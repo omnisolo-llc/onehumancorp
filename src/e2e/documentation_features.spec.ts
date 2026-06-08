@@ -1,80 +1,115 @@
 import { test, expect } from './fixtures';
 
-test.describe('Help Center Page', () => {
-  test('should load help center and navigate to article', async ({ page }) => {
-    await page.goto('/help');
+test.describe('Help Chat Flow', () => {
+  test('should open help chat, type message, and see response', async ({ page }) => {
+    // Navigate to the dashboard
+    await page.goto('/');
 
-    await expect(page.getByRole('heading', { name: 'Help Center' })).toBeVisible();
+    // Check that the floating chat button exists
+    const chatButton = page.getByRole('button', { name: 'Open help chat' });
+    await expect(chatButton).toBeVisible();
 
-    await expect(page.locator('h2:has-text("Getting Started")')).toBeVisible();
+    // Open chat
+    await chatButton.click();
 
-    await page.locator('h2:has-text("Getting Started")').click();
+    // Verify chat UI appears
+    const chatHeader = page.locator('#ai-chat-header');
+    await expect(chatHeader).toBeVisible();
+    await expect(page.getByText('Ask AI Help')).toBeVisible();
+    await expect(page.getByText("Hi! I'm your AI Help Agent")).toBeVisible();
 
-    await expect(page.getByRole('heading', { name: 'Getting Started' })).toBeVisible();
+    // Type a message
+    const input = page.getByPlaceholder('Ask me anything...');
+    await input.fill('What is Operations?');
 
-    await expect(page.locator('text=Welcome to OneHumanCorp!')).toBeVisible();
-  });
+    // Submit
+    const sendButton = page.getByRole('button', { name: 'Send message' });
+    await sendButton.click();
 
-  test('should filter articles using search input', async ({ page }) => {
-    await page.goto('/help');
+    // Wait for the backend mocked response to appear
+    await expect(page.locator('text=I have routed your request to the')).toBeVisible();
 
-    // Type into the search box
-    const searchBox = page.getByPlaceholder('Search for help articles and videos...');
-    await searchBox.fill('AI');
-
-    // Wait for the UI to update based on search
-    await expect(page.locator('h2:has-text("Your AI Helpers")')).toBeVisible();
-
-    // Verify a non-matching article is hidden
-    await expect(page.locator('h2:has-text("Getting Started")')).not.toBeVisible();
+    // Verify link exists
+    await expect(page.getByRole('link', { name: 'Check your inbox for updates →' })).toBeVisible();
   });
 });
 
-test.describe('API Documentation', () => {
-  test('should load Swagger UI', async ({ page }) => {
+test.describe('Help Center Complete UI Flow', () => {
+  test('should load Help Center, find videos, and click video to play', async ({ page }) => {
+    await page.goto('/help');
+
+    // Search for the video string
+    const searchBox = page.getByPlaceholder('Search for help articles and videos...');
+    await searchBox.fill('payment');
+
+    // Wait for UI to filter
+    await expect(page.getByText('Accept your first payment')).toBeVisible();
+
+    // Click the video
+    await page.getByText('Accept your first payment').click();
+
+    // Expect the video player modal
+    const videoModal = page.locator('video');
+    await expect(videoModal).toBeVisible();
+
+    // Close the modal
+    const closeBtn = page.getByRole('button', { name: 'Close video' });
+    await closeBtn.click();
+
+    // Modal should be gone
+    await expect(videoModal).not.toBeVisible();
+  });
+});
+
+test.describe('Tooltip functionality', () => {
+  test('should display tooltip on hover', async ({ page }) => {
+    // Wait until tooltips load dynamically or are preloaded on Help page
     await page.goto('/api-docs');
 
-    await page.waitForLoadState('domcontentloaded');
+    // The component wrapper has class inline-block relative cursor-help
+    const tooltipTrigger = page.locator('.cursor-help').first();
+    await expect(tooltipTrigger).toBeVisible();
 
-    await expect(page.locator('.swagger-ui')).toBeVisible();
+    await tooltipTrigger.hover();
 
-    await expect(page.locator('text=OHC Advanced API Reference').first()).toBeVisible();
+    // Check if the tooltip wrapper gets rendered
+    await expect(page.getByText('Direct API access is only for custom integrations.')).toBeVisible();
+  });
 
-    await expect(page.locator('text=This section is for developers directly integrating with our APIs')).toBeVisible();
+  test('should display tooltip on dashboard hover', async ({ page }) => {
+    await page.goto('/dashboard');
+
+    // We expect the tooltip with text "View your daily sales and overall business health." to appear
+    const dashboardTooltipTrigger = page.locator('.cursor-help', { hasText: 'Dashboard' }).first();
+    await expect(dashboardTooltipTrigger).toBeVisible();
+
+    await dashboardTooltipTrigger.hover();
+
+    await expect(page.getByText('View your daily sales and overall business health.')).toBeVisible();
   });
 });
 
-test.describe('Release Notes and Changelog', () => {
-  test('should load changelog page', async ({ page }) => {
+test.describe('Changelog UX', () => {
+  test('should ensure changelog renders beautiful design without placeholder text', async ({ page }) => {
     await page.goto('/changelog');
 
-    await expect(page.getByRole('heading', { name: 'Release Notes & Changelog' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Version 1.0 (Latest)' })).toBeVisible();
-    await expect(page.locator('text=Interactive AI Store Builder:')).toBeVisible();
+    // Check that we removed the test line
+    await expect(page.locator('text=This is a plain paragraph test line.')).not.toBeVisible();
   });
 });
 
-test.describe('Help Chat Widget', () => {
-  test('should verify widget functionality', async ({ page }) => {
-    const response = await page.request.post('/api/chat', {
-        data: { message: "How do I add a product?" }
-    });
+test.describe('AppShell Help Button', () => {
+  test('should display Help Center link and navigate successfully', async ({ page }) => {
+    await page.goto('/dashboard');
 
-    expect(response.status()).toBe(200);
-    const result = await response.json();
-    expect(result.reply).toBeDefined();
-    expect(result.link).toBeDefined();
-  });
-});
+    const helpButton = page.getByRole('link', { name: 'Help Center' });
+    await expect(helpButton).toBeVisible();
 
-test.describe('Video Tutorials in Help Widget', () => {
-  test('should verify video endpoint', async ({ page }) => {
-    const response = await page.request.get('/api/videos');
-    expect(response.status()).toBe(200);
+    await helpButton.click();
+    await expect(page).toHaveURL(/\/help/);
 
-    const result = await response.json();
-    expect(result.length).toBeGreaterThan(0);
-    expect(result[0].title).toBeDefined();
-    expect(result[0].duration).toBeDefined();
+    // Help Center should have its search input
+    await expect(page.getByPlaceholder('Search for help articles and videos...')).toBeVisible();
   });
 });

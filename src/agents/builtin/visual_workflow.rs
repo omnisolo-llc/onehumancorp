@@ -163,10 +163,17 @@ impl WorkflowExecutor {
                     let tool = self.tools.iter().find(|t| &t.name == tool_name)
                         .ok_or_else(|| format!("Tool {} not found", tool_name))?;
 
-                    let result = crate::tool_executor_engine::ToolExecutionEngine::execute_tool_with_langgraph_mechanics(tool, &ohc_builtin_agent_core::types::ToolCall{id: "dynamic".into(), name: tool_name.clone(), arguments: args}, 2).await
-                        .map_err(|e| format!("Tool {} execution failed: {}", tool_name, e))?;
+                    let result = crate::tool_executor_engine::ToolExecutionEngine::execute_tool_with_langgraph_mechanics(tool, &ohc_builtin_agent_core::types::ToolCall{id: "dynamic".into(), name: tool_name.clone(), arguments: args}, 2).await;
 
-                    state.insert(node.id.clone(), result);
+                    let result_str = match result {
+                        Ok(res) => res,
+                        Err(ohc_builtin_agent_core::types::ToolError::LlmRecoverable(msg)) => {
+                            format!("LLM-Recoverable Error: {}. Please analyze this error, correct your tool arguments, and try again.", msg)
+                        }
+                        Err(e) => return Err(format!("Tool {} execution failed: {}", tool_name, e)),
+                    };
+
+                    state.insert(node.id.clone(), result_str);
                 }
                 NodeType::Condition { condition_expression, true_target, false_target } => {
                     let mut expr = condition_expression.clone();
@@ -237,7 +244,8 @@ impl WorkflowExecutor {
         Ok("Execution halted without reaching output".to_string())
     }
 
-    pub async fn execute_from_node(&self, start_node_id: String, mut state: HashMap<String, String>) -> Result<(HashMap<String, String>, Option<String>), String> {
+    pub fn execute_from_node<'a>(&'a self, start_node_id: String, mut state: HashMap<String, String>) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<(HashMap<String, String>, Option<String>), String>> + Send + 'a>> {
+        Box::pin(async move {
         let mut current_node_id = start_node_id;
 
         let nodes_map: HashMap<String, Node> = self.graph.nodes.iter()
@@ -292,10 +300,17 @@ impl WorkflowExecutor {
                     let tool = self.tools.iter().find(|t| &t.name == tool_name)
                         .ok_or_else(|| format!("Tool {} not found", tool_name))?;
 
-                    let result = crate::tool_executor_engine::ToolExecutionEngine::execute_tool_with_langgraph_mechanics(tool, &ohc_builtin_agent_core::types::ToolCall{id: "dynamic".into(), name: tool_name.clone(), arguments: args}, 2).await
-                        .map_err(|e| format!("Tool {} execution failed: {}", tool_name, e))?;
+                    let result = crate::tool_executor_engine::ToolExecutionEngine::execute_tool_with_langgraph_mechanics(tool, &ohc_builtin_agent_core::types::ToolCall{id: "dynamic".into(), name: tool_name.clone(), arguments: args}, 2).await;
 
-                    state.insert(node.id.clone(), result);
+                    let result_str = match result {
+                        Ok(res) => res,
+                        Err(ohc_builtin_agent_core::types::ToolError::LlmRecoverable(msg)) => {
+                            format!("LLM-Recoverable Error: {}. Please analyze this error, correct your tool arguments, and try again.", msg)
+                        }
+                        Err(e) => return Err(format!("Tool {} execution failed: {}", tool_name, e)),
+                    };
+
+                    state.insert(node.id.clone(), result_str);
                 }
                 NodeType::Condition { condition_expression, true_target, false_target } => {
                     let mut expr = condition_expression.clone();
@@ -338,8 +353,50 @@ impl WorkflowExecutor {
                     let merged_string = serde_json::to_string(&merged_data).unwrap_or_else(|_| "[]".to_string());
                     state.insert(output_key.clone(), merged_string);
                 }
-                NodeType::ParallelFork { .. } => {
-                    return Err("Nested ParallelFork not supported".to_string());
+                NodeType::ParallelFork { targets } => {
+                    let mut handles = Vec::new();
+                    for target in targets {
+                        let target_clone = target.clone();
+                        let state_clone = state.clone();
+
+                        let agent_clone = self.agent.clone();
+                        let tools_clone = self.tools.clone();
+                        let sub_agents_clone = self.sub_agents.clone();
+                        let config_clone = self.config.clone();
+                        let graph_clone = self.graph.clone();
+
+                        let handle = tokio::spawn(async move {
+                            let sub_executor = WorkflowExecutor::new(graph_clone, agent_clone, tools_clone, sub_agents_clone, config_clone);
+                            sub_executor.execute_from_node(target_clone, state_clone).await
+                        });
+                        handles.push(handle);
+                    }
+
+                    let results = futures::future::join_all(handles).await;
+
+                    let mut join_node_opt = None;
+
+                    for res in results {
+                        match res {
+                            Ok(Ok((sub_state, sub_join_node))) => {
+                                for (k, v) in sub_state {
+                                    state.insert(k, v);
+                                }
+                                if sub_join_node.is_some() {
+                                    join_node_opt = sub_join_node;
+                                }
+                            }
+                            Ok(Err(e)) => return Err(format!("Parallel execution failed: {}", e)),
+                            Err(e) => return Err(format!("Parallel task join failed: {}", e)),
+                        }
+                    }
+
+                    if let Some(join_node) = join_node_opt {
+                        current_node_id = join_node;
+                        continue;
+                    } else {
+                        return Ok((state, None));
+                    }
                 }
             }
 
@@ -356,6 +413,7 @@ impl WorkflowExecutor {
         }
 
         Ok((state, None))
+        })
     }
 }
 
@@ -595,5 +653,52 @@ mod tests {
         assert!(result.contains("Processed: Final: [\"Processed: A Processed: init_data\",\"Processed: B Processed: init_data\"]") ||
                 result.contains("Processed: Final: [\"Processed: B Processed: init_data\",\"Processed: A Processed: init_data\"]"),
                 "Result was: {}", result);
+    }
+
+    #[tokio::test]
+    async fn test_visual_workflow_nested_parallel_fork() {
+        let graph = WorkflowGraph {
+            nodes: vec![
+                Node { id: "in".to_string(), node_type: NodeType::Input { name: "input_var".to_string() } },
+                Node { id: "fork_outer".to_string(), node_type: NodeType::ParallelFork { targets: vec!["path_outer_a".to_string(), "path_outer_b".to_string()] } },
+                Node { id: "path_outer_a".to_string(), node_type: NodeType::Llm { prompt_template: "Outer A: {{in}}".to_string() } },
+                Node { id: "path_outer_b".to_string(), node_type: NodeType::ParallelFork { targets: vec!["path_inner_b1".to_string(), "path_inner_b2".to_string()] } },
+                Node { id: "path_inner_b1".to_string(), node_type: NodeType::Llm { prompt_template: "Inner B1: {{in}}".to_string() } },
+                Node { id: "path_inner_b2".to_string(), node_type: NodeType::Llm { prompt_template: "Inner B2: {{in}}".to_string() } },
+                Node { id: "join_inner_b".to_string(), node_type: NodeType::ParallelJoin { state_keys: vec!["path_inner_b1".to_string(), "path_inner_b2".to_string()], output_key: "joined_inner".to_string() } },
+                Node { id: "path_outer_b_post_join".to_string(), node_type: NodeType::Llm { prompt_template: "Outer B post join: {{joined_inner}}".to_string() } },
+                Node { id: "join_outer".to_string(), node_type: NodeType::ParallelJoin { state_keys: vec!["path_outer_a".to_string(), "path_outer_b_post_join".to_string()], output_key: "joined_outer".to_string() } },
+                Node { id: "out_llm".to_string(), node_type: NodeType::Llm { prompt_template: "Final Nested: {{joined_outer}}".to_string() } },
+                Node { id: "out".to_string(), node_type: NodeType::Output },
+            ],
+            edges: vec![
+                Edge { source: "in".to_string(), target: "fork_outer".to_string() },
+                Edge { source: "path_outer_a".to_string(), target: "join_outer".to_string() },
+
+                Edge { source: "path_outer_b".to_string(), target: "join_inner_b".to_string() }, // fork edge implicitly starts targets, this edge just ensures topology connectivity if needed by other components, although WorkflowExecutor follows target arrays directly. We will explicitly route inner targets to inner join
+                Edge { source: "path_inner_b1".to_string(), target: "join_inner_b".to_string() },
+                Edge { source: "path_inner_b2".to_string(), target: "join_inner_b".to_string() },
+                Edge { source: "join_inner_b".to_string(), target: "path_outer_b_post_join".to_string() },
+                Edge { source: "path_outer_b_post_join".to_string(), target: "join_outer".to_string() },
+
+                Edge { source: "join_outer".to_string(), target: "out_llm".to_string() },
+                Edge { source: "out_llm".to_string(), target: "out".to_string() },
+            ],
+        };
+
+        let main_agent = Arc::new(Agent::new(Arc::new(MockVisualLlmClient), vec![]));
+        let config = AgentRunConfig::default();
+
+        let executor = WorkflowExecutor::new(graph, main_agent, vec![], HashMap::new(), config);
+
+        let mut inputs = HashMap::new();
+        inputs.insert("in".to_string(), "root_data".to_string());
+
+        let result = executor.execute(inputs).await.unwrap();
+
+        assert!(result.contains("Processed: Final Nested: "), "Result missing final prefix: {}", result);
+        assert!(result.contains("Outer A: root_data"), "Result missing Outer A: {}", result);
+        assert!(result.contains("Inner B1: root_data"), "Result missing Inner B1: {}", result);
+        assert!(result.contains("Inner B2: root_data"), "Result missing Inner B2: {}", result);
     }
 }

@@ -13,8 +13,8 @@ export default function LinkInBioPublicPage() {
     const [storeName, setStoreName] = useState('My Store');
     const [bio, setBio] = useState('Welcome to my storefront!');
     const [links, setLinks] = useState<any[]>([
-        { id: '1', title: 'Visit My Store', url: 'https://ohc.store' },
-        { id: '2', title: 'Book an Appointment', url: 'https://ohc.store/book' },
+        { id: '1', title: 'Visit My Store', url: '/website-builder' },
+        { id: '2', title: 'Book an Appointment', url: '/booking' },
     ]);
     const [theme, setTheme] = useState('gradient');
     const [loading, setLoading] = useState(true);
@@ -97,8 +97,8 @@ export default function LinkInBioPublicPage() {
                      </div>
 
                      <div className="mt-auto pt-12 pb-6 w-full flex justify-center">
-                         <a href={`https://ohc.store/join?ref=${tenantId}`} target="_blank" rel="noopener noreferrer" className="text-sm font-semibold tracking-wider uppercase opacity-70 hover:opacity-100 transition-opacity flex flex-col items-center gap-1">
-                             Powered by OHC
+                         <a href={`/onboarding?ref=${tenantId}`} className="text-sm font-semibold tracking-wider uppercase opacity-70 hover:opacity-100 transition-opacity flex flex-col items-center gap-1">
+                             ⚡ Powered by OHC
                          </a>
                      </div>
                  </div>

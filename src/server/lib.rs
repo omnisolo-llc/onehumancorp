@@ -1,4 +1,5 @@
 pub mod rag_sync;
+pub mod cart_recovery;
 pub use ::server_harness as harness;
 pub mod api;
 pub mod agents;
@@ -40,11 +41,20 @@ static ORG_CACHE_ADVISORY: std::sync::OnceLock<::server_utils::cache::HybridCach
 static ACTIVE_ORDERS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<i64>> = std::sync::OnceLock::new();
 static ADVISORY_INSIGHT_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<String>> = std::sync::OnceLock::new();
 pub static AI_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<String>> = std::sync::OnceLock::new();
+
 static UI_ORDERS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<Vec<serde_json::Value>>> = std::sync::OnceLock::new();
 static UI_BOOKINGS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<Vec<serde_json::Value>>> = std::sync::OnceLock::new();
 static UI_INBOX_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<Vec<serde_json::Value>>> = std::sync::OnceLock::new();
 static UI_DASHBOARD_METRICS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<serde_json::Value>> = std::sync::OnceLock::new();
 static METRICS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<HttpMetricsResponse>> = std::sync::OnceLock::new();
+
+pub fn get_redis_client() -> Option<redis::Client> {
+    if is_standalone_runtime() {
+        None
+    } else {
+        std::env::var("REDIS_URL").ok().and_then(|url| redis::Client::open(url).ok())
+    }
+}
 
 pub fn is_standalone_runtime() -> bool {
     fn parse_bool(value: &str) -> Option<bool> {
@@ -77,6 +87,9 @@ fn get_tooltips_registry() -> &'static RwLock<HashMap<String, String>> {
     m.insert("bio-input-tooltip".to_string(), "Describe what you sell, your target audience, and the vibe of your brand.".to_string());
     m.insert("generate-btn-tooltip".to_string(), "Our AI agents will analyze your description and build a ready-to-launch store for you.".to_string());
     m.insert("launch-btn-tooltip".to_string(), "Launch your storefront immediately to a live URL.".to_string());
+    m.insert("dashboard-tooltip".to_string(), "View your daily sales and overall business health.".to_string());
+    m.insert("inventory-tooltip".to_string(), "Manage your inventory, prices, and stock levels.".to_string());
+    m.insert("orders-tooltip".to_string(), "See what customers bought and track order fulfillment.".to_string());
     m.insert("team-activity-tooltip".to_string(), "Monitor the real-time actions and tasks being performed by your AI workforce.".to_string());
     m.insert("referral-tooltip".to_string(), "Share your unique link to earn credits when friends join OHC.".to_string());
     m.insert("swarm-online-tooltip".to_string(), "Your AI workforce is active. They process tasks in the background.".to_string());
@@ -90,6 +103,7 @@ fn get_tooltips_registry() -> &'static RwLock<HashMap<String, String>> {
     m.insert("todays-sales-tooltip".to_string(), "Your total sales for today. Check back often to track your progress.".to_string());
     m.insert("approval-inbox-tooltip".to_string(), "Review tasks that your AI agents need permission to execute. Approve or deny them here.".to_string());
     m.insert("ask-ai-tooltip".to_string(), "Open the AI Chat to get answers instantly. The AI reads our entire Help Center for you.".to_string());
+    m.insert("api-docs-tooltip".to_string(), "Direct API access is only for custom integrations.".to_string());
     RwLock::new(m)
     })
 }
@@ -330,8 +344,10 @@ pub mod services {
     pub mod agent;
     pub mod autodream;
     pub mod booking;
+    pub mod subscription;
     pub mod pos;
     pub mod collective;
+
 }
 
 use tonic::{transport::Server, Request, Response, Status};
@@ -546,7 +562,7 @@ async fn http_metrics_handler(
     }
 
     let cache_key = format!("metrics:{}", tenant_id);
-    let cache = METRICS_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(None));
+    let cache = METRICS_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
     if let Some(metrics) = cache.get(&cache_key).await {
         return (StatusCode::OK, axum::Json(metrics)).into_response();
     }
@@ -818,7 +834,7 @@ pub async fn advisory_insights_handler(
     let (org_res, active_orders_res) = tokio::join!(
         async {
             let cache_key = format!("advisory:org:{}", tenant_id);
-            let cache = ORG_CACHE_ADVISORY.get_or_init(|| ::server_utils::cache::HybridCache::new(None));
+            let cache = ORG_CACHE_ADVISORY.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
             if let Some(org) = cache.get(&cache_key).await {
                 return Ok(org);
             }
@@ -849,7 +865,7 @@ pub async fn advisory_insights_handler(
         },
         async {
             let cache_key = format!("advisory:orders:{}", tenant_id);
-            let cache = ACTIVE_ORDERS_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(None));
+            let cache = ACTIVE_ORDERS_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
             if let Some(orders) = cache.get(&cache_key).await {
                 return Ok(orders);
             }
@@ -895,7 +911,7 @@ pub async fn advisory_insights_handler(
     let stats_hash = format!("{:x}", hasher.finalize());
     let insight_cache_key = format!("advisory:insight:{}:{}", tenant_id, stats_hash);
 
-    let insight_cache = ADVISORY_INSIGHT_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(None));
+    let insight_cache = ADVISORY_INSIGHT_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
     if let Some(insight) = insight_cache.get(&insight_cache_key).await {
         return (StatusCode::OK, axum::Json(serde_json::json!({ "summary": insight }))).into_response();
     }
@@ -1068,7 +1084,7 @@ impl HubService for MyHubService {
         let prompt_hash = hex::encode(hasher.finalize());
         let ai_cache_key = format!("ai_cache:reason:{}", prompt_hash);
 
-        let ai_cache = AI_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(None));
+        let ai_cache = AI_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
         if let Some(cached_output) = ai_cache.get(&ai_cache_key).await {
             return Ok(Response::new(ReasonResponse { content: cached_output }));
         }
@@ -1200,6 +1216,12 @@ impl HubService for MyHubService {
                 let auth_info = request.extensions().get::<::server_auth::orchestration::AuthInfo>()
             .ok_or_else(|| tonic::Status::unauthenticated("Missing AuthInfo"))?;
         let tenant_id = if auth_info.org_id.is_empty() { return Err(tonic::Status::unauthenticated("Missing org_id")); } else { &auth_info.org_id };
+        static COST_DASHBOARD_CACHE: std::sync::OnceLock<server_utils::cache::HybridCache<::server_ohc::orchestration::CostDashboardResponse>> = std::sync::OnceLock::new();
+        let cache = COST_DASHBOARD_CACHE.get_or_init(|| server_utils::cache::HybridCache::new(self.hub.redis_client.clone()));
+        let cache_key = format!("cost_dashboard:{}", tenant_id);
+        if let Some(cached) = cache.get(&cache_key).await {
+            return Ok(tonic::Response::new(cached));
+        }
 
         let auditor = self.hub.get_cost_auditor();
         let tenant_id_clone = tenant_id.clone();
@@ -1228,7 +1250,7 @@ impl HubService for MyHubService {
 
         let total_costs_f64 = llm_cost_f64 + storage_cost_f64 + payment_fees_f64 + network_cost_f64;
 
-        Ok(tonic::Response::new(::server_ohc::orchestration::CostDashboardResponse {
+        let response = ::server_ohc::orchestration::CostDashboardResponse {
             total_revenue: (total_revenue_f64 * 100.0) as i64,
             total_costs: (total_costs_f64 * 100.0) as i64,
             llm_cost: (llm_cost_f64 * 100.0) as i64,
@@ -1238,7 +1260,11 @@ impl HubService for MyHubService {
             period_end: "2024-05-31".to_string(),
             bandwidth_savings: (bandwidth_savings_f64 * 100.0) as i64,
             network_cost: (network_cost_f64 * 100.0) as i64,
-        }))
+        };
+
+        cache.set(&cache_key, response.clone(), std::time::Duration::from_secs(60)).await;
+
+        Ok(tonic::Response::new(response))
     }
 
     async fn select_plan(
@@ -2278,12 +2304,10 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let cs_worker = crate::workers::department_workers::CustomerSuccessWorker::new(db.clone());
     cs_worker.start();
 
-    let pos_sync_worker = crate::workers::department_workers::pos_sync_worker::PosSyncWorker::new(db.clone());
-    pos_sync_worker.start();
 
-    // Start Maintenance Worker
-    let maintenance_worker = Arc::new(crate::workers::maintenance::MaintenanceWorker::new(db.clone()));
-    maintenance_worker.start();
+    if matches!(&db.store, crate::db::DbStore::Postgres) {
+        crate::cart_recovery::start_cart_recovery_background_workers(Arc::new(db.pool.clone()));
+    }
 
     // Start Token Forecast Engine
     let forecaster = Arc::new(crate::telemetry::forecaster::Forecaster::new(db.pool.clone()));
@@ -2628,7 +2652,14 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
         return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!([]))).into_response();
     }
 
-    match sqlx::query("SELECT id, tenant_id, source, content, draft_reply, status, created_at FROM inbox_messages ORDER BY created_at DESC")
+    match sqlx::query(
+        "SELECT id, tenant_id, source, content,
+                COALESCE(original_content, content) AS original_content,
+                COALESCE(translated_from_language, '') AS translated_from_language,
+                draft_reply, status, created_at
+         FROM inbox_messages
+         ORDER BY created_at DESC"
+    )
         .fetch_all(&mut *tx)
         .await
     {
@@ -2643,7 +2674,9 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
                     "tenant_id": row.get::<String, _>("tenant_id"),
                     "source": row.get::<String, _>("source"),
                     "content": row.get::<String, _>("content"),
-                    "draft_reply": row.get::<String, _>("draft_reply"),
+                    "original_message": row.get::<String, _>("original_content"),
+                    "translated_from_language": row.get::<String, _>("translated_from_language"),
+                    "generated_response": row.get::<String, _>("draft_reply"),
                     "status": row.get::<String, _>("status"),
                     "created_at": created_at_str,
                 })
@@ -2675,6 +2708,56 @@ fn ui_tenant_id(query: &UiTenantQuery) -> String {
         .to_string()
 }
 
+#[derive(Debug, Clone, serde::Serialize)]
+pub(crate) struct UiDashboardMetrics {
+    active_customers: i64,
+    pending_orders: i64,
+    total_sales: f64,
+    total_campaigns_sent: i64,
+}
+
+pub(crate) async fn load_ui_dashboard_metrics(
+    db: &crate::db::DB,
+    tenant_id: &str,
+) -> Result<UiDashboardMetrics, sqlx::Error> {
+    let (active_customers, pending_orders, total_sales, total_campaigns_sent) = match &db.store {
+        crate::db::DbStore::Postgres => {
+            sqlx::query_as::<_, (i64, i64, f64, i64)>(
+                "SELECT \
+                    (SELECT COUNT(*) FROM customers WHERE tenant_id = $1) AS active_customers, \
+                    (SELECT COUNT(*) FROM orders WHERE tenant_id = $1 AND status = 'pending') AS pending_orders, \
+                    (SELECT COALESCE(SUM(total_amount), 0.0)::DOUBLE PRECISION FROM orders WHERE tenant_id = $1) AS total_sales, \
+                    (SELECT COUNT(*) FROM agent_actions WHERE tenant_id = $1 AND action_type = 'growth.campaign_sent') AS total_campaigns_sent"
+            )
+            .bind(tenant_id)
+            .fetch_one(&db.pool)
+            .await?
+        }
+        crate::db::DbStore::Sqlite(pool) => {
+            sqlx::query_as::<_, (i64, i64, f64, i64)>(
+                "SELECT \
+                    (SELECT COUNT(*) FROM customers WHERE tenant_id = ?) AS active_customers, \
+                    (SELECT COUNT(*) FROM orders WHERE tenant_id = ? AND status = 'pending') AS pending_orders, \
+                    (SELECT COALESCE(SUM(total_amount), 0.0) FROM orders WHERE tenant_id = ?) AS total_sales, \
+                    (SELECT COUNT(*) FROM agent_actions WHERE tenant_id = ? AND action_type = 'growth.campaign_sent') AS total_campaigns_sent"
+            )
+            .bind(tenant_id)
+            .bind(tenant_id)
+            .bind(tenant_id)
+            .bind(tenant_id)
+            .fetch_one(pool)
+            .await?
+        }
+    };
+
+    Ok(UiDashboardMetrics {
+        active_customers,
+        pending_orders,
+        total_sales,
+        total_campaigns_sent,
+    })
+}
+
 async fn list_ui_orders_handler(
     axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
     axum::extract::Query(query): axum::extract::Query<UiTenantQuery>,
@@ -2684,7 +2767,7 @@ async fn list_ui_orders_handler(
     let tenant_id = ui_tenant_id(&query);
 
     let cache_key = format!("ui_orders:{}", tenant_id);
-    let cache = UI_ORDERS_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(None));
+    let cache = UI_ORDERS_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
     if let Some(cached) = cache.get(&cache_key).await {
         return (axum::http::StatusCode::OK, axum::Json(cached)).into_response();
     }
@@ -2752,7 +2835,7 @@ async fn list_ui_bookings_handler(
     let tenant_id = ui_tenant_id(&query);
 
     let cache_key = format!("ui_bookings:{}", tenant_id);
-    let cache = UI_BOOKINGS_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(None));
+    let cache = UI_BOOKINGS_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
     if let Some(cached) = cache.get(&cache_key).await {
         return (axum::http::StatusCode::OK, axum::Json(cached)).into_response();
     }
@@ -2825,14 +2908,27 @@ async fn list_ui_inbox_handler(
     let tenant_id = ui_tenant_id(&query);
 
     let cache_key = format!("ui_inbox:{}", tenant_id);
-    let cache = UI_INBOX_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(None));
+    let cache = UI_INBOX_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
     if let Some(cached) = cache.get(&cache_key).await {
         return (axum::http::StatusCode::OK, axum::Json(cached)).into_response();
     }
 
     let messages = match &db.store {
         crate::db::DbStore::Postgres => {
-            match sqlx::query("SELECT id, COALESCE(source, '') AS source, COALESCE(content, '') AS content, COALESCE(draft_reply, '') AS draft_reply, COALESCE(status, '') AS status, COALESCE(created_at::text, '') AS created_at FROM inbox_messages WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 50")
+            match sqlx::query(
+                "SELECT id,
+                        COALESCE(source, '') AS source,
+                        COALESCE(content, '') AS content,
+                        COALESCE(original_content, content, '') AS original_content,
+                        COALESCE(translated_from_language, '') AS translated_from_language,
+                        COALESCE(draft_reply, '') AS draft_reply,
+                        COALESCE(status, '') AS status,
+                        COALESCE(created_at::text, '') AS created_at
+                 FROM inbox_messages
+                 WHERE tenant_id = $1
+                 ORDER BY created_at DESC
+                 LIMIT 50"
+            )
                 .bind(&tenant_id)
                 .fetch_all(&db.pool)
                 .await {
@@ -2840,7 +2936,9 @@ async fn list_ui_inbox_handler(
                         "id": row.get::<String, _>("id"),
                         "source": row.get::<String, _>("source"),
                         "content": row.get::<String, _>("content"),
-                        "draft_reply": row.get::<String, _>("draft_reply"),
+                        "original_message": row.get::<String, _>("original_content"),
+                        "translated_from_language": row.get::<String, _>("translated_from_language"),
+                        "generated_response": row.get::<String, _>("draft_reply"),
                         "status": row.get::<String, _>("status"),
                         "created_at": row.get::<String, _>("created_at"),
                     })).collect::<Vec<_>>()),
@@ -2848,7 +2946,20 @@ async fn list_ui_inbox_handler(
                 }
         }
         crate::db::DbStore::Sqlite(pool) => {
-            match sqlx::query("SELECT id, COALESCE(source, '') AS source, COALESCE(content, '') AS content, COALESCE(draft_reply, '') AS draft_reply, COALESCE(status, '') AS status, COALESCE(CAST(created_at AS TEXT), '') AS created_at FROM inbox_messages WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 50")
+            match sqlx::query(
+                "SELECT id,
+                        COALESCE(source, '') AS source,
+                        COALESCE(content, '') AS content,
+                        COALESCE(original_content, content, '') AS original_content,
+                        COALESCE(translated_from_language, '') AS translated_from_language,
+                        COALESCE(draft_reply, '') AS draft_reply,
+                        COALESCE(status, '') AS status,
+                        COALESCE(CAST(created_at AS TEXT), '') AS created_at
+                 FROM inbox_messages
+                 WHERE tenant_id = ?
+                 ORDER BY created_at DESC
+                 LIMIT 50"
+            )
                 .bind(&tenant_id)
                 .fetch_all(pool)
                 .await {
@@ -2856,7 +2967,9 @@ async fn list_ui_inbox_handler(
                         "id": row.get::<String, _>("id"),
                         "source": row.get::<String, _>("source"),
                         "content": row.get::<String, _>("content"),
-                        "draft_reply": row.get::<String, _>("draft_reply"),
+                        "original_message": row.get::<String, _>("original_content"),
+                        "translated_from_language": row.get::<String, _>("translated_from_language"),
+                        "generated_response": row.get::<String, _>("draft_reply"),
                         "status": row.get::<String, _>("status"),
                         "created_at": row.get::<String, _>("created_at"),
                     })).collect::<Vec<_>>()),
@@ -2886,46 +2999,16 @@ async fn ui_dashboard_metrics_handler(
     let tenant_id = ui_tenant_id(&query);
 
     let cache_key = format!("ui_dashboard_metrics:{}", tenant_id);
-    let cache = UI_DASHBOARD_METRICS_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(None));
+    let cache = UI_DASHBOARD_METRICS_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
     if let Some(cached) = cache.get(&cache_key).await {
         return (axum::http::StatusCode::OK, axum::Json(cached)).into_response();
     }
 
-    let metrics = match &db.store {
-        crate::db::DbStore::Postgres => {
-            sqlx::query_as::<_, (i64, i64, f64)>(
-                "SELECT \
-                    (SELECT COUNT(*) FROM customers WHERE tenant_id = $1) AS active_customers, \
-                    (SELECT COUNT(*) FROM orders WHERE tenant_id = $1 AND status = 'pending') AS pending_orders, \
-                    (SELECT COALESCE(SUM(total_amount), 0.0)::DOUBLE PRECISION FROM orders WHERE tenant_id = $1) AS total_sales"
-            )
-            .bind(&tenant_id)
-            .fetch_one(&db.pool)
-            .await
-        }
-        crate::db::DbStore::Sqlite(pool) => {
-            sqlx::query_as::<_, (i64, i64, f64)>(
-                "SELECT \
-                    (SELECT COUNT(*) FROM customers WHERE tenant_id = ?) AS active_customers, \
-                    (SELECT COUNT(*) FROM orders WHERE tenant_id = ? AND status = 'pending') AS pending_orders, \
-                    (SELECT COALESCE(SUM(total_amount), 0.0) FROM orders WHERE tenant_id = ?) AS total_sales"
-            )
-            .bind(&tenant_id)
-            .bind(&tenant_id)
-            .bind(&tenant_id)
-            .fetch_one(pool)
-            .await
-        }
-    };
+    let metrics = load_ui_dashboard_metrics(&db, &tenant_id).await;
 
     match metrics {
-        Ok((active_customers, pending_orders, total_sales)) => {
-            let res = serde_json::json!({
-                "active_customers": active_customers,
-                "pending_orders": pending_orders,
-                "total_sales": total_sales,
-                "total_campaigns_sent": 0
-            });
+        Ok(metrics) => {
+            let res = serde_json::to_value(metrics).unwrap_or_else(|_| serde_json::json!({}));
             cache.set(&cache_key, res.clone(), std::time::Duration::from_secs(10)).await;
             (axum::http::StatusCode::OK, axum::Json(res)).into_response()
         }
@@ -3303,6 +3386,91 @@ async fn create_ui_bom_item_handler(
                 axum::response::Json(serde_json::json!({ "success": true }))
             }
         }))
+        .route("/api/settings/voice", axum::routing::get({
+            let settings_store = settings_store.clone();
+            move |axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>| async move {
+                let settings = settings_store.get();
+                axum::response::Json(serde_json::json!({
+                    "voice_receptionist_enabled": settings.voice_receptionist_enabled,
+                    "voice_receptionist_number": settings.voice_receptionist_number,
+                    "voice_receptionist_persona": settings.voice_receptionist_persona,
+                }))
+            }
+        }))
+        .route("/api/settings/voice", axum::routing::post({
+            let settings_store = settings_store.clone();
+            move |axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
+                let enabled = req.get("voice_receptionist_enabled").and_then(|v| v.as_bool()).unwrap_or(false);
+                let number = req.get("voice_receptionist_number").and_then(|v| v.as_str()).map(|s| s.to_string());
+                let persona = req.get("voice_receptionist_persona").and_then(|v| v.as_str()).map(|s| s.to_string());
+
+                if let Err(e) = settings_store.set_voice_settings(enabled, number, persona) {
+                    ::server_telemetry::record_error_signal("Failed to save voice settings");
+                    tracing::error!("Failed to save voice settings: {}", e);
+                    return axum::response::Json(serde_json::json!({ "success": false }));
+                }
+                axum::response::Json(serde_json::json!({ "success": true }))
+            }
+        }))
+        .route("/api/settings/voice/provision", axum::routing::post({
+            let settings_store = settings_store.clone();
+            move |axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>| async move {
+                // Mock Twilio number provisioning
+                use rand::Rng;
+                let mut rng = rand::thread_rng();
+                let last_four: u32 = rng.gen_range(1000..9999);
+                let mock_number = format!("+1555123{}", last_four);
+
+                let settings = settings_store.get();
+                if let Err(e) = settings_store.set_voice_settings(
+                    settings.voice_receptionist_enabled,
+                    Some(mock_number.clone()),
+                    settings.voice_receptionist_persona,
+                ) {
+                    ::server_telemetry::record_error_signal("Failed to provision voice number");
+                    tracing::error!("Failed to provision voice number: {}", e);
+                    return axum::response::Json(serde_json::json!({ "success": false, "error": "Internal error" }));
+                }
+
+                axum::response::Json(serde_json::json!({ "success": true, "number": mock_number }))
+            }
+        }))
+        .route("/api/voice/incoming", axum::routing::post({
+            let settings_store = settings_store.clone();
+            let voice_engine = Arc::new(crate::voice::VoiceAIEdgeEngine::new());
+            let twilio_client = Arc::new(::server_integrations_twilio::provider::TwilioProvider::new(
+                std::env::var("TWILIO_ACCOUNT_SID").unwrap_or_default(),
+                std::env::var("TWILIO_AUTH_TOKEN").unwrap_or_default(),
+            ));
+            let voice_router = Arc::new(crate::voice::VoiceContextRouter::new(voice_engine.clone(), twilio_client));
+
+            move |axum::Json(req): axum::Json<serde_json::Value>| async move {
+                let caller_phone = req.get("caller_phone").and_then(|v| v.as_str()).unwrap_or("").to_string();
+                let user_text = req.get("user_text").and_then(|v| v.as_str()).unwrap_or("").to_string();
+
+                let settings = settings_store.get();
+                if !settings.voice_receptionist_enabled {
+                    return axum::response::Json(serde_json::json!({ "reply": "The voice receptionist is currently disabled." }));
+                }
+
+                let merchant_phone = settings.voice_receptionist_number.clone().unwrap_or_default();
+                let session_id = voice_engine.handle_incoming_call("merchant_123", &caller_phone).await;
+
+                let reply = voice_router.process_user_input(&session_id, &user_text, &merchant_phone).await;
+
+                voice_engine.end_call(&session_id).await;
+
+                axum::response::Json(serde_json::json!({ "reply": reply }))
+            }
+        }))
+        .route("/api/checkout/mercadopago", axum::routing::post(|axum::Json(req): axum::Json<serde_json::Value>| async move {
+            let amount_cents = req.get("amount_cents").and_then(|v| v.as_i64()).unwrap_or(4500);
+            let tenant_id = req.get("tenant_id").and_then(|v| v.as_str()).unwrap_or("default");
+            let url = format!("https://www.mercadopago.com/checkout/v1/redirect?pref_id={}_{}", tenant_id, amount_cents);
+            axum::response::Json(serde_json::json!({
+                "checkout_url": url
+            }))
+        }))
         .route("/api/checkout/delivery-quote", axum::routing::post({
             let settings_store = settings_store.clone();
             move |axum::Json(req): axum::Json<serde_json::Value>| async move {
@@ -3613,18 +3781,23 @@ async fn create_ui_bom_item_handler(
         .nest("/api/v1/autodream", api::autodream::router(autodream_worker.clone()))
         .nest("/api/v1/dynamic-workflows", api::dynamic_workflows::router(dynamic_workflow_manager.clone()))
         .nest("/api/billing", api::billing_api::router(hub.clone()))
+        .nest("/api/subscriptions", api::subscription::router_with_orchestrator(hub.clone(), Some(dept_orchestrator.clone())))
+        .nest("/api/fulfillment", api::fulfillment::router(db.pool.clone()))
+        .nest("/api/staff", api::staff_mesh::router(db.clone()))
         .nest("/api/v1/builder", crate::builder::api::router(db.pool.clone()))
         .route("/api/agents/workflows", axum::routing::get(list_workflows_handler).post(create_workflow_handler))
         .nest("/api/agents", api::agents::hire::router(hub.clone()))
         .nest("/api/onboarding", api::onboarding::router(std::sync::Arc::new(crate::services::onboarding::onboarding_agent::OnboardingAgent::new(db.clone(), hub.clone()))).with_state(mesh_transport.clone()))
         .nest("/api/v1/growth", api::growth::router(db.pool.clone(), hub.clone()))
         .nest("/api/v1/catalog", api::catalog::router(hub.clone()))
+        .nest("/api/v1/shipping", api::shipping::router())
         .nest("/api/v1/payments/terminal", api::terminal_api::router(hub.clone()))
 
         .nest("/api/agents/approvals", api::agents::approvals::router(dept_orchestrator.clone()))
         .nest("/api/agents/settings", api::agents::settings::router(dept_orchestrator.clone()))
         .nest("/api/agents/chat", api::agents::chat::router(dept_orchestrator.clone(), semantic_router.clone()))
         .nest("/api/agents/webhook", api::agents::webhook::router(dept_orchestrator.clone()))
+        .nest("/api/v1/booking/request", api::booking::request::router(dept_orchestrator.clone()))
         .nest("/api/agents/mission", api::agents::mission::handoff::router(std::sync::Arc::new(crate::sip::SipDB::new(db.pool.clone(), "default".to_string()))))
         .route("/api/telemetry/sync", axum::routing::post(api::telemetry::sync_telemetry_handler))
         .route_layer(axum::middleware::from_fn_with_state(
@@ -3632,15 +3805,9 @@ async fn create_ui_bom_item_handler(
             ::server_utils::tier_middleware::tier_middleware,
         ))
         .with_state(mesh_transport)
-        .route("/api/help", axum::routing::get(|| async { axum::Json(serde_json::json!([
-            { "title": "Getting Started", "desc": "Welcome to One Human Corp! This is a simple app that helps you manage your small business. You can set up your store, accept payments, and hire AI helpers.", "link": "/help/getting-started" },
-            { "title": "My Store", "desc": "To set up your storefront, go to the 'My Store' tab and add your products. It's easy! Just upload a photo, write a simple description, and set a price.", "link": "/help/my-store" },
-            { "title": "Payments", "desc": "When a customer buys something, the money goes straight to your account. We handle all the technical details so you can focus on your business.", "link": "/help/payments" },
-            { "title": "AI Agents", "desc": "Need a hand? Your AI Support Agent can answer customer emails and chats for you while you sleep. Just turn it on in the 'AI Agents' tab.", "link": "/help/ai-agents" },
-            { "title": "Marketing", "desc": "Let our AI write your social media posts! Just tell it what you want to sell, and it will give you a catchy post to share with your customers.", "link": "/help/marketing" },
-            { "title": "Account & Billing", "desc": "Your monthly invoice shows exactly what you paid for. We keep things simple with no hidden fees.", "link": "/help/account-billing" },
-            { "title": "API Documentation (Advanced)", "desc": "See the technical details for connecting custom software to your store.", "link": "/api-docs" }
-        ])) }))
+        .route("/api/help", axum::routing::get(crate::api::docs::list_articles))
+        .route("/api/help/search", axum::routing::get(crate::api::docs::search_articles))
+        .route("/api/help/{article_id}", axum::routing::get(crate::api::docs::get_article_handler))
         .route("/api/tooltips", axum::routing::get(|| async {
             let registry = get_tooltips_registry();
             let m = registry.read().unwrap();
@@ -3653,18 +3820,9 @@ async fn create_ui_bom_item_handler(
             }
             axum::Json(serde_json::json!({"success": true}))
         }))
-        .route("/api/videos", axum::routing::get(|| async { axum::Json(serde_json::json!([
-            { "id": 1, "title": "How to set up your first store easily", "duration": "1:20" },
-            { "id": 2, "title": "Accept your first payment", "duration": "1:15" },
-            { "id": 3, "title": "Activate your AI Support Agent", "duration": "0:50" },
-            { "id": 4, "title": "Adding staff to your account", "duration": "1:05" },
-            { "id": 5, "title": "Review an order", "duration": "1:10" },
-            { "id": 6, "title": "Send a campaign", "duration": "1:25" },
-            { "id": 7, "title": "Connect Stripe", "duration": "1:30" },
-            { "id": 8, "title": "Manage inventory", "duration": "1:00" },
-            { "id": 9, "title": "View analytics", "duration": "0:45" },
-            { "id": 10, "title": "Update your profile", "duration": "0:55" }
-        ])) }))
+        .route("/api/videos", axum::routing::get(crate::api::docs::list_videos))
+        .route("/api/changelog", axum::routing::get(crate::api::docs::get_changelog))
+        .route("/api/api-docs-spec", axum::routing::get(crate::api::docs::get_api_docs_spec))
         .route("/api/chat", axum::routing::post(|axum::Json(req): axum::Json<ChatRequest>| async move {
             let help_articles = vec![
                 ("getting started", "Welcome to One Human Corp! This is a simple app that helps you manage your small business. You can set up your store, accept payments, and hire AI helpers."),
@@ -3678,7 +3836,7 @@ async fn create_ui_bom_item_handler(
 
             let query = req.message.to_lowercase();
             let mut reply = "I am your AI Help Agent! I specialize in answering questions about OHC features and helping you grow your small business. Check out our Getting Started guide.".to_string();
-            let link_title = "Read the full article →";
+            let mut link_title = "Read the full article →";
             let mut link_url = "/help/getting-started";
 
             if query.contains("getting started") {
@@ -3702,6 +3860,10 @@ async fn create_ui_bom_item_handler(
             } else if query.contains("api") || query.contains("advanced") {
                 reply = format!("Based on our help center: {}", help_articles[6].1);
                 link_url = "/api-docs";
+            } else if query.contains("operations") {
+                reply = "I have routed your request to the Operations department.".to_string();
+                link_url = "/inbox";
+                link_title = "Check your inbox for updates →";
             }
 
             axum::Json(serde_json::json!({
@@ -3710,6 +3872,12 @@ async fn create_ui_bom_item_handler(
             }))
         }))
         .merge(webhook_router)
+        .merge(ohc_builtin_agent::visual_workflow_client::create_router(std::sync::Arc::new(ohc_builtin_agent::visual_workflow_client::VisualWorkflowState {
+            default_agent: std::sync::Arc::new(ohc_builtin_agent::agent::Agent::new(std::sync::Arc::new(ohc_builtin_agent::llm::openai::OpenAIClient::new("dummy".to_string())), vec![])),
+            tools: vec![],
+            sub_agents: std::collections::HashMap::new(),
+            default_config: ohc_builtin_agent::agent::AgentRunConfig::default(),
+        })))
         .merge(meta_webhook_router)
         .merge(health_router)
         .fallback(api_not_found_handler);
@@ -3862,5 +4030,24 @@ async fn api_not_found_handler(req: axum::extract::Request) -> impl axum::respon
     )
         .into_response()
 }
+
 pub mod crypto;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::settings::Store;
+
+    #[tokio::test]
+    async fn test_voice_settings_logic() {
+        let store = Arc::new(Store::new());
+        // Enable Voice Settings
+        store.set_voice_settings(true, Some("+15551112222".to_string()), Some("Professional".to_string())).unwrap();
+
+        let current = store.get();
+        assert_eq!(current.voice_receptionist_enabled, true);
+        assert_eq!(current.voice_receptionist_number, Some("+15551112222".to_string()));
+        assert_eq!(current.voice_receptionist_persona, Some("Professional".to_string()));
+    }
+}
 // resolves #9690

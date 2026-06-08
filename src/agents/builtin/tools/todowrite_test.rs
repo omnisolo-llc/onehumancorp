@@ -29,3 +29,30 @@ async fn test_todo_write_and_read() {
     assert!(read_res.contains("pending"));
     assert!(read_res.contains("completed"));
 }
+
+#[tokio::test]
+async fn test_todo_write_invalid_args() {
+    let todos = Arc::new(RwLock::new(Vec::new()));
+    let write_tool = todowrite_tool(todos.clone());
+
+    let write_args = serde_json::json!({
+        "wrong_field": "test"
+    });
+
+    let write_res = write_tool.execute.execute(write_args).await;
+    assert!(write_res.is_err());
+
+    // We expect LlmRecoverable
+    let err = write_res.unwrap_err();
+    assert!(err.to_string().contains("Recoverable error: Validation Error (Pydantic-first tool schema)"));
+    assert!(err.to_string().contains("missing field `todos`"));
+}
+
+#[tokio::test]
+async fn test_todo_read_empty() {
+    let todos = Arc::new(RwLock::new(Vec::new()));
+    let read_tool = todoread_tool(todos.clone());
+
+    let read_res = read_tool.execute.execute(serde_json::json!({})).await.unwrap();
+    assert_eq!(read_res, "Todo list is empty.");
+}

@@ -1,6 +1,10 @@
 import { TooltipProvider } from '../../components/TooltipRegistry';
 import { render, screen, waitFor } from '@testing-library/react';
 import Dashboard from './page';
+import { FloatingActionButton } from './components/FAB';
+vi.mock('./components/FAB', () => ({
+  FloatingActionButton: () => <div data-testid="mock-fab">Mock FAB</div>
+}));
 import { expect, test, vi } from 'vitest';
 
 vi.mock('next/navigation', () => ({
@@ -48,4 +52,6 @@ test('renders dashboard with actionable feed', async () => {
   expect(screen.getByText(/Action Required/)).toBeDefined();
   expect(screen.getByText("Recent Orders")).toBeDefined();
   expect(screen.getByText("Inbox Activity")).toBeDefined();
+  expect(screen.getByRole("link", { name: /Campaign Orchestration/i })).toHaveAttribute("href", "/dashboard/campaigns");
+  expect(screen.getByText("Pro Plan ROI Calculator")).toBeDefined();
 });

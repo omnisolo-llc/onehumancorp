@@ -33,7 +33,7 @@
       },
       "options": {
         "mode": "html",
-        "content": "<div style=\"background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 12px; padding: 20px; font-family: 'Outfit', 'Inter', sans-serif; color: #000;\">\n<link rel=\"stylesheet\" href=\"/public/css/custom.css\">\n</div>"
+        "content": "<link rel=\"stylesheet\" href=\"/public/css/custom.css\">\n"
       },
       "transparent": true
     },
@@ -46,7 +46,7 @@
       },
       "id": 2,
       "options": {
-        "content": "<div style=\"background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 12px; padding: 20px; font-family: 'Outfit', 'Inter', sans-serif; color: #000;\">\n<link rel=\"stylesheet\" href=\"/public/css/custom.css\">\n\n  OHC Premium Telemetry\n</div>",
+        "content": "<link rel=\"stylesheet\" href=\"/public/css/custom.css\">\n<div class=\"panel-container\" style=\"font-size: 24px; font-weight: bold; text-align: center; color: white; padding: 10px;\">\n  OHC Premium Telemetry\n</div>",
         "mode": "html"
       },
       "title": "Aesthetic Mandate Injector",
@@ -3218,7 +3218,7 @@
             "uid": "Prometheus"
           },
           "editorMode": "code",
-          "expr": "sum(rate(ohc_task_processing_latency_seconds_sum[5m])) by (deployment_mode) / sum(rate(ohc_task_processing_latency_seconds_count[5m])) by (deployment_mode)",
+          "expr": "rate(ohc_task_processing_latency_seconds_sum[5m]) / rate(ohc_task_processing_latency_seconds_count[5m])",
           "legendFormat": "Latency",
           "range": true,
           "refId": "A"
@@ -3747,7 +3747,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "sum(rate(ohc_task_processing_latency_seconds_sum[5m])) by (deployment_mode) / sum(rate(ohc_task_processing_latency_seconds_count[5m])) by (deployment_mode)",
+          "expr": "rate(ohc_task_processing_latency_seconds_sum[5m]) / rate(ohc_task_processing_latency_seconds_count[5m])",
           "legendFormat": "Seconds",
           "range": true,
           "refId": "A"
@@ -4091,6 +4091,65 @@
         "overrides": []
       },
       "transparent": true
+    },
+    {
+      "type": "heatmap",
+      "title": "Token Efficiency by Agent Role",
+      "gridPos": {
+        "x": 0,
+        "y": 20,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "expr": "avg(ohc_agent_roi_efficiency_score) by (agent_role, tenant_id)",
+          "format": "time_series",
+          "legendFormat": "{{tenant_id}} - {{agent_role}}"
+        }
+      ],
+      "options": {
+        "calculate": false,
+        "cellGap": 1,
+        "color": {
+          "mode": "scheme",
+          "scheme": "Oranges",
+          "steps": 64
+        },
+        "yAxis": {
+          "axisPlacement": "left"
+        }
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Swarm ROI (Tokens per Success)",
+      "gridPos": {
+        "x": 12,
+        "y": 20,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(ohc_token_usage_by_outcome_total{outcome=\"SUCCESS\"}[1h])) by (tenant_id) / sum(rate(ohc_agent_cost_total[1h])) by (tenant_id)",
+          "format": "time_series",
+          "legendFormat": "ROI Score"
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "area"
+      }
     }
   ],
   "refresh": "",

@@ -19,14 +19,14 @@ describe('GrowthReferralWidget', () => {
 
   it('renders correctly', () => {
     render(<GrowthReferralWidget />);
-    expect(screen.getByText('Invite your network, grow together')).toBeInTheDocument();
+    expect(screen.getByText('Grow Your Team')).toBeInTheDocument();
     expect(screen.getByText('Get My Invite Link')).toBeInTheDocument();
   });
 
   it('generates a link successfully', async () => {
     (global.fetch as any).mockResolvedValueOnce({
       ok: true,
-      json: async () => ({ invite_url: 'https://ohc.app/invite/123' }),
+      json: async () => ({ invite_link: 'https://ohc.app/invite/123' }),
     });
 
     render(<GrowthReferralWidget />);
@@ -62,7 +62,7 @@ describe('GrowthReferralWidget', () => {
   it('copies link to clipboard', async () => {
     (global.fetch as any).mockResolvedValueOnce({
       ok: true,
-      json: async () => ({ invite_url: 'https://ohc.app/invite/123' }),
+      json: async () => ({ invite_link: 'https://ohc.app/invite/123' }),
     });
 
     render(<GrowthReferralWidget />);
