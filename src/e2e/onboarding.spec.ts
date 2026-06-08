@@ -31,6 +31,7 @@ test.describe('Onboarding Wizard E2E Flow', () => {
     await expect(nameInput).toBeVisible();
     await expect(nameInput).toHaveClass(/min-h-\[54px\]/);
     await expect(nameInput).toHaveClass(/glassmorphism/);
+    await expect(nameInput).toHaveAttribute('autoComplete', 'organization');
 
     await nameInput.fill("My Awesome E2E Business");
     await page.getByRole('button', { name: 'Next' }).click();
@@ -78,18 +79,22 @@ test.describe('Onboarding Wizard E2E Flow', () => {
     await expect(nameInputAdmin).toBeVisible();
     await expect(nameInputAdmin).toHaveClass(/min-h-\[54px\]/);
     await expect(nameInputAdmin).toHaveClass(/glassmorphism/);
+    await expect(nameInputAdmin).toHaveAttribute('autoComplete', 'name');
     await nameInputAdmin.fill("Test User");
 
     const emailInput = page.getByPlaceholder("you@example.com");
     await expect(emailInput).toBeVisible();
     await expect(emailInput).toHaveClass(/min-h-\[54px\]/);
     await expect(emailInput).toHaveClass(/glassmorphism/);
+    await expect(emailInput).toHaveAttribute('inputMode', 'email');
+    await expect(emailInput).toHaveAttribute('autoComplete', 'email');
     await emailInput.fill("admin@myawesomebusiness.com");
 
     const passwordInput = page.getByPlaceholder("••••••••");
     await expect(passwordInput).toBeVisible();
     await expect(passwordInput).toHaveClass(/min-h-\[54px\]/);
     await expect(passwordInput).toHaveClass(/glassmorphism/);
+    await expect(passwordInput).toHaveAttribute('autoComplete', 'new-password');
     await passwordInput.fill("SecurePass123");
 
     // Launch Store

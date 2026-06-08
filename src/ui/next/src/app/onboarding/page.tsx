@@ -650,6 +650,7 @@ export default function OnboardingWizard() {
                         autoFocus
                         enterKeyHint="next"
                         autoCapitalize="words"
+                        autoComplete="organization"
                         value={businessName}
                         onChange={(e) => setBusinessName(e.target.value)}
                         onKeyDown={(e) => {
@@ -1093,6 +1094,7 @@ export default function OnboardingWizard() {
                         type="text"
                         enterKeyHint="next"
                         autoCapitalize="words"
+                        autoComplete="name"
                         value={adminName}
                         onChange={(e) => {
                           const val = e.target.value;
@@ -1114,6 +1116,8 @@ export default function OnboardingWizard() {
                         type="email"
                         enterKeyHint="next"
                         autoCapitalize="none"
+                        inputMode="email"
+                        autoComplete="email"
                         value={adminEmail}
                         onChange={(e) => {
                           const val = e.target.value;
@@ -1136,6 +1140,7 @@ export default function OnboardingWizard() {
                       <input
                         type="password"
                         enterKeyHint="done"
+                        autoComplete="new-password"
                         value={adminPassword}
                         onChange={(e) => {
                           const val = e.target.value;
