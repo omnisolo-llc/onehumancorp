@@ -46,7 +46,8 @@ test.describe('Help Center Complete UI Flow', () => {
     await expect(page.getByText('Accept your first payment')).toBeVisible();
 
     // Click the video
-    await page.getByText('Accept your first payment').click();
+    await page.getByTestId('video-card-2').click({ force: true });
+    await page.locator('video').waitFor({ state: 'visible' });
 
     // Expect the video player modal
     const videoModal = page.locator('video');

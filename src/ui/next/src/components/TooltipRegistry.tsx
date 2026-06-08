@@ -44,6 +44,7 @@ export function TooltipProvider({ children }: { children: ReactNode }) {
       {children}
       {activeTooltip && tooltipRect && (
         <div
+          role="tooltip"
           className="fixed z-[100] bg-gray-900/80 text-white text-sm font-inter p-3 rounded-lg shadow-[0_8px_32px_rgba(0,0,0,0.12)] pointer-events-none w-64 max-w-[calc(100vw-32px)] mx-4 text-center leading-relaxed backdrop-blur-[40px] saturate-200 border border-white/40 animate-fade-in-up"
           style={{
             top: tooltipRect.top - 10,
