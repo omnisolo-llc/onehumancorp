@@ -238,7 +238,7 @@ export default function CheckoutPage() {
                 <button
                   onClick={handlePlanUpgrade}
                   disabled={isProcessing}
-                  className={"w-full px-4 py-3 text-white rounded-lg font-medium transition-colors shadow-sm " + (isProcessing ? 'bg-indigo-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700')}
+                  className={"w-full min-h-[44px] px-4 py-3 text-white rounded-lg font-medium transition-colors shadow-sm " + (isProcessing ? 'bg-indigo-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700')}
                 >
                   {isProcessing ? 'Processing...' : 'Pay with Stripe'}
                 </button>
@@ -247,7 +247,7 @@ export default function CheckoutPage() {
               <WithTooltip id="checkout-cancel-tooltip" defaultText="Go back to the previous screen without subscribing.">
                 <button
                   onClick={() => router.push('/pricing')}
-                  className="w-full px-4 py-3 bg-gray-200 text-gray-800 rounded-lg font-medium hover:bg-gray-300 transition-colors"
+                  className="w-full min-h-[44px] px-4 py-3 bg-gray-200 text-gray-800 rounded-lg font-medium hover:bg-gray-300 transition-colors"
                 >
                   Cancel
                 </button>
@@ -283,7 +283,7 @@ export default function CheckoutPage() {
             <button
               onClick={checkDeliveryEligibility}
               disabled={isCheckingDelivery || !deliveryAddress}
-              className="px-4 py-2 bg-gray-900 text-white rounded-lg font-medium hover:bg-gray-800 transition-colors shadow-sm disabled:opacity-50 text-sm whitespace-nowrap"
+              className="min-h-[44px] min-w-[44px] px-4 py-2 bg-gray-900 text-white rounded-lg font-medium hover:bg-gray-800 transition-colors shadow-sm disabled:opacity-50 text-sm whitespace-nowrap"
             >
               {isCheckingDelivery ? "Checking..." : "Check"}
             </button>
@@ -350,7 +350,7 @@ export default function CheckoutPage() {
             <button
               onClick={() => handlePayment(false)}
               disabled={isProcessing}
-              className={`w-full px-4 py-3 text-white rounded-lg font-medium transition-colors shadow-sm ${isProcessing ? "bg-indigo-400 cursor-not-allowed" : "bg-indigo-600 hover:bg-indigo-700"}`}
+              className={`w-full min-h-[44px] px-4 py-3 text-white rounded-lg font-medium transition-colors shadow-sm ${isProcessing ? "bg-indigo-400 cursor-not-allowed" : "bg-indigo-600 hover:bg-indigo-700"}`}
             >
               {isProcessing ? "Processing..." : "Pay Now"}
             </button>
@@ -363,7 +363,7 @@ export default function CheckoutPage() {
             <button
               onClick={() => handlePayment(true)}
               disabled={isProcessing}
-              className={`w-full px-4 py-3 text-white rounded-lg font-medium transition-colors shadow-sm ${isProcessing ? "bg-green-400 cursor-not-allowed" : "bg-green-600 hover:bg-green-700"}`}
+              className={`w-full min-h-[44px] px-4 py-3 text-white rounded-lg font-medium transition-colors shadow-sm ${isProcessing ? "bg-green-400 cursor-not-allowed" : "bg-green-600 hover:bg-green-700"}`}
             >
               {isProcessing
                 ? "Processing..."
@@ -401,7 +401,7 @@ export default function CheckoutPage() {
                   setShowSuccessModal(true);
                 }
               }}
-              className="w-full px-4 py-3 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 transition-colors shadow-sm"
+              className="w-full min-h-[44px] px-4 py-3 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 transition-colors shadow-sm"
             >
               Tap to Pay (Stripe Terminal)
             </button>
@@ -414,7 +414,7 @@ export default function CheckoutPage() {
             <button
               onClick={startMercadoPagoCheckout}
               disabled={isMercadoPagoProcessing}
-              className="w-full px-4 py-3 bg-[#009EE3] text-white rounded-lg font-medium hover:bg-[#007ebd] transition-colors shadow-sm flex items-center justify-center gap-2"
+              className="w-full min-h-[44px] px-4 py-3 bg-[#009EE3] text-white rounded-lg font-medium hover:bg-[#007ebd] transition-colors shadow-sm flex items-center justify-center gap-2"
             >
               {isMercadoPagoProcessing
                 ? "Preparing Mercado Pago..."
@@ -434,7 +434,7 @@ export default function CheckoutPage() {
           >
             <button
               onClick={() => router.push("/pricing")}
-              className="w-full px-4 py-3 bg-gray-200 text-gray-800 rounded-lg font-medium hover:bg-gray-300 transition-colors"
+              className="w-full min-h-[44px] px-4 py-3 bg-gray-200 text-gray-800 rounded-lg font-medium hover:bg-gray-300 transition-colors"
             >
               Cancel
             </button>
@@ -575,7 +575,7 @@ export default function CheckoutPage() {
 
               <button
                 onClick={() => router.push("/dashboard")}
-                className="w-full px-4 py-3 text-indigo-600 bg-indigo-50 rounded-lg font-medium hover:bg-indigo-100 transition-colors"
+                className="w-full min-h-[44px] px-4 py-3 text-indigo-600 bg-indigo-50 rounded-lg font-medium hover:bg-indigo-100 transition-colors"
               >
                 Continue to Dashboard
               </button>

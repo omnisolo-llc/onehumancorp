@@ -99,7 +99,7 @@ impl MinimaxClient {
         MinimaxClient {
             api_key,
             url: "https://api.minimax.chat/v1/chat/completions".to_string(),
-            cache: PromptCache::new(Duration::from_secs(300)),
+            cache: PromptCache::new(::server_pricing::rate_limit::PlanTier::Free.get_prompt_cache_ttl()),
             deduplicator: std::sync::Arc::new(RequestDeduplicator::new(Duration::from_secs(5))), // 5 minute TTL
         }
     }
@@ -420,7 +420,7 @@ impl LocalLLMClient {
         let model = std::env::var("OHC_LOCAL_MODEL_NAME")
             .unwrap_or_else(|_| "llama3".to_string());
             
-        LocalLLMClient { endpoint, embed_endpoint, model, cache: PromptCache::new(Duration::from_secs(300)), deduplicator: std::sync::Arc::new(RequestDeduplicator::new(Duration::from_secs(5))) }
+        LocalLLMClient { endpoint, embed_endpoint, model, cache: PromptCache::new(::server_pricing::rate_limit::PlanTier::Free.get_prompt_cache_ttl()), deduplicator: std::sync::Arc::new(RequestDeduplicator::new(Duration::from_secs(5))) }
     }
 
     pub async fn reason(&self, prompt: &str) -> Result<String, String> {
