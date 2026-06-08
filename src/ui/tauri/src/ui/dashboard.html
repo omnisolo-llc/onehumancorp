@@ -159,6 +159,13 @@
           background-color: #48484a;
         }
       }
+      .dashboard-links {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        margin-top: 20px;
+        width: 100%;
+      }
     </style>
   </head>
   <body>
@@ -180,6 +187,11 @@
             <button class="btn-secondary" id="copy-btn">Copy</button>
             <button class="btn-secondary" id="share-whatsapp-btn">Share on WhatsApp</button>
           </div>
+        </div>
+
+        <div class="dashboard-links">
+            <button id="my-plan-btn" class="btn-secondary">My Plan & Billing</button>
+            <button id="pricing-btn" class="btn-secondary">View Pricing Options</button>
         </div>
       </div>
     </div>
@@ -225,6 +237,21 @@
           copyBtn.innerText = "Copy";
         }, 2000);
       });
+
+      const myPlanBtn = document.getElementById("my-plan-btn");
+      const pricingBtn = document.getElementById("pricing-btn");
+
+      if (myPlanBtn) {
+        myPlanBtn.addEventListener("click", () => {
+            window.location.href = "plan.html";
+        });
+      }
+      if (pricingBtn) {
+        pricingBtn.addEventListener("click", () => {
+            window.location.href = "pricing.html";
+        });
+      }
     </script>
+
   </body>
 </html>

@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>My Plan</title>
+    <style>
+      body { font-family: "Outfit", sans-serif; background: #f5f5f7; padding: 20px; }
+      .container { background: rgba(255, 255, 255, 0.65); padding: 40px; border-radius: 16px; text-align: center; max-width: 600px; margin: 0 auto; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1); }
+      h1 { margin-bottom: 20px; }
+      .usage-bar { width: 100%; height: 20px; background: #eee; border-radius: 10px; overflow: hidden; margin-bottom: 30px; }
+      .usage-fill { height: 100%; background: #0066FF; width: 0%; transition: width 0.3s ease; }
+      button { background: #0066FF; color: white; padding: 10px 20px; border-radius: 8px; border: none; cursor: pointer; }
+      button.back { background: #e5e5ea; color: #1d1d1f; margin-right: 10px; }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1 id="plan-title">Loading...</h1>
+      <p id="next-bill">Estimated Next Bill: Loading...</p>
+
+      <div style="text-align:left; margin-bottom: 5px;" id="ai-actions-label">AI Actions Used (0 / 0)</div>
+      <div class="usage-bar"><div class="usage-fill" id="ai-actions-fill"></div></div>
+
+      <div style="text-align:left; margin-bottom: 5px;" id="storage-label">Storage Used (0 / 0)</div>
+      <div class="usage-bar"><div class="usage-fill" id="storage-fill" style="background:#34C759"></div></div>
+
+      <div>
+        <button class="back" onclick="window.location.href='dashboard.html'">Back</button>
+        <button onclick="window.location.href='pricing.html'">Upgrade Plan</button>
+      </div>
+    </div>
+    <script>
+        fetch('/api/billing/my-plan')
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById('plan-title').innerText = "My Plan: " + data.current_plan;
+                document.getElementById('next-bill').innerText = "Estimated Next Bill: $" + (data.next_bill_estimated / 100).toFixed(2);
+
+                const aiLabel = document.getElementById('ai-actions-label');
+                const aiFill = document.getElementById('ai-actions-fill');
+                aiLabel.innerText = "AI Actions Used (" + data.ai_actions_used + " / " + (data.ai_actions_limit || 'Unlimited') + ")";
+                if (data.ai_actions_limit) {
+                    aiFill.style.width = Math.min((data.ai_actions_used / data.ai_actions_limit) * 100, 100) + "%";
+                } else {
+                    aiFill.style.width = "100%";
+                }
+
+                const formatStorage = (bytes) => {
+                    const mb = bytes / (1024 * 1024);
+                    if (mb < 1) return "< 1 MB";
+                    if (mb >= 1024) return (mb / 1024).toFixed(2) + " GB";
+                    return mb.toFixed(1) + " MB";
+                };
+
+                const storageLabel = document.getElementById('storage-label');
+                const storageFill = document.getElementById('storage-fill');
+                storageLabel.innerText = "Storage Used (" + formatStorage(data.storage_used_bytes || 0) + " / " + (data.storage_limit_bytes ? formatStorage(data.storage_limit_bytes) : 'Unlimited') + ")";
+
+                if (data.storage_limit_bytes) {
+                    storageFill.style.width = Math.min(((data.storage_used_bytes || 0) / data.storage_limit_bytes) * 100, 100) + "%";
+                } else {
+                    storageFill.style.width = "100%";
+                }
+            })
+            .catch(e => {
+                document.getElementById('plan-title').innerText = "My Plan: Error loading data";
+                document.getElementById('next-bill').innerText = "Estimated Next Bill: --";
+            });
+    </script>
+  </body>
+</html>

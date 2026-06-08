@@ -59,7 +59,7 @@ export default function CostDashboardPage() {
         const headers = { 'Authorization': `Bearer ${token}` };
 
         const [costRes, planRes] = await Promise.all([
-          fetch('/api/billing/cost-dashboard', { headers }),
+          fetch('/api/billing/dashboard', { headers }),
           fetch('/api/billing/my-plan', { headers })
         ]);
 
