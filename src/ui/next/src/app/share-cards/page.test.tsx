@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, act } from '@testing-library/react';
 import ShareCardsPage from './page';
 import { describe, it, expect, vi } from 'vitest';
 
@@ -21,7 +21,27 @@ describe('ShareCardsPage', () => {
 
   it('renders Powered by OHC branding in preview', () => {
     render(<ShareCardsPage />);
-    const branding = screen.getByText(/Powered by OHC/i);
-    expect(branding).toBeInTheDocument();
+    const brandingElements = screen.getAllByText(/Powered by OHC/i);
+    expect(brandingElements.length).toBeGreaterThan(0);
+  });
+
+  it('shows soft paywall when trying to remove branding without Pro', () => {
+    window.localStorage.setItem('has_pro', 'false');
+    render(<ShareCardsPage />);
+    const toggle = screen.getByRole('checkbox');
+    act(() => {
+        toggle.click();
+    });
+    expect(screen.getAllByText('Upgrade to Pro').length).toBeGreaterThan(0);
+  });
+
+  it('allows removing branding with Pro', () => {
+    window.localStorage.setItem('has_pro', 'true');
+    render(<ShareCardsPage />);
+    const toggle = screen.getByRole('checkbox');
+    act(() => {
+        toggle.click();
+    });
+    expect(screen.queryByText('Powered by OHC')).toBeNull();
   });
 });

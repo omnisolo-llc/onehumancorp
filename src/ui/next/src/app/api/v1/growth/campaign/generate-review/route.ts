@@ -4,7 +4,7 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
 
-    const backendUrl = process.env.BACKEND_URL || 'http://localhost:8080';
+    const backendUrl = process.env.BACKEND_URL || 'http://127.0.0.1:18789';
     let backendRes;
     try {
         backendRes = await fetch(`${backendUrl}/api/v1/growth/campaign/generate-review`, {
@@ -25,13 +25,13 @@ export async function POST(request: Request) {
         const product = product_name || 'your order';
         const id = order_id || 'recent';
 
-        const message = `Hi ${name},\n\nWe noticed you recently received your ${product} and we hope you are absolutely loving it!\n\nAs a small business, we rely on feedback from amazing customers like you to grow and improve. If you have a minute, we would be incredibly grateful if you could share your thoughts by leaving a quick review here: https://ohc.store/review/${id}\n\nWarmly,\nThe Team\n\n⚡ Powered by OHC`;
+        const message = `Hi ${name},\n\nWe noticed you recently received your ${product} and we hope you are absolutely loving it!\n\nAs a small business, we rely on feedback from amazing customers like you to grow and improve. If you have a minute, we would be incredibly grateful if you could share your thoughts by leaving a quick review here: /review-campaigns?order=${id}\n\nWarmly,\nThe Team\n\n⚡ Powered by OHC`;
 
         return NextResponse.json({ message });
     }
   } catch (error) {
     console.error("Error generating review campaign message:", error);
-    const message = `Hi Customer,\n\nWe noticed you recently received your your order and we hope you are absolutely loving it!\n\nAs a small business, we rely on feedback from amazing customers like you to grow and improve. If you have a minute, we would be incredibly grateful if you could share your thoughts by leaving a quick review here: https://ohc.store/review/recent\n\nWarmly,\nThe Team\n\n⚡ Powered by OHC`;
+    const message = `Hi Customer,\n\nWe noticed you recently received your your order and we hope you are absolutely loving it!\n\nAs a small business, we rely on feedback from amazing customers like you to grow and improve. If you have a minute, we would be incredibly grateful if you could share your thoughts by leaving a quick review here: /review-campaigns?order=recent\n\nWarmly,\nThe Team\n\n⚡ Powered by OHC`;
     return NextResponse.json({ message });
   }
 }

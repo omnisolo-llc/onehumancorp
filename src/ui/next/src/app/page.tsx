@@ -1,9 +1,8 @@
 'use client';
-import { useEffect } from 'react';
+import { useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Suspense } from 'react';
 
-function PageContent() {
+function HomeContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -27,7 +26,7 @@ function PageContent() {
 export default function Home() {
   return (
     <Suspense fallback={null}>
-      <PageContent />
+      <HomeContent />
     </Suspense>
   );
 }

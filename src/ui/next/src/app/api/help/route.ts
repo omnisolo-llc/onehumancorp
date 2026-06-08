@@ -1,12 +1,21 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, NextRequest } from 'next/server';
 
-export async function GET() {
-  return NextResponse.json([
-    { title: "Getting Started", desc: "Learn how to easily set up your store and accept your first payment.", link: "/help/getting-started-1" },
-    { title: "My Store", desc: "Add products, track what's in stock, and change how your store looks.", link: "/help/my-store" },
-    { title: "Getting Paid", desc: "Set up how you get paid, view deposits, and handle simple taxes.", link: "/help/payments" },
-    { title: "Your AI Helpers", desc: "Learn how to hire AI helpers and give them tasks to do.", link: "/help/ai-agents" },
-    { title: "Finding Customers", desc: "Send emails to customers and grow your business easily.", link: "/help/marketing" },
-    { title: "Account & Billing", desc: "View your bills, manage your plan, and invite team members.", link: "/help/account-billing" }
-  ]);
+export async function GET(request: NextRequest) {
+  const backendUrl = process.env.BACKEND_URL || 'http://127.0.0.1:18789';
+
+  try {
+    const res = await fetch(`${backendUrl}/api/help`).catch(() => null);
+
+    if (res && res.ok) {
+      const data = await res.json();
+      return NextResponse.json(data);
+    }
+
+    return NextResponse.json([], { status: res?.status || 500 });
+  } catch (e) {
+    if (process.env.NODE_ENV !== "test" && process.env.CI !== "1") {
+      console.error("Failed to fetch help from backend:", e);
+    }
+    return NextResponse.json([], { status: 500 });
+  }
 }

@@ -9,6 +9,8 @@ export default function StorefrontWidgetPage() {
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [copied, setCopied] = useState(false);
   const [showModal, setShowModal] = useState(false);
+  const [removeBranding, setRemoveBranding] = useState(false);
+  const [previewStatus, setPreviewStatus] = useState('');
 
   useEffect(() => {
     if (typeof localStorage !== 'undefined') {
@@ -18,7 +20,7 @@ export default function StorefrontWidgetPage() {
     document.title = "Embed Your Store | OHC";
   }, []);
 
-  const embedCode = `<iframe src="https://ohc.app/api/v1/growth/storefront/embed?tenant=${tenant}&theme=${theme}" width="320" height="400" frameborder="0" scrolling="no" style="border:none; overflow:hidden; border-radius:16px;"></iframe>`;
+  const embedCode = `<iframe src="https://ohc.app/api/v1/growth/storefront/embed?tenant=${tenant}&theme=${theme}" width="320" height="400" frameborder="0" scrolling="no" style="border:none; overflow:hidden; border-radius:16px;"></iframe>` + (removeBranding ? '' : `\n<div style="font-family: sans-serif; text-align: center; font-size: 12px; margin-top: 8px;"><a href="/api/v1/growth/referrals/click?target=/onboarding&ref=${tenant}" target="_blank" style="color: #6b7280; text-decoration: none; font-weight: 600;">⚡ Powered by OHC</a></div>`);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(embedCode);
@@ -62,12 +64,14 @@ export default function StorefrontWidgetPage() {
                     <label className="block text-sm font-medium text-gray-700 mb-2">Theme</label>
                     <div className="flex bg-gray-100 p-1 rounded-lg">
                         <button
+                            aria-pressed={theme === 'light'}
                             onClick={() => setTheme('light')}
                             className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${theme === 'light' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
                         >
                             Light
                         </button>
                         <button
+                            aria-pressed={theme === 'dark'}
                             onClick={() => setTheme('dark')}
                             className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${theme === 'dark' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
                         >
@@ -86,6 +90,18 @@ export default function StorefrontWidgetPage() {
                         placeholder="e.g. my-store"
                     />
                     <p className="text-xs text-gray-500 mt-2">Used to link the widget to your store.</p>
+                </div>
+
+                <div className="mb-6">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                            type="checkbox"
+                            checked={removeBranding}
+                            onChange={(e) => setRemoveBranding(e.target.checked)}
+                            className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                        />
+                        <span className="text-sm font-medium text-gray-700">Remove "Powered by OHC" Badge (Pro)</span>
+                    </label>
                 </div>
 
                 <button
@@ -129,12 +145,27 @@ export default function StorefrontWidgetPage() {
                             <span className={`text-xs font-semibold px-2 py-1 rounded ${theme === 'dark' ? 'bg-green-900/30 text-green-400' : 'bg-green-50 text-green-600'}`}>In Stock</span>
                         </div>
 
-                        <button className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg text-sm flex items-center justify-center gap-2 transition-colors">
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setPreviewStatus('Preview product added to checkout.');
+                                router.push('/checkout');
+                            }}
+                            className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg text-sm flex items-center justify-center gap-2 transition-colors"
+                        >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
                             Buy Now
                         </button>
+                        {previewStatus && <p className="mt-2 text-xs font-semibold text-blue-600" role="status">{previewStatus}</p>}
                     </div>
                 </div>
+                {!removeBranding && (
+                    <div className="mt-2 text-center" style={{ fontFamily: 'sans-serif', fontSize: '12px' }}>
+                        <a href={`/api/v1/growth/referrals/click?target=/onboarding&ref=${tenant}`} target="_blank" rel="noopener noreferrer" style={{ color: '#6b7280', textDecoration: 'none', fontWeight: 600 }}>
+                            ⚡ Powered by OHC
+                        </a>
+                    </div>
+                )}
             </div>
         </div>
       </main>
@@ -144,6 +175,7 @@ export default function StorefrontWidgetPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
             <div className="bg-white rounded-[24px] p-8 max-w-xl w-full shadow-2xl relative animate-in fade-in zoom-in-95 duration-200">
                 <button
+                    aria-label="Close embed modal"
                     onClick={() => setShowModal(false)}
                     className="absolute top-6 right-6 text-gray-400 hover:text-gray-600 transition-colors"
                 >

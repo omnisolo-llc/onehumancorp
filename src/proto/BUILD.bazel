@@ -251,3 +251,35 @@ proto_rust_library(
     use_grpc = True,
     visibility = ["//visibility:public"],
 )
+
+# ── Collective ──────────────────────────────────────────────────────────────────
+
+proto_library(
+    name = "collective_proto",
+    srcs = ["collective.proto"],
+    deps = [
+        ":common_proto",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+proto_rust_library(
+    name = "collective",
+    proto = ":collective_proto",
+    use_grpc = True,
+    visibility = ["//visibility:public"],
+)
+
+proto_library(
+    name = "ledger_proto",
+    srcs = ["ledger.proto"],
+    deps = [],
+    visibility = ["//visibility:public"],
+)
+
+proto_rust_library(
+    name = "ledger",
+    proto = ":ledger_proto",
+    use_grpc = True,
+    visibility = ["//visibility:public"],
+)

@@ -1,27 +1,39 @@
 use ohc_builtin_agent_core::types::ToolError;
 use async_recursion::async_recursion;
 use regex::Regex;
-use serde_json::{json, Value};
+use serde_json::json;
+use serde::Deserialize;
 use std::sync::Arc;
 
-use super::{Tool, ToolExecutor};
+use super::{Tool, pydantic::{PydanticToolExecutor, PydanticAdapter}};
+
+#[derive(Deserialize)]
+struct GrepArgs {
+    pattern: String,
+    #[serde(default = "default_path")]
+    path: String,
+    #[serde(default)]
+    case_insensitive: bool,
+    #[serde(default)]
+    include: Option<String>,
+}
+
+fn default_path() -> String { ".".to_string() }
 
 struct GrepExecutor {
     working_dir: Option<std::path::PathBuf>,
 }
 
 #[async_trait::async_trait]
-impl ToolExecutor for GrepExecutor {
-    async fn execute(
+impl PydanticToolExecutor<GrepArgs> for GrepExecutor {
+    async fn execute_typed(
         &self,
-        args: Value,
+        args: GrepArgs,
     ) -> Result<String, ToolError> {
-        let pattern = args["pattern"]
-            .as_str()
-            .ok_or_else(|| ToolError::LlmRecoverable("grep: pattern is required".to_string()))?;
-        let path = args["path"].as_str().unwrap_or(".");
-        let case_insensitive = args["case_insensitive"].as_bool().unwrap_or(false);
-        let include_pattern = args["include"].as_str().map(str::to_string);
+        let pattern = &args.pattern;
+        let path = &args.path;
+        let case_insensitive = args.case_insensitive;
+        let include_pattern = args.include;
 
         let re = if case_insensitive {
             Regex::new(&format!("(?i){}", pattern))
@@ -121,7 +133,7 @@ fn matches_include(filename: &str, include: &str) -> bool {
 pub fn grep_tool(working_dir: Option<std::path::PathBuf>) -> Tool {
     Tool {
         name: "Grep".to_string(),
-        description: "Search for a regex pattern in files under a directory. Returns file:line:content matches. Used for Just-in-Time (JIT) Context Retrieval.".to_string(),
+        description: "Search for a regex pattern in files under a directory. Returns file:line:content matches. Used for Context Management (Preventing Context Rot): Just-in-Time (JIT) Context Retrieval.".to_string(),
         is_read_only: true,
         parameters: json!({
             "type": "object",
@@ -145,7 +157,7 @@ pub fn grep_tool(working_dir: Option<std::path::PathBuf>) -> Tool {
             },
             "required": ["pattern"]
         }),
-        execute: Arc::new(GrepExecutor { working_dir }),
+        execute: Arc::new(PydanticAdapter::new(GrepExecutor { working_dir })),
     }
 }
 
@@ -172,14 +184,14 @@ mod tests {
             }
         }
 
-        let executor = GrepExecutor { working_dir: Some(test_dir.clone()) };
+        let executor = PydanticAdapter::new(GrepExecutor { working_dir: Some(test_dir.clone()) });
 
         let args = json!({
             "pattern": "critical failure",
             "path": ".",
         });
 
-        let result = executor.execute(args).await.unwrap();
+        let result = crate::ToolExecutor::execute(&executor, args).await.unwrap();
         let _expected_path = test_file.strip_prefix(&test_dir).unwrap_or(&test_file);
         // The display string might be just the name if we strip it
         assert!(result.contains("critical failure found here!"));

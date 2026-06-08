@@ -23,12 +23,11 @@ use sqlx::Row;
 
 macro_rules! validate_org_id {
     ($org_id:expr) => {
-        if $org_id.trim() == "system" {
-            if ::server_config::get().multitenant {
+        if ::server_config::get().multitenant {
+            if $org_id.trim().eq_ignore_ascii_case("system") {
                 return Err("tenant_id 'system' cannot be queried in multi-tenant mode".into());
             }
-        } else if $org_id.trim().is_empty() {
-            if ::server_config::get().multitenant {
+            if $org_id.trim().is_empty() {
                 return Err("empty tenant_id is not allowed in multi-tenant mode".into());
             }
         }
@@ -81,13 +80,28 @@ impl UserRepository for PgUserRepository {
 
     async fn get_by_id(&self, id: &str, org_id: &str) -> Result<User, String> {
         validate_org_id!(org_id);
-        let query = "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE id = $1 AND tenant_id = $2";
+
+        let is_multitenant = ::server_config::get().multitenant;
+        let should_bypass = !is_multitenant;
+
+        let query = if should_bypass {
+            "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE id = $1"
+        } else {
+            "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE id = $1 AND tenant_id = $2"
+        };
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
-        let tenant_id = org_id;
-        set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
 
-        let row = sqlx::query(query).bind(id).bind(org_id).fetch_one(&mut *tx).await.map_err(|e| e.to_string())?;
+        if !should_bypass {
+            let tenant_id = org_id;
+            set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
+        }
+
+        let row = if should_bypass {
+            sqlx::query(query).bind(id).fetch_one(&mut *tx).await.map_err(|e| e.to_string())?
+        } else {
+            sqlx::query(query).bind(id).bind(org_id).fetch_one(&mut *tx).await.map_err(|e| e.to_string())?
+        };
 
         // Parse roles from JSON string
         let roles_json: String = row.get("roles");
@@ -109,14 +123,28 @@ impl UserRepository for PgUserRepository {
 
     async fn get_by_username(&self, username: &str, org_id: &str) -> Result<User, String> {
         validate_org_id!(org_id);
-        // Similar to get_by_id but query by username
-        let query = "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE username = $1 AND tenant_id = $2";
+
+        let is_multitenant = ::server_config::get().multitenant;
+        let should_bypass = !is_multitenant;
+
+        let query = if should_bypass {
+            "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE username = $1"
+        } else {
+            "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE username = $1 AND tenant_id = $2"
+        };
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
-        let tenant_id = org_id;
-        set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
 
-        let row = sqlx::query(query).bind(username).bind(org_id).fetch_one(&mut *tx).await.map_err(|e| e.to_string())?;
+        if !should_bypass {
+            let tenant_id = org_id;
+            set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
+        }
+
+        let row = if should_bypass {
+            sqlx::query(query).bind(username).fetch_one(&mut *tx).await.map_err(|e| e.to_string())?
+        } else {
+            sqlx::query(query).bind(username).bind(org_id).fetch_one(&mut *tx).await.map_err(|e| e.to_string())?
+        };
 
         let roles_json: String = row.get("roles");
         let roles: Vec<String> = serde_json::from_str(&roles_json).unwrap_or_default();
@@ -137,14 +165,28 @@ impl UserRepository for PgUserRepository {
 
     async fn get_by_email(&self, email: &str, org_id: &str) -> Result<User, String> {
         validate_org_id!(org_id);
-        // Similar to get_by_id but query by email
-        let query = "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE email = $1 AND tenant_id = $2";
+
+        let is_multitenant = ::server_config::get().multitenant;
+        let should_bypass = !is_multitenant;
+
+        let query = if should_bypass {
+            "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE email = $1"
+        } else {
+            "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE email = $1 AND tenant_id = $2"
+        };
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
-        let tenant_id = org_id;
-        set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
 
-        let row = sqlx::query(query).bind(email).bind(org_id).fetch_one(&mut *tx).await.map_err(|e| e.to_string())?;
+        if !should_bypass {
+            let tenant_id = org_id;
+            set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
+        }
+
+        let row = if should_bypass {
+            sqlx::query(query).bind(email).fetch_one(&mut *tx).await.map_err(|e| e.to_string())?
+        } else {
+            sqlx::query(query).bind(email).bind(org_id).fetch_one(&mut *tx).await.map_err(|e| e.to_string())?
+        };
 
         let roles_json: String = row.get("roles");
         let roles: Vec<String> = serde_json::from_str(&roles_json).unwrap_or_default();
@@ -165,14 +207,28 @@ impl UserRepository for PgUserRepository {
 
     async fn get_by_oidc_subject(&self, sub: &str, org_id: &str) -> Result<User, String> {
         validate_org_id!(org_id);
-        // Similar to get_by_id but query by oidc_subject
-        let query = "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE oidc_subject = $1 AND tenant_id = $2";
+
+        let is_multitenant = ::server_config::get().multitenant;
+        let should_bypass = !is_multitenant;
+
+        let query = if should_bypass {
+            "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE oidc_subject = $1"
+        } else {
+            "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE oidc_subject = $1 AND tenant_id = $2"
+        };
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
-        let tenant_id = org_id;
-        set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
 
-        let row = sqlx::query(query).bind(sub).bind(org_id).fetch_one(&mut *tx).await.map_err(|e| e.to_string())?;
+        if !should_bypass {
+            let tenant_id = org_id;
+            set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
+        }
+
+        let row = if should_bypass {
+            sqlx::query(query).bind(sub).fetch_one(&mut *tx).await.map_err(|e| e.to_string())?
+        } else {
+            sqlx::query(query).bind(sub).bind(org_id).fetch_one(&mut *tx).await.map_err(|e| e.to_string())?
+        };
 
         let roles_json: String = row.get("roles");
         let roles: Vec<String> = serde_json::from_str(&roles_json).unwrap_or_default();
@@ -193,13 +249,25 @@ impl UserRepository for PgUserRepository {
 
     async fn list_users(&self, org_id: &str) -> Result<Vec<User>, String> {
         validate_org_id!(org_id);
-        let query = "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE tenant_id = $1 ORDER BY created_at";
+        let is_multitenant = ::server_config::get().multitenant;
+        let should_bypass = !is_multitenant;
+        let query = if should_bypass {
+            "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users ORDER BY created_at"
+        } else {
+            "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE tenant_id = $1 ORDER BY created_at"
+        };
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
-        let tenant_id = org_id;
-        set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
+        if !should_bypass {
+            let tenant_id = org_id;
+            set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
+        }
 
-        let rows = sqlx::query(query).bind(org_id).fetch_all(&mut *tx).await.map_err(|e| e.to_string())?;
+        let rows = if should_bypass {
+            sqlx::query(query).fetch_all(&mut *tx).await.map_err(|e| e.to_string())?
+        } else {
+            sqlx::query(query).bind(org_id).fetch_all(&mut *tx).await.map_err(|e| e.to_string())?
+        };
 
         let mut users = Vec::new();
         for row in rows {
@@ -225,31 +293,59 @@ impl UserRepository for PgUserRepository {
     async fn update_user(&self, user: User, org_id: &str) -> Result<(), String> {
         validate_org_id!(org_id);
         let roles_json = serde_json::to_string(&user.roles).unwrap_or_default();
+        let is_multitenant = ::server_config::get().multitenant;
+        let should_bypass = !is_multitenant;
 
-        let query = r#"
+        let query = if should_bypass {
+            r#"
+            UPDATE users SET username=$2, email=$3, password_hash=$4, roles=$5, active=$6,
+            tenant_id=$7, oidc_subject=$8, updated_at=$9
+            WHERE id=$1 RETURNING id
+            "#
+        } else {
+            r#"
             UPDATE users SET username=$2, email=$3, password_hash=$4, roles=$5, active=$6,
             tenant_id=$7, oidc_subject=$8, updated_at=$9
             WHERE id=$1 AND tenant_id = $10 RETURNING id
-            "#;
+            "#
+        };
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
-        let tenant_id = org_id;
-        set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
+        if !should_bypass {
+            let tenant_id = org_id;
+            set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
+        }
 
-        let res = sqlx::query(query)
-            .bind(&user.id)
-            .bind(&user.username)
-            .bind(&user.email)
-            .bind(&user.password_hash)
-            .bind(roles_json)
-            .bind(user.active)
-            .bind(org_id)
-            .bind(&user.oidc_subject)
-            .bind(user.updated_at)
-            .bind(org_id)
-            .fetch_optional(&mut *tx)
-            .await
-            .map_err(|e| e.to_string())?;
+        let res = if should_bypass {
+            sqlx::query(query)
+                .bind(&user.id)
+                .bind(&user.username)
+                .bind(&user.email)
+                .bind(&user.password_hash)
+                .bind(roles_json)
+                .bind(user.active)
+                .bind(org_id)
+                .bind(&user.oidc_subject)
+                .bind(user.updated_at)
+                .fetch_optional(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?
+        } else {
+            sqlx::query(query)
+                .bind(&user.id)
+                .bind(&user.username)
+                .bind(&user.email)
+                .bind(&user.password_hash)
+                .bind(roles_json)
+                .bind(user.active)
+                .bind(org_id)
+                .bind(&user.oidc_subject)
+                .bind(user.updated_at)
+                .bind(org_id)
+                .fetch_optional(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?
+        };
 
         if res.is_none() {
             return Err("user not found or unauthorized".to_string());
@@ -262,13 +358,25 @@ impl UserRepository for PgUserRepository {
 
     async fn delete_user(&self, id: &str, org_id: &str) -> Result<(), String> {
         validate_org_id!(org_id);
-        let query = "DELETE FROM users WHERE id = $1 AND tenant_id = $2 RETURNING id";
+        let is_multitenant = ::server_config::get().multitenant;
+        let should_bypass = !is_multitenant;
+        let query = if should_bypass {
+            "DELETE FROM users WHERE id = $1 RETURNING id"
+        } else {
+            "DELETE FROM users WHERE id = $1 AND tenant_id = $2 RETURNING id"
+        };
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
-        let tenant_id = org_id;
-        set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
+        if !should_bypass {
+            let tenant_id = org_id;
+            set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
+        }
 
-        let res = sqlx::query(query).bind(id).bind(org_id).fetch_optional(&mut *tx).await.map_err(|e| e.to_string())?;
+        let res = if should_bypass {
+            sqlx::query(query).bind(id).fetch_optional(&mut *tx).await.map_err(|e| e.to_string())?
+        } else {
+            sqlx::query(query).bind(id).bind(org_id).fetch_optional(&mut *tx).await.map_err(|e| e.to_string())?
+        };
 
         if res.is_none() {
             return Err("user not found or unauthorized".to_string());
@@ -286,12 +394,13 @@ impl UserRepository for PgUserRepository {
 
         sqlx::query(
             r#"
-            INSERT INTO revoked_tokens (jti, expires_at, tenant_id) VALUES ($1, $2, current_setting('app.current_tenant', true))
+            INSERT INTO revoked_tokens (jti, expires_at, tenant_id) VALUES ($1, $2, $3)
             ON CONFLICT (jti) DO NOTHING
             "#
         )
         .bind(jti)
         .bind(exp)
+        .bind(org_id)
         .execute(&mut *tx)
         .await
         .map_err(|e| e.to_string())?;
@@ -354,14 +463,13 @@ mod security_tests {
 
         // Cloud multitenant mode should NOT allow bypassing.
         let is_multitenant = true;
-        let org_id = "system";
-        let should_bypass = !is_multitenant && org_id == "system";
+        let should_bypass = !is_multitenant;
 
         // Ensure the condition strictly evaluates to false when multitenant is true.
         assert!(!should_bypass, "Cloud mode should NEVER bypass tenant filters when org_id is 'system'");
 
         let res = repo.get_by_id("dummy_id", "system").await;
-        assert!(res.is_err() || res.is_ok(), "Codebase query executed correctly");
+        assert!(res.is_err(), "Must reject system id in multitenant mode");
     }
 
     #[tokio::test]
@@ -388,5 +496,48 @@ mod security_tests {
 
         // Depending on test db state, it might be an error (missing migrations), but we just ensure it executes cleanly.
         assert!(res.is_ok() || res.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_update_user_tenant_isolation_regression() {
+        let database_url = match std::env::var("OHC_DATABASE_URL") {
+            Ok(url) => url,
+            Err(_) => return,
+        };
+
+        if database_url.starts_with("sqlite") {
+            return; // Postgres-specific test
+        }
+
+        let pool = PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .acquire_timeout(Duration::from_millis(50))
+            .connect_lazy(&database_url)
+            .unwrap();
+
+        let repo = PgUserRepository::new(pool.clone());
+
+        let dummy_user = User {
+            id: "dummy_id_update".to_string(),
+            username: "dummy_user".to_string(),
+            email: "dummy@example.com".to_string(),
+            password_hash: "hash".to_string(),
+            roles: vec![],
+            active: true,
+            organization_id: Some("system".to_string()),
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+            oidc_subject: Some("sub".to_string()),
+        };
+
+        // Ensure multitenant environment is mocked strictly for 'system' context evaluation
+        let old_val = std::env::var("OHC_MULTITENANT").ok();
+        unsafe { std::env::set_var("OHC_MULTITENANT", "true"); }
+        let res = repo.update_user(dummy_user, "system").await;
+        if let Some(val) = old_val {
+            unsafe { std::env::set_var("OHC_MULTITENANT", val); }
+        } else {
+            unsafe { std::env::remove_var("OHC_MULTITENANT"); }
+        }
+        assert!(res.is_err(), "Must reject system org_id for update in multitenant mode");
     }
 }

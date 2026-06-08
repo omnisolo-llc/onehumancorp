@@ -52,8 +52,8 @@ impl PlanTier {
 
         match self {
             PlanTier::Free => Some(500),
-            PlanTier::Starter => Some(5000), // 5GB
-            PlanTier::Pro => Some(50000),    // 50GB
+            PlanTier::Starter => Some(5120), // 5GB
+            PlanTier::Pro => Some(51200),    // 50GB
             PlanTier::Business => Some(512000),      // 500GB
         }
     }
@@ -104,11 +104,17 @@ pub struct RedisRateLimiter {
     client: Client,
     connection: OnceCell<redis::aio::MultiplexedConnection>,
     pub telemetry_store: Option<std::sync::Arc<::server_harness::telemetry::ViolationStore>>,
+    db_pool: Option<sqlx::PgPool>,
 }
 
 impl RedisRateLimiter {
     pub fn new(client: Client) -> Self {
-        Self { client, connection: OnceCell::new(), telemetry_store: None }
+        Self { client, connection: OnceCell::new(), telemetry_store: None, db_pool: None }
+    }
+
+    pub fn with_db(mut self, pool: sqlx::PgPool) -> Self {
+        self.db_pool = Some(pool);
+        self
     }
 
     pub fn with_telemetry(mut self, store: std::sync::Arc<::server_harness::telemetry::ViolationStore>) -> Self {
@@ -125,12 +131,32 @@ impl RedisRateLimiter {
 
     pub async fn get_tenant_tier(&self, tenant_id: &str) -> Result<PlanTier, String> {
         let mut conn = self.get_connection().await?;
-        let tier: Option<String> = conn.get(format!("tenant:{}:tier", tenant_id)).await.map_err(|e| e.to_string())?;
+        let redis_key = format!("tenant:{}:tier", tenant_id);
+        let mut tier: Option<String> = conn.get(&redis_key).await.map_err(|e| e.to_string())?;
+
+        if tier.is_none() {
+            if let Some(pool) = &self.db_pool {
+                use sqlx::Row;
+                if let Ok(record) = sqlx::query("SELECT tier FROM tenants WHERE id = $1")
+                    .bind(tenant_id)
+                    .fetch_one(pool)
+                    .await
+                {
+                    if let Ok(t) = record.try_get::<Option<String>, _>("tier") {
+                        tier = t;
+                        if let Some(ref t_str) = tier {
+                            // Cache for 24 hours
+                            let _ : () = conn.set_ex(&redis_key, t_str, 24 * 60 * 60).await.unwrap_or(());
+                        }
+                    }
+                }
+            }
+        }
 
         match tier.as_deref() {
-            Some("Starter") => Ok(PlanTier::Starter),
-            Some("Pro") => Ok(PlanTier::Pro),
-            Some("Business") => Ok(PlanTier::Business),
+            Some("Starter") | Some("starter") => Ok(PlanTier::Starter),
+            Some("Pro") | Some("pro") => Ok(PlanTier::Pro),
+            Some("Business") | Some("business") => Ok(PlanTier::Business),
             _ => Ok(PlanTier::Free),
         }
     }
@@ -141,6 +167,15 @@ impl RedisRateLimiter {
         let month_key = now.format("%Y-%m").to_string();
         let tenant_key = format!("tenant:{}:actions_used:{}", tenant_id, month_key);
         let used: Option<u32> = conn.get(&tenant_key).await.map_err(|e| e.to_string())?;
+        Ok(used.unwrap_or(0))
+    }
+
+    pub async fn get_agent_actions_used(&self, tenant_id: &str, agent_id: &str) -> Result<u32, String> {
+        let mut conn = self.get_connection().await?;
+        let now = chrono::Utc::now();
+        let month_key = now.format("%Y-%m").to_string();
+        let agent_key = format!("tenant:{}:agent:{}:actions_used:{}", tenant_id, agent_id, month_key);
+        let used: Option<u32> = conn.get(&agent_key).await.map_err(|e| e.to_string())?;
         Ok(used.unwrap_or(0))
     }
 
@@ -394,8 +429,8 @@ mod tests {
         assert_eq!(PlanTier::Starter.agent_action_limit(), Some(200));
 
         assert_eq!(PlanTier::Free.storage_limit_mb(), Some(500));
-        assert_eq!(PlanTier::Starter.storage_limit_mb(), Some(5000));
-        assert_eq!(PlanTier::Pro.storage_limit_mb(), Some(50000));
+        assert_eq!(PlanTier::Starter.storage_limit_mb(), Some(5120));
+        assert_eq!(PlanTier::Pro.storage_limit_mb(), Some(51200));
         assert_eq!(PlanTier::Business.storage_limit_mb(), Some(512000));
 
         assert_eq!(PlanTier::Free.max_agents(), Some(1));
@@ -485,6 +520,23 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_check_storage_quota_no_mutation() {
+        if let Ok(redis_url) = std::env::var("REDIS_URL") {
+            if let Ok(client) = redis::Client::open(redis_url) {
+                let limiter = RedisRateLimiter::new(client.clone());
+                let tenant_id = "test-tenant-storage-no-mutation";
+
+                let mut conn = client.get_multiplexed_async_connection().await.unwrap();
+                let storage_key = format!("tenant:{}:storage_used_bytes", tenant_id);
+                let _ : () = redis::AsyncCommands::del(&mut conn, &storage_key).await.unwrap_or(());
+
+                let status = limiter.check_storage_quota(tenant_id, 0).await.unwrap();
+                assert!(status.is_allowed);
+            }
+        }
+    }
+
+    #[tokio::test]
     async fn test_check_storage_quota() {
         if let Ok(redis_url) = std::env::var("REDIS_URL") {
             if let Ok(client) = redis::Client::open(redis_url) {
@@ -567,6 +619,59 @@ mod tests {
                 // Verify the monthly key was created and has a value of 1
                 let count: usize = conn.get(&tenant_key).await.unwrap_or(0);
                 assert_eq!(count, 1);
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_agent_action_limit() {
+        if let Ok(redis_url) = std::env::var("REDIS_URL") {
+            if let Ok(client) = redis::Client::open(redis_url) {
+                let limiter = RedisRateLimiter::new(client.clone());
+                let tenant_id = "test-tenant-agent-action";
+                let agent_id = "agent-limit";
+
+                let mut conn = client.get_multiplexed_async_connection().await.unwrap();
+                let now = chrono::Utc::now();
+                let month_key = now.format("%Y-%m").to_string();
+                let agent_key = format!("tenant:{}:agent:{}:actions_used:{}", tenant_id, agent_id, month_key);
+                let _ : () = conn.del(&agent_key).await.unwrap_or(());
+
+                limiter.set_tenant_tier(tenant_id, PlanTier::Free).await.unwrap();
+
+                for _ in 0..20 {
+                    let _ = limiter.record_action(tenant_id, agent_id).await;
+                }
+                let status = limiter.record_action(tenant_id, agent_id).await.unwrap();
+                assert!(status.soft_limit_reached);
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_rate_limit_status_is_always_allowed_soft_limit() {
+        if let Ok(redis_url) = std::env::var("REDIS_URL") {
+            if let Ok(client) = redis::Client::open(redis_url) {
+                let limiter = RedisRateLimiter::new(client.clone());
+                let tenant_id = "test-tenant-soft-limits";
+                let agent_id = "agent-1";
+
+                let mut conn = client.get_multiplexed_async_connection().await.unwrap();
+                let now = chrono::Utc::now();
+                let month_key = now.format("%Y-%m").to_string();
+                let tenant_key = format!("tenant:{}:actions_used:{}", tenant_id, month_key);
+                let _ : () = conn.del(&tenant_key).await.unwrap_or(());
+
+                limiter.set_tenant_tier(tenant_id, PlanTier::Free).await.unwrap();
+
+                // exceed limit
+                for _ in 0..100 {
+                    let _ = limiter.record_action(tenant_id, agent_id).await;
+                }
+                let status = limiter.record_action(tenant_id, agent_id).await.unwrap();
+
+                assert!(status.is_allowed);
+                assert!(status.soft_limit_reached);
             }
         }
     }
