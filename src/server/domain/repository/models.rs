@@ -271,3 +271,76 @@ pub struct LeadGenCampaign {
     pub created_at: Option<DateTime<Utc>>,
     pub updated_at: Option<DateTime<Utc>>,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct Invoice {
+    pub id: String,
+    pub tenant_id: String,
+    pub customer_id: String,
+    pub status: Option<String>,
+    pub due_date: Option<DateTime<Utc>>,
+    pub total_amount: Option<f64>,
+    pub currency: Option<String>,
+    pub tax_nexus: Option<String>,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct InvoiceLineItem {
+    pub id: String,
+    pub tenant_id: String,
+    pub invoice_id: String,
+    pub description: String,
+    pub quantity: Option<i32>,
+    pub unit_price: Option<f64>,
+    pub amount: Option<f64>,
+    pub created_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct PaymentEvent {
+    pub id: String,
+    pub tenant_id: String,
+    pub invoice_id: String,
+    pub amount: f64,
+    pub method: String,
+    pub completed_at: Option<DateTime<Utc>>,
+    pub created_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct LedgerEntry {
+    pub id: String,
+    pub tenant_id: String,
+    pub payment_event_id: String,
+    pub credit: f64,
+    pub debit: f64,
+    pub entry_type: String,
+    pub posted_at: Option<DateTime<Utc>>,
+    pub created_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct TaxObligation {
+    pub id: String,
+    pub tenant_id: String,
+    pub transaction_id: String,
+    pub tax_type: String,
+    pub amount: f64,
+    pub jurisdiction: Option<String>,
+    pub status: String,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct VirtualEnvelope {
+    pub id: String,
+    pub tenant_id: String,
+    pub name: String,
+    pub balance: f64,
+    pub target_amount: Option<f64>,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
+}
