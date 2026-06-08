@@ -1,6 +1,6 @@
 use std::sync::Arc;
 use crate::db::{DB, DbStore};
-use super::models::{Invoice, InvoiceLineItem, PaymentEvent, LedgerEntry};
+use super::models::{Invoice, InvoiceLineItem, PaymentEvent, LedgerEntry, TaxObligation};
 use chrono::Utc;
 use uuid::Uuid;
 
@@ -181,6 +181,13 @@ impl LedgerRepository {
                 .bind(now).bind(&event.tenant_id).bind(&event.invoice_id)
                 .execute(&mut *tx).await.map_err(|e| e.to_string())?;
 
+                // Auto-create tax obligation (30% of revenue)
+                let tax_amount = event.amount * 0.30;
+                let tax_obligation_id = Uuid::new_v4().to_string();
+                sqlx::query(r#"INSERT INTO tax_obligations (id, tenant_id, ledger_entry_id, tax_type, amount_estimated, status, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#)
+                .bind(&tax_obligation_id).bind(&event.tenant_id).bind(&credit_entry_id).bind("INCOME_TAX_ESTIMATE").bind(tax_amount).bind("PENDING").bind(now).bind(now)
+                .execute(&mut *tx).await.map_err(|e| e.to_string())?;
+
                 tx.commit().await.map_err(|e| e.to_string())?;
             }
             DbStore::Sqlite(sqlite_pool) => {
@@ -201,6 +208,13 @@ impl LedgerRepository {
 
                 sqlx::query(r#"UPDATE invoices SET status = 'Paid', updated_at = ? WHERE tenant_id = ? AND id = ?"#)
                 .bind(now).bind(&event.tenant_id).bind(&event.invoice_id)
+                .execute(&mut *tx).await.map_err(|e| e.to_string())?;
+
+                // Auto-create tax obligation (30% of revenue)
+                let tax_amount = event.amount * 0.30;
+                let tax_obligation_id = Uuid::new_v4().to_string();
+                sqlx::query(r#"INSERT INTO tax_obligations (id, tenant_id, ledger_entry_id, tax_type, amount_estimated, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"#)
+                .bind(&tax_obligation_id).bind(&event.tenant_id).bind(&credit_entry_id).bind("INCOME_TAX_ESTIMATE").bind(tax_amount).bind("PENDING").bind(now).bind(now)
                 .execute(&mut *tx).await.map_err(|e| e.to_string())?;
 
                 tx.commit().await.map_err(|e| e.to_string())?;
@@ -289,6 +303,17 @@ mod ledger_tests {
                 created_at TEXT
             );
 
+CREATE TABLE IF NOT EXISTS tax_obligations (
+    id TEXT PRIMARY KEY,
+    tenant_id TEXT,
+    ledger_entry_id TEXT,
+    tax_type TEXT,
+    amount_estimated REAL,
+    status TEXT,
+    created_at TEXT,
+    updated_at TEXT
+);
+
             CREATE TABLE ledger_entries (
                 id TEXT PRIMARY KEY,
                 tenant_id TEXT,
@@ -298,6 +323,17 @@ mod ledger_tests {
                 entry_type TEXT,
                 posted_at TEXT,
                 created_at TEXT
+            );
+
+            CREATE TABLE tax_obligations (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT,
+                ledger_entry_id TEXT,
+                tax_type TEXT,
+                amount_estimated REAL,
+                status TEXT,
+                created_at TEXT,
+                updated_at TEXT
             );
             "#
         )
@@ -450,5 +486,38 @@ mod ledger_tests {
 
         let entries_tenant4 = repo.get_ledger_entries("tenant_4").await.unwrap();
         assert_eq!(entries_tenant4.len(), 2);
+    }
+}
+
+impl LedgerRepository {
+    pub async fn get_tax_obligations(&self, tenant_id: &str) -> Result<Vec<TaxObligation>, String> {
+        match &self.db.store {
+            DbStore::Postgres => {
+                sqlx::query_as::<_, TaxObligation>(
+                    r#"
+                    SELECT id, tenant_id, ledger_entry_id, tax_type, amount_estimated, status, created_at, updated_at
+                    FROM tax_obligations
+                    WHERE tenant_id = $1
+                    "#
+                )
+                .bind(tenant_id)
+                .fetch_all(&self.db.pool)
+                .await
+                .map_err(|e| e.to_string())
+            }
+            DbStore::Sqlite(sqlite_pool) => {
+                sqlx::query_as::<_, TaxObligation>(
+                    r#"
+                    SELECT id, tenant_id, ledger_entry_id, tax_type, amount_estimated, status, created_at, updated_at
+                    FROM tax_obligations
+                    WHERE tenant_id = ?
+                    "#
+                )
+                .bind(tenant_id)
+                .fetch_all(sqlite_pool)
+                .await
+                .map_err(|e| e.to_string())
+            }
+        }
     }
 }

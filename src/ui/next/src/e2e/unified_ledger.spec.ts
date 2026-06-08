@@ -9,14 +9,17 @@ test.describe('Unified Ledger & Multi-Currency Settlement Engine', () => {
         await page.click('button[type="submit"]');
         await page.waitForURL('/dashboard');
 
-        // Check if the new Financials card is displayed
-        const financialsCard = page.locator('text=Financials');
-        await expect(financialsCard).toBeVisible();
+        // Click on the Ledger widget on the dashboard
+        await page.click('text=Ledger');
+        await page.waitForURL('/ledger');
+
+        // Check if the new Financials card is displayed on the ledger page
+        await expect(page.locator('text=Financials')).toBeVisible();
         await expect(page.locator('text=Total Balance')).toBeVisible();
+        await expect(page.locator('text=Estimated Taxes Saved')).toBeVisible();
 
         // Check statement drill-down
-        await page.click('text=Recent Activity');
-        await expect(page.locator('text=Ledger Statement')).toBeVisible();
+        await expect(page.locator('text=Recent Activity')).toBeVisible();
     });
 
     test('Agent Accountant can answer balance queries', async ({ page }) => {

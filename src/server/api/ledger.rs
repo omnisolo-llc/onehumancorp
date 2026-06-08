@@ -11,7 +11,7 @@ use uuid::Uuid;
 use chrono::Utc;
 
 use crate::db::DB;
-use crate::domain::repository::models::{Invoice, InvoiceLineItem, PaymentEvent, LedgerEntry};
+use crate::domain::repository::models::{Invoice, InvoiceLineItem, PaymentEvent, LedgerEntry, TaxObligation};
 use crate::domain::repository::ledger_repo::LedgerRepository;
 
 #[derive(Clone)]
@@ -61,6 +61,7 @@ pub fn router() -> Router<AppState> {
         .route("/api/ledger/invoice/{id}/update", put(update_invoice_status))
         .route("/api/ledger/invoice/{id}/pay", post(apply_payment))
         .route("/api/ledger/entries/{tenant_id}", get(get_ledger_entries))
+        .route("/api/ledger/tax-savings/{tenant_id}", get(get_tax_savings))
 }
 
 async fn get_invoice(
@@ -160,6 +161,20 @@ async fn get_ledger_entries(
     let repo = LedgerRepository::new(state.db);
     match repo.get_ledger_entries(&tenant_id).await {
         Ok(entries) => (StatusCode::OK, Json(entries)).into_response(),
+        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e).into_response(),
+    }
+}
+
+async fn get_tax_savings(
+    State(state): State<AppState>,
+    Path(tenant_id): Path<String>,
+) -> impl IntoResponse {
+    let repo = LedgerRepository::new(state.db);
+    match repo.get_tax_obligations(&tenant_id).await {
+        Ok(obligations) => {
+            let total: f64 = obligations.iter().map(|o| o.amount_estimated).sum();
+            (StatusCode::OK, Json(serde_json::json!({ "total_saved": total, "obligations": obligations }))).into_response()
+        },
         Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e).into_response(),
     }
 }
