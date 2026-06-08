@@ -12,6 +12,7 @@ rust_library(
         "caveman.rs",
         "code_native.rs",
         "core.rs",
+        "durable_execution.rs",
         "dynamic_workflows.rs",
         "expert_team.rs",
         "hnsw_memory.rs",
