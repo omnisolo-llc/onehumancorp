@@ -1,0 +1,11 @@
+--- src/ui/next/src/e2e/help.spec.ts
++++ src/ui/next/src/e2e/help.spec.ts
+@@ -43,7 +43,7 @@
+         // Use Promise.all to wait for the request to the search endpoint
+         const [response] = await Promise.all([
+             page.waitForResponse(response =>
+-                response.url().includes('/api/help/search') && response.status() === 200
++                response.url().includes('/api/help/search') && (response.status() === 200 || response.status() === 304)
+             ),
+             searchInput.pressSequentially('My Store', { delay: 100 })
+         ]);
