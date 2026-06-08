@@ -1,6 +1,15 @@
 use std::sync::Arc;
 use ::server_integrations_twilio::provider::TwilioProvider;
 use super::engine::VoiceAIEdgeEngine;
+#[cfg(ohc_bazel)]
+use ::minimax::MinimaxClient;
+#[cfg(ohc_bazel)]
+use ::minimax::LocalLLMClient;
+#[cfg(not(ohc_bazel))]
+use crate::minimax::MinimaxClient;
+#[cfg(not(ohc_bazel))]
+use crate::minimax::LocalLLMClient;
+
 
 pub struct VoiceContextRouter {
     engine: Arc<VoiceAIEdgeEngine>,
@@ -36,9 +45,9 @@ impl VoiceTurnPlanner for LlmVoiceTurnPlanner {
         let raw: String = match provider.as_str() {
             "minimax" => {
                 let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
-                crate::minimax::MinimaxClient::new(api_key).reason(&prompt).await
+                MinimaxClient::new(api_key).reason(&prompt).await
             }
-            _ => crate::minimax::LocalLLMClient::new().reason(&prompt).await,
+            _ => LocalLLMClient::new().reason(&prompt).await,
         }?;
 
         parse_voice_turn_plan(&raw)
