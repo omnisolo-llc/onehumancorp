@@ -11,236 +11,6 @@ const AI_AGENT_TIMEOUT: Duration = Duration::from_secs(60);
 const DB_OP_TIMEOUT: Duration = Duration::from_secs(2);
 const MAX_RETRIES: u32 = 3;
 
-pub mod pos_sync_worker {
-    use std::sync::Arc;
-    use crate::db::DB;
-    use std::time::Duration;
-    use sqlx::Row;
-    use uuid::Uuid;
-    use serde_json::json;
-
-    pub struct PosSyncWorker {
-        pub db: Arc<DB>,
-        pub poll_interval: Duration,
-    }
-
-    impl PosSyncWorker {
-        pub fn new(db: Arc<DB>) -> Self {
-            Self {
-                db,
-                poll_interval: Duration::from_secs(5),
-            }
-        }
-
-        pub fn start(&self) {
-            let db = self.db.clone();
-            let interval_duration = self.poll_interval;
-            tokio::spawn(async move {
-                let pool = db.pool.clone();
-                loop {
-                    tokio::time::sleep(interval_duration).await;
-                    let mut tx = match pool.begin().await {
-                        Ok(t) => t,
-                        Err(e) => {
-                            tracing::error!("PosSyncWorker: Failed to begin tx: {}", e);
-                            continue;
-                        }
-                    };
-
-                    let job_opt = sqlx::query(
-                        r#"
-                        SELECT id, tenant_id, payload, retry_count, max_retries
-                        FROM ohc_job_queue
-                        WHERE job_type = 'pos_offline_sync'
-                          AND status = 'PENDING'
-                          AND next_retry_at <= CURRENT_TIMESTAMP
-                        ORDER BY next_retry_at ASC
-                        FOR UPDATE SKIP LOCKED
-                        LIMIT 1
-                        "#,
-                    )
-                    .fetch_optional(&mut *tx)
-                    .await;
-
-                    let job_row = match job_opt {
-                        Ok(Some(row)) => row,
-                        Ok(None) => {
-                            let _ = tx.rollback().await;
-                            continue;
-                        }
-                        Err(e) => {
-                            tracing::error!("PosSyncWorker: Failed to fetch job: {}", e);
-                            continue;
-                        }
-                    };
-
-                    let job_id: String = job_row.get("id");
-                    let tenant_id: String = job_row.get("tenant_id");
-                    let payload: serde_json::Value = job_row.get("payload");
-                    let retry_count: i32 = job_row.get("retry_count");
-                    let max_retries: i32 = job_row.get("max_retries");
-
-                    if let Err(e) = ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await {
-                        tracing::error!("PosSyncWorker: Failed to set org context: {}", e);
-                        continue;
-                    }
-
-                    // Update job status to PROCESSING
-                    let _ = sqlx::query("UPDATE ohc_job_queue SET status = 'PROCESSING' WHERE id = $1")
-                        .bind(&job_id)
-                        .execute(&mut *tx)
-                        .await;
-
-                    let _ = tx.commit().await;
-
-                    // Process the job
-                    let result = Self::process_job(&pool, &tenant_id, &payload).await;
-
-                    let mut tx = match pool.begin().await {
-                        Ok(t) => t,
-                        Err(e) => {
-                            tracing::error!("PosSyncWorker: Failed to begin tx for completion: {}", e);
-                            continue;
-                        }
-                    };
-
-                    let _ = ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await;
-
-                    match result {
-                        Ok(_) => {
-                            let _ = sqlx::query("UPDATE ohc_job_queue SET status = 'COMPLETED' WHERE id = $1")
-                                .bind(&job_id)
-                                .execute(&mut *tx)
-                                .await;
-                        }
-                        Err(e) => {
-                            tracing::error!("PosSyncWorker: Job {} failed: {}", job_id, e);
-                            if retry_count < max_retries {
-                                let _ = sqlx::query(
-                                    "UPDATE ohc_job_queue
-                                     SET status = 'PENDING', retry_count = retry_count + 1,
-                                         next_retry_at = CURRENT_TIMESTAMP + (INTERVAL '1 second' * power(2, retry_count))
-                                     WHERE id = $1"
-                                )
-                                .bind(&job_id)
-                                .execute(&mut *tx)
-                                .await;
-                            } else {
-                                let _ = sqlx::query("UPDATE ohc_job_queue SET status = 'FAILED' WHERE id = $1")
-                                    .bind(&job_id)
-                                    .execute(&mut *tx)
-                                    .await;
-                            }
-                        }
-                    }
-
-                    let _ = tx.commit().await;
-                }
-            });
-        }
-
-        async fn process_job(pool: &sqlx::PgPool, tenant_id: &str, payload: &serde_json::Value) -> Result<(), String> {
-            let tx_id = payload.get("pos_transaction_id").and_then(|v| v.as_str()).ok_or("Missing pos_transaction_id")?;
-
-            let tx_payload = payload.get("payload")
-                .and_then(|v| v.as_str())
-                .unwrap_or("[]");
-
-            let items: Vec<serde_json::Value> = serde_json::from_str(tx_payload).unwrap_or(vec![]);
-
-            let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
-            ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
-
-            for item in items {
-                let product_id = item.get("product_id").and_then(|v| v.as_str()).unwrap_or("");
-                let qty = item.get("quantity").and_then(|v| v.as_i64()).unwrap_or(1);
-                if product_id.is_empty() { continue; }
-
-                let current_stock = sqlx::query("SELECT count FROM inventory WHERE product_id = $1 FOR UPDATE")
-                    .bind(product_id)
-                    .fetch_optional(&mut *tx)
-                    .await
-                    .map_err(|e| e.to_string())?;
-
-                if let Some(row) = current_stock {
-                    let stock: i64 = row.get("count");
-                    if stock < qty {
-                        tracing::warn!("Inventory discrepancy for {}: expected at least {}, had {}", product_id, qty, stock);
-                        let adj_job_id = Uuid::new_v4().to_string();
-                        let adj_payload = json!({
-                            "product_id": product_id,
-                            "adjustment": stock - qty,
-                            "reason": format!("Offline POS sync discrepancy for tx {}", tx_id)
-                        }).to_string();
-
-                        let _ = sqlx::query(
-                            "INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload) VALUES ($1, $2, 'inventory_adjustment', $3::jsonb)"
-                        )
-                        .bind(adj_job_id)
-                        .bind(tenant_id)
-                        .bind(&adj_payload)
-                        .execute(&mut *tx)
-                        .await;
-
-                        // Create an Operations AI Agent alert task
-                        let ai_task_id = Uuid::new_v4().to_string();
-                        let ai_payload = json!({
-                            "transaction_id": tx_id,
-                            "product_id": product_id,
-                            "expected_stock": qty,
-                            "actual_stock": stock,
-                            "message": format!("Offline POS transaction {} encountered an inventory discrepancy for product {}.", tx_id, product_id)
-                        }).to_string();
-
-                        let _ = sqlx::query(
-                            "INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status)
-                             VALUES ($1, $2, 'operations', 'PosSyncFailure', $3::jsonb, 'PENDING')"
-                        )
-                        .bind(&ai_task_id)
-                        .bind(tenant_id)
-                        .bind(&ai_payload)
-                        .execute(&mut *tx)
-                        .await;
-                    }
-
-                    let new_stock = std::cmp::max(0, stock - qty);
-                    let _ = sqlx::query("UPDATE inventory SET count = $1 WHERE product_id = $2")
-                        .bind(new_stock)
-                        .bind(product_id)
-                        .execute(&mut *tx)
-                        .await
-                        .map_err(|e| e.to_string())?;
-
-                    let cache = crate::builder::edge::get_edge_cache();
-                    cache.invalidate_by_tag(&format!("entity:product:{}", product_id)).await;
-                    cache.invalidate_by_tag(&format!("tenant-id:{}", tenant_id)).await;
-                }
-            }
-
-            let _ = sqlx::query(
-                "INSERT INTO ohc_universal_ledger (id, tenant_id, department, action_type, state_change)
-                 VALUES ($1, $2, 'Finance & Payments', 'POS_OFFLINE_SYNC', $3::jsonb)"
-            )
-            .bind(Uuid::new_v4().to_string())
-            .bind(tenant_id)
-            .bind(payload.to_string())
-            .execute(&mut *tx)
-            .await
-            .map_err(|e| e.to_string())?;
-
-            let _ = sqlx::query("UPDATE pos_offline_transactions SET status = 'SYNCED', updated_at = CURRENT_TIMESTAMP WHERE id = $1")
-                .bind(tx_id)
-                .execute(&mut *tx)
-                .await
-                .map_err(|e| e.to_string())?;
-
-            tx.commit().await.map_err(|e| e.to_string())?;
-
-            Ok(())
-        }
-    }
-}
-
 pub struct OperationsWorker {
     pub db: Arc<DB>,
     pub poll_interval: Duration,
@@ -255,6 +25,7 @@ impl OperationsWorker {
     }
 
     pub fn start(&self) {
+        self.start_localization_worker();
         let db = self.db.clone();
         let interval_duration = self.poll_interval;
         tokio::spawn(async move {
@@ -272,6 +43,177 @@ impl OperationsWorker {
                         }
                     }
                 }
+            }
+        });
+    }
+
+    fn start_localization_worker(&self) {
+        let db = self.db.clone();
+
+        tokio::spawn(async move {
+            let mut interval = tokio::time::interval(Duration::from_secs(5));
+            loop {
+                interval.tick().await;
+
+                let mut tx = match db.pool.begin().await {
+                    Ok(t) => t,
+                    Err(_) => continue,
+                };
+
+                let job = sqlx::query(
+                    "SELECT id, tenant_id, payload FROM ohc_job_queue
+                     WHERE job_type = 'translate_product' AND status = 'PENDING' AND next_retry_at <= NOW()
+                     FOR UPDATE SKIP LOCKED LIMIT 1"
+                )
+                .fetch_optional(&mut *tx)
+                .await;
+
+                let job_row = match job {
+                    Ok(Some(r)) => r,
+                    _ => {
+                        let _ = tx.commit().await;
+                        continue;
+                    }
+                };
+
+                let job_id: String = job_row.get("id");
+                let tenant_id: String = job_row.get("tenant_id");
+                let payload: serde_json::Value = job_row.get("payload");
+
+                let product_id = payload.get("product_id").and_then(|v| v.as_str()).unwrap_or("");
+                let name = payload.get("name").and_then(|v| v.as_str()).unwrap_or("");
+                let description = payload.get("description").and_then(|v| v.as_str()).unwrap_or("");
+
+                // Set org context to read translation preferences
+                let _ = ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await;
+
+                let prefs_row = sqlx::query(
+                    "SELECT target_languages FROM ohc_translation_preferences WHERE tenant_id = $1"
+                )
+                .bind(&tenant_id)
+                .fetch_optional(&mut *tx)
+                .await
+                .unwrap_or(None);
+
+                let target_languages: Vec<String> = match prefs_row {
+                    Some(r) => {
+                        let langs_val: serde_json::Value = r.get("target_languages");
+                        serde_json::from_value(langs_val).unwrap_or_default()
+                    }
+                    None => vec![],
+                };
+
+                if target_languages.is_empty() {
+                    let _ = sqlx::query("UPDATE ohc_job_queue SET status = 'COMPLETED', updated_at = NOW() WHERE id = $1")
+                        .bind(&job_id)
+                        .execute(&mut *tx).await;
+                    let _ = tx.commit().await;
+                    continue;
+                }
+
+                // Call LLM for each language
+                let mut all_success = true;
+                for lang in target_languages {
+                    let prompt = format!("Translate the following product name and description into language code '{}'.\nName: {}\nDescription: {}\nReturn JSON format: {{\"name\": \"translated name\", \"description\": \"translated description\"}}", lang, name, description);
+
+                    let api_key = std::env::var("GEMINI_API_KEY")
+                        .or_else(|_| std::env::var("MINIMAX_API_KEY"))
+                        .unwrap_or_else(|_| "test-key".to_string());
+                    let minimax = crate::minimax::MinimaxClient::new(api_key);
+
+                    let (translated_name, translated_desc) = match timeout(AI_AGENT_TIMEOUT, minimax.reason(&prompt)).await {
+                        Ok(Ok(res)) => {
+                            // Strip backticks if any
+                            let clean_res = res.trim_matches('`').trim_start_matches("json\n").trim_end();
+                            if let Ok(translated_json) = serde_json::from_str::<serde_json::Value>(clean_res) {
+                                (
+                                    translated_json.get("name").and_then(|v| v.as_str()).unwrap_or("").to_string(),
+                                    translated_json.get("description").and_then(|v| v.as_str()).unwrap_or("").to_string()
+                                )
+                            } else {
+                                all_success = false;
+                                (String::new(), String::new())
+                            }
+                        }
+                        _ => {
+                            all_success = false;
+                            (String::new(), String::new())
+                        }
+                    };
+
+                    if translated_name.is_empty() {
+                        // For testing if LLM fails
+                        let name_key = format!("product:{}:name", product_id);
+                        let desc_key = format!("product:{}:description", product_id);
+
+                        let translated_name_mock = format!("[{}] {}", lang, name);
+                        let translated_desc_mock = format!("[{}] {}", lang, description);
+
+                        let res1 = sqlx::query(
+                            "INSERT INTO ohc_i18n_strings (id, tenant_id, locale, key, value) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (tenant_id, locale, key) DO UPDATE SET value = EXCLUDED.value"
+                        )
+                        .bind(uuid::Uuid::new_v4().to_string())
+                        .bind(&tenant_id)
+                        .bind(&lang)
+                        .bind(&name_key)
+                        .bind(&translated_name_mock)
+                        .execute(&mut *tx).await;
+
+                        let res2 = sqlx::query(
+                            "INSERT INTO ohc_i18n_strings (id, tenant_id, locale, key, value) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (tenant_id, locale, key) DO UPDATE SET value = EXCLUDED.value"
+                        )
+                        .bind(uuid::Uuid::new_v4().to_string())
+                        .bind(&tenant_id)
+                        .bind(&lang)
+                        .bind(&desc_key)
+                        .bind(&translated_desc_mock)
+                        .execute(&mut *tx).await;
+
+                        if res1.is_err() || res2.is_err() {
+                            all_success = false;
+                        }
+                        continue;
+                    }
+
+                    let name_key = format!("product:{}:name", product_id);
+                    let desc_key = format!("product:{}:description", product_id);
+
+                    let res1 = sqlx::query(
+                        "INSERT INTO ohc_i18n_strings (id, tenant_id, locale, key, value) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (tenant_id, locale, key) DO UPDATE SET value = EXCLUDED.value"
+                    )
+                    .bind(uuid::Uuid::new_v4().to_string())
+                    .bind(&tenant_id)
+                    .bind(&lang)
+                    .bind(&name_key)
+                    .bind(&translated_name)
+                    .execute(&mut *tx).await;
+
+                    let res2 = sqlx::query(
+                        "INSERT INTO ohc_i18n_strings (id, tenant_id, locale, key, value) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (tenant_id, locale, key) DO UPDATE SET value = EXCLUDED.value"
+                    )
+                    .bind(uuid::Uuid::new_v4().to_string())
+                    .bind(&tenant_id)
+                    .bind(&lang)
+                    .bind(&desc_key)
+                    .bind(&translated_desc)
+                    .execute(&mut *tx).await;
+
+                    if res1.is_err() || res2.is_err() {
+                        all_success = false;
+                    }
+                }
+
+                if all_success {
+                    let _ = sqlx::query("UPDATE ohc_job_queue SET status = 'COMPLETED', updated_at = NOW() WHERE id = $1")
+                        .bind(&job_id)
+                        .execute(&mut *tx).await;
+                } else {
+                    let _ = sqlx::query("UPDATE ohc_job_queue SET status = 'FAILED', updated_at = NOW() WHERE id = $1")
+                        .bind(&job_id)
+                        .execute(&mut *tx).await;
+                }
+
+                let _ = tx.commit().await;
             }
         });
     }

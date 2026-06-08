@@ -11,7 +11,6 @@ export async function POST(request: Request) {
     const tenant = searchParams.get('tenant') || 'my-business';
 
     // In a real application, we would save this to the database
-    console.log(`[Work Intake Submit] New request for ${tenant} from ${name} (${email}): ${details}`);
 
     const html = `
     <!DOCTYPE html>
@@ -84,7 +83,7 @@ export async function POST(request: Request) {
              <!-- Viral Growth Loop Footer -->
              <div class="footer">
                 <span>⚡ Powered by</span>
-                <a href="/onboarding?ref=${encodeURIComponent(tenant)}" target="_blank" rel="noopener noreferrer">OHC</a>
+                <a href="/api/v1/growth/referrals/click?target=/onboarding&ref=${encodeURIComponent(tenant)}" target="_blank" rel="noopener noreferrer">OHC</a>
              </div>
         </div>
       </div>

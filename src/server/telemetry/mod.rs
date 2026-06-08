@@ -10,7 +10,7 @@ use regex::Regex;
 
 use opentelemetry::metrics::Histogram;
 
-use opentelemetry::metrics::{Counter, UpDownCounter};
+use opentelemetry::metrics::{Counter, UpDownCounter, Gauge};
 
 static SUB_AGENT_QUEUE_LENGTH_GAUGE: OnceLock<UpDownCounter<i64>> = OnceLock::new();
 static SUB_AGENT_QUEUE_DELAY_HISTOGRAM: OnceLock<Histogram<f64>> = OnceLock::new();
@@ -20,6 +20,7 @@ static BUBBLEWRAP_EXECUTION_LATENCY: OnceLock<Histogram<f64>> = OnceLock::new();
 static BUBBLEWRAP_VIOLATION_TOTAL: OnceLock<UpDownCounter<i64>> = OnceLock::new();
 static SANDBOX_VIOLATION_TOTAL: OnceLock<UpDownCounter<i64>> = OnceLock::new();
 static TOKEN_USAGE: OnceLock<Counter<u64>> = OnceLock::new();
+static AGENT_EFFICIENCY_SCORE: OnceLock<Gauge<f64>> = OnceLock::new();
 static AGENT_API_CALL: OnceLock<Counter<u64>> = OnceLock::new();
 static AGENT_API_ERROR: OnceLock<Counter<u64>> = OnceLock::new();
 static HUMAN_INTERACTION: OnceLock<Counter<u64>> = OnceLock::new();
@@ -29,6 +30,7 @@ static MCP_TOOL_CALLS_TOTAL: OnceLock<Counter<u64>> = OnceLock::new();
 static POSTGRES_LOCK_CONTENTION: OnceLock<Counter<u64>> = OnceLock::new();
 static LLM_NETWORK_LATENCY: OnceLock<Histogram<f64>> = OnceLock::new();
 static AUTODREAM_SYNC_DURATION: OnceLock<Histogram<f64>> = OnceLock::new();
+static TOKEN_USAGE_BY_OUTCOME: OnceLock<Counter<u64>> = OnceLock::new();
 
 static ERROR_SIGNAL_CATEGORIZED: OnceLock<Counter<u64>> = OnceLock::new();
 
@@ -120,6 +122,21 @@ pub fn get_token_usage_counter() -> &'static Counter<u64> {
         meter.u64_counter("token_usage").build()
     })
 }
+
+pub fn get_token_usage_by_outcome_counter() -> &'static Counter<u64> {
+    TOKEN_USAGE_BY_OUTCOME.get_or_init(|| {
+        let meter = global::meter("ohc.telemetry");
+        meter.u64_counter("ohc_token_usage_by_outcome").build()
+    })
+}
+
+pub fn get_agent_efficiency_score_gauge() -> &'static Gauge<f64> {
+    AGENT_EFFICIENCY_SCORE.get_or_init(|| {
+        let meter = global::meter("ohc.telemetry");
+        meter.f64_gauge("ohc_agent_roi_efficiency_score").build()
+    })
+}
+
 
 pub fn get_agent_api_call_counter() -> &'static Counter<u64> {
     AGENT_API_CALL.get_or_init(|| {
@@ -858,6 +875,7 @@ pub async fn record_task_resolution_efficiency(
     role: &str,
     model: &str,
     tokens: i64,
+    tenant_id: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let deployment_mode = get_deployment_mode();
 
@@ -872,9 +890,22 @@ pub async fn record_task_resolution_efficiency(
             "agent_role": role,
             "model": model,
             "deployment_mode": deployment_mode,
+            "tenant_id": tenant_id,
         }),
     )
     .await?;
+
+    let token_usage_counter = get_token_usage_by_outcome_counter();
+    token_usage_counter.add(
+        tokens as u64,
+        &[
+            opentelemetry::KeyValue::new("outcome", outcome.to_string()),
+            opentelemetry::KeyValue::new("agent_role", role.to_string()),
+            opentelemetry::KeyValue::new("model", model.to_string()),
+            opentelemetry::KeyValue::new("deployment_mode", deployment_mode.to_string()),
+            opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string()),
+        ],
+    );
 
     // 2. ROI Calculation in Telemetry
     // Efficiency = 1 / (Tokens Consumed * 1000) for SUCCESS
@@ -888,9 +919,20 @@ pub async fn record_task_resolution_efficiency(
             serde_json::json!({
                 "agent_role": role,
                 "deployment_mode": deployment_mode,
+                "tenant_id": tenant_id,
             }),
         )
         .await?;
+
+        let efficiency_gauge = get_agent_efficiency_score_gauge();
+        efficiency_gauge.record(
+            efficiency as f64,
+            &[
+                opentelemetry::KeyValue::new("agent_role", role.to_string()),
+                opentelemetry::KeyValue::new("deployment_mode", deployment_mode.to_string()),
+                opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string()),
+            ],
+        );
     }
 
     Ok(())
@@ -1230,11 +1272,12 @@ pub async fn record_storage_rw_cost(
     operation: &str,
     size_bytes: i64,
 ) -> Result<(), Box<dyn std::error::Error>> {
+    let cost_cents = (size_bytes as f64 * 0.00000001) as f32;
     buffer_metric(
         pool,
         "ohc_storage_rw_cost",
         "counter",
-        size_bytes as f32,
+        cost_cents,
         serde_json::json!({
             "organization_id": organization_id,
             "operation": operation,
@@ -1654,3 +1697,5 @@ mod harness_security_divergence_tests {
         counter.add(0, &[]);
     }
 }
+#[cfg(test)]
+mod dashboard_test;

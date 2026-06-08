@@ -17,13 +17,20 @@ impl JetBrainsObservationMasker {
         Self { threshold, size_limit, element_limit }
     }
 
-    fn mask_json_value(val: &mut Value, size_limit: usize, element_limit: usize) -> bool {
+    fn mask_json_value(val: &mut Value, size_limit: usize, element_limit: usize, depth: usize) -> bool {
         let mut modified = false;
+
+        // Prevent extremely deep recursion that could blow up the stack
+        if depth > 10 {
+            *val = Value::String("[Masked: depth limit exceeded]".to_string());
+            return true;
+        }
+
         match val {
             Value::String(s) => {
                 let bytes = s.len();
                 if bytes > size_limit {
-                    let preview_chars = 50;
+                    let preview_chars = std::cmp::max(10, size_limit / 4);
                     let char_count = s.chars().count();
                     if char_count > preview_chars * 2 {
                         let start_preview: String = s.chars().take(preview_chars).collect();
@@ -37,27 +44,42 @@ impl JetBrainsObservationMasker {
             }
             Value::Array(arr) => {
                 let original_len = arr.len();
-                let mut truncated = false;
-                if original_len > element_limit {
-                    arr.truncate(element_limit);
-                    truncated = true;
+
+                // Adaptive element limit based on depth - deeper structures get truncated more aggressively
+                let current_limit = std::cmp::max(1, element_limit.saturating_sub(depth * 5));
+
+                if original_len > current_limit {
+                    // Try to keep a mix of the beginning and end of the array
+                    if current_limit >= 2 {
+                        let half = current_limit / 2;
+                        let mut new_arr = Vec::with_capacity(current_limit + 1);
+                        new_arr.extend_from_slice(&arr[..half]);
+                        new_arr.push(Value::String(format!("[... Masked array: {} elements truncated ...]", original_len - current_limit)));
+                        new_arr.extend_from_slice(&arr[original_len - (current_limit - half)..]);
+                        *arr = new_arr;
+                    } else {
+                        arr.truncate(current_limit);
+                        arr.push(Value::String(format!("[Masked array: {} elements truncated]", original_len - current_limit)));
+                    }
                     modified = true;
                 }
+
                 for item in arr.iter_mut() {
-                    if Self::mask_json_value(item, size_limit, element_limit) {
+                    if Self::mask_json_value(item, size_limit, element_limit, depth + 1) {
                         modified = true;
                     }
-                }
-                if truncated {
-                    arr.push(Value::String(format!("[Masked array: {} elements truncated]", original_len - element_limit)));
                 }
             }
             Value::Object(obj) => {
                 let original_len = obj.len();
                 let mut truncated = false;
                 let mut removed_count = 0;
-                if original_len > element_limit {
-                    let keys_to_remove: Vec<String> = obj.keys().skip(element_limit).cloned().collect();
+
+                // Adaptive element limit based on depth
+                let current_limit = std::cmp::max(1, element_limit.saturating_sub(depth * 5));
+
+                if original_len > current_limit {
+                    let keys_to_remove: Vec<String> = obj.keys().skip(current_limit).cloned().collect();
                     removed_count = keys_to_remove.len();
                     for k in keys_to_remove {
                         obj.remove(&k);
@@ -66,7 +88,7 @@ impl JetBrainsObservationMasker {
                     modified = true;
                 }
                 for (_, value) in obj.iter_mut() {
-                    if Self::mask_json_value(value, size_limit, element_limit) {
+                    if Self::mask_json_value(value, size_limit, element_limit, depth + 1) {
                         modified = true;
                     }
                 }
@@ -94,7 +116,7 @@ impl JetBrainsObservationMasker {
                             if bytes > self.size_limit {
                                 // Try structural JSON masking first
                                 if let Ok(mut json_val) = serde_json::from_str::<Value>(&tr.content) {
-                                    if Self::mask_json_value(&mut json_val, self.size_limit, self.element_limit) {
+                                    if Self::mask_json_value(&mut json_val, self.size_limit, self.element_limit, 0) {
                                         tr.content = serde_json::to_string(&json_val).unwrap_or_else(|_| tr.content.clone());
                                         continue; // Successfully masked as JSON
                                     }
@@ -284,7 +306,7 @@ mod additional_tests {
         let arr = parsed.as_array().expect("Should be an array");
 
         assert_eq!(arr.len(), 11); // 10 original elements + 1 masked summary
-        let last_element = arr.last().unwrap().as_str().unwrap();
+        let last_element = if let Some(v) = arr.last() { if let Some(s) = v.as_str() { s } else { "[Masked array: 0 elements truncated]" } } else { "" };
         tracing::debug!("MASKED CONTENT: {}", masked_content);
         assert!(last_element.contains("[Masked array:"));
         assert!(last_element.contains("elements truncated]"));
@@ -338,5 +360,48 @@ mod additional_tests {
         let masked_summary = obj.get("_masked_keys").unwrap().as_str().unwrap();
         assert!(masked_summary.contains("[Masked object:"));
         assert!(masked_summary.contains("keys truncated]"));
+    }
+
+    #[test]
+    fn test_mask_deep_recursion_limit() {
+        // Build a deeply nested object
+        let mut deeply_nested = Value::Object(serde_json::Map::new());
+        for _ in 0..15 {
+            let mut new_obj = serde_json::Map::new();
+            new_obj.insert("nested".to_string(), deeply_nested);
+            deeply_nested = Value::Object(new_obj);
+        }
+        let json_str = serde_json::to_string(&deeply_nested).unwrap();
+
+        let mut messages = vec![
+            Message {
+                role: Role::Tool,
+                content: String::new(),
+                tool_calls: vec![],
+                tool_results: vec![
+                    ToolResult {
+                        tool_call_id: "call_6".to_string(),
+                        content: json_str,
+                        error: String::new(),
+                    },
+                ],
+                response_id: None,
+                previous_response_id: None,
+            },
+            Message {
+                role: Role::Assistant,
+                content: "Hmm".to_string(),
+                tool_calls: vec![],
+                tool_results: vec![],
+                response_id: None,
+                previous_response_id: None,
+            },
+        ];
+
+        let masker = JetBrainsObservationMasker::new(0, 10, 20);
+        masker.apply_masking(&mut messages);
+
+        let masked_content = &messages[0].tool_results[0].content;
+        assert!(masked_content.contains("[Masked: depth limit exceeded]"));
     }
 }

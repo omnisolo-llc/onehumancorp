@@ -256,8 +256,7 @@ fn generic_tool_spec(server: &McpServerConfig, raw_name: &str) -> McpToolSpec {
 }
 
 fn format_mcp_result(value: Value) -> String {
-    if let Some(content) = value.get("content") {
-        if let Some(items) = content.as_array() {
+    if let Some(content) = value.get("content") && let Some(items) = content.as_array() {
             let mut out = Vec::new();
             for item in items {
                 if let Some(text) = item.get("text").and_then(Value::as_str) {
@@ -267,7 +266,6 @@ fn format_mcp_result(value: Value) -> String {
                 }
             }
             return out.join("\n");
-        }
     }
     value.to_string()
 }

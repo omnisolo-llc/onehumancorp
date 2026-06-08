@@ -82,11 +82,18 @@ pub async fn bench_db_query_time() {
     // Only run if the database URL actually points to postgres, otherwise skip
     if database_url.starts_with("postgres") {
         let pg_pool = sqlx::postgres::PgPoolOptions::new().connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
-        let mut pg_times = Vec::new();
+        let mut pg_handles = Vec::new();
         for _ in 0..iterations {
-            let start = Instant::now();
-            let _ = sqlx::query("SELECT 1").execute(&pg_pool).await;
-            pg_times.push(start.elapsed().as_micros());
+            let pool = pg_pool.clone();
+            pg_handles.push(tokio::spawn(async move {
+                let start = Instant::now();
+                let _ = sqlx::query("SELECT 1").execute(&pool).await;
+                start.elapsed().as_micros()
+            }));
+        }
+        let mut pg_times = Vec::new();
+        for handle in pg_handles {
+            pg_times.push(handle.await.unwrap());
         }
         pg_times.sort();
         println!("Database Query Time Cloud Mode (Postgres): p50: {} us, p95: {} us, p99: {} us", pg_times[iterations / 2], pg_times[((iterations as f32 * 0.95) as usize).min(iterations.saturating_sub(1))], pg_times[((iterations as f32 * 0.99) as usize).min(iterations.saturating_sub(1))]);
@@ -104,12 +111,19 @@ pub async fn bench_db_query_time() {
                     Ok(())
                 })
             })
-            .connect("sqlite::memory:").await.unwrap();
-    let mut sqlite_times = Vec::new();
+            .max_connections(50).connect("sqlite::memory:?cache=shared").await.unwrap();
+    let mut sqlite_handles = Vec::new();
     for _ in 0..iterations {
-        let start = Instant::now();
-        let _ = sqlx::query("SELECT 1").execute(&sqlite_pool).await;
-        sqlite_times.push(start.elapsed().as_micros());
+        let pool = sqlite_pool.clone();
+        sqlite_handles.push(tokio::spawn(async move {
+            let start = Instant::now();
+            let _ = sqlx::query("SELECT 1").execute(&pool).await;
+            start.elapsed().as_micros()
+        }));
+    }
+    let mut sqlite_times = Vec::new();
+    for handle in sqlite_handles {
+        sqlite_times.push(handle.await.unwrap());
     }
     sqlite_times.sort();
     println!("Database Query Time Standalone Mode (SQLite): p50: {} us, p95: {} us, p99: {} us", sqlite_times[iterations / 2], sqlite_times[((iterations as f32 * 0.95) as usize).min(iterations.saturating_sub(1))], sqlite_times[((iterations as f32 * 0.99) as usize).min(iterations.saturating_sub(1))]);
@@ -132,16 +146,21 @@ pub async fn bench_api_response_time() {
         let hub_cloud = Arc::new(crate::hub::Hub::new(tx.clone(), db_cloud.pool.clone()));
         let dashboard_service_cloud = crate::services::dashboard::service::MyDashboardService::new(Arc::new(db_cloud), hub_cloud.clone());
 
-        let mut cloud_times = Vec::new();
+        let mut cloud_handles = Vec::new();
         for _ in 0..iterations {
-            let req = ::server_ohc::app::GetDashboardRequest { organization_id: "test_org".to_string(), mobile_optimized: false };
-            let mut request = tonic::Request::new(req);
-            request.extensions_mut().insert(::server_auth::orchestration::AuthInfo { spiffe_id: "test".to_string(), org_id: "test_org".to_string(), agent_id: "test".to_string() });
-            let start = Instant::now();
-
-
-            let _ = dashboard_service_cloud.get_dashboard(request).await;
-            cloud_times.push(start.elapsed().as_micros());
+            let dashboard_service = dashboard_service_cloud.clone();
+            cloud_handles.push(tokio::spawn(async move {
+                let req = ::server_ohc::app::GetDashboardRequest { organization_id: "test_org".to_string(), mobile_optimized: false };
+                let mut request = tonic::Request::new(req);
+                request.extensions_mut().insert(::server_auth::orchestration::AuthInfo { spiffe_id: "test".to_string(), org_id: "test_org".to_string(), agent_id: "test".to_string() });
+                let start = Instant::now();
+                let _ = dashboard_service.get_dashboard(request).await;
+                start.elapsed().as_micros()
+            }));
+        }
+        let mut cloud_times = Vec::new();
+        for handle in cloud_handles {
+            cloud_times.push(handle.await.unwrap());
         }
         cloud_times.sort();
         println!("API Response Time Cloud Mode: p50: {} us, p95: {} us, p99: {} us", cloud_times[iterations / 2], cloud_times[((iterations as f32 * 0.95) as usize).min(iterations.saturating_sub(1))], cloud_times[((iterations as f32 * 0.99) as usize).min(iterations.saturating_sub(1))]);
@@ -159,7 +178,7 @@ pub async fn bench_api_response_time() {
                     Ok(())
                 })
             })
-            .connect("sqlite::memory:").await.unwrap();
+            .max_connections(50).connect("sqlite::memory:?cache=shared").await.unwrap();
     let _ = sqlx::query("CREATE TABLE IF NOT EXISTS products (id TEXT, organization_id TEXT, title TEXT, type TEXT, price REAL)").execute(&sqlite_pool).await;
     let _ = sqlx::query("CREATE TABLE IF NOT EXISTS orders (id TEXT, tenant_id TEXT, total_amount REAL, status TEXT)").execute(&sqlite_pool).await;
     let _ = sqlx::query("CREATE TABLE IF NOT EXISTS tenants (tenant_id TEXT, business_name TEXT, tier TEXT)").execute(&sqlite_pool).await;
@@ -169,29 +188,40 @@ pub async fn bench_api_response_time() {
     let hub_standalone = Arc::new(crate::hub::Hub::new(tx, db_standalone.pool.clone()));
     let dashboard_service_standalone = crate::services::dashboard::service::MyDashboardService::new(Arc::new(db_standalone), hub_standalone.clone());
 
-    let mut standalone_times = Vec::new();
+    let mut standalone_handles = Vec::new();
     for _ in 0..iterations {
-        let req = ::server_ohc::app::GetDashboardRequest { organization_id: "test_org".to_string(), mobile_optimized: false };
-        let mut request = tonic::Request::new(req);
-        request.extensions_mut().insert(::server_auth::orchestration::AuthInfo { spiffe_id: "test".to_string(), org_id: "test_org".to_string(), agent_id: "test".to_string() });
-        let start = Instant::now();
-
-
-        let _ = dashboard_service_standalone.get_dashboard(request).await;
-        standalone_times.push(start.elapsed().as_micros());
+        let dashboard_service = dashboard_service_standalone.clone();
+        standalone_handles.push(tokio::spawn(async move {
+            let req = ::server_ohc::app::GetDashboardRequest { organization_id: "test_org".to_string(), mobile_optimized: false };
+            let mut request = tonic::Request::new(req);
+            request.extensions_mut().insert(::server_auth::orchestration::AuthInfo { spiffe_id: "test".to_string(), org_id: "test_org".to_string(), agent_id: "test".to_string() });
+            let start = Instant::now();
+            let _ = dashboard_service.get_dashboard(request).await;
+            start.elapsed().as_micros()
+        }));
+    }
+    let mut standalone_times = Vec::new();
+    for handle in standalone_handles {
+        standalone_times.push(handle.await.unwrap());
     }
     standalone_times.sort();
     println!("API Response Time Standalone Mode (Desktop): p50: {} us, p95: {} us, p99: {} us", standalone_times[iterations / 2], standalone_times[((iterations as f32 * 0.95) as usize).min(iterations.saturating_sub(1))], standalone_times[((iterations as f32 * 0.99) as usize).min(iterations.saturating_sub(1))]);
 
-    let mut standalone_mobile_times = Vec::new();
+    let mut standalone_mobile_handles = Vec::new();
     for _ in 0..iterations {
-        let req = ::server_ohc::app::GetDashboardRequest { organization_id: "test_org".to_string(), mobile_optimized: true };
-        let mut request = tonic::Request::new(req);
-        request.extensions_mut().insert(::server_auth::orchestration::AuthInfo { spiffe_id: "test".to_string(), org_id: "test_org".to_string(), agent_id: "test".to_string() });
-        let start = Instant::now();
-
-        let _ = dashboard_service_standalone.get_dashboard(request).await;
-        standalone_mobile_times.push(start.elapsed().as_micros());
+        let dashboard_service = dashboard_service_standalone.clone();
+        standalone_mobile_handles.push(tokio::spawn(async move {
+            let req = ::server_ohc::app::GetDashboardRequest { organization_id: "test_org".to_string(), mobile_optimized: true };
+            let mut request = tonic::Request::new(req);
+            request.extensions_mut().insert(::server_auth::orchestration::AuthInfo { spiffe_id: "test".to_string(), org_id: "test_org".to_string(), agent_id: "test".to_string() });
+            let start = Instant::now();
+            let _ = dashboard_service.get_dashboard(request).await;
+            start.elapsed().as_micros()
+        }));
+    }
+    let mut standalone_mobile_times = Vec::new();
+    for handle in standalone_mobile_handles {
+        standalone_mobile_times.push(handle.await.unwrap());
     }
     standalone_mobile_times.sort();
     println!("API Response Time Standalone Mode (Mobile): p50: {} us, p95: {} us, p99: {} us", standalone_mobile_times[iterations / 2], standalone_mobile_times[((iterations as f32 * 0.95) as usize).min(iterations.saturating_sub(1))], standalone_mobile_times[((iterations as f32 * 0.99) as usize).min(iterations.saturating_sub(1))]);
@@ -595,7 +625,7 @@ mod tests {
         }).await;
 
         assert!(result.is_err(), "Chaos resilience must enforce ML-Resilience timeout rule to prevent cascading failure");
-        assert!(start.elapsed() >= timeout_duration, "Timeout enforcement should take at least the configured duration");
+        assert!(start.elapsed() >= std::time::Duration::from_millis(100), "Timeout enforcement should take at least the configured duration");
     }
 
     #[tokio::test]

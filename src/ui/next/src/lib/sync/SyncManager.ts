@@ -75,12 +75,24 @@ export class SyncManager {
         } else if (m.type === 'tap_to_pay') {
           return {
              transaction_id: m.id,
-             product_id: 'offline_payment',
-             quantity_deducted: 0,
-             amount: Math.round(m.amount * 100),
+             product_id: m.product_id || 'offline_payment',
+             quantity_deducted: m.quantity || 1,
+             amount: Math.round(m.amount),
              payment_method: 'terminal',
              payment_intent_id: m.idempotency_key,
-             currency: 'USD'
+             currency: m.currency || 'usd'
+          };
+        } else if (m.type === 'draft_quote') {
+          return {
+             transaction_id: m.id,
+             product_id: 'draft_quote',
+             quantity_deducted: 0,
+             amount: null,
+             payment_method: null,
+             payment_intent_id: null,
+             currency: 'usd',
+             mutation_type: 'draft_quote',
+             payload: m.notes
           };
         }
         return m;

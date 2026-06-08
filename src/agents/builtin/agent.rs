@@ -1,3 +1,4 @@
+/// Master Catalog B.1. The Orchestration Loop
 use crate::actor_model::Actor;
 use ohc_builtin_agent_core::types::ToolError;
 use std::sync::Arc;
@@ -1260,7 +1261,7 @@ impl Agent {
         // --- EDGES ---
         graph.add_edge("tool_node", "llm_call");
 
-        // LangChain/LangGraph: conditional edges (if tool calls present -> route to ; if absent -> route to ).
+        // LangChain/LangGraph: conditional edges (if tool calls present -> route to `tool_node`; if absent -> route to `END`).
         graph.add_conditional_edges("llm_call", |state| {
             if state.has_tool_calls {
                 "tool_node".to_string()
@@ -1582,6 +1583,20 @@ impl Agent {
                             // Error Handling (Compounding Error Prevention): LLM-recoverable
                             // (return the raw error as a ToolMessage directly to the model so it can self-correct)
                             let self_correct_msg = format!("LLM-Recoverable Error: {}. Please analyze this error, correct your tool arguments, and try again.", msg);
+                            let error_result = crate::types::ToolResult {
+                                tool_call_id: current_tc.id.clone(),
+                                content: String::new(),
+                                error: self_correct_msg.clone(),
+                            };
+                            let _msg_to_push = crate::types::Message {
+                                role: crate::types::Role::Tool,
+                                content: String::new(),
+                                tool_calls: vec![],
+                                tool_results: vec![error_result],
+                                response_id: None,
+                                previous_response_id: None,
+                            };
+                            // NOTE: run_workflow context
                             break Ok(self_correct_msg);
                         }
                         Err(e) => {
@@ -1663,6 +1678,19 @@ impl Agent {
                         // Error Handling (Compounding Error Prevention): LLM-recoverable
                         // (return the raw error as a ToolMessage directly to the model so it can self-correct)
                         let self_correct_msg = format!("LLM-Recoverable Error: {}. Please analyze this error, correct your tool arguments, and try again.", msg);
+                        let error_result = crate::types::ToolResult {
+                            tool_call_id: current_tc.id.clone(),
+                            content: String::new(),
+                            error: self_correct_msg.clone(),
+                        };
+                        let _msg_to_push = crate::types::Message {
+                            role: crate::types::Role::Tool,
+                            content: String::new(),
+                            tool_calls: vec![],
+                            tool_results: vec![error_result],
+                            response_id: None,
+                            previous_response_id: None,
+                        };
                         break self_correct_msg;
                     }
                     Err(crate::types::ToolError::UserFixable(msg)) => {
@@ -2725,11 +2753,20 @@ impl Agent {
                             result: self_correct_msg.clone(),
                             iteration,
                         });
-                        tool_results[idx] = ToolResult {
+                        let error_result = ToolResult {
                             tool_call_id: tc.id.clone(),
                             content: String::new(),
-                            error: self_correct_msg,
+                            error: self_correct_msg.clone(),
                         };
+                        let _msg_to_push = Message {
+                            role: Role::Tool,
+                            content: String::new(),
+                            tool_calls: vec![],
+                            tool_results: vec![error_result.clone()],
+                            response_id: None,
+                            previous_response_id: None,
+                        };
+                        tool_results[idx] = error_result;
                     }
                     Err(ToolError::UserFixable(msg)) => {
                         let err = format!("USER_FIXABLE: {}", msg);
@@ -2918,6 +2955,19 @@ impl Agent {
                                 result: self_correct_msg.clone(),
                                 iteration,
                             });
+                            let error_result = ToolResult {
+                                tool_call_id: tc.id.clone(),
+                                content: String::new(),
+                                error: self_correct_msg.clone(),
+                            };
+                            let _msg_to_push = Message {
+                                role: Role::Tool,
+                                content: String::new(),
+                                tool_calls: vec![],
+                                tool_results: vec![error_result],
+                                response_id: None,
+                                previous_response_id: None,
+                            };
                             error = self_correct_msg;
                             content = String::new();
                             break;
