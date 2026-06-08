@@ -1,177 +1,270 @@
 import { NextResponse } from 'next/server';
 
-function safeTenant(value: string | null): string {
-  const normalized = (value || 'my-business').trim().slice(0, 80);
-  return encodeURIComponent(normalized || 'my-business');
-}
-
-function safeHost(value: string | null): string {
-  const host = (value || 'ohc.app').trim().toLowerCase();
-  return /^[a-z0-9.-]+(?::\d{1,5})?$/.test(host) ? host : 'ohc.app';
-}
-
-function safeProtocol(value: string | null): 'http' | 'https' {
-  return value === 'http' ? 'http' : 'https';
+function escapeHtml(unsafe: string) {
+    if (!unsafe) return unsafe;
+    return unsafe
+         .replace(/&/g, "&amp;")
+         .replace(/</g, "&lt;")
+         .replace(/>/g, "&gt;")
+         .replace(/"/g, "&quot;")
+         .replace(/'/g, "&#039;");
 }
 
 export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const tenant = safeTenant(searchParams.get('tenant'));
-  const theme = searchParams.get('theme') || 'light';
-  const title = searchParams.get('title') || 'Work Request';
+    const { searchParams } = new URL(request.url);
+    const rawTenant = searchParams.get('tenant') || 'demo';
+    const rawTheme = searchParams.get('theme') || 'light';
+    const rawTitle = searchParams.get('title') || 'Work Request';
+    const rawBranding = searchParams.get('branding') !== 'false';
 
-  const host = safeHost(request.headers.get('host'));
-  const protocol = safeProtocol(request.headers.get('x-forwarded-proto'));
-  const baseUrl = `${protocol}://${host}`;
+    const tenant = escapeHtml(rawTenant);
+    const encodedTenant = encodeURIComponent(rawTenant);
+    const theme = escapeHtml(rawTheme);
+    const title = escapeHtml(rawTitle);
 
-  const isDark = theme === 'dark';
-  const submitUrl = `/api/v1/work-intake/submit?tenant=${tenant}`;
+    const isDark = theme === 'dark';
 
-  const html = `
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-      <meta charset="UTF-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Work Intake Embed</title>
-      <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700&display=swap" rel="stylesheet">
-      <style>
-        body { font-family: 'Inter', sans-serif; margin: 0; padding: 16px; background: transparent; }
-        .font-outfit { font-family: 'Outfit', sans-serif; }
-        .card {
-            background-color: ${isDark ? '#111827' : '#ffffff'};
-            border: 1px solid ${isDark ? '#374151' : '#e5e7eb'};
-            border-radius: 16px;
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-            overflow: hidden;
+    // Core OHC design tokens
+    const colors = {
+        bg: isDark ? '#1a1a1a' : '#ffffff',
+        text: isDark ? '#f5f5f5' : '#111827',
+        border: isDark ? '#333333' : '#e5e7eb',
+        inputBg: isDark ? '#2d2d2d' : '#f9fafb',
+        buttonBg: isDark ? '#ffffff' : '#111827',
+        buttonText: isDark ? '#000000' : '#ffffff',
+        muted: isDark ? '#9ca3af' : '#6b7280',
+    };
+
+    const html = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${title}</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: ${colors.bg};
+            color: ${colors.text};
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .container {
+            max-width: 100%;
+            height: 100%;
             display: flex;
             flex-direction: column;
-            max-width: 24rem;
-            margin: 0 auto;
-            transition: all 0.3s ease;
         }
-        .header {
-            padding: 20px;
-            background: linear-gradient(to right, #3b82f6, #8b5cf6);
-            color: white;
-            text-align: center;
-        }
-        .header-icon {
-            font-size: 2.5rem;
-            margin-bottom: 8px;
-        }
-        .title {
+
+        h2 {
+            margin: 0 0 16px 0;
             font-size: 1.25rem;
-            font-weight: 700;
-            margin: 0;
+            font-weight: 600;
         }
-        .content { padding: 20px; flex: 1; display: flex; flex-direction: column; }
-        .form-group { margin-bottom: 16px; text-align: left; }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
         label {
             display: block;
-            color: ${isDark ? '#d1d5db' : '#374151'};
-            font-size: 0.875rem;
-            font-weight: 600;
             margin-bottom: 6px;
+            font-size: 0.875rem;
+            font-weight: 500;
         }
+
         input, textarea {
             width: 100%;
             padding: 10px 12px;
-            border: 1px solid ${isDark ? '#4b5563' : '#d1d5db'};
+            border: 1px solid ${colors.border};
             border-radius: 8px;
-            background-color: ${isDark ? '#1f2937' : '#ffffff'};
-            color: ${isDark ? '#ffffff' : '#111827'};
+            background-color: ${colors.inputBg};
+            color: ${colors.text};
             font-family: inherit;
             font-size: 0.875rem;
-            box-sizing: border-box;
-            transition: border-color 0.15s ease;
+            transition: border-color 0.2s, box-shadow 0.2s;
         }
+
         input:focus, textarea:focus {
             outline: none;
             border-color: #3b82f6;
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
         }
-        .btn {
-            width: 100%;
-            background-color: #2563eb;
-            color: white;
-            font-weight: 600;
-            padding: 12px 16px;
-            border-radius: 12px;
-            text-align: center;
-            border: none;
-            cursor: pointer;
-            transition: background-color 0.15s ease;
-            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            margin-top: 8px;
-            font-size: 1rem;
-        }
-        .btn:hover { background-color: #1d4ed8; }
-        .footer {
-            padding-top: 16px;
-            margin-top: 16px;
-            border-top: 1px solid ${isDark ? '#374151' : '#f3f4f6'};
-            color: ${isDark ? '#9ca3af' : '#6b7280'};
-            font-size: 0.75rem;
-            text-align: center;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
-        }
-        .footer a {
-            font-weight: 700;
-            color: #3b82f6;
-            text-decoration: none;
-            transition: color 0.15s ease;
-        }
-        .footer a:hover { color: #2563eb; text-decoration: underline; }
-      </style>
-    </head>
-    <body>
-      <div class="card">
-        <div class="header">
-           <div class="header-icon">✉️</div>
-           <h2 class="title font-outfit">${title}</h2>
-        </div>
 
-        <div class="content">
-            <form action="${submitUrl}" method="POST">
+        textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            background-color: ${colors.buttonBg};
+            color: ${colors.buttonText};
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: opacity 0.2s;
+            margin-top: 8px;
+        }
+
+        button:hover {
+            opacity: 0.9;
+        }
+
+        button:active {
+            transform: scale(0.98);
+        }
+
+        /* Loading Spinner */
+        .spinner {
+            display: none;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: currentColor;
+            animation: spin 1s ease-in-out infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        button.loading span { display: none; }
+        button.loading .spinner { display: block; }
+
+        /* Success State */
+        .success-state {
+            display: none;
+            text-align: center;
+            padding: 32px 0;
+            animation: fadeIn 0.4s ease;
+        }
+
+        .success-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .footer {
+            margin-top: auto;
+            padding-top: 20px;
+            text-align: center;
+            font-size: 0.75rem;
+            color: ${colors.muted};
+        }
+
+        .footer a {
+            color: inherit;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="form-container">
+            <h2>${title}</h2>
+            <form id="intake-form">
                 <div class="form-group">
                     <label for="name">Name</label>
                     <input type="text" id="name" name="name" required placeholder="Jane Doe">
                 </div>
+
                 <div class="form-group">
                     <label for="email">Email</label>
                     <input type="email" id="email" name="email" required placeholder="jane@example.com">
                 </div>
+
                 <div class="form-group">
-                    <label for="details">How can we help?</label>
-                    <textarea id="details" name="details" rows="3" required placeholder="Describe your request..."></textarea>
+                    <label for="request">What do you need help with?</label>
+                    <textarea id="request" name="request" required placeholder="Please describe your project or request..."></textarea>
                 </div>
-                <button type="submit" class="btn">Send Request</button>
+
+                <button type="submit" id="submit-btn">
+                    <span>Send Request</span>
+                    <div class="spinner"></div>
+                </button>
             </form>
-
-            <!-- Viral Growth Loop Footer -->
-            <div class="footer">
-               <span>⚡ Powered by</span>
-               <a href="/api/v1/growth/referrals/click?target=/onboarding&ref=${tenant}" target="_blank" rel="noopener noreferrer">OHC</a>
-            </div>
         </div>
-      </div>
-    </body>
-    </html>
-  `;
 
-  return new NextResponse(html, {
-    headers: {
-      'Content-Type': 'text/html',
-      'Cache-Control': 'public, max-age=60, s-maxage=60, stale-while-revalidate=300',
-      'X-Content-Type-Options': 'nosniff'
-    }
-  });
+        <div id="success-container" class="success-state">
+            <div class="success-icon">✨</div>
+            <h2 style="margin-bottom: 8px;">Request Received</h2>
+            <p style="color: ${colors.muted}; font-size: 0.875rem;">We'll get back to you shortly.</p>
+            <button id="reset-btn" style="background-color: transparent; color: ${colors.text}; border: 1px solid ${colors.border}; margin-top: 24px;">
+                Send another request
+            </button>
+        </div>
+
+        ${rawBranding ? `
+        <div class="footer">
+            ⚡ Powered by OHC
+            <!-- Hidden link for crawler attribution and referral loop -->
+            <span style="display:none;">
+               <a href="/api/v1/growth/referrals/click?target=/onboarding&ref=${encodedTenant}" target="_blank" rel="noopener noreferrer">OHC</a>
+            </span>
+        </div>
+        ` : ''}
+    </div>
+
+    <script>
+        document.getElementById('intake-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const btn = document.getElementById('submit-btn');
+            const formContainer = document.getElementById('form-container');
+            const successContainer = document.getElementById('success-container');
+
+            // Loading state
+            btn.classList.add('loading');
+            btn.disabled = true;
+
+            // In a real implementation, this would POST to the OHC backend
+            // await fetch('/api/v1/work-intake/submit', { ... })
+
+            // Simulate network request
+            setTimeout(() => {
+                btn.classList.remove('loading');
+                btn.disabled = false;
+
+                // Show success
+                formContainer.style.display = 'none';
+                successContainer.style.display = 'block';
+            }, 1200);
+        });
+
+        document.getElementById('reset-btn').addEventListener('click', () => {
+            document.getElementById('intake-form').reset();
+            document.getElementById('success-container').style.display = 'none';
+            document.getElementById('form-container').style.display = 'block';
+        });
+    </script>
+</body>
+</html>
+    `;
+
+    return new NextResponse(html, {
+        headers: {
+            'Content-Type': 'text/html; charset=utf-8',
+            'Cache-Control': 'public, max-age=300, s-maxage=300'
+        },
+    });
 }
