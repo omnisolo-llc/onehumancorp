@@ -5,6 +5,7 @@ use std::collections::HashMap;
 
 pub struct CustomerSuccessAgent {
     orchestrator: std::sync::Arc<DepartmentOrchestrator>,
+    pub hub: Option<std::sync::Arc<crate::hub::Hub>>,
     configs: HashMap<String, DepartmentConfig>,
 }
 
@@ -12,8 +13,14 @@ impl CustomerSuccessAgent {
     pub fn new(orchestrator: std::sync::Arc<DepartmentOrchestrator>) -> Self {
         Self {
             orchestrator,
+            hub: None,
             configs: HashMap::new(),
         }
+    }
+
+    pub fn with_hub(mut self, hub: std::sync::Arc<crate::hub::Hub>) -> Self {
+        self.hub = Some(hub);
+        self
     }
 }
 
@@ -55,6 +62,20 @@ impl Department for CustomerSuccessAgent {
             tracing::info!("EXECUTING APPROVED DRAFT: Sending message: {}", message);
 
             let content = format!("Sent response to customer: {}", message);
+
+            let source = original.and_then(|orig| orig.get("source").and_then(|v| v.as_str())).unwrap_or("").to_string();
+            let sender_id = original.and_then(|orig| orig.get("sender_id").and_then(|v| v.as_str())).unwrap_or("").to_string();
+            let text = message.to_string();
+            let _hub_clone = self.hub.clone();
+
+            tokio::spawn(async move {
+                if source == "whatsapp" && !sender_id.is_empty() {
+                    let integrations = std::sync::Arc::new(crate::integrations::registry::IntegrationsRegistry::new());
+                    if let Err(e) = integrations.send_message("whatsapp", "whatsapp", &sender_id, &text).await {
+                         tracing::error!("Failed to send whatsapp message via Meta integration: {}", e);
+                    }
+                }
+            });
 
             if let Some(inbox_id) = original.and_then(|orig| orig.get("inbox_message_id").and_then(|v| v.as_str())) {
                 let orchestrator_clone = self.orchestrator.clone();
