@@ -184,14 +184,18 @@ export default function CostDashboardPage() {
             <div className="app-panel-body space-y-4">
                 <div className="flex flex-col app-card hover:-translate-y-1 hover:shadow-md transition-all duration-300">
                     <h3 className="font-medium text-gray-900 mb-2">7-Day Trend</h3>
-                    <ul id="cost-dashboard-trend" className="space-y-2">
-                        {(data?.trend?.length ? data.trend : [{ date: 'No trend data yet', total_cost: 0 } as DailyCost]).map((daily, index) => (
-                            <li key={index} className="flex justify-between items-center border-b border-gray-200 pb-2 last:border-b-0 last:pb-0">
-                                <span className="text-sm text-gray-700">{daily.date}</span>
-                                <span className="text-sm font-medium text-gray-900">{formatCurrency(daily.total_cost)}</span>
-                            </li>
-                        ))}
-                    </ul>
+                    {data?.trend && data.trend.length > 0 ? (
+                        <ul id="cost-dashboard-trend" className="space-y-2">
+                            {data.trend.map((daily, index) => (
+                                <li key={index} className="flex justify-between items-center border-b border-gray-200 pb-2 last:border-b-0 last:pb-0">
+                                    <span className="text-sm text-gray-700">{daily.date}</span>
+                                    <span className="text-sm font-medium text-gray-900">{formatCurrency(daily.total_cost)}</span>
+                                </li>
+                            ))}
+                        </ul>
+                    ) : (
+                        <p className="text-sm text-gray-500">No trend data yet.</p>
+                    )}
                 </div>
 
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 app-card hover:-translate-y-1 hover:shadow-md transition-all duration-300">
@@ -268,7 +272,7 @@ export default function CostDashboardPage() {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-6">
                 <h2 className="text-xl font-bold font-outfit text-gray-900">Department Tier Usage</h2>
                 <span className="text-sm text-gray-500 font-medium">
-                  {data?.department_tier_usage?.current_plan || 'Free'} plan · {data?.department_tier_usage?.period || data?.period_end?.slice(0, 7) || ''}
+                  {data?.department_tier_usage?.current_plan ? `${data.department_tier_usage.current_plan} plan` : 'Loading...'} · {data?.department_tier_usage?.period || data?.period_end?.slice(0, 7) || ''}
                 </span>
             </div>
 

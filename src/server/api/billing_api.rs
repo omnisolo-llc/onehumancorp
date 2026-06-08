@@ -88,7 +88,7 @@ pub async fn my_plan_handler(
                 auth.org_id.clone()
             }
         },
-        None => return Json(MyPlanResponse { current_plan: "Free".to_string(), ai_actions_used: 0, ai_actions_limit: None, storage_used_bytes: 0, storage_limit_bytes: None, next_bill_estimated: 0 })
+        None => return Json(MyPlanResponse { current_plan: plan_name(&::server_pricing::rate_limit::PlanTier::Free).to_string(), ai_actions_used: 0, ai_actions_limit: None, storage_used_bytes: 0, storage_limit_bytes: None, next_bill_estimated: 0 })
     };
 
     let cache = MY_PLAN_CACHE.get_or_init(|| HybridCache::new(None));
@@ -373,7 +373,7 @@ fn current_usage_period() -> String {
 
 fn empty_department_tier_usage_response() -> DepartmentTierUsageResponse {
     DepartmentTierUsageResponse {
-        current_plan: "Free".to_string(),
+        current_plan: plan_name(&::server_pricing::rate_limit::PlanTier::Free).to_string(),
         period: current_usage_period(),
         departments: vec![],
     }
@@ -441,7 +441,7 @@ mod department_tier_usage_tests {
 
         // Assert concurrency latency (should be very fast since no actual usage)
         assert!(elapsed.as_millis() < 500, "Should execute concurrently and quickly");
-        assert_eq!(response.current_plan, "Free");
+        assert_eq!(response.current_plan, plan_name(&::server_pricing::rate_limit::PlanTier::Free).to_string());
 
         // Teardown
         sqlx::query("DELETE FROM agent_departments WHERE tenant_id = $1").bind(&tenant_id).execute(&pool).await.unwrap();
