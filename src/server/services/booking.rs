@@ -989,32 +989,44 @@ impl BookingEngineService for NativeBookingService {
         let inventory_capacity =
             Self::product_inventory_capacity(&req.tenant_id, &req.product_id).await?;
 
-        // If capacity is 1, check if there's an active POS transaction locking this item.
+        // If capacity is 1, acquire an active POS transaction lock to prevent offline conflicts.
+        let mut inventory_lock_id = format!("ohc:booking:inventory:{}:{}:{}", req.tenant_id, req.product_id, session_id);
+
         if inventory_capacity <= 1 {
             let pos_lock_key = format!("ohc:lock:{}:inventory:{}", req.tenant_id, req.product_id);
             if let Some(client) = &self.redis_client {
                 if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
-                    let is_locked: bool = redis::cmd("EXISTS").arg(&pos_lock_key).query_async(&mut conn).await.unwrap_or(false);
-                    if is_locked {
-                        return Err(Status::resource_exhausted("Product inventory is currently being checked out in-store"));
+                    let acquired: bool = redis::cmd("SET")
+                        .arg(&pos_lock_key)
+                        .arg(&session_id)
+                        .arg("EX")
+                        .arg(INVENTORY_LOCK_TTL.as_secs())
+                        .arg("NX")
+                        .query_async(&mut conn)
+                        .await
+                        .unwrap_or(false);
+
+                    if !acquired {
+                        return Err(Status::resource_exhausted("Item no longer available"));
                     }
+                    inventory_lock_id = pos_lock_key;
                 }
             }
+        } else {
+            let soft_locks = self.soft_lock_store();
+            let inventory_lock = soft_locks
+                .acquire_inventory_lock(
+                    &req.tenant_id,
+                    &req.product_id,
+                    &session_id,
+                    inventory_capacity,
+                    INVENTORY_LOCK_TTL,
+                )
+                .await
+                .map_err(Status::internal)?
+                .ok_or_else(|| Status::resource_exhausted("Product inventory is currently fully held"))?;
+            inventory_lock_id = inventory_lock.key;
         }
-        let soft_locks = self.soft_lock_store();
-        let inventory_lock = soft_locks
-            .acquire_inventory_lock(
-                &req.tenant_id,
-                &req.product_id,
-                &session_id,
-                inventory_capacity,
-                INVENTORY_LOCK_TTL,
-            )
-            .await
-            .map_err(Status::internal)?
-            .ok_or_else(|| Status::resource_exhausted("Product inventory is currently fully held"))?;
-
-        let inventory_lock_id = inventory_lock.key;
 
         let checkout_url = format!("https://checkout.stripe.com/pay/cs_test_{}", session_id.replace("-", ""));
 
