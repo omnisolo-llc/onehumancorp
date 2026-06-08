@@ -17,21 +17,6 @@ describe('HelpCenterPage', () => {
           ])
         });
       }
-      if (typeof url === 'string' && url.includes('/api/help/search')) {
-        const urlObj = new URL('http://localhost' + url);
-        const q = urlObj.searchParams.get('q')?.toLowerCase() || '';
-        const allArticles = [
-            { title: "Getting Started", desc: "Learn how to easily set up your store and accept your first payment.", link: "/help/getting-started-1" },
-            { title: "My Store", desc: "Add products, track what's in stock, and change how your store looks.", link: "/help/my-store" }
-        ];
-        const results = allArticles.filter(a =>
-          a.title.toLowerCase().includes(q) ||
-          a.desc.toLowerCase().includes(q)
-        );
-        return Promise.resolve({
-          json: () => Promise.resolve(results)
-        });
-      }
       if (url === '/api/videos') {
         return Promise.resolve({
           json: () => Promise.resolve([

@@ -94,30 +94,6 @@ impl AgentProtocolServer {
         serde_json::to_string(&resp).unwrap_or_else(|_| r#"{"error": "Serialization failed"}"#.to_string())
     }
 
-
-    /// GET /ap/v1/agent/tasks/{task_id}
-
-    /// GET /ap/v1/agent/tasks/{task_id}
-    pub async fn get_task(&self, task_id: &str) -> String {
-        // Query the Checkpointer to see if the task exists and its state.
-        let status = if let Some(cp) = &self.runner.core.agent.checkpointer {
-            match cp.list_checkpoints(task_id).await {
-                Ok(cps) if !cps.is_empty() => "Running",
-                _ => "Created or Not Found",
-            }
-        } else {
-            "Created or Not Found"
-        };
-
-        let resp = Task {
-            task_id: task_id.to_string(),
-            input: format!("State from checkpoint: {}", status),
-            additional_input: None,
-            artifacts: vec![],
-        };
-        serde_json::to_string(&resp).unwrap_or_else(|_| r#"{"error": "Serialization failed"}"#.to_string())
-    }
-
     /// POST /ap/v1/agent/tasks/{task_id}/steps
     pub async fn execute_step(&self, task_id: &str, req_json: &str) -> String {
         let req: StepRequestBody = match serde_json::from_str(req_json) {
@@ -207,20 +183,6 @@ mod tests {
         assert_eq!(step_resp.output.unwrap(), "agent protocol success");
         assert_eq!(step_resp.status, StepStatus::Completed);
         assert!(step_resp.is_last);
-    }
-
-
-    #[tokio::test]
-    async fn test_agent_protocol_get_task() {
-        let client = Arc::new(MockLlmClient);
-        let agent = Arc::new(Agent::new(client, vec![]));
-        let runner = Arc::new(Runner::new(agent));
-        let server = AgentProtocolServer::new(runner);
-
-        let resp_json = server.get_task("task-123").await;
-        let resp: Task = serde_json::from_str(&resp_json).unwrap();
-        assert_eq!(resp.task_id, "task-123");
-        assert!(resp.input.contains("State from checkpoint: "));
     }
 
     #[tokio::test]

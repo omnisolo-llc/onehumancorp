@@ -51,7 +51,9 @@ pub fn check_token_budget(
         && delta < DIMINISHING_THRESHOLD
         && tracker.last_delta_tokens < DIMINISHING_THRESHOLD;
 
-    if !is_diminishing && (global_turn_tokens as f64) < (budget as f64) * COMPLETION_THRESHOLD {
+    if !is_diminishing
+        && (global_turn_tokens as f64) < (budget as f64) * COMPLETION_THRESHOLD
+    {
         tracker.continuation_count += 1;
         tracker.last_delta_tokens = delta;
         tracker.last_global_turn_tokens = global_turn_tokens;

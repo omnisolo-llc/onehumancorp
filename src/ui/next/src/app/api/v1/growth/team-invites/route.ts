@@ -1,56 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-export async function GET(request: NextRequest) {
+export async function POST(req: NextRequest) {
   try {
-    const backendUrl = process.env.OHC_BACKEND_URL || 'http://localhost:8080';
-    const headers = new Headers({ 'Content-Type': 'application/json' });
-    const authHeader = request.headers.get('authorization');
-    if (authHeader) headers.set('authorization', authHeader);
-    const cookie = request.headers.get('cookie');
-    if (cookie) headers.set('cookie', cookie);
+    const body = await req.json();
+    const { team_id, inviter_id, invitee_id } = body;
 
-    const backendRes = await fetch(`${backendUrl}/api/v1/growth/team-invites`, {
-      method: 'GET',
-      headers,
-    });
-
-    if (backendRes.ok) {
-      const data = await backendRes.json();
-      return NextResponse.json(data);
-    } else {
-      return NextResponse.json({ error: 'Failed to fetch team invites' }, { status: backendRes.status });
+    if (!team_id || !inviter_id) {
+      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
+
+    // In a real application, this would store the invite in the database
+    // and provision a temporary tenant context.
+
+    return NextResponse.json({
+      status: 'success',
+      team_id,
+      invite_link: `https://ohc.app/invite/${encodeURIComponent(team_id)}`,
+      invitee_id: invitee_id || `pending-invitee-${Math.random().toString(36).substring(2, 10)}`
+    }, { status: 200 });
+
   } catch (error) {
-    if (process.env.NODE_ENV !== "test") console.error("Error fetching team invites:", error);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
-  }
-}
-
-export async function POST(request: NextRequest) {
-  try {
-    const backendUrl = process.env.OHC_BACKEND_URL || 'http://localhost:8080';
-    const headers = new Headers({ 'Content-Type': 'application/json' });
-    const authHeader = request.headers.get('authorization');
-    if (authHeader) headers.set('authorization', authHeader);
-    const cookie = request.headers.get('cookie');
-    if (cookie) headers.set('cookie', cookie);
-
-    const body = await request.json();
-
-    const backendRes = await fetch(`${backendUrl}/api/v1/growth/team-invites`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(body)
-    });
-
-    if (backendRes.ok) {
-        const data = await backendRes.json();
-        return NextResponse.json(data);
-    } else {
-        return NextResponse.json({ error: 'Failed to generate team invite' }, { status: backendRes.status });
-    }
-  } catch (error) {
-    if (process.env.NODE_ENV !== "test") console.error("Error generating team invite:", error);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    console.error('Error generating team invite:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

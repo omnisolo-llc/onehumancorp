@@ -84,8 +84,8 @@ mod tests {
         assert_eq!(provider.local_endpoint, "http://localhost:11434");
         assert_eq!(provider.model_name, "llama3");
 
-        assert!(!(config.enable_visual_verification));
-        assert!(!(config.enable_llmcompiler_plan_and_execute));
+        assert_eq!(config.enable_visual_verification, false);
+        assert_eq!(config.enable_llmcompiler_plan_and_execute, false);
         assert_eq!(config.max_iterations, 25);
     }
 }
