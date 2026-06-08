@@ -95,10 +95,10 @@ export default function CostDashboardPage() {
 
   return (
     <div className="flex flex-col min-h-screen font-inter bg-gradient-to-br from-indigo-50 via-white to-purple-50 text-gray-900">
-      <header className="px-4 md:px-6 py-4 flex flex-col md:flex-row items-center justify-between border-b gap-4 sticky top-0 z-50 bg-white/70 backdrop-blur-xl saturate-200 border-b-white/40 shadow-sm">
+      <header className="px-4 md:px-6 py-4 flex flex-col md:flex-row items-center justify-between border-b gap-4 sticky top-0 z-50 shadow-sm" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', borderBottom: '1px solid rgba(255, 255, 255, 0.4)' }}>
         <h1 className="text-2xl font-bold font-outfit text-center md:text-left text-gray-900 tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-gray-900 to-gray-600">Business Advisory Dashboard</h1>
         <div className="flex gap-2">
-            <button onClick={() => router.push('/plan')} className="min-w-[44px] min-h-[44px] px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-xl text-sm font-medium transition-all active:scale-95 shadow-sm flex items-center justify-center">
+            <button onClick={() => router.push('/plan')} className="min-w-[44px] min-h-[44px] px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-xl text-sm font-medium transition-colors shadow-sm flex items-center justify-center">
             Back to My Plan
             </button>
         </div>
@@ -123,25 +123,25 @@ export default function CostDashboardPage() {
              <h2 className="app-panel-title">My Plan</h2>
              <button
                onClick={() => router.push('/pricing')}
-               className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-medium transition-all shadow-sm">
+               className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-medium transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
                Upgrade
              </button>
           </div>
           <div className="app-panel-body">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                  <div className="p-4 rounded-xl bg-white/50 border border-white/50">
+                  <div className="p-4 rounded-xl" style={{ background: 'rgba(255, 255, 255, 0.4)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)' }}>
                       <h3 className="text-sm font-medium text-gray-500">Current Plan</h3>
                       <p className="text-2xl font-bold text-gray-900 mt-1">{myPlanData?.current_plan || 'Free'}</p>
                   </div>
-                  <div className="p-4 rounded-xl bg-white/50 border border-white/50">
+                  <div className="p-4 rounded-xl" style={{ background: 'rgba(255, 255, 255, 0.4)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)' }}>
                       <h3 className="text-sm font-medium text-gray-500">AI Actions Used</h3>
                       <p className="text-2xl font-bold text-gray-900 mt-1">{myPlanData?.ai_actions_used || 0} <span className="text-sm text-gray-500 font-normal">{myPlanData?.ai_actions_limit != null ? `/ ${myPlanData.ai_actions_limit}` : '/ Unlimited'}</span></p>
                   </div>
-                  <div className="p-4 rounded-xl bg-white/50 border border-white/50">
+                  <div className="p-4 rounded-xl" style={{ background: 'rgba(255, 255, 255, 0.4)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)' }}>
                       <h3 className="text-sm font-medium text-gray-500">Storage Used</h3>
                       <p className="text-2xl font-bold text-gray-900 mt-1">{((myPlanData?.storage_used_bytes || 0) / (1024 * 1024)).toFixed(1)} MB <span className="text-sm text-gray-500 font-normal">{myPlanData?.storage_limit_bytes != null ? `/ ${(myPlanData.storage_limit_bytes / (1024 * 1024)).toFixed(0)} MB` : '/ Unlimited'}</span></p>
                   </div>
-                  <div className="p-4 rounded-xl bg-white/50 border border-white/50">
+                  <div className="p-4 rounded-xl" style={{ background: 'rgba(255, 255, 255, 0.4)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)' }}>
                       <h3 className="text-sm font-medium text-gray-500">Estimated Next Bill</h3>
                       <p className="text-2xl font-bold text-gray-900 mt-1">{formatCurrency(myPlanData?.next_bill_estimated || 0)}</p>
                   </div>
@@ -264,18 +264,19 @@ export default function CostDashboardPage() {
             </div>
         </section>
 
-        <section className="p-6 md:p-8 shadow-lg bg-white/60 backdrop-blur-2xl saturate-200 border border-white/40 rounded-2xl md:rounded-[24px] hover:shadow-xl transition-shadow duration-300">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-6">
-                <h2 className="text-xl font-bold font-outfit text-gray-900">Department Tier Usage</h2>
+        <section className="app-panel">
+            <div className="app-panel-header">
+                <h2 className="app-panel-title">Department Tier Usage</h2>
                 <span className="text-sm text-gray-500 font-medium">
                   {data?.department_tier_usage?.current_plan || 'Free'} plan · {data?.department_tier_usage?.period || data?.period_end?.slice(0, 7) || ''}
                 </span>
             </div>
+            <div className="app-panel-body">
 
             {data?.department_tier_usage?.departments?.length ? (
                 <div className="space-y-4" id="department-tier-usage-list">
                     {data.department_tier_usage.departments.map((department) => (
-                        <div key={department.id} className="p-5 rounded-2xl shadow-sm bg-white/50 backdrop-blur-lg border border-white/50">
+                        <div key={department.id} className="p-5 rounded-xl" style={{ background: 'rgba(255, 255, 255, 0.4)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)' }}>
                             <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
                                 <div>
                                     <h3 className="font-semibold text-gray-900">{department.department_type}</h3>
@@ -306,6 +307,7 @@ export default function CostDashboardPage() {
             ) : (
                 <p className="text-sm text-gray-500" id="department-tier-usage-empty">No department usage recorded for this period.</p>
             )}
+            </div>
         </section>
 
       </main>
