@@ -65,7 +65,7 @@ pub async fn reserve_inventory_handler(
 
     if let Some(client) = &hub.redis_client {
         if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
-            let ttl = if req_data.ttl_seconds > 0 { req_data.ttl_seconds } else { 300 };
+            let ttl = if req_data.ttl_seconds > 0 { req_data.ttl_seconds } else { 15 };
             let acquired: bool = redis::cmd("SET")
                 .arg(&lock_key).arg(&lock_id).arg("EX").arg(ttl).arg("NX")
                 .query_async(&mut conn).await.unwrap_or(false);
@@ -212,6 +212,17 @@ pub async fn commit_inventory_handler(
 
                     let _ = sqlx::query("INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status) VALUES ($1, $2, 'operations', 'LowStockAlert', $3::jsonb, 'PENDING')")
                         .bind(job_id).bind(&tenant_id).bind(&job_payload).execute(&mut *tx).await;
+
+                    let approval_id = uuid::Uuid::new_v4().to_string();
+                    let approval_payload = serde_json::json!({
+                        "feature_type": "low_stock_restock",
+                        "product_id": req_data.product_id,
+                        "remaining_stock": new_stock,
+                        "suggested_action": "Restock Item"
+                    }).to_string();
+                    let description = format!("Inventory for {} is low ({} remaining). Draft a restock order.", req_data.product_id, new_stock);
+                    let _ = sqlx::query("INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, payload, created_at, updated_at) VALUES ($1, $2, 'operations', $3, 'DRAFT', 'LOW', $4::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
+                        .bind(&approval_id).bind(&tenant_id).bind(&description).bind(&approval_payload).execute(&mut *tx).await;
                 }
 
                 let _ = tx.commit().await;
@@ -257,8 +268,11 @@ pub async fn get_terminal_connection_token_handler(
     let stripe_key = std::env::var("STRIPE_API_KEY").unwrap_or_default();
 
     let client = crate::integrations::stripe::client::StripeClient::new(stripe_key);
-    match client.create_terminal_connection_token(&tenant_id).await {
-        Ok(token) => Json(Ok(TerminalTokenResponse { token })),
+    match client.require_api_key() {
+        Ok(_) => match client.create_terminal_connection_token(&tenant_id).await {
+            Ok(token) => Json(Ok(TerminalTokenResponse { token })),
+            Err(e) => Json(Err(e)),
+        },
         Err(e) => Json(Err(e)),
     }
 }
@@ -316,9 +330,27 @@ pub async fn sync_offline_transactions_handler(
     let pool = crate::db::get_pool();
     let mut synced_count = 0;
     let mut failed_ids = Vec::new();
+
     let mut futures = Vec::new();
 
+    let client_id = req_data.transactions.first().and_then(|tx| tx.client_id.clone()).unwrap_or_else(|| "unknown".to_string());
+
+    // Update terminal_sessions
+    let session_id = uuid::Uuid::new_v4().to_string();
+    let _ = sqlx::query(
+        "INSERT INTO terminal_sessions (id, tenant_id, device_id, status, started_at, last_synced_at, offline_changes_count)
+         VALUES ($1, $2, $3, 'ACTIVE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, $4)
+         ON CONFLICT (tenant_id, device_id) DO UPDATE SET last_synced_at = CURRENT_TIMESTAMP, offline_changes_count = terminal_sessions.offline_changes_count + $4"
+    )
+    .bind(&session_id)
+    .bind(&tenant_id)
+    .bind(&client_id)
+    .bind(req_data.transactions.len() as i32)
+    .execute(&pool)
+    .await;
+
     for tx in &req_data.transactions {
+
         let pool_clone = pool.clone();
         let tenant_id_clone = tenant_id.clone();
         let client_id_clone = tx.client_id.clone().unwrap_or_default();
@@ -449,8 +481,11 @@ pub async fn create_payment_intent_handler(
     let stripe_key = std::env::var("STRIPE_API_KEY").unwrap_or_default();
 
     let client = crate::integrations::stripe::client::StripeClient::new(stripe_key);
-    match client.create_terminal_payment_intent(&tenant_id, req_data.amount_cents, &req_data.currency).await {
-        Ok(client_secret) => Json(Ok(PaymentIntentResponse { client_secret })),
+    match client.require_api_key() {
+        Ok(_) => match client.create_terminal_payment_intent(&tenant_id, req_data.amount_cents, &req_data.currency).await {
+            Ok(client_secret) => Json(Ok(PaymentIntentResponse { client_secret })),
+            Err(e) => Json(Err(e)),
+        },
         Err(e) => Json(Err(e)),
     }
 }

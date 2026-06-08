@@ -57,6 +57,7 @@ export function currentAppSmoke(label: string) {
     expect(await bandwidthSavings.innerText()).toMatch(/^\$[\d,]+\.\d{2}$/);
 
     await expect(page.locator('h2', { hasText: 'Cost Breakdown' })).toBeVisible();
+    await expect(page.locator('h3', { hasText: 'Agent & Feature Costs' })).toBeVisible();
 
     const llmCost = page.locator('#cost-dashboard-llm');
     await expect(llmCost).toBeVisible();
