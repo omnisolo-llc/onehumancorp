@@ -245,9 +245,75 @@ fn normalize_api_base_url(base_url: &str) -> String {
     trimmed
 }
 
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct WorkflowGraph {
+    pub nodes: Vec<Node>,
+    pub edges: Vec<Edge>,
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct Node {
+    pub id: String,
+    pub node_type: NodeType,
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub enum NodeType {
+    Input { name: String },
+    Llm { prompt_template: String },
+    Condition { condition_expression: String },
+    Merge { state_keys: Vec<String>, output_key: String },
+    ParallelFork { targets: Vec<String> },
+    ParallelJoin { state_keys: Vec<String>, output_key: String },
+    SubAgent { agent_name: String, task_template: String },
+    Output,
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct Edge {
+    pub source: String,
+    pub target: String,
+}
+
+#[tauri::command]
+async fn run_visual_workflow(graph: WorkflowGraph, inputs: std::collections::HashMap<String, String>) -> Result<String, String> {
+    let port = std::env::var("OHC_PORT").unwrap_or_else(|_| "18789".to_string());
+    let url = format!("http://127.0.0.1:{}/api/workflow/run", port);
+
+    let body = serde_json::json!({
+        "graph": graph,
+        "inputs": inputs
+    });
+
+    let client = reqwest::Client::new();
+    let res = client.post(&url)
+        .json(&body)
+        .send()
+        .await
+        .map_err(|e| format!("Failed to connect to backend: {}", e))?;
+
+    if res.status().is_success() {
+        let json: serde_json::Value = res.json().await.map_err(|e| format!("Failed to parse response: {}", e))?;
+        if let Some(success) = json.get("success").and_then(|v| v.as_bool()) {
+            if success {
+                if let Some(result) = json.get("result").and_then(|v| v.as_str()) {
+                    return Ok(result.to_string());
+                }
+            } else if let Some(error) = json.get("error").and_then(|v| v.as_str()) {
+                return Err(error.to_string());
+            }
+        }
+        Ok("Workflow completed but response format was unexpected.".to_string())
+    } else {
+        Err(format!("Backend returned error status: {}", res.status()))
+    }
+}
+
 fn endpoint_url(base_url: &str, endpoint: &str) -> String {
     format!("{}/{}", base_url.trim_end_matches('/'), endpoint)
 }
+
 
 #[cfg(ohc_bazel_tauri_context)]
 macro_rules! tauri_build_context {
@@ -276,6 +342,7 @@ pub fn run() {
             load_ai_provider,
             save_ai_provider,
             test_ai_provider,
+            run_visual_workflow,
         ])
         .setup(|app| {
             let window = app.get_webview_window("main").unwrap();

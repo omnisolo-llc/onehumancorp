@@ -151,6 +151,7 @@ rust_library(
         "@crates//:tauri",
         "@crates//:tauri-plugin-shell",
         "@crates//:tauri-plugin-updater",
+        "@crates//:tokio",
     ],
 )
 
