@@ -54,8 +54,8 @@ export const NeighborhoodPulseCard = ({ tenant }: { tenant: string }) => {
       className="p-6 rounded-2xl mb-6 shadow-xl relative overflow-hidden text-white"
       style={{
         background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.9), rgba(168, 85, 247, 0.9))',
-        backdropFilter: 'blur(20px) saturate(200%)',
-        border: '1px solid rgba(255, 255, 255, 0.2)'
+        backdropFilter: 'blur(30px) saturate(210%)',
+        border: '1px solid rgba(255, 255, 255, 0.4)'
       }}
     >
       {/* Decorative pulse element */}
@@ -75,7 +75,7 @@ export const NeighborhoodPulseCard = ({ tenant }: { tenant: string }) => {
               style={{
                 background: 'rgba(255, 255, 255, 0.15)',
                 backdropFilter: 'blur(20px)',
-                border: '1px solid rgba(255, 255, 255, 0.2)'
+                border: '1px solid rgba(255, 255, 255, 0.4)'
               }}
             >
               <div>
