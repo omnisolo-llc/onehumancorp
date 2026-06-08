@@ -5,53 +5,87 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>OHC Setup</title>
     <style>
+      :root {
+        --bg-color: #f5f5f7;
+        --glass-bg: rgba(255, 255, 255, 0.65);
+        --glass-border: rgba(255, 255, 255, 0.4);
+        --text-primary: #1d1d1f;
+        --text-secondary: #86868b;
+        --input-bg: rgba(255, 255, 255, 0.5);
+        --primary-accent: #0066FF;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg-color: #000000;
+          --glass-bg: rgba(22, 22, 26, 0.7);
+          --glass-border: rgba(255, 255, 255, 0.1);
+          --text-primary: #f5f5f7;
+          --text-secondary: #a1a1a6;
+          --input-bg: rgba(0, 0, 0, 0.5);
+        }
+      }
+
       body {
         font-family: "Outfit", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-        background-color: #f5f5f7;
+        background-color: var(--bg-color);
         margin: 0;
         display: flex;
         align-items: center;
         justify-content: center;
-        height: 100vh;
+        min-height: 100vh;
+        color: var(--text-primary);
       }
       .container {
-        background: rgba(255, 255, 255, 0.6);
-        backdrop-filter: blur(20px);
+        background: var(--glass-bg);
+        backdrop-filter: blur(30px) saturate(210%);
+        -webkit-backdrop-filter: blur(30px) saturate(210%);
         padding: 40px;
         border-radius: 16px;
         box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
         text-align: center;
         max-width: 400px;
         width: 100%;
-        border: 1px solid rgba(255, 255, 255, 0.4);
+        box-sizing: border-box;
+        border: 1px solid var(--glass-border);
       }
       h1 {
         margin-top: 0;
-        color: #1d1d1f;
         font-size: 24px;
         font-weight: 700;
+        margin-bottom: 8px;
       }
       p {
-        color: #86868b;
+        color: var(--text-secondary);
         font-size: 14px;
-        margin-bottom: 20px;
+        margin-bottom: 24px;
+        margin-top: 0;
+      }
+      .step-container {
+        display: none;
+        flex-direction: column;
+      }
+      .step-container.active {
+        display: flex;
       }
       input {
         width: 100%;
         padding: 14px;
-        margin-bottom: 20px;
-        border: 1px solid rgba(255, 255, 255, 0.5);
+        margin-bottom: 24px;
+        border: 1px solid var(--glass-border);
         border-radius: 8px;
         box-sizing: border-box;
         font-size: 16px;
-        background: rgba(255, 255, 255, 0.5);
+        background: var(--input-bg);
+        color: var(--text-primary);
+        min-height: 54px;
       }
       input:focus {
         outline: none;
-        border-color: #0066FF;
+        border-color: var(--primary-accent);
       }
       button {
-        background-color: #0066FF;
+        background-color: var(--primary-accent);
         color: white;
         border: none;
         padding: 14px 24px;
@@ -62,33 +96,128 @@
         width: 100%;
         transition: background-color 0.2s, transform 0.1s;
         box-shadow: 0 4px 14px 0 rgba(0, 102, 255, 0.39);
+        min-height: 54px;
       }
-      button:hover {
+      button:hover:not(:disabled) {
         background-color: #0052cc;
       }
-      button:active {
+      button:active:not(:disabled) {
         transform: scale(0.98);
+      }
+      button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      .progress-dots {
+        display: flex;
+        justify-content: center;
+        gap: 8px;
+        margin-bottom: 24px;
+      }
+      .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background-color: var(--text-secondary);
+        opacity: 0.3;
+      }
+      .dot.active {
+        background-color: var(--primary-accent);
+        opacity: 1;
       }
     </style>
   </head>
   <body>
     <div class="container">
-      <h1>What's the name of your business?</h1>
-      <p>We'll use this to set up your workspace.</p>
-      <input type="text" id="business-name" placeholder="e.g. Maya's Bakery" />
-      <button id="next-btn">Next</button>
+      <div class="progress-dots" id="progress-dots">
+        <div class="dot active"></div>
+        <div class="dot"></div>
+        <div class="dot"></div>
+      </div>
+
+      <div class="step-container active" id="step-1">
+        <h1>What's the name of your business?</h1>
+        <p>We'll use this to set up your workspace.</p>
+        <input type="text" id="business-name" placeholder="e.g. Maya's Bakery" />
+        <button id="next-btn-1" disabled>Next</button>
+      </div>
+
+      <div class="step-container" id="step-2">
+        <h1>What do you sell?</h1>
+        <p>Tell us a bit about your products or services.</p>
+        <input type="text" id="business-desc" placeholder="e.g. Custom vegan cakes for events" />
+        <button id="next-btn-2" disabled>Next</button>
+      </div>
+
+      <div class="step-container" id="step-3">
+        <h1>Where are you located?</h1>
+        <p>This helps us configure local delivery or tax settings.</p>
+        <input type="text" id="business-location" placeholder="e.g. Portland, OR" />
+        <button id="finish-btn" disabled>Generate My Business</button>
+      </div>
     </div>
+
     <script>
-      const nextBtn = document.getElementById('next-btn');
-      if (nextBtn) {
-        nextBtn.addEventListener('click', () => {
-           const name = document.getElementById('business-name').value;
-           if (name) {
-               localStorage.setItem('businessName', name);
-               window.location.href = "success.html";
-           }
+      let currentStep = 1;
+      const totalSteps = 3;
+
+      const steps = [
+        { id: 'business-name', btnId: 'next-btn-1', nextStep: 2 },
+        { id: 'business-desc', btnId: 'next-btn-2', nextStep: 3 },
+        { id: 'business-location', btnId: 'finish-btn', nextStep: null }
+      ];
+
+      function updateProgress() {
+        const dots = document.querySelectorAll('.dot');
+        dots.forEach((dot, index) => {
+          if (index < currentStep) {
+            dot.classList.add('active');
+          } else {
+            dot.classList.remove('active');
+          }
         });
       }
+
+      function showStep(stepNumber) {
+        document.querySelectorAll('.step-container').forEach(el => el.classList.remove('active'));
+        document.getElementById(`step-${stepNumber}`).classList.add('active');
+        currentStep = stepNumber;
+        updateProgress();
+        const inputId = steps[stepNumber - 1].id;
+        document.getElementById(inputId).focus();
+      }
+
+      steps.forEach((step, index) => {
+        const input = document.getElementById(step.id);
+        const button = document.getElementById(step.btnId);
+
+        // Validation
+        input.addEventListener('input', () => {
+          button.disabled = input.value.trim().length === 0;
+        });
+
+        // Enter key support
+        input.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' && !button.disabled) {
+            e.preventDefault();
+            button.click();
+          }
+        });
+
+        // Button click
+        button.addEventListener('click', () => {
+          localStorage.setItem(step.id, input.value.trim());
+          if (step.nextStep) {
+            showStep(step.nextStep);
+          } else {
+            // Done!
+            window.location.href = "success.html";
+          }
+        });
+      });
+
+      // Initialize
+      document.getElementById('business-name').focus();
     </script>
   </body>
 </html>
