@@ -197,7 +197,6 @@ pub fn repomap_tool(workspace_path: PathBuf) -> Tool {
 mod tests {
     use super::*;
     use tempfile::tempdir;
-    use std::fs;
 
     #[tokio::test]
     async fn test_repomap_generation() {
@@ -206,35 +205,35 @@ mod tests {
 
         // Create a dummy structure
         let src_dir = root.join("src");
-        fs::create_dir(&src_dir).expect("should succeed in test");
+        std::fs::create_dir(&src_dir).expect("should succeed in test");
 
         let rs_file = src_dir.join("main.rs");
-        fs::write(&rs_file, "pub fn main() {}\nstruct User {\n  id: u64,\n}\nfn helper() {}\n").expect("should succeed in test");
+        std::fs::write(&rs_file, "pub fn main() {}\nstruct User {\n  id: u64,\n}\nfn helper() {}\n").expect("should succeed in test");
 
         let py_file = src_dir.join("utils.py");
-        fs::write(&py_file, "def do_something():\n  pass\n\nclass Data:\n  pass\n").expect("should succeed in test");
+        std::fs::write(&py_file, "def do_something():\n  pass\n\nclass Data:\n  pass\n").expect("should succeed in test");
 
         let ts_file = src_dir.join("app.ts");
-        fs::write(&ts_file, "export function init() {}\ninterface Config {}\n").expect("should succeed in test");
+        std::fs::write(&ts_file, "export function init() {}\ninterface Config {}\n").expect("should succeed in test");
 
         let go_file = src_dir.join("server.go");
-        fs::write(&go_file, "func StartServer() {}\ntype Handler struct {}\n").expect("should succeed in test");
+        std::fs::write(&go_file, "func StartServer() {}\ntype Handler struct {}\n").expect("should succeed in test");
 
         let cpp_file = src_dir.join("engine.cpp");
-        fs::write(&cpp_file, "class Engine {\npublic:\n  void init() {}\n};\nvoid globalFunc() {}\n").expect("should succeed in test");
+        std::fs::write(&cpp_file, "class Engine {\npublic:\n  void init() {}\n};\nvoid globalFunc() {}\n").expect("should succeed in test");
 
         let java_file = src_dir.join("Server.java");
-        fs::write(&java_file, "public class Server {\n  public static void main() {}\n}\n").expect("should succeed in test");
+        std::fs::write(&java_file, "public class Server {\n  public static void main() {}\n}\n").expect("should succeed in test");
 
         let rb_file = src_dir.join("utils.rb");
-        fs::write(&rb_file, "class Utils\n  def helper\n  end\nend\n").expect("should succeed in test");
+        std::fs::write(&rb_file, "class Utils\n  def helper\n  end\nend\n").expect("should succeed in test");
 
 
         // Should ignore hidden and target
         let hidden_dir = root.join(".git");
-        fs::create_dir(&hidden_dir).expect("should succeed in test");
+        std::fs::create_dir(&hidden_dir).expect("should succeed in test");
         let target_dir = root.join("target");
-        fs::create_dir(&target_dir).expect("should succeed in test");
+        std::fs::create_dir(&target_dir).expect("should succeed in test");
 
         let executor = RepoMapExecutor::new(root.to_path_buf());
         let result = executor.execute(json!({})).await.expect("should succeed in test");
@@ -289,14 +288,14 @@ mod extra_tests {
         let root = dir.path();
 
         let d1 = root.join("d1");
-        fs::create_dir(&d1).expect("should succeed in test");
+        std::fs::create_dir(&d1).expect("should succeed in test");
         let d2 = d1.join("d2");
-        fs::create_dir(&d2).expect("should succeed in test");
+        std::fs::create_dir(&d2).expect("should succeed in test");
         let d3 = d2.join("d3");
-        fs::create_dir(&d3).expect("should succeed in test");
+        std::fs::create_dir(&d3).expect("should succeed in test");
 
         let f3 = d3.join("f3.rs");
-        fs::write(&f3, "fn inner() {}").expect("should succeed in test");
+        std::fs::write(&f3, "fn inner() {}").expect("should succeed in test");
 
         let executor = RepoMapExecutor::new(root.to_path_buf());
 
