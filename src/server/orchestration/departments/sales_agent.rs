@@ -217,6 +217,7 @@ impl Department for SalesAgent {
     fn subscribed_events(&self) -> Vec<String> {
         vec![
             "tenant.quote.requested".to_string(),
+            "tenant.intake.received".to_string(),
             "tenant.message.received".to_string(),
             "tenant.omnichannel.message.received".to_string(),
             "agent:sales:approved".to_string(),
@@ -224,6 +225,67 @@ impl Department for SalesAgent {
     }
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
+        if event.event_type == "tenant.intake.received" {
+            let planned_intent = match self
+                .quote_intent_planner
+                .plan_quote_intent(&event.tenant_id, &event.payload)
+                .await
+            {
+                Ok(intent) => intent,
+                Err(err) => {
+                    ::server_telemetry::record_error_signal("SalesAgent LLM intake planning failed");
+                    tracing::error!("SalesAgent LLM intake planning failed: {}", err);
+                    None
+                }
+            };
+
+            if let Some(intent) = planned_intent {
+                let service = self
+                    .orchestrator
+                    .get_service_by_name_like(&event.tenant_id, &intent.service_name)
+                    .await?;
+                let (service_name, price) = service.unwrap_or((intent.service_name, 1200.0));
+                let risk =
+                    risk_for_service_price(self.get_config(&event.tenant_id).as_ref(), price);
+
+                let drafted_message = format!(
+                    "Hi! I have reviewed your request for {}. We can get started on this next week. Our estimated cost is ${}.",
+                    service_name, price
+                );
+
+                ::server_telemetry::record_business_event(
+                    &event.tenant_id,
+                    ::server_telemetry::get_deployment_mode(),
+                    "quote_drafted_from_intake",
+                );
+
+                let action_payload = serde_json::json!({
+                    "feature_type": "quote_draft",
+                    "customer_inquiry": intent.original_message,
+                    "suggested_price": price,
+                    "scope": format!("{} including standard deliverables.", service_name),
+                    "suggested_time": "Next Monday",
+                    "generated_response": drafted_message,
+                    "service": service_name.clone(),
+                    "price": price,
+                });
+
+                self.orchestrator
+                    .execute_action(
+                        DepartmentType::Sales,
+                        format!("Draft proposal for {}", service_name),
+                        event.tenant_id.clone(),
+                        risk,
+                        action_payload,
+                    )
+                    .await
+                    .map(|_| ())?;
+                return Ok(());
+            }
+
+            return Ok(());
+        }
+
         if event.event_type == "agent:sales:approved" {
             if let Some(payload) = event.payload.get("original_payload") {
                 if let Some(feature_type) = payload.get("feature_type").and_then(|v| v.as_str()) {

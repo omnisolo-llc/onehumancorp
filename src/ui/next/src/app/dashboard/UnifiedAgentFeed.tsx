@@ -195,9 +195,48 @@ export function UnifiedAgentFeed() {
                   <h3 className="text-lg font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] leading-snug mt-1">
                     {approval.description}
                   </h3>
-                  {(approval.payload?.context || approval.payload?.remaining_stock !== undefined) && (
+                  {(approval.payload?.context || approval.payload?.remaining_stock !== undefined || approval.payload?.feature_type === 'quote_draft') && (
                     <div className="mt-2 flex flex-col gap-1 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
-                      {approval.payload?.context?.smart_pricing === true ? (
+                      {approval.payload?.feature_type === 'quote_draft' ? (
+                        <>
+                          <div className="flex flex-col gap-2">
+                            <div className="text-sm">
+                              <span className="font-semibold text-gray-700 dark:text-gray-300">Intake Request:</span>{' '}
+                              <span className="text-gray-900 dark:text-gray-100 italic">"{approval.payload.customer_inquiry}"</span>
+                            </div>
+
+                            <div className="bg-white dark:bg-gray-900 p-3 rounded-md border border-gray-200 dark:border-gray-700">
+                              <h4 className="text-xs font-bold uppercase text-indigo-500 mb-2 tracking-wider">Proposed Scope & Pricing</h4>
+
+                              <div className="flex justify-between items-center text-sm mb-1">
+                                <span className="text-gray-500 dark:text-gray-400">Scope:</span>
+                                <span className="font-medium text-gray-900 dark:text-gray-100 text-right max-w-[60%]">{approval.payload.scope}</span>
+                              </div>
+
+                              <div className="flex justify-between items-center text-sm mb-1">
+                                <span className="text-gray-500 dark:text-gray-400">Timeline:</span>
+                                <span className="font-medium text-gray-900 dark:text-gray-100">{approval.payload.suggested_time}</span>
+                              </div>
+
+                              <div className="flex justify-between items-center text-sm mt-2 pt-2 border-t border-gray-100 dark:border-gray-800">
+                                <span className="text-gray-500 dark:text-gray-400 font-medium">Estimated Price:</span>
+                                <span className="font-bold text-green-600 dark:text-green-400 text-lg">
+                                  ${Number(approval.payload.suggested_price || approval.payload.price).toFixed(2)}
+                                </span>
+                              </div>
+                            </div>
+
+                            {approval.payload.generated_response && (
+                              <div className="text-sm mt-1">
+                                <span className="font-semibold text-gray-700 dark:text-gray-300">Draft Reply:</span>
+                                <p className="text-gray-600 dark:text-gray-400 mt-1 pl-3 border-l-2 border-indigo-200 dark:border-indigo-800">
+                                  {approval.payload.generated_response}
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        </>
+                      ) : approval.payload?.context?.smart_pricing === true ? (
                         <>
                           <div className="flex justify-between items-center text-sm mb-1">
                             <span className="text-gray-500 dark:text-gray-400">Current Price:</span>
@@ -270,7 +309,36 @@ export function UnifiedAgentFeed() {
                 </div>
 
                 <div className="flex flex-col gap-3 w-full mt-2">
-                  {approval.payload?.context?.smart_pricing === true ? (
+                  {approval.payload?.feature_type === 'quote_draft' ? (
+                    <>
+                      <button
+                        onClick={() => handleDecision(approval.id, true)}
+                        className="w-full min-h-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-colors shadow-md flex items-center justify-center"
+                        aria-label="Approve & Send Proposal"
+                        data-testid="approve-send-proposal"
+                      >
+                        Approve & Send Proposal
+                      </button>
+                      <div className="flex flex-col sm:flex-row gap-3 w-full">
+                        <button
+                          onClick={() => {}}
+                          className="flex-1 min-h-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex items-center justify-center"
+                          aria-label="Edit Draft"
+                          data-testid="edit-draft"
+                        >
+                          Edit Draft
+                        </button>
+                        <button
+                          onClick={() => handleDecision(approval.id, false)}
+                          className="flex-1 min-h-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex items-center justify-center"
+                          aria-label="Ask Agent to Adjust"
+                          data-testid="dismiss-proposal"
+                        >
+                          Decline
+                        </button>
+                      </div>
+                    </>
+                  ) : approval.payload?.context?.smart_pricing === true ? (
                     <div className="flex flex-col sm:flex-row gap-3 w-full">
                       <button
                         onClick={() => handleDecision(approval.id, true)}

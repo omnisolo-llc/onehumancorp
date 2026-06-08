@@ -89,7 +89,8 @@ VALUES
 ,
 ('e2e-approval-social', 'e2e-tenant', 'marketing', 'Generated 7-day social media plan for Vegan Celebration Cake', 'DRAFT', 'LOW', '{"feature_type": "social_calendar"}'::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
 ('e2e-approval-cart', 'e2e-tenant', 'sales', 'Abandoned cart recovery: 10% discount for Sarah', 'DRAFT', 'HIGH', '{"feature_type": "abandoned_cart", "context": {"abandoned_carts_count": 3, "potential_revenue": 120.00}}'::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-('e2e-approval-review', 'e2e-tenant', 'customer_success', '3 customers haven''t reviewed their orders. Request reviews?', 'DRAFT', 'HIGH', '{"feature_type": "automated_review_request", "target": "recent_unreviewed_orders", "count": 3}'::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+('e2e-approval-review', 'e2e-tenant', 'customer_success', '3 customers haven''t reviewed their orders. Request reviews?', 'DRAFT', 'HIGH', '{"feature_type": "automated_review_request", "target": "recent_unreviewed_orders", "count": 3}'::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+('e2e-approval-proposal', 'e2e-tenant', 'sales', 'Draft proposal for ACME Corp Branding', 'DRAFT', 'HIGH', '{"feature_type": "quote_draft", "customer_inquiry": "ACME wants a logo refresh and 3-page site", "scope": "Logo refresh and 3-page site including mobile responsive design.", "suggested_price": 1200.00, "suggested_time": "Next Monday", "generated_response": "Hi ACME, I have reviewed your request for a logo refresh and 3-page site...", "service": "Logo refresh", "price": 1200.0}'::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
 ON CONFLICT (id) DO UPDATE
 SET status = EXCLUDED.status,
     updated_at = CURRENT_TIMESTAMP;
