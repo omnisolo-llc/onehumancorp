@@ -77,12 +77,16 @@ impl MyDashboardService {
                 let mut mtg = m.clone();
                 if mobile_optimized {
                     mtg.transcript.clear();
+                    mtg.participants.clear();
+                    mtg.agenda.clear();
                 }
                 filtered.push(mtg);
             } else if m.participants.iter().any(|p| p.starts_with(org_id) || p.contains(org_id)) {
                 let mut mtg = m.clone();
                 if mobile_optimized {
                     mtg.transcript.clear();
+                    mtg.participants.clear();
+                    mtg.agenda.clear();
                 }
                 filtered.push(mtg);
             }

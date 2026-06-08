@@ -238,19 +238,51 @@ pub async fn cost_dashboard_handler(
 
     // Proper concurrent execution combining spawn_blocking for CPU/sync methods
     // and tokio::join! to wait on both the async I/O future and the blocking CPU task simultaneously.
-    let tenant_id_clone_2 = tenant_id.clone();
-    let auditor_future = tokio::task::spawn_blocking(move || {
+    let tid = tenant_id.clone();
+    let a1 = auditor.clone();
+    let t1 = tokio::task::spawn_blocking(move || a1.get_tenant_cost(&tid));
+
+    let tid2 = tenant_id.clone();
+    let a2 = auditor.clone();
+    let t2 = tokio::task::spawn_blocking(move || a2.get_tenant_revenue(&tid2));
+
+    let tid3 = tenant_id.clone();
+    let a3 = auditor.clone();
+    let t3 = tokio::task::spawn_blocking(move || a3.get_tenant_payment_fees(&tid3));
+
+    let tid4 = tenant_id.clone();
+    let a4 = auditor.clone();
+    let t4 = tokio::task::spawn_blocking(move || a4.get_tenant_compute_cost(&tid4));
+
+    let tid5 = tenant_id.clone();
+    let a5 = auditor.clone();
+    let t5 = tokio::task::spawn_blocking(move || a5.get_tenant_network_cost(&tid5));
+
+    let tid6 = tenant_id.clone();
+    let a6 = auditor.clone();
+    let t6 = tokio::task::spawn_blocking(move || a6.get_tenant_bandwidth_savings(&tid6));
+
+    let tid7 = tenant_id.clone();
+    let a7 = auditor.clone();
+    let t7 = tokio::task::spawn_blocking(move || a7.get_tenant_tokens(&tid7));
+
+    let tid8 = tenant_id.clone();
+    let a8 = auditor.clone();
+    let t8 = tokio::task::spawn_blocking(move || a8.get_tenant_cached_tokens(&tid8));
+
+    let auditor_future = async move {
+        let (r1, r2, r3, r4, r5, r6, r7, r8) = tokio::join!(t1, t2, t3, t4, t5, t6, t7, t8);
         (
-            auditor.get_tenant_cost(&tenant_id_clone_2),
-            auditor.get_tenant_revenue(&tenant_id_clone_2),
-            auditor.get_tenant_payment_fees(&tenant_id_clone_2),
-            auditor.get_tenant_compute_cost(&tenant_id_clone_2),
-            auditor.get_tenant_network_cost(&tenant_id_clone_2),
-            auditor.get_tenant_bandwidth_savings(&tenant_id_clone_2),
-            auditor.get_tenant_tokens(&tenant_id_clone_2),
-            auditor.get_tenant_cached_tokens(&tenant_id_clone_2)
+            r1.unwrap_or(0.0),
+            r2.unwrap_or(0.0),
+            r3.unwrap_or(0.0),
+            r4.unwrap_or(0.0),
+            r5.unwrap_or(0.0),
+            r6.unwrap_or(0.0),
+            r7.unwrap_or(0),
+            r8.unwrap_or(0),
         )
-    });
+    };
 
     let storage_future = tokio::task::spawn(async move {
         hub_clone.tracker().get_tenant_storage_used(&tenant_id_clone).await.unwrap_or(0)
@@ -275,7 +307,7 @@ pub async fn cost_dashboard_handler(
     let (storage_res, auditor_res, trend_res, agent_costs_res) = tokio::join!(storage_future, auditor_future, trend_future, agent_costs_future);
 
     let storage_bytes = storage_res.unwrap_or(0);
-    let (llm_cost_f64, total_revenue_f64, payment_fees_f64, compute_cost_f64, network_cost_f64, bandwidth_savings_f64, total_tokens, cached_tokens) = auditor_res.unwrap_or((0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0, 0));
+    let (llm_cost_f64, total_revenue_f64, payment_fees_f64, compute_cost_f64, network_cost_f64, bandwidth_savings_f64, total_tokens, cached_tokens) = auditor_res;
     let trend = trend_res.unwrap_or_else(|_| vec![]);
     let agent_costs = agent_costs_res.unwrap_or_else(|_| vec![]);
 
@@ -286,7 +318,7 @@ pub async fn cost_dashboard_handler(
     };
 
     let total_tokens_incl_cached = total_tokens + cached_tokens;
-    let cost_per_1k_tokens = if total_tokens_incl_cached > 0 {
+    let cost_per_1k_tokens: f64 = if total_tokens_incl_cached > 0 {
         llm_cost_f64 / (total_tokens_incl_cached as f64 / 1000.0)
     } else {
         0.0
