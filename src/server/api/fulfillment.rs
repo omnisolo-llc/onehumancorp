@@ -343,7 +343,7 @@ async fn doordash_webhook(
             return (StatusCode::BAD_REQUEST, Json(serde_json::json!({"error": err}))).into_response();
         }
     };
-    let tenant_id = claims
+    let tenant_id = match claims
         .and_then(|Extension(claims)| claims.organization_id)
         .or_else(|| {
             headers
@@ -352,7 +352,10 @@ async fn doordash_webhook(
                 .map(|value| value.to_string())
         })
         .or_else(|| find_string_by_key(&payload, &["organization_id", "tenant_id"]))
-        .unwrap_or_else(|| "default".to_string());
+    {
+        Some(id) if !id.trim().is_empty() => id,
+        _ => return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({"error": "unauthorized"}))).into_response(),
+    };
 
     match persist_doordash_tracking_update(&state.pool, &tenant_id, &update).await {
         Ok(_) => {

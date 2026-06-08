@@ -62,7 +62,7 @@ export default function ApprovalInbox({
         <div className="pt-12 pb-6 px-6 bg-white/65 backdrop-blur-[30px] border-b border-white/40 sticky top-0 z-10 flex items-center gap-4">
           <button
             onClick={onBack}
-            className="w-10 h-10 flex items-center justify-center rounded-full bg-white shadow-sm border border-gray-100 text-gray-500 hover:text-gray-900 transition-colors"
+            className="w-[44px] h-[44px] flex items-center justify-center rounded-full bg-white shadow-sm border border-gray-100 text-gray-500 hover:text-gray-900 transition-colors"
           >
             <svg
               className="w-5 h-5"
@@ -135,7 +135,7 @@ export default function ApprovalInbox({
               return (
                 <div
                   key={req.id}
-                  className="bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-white/40 rounded-2xl p-5 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] transition-all duration-300"
+                  className="app-card rounded-2xl p-5 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] transition-all duration-300"
                 >
                   <div className="flex items-center gap-2 mb-3">
                     <span
@@ -179,7 +179,7 @@ export default function ApprovalInbox({
                         Customer Inquiry
                       </div>
 
-                      <div className="bg-white p-3 rounded-lg border border-blue-100 text-xs text-gray-700 italic">
+                      <div className="app-card p-3 rounded-lg border border-blue-100 text-xs text-gray-700 italic">
                         "{req.payload.original_message}"
                       </div>
 
@@ -227,7 +227,7 @@ export default function ApprovalInbox({
                         Sales are approaching €10,000. New tax rules require an
                         updated Privacy Policy.
                       </div>
-                      <div className="bg-white p-3 rounded-lg border border-orange-100 text-xs text-gray-600">
+                      <div className="app-card p-3 rounded-lg border border-orange-100 text-xs text-gray-600">
                         Drafting updated European privacy policy...
                       </div>
                     </div>
@@ -257,7 +257,7 @@ export default function ApprovalInbox({
                         </span>
                       </div>
                       <div className="grid grid-cols-2 gap-2 text-xs">
-                        <div className="bg-white p-2 rounded border border-indigo-50">
+                        <div className="app-card p-2 rounded border border-indigo-50">
                           <span className="text-gray-400 block mb-1">
                             Original (EN)
                           </span>
@@ -267,7 +267,7 @@ export default function ApprovalInbox({
                             $25.00
                           </div>
                         </div>
-                        <div className="bg-white p-2 rounded border border-indigo-100 ring-1 ring-indigo-500/20">
+                        <div className="app-card p-2 rounded border border-indigo-100 ring-1 ring-indigo-500/20">
                           <span className="text-indigo-400 block mb-1">
                             Preview (ES)
                           </span>
@@ -340,7 +340,7 @@ export default function ApprovalInbox({
                         {req.payload.service_name}
                       </div>
 
-                      <div className="bg-white rounded-lg border border-blue-100 overflow-hidden shadow-sm">
+                      <div className="app-card rounded-lg border border-blue-100 overflow-hidden shadow-sm">
                         {req.payload.media_url && (
                           <div className="w-full h-40 bg-gray-100 relative">
                             <img
@@ -445,7 +445,7 @@ export default function ApprovalInbox({
                         <span className="font-semibold">{req.payload.product_name}</span>
                       </div>
 
-                      <div className="bg-white rounded-lg border border-pink-100 overflow-hidden shadow-sm">
+                      <div className="app-card rounded-lg border border-pink-100 overflow-hidden shadow-sm">
                         {req.payload.image_url && (
                           <div className="w-full h-40 bg-gray-100 relative">
                             <img
@@ -468,7 +468,7 @@ export default function ApprovalInbox({
                   )}
 
                   {req.payload?.feature_type === "quote_draft" && (
-                    <div className="mb-6 p-4 rounded-xl bg-blue-50 border border-blue-100 flex flex-col gap-3">
+                    <div className="mb-6 p-4 rounded-xl bg-blue-50 border border-blue-100 flex flex-col gap-3" data-testid="draft-quote-card">
                       <div className="flex items-center gap-2 text-blue-800 font-semibold text-sm">
                         <svg
                           className="w-5 h-5"
@@ -483,19 +483,19 @@ export default function ApprovalInbox({
                             d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
                           />
                         </svg>
-                        New Service Inquiry
+                        Draft Quote: {req.payload.service || 'Plumbing Fix'} for Customer
                       </div>
                       <div className="text-xs text-blue-700 font-medium">
                         {req.payload.customer_inquiry}
                       </div>
 
-                      <div className="bg-white p-3 rounded-lg border border-blue-100 relative mt-2">
+                      <div className="app-card p-3 rounded-lg border border-blue-100 relative mt-2">
                         <div className="text-[10px] uppercase font-bold text-gray-400 mb-2">
                           AI Proposed Quote
                         </div>
                         <div className="space-y-2">
                           <div className="flex justify-between">
-                            <span className="text-xs text-gray-500">Suggested Price:</span>
+                            <span className="text-xs text-gray-500">Calculated Total:</span>
                             <span className="text-xs font-semibold text-gray-900">${req.payload.suggested_price}</span>
                           </div>
                           <div className="flex justify-between">
@@ -505,6 +505,42 @@ export default function ApprovalInbox({
                           <div className="flex justify-between">
                             <span className="text-xs text-gray-500">Suggested Time:</span>
                             <span className="text-xs font-medium text-gray-800">{req.payload.suggested_time}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {req.payload?.feature_type === "low_stock_restock" && (
+                    <div className="mb-6 p-4 rounded-xl bg-orange-50 border border-orange-100 flex flex-col gap-3">
+                      <div className="flex items-center gap-2 text-orange-800 font-semibold text-sm">
+                        <svg
+                          className="w-5 h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                          />
+                        </svg>
+                        Low Stock Alert
+                      </div>
+                      <div className="text-xs text-orange-700 font-medium">
+                        Inventory for <span className="font-semibold">{req.payload.product_id}</span> is critically low.
+                      </div>
+
+                      <div className="app-card p-3 rounded-lg border border-orange-100 relative mt-2">
+                        <div className="space-y-2">
+                          <div className="flex justify-between">
+                            <span className="text-xs text-gray-500">Remaining Stock:</span>
+                            <span className="text-xs font-semibold text-orange-600">{req.payload.remaining_stock}</span>
+                          </div>
+                          <div className="text-xs text-gray-700 italic mt-2">
+                            System suggests: "{req.payload.suggested_action}"
                           </div>
                         </div>
                       </div>
@@ -533,7 +569,7 @@ export default function ApprovalInbox({
                         Sarah left a $45 Vegan Chocolate Cake in her cart.
                       </div>
 
-                      <div className="bg-white p-3 rounded-lg border border-rose-100 relative">
+                      <div className="app-card p-3 rounded-lg border border-rose-100 relative">
                         <div className="text-[10px] uppercase font-bold text-gray-400 mb-1 absolute top-2 right-2">
                           AI Draft
                         </div>
@@ -558,26 +594,28 @@ export default function ApprovalInbox({
                   <div className="flex gap-3">
                     <button
                       onClick={() => {
-                        if (payload && payload.original_message) {
+                        if (payload && (payload.original_message || payload.feature_type === "quote_draft")) {
                           setSelectedReview(req);
                         } else {
                           onReject(req.id);
                         }
                       }}
-                      className="flex-1 py-3 px-4 rounded-xl font-semibold text-sm bg-gray-100 text-gray-700 hover:bg-gray-200 active:scale-[0.98] transition-all min-h-[44px]"
+                      className="flex-1 py-3 px-4 rounded-xl font-semibold text-sm bg-gray-100 text-gray-700 hover:bg-gray-200 active:scale-[0.98] transition-all min-h-[44px] min-w-[44px]"
                     >
-                      {payload && payload.original_message
+                      {payload && (payload.original_message || payload.feature_type === "quote_draft")
                         ? "Review"
                         : "Reject / Edit"}
                     </button>
                     <button
                       onClick={() => onApprove(req.id)}
-                      className="flex-1 py-3 px-4 rounded-xl font-bold text-sm bg-blue-600 text-white hover:bg-blue-700 shadow-md shadow-blue-500/20 active:scale-[0.98] transition-all min-h-[44px]"
+                      className="flex-1 py-3 px-4 rounded-xl font-bold text-sm bg-blue-600 text-white hover:bg-blue-700 shadow-md shadow-blue-500/20 active:scale-[0.98] transition-all min-h-[44px] min-w-[44px]"
                     >
                       {req.payload?.feature_type === "case_study"
                         ? "Publish to Website"
                         : req.payload?.feature_type === "social_post"
                         ? "Schedule Post"
+                        : req.payload?.feature_type === "quote_draft"
+                        ? "Approve & Send"
                         : "Approve"}
                     </button>
                   </div>
@@ -591,7 +629,7 @@ export default function ApprovalInbox({
         {selectedReview && (
           <div className="absolute inset-0 bg-black/40 z-50 flex flex-col justify-end">
             <div
-              className="bg-white rounded-t-3xl p-6 shadow-2xl transition-transform duration-300"
+              className="app-card rounded-t-3xl p-6 shadow-2xl transition-transform duration-300"
               style={{
                 animation: "slideUp 300ms cubic-bezier(0.4, 0, 0.2, 1)",
               }}
@@ -606,7 +644,7 @@ export default function ApprovalInbox({
                 </p>
                 <div className="bg-gray-50 p-3 rounded-xl border border-gray-100 text-sm text-gray-700">
                   {extractPayload(selectedReview.description).payload
-                    ?.original_message || "N/A"}
+                    ?.original_message || extractPayload(selectedReview.description).payload?.customer_inquiry || "N/A"}
                 </div>
               </div>
 
@@ -626,7 +664,7 @@ export default function ApprovalInbox({
                     onReject(selectedReview.id);
                     setSelectedReview(null);
                   }}
-                  className="flex-1 py-3 px-4 rounded-xl font-semibold text-sm bg-gray-100 text-gray-700 hover:bg-gray-200 min-h-[44px]"
+                  className="flex-1 py-3 px-4 rounded-xl font-semibold text-sm bg-gray-100 text-gray-700 hover:bg-gray-200 min-h-[44px] min-w-[44px]"
                 >
                   Discard
                 </button>
@@ -634,7 +672,7 @@ export default function ApprovalInbox({
                   onClick={() => {
                     setSelectedReview(null);
                   }}
-                  className="flex-1 py-3 px-4 rounded-xl font-semibold text-sm bg-gray-100 text-gray-700 hover:bg-gray-200 min-h-[44px]"
+                  className="flex-1 py-3 px-4 rounded-xl font-semibold text-sm bg-gray-100 text-gray-700 hover:bg-gray-200 min-h-[44px] min-w-[44px]"
                 >
                   Edit
                 </button>
@@ -643,7 +681,7 @@ export default function ApprovalInbox({
                     onApprove(selectedReview.id);
                     setSelectedReview(null);
                   }}
-                  className="flex-1 py-3 px-4 rounded-xl font-bold text-sm bg-blue-600 text-white hover:bg-blue-700 min-h-[44px]"
+                  className="flex-1 py-3 px-4 rounded-xl font-bold text-sm bg-blue-600 text-white hover:bg-blue-700 min-h-[44px] min-w-[44px]"
                 >
                   Send Now
                 </button>

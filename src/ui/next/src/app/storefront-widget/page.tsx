@@ -20,7 +20,7 @@ export default function StorefrontWidgetPage() {
     document.title = "Embed Your Store | OHC";
   }, []);
 
-  const embedCode = `<iframe src="https://ohc.app/api/v1/growth/storefront/embed?tenant=${tenant}&theme=${theme}" width="320" height="400" frameborder="0" scrolling="no" style="border:none; overflow:hidden; border-radius:16px;"></iframe>` + (removeBranding ? '' : `\n<div style="font-family: sans-serif; text-align: center; font-size: 12px; margin-top: 8px;"><a href="https://ohc.app/join?ref=${tenant}" target="_blank" style="color: #6b7280; text-decoration: none; font-weight: 600;">⚡ Powered by OHC</a></div>`);
+  const embedCode = `<iframe src="https://ohc.app/api/v1/growth/storefront/embed?tenant=${tenant}&theme=${theme}" width="320" height="400" frameborder="0" scrolling="no" style="border:none; overflow:hidden; border-radius:16px;"></iframe>` + (removeBranding ? '' : `\n<div style="font-family: sans-serif; text-align: center; font-size: 12px; margin-top: 8px;"><a href="/api/v1/growth/referrals/click?target=/onboarding&ref=${tenant}" target="_blank" style="color: #6b7280; text-decoration: none; font-weight: 600;">⚡ Powered by OHC</a></div>`);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(embedCode);
@@ -161,7 +161,7 @@ export default function StorefrontWidgetPage() {
                 </div>
                 {!removeBranding && (
                     <div className="mt-2 text-center" style={{ fontFamily: 'sans-serif', fontSize: '12px' }}>
-                        <a href={`https://ohc.app/join?ref=${tenant}`} target="_blank" rel="noopener noreferrer" style={{ color: '#6b7280', textDecoration: 'none', fontWeight: 600 }}>
+                        <a href={`/api/v1/growth/referrals/click?target=/onboarding&ref=${tenant}`} target="_blank" rel="noopener noreferrer" style={{ color: '#6b7280', textDecoration: 'none', fontWeight: 600 }}>
                             ⚡ Powered by OHC
                         </a>
                     </div>
@@ -173,7 +173,7 @@ export default function StorefrontWidgetPage() {
       {/* Embed Modal */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-            <div className="bg-white rounded-[24px] p-8 max-w-xl w-full shadow-2xl relative animate-in fade-in zoom-in-95 duration-200">
+            <div className="app-card rounded-[24px] p-8 max-w-xl w-full shadow-2xl relative animate-in fade-in zoom-in-95 duration-200">
                 <button
                     aria-label="Close embed modal"
                     onClick={() => setShowModal(false)}

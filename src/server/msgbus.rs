@@ -192,6 +192,45 @@ pub struct IpcBus {
 impl IpcBus {
     pub async fn new(db_url: &str) -> Result<Self, String> {
         use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+
+        let path_str_opt = if let Some(p) = db_url.strip_prefix("sqlite://") {
+            Some(p)
+        } else if let Some(p) = db_url.strip_prefix("sqlite:") {
+            Some(p)
+        } else {
+            None
+        };
+
+        if let Some(path_str) = path_str_opt {
+            let db_path = std::path::Path::new(path_str.split('?').next().unwrap_or(path_str));
+            if db_path.to_str().unwrap_or("") != "memory:" {
+                #[cfg(unix)]
+                {
+                    use std::os::unix::fs::OpenOptionsExt;
+                    if let Ok(file) = std::fs::OpenOptions::new()
+                        .read(true)
+                        .write(true)
+                        .create(true)
+                        .mode(0o600)
+                        .open(db_path)
+                    {
+                        use std::os::unix::fs::PermissionsExt;
+                        if let Ok(metadata) = file.metadata() {
+                            let mut perms = metadata.permissions();
+                            if perms.mode() & 0o777 != 0o600 {
+                                perms.set_mode(0o600);
+                                let _ = file.set_permissions(perms);
+                            }
+                        }
+                    }
+                }
+                #[cfg(not(unix))]
+                {
+                    let _ = std::fs::OpenOptions::new().write(true).create(true).open(db_path);
+                }
+            }
+        }
+
         let options: SqliteConnectOptions = db_url.parse().map_err(|e| format!("Invalid db url: {}", e))?;
         let options = options.create_if_missing(true);
         let pool = SqlitePoolOptions::new().connect_with(options).await.map_err(|e| e.to_string())?;
@@ -663,15 +702,15 @@ mod tests {
         let owner1 = "owner1";
         let owner2 = "owner2";
 
-        assert!(bus.acquire_lock(resource, owner1, 1).await.unwrap());
-        assert!(!bus.acquire_lock(resource, owner2, 1).await.unwrap());
+        assert!(bus.acquire_lock(resource, owner1, 2).await.unwrap());
+        assert!(!bus.acquire_lock(resource, owner2, 2).await.unwrap());
 
         // Allow lock to expire. Poll because SQLite's second-granularity clock can
         // land on the boundary under loaded test runs.
         let deadline = tokio::time::Instant::now() + tokio::time::Duration::from_secs(5);
         let mut acquired_after_expiration = false;
         while tokio::time::Instant::now() < deadline {
-            if bus.acquire_lock(resource, owner2, 1).await.unwrap() {
+            if bus.acquire_lock(resource, owner2, 2).await.unwrap() {
                 acquired_after_expiration = true;
                 break;
             }
@@ -680,10 +719,10 @@ mod tests {
         assert!(acquired_after_expiration);
 
         bus.release_lock(resource, owner2).await.unwrap();
-        assert!(bus.acquire_lock(resource, owner1, 1).await.unwrap());
+        assert!(bus.acquire_lock(resource, owner1, 2).await.unwrap());
 
         // Re-acquire by same owner to extend
-        assert!(bus.acquire_lock(resource, owner1, 1).await.unwrap());
+        assert!(bus.acquire_lock(resource, owner1, 2).await.unwrap());
     }
 
     #[tokio::test]
@@ -697,12 +736,12 @@ mod tests {
         let owner1 = "owner1";
         let owner2 = "owner2";
 
-        assert!(bus.acquire_lock(resource, owner1, 1).await.unwrap());
-        assert!(!bus.acquire_lock(resource, owner2, 1).await.unwrap());
-        assert!(bus.acquire_lock(resource, owner1, 1).await.unwrap());
+        assert!(bus.acquire_lock(resource, owner1, 10).await.unwrap());
+        assert!(!bus.acquire_lock(resource, owner2, 10).await.unwrap());
+        assert!(bus.acquire_lock(resource, owner1, 10).await.unwrap());
 
         bus.release_lock(resource, owner1).await.unwrap();
-        assert!(bus.acquire_lock(resource, owner2, 1).await.unwrap());
+        assert!(bus.acquire_lock(resource, owner2, 10).await.unwrap());
     }
 }
 

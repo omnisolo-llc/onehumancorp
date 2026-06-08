@@ -67,7 +67,7 @@ export default function FulfillmentHub() {
     <div className="min-h-screen bg-gray-50 flex justify-center">
       <div className="w-full max-w-[375px] bg-white relative pb-20 shadow-xl overflow-hidden">
         {/* App Bar (Translucent Glass) */}
-        <div className="sticky top-0 z-50 bg-white/70 backdrop-blur-md border-b border-gray-200 px-4 py-3 flex items-center justify-between">
+        <div className="sticky top-0 z-50 bg-[rgba(255,255,255,0.65)] backdrop-blur-[30px] backdrop-saturate-[210%] border-b border-[rgba(255,255,255,0.4)] dark:bg-[rgba(22,22,26,0.7)] dark:border-[rgba(255,255,255,0.1)] px-4 py-3 flex items-center justify-between">
           <h1 className="text-xl font-bold text-gray-900 tracking-tight">Fulfillment Hub</h1>
           <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-sm">
             OHC
@@ -89,7 +89,7 @@ export default function FulfillmentHub() {
                 ) : (
                   <div className="space-y-3">
                     {toPack.map((order) => (
-                      <div key={order.id} className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 relative overflow-hidden group">
+                      <div key={order.id} className="app-card rounded-xl shadow-sm border border-gray-100 p-4 relative overflow-hidden group">
                         <div className="absolute top-0 left-0 w-1 h-full bg-orange-400"></div>
                         <div className="flex justify-between items-start mb-2">
                           <div>
@@ -133,7 +133,7 @@ export default function FulfillmentHub() {
                 ) : (
                   <div className="space-y-3">
                     {awaitingPickup.map((order) => (
-                      <div key={order.id} className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 relative overflow-hidden">
+                      <div key={order.id} className="app-card rounded-xl shadow-sm border border-gray-100 p-4 relative overflow-hidden">
                          <div className="absolute top-0 left-0 w-1 h-full bg-green-400"></div>
                         <div className="flex justify-between items-start mb-2">
                           <div>

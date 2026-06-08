@@ -1,37 +1,9 @@
 import { NextResponse } from 'next/server';
 
-type OnboardingStateBody = { wizardState?: unknown };
-
-declare global {
-  var __ohcOnboardingDrafts: Map<string, OnboardingStateBody> | undefined;
-}
-
-function draftStore() {
-  globalThis.__ohcOnboardingDrafts ??= new Map<string, OnboardingStateBody>();
-  return globalThis.__ohcOnboardingDrafts;
-}
-
-function draftKey(tenantId: string, userId: string) {
-  return `${tenantId}:${userId}`;
-}
-
-function cachedDraft(tenantId: string, userId: string) {
-  const store = draftStore();
-  const exact = store.get(draftKey(tenantId, userId));
-  if (exact) return exact;
-  const values = Array.from(store.values());
-  return values.length > 0 ? values[values.length - 1] : undefined;
-}
-
 export async function GET(request: Request) {
-  const backendUrl = process.env.BACKEND_URL || 'http://localhost:8080';
+  const backendUrl = process.env.BACKEND_URL || 'http://127.0.0.1:18789';
   const tenantId = request.headers.get('x-tenant-id') || 'default';
   const userId = request.headers.get('x-user-id') || 'default';
-  const cached = cachedDraft(tenantId, userId);
-
-  if (cached) {
-    return NextResponse.json(cached);
-  }
 
   try {
     const res = await fetch(`${backendUrl}/api/onboarding/draft`, {
@@ -53,13 +25,12 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const backendUrl = process.env.BACKEND_URL || 'http://localhost:8080';
+  const backendUrl = process.env.BACKEND_URL || 'http://127.0.0.1:18789';
   const tenantId = request.headers.get('x-tenant-id') || 'default';
   const userId = request.headers.get('x-user-id') || 'default';
 
   try {
     const body = await request.json();
-    draftStore().set(draftKey(tenantId, userId), body);
     const res = await fetch(`${backendUrl}/api/onboarding/draft`, {
       method: 'POST',
       headers: {

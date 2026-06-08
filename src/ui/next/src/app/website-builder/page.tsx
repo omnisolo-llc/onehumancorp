@@ -37,6 +37,7 @@ export default function WebsiteBuilderPage() {
   const [selectedBlockIndex, setSelectedBlockIndex] = useState<number | null>(null);
   const [tenantId, setTenantId] = useState("storefront");
   const [saveMessage, setSaveMessage] = useState("");
+  const [isLoaded, setIsLoaded] = useState(false);
 
   const handleSaveDraft = async () => {
     setStatus("generating"); // Just show some loading state or disable button
@@ -45,7 +46,7 @@ export default function WebsiteBuilderPage() {
       const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
       const user = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
 
-      const res = await fetch('/api/onboarding/state', {
+      const res = await fetch('/api/onboarding/draft', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -60,6 +61,8 @@ export default function WebsiteBuilderPage() {
       if (res.ok) {
         setSaveMessage("Draft Saved!");
         setTimeout(() => setSaveMessage(""), 3000);
+      } else {
+        console.error('Failed to save draft response not ok');
       }
     } catch (e) {
       console.error('Failed to save draft', e);
@@ -86,11 +89,17 @@ export default function WebsiteBuilderPage() {
     const tenantIdStr = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront';
     setTenantId(tenantIdStr);
     const userId = localStorage.getItem('user_id') || 'test-user';
-    fetch('/api/onboarding/state', {
-      headers: { 'X-Tenant-ID': tenantIdStr, 'X-User-ID': userId }
-    })
-    .then(res => res.json())
-    .then(data => {
+
+    Promise.all([
+      fetch('/api/onboarding/draft', { headers: { 'X-Tenant-ID': tenantIdStr, 'X-User-ID': userId } })
+        .then(res => res.ok ? res.json() : null)
+        .catch(() => null),
+      fetch('/api/onboarding/state', { headers: { 'X-Tenant-ID': tenantIdStr, 'X-User-ID': userId } })
+        .then(res => res.ok ? res.json() : null)
+        .catch(() => null)
+    ])
+    .then(([draftData, stateData]) => {
+      const data = (draftData && draftData.wizardState) ? draftData : stateData;
       if (data && data.builderState) {
         if (data.builderState.bio) setBio(data.builderState.bio);
         if (data.builderState.blocks && Array.isArray(data.builderState.blocks)) setBlocks(data.builderState.blocks);
@@ -98,6 +107,7 @@ export default function WebsiteBuilderPage() {
       }
       if (data && data.wizardState) {
         if (data.wizardState.step !== undefined) setWizardStep(data.wizardState.step);
+        if (data.wizardState.wizardStep !== undefined) setWizardStep(data.wizardState.wizardStep);
         if (data.wizardState.businessName) setBusinessName(data.wizardState.businessName);
         if (data.wizardState.businessType) setBusinessType(data.wizardState.businessType);
         if (data.wizardState.hasPhysicalProducts !== undefined) setHasPhysicalProducts(data.wizardState.hasPhysicalProducts);
@@ -115,11 +125,15 @@ export default function WebsiteBuilderPage() {
         if (data.wizardState.aiAutoRespond !== undefined) setAiAutoRespond(data.wizardState.aiAutoRespond);
       }
     })
-    .catch(err => console.error('Failed to load builder state', err));
+    .catch(err => console.error('Failed to load builder state', err))
+    .finally(() => {
+      setIsLoaded(true);
+    });
   }, []);
 
   // Sync full state to backend
   useEffect(() => {
+    if (!isLoaded) return;
     // Only save if there's actual state
     if (wizardStep !== 0 || bio !== '' || blocks.length > 0 || businessName !== '') {
       const tenantIdStr = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront';
@@ -268,7 +282,7 @@ export default function WebsiteBuilderPage() {
     };
 
     return (
-      <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#16161a] font-inter flex flex-col justify-center px-4 py-8 sm:px-6 lg:px-8 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] bg-fixed">
+      <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#16161a] font-inter flex flex-col justify-center px-4 py-8 sm:px-6 lg:px-8">
       {/* Background Glows for Premium Aesthetic */}
       <div className="fixed top-[-10%] left-[-10%] w-[40%] h-[40%] bg-[#0066FF]/10 blur-[120px] rounded-full pointer-events-none"></div>
       <div className="fixed bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-[#34C759]/10 blur-[120px] rounded-full pointer-events-none"></div>
@@ -320,7 +334,7 @@ export default function WebsiteBuilderPage() {
                     </button>
 
                     <button
-                      className="w-full mac-glass-container text-[#0071E3] border border-[#0071E3] p-4 font-bold rounded-[8px] shadow-sm hover:bg-blue-50 transition-all"
+                      className="w-full glassmorphism text-[#0071E3] border border-[#0071E3] p-4 font-bold rounded-[8px] shadow-sm hover:bg-blue-50 transition-all"
                       onClick={() => setWizardStep('instant-build')}
                     >
                       Instant Build
@@ -488,12 +502,14 @@ export default function WebsiteBuilderPage() {
                       onChange={(e) => setUserPassword(e.target.value)}
                     />
                     <button
-                      disabled={!userName.trim() || !userEmail.trim() || !userPassword.trim()}
+                      disabled={!userName.trim() || !userEmail.trim() || !userPassword.trim() || !userEmail.includes('@') || userPassword.length < 8}
                       className="w-full bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all mt-4 disabled:opacity-50 disabled:cursor-not-allowed"
                       onClick={() => setWizardStep(7)}
                     >
                       Next
                     </button>
+                    {!userEmail.includes('@') && userEmail.length > 0 && <p className="text-red-500 text-xs text-center mt-1">Please enter a valid email address.</p>}
+                    {userPassword.length > 0 && userPassword.length < 8 && <p className="text-red-500 text-xs text-center mt-1">Password must be at least 8 characters.</p>}
                   </div>
                 </>
               )}
@@ -542,7 +558,7 @@ export default function WebsiteBuilderPage() {
                       Free OHC Domain
                     </button>
                     <button
-                      className="w-full mac-glass-container text-[#0071E3] border border-[#0071E3] p-4 font-bold rounded-[8px] shadow-sm hover:bg-blue-50 transition-all"
+                      className="w-full glassmorphism text-[#0071E3] border border-[#0071E3] p-4 font-bold rounded-[8px] shadow-sm hover:bg-blue-50 transition-all"
                       onClick={() => setWizardStep('8.5')}
                     >
                       Connect Custom Domain
@@ -668,7 +684,7 @@ export default function WebsiteBuilderPage() {
 
   if (status === "generating") {
     return (
-      <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#16161a] font-inter flex flex-col justify-center px-4 py-8 sm:px-6 lg:px-8 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] bg-fixed">
+      <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#16161a] font-inter flex flex-col justify-center px-4 py-8 sm:px-6 lg:px-8">
         <div className="w-full sm:max-w-md lg:max-w-lg xl:max-w-2xl mx-auto min-h-[100dvh] sm:min-h-[812px] shadow-2xl flex flex-col relative rounded-[16px] overflow-hidden justify-center items-center glassmorphism">
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mb-4"></div>
             <p className="text-gray-500 dark:text-[#a1a1a6] font-medium">Agents are building your store...</p>
@@ -679,7 +695,7 @@ export default function WebsiteBuilderPage() {
 
   if (status === "live") {
     return (
-      <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#16161a] font-inter flex flex-col justify-center px-4 py-8 sm:px-6 lg:px-8 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] bg-fixed">
+      <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#16161a] font-inter flex flex-col justify-center px-4 py-8 sm:px-6 lg:px-8">
         <div className="w-full sm:max-w-md lg:max-w-lg xl:max-w-2xl mx-auto min-h-[100dvh] sm:min-h-[812px] shadow-2xl flex flex-col relative rounded-[16px] overflow-hidden text-center p-8 justify-center glassmorphism">
           <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
             <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
@@ -688,7 +704,7 @@ export default function WebsiteBuilderPage() {
           <p className="text-gray-500 dark:text-[#a1a1a6] mb-6 text-sm">Your automated storefront is successfully published.</p>
           <p className="text-gray-500 dark:text-[#a1a1a6] mb-6 text-sm">You're set up! Here's what to do next:</p>
 
-          <div className="w-full bg-gray-50 p-3 rounded-xl border border-gray-100 mb-6 flex items-center justify-between">
+          <div className="w-full glassmorphism p-3 rounded-[16px] mb-6 flex items-center justify-between">
             <span className="text-sm text-gray-700 dark:text-[#a1a1a6] truncate mr-2 font-medium">{liveUrl}</span>
             <button className="text-blue-600 font-semibold text-sm hover:underline shrink-0">Copy</button>
           </div>
@@ -705,7 +721,7 @@ export default function WebsiteBuilderPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#16161a] font-inter flex flex-col justify-center px-4 py-8 sm:px-6 lg:px-8 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] bg-fixed">
+    <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#16161a] font-inter flex flex-col justify-center px-4 py-8 sm:px-6 lg:px-8">
       <div className="w-full sm:max-w-md lg:max-w-lg xl:max-w-2xl mx-auto min-h-[100dvh] sm:min-h-[812px] shadow-2xl flex flex-col relative rounded-[16px] overflow-hidden glassmorphism">
         <div className="absolute top-0 left-0 w-full bg-black/80 backdrop-blur-md text-white text-xs py-2 text-center font-medium z-50 flex justify-between px-4 items-center">
           <span>Preview Mode</span>
@@ -748,7 +764,7 @@ export default function WebsiteBuilderPage() {
           <SmartBlock type="PoweredBy" props={{ tenantId, isPremium: false }} />
         </div>
 
-        <div className="absolute bottom-0 w-full p-4 mac-glass-container z-50 rounded-b-[16px]">
+        <div className="absolute bottom-0 w-full p-4 glassmorphism z-50 rounded-b-[16px]">
           <WithTooltip id="launch-btn-tooltip" defaultText="Launch your storefront immediately to a live URL.">
             <button
               id="launch-btn"
@@ -772,9 +788,9 @@ export default function WebsiteBuilderPage() {
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap');
         .font-inter { font-family: 'Inter', sans-serif; }
         .font-outfit { font-family: 'Outfit', sans-serif; }
-        .glassmorphism { background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; }
+        .glassmorphism { background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; }
         @media (prefers-color-scheme: dark) {
-          .glassmorphism { background: rgba(22, 22, 26, 0.7); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.1); }
+          .glassmorphism { background: rgba(22, 22, 26, 0.7); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.1); }
         }
       `}} />
     </div>

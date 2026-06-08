@@ -1,0 +1,89 @@
+syntax = "proto3";
+
+package ohc.assistant;
+
+import "src/proto/common.proto";
+import "src/proto/organization.proto";
+
+option go_package = "github.com/onehumancorp/mono/src/proto/ohc/assistant;assistantpb";
+
+message AssistantWorkspace {
+  string id = 1;
+  string tenant_id = 2;
+  string name = 3;
+  string default_work_dir = 4;
+  string default_model = 5;
+  int64 created_at_unix = 6;
+  int64 updated_at_unix = 7;
+}
+
+message AssistantTask {
+  string id = 1;
+  string tenant_id = 2;
+  string workspace_id = 3;
+  string title = 4;
+  string prompt = 5;
+  string status = 6;
+  string mode = 7;
+  string permission_profile = 8;
+  string model_config_json = 9;
+  string current_step = 10;
+  bool archived = 11;
+  int64 created_at_unix = 12;
+  int64 updated_at_unix = 13;
+}
+
+message AssistantMessage {
+  string id = 1;
+  string tenant_id = 2;
+  string task_id = 3;
+  string role = 4;
+  string content = 5;
+  string tool_metadata_json = 6;
+  int64 created_at_unix = 7;
+}
+
+message AssistantArtifact {
+  string id = 1;
+  string tenant_id = 2;
+  string task_id = 3;
+  string type = 4;
+  string filename = 5;
+  string path = 6;
+  string mime_type = 7;
+  int64 size = 8;
+  string preview_ref = 9;
+  int64 created_at_unix = 10;
+}
+
+message AssistantFileChange {
+  string id = 1;
+  string tenant_id = 2;
+  string task_id = 3;
+  string path = 4;
+  string change_type = 5;
+  string summary = 6;
+  string approval_status = 7;
+  int64 created_at_unix = 8;
+}
+
+service AssistantService {
+  rpc CreateWorkspace(AssistantWorkspace) returns (AssistantWorkspace);
+  rpc GetWorkspace(AssistantWorkspace) returns (AssistantWorkspace);
+  rpc ListWorkspaces(AssistantWorkspace) returns (WorkspaceList);
+
+  rpc CreateTask(AssistantTask) returns (AssistantTask);
+  rpc GetTask(AssistantTask) returns (AssistantTask);
+  rpc ListTasks(AssistantTask) returns (TaskList);
+
+  rpc StreamTaskMessages(AssistantTask) returns (stream AssistantMessage);
+  rpc SendMessage(AssistantMessage) returns (AssistantMessage);
+}
+
+message WorkspaceList {
+  repeated AssistantWorkspace workspaces = 1;
+}
+
+message TaskList {
+  repeated AssistantTask tasks = 1;
+}

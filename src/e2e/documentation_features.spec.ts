@@ -66,15 +66,26 @@ test.describe('Tooltip functionality', () => {
     // Wait until tooltips load dynamically or are preloaded on Help page
     await page.goto('/api-docs');
 
-    const tooltipTrigger = page.locator('span.cursor-help');
+    // The component wrapper has class inline-block relative cursor-help
+    const tooltipTrigger = page.locator('.cursor-help').first();
     await expect(tooltipTrigger).toBeVisible();
 
     await tooltipTrigger.hover();
 
     // Check if the tooltip wrapper gets rendered
-    await expect(page.getByRole('tooltip')).toBeVisible();
-    // Assuming the tooltip component role isn't 'tooltip', let's check text instead
     await expect(page.getByText('Direct API access is only for custom integrations.')).toBeVisible();
+  });
+
+  test('should display tooltip on dashboard hover', async ({ page }) => {
+    await page.goto('/dashboard');
+
+    // We expect the tooltip with text "View your daily sales and overall business health." to appear
+    const dashboardTooltipTrigger = page.locator('.cursor-help', { hasText: 'Dashboard' }).first();
+    await expect(dashboardTooltipTrigger).toBeVisible();
+
+    await dashboardTooltipTrigger.hover();
+
+    await expect(page.getByText('View your daily sales and overall business health.')).toBeVisible();
   });
 });
 
@@ -85,5 +96,20 @@ test.describe('Changelog UX', () => {
     await expect(page.getByRole('heading', { name: 'Version 1.0 (Latest)' })).toBeVisible();
     // Check that we removed the test line
     await expect(page.locator('text=This is a plain paragraph test line.')).not.toBeVisible();
+  });
+});
+
+test.describe('AppShell Help Button', () => {
+  test('should display Help Center link and navigate successfully', async ({ page }) => {
+    await page.goto('/dashboard');
+
+    const helpButton = page.getByRole('link', { name: 'Help Center' });
+    await expect(helpButton).toBeVisible();
+
+    await helpButton.click();
+    await expect(page).toHaveURL(/\/help/);
+
+    // Help Center should have its search input
+    await expect(page.getByPlaceholder('Search for help articles and videos...')).toBeVisible();
   });
 });

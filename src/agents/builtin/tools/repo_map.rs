@@ -12,6 +12,8 @@ static PY_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\s*(?:async\s+)?(def|c
 static TS_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\s*(export\s+)?(?:async\s+)?(function|class|interface|type|const|let|var)\s+([a-zA-Z0-9_]+)").expect("should succeed in test"));
 static GO_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\s*(func|type)\s+([a-zA-Z0-9_]+)").expect("should succeed in test"));
 static CPP_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\s*(?:virtual\s+|static\s+)?(?:[a-zA-Z0-9_:]+(?:<[^>]+>)?\s+)+(?:\*|&)?\s*([a-zA-Z0-9_:]+)\s*\([^\)]*\)\s*(?:const)?\s*(?:override)?\s*(?:;|\{)|class\s+([a-zA-Z0-9_]+)|struct\s+([a-zA-Z0-9_]+)").expect("should succeed in test"));
+static JAVA_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\s*(?:public|private|protected)?\s*(?:static)?\s*(?:final)?\s*(?:class|interface|enum|record)\s+([a-zA-Z0-9_]+)|^\s*(?:public|private|protected)?\s*(?:static)?\s*(?:final)?\s*[\w<>\[\]]+\s+([a-zA-Z0-9_]+)\s*\([^)]*\)").expect("should succeed in test"));
+static RB_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\s*(class|module|def)\s+([a-zA-Z0-9_:]+)").expect("should succeed in test"));
 
 /// SOTA Harness Pattern: Aider: RepoMap for large codebases.
 /// Generates a compact summary of the repository's architecture including file structure and basic symbol signatures.
@@ -29,35 +31,49 @@ impl RepoMapExecutor {
         match ext {
             "rs" => {
                 for line in content.lines() {
-                    if let Some(_) = RS_REGEX.captures(line) {
+                    if RS_REGEX.captures(line).is_some() {
                         sigs.push(line.trim().to_string());
                     }
                 }
             }
             "py" => {
                 for line in content.lines() {
-                    if let Some(_) = PY_REGEX.captures(line) {
+                    if PY_REGEX.captures(line).is_some() {
                         sigs.push(line.trim().to_string());
                     }
                 }
             }
             "ts" | "js" | "tsx" | "jsx" => {
                 for line in content.lines() {
-                    if let Some(_) = TS_REGEX.captures(line) {
+                    if TS_REGEX.captures(line).is_some() {
                         sigs.push(line.trim().to_string());
                     }
                 }
             }
             "go" => {
                 for line in content.lines() {
-                    if let Some(_) = GO_REGEX.captures(line) {
+                    if GO_REGEX.captures(line).is_some() {
                         sigs.push(line.trim().to_string());
                     }
                 }
             }
             "c" | "cpp" | "h" | "hpp" => {
                 for line in content.lines() {
-                    if let Some(_) = CPP_REGEX.captures(line) {
+                    if CPP_REGEX.captures(line).is_some() {
+                        sigs.push(line.trim().to_string());
+                    }
+                }
+            }
+            "java" => {
+                for line in content.lines() {
+                    if JAVA_REGEX.captures(line).is_some() {
+                        sigs.push(line.trim().to_string());
+                    }
+                }
+            }
+            "rb" => {
+                for line in content.lines() {
+                    if RB_REGEX.captures(line).is_some() {
                         sigs.push(line.trim().to_string());
                     }
                 }
@@ -67,7 +83,7 @@ impl RepoMapExecutor {
         sigs
     }
 
-    fn generate_map_recursive(dir: PathBuf, prefix: String) -> Result<String, std::io::Error> {
+    fn generate_map_recursive(dir: PathBuf, prefix: String, current_depth: usize, max_depth: usize) -> Result<String, std::io::Error> {
         let mut map = String::new();
         if !dir.is_dir() {
             return Ok(map);
@@ -87,13 +103,17 @@ impl RepoMapExecutor {
 
             if path.is_dir() {
                 map.push_str(&format!("{}📁 {}/\n", prefix, name));
-                map.push_str(&Self::generate_map_recursive(path, format!("{}  ", prefix))?);
+                if current_depth < max_depth {
+                    map.push_str(&Self::generate_map_recursive(path, format!("{}  ", prefix), current_depth + 1, max_depth)?);
+                } else {
+                    map.push_str(&format!("{}  ... (max depth reached)\n", prefix));
+                }
             } else {
                 map.push_str(&format!("{}📄 {}\n", prefix, name));
 
                 // Read file to extract signatures
-                if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
-                    if let Ok(content) = std::fs::read_to_string(&path) {
+                if let Some(ext) = path.extension().and_then(|e| e.to_str())
+                    && let Ok(content) = std::fs::read_to_string(&path) {
                         let sigs = Self::extract_signatures(&content, ext);
                         for sig in sigs.iter().take(10) { // Limit to top 10 signatures per file to keep it compact
                             map.push_str(&format!("{}  │ {}\n", prefix, sig));
@@ -101,7 +121,6 @@ impl RepoMapExecutor {
                         if sigs.len() > 10 {
                             map.push_str(&format!("{}  │ ... ({} more)\n", prefix, sigs.len() - 10));
                         }
-                    }
                 }
             }
         }
@@ -115,11 +134,12 @@ impl ToolExecutor for RepoMapExecutor {
     async fn execute(&self, args: Value) -> Result<String, ToolError> {
         let mut target_path = self.workspace_path.clone();
 
-        if let Some(path_val) = args.get("path") {
-            if let Some(path_str) = path_val.as_str() {
+        if let Some(path_val) = args.get("path")
+            && let Some(path_str) = path_val.as_str() {
                 target_path = self.workspace_path.join(path_str);
-            }
         }
+
+        let max_depth = args.get("max_depth").and_then(|v| v.as_u64()).unwrap_or(100) as usize;
 
         // Fix path traversal: canonicalize both paths and verify target is within workspace
         let abs_workspace = std::fs::canonicalize(&self.workspace_path)
@@ -135,7 +155,7 @@ impl ToolExecutor for RepoMapExecutor {
              return Err(ToolError::LlmRecoverable(format!("Path does not exist: {}", abs_target.display())));
         }
 
-        let map = tokio::task::spawn_blocking(move || RepoMapExecutor::generate_map_recursive(abs_target.clone(), "".to_string()))
+        let map = tokio::task::spawn_blocking(move || RepoMapExecutor::generate_map_recursive(abs_target.clone(), "".to_string(), 0, max_depth))
             .await
             .map_err(|e| ToolError::Transient(format!("Task Join Error: {}", e)))?
             .map_err(|e| ToolError::Transient(e.to_string()))?;
@@ -162,6 +182,10 @@ pub fn repomap_tool(workspace_path: PathBuf) -> Tool {
                 "path": {
                     "type": "string",
                     "description": "Optional relative path within the workspace to generate the map for. Defaults to the root workspace."
+                },
+                "max_depth": {
+                    "type": "integer",
+                    "description": "Optional maximum depth to recurse into directories. Useful for very large codebases."
                 }
             }
         }),
@@ -173,7 +197,6 @@ pub fn repomap_tool(workspace_path: PathBuf) -> Tool {
 mod tests {
     use super::*;
     use tempfile::tempdir;
-    use std::fs;
 
     #[tokio::test]
     async fn test_repomap_generation() {
@@ -182,28 +205,35 @@ mod tests {
 
         // Create a dummy structure
         let src_dir = root.join("src");
-        fs::create_dir(&src_dir).expect("should succeed in test");
+        std::fs::create_dir(&src_dir).expect("should succeed in test");
 
         let rs_file = src_dir.join("main.rs");
-        fs::write(&rs_file, "pub fn main() {}\nstruct User {\n  id: u64,\n}\nfn helper() {}\n").expect("should succeed in test");
+        std::fs::write(&rs_file, "pub fn main() {}\nstruct User {\n  id: u64,\n}\nfn helper() {}\n").expect("should succeed in test");
 
         let py_file = src_dir.join("utils.py");
-        fs::write(&py_file, "def do_something():\n  pass\n\nclass Data:\n  pass\n").expect("should succeed in test");
+        std::fs::write(&py_file, "def do_something():\n  pass\n\nclass Data:\n  pass\n").expect("should succeed in test");
 
         let ts_file = src_dir.join("app.ts");
-        fs::write(&ts_file, "export function init() {}\ninterface Config {}\n").expect("should succeed in test");
+        std::fs::write(&ts_file, "export function init() {}\ninterface Config {}\n").expect("should succeed in test");
 
         let go_file = src_dir.join("server.go");
-        fs::write(&go_file, "func StartServer() {}\ntype Handler struct {}\n").expect("should succeed in test");
+        std::fs::write(&go_file, "func StartServer() {}\ntype Handler struct {}\n").expect("should succeed in test");
 
         let cpp_file = src_dir.join("engine.cpp");
-        fs::write(&cpp_file, "class Engine {\npublic:\n  void init() {}\n};\nvoid globalFunc() {}\n").expect("should succeed in test");
+        std::fs::write(&cpp_file, "class Engine {\npublic:\n  void init() {}\n};\nvoid globalFunc() {}\n").expect("should succeed in test");
+
+        let java_file = src_dir.join("Server.java");
+        std::fs::write(&java_file, "public class Server {\n  public static void main() {}\n}\n").expect("should succeed in test");
+
+        let rb_file = src_dir.join("utils.rb");
+        std::fs::write(&rb_file, "class Utils\n  def helper\n  end\nend\n").expect("should succeed in test");
+
 
         // Should ignore hidden and target
         let hidden_dir = root.join(".git");
-        fs::create_dir(&hidden_dir).expect("should succeed in test");
+        std::fs::create_dir(&hidden_dir).expect("should succeed in test");
         let target_dir = root.join("target");
-        fs::create_dir(&target_dir).expect("should succeed in test");
+        std::fs::create_dir(&target_dir).expect("should succeed in test");
 
         let executor = RepoMapExecutor::new(root.to_path_buf());
         let result = executor.execute(json!({})).await.expect("should succeed in test");
@@ -231,6 +261,15 @@ mod tests {
         assert!(result.contains("│ class Engine {"));
         assert!(result.contains("│ void globalFunc() {}"));
 
+        assert!(result.contains("📄 Server.java"));
+        assert!(result.contains("│ public class Server {"));
+        assert!(result.contains("│ public static void main() {"));
+
+        assert!(result.contains("📄 utils.rb"));
+        assert!(result.contains("│ class Utils"));
+        assert!(result.contains("│ def helper"));
+
+
         assert!(!result.contains(".git"));
         assert!(!result.contains("target"));
     }
@@ -241,6 +280,54 @@ mod tests {
 mod extra_tests {
     use super::*;
     use tempfile::tempdir;
+
+
+    #[tokio::test]
+    async fn test_repomap_max_depth() {
+        let dir = tempdir().expect("should succeed in test");
+        let root = dir.path();
+
+        let d1 = root.join("d1");
+        std::fs::create_dir(&d1).expect("should succeed in test");
+        let d2 = d1.join("d2");
+        std::fs::create_dir(&d2).expect("should succeed in test");
+        let d3 = d2.join("d3");
+        std::fs::create_dir(&d3).expect("should succeed in test");
+
+        let f3 = d3.join("f3.rs");
+        std::fs::write(&f3, "fn inner() {}").expect("should succeed in test");
+
+        let executor = RepoMapExecutor::new(root.to_path_buf());
+
+        // Depth 0: only d1
+        let res0 = executor.execute(json!({"max_depth": 0})).await.expect("should succeed in test");
+        assert!(res0.contains("📁 d1/"));
+        assert!(res0.contains("... (max depth reached)"));
+        assert!(!res0.contains("d2/"));
+
+        // Depth 1: d1 -> d2
+        let res1 = executor.execute(json!({"max_depth": 1})).await.expect("should succeed in test");
+        assert!(res1.contains("📁 d1/"));
+        assert!(res1.contains("📁 d2/"));
+        assert!(res1.contains("... (max depth reached)"));
+        assert!(!res1.contains("d3/"));
+
+        // Depth 2: d1 -> d2 -> d3
+        let res2 = executor.execute(json!({"max_depth": 2})).await.expect("should succeed in test");
+        assert!(res2.contains("📁 d1/"));
+        assert!(res2.contains("📁 d2/"));
+        assert!(res2.contains("📁 d3/"));
+        assert!(res2.contains("... (max depth reached)"));
+        assert!(!res2.contains("f3.rs"));
+
+        // Depth 3: d1 -> d2 -> d3 -> f3.rs
+        let res3 = executor.execute(json!({"max_depth": 3})).await.expect("should succeed in test");
+        assert!(res3.contains("📁 d1/"));
+        assert!(res3.contains("📁 d2/"));
+        assert!(res3.contains("📁 d3/"));
+        assert!(res3.contains("📄 f3.rs"));
+        assert!(!res3.contains("... (max depth reached)"));
+    }
 
     #[tokio::test]
     async fn test_repomap_path_traversal() {

@@ -31,7 +31,7 @@ jobs:
     outputs:
       markdown-only: ${{ steps.check.outputs.markdown-only }}
     steps:
-      - uses: actions/checkout@v6.0.2
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -95,7 +95,7 @@ jobs:
           #  runner: macos-15-intel
           #  bazel_config: macos_x86_64
     steps:
-      - uses: actions/checkout@v6.0.2
+      - uses: actions/checkout@v6
 
       - name: Free runner disk space
         if: startsWith(matrix.runner, 'ubuntu')
@@ -245,7 +245,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 120
     steps:
-      - uses: actions/checkout@v6.0.2
+      - uses: actions/checkout@v6
 
       - name: Free runner disk space
         run: |
@@ -318,7 +318,7 @@ jobs:
     env:
       MINIMAX_API_KEY: ${{ secrets.MINIMAX_API_KEY }}
     steps:
-      - uses: actions/checkout@v6.0.2
+      - uses: actions/checkout@v6
 
       - name: Free runner disk space
         run: |
@@ -397,7 +397,7 @@ jobs:
       HELM_SHA256_ARM64: "5ea2d6bc2cda3f8edf985e028809f5a9278f404fb8ab24044de9b7cb9b79a691"
       MINIMAX_API_KEY: ${{ secrets.MINIMAX_API_KEY }}
     steps:
-      - uses: actions/checkout@v6.0.2
+      - uses: actions/checkout@v6
 
       - name: Free runner disk space
         run: |
@@ -478,6 +478,27 @@ jobs:
             test --test_output=errors
             test --test_summary=detailed
 
+      - name: Restore Docker image cache
+        uses: actions/cache@v5
+        with:
+          path: /tmp/ohc-kind-images
+          key: ${{ runner.os }}-${{ runner.arch }}-kind-images-v1
+          restore-keys: |
+            ${{ runner.os }}-${{ runner.arch }}-kind-images-
+
+      - name: Load and pull Docker images for Kind
+        run: |
+          if [[ -f /tmp/ohc-kind-images/images.tar ]]; then
+            docker load -i /tmp/ohc-kind-images/images.tar
+          fi
+          docker pull pgvector/pgvector:pg15
+          docker pull valkey/valkey:8-alpine
+          mkdir -p /tmp/ohc-kind-images
+          docker save \
+            pgvector/pgvector:pg15 \
+            valkey/valkey:8-alpine \
+            -o /tmp/ohc-kind-images/images.tar
+
       - name: Run Kind smoke test
         run: |
           command -v kind
@@ -504,7 +525,7 @@ jobs:
     env:
       MINIMAX_API_KEY: ${{ secrets.MINIMAX_API_KEY }}
     steps:
-      - uses: actions/checkout@v6.0.2
+      - uses: actions/checkout@v6
 
       - name: Free runner disk space
         run: |
@@ -525,7 +546,7 @@ jobs:
           docker info
 
       - name: Restore Docker Compose image cache
-        uses: actions/cache@v5.0.5
+        uses: actions/cache@v5
         with:
           path: /tmp/ohc-docker-compose-images
           key: ${{ runner.os }}-${{ runner.arch }}-docker-compose-images-${{ hashFiles('deploy/docker-compose.yml') }}

@@ -59,12 +59,8 @@ impl HybridBlobManager {
             while let Ok(Some(entry)) = entries.next_entry().await {
                 if let Ok(metadata) = entry.metadata().await {
                     if metadata.is_file() {
-                        if let Ok(modified) = metadata.modified() {
-                            if let Ok(elapsed) = modified.elapsed() {
-                                if elapsed > max_age {
-                                    let _ = tokio::fs::remove_file(entry.path()).await;
-                                }
-                            }
+                        if let Ok(modified) = metadata.modified() && let Ok(elapsed) = modified.elapsed() && elapsed > max_age {
+                            let _ = tokio::fs::remove_file(entry.path()).await;
                         }
                     } else if metadata.is_dir() {
                         Box::pin(Self::cleanup_old_blobs(&entry.path(), max_age)).await;
@@ -170,7 +166,7 @@ impl ToolExecutor for HybridBlobExecutor {
 
         match action {
             "read" => {
-                let data = self.manager.read_blob(key).await.map_err(|e| ToolError::LlmRecoverable(e))?;
+                let data = self.manager.read_blob(key).await.map_err(ToolError::LlmRecoverable)?;
                 // Attempt to return as UTF-8 string, otherwise base64 encode
                 let content = if let Ok(s) = String::from_utf8(data.clone()) {
                     s
@@ -189,7 +185,7 @@ impl ToolExecutor for HybridBlobExecutor {
                 let data_str = args["Data"].as_str().ok_or_else(|| ToolError::LlmRecoverable("hybrid_blob: Data is required for write".to_string()))?;
                 let data_bytes = data_str.as_bytes();
 
-                self.manager.write_blob(key, data_bytes).await.map_err(|e| ToolError::LlmRecoverable(e))?;
+                self.manager.write_blob(key, data_bytes).await.map_err(ToolError::LlmRecoverable)?;
 
                 Ok(json!({
                     "status": "written",

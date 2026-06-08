@@ -234,7 +234,7 @@ export default function FlashSaleGeneratorPage() {
                 </div>
 
                 <div className="mt-4 text-center" style={{ fontFamily: 'sans-serif', fontSize: '12px' }}>
-                    <a href={`https://ohc.app/join?ref=${tenant}`} target="_blank" rel="noopener noreferrer" style={{ color: '#6b7280', textDecoration: 'none', fontWeight: 600 }}>
+                    <a href={`/api/v1/growth/referrals/click?target=/onboarding&ref=${tenant}`} target="_blank" rel="noopener noreferrer" style={{ color: '#6b7280', textDecoration: 'none', fontWeight: 600 }}>
                         ⚡ Powered by OHC
                     </a>
                 </div>
@@ -245,7 +245,7 @@ export default function FlashSaleGeneratorPage() {
       {/* Embed Modal */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-            <div className="bg-white rounded-[24px] p-8 max-w-xl w-full shadow-2xl relative animate-in fade-in zoom-in-95 duration-200">
+            <div className="app-card rounded-[24px] p-8 max-w-xl w-full shadow-2xl relative animate-in fade-in zoom-in-95 duration-200">
                 <button
                     aria-label="Close embed modal"
                     onClick={() => setShowModal(false)}
@@ -299,9 +299,9 @@ export default function FlashSaleGeneratorPage() {
         .font-inter { font-family: 'Inter', sans-serif; }
         .font-outfit { font-family: 'Outfit', sans-serif; }
         .glassmorphism {
-          background: rgba(255, 255, 255, 0.7);
-          backdrop-filter: blur(20px);
-          -webkit-backdrop-filter: blur(20px);
+          background: rgba(255, 255, 255, 0.65);
+          backdrop-filter: blur(30px) saturate(210%);
+          -webkit-backdrop-filter: blur(30px) saturate(210%);
         }
       `}} />
     </div>

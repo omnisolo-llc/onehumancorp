@@ -11,6 +11,8 @@ pub struct OfflineMutation {
     pub payment_method: Option<String>,
     pub payment_intent_id: Option<String>,
     pub currency: Option<String>,
+    pub mutation_type: Option<String>,
+    pub payload: Option<String>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -43,7 +45,7 @@ pub async fn offline_sync_handler(
     let cache = crate::builder::edge::get_edge_cache();
     cache.invalidate_by_tag(&format!("tenant-id:{}", tenant_id)).await;
 
-    let mut futures = Vec::new();
+    let mut futures: Vec<std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>>> = Vec::new();
     for mutation in &payload.mutations {
         let mutation = mutation.clone();
         let cache_clone = cache.clone();
@@ -51,25 +53,76 @@ pub async fn offline_sync_handler(
         let db_clone = db.clone();
         let mesh_clone = mesh.clone();
 
-        futures.push(async move {
+        if mutation.mutation_type.as_deref() == Some("draft_quote") {
+            futures.push(Box::pin(async move {
+                let mut db_tx = db_clone.begin().await.unwrap();
+                let _ = sqlx::query(
+                    "INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status)
+                     VALUES ($1, $2, 'sales', 'tenant.omnichannel.message.received', $3::jsonb, 'PENDING')"
+                )
+                .bind(uuid::Uuid::new_v4().to_string())
+                .bind(&tenant_id_clone)
+                .bind(serde_json::json!({
+                    "source": "offline_app",
+                    "message": mutation.payload.unwrap_or_default()
+                }).to_string())
+                .execute(&mut *db_tx)
+                .await;
+                db_tx.commit().await.unwrap();
+            }) as std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>>);
+            continue;
+        }
+
+        futures.push(Box::pin(async move {
             cache_clone.invalidate_by_tag(&format!("entity:product:{}", mutation.product_id)).await;
 
-            let query = "
-                UPDATE products
-                SET inventory_count = GREATEST(0, inventory_count - $1)
-                WHERE id = $2 AND tenant_id = $3
-                RETURNING id
-            ";
+            let mut db_tx = db_clone.begin().await.unwrap();
 
-            let result = sqlx::query(query)
-                .bind(mutation.quantity_deducted)
+            let query = "SELECT inventory_count FROM products WHERE id = $1 AND tenant_id = $2 FOR UPDATE";
+            let current_stock = sqlx::query(query)
                 .bind(&mutation.product_id)
                 .bind(&tenant_id_clone)
-                .fetch_optional(&db_clone)
+                .fetch_optional(&mut *db_tx)
                 .await;
 
-            match result {
-                Ok(Some(_)) => {
+            match current_stock {
+                Ok(Some(row)) => {
+                    let stock: i32 = sqlx::Row::get(&row, "inventory_count");
+                    let mut is_conflict = false;
+                    if stock < mutation.quantity_deducted {
+                        is_conflict = true;
+                    }
+
+                    let new_stock = std::cmp::max(0, stock - mutation.quantity_deducted);
+
+                    let _ = sqlx::query("UPDATE products SET inventory_count = $1 WHERE id = $2 AND tenant_id = $3")
+                        .bind(new_stock)
+                        .bind(&mutation.product_id)
+                        .bind(&tenant_id_clone)
+                        .execute(&mut *db_tx)
+                        .await;
+
+                    if is_conflict {
+                        let ai_task_id = uuid::Uuid::new_v4().to_string();
+                        let ai_payload = serde_json::json!({
+                            "transaction_id": mutation.transaction_id,
+                            "product_id": mutation.product_id,
+                            "expected_stock": mutation.quantity_deducted,
+                            "actual_stock": stock,
+                            "message": format!("Heads up! A pop-up sale overlapped with an online order for {}. Operations has drafted an email to the online customer.", mutation.product_id)
+                        }).to_string();
+
+                        let _ = sqlx::query(
+                            "INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status)
+                             VALUES ($1, $2, 'operations', 'PosSyncFailure', $3::jsonb, 'PENDING')"
+                        )
+                        .bind(&ai_task_id)
+                        .bind(&tenant_id_clone)
+                        .bind(&ai_payload)
+                        .execute(&mut *db_tx)
+                        .await;
+                    }
+
                     // Also queue an offline_pos_sync job to record the transaction
                     let job_id = uuid::Uuid::new_v4().to_string();
                     let job_payload = serde_json::json!({
@@ -89,12 +142,14 @@ pub async fn offline_sync_handler(
                     .bind(&job_id)
                     .bind(&tenant_id_clone)
                     .bind(&job_payload)
-                    .execute(&db_clone)
+                    .execute(&mut *db_tx)
                     .await;
 
                     if let Err(e) = job_res {
                         tracing::error!("Failed to enqueue offline_pos_sync job: {}", e);
                     }
+
+                    db_tx.commit().await.unwrap();
 
                     // Publish mesh event
                     let event = ::server_ohc::orchestration::TeammateMeshEvent {
@@ -119,7 +174,7 @@ pub async fn offline_sync_handler(
                     tracing::error!("Failed to deduct inventory for product {}: {}", mutation.product_id, e);
                 }
             }
-        });
+        }) as std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>>);
     }
     futures::future::join_all(futures).await;
 
@@ -177,7 +232,7 @@ mod tests {
                     amount: Some(1000),
                     payment_method: None,
                     payment_intent_id: None,
-                    currency: Some("USD".to_string()),
+                    currency: Some("USD".to_string()), mutation_type: None, payload: None,
                 },
             ],
         };
@@ -197,7 +252,7 @@ mod tests {
                     amount: Some(1000),
                     payment_method: None,
                     payment_intent_id: None,
-                    currency: Some("USD".to_string()),
+                    currency: Some("USD".to_string()), mutation_type: None, payload: None,
                 },
             ],
         };

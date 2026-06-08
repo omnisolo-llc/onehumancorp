@@ -1,22 +1,53 @@
-import { test, expect } from './fixtures';
+import { expect, test } from "./fixtures";
 
-test.describe('Unified Agent Feed', () => {
-  test('should display agent feed and allow interaction', async ({ page }) => {
+test.describe("Unified Agent Feed Mobile UX", () => {
+  // Use a strictly 375px wide viewport as specified by the issue
+  test.use({ viewport: { width: 375, height: 667 } });
 
-    // Ensure we are using the seeded e2e tenant explicitly to fetch the seed data
-    await page.addInitScript(() => {
-      localStorage.setItem('tenant_id', 'e2e-tenant');
-      localStorage.setItem('user_id', 'e2e-admin-user');
+  test("Renders and actions can be tapped on 375px mobile screen", async ({
+    page,
+    request,
+  }) => {
+    // 1. Seed some distinct approvals representing different departments
+    await request.post("/api/e2e/setup", {
+      data: {
+        query: `
+          INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, payload, created_at, updated_at)
+          VALUES
+            ('e2e-feed-test-1', 'e2e-tenant', 'operations', '3 new orders to fulfill', 'DRAFT', 'LOW', '{"feature_type": "fulfillment_batch", "message": "Batch process 3 orders?"}'::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+            ('e2e-feed-test-2', 'e2e-tenant', 'marketing', 'Draft promo email?', 'DRAFT', 'LOW', '{"context": {"weekly_health_report": true}, "message": "Send promo?"}'::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+          ON CONFLICT (id) DO UPDATE SET status = 'DRAFT', updated_at = CURRENT_TIMESTAMP;
+        `,
+      },
     });
 
-    // Go to dashboard
-    await page.goto('/dashboard');
+    // 2. Load the dashboard on mobile
+    await page.goto("/dashboard");
 
-    // Verify we are on dashboard and the Unified Agent Feed is present
-    await expect(page.locator('button', { hasText: 'Proposals' }).first()).toBeVisible();
+    // 3. Ensure the unified feed tab is visible
+    await expect(page.locator("text=Activity Feed").first()).toBeVisible({ timeout: 15000 });
 
-    await expect(page.getByText(/All caught up!|Requires Review|Loading Agent Proposals/).first()).toBeVisible();
-    await page.getByRole('button', { name: 'Activity Feed' }).click();
-    await expect(page.getByRole('button', { name: 'Activity Feed' })).toBeVisible();
+    // 4. Verify the seeded cards are rendered
+    const opsCard = page.locator("text=3 new orders to fulfill").first();
+    const marketingCard = page.locator("text=Draft promo email?").first();
+
+    await expect(opsCard).toBeVisible();
+    await expect(marketingCard).toBeVisible();
+
+    // 5. Verify touch targets on the default Approve button (has min-h-[44px] class)
+    // We can't strictly test min-height CSS but we can click them to verify interaction
+    const approveButton = page.locator('button[data-testid="approve-proposal"]').first();
+    await expect(approveButton).toBeVisible();
+    await approveButton.click();
+
+    // The item should optimisticly disappear
+    await expect(page.locator("text=3 new orders to fulfill").first()).not.toBeVisible();
+
+    // Test a specific payload button (e.g., from weekly_health_report which shows "Yes, draft it!")
+    const draftButton = page.locator('button[data-testid="approve-draft"]').first();
+    await expect(draftButton).toBeVisible();
+    await draftButton.click();
+
+    await expect(page.locator("text=Draft promo email?").first()).not.toBeVisible();
   });
 });
