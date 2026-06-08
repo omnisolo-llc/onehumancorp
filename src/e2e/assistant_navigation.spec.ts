@@ -11,7 +11,7 @@ test.describe('Assistant Navigation & Routing', () => {
     // Go to root again, should redirect to /assistant
     await page.goto('/');
     await expect(page).toHaveURL(/.*\/assistant/);
-    await expect(page.getByRole('heading', { name: 'Jarvis Assistant' })).toBeVisible({ timeout: 15000 });
+    await expect(page.getByRole('heading', { name: 'Agent One Assistant' })).toBeVisible({ timeout: 15000 });
   });
 
   test('should redirect non-onboarded user to onboarding', async ({ page }) => {
@@ -34,6 +34,6 @@ test.describe('Assistant Navigation & Routing', () => {
     // Click it and verify navigation
     await assistantLink.click();
     await expect(page).toHaveURL(/.*\/assistant/);
-    await expect(page.getByRole('heading', { name: 'Jarvis Assistant' })).toBeVisible({ timeout: 15000 });
+    await expect(page.getByRole('heading', { name: 'Agent One Assistant' })).toBeVisible({ timeout: 15000 });
   });
 });

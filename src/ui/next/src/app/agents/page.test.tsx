@@ -51,7 +51,7 @@ beforeEach(() => {
   });
 });
 
-test('replaces /agents with a Workbuddy-style Expert Center catalog', async () => {
+test('replaces /agents with an Agent-style Expert Center catalog', async () => {
   render(<AgentsPage />);
 
   expect(await screen.findByRole('heading', { name: 'Expert Center' })).toBeDefined();
@@ -98,7 +98,7 @@ test('summons an expert into the task composer and starts a hire workflow', asyn
   expect(await screen.findByText('workflow-growth')).toBeDefined();
 });
 
-test('shows result inspection and extension surfaces from Workbuddy', async () => {
+test('shows result inspection and extension surfaces from Agent', async () => {
   render(<AgentsPage />);
 
   expect(await screen.findAllByText('Artifacts')).toHaveLength(2);
@@ -123,7 +123,7 @@ test('shows result inspection and extension surfaces from Workbuddy', async () =
   expect(screen.getByText('Import from ChatGPT or Claude')).toBeDefined();
 });
 
-test('covers every Workbuddy efficient-tip feature surface', async () => {
+test('covers every Agent efficient-tip feature surface', async () => {
   render(<AgentsPage />);
 
   expect(await screen.findByLabelText('Context references')).toBeDefined();
@@ -206,7 +206,7 @@ test('preserves approvals and activity feed operations', async () => {
   expect(screen.getByText('Approve & Send')).toBeDefined();
 });
 
-test('sends Workbuddy context, attachment, model, and output controls in the hire payload', async () => {
+test('sends Agent context, attachment, model, and output controls in the hire payload', async () => {
   render(<AgentsPage />);
 
   fireEvent.change(await screen.findByLabelText('Context references'), {
