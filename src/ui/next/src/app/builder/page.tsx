@@ -474,7 +474,7 @@ export default function BuilderPage() {
           <div className="w-full glassmorphism backdrop-blur-md rounded-[16px] border border-white/50 dark:border-white/10 shadow-sm p-5 mb-4 text-left">
             <h2 className="text-lg font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-1">Sell Anywhere 💻</h2>
             <p className="text-xs text-gray-500 dark:text-[#A1A1A6] mb-4">Embed your OHC storefront on your existing website, blog, or partner pages.</p>
-            <div className="bg-white/60 dark:bg-black/30 backdrop-blur-sm border border-white/50 dark:border-white/10 rounded-[8px] p-3 relative">
+            <div className="app-card dark:bg-black/30 backdrop-blur-sm border border-white/50 dark:border-white/10 rounded-[8px] p-3 relative">
                 <pre className="text-[10px] text-[#1D1D1F] dark:text-[#F5F5F7] overflow-x-auto font-mono whitespace-pre-wrap leading-tight">
 {`<div id="ohc-embed-root"></div>
 <script src="/embed.js" data-store="${tenantId}"></script>
@@ -794,9 +794,9 @@ export default function BuilderPage() {
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap');
         .font-inter { font-family: 'Inter', sans-serif; }
         .font-outfit { font-family: 'Outfit', sans-serif; }
-        .glassmorphism { background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; }
+        .glassmorphism { background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; }
         @media (prefers-color-scheme: dark) {
-          .glassmorphism { background: rgba(22, 22, 26, 0.7); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.1); }
+          .glassmorphism { background: rgba(22, 22, 26, 0.7); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.1); }
         }
       `}} />
     </div>
