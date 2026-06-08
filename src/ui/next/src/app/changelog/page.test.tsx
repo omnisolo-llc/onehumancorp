@@ -34,13 +34,19 @@ describe('ChangelogPage', () => {
   });
 
   it('renders paragraph strings', async () => {
-    render(<ChangelogPage />);
+    const { act } = require('@testing-library/react');
+    await act(async () => {
+      render(<ChangelogPage />);
+    });
     const link = screen.getByText('Read the full technical changelog on our website →');
     expect(link).toHaveAttribute('href', 'https://onehumancorp.com/changelog');
   });
 
   it('renders paragraph elements for random text', async () => {
-    render(<ChangelogPage />);
+    const { act } = require('@testing-library/react');
+    await act(async () => {
+      render(<ChangelogPage />);
+    });
     await waitFor(() => {
       expect(screen.getByText(/Faster loading times for product images/)).toBeInTheDocument();
     });
@@ -48,6 +54,9 @@ describe('ChangelogPage', () => {
 
   it('covers the line 36 paragraph fallback', async () => {
     // Re-render to ensure we evaluate the branch where a line neither starts with ### nor -
-    render(<ChangelogPage />);
+    const { act } = require('@testing-library/react');
+    await act(async () => {
+      render(<ChangelogPage />);
+    });
   });
 });

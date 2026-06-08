@@ -16,7 +16,7 @@ interface LocalizationState {
   setCurrency: (currency: string) => void;
   setTranslations: (translations: Record<string, string>) => void;
   setFxRates: (rates: FxRate[]) => void;
-  t: (key: string) => string;
+  t: (key: string, options?: { count?: number }) => string;
   convert: (amount: number, from: string, to: string) => { amount: number; rate: number; isOffline: boolean };
 }
 
@@ -31,7 +31,13 @@ export const useLocalizationStore = create<LocalizationState>()(
       setCurrency: (currency) => set({ currency }),
       setTranslations: (translations) => set({ translations }),
       setFxRates: (fxRates) => set({ fxRates }),
-      t: (key) => get().translations[key] || key,
+      t: (key, options) => {
+        let translated = get().translations[key] || key;
+        if (options?.count !== undefined) {
+          translated = translated.replace('{{count}}', options.count.toString());
+        }
+        return translated;
+      },
       convert: (amount, from, to) => {
         if (from === to) return { amount, rate: 1.0, isOffline: false };
         const rateEntry = get().fxRates.find(r => r.from === from && r.to === to);
