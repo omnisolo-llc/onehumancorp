@@ -5,6 +5,9 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { WithTooltip } from "../../components/TooltipRegistry";
 import { PoweredByOHC } from "../components/PoweredByOHC";
 
+
+import { Suspense } from "react";
+
 export default function CheckoutPage() {
   return (
     <React.Suspense fallback={<div>Loading checkout...</div>}>
@@ -12,6 +15,7 @@ export default function CheckoutPage() {
     </React.Suspense>
   );
 }
+
 
 function CheckoutContent() {
   const router = useRouter();
@@ -603,5 +607,13 @@ function CheckoutContent() {
         }}
       />
     </div>
+  );
+}
+
+export default function CheckoutPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center font-inter text-gray-500">Loading Checkout...</div>}>
+      <CheckoutContent />
+    </Suspense>
   );
 }
