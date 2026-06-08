@@ -135,7 +135,9 @@ where
         .route("/campaign/abandoned-carts-count", get(handle_abandoned_carts_count))
         .route("/storefront/track", post(handle_track_visitor))
         .route("/storefront/embed", get(handle_storefront_embed))
-                .route("/storefront/og-card", get(handle_og_card))
+        .route("/storefront/og-card", get(handle_og_card))
+        .route("/work-intake/embed", get(handle_work_intake_embed))
+        .route("/work-intake/submit", post(handle_work_intake_submit))
         .route("/flash-sale/embed", get(handle_flash_sale_embed))
         .route("/milestones/check", get(handle_check_milestones))
         .route("/affiliate/generate-link", post(handle_affiliate_generate_link))
@@ -627,6 +629,145 @@ async fn handle_storefront_embed(
     axum::response::Html(html)
 }
 
+
+
+#[derive(Debug, Deserialize)]
+pub struct WorkIntakeEmbedQuery {
+    pub tenant: Option<String>,
+    pub title: Option<String>,
+    pub theme: Option<String>,
+}
+
+async fn handle_work_intake_embed(
+    Extension(state): Extension<GrowthState>,
+    axum::extract::Query(query): axum::extract::Query<WorkIntakeEmbedQuery>,
+) -> impl IntoResponse {
+    let tenant = query.tenant.as_deref().unwrap_or("embed");
+    let title = query.title.as_deref().unwrap_or("Work Request");
+    let bg_color = if query.theme.as_deref() == Some("dark") { "#1D1D1F" } else { "#ffffff" };
+    let text_color = if query.theme.as_deref() == Some("dark") { "#ffffff" } else { "#111827" };
+    let border_color = if query.theme.as_deref() == Some("dark") { "#333333" } else { "#e5e7eb" };
+    let input_bg = if query.theme.as_deref() == Some("dark") { "#2d2d2d" } else { "#f9fafb" };
+
+    let escape_html = |s: &str| {
+        s.replace("&", "&amp;")
+         .replace("<", "&lt;")
+         .replace(">", "&gt;")
+         .replace("\"", "&quot;")
+         .replace("'", "&#x27;")
+    };
+
+    let safe_title = escape_html(title);
+    let safe_tenant = tenant.replace(" ", "%20").replace("<", "%3C").replace(">", "%3E").replace("\"", "%22").replace("'", "%27");
+
+    let mut has_pro = false;
+    if tenant != "embed" && uuid::Uuid::parse_str(tenant).is_ok() {
+        let row: Option<String> = sqlx::query_scalar("SELECT plan_tier FROM tenants WHERE id = $1::uuid OR tenant_id = $1::uuid")
+            .bind(tenant)
+            .fetch_optional(&state.pool)
+            .await
+            .unwrap_or_default();
+        if let Some(plan) = row {
+            has_pro = plan.to_lowercase() == "pro";
+        }
+    }
+
+    let branding = if !has_pro {
+        format!("<div class=\"footer\"><a href=\"/api/v1/growth/referrals/click?target=/onboarding&ref={}\" target=\"_blank\">⚡ Powered by OHC</a></div>", safe_tenant)
+    } else {
+        "".to_string()
+    };
+
+    let html = format!(r##"<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {{ margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: {bg_color}; color: {text_color}; }}
+        .widget-container {{ padding: 20px; }}
+        .title {{ font-size: 1.25rem; font-weight: bold; margin-top: 0; margin-bottom: 16px; text-align: center; }}
+        .form-group {{ margin-bottom: 12px; }}
+        label {{ display: block; font-size: 0.875rem; font-weight: 500; margin-bottom: 4px; }}
+        input, textarea {{ width: 100%; box-sizing: border-box; padding: 8px 12px; border: 1px solid {border_color}; border-radius: 6px; background-color: {input_bg}; color: {text_color}; font-size: 0.875rem; font-family: inherit; }}
+        textarea {{ resize: vertical; min-height: 80px; }}
+        input:focus, textarea:focus {{ outline: none; border-color: #6366f1; box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2); }}
+        .submit-btn {{ display: block; width: 100%; background: #6366f1; color: white; padding: 10px; border: none; border-radius: 6px; font-weight: 600; font-size: 0.875rem; cursor: pointer; transition: background-color 0.2s; }}
+        .submit-btn:hover {{ background: #4f46e5; }}
+        .footer {{ font-family: sans-serif; text-align: center; font-size: 12px; margin-top: 8px; }}
+        .footer a {{ color: #6b7280; text-decoration: none; font-weight: 600; }}
+    </style>
+</head>
+<body>
+    <div class="widget-container">
+        <h2 class="title">{safe_title}</h2>
+        <form method="POST" action="/api/v1/growth/work-intake/submit?tenant={safe_tenant}">
+            <div class="form-group">
+                <label for="name">Name</label>
+                <input type="text" id="name" name="name" required placeholder="Jane Doe">
+            </div>
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" name="email" required placeholder="jane@example.com">
+            </div>
+            <div class="form-group">
+                <label for="message">How can we help?</label>
+                <textarea id="message" name="message" required placeholder="Describe what you need..."></textarea>
+            </div>
+            <button type="submit" class="submit-btn">Send Request</button>
+        </form>
+        {branding}
+    </div>
+</body>
+</html>"##);
+    axum::response::Html(html)
+}
+
+#[derive(Debug, Deserialize)]
+pub struct WorkIntakeSubmitForm {
+    pub name: String,
+    pub email: String,
+    pub message: String,
+}
+
+async fn handle_work_intake_submit(
+    Extension(state): Extension<GrowthState>,
+    axum::extract::Query(query): axum::extract::Query<WorkIntakeEmbedQuery>,
+    axum::extract::Form(form): axum::extract::Form<WorkIntakeSubmitForm>,
+) -> impl IntoResponse {
+    let tenant = query.tenant.as_deref().unwrap_or("embed");
+    let parsed_tenant = uuid::Uuid::parse_str(tenant).unwrap_or_else(|_| uuid::Uuid::nil());
+    let content = format!("From: {} <{}>\n\n{}", form.name, form.email, form.message);
+    let id = uuid::Uuid::new_v4().to_string();
+    let _ = sqlx::query("INSERT INTO inbox_messages (id, tenant_id, source, content, status) VALUES ($1, $2, 'Widget', $3, 'UNREAD')")
+        .bind(&id).bind(parsed_tenant.to_string()).bind(&content)
+        .execute(&state.pool).await;
+
+    let bg_color = if query.theme.as_deref() == Some("dark") { "#1D1D1F" } else { "#ffffff" };
+    let text_color = if query.theme.as_deref() == Some("dark") { "#ffffff" } else { "#111827" };
+
+    let html = format!(r##"<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <style>
+        body {{ margin: 0; display: flex; align-items: center; justify-content: center; height: 100vh; font-family: -apple-system, sans-serif; background: {bg_color}; color: {text_color}; text-align: center; }}
+        .success {{ padding: 20px; }}
+        .icon {{ font-size: 48px; margin-bottom: 16px; }}
+        h2 {{ margin: 0 0 8px 0; }}
+        p {{ margin: 0; color: #6b7280; }}
+    </style>
+</head>
+<body>
+    <div class="success">
+        <div class="icon">✅</div>
+        <h2>Request Sent!</h2>
+        <p>We'll be in touch soon.</p>
+    </div>
+</body>
+</html>"##);
+    axum::response::Html(html)
+}
 
 #[derive(Debug, Deserialize)]
 pub struct FlashSaleEmbedQuery {
@@ -1625,9 +1766,68 @@ mod tests {
         let html2 = String::from_utf8(body_bytes2.to_vec()).unwrap();
         assert!(html2.contains("Powered by OHC"));
     }
+
+    #[tokio::test]
+    async fn test_work_intake_embed() {
+        let pool = setup_db().await;
+        if sqlx::query("SELECT 1").execute(&pool).await.is_err() {
+            tracing::debug!("Skipping DB test, DB not available");
+            return;
+        }
+
+        let (event_tx, _) = tokio::sync::mpsc::channel(100);
+        let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
+        let state = GrowthState { pool: pool.clone(), hub: hub.clone() };
+
+        sqlx::query("INSERT INTO tenants (id, business_name, plan_tier) VALUES ($1::uuid, 'Test Free', 'free') ON CONFLICT (id) DO UPDATE SET plan_tier = 'free'")
+            .bind("33333333-3333-3333-3333-333333333333")
+            .execute(&pool).await.unwrap();
+
+        let query = super::WorkIntakeEmbedQuery { tenant: Some("33333333-3333-3333-3333-333333333333".to_string()), title: Some("Custom Intake".to_string()), theme: None };
+        let res = super::handle_work_intake_embed(Extension(state.clone()), axum::extract::Query(query)).await.into_response();
+        let body_bytes = axum::body::to_bytes(res.into_body(), usize::MAX).await.unwrap();
+        let html = String::from_utf8(body_bytes.to_vec()).unwrap();
+
+        assert!(html.contains("Custom Intake"));
+        assert!(html.contains("Powered by OHC"));
+    }
+
+    #[tokio::test]
+    async fn test_work_intake_submit() {
+        let pool = setup_db().await;
+        if sqlx::query("SELECT 1").execute(&pool).await.is_err() {
+            tracing::debug!("Skipping DB test, DB not available");
+            return;
+        }
+
+        let (event_tx, _) = tokio::sync::mpsc::channel(100);
+        let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
+        let state = GrowthState { pool: pool.clone(), hub: hub.clone() };
+
+        let tenant_id = "44444444-4444-4444-4444-444444444444";
+        sqlx::query("INSERT INTO tenants (id, business_name, plan_tier) VALUES ($1::uuid, 'Test Starter', 'starter') ON CONFLICT (id) DO UPDATE SET plan_tier = 'starter'")
+            .bind(tenant_id)
+            .execute(&pool).await.unwrap();
+
+        let query = super::WorkIntakeEmbedQuery { tenant: Some(tenant_id.to_string()), title: None, theme: None };
+        let form = super::WorkIntakeSubmitForm { name: "Test User".to_string(), email: "test@example.com".to_string(), message: "Hello world".to_string() };
+
+        let res = super::handle_work_intake_submit(Extension(state.clone()), axum::extract::Query(query), axum::extract::Form(form)).await.into_response();
+        let body_bytes = axum::body::to_bytes(res.into_body(), usize::MAX).await.unwrap();
+        let html = String::from_utf8(body_bytes.to_vec()).unwrap();
+
+        assert!(html.contains("Request Sent!"));
+
+        let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM inbox_messages WHERE tenant_id = $1")
+            .bind(tenant_id)
+            .fetch_one(&pool).await.unwrap();
+
+        assert_eq!(count, 1);
+    }
 }
 
 async fn handle_aggregated_team_invites_metrics(
+
     Extension(state): Extension<GrowthState>,
 ) -> Result<Json<TeamInvitesMetricsResponse>, StatusCode> {
     let cache_key = "aggregated_metrics";
