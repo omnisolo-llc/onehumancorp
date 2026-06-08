@@ -2305,6 +2305,10 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     cs_worker.start();
 
 
+    // Start Booking Reengagement Worker
+    let booking_reengagement_worker = crate::workers::booking_reengagement::BookingReengagementWorker::new(db.clone());
+    booking_reengagement_worker.start();
+
     if matches!(&db.store, crate::db::DbStore::Postgres) {
         crate::cart_recovery::start_cart_recovery_background_workers(Arc::new(db.pool.clone()));
     }
