@@ -182,7 +182,7 @@ bazelisk test //src/e2e:playwright --nocache_test_results --local_test_jobs="$(n
 Run the local Playwright suite against an already running app:
 
 ```bash
-DATABASE_URL=postgres://ohc:ohc@localhost:5432/ohc \
+DATABASE_URL=postgres://ohc:ohc@localhost:$PG_PORT/ohc \
 REDIS_URL=redis://localhost:6379 \
 MINIMAX_API_KEY=... \
 npx playwright test

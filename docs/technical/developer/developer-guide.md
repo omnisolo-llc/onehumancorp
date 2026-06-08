@@ -227,7 +227,7 @@ docker compose -f deploy/docker-compose.yml down -v
 |----------|---------|-------------|
 | `OHC_PORT` | `18789` | HTTP/Axum listen port for the Rust server; Docker Compose exposes the packaged server on `8080` |
 | `OHC_GRPC_PORT` | `8081` | gRPC/tonic listen port |
-| `DATABASE_URL` | `postgres://postgres:postgres@localhost:5432/ohc` | PostgreSQL DSN by default; use a `sqlite://...` URL in standalone mode |
+| `DATABASE_URL` | `postgres://postgres:postgres@localhost:$PG_PORT/ohc` | PostgreSQL DSN by default; use a `sqlite://...` URL in standalone mode |
 | `REDIS_URL` | `redis://127.0.0.1/` | Redis address used by rate limiting and cloud mesh paths |
 | `OHC_STANDALONE` | `false` | Enables standalone-mode config enforcement |
 | `OHC_SQLITE_KEY` | *(required for SQLite)* | Required encryption key when using SQLite-backed standalone state |
