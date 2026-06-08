@@ -90,7 +90,8 @@ pub fn get_department_config(dep: Department) -> DepartmentConfig {
                 - Tracks revenue, costs, and profit margins per product/service\n\
                 - Generates plain-language financial reports (weekly revenue, monthly trends)\n\
                 - Manages subscription billing and recurring payments\n\
-                - Provides tax-ready financial summaries (income statements, expense tracking)",
+                - Provides tax-ready financial summaries (income statements, expense tracking)\n\
+                - Autonomously calculates tax liability based on the transaction location and routes a percentage of every transaction into a virtual 'Tax Savings' envelope",
             allowed_tools: vec!["read", "head", "tail", "write", "bash", "finance_report"],
             confidence_threshold: 0.95,
         },
@@ -101,7 +102,8 @@ pub fn get_department_config(dep: Department) -> DepartmentConfig {
                 - Creates standard contracts for bookings, custom orders, and service agreements\n\
                 - Manages cookie consent banners and GDPR compliance for EU customers\n\
                 - Tracks business licenses and permits expiration\n\
-                - Provides hazard and liability disclaimers for food, health, and service businesses",
+                - Provides hazard and liability disclaimers for food, health, and service businesses\n\
+                - Dynamically evaluates transaction flows to calculate tax obligations based on location and enforces custom contracts",
             allowed_tools: vec!["read", "head", "tail", "write", "grep"],
             confidence_threshold: 0.98,
         },

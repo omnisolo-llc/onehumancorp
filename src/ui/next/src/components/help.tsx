@@ -10,7 +10,7 @@ import { InteractiveWalkthrough, Step } from './Walkthrough';
 // --- Walkthrough System ---
 
 type HelpArticle = { title: string; desc: string; link?: string };
-type HelpVideo = { id: number; title: string; duration: string };
+type HelpVideo = { id: number; title: string; duration: string; url?: string; video_url?: string; };
 type HelpTab = "center" | "chat" | "videos" | "whatsnew";
 type ChatMessage = { id: string; role: "bot" | "user"; text: string; linkUrl?: string; linkTitle?: string };
 
@@ -385,7 +385,7 @@ export function HelpWidget() {
                <video
                  controls
                  className="w-full h-full object-contain"
-                 src={activeVideo.video_url || ""}
+                 src={activeVideo.url || ""}
                  autoPlay
                >
                  Your browser does not support the video tag.
