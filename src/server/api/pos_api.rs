@@ -230,10 +230,11 @@ pub async fn post_orders(
 
     for event in events {
         if event.event_type == "UPDATE_ORDER_STATUS" {
-            let actual_status = if event.payload.status.to_lowercase() == "received" {
+            let lower_status = event.payload.status.to_lowercase();
+            let actual_status = if lower_status == "received" {
                 "pending"
             } else {
-                event.payload.status.to_lowercase().as_str()
+                lower_status.as_str()
             };
 
             // for E2E, if ID doesn't have e2e-order-, prepend it (except 1 which is our test mock)

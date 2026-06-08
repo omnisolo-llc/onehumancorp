@@ -91,6 +91,7 @@ SERVER_RS_SRCS = [
     "//src/server/domain:organization.rs",
     "//src/server/domain:subscription.rs",
     "//src/server/domain:sre.rs",
+    "//src/server/api:pos_api.rs",
     "//src/server/domain:unified_tenant_test.rs",
     "//src/server/domain/repository:mod.rs",
     "//src/server/domain/repository:models.rs",
