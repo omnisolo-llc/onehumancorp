@@ -29,6 +29,39 @@ pub fn get_pricing_with_config(model: &str, config: &CostConfig) -> ModelPricing
     get_pricing(model)
 }
 
+pub fn get_default_config() -> CostConfig {
+    let mut config = CostConfig {
+        cost_per_input_token: std::env::var("OHC_COST_INPUT_TOKEN").ok().and_then(|s| s.parse().ok()).unwrap_or(0.000003),
+        cost_per_output_token: std::env::var("OHC_COST_OUTPUT_TOKEN").ok().and_then(|s| s.parse().ok()).unwrap_or(0.000015),
+        cost_per_cached_input_token: std::env::var("OHC_COST_CACHED_TOKEN").ok().and_then(|s| s.parse().ok()).unwrap_or(0.0000003),
+        cost_per_local_embedding: 0.0,
+        discount_factor: 0.0,
+        cost_per_gb_month: std::env::var("OHC_COST_GB_MONTH").ok().and_then(|s| s.parse().ok()).unwrap_or(0.02),
+        cost_per_compute_hour: std::env::var("OHC_COST_COMPUTE_HOUR").ok().and_then(|s| s.parse().ok()).unwrap_or(0.10),
+        cost_per_network_gb: std::env::var("OHC_COST_NETWORK_GB").ok().and_then(|s| s.parse().ok()).unwrap_or(0.05),
+        model_overrides: HashMap::new(),
+    };
+
+    // Load overrides from environment
+    // Format: OHC_COST_OVERRIDE_MODELNAME="input_cost,output_cost,cached_cost"
+    for (key, value) in std::env::vars() {
+        if let Some(model_name) = key.strip_prefix("OHC_COST_OVERRIDE_") {
+            let parts: Vec<&str> = value.split(',').collect();
+            if parts.len() == 3 {
+                if let (Ok(input), Ok(output), Ok(cached)) = (parts[0].parse(), parts[1].parse(), parts[2].parse()) {
+                    config.model_overrides.insert(model_name.to_lowercase().replace('_', "-"), ModelPricing {
+                        input_cost: input,
+                        output_cost: output,
+                        cached_cost: cached,
+                    });
+                }
+            }
+        }
+    }
+
+    config
+}
+
 pub fn get_pricing(model: &str) -> ModelPricing {
     match model {
         // Anthropic — Claude 3 family

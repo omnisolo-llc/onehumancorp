@@ -64,7 +64,7 @@ impl Hub {
         let (telemetry_tx, mut telemetry_rx) = tokio::sync::mpsc::unbounded_channel::<crate::services::billing::auditor::AuditEvent>();
         let pool_clone = pool.clone();
         let cost_auditor = Arc::new({
-            let mut a = CostAuditor::new(CostConfig::default());
+            let mut a = CostAuditor::new_default();
             a.set_telemetry_tx(telemetry_tx.clone());
             a
         });

@@ -41,7 +41,6 @@ pub struct AppConfig {
     pub jwt_secret: Option<String>,
     pub s3_endpoint: Option<String>,
     pub s3_bucket_blobs: String,
-    pub cost_config: ::server_pricing::calculator::CostConfig,
 }
 
 static INSTANCE: OnceLock<AppConfig> = OnceLock::new();
@@ -68,12 +67,6 @@ pub fn load() -> Result<AppConfig, ::config::ConfigError> {
         .set_default("headless", false)?
         .set_default("agent_auth_disabled", false)?
         .set_default("telemetry_enabled", false)?
-        .set_default("cost_config.cost_per_input_token", 0.000003)?
-        .set_default("cost_config.cost_per_output_token", 0.000015)?
-        .set_default("cost_config.cost_per_cached_input_token", 0.0000003)?
-        .set_default("cost_config.cost_per_gb_month", 0.02)?
-        .set_default("cost_config.cost_per_compute_hour", 0.10)?
-        .set_default("cost_config.cost_per_network_gb", 0.05)?
 
         // Optional file
         .add_source(::config::File::with_name("ohc").required(false))

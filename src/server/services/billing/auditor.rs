@@ -52,6 +52,10 @@ pub struct CostAuditor {
 }
 
 impl CostAuditor {
+    pub fn new_default() -> Self {
+        Self::new(calculator::get_default_config())
+    }
+
     pub fn new(config: CostConfig) -> Self {
         let meter = global::meter("ohc.billing");
         let llm_cost_counter = meter.u64_counter("ohc_llm_cost_total_cents").build();
