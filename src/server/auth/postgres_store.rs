@@ -394,12 +394,13 @@ impl UserRepository for PgUserRepository {
 
         sqlx::query(
             r#"
-            INSERT INTO revoked_tokens (jti, expires_at, tenant_id) VALUES ($1, $2, current_setting('app.current_tenant', true))
+            INSERT INTO revoked_tokens (jti, expires_at, tenant_id) VALUES ($1, $2, $3)
             ON CONFLICT (jti) DO NOTHING
             "#
         )
         .bind(jti)
         .bind(exp)
+        .bind(org_id)
         .execute(&mut *tx)
         .await
         .map_err(|e| e.to_string())?;
@@ -468,7 +469,7 @@ mod security_tests {
         assert!(!should_bypass, "Cloud mode should NEVER bypass tenant filters when org_id is 'system'");
 
         let res = repo.get_by_id("dummy_id", "system").await;
-        assert!(res.is_err() || res.is_ok(), "Codebase query executed correctly");
+        assert!(res.is_err(), "Must reject system id in multitenant mode");
     }
 
     #[tokio::test]
