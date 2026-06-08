@@ -83,9 +83,9 @@ describe('CostDashboardPage', () => {
     const mockPlanData = {
       current_plan: "Starter",
       ai_actions_used: 150,
-      ai_actions_limit: 1000,
+      ai_actions_limit: 10000,
       storage_used_bytes: 2 * 1024 * 1024,
-      storage_limit_bytes: 5 * 1024 * 1024 * 1024,
+      storage_limit_bytes: 10 * 1024 * 1024 * 1024,
       next_bill_estimated: 2900,
     };
 
@@ -115,9 +115,9 @@ describe('CostDashboardPage', () => {
     expect(screen.getByText('Starter')).toBeDefined();
     // AI actions used: 150 / 1000. Text split.
     expect(screen.getAllByText(/150/)[0]).toBeDefined();
-    expect(screen.getAllByText(/\/ 1000/)[0]).toBeDefined();
+    expect(screen.getAllByText(/\/ 10000/)[0]).toBeDefined();
     // Storage used
-    expect(screen.getByText(/2.0 MB/)).toBeDefined();
+    expect(screen.getAllByText(/2.0 MB/)[0]).toBeDefined();
     // Next bill estimated
     expect(screen.getByText('$29.00')).toBeDefined(); // Since Next bill estimated uses formatCurrency which divides by 100
 

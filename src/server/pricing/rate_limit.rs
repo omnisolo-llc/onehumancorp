@@ -23,17 +23,19 @@ impl PlanTier {
         }
 
         match self {
-            PlanTier::Free => Some(100),
-            PlanTier::Starter => Some(1000),
-            PlanTier::Pro | PlanTier::Business => None, // Unlimited
+            PlanTier::Free => Some(1000),
+            PlanTier::Starter => Some(10000),
+            PlanTier::Pro => Some(50000),
+            PlanTier::Business => None, // Unlimited
         }
     }
 
     pub fn agent_action_limit(&self) -> Option<u32> {
         match self {
-            PlanTier::Free => Some(20),
-            PlanTier::Starter => Some(200),
-            PlanTier::Pro | PlanTier::Business => None,
+            PlanTier::Free => Some(200),
+            PlanTier::Starter => Some(2000),
+            PlanTier::Pro => Some(10000),
+            PlanTier::Business => None,
         }
     }
 
@@ -51,10 +53,10 @@ impl PlanTier {
         }
 
         match self {
-            PlanTier::Free => Some(500),
-            PlanTier::Starter => Some(5120), // 5GB
-            PlanTier::Pro => Some(51200),    // 50GB
-            PlanTier::Business => Some(512000),      // 500GB
+            PlanTier::Free => Some(1024),      // 1GB
+            PlanTier::Starter => Some(10240),  // 10GB
+            PlanTier::Pro => Some(51200),      // 50GB
+            PlanTier::Business => Some(512000), // 500GB
         }
     }
 
@@ -137,12 +139,12 @@ impl RedisRateLimiter {
         if tier.is_none() {
             if let Some(pool) = &self.db_pool {
                 use sqlx::Row;
-                if let Ok(record) = sqlx::query("SELECT tier FROM tenants WHERE id = $1")
+                if let Ok(record) = sqlx::query("SELECT plan_tier FROM tenants WHERE id = $1")
                     .bind(tenant_id)
                     .fetch_one(pool)
                     .await
                 {
-                    if let Ok(t) = record.try_get::<Option<String>, _>("tier") {
+                    if let Ok(t) = record.try_get::<Option<String>, _>("plan_tier") {
                         tier = t;
                         if let Some(ref t_str) = tier {
                             // Cache for 24 hours
@@ -382,7 +384,7 @@ impl RedisRateLimiter {
                 delta_bytes as u64,
                 &[
                     opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string()),
-                    opentelemetry::KeyValue::new("tier", format!("{:?}", tier)),
+                    opentelemetry::KeyValue::new("plan_tier", format!("{:?}", tier)),
                 ],
             );
         }
@@ -424,16 +426,17 @@ mod tests {
 
     #[test]
     fn test_plan_tier_limits() {
-        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
-        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
-        assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
+        assert_eq!(PlanTier::Free.monthly_action_limit(), Some(1000));
+        assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(10000));
+        assert_eq!(PlanTier::Pro.monthly_action_limit(), Some(50000));
         assert_eq!(PlanTier::Business.monthly_action_limit(), None);
 
-        assert_eq!(PlanTier::Free.agent_action_limit(), Some(20));
-        assert_eq!(PlanTier::Starter.agent_action_limit(), Some(200));
+        assert_eq!(PlanTier::Free.agent_action_limit(), Some(200));
+        assert_eq!(PlanTier::Starter.agent_action_limit(), Some(2000));
+        assert_eq!(PlanTier::Pro.agent_action_limit(), Some(10000));
 
-        assert_eq!(PlanTier::Free.storage_limit_mb(), Some(500));
-        assert_eq!(PlanTier::Starter.storage_limit_mb(), Some(5120));
+        assert_eq!(PlanTier::Free.storage_limit_mb(), Some(1024));
+        assert_eq!(PlanTier::Starter.storage_limit_mb(), Some(10240));
         assert_eq!(PlanTier::Pro.storage_limit_mb(), Some(51200));
         assert_eq!(PlanTier::Business.storage_limit_mb(), Some(512000));
 

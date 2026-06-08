@@ -35,9 +35,9 @@ describe('MyPlanPage', () => {
       current_plan: 'Pro',
       next_bill_estimated: 7900,
       ai_actions_used: 50,
-      ai_actions_limit: 1000,
+      ai_actions_limit: 50000,
       storage_used_bytes: 1024 * 1024 * 500, // 500 MB
-      storage_limit_bytes: 1024 * 1024 * 1024 * 5, // 5 GB
+      storage_limit_bytes: 1024 * 1024 * 1024 * 50, // 5 GB
     };
 
     mockFetch.mockResolvedValueOnce({
@@ -53,8 +53,8 @@ describe('MyPlanPage', () => {
 
     expect(screen.getByText('Pro')).toBeDefined();
     expect(screen.getByText('$79.00')).toBeDefined();
-    expect(screen.getByText('50 / 1000')).toBeDefined();
-    expect(screen.getByText('500 MB / 5 GB')).toBeDefined();
+    expect(screen.getByText('50 / 50000')).toBeDefined();
+    expect(screen.getByText('500 MB / 50 GB')).toBeDefined();
   });
 
   it('navigates to dashboard when clicking "Back to Dashboard"', async () => {

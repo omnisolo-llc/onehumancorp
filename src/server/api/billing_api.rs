@@ -562,8 +562,8 @@ mod department_tier_usage_tests {
             .expect("marketing department should be present");
         assert_eq!(marketing.agent_id, "marketing_agent");
         assert_eq!(marketing.actions_used, 21);
-        assert_eq!(marketing.action_limit, Some(20));
-        assert!(marketing.soft_limit_reached);
+        assert_eq!(marketing.action_limit, Some(200));
+        assert!(!marketing.soft_limit_reached);
 
         let operations = response
             .departments
@@ -571,6 +571,6 @@ mod department_tier_usage_tests {
             .find(|row| row.department_type == "operations")
             .expect("operations department should be present");
         assert_eq!(operations.actions_used, 7);
-        assert_eq!(operations.usage_percent, Some(35.0));
+        assert_eq!(operations.usage_percent, Some(3.5));
     }
 }
