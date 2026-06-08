@@ -344,12 +344,14 @@ pub async fn department_tier_usage_handler(
 
 pub async fn department_tier_usage_for_tenant(hub: &Arc<Hub>, tenant_id: &str) -> DepartmentTierUsageResponse {
     let tier_future = hub.tracker().get_tenant_tier(tenant_id);
-    let depts_future = load_department_records(&hub.pool, tenant_id);
-    let (tier_res, depts_res) = tokio::join!(tier_future, depts_future);
+    let departments_future = load_department_records(&hub.pool, tenant_id);
+
+    let (tier_res, departments_res) = tokio::join!(tier_future, departments_future);
+
     let tier = tier_res.unwrap_or(::server_pricing::rate_limit::PlanTier::Free);
     let current_plan = plan_name(&tier).to_string();
     let period = current_usage_period();
-    let departments = depts_res.unwrap_or_default();
+    let departments = departments_res.unwrap_or_default();
 
     let mut futures = Vec::new();
     for department in &departments {
