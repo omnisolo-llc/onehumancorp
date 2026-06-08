@@ -184,7 +184,7 @@ export default function TeamChatPage() {
 
                 {/* Action Card if present */}
                 {msg.card && (
-                  <div className="bg-white/60 backdrop-blur-md border border-gray-200 rounded-xl p-4 shadow-sm relative overflow-hidden" data-testid="action-card">
+                  <div className="app-card backdrop-blur-md border border-gray-200 rounded-xl p-4 shadow-sm relative overflow-hidden" data-testid="action-card">
                     <div className={`absolute top-0 left-0 w-full h-1 ${msg.card.status === 'approved' ? 'bg-green-500' : 'bg-gradient-to-r from-blue-400 to-indigo-500'}`}></div>
                     <div className="flex items-center gap-2 mb-2">
                       {msg.card.status === 'pending' ? (

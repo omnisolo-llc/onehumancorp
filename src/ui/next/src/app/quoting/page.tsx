@@ -118,7 +118,7 @@ export default function MobileQuotingPage() {
       <main className="px-4 py-6 max-w-md mx-auto space-y-6">
 
         {/* Customer Context Card */}
-        <section className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+        <section className="app-card rounded-2xl p-5 shadow-sm border border-gray-100">
           <div className="flex items-start space-x-4">
             {activeQuote.customerPhotoUrl ? (
               <img src={activeQuote.customerPhotoUrl} alt={activeQuote.customerName} className="w-12 h-12 rounded-full object-cover shadow-sm" />

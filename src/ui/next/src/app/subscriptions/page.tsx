@@ -42,7 +42,7 @@ export default function SubscriptionsPage() {
 
       <div className="mb-6">
         <h2 className="text-lg font-bold text-gray-900 mb-3">Subscribers ({subscribers.length})</h2>
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div className="app-card rounded-xl shadow-sm border border-gray-200 overflow-hidden">
           {subscribers.map((s, i) => (
             <div key={s.id} className={`p-4 flex justify-between items-center ${i !== subscribers.length - 1 ? 'border-b border-gray-100' : ''}`}>
               <span className="font-medium text-gray-800">Customer #{s.customer_id.substring(0,6)}</span>
