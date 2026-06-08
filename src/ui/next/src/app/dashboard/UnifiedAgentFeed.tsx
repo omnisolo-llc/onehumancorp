@@ -377,7 +377,7 @@ export function UnifiedAgentFeed() {
                         Dismiss
                       </button>
                     </div>                  ) : approval.payload?.remaining_stock !== undefined ? (
-                    <div className="flex gap-3 w-full">
+                    <div className="flex flex-col sm:flex-row gap-3 w-full">
                       <button
                         onClick={() => handleDecision(approval.id, true)}
                         className="flex-1 min-h-[44px] px-4 rounded-[8px] bg-amber-500 text-white font-medium hover:bg-amber-600 transition-colors shadow-md flex items-center justify-center"
