@@ -11,6 +11,7 @@ exports_files(
         "settings.rs",
         "translation.rs",
         "webhook.rs",
+        "actions.rs",
     ],
     visibility = ["//visibility:public"],
 )
@@ -28,6 +29,7 @@ rust_library(
         "settings.rs",
         "translation.rs",
         "webhook.rs",
+        "actions.rs",
     ],
     crate_root = "bazel_lib.rs",
     edition = "2024",

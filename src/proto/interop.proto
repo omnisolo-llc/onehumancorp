@@ -75,3 +75,20 @@ message JobStatusUpdate {
   bytes details_payload = 4;
   int64 timestamp_ms = 5;
 }
+
+message DispatchActionRequest {
+  string tenant_id = 1;
+  string action_name = 2;
+  string payload_json = 3;
+}
+
+message DispatchActionResponse {
+  string approval_request_id = 1;
+  string status = 2;
+  string department_assigned = 3;
+  string description = 4;
+}
+
+service UnifiedActionDispatcher {
+  rpc DispatchAction(DispatchActionRequest) returns (DispatchActionResponse);
+}

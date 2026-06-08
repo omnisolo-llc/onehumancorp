@@ -30,6 +30,7 @@ exports_files(
         "tasks_db_test.rs",
         "router.rs",
         "load_test.rs",
+        "action_dispatcher.rs",
     ],
     visibility = ["//visibility:public"],
 )
@@ -64,6 +65,7 @@ rust_library(
         "tasks_db.rs",
         "tasks_db_test.rs",
         "router.rs",
+        "action_dispatcher.rs",
         "//src/server/orchestration/departments:approvals_test.rs",
         "//src/server/orchestration/departments:business_advisory_agent.rs",
         "//src/server/orchestration/departments:customer_success_agent.rs",

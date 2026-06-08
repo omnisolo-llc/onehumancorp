@@ -82,13 +82,37 @@ export default function TeamChatPage() {
 
     try {
       const token = typeof window !== 'undefined' ? localStorage.getItem('token') || '' : '';
-      const response = await fetch('/api/agents/chat', {
+
+      // Create a deterministic mapping for demo purposes.
+      // In a real system, the LLM decides the intent and payload
+      let targetEndpoint = '/api/agents/chat';
+      let payloadBody: any = { message: userMsg, enableToolsGating: true, enableTaoOrchestrationLoop: true };
+
+      const lowerMsg = userMsg.toLowerCase();
+      if (lowerMsg.includes('quote') || lowerMsg.includes('vegan') || lowerMsg.includes('inventory') || lowerMsg.includes('refund')) {
+         targetEndpoint = '/api/agents/actions/dispatch';
+         let actionName = 'draft_email';
+         if (lowerMsg.includes('quote')) actionName = 'quote_draft';
+         else if (lowerMsg.includes('inventory') || lowerMsg.includes('vegan')) actionName = 'update_inventory';
+         else if (lowerMsg.includes('refund')) actionName = 'issue_refund';
+
+         payloadBody = {
+            action_name: actionName,
+            payload_json: JSON.stringify({
+               original_request: userMsg,
+               customer_intent: lowerMsg
+            })
+         };
+      }
+
+
+      const response = await fetch(targetEndpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ message: userMsg, enableToolsGating: true, enableTaoOrchestrationLoop: true })
+        body: JSON.stringify(payloadBody)
       });
       const data = await response.json().catch(() => ({}));
       if (response.ok) {
@@ -99,10 +123,11 @@ export default function TeamChatPage() {
           role: 'system',
           content: "I've drafted an action for your approval.",
           card: {
-            id: Date.now().toString() + '-card',
-            department: data.agent || 'The Manager',
+            id: data.approval_request_id || Date.now().toString() + '-card',
+            department: data.department_assigned || data.agent || 'The Manager',
             description: data.description || `Drafted action based on: "${userMsg}"`,
-              status: 'pending'
+            status: 'pending',
+            feature_type: targetEndpoint === '/api/agents/actions/dispatch' ? payloadBody.action_name : undefined
             }
         }));
 
