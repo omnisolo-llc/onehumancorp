@@ -21,7 +21,7 @@ test.describe('Health Monitoring Resilience E2E', () => {
   test('keeps agents page reachable from dashboard', async ({ page }) => {
     await page.goto('/dashboard');
     await page.getByRole('link', { name: 'Agents' }).click();
-    await expect(page.getByRole('heading', { name: 'AI Departments' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Jarvis Assistant' })).toBeVisible();
     await expect(page.getByText('Your autonomous business team.')).toBeVisible();
   });
 });

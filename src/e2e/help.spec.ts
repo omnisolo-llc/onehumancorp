@@ -28,8 +28,8 @@ test.describe('Help Center', () => {
 });
 test.describe('Agents Page', () => {
   test('should display agents page', async ({ page }) => {
-    await page.goto('/agents');
-    await expect(page.getByRole('heading', { name: 'AI Departments' })).toBeVisible();
+    await page.goto('/assistant');
+    await expect(page.getByRole('heading', { name: 'Jarvis Assistant' })).toBeVisible();
   });
 });
 test.describe('Business Setup Page', () => {
@@ -46,7 +46,7 @@ test.describe('Dashboard', () => {
   test('should have working nav links', async ({ page }) => {
     await page.goto('/dashboard');
     await page.getByRole('link', { name: 'Agents' }).click();
-    await expect(page.getByRole('heading', { name: 'AI Departments' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Jarvis Assistant' })).toBeVisible();
   });
 });
 

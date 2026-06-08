@@ -9,8 +9,8 @@ test.describe('Dashboard UX Simplification (Grandmother Test)', () => {
   });
 
   test('should display agents page', async ({ page }) => {
-    await page.goto('/agents');
-    await expect(page.getByRole('heading', { name: 'AI Departments' })).toBeVisible();
+    await page.goto('/assistant');
+    await expect(page.getByRole('heading', { name: 'Jarvis Assistant' })).toBeVisible();
   });
 
   test('should display login page', async ({ page }) => {
@@ -28,8 +28,8 @@ test.describe('Navigation', () => {
   test('should navigate via nav links', async ({ page }) => {
     await page.goto('/dashboard');
     await expect(page.getByRole('navigation', { name: 'Primary' })).toBeVisible();
-    await page.getByRole('link', { name: 'Agents' }).click();
-    await expect(page.getByRole('heading', { name: 'AI Departments' })).toBeVisible();
+    await page.getByRole('link', { name: 'Assistant' }).click();
+    await expect(page.getByRole('heading', { name: 'Jarvis Assistant' })).toBeVisible();
   });
 
   test('should show welcome message on dashboard', async ({ page }) => {

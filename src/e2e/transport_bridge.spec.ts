@@ -7,8 +7,8 @@ test('Cloud-Standalone Mode Switching UI Visibility', async ({ page }) => {
 
   await expect(page.locator('h1', { hasText: 'Dashboard' }).first()).toBeVisible({ timeout: 15000 });
 
-  await page.goto('/agents');
-  await expect(page.getByRole('heading', { name: 'AI Departments' }).first()).toBeVisible({ timeout: 5000 });
+  await page.goto('/assistant');
+  await expect(page.getByRole('heading', { name: 'Jarvis Assistant' }).first()).toBeVisible({ timeout: 5000 });
 
   await expect(page.getByText('Active and running').first()).toBeVisible({ timeout: 15000 });
 });

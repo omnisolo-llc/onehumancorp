@@ -9,8 +9,8 @@ test.describe('Autonomous Voice AI Phone Attendant Engine', () => {
         await expect(page.getByRole('heading', { name: 'Dashboard' }).first()).toBeVisible();
 
         // 2. Carlos navigates to the Agents section to configure his AI Receptionist
-        await page.goto('/agents');
-        await expect(page.getByRole('heading', { name: 'AI Departments' }).first()).toBeVisible();
+        await page.goto('/assistant');
+        await expect(page.getByRole('heading', { name: 'Jarvis Assistant' }).first()).toBeVisible();
 
         await expect(page.getByRole('button', { name: /The Ambassador/ }).first()).toBeVisible();
         await expect(page.getByRole('button', { name: /The Manager/ }).first()).toBeVisible();

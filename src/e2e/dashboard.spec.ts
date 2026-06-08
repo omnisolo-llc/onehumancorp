@@ -17,8 +17,8 @@ test.describe('Dashboard Core', () => {
     await page.goto('/login');
     await expect(page.getByRole('heading', { name: 'Login' })).toBeVisible();
 
-    await page.goto('/agents');
-    await expect(page.getByRole('heading', { name: 'AI Departments' })).toBeVisible();
+    await page.goto('/assistant');
+    await expect(page.getByRole('heading', { name: 'Jarvis Assistant' })).toBeVisible();
   });
 
   test('opens setup from dashboard quick actions', async ({ page }) => {

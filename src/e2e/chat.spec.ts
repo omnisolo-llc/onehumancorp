@@ -12,8 +12,8 @@ test.describe('Chat Page', () => {
   });
 
   test('should display agents page', async ({ page }) => {
-    await page.goto('/agents');
-    await expect(page.getByRole('heading', { name: 'AI Departments' })).toBeVisible();
+    await page.goto('/assistant');
+    await expect(page.getByRole('heading', { name: 'Jarvis Assistant' })).toBeVisible();
   });
 
   test('should display business setup page', async ({ page }) => {
@@ -27,7 +27,7 @@ test.describe('Navigation', () => {
     await page.goto('/dashboard');
     await expect(page.getByRole('navigation', { name: 'Primary' })).toBeVisible();
     await page.getByRole('link', { name: 'Agents' }).click();
-    await expect(page.getByRole('heading', { name: 'AI Departments' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Jarvis Assistant' })).toBeVisible();
   });
 
   test('should show welcome message on dashboard', async ({ page }) => {

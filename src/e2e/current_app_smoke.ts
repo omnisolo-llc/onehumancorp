@@ -22,8 +22,8 @@ export function currentAppSmoke(label: string) {
     await expect(card).toHaveCSS('backdrop-filter', /blur\(30px\)/);
     await expect(card).toHaveCSS('border-radius', '16px');
 
-    await page.goto('/agents');
-    await expect(page.getByRole('heading', { name: 'AI Departments' }).first()).toBeVisible({ timeout: 5000 });
+    await page.goto('/assistant');
+    await expect(page.getByRole('heading', { name: 'Jarvis Assistant' }).first()).toBeVisible({ timeout: 5000 });
 
     await page.goto('/website-builder');
     await expect(page.getByRole('heading', { name: '10-Minute Setup Wizard' }).first()).toBeVisible({ timeout: 5000 });

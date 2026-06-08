@@ -20,8 +20,8 @@ test.describe('Grandmother Test - Plain Language Check', () => {
   });
 
   test('should display agents page', async ({ page }) => {
-    await page.goto('/agents');
-    await expect(page.getByRole('heading', { name: 'AI Departments' })).toBeVisible();
+    await page.goto('/assistant');
+    await expect(page.getByRole('heading', { name: 'Jarvis Assistant' })).toBeVisible();
   });
 
   test('should display business setup', async ({ page }) => {

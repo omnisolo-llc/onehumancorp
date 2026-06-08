@@ -33,8 +33,8 @@ test.describe('Dashboard', () => {
 
 test.describe('Navigation', () => {
   test('should navigate to agents page', async ({ page }) => {
-    await page.goto('/agents');
-    await expect(page.getByRole('heading', { name: 'AI Departments' })).toBeVisible({ timeout: 15000 });
+    await page.goto('/assistant');
+    await expect(page.getByRole('heading', { name: 'Jarvis Assistant' })).toBeVisible({ timeout: 15000 });
   });
 
   test('should display business setup', async ({ page }) => {

@@ -7,8 +7,8 @@ test.describe('Security Settings', () => {
   });
 
   test('should display agents page', async ({ page }) => {
-    await page.goto('/agents');
-    await expect(page.getByRole('heading', { name: 'AI Departments' })).toBeVisible();
+    await page.goto('/assistant');
+    await expect(page.getByRole('heading', { name: 'Jarvis Assistant' })).toBeVisible();
   });
 
   test('should display login page', async ({ page }) => {
@@ -28,7 +28,7 @@ test.describe('Navigation', () => {
     const primaryNav = page.getByRole('navigation', { name: 'Primary' });
     await expect(primaryNav).toBeVisible();
     await primaryNav.getByRole('link', { name: /Agents/ }).click();
-    await expect(page.getByRole('heading', { name: 'AI Departments' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Jarvis Assistant' })).toBeVisible();
   });
 
   test('should have nav links to all main sections', async ({ page }) => {
