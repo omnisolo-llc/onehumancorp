@@ -21,10 +21,12 @@ export const E2E_MEMBER_USER = {
 type E2EUser = typeof E2E_ADMIN_USER | typeof E2E_UNLIMITED_ADMIN_USER | typeof E2E_MEMBER_USER;
 
 async function loginAs(page: Page, user: E2EUser) {
-  // We need to inject the tenant ID context for the mock app if possible.
-  // The actual tenant_id comes from a header or cookie in a real deployment.
-  // In the real system, it's determined by the login session. But in our e2e fixture,
-  // we can use Playwright to set the context or navigate.
+  const tenantId = user.email === 'pro@example.com' ? 'e2e-tenant-unlimited' : 'e2e-tenant';
+  await page.addInitScript((tenantId) => {
+    localStorage.setItem('tenant_id', tenantId);
+    localStorage.setItem('tenant', tenantId);
+    localStorage.setItem('user_id', 'e2e-admin-user');
+  }, tenantId);
   await page.goto('/dashboard');
 }
 
