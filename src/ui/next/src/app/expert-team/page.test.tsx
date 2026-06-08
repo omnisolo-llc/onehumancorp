@@ -12,7 +12,7 @@ describe('ExpertTeamPage', () => {
 
   it('renders correctly', () => {
     render(<ExpertTeamPage />);
-    expect(screen.getByText(/Tencent Workbuddy: Expert Team/i)).toBeInTheDocument();
+    expect(screen.getByText(/Collaborative Expert Team/i)).toBeInTheDocument();
   });
 
   it('handles execution and displays result', async () => {
