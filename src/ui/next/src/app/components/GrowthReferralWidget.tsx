@@ -16,10 +16,7 @@ export default function GrowthReferralWidget() {
       const inviterId = typeof window !== 'undefined' ? (localStorage.getItem('user_id') || 'local-user') : 'local-user';
 
       const res = await fetch('/api/v1/growth/team-invites', {
-<<<<<<< HEAD
 
-=======
->>>>>>> 7c808b64 (🚀 Nova: [Business Health gamification growth loop])
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

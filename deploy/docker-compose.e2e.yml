@@ -13,12 +13,6 @@ services:
   postgres:
     image: pgvector/pgvector:pg15
     command: ["postgres", "-c", "wal_level=logical"]
-    security_opt:
-      - seccomp:unconfined
-      - apparmor:unconfined
-    cap_add:
-      - SYS_ADMIN
-      - DAC_READ_SEARCH
     environment:
       POSTGRES_USER: ohc
       POSTGRES_PASSWORD: ohc
@@ -40,15 +34,9 @@ services:
           memory: 256M
 
   valkey:
-    image: redis:7
-    security_opt:
-      - seccomp:unconfined
-      - apparmor:unconfined
-    cap_add:
-      - SYS_ADMIN
-      - DAC_READ_SEARCH
+    image: valkey/valkey:8-alpine
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD", "valkey-cli", "ping"]
       interval: 5s
       timeout: 3s
       retries: 30

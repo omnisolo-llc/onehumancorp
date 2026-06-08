@@ -128,7 +128,7 @@ mod tests {
             "content": "hello world"
         });
 
-        let result = crate::ToolExecutor::execute(&executor, args).await.unwrap();
+        let result = super::ToolExecutor::execute(&executor, args).await.unwrap();
         assert_eq!(result, "File written: test.txt");
 
         let content = fs::read_to_string(dir.path().join("test.txt")).await.unwrap();
@@ -141,11 +141,11 @@ mod tests {
         let executor = PydanticAdapter::new(WriteExecutor { working_dir: None, runner });
 
         let args = json!({ "path": "test.txt" });
-        let result = crate::ToolExecutor::execute(&executor, args).await;
+        let result = super::ToolExecutor::execute(&executor, args).await;
         assert!(result.is_err());
 
         let args2 = json!({ "content": "test" });
-        let result2 = crate::ToolExecutor::execute(&executor, args2).await;
+        let result2 = super::ToolExecutor::execute(&executor, args2).await;
         assert!(result2.is_err());
     }
 
@@ -161,7 +161,7 @@ mod tests {
         });
 
         // Should succeed and pass verification
-        let result = crate::ToolExecutor::execute(&executor, args).await.unwrap();
+        let result = super::ToolExecutor::execute(&executor, args).await.unwrap();
         assert_eq!(result, "File written: test.rs");
     }
 
@@ -180,7 +180,7 @@ mod tests {
         });
 
         // Should fail verification due to syntax error
-        let result = crate::ToolExecutor::execute(&executor, args).await;
+        let result = super::ToolExecutor::execute(&executor, args).await;
         assert!(result.is_err(), "Expected error from mock rustc verification");
         if let Err(ToolError::LlmRecoverable(msg)) = result {
             assert!(msg.contains("Verification Loop Failed: `rustc` reported syntax errors"));

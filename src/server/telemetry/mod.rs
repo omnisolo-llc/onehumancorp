@@ -1230,12 +1230,11 @@ pub async fn record_storage_rw_cost(
     operation: &str,
     size_bytes: i64,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let cost_cents = (size_bytes as f64 * 0.00000001) as f32;
     buffer_metric(
         pool,
         "ohc_storage_rw_cost",
         "counter",
-        cost_cents,
+        size_bytes as f32,
         serde_json::json!({
             "organization_id": organization_id,
             "operation": operation,

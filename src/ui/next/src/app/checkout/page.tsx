@@ -212,21 +212,24 @@ export default function CheckoutPage() {
 
           <WithTooltip id="checkout-tap-to-pay-tooltip" defaultText="Tap your card or phone on the reader to pay in person.">
             <button
-              onClick={async () => {
+              onClick={() => {
                 if (navigator.onLine) {
                   setCheckoutStatus('Stripe Terminal payment captured for $45.00.');
-                  await handlePayment(false);
+                  handlePayment(false);
                 } else {
-                  // Dynamically import SyncManager to avoid SSR issues
-                  const { SyncManager } = await import('../../lib/sync/SyncManager');
-                  const syncManager = SyncManager.getInstance();
-                  syncManager.enqueue({
+                  let queue = [];
+                  try {
+                    queue = JSON.parse(localStorage.getItem('ohc_offline_queue') || '[]');
+                  } catch (e) {}
+
+                  queue.push({
                     id: 'txn_' + Date.now(),
                     amount: 45,
                     timestamp: new Date().toISOString(),
                     type: 'tap_to_pay',
                     idempotency_key: 'idempotency_' + Date.now() + Math.random().toString(36).substring(7)
                   });
+                  localStorage.setItem('ohc_offline_queue', JSON.stringify(queue));
                   setCheckoutStatus('Payment Saved Offline');
                   setShowSuccessModal(true);
                 }

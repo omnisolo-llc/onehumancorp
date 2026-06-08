@@ -116,34 +116,36 @@ export default function CostDashboardPage() {
         </section>
 
         {/* My Plan Section */}
-        <section id="my-plan-section" className="p-6 md:p-8 shadow-lg bg-white/60 backdrop-blur-2xl saturate-200 border border-white/40 rounded-2xl md:rounded-[24px] hover:shadow-xl transition-shadow duration-300">
-          <div className="flex justify-between items-center mb-6">
-             <h2 className="text-xl font-bold font-outfit text-gray-900">My Plan</h2>
-             <button
-               onClick={() => router.push('/pricing')}
-               className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-medium transition-all shadow-sm">
-               Upgrade
-             </button>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <div className="p-4 rounded-xl bg-white/50 border border-white/50">
-                  <h3 className="text-sm font-medium text-gray-500">Current Plan</h3>
-                  <p className="text-2xl font-bold text-gray-900 mt-1">{myPlanData?.current_plan || 'Free'}</p>
-              </div>
-              <div className="p-4 rounded-xl bg-white/50 border border-white/50">
-                  <h3 className="text-sm font-medium text-gray-500">AI Actions Used</h3>
-                  <p className="text-2xl font-bold text-gray-900 mt-1">{myPlanData?.ai_actions_used || 0} <span className="text-sm text-gray-500 font-normal">{myPlanData?.ai_actions_limit ? `/ ${myPlanData.ai_actions_limit}` : ''}</span></p>
-              </div>
-              <div className="p-4 rounded-xl bg-white/50 border border-white/50">
-                  <h3 className="text-sm font-medium text-gray-500">Storage Used</h3>
-                  <p className="text-2xl font-bold text-gray-900 mt-1">{((myPlanData?.storage_used_bytes || 0) / (1024 * 1024)).toFixed(1)} MB <span className="text-sm text-gray-500 font-normal">{myPlanData?.storage_limit_bytes ? `/ ${(myPlanData.storage_limit_bytes / (1024 * 1024)).toFixed(0)} MB` : ''}</span></p>
-              </div>
-              <div className="p-4 rounded-xl bg-white/50 border border-white/50">
-                  <h3 className="text-sm font-medium text-gray-500">Estimated Next Bill</h3>
-                  <p className="text-2xl font-bold text-gray-900 mt-1">{formatCurrency(myPlanData?.next_bill_estimated || 0)}</p>
-              </div>
-          </div>
-        </section>
+        {myPlanData && (
+          <section id="my-plan-section" className="p-6 md:p-8 shadow-lg bg-white/60 backdrop-blur-2xl saturate-200 border border-white/40 rounded-2xl md:rounded-[24px] hover:shadow-xl transition-shadow duration-300">
+            <div className="flex justify-between items-center mb-6">
+               <h2 className="text-xl font-bold font-outfit text-gray-900">My Plan</h2>
+               <button
+                 onClick={() => router.push('/pricing')}
+                 className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-medium transition-all shadow-sm">
+                 Upgrade
+               </button>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="p-4 rounded-xl bg-white/50 border border-white/50">
+                    <h3 className="text-sm font-medium text-gray-500">Current Plan</h3>
+                    <p className="text-2xl font-bold text-gray-900 mt-1">{myPlanData.current_plan}</p>
+                </div>
+                <div className="p-4 rounded-xl bg-white/50 border border-white/50">
+                    <h3 className="text-sm font-medium text-gray-500">AI Actions Used</h3>
+                    <p className="text-2xl font-bold text-gray-900 mt-1">{myPlanData.ai_actions_used} <span className="text-sm text-gray-500 font-normal">{myPlanData.ai_actions_limit ? `/ ${myPlanData.ai_actions_limit}` : ''}</span></p>
+                </div>
+                <div className="p-4 rounded-xl bg-white/50 border border-white/50">
+                    <h3 className="text-sm font-medium text-gray-500">Storage Used</h3>
+                    <p className="text-2xl font-bold text-gray-900 mt-1">{(myPlanData.storage_used_bytes / (1024 * 1024)).toFixed(1)} MB <span className="text-sm text-gray-500 font-normal">{myPlanData.storage_limit_bytes ? `/ ${(myPlanData.storage_limit_bytes / (1024 * 1024)).toFixed(0)} MB` : ''}</span></p>
+                </div>
+                <div className="p-4 rounded-xl bg-white/50 border border-white/50">
+                    <h3 className="text-sm font-medium text-gray-500">Estimated Next Bill</h3>
+                    <p className="text-2xl font-bold text-gray-900 mt-1">{formatCurrency(myPlanData.next_bill_estimated)}</p>
+                </div>
+            </div>
+          </section>
+        )}
 
         {/* Overview Section */}
         <section className="app-panel">

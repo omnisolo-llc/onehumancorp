@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, ReactNode } from 'react';
 
-export type Step = {
+type Step = {
   targetId: string;
   title: string;
   content: string;

@@ -1,4 +1,3 @@
-/// Master Catalog B.12. The "Ralph Loop"
 use crate::agent::{Agent, AgentEvent, AgentRunConfig};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;

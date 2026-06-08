@@ -1,4 +1,3 @@
-/// Master Catalog B.3. Memory
 use crate::memory_store::LongTermMemory;
 use sqlx::{SqlitePool, sqlite::SqlitePoolOptions};
 use async_trait::async_trait;

@@ -16,26 +16,11 @@ export default function TrialExtensionPage() {
     // Open the share window
     window.open(shareUrl, '_blank');
 
-    try {
-      const response = await fetch('/api/v1/growth/trial-extension/claim', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        }
-      });
-
-      if (response.ok) {
-        setHasClaimed(true);
-      } else {
-        console.error('Failed to claim trial extension');
-        alert("Failed to claim trial extension. Please try again.");
-      }
-    } catch (error) {
-      console.error('Error claiming trial extension:', error);
-      alert("Error claiming trial extension. Please try again.");
-    } finally {
+    // Wait for a simulated backend call to process the extension
+    setTimeout(() => {
+      setHasClaimed(true);
       setIsClaiming(false);
-    }
+    }, 2000);
   };
 
   return (

@@ -219,46 +219,10 @@ impl Department for SalesAgent {
             "tenant.quote.requested".to_string(),
             "tenant.message.received".to_string(),
             "tenant.omnichannel.message.received".to_string(),
-            "agent:sales:approved".to_string(),
         ]
     }
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
-        if event.event_type == "agent:sales:approved" {
-            if let Some(payload) = event.payload.get("original_payload") {
-                if let Some(feature_type) = payload.get("feature_type").and_then(|v| v.as_str()) {
-                    if feature_type == "quote_draft" {
-                        let suggested_price = payload.get("suggested_price").and_then(|v| v.as_f64()).unwrap_or(0.0);
-                        let customer_inquiry = payload.get("customer_inquiry").and_then(|v| v.as_str()).unwrap_or("Unknown");
-                        let deposit_amount = suggested_price * 0.20; // 20% deposit
-
-                        tracing::info!(
-                            "Executing approved quote draft for inquiry: '{}'. Suggested price: ${}. Deposit: ${}",
-                            customer_inquiry,
-                            suggested_price,
-                            deposit_amount
-                        );
-
-                        // Simulate creating a Stripe checkout session for the deposit
-                        let stripe_client = crate::integrations::stripe::client::StripeClient::new(
-                            std::env::var("STRIPE_API_KEY").unwrap_or_else(|_| "sk_test_123".to_string()),
-                        );
-
-                        match stripe_client.create_checkout_session("price_dummy", "cus_dummy", deposit_amount).await {
-                            Ok(url) => {
-                                tracing::info!("Generated deposit link: {}", url);
-                                // Optional: Update timeline or send a message
-                            }
-                            Err(e) => {
-                                tracing::error!("Failed to create checkout session for quote deposit: {}", e);
-                            }
-                        }
-                    }
-                }
-            }
-            return Ok(());
-        }
-
         if event.event_type == "tenant.message.received" || event.event_type == "tenant.omnichannel.message.received" {
             let planned_intent = match self
                 .quote_intent_planner

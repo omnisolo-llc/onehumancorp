@@ -48,7 +48,7 @@ describe('OnboardingWizard', () => {
   it('Step 1: Renders initial screen correctly', async () => {
     await renderOnboardingWizard();
 
-    expect(screen.getByText("What's the name of your business?")).toBeInTheDocument();
+    expect(screen.getByText("Tell us about your business")).toBeInTheDocument();
     const button = screen.getByRole('button', { name: /Next/i });
     expect(button).toBeDisabled();
   });
@@ -58,7 +58,6 @@ describe('OnboardingWizard', () => {
 
     // Mock intake success
     (global.fetch as any).mockImplementation((url: string) => {
-      if (url === '/api/onboarding/launch') { return Promise.resolve({ ok: true, json: async () => ({}) }); }
       if (url === '/api/onboarding/intake') {
         return Promise.resolve({
           ok: true,
@@ -86,10 +85,6 @@ describe('OnboardingWizard', () => {
     // Chat Step 3 - Use Enter Key
     const locInput = await screen.findByPlaceholderText(/Portland, OR/i);
     await user.type(locInput, 'NY{Enter}');
-
-    // Chat Step 4 - Use Enter Key
-    const targetAudienceInput = await screen.findByPlaceholderText(/Local families, Tech startups/i);
-    await user.type(targetAudienceInput, 'Local families{Enter}');
 
     // Verify it transitions to Step 2: Review Details by triggering handleIntake
     await waitFor(() => {
@@ -132,7 +127,7 @@ describe('OnboardingWizard', () => {
 
     await user.clear(locInput);
 
-    const nextBtn3 = screen.getByRole('button', { name: /Next/i });
+    const nextBtn3 = screen.getByRole('button', { name: /Generate My Business/i });
 
     // Verify the button is disabled when empty
     expect(nextBtn3).toBeDisabled();
@@ -141,16 +136,6 @@ describe('OnboardingWizard', () => {
     await user.type(locInput, 'NY');
     expect(nextBtn3).not.toBeDisabled();
     await user.click(nextBtn3);
-
-    // Chat Step 4
-    await waitFor(() => {
-      expect(screen.getByText('Who is your target audience?')).toBeInTheDocument();
-    });
-    const targetAudienceInput = await screen.findByPlaceholderText(/Local families, Tech startups/i);
-    await user.type(targetAudienceInput, 'Local families');
-    const generateBtn = screen.getByRole('button', { name: /Generate My Business/i });
-    expect(generateBtn).not.toBeDisabled();
-    await user.click(generateBtn);
   });
 
   it('Handles multi-step successful onboarding flow', async () => {
@@ -158,7 +143,6 @@ describe('OnboardingWizard', () => {
 
     // Mock intake success
     (global.fetch as any).mockImplementation((url: string) => {
-      if (url === '/api/onboarding/launch') { return Promise.resolve({ ok: true, json: async () => ({}) }); }
       if (url === '/api/onboarding/intake') {
         return Promise.resolve({
           ok: true,
@@ -198,17 +182,6 @@ describe('OnboardingWizard', () => {
     // Chat Step 3
     const locInput = await screen.findByPlaceholderText(/Portland, OR/i, {}, { timeout: 3000 });
     await user.type(locInput, 'NY');
-
-    const button3 = screen.getByRole('button', { name: /Next/i });
-    expect(button3).not.toBeDisabled();
-    await user.click(button3);
-
-    // Chat Step 4
-    await waitFor(() => {
-      expect(screen.getByText('Who is your target audience?')).toBeInTheDocument();
-    });
-    const targetAudienceInput = await screen.findByPlaceholderText(/Local families, Tech startups/i);
-    await user.type(targetAudienceInput, 'Local families');
 
     const button = screen.getByRole('button', { name: /Generate My Business/i });
     expect(button).not.toBeDisabled();
@@ -271,7 +244,6 @@ describe('OnboardingWizard', () => {
 
     // Mock intake failure
     (global.fetch as any).mockImplementation((url: string) => {
-      if (url === '/api/onboarding/launch') { return Promise.resolve({ ok: true, json: async () => ({}) }); }
       if (url === '/api/onboarding/intake' || url === '/api/onboarding/start') {
         return Promise.resolve({ ok: false, json: async () => ({ error: "Failed to process business details" }) });
       }
@@ -298,23 +270,14 @@ describe('OnboardingWizard', () => {
     const locInput = await screen.findByPlaceholderText(/Portland, OR/i, {}, { timeout: 3000 });
     await user.type(locInput, 'NY');
 
-    const button3 = screen.getByRole('button', { name: /Next/i });
-    await user.click(button3);
-
-    // Chat Step 4
-    await waitFor(() => {
-      expect(screen.getByText('Who is your target audience?')).toBeInTheDocument();
-    });
-    const targetAudienceInput = await screen.findByPlaceholderText(/Local families, Tech startups/i);
-    await user.type(targetAudienceInput, 'Local families');
-
     const button = screen.getByRole('button', { name: /Generate My Business/i });
 
     await user.click(button);
 
-    // Verify error appears and step goes back to last input screen
+    // Verify error appears and step goes back to 1
     await waitFor(() => {
       expect(screen.getByText("Failed to process business details")).toBeInTheDocument();
+      expect(screen.getByText("Where are you located?")).toBeInTheDocument();
     });
 
     consoleErrorSpy.mockRestore();
@@ -331,7 +294,6 @@ describe('OnboardingWizard', () => {
 
     // Mock start failure
     (global.fetch as any).mockImplementation((url: string) => {
-      if (url === '/api/onboarding/launch') { return Promise.resolve({ ok: true, json: async () => ({}) }); }
       if (url === '/api/onboarding/intake' || url === '/api/onboarding/start') {
         return Promise.resolve({ ok: false, json: async () => ({ error: "Failed to start onboarding" }) });
       }
@@ -493,20 +455,23 @@ describe('OnboardingWizard', () => {
     await user.click(customOption);
 
     // Verify initial state
-    // By default, since the store initializes with empty agents, we might not see any badges immediately.
-    // However, if the store had active agents, they would appear.
-    // The auto-respond toggle remains.
+    const salesAgent = screen.getByText('Sales Agent');
+    expect(salesAgent).toBeInTheDocument();
 
     // Check toggle
     // Checkbox might be hidden by sr-only or similar, use label text instead or get by id
     const toggle = document.querySelector('input[type="checkbox"]') as HTMLInputElement;
     expect(toggle).toBeChecked();
 
+    // Select Sales Agent
+    await user.click(salesAgent);
+
     // Toggle auto respond
     await user.click(toggle);
 
     await waitFor(() => {
       const state = useOnboardingStore.getState();
+      expect(state.aiAgents).toContain('Sales Agent');
       expect(state.aiAutoRespond).toBe(false);
       expect(state.domainChoice).toBe('custom');
     });
@@ -579,12 +544,6 @@ describe('OnboardingWizard', () => {
     });
 
     await renderOnboardingWizard();
-
-    const targetAudienceInput = await screen.findByPlaceholderText(/Local families, Tech startups/i);
-    await user.type(targetAudienceInput, 'Local families');
-
-    const generateBtn = screen.getByRole('button', { name: /Generate My Business/i });
-    expect(generateBtn).not.toBeDisabled();
 
     // Note: handleIntake uses fetch which is either mocked or fails, but we just want to test
     // that the UI hook for targetAudience works.
