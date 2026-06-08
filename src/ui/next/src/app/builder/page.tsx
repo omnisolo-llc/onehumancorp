@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { SmartBlock, SkeletonBlock, ActionSheet, DraggableBlock, QRCode } from "./components";
 import { useWalkthrough } from "../../components/help";
 import { WithTooltip } from "../../components/TooltipRegistry";
+import { WalkthroughTarget } from "../../components/Walkthrough";
 import { useBuilderStore } from "./store";
 
 export default function BuilderPage() {
@@ -388,17 +389,19 @@ export default function BuilderPage() {
                 </p>
 
                 <label className="text-sm font-semibold text-gray-700 dark:text-[#a1a1a6] mb-2 block text-left">Your Business Details</label>
-                <WithTooltip id="bio-input-tooltip" defaultText="Describe what you sell, your target audience, and the vibe of your brand.">
-                  <textarea
-                    id="bio-input"
-                    className="w-full border border-white/50 dark:border-white/10 glassmorphism backdrop-blur-md p-4 mb-8 focus:ring-2 focus:ring-[#0066FF]/50 focus:border-[#0066FF] outline-none transition-all resize-none text-[#1D1D1F] dark:text-[#f5f5f7] shadow-inner"
-                    style={{ borderRadius: '8px' }}
-                    value={bio}
-                    onChange={(e) => setBio(e.target.value)}
-                    placeholder="e.g. I run a mobile dog grooming service in Portland"
-                    rows={6}
-                  />
-                </WithTooltip>
+                <WalkthroughTarget id="bio-input-tooltip">
+                  <WithTooltip id="bio-input-tooltip" defaultText="Describe what you sell, your target audience, and the vibe of your brand.">
+                    <textarea
+                      id="bio-input"
+                      className="w-full border border-white/50 dark:border-white/10 glassmorphism backdrop-blur-md p-4 mb-8 focus:ring-2 focus:ring-[#0066FF]/50 focus:border-[#0066FF] outline-none transition-all resize-none text-[#1D1D1F] dark:text-[#f5f5f7] shadow-inner"
+                      style={{ borderRadius: '8px' }}
+                      value={bio}
+                      onChange={(e) => setBio(e.target.value)}
+                      placeholder="e.g. A high-end artisan bakery in Portland focusing on sourdough and vegan pastries."
+                      rows={6}
+                    />
+                  </WithTooltip>
+                </WalkthroughTarget>
 
                 <div className="flex gap-4">
                   <button
@@ -408,21 +411,23 @@ export default function BuilderPage() {
                   >
                     Back
                   </button>
-                  <WithTooltip id="generate-btn-tooltip" defaultText="Our AI agents will analyze your description and build a ready-to-launch store for you.">
-                    <button
-                      id="generate-btn"
-                      className={`flex-[2] p-4 font-bold font-outfit text-lg transition-all ${
-                        bio.trim().length > 5
-                          ? "text-white shadow-md active:scale-[0.98] bg-gradient-to-r from-[#0066FF] to-[#0052cc]"
-                          : "glassmorphism text-gray-400 dark:text-gray-500 cursor-not-allowed border border-white/50 dark:border-white/10 backdrop-blur-md"
-                      }`}
-                      style={{ borderRadius: '8px' }}
-                      onClick={handleGenerate}
-                      disabled={bio.trim().length <= 5}
-                    >
-                      Build Store
-                    </button>
-                  </WithTooltip>
+                  <WalkthroughTarget id="generate-btn-tooltip">
+                    <WithTooltip id="generate-btn-tooltip" defaultText="Our AI agents will analyze your description and build a ready-to-launch store for you.">
+                      <button
+                        id="generate-btn"
+                        className={`flex-[2] p-4 font-bold font-outfit text-lg transition-all ${
+                          bio.trim().length > 5
+                            ? "text-white shadow-md active:scale-[0.98] bg-gradient-to-r from-[#0066FF] to-[#0052cc]"
+                            : "glassmorphism text-gray-400 dark:text-gray-500 cursor-not-allowed border border-white/50 dark:border-white/10 backdrop-blur-md"
+                        }`}
+                        style={{ borderRadius: '8px' }}
+                        onClick={handleGenerate}
+                        disabled={bio.trim().length <= 5}
+                      >
+                        Build Store
+                      </button>
+                    </WithTooltip>
+                  </WalkthroughTarget>
                 </div>
               </div>
             )}

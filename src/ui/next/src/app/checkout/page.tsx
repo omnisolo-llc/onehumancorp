@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { WithTooltip } from "../../components/TooltipRegistry";
+import { WalkthroughTarget } from "../../components/Walkthrough";
 import { PoweredByOHC } from "../components/PoweredByOHC";
 
 import { Suspense } from "react";
@@ -346,18 +347,20 @@ function CheckoutContent() {
             </div>
           )}
 
-          <WithTooltip
-            id="checkout-pay-now-tooltip"
-            defaultText="Click here to securely finish your purchase and process your payment."
-          >
-            <button
-              onClick={() => handlePayment(false)}
-              disabled={isProcessing}
-              className={`w-full px-4 py-3 text-white rounded-lg font-medium transition-colors shadow-sm ${isProcessing ? "bg-indigo-400 cursor-not-allowed" : "bg-indigo-600 hover:bg-indigo-700"}`}
+          <WalkthroughTarget id="checkout-pay-now-tooltip">
+            <WithTooltip
+              id="checkout-pay-now-tooltip"
+              defaultText="Click here to securely finish your purchase and process your payment."
             >
-              {isProcessing ? "Processing..." : "Pay Now"}
-            </button>
-          </WithTooltip>
+              <button
+                onClick={() => handlePayment(false)}
+                disabled={isProcessing}
+                className={`w-full px-4 py-3 text-white rounded-lg font-medium transition-colors shadow-sm ${isProcessing ? "bg-indigo-400 cursor-not-allowed" : "bg-indigo-600 hover:bg-indigo-700"}`}
+              >
+                {isProcessing ? "Processing..." : "Pay Now"}
+              </button>
+            </WithTooltip>
+          </WalkthroughTarget>
 
           <WithTooltip
             id="checkout-subscribe-tooltip"
