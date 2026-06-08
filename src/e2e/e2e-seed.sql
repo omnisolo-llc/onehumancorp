@@ -217,3 +217,6 @@ ALTER TABLE IF EXISTS ohc_fx_rates FORCE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS bookings FORCE ROW LEVEL SECURITY;
 
 COMMIT;
+INSERT INTO cache_config (id, tenant_id, enabled, ttl_seconds)
+VALUES ('00000000-0000-0000-0000-000000000001', 'e2e-tenant', true, 3600)
+ON CONFLICT (tenant_id) DO UPDATE SET enabled = EXCLUDED.enabled, ttl_seconds = EXCLUDED.ttl_seconds;

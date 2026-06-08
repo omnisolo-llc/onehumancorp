@@ -13,6 +13,7 @@ import { InteractiveWalkthrough, WalkthroughTarget } from "../../components/Walk
 import { WithTooltip } from "../../components/TooltipRegistry";
 import GrowthReferralWidget from "../components/GrowthReferralWidget";
 import { SmartBlock } from "../builder/components";
+import PerformanceCard from "./PerformanceCard";
 import { UnifiedAgentFeed } from "./UnifiedAgentFeed";
 import { NeighborhoodPulseCard } from "./NeighborhoodPulseCard";
 import { ViralLoopPerformanceWidget } from "./ViralLoopPerformanceWidget";
@@ -400,7 +401,8 @@ export default function Dashboard() {
           </section>
         )}
 
-        <UnifiedAgentFeed />
+        <PerformanceCard />
+              <UnifiedAgentFeed />
 
         <section>
           <div className="mb-6 p-6 rounded-[16px] bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] saturate-[210%] border border-white/40 dark:border-white/10">
