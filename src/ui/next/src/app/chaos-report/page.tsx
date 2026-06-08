@@ -11,11 +11,28 @@ export default function ChaosReportPage() {
       setIsDarkMode(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
     }
 
-    // Mock chaos metrics
-    setData({
-      latencyHistograms: [10, 20, 50, 100, 300, 500, 1000],
-      errorRate: [0.01, 0.02, 0.05, 0.04, 0.01],
-    });
+    const fetchRealData = async () => {
+      try {
+        const response = await fetch('/api/chaos-report');
+        if (response.ok) {
+          const json = await response.json();
+          setData(json);
+        } else {
+          // Fallback if API fails
+           setData({
+            latencyHistograms: [0],
+            errorRate: [0],
+          });
+        }
+      } catch (error) {
+         setData({
+            latencyHistograms: [0],
+            errorRate: [0],
+          });
+      }
+    };
+
+    fetchRealData();
   }, []);
 
   const glassStyle = isDarkMode ? {
@@ -34,6 +51,7 @@ export default function ChaosReportPage() {
         <div>
           <h1 className="text-4xl font-bold font-outfit tracking-tight">System Reliability Report</h1>
           <p className={`mt-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Chaos Engineering & Sentry Dashboard</p>
+          {data?.mode && <p className={`mt-1 text-sm font-semibold ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`}>Environment: {data.mode}</p>}
         </div>
         <button
           onClick={() => setIsDarkMode(!isDarkMode)}
@@ -62,11 +80,11 @@ export default function ChaosReportPage() {
           <div className="h-64 flex items-end gap-3 p-4 rounded-xl relative" style={{ background: isDarkMode ? 'rgba(0,0,0,0.3)' : 'rgba(0,0,0,0.03)' }}>
             <div className="absolute left-0 bottom-0 w-full h-full border-b border-l border-current opacity-10 m-4"></div>
 
-            {data?.latencyHistograms.map((val: number, i: number) => (
+            {data?.latencyHistograms?.map((val: number, i: number) => (
               <div key={i} className="flex-1 flex flex-col items-center justify-end group">
                 <div
-                  className={`w-full rounded-t-md transition-all duration-500 ${isDarkMode ? 'bg-blue-500/80' : 'bg-blue-500/60'} group-hover:bg-blue-400 relative`}
-                  style={{ height: `${Math.max(5, Math.min(100, val / 10))}%` }}
+                  className={`w-full rounded-t-md transition-all duration-500 relative`}
+                  style={{ height: `${Math.max(5, Math.min(100, val / 10))}%`, backgroundColor: isDarkMode ? 'rgba(59, 130, 246, 0.8)' : 'rgba(59, 130, 246, 0.6)' }}
                 >
                   <div className={`absolute -top-8 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity text-xs font-bold px-2 py-1 rounded ${isDarkMode ? 'bg-gray-800 text-white' : 'bg-white shadow text-gray-900'}`}>
                     {val}ms
@@ -100,7 +118,7 @@ export default function ChaosReportPage() {
 
             <svg className="w-full h-full absolute inset-0 p-4" preserveAspectRatio="none" viewBox="0 0 100 100">
               <path
-                d={data ? `M 0 100 ${data.errorRate.map((val: number, i: number) => `L ${i * 25} ${100 - val * 1000}`).join(' ')}` : ''}
+                d={data?.errorRate && data.errorRate.length > 0 ? `M 0 100 ${data.errorRate.map((val: number, i: number) => `L ${i * 25} ${100 - val * 1000}`).join(' ')}` : 'M 0 100 L 100 100'}
                 fill="none"
                 stroke={isDarkMode ? '#ef4444' : '#dc2626'}
                 strokeWidth="2"
@@ -109,14 +127,14 @@ export default function ChaosReportPage() {
                 className="drop-shadow-sm"
               />
               <path
-                d={data ? `M 0 100 ${data.errorRate.map((val: number, i: number) => `L ${i * 25} ${100 - val * 1000}`).join(' ')} L 100 100 Z` : ''}
+                d={data?.errorRate && data.errorRate.length > 0 ? `M 0 100 ${data.errorRate.map((val: number, i: number) => `L ${i * 25} ${100 - val * 1000}`).join(' ')} L 100 100 Z` : 'M 0 100 L 100 100 Z'}
                 fill={isDarkMode ? 'rgba(239, 68, 68, 0.1)' : 'rgba(220, 38, 38, 0.05)'}
               />
             </svg>
 
             {/* Markers */}
             <div className="absolute inset-0 p-4 w-full h-full">
-              {data?.errorRate.map((val: number, i: number) => (
+              {data?.errorRate?.map((val: number, i: number) => (
                 <div
                   key={i}
                   className={`absolute w-3 h-3 rounded-full -ml-1.5 -mb-1.5 cursor-pointer z-10 transition-transform hover:scale-150 ${isDarkMode ? 'bg-red-400 ring-2 ring-gray-900' : 'bg-red-500 ring-2 ring-white'}`}
