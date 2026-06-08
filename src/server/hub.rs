@@ -360,6 +360,19 @@ impl Hub {
         Ok(())
     }
 
+    pub async fn get_meetings_by_org(&self, org_id: &str) -> Arc<Vec<MeetingRoom>> {
+        let all_meetings = self.get_meetings().await;
+        let mut filtered = Vec::new();
+        for m in all_meetings.iter() {
+            if m.id.starts_with(org_id) || m.id.contains(org_id) {
+                filtered.push(m.clone());
+            } else if m.participants.iter().any(|p| p.starts_with(org_id) || p.contains(org_id)) {
+                filtered.push(m.clone());
+            }
+        }
+        Arc::new(filtered)
+    }
+
     pub async fn get_meetings(&self) -> Arc<Vec<MeetingRoom>> {
         {
             let cache = self.meetings_cache.read().unwrap();
