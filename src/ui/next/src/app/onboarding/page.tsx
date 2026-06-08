@@ -387,11 +387,10 @@ export default function OnboardingWizard() {
   const getProgress = () => {
     // There are 5 steps, let's make it a more gradual fill
     if (step === 1) {
-      if (chatStep === 1) return 20;
-      if (chatStep === 2) return 30;
-      if (chatStep === 3) return 40;
-      if (chatStep === 4) return 45;
-      if (chatStep === 5) return 50;
+      if (chatStep === 1) return 25;
+      if (chatStep === 2) return 35;
+      if (chatStep === 3) return 45;
+      if (chatStep === 4) return 50;
     }
     if (step === 2) return 60;
     if (step === 3) return 80;
@@ -692,7 +691,7 @@ export default function OnboardingWizard() {
                           </svg>
                           Analyzing...
                         </span>
-                      ) : <IconLabel icon="launch">Generate My Business</IconLabel>}
+                      ) : <IconLabel icon="launch">Next</IconLabel>}
                     </button>
                   </div>
                 </div>
