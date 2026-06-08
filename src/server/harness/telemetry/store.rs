@@ -18,7 +18,7 @@ pub struct ViolationStore {
 impl ViolationStore {
     pub fn new(pool: Option<PgPool>) -> Self {
         let meter = global::meter("ohc.harness.telemetry");
-        let violation_counter = meter.u64_counter("ohc_harness_violations_total").build();
+        let violation_counter = meter.u64_counter("ohc_sandbox_violation_total").build();
         let token_usage_counter = meter.u64_counter("ohc_tenant_token_usage_total").build();
         let llm_cost_counter = meter.u64_counter("ohc_mission_cost_cents").build();
         let storage_bytes_counter = meter.u64_counter("ohc_storage_bytes_total").build();
@@ -47,7 +47,11 @@ impl ViolationStore {
         // Emit OpenTelemetry metric
         self.violation_counter.add(
             1,
-            &[KeyValue::new("type", violation_type.to_string())],
+            &[
+                KeyValue::new("agent_id", agent_id.to_string()),
+                KeyValue::new("violation_type", violation_type.to_string()),
+                KeyValue::new("harness_mode", "unknown".to_string()),
+            ],
         );
 
         // Save to DB if pool is available

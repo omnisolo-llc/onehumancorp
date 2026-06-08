@@ -1,6 +1,6 @@
-use crate::postgres_store::UserRepository;
-use crate::postgres_store::PgUserRepository;
-use crate::User;
+use server_auth::postgres_store::UserRepository;
+use server_auth::postgres_store::PgUserRepository;
+use server_auth::User;
 use std::time::Duration;
 use sqlx::postgres::PgPoolOptions;
 use std::sync::Mutex;

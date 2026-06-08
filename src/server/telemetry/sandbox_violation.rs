@@ -32,7 +32,11 @@ impl SandboxViolationStore {
         // Emit OpenTelemetry metric
         self.violation_counter.add(
             1,
-            &[KeyValue::new("type", violation_type.to_string())],
+            &[
+                KeyValue::new("agent_id", agent_id.to_string()),
+                KeyValue::new("violation_type", violation_type.to_string()),
+                KeyValue::new("harness_mode", "unknown".to_string()), // Default since store doesn't inherently know harness mode
+            ],
         );
 
         // Save to DB if pool is available
