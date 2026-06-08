@@ -67,6 +67,7 @@ rust_library(
         "//src/server/api/agents:hire.rs",
         "//src/server/api/agents:mission/handoff.rs",
         "//src/server/api/agents:mission/mod.rs",
+        "//src/server/api/agents:ralph.rs",
         "//src/server/api/agents:mod.rs",
         "//src/server/api/agents:settings.rs",
         "//src/server/api/agents:translation.rs",
