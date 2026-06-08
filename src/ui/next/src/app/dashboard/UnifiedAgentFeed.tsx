@@ -183,11 +183,11 @@ export function UnifiedAgentFeed() {
               >
                 <div className="flex flex-col gap-1">
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-1 rounded-md">
-                      {approval.department.replace('_', ' ')}
+                    <span className="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-1 rounded-md font-outfit">
+                      {approval.department.replace(/operations/i, 'The Manager').replace(/marketing/i, 'The Promoter').replace(/sales/i, 'The Salesperson').replace(/customer_success|customersuccess/i, 'The Ambassador').replace(/finance/i, 'The Accountant').replace(/legal/i, 'The Protector').replace(/business_advisory|businessadvisory/i, 'The Advisor')}
                     </span>
                     {approval.action_risk === 'HIGH' && (
-                      <span className="text-xs font-bold uppercase tracking-wider text-red-600 bg-red-50 px-2 py-1 rounded-md">
+                      <span className="text-xs font-bold uppercase tracking-wider text-red-600 bg-red-50 px-2 py-1 rounded-md font-outfit">
                         Requires Review
                       </span>
                     )}
@@ -478,10 +478,16 @@ export function UnifiedAgentFeed() {
               <div
                 key={activity.id}
                 className="glassmorphism p-5 rounded-[16px] border border-white/40 dark:border-white/10 shadow-sm flex flex-col gap-3 opacity-90"
+                style={{
+                  background: 'rgba(255, 255, 255, 0.65)',
+                  backdropFilter: 'blur(30px) saturate(210%)',
+                  WebkitBackdropFilter: 'blur(30px) saturate(210%)',
+                  borderColor: 'rgba(255, 255, 255, 0.4)'
+                }}
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-1 rounded-md">
-                    {activity.department.replace('_', ' ')}
+                  <span className="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-1 rounded-md font-outfit">
+                    {activity.department.replace(/operations/i, 'The Manager').replace(/marketing/i, 'The Promoter').replace(/sales/i, 'The Salesperson').replace(/customer_success|customersuccess/i, 'The Ambassador').replace(/finance/i, 'The Accountant').replace(/legal/i, 'The Protector').replace(/business_advisory|businessadvisory/i, 'The Advisor')}
                   </span>
                   <span className={`text-xs font-bold uppercase tracking-wider px-2 py-1 rounded-md ${
                     activity.status === 'Approved' ? 'text-green-600 bg-green-50 dark:text-green-400 dark:bg-green-900/30' :
@@ -491,9 +497,17 @@ export function UnifiedAgentFeed() {
                     {activity.status}
                   </span>
                 </div>
-                <h3 className="text-md font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] leading-snug">
+                <h3 className="text-md font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] leading-snug font-inter">
                   {activity.description}
                 </h3>
+                <div className="flex gap-2 mt-2">
+                  <button className="min-h-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex items-center justify-center font-inter text-sm" aria-label="Undo action">
+                    Undo
+                  </button>
+                  <button className="min-h-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-colors shadow-md flex items-center justify-center font-inter text-sm" aria-label="See Details">
+                    See Details
+                  </button>
+                </div>
               </div>
             ))}
           </>

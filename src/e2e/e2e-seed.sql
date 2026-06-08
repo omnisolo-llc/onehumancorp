@@ -265,3 +265,9 @@ ALTER TABLE IF EXISTS customer_timeline FORCE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS depletion_logs FORCE ROW LEVEL SECURITY;
 
 COMMIT;
+
+INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, payload, created_at, updated_at)
+VALUES
+('e2e-activity-1', 'e2e-tenant', 'operations', 'processed 3 orders', 'APPROVED', 'LOW', '{}'::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+('e2e-activity-2', 'e2e-tenant', 'marketing', 'paused ads for Sold Out Vegan Cake', 'APPROVED', 'LOW', '{}'::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+ON CONFLICT (id) DO UPDATE SET status = EXCLUDED.status;
