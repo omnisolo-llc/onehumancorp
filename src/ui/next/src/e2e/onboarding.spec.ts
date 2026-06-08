@@ -9,10 +9,19 @@ test.describe('OnboardingWizard CUJ', () => {
   });
 
 
-  test('Maya the Baker can complete the onboarding flow', async ({ page }) => {
+  test('Maya the Baker can complete the onboarding flow, starting from business setup', async ({ page }) => {
+    // 1. First visit /business-setup and verify it navigates to /onboarding
+    await page.goto('/business-setup');
+    await expect(page.locator('#business-setup-screen')).toBeVisible();
+    await expect(page.getByText('Your business, live in minutes.')).toBeVisible();
 
+    // Click on the link to start the business setup wizard
+    await page.getByRole('link', { name: 'Start Business Setup' }).click();
 
-    await page.goto('/onboarding');
+    // Verify we have navigated to /onboarding by looking for the onboarding heading
+    await expect(page).toHaveURL(/\/onboarding/);
+
+    // 2. Complete the onboarding wizard workflow
     await expect(page.getByText("10-Minute Setup Wizard")).toBeVisible();
     await page.getByRole('button', { name: 'Start My Business' }).click();
     await expect(page.getByText("What's the name of your business?")).toBeVisible();
