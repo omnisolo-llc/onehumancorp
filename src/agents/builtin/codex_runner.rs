@@ -247,6 +247,47 @@ impl AppServer {
                     serde_json::to_string(&resp).unwrap()
                 }
             }
+        } else if req.method == "get_sona_patterns" {
+            // SOTA Harness Pattern: Ruflo SONA neural patterns
+            // Retrieve all learned trajectory patterns
+            let patterns = if let Some(matcher) = self.runner.core.agent.sona_matcher.as_ref() {
+                matcher.lock().await.get_patterns().to_vec()
+            } else {
+                vec![]
+            };
+            let resp = JsonRpcResponse {
+                jsonrpc: "2.0".to_string(),
+                id: req.id,
+                result: Some(serde_json::json!({ "patterns": patterns })),
+                error: None,
+                meta: None,
+            };
+            serde_json::to_string(&resp).unwrap()
+        } else if req.method == "record_sona_pattern" {
+            let pattern: crate::sona_patterns::TrajectoryPattern = match serde_json::from_value(req.params.clone()) {
+                Ok(p) => p,
+                Err(e) => {
+                    let resp = JsonRpcResponse {
+                        jsonrpc: "2.0".to_string(),
+                        id: req.id,
+                        result: None,
+                        error: Some(JsonRpcError { code: -32602, message: e.to_string() }),
+                        meta: None,
+                    };
+                    return serde_json::to_string(&resp).unwrap();
+                }
+            };
+            if let Some(matcher) = self.runner.core.agent.sona_matcher.as_ref() {
+                matcher.lock().await.record_pattern(pattern);
+            }
+            let resp = JsonRpcResponse {
+                jsonrpc: "2.0".to_string(),
+                id: req.id,
+                result: Some(serde_json::json!({ "status": "success" })),
+                error: None,
+                meta: None,
+            };
+            serde_json::to_string(&resp).unwrap()
         } else if req.method == "run_ralph_loop" {
             let task = req.params.get("task").and_then(|v| v.as_str()).unwrap_or("").to_string();
             let progress_file = req.params.get("progress_file").and_then(|v| v.as_str()).unwrap_or(".ralph_progress.json").to_string();
@@ -518,6 +559,19 @@ mod tests {
         // Clean up test file if it exists
         let _ = std::fs::remove_file(".test_ralph_progress.json");
 
+
+
+        // Test SONA endpoints
+        let record_req = r#"{"jsonrpc": "2.0", "id": "1", "method": "record_sona_pattern", "params": { "id": "p1", "initial_context": "ctx", "successful_tools": ["bash"], "outcome_score": 1.0 }}"#;
+        let record_resp = app_server.handle_request(record_req).await;
+        let resp: JsonRpcResponse = serde_json::from_str(&record_resp).unwrap();
+        assert!(resp.error.is_none());
+
+        // Get patterns
+        let get_req = r#"{"jsonrpc": "2.0", "id": "2", "method": "get_sona_patterns", "params": {}}"#;
+        let get_resp = app_server.handle_request(get_req).await;
+        let resp2: JsonRpcResponse = serde_json::from_str(&get_resp).unwrap();
+        assert!(resp2.error.is_none());
 
         // Test get_task method
         let req_json_get = r#"{"jsonrpc": "2.0", "id": "4", "method": "get_task", "params": {"task_id": "task-abc"}}"#;

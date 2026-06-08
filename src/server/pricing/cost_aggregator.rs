@@ -195,3 +195,47 @@ mod tests {
         }
     }
 }
+
+#[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
+pub struct AgentCostRow {
+    pub agent_id: String,
+    pub cost_cents: i64,
+}
+
+pub async fn aggregate_agent_costs(pool: &PgPool, tenant_id: &str) -> Vec<AgentCostRow> {
+    let raw_rows_result = sqlx::query(
+        r#"
+        SELECT
+            (labels_json::jsonb)->>'agent_id' as agent_id,
+            SUM(value)::FLOAT8 as total
+        FROM telemetry_buffer
+        WHERE (labels_json::jsonb)->>'tenant_id' = $1
+          AND metric_name = 'ohc_mission_cost_cents'
+          AND timestamp >= CURRENT_DATE - INTERVAL '30 days'
+        GROUP BY (labels_json::jsonb)->>'agent_id'
+        ORDER BY total DESC
+        "#
+    )
+    .bind(tenant_id)
+    .fetch_all(pool)
+    .await;
+
+    let raw_rows = match raw_rows_result {
+        Ok(rows) => rows,
+        Err(e) => {
+            error!("Failed to fetch agent costs from database for tenant {}: {}", tenant_id, e);
+            return vec![];
+        }
+    };
+
+    raw_rows.into_iter().map(|r| AgentCostRow {
+        agent_id: r.try_get::<Option<String>, _>("agent_id")
+            .unwrap_or_else(|_| None)
+            .unwrap_or_else(|| "unknown".to_string()),
+        cost_cents: r.try_get::<Option<f64>, _>("total")
+            .unwrap_or_else(|_| None)
+            .unwrap_or(0.0) as i64,
+    })
+    .filter(|r| r.cost_cents > 0)
+    .collect()
+}
