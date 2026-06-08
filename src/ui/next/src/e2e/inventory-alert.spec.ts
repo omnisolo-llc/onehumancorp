@@ -35,7 +35,7 @@ test.describe('Agentic Inventory Alert Feed Component', () => {
     await expect(page.getByText('0', { exact: true })).toBeVisible();
 
     // Verify and click the Approve Restock button
-    const approveBtn = page.getByTestId('approve-restock');
+    const approveBtn = page.getByTestId('approve-restock').first();
     await expect(approveBtn).toBeVisible();
     await approveBtn.click();
 
