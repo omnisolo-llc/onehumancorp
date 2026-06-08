@@ -37,3 +37,4 @@ rust_test(
     name = "server_integrations_resend_test",
     crate = ":server_integrations_resend",
 )
+exports_files(["Cargo.toml"], visibility = ["//visibility:public"])

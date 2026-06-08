@@ -28,3 +28,4 @@ rust_test(
     crate = ":server_integrations_nats",
     edition = "2024",
 )
+exports_files(["Cargo.toml"], visibility = ["//visibility:public"])

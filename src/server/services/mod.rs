@@ -22,3 +22,4 @@ pub mod pos;
 pub mod collective;
 pub mod campaign;
 pub mod ledger;
+pub mod action_feed;

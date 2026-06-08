@@ -12,3 +12,4 @@ rust_library(
         "@crates//:serde",
     ],
 )
+exports_files(["Cargo.toml"], visibility = ["//visibility:public"])

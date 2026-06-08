@@ -21,3 +21,4 @@ rust_library(
         "@crates//:tonic",
     ],
 )
+exports_files(["Cargo.toml"], visibility = ["//visibility:public"])

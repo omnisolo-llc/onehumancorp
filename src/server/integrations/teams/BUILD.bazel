@@ -29,3 +29,4 @@ rust_test(
     crate = ":teams",
     edition = "2024",
 )
+exports_files(["Cargo.toml"], visibility = ["//visibility:public"])

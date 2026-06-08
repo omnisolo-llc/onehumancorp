@@ -25,6 +25,7 @@ _NEXT_UI_E2E_SPECS = [
     "//src/ui/next:src/e2e/subscription_box.spec.ts",
     "//src/ui/next:src/e2e/supply_chain.spec.ts",
     "//src/ui/next:src/e2e/verify-ui.spec.ts",
+    "//src/ui/next:src/e2e/agent_action_feed.spec.ts",
     "//src/ui/next:src/e2e/videos.spec.ts",
     "//src/ui/next:src/e2e/viral_share_cards_intent.spec.ts",
     "//src/ui/next:src/e2e/website-builder-bugfix.spec.ts",

@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server';
 
-export async function GET(req: Request, { params }: { params: { articleId: string } }) {
+export async function GET(req: Request, { params }: { params: Promise<{ articleId: string }> }) {
   const backendUrl = process.env.BACKEND_URL || 'http://127.0.0.1:18789';
+  const p = await params;
 
   try {
-    const res = await fetch(`${backendUrl}/api/help/${params.articleId}`);
+    const res = await fetch(`${backendUrl}/api/help/${p.articleId}`);
 
     if (res.ok) {
       const data = await res.json();

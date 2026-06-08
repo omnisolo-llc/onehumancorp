@@ -1,0 +1,17 @@
+load("@rules_rust//rust:defs.bzl", "rust_library")
+exports_files(["mod.rs", "service.rs"], visibility = ["//visibility:public"])
+rust_library(
+    name = "action_feed",
+    srcs = glob(["*.rs"]),
+    crate_root = "mod.rs",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/server:server_lib",
+        "@crates//:axum",
+        "@crates//:chrono",
+        "@crates//:serde",
+        "@crates//:serde_json",
+        "@crates//:sqlx",
+        "@crates//:uuid",
+    ],
+)
