@@ -214,7 +214,7 @@ pub struct QualityGates;
 
 impl QualityGates {
     /// Pre-flight (e.g., initialization check).
-    /// Ensures there are exactly 6 agents initialization (Tencent Workbuddy: Expert Team Feature).
+    /// Ensures there are exactly 6 agents initialization.
     pub fn pre_flight<T: ExpertTeamLlmClient + ?Sized>(
         manager: &ExpertTeamManager<T>,
         task: &str,
@@ -311,7 +311,7 @@ impl QualityGates {
         }
 
         // Enforce word count to exactly match the requirement (>= 20,000 words)
-        // Tencent Workbuddy Pattern Requirement: Pre-deliver (>=20,000 words, chart verification)
+        // Pattern Requirement: Pre-deliver (>=20,000 words, chart verification)
         let word_count = final_output.split_whitespace().count();
         if word_count < 20000 {
             return Err(format!(

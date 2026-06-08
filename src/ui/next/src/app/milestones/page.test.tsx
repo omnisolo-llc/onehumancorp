@@ -2,13 +2,17 @@ import React from 'react';
 import { render, screen, act, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import MilestonesPage from './page';
+import * as navigation from 'next/navigation';
 
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({ push: vi.fn() }),
+  useRouter: vi.fn(() => ({ push: vi.fn() })),
 }));
 
 describe('MilestonesPage', () => {
+  const mockPush = vi.fn();
+
   beforeEach(() => {
+    (navigation.useRouter as any).mockReturnValue({ push: mockPush });
     vi.clearAllMocks();
     global.fetch = vi.fn().mockResolvedValue({
       ok: true,
@@ -61,5 +65,27 @@ describe('MilestonesPage', () => {
     expect(preElement).toBeDefined();
     // expect(preElement?.textContent).toContain('First Order! 🎉');
     // expect(preElement?.textContent).toContain('Powered by OHC');
+  });
+
+  it('contains the invite a friend CTA and navigates to referrals', async () => {
+    await act(async () => {
+      render(<MilestonesPage />);
+    });
+
+    const milestoneTitle = screen.getByText('First Sale!');
+    const container = milestoneTitle.closest('div.glassmorphism');
+
+    await act(async () => {
+        fireEvent.click(container!);
+    });
+
+    const inviteButton = screen.getByText('Invite a friend and get a $50 credit');
+    expect(inviteButton).toBeDefined();
+
+    await act(async () => {
+      fireEvent.click(inviteButton);
+    });
+
+    expect(mockPush).toHaveBeenCalledWith('/referrals?ref=milestone');
   });
 });
