@@ -27,12 +27,14 @@ test.describe('In-Person Payment (POS) Flow', () => {
     await page.locator('text=New Order').click();
     await expect(page.locator('text=Payment Saved Offline - 50 USD')).toBeVisible();
 
-    // Add a Stripe terminal component mock check if needed or navigate to payment
-    // Since the terminal component needs internet, we would simulate offline queuing here
-
     // Perform an offline clock in
     await page.locator('text=Clock In').click();
     await expect(page.locator('text=Clocked In')).toBeVisible();
+
+    // Test terminal offline payment queuing
+    await page.getByText('Discover Readers').click();
+    await page.waitForTimeout(500);
+    // As mock does not work fully offline, we only rely on the "New Order" test for POS Tx
 
     // Restore network
     await context.setOffline(false);
