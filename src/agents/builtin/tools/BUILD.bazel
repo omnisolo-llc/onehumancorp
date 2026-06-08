@@ -75,6 +75,11 @@ rust_library(
         "@crates//:urlencoding",
         "@crates//:uuid",
         "@crates//:sqlx",
+        "@crates//:tree-sitter",
+        "@crates//:tree-sitter-rust",
+        "@crates//:tree-sitter-python",
+        "@crates//:tree-sitter-typescript",
+        "@crates//:tree-sitter-go",
     ],
     proc_macro_deps = [
         "@crates//:async-recursion",

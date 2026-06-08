@@ -400,7 +400,7 @@ while (( pg_attempts < pg_max_attempts )); do
     log "PostgreSQL is ready!"
     break
   fi
-  (( pg_attempts++ ))
+  pg_attempts=$((pg_attempts+1))
   sleep 2
 done
 if (( pg_attempts == pg_max_attempts )); then
