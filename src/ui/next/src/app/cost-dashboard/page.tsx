@@ -93,6 +93,13 @@ export default function CostDashboardPage() {
       return '$' + (cents / 100).toFixed(2);
   };
 
+  const formatStorage = (bytes: number) => {
+      const mb = bytes / (1024 * 1024);
+      if (mb < 1) return "< 1 MB";
+      if (mb >= 1024) return parseFloat((mb / 1024).toFixed(2)) + " GB";
+      return parseFloat(mb.toFixed(1)) + " MB";
+  };
+
   return (
     <div className="flex flex-col min-h-screen font-inter bg-gradient-to-br from-indigo-50 via-white to-purple-50 text-gray-900">
       <header className="px-4 md:px-6 py-4 flex flex-col md:flex-row items-center justify-between border-b gap-4 sticky top-0 z-50 bg-white/70 backdrop-blur-xl saturate-200 border-b-white/40 shadow-sm">
@@ -106,7 +113,7 @@ export default function CostDashboardPage() {
 
       <main id="cost-dashboard-screen" className="p-4 md:p-8 flex-1 max-w-4xl mx-auto w-full flex flex-col gap-6">
 
-        <section className="app-panel bg-white/60 backdrop-blur-2xl saturate-200 border border-white/40 shadow-lg rounded-[24px] hover:shadow-xl transition-shadow duration-300">
+        <section className="app-panel bg-white/65 backdrop-blur-3xl saturate-200 border border-white/50 shadow-lg rounded-[24px] hover:shadow-xl transition-shadow duration-300">
             <div className="app-panel-header px-6 py-4 border-b border-white/40">
                 <h2 className="app-panel-title text-xl font-bold font-outfit text-gray-900">Advisory Summary</h2>
             </div>
@@ -139,7 +146,7 @@ export default function CostDashboardPage() {
                   </div>
                   <div className="p-4 rounded-xl bg-white/50 border border-white/50">
                       <h3 className="text-sm font-medium text-gray-500">Storage Used</h3>
-                      <p className="text-2xl font-bold text-gray-900 mt-1">{((myPlanData?.storage_used_bytes || 0) / (1024 * 1024)).toFixed(1)} MB <span className="text-sm text-gray-500 font-normal">{myPlanData?.storage_limit_bytes != null ? `/ ${(myPlanData.storage_limit_bytes / (1024 * 1024)).toFixed(0)} MB` : '/ Unlimited'}</span></p>
+                      <p className="text-2xl font-bold text-gray-900 mt-1">{formatStorage(myPlanData?.storage_used_bytes || 0)} <span className="text-sm text-gray-500 font-normal">{myPlanData?.storage_limit_bytes != null ? `/ ${formatStorage(myPlanData.storage_limit_bytes)}` : '/ Unlimited'}</span></p>
                   </div>
                   <div className="p-4 rounded-xl bg-white/50 border border-white/50">
                       <h3 className="text-sm font-medium text-gray-500">Estimated Next Bill</h3>
@@ -150,7 +157,7 @@ export default function CostDashboardPage() {
         </section>
 
         {/* Overview Section */}
-        <section className="app-panel bg-white/60 backdrop-blur-2xl saturate-200 border border-white/40 shadow-lg rounded-[24px] hover:shadow-xl transition-shadow duration-300">
+        <section className="app-panel bg-white/65 backdrop-blur-3xl saturate-200 border border-white/50 shadow-lg rounded-[24px] hover:shadow-xl transition-shadow duration-300">
             <div className="app-panel-header flex justify-between items-center px-6 py-4 border-b border-white/40">
                <h2 className="app-panel-title text-xl font-bold font-outfit text-gray-900">Cost Transparency</h2>
                <span id="cost-dashboard-period" className="text-sm text-gray-500 font-medium">Period: {data?.period_start} to {data?.period_end}</span>
@@ -176,7 +183,7 @@ export default function CostDashboardPage() {
         </section>
 
         {/* Breakdown Section */}
-        <section className="app-panel bg-white/60 backdrop-blur-2xl saturate-200 border border-white/40 shadow-lg rounded-[24px] hover:shadow-xl transition-shadow duration-300">
+        <section className="app-panel bg-white/65 backdrop-blur-3xl saturate-200 border border-white/50 shadow-lg rounded-[24px] hover:shadow-xl transition-shadow duration-300">
             <div className="app-panel-header px-6 py-4 border-b border-white/40">
                 <h2 className="app-panel-title text-xl font-bold font-outfit text-gray-900">Cost Breakdown</h2>
             </div>
@@ -268,7 +275,7 @@ export default function CostDashboardPage() {
             </div>
         </section>
 
-        <section className="p-6 md:p-8 shadow-lg bg-white/60 backdrop-blur-2xl saturate-200 border border-white/40 rounded-2xl md:rounded-[24px] hover:shadow-xl transition-shadow duration-300">
+        <section className="p-6 md:p-8 shadow-lg bg-white/65 backdrop-blur-3xl saturate-200 border border-white/50 rounded-2xl md:rounded-[24px] hover:shadow-xl transition-shadow duration-300">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-6">
                 <h2 className="text-xl font-bold font-outfit text-gray-900">Department Tier Usage</h2>
                 <span className="text-sm text-gray-500 font-medium">
