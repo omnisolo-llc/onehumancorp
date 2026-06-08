@@ -126,9 +126,6 @@ debian-binary
 /srcs/
 /scratch/
 *.db
-*.db-shm
-*.db-wal
-.ohc_jwt_secret
 
 dummy.*
 dummy_*
