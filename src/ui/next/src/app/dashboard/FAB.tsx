@@ -5,6 +5,21 @@ import Link from 'next/link';
 export function FloatingActionButton() {
   const [isOpen, setIsOpen] = useState(false);
 
+  const simulateAction = async (type: string) => {
+    try {
+      await fetch(`/api/agents/approvals/simulate-${type}`, {
+        method: "POST",
+        headers: {
+          "x-tenant-id": "default",
+          "x-user-id": "default",
+        },
+      });
+      window.location.reload();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   return (
     <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3">
       {isOpen && (
@@ -18,6 +33,15 @@ export function FloatingActionButton() {
           <Link href="/services/new" className="px-4 py-2 bg-white text-gray-900 rounded-full shadow-lg font-semibold border border-gray-200 hover:bg-gray-50 whitespace-nowrap">
             📅 New Service
           </Link>
+          <button onClick={() => simulateAction('operations-fulfill')} className="px-4 py-2 bg-green-50 text-green-700 rounded-full shadow-lg font-semibold border border-green-200 hover:bg-green-100 whitespace-nowrap">
+            🚀 Simulate Operations
+          </button>
+          <button onClick={() => simulateAction('advisory-promo')} className="px-4 py-2 bg-indigo-50 text-indigo-700 rounded-full shadow-lg font-semibold border border-indigo-200 hover:bg-indigo-100 whitespace-nowrap">
+            📈 Simulate Advisory
+          </button>
+          <button onClick={() => simulateAction('marketing-post')} className="px-4 py-2 bg-purple-50 text-purple-700 rounded-full shadow-lg font-semibold border border-purple-200 hover:bg-purple-100 whitespace-nowrap">
+            ✨ Simulate Marketing
+          </button>
         </div>
       )}
 
