@@ -40,6 +40,7 @@ export default function ApiDocsPage() {
       )}
       {mounted && !loading && spec && (
         <div className="bg-white/60 backdrop-blur-[20px] saturate-200 p-6 rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.05)] border border-white/40">
+          {/* @ts-expect-error type conflict with react18 vs latest swagger-ui */}
           <SwaggerUI spec={spec} />
         </div>
       )}
