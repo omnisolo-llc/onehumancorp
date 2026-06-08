@@ -78,7 +78,7 @@ export default function StaffManager() {
        ) : (
          <div className="space-y-3">
            {staff.map(member => (
-             <div key={member.id} className="app-card border border-white/40 rounded-2xl p-4 shadow-sm flex items-center justify-between">
+             <div key={member.id} className="app-card rounded-2xl p-4 shadow-sm flex items-center justify-between">
                <div>
                  <p className="font-semibold text-gray-900 font-outfit">{member.name}</p>
                  <p className="text-xs text-gray-500 mt-0.5">{member.role} • {member.phone_number}</p>

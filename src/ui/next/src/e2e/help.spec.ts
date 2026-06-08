@@ -44,9 +44,9 @@ test.describe('Help Center', () => {
         // Use Promise.all to wait for the request to the search endpoint
         const [response] = await Promise.all([
             page.waitForResponse(response =>
-                response.url().includes('/api/help/search') && response.status() === 200
+                response.url().includes('/api/help/search') && (response.status() === 200 || response.status() === 304)
             ),
-            searchInput.fill('My Store')
+            searchInput.pressSequentially('My Store', { delay: 100 })
         ]);
 
         // Wait for UI to update
@@ -60,7 +60,7 @@ test.describe('Help Center', () => {
         // Find and click the floating Ask anything button
         const chatButton = page.locator('button[aria-label="Open help chat"]');
         await expect(chatButton).toBeVisible();
-        await chatButton.click({ force: true });
+        await chatButton.click();
 
         // Wait for the chat to open and be visible
         const chatHeader = page.locator('#ai-chat-header');
