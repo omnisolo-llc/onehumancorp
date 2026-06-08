@@ -41,15 +41,13 @@ test.describe('Help Center', () => {
         // Search for an article that matches My Store
         const searchInput = page.getByPlaceholder('Search for help articles and videos...');
 
-        // Use Promise.all to wait for the request to the search endpoint
-        const [response] = await Promise.all([
-            page.waitForResponse(response =>
-                response.url().includes('/api/help/search') && response.status() === 200
-            ),
-            searchInput.fill('My Store')
-        ]);
+        // Fill search input to trigger filtering
+        await searchInput.fill('My Store');
 
-        // Wait for UI to update
+        // Wait for UI to update: non-matching articles should disappear
+        await expect(page.locator('a[href="/help/getting-started-1"]')).not.toBeVisible();
+
+        // The matching article should remain visible
         const articleLink = page.locator('a[href="/help/my-store"]');
         await expect(articleLink).toBeVisible();
     });
