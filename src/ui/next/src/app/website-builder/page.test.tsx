@@ -77,7 +77,9 @@ describe('WebsiteBuilderPage', () => {
 
   it('renders initial setup screen', async () => {
     render(<WebsiteBuilderPage />);
-    expect(screen.getByText('Your business, live in minutes.')).toBeInTheDocument();
+    await waitFor(() => {
+        expect(screen.getByText('Your business, live in minutes.')).toBeInTheDocument();
+    });
 
     // Check local storage init fetching
     expect(global.fetch).toHaveBeenCalledWith('/api/onboarding/state', expect.any(Object));
@@ -86,6 +88,10 @@ describe('WebsiteBuilderPage', () => {
   it('can follow the standard wizard flow', async () => {
     const user = userEvent.setup({ delay: null });
     render(<WebsiteBuilderPage />);
+
+    await waitFor(() => {
+        expect(screen.getByText('Start My Business')).toBeInTheDocument();
+    });
 
     // Step 0
     fireEvent.click(screen.getByText('Start My Business'));
@@ -169,6 +175,10 @@ describe('WebsiteBuilderPage', () => {
     });
 
     render(<WebsiteBuilderPage />);
+
+    await waitFor(() => {
+        expect(screen.getByText('Instant Build')).toBeInTheDocument();
+    });
 
     fireEvent.click(screen.getByText('Instant Build'));
     fireEvent.change(screen.getByPlaceholderText('e.g. I run a local bakery'), { target: { value: 'I run a local bakery' } });
