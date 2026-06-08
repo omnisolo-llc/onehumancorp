@@ -225,6 +225,13 @@
           copyBtn.innerText = "Copy";
         }, 2000);
       });
+
+      const shareWhatsAppBtn = document.getElementById('share-whatsapp-btn');
+      shareWhatsAppBtn.addEventListener('click', () => {
+        const link = referralLink.value;
+        const text = `Join my team on OHC! Here is your invite link:\n\n${link}\n\n⚡ Powered by OHC`;
+        window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+      });
     </script>
   </body>
 </html>
