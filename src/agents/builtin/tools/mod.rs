@@ -27,6 +27,7 @@ pub mod ollama;
 pub mod subagent;
 pub mod head;
 pub mod tail;
+pub mod jit_context;
 pub mod find;
 pub mod hybrid_blob;
 pub mod restic;
@@ -117,6 +118,7 @@ pub fn all_tools(
         read::read_tool(working_dir.clone()),
         head::head_tool(working_dir.clone()),
         tail::tail_tool(working_dir.clone()),
+        jit_context::jit_context_tool(working_dir.clone()),
             find::find_tool(working_dir.clone()),
         write::write_tool(working_dir.clone(), runner.clone()),
         edit::edit_tool(working_dir.clone(), runner.clone()),
