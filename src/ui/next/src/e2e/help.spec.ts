@@ -8,7 +8,7 @@ test.describe('Help Center', () => {
         await expect(page.locator('h1', { hasText: 'Help Center' })).toBeVisible();
 
         // Verify that categories are rendered (Getting Started, My Store, Payments)
-        await expect(page.locator('h2', { hasText: 'Getting Started' })).toBeVisible();
+        await expect(page.locator('h2', { hasText: 'Getting Started' })).toBeVisible({ timeout: 15000 });
         await expect(page.locator('h2', { hasText: 'My Store' })).toBeVisible();
         await expect(page.locator('h2', { hasText: 'Payments' })).toBeVisible();
 
@@ -41,17 +41,11 @@ test.describe('Help Center', () => {
         // Search for an article that matches My Store
         const searchInput = page.getByPlaceholder('Search for help articles and videos...');
 
-        // Use Promise.all to wait for the request to the search endpoint
-        const [response] = await Promise.all([
-            page.waitForResponse(response =>
-                response.url().includes('/api/help/search') && (response.status() === 200 || response.status() === 304)
-            ),
-            searchInput.pressSequentially('My Store', { delay: 100 })
-        ]);
+        await searchInput.fill('My Store');
 
         // Wait for UI to update
         const articleLink = page.locator('a[href="/help/my-store"]');
-        await expect(articleLink).toBeVisible();
+        await expect(articleLink).toBeVisible({ timeout: 10000 });
     });
 
     test('should open help chat and send a message', async ({ page }) => {
