@@ -7,22 +7,6 @@ pub mod postgres_store;
 pub mod sqlite_store;
 
 use std::collections::HashMap;
-
-pub async fn guest_auth_middleware(
-    mut req: axum::extract::Request,
-    next: axum::middleware::Next,
-) -> axum::response::Response {
-    let tenant_id = req.headers().get("x-tenant-id").and_then(|v| v.to_str().ok()).unwrap_or("storefront").to_string();
-    let user_id = req.headers().get("x-user-id").and_then(|v| v.to_str().ok()).unwrap_or("test-user").to_string();
-
-    req.extensions_mut().insert(crate::orchestration::AuthInfo {
-        org_id: tenant_id,
-        agent_id: user_id.clone(),
-        spiffe_id: format!("spiffe://onehumancorp.io/guest/{}", user_id),
-    });
-
-    next.run(req).await
-}
 use std::sync::Arc;
 use std::sync::RwLock;
 

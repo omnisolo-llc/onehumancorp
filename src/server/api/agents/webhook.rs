@@ -151,26 +151,12 @@ async fn handle_webhook(
         }
     }
 
-    let res = orchestrator.execute_action(
+    match orchestrator.execute_action(
         DepartmentType::CustomerSuccess,
         description,
-        payload.tenant_id.clone(),
+        payload.tenant_id,
         risk,
         serde_json::json!({
-            "source": payload.source.clone(),
-            "message": translation.translated_content.clone(),
-            "original_content": translation.original_content.clone(),
-            "translated_from_language": translation.source_language.clone(),
-            "draft_reply": draft_reply.clone(),
-            "inbox_message_id": id.clone(),
-        }),
-    ).await;
-
-    let _ = orchestrator.dispatch_event(crate::orchestration::departments::types::DepartmentEvent {
-        id: uuid::Uuid::new_v4().to_string(),
-        tenant_id: payload.tenant_id.clone(),
-        event_type: "tenant.omnichannel.message.received".to_string(),
-        payload: serde_json::json!({
             "source": payload.source,
             "message": translation.translated_content,
             "original_content": translation.original_content,
@@ -178,9 +164,7 @@ async fn handle_webhook(
             "draft_reply": draft_reply,
             "inbox_message_id": id,
         }),
-    }).await;
-
-    match res {
+    ).await {
         Ok(req) => (StatusCode::OK, Json(WebhookResponse { success: true, request_id: Some(req.id) })).into_response(),
         Err(e) => {
             if e.contains("AI Budget exhausted") {

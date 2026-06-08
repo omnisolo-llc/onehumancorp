@@ -4091,65 +4091,6 @@
         "overrides": []
       },
       "transparent": true
-    },
-    {
-      "type": "heatmap",
-      "title": "Token Efficiency by Agent Role",
-      "gridPos": {
-        "x": 0,
-        "y": 20,
-        "w": 12,
-        "h": 8
-      },
-      "targets": [
-        {
-          "expr": "avg(ohc_agent_roi_efficiency_score) by (agent_role, tenant_id)",
-          "format": "time_series",
-          "legendFormat": "{{tenant_id}} - {{agent_role}}"
-        }
-      ],
-      "options": {
-        "calculate": false,
-        "cellGap": 1,
-        "color": {
-          "mode": "scheme",
-          "scheme": "Oranges",
-          "steps": 64
-        },
-        "yAxis": {
-          "axisPlacement": "left"
-        }
-      }
-    },
-    {
-      "type": "stat",
-      "title": "Swarm ROI (Tokens per Success)",
-      "gridPos": {
-        "x": 12,
-        "y": 20,
-        "w": 12,
-        "h": 8
-      },
-      "targets": [
-        {
-          "expr": "sum(rate(ohc_token_usage_by_outcome_total{outcome=\"SUCCESS\"}[1h])) by (tenant_id) / sum(rate(ohc_agent_cost_total[1h])) by (tenant_id)",
-          "format": "time_series",
-          "legendFormat": "ROI Score"
-        }
-      ],
-      "options": {
-        "reduceOptions": {
-          "values": false,
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": ""
-        },
-        "orientation": "auto",
-        "textMode": "auto",
-        "colorMode": "value",
-        "graphMode": "area"
-      }
     }
   ],
   "refresh": "",

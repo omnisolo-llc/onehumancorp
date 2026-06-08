@@ -48,42 +48,11 @@ fn save_ai_provider(config: AiProviderConfig) -> Result<AiProviderView, String> 
     validate_ai_provider_config(&next)?;
     let path = ai_provider_config_path();
     if let Some(parent) = path.parent() {
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::DirBuilderExt;
-            std::fs::DirBuilder::new()
-                .recursive(true)
-                .mode(0o700)
-                .create(parent)
-                .map_err(|err| err.to_string())?;
-        }
-        #[cfg(not(unix))]
-        {
-            std::fs::create_dir_all(parent).map_err(|err| err.to_string())?;
-        }
+        std::fs::create_dir_all(parent).map_err(|err| err.to_string())?;
     }
 
     let json = serde_json::to_string_pretty(&next).map_err(|err| err.to_string())?;
-
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::OpenOptionsExt;
-        use std::io::Write;
-        let mut file = std::fs::OpenOptions::new()
-            .write(true)
-            .create(true)
-            .truncate(true)
-            .mode(0o600)
-            .open(path)
-            .map_err(|err| err.to_string())?;
-        file.write_all(format!("{json}\n").as_bytes())
-            .map_err(|err| err.to_string())?;
-    }
-    #[cfg(not(unix))]
-    {
-        std::fs::write(path, format!("{json}\n")).map_err(|err| err.to_string())?;
-    }
-
+    std::fs::write(path, format!("{json}\n")).map_err(|err| err.to_string())?;
     Ok(to_provider_view(next))
 }
 

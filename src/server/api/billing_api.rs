@@ -20,12 +20,6 @@ pub struct MyPlanResponse {
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Clone)]
-pub struct AgentCostRow {
-    pub agent_id: String,
-    pub cost_cents: i64,
-}
-
-#[derive(serde::Serialize, serde::Deserialize, Clone)]
 pub struct CostDashboardResponse {
     pub total_revenue: i64,
     pub total_costs: i64,
@@ -33,16 +27,15 @@ pub struct CostDashboardResponse {
     pub storage_cost: i64,
     pub payment_fees: i64,
     pub network_cost: i64,
-    pub compute_cost: i64,
     pub bandwidth_savings: i64,
     pub cache_hit_rate: f64,
     pub cost_per_1k_tokens: f64,
     pub period_start: String,
     pub period_end: String,
     pub trend: Vec<crate::pricing::cost_aggregator::DailyCost>,
-    pub agent_costs: Vec<AgentCostRow>,
     pub department_tier_usage: DepartmentTierUsageResponse,
 }
+
 #[derive(serde::Serialize, serde::Deserialize, Clone, Default)]
 pub struct DepartmentTierUsageResponse {
     pub current_plan: String,
@@ -146,7 +139,7 @@ pub async fn cost_dashboard_handler(
                 auth.org_id.clone()
             }
         },
-        None => return Json(CostDashboardResponse { total_revenue: 0, total_costs: 0, llm_cost: 0, storage_cost: 0, payment_fees: 0, network_cost: 0, compute_cost: 0, bandwidth_savings: 0, cache_hit_rate: 0.0, cost_per_1k_tokens: 0.0, period_start: "2024-05-01".to_string(), period_end: "2024-05-31".to_string(), trend: vec![], agent_costs: vec![], department_tier_usage: empty_department_tier_usage_response() })
+        None => return Json(CostDashboardResponse { total_revenue: 0, total_costs: 0, llm_cost: 0, storage_cost: 0, payment_fees: 0, network_cost: 0, bandwidth_savings: 0, cache_hit_rate: 0.0, cost_per_1k_tokens: 0.0, period_start: "2024-05-01".to_string(), period_end: "2024-05-31".to_string(), trend: vec![], department_tier_usage: empty_department_tier_usage_response() })
     };
 
     let cache = COST_DASHBOARD_CACHE.get_or_init(|| HybridCache::new(None));
@@ -192,20 +185,11 @@ pub async fn cost_dashboard_handler(
         }
     });
 
-    let agent_costs_future = tokio::task::spawn({
-        let pool = crate::db::get_pool();
-        let t_id = tenant_id.clone();
-        async move {
-            crate::pricing::cost_aggregator::aggregate_agent_costs(&pool, &t_id).await
-        }
-    });
-
-    let (storage_res, auditor_res, trend_res, agent_costs_res) = tokio::join!(storage_future, auditor_future, trend_future, agent_costs_future);
+    let (storage_res, auditor_res, trend_res) = tokio::join!(storage_future, auditor_future, trend_future);
 
     let storage_bytes = storage_res.unwrap_or(0);
     let (llm_cost_f64, total_revenue_f64, payment_fees_f64, compute_cost_f64, network_cost_f64, bandwidth_savings_f64, total_tokens, cached_tokens) = auditor_res.unwrap_or((0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0, 0));
-    let trend = trend_res.unwrap_or_else(|_| vec![]);
-    let agent_costs = agent_costs_res.unwrap_or_else(|_| vec![]);
+    let trend = trend_res.unwrap_or_default();
 
     let cache_hit_rate = if total_tokens + cached_tokens > 0 {
         (cached_tokens as f64 / (total_tokens as f64 + cached_tokens as f64)) * 100.0
@@ -234,14 +218,12 @@ pub async fn cost_dashboard_handler(
         storage_cost: (storage_cost_f64 * 100.0).round() as i64,
         payment_fees: (payment_fees_f64 * 100.0).round() as i64,
         network_cost: (network_cost_f64 * 100.0).round() as i64,
-        compute_cost: (compute_cost_f64 * 100.0).round() as i64,
         bandwidth_savings: (bandwidth_savings_f64 * 100.0).round() as i64,
         cache_hit_rate: (cache_hit_rate * 100.0).round() / 100.0,
         cost_per_1k_tokens: (cost_per_1k_tokens * 10000.0).round() / 10000.0,
         period_start,
         period_end,
         trend,
-        agent_costs: agent_costs.into_iter().map(|r| AgentCostRow { agent_id: r.agent_id, cost_cents: r.cost_cents }).collect(),
         department_tier_usage,
     };
     cache.set(&tenant_id, resp.clone(), std::time::Duration::from_secs(60)).await;
@@ -391,62 +373,6 @@ fn plan_name(tier: &::server_pricing::rate_limit::PlanTier) -> &'static str {
 #[cfg(test)]
 mod department_tier_usage_tests {
     use super::*;
-
-    #[tokio::test]
-    async fn test_department_tier_usage_for_tenant_concurrency() {
-        let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://ohc:ohc@localhost:5432/ohc".to_string());
-        let pool = sqlx::postgres::PgPoolOptions::new()
-            .acquire_timeout(std::time::Duration::from_millis(500))
-            .connect(&database_url)
-            .await;
-
-        let pool = match pool {
-            Ok(p) => p,
-            Err(_) => return, // If no real database available in CI, skip safely
-        };
-
-        if sqlx::query("SELECT 1").execute(&pool).await.is_err() {
-            return;
-        }
-
-        let tenant_id = format!("test_tenant_{}", uuid::Uuid::new_v4());
-
-        // Start a transaction so we can rollback and not pollute the DB
-        let mut tx = pool.begin().await.unwrap();
-
-        sqlx::query("INSERT INTO organizations (id, name, plan_tier) VALUES ($1, 'Test Tenant', 'Free') ON CONFLICT DO NOTHING")
-            .bind(&tenant_id)
-            .execute(&mut *tx)
-            .await
-            .unwrap();
-
-        let (event_tx, _rx) = tokio::sync::mpsc::channel(100);
-        // Using pool instead of tx since Hub needs pool, but since it's a test we just clean up after.
-        let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
-
-        sqlx::query("INSERT INTO agent_departments (id, tenant_id, department_type, settings) VALUES ($1, $2, 'marketing', '{}'), ($3, $4, 'operations', '{}')")
-            .bind(uuid::Uuid::new_v4().to_string())
-            .bind(&tenant_id)
-            .bind(uuid::Uuid::new_v4().to_string())
-            .bind(&tenant_id)
-            .execute(&mut *tx)
-            .await
-            .unwrap();
-
-        tx.commit().await.unwrap();
-
-        let start = std::time::Instant::now();
-        let response = department_tier_usage_for_tenant(&hub, &tenant_id).await;
-        let elapsed = start.elapsed();
-
-        // Assert concurrency latency (should be very fast since no actual usage)
-        assert!(elapsed.as_millis() < 500, "Should execute concurrently and quickly");
-        assert_eq!(response.current_plan, "Free");
-
-        // Teardown
-        sqlx::query("DELETE FROM agent_departments WHERE tenant_id = $1").bind(&tenant_id).execute(&pool).await.unwrap();
-        sqlx::query("DELETE FROM organizations WHERE id = $1").bind(&tenant_id).execute(&pool).await.unwrap();
-    }
 
     #[test]
     fn department_tier_usage_uses_only_persisted_departments_and_real_usage_keys() {

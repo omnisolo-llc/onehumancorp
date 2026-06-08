@@ -44,7 +44,7 @@ impl InventorySyncService for MyInventorySyncService {
             let mut conn = client.get_multiplexed_async_connection().await
                 .map_err(|e| Status::internal(format!("Redis conn failed: {}", e)))?;
 
-            let ttl = if req.ttl_seconds > 0 { req.ttl_seconds } else { 15 };
+            let ttl = if req.ttl_seconds > 0 { req.ttl_seconds } else { 300 };
 
             let acquired: bool = redis::cmd("SET")
                 .arg(&lock_key)

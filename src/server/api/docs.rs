@@ -3,7 +3,6 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Clone)]
 pub struct HelpArticle {
-    pub category: String,
     pub title: String,
     pub desc: String,
     pub link: String,
@@ -14,7 +13,6 @@ pub struct VideoTutorial {
     pub id: i32,
     pub title: String,
     pub duration: String,
-    pub video_url: String,
 }
 
 #[derive(Deserialize)]
@@ -24,25 +22,25 @@ pub struct SearchQuery {
 
 pub fn get_articles() -> Vec<HelpArticle> {
     vec![
-        HelpArticle { category: "Getting Started".to_string(), title: "Getting Started".to_string(), desc: "Learn how to easily set up your store and accept your first payment.".to_string(), link: "/help/getting-started-1".to_string() },
-        HelpArticle { category: "My Store".to_string(), title: "My Store".to_string(), desc: "Add products, track what's in stock, and change how your store looks.".to_string(), link: "/help/my-store".to_string() },
-        HelpArticle { category: "Payments".to_string(), title: "Getting Paid".to_string(), desc: "Set up how you get paid, view deposits, and handle simple taxes.".to_string(), link: "/help/payments".to_string() },
-        HelpArticle { category: "AI Agents".to_string(), title: "Your AI Helpers".to_string(), desc: "Learn how to hire AI helpers and give them tasks to do.".to_string(), link: "/help/ai-agents".to_string() },
-        HelpArticle { category: "Marketing".to_string(), title: "Finding Customers".to_string(), desc: "Send emails to customers and grow your business easily.".to_string(), link: "/help/marketing".to_string() },
-        HelpArticle { category: "Account & Billing".to_string(), title: "Account & Billing".to_string(), desc: "View your bills, manage your plan, and invite team members.".to_string(), link: "/help/account-billing".to_string() }
+        HelpArticle { title: "Getting Started".to_string(), desc: "Learn how to easily set up your store and accept your first payment.".to_string(), link: "/help/getting-started-1".to_string() },
+        HelpArticle { title: "My Store".to_string(), desc: "Add products, track what's in stock, and change how your store looks.".to_string(), link: "/help/my-store".to_string() },
+        HelpArticle { title: "Getting Paid".to_string(), desc: "Set up how you get paid, view deposits, and handle simple taxes.".to_string(), link: "/help/payments".to_string() },
+        HelpArticle { title: "Your AI Helpers".to_string(), desc: "Learn how to hire AI helpers and give them tasks to do.".to_string(), link: "/help/ai-agents".to_string() },
+        HelpArticle { title: "Finding Customers".to_string(), desc: "Send emails to customers and grow your business easily.".to_string(), link: "/help/marketing".to_string() },
+        HelpArticle { title: "Account & Billing".to_string(), desc: "View your bills, manage your plan, and invite team members.".to_string(), link: "/help/account-billing".to_string() }
     ]
 }
 
 pub fn get_videos() -> Vec<VideoTutorial> {
     vec![
-        VideoTutorial { id: 1, title: "How to set up your first store easily".to_string(), duration: "1:20".to_string(), video_url: "/videos/1.mp4".to_string() },
-        VideoTutorial { id: 2, title: "Accept your first payment".to_string(), duration: "1:15".to_string(), video_url: "/videos/2.mp4".to_string() },
-        VideoTutorial { id: 3, title: "Activate your AI Support Agent".to_string(), duration: "0:50".to_string(), video_url: "/videos/3.mp4".to_string() },
-        VideoTutorial { id: 4, title: "Adding staff to your account".to_string(), duration: "1:05".to_string(), video_url: "/videos/4.mp4".to_string() },
-        VideoTutorial { id: 5, title: "Review an order".to_string(), duration: "1:10".to_string(), video_url: "/videos/5.mp4".to_string() },
-        VideoTutorial { id: 6, title: "Send a campaign".to_string(), duration: "1:25".to_string(), video_url: "/videos/6.mp4".to_string() },
-        VideoTutorial { id: 7, title: "Connect Stripe".to_string(), duration: "1:30".to_string(), video_url: "/videos/7.mp4".to_string() },
-        VideoTutorial { id: 8, title: "Manage inventory".to_string(), duration: "1:00".to_string(), video_url: "/videos/8.mp4".to_string() },
+        VideoTutorial { id: 1, title: "How to set up your first store easily".to_string(), duration: "1:20".to_string() },
+        VideoTutorial { id: 2, title: "Accept your first payment".to_string(), duration: "1:15".to_string() },
+        VideoTutorial { id: 3, title: "Activate your AI Support Agent".to_string(), duration: "0:50".to_string() },
+        VideoTutorial { id: 4, title: "Adding staff to your account".to_string(), duration: "1:05".to_string() },
+        VideoTutorial { id: 5, title: "Review an order".to_string(), duration: "1:10".to_string() },
+        VideoTutorial { id: 6, title: "Send a campaign".to_string(), duration: "1:25".to_string() },
+        VideoTutorial { id: 7, title: "Connect Stripe".to_string(), duration: "1:30".to_string() },
+        VideoTutorial { id: 8, title: "Manage inventory".to_string(), duration: "1:00".to_string() },
     ]
 }
 
@@ -207,238 +205,4 @@ pub async fn get_article_handler(axum::extract::Path(article_id): axum::extract:
     } else {
         Err(axum::http::StatusCode::NOT_FOUND)
     }
-}
-
-#[derive(Serialize, Clone)]
-pub struct ChangelogSection {
-    pub version: String,
-    #[serde(rename = "contentLines")]
-    pub content_lines: Vec<String>,
-}
-
-pub fn get_changelog_data() -> Vec<ChangelogSection> {
-    vec![
-        ChangelogSection {
-            version: "Version 1.0 (Latest)".to_string(),
-            content_lines: vec![
-                "### 🌟 New Features".to_string(),
-                "- **Interactive AI Store Builder:** You can now generate a complete storefront from just a short description of your business. AI will handle the layout and copy for you.".to_string(),
-                "- **Smart Tooltips:** We added helpful text bubbles to all major buttons to help you learn the system faster.".to_string(),
-                "- **Help Center Upgrade:** Find answers instantly with our new searchable Help Center.".to_string(),
-                "### 🛠️ Improvements".to_string(),
-                "- Faster loading times for product images.".to_string(),
-                "- Simplified checkout process for your customers.".to_string(),
-            ]
-        }
-    ]
-}
-
-pub async fn get_changelog() -> Json<Vec<ChangelogSection>> {
-    Json(get_changelog_data())
-}
-
-pub async fn get_api_docs_spec() -> Json<serde_json::Value> {
-    let spec = serde_json::json!({
-        "openapi": "3.0.0",
-        "info": {
-            "title": "OHC Advanced API Reference",
-            "version": "1.0.0",
-            "description": "API Reference for advanced users integrating with OneHumanCorp.",
-        },
-        "servers": [
-            {
-                "url": "http://localhost:8080",
-                "description": "Backend Server"
-            }
-        ],
-        "paths": {
-            "/api/help": {
-                "get": {
-                    "summary": "Get Help Articles",
-                    "description": "Retrieves a list of available help articles for the Help Center.",
-                    "tags": ["Documentation"],
-                    "responses": {
-                        "200": {
-                            "description": "Success",
-                            "content": {
-                                "application/json": {
-                                    "schema": {
-                                        "type": "array",
-                                        "items": {
-                                            "type": "object",
-                                            "properties": {
-                                                "title": { "type": "string" },
-                                                "desc": { "type": "string" },
-                                                "link": { "type": "string" }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            },
-            "/api/tooltips": {
-                "get": {
-                    "summary": "Get Tooltips Registry",
-                    "description": "Retrieves the key-value dictionary of all UI tooltips.",
-                    "tags": ["Documentation"],
-                    "responses": {
-                        "200": {
-                            "description": "Success",
-                            "content": {
-                                "application/json": {
-                                    "schema": {
-                                        "type": "object",
-                                        "additionalProperties": { "type": "string" }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            },
-            "/api/orgs/register": {
-                "post": {
-                    "summary": "Register an Organization",
-                    "description": "Registers a new tenant organization in the multi-tenant OHC environment.",
-                    "tags": ["Tenants"],
-                    "requestBody": {
-                        "required": true,
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object",
-                                    "properties": {
-                                        "id": { "type": "string", "example": "acme" },
-                                        "name": { "type": "string", "example": "Acme Corp" },
-                                        "domain": { "type": "string", "example": "acme.com" }
-                                    }
-                                }
-                            }
-                        }
-                    },
-                    "responses": {
-                        "200": {
-                            "description": "Success",
-                            "content": {
-                                "application/json": {
-                                    "schema": {
-                                        "type": "object",
-                                        "properties": {
-                                            "success": { "type": "boolean" },
-                                            "tenant_id": { "type": "string" },
-                                            "message": { "type": "string" }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            },
-            "/api/agents/task": {
-                "post": {
-                    "summary": "Dispatch a task",
-                    "description": "Dispatches a new task to the AI Swarm Orchestrator.",
-                    "tags": ["Agents"],
-                    "requestBody": {
-                        "required": true,
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object",
-                                    "properties": {
-                                        "task_description": { "type": "string", "example": "Build a landing page for a dog groomer" },
-                                        "priority": { "type": "string", "example": "high" }
-                                    }
-                                }
-                            }
-                        }
-                    },
-                    "responses": {
-                        "202": {
-                            "description": "Accepted",
-                            "content": {
-                                "application/json": {
-                                    "schema": {
-                                        "type": "object",
-                                        "properties": {
-                                            "task_id": { "type": "string" },
-                                            "status": { "type": "string" }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            },
-            "/api/videos": {
-                "get": {
-                    "summary": "Get video tutorials",
-                    "description": "Retrieves a list of video tutorial metadata for the Help Center.",
-                    "tags": ["Documentation"],
-                    "responses": {
-                        "200": {
-                            "description": "Success",
-                            "content": {
-                                "application/json": {
-                                    "schema": {
-                                        "type": "array",
-                                        "items": {
-                                            "type": "object",
-                                            "properties": {
-                                                "id": { "type": "integer" },
-                                                "title": { "type": "string" },
-                                                "duration": { "type": "string" },
-                                                "video_url": { "type": "string" }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            },
-            "/api/agents/status": {
-                "get": {
-                    "summary": "Get workforce status",
-                    "description": "Retrieves the current status of the agent swarm workforce.",
-                    "tags": ["Agents"],
-                    "parameters": [
-                        {
-                            "name": "tenant_id",
-                            "in": "query",
-                            "description": "Optional. Filter by organization.",
-                            "required": false,
-                            "schema": {
-                                "type": "string"
-                            }
-                        }
-                    ],
-                    "responses": {
-                        "200": {
-                            "description": "Success",
-                            "content": {
-                                "application/json": {
-                                    "schema": {
-                                        "type": "object",
-                                        "properties": {
-                                            "active_agents": { "type": "integer" },
-                                            "queued_tasks": { "type": "integer" },
-                                            "system_health": { "type": "string" }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    });
-    Json(spec)
 }

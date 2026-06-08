@@ -9,13 +9,12 @@ interface DailyCost {
   llm_cost: number;
   storage_cost: number;
   network_cost: number;
-  compute_cost?: number;
+  compute_cost: number;
 }
 
 interface CostDashboardData {
   total_revenue: number;
   total_costs: number;
-  compute_cost?: number;
   llm_cost: number;
   storage_cost: number;
   payment_fees: number;
@@ -26,7 +25,6 @@ interface CostDashboardData {
   period_start: string;
   period_end: string;
   trend: DailyCost[];
-  agent_costs?: { agent_id: string; cost_cents: number; }[];
   department_tier_usage?: DepartmentTierUsage;
 }
 
@@ -118,36 +116,36 @@ export default function CostDashboardPage() {
         </section>
 
         {/* My Plan Section */}
-        <section id="my-plan-section" className="app-panel">
-          <div className="app-panel-header flex justify-between items-center">
-             <h2 className="app-panel-title">My Plan</h2>
-             <button
-               onClick={() => router.push('/pricing')}
-               className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-medium transition-all shadow-sm">
-               Upgrade
-             </button>
-          </div>
-          <div className="app-panel-body">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                  <div className="p-4 rounded-xl bg-white/50 border border-white/50">
-                      <h3 className="text-sm font-medium text-gray-500">Current Plan</h3>
-                      <p className="text-2xl font-bold text-gray-900 mt-1">{myPlanData?.current_plan || 'Free'}</p>
-                  </div>
-                  <div className="p-4 rounded-xl bg-white/50 border border-white/50">
-                      <h3 className="text-sm font-medium text-gray-500">AI Actions Used</h3>
-                      <p className="text-2xl font-bold text-gray-900 mt-1">{myPlanData?.ai_actions_used || 0} <span className="text-sm text-gray-500 font-normal">{myPlanData?.ai_actions_limit != null ? `/ ${myPlanData.ai_actions_limit}` : '/ Unlimited'}</span></p>
-                  </div>
-                  <div className="p-4 rounded-xl bg-white/50 border border-white/50">
-                      <h3 className="text-sm font-medium text-gray-500">Storage Used</h3>
-                      <p className="text-2xl font-bold text-gray-900 mt-1">{((myPlanData?.storage_used_bytes || 0) / (1024 * 1024)).toFixed(1)} MB <span className="text-sm text-gray-500 font-normal">{myPlanData?.storage_limit_bytes != null ? `/ ${(myPlanData.storage_limit_bytes / (1024 * 1024)).toFixed(0)} MB` : '/ Unlimited'}</span></p>
-                  </div>
-                  <div className="p-4 rounded-xl bg-white/50 border border-white/50">
-                      <h3 className="text-sm font-medium text-gray-500">Estimated Next Bill</h3>
-                      <p className="text-2xl font-bold text-gray-900 mt-1">{formatCurrency(myPlanData?.next_bill_estimated || 0)}</p>
-                  </div>
-              </div>
-          </div>
-        </section>
+        {myPlanData && (
+          <section id="my-plan-section" className="p-6 md:p-8 shadow-lg bg-white/60 backdrop-blur-2xl saturate-200 border border-white/40 rounded-2xl md:rounded-[24px] hover:shadow-xl transition-shadow duration-300">
+            <div className="flex justify-between items-center mb-6">
+               <h2 className="text-xl font-bold font-outfit text-gray-900">My Plan</h2>
+               <button
+                 onClick={() => router.push('/pricing')}
+                 className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-medium transition-all shadow-sm">
+                 Upgrade
+               </button>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="p-4 rounded-xl bg-white/50 border border-white/50">
+                    <h3 className="text-sm font-medium text-gray-500">Current Plan</h3>
+                    <p className="text-2xl font-bold text-gray-900 mt-1">{myPlanData.current_plan}</p>
+                </div>
+                <div className="p-4 rounded-xl bg-white/50 border border-white/50">
+                    <h3 className="text-sm font-medium text-gray-500">AI Actions Used</h3>
+                    <p className="text-2xl font-bold text-gray-900 mt-1">{myPlanData.ai_actions_used} <span className="text-sm text-gray-500 font-normal">{myPlanData.ai_actions_limit ? `/ ${myPlanData.ai_actions_limit}` : ''}</span></p>
+                </div>
+                <div className="p-4 rounded-xl bg-white/50 border border-white/50">
+                    <h3 className="text-sm font-medium text-gray-500">Storage Used</h3>
+                    <p className="text-2xl font-bold text-gray-900 mt-1">{(myPlanData.storage_used_bytes / (1024 * 1024)).toFixed(1)} MB <span className="text-sm text-gray-500 font-normal">{myPlanData.storage_limit_bytes ? `/ ${(myPlanData.storage_limit_bytes / (1024 * 1024)).toFixed(0)} MB` : ''}</span></p>
+                </div>
+                <div className="p-4 rounded-xl bg-white/50 border border-white/50">
+                    <h3 className="text-sm font-medium text-gray-500">Estimated Next Bill</h3>
+                    <p className="text-2xl font-bold text-gray-900 mt-1">{formatCurrency(myPlanData.next_bill_estimated)}</p>
+                </div>
+            </div>
+          </section>
+        )}
 
         {/* Overview Section */}
         <section className="app-panel">
@@ -205,23 +203,6 @@ export default function CostDashboardPage() {
                     </div>
                 </div>
 
-                {/* Per-Agent / Per-Feature Costs */}
-                <div className="flex flex-col app-card hover:-translate-y-1 hover:shadow-md transition-all duration-300">
-                    <h3 className="font-medium text-gray-900 mb-2">Agent & Feature Costs</h3>
-                    {data?.agent_costs && data.agent_costs.length > 0 ? (
-                        <ul id="cost-dashboard-agent-costs" className="space-y-2">
-                            {data.agent_costs.map((agent, index) => (
-                                <li key={index} className="flex justify-between items-center border-b border-gray-200 pb-2 last:border-b-0 last:pb-0">
-                                    <span className="text-sm text-gray-700 capitalize">{agent.agent_id.replace(/_/g, ' ')}</span>
-                                    <span className="text-sm font-medium text-gray-900">{formatCurrency(agent.cost_cents)}</span>
-                                </li>
-                            ))}
-                        </ul>
-                    ) : (
-                        <p className="text-sm text-gray-500">No agent cost data available.</p>
-                    )}
-                </div>
-
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 app-card hover:-translate-y-1 hover:shadow-md transition-all duration-300">
                     <div>
                         <span className="font-medium text-gray-900">Storage</span>
@@ -237,15 +218,6 @@ export default function CostDashboardPage() {
                     </div>
                     <span id="cost-dashboard-payment-fees" className="text-lg font-semibold text-gray-900">{formatCurrency(data?.payment_fees || 0)}</span>
                 </div>
-
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 app-card hover:-translate-y-1 hover:shadow-md transition-all duration-300">
-                    <div>
-                        <span className="font-medium text-gray-900">Compute Usage</span>
-                        <p className="text-sm text-gray-500 mt-1">Cost of container execution and background processing.</p>
-                    </div>
-                    <span id="cost-dashboard-compute" className="text-lg font-semibold text-gray-900">{formatCurrency(data?.compute_cost || 0)}</span>
-                </div>
-
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 app-card hover:-translate-y-1 hover:shadow-md transition-all duration-300">
                     <div>
                         <span className="font-medium text-gray-900">Network & Bandwidth</span>

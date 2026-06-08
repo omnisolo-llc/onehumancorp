@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation, useCurrency } from '../../../lib/localizationStore';
 import { LocalizationToggle } from '../../../components/LocalizationToggle';
-import StripeTerminalClient from './StripeTerminalClient';
 
 // Offline storage helper for staff data
 const OfflineStore = {
@@ -37,24 +36,8 @@ export default function TerminalPage() {
   const [error, setError] = useState('');
   const [syncing, setSyncing] = useState(false);
   const [offlineConversion, setOfflineConversion] = useState(false);
-  const [syncCount, setSyncCount] = useState(0);
   const [orderStatus, setOrderStatus] = useState('');
   const [reserving, setReserving] = useState(false);
-
-  useEffect(() => {
-    if (navigator.onLine) {
-      fetch('/api/staff')
-        .then(res => res.json())
-        .then(data => {
-          if (Array.isArray(data)) {
-            OfflineStore.setStaff(data);
-          } else if (data && data.staff) {
-            OfflineStore.setStaff(data.staff);
-          }
-        })
-        .catch(console.error);
-    }
-  }, []);
   const [isOffline, setIsOffline] = useState(false);
 
   // Network listener
@@ -82,7 +65,6 @@ export default function TerminalPage() {
         const posTransactions = OfflineStore.getPosTransactions();
 
         if (events.length > 0 || posTransactions.length > 0) {
-          setSyncCount(events.length + posTransactions.length);
           setSyncing(true);
           try {
             if (events.length > 0) {
@@ -97,11 +79,10 @@ export default function TerminalPage() {
             }
 
             if (posTransactions.length > 0) {
-              const sessionId = localStorage.getItem('ohc_active_terminal_session_id');
               const res = await fetch('/api/pos/transactions/sync', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ session_id: sessionId, transactions: posTransactions })
+                body: JSON.stringify(posTransactions)
               });
               if (res.ok) {
                 const data = await res.json();
@@ -199,10 +180,10 @@ export default function TerminalPage() {
       setOrderStatus(t('Processing/Reserving...'));
 
       try {
-        const reserveRes = await fetch('/api/pos/terminal/reserve', {
+        const reserveRes = await fetch('/api/v1/payments/terminal/reserve', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ tenant_id: activeStaff?.tenant_id || "default_tenant", product_id: 'prod_123', quantity: 1, ttl_seconds: 15 })
+          body: JSON.stringify({ product_id: 'prod_123', quantity: 1, ttl_seconds: 15 })
         });
 
         const reserveData = await reserveRes.json();
@@ -215,12 +196,15 @@ export default function TerminalPage() {
 
         setOrderStatus(`${t('New Order Total')}: ${converted.amount / 100} ${currency}`);
 
-        await fetch('/api/pos/terminal/commit', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ tenant_id: activeStaff?.tenant_id || "default_tenant", product_id: 'prod_123', quantity: 1, lock_id: reserveData.lock_id })
-        });
-        setOrderStatus(`${t('Payment Completed')}`);
+        // Simulate payment completion
+        setTimeout(async () => {
+          await fetch('/api/v1/payments/terminal/commit', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ product_id: 'prod_123', quantity: 1, lock_id: reserveData.lock_id })
+          });
+          setOrderStatus(`${t('Payment Completed')}`);
+        }, 1000);
       } catch (err) {
         setOrderStatus(t('Error connecting to server'));
       } finally {
@@ -295,11 +279,7 @@ export default function TerminalPage() {
           <div>
             <h1 className="text-2xl font-bold font-outfit text-gray-900 tracking-tight">{activeStaff.name}</h1>
             <p className="text-blue-600 font-medium text-sm mt-1">{t(activeStaff.role)}</p>
-            {isOffline ? (
-              <span className="inline-block mt-1 text-yellow-800 font-bold text-xs bg-yellow-100 px-2 py-1 rounded border border-yellow-200 shadow-sm">{t('Offline Mode')}</span>
-            ) : (
-              <span className="inline-block mt-1 text-green-800 font-bold text-xs bg-green-100 px-2 py-1 rounded border border-green-200 shadow-sm">{t('Online')}</span>
-            )}
+            {isOffline && <span className="inline-block mt-1 text-red-500 font-bold text-xs bg-red-100 px-2 py-1 rounded">{t('Offline Mode')}</span>}
           </div>
           <div className="flex items-center gap-3">
             <LocalizationToggle />
@@ -373,18 +353,16 @@ export default function TerminalPage() {
                <span className="font-medium text-gray-900">{t('Refunds')}</span>
              </button>
            </div>
-
-           <StripeTerminalClient amount={activeStaff?.id ? 5000 : 0} productId="prod_123" tenantId={activeStaff?.tenant_id || "default_tenant"} />
            {orderStatus && <p className="mt-4 rounded-xl bg-blue-50 px-4 py-3 text-sm font-semibold text-blue-800" role="status">{orderStatus}</p>}
         </div>
 
         {syncing && (
-          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-blue-600/90 backdrop-blur-[30px] border border-white/20 text-white px-6 py-3 rounded-full shadow-lg font-bold min-h-[44px] flex items-center justify-center space-x-2 z-50">
+          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-blue-600 text-white px-6 py-3 rounded-full shadow-lg font-bold min-h-[44px] flex items-center justify-center space-x-2 z-50">
             <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
             </svg>
-            <span>{t('Syncing {{count}} transactions...', { count: syncCount })}</span>
+            <span>{t('Syncing offline events...')}</span>
           </div>
         )}
         {offlineConversion && (

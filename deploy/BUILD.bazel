@@ -1,4 +1,3 @@
-load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 load("@rules_oci//oci:defs.bzl", "oci_image", "oci_load", "oci_push")
 load("@rules_pkg//pkg:tar.bzl", "pkg_tar")
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
@@ -65,17 +64,6 @@ oci_load(
     }),
     visibility = ["//visibility:public"],
 )
-oci_load(
-    name = "mono_core_load",
-    image = ":server_image",
-    repo_tags = ["onehumancorp/mono-core:latest"],
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
-    visibility = ["//visibility:public"],
-)
-
 
 oci_load(
     name = "server_web_image_tarball",
@@ -258,10 +246,9 @@ sh_test(
     srcs = ["tests/docker_compose_e2e_test.sh"],
     data = [
         "docker-compose.yml",
-        "docker-compose.override.yml",
         "docker/postgres/init-multiple-databases.sh",
     ] + [
-        ":load_all_images",
+        ":server_load",
         "//src/server",
     ],
     tags = [
@@ -321,7 +308,7 @@ sh_test(
         "helm/ohc/templates/vpa.yaml",
         "helm/ohc/values.yaml",
     ] + [
-        ":load_all_images",
+        ":server_load",
         "//src/server",
     ],
     tags = [
@@ -338,22 +325,4 @@ sh_test(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     visibility = ["//visibility:public"],
-)
-
-
-sh_binary(
-    name = "load_all_images",
-    srcs = ["load_all_images.sh"],
-    data = [
-        ":server_load",
-        ":mono_core_load",
-        ":agent_load",
-        ":default_agent_load",
-    ],
-    deps = ["@bazel_tools//tools/bash/runfiles"],
-    tags = ["manual"],
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
 )

@@ -505,7 +505,7 @@ mod tests {
             .run("Create a launch plan for a neighborhood bakery adding subscription pastry boxes.")
             .await
             .expect("live Minimax agent workspace should complete");
-        tracing::info!("{}", serde_json::to_string_pretty(&transcript).unwrap());
+        println!("{}", serde_json::to_string_pretty(&transcript).unwrap());
 
         assert_eq!(transcript.turns.len(), 5);
         assert!(transcript

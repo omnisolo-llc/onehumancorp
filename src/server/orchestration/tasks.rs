@@ -596,9 +596,7 @@ impl TaskDecompositionService {
         agent_id: &str,
         reason: &str,
     ) -> Result<(), String> {
-        let mut organization_id_opt = None;
         if let Ok(task) = self.get_task(task_id).await {
-            organization_id_opt = Some(task.organization_id.clone());
             ::server_telemetry::record_mission_failure(
                 &task.organization_id,
                 ::server_telemetry::get_deployment_mode(),
@@ -610,27 +608,21 @@ impl TaskDecompositionService {
             DbStore::Postgres => {
                 let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
 
-                let old_status_row = sqlx::query(
-                    "SELECT status, organization_id, tokens_consumed, agent_role, model FROM shared_tasks_decomposition WHERE id = $1 FOR UPDATE",
+                let old_status: Option<String> = sqlx::query_scalar(
+                    "SELECT status FROM shared_tasks_decomposition WHERE id = $1 FOR UPDATE",
                 )
                 .bind(task_id)
                 .fetch_optional(&mut *tx)
                 .await
                 .map_err(|e| e.to_string())?;
 
-                let old_status_row = match old_status_row {
+                let old_status = match old_status {
                     Some(s) => s,
                     None => {
                         tx.commit().await.map_err(|e| e.to_string())?;
                         return Err("Task not found".to_string());
                     }
                 };
-
-                let old_status: String = old_status_row.try_get("status").unwrap_or("PENDING".to_string());
-                let tokens_consumed: i32 = old_status_row.try_get("tokens_consumed").unwrap_or(0);
-                let agent_role: Option<String> = old_status_row.try_get("agent_role").unwrap_or(None);
-                let model: Option<String> = old_status_row.try_get("model").unwrap_or(None);
-                let org_id: String = old_status_row.try_get("organization_id").unwrap_or_else(|_| organization_id_opt.unwrap_or_default());
 
                 let payload_update = serde_json::to_string(&serde_json::json!({"error": reason}))
                     .unwrap_or_else(|_| "{}".to_string());
@@ -654,7 +646,7 @@ impl TaskDecompositionService {
                 )
                 .bind(trans_id)
                 .bind(task_id)
-                .bind(&old_status)
+                .bind(old_status)
                 .bind("FAILED")
                 .bind(agent_id)
                 .bind(now)
@@ -663,19 +655,6 @@ impl TaskDecompositionService {
                 .map_err(|e| e.to_string())?;
 
                 tx.commit().await.map_err(|e| e.to_string())?;
-
-                if let (Some(role), Some(modl)) = (agent_role, model) {
-                    let _ = ::server_telemetry::record_task_resolution_efficiency(
-                        &self.db.pool,
-                        "FAILED",
-                        &role,
-                        &modl,
-                        tokens_consumed as i64,
-                        &org_id,
-                    )
-                    .await;
-                }
-
                 Ok(())
             }
             DbStore::Sqlite(pool) => {

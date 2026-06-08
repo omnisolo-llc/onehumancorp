@@ -37,7 +37,6 @@ async fn test_cloud_fs_provider() {
     assert_eq!(content, b"cloud content".to_vec());
 
     // Verify it was written to tenant dir
-    tokio::time::sleep(std::time::Duration::from_millis(50)).await;
     let tenant_file = dir.path().join(&tenant_id).join("test.txt");
     assert!(tenant_file.exists());
 

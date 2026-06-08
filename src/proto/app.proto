@@ -272,43 +272,8 @@ message SyncOfflineTransactionsResponse {
   repeated string failed_transaction_ids = 3;
 }
 
-message StartTerminalSessionRequest {
-  string tenant_id = 1;
-  string device_id = 2;
-}
-
-message StartTerminalSessionResponse {
-  string session_id = 1;
-  bool success = 2;
-  string error_message = 3;
-}
-
-message UpdateTerminalSessionStatusRequest {
-  string tenant_id = 1;
-  string session_id = 2;
-  string status = 3; // ACTIVE, PAUSED, OFFLINE, RECONCILED
-}
-
-message UpdateTerminalSessionStatusResponse {
-  bool success = 1;
-  string error_message = 2;
-}
-
-message EndTerminalSessionRequest {
-  string tenant_id = 1;
-  string session_id = 2;
-}
-
-message EndTerminalSessionResponse {
-  bool success = 1;
-  string error_message = 2;
-}
-
 service PosService {
   rpc SyncOfflineTransactions(SyncOfflineTransactionsRequest) returns (SyncOfflineTransactionsResponse);
-  rpc StartTerminalSession(StartTerminalSessionRequest) returns (StartTerminalSessionResponse);
-  rpc UpdateTerminalSessionStatus(UpdateTerminalSessionStatusRequest) returns (UpdateTerminalSessionStatusResponse);
-  rpc EndTerminalSession(EndTerminalSessionRequest) returns (EndTerminalSessionResponse);
 }
 
 message SyncCalendarRequest {

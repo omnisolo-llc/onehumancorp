@@ -453,7 +453,7 @@ mod tests {
         let res = QualityGates::pre_deliver(&final_output, &trace);
         assert!(res.is_err());
         assert!(
-            matches!(res, Err(e) if e.contains("Missing required chart/analysis/graph verification"))
+            matches!(res, Err(e) if e.contains("Missing required chart/analysis verification"))
         );
     }
 

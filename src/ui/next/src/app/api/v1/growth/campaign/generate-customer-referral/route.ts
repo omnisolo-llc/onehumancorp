@@ -5,7 +5,7 @@ export async function POST(request: Request) {
     const body = await request.json();
 
     // In production, BACKEND_URL would be defined. For local dev we use the default 8080.
-    const backendUrl = process.env.BACKEND_URL || 'http://127.0.0.1:18789';
+    const backendUrl = process.env.BACKEND_URL || 'http://localhost:8080';
     const backendRes = await fetch(`${backendUrl}/api/v1/growth/campaign/generate-customer-referral`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

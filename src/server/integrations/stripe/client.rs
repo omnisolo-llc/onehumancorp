@@ -37,7 +37,7 @@ impl StripeClient {
         StripeClient { api_key }
     }
 
-    pub fn require_api_key(&self) -> Result<&str, String> {
+    fn require_api_key(&self) -> Result<&str, String> {
         let key = self.api_key.trim();
         if key.is_empty() || key == "sk_test_123" || key == "sk_test" {
             return Err("Stripe API key is required for Terminal API calls".to_string());
@@ -45,7 +45,7 @@ impl StripeClient {
         Ok(key)
     }
 
-    pub fn api_base() -> String {
+    fn api_base() -> String {
         std::env::var("STRIPE_API_BASE").unwrap_or_else(|_| "https://api.stripe.com".to_string())
     }
 

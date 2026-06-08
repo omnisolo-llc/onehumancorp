@@ -29,12 +29,11 @@ impl VoiceTurnPlanner for LlmVoiceTurnPlanner {
             "You are the OneHumanCorp voice receptionist planner. Return strict JSON with keys intent_type, ai_response, and sms_body. intent_type must be CHECK_AVAILABILITY, BOOK_APPOINTMENT, or GENERAL_HELP. Use sms_body only when the caller explicitly confirms a booking and a secure confirmation/deposit link should be sent. Do not invent exact appointment availability; ask a concise follow-up when calendar data is not present. Session: {session_id}. Caller said: {user_text}"
         );
 
-        let provider = std::env::var("OHC_VOICE_LLM_PROVIDER")
+        let raw = match std::env::var("OHC_VOICE_LLM_PROVIDER")
             .or_else(|_| std::env::var("OHC_LLM_PROVIDER"))
-            .unwrap_or_default();
-
-        let raw: String = match provider.as_str() {
-            "minimax" => {
+            .as_deref()
+        {
+            Ok("minimax") => {
                 let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
                 ::minimax::MinimaxClient::new(api_key).reason(&prompt).await
             }

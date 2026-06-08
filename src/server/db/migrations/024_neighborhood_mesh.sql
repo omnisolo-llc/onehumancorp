@@ -1,19 +1,12 @@
 
 CREATE TABLE IF NOT EXISTS ohc_collective (
     id TEXT PRIMARY KEY,
-    tenant_id TEXT NOT NULL,
     name TEXT NOT NULL,
     location_center TEXT,
     radius_meters FLOAT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
-CREATE INDEX IF NOT EXISTS idx_ohc_collective_tenant ON ohc_collective(tenant_id);
-ALTER TABLE ohc_collective ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant_isolation_ohc_collective ON ohc_collective;
-CREATE POLICY tenant_isolation_ohc_collective
-ON ohc_collective
-USING (tenant_id = current_setting('app.current_tenant', true)) WITH CHECK (tenant_id = current_setting('app.current_tenant', true));
 
 CREATE TABLE IF NOT EXISTS ohc_collective_member (
     collective_id TEXT NOT NULL REFERENCES ohc_collective(id) ON DELETE CASCADE,
@@ -52,15 +45,8 @@ USING (originating_tenant_id = current_setting(app.current_tenant, true) OR targ
 CREATE TABLE IF NOT EXISTS ohc_collective_loyalty_balance (
     collective_id TEXT NOT NULL REFERENCES ohc_collective(id) ON DELETE CASCADE,
     buyer_id TEXT NOT NULL,
-    tenant_id TEXT NOT NULL,
     balance INTEGER NOT NULL DEFAULT 0,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (collective_id, buyer_id, tenant_id)
+    PRIMARY KEY (collective_id, buyer_id)
 );
-CREATE INDEX IF NOT EXISTS idx_collective_loyalty_balance_tenant ON ohc_collective_loyalty_balance(tenant_id);
-ALTER TABLE ohc_collective_loyalty_balance ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS tenant_isolation_ohc_collective_loyalty_balance ON ohc_collective_loyalty_balance;
-CREATE POLICY tenant_isolation_ohc_collective_loyalty_balance
-ON ohc_collective_loyalty_balance
-USING (tenant_id = current_setting('app.current_tenant', true)) WITH CHECK (tenant_id = current_setting('app.current_tenant', true));

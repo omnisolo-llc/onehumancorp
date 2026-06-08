@@ -22,7 +22,7 @@ export default function AgentMarketplacePage() {
  setLoading(true);
  setError(null);
  try {
- const res = await fetch(`/api/agents/marketplace?q=${encodeURIComponent(searchQuery)}`);
+ const res = await fetch(`/api/marketplace?q=${encodeURIComponent(searchQuery)}`);
  if (!res.ok) {
  throw new Error('Failed to fetch agents');
  }

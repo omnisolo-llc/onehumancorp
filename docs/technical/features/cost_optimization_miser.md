@@ -7,6 +7,6 @@
 4. **Rate Limiting & Quotas**: `src/server/pricing/rate_limit.rs` and `src/server/pricing/budget.rs` provide Redis-backed soft rate limits and storage quotas per tenant plan tier.
 5. **Cost Transparency Dashboard**: `src/server/api/billing_api.rs` and frontend implementations provide detailed, accurate cost tracking, including `Network Cost` and `Bandwidth Savings`.
 
-## Resolved Blockers
-1. The Playwright end-to-end tests for the cost dashboard were previously blocked universally in the CI sandbox environment by a Docker daemon/containerd issue (`failed to convert whiteout file "etc/alternatives/.wh.pager.1.gz": operation not permitted`) when attempting to run `pgvector/pgvector:pg16` or `postgres:16-alpine`.
-   - **Resolution**: Switched the `deploy/docker-compose.e2e.yml` to use `pgvector/pgvector:pg15` and `redis:7` images and added `seccomp:unconfined`, `apparmor:unconfined` and capabilities to `security_opt` and `cap_add`. Full UI tests now run in CI and locally through the Bazel Playwright aggregate.
+## Pending/Blocked by Infrastructure
+1. The Playwright end-to-end tests for the cost dashboard are currently blocked universally in the CI sandbox environment by a Docker daemon/containerd issue (`failed to convert whiteout file "etc/alternatives/.wh.pager.1.gz": operation not permitted`) when attempting to run `pgvector/pgvector:pg16` or `postgres:16-alpine`.
+   - **Resolution**: full UI tests now run in CI and locally through the Bazel Playwright aggregate. CI-only Playwright skips are not an acceptable workaround; failing infrastructure must be fixed in the harness or covered by stable route/API contracts.

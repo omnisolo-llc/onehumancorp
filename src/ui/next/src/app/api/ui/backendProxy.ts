@@ -13,7 +13,7 @@ export function backendHeaders(req: Request, withJson = false): Headers {
 }
 
 export async function proxyBackendGet(req: Request, backendPath: string) {
-  const backendUrl = process.env.BACKEND_URL || "http://127.0.0.1:18789";
+  const backendUrl = process.env.BACKEND_URL || "http://localhost:8080";
   const { search } = new URL(req.url);
 
   try {

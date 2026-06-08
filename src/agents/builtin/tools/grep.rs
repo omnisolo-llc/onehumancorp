@@ -5,7 +5,7 @@ use serde_json::json;
 use serde::Deserialize;
 use std::sync::Arc;
 
-use super::{Tool, pydantic::{PydanticToolExecutor, PydanticAdapter}};
+use super::{Tool, ToolExecutor, pydantic::{PydanticToolExecutor, PydanticAdapter}};
 
 #[derive(Deserialize)]
 struct GrepArgs {
@@ -133,7 +133,7 @@ fn matches_include(filename: &str, include: &str) -> bool {
 pub fn grep_tool(working_dir: Option<std::path::PathBuf>) -> Tool {
     Tool {
         name: "Grep".to_string(),
-        description: "Search for a regex pattern in files under a directory. Returns file:line:content matches. Used for Context Management (Preventing Context Rot): Just-in-Time (JIT) Context Retrieval.".to_string(),
+        description: "Search for a regex pattern in files under a directory. Returns file:line:content matches. Used for Just-in-Time (JIT) Context Retrieval.".to_string(),
         is_read_only: true,
         parameters: json!({
             "type": "object",
@@ -191,7 +191,7 @@ mod tests {
             "path": ".",
         });
 
-        let result = crate::ToolExecutor::execute(&executor, args).await.unwrap();
+        let result = super::ToolExecutor::execute(&executor, args).await.unwrap();
         let _expected_path = test_file.strip_prefix(&test_dir).unwrap_or(&test_file);
         // The display string might be just the name if we strip it
         assert!(result.contains("critical failure found here!"));

@@ -48,14 +48,6 @@ static UI_INBOX_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<Ve
 static UI_DASHBOARD_METRICS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<serde_json::Value>> = std::sync::OnceLock::new();
 static METRICS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<HttpMetricsResponse>> = std::sync::OnceLock::new();
 
-pub fn get_redis_client() -> Option<redis::Client> {
-    if is_standalone_runtime() {
-        None
-    } else {
-        std::env::var("REDIS_URL").ok().and_then(|url| redis::Client::open(url).ok())
-    }
-}
-
 pub fn is_standalone_runtime() -> bool {
     fn parse_bool(value: &str) -> Option<bool> {
         match value.trim().to_ascii_lowercase().as_str() {
@@ -103,7 +95,6 @@ fn get_tooltips_registry() -> &'static RwLock<HashMap<String, String>> {
     m.insert("todays-sales-tooltip".to_string(), "Your total sales for today. Check back often to track your progress.".to_string());
     m.insert("approval-inbox-tooltip".to_string(), "Review tasks that your AI agents need permission to execute. Approve or deny them here.".to_string());
     m.insert("ask-ai-tooltip".to_string(), "Open the AI Chat to get answers instantly. The AI reads our entire Help Center for you.".to_string());
-    m.insert("api-docs-tooltip".to_string(), "Direct API access is only for custom integrations.".to_string());
     RwLock::new(m)
     })
 }
@@ -562,7 +553,7 @@ async fn http_metrics_handler(
     }
 
     let cache_key = format!("metrics:{}", tenant_id);
-    let cache = METRICS_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
+    let cache = METRICS_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(None));
     if let Some(metrics) = cache.get(&cache_key).await {
         return (StatusCode::OK, axum::Json(metrics)).into_response();
     }
@@ -834,7 +825,7 @@ pub async fn advisory_insights_handler(
     let (org_res, active_orders_res) = tokio::join!(
         async {
             let cache_key = format!("advisory:org:{}", tenant_id);
-            let cache = ORG_CACHE_ADVISORY.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
+            let cache = ORG_CACHE_ADVISORY.get_or_init(|| ::server_utils::cache::HybridCache::new(None));
             if let Some(org) = cache.get(&cache_key).await {
                 return Ok(org);
             }
@@ -865,7 +856,7 @@ pub async fn advisory_insights_handler(
         },
         async {
             let cache_key = format!("advisory:orders:{}", tenant_id);
-            let cache = ACTIVE_ORDERS_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
+            let cache = ACTIVE_ORDERS_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(None));
             if let Some(orders) = cache.get(&cache_key).await {
                 return Ok(orders);
             }
@@ -911,7 +902,7 @@ pub async fn advisory_insights_handler(
     let stats_hash = format!("{:x}", hasher.finalize());
     let insight_cache_key = format!("advisory:insight:{}:{}", tenant_id, stats_hash);
 
-    let insight_cache = ADVISORY_INSIGHT_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
+    let insight_cache = ADVISORY_INSIGHT_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(None));
     if let Some(insight) = insight_cache.get(&insight_cache_key).await {
         return (StatusCode::OK, axum::Json(serde_json::json!({ "summary": insight }))).into_response();
     }
@@ -1084,7 +1075,7 @@ impl HubService for MyHubService {
         let prompt_hash = hex::encode(hasher.finalize());
         let ai_cache_key = format!("ai_cache:reason:{}", prompt_hash);
 
-        let ai_cache = AI_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
+        let ai_cache = AI_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(None));
         if let Some(cached_output) = ai_cache.get(&ai_cache_key).await {
             return Ok(Response::new(ReasonResponse { content: cached_output }));
         }
@@ -2304,6 +2295,8 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let cs_worker = crate::workers::department_workers::CustomerSuccessWorker::new(db.clone());
     cs_worker.start();
 
+    let pos_sync_worker = crate::workers::department_workers::pos_sync_worker::PosSyncWorker::new(db.clone());
+    pos_sync_worker.start();
 
     if matches!(&db.store, crate::db::DbStore::Postgres) {
         crate::cart_recovery::start_cart_recovery_background_workers(Arc::new(db.pool.clone()));
@@ -2767,7 +2760,7 @@ async fn list_ui_orders_handler(
     let tenant_id = ui_tenant_id(&query);
 
     let cache_key = format!("ui_orders:{}", tenant_id);
-    let cache = UI_ORDERS_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
+    let cache = UI_ORDERS_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(None));
     if let Some(cached) = cache.get(&cache_key).await {
         return (axum::http::StatusCode::OK, axum::Json(cached)).into_response();
     }
@@ -2835,7 +2828,7 @@ async fn list_ui_bookings_handler(
     let tenant_id = ui_tenant_id(&query);
 
     let cache_key = format!("ui_bookings:{}", tenant_id);
-    let cache = UI_BOOKINGS_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
+    let cache = UI_BOOKINGS_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(None));
     if let Some(cached) = cache.get(&cache_key).await {
         return (axum::http::StatusCode::OK, axum::Json(cached)).into_response();
     }
@@ -2908,7 +2901,7 @@ async fn list_ui_inbox_handler(
     let tenant_id = ui_tenant_id(&query);
 
     let cache_key = format!("ui_inbox:{}", tenant_id);
-    let cache = UI_INBOX_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
+    let cache = UI_INBOX_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(None));
     if let Some(cached) = cache.get(&cache_key).await {
         return (axum::http::StatusCode::OK, axum::Json(cached)).into_response();
     }
@@ -2999,7 +2992,7 @@ async fn ui_dashboard_metrics_handler(
     let tenant_id = ui_tenant_id(&query);
 
     let cache_key = format!("ui_dashboard_metrics:{}", tenant_id);
-    let cache = UI_DASHBOARD_METRICS_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
+    let cache = UI_DASHBOARD_METRICS_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(None));
     if let Some(cached) = cache.get(&cache_key).await {
         return (axum::http::StatusCode::OK, axum::Json(cached)).into_response();
     }
@@ -3463,14 +3456,6 @@ async fn create_ui_bom_item_handler(
                 axum::response::Json(serde_json::json!({ "reply": reply }))
             }
         }))
-        .route("/api/checkout/mercadopago", axum::routing::post(|axum::Json(req): axum::Json<serde_json::Value>| async move {
-            let amount_cents = req.get("amount_cents").and_then(|v| v.as_i64()).unwrap_or(4500);
-            let tenant_id = req.get("tenant_id").and_then(|v| v.as_str()).unwrap_or("default");
-            let url = format!("https://www.mercadopago.com/checkout/v1/redirect?pref_id={}_{}", tenant_id, amount_cents);
-            axum::response::Json(serde_json::json!({
-                "checkout_url": url
-            }))
-        }))
         .route("/api/checkout/delivery-quote", axum::routing::post({
             let settings_store = settings_store.clone();
             move |axum::Json(req): axum::Json<serde_json::Value>| async move {
@@ -3797,7 +3782,6 @@ async fn create_ui_bom_item_handler(
         .nest("/api/agents/settings", api::agents::settings::router(dept_orchestrator.clone()))
         .nest("/api/agents/chat", api::agents::chat::router(dept_orchestrator.clone(), semantic_router.clone()))
         .nest("/api/agents/webhook", api::agents::webhook::router(dept_orchestrator.clone()))
-        .nest("/api/v1/booking/request", api::booking::request::router(dept_orchestrator.clone()))
         .nest("/api/agents/mission", api::agents::mission::handoff::router(std::sync::Arc::new(crate::sip::SipDB::new(db.pool.clone(), "default".to_string()))))
         .route("/api/telemetry/sync", axum::routing::post(api::telemetry::sync_telemetry_handler))
         .route_layer(axum::middleware::from_fn_with_state(
@@ -3821,8 +3805,6 @@ async fn create_ui_bom_item_handler(
             axum::Json(serde_json::json!({"success": true}))
         }))
         .route("/api/videos", axum::routing::get(crate::api::docs::list_videos))
-        .route("/api/changelog", axum::routing::get(crate::api::docs::get_changelog))
-        .route("/api/api-docs-spec", axum::routing::get(crate::api::docs::get_api_docs_spec))
         .route("/api/chat", axum::routing::post(|axum::Json(req): axum::Json<ChatRequest>| async move {
             let help_articles = vec![
                 ("getting started", "Welcome to One Human Corp! This is a simple app that helps you manage your small business. You can set up your store, accept payments, and hire AI helpers."),
@@ -3836,7 +3818,7 @@ async fn create_ui_bom_item_handler(
 
             let query = req.message.to_lowercase();
             let mut reply = "I am your AI Help Agent! I specialize in answering questions about OHC features and helping you grow your small business. Check out our Getting Started guide.".to_string();
-            let mut link_title = "Read the full article →";
+            let link_title = "Read the full article →";
             let mut link_url = "/help/getting-started";
 
             if query.contains("getting started") {
@@ -3860,10 +3842,6 @@ async fn create_ui_bom_item_handler(
             } else if query.contains("api") || query.contains("advanced") {
                 reply = format!("Based on our help center: {}", help_articles[6].1);
                 link_url = "/api-docs";
-            } else if query.contains("operations") {
-                reply = "I have routed your request to the Operations department.".to_string();
-                link_url = "/inbox";
-                link_title = "Check your inbox for updates →";
             }
 
             axum::Json(serde_json::json!({

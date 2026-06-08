@@ -5,9 +5,9 @@ test.describe('Ambassador Auto-Responder CUJ', () => {
     // 1. Connect Instagram via Integrations
     // Start from login to satisfy the rules
     await page.goto('/login');
-    await page.getByPlaceholder('Email or Username').fill('test@example.com');
+    await page.getByPlaceholder('Email or Username').fill('maya@ohc.test');
     await page.getByPlaceholder('Password').fill('password123');
-    await page.getByRole('button', { name: 'Log In' }).click();
+    await page.getByRole('button', { name: 'Login' }).click();
     await expect(page.getByRole('heading', { name: 'Dashboard' }).first()).toBeVisible();
 
     await page.goto('/integrations');

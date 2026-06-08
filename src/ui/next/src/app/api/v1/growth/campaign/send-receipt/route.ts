@@ -4,7 +4,7 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
 
-    const backendUrl = process.env.BACKEND_URL || 'http://127.0.0.1:18789';
+    const backendUrl = process.env.BACKEND_URL || 'http://localhost:8080';
     const backendRes = await fetch(`${backendUrl}/api/v1/growth/campaign/send-receipt`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

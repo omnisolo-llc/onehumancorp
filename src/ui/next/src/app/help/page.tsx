@@ -4,10 +4,10 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 
 export default function HelpCenterPage() {
-  const [articles, setArticles] = useState<{category: string, title: string, desc: string, link: string}[]>([]);
-  const [videos, setVideos] = useState<{id: number, title: string, duration: string, video_url: string}[]>([]);
+  const [articles, setArticles] = useState<{title: string, desc: string, link: string}[]>([]);
+  const [videos, setVideos] = useState<{id: number, title: string, duration: string}[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedVideo, setSelectedVideo] = useState<{id: number, title: string, duration: string, video_url: string} | null>(null);
+  const [selectedVideo, setSelectedVideo] = useState<{id: number, title: string, duration: string} | null>(null);
 
   useEffect(() => {
     const url = searchQuery.trim() ? `/api/help/search?q=${encodeURIComponent(searchQuery.trim())}` : '/api/help';
@@ -52,26 +52,19 @@ export default function HelpCenterPage() {
         ) : (
           <div className="space-y-12">
             {filteredArticles.length > 0 && (
-              <div className="space-y-12">
-                {Array.from(new Set(filteredArticles.map(a => a.category || "General"))).map((category) => (
-                  <section key={category}>
-                    <div className="flex items-center mb-6">
-                      <h2 className="text-2xl font-bold font-outfit text-gray-900">{category}</h2>
-                      <div className="ml-4 flex-grow border-t border-gray-200/50"></div>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                      {filteredArticles.filter(a => (a.category || "General") === category).map((article, idx) => (
-                        <Link key={idx} href={article.link} className="block group">
-                          <div className="bg-white/60 backdrop-blur-[20px] saturate-200 p-6 rounded-2xl shadow-[0_4px_16px_rgba(0,0,0,0.04)] border border-white/50 group-hover:border-blue-300 group-hover:shadow-[0_0_15px_rgba(59,130,246,0.5)] group-hover:-translate-y-1 hover:bg-white/80 transition-all duration-300 cursor-pointer h-full flex flex-col min-h-[140px]">
-                            <h3 className="text-xl font-bold font-outfit text-blue-600 mb-3 group-hover:text-blue-700">{article.title}</h3>
-                            <p className="text-gray-600 leading-relaxed flex-grow">{article.desc}</p>
-                          </div>
-                        </Link>
-                      ))}
-                    </div>
-                  </section>
-                ))}
-              </div>
+              <section>
+                <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-6">Articles</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  {filteredArticles.map((article, idx) => (
+                    <Link key={idx} href={article.link} className="block group">
+                      <div className="bg-white/60 backdrop-blur-[20px] saturate-200 p-6 rounded-2xl shadow-[0_4px_16px_rgba(0,0,0,0.04)] border border-white/50 group-hover:border-blue-300 group-hover:shadow-[0_0_15px_rgba(59,130,246,0.5)] group-hover:-translate-y-1 hover:bg-white/80 transition-all duration-300 cursor-pointer h-full flex flex-col min-h-[140px]">
+                        <h2 className="text-xl font-bold font-outfit text-blue-600 mb-3 group-hover:text-blue-700">{article.title}</h2>
+                        <p className="text-gray-600 leading-relaxed flex-grow">{article.desc}</p>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </section>
             )}
 
             {filteredVideos.length > 0 && (
@@ -111,7 +104,7 @@ export default function HelpCenterPage() {
             </div>
             <div className="aspect-video w-full bg-gray-900 flex items-center justify-center relative">
               <video
-                src={selectedVideo.video_url || ""}
+                src="/placeholder-video.mp4"
                 controls
                 autoPlay
                 className="w-full h-full object-contain"

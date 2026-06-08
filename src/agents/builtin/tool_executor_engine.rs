@@ -1,4 +1,3 @@
-/// Master Catalog B.8. Error Handling (Compounding Error Prevention)
 
 use tokio::time::{sleep, Duration};
 use ohc_builtin_agent_core::types::{ToolCall, ToolError};

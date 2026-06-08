@@ -29,7 +29,6 @@ exports_files(
         "tasks_db.rs",
         "tasks_db_test.rs",
         "router.rs",
-        "load_test.rs",
     ],
     visibility = ["//visibility:public"],
 )

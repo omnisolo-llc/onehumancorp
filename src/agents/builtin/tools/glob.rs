@@ -45,8 +45,10 @@ impl PydanticToolExecutor<GlobArgs> for GlobExecutor {
             .filter_map(|r| r.ok())
             .map(|p| {
                 let mut p_str = p.display().to_string();
-                if let Some(wd) = &self.working_dir && let Ok(rel) = p.strip_prefix(wd) {
-                    p_str = rel.display().to_string();
+                if let Some(wd) = &self.working_dir {
+                    if let Ok(rel) = p.strip_prefix(wd) {
+                        p_str = rel.display().to_string();
+                    }
                 }
                 p_str
             })
@@ -70,7 +72,7 @@ impl PydanticToolExecutor<GlobArgs> for GlobExecutor {
 pub fn glob_tool(working_dir: Option<std::path::PathBuf>) -> Tool {
     Tool {
         name: "Glob".to_string(),
-        description: "Find files matching a glob pattern. Returns newline-separated paths. Used for Context Management (Preventing Context Rot): Just-in-Time (JIT) Context Retrieval.".to_string(),
+        description: "Find files matching a glob pattern. Returns newline-separated paths. Used for Just-in-Time (JIT) Context Retrieval.".to_string(),
         is_read_only: true,
         parameters: json!({
             "type": "object",

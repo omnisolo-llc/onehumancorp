@@ -33,7 +33,7 @@ impl PydanticToolExecutor<ReadArgs> for ReadExecutor {
         let safe_path = std::path::Path::new(&path).strip_prefix("/").unwrap_or(std::path::Path::new(&path));
         let actual_path = if let Some(wd) = &self.working_dir { wd.join(safe_path) } else { std::path::PathBuf::from(&path) };
 
-        // Context Management (Preventing Context Rot): Just-in-Time (JIT) Context Retrieval Mechanic:
+        // Just-in-Time (JIT) Retrieval Mechanic:
         // "Never load full files." We enforce a strict token/line limit and stream the file to prevent loading it entirely into memory.
         let file = fs::File::open(&actual_path)
             .await

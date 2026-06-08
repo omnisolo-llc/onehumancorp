@@ -27,7 +27,6 @@ impl Department for CustomerSuccessAgent {
         vec![
             "tenant.order.fulfillment_ready".to_string(),
             "tenant.message.received".to_string(),
-            "tenant.omnichannel.message.received".to_string(),
             "agent:customer_success:approved".to_string(),
         ]
     }
@@ -87,7 +86,7 @@ impl Department for CustomerSuccessAgent {
             return Ok(());
         }
 
-        if event.event_type == "tenant.message.received" || event.event_type == "tenant.omnichannel.message.received" {
+        if event.event_type == "tenant.message.received" {
             let message = event.payload.get("message").and_then(|v| v.as_str()).unwrap_or("");
 
             let query_embedding = match std::env::var("OHC_INBOX_DRAFT_LLM_PROVIDER")
@@ -105,19 +104,14 @@ impl Department for CustomerSuccessAgent {
 
             let memories = self.orchestrator.query_long_term_memory(&event.tenant_id, &query_embedding, 5).await.unwrap_or_default();
 
-            let mut context_summary = if !memories.is_empty() {
+            let context_summary = if !memories.is_empty() {
                 memories.join("\n")
             } else {
                 "No relevant memory found.".to_string()
             };
 
-            if let Ok(inventory_summary) = self.orchestrator.get_inventory_summary(&event.tenant_id).await {
-                context_summary.push_str("\n\n");
-                context_summary.push_str(&inventory_summary);
-            }
-
             let prompt = format!(
-                "Write one concise, warm customer-service reply for an omnichannel SMB inbox. Do not invent policies, availability, prices, or order state. Use the provided inventory context if asked about product availability. Tenant: {}. Customer message: {}\n\nContext:\n{}",
+                "Write one concise, warm customer-service reply for an omnichannel SMB inbox. Do not invent policies, availability, prices, or order state. Tenant: {}. Customer message: {}\n\nContext:\n{}",
                 event.tenant_id, message, context_summary
             );
             let compressed_prompt = crate::pricing::compression::reduce_tokens(&prompt);
@@ -148,7 +142,7 @@ impl Department for CustomerSuccessAgent {
 
             let action_payload = serde_json::json!({
                 "feature_type": "ambassador_reply",
-                "original_message": if message.is_empty() { "Do you have vegan options for birthday cakes?" } else { message },
+                "original_message": message,
                 "generated_response": generated_response,
                 "context_used": context_summary,
                 "inbox_message_id": inbox_id,

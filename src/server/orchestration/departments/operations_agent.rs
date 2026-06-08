@@ -23,8 +23,6 @@ impl Department for OperationsAgent {
             "tenant.quote.accepted".to_string(),
             "tenant.order.created".to_string(),
             "tenant.subscription.fulfillment_batch.created".to_string(),
-            "LowStockAlert".to_string(),
-            "PosSyncFailure".to_string(),
         ]
     }
 
@@ -42,14 +40,6 @@ impl Department for OperationsAgent {
 
         let action_description = match event.event_type.as_str() {
             "tenant.order.created" => "Process Order & Update Inventory".to_string(),
-            "LowStockAlert" => {
-                let product_id = event.payload.get("product_id").and_then(|v| v.as_str()).unwrap_or("unknown");
-                format!("Draft a restock order for product {} due to low stock", product_id)
-            },
-            "PosSyncFailure" => {
-                let transaction_id = event.payload.get("transaction_id").and_then(|v| v.as_str()).unwrap_or("unknown");
-                format!("Review POS offline sync discrepancy for transaction {}", transaction_id)
-            },
             "tenant.subscription.fulfillment_batch.created" => {
                 let batch_id = event
                     .payload

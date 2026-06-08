@@ -10,7 +10,7 @@ use regex::Regex;
 
 use opentelemetry::metrics::Histogram;
 
-use opentelemetry::metrics::{Counter, UpDownCounter, Gauge};
+use opentelemetry::metrics::{Counter, UpDownCounter};
 
 static SUB_AGENT_QUEUE_LENGTH_GAUGE: OnceLock<UpDownCounter<i64>> = OnceLock::new();
 static SUB_AGENT_QUEUE_DELAY_HISTOGRAM: OnceLock<Histogram<f64>> = OnceLock::new();
@@ -20,7 +20,6 @@ static BUBBLEWRAP_EXECUTION_LATENCY: OnceLock<Histogram<f64>> = OnceLock::new();
 static BUBBLEWRAP_VIOLATION_TOTAL: OnceLock<UpDownCounter<i64>> = OnceLock::new();
 static SANDBOX_VIOLATION_TOTAL: OnceLock<UpDownCounter<i64>> = OnceLock::new();
 static TOKEN_USAGE: OnceLock<Counter<u64>> = OnceLock::new();
-static AGENT_EFFICIENCY_SCORE: OnceLock<Gauge<f64>> = OnceLock::new();
 static AGENT_API_CALL: OnceLock<Counter<u64>> = OnceLock::new();
 static AGENT_API_ERROR: OnceLock<Counter<u64>> = OnceLock::new();
 static HUMAN_INTERACTION: OnceLock<Counter<u64>> = OnceLock::new();
@@ -30,7 +29,6 @@ static MCP_TOOL_CALLS_TOTAL: OnceLock<Counter<u64>> = OnceLock::new();
 static POSTGRES_LOCK_CONTENTION: OnceLock<Counter<u64>> = OnceLock::new();
 static LLM_NETWORK_LATENCY: OnceLock<Histogram<f64>> = OnceLock::new();
 static AUTODREAM_SYNC_DURATION: OnceLock<Histogram<f64>> = OnceLock::new();
-static TOKEN_USAGE_BY_OUTCOME: OnceLock<Counter<u64>> = OnceLock::new();
 
 static ERROR_SIGNAL_CATEGORIZED: OnceLock<Counter<u64>> = OnceLock::new();
 
@@ -122,21 +120,6 @@ pub fn get_token_usage_counter() -> &'static Counter<u64> {
         meter.u64_counter("token_usage").build()
     })
 }
-
-pub fn get_token_usage_by_outcome_counter() -> &'static Counter<u64> {
-    TOKEN_USAGE_BY_OUTCOME.get_or_init(|| {
-        let meter = global::meter("ohc.telemetry");
-        meter.u64_counter("ohc_token_usage_by_outcome").build()
-    })
-}
-
-pub fn get_agent_efficiency_score_gauge() -> &'static Gauge<f64> {
-    AGENT_EFFICIENCY_SCORE.get_or_init(|| {
-        let meter = global::meter("ohc.telemetry");
-        meter.f64_gauge("ohc_agent_roi_efficiency_score").build()
-    })
-}
-
 
 pub fn get_agent_api_call_counter() -> &'static Counter<u64> {
     AGENT_API_CALL.get_or_init(|| {
@@ -875,7 +858,6 @@ pub async fn record_task_resolution_efficiency(
     role: &str,
     model: &str,
     tokens: i64,
-    tenant_id: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let deployment_mode = get_deployment_mode();
 
@@ -890,22 +872,9 @@ pub async fn record_task_resolution_efficiency(
             "agent_role": role,
             "model": model,
             "deployment_mode": deployment_mode,
-            "tenant_id": tenant_id,
         }),
     )
     .await?;
-
-    let token_usage_counter = get_token_usage_by_outcome_counter();
-    token_usage_counter.add(
-        tokens as u64,
-        &[
-            opentelemetry::KeyValue::new("outcome", outcome.to_string()),
-            opentelemetry::KeyValue::new("agent_role", role.to_string()),
-            opentelemetry::KeyValue::new("model", model.to_string()),
-            opentelemetry::KeyValue::new("deployment_mode", deployment_mode.to_string()),
-            opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string()),
-        ],
-    );
 
     // 2. ROI Calculation in Telemetry
     // Efficiency = 1 / (Tokens Consumed * 1000) for SUCCESS
@@ -919,20 +888,9 @@ pub async fn record_task_resolution_efficiency(
             serde_json::json!({
                 "agent_role": role,
                 "deployment_mode": deployment_mode,
-                "tenant_id": tenant_id,
             }),
         )
         .await?;
-
-        let efficiency_gauge = get_agent_efficiency_score_gauge();
-        efficiency_gauge.record(
-            efficiency as f64,
-            &[
-                opentelemetry::KeyValue::new("agent_role", role.to_string()),
-                opentelemetry::KeyValue::new("deployment_mode", deployment_mode.to_string()),
-                opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string()),
-            ],
-        );
     }
 
     Ok(())
@@ -1211,9 +1169,6 @@ pub fn is_sensitive_key(key: &str) -> bool {
         || k.contains("salary")
         || k.contains("tax")
         || k.contains("social_security")
-        || k.contains("ip_address")
-        || k.contains("mac_address")
-        || k.contains("credit_card")
 }
 
 pub fn is_email(s: &str) -> bool {
@@ -1272,12 +1227,11 @@ pub async fn record_storage_rw_cost(
     operation: &str,
     size_bytes: i64,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let cost_cents = (size_bytes as f64 * 0.00000001) as f32;
     buffer_metric(
         pool,
         "ohc_storage_rw_cost",
         "counter",
-        cost_cents,
+        size_bytes as f32,
         serde_json::json!({
             "organization_id": organization_id,
             "operation": operation,
@@ -1453,11 +1407,8 @@ mod additional_tests {
         assert_eq!(metric_name, "ohc_autodream_sync_duration_seconds");
         record_autodream_sync_duration(0.25, "Standalone");
 
-        let dashboard = fs::read_to_string("../monitoring/dashboards/hybrid-telemetry.json").or_else(|_| {
-            fs::read_to_string("../../monitoring/dashboards/hybrid-telemetry.json").or_else(|_| {
-                fs::read_to_string("src/server/monitoring/dashboards/hybrid-telemetry.json")
-            })
-        }).expect("hybrid telemetry dashboard should be readable");
+        let dashboard = fs::read_to_string("src/server/monitoring/dashboards/hybrid-telemetry.json")
+            .expect("hybrid telemetry dashboard should be readable");
         assert!(dashboard.contains(metric_name));
     }
 }
@@ -1561,30 +1512,8 @@ mod harness_io_bytes_tests {
     }
 }
 
-pub static HARNESS_SECURITY_DIVERGENCE_TOTAL: OnceLock<Counter<u64>> = OnceLock::new();
-
 pub static RAG_RECORDS_SYNCED_TOTAL: OnceLock<Counter<u64>> = OnceLock::new();
 pub static RAG_SYNC_ERRORS_TOTAL: OnceLock<Counter<u64>> = OnceLock::new();
-
-pub fn get_harness_security_divergence_total() -> &'static Counter<u64> {
-    HARNESS_SECURITY_DIVERGENCE_TOTAL.get_or_init(|| {
-        global::meter("ohc.telemetry")
-            .u64_counter("ohc_harness_security_divergence_total")
-            .with_description("Total number of security divergence validations triggered in Harness")
-            .build()
-    })
-}
-
-pub fn record_harness_security_divergence(reason: &str, command_snippet: &str) {
-    let counter = get_harness_security_divergence_total();
-    counter.add(
-        1,
-        &[
-            opentelemetry::KeyValue::new("reason", reason.to_string()),
-            opentelemetry::KeyValue::new("command_snippet", command_snippet.to_string()),
-        ],
-    );
-}
 
 pub fn get_rag_records_synced_total() -> &'static Counter<u64> {
     let meter = global::meter("ohc.hybrid_sync");
@@ -1685,17 +1614,3 @@ impl Drop for ChaosRecoveryTracker {
         record_task_recovery_time(&self.env_mode, self.start.elapsed().as_millis() as f64);
     }
 }
-
-#[cfg(test)]
-mod harness_security_divergence_tests {
-    use super::*;
-
-    #[test]
-    fn test_record_harness_security_divergence() {
-        record_harness_security_divergence("test_reason", "test_cmd");
-        let counter = get_harness_security_divergence_total();
-        counter.add(0, &[]);
-    }
-}
-#[cfg(test)]
-mod dashboard_test;

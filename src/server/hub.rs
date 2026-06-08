@@ -105,11 +105,11 @@ impl Hub {
             subs: RwLock::new(HashMap::new()),
             minimax_api_key,
             caps_tx,
-            pool: pool.clone(),
+            pool,
             mesh_events: RwLock::new(HashMap::new()),
             teammate_events: RwLock::new(HashMap::new()),
             tracker: {
-                let mut t = if let Ok(url) = std::env::var("REDIS_URL") { Tracker::new_with_redis(&url).with_db(pool.clone()) } else { Tracker::new() };
+                let mut t = if let Ok(url) = std::env::var("REDIS_URL") { Tracker::new_with_redis(&url) } else { Tracker::new() };
                 t.set_auditor(cost_auditor.clone());
                 t
             },
