@@ -272,9 +272,40 @@ message SyncOfflineTransactionsResponse {
   repeated string failed_transaction_ids = 3;
 }
 
+
+message StartTerminalSessionRequest {
+  string tenant_id = 1;
+  string device_id = 2;
+}
+
+message StartTerminalSessionResponse {
+  string session_id = 1;
+}
+
+message UpdateTerminalSessionStatusRequest {
+  string session_id = 1;
+  string status = 2;
+}
+
+message UpdateTerminalSessionStatusResponse {
+  bool success = 1;
+}
+
+message EndTerminalSessionRequest {
+  string session_id = 1;
+}
+
+message EndTerminalSessionResponse {
+  bool success = 1;
+}
+
 service PosService {
   rpc SyncOfflineTransactions(SyncOfflineTransactionsRequest) returns (SyncOfflineTransactionsResponse);
+  rpc StartTerminalSession(StartTerminalSessionRequest) returns (StartTerminalSessionResponse);
+  rpc UpdateTerminalSessionStatus(UpdateTerminalSessionStatusRequest) returns (UpdateTerminalSessionStatusResponse);
+  rpc EndTerminalSession(EndTerminalSessionRequest) returns (EndTerminalSessionResponse);
 }
+
 
 message SyncCalendarRequest {
   string tenant_id = 1;

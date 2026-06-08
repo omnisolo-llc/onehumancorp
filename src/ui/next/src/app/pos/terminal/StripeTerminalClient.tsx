@@ -10,6 +10,8 @@ export default function StripeTerminalClient({ amount, productId, tenantId }: { 
   const [discoveredReaders, setDiscoveredReaders] = useState<any[]>([]);
   const [connectedReader, setConnectedReader] = useState<any>(null);
   const [reserving, setReserving] = useState<boolean>(false);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const sessionIdRef = React.useRef<string | null>(null);
 
   useEffect(() => {
     async function initTerminal() {
@@ -25,9 +27,18 @@ export default function StripeTerminalClient({ amount, productId, tenantId }: { 
           const data = await res.json();
           return data.secret;
         },
-        onUnexpectedReaderDisconnect: () => {
+        onUnexpectedReaderDisconnect: async () => {
           setStatus('Reader disconnected unexpectedly.');
           setConnectedReader(null);
+          if (sessionIdRef.current) {
+            await fetch('/api/v1/payments/terminal/session/end', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ session_id: sessionIdRef.current })
+            });
+            setSessionId(null);
+            sessionIdRef.current = null;
+          }
         }
       });
       setTerminal(term);
@@ -57,6 +68,21 @@ export default function StripeTerminalClient({ amount, productId, tenantId }: { 
     } else {
       setConnectedReader(result.reader);
       setStatus('Connected to reader: ' + result.reader.label);
+
+      try {
+        const res = await fetch('/api/v1/payments/terminal/session/start', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ device_id: result.reader.id })
+        });
+        const data = await res.json();
+        if (data.session_id) {
+          setSessionId(data.session_id);
+          sessionIdRef.current = data.session_id;
+        }
+      } catch (e) {
+        console.error('Failed to start terminal session:', e);
+      }
     }
   };
 
@@ -77,7 +103,8 @@ export default function StripeTerminalClient({ amount, productId, tenantId }: { 
              amount: amount,
              quantity: 1,
              idempotency_key: `idemp_${transactionId}`,
-             currency: 'usd'
+             currency: 'usd',
+             session_id: sessionIdRef.current
           });
           setStatus('Payment saved offline. Will sync when network is restored.');
           setReserving(false);
