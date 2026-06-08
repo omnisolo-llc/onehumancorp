@@ -54,7 +54,9 @@ export async function GET(
 
     return response;
   } catch (error) {
-    console.error('Error proxying to Rust Edge Storefront:', error);
+    if (process.env.NODE_ENV !== 'test') {
+      console.error('Error proxying to Rust Edge Storefront:', error);
+    }
     return new NextResponse('Internal Server Error', { status: 500 });
   }
 }

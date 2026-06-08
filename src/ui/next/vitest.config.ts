@@ -10,6 +10,12 @@ export default defineConfig({
     globals: true,
     exclude: [
       '**/node_modules/**',
+      '**/.bazel/**',
+      '**/.cache/bazel/**',
+      '**/bazel-*/**',
+      '**/bazel-out/**',
+      '**/bazel-bin/**',
+      '**/bazel-app/**',
       '**/dist/**',
       '**/e2e/**',
       '**/verification_tests/**',

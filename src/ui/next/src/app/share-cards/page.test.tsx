@@ -1,4 +1,5 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, act } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import ShareCardsPage from './page';
 import { describe, it, expect, vi } from 'vitest';
 
@@ -25,19 +26,19 @@ describe('ShareCardsPage', () => {
     expect(brandingElements.length).toBeGreaterThan(0);
   });
 
-  it('shows soft paywall when trying to remove branding without Pro', () => {
+  it('shows soft paywall when trying to remove branding without Pro', async () => {
     window.localStorage.setItem('has_pro', 'false');
     render(<ShareCardsPage />);
     const toggle = screen.getByRole('checkbox');
-    toggle.click();
+    await userEvent.click(toggle);
     expect(screen.getAllByText('Upgrade to Pro').length).toBeGreaterThan(0);
   });
 
-  it('allows removing branding with Pro', () => {
+  it('allows removing branding with Pro', async () => {
     window.localStorage.setItem('has_pro', 'true');
     render(<ShareCardsPage />);
     const toggle = screen.getByRole('checkbox');
-    toggle.click();
+    await userEvent.click(toggle);
     expect(screen.queryByText('Powered by OHC')).toBeNull();
   });
 });
