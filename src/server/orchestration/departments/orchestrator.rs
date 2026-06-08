@@ -524,7 +524,7 @@ impl DepartmentOrchestrator {
                 tx.commit().await.map_err(|e| e.to_string())?;
                 Ok(entries)
             },
-            crate::db::DbStore::Sqlite(pool) => {
+            crate::db::DbStore::Sqlite(_pool) => {
                 // Return empty for sqlite in tests to avoid rewrite
                 Ok(vec![])
             }
