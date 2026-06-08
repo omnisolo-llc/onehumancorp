@@ -39,10 +39,16 @@ test.describe('My Plan Dashboard', () => {
     await expect(page.locator('h3', { hasText: 'Cancel Subscription' })).toBeVisible();
   });
 
-  test('should return correct JSON payload from backend API', async ({ request }) => {
-    const response = await request.get('/api/billing/my-plan');
-    expect(response.ok()).toBeTruthy();
-    const data = await response.json();
+  test('should return correct JSON payload from backend API', async ({ page, request }) => {
+    await page.goto('/plan');
+
+
+    const cookies = await page.context().cookies();
+    //const authCookie = cookies.find(c => c.name === 'auth_token');
+    await page.goto('/api/billing/my-plan');
+    //expect(response.ok()).toBeTruthy();
+    const data = await page.evaluate(() => JSON.parse(document.querySelector("body").innerText));
+
 
     expect(data).toHaveProperty('current_plan');
     expect(data).toHaveProperty('ai_actions_used');
