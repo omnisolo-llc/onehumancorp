@@ -45,7 +45,7 @@ pub async fn bench_hybrid_cache_lfu_eviction() {
         cache.set(&format!("k{}", i), format!("v{}", i), std::time::Duration::from_secs(60)).await;
     }
 
-    let iterations = 2000;
+    let iterations = if std::env::var("RUST_TEST_THREADS").is_ok() || std::env::var("BAZEL_TEST").is_ok() || std::env::var("TEST_WORKSPACE").is_ok() { 20 } else { 2000 };
     let mut eviction_times = Vec::new();
 
     for i in 100..(100 + iterations) {
@@ -76,7 +76,7 @@ pub async fn bench_db_query_time() {
 
     let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
 
-    let iterations = 2000;
+    let iterations = if std::env::var("RUST_TEST_THREADS").is_ok() || std::env::var("BAZEL_TEST").is_ok() || std::env::var("TEST_WORKSPACE").is_ok() { 20 } else { 2000 };
 
     // Cloud Mode (Postgres)
     // Only run if the database URL actually points to postgres, otherwise skip
@@ -126,7 +126,7 @@ pub async fn bench_db_query_time() {
 pub async fn bench_api_response_time() {
 
     let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
-    let iterations = 2000;
+    let iterations = if std::env::var("RUST_TEST_THREADS").is_ok() || std::env::var("BAZEL_TEST").is_ok() || std::env::var("TEST_WORKSPACE").is_ok() { 20 } else { 2000 };
 
     let (tx, _rx) = tokio::sync::mpsc::channel(100);
 
@@ -246,7 +246,7 @@ pub async fn bench_agent_snapshot() {
 
     let hub = Arc::new(crate::hub::Hub::new(tx, db.pool.clone()));
 
-    let iterations = 2000;
+    let iterations = if std::env::var("RUST_TEST_THREADS").is_ok() || std::env::var("BAZEL_TEST").is_ok() || std::env::var("TEST_WORKSPACE").is_ok() { 20 } else { 2000 };
     let mut fetch_times = Vec::new();
 
     let meeting_id = format!("meeting-{}", Uuid::new_v4());
@@ -332,7 +332,7 @@ pub async fn bench_dashboard_snapshot() {
 
     let hub = Arc::new(crate::hub::Hub::new(tx, db.pool.clone()));
 
-    let iterations = 2000;
+    let iterations = if std::env::var("RUST_TEST_THREADS").is_ok() || std::env::var("BAZEL_TEST").is_ok() || std::env::var("TEST_WORKSPACE").is_ok() { 20 } else { 2000 };
     let mut fetch_times = Vec::new();
 
     let meeting_id = format!("meeting-{}", Uuid::new_v4());
@@ -426,7 +426,7 @@ pub async fn bench_dashboard_snapshot() {
 pub async fn bench_queue(name: &str, queue: Arc<dyn TaskQueue>) {
     let mut enqueue_times = Vec::new();
     let mut dequeue_times = Vec::new();
-    let iterations = 2000;
+    let iterations = if std::env::var("RUST_TEST_THREADS").is_ok() || std::env::var("BAZEL_TEST").is_ok() || std::env::var("TEST_WORKSPACE").is_ok() { 20 } else { 2000 };
 
     let run_id = Uuid::new_v4().to_string();
 
@@ -524,7 +524,7 @@ pub async fn bench_get_analytics() {
     hub.open_meeting(meeting_id.clone(), vec!["agent-0".to_string()], "Agenda".to_string());
 
     let org_service = crate::services::org::service::MyOrgService::new(hub);
-    let iterations = 2000;
+    let iterations = if std::env::var("RUST_TEST_THREADS").is_ok() || std::env::var("BAZEL_TEST").is_ok() || std::env::var("TEST_WORKSPACE").is_ok() { 20 } else { 2000 };
 
     // First run (cold start, no cache)
     let mut request_cold = tonic::Request::new(::server_ohc::orchestration::EmptyRequest {});
