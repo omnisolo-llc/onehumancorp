@@ -786,6 +786,49 @@ impl DepartmentOrchestrator {
                     }
                 }
 
+                // If this is a stockout restock and price approval, execute the price change and dispatch a job
+                if let Some(payload) = &original_payload {
+                    if payload.get("feature_type").and_then(|v| v.as_str()) == Some("stockout_restock_and_price") {
+                        if let Some(product_id) = payload.get("product_id").and_then(|v| v.as_str()) {
+                            let new_price = payload.get("new_price").and_then(|v| v.as_f64()).unwrap_or(0.0);
+                            let new_price_cents = (new_price * 100.0) as i64;
+
+                            if let DbStore::Postgres = &self.db.store {
+                                let _ = sqlx::query("UPDATE products SET price = $1, price_cents = $2 WHERE id = $3 AND tenant_id = $4")
+                                    .bind(new_price)
+                                    .bind(new_price_cents)
+                                    .bind(product_id)
+                                    .bind(tenant_id)
+                                    .execute(&self.db.pool)
+                                    .await;
+
+                                // Dispatch simulated reorder to job queue
+                                let job_id = uuid::Uuid::new_v4().to_string();
+                                let reorder_quantity = payload.get("suggested_reorder_quantity").and_then(|v| v.as_i64()).unwrap_or(50);
+                                let job_payload = serde_json::json!({
+                                    "action": "reorder_stock",
+                                    "product_id": product_id,
+                                    "quantity": reorder_quantity,
+                                });
+                                let _ = sqlx::query("INSERT INTO ohc_job_queue (id, tenant_id, queue_name, payload, status) VALUES ($1, $2, 'operations_queue', $3, 'pending')")
+                                    .bind(&job_id)
+                                    .bind(tenant_id)
+                                    .bind(&job_payload)
+                                    .execute(&self.db.pool)
+                                    .await;
+                            } else if let DbStore::Sqlite(pool) = &self.db.store {
+                                let _ = sqlx::query("UPDATE products SET price = ?, price_cents = ? WHERE id = ? AND tenant_id = ?")
+                                    .bind(new_price)
+                                    .bind(new_price_cents)
+                                    .bind(product_id)
+                                    .bind(tenant_id)
+                                    .execute(pool)
+                                    .await;
+                            }
+                        }
+                    }
+                }
+
                 // If this is a Smart Pricing approval, execute the price change in the database directly.
                 if let Some(payload) = &original_payload {
                     if payload.get("context").and_then(|c| c.get("smart_pricing")).and_then(|v| v.as_bool()).unwrap_or(false) {
@@ -889,6 +932,26 @@ impl DepartmentOrchestrator {
             }
         }
         Ok(())
+    }
+
+    pub async fn simulate_stockout_restock_and_price(&self, tenant_id: &str) -> Result<(), String> {
+        let payload = serde_json::json!({
+            "feature_type": "stockout_restock_and_price",
+            "product_id": uuid::Uuid::new_v4().to_string(),
+            "product_name": "Red Dress",
+            "old_price": 40.0,
+            "new_price": 46.0,
+            "suggested_reorder_quantity": 50,
+            "message": "Red Dress sold out in 2 days. Demand is high. Operations Agent drafted a reorder for 50 units. Finance Agent suggests raising price from $40 to $46."
+        });
+
+        self.execute_action(
+            DepartmentType::BusinessAdvisory,
+            "Urgent: Red Dress Stockout & Price Action".to_string(),
+            tenant_id.to_string(),
+            ActionRisk::DraftForReview,
+            payload
+        ).await.map(|_| ())
     }
 
     pub async fn simulate_smart_pricing(&self, tenant_id: &str) -> Result<(), String> {
