@@ -18,6 +18,7 @@ import { NeighborhoodPulseCard } from "./NeighborhoodPulseCard";
 import { PromoterCard } from "./PromoterCard";
 import { ViralLoopPerformanceWidget } from "./ViralLoopPerformanceWidget";
 import { SuccessMilestoneAlert } from "./SuccessMilestoneAlert";
+import AffiliateMarketingWidget from "./AffiliateMarketingWidget";
 
 type DashboardMetrics = {
   active_customers: number;
@@ -317,6 +318,9 @@ export default function Dashboard() {
 
       <SuccessMilestoneAlert />
       <ViralLoopPerformanceWidget />
+      <div className="mb-6">
+        <AffiliateMarketingWidget />
+      </div>
 
       <div className="mb-6">
           <SmartBlock type="PoweredBy" props={{ tenantId: tenantId(), isPremium: false }} />
