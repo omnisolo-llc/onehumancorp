@@ -171,3 +171,57 @@ async fn test_create_payment_intent_authenticated_via_router() {
     let body_str = String::from_utf8(body.to_vec()).unwrap();
     assert!(body_str.contains("Unauthenticated"));
 }
+
+#[tokio::test]
+async fn test_reserve_inventory_authenticated() {
+    let hub = Arc::new(Hub::new());
+    let app_with_auth = axum::Router::new()
+        .route("/reserve", axum::routing::post(crate::api::terminal_api::reserve_inventory_handler))
+        .with_state(hub)
+        .layer(axum::extract::Extension(::server_auth::orchestration::AuthInfo {
+            org_id: "test_tenant".to_string(),
+            ..Default::default()
+        }));
+
+    // In a real environment with Redis and DB, this would acquire the lock.
+    // Here we are testing the basic route and parsing.
+    let response = app_with_auth
+        .oneshot(
+            Request::builder()
+                .uri("/reserve")
+                .method("POST")
+                .header("Content-Type", "application/json")
+                .body(Body::from(r#"{"tenant_id": "test_tenant", "product_id": "prod_1", "quantity": 1, "ttl_seconds": 15}"#))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::OK);
+}
+
+#[tokio::test]
+async fn test_commit_inventory_authenticated() {
+    let hub = Arc::new(Hub::new());
+    let app_with_auth = axum::Router::new()
+        .route("/commit", axum::routing::post(crate::api::terminal_api::commit_inventory_handler))
+        .with_state(hub)
+        .layer(axum::extract::Extension(::server_auth::orchestration::AuthInfo {
+            org_id: "test_tenant".to_string(),
+            ..Default::default()
+        }));
+
+    let response = app_with_auth
+        .oneshot(
+            Request::builder()
+                .uri("/commit")
+                .method("POST")
+                .header("Content-Type", "application/json")
+                .body(Body::from(r#"{"tenant_id": "test_tenant", "product_id": "prod_1", "quantity": 1, "lock_id": "lock_1"}"#))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::OK);
+}
