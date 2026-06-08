@@ -111,7 +111,7 @@ pub async fn create_checkout_session_handler(
 
     if let Some(client) = &hub.tracker().stripe_client {
         // Assume price_id corresponds to the tier directly or is generated. We pass the tier name as the price_id for now.
-        match client.create_checkout_session(&req.tier, &tenant_id, amount_usd).await {
+        match client.create_checkout_session(&req.tier, &tenant_id, amount_usd, None).await {
             Ok(url) => Ok(Json(CreateCheckoutSessionResponse { checkout_url: url })),
             Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
         }

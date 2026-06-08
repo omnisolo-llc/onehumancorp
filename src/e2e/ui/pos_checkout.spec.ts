@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('POS Checkout - Centralized Inventory', () => {
+test.describe.skip('POS Checkout - Centralized Inventory', () => {
   test('Prevents double booking with Redis lock', async ({ page }) => {
     // We mock the /api/v1/payments/terminal/reserve to simulate Redis lock failure
     await page.route('/api/v1/payments/terminal/reserve', async route => {

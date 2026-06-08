@@ -1303,7 +1303,7 @@ impl HubService for MyHubService {
         } else if let Some(mp_client) = mercadopago_client.filter(|_| is_latam) {
             mp_client.create_checkout_preference(&req.plan_id, &tenant_id).await
         } else {
-            client.create_checkout_session(&req.plan_id, &tenant_id, amount).await
+            client.create_checkout_session(&req.plan_id, &tenant_id, amount, None).await
         }
             .map_err(|e| tonic::Status::internal(e))?;
 
@@ -3703,6 +3703,53 @@ async fn create_ui_bom_item_handler(
                 voice_engine.end_call(&session_id).await;
 
                 axum::response::Json(serde_json::json!({ "reply": reply }))
+            }
+        }))
+        .route("/api/checkout/stripe", axum::routing::post({
+            let hub_clone = hub.clone();
+            move |axum::Json(req): axum::Json<serde_json::Value>| async move {
+                let tenant_id = req.get("tenant_id").and_then(|v| v.as_str()).unwrap_or("default").to_string();
+                let amount_cents = req.get("amount_cents").and_then(|v| v.as_i64()).unwrap_or(4500);
+                let product_id = req.get("product_id").and_then(|v| v.as_str()).unwrap_or("prod_123");
+                let quantity = req.get("quantity").and_then(|v| v.as_i64()).unwrap_or(1);
+
+                let mut lock_acquired = false;
+                let mut lock_id = String::new();
+                let lock_key = format!("ohc:lock:{}:inventory:{}", tenant_id, product_id);
+
+                if let Some(client) = &hub_clone.redis_client {
+                    if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
+                        lock_id = uuid::Uuid::new_v4().to_string();
+                        let ttl = 15 * 60; // 15 minutes for cart
+                        let acquired: bool = redis::cmd("SET")
+                            .arg(&lock_key).arg(&lock_id).arg("EX").arg(ttl).arg("NX")
+                            .query_async(&mut conn).await.unwrap_or(false);
+
+                        lock_acquired = acquired;
+                    }
+                }
+
+                if !lock_acquired && hub_clone.redis_client.is_some() {
+                     return axum::response::Json(serde_json::json!({
+                        "error": "Item is currently being purchased elsewhere"
+                    }));
+                }
+
+                // Call Stripe API
+                let amount_usd = (amount_cents as f64) / 100.0;
+                let stripe_client = crate::integrations::stripe::client::StripeClient::new(std::env::var("STRIPE_API_KEY").unwrap_or_default());
+
+                match stripe_client.create_checkout_session(product_id, "default_customer", amount_usd, Some(lock_id.clone())).await {
+                    Ok(url) => axum::response::Json(serde_json::json!({ "checkout_url": url, "lock_id": lock_id })),
+                    Err(e) => {
+                         if let Some(client) = &hub_clone.redis_client {
+                            if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
+                                let _: () = redis::cmd("DEL").arg(&lock_key).query_async(&mut conn).await.unwrap_or(());
+                            }
+                         }
+                         axum::response::Json(serde_json::json!({ "error": e }))
+                    }
+                }
             }
         }))
         .route("/api/checkout/mercadopago", axum::routing::post(|axum::Json(req): axum::Json<serde_json::Value>| async move {
