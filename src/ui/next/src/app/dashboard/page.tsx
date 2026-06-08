@@ -1,5 +1,5 @@
 "use client";
-import { FloatingActionButton } from "./FAB";
+import { FloatingActionButton } from "./components/FAB";
 
 
 
@@ -13,10 +13,10 @@ import { InteractiveWalkthrough, WalkthroughTarget } from "../../components/Walk
 import { WithTooltip } from "../../components/TooltipRegistry";
 import GrowthReferralWidget from "../components/GrowthReferralWidget";
 import { SmartBlock } from "../builder/components";
-import { UnifiedAgentFeed } from "./UnifiedAgentFeed";
-import { NeighborhoodPulseCard } from "./NeighborhoodPulseCard";
-import { ViralLoopPerformanceWidget } from "./ViralLoopPerformanceWidget";
-import { SuccessMilestoneAlert } from "./SuccessMilestoneAlert";
+import { UnifiedAgentFeed } from "./components/UnifiedAgentFeed";
+import { NeighborhoodPulseCard } from "./components/NeighborhoodPulseCard";
+import { ViralLoopPerformanceWidget } from "./components/ViralLoopPerformanceWidget";
+import { SuccessMilestoneAlert } from "./components/SuccessMilestoneAlert";
 
 type DashboardMetrics = {
   active_customers: number;

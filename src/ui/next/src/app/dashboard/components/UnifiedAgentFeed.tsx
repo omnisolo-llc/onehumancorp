@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import GrowthReferralWidget from "../components/GrowthReferralWidget";
+import GrowthReferralWidget from "../../components/GrowthReferralWidget";
 
 type ApprovalRequest = {
   id: string;
