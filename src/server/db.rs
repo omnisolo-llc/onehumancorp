@@ -891,7 +891,10 @@ impl DB {
                 }
             }
             DbStore::Postgres => {
-                let tenants = sqlx::query("SELECT id FROM tenants").fetch_all(&self.pool).await?;
+                let mut system_tx = self.pool.begin().await?;
+                ::server_common::auth_utils::set_org_context(&mut *system_tx, "system").await?;
+                let tenants = sqlx::query("SELECT id FROM tenants").fetch_all(&mut *system_tx).await?;
+                system_tx.commit().await?;
                 for tenant_row in tenants {
                     let tenant_id: String = tenant_row.get("id");
                     let mut tx = self.pool.begin().await?;
@@ -965,7 +968,10 @@ impl DB {
                 }
             }
             DbStore::Postgres => {
-                let tenants = sqlx::query("SELECT id FROM tenants").fetch_all(&self.pool).await?;
+                let mut system_tx = self.pool.begin().await?;
+                ::server_common::auth_utils::set_org_context(&mut *system_tx, "system").await?;
+                let tenants = sqlx::query("SELECT id FROM tenants").fetch_all(&mut *system_tx).await?;
+                system_tx.commit().await?;
                 for tenant_row in tenants {
                     let tenant_id: String = tenant_row.get("id");
                     let mut tx = self.pool.begin().await?;
@@ -1006,14 +1012,17 @@ impl DB {
                 sqlx::query("INSERT INTO agent_memories (id, tenant_id, task_id, raw_content, summary_embedding) VALUES (?, ?, ?, ?, ?)").bind(id).bind(org_id).bind(task_id).bind(content).bind(embedding).execute(sqlite_pool).await?;
             }
             DbStore::Postgres => {
+                let mut tx = self.pool.begin().await?;
+                ::server_common::auth_utils::set_org_context(&mut *tx, org_id).await?;
                 sqlx::query("INSERT INTO agent_memories (id, tenant_id, task_id, raw_content, summary_embedding) VALUES ($1, $2, $3, $4, $5)")
                 .bind(id)
                 .bind(org_id)
                 .bind(task_id)
                 .bind(content)
                 .bind(embedding)
-                .execute(&self.pool)
+                .execute(&mut *tx)
                 .await?;
+                tx.commit().await?;
             }
         };
 
@@ -1044,6 +1053,8 @@ impl DB {
                     .await?;
             }
             DbStore::Postgres => {
+                let mut tx = self.pool.begin().await?;
+                ::server_common::auth_utils::set_org_context(&mut *tx, org_id).await?;
                 sqlx::query("INSERT INTO autodream_memories (id, tenant_id, agent_id, task_id, content, embedding, source_type) VALUES ($1, $2, $3, $4, $5, $6::vector, $7)")
                     .bind(id)
                     .bind(org_id)
@@ -1052,8 +1063,9 @@ impl DB {
                     .bind(content)
                     .bind(embedding)
                     .bind(source_type)
-                    .execute(&self.pool)
+                    .execute(&mut *tx)
                     .await?;
+                tx.commit().await?;
             }
         }
         Ok(())
@@ -1083,6 +1095,8 @@ impl DB {
                     .await?;
             }
             DbStore::Postgres => {
+                let mut tx = self.pool.begin().await?;
+                ::server_common::auth_utils::set_org_context(&mut *tx, org_id).await?;
                 sqlx::query("INSERT INTO knowledge_embeddings (id, tenant_id, agent_id, task_id, content, embedding, source_type) VALUES ($1, $2, $3, $4, $5, $6::vector, $7)")
                     .bind(uuid::Uuid::parse_str(id).unwrap_or_else(|_| uuid::Uuid::new_v4()))
                     .bind(org_id)
@@ -1091,8 +1105,9 @@ impl DB {
                     .bind(content)
                     .bind(embedding)
                     .bind(source_type)
-                    .execute(&self.pool)
+                    .execute(&mut *tx)
                     .await?;
+                tx.commit().await?;
             }
         }
         Ok(())

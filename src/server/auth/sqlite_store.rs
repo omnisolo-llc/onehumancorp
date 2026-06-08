@@ -62,7 +62,7 @@ impl UserRepository for SqliteUserRepository {
     async fn get_by_id(&self, id: &str, org_id: &str) -> Result<User, String> {
         validate_org_id!(org_id);
         let is_multitenant = ::server_config::get().multitenant;
-        let should_bypass = !is_multitenant && org_id == "system";
+        let should_bypass = !is_multitenant;
         let query = if should_bypass {
             "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE id = $1"
         } else {
@@ -94,7 +94,7 @@ impl UserRepository for SqliteUserRepository {
     async fn get_by_username(&self, username: &str, org_id: &str) -> Result<User, String> {
         validate_org_id!(org_id);
         let is_multitenant = ::server_config::get().multitenant;
-        let should_bypass = !is_multitenant && org_id == "system";
+        let should_bypass = !is_multitenant;
         let query = if should_bypass {
             "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE username = $1"
         } else {
@@ -126,7 +126,7 @@ impl UserRepository for SqliteUserRepository {
     async fn get_by_email(&self, email: &str, org_id: &str) -> Result<User, String> {
         validate_org_id!(org_id);
         let is_multitenant = ::server_config::get().multitenant;
-        let should_bypass = !is_multitenant && org_id == "system";
+        let should_bypass = !is_multitenant;
         let query = if should_bypass {
             "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE email = $1"
         } else {
@@ -158,7 +158,7 @@ impl UserRepository for SqliteUserRepository {
     async fn get_by_oidc_subject(&self, sub: &str, org_id: &str) -> Result<User, String> {
         validate_org_id!(org_id);
         let is_multitenant = ::server_config::get().multitenant;
-        let should_bypass = !is_multitenant && org_id == "system";
+        let should_bypass = !is_multitenant;
         let query = if should_bypass {
             "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE oidc_subject = $1"
         } else {
@@ -190,7 +190,7 @@ impl UserRepository for SqliteUserRepository {
     async fn list_users(&self, org_id: &str) -> Result<Vec<User>, String> {
         validate_org_id!(org_id);
         let is_multitenant = ::server_config::get().multitenant;
-        let should_bypass = !is_multitenant && org_id == "system";
+        let should_bypass = !is_multitenant;
         let query = if should_bypass {
             "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users ORDER BY created_at"
         } else {
@@ -227,7 +227,7 @@ impl UserRepository for SqliteUserRepository {
         validate_org_id!(org_id);
         let roles_json = serde_json::to_string(&user.roles).unwrap_or_default();
         let is_multitenant = ::server_config::get().multitenant;
-        let should_bypass = !is_multitenant && org_id == "system";
+        let should_bypass = !is_multitenant;
 
         let query = if should_bypass {
             r#"
@@ -281,7 +281,7 @@ impl UserRepository for SqliteUserRepository {
     async fn delete_user(&self, id: &str, org_id: &str) -> Result<(), String> {
         validate_org_id!(org_id);
         let is_multitenant = ::server_config::get().multitenant;
-        let should_bypass = !is_multitenant && org_id == "system";
+        let should_bypass = !is_multitenant;
         let query = if should_bypass {
             "DELETE FROM users WHERE id = $1 RETURNING id"
         } else {
@@ -403,7 +403,7 @@ mod tests {
         let repo = SqliteUserRepository::new(_pool.clone());
 
         let is_multitenant = ::server_config::get().multitenant;
-        let org_id = "system"; let should_bypass = !is_multitenant && org_id == "system";
+        let org_id = "system"; let should_bypass = !is_multitenant;
         assert!(!should_bypass || is_multitenant == false, "Cloud mode should NEVER bypass tenant filters when org_id is 'system'");
 
         let res = repo.get_by_id("dummy_id", "system").await;
@@ -436,7 +436,7 @@ mod tests {
         };
 
         let is_multitenant = ::server_config::get().multitenant;
-        let org_id = "system"; let should_bypass = !is_multitenant && org_id == "system";
+        let org_id = "system"; let should_bypass = !is_multitenant;
         assert!(!should_bypass || is_multitenant == false, "Cloud mode should NEVER bypass tenant filters when org_id is 'system'");
 
         let res = repo.update_user(dummy_user, "system").await;
