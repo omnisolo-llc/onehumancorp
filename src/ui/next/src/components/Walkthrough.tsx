@@ -123,7 +123,7 @@ export function InteractiveWalkthrough({ steps, isOpen, onClose, onComplete }: W
       {/* Target Highlight Overlay (using box-shadow to punch a hole) */}
       {targetRect && (
         <div
-          className="fixed z-[90] pointer-events-none transition-all duration-300 ease-in-out border-2 border-blue-500 rounded-lg shadow-[0_0_0_9999px_rgba(0,0,0,0.5)]"
+          className="fixed z-[90] pointer-events-none transition-all duration-300 ease-in-out ring-4 ring-blue-500/50 rounded-xl shadow-[0_0_0_9999px_rgba(0,0,0,0.6)] backdrop-blur-[2px]"
           style={{
             top: targetRect.top - 4,
             left: targetRect.left - 4,
