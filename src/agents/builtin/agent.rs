@@ -949,6 +949,35 @@ impl Agent {
 
         let mut graph = crate::langgraph::StateGraph::<AgentState>::new(std::sync::Arc::new(AgentStateReducer));
 
+        // Adapt existing checkpointer to LangGraph's StateCheckpointer if configured
+        if let (Some(cp), Some(thread_id)) = (&self.checkpointer, &cfg.thread_id) {
+            struct LangGraphCheckpointerAdapter {
+                cp: std::sync::Arc<dyn crate::checkpointer::CheckpointSaver>,
+                thread_id: String,
+            }
+
+            #[async_trait::async_trait]
+            impl crate::langgraph::StateCheckpointer<AgentState> for LangGraphCheckpointerAdapter {
+                async fn save_checkpoint(&self, node: &str, state: &AgentState) -> Result<(), String> {
+                    let checkpoint_id = uuid::Uuid::new_v4().to_string();
+                    let checkpoint = crate::checkpointer::Checkpoint {
+                        thread_id: self.thread_id.clone(),
+                        checkpoint_id,
+                        parent_id: None, // Simplified for this adapter
+                        data: serde_json::to_value(&state.messages).unwrap_or(serde_json::Value::Null),
+                        metadata: serde_json::json!({"node": node}),
+                        created_at: chrono::Utc::now(),
+                    };
+                    self.cp.put_checkpoint(checkpoint).await
+                }
+            }
+
+            graph = graph.with_checkpointer(std::sync::Arc::new(LangGraphCheckpointerAdapter {
+                cp: cp.clone(),
+                thread_id: thread_id.clone(),
+            }));
+        }
+
         let llm = self.llm.clone();
         let tools_def: Vec<_> = session_tools.iter().map(|t| crate::types::ToolDefinition {
             name: t.name.clone(),

@@ -15,12 +15,19 @@ pub type BoxFuture<'a, T> = Pin<Box<dyn Future<Output = T> + Send + 'a>>;
 pub type NodeFn<S> = Arc<dyn Fn(S) -> BoxFuture<'static, Result<S, String>> + Send + Sync>;
 pub type ConditionFn<S> = Arc<dyn Fn(&S) -> String + Send + Sync>;
 
+/// Trait for checkpointing the state at super-step boundaries.
+#[async_trait::async_trait]
+pub trait StateCheckpointer<S>: Send + Sync {
+    async fn save_checkpoint(&self, node: &str, state: &S) -> Result<(), String>;
+}
+
 pub struct StateGraph<S> {
     nodes: HashMap<String, NodeFn<S>>,
     edges: HashMap<String, String>,
     conditional_edges: HashMap<String, ConditionFn<S>>,
     entry_point: Option<String>,
     reducer: Arc<dyn Reducer<S>>,
+    checkpointer: Option<Arc<dyn StateCheckpointer<S>>>,
 }
 
 pub const END: &str = "__END__";
@@ -33,7 +40,13 @@ impl<S: Clone + Send + Sync + 'static> StateGraph<S> {
             conditional_edges: HashMap::new(),
             entry_point: None,
             reducer,
+            checkpointer: None,
         }
+    }
+
+    pub fn with_checkpointer(mut self, checkpointer: Arc<dyn StateCheckpointer<S>>) -> Self {
+        self.checkpointer = Some(checkpointer);
+        self
     }
 
     pub fn add_node<F, Fut>(&mut self, name: &str, node_fn: F)
@@ -79,6 +92,12 @@ impl<S: Clone + Send + Sync + 'static> StateGraph<S> {
 
             let update = node_fn(current_state.clone()).await?;
             self.reducer.reduce(&mut current_state, update);
+
+            if let Some(cp) = &self.checkpointer {
+                if let Err(e) = cp.save_checkpoint(&current_node, &current_state).await {
+                    tracing::error!("Failed to save LangGraph checkpoint: {}", e);
+                }
+            }
 
             if let Some(cond_fn) = self.conditional_edges.get(&current_node) {
                 current_node = cond_fn(&current_state);
@@ -188,5 +207,60 @@ mod tests {
         assert_eq!(final_state.messages[1], "assistant: (tool_call: search weather)");
         assert_eq!(final_state.messages[2], "tool: Sunny");
         assert_eq!(final_state.messages[3], "assistant: The weather is sunny.");
+    }
+
+    struct MockCheckpointer {
+        history: tokio::sync::Mutex<Vec<(String, TypedAgentState)>>,
+    }
+
+    #[async_trait::async_trait]
+    impl StateCheckpointer<TypedAgentState> for MockCheckpointer {
+        async fn save_checkpoint(&self, node: &str, state: &TypedAgentState) -> Result<(), String> {
+            self.history.lock().await.push((node.to_string(), state.clone()));
+            Ok(())
+        }
+    }
+
+    #[tokio::test]
+    async fn test_langgraph_super_step_checkpointing() {
+        let checkpointer = Arc::new(MockCheckpointer {
+            history: tokio::sync::Mutex::new(Vec::new()),
+        });
+
+        let mut graph = StateGraph::<TypedAgentState>::new(Arc::new(TypedReducer))
+            .with_checkpointer(checkpointer.clone());
+
+        graph.add_node("step_1", |state| async move {
+            Ok(TypedAgentState {
+                messages: vec!["Step 1 complete".to_string()],
+                has_tool_calls: false,
+            })
+        });
+
+        graph.add_node("step_2", |state| async move {
+            Ok(TypedAgentState {
+                messages: vec!["Step 2 complete".to_string()],
+                has_tool_calls: false,
+            })
+        });
+
+        graph.add_edge("step_1", "step_2");
+        graph.set_entry_point("step_1");
+
+        let initial_state = TypedAgentState {
+            messages: vec!["Initial".to_string()],
+            has_tool_calls: false,
+        };
+
+        graph.run(initial_state).await.unwrap();
+
+        let history = checkpointer.history.lock().await;
+        assert_eq!(history.len(), 2);
+
+        assert_eq!(history[0].0, "step_1");
+        assert_eq!(history[0].1.messages, vec!["Initial", "Step 1 complete"]);
+
+        assert_eq!(history[1].0, "step_2");
+        assert_eq!(history[1].1.messages, vec!["Initial", "Step 1 complete", "Step 2 complete"]);
     }
 }
