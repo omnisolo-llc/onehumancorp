@@ -1,8 +1,8 @@
 'use client';
-import { useEffect } from 'react';
+import { useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
-export default function Home() {
+function HomeContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -14,11 +14,19 @@ export default function Home() {
 
     const hasOnboarded = localStorage.getItem('has_onboarded');
     if (hasOnboarded) {
-      router.push('/dashboard');
+      router.push('/assistant');
     } else {
       router.push('/onboarding');
     }
   }, [router, searchParams]);
 
   return null;
+}
+
+export default function Home() {
+  return (
+    <Suspense fallback={null}>
+      <HomeContent />
+    </Suspense>
+  );
 }

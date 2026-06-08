@@ -10,6 +10,7 @@ export default function SettingsPage() {
   const [otp, setOtp] = useState("");
   const [isVerifying, setIsVerifying] = useState(false);
   const [isVerified, setIsVerified] = useState(false);
+  const [smsStatus, setSmsStatus] = useState("");
   const [preferences, setPreferences] = useState({
     urgent_booking: false,
     failed_payment: false,
@@ -22,17 +23,53 @@ export default function SettingsPage() {
     delivery_fee: 8.50,
   });
 
+  const [voiceSettings, setVoiceSettings] = useState({
+    voice_receptionist_enabled: false,
+    voice_receptionist_number: "",
+    voice_receptionist_persona: "Friendly",
+  });
+
+  const [isLoading, setIsLoading] = useState(true);
+  const [agentName, setAgentName] = useState("Agent One");
+
+
   useEffect(() => {
-    fetch("/api/settings/delivery")
-      .then(res => res.json())
-      .then(data => {
-         setDeliverySettings({
-           delivery_enabled: data.delivery_enabled || false,
-           delivery_radius: data.delivery_radius || 5.0,
-           delivery_fee: data.delivery_fee || 8.50,
-         });
-      })
-      .catch(e => console.error("Failed to load delivery settings", e));
+    Promise.all([
+      fetch("/api/settings/delivery")
+        .then(res => res.json())
+        .then(data => {
+           setDeliverySettings({
+             delivery_enabled: data.delivery_enabled || false,
+             delivery_radius: data.delivery_radius || 5.0,
+             delivery_fee: data.delivery_fee || 8.50,
+           });
+        })
+        .catch(e => console.error("Failed to load delivery settings", e)),
+
+      fetch("/api/assistant/settings")
+        .then(res => res.json())
+        .then(data => {
+          if (data?.settings?.agentName) {
+            setAgentName(data.settings.agentName);
+          }
+        })
+        .catch(e => console.error("Failed to load assistant settings", e)),
+
+      fetch("/api/settings/voice")
+        .then(res => res.json())
+        .then(data => {
+          if (data) {
+            setVoiceSettings({
+              voice_receptionist_enabled: data.voice_receptionist_enabled || false,
+              voice_receptionist_number: data.voice_receptionist_number || "",
+              voice_receptionist_persona: data.voice_receptionist_persona || "Friendly",
+            });
+          }
+        })
+        .catch(e => console.error("Failed to load voice settings", e))
+    ]).finally(() => {
+      setIsLoading(false);
+    });
   }, []);
 
   const handleDeliverySettingChange = async (key: string, value: any) => {
@@ -58,11 +95,13 @@ export default function SettingsPage() {
         body: JSON.stringify({ phone }),
       });
       if (!res.ok) {
-        alert("Failed to send verification SMS");
+        setSmsStatus("Failed to send verification SMS.");
         setIsVerifying(false);
+      } else {
+        setSmsStatus("Verification code sent.");
       }
     } catch {
-      alert("Network error");
+      setSmsStatus("Network error while sending verification SMS.");
       setIsVerifying(false);
     }
   };
@@ -76,11 +115,12 @@ export default function SettingsPage() {
       });
       if (res.ok) {
         setIsVerified(true);
+        setSmsStatus("Phone number verified.");
       } else {
-        alert("Invalid OTP");
+        setSmsStatus("Invalid OTP.");
       }
     } catch {
-      alert("Network error");
+      setSmsStatus("Network error while confirming OTP.");
     }
   };
 
@@ -100,65 +140,80 @@ export default function SettingsPage() {
     }
   };
 
+  const handleVoiceSettingChange = async (key: string, value: string | boolean) => {
+    const newSettings = { ...voiceSettings, [key]: value };
+    setVoiceSettings(newSettings);
+
+    try {
+      await fetch("/api/settings/voice", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newSettings),
+      });
+    } catch (e) {
+      console.error("Failed to save voice settings", e);
+    }
+  };
+
+  const handleAgentNameChange = async (value: string) => {
+    setAgentName(value);
+    try {
+      await fetch("/api/assistant/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ agentName: value }),
+      });
+    } catch (e) {
+      console.error("Failed to save agent settings", e);
+    }
+  };
+
+  const handleProvisionVoiceNumber = async () => {
+    try {
+      const res = await fetch("/api/settings/voice/provision", {
+        method: "POST",
+      });
+      if (res.ok) {
+        const data = await res.json();
+        handleVoiceSettingChange('voice_receptionist_number', data.number);
+      }
+    } catch (e) {
+      console.error("Failed to provision voice number", e);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <AppShell title="Settings">
+        <div className="flex h-64 items-center justify-center">
+          <div className="w-8 h-8 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
+        </div>
+      </AppShell>
+    );
+  }
+
   return (
-    <AppShell
-      title="Settings"
-      subtitle="Application preferences, notification channels, and account controls."
-      statusItems={[
-        { label: "SMS", value: isVerified ? "Verified" : "Not verified", tone: isVerified ? "good" : "neutral" },
-        { label: "Alerts", value: String(Object.values(preferences).filter(Boolean).length), tone: "neutral" },
-      ]}
-      actions={[{ label: "Dashboard", href: "/dashboard" }]}
-    >
-      <div id="settings-screen" className="app-grid two">
-        <section className="app-panel">
-          <div className="app-panel-header">
-            <div>
-              <div className="app-panel-title">General Notifications</div>
-              <div className="app-list-subtitle">Baseline notification preferences.</div>
-            </div>
-          </div>
-          <div className="app-panel-body">
-            <div className="space-y-4">
-              <label className="flex items-center gap-2 text-sm text-gray-700">
-                <input type="checkbox" className="rounded" /> Enable Email Notifications
-              </label>
-              <label className="flex items-center gap-2 text-sm text-gray-700">
-                <input type="checkbox" className="rounded" /> Enable Push Notifications
-              </label>
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <label className="block">
-                  <span className="app-metric-label">Timezone</span>
-                  <select className="mt-2 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800">
-                    <option>UTC</option>
-                    <option>EST</option>
-                    <option>PST</option>
-                  </select>
-                </label>
-                <label className="block">
-                  <span className="app-metric-label">Language</span>
-                  <select className="mt-2 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800">
-                    <option>English</option>
-                    <option>Spanish</option>
-                  </select>
-                </label>
-              </div>
-            </div>
-          </div>
-        </section>
+    <AppShell title="Settings">
+      <div className="mx-auto max-w-4xl space-y-6">
+        <header className="mb-8">
+          <h1 className="text-2xl font-bold font-outfit text-gray-900">Workspace Settings</h1>
+          <p className="app-list-subtitle">Manage integrations, local routing, and security.</p>
+        </header>
 
         <section className="app-panel">
           <div className="app-panel-header">
             <div>
-              <div className="app-panel-title">Critical SMS Alerts</div>
-              <div className="app-list-subtitle">Immediate text alerts for urgent events.</div>
+              <div className="app-panel-title">SMS Notifications & Security</div>
+              <div className="app-list-subtitle">Get texts for critical events. Verify your phone number to enable.</div>
             </div>
           </div>
           <div className="app-panel-body">
             <div className="space-y-4">
+              <label className="block text-sm font-semibold text-gray-700">Mobile Number</label>
               <input
-                type="text"
-                placeholder="Mobile Phone Number (e.g. +1234567890)"
+                aria-label="Mobile Number"
+                type="tel"
+                placeholder="+1 (555) 000-0000"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 disabled={isVerified}
@@ -170,11 +225,14 @@ export default function SettingsPage() {
                 </button>
               )}
 
+              {smsStatus && <p className="text-sm font-medium text-blue-700" role="status">{smsStatus}</p>}
+
               {isVerifying && !isVerified && (
                 <div className="rounded-md border border-blue-100 bg-blue-50 p-3">
                   <p className="mb-2 text-sm text-blue-800">A 6-digit code has been sent. Enter it below:</p>
                   <div className="flex gap-2">
                     <input
+                      aria-label="Verification code"
                       type="text"
                       placeholder="123456"
                       value={otp}
@@ -196,15 +254,16 @@ export default function SettingsPage() {
                   ["failed_payment", "Failed Payments"],
                   ["new_order", "New Orders"],
                 ].map(([key, label]) => (
-                  <label key={key} className="flex items-center justify-between rounded-md border border-gray-200 p-3 text-sm text-gray-700">
-                    <span>{label}</span>
+                  <label key={key} className="flex items-center gap-3">
                     <input
+                      aria-label={label}
                       type="checkbox"
-                      checked={preferences[key as keyof typeof preferences]}
-                      onChange={(e) => handlePreferenceChange(key, e.target.checked)}
                       disabled={!isVerified}
+                      checked={(preferences as any)[key]}
+                      onChange={(e) => handlePreferenceChange(key, e.target.checked)}
                       className="rounded"
                     />
+                    <span className={`text-sm ${isVerified ? "text-gray-800" : "text-gray-400"}`}>{label}</span>
                   </label>
                 ))}
               </div>
@@ -212,18 +271,19 @@ export default function SettingsPage() {
           </div>
         </section>
 
-        <section className="app-panel">
-          <div className="app-panel-header">
-            <div>
-              <div className="app-panel-title">Local Delivery (DoorDash Drive)</div>
-              <div className="app-list-subtitle">Configure white-label delivery powered by DoorDash.</div>
+        <section className="app-grid two">
+          <div className="app-panel">
+            <div className="app-panel-header">
+              <div>
+                <div className="app-panel-title">Local Delivery Setup</div>
+                <div className="app-list-subtitle">Configure delivery radius and rates.</div>
+              </div>
             </div>
-          </div>
-          <div className="app-panel-body">
-            <div className="space-y-4">
+            <div className="app-panel-body space-y-4">
               <label className="flex items-center justify-between rounded-md border border-gray-200 p-3 text-sm text-gray-700">
                 <span>Enable Local Delivery</span>
                 <input
+                  aria-label="Enable Local Delivery"
                   type="checkbox"
                   checked={deliverySettings.delivery_enabled}
                   onChange={(e) => handleDeliverySettingChange('delivery_enabled', e.target.checked)}
@@ -257,26 +317,98 @@ export default function SettingsPage() {
               </div>
             </div>
           </div>
+
+          <div className="app-panel">
+            <div className="app-panel-header">
+              <div>
+                <div className="app-panel-title">AI Voice Receptionist</div>
+                <div className="app-list-subtitle">Let OHC handle your business calls.</div>
+              </div>
+            </div>
+            <div className="app-panel-body">
+              <div className="space-y-4">
+              <label className="flex items-center justify-between rounded-md border border-gray-200 p-3 text-sm text-gray-700">
+                <span>Enable AI Voice Receptionist</span>
+                <input
+                  type="checkbox"
+                  checked={voiceSettings.voice_receptionist_enabled}
+                  onChange={(e) => handleVoiceSettingChange('voice_receptionist_enabled', e.target.checked)}
+                  className="rounded"
+                />
+              </label>
+
+              {voiceSettings.voice_receptionist_enabled && (
+                <div className="space-y-4 border-t border-gray-200 pt-4">
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <label className="block">
+                      <span className="app-metric-label">Voice Persona</span>
+                      <select
+                        value={voiceSettings.voice_receptionist_persona}
+                        onChange={(e) => handleVoiceSettingChange('voice_receptionist_persona', e.target.value)}
+                        className="mt-2 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800"
+                      >
+                        <option value="Friendly">Friendly & Casual</option>
+                        <option value="Professional">Professional & Crisp</option>
+                        <option value="Efficient">Fast & Efficient</option>
+                      </select>
+                    </label>
+
+                    <div className="block">
+                      <span className="app-metric-label">Assigned Phone Number</span>
+                      <div className="mt-2 flex gap-2">
+                        <input
+                          aria-label="Assigned Phone Number"
+                          type="text"
+                          readOnly
+                          value={voiceSettings.voice_receptionist_number || "Not assigned"}
+                          className="w-full rounded-md border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-500"
+                        />
+                        {!voiceSettings.voice_receptionist_number && (
+                          <button onClick={handleProvisionVoiceNumber} className="app-button secondary whitespace-nowrap" type="button">
+                            Get Number
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+          </div>
         </section>
 
         <section className="app-panel">
           <div className="app-panel-header">
-            <div className="app-panel-title">Profile</div>
+            <div>
+              <div className="app-panel-title">Agent Settings</div>
+              <div className="app-list-subtitle">Configure your AI agent's identity.</div>
+            </div>
           </div>
-          <div className="app-panel-body grid gap-3">
-            <input type="text" placeholder="Display Name" className="rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-800" />
-            <textarea placeholder="Bio" className="h-24 rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-800" />
+          <div className="app-panel-body">
+            <label className="block">
+              <span className="app-metric-label">Agent Name</span>
+              <input
+                type="text"
+                value={agentName}
+                onChange={(e) => handleAgentNameChange(e.target.value)}
+                className="mt-2 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800"
+                placeholder="Agent One"
+              />
+            </label>
           </div>
         </section>
 
         <section className="app-panel">
           <div className="app-panel-header">
-            <div className="app-panel-title">Security</div>
+            <div>
+              <div className="app-panel-title">Change Password</div>
+            </div>
           </div>
           <div className="app-panel-body grid gap-3">
-            <input type="password" placeholder="Current Password" className="rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-800" />
-            <input type="password" placeholder="New Password" className="rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-800" />
-            <input type="password" placeholder="Confirm Password" className="rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-800" />
+            <input aria-label="Current Password" type="password" placeholder="Current Password" className="rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-800" />
+            <input aria-label="New Password" type="password" placeholder="New Password" className="rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-800" />
+            <input aria-label="Confirm Password" type="password" placeholder="Confirm Password" className="rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-800" />
             <button onClick={() => router.push("/dashboard")} className="app-button primary w-fit" type="button">
               Save
             </button>

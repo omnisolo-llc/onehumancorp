@@ -26,7 +26,7 @@ defaults:
 jobs:
   check-changes:
     name: Check what files changed
-    runs-on: ubuntu-latest
+    runs-on: oci-runner
     timeout-minutes: 5
     outputs:
       markdown-only: ${{ steps.check.outputs.markdown-only }}
@@ -301,12 +301,20 @@ jobs:
             //...
 
   bazel-test-e2e:
-    name: Bazel Full UI E2E
+    name: Bazel UI E2E (${{ matrix.name }})
     needs:
       - check-changes
     if: ${{ needs.check-changes.outputs.markdown-only == 'false' }}
     runs-on: ubuntu-latest
     timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: spec coverage
+            target: //src/e2e:playwright_spec_coverage
+          - name: shard 1/1
+            target: //src/e2e:playwright_shard_1_of_1
     env:
       MINIMAX_API_KEY: ${{ secrets.MINIMAX_API_KEY }}
     steps:
@@ -363,9 +371,9 @@ jobs:
           docker pull pgvector/pgvector:pg16
           docker pull valkey/valkey:8-alpine
 
-      - name: Test full Playwright UI E2E suite
+      - name: Test Playwright UI E2E target
         run: |
-          bazelisk test //src/e2e:playwright \
+          bazelisk test "${{ matrix.target }}" \
             --local_test_jobs="$(nproc)" \
             --jobs="$(nproc)" \
             --nocache_test_results
@@ -580,7 +588,7 @@ jobs:
       - kind-e2e
       - docker-e2e
     if: ${{ always() }}
-    runs-on: ubuntu-latest
+    runs-on: oci-runner
     timeout-minutes: 5
     steps:
       - name: Check required CI results

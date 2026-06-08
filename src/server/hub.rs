@@ -105,11 +105,11 @@ impl Hub {
             subs: RwLock::new(HashMap::new()),
             minimax_api_key,
             caps_tx,
-            pool,
+            pool: pool.clone(),
             mesh_events: RwLock::new(HashMap::new()),
             teammate_events: RwLock::new(HashMap::new()),
             tracker: {
-                let mut t = if let Ok(url) = std::env::var("REDIS_URL") { Tracker::new_with_redis(&url) } else { Tracker::new() };
+                let mut t = if let Ok(url) = std::env::var("REDIS_URL") { Tracker::new_with_redis(&url).with_db(pool.clone()) } else { Tracker::new() };
                 t.set_auditor(cost_auditor.clone());
                 t
             },
@@ -271,14 +271,31 @@ impl Hub {
         // Check rate limiting
         let tenant_id = msg.to_agent.split("-").next().unwrap_or("default").to_string();
         let agent_id = msg.to_agent.clone();
+        let meeting_id = msg.meeting_id.clone();
         let tracker = self.tracker.clone();
-        tokio::spawn(async move {
-            if let Ok(limit_status) = tracker.check_rate_limit(&tenant_id, &agent_id).await {
-                if limit_status.soft_limit_reached {
-                    tracing::warn!("Rate limit warning: {:?}", limit_status.user_message);
+        let hub_clone = self.clone();
+
+        if msg.from_agent != "system-scheduler" && msg.r#type != "warning" {
+            tokio::spawn(async move {
+                if let Ok(limit_status) = tracker.check_rate_limit(&tenant_id, &agent_id).await {
+                    if limit_status.soft_limit_reached {
+                        tracing::warn!("Rate limit warning: {:?}", limit_status.user_message);
+                        if let Some(user_msg) = limit_status.user_message {
+                            let warning_msg = Message {
+                                id: format!("warning-{}", chrono::Utc::now().timestamp()),
+                                from_agent: "system-scheduler".to_string(),
+                                to_agent: agent_id.clone(),
+                                r#type: "warning".to_string(),
+                                content: user_msg,
+                                occurred_at_unix: chrono::Utc::now().timestamp(),
+                                meeting_id: meeting_id,
+                            };
+                            let _ = hub_clone.publish(warning_msg);
+                        }
+                    }
                 }
-            }
-        });
+            });
+        }
         
         // Add to recipient's inbox
         let messages = inbox.entry(to_agent.clone()).or_insert_with(Vec::new);

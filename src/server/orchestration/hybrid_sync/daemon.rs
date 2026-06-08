@@ -106,7 +106,7 @@ impl HybridSyncDaemon {
 
         for row in rows {
             let id: i32 = row.get("id");
-            let _ = sqlx::query("UPDATE telemetry_buffer SET sync_status = 'SYNCED' WHERE id = ?")
+            let _ = sqlx::query("UPDATE telemetry_buffer SET sync_status = 'SYNCED', sync_error = NULL WHERE id = ?")
                 .bind(id)
                 .execute(&self.sqlite_pool)
                 .await;
@@ -120,7 +120,7 @@ impl HybridSyncDaemon {
     pub async fn sync_cloud_escalations(&self) -> Result<(), Box<dyn std::error::Error>> {
         let start = Instant::now();
         // 1. Update `sync_daemon.go` to explicitly fetch missions from `agent_missions` where `status = 'CLOUD_ESCALATION'` and sync them to the remote API.
-        let rows = sqlx::query("SELECT id, status, payload, tenant_id FROM agent_missions WHERE synced_to_cloud = false AND (status = 'CLOUD_ESCALATION' OR status = 'BURSTING') AND (sync_error IS NULL OR last_synced_at < datetime('now', '-5 minute')) LIMIT 100")
+        let rows = sqlx::query("SELECT id, status, payload, tenant_id FROM agent_missions WHERE synced_to_cloud = false AND (status = 'CLOUD_ESCALATION' OR status = 'BURSTING' OR status = 'PENDING') AND (sync_error IS NULL OR last_synced_at < datetime('now', '-5 minute')) LIMIT 100")
             .fetch_all(&self.sqlite_pool)
             .await?;
 
@@ -159,7 +159,7 @@ impl HybridSyncDaemon {
                 }
             };
 
-            let res = sqlx::query("INSERT INTO agent_missions (id, status, payload, tenant_id) VALUES ($1, 'PENDING', $2, $3) ON CONFLICT (id) DO UPDATE SET payload = $2")
+            let res = sqlx::query("INSERT INTO agent_missions (id, status, payload, tenant_id) VALUES ($1, 'PENDING', $2::jsonb, $3) ON CONFLICT (id) DO UPDATE SET payload = $2::jsonb")
                 .bind(&id)
                 .bind(&final_payload)
                 .bind(&tenant_id)
@@ -303,7 +303,7 @@ impl HybridSyncDaemon {
                 }
             };
 
-            let mission_res = sqlx::query("INSERT INTO agent_missions (id, status, payload, tenant_id) VALUES ($1, 'PENDING', $2, $3)")
+            let mission_res = sqlx::query("INSERT INTO agent_missions (id, status, payload, tenant_id) VALUES ($1, 'PENDING', $2::jsonb, $3)")
                 .bind(&queue_id)
                 .bind(payload.to_string())
                 .bind(&tenant_id)
@@ -321,7 +321,7 @@ impl HybridSyncDaemon {
                 continue;
             }
 
-            let res = sqlx::query("INSERT INTO sub_agent_queue (id, tenant_id, parent_task_id, payload, status, scheduled_at, created_at, updated_at) VALUES ($1, $4, NULL, $2, 'QUEUED', $3, $3, $3)")
+            let res = sqlx::query("INSERT INTO sub_agent_queue (id, tenant_id, parent_task_id, payload, status, scheduled_at, created_at, updated_at) VALUES ($1, $4, NULL, $2::jsonb, 'QUEUED', $3, $3, $3)")
                 .bind(&queue_id)
                 .bind(payload.to_string())
                 .bind(now)
@@ -343,7 +343,7 @@ impl HybridSyncDaemon {
                     }
 
                     // Update SQLite sync status
-                    sqlx::query("UPDATE swarm_truth_embeddings SET sync_status = 'SYNCED' WHERE memory_id = ?")
+                    sqlx::query("UPDATE swarm_truth_embeddings SET sync_status = 'SYNCED', sync_error = NULL WHERE memory_id = ?")
                         .bind(&id)
                         .execute(&self.sqlite_pool)
                         .await?;

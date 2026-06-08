@@ -310,7 +310,7 @@ postgres_exec() {
 USE_STANDALONE_MODE=false
 PULL_PG_SUCCESS=false
 for i in {1..3}; do
-  if docker pull pgvector/pgvector:pg16 >/dev/null 2>&1; then
+  if docker pull pgvector/pgvector:pg15 >/dev/null 2>&1; then
     PULL_PG_SUCCESS=true
     break
   fi
@@ -328,7 +328,7 @@ if [ "$PULL_PG_SUCCESS" = true ]; then
   done
 
   if [ "$PULL_VK_SUCCESS" = true ]; then
-    if docker rm -f "$POSTGRES_NAME" >/dev/null 2>&1 || true; docker run -d --name "$POSTGRES_NAME" -p 127.0.0.1::5432 -e POSTGRES_USER=ohc -e POSTGRES_PASSWORD=ohc -e POSTGRES_DB=ohc pgvector/pgvector:pg16; then
+    if docker rm -f "$POSTGRES_NAME" >/dev/null 2>&1 || true; docker run -d --name "$POSTGRES_NAME" -p 127.0.0.1::5432 -e POSTGRES_USER=ohc -e POSTGRES_PASSWORD=ohc -e POSTGRES_DB=ohc pgvector/pgvector:pg15; then
       docker run -d --name "$VALKEY_NAME" -p 127.0.0.1::6379 valkey/valkey:8-alpine
       PG_PORT="$(docker port "$POSTGRES_NAME" 5432/tcp | sed -E 's/.*:([0-9]+)$/\1/' | head -n 1)"
       VK_PORT="$(docker port "$VALKEY_NAME" 6379/tcp | sed -E 's/.*:([0-9]+)$/\1/' | head -n 1)"
@@ -598,9 +598,13 @@ export PLAYWRIGHT_HTML_REPORT="$BASE_OUTPUT_DIR/report"
 mkdir -p "$PLAYWRIGHT_OUTPUT_DIR"
 mkdir -p "$PLAYWRIGHT_HTML_REPORT"
 
-# Prepare sharding argument if running under Bazel sharding
+# Prepare sharding argument if running under Bazel sharding or a generated
+# shard target.
 PLAYWRIGHT_SHARD_ARG=""
-if [[ -n "${TEST_TOTAL_SHARDS:-}" ]]; then
+if [[ -n "${PLAYWRIGHT_SHARD:-}" ]]; then
+  PLAYWRIGHT_SHARD_ARG="--shard=${PLAYWRIGHT_SHARD}"
+  echo "[playwright] Playwright sharding active: running shard ${PLAYWRIGHT_SHARD}"
+elif [[ -n "${TEST_TOTAL_SHARDS:-}" ]]; then
   SHARD_INDEX=$((TEST_SHARD_INDEX + 1))
   PLAYWRIGHT_SHARD_ARG="--shard=${SHARD_INDEX}/${TEST_TOTAL_SHARDS}"
   echo "[playwright] Bazel sharding active: running shard ${SHARD_INDEX} of ${TEST_TOTAL_SHARDS}"

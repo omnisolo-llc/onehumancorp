@@ -1,6 +1,14 @@
 import { test, expect } from './fixtures';
 
 test.describe('Business Setup Wizard Comprehensive Flow', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript(() => {
+      localStorage.removeItem('website-builder-storage');
+      localStorage.removeItem('ohc_builder_blocks');
+      localStorage.removeItem('ohc_builder_status');
+    });
+  });
+
   test('traverses the new instant build flow', async ({ page }) => {
     const id = `setup-comprehensive-${Date.now()}-${Math.random()}`;
     await page.addInitScript((tenantId) => {
@@ -8,17 +16,28 @@ test.describe('Business Setup Wizard Comprehensive Flow', () => {
       localStorage.setItem('user_id', tenantId);
       localStorage.removeItem('ohc_wizard_state');
       localStorage.removeItem('onboarding-storage-v3');
+      localStorage.removeItem('website-builder-storage');
     }, id);
 
     // We only have the instant build flow now.
     await page.goto('/website-builder');
     await page.waitForLoadState('networkidle');
 
+
     await page.getByRole('button', { name: /Instant Build/ }).click();
+
+    // Verify glassmorphism style is present
+    await expect(page.locator('.glassmorphism').first()).toBeVisible({ timeout: 5000 });
+
     await page.getByPlaceholder('e.g. I run a local bakery').fill('I run a modern art shop online');
+
     await page.getByRole('button', { name: /Generate Storefront/ }).click();
 
     await expect(page.getByText('Agents are building your store...')).toBeVisible({ timeout: 10000 });
+
+    // Verify glassmorphism style is present on loading screen
+    await expect(page.locator('.glassmorphism', { hasText: 'Agents are building your store' }).first()).toBeVisible({ timeout: 5000 });
+
     await expect(page.getByRole('heading', { name: /Success! Your business is live!/ })).toBeVisible({ timeout: 20000 });
   });
 

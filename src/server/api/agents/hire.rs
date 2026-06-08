@@ -36,6 +36,7 @@ where
     Router::new()
         .route("/", get(list_agents_handler))
         .route("/hire", post(hire_handler))
+        .route("/marketplace", get(list_marketplace_agents))
         .with_state(hub)
 }
 
@@ -46,8 +47,8 @@ async fn hire_handler(
     req: axum::extract::Request,
 ) -> impl IntoResponse {
     let tenant_id = match req.extensions().get::<::server_common::Claims>() {
-        Some(claims) => claims.organization_id.clone().unwrap_or_else(|| "system".to_string()),
-        None => "system".to_string(),
+        Some(claims) => claims.organization_id.clone().unwrap_or_else(|| ::server_common::auth_utils::get_default_tenant()),
+        None => ::server_common::auth_utils::get_default_tenant(),
     };
 
     let (parts, body) = req.into_parts();
@@ -121,4 +122,34 @@ async fn hire_handler(
 
 async fn list_agents_handler(State(hub): State<Arc<Hub>>) -> impl IntoResponse {
     (StatusCode::OK, Json((*hub.get_agents().await).clone())).into_response()
+}
+
+pub async fn list_marketplace_agents() -> impl IntoResponse {
+    let agents = serde_json::json!([
+        {
+            "id": "agent-1",
+            "name": "Data Analyst",
+            "description": "Analyzes CSV files and generates beautiful charts. (AutoGPT Agent Marketplace)",
+            "author": "AutoGPT",
+            "version": "1.0.0",
+            "endpoint": "https://marketplace.example.com/agents/agent-1"
+        },
+        {
+            "id": "agent-2",
+            "name": "SEO Optimizer",
+            "description": "Optimizes your storefront content for better search engine rankings.",
+            "author": "AutoGPT",
+            "version": "2.1.0",
+            "endpoint": "https://marketplace.example.com/agents/agent-2"
+        },
+        {
+            "id": "agent-3",
+            "name": "Customer Service Bot",
+            "description": "Handles basic customer inquiries and manages refunds automatically.",
+            "author": "Community",
+            "version": "1.5.0",
+            "endpoint": "https://marketplace.example.com/agents/agent-3"
+        }
+    ]);
+    (StatusCode::OK, Json(agents)).into_response()
 }

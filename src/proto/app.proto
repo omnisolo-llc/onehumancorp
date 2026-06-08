@@ -34,6 +34,22 @@ message Order {
   int64 created_at_unix = 6;
 }
 
+message Quote {
+  string id = 1;
+  string tenant_id = 2;
+  string status = 3;
+  int64 total_amount = 4;
+  int64 required_deposit = 5;
+  int64 expires_at_unix = 6;
+}
+
+message Invoice {
+  string id = 1;
+  string tenant_id = 2;
+  string type = 3;
+  int64 amount = 4;
+}
+
 message Booking {
   string id = 1;
   string organization_id = 2;
@@ -181,6 +197,7 @@ service BookingEngineService {
   rpc CheckAvailability(CheckAvailabilityRequest) returns (CheckAvailabilityResponse);
   rpc ReserveTimeSlot(ReserveTimeSlotRequest) returns (ReserveTimeSlotResponse);
   rpc CreateConversationalCheckout(CreateConversationalCheckoutRequest) returns (ConversationalCheckoutSession);
+  rpc SyncCalendar(SyncCalendarRequest) returns (SyncCalendarResponse);
 }
 
 message CheckAvailabilityRequest {
@@ -204,6 +221,8 @@ message ReserveTimeSlotRequest {
   string product_id = 3;
   string start_time = 4; // RFC3339
   string end_time = 5; // RFC3339
+  bool requires_deposit = 6;
+  string timezone = 7;
 }
 
 message ReserveTimeSlotResponse {
@@ -253,6 +272,49 @@ message SyncOfflineTransactionsResponse {
   repeated string failed_transaction_ids = 3;
 }
 
+message StartTerminalSessionRequest {
+  string tenant_id = 1;
+  string device_id = 2;
+}
+
+message StartTerminalSessionResponse {
+  string session_id = 1;
+  bool success = 2;
+  string error_message = 3;
+}
+
+message UpdateTerminalSessionStatusRequest {
+  string tenant_id = 1;
+  string session_id = 2;
+  string status = 3; // ACTIVE, PAUSED, OFFLINE, RECONCILED
+}
+
+message UpdateTerminalSessionStatusResponse {
+  bool success = 1;
+  string error_message = 2;
+}
+
+message EndTerminalSessionRequest {
+  string tenant_id = 1;
+  string session_id = 2;
+}
+
+message EndTerminalSessionResponse {
+  bool success = 1;
+  string error_message = 2;
+}
+
 service PosService {
   rpc SyncOfflineTransactions(SyncOfflineTransactionsRequest) returns (SyncOfflineTransactionsResponse);
+  rpc StartTerminalSession(StartTerminalSessionRequest) returns (StartTerminalSessionResponse);
+  rpc UpdateTerminalSessionStatus(UpdateTerminalSessionStatusRequest) returns (UpdateTerminalSessionStatusResponse);
+  rpc EndTerminalSession(EndTerminalSessionRequest) returns (EndTerminalSessionResponse);
+}
+
+message SyncCalendarRequest {
+  string tenant_id = 1;
+}
+
+message SyncCalendarResponse {
+  string status = 1;
 }

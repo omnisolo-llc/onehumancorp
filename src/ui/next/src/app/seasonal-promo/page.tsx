@@ -21,7 +21,7 @@ export default function SeasonalPromoPage() {
   const generatePromo = () => {
     setIsGenerating(true);
     const code = occasion.substring(0, 8).toUpperCase().replace(/[^A-Z]/g, '') + discount;
-    setResult(`${occasion} Special! ${discount}% OFF\nUse code: ${code}`);
+    setResult(`${occasion} Special! ${discount}% OFF\nUse code: ${code}\n\n⚡ Powered by OHC`);
     setIsGenerating(false);
   };
 
@@ -36,7 +36,8 @@ export default function SeasonalPromoPage() {
 
   const claimTrialExtension = () => {
     const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || 'DEFAULT' : 'DEFAULT';
-    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('I just unlocked powerful AI tools for my business on One Human Corp! Start your own business today: ohc://join?ref=' + tenant)}`, '_blank');
+    const referralUrl = `${window.location.origin}/onboarding?ref=${tenant}`;
+    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('I just unlocked powerful AI tools for my business on One Human Corp! Start your own business today: ' + referralUrl)}`, '_blank');
     if (typeof localStorage !== 'undefined') {
         localStorage.setItem('has_pro', 'true');
     }

@@ -73,7 +73,7 @@ describe('Agent Marketplace Page', () => {
     expect(searchInput).toHaveValue('SEO');
 
     await waitFor(() => {
-      expect(mockFetch).toHaveBeenCalledWith('/api/marketplace?q=SEO');
+      expect(mockFetch).toHaveBeenCalledWith('/api/agents/marketplace?q=SEO');
     });
   });
 
@@ -85,7 +85,7 @@ describe('Agent Marketplace Page', () => {
     render(<AgentMarketplacePage />);
 
     await waitFor(() => {
-      expect(screen.getByText('Failed to fetch agents')).toBeInTheDocument();
+      expect(screen.getByText(/Failed to fetch agents/)).toBeInTheDocument();
     });
   });
 });

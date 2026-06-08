@@ -4,6 +4,7 @@ ALTER TABLE IF EXISTS agent_approvals DISABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS meeting_transcripts DISABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS meeting_rooms DISABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS agent_inbox DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS inbox_messages DISABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS shared_tasks DISABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS orders DISABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS customers DISABLE ROW LEVEL SECURITY;
@@ -13,11 +14,14 @@ ALTER TABLE IF EXISTS loyalty_ledger DISABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS customer360 DISABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS bookings DISABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS agents DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS ohc_staff_member DISABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS users DISABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS tenants DISABLE ROW LEVEL SECURITY;
 
 INSERT INTO tenants (id, name, industry, tier)
-VALUES ('e2e-tenant', 'OHC E2E Bakery', 'Food and beverage', 'starter')
+VALUES
+  ('e2e-tenant', 'OHC E2E Bakery', 'Food and beverage', 'starter'),
+  ('e2e-tenant-unlimited', 'OHC E2E Pro Bakery', 'Food and beverage', 'Pro')
 ON CONFLICT (id) DO UPDATE
 SET name = EXCLUDED.name,
     industry = EXCLUDED.industry,
@@ -47,6 +51,17 @@ VALUES
     'e2e-tenant',
     CURRENT_TIMESTAMP,
     CURRENT_TIMESTAMP
+  ),
+  (
+    'e2e-unlimited-admin-user',
+    'pro@example.com',
+    'pro@example.com',
+    '$2b$10$hmVhunI7Fq2ZzQ0PguAH5OeXUyb/gNAORUpLPD2g44Ik9/Fd9sM7a',
+    ARRAY['ADMIN'],
+    TRUE,
+    'e2e-tenant-unlimited',
+    CURRENT_TIMESTAMP,
+    CURRENT_TIMESTAMP
   )
 ON CONFLICT (id) DO UPDATE
 SET username = EXCLUDED.username,
@@ -56,6 +71,17 @@ SET username = EXCLUDED.username,
     active = EXCLUDED.active,
     tenant_id = EXCLUDED.tenant_id,
     updated_at = CURRENT_TIMESTAMP;
+
+
+INSERT INTO ohc_staff_member (id, tenant_id, name, phone_number, role, pin_hash)
+VALUES ('staff_1', 'e2e-tenant', 'Carlos', '+15550101010', 'Manager', '1234')
+ON CONFLICT (id) DO UPDATE
+SET name = EXCLUDED.name,
+    phone_number = EXCLUDED.phone_number,
+    role = EXCLUDED.role,
+    pin_hash = EXCLUDED.pin_hash,
+    updated_at = CURRENT_TIMESTAMP;
+
 
 INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, payload, created_at, updated_at)
 VALUES
@@ -150,14 +176,22 @@ VALUES
   ('e2e-agent-marketing', 'e2e-tenant', 'e2e-message-vegan-options', 'customer', 'e2e-agent-marketing', 'customer_question', 'Do you have vegan options for birthday cakes?', 'e2e-room-ops')
 ON CONFLICT DO NOTHING;
 
+INSERT INTO inbox_messages (id, tenant_id, source, content, draft_reply, status)
+VALUES
+  ('e2e-inbox-msg-1', 'e2e-tenant', 'Instagram DM', 'Do you have vegan options for birthday cakes?', 'Hi there! Yes, we do offer vegan birthday cakes. They start at $45. Would you like to see our menu?', 'pending'),
+  ('e2e-inbox-msg-2', 'e2e-tenant', 'WhatsApp', 'Can I schedule a consultation for my wedding?', 'Hi! Absolutely. I have availability this Thursday at 2pm or Friday at 10am. Which works best for you?', 'pending')
+ON CONFLICT DO NOTHING;
+
 ALTER TABLE IF EXISTS tenants ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS agents ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS ohc_staff_member ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS products ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS customers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS orders ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS shared_tasks ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS agent_inbox ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS inbox_messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS meeting_rooms ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS meeting_transcripts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS customer360 ENABLE ROW LEVEL SECURITY;
@@ -168,16 +202,66 @@ ALTER TABLE IF EXISTS bookings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS tenants FORCE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS users FORCE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS agents FORCE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS ohc_staff_member FORCE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS products FORCE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS customers FORCE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS orders FORCE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS shared_tasks FORCE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS agent_inbox FORCE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS inbox_messages FORCE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS meeting_rooms FORCE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS meeting_transcripts FORCE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS customer360 FORCE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS loyalty_ledger FORCE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS ohc_fx_rates FORCE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS bookings FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE IF EXISTS agent_actions ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE IF EXISTS purchase_orders ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE IF EXISTS services ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE IF EXISTS interactions ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE IF EXISTS bom_items ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE IF EXISTS vendors ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE IF EXISTS ai_memories ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE IF EXISTS po_line_items ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE IF EXISTS order_line_items ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE IF EXISTS raw_materials ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE IF EXISTS customer_timeline ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE IF EXISTS depletion_logs ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE IF EXISTS agent_actions FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE IF EXISTS purchase_orders FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE IF EXISTS services FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE IF EXISTS interactions FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE IF EXISTS bom_items FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE IF EXISTS vendors FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE IF EXISTS ai_memories FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE IF EXISTS po_line_items FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE IF EXISTS order_line_items FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE IF EXISTS raw_materials FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE IF EXISTS customer_timeline FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE IF EXISTS depletion_logs FORCE ROW LEVEL SECURITY;
 
 COMMIT;
