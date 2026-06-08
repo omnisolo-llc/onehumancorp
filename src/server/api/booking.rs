@@ -14,7 +14,7 @@ use ::server_ohc::app::CreateConversationalCheckoutRequest;
 use ::server_ohc::app::booking_engine_service_server::BookingEngineService;
 use tonic::Request;
 use uuid::Uuid;
-use ohc_builtin_agent::mesh::transport::MeshTransport;
+
 
 #[derive(Clone)]
 pub struct BookingApiState {
