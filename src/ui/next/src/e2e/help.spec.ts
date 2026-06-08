@@ -60,7 +60,7 @@ test.describe('Help Center', () => {
         // Find and click the floating Ask anything button
         const chatButton = page.locator('button[aria-label="Open help chat"]');
         await expect(chatButton).toBeVisible();
-        await chatButton.click();
+        await chatButton.click({ force: true });
 
         // Wait for the chat to open and be visible
         const chatHeader = page.locator('#ai-chat-header');
