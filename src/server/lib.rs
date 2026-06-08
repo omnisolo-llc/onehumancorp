@@ -33,7 +33,6 @@ struct CreateWorkflowRequest {
     workflow: String,
 }
 
-static TOOLTIPS_REGISTRY: std::sync::OnceLock<RwLock<HashMap<String, String>>> = std::sync::OnceLock::new();
 static WORKFLOW_REGISTRY: std::sync::OnceLock<RwLock<Vec<WorkflowRecord>>> = std::sync::OnceLock::new();
 static BUILTIN_AGENT_SERVICE: std::sync::OnceLock<std::sync::Arc<ohc_builtin_agent::service::AgentServiceImpl>> = std::sync::OnceLock::new();
 
@@ -81,32 +80,6 @@ pub fn is_standalone_runtime() -> bool {
     true
 }
 
-fn get_tooltips_registry() -> &'static RwLock<HashMap<String, String>> {
-    TOOLTIPS_REGISTRY.get_or_init(|| {
-    let mut m = HashMap::new();
-    m.insert("bio-input-tooltip".to_string(), "Describe what you sell, your target audience, and the vibe of your brand.".to_string());
-    m.insert("generate-btn-tooltip".to_string(), "Our AI agents will analyze your description and build a ready-to-launch store for you.".to_string());
-    m.insert("launch-btn-tooltip".to_string(), "Launch your storefront immediately to a live URL.".to_string());
-    m.insert("dashboard-tooltip".to_string(), "View your daily sales and overall business health.".to_string());
-    m.insert("inventory-tooltip".to_string(), "Manage your inventory, prices, and stock levels.".to_string());
-    m.insert("orders-tooltip".to_string(), "See what customers bought and track order fulfillment.".to_string());
-    m.insert("team-activity-tooltip".to_string(), "Monitor the real-time actions and tasks being performed by your AI workforce.".to_string());
-    m.insert("referral-tooltip".to_string(), "Share your unique link to earn credits when friends join OHC.".to_string());
-    m.insert("swarm-online-tooltip".to_string(), "Your AI workforce is active. They process tasks in the background.".to_string());
-    m.insert("department-card-tooltip".to_string(), "Click to view and manage pending approvals for this department.".to_string());
-    m.insert("nav-dashboard-tooltip".to_string(), "View your store metrics, recent orders, and overall performance.".to_string());
-    m.insert("nav-agents-tooltip".to_string(), "Manage your AI workforce, check their tasks, and hire new agents.".to_string());
-    m.insert("nav-setup-tooltip".to_string(), "Configure your business details, branding, and payment settings.".to_string());
-    m.insert("credit-tooltip".to_string(), "Earn credits to use on premium tools when you refer a friend.".to_string());
-    m.insert("help-btn-tooltip".to_string(), "Need help? Click here to access our Help Center and tutorials.".to_string());
-    m.insert("changelog-nav-tooltip".to_string(), "See what's new in the latest OneHumanCorp updates.".to_string());
-    m.insert("todays-sales-tooltip".to_string(), "Your total sales for today. Check back often to track your progress.".to_string());
-    m.insert("approval-inbox-tooltip".to_string(), "Review tasks that your AI agents need permission to execute. Approve or deny them here.".to_string());
-    m.insert("ask-ai-tooltip".to_string(), "Open the AI Chat to get answers instantly. The AI reads our entire Help Center for you.".to_string());
-    m.insert("api-docs-tooltip".to_string(), "Direct API access is only for custom integrations.".to_string());
-    RwLock::new(m)
-    })
-}
 
 pub fn get_workflow_registry() -> &'static RwLock<Vec<WorkflowRecord>> {
     WORKFLOW_REGISTRY.get_or_init(|| RwLock::new(Vec::new()))
@@ -3808,18 +3781,7 @@ async fn create_ui_bom_item_handler(
         .route("/api/help", axum::routing::get(crate::api::docs::list_articles))
         .route("/api/help/search", axum::routing::get(crate::api::docs::search_articles))
         .route("/api/help/{article_id}", axum::routing::get(crate::api::docs::get_article_handler))
-        .route("/api/tooltips", axum::routing::get(|| async {
-            let registry = get_tooltips_registry();
-            let m = registry.read().unwrap();
-            axum::Json(serde_json::to_value(&*m).unwrap())
-        }).post(|axum::Json(payload): axum::Json<HashMap<String, String>>| async {
-            let registry = get_tooltips_registry();
-            let mut m = registry.write().unwrap();
-            for (k, v) in payload {
-                m.insert(k, v);
-            }
-            axum::Json(serde_json::json!({"success": true}))
-        }))
+        .route("/api/tooltips", axum::routing::get(crate::api::docs::get_tooltips_handler).post(crate::api::docs::post_tooltips_handler))
         .route("/api/videos", axum::routing::get(crate::api::docs::list_videos))
         .route("/api/changelog", axum::routing::get(crate::api::docs::get_changelog))
         .route("/api/api-docs-spec", axum::routing::get(crate::api::docs::get_api_docs_spec))
