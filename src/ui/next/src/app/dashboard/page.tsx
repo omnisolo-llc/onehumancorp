@@ -510,12 +510,40 @@ export default function Dashboard() {
             </div>
           </WalkthroughTarget>
 
+          <div className="app-panel" style={{ marginBottom: '24px' }}>
+            <div className="app-panel-header">
+              <div className="app-panel-title">Agent Activity</div>
+              <Link href="/calendar" className="app-button">Calendar</Link>
+            </div>
+            <div className="app-list">
+              <div className="app-list-item" style={{ flexDirection: 'column', alignItems: 'flex-start' }}>
+                <div style={{ display: 'flex', alignItems: 'center', width: '100%', justifyContent: 'space-between', marginBottom: '8px' }}>
+                  <div className="app-list-title">Agent tentatively booked a roof repair estimate for Sarah on Tuesday 2 PM. Pending $50 deposit. No action needed.</div>
+                  <span className="app-badge">Booking</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <div className="app-panel">
             <div className="app-panel-header">
               <div className="app-panel-title">Action Required</div>
               <Link href="/inventory" className="app-button">Inventory</Link>
             </div>
             <div className="app-list">
+              <div className="app-list-item" style={{ flexDirection: 'column', alignItems: 'flex-start' }}>
+                <div style={{ display: 'flex', alignItems: 'center', width: '100%', justifyContent: 'space-between', marginBottom: '12px' }}>
+                  <div>
+                    <div className="app-list-title">Mark requested to reschedule his 4 PM lesson to 5 PM today. You have a conflict. Suggest tomorrow at 4 PM?</div>
+                  </div>
+                  <span className="app-badge warn">Approval</span>
+                </div>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button className="app-button" style={{ backgroundColor: '#0066FF', color: 'white', padding: '6px 12px' }}>Approve</button>
+                  <button className="app-button" style={{ backgroundColor: '#e5e5ea', color: '#1d1d1f', padding: '6px 12px' }}>Edit</button>
+                  <button className="app-button" style={{ backgroundColor: '#FF3B30', color: 'white', padding: '6px 12px' }}>Deny</button>
+                </div>
+              </div>
               {metrics.pending_orders > 0 && (
                 <div className="app-list-item">
                   <div>
