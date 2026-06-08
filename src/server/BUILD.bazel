@@ -155,6 +155,7 @@ SERVER_RS_SRCS = [
     "//src/server/orchestration:tasks_db.rs",
     "//src/server/orchestration:tasks_db_test.rs",
     "//src/server/orchestration:router.rs",
+    "//src/server/orchestration:dispatcher.rs",
     "//src/server/orchestration/departments:approvals_test.rs",
     "//src/server/orchestration/departments:business_advisory_agent.rs",
     "//src/server/orchestration/departments:customer_success_agent.rs",

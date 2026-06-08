@@ -28,4 +28,5 @@ pub mod tasks_db;
 #[cfg(test)]
 pub mod tasks_db_test;
 pub mod router;
+pub mod dispatcher;
 pub mod minimax_swarm;
