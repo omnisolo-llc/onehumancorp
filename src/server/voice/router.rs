@@ -36,9 +36,9 @@ impl VoiceTurnPlanner for LlmVoiceTurnPlanner {
         let raw: String = match provider.as_str() {
             "minimax" => {
                 let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
-                crate::minimax::MinimaxClient::new(api_key).reason(&prompt).await
+                ::minimax::MinimaxClient::new(api_key).reason(&prompt).await
             }
-            _ => crate::minimax::LocalLLMClient::new().reason(&prompt).await,
+            _ => ::minimax::LocalLLMClient::new().reason(&prompt).await,
         }?;
 
         parse_voice_turn_plan(&raw)

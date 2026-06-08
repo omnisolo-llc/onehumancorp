@@ -111,7 +111,7 @@ pub async fn bench_db_query_time() {
                     Ok(())
                 })
             })
-            .connect("sqlite::memory:").await.unwrap();
+            .max_connections(50).connect("sqlite::memory:?cache=shared").await.unwrap();
     let mut sqlite_handles = Vec::new();
     for _ in 0..iterations {
         let pool = sqlite_pool.clone();
@@ -178,7 +178,7 @@ pub async fn bench_api_response_time() {
                     Ok(())
                 })
             })
-            .connect("sqlite::memory:").await.unwrap();
+            .max_connections(50).connect("sqlite::memory:?cache=shared").await.unwrap();
     let _ = sqlx::query("CREATE TABLE IF NOT EXISTS products (id TEXT, organization_id TEXT, title TEXT, type TEXT, price REAL)").execute(&sqlite_pool).await;
     let _ = sqlx::query("CREATE TABLE IF NOT EXISTS orders (id TEXT, tenant_id TEXT, total_amount REAL, status TEXT)").execute(&sqlite_pool).await;
     let _ = sqlx::query("CREATE TABLE IF NOT EXISTS tenants (tenant_id TEXT, business_name TEXT, tier TEXT)").execute(&sqlite_pool).await;

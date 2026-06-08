@@ -167,7 +167,8 @@ impl Provider for LocalProvider {
 
             use tokio::io::AsyncWriteExt;
             let mut file = options.open(&path).await?;
-            file.write_all(&final_data).await
+            file.write_all(&final_data).await?;
+            file.sync_all().await
         }.await;
 
         #[cfg(not(unix))]

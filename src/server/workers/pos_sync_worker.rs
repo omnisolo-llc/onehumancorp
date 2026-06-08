@@ -40,16 +40,48 @@ impl PosSyncWorker {
             let product_id = mutation["product_id"].as_str().unwrap();
             let quantity_deducted = mutation["quantity_deducted"].as_i64().unwrap();
 
-            sqlx::query("UPDATE products SET inventory_count = GREATEST(0, inventory_count - $1) WHERE id = $2")
-                .bind(quantity_deducted)
+            let current_stock_res = sqlx::query("SELECT inventory_count FROM products WHERE id = $1 AND tenant_id = $2 FOR UPDATE")
                 .bind(product_id)
-                .execute(&mut *tx)
-                .await
-                .unwrap();
+                .bind(&job.tenant_id)
+                .fetch_optional(&mut *tx)
+                .await;
 
-            let cache = crate::builder::edge::get_edge_cache();
-            cache.invalidate_by_tag(&format!("entity:product:{}", product_id)).await;
-            cache.invalidate_by_tag(&format!("tenant-id:{}", job.tenant_id)).await;
+            if let Ok(Some(row)) = current_stock_res {
+                let stock: i32 = sqlx::Row::get(&row, "inventory_count");
+                let is_conflict = stock < quantity_deducted as i32;
+
+                let _ = sqlx::query("UPDATE products SET inventory_count = GREATEST(0, inventory_count - $1) WHERE id = $2 AND tenant_id = $3")
+                    .bind(quantity_deducted)
+                    .bind(product_id)
+                    .bind(&job.tenant_id)
+                    .execute(&mut *tx)
+                    .await;
+
+                if is_conflict {
+                    let ai_task_id = uuid::Uuid::new_v4().to_string();
+                    let ai_payload = serde_json::json!({
+                        "transaction_id": transaction_id,
+                        "product_id": product_id,
+                        "expected_stock": quantity_deducted,
+                        "actual_stock": stock,
+                        "message": format!("Heads up! A pop-up sale overlapped with an online order for {}. Operations has drafted an email to the online customer.", product_id)
+                    }).to_string();
+
+                    let _ = sqlx::query(
+                        "INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status)
+                         VALUES ($1, $2, 'operations', 'PosSyncFailure', $3::jsonb, 'PENDING')"
+                    )
+                    .bind(&ai_task_id)
+                    .bind(&job.tenant_id)
+                    .bind(&ai_payload)
+                    .execute(&mut *tx)
+                    .await;
+                }
+
+                let cache = crate::builder::edge::get_edge_cache();
+                let _ = cache.invalidate_by_tag(&format!("entity:product:{}", product_id)).await;
+                let _ = cache.invalidate_by_tag(&format!("tenant-id:{}", job.tenant_id)).await;
+            }
         }
 
         // Support payload formatted directly for the transaction items array
@@ -61,15 +93,48 @@ impl PosSyncWorker {
                         let qty = item.get("quantity").and_then(|v| v.as_i64()).unwrap_or(1);
                         if product_id.is_empty() { continue; }
 
-                        let _ = sqlx::query("UPDATE products SET inventory_count = GREATEST(0, inventory_count - $1) WHERE id = $2")
-                            .bind(qty)
+                        let current_stock_res = sqlx::query("SELECT inventory_count FROM products WHERE id = $1 AND tenant_id = $2 FOR UPDATE")
                             .bind(product_id)
-                            .execute(&mut *tx)
+                            .bind(&job.tenant_id)
+                            .fetch_optional(&mut *tx)
                             .await;
 
-                        let cache = crate::builder::edge::get_edge_cache();
-                        let _ = cache.invalidate_by_tag(&format!("entity:product:{}", product_id)).await;
-                        let _ = cache.invalidate_by_tag(&format!("tenant-id:{}", job.tenant_id)).await;
+                        if let Ok(Some(row)) = current_stock_res {
+                            let stock: i32 = sqlx::Row::get(&row, "inventory_count");
+                            let is_conflict = stock < qty as i32;
+
+                            let _ = sqlx::query("UPDATE products SET inventory_count = GREATEST(0, inventory_count - $1) WHERE id = $2 AND tenant_id = $3")
+                                .bind(qty)
+                                .bind(product_id)
+                                .bind(&job.tenant_id)
+                                .execute(&mut *tx)
+                                .await;
+
+                            if is_conflict {
+                                let ai_task_id = uuid::Uuid::new_v4().to_string();
+                                let ai_payload = serde_json::json!({
+                                    "transaction_id": transaction_id,
+                                    "product_id": product_id,
+                                    "expected_stock": qty,
+                                    "actual_stock": stock,
+                                    "message": format!("Heads up! A pop-up sale overlapped with an online order for {}. Operations has drafted an email to the online customer.", product_id)
+                                }).to_string();
+
+                                let _ = sqlx::query(
+                                    "INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status)
+                                     VALUES ($1, $2, 'operations', 'PosSyncFailure', $3::jsonb, 'PENDING')"
+                                )
+                                .bind(&ai_task_id)
+                                .bind(&job.tenant_id)
+                                .bind(&ai_payload)
+                                .execute(&mut *tx)
+                                .await;
+                            }
+
+                            let cache = crate::builder::edge::get_edge_cache();
+                            let _ = cache.invalidate_by_tag(&format!("entity:product:{}", product_id)).await;
+                            let _ = cache.invalidate_by_tag(&format!("tenant-id:{}", job.tenant_id)).await;
+                        }
                     }
                 }
             }
