@@ -11,6 +11,8 @@ pub struct OfflineMutation {
     pub payment_method: Option<String>,
     pub payment_intent_id: Option<String>,
     pub currency: Option<String>,
+    pub mutation_type: Option<String>,
+    pub payload: Option<String>,
 }
 
 pub struct CRDTOfflineSynchronizer;
@@ -25,6 +27,9 @@ impl CRDTOfflineSynchronizer {
         let mut failed_transactions = Vec::new();
 
         for mutation in mutations {
+            if mutation.mutation_type.as_deref() == Some("draft_quote") {
+                continue;
+            }
             let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
 
             // CRDT Operation: decrement inventory idempotently/commutatively
