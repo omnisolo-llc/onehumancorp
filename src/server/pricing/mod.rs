@@ -7,6 +7,5 @@ pub mod compression;
 pub mod dynamic;
 pub mod payment_routing;
 pub mod prompt_caching;
-pub mod deduplication;
 pub mod rate_limit;
 pub mod cost_aggregator;

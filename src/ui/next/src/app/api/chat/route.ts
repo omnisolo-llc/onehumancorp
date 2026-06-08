@@ -22,7 +22,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: `message must be ${MAX_MESSAGE_LENGTH} characters or fewer` }, { status: 413 });
   }
 
-  const backendUrl = process.env.BACKEND_URL || 'http://127.0.0.1:18789';
+  const backendUrl = process.env.BACKEND_URL || 'http://localhost:8080';
 
   try {
     const res = await fetch(`${backendUrl}/api/agents/chat`, {

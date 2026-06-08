@@ -104,17 +104,11 @@ pub struct RedisRateLimiter {
     client: Client,
     connection: OnceCell<redis::aio::MultiplexedConnection>,
     pub telemetry_store: Option<std::sync::Arc<::server_harness::telemetry::ViolationStore>>,
-    db_pool: Option<sqlx::PgPool>,
 }
 
 impl RedisRateLimiter {
     pub fn new(client: Client) -> Self {
-        Self { client, connection: OnceCell::new(), telemetry_store: None, db_pool: None }
-    }
-
-    pub fn with_db(mut self, pool: sqlx::PgPool) -> Self {
-        self.db_pool = Some(pool);
-        self
+        Self { client, connection: OnceCell::new(), telemetry_store: None }
     }
 
     pub fn with_telemetry(mut self, store: std::sync::Arc<::server_harness::telemetry::ViolationStore>) -> Self {
@@ -131,32 +125,12 @@ impl RedisRateLimiter {
 
     pub async fn get_tenant_tier(&self, tenant_id: &str) -> Result<PlanTier, String> {
         let mut conn = self.get_connection().await?;
-        let redis_key = format!("tenant:{}:tier", tenant_id);
-        let mut tier: Option<String> = conn.get(&redis_key).await.map_err(|e| e.to_string())?;
-
-        if tier.is_none() {
-            if let Some(pool) = &self.db_pool {
-                use sqlx::Row;
-                if let Ok(record) = sqlx::query("SELECT tier FROM tenants WHERE id = $1")
-                    .bind(tenant_id)
-                    .fetch_one(pool)
-                    .await
-                {
-                    if let Ok(t) = record.try_get::<Option<String>, _>("tier") {
-                        tier = t;
-                        if let Some(ref t_str) = tier {
-                            // Cache for 24 hours
-                            let _ : () = conn.set_ex(&redis_key, t_str, 24 * 60 * 60).await.unwrap_or(());
-                        }
-                    }
-                }
-            }
-        }
+        let tier: Option<String> = conn.get(format!("tenant:{}:tier", tenant_id)).await.map_err(|e| e.to_string())?;
 
         match tier.as_deref() {
-            Some("Starter") | Some("starter") => Ok(PlanTier::Starter),
-            Some("Pro") | Some("pro") => Ok(PlanTier::Pro),
-            Some("Business") | Some("business") => Ok(PlanTier::Business),
+            Some("Starter") => Ok(PlanTier::Starter),
+            Some("Pro") => Ok(PlanTier::Pro),
+            Some("Business") => Ok(PlanTier::Business),
             _ => Ok(PlanTier::Free),
         }
     }
@@ -167,15 +141,6 @@ impl RedisRateLimiter {
         let month_key = now.format("%Y-%m").to_string();
         let tenant_key = format!("tenant:{}:actions_used:{}", tenant_id, month_key);
         let used: Option<u32> = conn.get(&tenant_key).await.map_err(|e| e.to_string())?;
-        Ok(used.unwrap_or(0))
-    }
-
-    pub async fn get_agent_actions_used(&self, tenant_id: &str, agent_id: &str) -> Result<u32, String> {
-        let mut conn = self.get_connection().await?;
-        let now = chrono::Utc::now();
-        let month_key = now.format("%Y-%m").to_string();
-        let agent_key = format!("tenant:{}:agent:{}:actions_used:{}", tenant_id, agent_id, month_key);
-        let used: Option<u32> = conn.get(&agent_key).await.map_err(|e| e.to_string())?;
         Ok(used.unwrap_or(0))
     }
 

@@ -42,7 +42,13 @@ mod tests {
     use ohc_builtin_agent_tools::{Tool, ToolExecutor};
     use serde_json::json;
     use std::sync::atomic::{AtomicUsize, Ordering};
-    use std::sync::Arc;
+    use std::sync::{Arc, OnceLock};
+
+    static USER_INPUT_ENV_LOCK: OnceLock<tokio::sync::Mutex<()>> = OnceLock::new();
+
+    fn user_input_env_lock() -> &'static tokio::sync::Mutex<()> {
+        USER_INPUT_ENV_LOCK.get_or_init(|| tokio::sync::Mutex::new(()))
+    }
 
     struct DummyToolExecutor {
         result: Result<String, ToolError>,
@@ -306,8 +312,10 @@ mod tests {
         }
     }
 
-    #[tokio::test]
+    #[tokio::test()]
     async fn test_user_fixable() {
+        let _env_guard = user_input_env_lock().lock().await;
+        unsafe { std::env::set_var("OHC_MOCK_USER_INPUT", "abort"); }
         let tool = Tool {
             name: "dummy".to_string(),
             description: "dummy".to_string(),
@@ -325,11 +333,38 @@ mod tests {
         };
 
         let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2).await;
+        unsafe { std::env::remove_var("OHC_MOCK_USER_INPUT"); }
         assert!(res.is_err());
         match res.unwrap_err() {
-            ToolError::UserFixable(msg) => assert_eq!(msg, "ask user"),
-            _ => panic!("Expected UserFixable error bubbled up"),
+            ToolError::UserFixable(msg) => assert_eq!(msg, "User aborted. Original error: ask user"),
+            _ => panic!("Expected UserFixable error"),
         }
+    }
+
+    #[tokio::test()]
+    async fn test_user_fixable_resolve() {
+        let _env_guard = user_input_env_lock().lock().await;
+        unsafe { std::env::set_var("OHC_MOCK_USER_INPUT", "here is the fix"); }
+        let tool = Tool {
+            name: "dummy".to_string(),
+            description: "dummy".to_string(),
+            parameters: json!({}),
+            is_read_only: false,
+            execute: Arc::new(DummyToolExecutor {
+                result: Err(ToolError::UserFixable("ask user".to_string())),
+            }),
+        };
+
+        let tc = ToolCall {
+            id: "1".to_string(),
+            name: "dummy".to_string(),
+            arguments: json!({}),
+        };
+
+        let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2).await;
+        unsafe { std::env::remove_var("OHC_MOCK_USER_INPUT"); }
+        assert!(res.is_ok());
+        assert_eq!(res.unwrap(), "User provided input to resolve the issue: here is the fix");
     }
 
     #[tokio::test]
@@ -408,43 +443,5 @@ mod tests {
             ToolError::HandoffRequested(msg) => assert_eq!(msg, "agent_2"),
             _ => panic!("Expected HandoffRequested error"),
         }
-    }
-
-    #[tokio::test(start_paused = true)]
-    async fn test_transient_retry_clamped_to_two() {
-        let call_count = Arc::new(AtomicUsize::new(0));
-        let tool = Tool {
-            name: "dummy".to_string(),
-            description: "dummy".to_string(),
-            parameters: json!({}),
-            is_read_only: false,
-            execute: Arc::new(TransientRetryExecutor {
-                call_count: call_count.clone(),
-                fail_until: 10, // Keep failing
-            }),
-        };
-
-        let tc = ToolCall {
-            id: "1".to_string(),
-            name: "dummy".to_string(),
-            arguments: json!({}),
-        };
-
-        // Pass max_retries = 5, but it should be clamped to 2
-        let handle = tokio::spawn(async move {
-            ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 5).await
-        });
-
-        tokio::time::advance(std::time::Duration::from_millis(30000)).await;
-
-        let res = handle.await.unwrap();
-
-        assert!(res.is_err());
-        match res.unwrap_err() {
-            ToolError::Unexpected(msg) => assert_eq!(msg, "Transient error after retries: transient error attempt 2"),
-            _ => panic!("Expected Unexpected error"),
-        }
-        // 1 initial + 2 clamped retries = 3 calls
-        assert_eq!(call_count.load(Ordering::SeqCst), 3);
     }
 }

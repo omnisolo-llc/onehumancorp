@@ -344,7 +344,7 @@ impl CostAuditor {
 
             let fee = match method {
                 PaymentMethod::Ach => (amount * PaymentRouter::ACH_FEE_PERCENTAGE).min(PaymentRouter::ACH_FEE_CAP),
-                PaymentMethod::CreditCard | PaymentMethod::Razorpay | PaymentMethod::MercadoPago | PaymentMethod::Alipay => {
+                PaymentMethod::CreditCard | PaymentMethod::Razorpay | PaymentMethod::MercadoPago => {
                     (amount * PaymentRouter::CARD_FEE_PERCENTAGE) + PaymentRouter::CARD_FEE_FIXED
                 }
             };

@@ -26,7 +26,14 @@ impl MyDashboardService {
     }
 
     #[tracing::instrument(skip(self))]
-    async fn fetch_agents_impl(&self, org_id: &str, mobile_optimized: bool) -> Result<Vec<::server_ohc::orchestration::Agent>, String> {
+    async fn fetch_agents(&self, org_id: &str, mobile_optimized: bool) -> Result<Vec<::server_ohc::orchestration::Agent>, String> {
+        let cache_key = format!("hub:agents:{}:{}", org_id, mobile_optimized);
+        let cache = AGENTS_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
+
+        if let Some(agents) = cache.get(&cache_key).await {
+            return Ok(agents);
+        }
+
         let hub = self.hub.clone();
         let org_id_clone = org_id.to_string();
         let mut agents = tokio::task::spawn_blocking(move || {
@@ -38,38 +45,19 @@ impl MyDashboardService {
                 agent.name = String::new();
             }
         }
+        cache.set(&cache_key, agents.clone(), std::time::Duration::from_secs(5)).await;
         Ok(agents)
     }
 
     #[tracing::instrument(skip(self))]
-    async fn fetch_agents(&self, org_id: &str, mobile_optimized: bool) -> Result<Vec<::server_ohc::orchestration::Agent>, String> {
-        let cache_key = format!("hub:agents:{}:{}", org_id, mobile_optimized);
-        let cache = AGENTS_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
+    async fn fetch_meetings(&self, org_id: &str, mobile_optimized: bool) -> Result<Arc<Vec<::server_ohc::orchestration::MeetingRoom>>, String> {
+        let cache_key = format!("hub:meetings:{}:{}", org_id, mobile_optimized);
+        let cache = MEETINGS_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
 
-        if let Some((agents, is_stale)) = cache.get_with_swr(&cache_key).await {
-            if !is_stale {
-                return Ok(agents);
-            }
-            let s = self.clone();
-            let org_id_clone = org_id.to_string();
-            let cache_key_bg = cache_key.clone();
-            tokio::spawn(async move {
-                if let Ok(agents) = s.fetch_agents_impl(&org_id_clone, mobile_optimized).await {
-                    if let Some(c) = AGENTS_CACHE.get() {
-                        c.set(&cache_key_bg, agents, std::time::Duration::from_secs(3600)).await;
-                    }
-                }
-            });
-            return Ok(agents);
+        if let Some(meetings) = cache.get(&cache_key).await {
+            return Ok(meetings);
         }
 
-        let agents = self.fetch_agents_impl(org_id, mobile_optimized).await?;
-        cache.set(&cache_key, agents.clone(), std::time::Duration::from_secs(3600)).await;
-        Ok(agents)
-    }
-
-    #[tracing::instrument(skip(self))]
-    async fn fetch_meetings_impl(&self, org_id: &str, mobile_optimized: bool) -> Result<Arc<Vec<::server_ohc::orchestration::MeetingRoom>>, String> {
         let all_meetings = self.hub.get_meetings().await;
         let mut filtered = Vec::new();
         for m in all_meetings.iter() {
@@ -87,38 +75,20 @@ impl MyDashboardService {
                 filtered.push(mtg);
             }
         }
-        Ok(Arc::new(filtered))
-    }
-
-    #[tracing::instrument(skip(self))]
-    async fn fetch_meetings(&self, org_id: &str, mobile_optimized: bool) -> Result<Arc<Vec<::server_ohc::orchestration::MeetingRoom>>, String> {
-        let cache_key = format!("hub:meetings:{}:{}", org_id, mobile_optimized);
-        let cache = MEETINGS_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
-
-        if let Some((meetings, is_stale)) = cache.get_with_swr(&cache_key).await {
-            if !is_stale {
-                return Ok(meetings);
-            }
-            let s = self.clone();
-            let org_id_clone = org_id.to_string();
-            let cache_key_bg = cache_key.clone();
-            tokio::spawn(async move {
-                if let Ok(meetings) = s.fetch_meetings_impl(&org_id_clone, mobile_optimized).await {
-                    if let Some(c) = MEETINGS_CACHE.get() {
-                        c.set(&cache_key_bg, meetings, std::time::Duration::from_secs(5)).await;
-                    }
-                }
-            });
-            return Ok(meetings);
-        }
-
-        let meetings = self.fetch_meetings_impl(org_id, mobile_optimized).await?;
+        let meetings = Arc::new(filtered);
         cache.set(&cache_key, meetings.clone(), std::time::Duration::from_secs(5)).await;
         Ok(meetings)
     }
 
     #[tracing::instrument(skip(self))]
-    async fn fetch_cost_summary_impl(&self, org_id: &str, mobile_optimized: bool) -> Result<(f64, i64, Vec<(String, f64, i64, f64, f64, i64)>), String> {
+    async fn fetch_cost_summary(&self, org_id: &str, mobile_optimized: bool) -> Result<(f64, i64, Vec<(String, f64, i64, f64, f64, i64)>), String> {
+        let cache_key = format!("hub:cost:{}:{}", org_id, mobile_optimized);
+        let cache = COST_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
+
+        if let Some(cost_data) = cache.get(&cache_key).await {
+            return Ok(cost_data);
+        }
+
         let hub_clone = self.hub.clone();
         let cost_data = tokio::task::spawn_blocking(move || {
             let cost_auditor = hub_clone.get_cost_auditor();
@@ -135,32 +105,7 @@ impl MyDashboardService {
                 snapshot,
             )
         }).await.unwrap_or_else(|_| (0.0, 0, vec![]));
-        Ok(cost_data)
-    }
 
-    #[tracing::instrument(skip(self))]
-    async fn fetch_cost_summary(&self, org_id: &str, mobile_optimized: bool) -> Result<(f64, i64, Vec<(String, f64, i64, f64, f64, i64)>), String> {
-        let cache_key = format!("hub:cost:{}:{}", org_id, mobile_optimized);
-        let cache = COST_CACHE.get_or_init(|| HybridCache::new(self.hub.redis_client.clone()));
-
-        if let Some((cost_data, is_stale)) = cache.get_with_swr(&cache_key).await {
-            if !is_stale {
-                return Ok(cost_data);
-            }
-            let s = self.clone();
-            let org_id_clone = org_id.to_string();
-            let cache_key_bg = cache_key.clone();
-            tokio::spawn(async move {
-                if let Ok(cost_data) = s.fetch_cost_summary_impl(&org_id_clone, mobile_optimized).await {
-                    if let Some(c) = COST_CACHE.get() {
-                        c.set(&cache_key_bg, cost_data, std::time::Duration::from_secs(60)).await;
-                    }
-                }
-            });
-            return Ok(cost_data);
-        }
-
-        let cost_data = self.fetch_cost_summary_impl(org_id, mobile_optimized).await?;
         cache.set(&cache_key, cost_data.clone(), std::time::Duration::from_secs(60)).await;
         Ok(cost_data)
     }
@@ -479,19 +424,10 @@ impl DashboardService for MyDashboardService {
         let agents = agents_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
         let _meetings = meetings_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
         let (total_cost, total_tokens, _agent_costs_data) = cost_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
-        let mut products = products_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
-        let mut orders = orders_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
+        let products = products_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
+        let orders = orders_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
         let bookings = bookings_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
         let org = org_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
-
-        if req.mobile_optimized {
-            for p in &mut products {
-                p.fulfillment_strategy = String::new();
-            }
-            for o in &mut orders {
-                o.organization_id = String::new();
-            }
-        }
 
 
 
@@ -523,10 +459,6 @@ impl DashboardService for MyDashboardService {
         let final_meetings = if req.mobile_optimized { out_meetings.into_iter().map(|mut m| { m.transcript.clear(); m }).collect() } else { out_meetings };
         let mut final_cost_summary = None;
         let mut final_statuses = Vec::new();
-        if req.mobile_optimized { final_statuses.clear(); }
-
-        let mut original_prompts_len = 0;
-        let mut compressed_prompts_len = 0;
 
         let final_agents_payload = agents
             .iter()
@@ -546,19 +478,10 @@ impl DashboardService for MyDashboardService {
                     _ => ::server_ohc::common::Role::Unspecified as i32,
                 };
 
-                let orig_len = a.name.len();
-                if orig_len > 0 && !req.mobile_optimized {
-                    original_prompts_len += orig_len;
-                }
-
                 let name = if req.mobile_optimized {
                     String::new()
                 } else {
-                    let compressed = ::server_pricing::compression::reduce_tokens(&a.name);
-                    if orig_len > 0 {
-                        compressed_prompts_len += compressed.len();
-                    }
-                    compressed
+                    ::server_pricing::compression::reduce_tokens(&a.name)
                 };
 
                 ::server_ohc::agent::Agent {
@@ -580,6 +503,22 @@ impl DashboardService for MyDashboardService {
                 .into_iter()
                 .map(|(status, count)| StatusCount { status, count })
                 .collect();
+
+            // AI Token Efficiency (Phase 5): Audit system prompts for redundancy and compress
+            let mut original_prompts_len = 0;
+            let mut compressed_prompts_len = 0;
+
+            for agent in &agents {
+                let prompt = &agent.name;
+                let orig_len = prompt.len();
+                if orig_len > 0 {
+                    original_prompts_len += orig_len;
+
+                    let compressed = ::server_pricing::compression::reduce_tokens(prompt);
+
+                    compressed_prompts_len += compressed.len();
+                }
+            }
 
             if let Some(ref o) = org {
                 let prompt = &o.name;
@@ -996,7 +935,7 @@ mod tests {
         let start = std::time::Instant::now();
         let _res = service.get_dashboard(request).await.unwrap().into_inner();
         let elapsed = start.elapsed();
-        tracing::info!("Hybrid benchmark completed in {} ms", elapsed.as_millis());
+        println!("Hybrid benchmark completed in {} ms", elapsed.as_millis());
         assert!(elapsed.as_millis() < 500, "Dashboard fetch took too long: {}ms", elapsed.as_millis());
     }
 }

@@ -94,8 +94,10 @@ impl MarketplaceClient {
     /// Fetch a specific agent's definition
     pub async fn fetch_agent(&self, agent_id: &str) -> Result<MarketplaceAgent, String> {
         // Check cache first
-        if let Ok(cache) = self.cache.read() && let Some(agent) = cache.get(agent_id) {
-            return Ok(agent.clone());
+        if let Ok(cache) = self.cache.read() {
+            if let Some(agent) = cache.get(agent_id) {
+                return Ok(agent.clone());
+            }
         }
 
         // Fetch using provider

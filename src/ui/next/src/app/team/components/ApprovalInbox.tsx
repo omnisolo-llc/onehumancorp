@@ -62,7 +62,7 @@ export default function ApprovalInbox({
         <div className="pt-12 pb-6 px-6 bg-white/65 backdrop-blur-[30px] border-b border-white/40 sticky top-0 z-10 flex items-center gap-4">
           <button
             onClick={onBack}
-            className="w-[44px] h-[44px] flex items-center justify-center rounded-full bg-white shadow-sm border border-gray-100 text-gray-500 hover:text-gray-900 transition-colors"
+            className="w-10 h-10 flex items-center justify-center rounded-full bg-white shadow-sm border border-gray-100 text-gray-500 hover:text-gray-900 transition-colors"
           >
             <svg
               className="w-5 h-5"
@@ -468,7 +468,7 @@ export default function ApprovalInbox({
                   )}
 
                   {req.payload?.feature_type === "quote_draft" && (
-                    <div className="mb-6 p-4 rounded-xl bg-blue-50 border border-blue-100 flex flex-col gap-3" data-testid="draft-quote-card">
+                    <div className="mb-6 p-4 rounded-xl bg-blue-50 border border-blue-100 flex flex-col gap-3">
                       <div className="flex items-center gap-2 text-blue-800 font-semibold text-sm">
                         <svg
                           className="w-5 h-5"
@@ -483,7 +483,7 @@ export default function ApprovalInbox({
                             d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
                           />
                         </svg>
-                        Draft Quote: {req.payload.service || 'Plumbing Fix'} for Customer
+                        New Service Inquiry
                       </div>
                       <div className="text-xs text-blue-700 font-medium">
                         {req.payload.customer_inquiry}
@@ -495,7 +495,7 @@ export default function ApprovalInbox({
                         </div>
                         <div className="space-y-2">
                           <div className="flex justify-between">
-                            <span className="text-xs text-gray-500">Calculated Total:</span>
+                            <span className="text-xs text-gray-500">Suggested Price:</span>
                             <span className="text-xs font-semibold text-gray-900">${req.payload.suggested_price}</span>
                           </div>
                           <div className="flex justify-between">
@@ -558,28 +558,26 @@ export default function ApprovalInbox({
                   <div className="flex gap-3">
                     <button
                       onClick={() => {
-                        if (payload && (payload.original_message || payload.feature_type === "quote_draft")) {
+                        if (payload && payload.original_message) {
                           setSelectedReview(req);
                         } else {
                           onReject(req.id);
                         }
                       }}
-                      className="flex-1 py-3 px-4 rounded-xl font-semibold text-sm bg-gray-100 text-gray-700 hover:bg-gray-200 active:scale-[0.98] transition-all min-h-[44px] min-w-[44px]"
+                      className="flex-1 py-3 px-4 rounded-xl font-semibold text-sm bg-gray-100 text-gray-700 hover:bg-gray-200 active:scale-[0.98] transition-all min-h-[44px]"
                     >
-                      {payload && (payload.original_message || payload.feature_type === "quote_draft")
+                      {payload && payload.original_message
                         ? "Review"
                         : "Reject / Edit"}
                     </button>
                     <button
                       onClick={() => onApprove(req.id)}
-                      className="flex-1 py-3 px-4 rounded-xl font-bold text-sm bg-blue-600 text-white hover:bg-blue-700 shadow-md shadow-blue-500/20 active:scale-[0.98] transition-all min-h-[44px] min-w-[44px]"
+                      className="flex-1 py-3 px-4 rounded-xl font-bold text-sm bg-blue-600 text-white hover:bg-blue-700 shadow-md shadow-blue-500/20 active:scale-[0.98] transition-all min-h-[44px]"
                     >
                       {req.payload?.feature_type === "case_study"
                         ? "Publish to Website"
                         : req.payload?.feature_type === "social_post"
                         ? "Schedule Post"
-                        : req.payload?.feature_type === "quote_draft"
-                        ? "Approve & Send"
                         : "Approve"}
                     </button>
                   </div>
@@ -608,7 +606,7 @@ export default function ApprovalInbox({
                 </p>
                 <div className="bg-gray-50 p-3 rounded-xl border border-gray-100 text-sm text-gray-700">
                   {extractPayload(selectedReview.description).payload
-                    ?.original_message || extractPayload(selectedReview.description).payload?.customer_inquiry || "N/A"}
+                    ?.original_message || "N/A"}
                 </div>
               </div>
 
@@ -628,7 +626,7 @@ export default function ApprovalInbox({
                     onReject(selectedReview.id);
                     setSelectedReview(null);
                   }}
-                  className="flex-1 py-3 px-4 rounded-xl font-semibold text-sm bg-gray-100 text-gray-700 hover:bg-gray-200 min-h-[44px] min-w-[44px]"
+                  className="flex-1 py-3 px-4 rounded-xl font-semibold text-sm bg-gray-100 text-gray-700 hover:bg-gray-200 min-h-[44px]"
                 >
                   Discard
                 </button>
@@ -636,7 +634,7 @@ export default function ApprovalInbox({
                   onClick={() => {
                     setSelectedReview(null);
                   }}
-                  className="flex-1 py-3 px-4 rounded-xl font-semibold text-sm bg-gray-100 text-gray-700 hover:bg-gray-200 min-h-[44px] min-w-[44px]"
+                  className="flex-1 py-3 px-4 rounded-xl font-semibold text-sm bg-gray-100 text-gray-700 hover:bg-gray-200 min-h-[44px]"
                 >
                   Edit
                 </button>
@@ -645,7 +643,7 @@ export default function ApprovalInbox({
                     onApprove(selectedReview.id);
                     setSelectedReview(null);
                   }}
-                  className="flex-1 py-3 px-4 rounded-xl font-bold text-sm bg-blue-600 text-white hover:bg-blue-700 min-h-[44px] min-w-[44px]"
+                  className="flex-1 py-3 px-4 rounded-xl font-bold text-sm bg-blue-600 text-white hover:bg-blue-700 min-h-[44px]"
                 >
                   Send Now
                 </button>

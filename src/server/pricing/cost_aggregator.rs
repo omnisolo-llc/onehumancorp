@@ -42,7 +42,7 @@ pub fn process_telemetry_rows(rows: Vec<TelemetryRow>) -> Vec<DailyCost> {
                 let val = row.total.unwrap_or(0.0) as i64;
                 match row.metric_name.as_str() {
                     "ohc_mission_cost_cents" => daily.llm_cost += val,
-                    "ohc_storage_rw_cost" => daily.storage_cost += val,
+                    "ohc_storage_rw_cost" => daily.storage_cost += (row.total.unwrap_or(0.0) * 0.00000001).round() as i64,
                     "ohc_network_cost_cents" => daily.network_cost += val,
                     "ohc_compute_cost_cents" => daily.compute_cost += val,
                     _ => {
@@ -154,7 +154,7 @@ mod tests {
             TelemetryRow {
                 date: Some(today),
                 metric_name: "ohc_storage_rw_cost".to_string(),
-                total: Some(50.0), // Already stored as cents
+                total: Some(100000000.0), // Should become 1 after mult with 0.00000001
             },
             TelemetryRow {
                 date: Some(today),
@@ -171,11 +171,11 @@ mod tests {
         let today_str = today.format("%Y-%m-%d").to_string();
         let today_data = res.iter().find(|r| r.date == today_str).unwrap();
 
-        assert_eq!(today_data.storage_cost, 50);
+        assert_eq!(today_data.storage_cost, 1);
         assert_eq!(today_data.network_cost, 150);
         assert_eq!(today_data.llm_cost, 0);
         assert_eq!(today_data.compute_cost, 0);
-        assert_eq!(today_data.total_cost, 200);
+        assert_eq!(today_data.total_cost, 151);
     }
 
     #[test]
@@ -194,48 +194,4 @@ mod tests {
             assert_eq!(item.total_cost, 0);
         }
     }
-}
-
-#[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
-pub struct AgentCostRow {
-    pub agent_id: String,
-    pub cost_cents: i64,
-}
-
-pub async fn aggregate_agent_costs(pool: &PgPool, tenant_id: &str) -> Vec<AgentCostRow> {
-    let raw_rows_result = sqlx::query(
-        r#"
-        SELECT
-            (labels_json::jsonb)->>'agent_id' as agent_id,
-            SUM(value)::FLOAT8 as total
-        FROM telemetry_buffer
-        WHERE (labels_json::jsonb)->>'tenant_id' = $1
-          AND metric_name = 'ohc_mission_cost_cents'
-          AND timestamp >= CURRENT_DATE - INTERVAL '30 days'
-        GROUP BY (labels_json::jsonb)->>'agent_id'
-        ORDER BY total DESC
-        "#
-    )
-    .bind(tenant_id)
-    .fetch_all(pool)
-    .await;
-
-    let raw_rows = match raw_rows_result {
-        Ok(rows) => rows,
-        Err(e) => {
-            error!("Failed to fetch agent costs from database for tenant {}: {}", tenant_id, e);
-            return vec![];
-        }
-    };
-
-    raw_rows.into_iter().map(|r| AgentCostRow {
-        agent_id: r.try_get::<Option<String>, _>("agent_id")
-            .unwrap_or_else(|_| None)
-            .unwrap_or_else(|| "unknown".to_string()),
-        cost_cents: r.try_get::<Option<f64>, _>("total")
-            .unwrap_or_else(|_| None)
-            .unwrap_or(0.0) as i64,
-    })
-    .filter(|r| r.cost_cents > 0)
-    .collect()
 }

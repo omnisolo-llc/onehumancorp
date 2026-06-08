@@ -556,7 +556,6 @@ impl AgentServiceImpl {
             progressive_skills_dir: None,
             max_retries: 2,
             enable_single_agent_maximization: false,
-            enable_3_stage_anthropic_tool_gating: false,
             enable_vercel_tool_scoping_metric: false,
             enable_lazy_tool_loading: false,
             enable_sona_patterns: false,
@@ -666,7 +665,6 @@ impl AgentServiceImpl {
         let mailbox: SharedMailbox = Arc::new(RwLock::new(Mailbox::default()));
 
         let mut tools = crate::tools::all_tools(
-            None, // Pass None for LLM in tools to avoid circular dependencies for now
             None,
             todos,
             task_store,
@@ -996,7 +994,6 @@ impl AgentService for AgentServiceImpl {
                 progressive_skills_dir: None,
                 max_retries: 2,
                 enable_single_agent_maximization: false,
-            enable_3_stage_anthropic_tool_gating: false,
             enable_vercel_tool_scoping_metric: false,
             enable_lazy_tool_loading: false,
             enable_sona_patterns: false,

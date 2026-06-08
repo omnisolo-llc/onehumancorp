@@ -11,15 +11,12 @@ use crate::orchestration::departments::orchestrator::DepartmentOrchestrator;
 use crate::orchestration::departments::types::{DepartmentType, ActionRisk};
 use uuid::Uuid;
 use crate::db::get_pool;
-use super::translation::{translate_inbox_message_with_llm, InboxTranslation};
 
 #[derive(Deserialize)]
 pub struct WebhookPayload {
     pub tenant_id: String,
     pub message: String,
     pub source: String,
-    #[serde(default)]
-    pub target_language: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -100,30 +97,19 @@ async fn handle_webhook(
     // We route external messages (like DMs) to the Customer Success department
     let risk = ActionRisk::DraftForReview;
 
-    let target_language = payload.target_language.as_deref().unwrap_or("en");
-    let translation = match translate_inbox_message_with_llm(
-        &payload.tenant_id,
-        &payload.source,
-        &payload.message,
-        target_language,
-    )
-    .await
-    {
-        Ok(translation) => translation,
-        Err(e) => {
-            ::server_telemetry::record_error_signal("Inbox translation failed");
-            tracing::error!("Inbox translation failed: {}", e);
-            return (StatusCode::SERVICE_UNAVAILABLE, Json(WebhookResponse { success: false, request_id: None })).into_response();
-        }
-    };
-
-    let draft_reply = match generate_inbox_draft_reply(&payload.tenant_id, &payload.source, &translation).await {
-        Ok(reply) => reply,
-        Err(e) => {
-            ::server_telemetry::record_error_signal("Inbox draft generation failed");
-            tracing::error!("Inbox draft generation failed: {}", e);
-            return (StatusCode::SERVICE_UNAVAILABLE, Json(WebhookResponse { success: false, request_id: None })).into_response();
-        }
+    // Generate a draft reply
+    let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
+    let draft_reply = if !api_key.is_empty() {
+        let business_context = "A friendly bakery that sells vegan celebration cakes and classes."; // mocked context
+        let prompt = format!(
+            "Write one concise, warm customer-service reply. Business context: {} Customer message: {}",
+            business_context, payload.message
+        );
+        let compressed_prompt = crate::pricing::compression::reduce_tokens(&prompt);
+        let client = crate::minimax::MinimaxClient::new(api_key);
+        client.reason(&compressed_prompt).await.unwrap_or_else(|_| "Draft generation failed.".to_string())
+    } else {
+        "Thank you for reaching out! We will get back to you shortly.".to_string()
     };
 
     // Save to inbox_messages
@@ -133,16 +119,12 @@ async fn handle_webhook(
     if let Ok(mut tx) = pool.begin().await {
         if crate::common::auth_utils::set_org_context(&mut *tx, &payload.tenant_id).await.is_ok() {
             let _ = sqlx::query(
-                "INSERT INTO inbox_messages
-                    (id, tenant_id, source, content, original_content, translated_from_language, draft_reply, status)
-                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"
+                "INSERT INTO inbox_messages (id, tenant_id, source, content, draft_reply, status) VALUES ($1, $2, $3, $4, $5, $6)"
             )
             .bind(&id)
             .bind(&payload.tenant_id)
             .bind(&payload.source)
-            .bind(&translation.translated_content)
-            .bind(&translation.original_content)
-            .bind(translation.source_language.as_deref())
+            .bind(&payload.message)
             .bind(&draft_reply)
             .bind(&status)
             .execute(&mut *tx)
@@ -151,36 +133,18 @@ async fn handle_webhook(
         }
     }
 
-    let res = orchestrator.execute_action(
+    match orchestrator.execute_action(
         DepartmentType::CustomerSuccess,
         description,
-        payload.tenant_id.clone(),
+        payload.tenant_id,
         risk,
         serde_json::json!({
-            "source": payload.source.clone(),
-            "message": translation.translated_content.clone(),
-            "original_content": translation.original_content.clone(),
-            "translated_from_language": translation.source_language.clone(),
-            "draft_reply": draft_reply.clone(),
-            "inbox_message_id": id.clone(),
-        }),
-    ).await;
-
-    let _ = orchestrator.dispatch_event(crate::orchestration::departments::types::DepartmentEvent {
-        id: uuid::Uuid::new_v4().to_string(),
-        tenant_id: payload.tenant_id.clone(),
-        event_type: "tenant.omnichannel.message.received".to_string(),
-        payload: serde_json::json!({
             "source": payload.source,
-            "message": translation.translated_content,
-            "original_content": translation.original_content,
-            "translated_from_language": translation.source_language,
+            "message": payload.message,
             "draft_reply": draft_reply,
             "inbox_message_id": id,
         }),
-    }).await;
-
-    match res {
+    ).await {
         Ok(req) => (StatusCode::OK, Json(WebhookResponse { success: true, request_id: Some(req.id) })).into_response(),
         Err(e) => {
             if e.contains("AI Budget exhausted") {
@@ -189,30 +153,5 @@ async fn handle_webhook(
                 return (StatusCode::INTERNAL_SERVER_ERROR, Json(WebhookResponse { success: false, request_id: None })).into_response();
             }
         }
-    }
-}
-
-async fn generate_inbox_draft_reply(
-    tenant_id: &str,
-    source: &str,
-    translation: &InboxTranslation,
-) -> Result<String, String> {
-    let prompt = format!(
-        "Write one concise, warm customer-service reply in {} for an omnichannel SMB inbox. Do not invent policies, availability, prices, or order state. Tenant: {tenant_id}. Source: {source}. Customer message: {}",
-        translation.target_language,
-        translation.translated_content
-    );
-    let compressed_prompt = crate::pricing::compression::reduce_tokens(&prompt);
-
-    match std::env::var("OHC_INBOX_DRAFT_LLM_PROVIDER")
-        .or_else(|_| std::env::var("OHC_LLM_PROVIDER"))
-        .as_deref()
-    {
-        Ok("minimax") => {
-            let api_key = std::env::var("MINIMAX_API_KEY")
-                .map_err(|_| "MINIMAX_API_KEY is required for minimax inbox draft generation".to_string())?;
-            crate::minimax::MinimaxClient::new(api_key).reason(&compressed_prompt).await
-        }
-        _ => crate::minimax::LocalLLMClient::new().reason(&compressed_prompt).await,
     }
 }

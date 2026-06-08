@@ -46,7 +46,6 @@ sh_test(
     size = "large",
     srcs = ["bazel_vitest_test.sh"],
     data = glob([
-        "src/**/*.css",
         "src/**/*.ts",
         "src/**/*.tsx",
     ]) + [
@@ -57,8 +56,6 @@ sh_test(
         "vitest.config.ts",
         "vitest.setup.ts",
         ":node_modules",
-        "//deploy:hybrid_telemetry_dashboard_mirrors",
-        "//src/server/monitoring:dashboards/hybrid-telemetry.json",
         "@nodejs//:node",
     ],
 )

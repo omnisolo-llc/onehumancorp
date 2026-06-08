@@ -309,7 +309,6 @@ message StartOnboardingRequest {
   string admin_password = 12;
   string price_type = 13;
   string location = 14;
-  string target_audience = 15;
 }
 
 message StartOnboardingResponse {
@@ -783,13 +782,8 @@ message OnboardingMetricsResponse {
   repeated OnboardingMetric metrics = 1;
 }
 
-message GetOnboardingMetricsRequest {
-  bool mobile_optimized = 1;
-}
-
 message GetQuotaRequest {
   string user_id = 1;
-  bool mobile_optimized = 2;
 }
 
 message QuotaMetrics {
@@ -839,7 +833,7 @@ service GrowthService {
   
   rpc GetOnboardingFunnel(EmptyRequest) returns (OnboardingFunnelsResponse);
   rpc CreateOnboardingFunnel(CreateOnboardingRequest) returns (OnboardingFunnel);
-  rpc GetOnboardingMetrics(GetOnboardingMetricsRequest) returns (OnboardingMetricsResponse);
+  rpc GetOnboardingMetrics(EmptyRequest) returns (OnboardingMetricsResponse);
   
   rpc GetQuota(GetQuotaRequest) returns (QuotaMetrics);
   

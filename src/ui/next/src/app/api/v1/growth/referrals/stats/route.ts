@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(request: NextRequest) {
   try {
-    const backendUrl = process.env.OHC_BACKEND_URL || 'http://127.0.0.1:18789';
+    const backendUrl = process.env.OHC_BACKEND_URL || 'http://localhost:8080';
     const headers = new Headers({ 'Content-Type': 'application/json' });
     const authHeader = request.headers.get('authorization');
     if (authHeader) headers.set('authorization', authHeader);
@@ -25,4 +25,3 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
-export const dynamic = 'force-dynamic';

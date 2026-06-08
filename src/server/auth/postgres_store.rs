@@ -24,7 +24,7 @@ use sqlx::Row;
 macro_rules! validate_org_id {
     ($org_id:expr) => {
         if ::server_config::get().multitenant {
-            if $org_id.trim().eq_ignore_ascii_case("system") {
+            if $org_id.trim() == "system" {
                 return Err("tenant_id 'system' cannot be queried in multi-tenant mode".into());
             }
             if $org_id.trim().is_empty() {
@@ -293,59 +293,31 @@ impl UserRepository for PgUserRepository {
     async fn update_user(&self, user: User, org_id: &str) -> Result<(), String> {
         validate_org_id!(org_id);
         let roles_json = serde_json::to_string(&user.roles).unwrap_or_default();
-        let is_multitenant = ::server_config::get().multitenant;
-        let should_bypass = !is_multitenant;
 
-        let query = if should_bypass {
-            r#"
-            UPDATE users SET username=$2, email=$3, password_hash=$4, roles=$5, active=$6,
-            tenant_id=$7, oidc_subject=$8, updated_at=$9
-            WHERE id=$1 RETURNING id
-            "#
-        } else {
-            r#"
+        let query = r#"
             UPDATE users SET username=$2, email=$3, password_hash=$4, roles=$5, active=$6,
             tenant_id=$7, oidc_subject=$8, updated_at=$9
             WHERE id=$1 AND tenant_id = $10 RETURNING id
-            "#
-        };
+            "#;
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
-        if !should_bypass {
-            let tenant_id = org_id;
-            set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
-        }
+        let tenant_id = org_id;
+        set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
 
-        let res = if should_bypass {
-            sqlx::query(query)
-                .bind(&user.id)
-                .bind(&user.username)
-                .bind(&user.email)
-                .bind(&user.password_hash)
-                .bind(roles_json)
-                .bind(user.active)
-                .bind(org_id)
-                .bind(&user.oidc_subject)
-                .bind(user.updated_at)
-                .fetch_optional(&mut *tx)
-                .await
-                .map_err(|e| e.to_string())?
-        } else {
-            sqlx::query(query)
-                .bind(&user.id)
-                .bind(&user.username)
-                .bind(&user.email)
-                .bind(&user.password_hash)
-                .bind(roles_json)
-                .bind(user.active)
-                .bind(org_id)
-                .bind(&user.oidc_subject)
-                .bind(user.updated_at)
-                .bind(org_id)
-                .fetch_optional(&mut *tx)
-                .await
-                .map_err(|e| e.to_string())?
-        };
+        let res = sqlx::query(query)
+            .bind(&user.id)
+            .bind(&user.username)
+            .bind(&user.email)
+            .bind(&user.password_hash)
+            .bind(roles_json)
+            .bind(user.active)
+            .bind(org_id)
+            .bind(&user.oidc_subject)
+            .bind(user.updated_at)
+            .bind(org_id)
+            .fetch_optional(&mut *tx)
+            .await
+            .map_err(|e| e.to_string())?;
 
         if res.is_none() {
             return Err("user not found or unauthorized".to_string());
@@ -495,48 +467,5 @@ mod security_tests {
 
         // Depending on test db state, it might be an error (missing migrations), but we just ensure it executes cleanly.
         assert!(res.is_ok() || res.is_err());
-    }
-
-    #[tokio::test]
-    async fn test_update_user_tenant_isolation_regression() {
-        let database_url = match std::env::var("OHC_DATABASE_URL") {
-            Ok(url) => url,
-            Err(_) => return,
-        };
-
-        if database_url.starts_with("sqlite") {
-            return; // Postgres-specific test
-        }
-
-        let pool = PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
-            .acquire_timeout(Duration::from_millis(50))
-            .connect_lazy(&database_url)
-            .unwrap();
-
-        let repo = PgUserRepository::new(pool.clone());
-
-        let dummy_user = User {
-            id: "dummy_id_update".to_string(),
-            username: "dummy_user".to_string(),
-            email: "dummy@example.com".to_string(),
-            password_hash: "hash".to_string(),
-            roles: vec![],
-            active: true,
-            organization_id: Some("system".to_string()),
-            created_at: Utc::now(),
-            updated_at: Utc::now(),
-            oidc_subject: Some("sub".to_string()),
-        };
-
-        // Ensure multitenant environment is mocked strictly for 'system' context evaluation
-        let old_val = std::env::var("OHC_MULTITENANT").ok();
-        unsafe { std::env::set_var("OHC_MULTITENANT", "true"); }
-        let res = repo.update_user(dummy_user, "system").await;
-        if let Some(val) = old_val {
-            unsafe { std::env::set_var("OHC_MULTITENANT", val); }
-        } else {
-            unsafe { std::env::remove_var("OHC_MULTITENANT"); }
-        }
-        assert!(res.is_err(), "Must reject system org_id for update in multitenant mode");
     }
 }

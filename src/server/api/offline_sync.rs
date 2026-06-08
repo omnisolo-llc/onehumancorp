@@ -54,53 +54,22 @@ pub async fn offline_sync_handler(
         futures.push(async move {
             cache_clone.invalidate_by_tag(&format!("entity:product:{}", mutation.product_id)).await;
 
-            let mut db_tx = db_clone.begin().await.unwrap();
+            let query = "
+                UPDATE products
+                SET inventory_count = GREATEST(0, inventory_count - $1)
+                WHERE id = $2 AND tenant_id = $3
+                RETURNING id
+            ";
 
-            let query = "SELECT inventory_count FROM products WHERE id = $1 AND tenant_id = $2 FOR UPDATE";
-            let current_stock = sqlx::query(query)
+            let result = sqlx::query(query)
+                .bind(mutation.quantity_deducted)
                 .bind(&mutation.product_id)
                 .bind(&tenant_id_clone)
-                .fetch_optional(&mut *db_tx)
+                .fetch_optional(&db_clone)
                 .await;
 
-            match current_stock {
-                Ok(Some(row)) => {
-                    let stock: i32 = sqlx::Row::get(&row, "inventory_count");
-                    let mut is_conflict = false;
-                    if stock < mutation.quantity_deducted {
-                        is_conflict = true;
-                    }
-
-                    let new_stock = std::cmp::max(0, stock - mutation.quantity_deducted);
-
-                    let _ = sqlx::query("UPDATE products SET inventory_count = $1 WHERE id = $2 AND tenant_id = $3")
-                        .bind(new_stock)
-                        .bind(&mutation.product_id)
-                        .bind(&tenant_id_clone)
-                        .execute(&mut *db_tx)
-                        .await;
-
-                    if is_conflict {
-                        let ai_task_id = uuid::Uuid::new_v4().to_string();
-                        let ai_payload = serde_json::json!({
-                            "transaction_id": mutation.transaction_id,
-                            "product_id": mutation.product_id,
-                            "expected_stock": mutation.quantity_deducted,
-                            "actual_stock": stock,
-                            "message": format!("Heads up! A pop-up sale overlapped with an online order for {}. Operations has drafted an email to the online customer.", mutation.product_id)
-                        }).to_string();
-
-                        let _ = sqlx::query(
-                            "INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status)
-                             VALUES ($1, $2, 'operations', 'PosSyncFailure', $3::jsonb, 'PENDING')"
-                        )
-                        .bind(&ai_task_id)
-                        .bind(&tenant_id_clone)
-                        .bind(&ai_payload)
-                        .execute(&mut *db_tx)
-                        .await;
-                    }
-
+            match result {
+                Ok(Some(_)) => {
                     // Also queue an offline_pos_sync job to record the transaction
                     let job_id = uuid::Uuid::new_v4().to_string();
                     let job_payload = serde_json::json!({
@@ -120,14 +89,12 @@ pub async fn offline_sync_handler(
                     .bind(&job_id)
                     .bind(&tenant_id_clone)
                     .bind(&job_payload)
-                    .execute(&mut *db_tx)
+                    .execute(&db_clone)
                     .await;
 
                     if let Err(e) = job_res {
                         tracing::error!("Failed to enqueue offline_pos_sync job: {}", e);
                     }
-
-                    db_tx.commit().await.unwrap();
 
                     // Publish mesh event
                     let event = ::server_ohc::orchestration::TeammateMeshEvent {

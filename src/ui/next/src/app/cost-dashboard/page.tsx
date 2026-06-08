@@ -9,13 +9,12 @@ interface DailyCost {
   llm_cost: number;
   storage_cost: number;
   network_cost: number;
-  compute_cost?: number;
+  compute_cost: number;
 }
 
 interface CostDashboardData {
   total_revenue: number;
   total_costs: number;
-  compute_cost?: number;
   llm_cost: number;
   storage_cost: number;
   payment_fees: number;
@@ -26,24 +25,6 @@ interface CostDashboardData {
   period_start: string;
   period_end: string;
   trend: DailyCost[];
-  agent_costs?: { agent_id: string; cost_cents: number; }[];
-  department_tier_usage?: DepartmentTierUsage;
-}
-
-interface DepartmentTierUsage {
-  current_plan: string;
-  period: string;
-  departments: DepartmentTierUsageRow[];
-}
-
-interface DepartmentTierUsageRow {
-  id: string;
-  department_type: string;
-  agent_id: string;
-  actions_used: number;
-  action_limit: number | null;
-  usage_percent: number | null;
-  soft_limit_reached: boolean;
 }
 
 export default function CostDashboardPage() {
@@ -112,40 +93,45 @@ export default function CostDashboardPage() {
             </div>
             <div className="app-panel-body">
                 <p className="text-gray-700 font-medium leading-relaxed">
-                  Cost and tier usage are based on connected backend billing, storage, network, and agent department usage signals.
+                  Here's what happened this week and what you should do next:<br/><br/>
+                  - Your revenue is steady, but your AI marketing campaigns are driving more traffic.<br/>
+                  - <strong>Recommendation:</strong> Consider running a seasonal promotion to capitalize on the recent influx of visitors.<br/>
+                  - We also noticed a few unread messages in your central inbox. Using the AI draft feature might help you save time!
                 </p>
             </div>
         </section>
 
         {/* My Plan Section */}
-        <section id="my-plan-section" className="p-6 md:p-8 shadow-lg bg-white/60 backdrop-blur-2xl saturate-200 border border-white/40 rounded-2xl md:rounded-[24px] hover:shadow-xl transition-shadow duration-300">
-          <div className="flex justify-between items-center mb-6">
-             <h2 className="text-xl font-bold font-outfit text-gray-900">My Plan</h2>
-             <button
-               onClick={() => router.push('/pricing')}
-               className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-medium transition-all shadow-sm">
-               Upgrade
-             </button>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <div className="p-4 rounded-xl bg-white/50 border border-white/50">
-                  <h3 className="text-sm font-medium text-gray-500">Current Plan</h3>
-                  <p className="text-2xl font-bold text-gray-900 mt-1">{myPlanData?.current_plan || 'Free'}</p>
-              </div>
-              <div className="p-4 rounded-xl bg-white/50 border border-white/50">
-                  <h3 className="text-sm font-medium text-gray-500">AI Actions Used</h3>
-                  <p className="text-2xl font-bold text-gray-900 mt-1">{myPlanData?.ai_actions_used || 0} <span className="text-sm text-gray-500 font-normal">{myPlanData?.ai_actions_limit != null ? `/ ${myPlanData.ai_actions_limit}` : '/ Unlimited'}</span></p>
-              </div>
-              <div className="p-4 rounded-xl bg-white/50 border border-white/50">
-                  <h3 className="text-sm font-medium text-gray-500">Storage Used</h3>
-                  <p className="text-2xl font-bold text-gray-900 mt-1">{((myPlanData?.storage_used_bytes || 0) / (1024 * 1024)).toFixed(1)} MB <span className="text-sm text-gray-500 font-normal">{myPlanData?.storage_limit_bytes != null ? `/ ${(myPlanData.storage_limit_bytes / (1024 * 1024)).toFixed(0)} MB` : '/ Unlimited'}</span></p>
-              </div>
-              <div className="p-4 rounded-xl bg-white/50 border border-white/50">
-                  <h3 className="text-sm font-medium text-gray-500">Estimated Next Bill</h3>
-                  <p className="text-2xl font-bold text-gray-900 mt-1">{formatCurrency(myPlanData?.next_bill_estimated || 0)}</p>
-              </div>
-          </div>
-        </section>
+        {myPlanData && (
+          <section id="my-plan-section" className="p-6 md:p-8 shadow-lg bg-white/60 backdrop-blur-2xl saturate-200 border border-white/40 rounded-2xl md:rounded-[24px] hover:shadow-xl transition-shadow duration-300">
+            <div className="flex justify-between items-center mb-6">
+               <h2 className="text-xl font-bold font-outfit text-gray-900">My Plan</h2>
+               <button
+                 onClick={() => router.push('/pricing')}
+                 className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-medium transition-all shadow-sm">
+                 Upgrade
+               </button>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="p-4 rounded-xl bg-white/50 border border-white/50">
+                    <h3 className="text-sm font-medium text-gray-500">Current Plan</h3>
+                    <p className="text-2xl font-bold text-gray-900 mt-1">{myPlanData.current_plan}</p>
+                </div>
+                <div className="p-4 rounded-xl bg-white/50 border border-white/50">
+                    <h3 className="text-sm font-medium text-gray-500">AI Actions Used</h3>
+                    <p className="text-2xl font-bold text-gray-900 mt-1">{myPlanData.ai_actions_used} <span className="text-sm text-gray-500 font-normal">{myPlanData.ai_actions_limit ? `/ ${myPlanData.ai_actions_limit}` : ''}</span></p>
+                </div>
+                <div className="p-4 rounded-xl bg-white/50 border border-white/50">
+                    <h3 className="text-sm font-medium text-gray-500">Storage Used</h3>
+                    <p className="text-2xl font-bold text-gray-900 mt-1">{(myPlanData.storage_used_bytes / (1024 * 1024)).toFixed(1)} MB <span className="text-sm text-gray-500 font-normal">{myPlanData.storage_limit_bytes ? `/ ${(myPlanData.storage_limit_bytes / (1024 * 1024)).toFixed(0)} MB` : ''}</span></p>
+                </div>
+                <div className="p-4 rounded-xl bg-white/50 border border-white/50">
+                    <h3 className="text-sm font-medium text-gray-500">Estimated Next Bill</h3>
+                    <p className="text-2xl font-bold text-gray-900 mt-1">{formatCurrency(myPlanData.next_bill_estimated)}</p>
+                </div>
+            </div>
+          </section>
+        )}
 
         {/* Overview Section */}
         <section className="app-panel">
@@ -203,23 +189,6 @@ export default function CostDashboardPage() {
                     </div>
                 </div>
 
-                {/* Per-Agent / Per-Feature Costs */}
-                <div className="flex flex-col app-card hover:-translate-y-1 hover:shadow-md transition-all duration-300">
-                    <h3 className="font-medium text-gray-900 mb-2">Agent & Feature Costs</h3>
-                    {data?.agent_costs && data.agent_costs.length > 0 ? (
-                        <ul id="cost-dashboard-agent-costs" className="space-y-2">
-                            {data.agent_costs.map((agent, index) => (
-                                <li key={index} className="flex justify-between items-center border-b border-gray-200 pb-2 last:border-b-0 last:pb-0">
-                                    <span className="text-sm text-gray-700 capitalize">{agent.agent_id.replace(/_/g, ' ')}</span>
-                                    <span className="text-sm font-medium text-gray-900">{formatCurrency(agent.cost_cents)}</span>
-                                </li>
-                            ))}
-                        </ul>
-                    ) : (
-                        <p className="text-sm text-gray-500">No agent cost data available.</p>
-                    )}
-                </div>
-
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 app-card hover:-translate-y-1 hover:shadow-md transition-all duration-300">
                     <div>
                         <span className="font-medium text-gray-900">Storage</span>
@@ -235,15 +204,6 @@ export default function CostDashboardPage() {
                     </div>
                     <span id="cost-dashboard-payment-fees" className="text-lg font-semibold text-gray-900">{formatCurrency(data?.payment_fees || 0)}</span>
                 </div>
-
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 app-card hover:-translate-y-1 hover:shadow-md transition-all duration-300">
-                    <div>
-                        <span className="font-medium text-gray-900">Compute Usage</span>
-                        <p className="text-sm text-gray-500 mt-1">Cost of container execution and background processing.</p>
-                    </div>
-                    <span id="cost-dashboard-compute" className="text-lg font-semibold text-gray-900">{formatCurrency(data?.compute_cost || 0)}</span>
-                </div>
-
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 app-card hover:-translate-y-1 hover:shadow-md transition-all duration-300">
                     <div>
                         <span className="font-medium text-gray-900">Network & Bandwidth</span>
@@ -260,50 +220,6 @@ export default function CostDashboardPage() {
                     <span id="cost-dashboard-bandwidth-savings" className="text-lg font-semibold text-green-700">-{formatCurrency(data?.bandwidth_savings || 0)}</span>
                 </div>
             </div>
-        </section>
-
-        <section className="p-6 md:p-8 shadow-lg bg-white/60 backdrop-blur-2xl saturate-200 border border-white/40 rounded-2xl md:rounded-[24px] hover:shadow-xl transition-shadow duration-300">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-6">
-                <h2 className="text-xl font-bold font-outfit text-gray-900">Department Tier Usage</h2>
-                <span className="text-sm text-gray-500 font-medium">
-                  {data?.department_tier_usage?.current_plan || 'Free'} plan · {data?.department_tier_usage?.period || data?.period_end?.slice(0, 7) || ''}
-                </span>
-            </div>
-
-            {data?.department_tier_usage?.departments?.length ? (
-                <div className="space-y-4" id="department-tier-usage-list">
-                    {data.department_tier_usage.departments.map((department) => (
-                        <div key={department.id} className="p-5 rounded-2xl shadow-sm bg-white/50 backdrop-blur-lg border border-white/50">
-                            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
-                                <div>
-                                    <h3 className="font-semibold text-gray-900">{department.department_type}</h3>
-                                    <p className="text-sm text-gray-500 mt-1">{department.agent_id}</p>
-                                </div>
-                                <div className="text-left sm:text-right">
-                                    <p className="font-semibold text-gray-900">
-                                      {department.action_limit === null
-                                        ? `${department.actions_used} actions`
-                                        : `${department.actions_used} / ${department.action_limit} actions`}
-                                    </p>
-                                    {department.soft_limit_reached ? (
-                                      <p className="text-sm text-amber-700 font-medium mt-1">Tier limit reached</p>
-                                    ) : null}
-                                </div>
-                            </div>
-                            {department.usage_percent !== null ? (
-                                <div className="mt-4 h-2 rounded-full bg-gray-200 overflow-hidden" aria-label={`${department.department_type} usage`}>
-                                    <div
-                                      className={department.soft_limit_reached ? "h-full bg-amber-500" : "h-full bg-indigo-500"}
-                                      style={{ width: `${department.usage_percent}%` }}
-                                    />
-                                </div>
-                            ) : null}
-                        </div>
-                    ))}
-                </div>
-            ) : (
-                <p className="text-sm text-gray-500" id="department-tier-usage-empty">No department usage recorded for this period.</p>
-            )}
         </section>
 
       </main>
