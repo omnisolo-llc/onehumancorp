@@ -323,7 +323,7 @@ function AutoCatalogContent() {
                           <div className={`dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${productData?.isSubscription ? 'transform translate-x-4' : ''}`}></div>
                       </div>
                       <div className="ml-3 text-gray-800 font-semibold text-sm">
-                          Offer as Subscription
+                          Enable Subscribe & Save
                       </div>
                   </label>
 
@@ -345,11 +345,11 @@ function AutoCatalogContent() {
                               </select>
                           </div>
                           <div className="flex-1">
-                              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Cutoff day</label>
+                              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Discount %</label>
                               <input
                                   type="number"
-                                  value={subscriptionCutoff}
-                                  onChange={(e) => setSubscriptionCutoff(e.target.value)}
+                                  value={productData?.subscriptionDiscount || ''}
+                                  onChange={(e) => setProductData({...productData, subscriptionDiscount: e.target.value})}
                                   className="w-full bg-white/50 border border-white/60 rounded-[8px] px-3 py-2 text-gray-900 font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                               />
                           </div>

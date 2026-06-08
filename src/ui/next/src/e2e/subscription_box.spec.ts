@@ -23,9 +23,10 @@ test.describe('Autonomous Subscription Box Lifecycle', () => {
 
     await expect(page.locator('select')).toBeVisible();
     await page.selectOption('select', 'monthly');
-    await page.fill('input[type="number"]', '5');
+    // Discount field
+    await page.fill('input[type="number"]', '10');
 
-    await page.click('button:has-text("Publish Subscription")');
+    await page.click('button:has-text("Looks Good")');
 
     await expect(page.locator('text=Product Published!')).toBeVisible();
     await page.click('text=Return to Dashboard');
