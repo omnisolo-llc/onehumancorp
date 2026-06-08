@@ -43,6 +43,7 @@ pub mod create_skill;
 pub mod pydantic;
 pub mod marketplace;
 pub mod marketplace_tool;
+pub mod negotiator_tools;
 pub mod expert_team_tool;
 pub mod workflow;
 pub mod checkout;
@@ -154,6 +155,7 @@ pub fn all_tools(
         mcp_dynamic::mcp_invoke_tool(std::env::var("MCP_GATEWAY_URL").unwrap_or_else(|_| "http://localhost:8080".to_string())),
         restic::restic_tool(runner.clone()),
         checkout::conversational_checkout_tool(),
+        negotiator_tools::negotiator_draft_quote_tool(std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://ohc:ohc@localhost:5432/ohc".to_string())),
         aider_pair_programming::aider_pair_programming_tool(),
     ];
 

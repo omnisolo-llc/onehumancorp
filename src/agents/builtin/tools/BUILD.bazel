@@ -22,6 +22,7 @@ rust_library(
         "marketing.rs",
         "mcp_dynamic.rs",
         "mod.rs",
+        "negotiator_tools.rs",
         "expert_team_tool.rs",
         "marketplace.rs",
         "marketplace_tool.rs",

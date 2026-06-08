@@ -7,6 +7,7 @@ exports_files(
         "compute.rs",
         "federation.rs",
         "mod.rs",
+        "custom_quotes.rs",
         "model.rs",
         "organization.rs",
         "sre.rs",
@@ -19,6 +20,7 @@ exports_files(
 rust_library(
     name = "server_domain",
     srcs = [
+        "//src/server/domain/repository:custom_quotes_repository.rs",
         "bazel_lib.rs",
         "b2b.rs",
         "blueprint.rs",
@@ -44,7 +46,6 @@ rust_library(
     deps = [
         "//src/server:server_lib",
         "//src/agents/builtin:core",
-        "//src/agents/builtin:ohc_builtin_agent_lib",
         "//src/proto:agent_prost",
         "//src/proto:agent_service_tonic",
         "//src/proto:app_tonic",
@@ -72,7 +73,6 @@ rust_library(
         "//src/server/integrations/mailchimp:server_integrations_mailchimp",
         "//src/server/integrations/manychat:server_integrations_manychat",
         "//src/server/integrations/nats:server_integrations_nats",
-        "//src/server/integrations/pubsub:server_integrations_pubsub",
         "//src/server/integrations/razorpay:server_integrations_razorpay",
         "//src/server/integrations/sendgrid:server_integrations_sendgrid",
         "//src/server/integrations/shippo:server_integrations_shippo",

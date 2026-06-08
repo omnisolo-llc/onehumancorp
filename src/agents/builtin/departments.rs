@@ -68,7 +68,7 @@ pub fn get_department_config(dep: Department) -> DepartmentConfig {
                 - Suggests upsell and cross-sell opportunities\n\
                 - Manages referral program and tracks referrals\n\
                 - Autonomously generates Conversational Checkout Links for DMs",
-            allowed_tools: vec!["read", "head", "tail", "write", "sendmessage", "conversational_checkout"],
+            allowed_tools: vec!["read", "head", "tail", "write", "sendmessage", "conversational_checkout", "negotiator_draft_quote"],
             confidence_threshold: 0.80,
         },
         Department::CustomerSuccess => DepartmentConfig {
@@ -165,6 +165,7 @@ mod tests {
         assert!(config.system_prompt.contains("Sales & Acquisition"));
         assert!(config.allowed_tools.contains(&"sendmessage"));
         assert!(config.allowed_tools.contains(&"conversational_checkout"));
+        assert!(config.allowed_tools.contains(&"negotiator_draft_quote"));
         assert_eq!(config.confidence_threshold, 0.80);
     }
 
