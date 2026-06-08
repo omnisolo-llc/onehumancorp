@@ -54,7 +54,7 @@ pub async fn search_articles(Query(query): Query<SearchQuery>) -> Json<Vec<HelpA
     let q = query.q.to_lowercase();
     let articles = get_articles();
     let filtered = articles.into_iter().filter(|a| {
-        a.title.to_lowercase().contains(&q) || a.desc.to_lowercase().contains(&q)
+        a.category.to_lowercase().contains(&q) || a.title.to_lowercase().contains(&q) || a.desc.to_lowercase().contains(&q)
     }).collect();
     Json(filtered)
 }
