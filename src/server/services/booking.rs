@@ -583,8 +583,9 @@ fn capacity_lock_key(
     start_time: DateTime<Utc>,
     end_time: DateTime<Utc>,
 ) -> String {
+    // Adheres to ohc:lock:{tenant_id}:{resource_type}:{resource_id}
     format!(
-        "ohc:lock:{}:capacity:{}:{}:{}",
+        "ohc:lock:{}:capacity:{}_{}_{}",
         tenant_id,
         product_id,
         start_time.timestamp(),
