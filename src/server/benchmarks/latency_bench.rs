@@ -111,19 +111,13 @@ pub async fn bench_db_query_time() {
                     Ok(())
                 })
             })
-            .max_connections(50).connect("sqlite::memory:?cache=shared").await.unwrap();
-    let mut sqlite_handles = Vec::new();
-    for _ in 0..iterations {
-        let pool = sqlite_pool.clone();
-        sqlite_handles.push(tokio::spawn(async move {
-            let start = Instant::now();
-            let _ = sqlx::query("SELECT 1").execute(&pool).await;
-            start.elapsed().as_micros()
-        }));
-    }
+            .max_connections(1) // Single connection for in-memory SQLite to avoid lock contention
+            .connect("sqlite::memory:?cache=shared").await.unwrap();
     let mut sqlite_times = Vec::new();
-    for handle in sqlite_handles {
-        sqlite_times.push(handle.await.unwrap());
+    for _ in 0..iterations {
+        let start = Instant::now();
+        let _ = sqlx::query("SELECT 1").execute(&sqlite_pool).await;
+        sqlite_times.push(start.elapsed().as_micros());
     }
     sqlite_times.sort();
     println!("Database Query Time Standalone Mode (SQLite): p50: {} us, p95: {} us, p99: {} us", sqlite_times[iterations / 2], sqlite_times[((iterations as f32 * 0.95) as usize).min(iterations.saturating_sub(1))], sqlite_times[((iterations as f32 * 0.99) as usize).min(iterations.saturating_sub(1))]);
@@ -178,7 +172,9 @@ pub async fn bench_api_response_time() {
                     Ok(())
                 })
             })
-            .max_connections(50).connect("sqlite::memory:?cache=shared").await.unwrap();
+            .max_connections(100)
+            .min_connections(100)
+            .connect("sqlite::memory:?cache=shared").await.unwrap();
     let _ = sqlx::query("CREATE TABLE IF NOT EXISTS products (id TEXT, organization_id TEXT, title TEXT, type TEXT, price REAL)").execute(&sqlite_pool).await;
     let _ = sqlx::query("CREATE TABLE IF NOT EXISTS orders (id TEXT, tenant_id TEXT, total_amount REAL, status TEXT)").execute(&sqlite_pool).await;
     let _ = sqlx::query("CREATE TABLE IF NOT EXISTS tenants (tenant_id TEXT, business_name TEXT, tier TEXT)").execute(&sqlite_pool).await;
