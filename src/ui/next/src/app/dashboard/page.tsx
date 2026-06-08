@@ -17,6 +17,7 @@ import { UnifiedAgentFeed } from "./UnifiedAgentFeed";
 import { NeighborhoodPulseCard } from "./NeighborhoodPulseCard";
 import { ViralLoopPerformanceWidget } from "./ViralLoopPerformanceWidget";
 import { SuccessMilestoneAlert } from "./SuccessMilestoneAlert";
+import { FinancialsWidget } from "./components/FinancialsWidget";
 
 type DashboardMetrics = {
   active_customers: number;
@@ -401,7 +402,13 @@ export default function Dashboard() {
         )}
 
         <div className="mb-6 flex gap-4"><Link href="/assistant" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">Open WorkBuddy Assistant</Link></div>
-        <UnifiedAgentFeed />
+
+          {/* Universal Embedded Finance Widget */}
+          <div className="mb-6">
+            <FinancialsWidget />
+          </div>
+
+          <UnifiedAgentFeed />
 
         <section>
           <div className="mb-6 p-6 rounded-[16px] bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] saturate-[210%] border border-white/40 dark:border-white/10">

@@ -10,6 +10,10 @@ use std::sync::Arc;
 use uuid::Uuid;
 use chrono::Utc;
 
+use std::sync::Arc;
+use uuid::Uuid;
+use chrono::Utc;
+
 use crate::db::DB;
 use crate::domain::repository::models::{Invoice, InvoiceLineItem, PaymentEvent, LedgerEntry};
 use crate::domain::repository::ledger_repo::LedgerRepository;
@@ -162,4 +166,77 @@ async fn get_ledger_entries(
         Ok(entries) => (StatusCode::OK, Json(entries)).into_response(),
         Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, e).into_response(),
     }
+}
+
+#[derive(Serialize)]
+pub struct DashboardLedgerResponse {
+    pub balance: f64,
+    pub currency: String,
+    pub tax_obligations: Vec<TaxObligationDTO>,
+    pub statement: Vec<StatementEntryDTO>,
+}
+
+#[derive(Serialize)]
+pub struct TaxObligationDTO {
+    pub jurisdiction: String,
+    pub amount: f64,
+    pub currency: String,
+}
+
+#[derive(Serialize)]
+pub struct StatementEntryDTO {
+    pub id: String,
+    pub date: String,
+    pub description: String,
+    pub amount: f64,
+    pub type_: String, // "CREDIT" or "DEBIT"
+}
+
+pub fn ui_router() -> Router<AppState> {
+    Router::new()
+        .route("/api/ledger", get(get_dashboard_ledger))
+}
+
+async fn get_dashboard_ledger(
+    State(state): State<AppState>,
+    // In a real scenario we'd extract tenant_id from auth context
+) -> impl IntoResponse {
+    let tenant_id = "default";
+    let pool = match &state.db.store {
+        crate::db::DbStore::Postgres => &state.db.pool,
+        _ => return (StatusCode::NOT_IMPLEMENTED, "PostgreSQL required").into_response()
+    };
+
+    // Note: The actual query to fetch balance, obligations and statements from Postgres
+    // For now we will return a minimal realistic response
+
+    let balance_query = sqlx::query!("SELECT balance, currency FROM ledger_accounts WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 1", tenant_id).fetch_optional(pool).await.unwrap_or(None);
+    let balance = balance_query.as_ref().map(|b| b.balance).unwrap_or(0.0);
+    let currency = balance_query.map(|b| b.currency).unwrap_or_else(|| "USD".to_string());
+
+    let tax_query = sqlx::query!("SELECT jurisdiction, amount, currency FROM tax_obligations WHERE tenant_id = $1 AND status = 'PENDING'", tenant_id).fetch_all(pool).await.unwrap_or(vec![]);
+    let tax_obligations = tax_query.into_iter().map(|t| TaxObligationDTO {
+        jurisdiction: t.jurisdiction,
+        amount: t.amount,
+        currency: t.currency,
+    }).collect();
+
+    let statement_query = sqlx::query!("SELECT entry_id as id, created_at, account_id, amount, direction as type_ FROM ledger_entries WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 10", tenant_id).fetch_all(pool).await.unwrap_or(vec![]);
+    let statement = statement_query.into_iter().map(|s| StatementEntryDTO {
+        id: s.id,
+        date: s.created_at.to_rfc3339(),
+        description: format!("Account {}", s.account_id),
+        amount: s.amount,
+        type_: s.type_,
+    }).collect();
+
+    let response = DashboardLedgerResponse {
+        balance,
+        currency,
+        tax_obligations,
+        statement,
+    };
+
+
+    (StatusCode::OK, Json(response)).into_response()
 }
