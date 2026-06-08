@@ -11,7 +11,6 @@ export async function POST(request: Request) {
     const tenant = searchParams.get('tenant') || 'my-business';
 
     // In a real application, we would save this to the database
-    console.log(`[Work Intake Submit] New request for ${tenant} from ${name} (${email}): ${details}`);
 
     const html = `
     <!DOCTYPE html>
