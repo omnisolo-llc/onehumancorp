@@ -21,6 +21,10 @@ const nextConfig = {
       {
         source: '/api/billing/:path*',
         destination: process.env.BACKEND_URL ? `${process.env.BACKEND_URL}/api/billing/:path*` : 'http://localhost:8080/api/billing/:path*',
+      },
+      {
+        source: '/api/agents/:path*',
+        destination: process.env.BACKEND_URL ? `${process.env.BACKEND_URL}/api/agents/:path*` : 'http://localhost:8080/api/agents/:path*',
       }
     ]
   },
