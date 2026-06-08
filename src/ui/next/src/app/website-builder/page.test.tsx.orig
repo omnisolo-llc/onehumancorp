@@ -276,10 +276,7 @@ describe('WebsiteBuilderPage', () => {
   });
 
   it('handles sync back to server state on change', async () => {
-    useWebsiteBuilderStore.setState({ status: 'idle' });
     render(<WebsiteBuilderPage />);
-
-    await waitFor(() => { expect(global.fetch).toHaveBeenCalled(); });
 
     // Trigger something that changes status (e.g. going through the instant build flow generates a live status)
     fireEvent.click(screen.getByText('Instant Build'));

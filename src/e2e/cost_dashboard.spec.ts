@@ -26,20 +26,23 @@ test.describe('Cost Dashboard "My Plan" functionality', () => {
     await expect(page).toHaveURL(/.*\/pricing/);
   });
 
-  test('Cost Dashboard renders / Unlimited for Pro tenants', async ({ unlimitedAdminUser, loginAs, browser }) => {
+  test('Cost Dashboard renders limits correctly for Pro tenants', async ({ unlimitedAdminUser, loginAs, browser }) => {
     // Create a new context to avoid sharing the default page's auth state
     const context = await browser.newContext();
     const proPage = await context.newPage();
 
-    // Login as the unlimited admin user
+    // Login as the unlimited admin user (Pro tier)
     await loginAs(proPage, unlimitedAdminUser);
 
     await proPage.goto('/plan');
     await proPage.waitForLoadState('networkidle');
 
-    // Ensure the page renders / Unlimited for AI actions or storage
+    // Ensure the page renders / Unlimited for AI actions
     await expect(proPage.locator('text=/ Unlimited').first()).toBeVisible();
-    await expect(proPage.locator('text=/ Unlimited')).toHaveCount(2);
+    await expect(proPage.locator('text=/ Unlimited')).toHaveCount(1);
+
+    // Ensure the page renders / 50 GB for Storage
+    await expect(proPage.locator('text=/ 50 GB').first()).toBeVisible();
 
     await proPage.close();
     await context.close();
@@ -60,7 +63,7 @@ test.describe('Cost Dashboard "My Plan" functionality', () => {
     await context.close();
   });
 
-  test('Cost Dashboard displays Storage Used correctly without limits', async ({ unlimitedAdminUser, loginAs, browser }) => {
+  test('Cost Dashboard displays Storage Used correctly for Pro tenants (50 GB)', async ({ unlimitedAdminUser, loginAs, browser }) => {
     const context = await browser.newContext();
     const proPage = await context.newPage();
     await loginAs(proPage, unlimitedAdminUser);
@@ -69,7 +72,7 @@ test.describe('Cost Dashboard "My Plan" functionality', () => {
     await proPage.waitForLoadState('networkidle');
 
     const storageCard = proPage.locator('div', { has: proPage.locator('text="Storage Used"') }).first();
-    await expect(storageCard.locator('text=/ Unlimited')).toBeVisible();
+    await expect(storageCard.locator('text=/ 50 GB')).toBeVisible();
 
     await proPage.close();
     await context.close();

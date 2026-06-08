@@ -168,6 +168,7 @@ pub struct Booking {
     pub start_time: DateTime<Utc>,
     pub end_time: Option<DateTime<Utc>>,
     pub status: Option<String>,
+    pub payment_intent_id: Option<String>,
     pub created_at: Option<DateTime<Utc>>,
     pub updated_at: Option<DateTime<Utc>>,
 }
@@ -268,6 +269,29 @@ pub struct LeadGenCampaign {
     pub radius_miles: i32,
     pub zip_code: String,
     pub status: String,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct Service {
+    pub id: String,
+    pub tenant_id: String,
+    pub title: String,
+    pub description: Option<String>,
+    pub price_cents: i64,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct AvailabilityBlock {
+    pub id: String,
+    pub tenant_id: String,
+    pub service_id: String,
+    pub start_time: DateTime<Utc>,
+    pub end_time: DateTime<Utc>,
+    pub is_available: bool,
     pub created_at: Option<DateTime<Utc>>,
     pub updated_at: Option<DateTime<Utc>>,
 }

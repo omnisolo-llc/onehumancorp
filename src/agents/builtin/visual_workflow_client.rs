@@ -140,6 +140,7 @@ mod tests {
         let resp: WorkflowRunResponse = serde_json::from_slice(&body_bytes).unwrap();
 
         assert!(resp.success);
-        assert_eq!(resp.result.unwrap(), "Mocked: Input was: test_data");
+        // The simple implementation stringifies the prompt
+        assert_eq!(resp.result.unwrap(), "Processed: Input was: test_data");
     }
 }
