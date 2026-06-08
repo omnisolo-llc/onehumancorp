@@ -27,3 +27,6 @@ tracing = "0.1"
 
 [lib]
 path = "mod.rs"
+
+[lints]
+workspace = true

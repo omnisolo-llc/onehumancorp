@@ -22,3 +22,6 @@ regex = "1"
 
 [lib]
 path = "mod.rs"
+
+[lints]
+workspace = true

@@ -10,3 +10,6 @@ sqlx = { version = "0.8", features = ["postgres", "sqlite", "runtime-tokio-rustl
 
 [lib]
 path = "mod.rs"
+
+[lints]
+workspace = true

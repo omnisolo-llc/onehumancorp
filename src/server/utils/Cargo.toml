@@ -23,3 +23,6 @@ reqwest = { workspace = true }
 
 [lib]
 path = "mod.rs"
+
+[lints]
+workspace = true

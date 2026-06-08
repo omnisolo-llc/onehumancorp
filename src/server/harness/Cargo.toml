@@ -25,3 +25,6 @@ uuid = { version = "1", features = ["v4", "serde"] }
 
 [lib]
 path = "mod.rs"
+
+[lints]
+workspace = true

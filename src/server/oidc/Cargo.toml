@@ -19,3 +19,6 @@ temp-env = "0.3.6"
 
 [lib]
 path = "mod.rs"
+
+[lints]
+workspace = true

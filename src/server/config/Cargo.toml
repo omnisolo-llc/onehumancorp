@@ -10,3 +10,6 @@ config = "0.15.22"
 
 [lib]
 path = "mod.rs"
+
+[lints]
+workspace = true

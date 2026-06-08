@@ -9,3 +9,6 @@ serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 server_integrations_core = { path = "../core" }
 uuid = { workspace = true, features = ["v4", "fast-rng", "macro-diagnostics"] }
+
+[lints]
+workspace = true
