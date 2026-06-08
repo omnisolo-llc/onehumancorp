@@ -1144,10 +1144,11 @@ impl DB {
                      SET status = 'blocked',
                          mission_log = CASE WHEN mission_log IS NULL OR mission_log = '' THEN $1 ELSE mission_log || '\n' || $1 END,
                          updated_at = CURRENT_TIMESTAMP
-                     WHERE id = $2"
+                     WHERE id = $2 AND tenant_id = $3"
                 )
                 .bind(blockers)
                 .bind(mission_id)
+                .bind(tenant_id)
                 .execute(sqlite_pool)
                 .await?;
             }
@@ -1180,12 +1181,13 @@ impl DB {
         match &self.store {
             DbStore::Sqlite(sqlite_pool) => {
                 let query = if table == "swarm_tasks" {
-                    "UPDATE swarm_tasks SET auto_dreamed = 1 WHERE id = ?"
+                    "UPDATE swarm_tasks SET auto_dreamed = 1 WHERE id = ? AND tenant_id = ?"
                 } else {
-                    "UPDATE shared_tasks SET auto_dreamed = 1 WHERE id = ?"
+                    "UPDATE shared_tasks SET auto_dreamed = 1 WHERE id = ? AND organization_id = ?"
                 };
                 sqlx::query(query)
                     .bind(task_id)
+                    .bind(tenant_id)
                     .execute(sqlite_pool)
                     .await?;
             }
