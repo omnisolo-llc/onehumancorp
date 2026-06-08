@@ -1235,22 +1235,30 @@ async fn handle_team_invite_accept(
     }
 }
 
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CreateTeamInviteResponse {
+    pub invite_link: String,
+}
+
 async fn handle_create_team_invite(
     Extension(state): Extension<GrowthState>,
     Json(req): Json<CreateTeamInviteRequest>,
-) -> Result<Json<()>, StatusCode> {
+) -> Result<Json<CreateTeamInviteResponse>, StatusCode> {
     let repo = std::sync::Arc::new(crate::services::growth::invites::InviteRepository::new(state.pool.clone()));
     let tracker = crate::services::growth::invites::InviteTracker::new(repo);
 
     match tracker.record_invite(&req.team_id, &req.inviter_id, &req.invitee_id).await {
-        Ok(_) => {
+        Ok(invite_id) => {
             let cache_key_prefix = format!("team_invites:{}:", req.team_id);
             let cache = TEAM_INVITES_CACHE.get_or_init(|| HybridCache::new(None));
             cache.invalidate(&format!("{}None", cache_key_prefix)).await;
 
             let msg = state.hub.sanitize_hub_event(serde_json::json!({ "type": "growth.team_invite_created", "team_id": req.team_id, "inviter_id": req.inviter_id, "invitee_id": req.invitee_id }));
             state.hub.append_recent_event(msg);
-            Ok(Json(()))
+            let backend_url = std::env::var("OHC_CLOUD_URL").unwrap_or_else(|_| "http://localhost:3000".to_string());
+            let invite_link = format!("{}/invite/{}", backend_url, invite_id);
+            Ok(Json(CreateTeamInviteResponse { invite_link }))
         },
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
     }
@@ -1297,6 +1305,8 @@ mod tests {
         // Call create handler directly
         let res = handle_create_team_invite(Extension(state.clone()), Json(req)).await;
         assert!(res.is_ok());
+        let create_res = res.unwrap().0;
+        assert!(create_res.invite_link.contains("invite/inv-"));
 
         // Call get handler directly
         let query = GetTeamInvitesQuery {

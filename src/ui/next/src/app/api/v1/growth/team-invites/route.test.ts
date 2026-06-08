@@ -25,7 +25,7 @@ describe("GET/POST /api/v1/growth/team-invites", () => {
     (global.fetch as any).mockRejectedValue(new Error("Network Error"));
     const req = new NextRequest("http://localhost/api/v1/growth/team-invites", {
       method: "POST",
-      body: JSON.stringify({ team_id: "1" }),
+      body: JSON.stringify({ team_id: "1", inviter_id: "2", invitee_id: "3" }),
     });
 
     const res = await POST(req);

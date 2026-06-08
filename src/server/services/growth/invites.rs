@@ -159,9 +159,10 @@ impl InviteTracker {
         InviteTracker { repo }
     }
 
-    pub async fn record_invite(&self, team_id: &str, inviter_id: &str, invitee_id: &str) -> Result<(), String> {
+    pub async fn record_invite(&self, team_id: &str, inviter_id: &str, invitee_id: &str) -> Result<String, String> {
+        let id = format!("inv-{}", Utc::now().timestamp_nanos_opt().unwrap_or(0));
         let invite = TeamInvite {
-            id: format!("inv-{}", Utc::now().timestamp_nanos_opt().unwrap_or(0)),
+            id: id.clone(),
             team_id: team_id.to_string(),
             inviter_id: inviter_id.to_string(),
             invitee_id: invitee_id.to_string(),
@@ -172,7 +173,7 @@ impl InviteTracker {
 
         self.repo.create_invite(&invite).await?;
         
-        Ok(())
+        Ok(id)
     }
 
     pub async fn get_team_invites(&self, team_id: &str, cursor: Option<String>, limit: i64) -> Result<Vec<TeamInvite>, String> {
