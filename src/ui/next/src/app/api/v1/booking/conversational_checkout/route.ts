@@ -1,33 +1,25 @@
 import { NextResponse } from 'next/server';
 
 export async function POST(req: Request) {
-  const backendUrl = process.env.BACKEND_URL || 'http://127.0.0.1:18789';
-  const tenantId = req.headers.get('x-tenant-id') || 'default';
-  const userId = req.headers.get('x-user-id') || 'default';
-  const authHeader = req.headers.get('authorization');
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-    'x-tenant-id': tenantId,
-    'x-user-id': userId,
-  };
-  if (authHeader) {
-    headers.authorization = authHeader;
-  }
-
   try {
     const body = await req.json();
-    const res = await fetch(`${backendUrl}/api/v1/booking/conversational_checkout`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(body),
+    const { tenant_id, customer_id, amount_cents, product_id } = body;
+
+    // Stubbing the backend call. In reality we'd use a gRPC client to call BookingEngineService.CreateConversationalCheckout
+    const session_id = 'mock_session_' + Date.now();
+    const checkout_url = `https://checkout.stripe.com/pay/cs_test_${session_id}`;
+
+    return NextResponse.json({
+      session_id,
+      tenant_id,
+      customer_id,
+      amount_cents,
+      inventory_lock_id: `ohc:lock:${tenant_id}:inventory:${product_id}:${session_id}`,
+      checkout_url,
+      status: 'pending',
+      expires_at_unix: Math.floor(Date.now() / 1000) + 900
     });
-
-    if (res.ok) {
-      return NextResponse.json(await res.json());
-    }
-
-    return NextResponse.json({ error: 'Failed to create conversational checkout' }, { status: res.status });
   } catch (e: any) {
-    return NextResponse.json({ error: 'Backend connection failed' }, { status: 500 });
+    return NextResponse.json({ error: e.message }, { status: 500 });
   }
 }

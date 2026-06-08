@@ -93,7 +93,7 @@ export default function OrderDetailsPage() {
     <div className="flex flex-col min-h-screen font-inter" style={{ backgroundColor: '#F5F5F7' }}>
       <header className="px-6 py-4 flex items-center justify-between border-b" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', borderBottom: '1px solid rgba(255, 255, 255, 0.4)', position: 'sticky', top: 0, zIndex: 50 }}>
         <div className="flex items-center gap-4">
-          <button aria-label="Back to Orders" onClick={() => router.push('/orders')} className="text-gray-500 hover:text-gray-900">
+          <button onClick={() => router.push('/orders')} className="text-gray-500 hover:text-gray-900">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
           </button>
           <h1 className="text-2xl font-bold font-outfit text-gray-900">Order {orderId}</h1>
@@ -179,7 +179,6 @@ export default function OrderDetailsPage() {
                   <div>
                     <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">Weight (oz)</label>
                     <input
-                      aria-label="Package weight in ounces"
                       type="number"
                       value={weight}
                       onChange={(e) => setWeight(e.target.value)}
@@ -189,7 +188,6 @@ export default function OrderDetailsPage() {
                   <div>
                     <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1">Dimensions (LxWxH)</label>
                     <input
-                      aria-label="Package dimensions"
                       type="text"
                       value={dimensions}
                       onChange={(e) => setDimensions(e.target.value)}
@@ -291,7 +289,7 @@ export default function OrderDetailsPage() {
       </main>
 
       <div className="mt-8 text-center pb-8">
-        <a href="/onboarding?ref=my-store" className="text-xs font-semibold tracking-wider uppercase text-gray-500 opacity-70 hover:opacity-100 transition-opacity">⚡ Powered by OHC - Start your business today</a>
+        <a href="https://ohc.store/join?ref=my-store" target="_blank" rel="noopener noreferrer" className="text-xs font-semibold tracking-wider uppercase text-gray-500 opacity-70 hover:opacity-100 transition-opacity">⚡ Powered by OHC - Start your business today</a>
       </div>
 
       <style dangerouslySetInnerHTML={{__html: `

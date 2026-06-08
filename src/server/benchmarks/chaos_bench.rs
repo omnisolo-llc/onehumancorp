@@ -28,19 +28,11 @@ mod tests {
         let acquired2 = transport.acquire_lock(&resource, "agent_2", 2).await.unwrap();
         assert!(!acquired2);
 
-        // Simulate lag / timeout -> wait for TTL to pass. Poll to avoid
-        // scheduler jitter making a loaded test run land on the expiry boundary.
-        tokio::task::yield_now().await;
-        let deadline = tokio::time::Instant::now() + Duration::from_secs(6);
-        let mut acquired2_retry = false;
-        while tokio::time::Instant::now() < deadline {
-            if transport.acquire_lock(&resource, "agent_2", 2).await.unwrap() {
-                acquired2_retry = true;
-                break;
-            }
-            // sleep(Duration::from_millis(100)).await;
-            tokio::time::sleep(Duration::from_millis(100)).await;
-        }
+        // Simulate lag / timeout -> wait for TTL to pass
+        tokio::task::yield_now().await; sleep(Duration::from_millis(2100)).await;
+
+        // Recovery: Agent 2 should now acquire
+        let acquired2_retry = transport.acquire_lock(&resource, "agent_2", 2).await.unwrap();
         assert!(acquired2_retry);
 
         transport.release_lock(&resource, "agent_2").await.unwrap();

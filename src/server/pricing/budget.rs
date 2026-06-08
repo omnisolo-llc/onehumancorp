@@ -74,18 +74,18 @@ mod tests {
         
         assert_eq!(manager.get_remaining(), 100.0);
         
-        assert!(manager.record_spend(50.0).unwrap());
+        assert_eq!(manager.record_spend(50.0).unwrap(), true);
         assert_eq!(manager.get_remaining(), 50.0);
         
         // Exceed budget, it's a soft limit so it returns false but updates current
-        assert!(!(manager.record_spend(60.0).unwrap()));
+        assert_eq!(manager.record_spend(60.0).unwrap(), false);
         assert_eq!(manager.get_remaining(), -10.0);
         
         let err = manager.record_spend(-10.0).unwrap_err();
         assert_eq!(err, "spend amount cannot be negative");
 
         // test cents (soft limit still applies)
-        assert!(!(manager.record_spend_cents(1000).unwrap())); // spend $10
+        assert_eq!(manager.record_spend_cents(1000).unwrap(), false); // spend $10
         assert_eq!(manager.get_remaining(), -20.0);
         assert_eq!(manager.get_remaining_cents(), -2000);
     }
@@ -96,12 +96,12 @@ mod tests {
         assert_eq!(manager.get_remaining(), 100.0);
 
         // Spend exactly the limit
-        assert!(manager.record_spend(100.0).unwrap());
+        assert_eq!(manager.record_spend(100.0).unwrap(), true);
         assert_eq!(manager.get_remaining(), 0.0);
         assert_eq!(manager.get_remaining_cents(), 0);
 
         // Even an epsilon more should be over the limit (soft limit handled as false)
-        assert!(!(manager.record_spend(0.01).unwrap()));
+        assert_eq!(manager.record_spend(0.01).unwrap(), false);
         let rem = manager.get_remaining();
         assert!(rem < -0.009 && rem > -0.011);
     }
@@ -117,14 +117,14 @@ mod tests {
         assert!(manager.telemetry_store.is_some());
 
         // Spend money to hit telemetry path without panic
-        assert!(manager.record_spend(10.0).unwrap());
+        assert_eq!(manager.record_spend(10.0).unwrap(), true);
         assert_eq!(manager.get_remaining(), 40.0);
     }
 
     #[test]
     fn test_record_spend_cents_zero() {
         let manager = BudgetManager::new(100.0);
-        assert!(manager.record_spend_cents(0).unwrap());
+        assert_eq!(manager.record_spend_cents(0).unwrap(), true);
         assert_eq!(manager.get_remaining_cents(), 10000);
     }
 }

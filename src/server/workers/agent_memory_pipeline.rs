@@ -62,7 +62,7 @@ impl AgentMemoryPipeline {
 
             match &self.db.store {
                 DbStore::Sqlite(sqlite_pool) => {
-                    sqlx::query("INSERT INTO consolidated_memory (id, tenant_id, agent_id, source_type, content, embedding) VALUES ($1, $2, $3, $4, $5, NULL)")
+                    sqlx::query("INSERT INTO agent_memory_embeddings (id, organization_id, agent_id, memory_type, content, embedding) VALUES ($1, $2, $3, $4, $5, NULL)")
                         .bind(mem_id.to_string())
                         .bind("system")
                         .bind(&agent_id)
@@ -72,8 +72,8 @@ impl AgentMemoryPipeline {
                         .await?;
                 }
                 DbStore::Postgres => {
-                    sqlx::query("INSERT INTO consolidated_memory (id, tenant_id, agent_id, source_type, content, embedding) VALUES ($1, $2, $3, $4, $5, $6::vector)")
-                        .bind(mem_id.to_string())
+                    sqlx::query("INSERT INTO agent_memory_embeddings (id, organization_id, agent_id, memory_type, content, embedding) VALUES ($1, $2, $3, $4, $5, $6::vector)")
+                        .bind(mem_id)
                         .bind("system")
                         .bind(&agent_id)
                         .bind("SESSION_DATA")
@@ -115,7 +115,7 @@ impl AgentMemoryPipeline {
 
                         match &self.db.store {
                             DbStore::Sqlite(sqlite_pool) => {
-                                sqlx::query("INSERT INTO consolidated_memory (id, tenant_id, agent_id, source_type, content, embedding) VALUES ($1, $2, $3, $4, $5, NULL)")
+                                sqlx::query("INSERT INTO agent_memory_embeddings (id, organization_id, agent_id, memory_type, content, embedding) VALUES ($1, $2, $3, $4, $5, NULL)")
                                     .bind(mem_id.to_string())
                                     .bind("system")
                                     .bind("fs-agent")
@@ -125,8 +125,8 @@ impl AgentMemoryPipeline {
                                     .await?;
                             }
                             DbStore::Postgres => {
-                                sqlx::query("INSERT INTO consolidated_memory (id, tenant_id, agent_id, source_type, content, embedding) VALUES ($1, $2, $3, $4, $5, $6::vector)")
-                                    .bind(mem_id.to_string())
+                                sqlx::query("INSERT INTO agent_memory_embeddings (id, organization_id, agent_id, memory_type, content, embedding) VALUES ($1, $2, $3, $4, $5, $6::vector)")
+                                    .bind(mem_id)
                                     .bind("system")
                                     .bind("fs-agent")
                                     .bind("FS_MEMORY")
@@ -210,8 +210,8 @@ mod tests {
 
         // Ensure table exists for testing since it uses new schema
         sqlx::query("CREATE EXTENSION IF NOT EXISTS vector;").execute(&pool).await.unwrap_or(sqlx::postgres::PgQueryResult::default());
-        sqlx::query("CREATE TABLE IF NOT EXISTS consolidated_memory (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, agent_id TEXT, content TEXT NOT NULL, embedding vector(1536), source_type TEXT NOT NULL, created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP, last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP, reference_count INTEGER DEFAULT 0, reliability_score INTEGER DEFAULT 50, owner_override BOOLEAN DEFAULT FALSE, metadata TEXT);").execute(&pool).await.unwrap_or(sqlx::postgres::PgQueryResult::default());
-        sqlx::query("DELETE FROM consolidated_memory").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE IF NOT EXISTS agent_memory_embeddings (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), organization_id VARCHAR NOT NULL, agent_id VARCHAR NOT NULL, memory_type VARCHAR NOT NULL, content TEXT NOT NULL, embedding vector(1536), created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP);").execute(&pool).await.unwrap_or(sqlx::postgres::PgQueryResult::default());
+        sqlx::query("DELETE FROM agent_memory_embeddings").execute(&pool).await.unwrap();
 
         sqlx::query("INSERT INTO agent_session_data (session_id, agent_id, context_data) VALUES ('sess_pg_mem', 'agent1', 'some context pg mem');")
             .execute(&pool)
@@ -224,7 +224,7 @@ mod tests {
         let count: (i64,) = sqlx::query_as("SELECT count(*) FROM agent_session_data WHERE session_id = 'sess_pg_mem'").fetch_one(&pool).await.unwrap();
         assert_eq!(count.0, 0);
 
-        let mem_count: (i64,) = sqlx::query_as("SELECT count(*) FROM consolidated_memory WHERE content = 'some context pg mem'").fetch_one(&pool).await.unwrap();
+        let mem_count: (i64,) = sqlx::query_as("SELECT count(*) FROM agent_memory_embeddings WHERE content = 'some context pg mem'").fetch_one(&pool).await.unwrap();
         assert_eq!(mem_count.0, 1);
     }
 }

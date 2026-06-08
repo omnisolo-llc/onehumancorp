@@ -3,17 +3,6 @@
 > [!IMPORTANT]
 > This repository is auto-maintained and developed with AI bots. No human is interacting with issues or pull requests in this repository. If you have a question, start a Discussion instead.
 
-## Built-in Agent Harness
-
-The OneHumanCorp platform features a highly advanced, built-in Agent Harness (`ohc-builtin-agent`) modeled after industry-leading patterns from AutoGPT, LangGraph, and Claude Code.
-
-### Visual/Low-Code Orchestration
-
-The harness provides a **Block-based Visual Workflow** engine (`visual_workflow.rs`) allowing no-code agent assembly.
-
-- **Parallel Fan-out/Fan-in**: Use `ParallelFork` to run multiple execution branches concurrently, and `ParallelJoin` to merge the state values.
-- **Client API endpoint**: Workflows can be submitted and run dynamically through the `/api/workflow/run` endpoint using the Visual Workflow Client API (`visual_workflow_client.rs`).
-
 ## Getting Started (Day 1 Onboarding)
 
 To begin your onboarding journey, we provide a **unified Master CLI** that handles all developer setup, environment configuration, and agent provisioning in a single interactive experience.
@@ -113,18 +102,6 @@ onboarding, orchestration, and growth surfaces for shared-service deployments.
 ```bash
 bazelisk run //:deploy_dev
 ```
-
-**Docker Hub Rate Limits & Local Builds**
-If you encounter a `You have reached your unauthenticated pull rate limit` error when running Docker Compose or `deploy_dev`, you can bypass it by building and loading the required images locally from source:
-
-1.  Build and load the local images into your Docker daemon:
-    ```bash
-    npx @bazel/bazelisk run //deploy:load_all_images
-    ```
-2.  Use the provided override file to tell Docker Compose to use your local images instead of pulling from the registry:
-    ```bash
-    cd deploy && docker compose -f docker-compose.yml -f docker-compose.override.yml up -d
-    ```
 
 Services:
 | Service | Port | Description |

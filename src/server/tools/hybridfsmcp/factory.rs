@@ -23,11 +23,10 @@ impl Default for FactoryConfig {
 
 pub fn create_fs_provider_with_config(config: &FactoryConfig, tenant_id: Option<String>) -> Arc<dyn FileSystemProvider> {
     if config.is_multitenant && !config.is_standalone {
-        let tenant = tenant_id.unwrap_or_else(|| ::server_common::auth_utils::get_default_tenant());
+        let tenant = tenant_id.unwrap_or_else(|| "system".to_string());
         if tenant == "system" || tenant.trim().is_empty() {
             ::server_telemetry::record_error_signal("Invalid tenant_id for cloud fs provider.");
             tracing::error!("Invalid tenant_id for cloud fs provider.");
-            return Arc::new(LocalFSProvider::new(PathBuf::from("/dev/null")));
         }
         Arc::new(CloudFSProvider::new(tenant, PathBuf::from(&config.mount_point)))
     } else {

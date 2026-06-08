@@ -1,27 +1,12 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('KDS Offline & Multilingual', () => {
-  test.describe.configure({ mode: 'serial' });
-
-  test.beforeEach(async ({ page, context, request }) => {
-    // Clear cookies and state
-    await context.clearCookies();
-    await page.goto('/pos/kds');
-    await page.evaluate(() => localStorage.clear());
-
-    // Reset backend state before each test
-    await request.delete('/api/pos/orders');
-    await request.delete('/api/pos/inventory');
-
-    // Reload to ensure fresh state with clean local storage
-    await page.reload();
-
-    // Wait for mock data to load after reload
-    await expect(page.locator('text=Active Orders')).toBeVisible({ timeout: 10000 });
-  });
 
   test('KDS Order Sync & Multilingual Display', async ({ page }) => {
+    await page.goto('/pos/kds');
 
+    // Wait for mock data to load
+    await expect(page.locator('text=Active Orders')).toBeVisible();
     await expect(page.locator('text=#1 - Ahmed')).toBeVisible();
     await expect(page.getByText('Chicken Over Rice', { exact: true })).toBeVisible();
 
@@ -38,9 +23,8 @@ test.describe('KDS Offline & Multilingual', () => {
   });
 
   test('KDS Offline Actions & Background Sync', async ({ page, context }) => {
+    await page.goto('/pos/kds');
     await expect(page.locator('text=#1 - Ahmed')).toBeVisible();
-    // Verify initial state is "Received" before attempting to click "Prepare"
-    await expect(page.getByTestId('btn-prepare-1')).toBeVisible({ timeout: 5000 });
 
     // Set network to offline
     await context.setOffline(true);

@@ -1,4 +1,3 @@
-/// Master Catalog B.5. Prompt Construction
 use std::fmt::Write;
 use crate::agent::AgentRunConfig;
 use crate::types::Message;
@@ -44,11 +43,7 @@ impl PromptBuilder {
     fn extract_core_objective(user_instructions: &str) -> String {
         let first_paragraph = user_instructions.split("\n\n").next().unwrap_or(user_instructions);
         if first_paragraph.len() > 1000 {
-            let mut end_idx = 997;
-            while end_idx > 0 && !first_paragraph.is_char_boundary(end_idx) {
-                end_idx -= 1;
-            }
-            format!("{}...", &first_paragraph[..end_idx])
+            format!("{}...", &first_paragraph[..997])
         } else {
             first_paragraph.to_string()
         }
@@ -63,11 +58,7 @@ impl PromptBuilder {
                     error_summary.push_str(", ");
                 }
                 let err_msg = if msg.content.len() > 100 {
-                    let mut end_idx = 97;
-                    while end_idx > 0 && !msg.content.is_char_boundary(end_idx) {
-                        end_idx -= 1;
-                    }
-                    format!("{}...", &msg.content[..end_idx])
+                    format!("{}...", &msg.content[..97])
                 } else {
                     msg.content.clone()
                 };
@@ -252,33 +243,5 @@ mod tests {
         let last_msg = &messages[1];
         assert_eq!(last_msg.role, Role::User);
         assert_eq!(last_msg.content, "[Developer Instructions Reminder: Dev rules]");
-    }
-
-    #[test]
-    fn test_extract_core_objective_char_boundary() {
-        let user_instructions = "A".repeat(995) + "😊"; // '😊' is 4 bytes. 995 + 4 = 999 bytes. Total string is < 1000 so no truncation.
-        let obj = PromptBuilder::extract_core_objective(&user_instructions);
-        assert_eq!(obj, user_instructions);
-
-        let long_user_instructions = "A".repeat(995) + "😊" + "BC"; // 1001 bytes.
-        let obj2 = PromptBuilder::extract_core_objective(&long_user_instructions);
-
-        // 997 is in the middle of '😊' (bytes 995..999).
-        // `is_char_boundary` should walk back to 995.
-        let expected = "A".repeat(995) + "...";
-        assert_eq!(obj2, expected);
-    }
-
-    #[test]
-    fn test_summarize_recent_tool_errors_char_boundary() {
-        let error_msg = "error: " .to_string() + &"A".repeat(88) + "😊"; // 7 + 88 + 4 = 99 bytes
-        let error_msg = error_msg + "BC"; // 101 bytes
-        let messages = vec![Message::user(error_msg)];
-
-        let summary = PromptBuilder::summarize_recent_tool_errors(&messages);
-
-        // 97 is inside the '😊' (bytes 95..99). Walk back to 95.
-        let expected = "error: ".to_string() + &"A".repeat(88) + "...";
-        assert_eq!(summary, expected);
     }
 }

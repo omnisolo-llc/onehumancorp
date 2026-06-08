@@ -41,61 +41,8 @@ where
     Router::new()
         .route("/", get(list_approvals))
         .route("/activity", get(list_activity_feed))
-        .route("/simulate-smart-pricing", post(simulate_smart_pricing))
-        .route("/simulate-quote-draft", post(simulate_quote_draft))
         .route("/{id}", post(decide_approval))
         .with_state(orchestrator)
-}
-
-async fn simulate_quote_draft(
-    State(orchestrator): State<Arc<DepartmentOrchestrator>>,
-    Extension(claims): Extension<Claims>,
-) -> impl IntoResponse {
-    let tenant_id = match claims.organization_id.as_deref() {
-        Some(org_id) => org_id.to_string(),
-        None => return (StatusCode::UNAUTHORIZED, Json(DecisionResponse { success: false })).into_response(),
-    };
-
-    let payload = serde_json::json!({
-        "feature_type": "quote_draft",
-        "service": "Plumbing Fix",
-        "customer_inquiry": "I need a quote for Plumbing Fix",
-        "suggested_price": 250.0,
-        "scope": "Plumbing Fix including labor and standard materials.",
-        "suggested_time": "Tomorrow at 2 PM",
-    });
-
-    match orchestrator.execute_action(
-        crate::orchestration::departments::types::DepartmentType::Sales,
-        "Draft quote for Plumbing Fix".to_string(),
-        tenant_id,
-        crate::orchestration::departments::types::ActionRisk::DraftForReview,
-        payload,
-    ).await {
-        Ok(_) => (StatusCode::OK, Json(DecisionResponse { success: true })).into_response(),
-        Err(e) => {
-            tracing::error!("Failed to simulate quote draft: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(DecisionResponse { success: false })).into_response()
-        }
-    }
-}
-
-async fn simulate_smart_pricing(
-    State(orchestrator): State<Arc<DepartmentOrchestrator>>,
-    Extension(claims): Extension<Claims>,
-) -> impl IntoResponse {
-    let tenant_id = match claims.organization_id.as_deref() {
-        Some(org_id) => org_id.to_string(),
-        None => return (StatusCode::UNAUTHORIZED, Json(DecisionResponse { success: false })).into_response(),
-    };
-
-    match orchestrator.simulate_smart_pricing(&tenant_id).await {
-        Ok(_) => (StatusCode::OK, Json(DecisionResponse { success: true })).into_response(),
-        Err(e) => {
-            tracing::error!("Failed to simulate smart pricing: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(DecisionResponse { success: false })).into_response()
-        }
-    }
 }
 
 async fn list_approvals(

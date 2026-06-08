@@ -32,7 +32,7 @@ require_tool() {
 }
 
 compose() {
-  docker compose -p "${PROJECT_NAME}" -f "${COMPOSE_FILE}" -f "${REPO_ROOT}/deploy/docker-compose.override.yml" "$@"
+  docker compose -p "${PROJECT_NAME}" -f "${COMPOSE_FILE}" "$@"
 }
 
 cleanup() {
@@ -81,18 +81,18 @@ else
 fi
 
 COMPOSE_FILE="${REPO_ROOT}/deploy/docker-compose.yml"
-SERVER_LOADER="${REPO_ROOT}/deploy/load_all_images"
+SERVER_LOADER="${REPO_ROOT}/deploy/server_load.sh"
 export OHC_DOCKER_SERVER_PORT="${OHC_DOCKER_SERVER_PORT:-127.0.0.1:0}"
 export OHC_DOCKER_POSTGRES_PORT="${OHC_DOCKER_POSTGRES_PORT:-127.0.0.1:0}"
 export OHC_DOCKER_VALKEY_PORT="${OHC_DOCKER_VALKEY_PORT:-127.0.0.1:0}"
 export MINIMAX_API_KEY="${MINIMAX_API_KEY:-docker-compose-e2e-placeholder-key}"
 
 if [[ ! -f "${SERVER_LOADER}" || ! -x "${SERVER_LOADER}" ]]; then
-  SERVER_LOADER="$(find "${TEST_SRCDIR:-${REPO_ROOT}}" -name "load_all_images" -type f -executable | head -1)"
+  SERVER_LOADER="$(find "${TEST_SRCDIR:-${REPO_ROOT}}" -name "server_load.sh" -type f -executable | head -1)"
 fi
 
 if [[ -z "${SERVER_LOADER}" || ! -x "${SERVER_LOADER}" ]]; then
-  echo "error: could not find executable load_all_images" >&2
+  echo "error: could not find executable server_load.sh" >&2
   exit 1
 fi
 

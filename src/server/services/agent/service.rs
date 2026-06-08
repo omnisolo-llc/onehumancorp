@@ -92,7 +92,7 @@ impl AgentManagerService for MyAgentManagerService {
     ) -> Result<Response<DashboardSnapshot>, Status> {
         let spiffe_id_str = ::server_auth::extract_spiffe_id_from_metadata(request.metadata()).map_err(|e| Status::unauthenticated(e))?;
         let (tenant_id, _) = ::server_auth::parse_spiffe_id(&spiffe_id_str)?;
-        let org_id = if tenant_id.is_empty() { ::server_common::auth_utils::get_default_tenant() } else { tenant_id };
+        let org_id = if tenant_id.is_empty() { "system".to_string() } else { tenant_id };
         let req = request.into_inner();
         if req.name.is_empty() || req.role.is_empty() {
             return Err(Status::invalid_argument("name and role are required"));
@@ -119,7 +119,7 @@ impl AgentManagerService for MyAgentManagerService {
     ) -> Result<Response<DashboardSnapshot>, Status> {
         let spiffe_id_str = ::server_auth::extract_spiffe_id_from_metadata(request.metadata()).map_err(|e| Status::unauthenticated(e))?;
         let (tenant_id, _) = ::server_auth::parse_spiffe_id(&spiffe_id_str)?;
-        let org_id = if tenant_id.is_empty() { ::server_common::auth_utils::get_default_tenant() } else { tenant_id };
+        let org_id = if tenant_id.is_empty() { "system".to_string() } else { tenant_id };
         let req = request.into_inner();
         if req.agent_id.is_empty() {
             return Err(Status::invalid_argument("agentId is required"));
@@ -136,7 +136,7 @@ impl AgentManagerService for MyAgentManagerService {
     ) -> Result<Response<DashboardSnapshot>, Status> {
         let spiffe_id_str = ::server_auth::extract_spiffe_id_from_metadata(request.metadata()).map_err(|e| Status::unauthenticated(e))?;
         let (tenant_id, _) = ::server_auth::parse_spiffe_id(&spiffe_id_str)?;
-        let org_id = if tenant_id.is_empty() { ::server_common::auth_utils::get_default_tenant() } else { tenant_id };
+        let org_id = if tenant_id.is_empty() { "system".to_string() } else { tenant_id };
         let req = request.into_inner();
         let task = req.task.ok_or_else(|| Status::invalid_argument("task is required"))?;
         
@@ -239,7 +239,7 @@ impl AgentManagerService for MyAgentManagerService {
     ) -> Result<Response<OrgSnapshot>, Status> {
         let spiffe_id_str = ::server_auth::extract_spiffe_id_from_metadata(request.metadata()).map_err(|e| Status::unauthenticated(e))?;
         let (tenant_id, _) = ::server_auth::parse_spiffe_id(&spiffe_id_str)?;
-        let org_id = if tenant_id.is_empty() { ::server_common::auth_utils::get_default_tenant() } else { tenant_id };
+        let org_id = if tenant_id.is_empty() { "system".to_string() } else { tenant_id };
         let req = request.into_inner();
         let hub1 = self.hub.clone();
         let hub2 = self.hub.clone();
@@ -280,14 +280,13 @@ impl AgentManagerService for MyAgentManagerService {
         Ok(Response::new(snap))
     }
 
-    #[tracing::instrument(skip(self, request))]
     async fn get_dashboard_snapshot(
         &self,
         request: Request<EmptyRequest>,
     ) -> Result<Response<DashboardSnapshot>, Status> {
         let spiffe_id_str = ::server_auth::extract_spiffe_id_from_metadata(request.metadata()).map_err(|e| Status::unauthenticated(e))?;
         let (tenant_id, _) = ::server_auth::parse_spiffe_id(&spiffe_id_str)?;
-        let org_id_req = if tenant_id.is_empty() { ::server_common::auth_utils::get_default_tenant() } else { tenant_id };
+        let org_id_req = if tenant_id.is_empty() { "system".to_string() } else { tenant_id };
         Ok(Response::new(self.get_snapshot(&org_id_req).await?))
     }
 
@@ -297,7 +296,7 @@ impl AgentManagerService for MyAgentManagerService {
     ) -> Result<Response<DashboardSnapshot>, Status> {
         let spiffe_id_str = ::server_auth::extract_spiffe_id_from_metadata(request.metadata()).map_err(|e| Status::unauthenticated(e))?;
         let (tenant_id, _) = ::server_auth::parse_spiffe_id(&spiffe_id_str)?;
-        let org_id = if tenant_id.is_empty() { ::server_common::auth_utils::get_default_tenant() } else { tenant_id };
+        let org_id = if tenant_id.is_empty() { "system".to_string() } else { tenant_id };
         let req = request.into_inner();
         if req.snapshot_id.is_empty() {
             return Err(Status::invalid_argument("snapshotId is required"));

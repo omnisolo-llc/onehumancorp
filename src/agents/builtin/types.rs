@@ -120,7 +120,8 @@ pub struct Usage {
 }
 
 /// Tool definition for the LLM.
-#[derive(Debug, Clone, serde::Serialize)]
+#[derive(Debug, Clone)]
+#[derive(serde::Serialize)]
 pub struct ToolDefinition {
     pub name: String,
     pub description: String,
@@ -177,66 +178,22 @@ pub enum HumanInLoopSpectrum {
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq, Eq)]
-#[derive(Default)]
 pub enum PermissionArchitecture {
     /// Permissive (auto-approve): All tools are auto-approved unless explicitly in high-risk.
-    #[default]
     Permissive,
     /// Restrictive (require approval): All mutating tools require explicit approval.
     Restrictive,
 }
 
-/// Centralized Pydantic-first tool schema error formatter.
-pub fn format_pydantic_error(e: &serde_json::Error, args_str: Option<&str>) -> String {
-    let detail = if e.is_data() {
-        format!("Semantic validation failed: {}", e)
-    } else if e.is_syntax() {
-        format!("JSON syntax error at line {}, column {}: {}", e.line(), e.column(), e)
-    } else if e.is_eof() {
-        format!("Incomplete JSON structure (unexpected EOF): {}", e)
-    } else {
-        format!("{}", e)
-    };
-
-    let mut msg = format!("Validation Error (Pydantic-first tool schema): Failed to parse arguments.\nReason: {}", detail);
-    if let Some(snippet) = args_str {
-        msg.push_str(&format!("\nProvided arguments snippet: {}", snippet));
+impl Default for PermissionArchitecture {
+    fn default() -> Self {
+        Self::Permissive
     }
-    msg.push_str("\nPlease strictly follow the tool's JSON schema and try again.");
-    msg
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_format_pydantic_error() {
-        use serde::Deserialize;
-
-        #[derive(Deserialize, Debug)]
-        struct Dummy {
-            _field: u32,
-        }
-
-        // Test syntax error
-        let err_syntax = serde_json::from_str::<Dummy>("{ bad json }").unwrap_err();
-        let msg_syntax = format_pydantic_error(&err_syntax, Some("{ bad json }"));
-        assert!(msg_syntax.contains("Validation Error (Pydantic-first tool schema)"));
-        assert!(msg_syntax.contains("JSON syntax error"));
-        assert!(msg_syntax.contains("Provided arguments snippet: { bad json }"));
-
-        // Test EOF error
-        let err_eof = serde_json::from_str::<Dummy>("{\"_field\": 12").unwrap_err();
-        let msg_eof = format_pydantic_error(&err_eof, None);
-        assert!(msg_eof.contains("Incomplete JSON structure (unexpected EOF)"));
-        assert!(!msg_eof.contains("Provided arguments snippet"));
-
-        // Test semantic/data error
-        let err_semantic = serde_json::from_str::<Dummy>("{\"_field\": \"string instead of int\"}").unwrap_err();
-        let msg_semantic = format_pydantic_error(&err_semantic, Some("{\"_field\": \"string instead of int\"}"));
-        assert!(msg_semantic.contains("Semantic validation failed"));
-    }
 
     #[test]
     fn test_role_display() {
@@ -263,37 +220,16 @@ mod tests {
 
     #[test]
     fn test_tool_error_display() {
-        assert_eq!(
-            ToolError::Transient("timeout".to_string()).to_string(),
-            "Transient error: timeout"
-        );
-        assert_eq!(
-            ToolError::LlmRecoverable("bad args".to_string()).to_string(),
-            "Recoverable error: bad args"
-        );
-        assert_eq!(
-            ToolError::UserFixable("need approval".to_string()).to_string(),
-            "User intervention required: need approval"
-        );
-        assert_eq!(
-            ToolError::Fatal("crash".to_string()).to_string(),
-            "Fatal error: crash"
-        );
-        assert_eq!(
-            ToolError::Unexpected("wut".to_string()).to_string(),
-            "Unexpected error: wut"
-        );
-        assert_eq!(
-            ToolError::HandoffRequested("agent2".to_string()).to_string(),
-            "Handoff requested to: agent2"
-        );
+        assert_eq!(ToolError::Transient("timeout".to_string()).to_string(), "Transient error: timeout");
+        assert_eq!(ToolError::LlmRecoverable("bad args".to_string()).to_string(), "Recoverable error: bad args");
+        assert_eq!(ToolError::UserFixable("need approval".to_string()).to_string(), "User intervention required: need approval");
+        assert_eq!(ToolError::Fatal("crash".to_string()).to_string(), "Fatal error: crash");
+        assert_eq!(ToolError::Unexpected("wut".to_string()).to_string(), "Unexpected error: wut");
+        assert_eq!(ToolError::HandoffRequested("agent2".to_string()).to_string(), "Handoff requested to: agent2");
     }
 
     #[test]
     fn test_permission_architecture_default() {
-        assert_eq!(
-            PermissionArchitecture::default(),
-            PermissionArchitecture::Permissive
-        );
+        assert_eq!(PermissionArchitecture::default(), PermissionArchitecture::Permissive);
     }
 }

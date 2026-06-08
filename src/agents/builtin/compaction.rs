@@ -1,4 +1,3 @@
-/// Master Catalog B.4. Context Management
 use crate::types::{ChatRequest, Message};
 use crate::llm::LlmClient;
 use std::sync::Arc;

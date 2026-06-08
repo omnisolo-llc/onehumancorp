@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 
 export async function POST(request: Request) {
   try {
-    const backendUrl = process.env.OHC_BACKEND_URL || 'http://127.0.0.1:18789';
+    const backendUrl = process.env.OHC_BACKEND_URL || 'http://localhost:8080';
     const body = await request.json();
 
     const headers = new Headers({
@@ -32,7 +32,7 @@ export async function POST(request: Request) {
         );
     }
   } catch (error) {
-    if (process.env.NODE_ENV !== "test") console.error("Error recording referral conversion:", error);
+    console.error("Error recording referral conversion:", error);
     return NextResponse.json(
         { error: 'Internal Server Error' },
         { status: 500 }

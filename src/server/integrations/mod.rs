@@ -30,7 +30,6 @@ pub use ::server_integrations_ayrshare as ayrshare;
 pub use ::server_integrations_listmonk as listmonk;
 pub use ::server_integrations_doordash as doordash;
 pub use ::server_integrations_easypost as easypost;
-pub use ::server_integrations_shipday as shipday;
 pub use ::server_integrations_jitsi as jitsi;
 pub mod alipay;
 

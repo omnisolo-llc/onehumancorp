@@ -7,22 +7,6 @@ pub mod postgres_store;
 pub mod sqlite_store;
 
 use std::collections::HashMap;
-
-pub async fn guest_auth_middleware(
-    mut req: axum::extract::Request,
-    next: axum::middleware::Next,
-) -> axum::response::Response {
-    let tenant_id = req.headers().get("x-tenant-id").and_then(|v| v.to_str().ok()).unwrap_or("storefront").to_string();
-    let user_id = req.headers().get("x-user-id").and_then(|v| v.to_str().ok()).unwrap_or("test-user").to_string();
-
-    req.extensions_mut().insert(crate::orchestration::AuthInfo {
-        org_id: tenant_id,
-        agent_id: user_id.clone(),
-        spiffe_id: format!("spiffe://onehumancorp.io/guest/{}", user_id),
-    });
-
-    next.run(req).await
-}
 use std::sync::Arc;
 use std::sync::RwLock;
 
@@ -364,11 +348,12 @@ impl Store {
     }
 
     fn validate_org_id(&self, org_id: &str) -> Result<(), String> {
-        if ::server_config::get().multitenant {
-            if org_id.trim().eq_ignore_ascii_case("system") {
+        if org_id.trim() == "system" {
+            if ::server_config::get().multitenant {
                 return Err("tenant_id 'system' cannot be queried in multi-tenant mode".into());
             }
-            if org_id.trim().is_empty() {
+        } else if org_id.trim().is_empty() {
+            if ::server_config::get().multitenant {
                 return Err("empty tenant_id is not allowed in multi-tenant mode".into());
             }
         }
@@ -558,7 +543,7 @@ impl Store {
                     if ::server_config::get().multitenant && claims.organization_id.clone().unwrap_or_default().trim().is_empty() {
                         return Err("Invalid token: organization_id is required in cloud mode".to_string());
                     }
-                    if ::server_config::get().multitenant && claims.organization_id.as_deref() .map(|s| s.eq_ignore_ascii_case("system")).unwrap_or(false) {
+                    if ::server_config::get().multitenant && claims.organization_id.as_deref() == Some("system") {
                         return Err("Invalid token: 'system' organization cannot be used in multitenant mode".to_string());
                     }
                     if self.is_revoked(&claims.jti, &claims.organization_id.clone().unwrap_or_default()).await {
@@ -584,7 +569,7 @@ impl Store {
                     if ::server_config::get().multitenant && data.claims.organization_id.clone().unwrap_or_default().trim().is_empty() {
                         return Err("Invalid token: organization_id is required in cloud mode".to_string());
                     }
-                    if ::server_config::get().multitenant && data.claims.organization_id.as_deref() .map(|s| s.eq_ignore_ascii_case("system")).unwrap_or(false) {
+                    if ::server_config::get().multitenant && data.claims.organization_id.as_deref() == Some("system") {
                         return Err("Invalid token: 'system' organization cannot be used in multitenant mode".to_string());
                     }
                     if self.is_revoked(&data.claims.jti, &data.claims.organization_id.clone().unwrap_or_default()).await {
@@ -608,7 +593,7 @@ impl Store {
                         if ::server_config::get().multitenant && claims.organization_id.clone().unwrap_or_default().trim().is_empty() {
                             return Err("Invalid token: organization_id is required in cloud mode".to_string());
                         }
-                        if ::server_config::get().multitenant && claims.organization_id.as_deref() .map(|s| s.eq_ignore_ascii_case("system")).unwrap_or(false) {
+                        if ::server_config::get().multitenant && claims.organization_id.as_deref() == Some("system") {
                             return Err("Invalid token: 'system' organization cannot be used in multitenant mode".to_string());
                         }
                         if self.is_revoked(&claims.jti, &claims.organization_id.clone().unwrap_or_default()).await {
@@ -910,9 +895,4 @@ mod store_tests {
             assert!(res_valid.is_ok());
         }
     }
-}
-
-#[cfg(test)]
-mod tests {
-    pub mod multitenancy_isolation;
 }

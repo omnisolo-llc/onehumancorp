@@ -30,7 +30,27 @@ test.describe('Agentic Service Booking & Quoting CUJ', () => {
     // Verify successful login
     await expect(page.getByRole('heading', { name: 'Dashboard' }).first()).toBeVisible();
 
-    // We no longer mock approvals; we rely on the actual backend processing the real request.
+    // Intercept approvals to inject a mock quote draft
+    await page.route('/api/agents/approvals', async route => {
+      const json = {
+        pending_approvals: [
+          {
+            id: 'mock_quote_1',
+            tenant_id: 'test_tenant',
+            department: 'sales',
+            description: 'New Quote Request | Payload: {"feature_type":"quote_draft","customer_inquiry":"I need help fixing a leaky pipe in my kitchen sink.","suggested_price":"150","scope":"Fix leaky kitchen pipe including parts and labor.","suggested_time":"Tue 2 PM"}',
+            status: 'pending',
+            action_risk: 'low'
+          }
+        ]
+      };
+      await route.fulfill({ json });
+    });
+
+    // We also need to mock the approval POST endpoint so that it doesn't fail
+    await page.route('/api/agents/approvals/mock_quote_1', async route => {
+        await route.fulfill({ status: 200, json: { success: true } });
+    });
 
     // Navigate to Team
     await page.goto('/team');

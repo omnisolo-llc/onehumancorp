@@ -45,9 +45,6 @@ rust_library(
         "//src/server/integrations/meta:client.rs",
         "//src/server/integrations/meta:mod.rs",
         "//src/server/integrations/meta:provider.rs",
-        "//src/server/integrations/shipday:client.rs",
-        "//src/server/integrations/shipday:mod.rs",
-        "//src/server/integrations/shipday:provider.rs",
         "//src/server/integrations/stripe:client.rs",
         "//src/server/integrations/stripe:mod.rs",
         "//src/server/integrations/stripe:payout_batcher.rs",
@@ -100,7 +97,6 @@ rust_library(
         "//src/server/integrations/sendgrid:server_integrations_sendgrid",
         "//src/server/integrations/resend:server_integrations_resend",
         "//src/server/integrations/shippo:server_integrations_shippo",
-        "//src/server/integrations/shipday:server_integrations_shipday",
         "//src/server/integrations/task_scheduler:server_integrations_task_scheduler",
         "//src/server/integrations/twilio:server_integrations_twilio",
         "//src/server/integrations/zoom:server_integrations_zoom",
@@ -151,20 +147,6 @@ rust_library(
         "@crates//:uuid",
         "@crates//:walkdir",
     ],
-)
-
-rust_test(
-    name = "catalog_metadata_test",
-    size = "small",
-    srcs = [
-        "catalog_metadata_test.rs",
-        "catalog.rs",
-    ],
-    edition = "2024",
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
 )
 
 rust_test(

@@ -10,7 +10,6 @@ use std::str::FromStr;
 use std::sync::OnceLock;
 
 static GLOBAL_POOL: OnceLock<PgPool> = OnceLock::new();
-const POSTGRES_MIGRATION_LOCK_KEY: i64 = 0x4f48_435f_4d49_4752;
 
 pub fn get_pool() -> PgPool {
     GLOBAL_POOL.get_or_init(|| {
@@ -322,8 +321,7 @@ impl DB {
                     let is_postgres_lock = !self.is_sqlite()
                         && (err_str.contains("serialization failure")
                             || err_str.contains("deadlock detected")
-                            || err_str.contains("40001")
-                            || err_str.contains("could not obtain lock"));
+                            || err_str.contains("40001"));
 
                     if is_sqlite_lock || is_postgres_lock {
                         attempt += 1;
@@ -360,28 +358,13 @@ impl DB {
 
         match &self.store {
             DbStore::Postgres => {
-                let mut migration_conn = self.pool.acquire().await?;
-
-                sqlx::query("SELECT pg_advisory_lock($1);")
-                    .bind(POSTGRES_MIGRATION_LOCK_KEY)
-                    .execute(&mut *migration_conn)
-                    .await?;
-
                 sqlx::query("CREATE EXTENSION IF NOT EXISTS vector;")
-                    .execute(&mut *migration_conn)
+                    .execute(&self.pool)
                     .await?;
 
                 let migrator =
                     sqlx::migrate::Migrator::new(Path::new("src/server/migrations")).await?;
-                let migration_result = migrator.run(&mut *migration_conn).await;
-
-                let unlock_result = sqlx::query("SELECT pg_advisory_unlock($1);")
-                    .bind(POSTGRES_MIGRATION_LOCK_KEY)
-                    .execute(&mut *migration_conn)
-                    .await;
-
-                migration_result?;
-                unlock_result?;
+                migrator.run(&self.pool).await?;
             }
             DbStore::Sqlite(sqlite_pool) => {
                 let schema = r#"
@@ -446,9 +429,9 @@ impl DB {
                         description TEXT,
                         status TEXT NOT NULL DEFAULT 'PENDING',
                         assigned_agent_id TEXT,
-                        dependencies TEXT DEFAULT '[]',
-                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        dependencies JSONB DEFAULT '[]',
+                        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1,
                         auto_dreamed BOOLEAN DEFAULT 0
@@ -462,8 +445,8 @@ impl DB {
                         content TEXT NOT NULL,
                         metadata TEXT DEFAULT '{}',
                         embedding BLOB,
-                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1
                     );
@@ -791,8 +774,6 @@ impl DB {
                         tenant_id TEXT,
                         source TEXT,
                         content TEXT,
-                        original_content TEXT,
-                        translated_from_language TEXT,
                         draft_reply TEXT,
                         status TEXT,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -1136,6 +1117,45 @@ impl DB {
             }
         }
         Ok(())
+    }
+
+    pub async fn cleanup_stagnant_missions(
+        &self,
+        timeout_secs: i64,
+    ) -> Result<u64, Box<dyn std::error::Error>> {
+        let threshold = Utc::now() - chrono::Duration::seconds(timeout_secs);
+        let affected = match &self.store {
+            DbStore::Sqlite(sqlite_pool) => {
+                sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE status = 'STUCK' OR ((status = 'PENDING' OR status = 'RUNNING' OR status = 'IN_PROGRESS' OR status = 'BURSTING') AND updated_at < ?)")
+                    .bind(threshold)
+                    .execute(sqlite_pool)
+                    .await?.rows_affected()
+            },
+            DbStore::Postgres => {
+                let tenants = sqlx::query("SELECT id FROM tenants").fetch_all(&self.pool).await?;
+                let mut total_affected = 0;
+                for tenant_row in tenants {
+                    let tenant_id: String = tenant_row.get("id");
+                    let mut tx = self.pool.begin().await?;
+                    ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await?;
+                    total_affected += sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE (status = 'STUCK' OR ((status = 'PENDING' OR status = 'RUNNING' OR status = 'IN_PROGRESS' OR status = 'BURSTING') AND updated_at < $1)) AND tenant_id = $2")
+                        .bind(threshold)
+                        .bind(&tenant_id)
+                        .execute(&mut *tx)
+                        .await?.rows_affected();
+                    tx.commit().await?;
+                }
+                total_affected
+            }
+        };
+        if affected > 0 {
+            tracing::debug!(
+                "Cleaned up {} stagnant missions older than {} seconds",
+                affected,
+                timeout_secs
+            );
+        }
+        Ok(affected)
     }
 
     pub async fn mark_task_auto_dreamed(
@@ -1698,5 +1718,82 @@ mod e2e_tenant_isolation_swarm_tasks_tests {
             .await
             .expect("Database URL or operation failed in test");
         assert_eq!(count_t2.0, 0, "tenant_2 should NOT see tenant_1's task due to RLS");
+    }
+}
+
+#[cfg(test)]
+mod e2e_cleanup_stagnant_missions_tests {
+    use super::*;
+    use sqlx::Row;
+
+    #[tokio::test]
+    async fn test_cleanup_stagnant_missions_postgres() {
+        if std::env::var("OHC_DATABASE_URL").is_err() {
+            return;
+        }
+
+        let database_url = std::env::var("OHC_DATABASE_URL").expect("Database URL or operation failed in test");
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .after_release(|conn, _meta| {
+                Box::pin(async move {
+                    use sqlx::Executor;
+                    conn.execute("DISCARD ALL").await?;
+                    Ok(true)
+                })
+            })
+            .connect(&database_url)
+            .await
+            .expect("Database URL or operation failed in test");
+
+        let db = DB {
+            store: DbStore::Postgres,
+            pool: pool.clone(),
+
+        };
+
+        let mut tx = pool.begin().await.expect("failed to begin transaction");
+
+        // Use a unique tenant for this test to avoid conflicting with other tests
+        let test_tenant = format!("test_cleanup_stagnant_{}", uuid::Uuid::new_v4());
+
+        // 1. Stuck mission (should be updated)
+        sqlx::query("INSERT INTO agent_missions (id, status, payload, updated_at, tenant_id) VALUES ('mission_1', 'STUCK', '{}', CURRENT_TIMESTAMP, $1)")
+            .bind(&test_tenant)
+            .execute(&mut *tx).await.expect("Database URL or operation failed in test");
+
+        // 2. Pending mission but updated recently (should NOT be updated)
+        sqlx::query("INSERT INTO agent_missions (id, status, payload, updated_at, tenant_id) VALUES ('mission_2', 'PENDING', '{}', CURRENT_TIMESTAMP, $1)")
+            .bind(&test_tenant)
+            .execute(&mut *tx).await.expect("Database URL or operation failed in test");
+
+        // 3. Pending mission updated 2 hours ago (should be updated)
+        sqlx::query("INSERT INTO agent_missions (id, status, payload, updated_at, tenant_id) VALUES ('mission_3', 'PENDING', '{}', CURRENT_TIMESTAMP - INTERVAL '2 hours', $1)")
+            .bind(&test_tenant)
+            .execute(&mut *tx).await.expect("Database URL or operation failed in test");
+
+        tx.commit().await.expect("Database URL or operation failed in test");
+
+        // Clean up missions older than 3600 seconds
+        let _affected = db.cleanup_stagnant_missions(3600).await.expect("Database URL or operation failed in test");
+
+        let status_1: String = sqlx::query("SELECT status FROM agent_missions WHERE id = 'mission_1' AND tenant_id = $1")
+            .bind(&test_tenant)
+            .fetch_one(&pool).await.expect("Database URL or operation failed in test").get("status");
+        assert_eq!(status_1, "FAILED");
+
+        let status_2: String = sqlx::query("SELECT status FROM agent_missions WHERE id = 'mission_2' AND tenant_id = $1")
+            .bind(&test_tenant)
+            .fetch_one(&pool).await.expect("Database URL or operation failed in test").get("status");
+        assert_eq!(status_2, "PENDING");
+
+        let status_3: String = sqlx::query("SELECT status FROM agent_missions WHERE id = 'mission_3' AND tenant_id = $1")
+            .bind(&test_tenant)
+            .fetch_one(&pool).await.expect("Database URL or operation failed in test").get("status");
+        assert_eq!(status_3, "FAILED");
+
+        // Clean up the table for the unique tenant
+        sqlx::query("DELETE FROM agent_missions WHERE tenant_id = $1")
+            .bind(&test_tenant)
+            .execute(&pool).await.expect("Database URL or operation failed in test");
     }
 }

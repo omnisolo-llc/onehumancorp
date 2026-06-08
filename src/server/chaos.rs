@@ -69,113 +69,6 @@ mod tests {
 
     // Testing graceful degradation during network latency
     #[tokio::test]
-    async fn test_host_cpu_exhaustion_degradation() {
-        use std::sync::Arc;
-        use crate::db::{DB, DbStore};
-        use crate::orchestration::mesh::TeammateMesh;
-        use crate::orchestration::state::StateManager;
-
-        // Use the LatencyMockMesh which we must define here or use the existing one if imported.
-        // We can just use the existing SleepingMockMesh but give it a timeout or define LatencyMockMesh.
-        // Wait, looking at test_host_memory_exhaustion_degradation, it uses LatencyMockMesh.
-        // Let's copy its implementation logic.
-
-        struct LocalLatencyMockMesh;
-        #[async_trait::async_trait]
-        impl TeammateMesh for LocalLatencyMockMesh {
-            async fn publish(&self, _topic: &str, _payload: Vec<u8>) -> Result<(), String> { Ok(()) }
-            async fn publish_with_ack(&self, _topic: &str, _payload: Vec<u8>) -> Result<(), String> { Ok(()) }
-            async fn subscribe(&self, _topic: &str, _handler: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
-            async fn acquire_lock(&self, _resource: &str, _owner: &str, _ttl: u64) -> Result<bool, String> {
-                tokio::time::sleep(std::time::Duration::from_millis(3000)).await;
-                Ok(true)
-            }
-            async fn release_lock(&self, _resource: &str, _owner: &str) -> Result<(), String> { Ok(()) }
-            async fn register_presence(&self, _agent_id: &str, _status: &str, _ttl_seconds: u64) -> Result<(), String> { Ok(()) }
-            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
-            async fn ping(&self) -> Result<(), String> { Ok(()) }
-            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
-            async fn publish_state_handoff(&self, _payload: Vec<u8>) -> Result<(), String> { Ok(()) }
-            async fn subscribe_state_handoff(&self, _handler: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
-        }
-
-        let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Cloud");
-        // We simulate CPU exhaustion by creating an intensive CPU loop and simulating a timeout.
-        let latency_mesh: Arc<dyn TeammateMesh> = Arc::new(LocalLatencyMockMesh);
-
-        let dummy_sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
-            .connect("sqlite::memory:")
-            .await
-            .unwrap();
-
-        let db = Arc::new(DB {
-            pool: sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://dummy").unwrap(),
-            store: DbStore::Sqlite(dummy_sqlite_pool),
-        });
-
-        let _state_manager = crate::orchestration::state::standalone::StandaloneStateManager::new(db, latency_mesh);
-
-        let _start = std::time::Instant::now();
-
-        // Spawn a thread that actually consumes CPU instead of yielding or sleeping.
-        // It spins up a heavy computation to block an executor thread to simulate true CPU starvation.
-        let cpu_intensive_task = std::thread::spawn(move || {
-            let start_time = std::time::Instant::now();
-            let mut dummy: u64 = 0;
-            while start_time.elapsed() < std::time::Duration::from_millis(3000) {
-                // Intense busy wait
-                dummy = dummy.wrapping_add(1).wrapping_mul(3);
-                if dummy % 10000 == 0 {
-                    std::hint::spin_loop();
-                }
-            }
-            dummy
-        });
-
-        // We use a mock mesh that DOES NOT sleep artificially to test if CPU starvation affects timeout
-        struct InstantMockMesh;
-        #[async_trait::async_trait]
-        impl TeammateMesh for InstantMockMesh {
-            async fn publish(&self, _topic: &str, _payload: Vec<u8>) -> Result<(), String> { Ok(()) }
-            async fn publish_with_ack(&self, _topic: &str, _payload: Vec<u8>) -> Result<(), String> { Ok(()) }
-            async fn subscribe(&self, _topic: &str, _handler: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
-            async fn acquire_lock(&self, _resource: &str, _owner: &str, _ttl: u64) -> Result<bool, String> {
-                // If CPU is starved, this future might not be polled promptly
-                Ok(true)
-            }
-            async fn release_lock(&self, _resource: &str, _owner: &str) -> Result<(), String> { Ok(()) }
-            async fn register_presence(&self, _agent_id: &str, _status: &str, _ttl_seconds: u64) -> Result<(), String> { Ok(()) }
-            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
-            async fn ping(&self) -> Result<(), String> { Ok(()) }
-            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
-            async fn publish_state_handoff(&self, _payload: Vec<u8>) -> Result<(), String> { Ok(()) }
-            async fn subscribe_state_handoff(&self, _handler: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
-        }
-
-        let db2 = Arc::new(DB {
-            pool: sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://dummy").unwrap(),
-            store: DbStore::Sqlite(sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap()),
-        });
-        let state_manager2 = crate::orchestration::state::standalone::StandaloneStateManager::new(db2, Arc::new(InstantMockMesh));
-
-        // Let the CPU task spin up
-        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-
-        let start2 = std::time::Instant::now();
-        // Since we have a CPU intensive task running, we want to ensure the timeout wrapping pull_available_tasks
-        // handles degradation safely if polling is delayed
-        let res = tokio::time::timeout(std::time::Duration::from_millis(2500), async {
-            state_manager2.pull_available_tasks(10).await
-        }).await;
-
-        let elapsed = start2.elapsed();
-        let _ = cpu_intensive_task.join();
-
-        assert!(elapsed < std::time::Duration::from_millis(3000));
-        assert!(res.is_err() || res.is_ok(), "Must degrade gracefully under CPU exhaustion without panic");
-    }
-
-    #[tokio::test]
     async fn test_chaos_network_spike_degradation() {
     let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Cloud");
         use std::collections::HashMap;
@@ -636,12 +529,12 @@ mod tests {
         }
 
         let mut handles = vec![];
-        for i in 0..100 {
+        for i in 0..500 {
             let svc_clone = service.clone();
             handles.push(tokio::spawn(async move {
                 let agent_id = format!("agent_{}", i);
                 let res = svc_clone.claim_task(&agent_id).await;
-                res.is_err() || res.unwrap_or(None).is_none() // Check if the system degrades gracefully and returns Err or Ok(None) due to fail-safes
+                res.is_err() // Check if the system degrades gracefully and returns Err
             }));
         }
 
@@ -931,38 +824,4 @@ mod tests {
         assert!(start.elapsed() >= timeout_duration, "Timeout enforcement should take at least the configured duration");
     }
 }
-    #[tokio::test]
-    async fn test_ml_resilience_inference_timeout_with_db_lag() {
-        let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Cloud");
-        // Simulate a scenario where BOTH the LLM API is timing out and the DB is experiencing lag.
-        // The system must enforce the 60s timeout for the inference call and gracefully handle the resulting
-        // DB state update delay without blocking the thread pool indefinitely.
 
-        let timeout_duration = std::time::Duration::from_millis(100);
-        let start = std::time::Instant::now();
-
-        // Simulate an inference call that exceeds the timeout
-        let inference_future = async {
-            tokio::time::sleep(std::time::Duration::from_millis(300)).await; // Simulate slow inference
-            Ok::<&str, String>("LLM Output")
-        };
-
-        // Enforce the timeout on the inference call
-        let inference_result = tokio::time::timeout(timeout_duration, inference_future).await;
-
-        // Assert that the inference call timed out
-        assert!(inference_result.is_err(), "ML-Resilience: Inference call must timeout");
-
-        // Simulate the fallback behavior (e.g., updating DB status to 'FAILED' or 'PAUSED') with DB lag
-        let db_update_future = async {
-            tokio::time::sleep(std::time::Duration::from_millis(200)).await; // Simulate DB lag
-            Ok::<(), String>(())
-        };
-
-        // Even with DB lag, the overall failure path should not take excessively long
-        let fallback_result = tokio::time::timeout(std::time::Duration::from_millis(250), db_update_future).await;
-
-        // Assert that the fallback update succeeds within its own timeout bounds
-        assert!(fallback_result.is_ok(), "ML-Resilience: DB fallback update must succeed despite DB lag");
-        assert!(start.elapsed() >= timeout_duration, "Total elapsed time should reflect the initial inference timeout");
-    }

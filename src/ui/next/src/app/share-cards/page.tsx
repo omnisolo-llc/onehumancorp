@@ -10,40 +10,11 @@ export default function ShareCardsPage() {
   const [theme, setTheme] = useState('gradient');
   const [copied, setCopied] = useState(false);
   const [shareLink, setShareLink] = useState('');
-  const [removeBranding, setRemoveBranding] = useState(false);
-  const [showSoftPaywall, setShowSoftPaywall] = useState(false);
-  const [hasPro, setHasPro] = useState(false);
-  const [trialStatus, setTrialStatus] = useState<string | null>(null);
 
   useEffect(() => {
     const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store';
-    const origin = typeof window !== 'undefined' ? window.location.origin : '';
-    setShareLink(`${origin}/onboarding?ref=${tenant}`);
-    if (typeof localStorage !== 'undefined') {
-        setHasPro(localStorage.getItem('has_pro') === 'true');
-    }
+    setShareLink(`https://ohc.store/join?ref=${tenant}`);
   }, []);
-
-  const handleToggleBranding = () => {
-    if (!removeBranding && !hasPro) {
-      setShowSoftPaywall(true);
-      return;
-    }
-    setRemoveBranding(!removeBranding);
-  };
-
-  const claimTrialExtension = () => {
-    const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || 'DEFAULT' : 'DEFAULT';
-    const referralUrl = `${window.location.origin}/onboarding?ref=${tenant}`;
-    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('I just unlocked premium viral share cards for my business on One Human Corp! Start your own business today: ' + referralUrl)}`, '_blank');
-    if (typeof localStorage !== 'undefined') {
-        localStorage.setItem('has_pro', 'true');
-    }
-    setHasPro(true);
-    setShowSoftPaywall(false);
-    setTrialStatus('Your 7-day Pro trial has been activated.');
-    setRemoveBranding(true);
-  };
 
   const getThemeStyles = () => {
     switch (theme) {
@@ -78,18 +49,12 @@ export default function ShareCardsPage() {
       <main className="p-6 md:p-8 flex-1 max-w-5xl mx-auto w-full flex flex-col md:flex-row gap-8">
         {/* Editor Settings */}
         <section className="w-full md:w-1/3 flex flex-col gap-6">
-            {trialStatus && (
-                <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-xl text-sm font-medium">
-                    {trialStatus}
-                </div>
-            )}
             <div className="p-6 shadow-md" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
                 <h2 className="text-xl font-semibold font-outfit mb-4" style={{ color: '#1D1D1F' }}>Card Settings</h2>
                 <div className="flex flex-col gap-4">
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Store Name</label>
                         <input
-                            aria-label="Store name"
                             type="text"
                             value={storeName}
                             onChange={(e) => setStoreName(e.target.value)}
@@ -99,7 +64,6 @@ export default function ShareCardsPage() {
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Tagline</label>
                         <textarea
-                            aria-label="Tagline"
                             rows={2}
                             value={tagline}
                             onChange={(e) => setTagline(e.target.value)}
@@ -109,25 +73,10 @@ export default function ShareCardsPage() {
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">Theme</label>
                         <div className="flex gap-2">
-                            <button aria-label="Gradient theme" aria-pressed={theme === 'gradient'} onClick={() => setTheme('gradient')} className={`w-8 h-8 rounded-full border-2 ${theme === 'gradient' ? 'border-indigo-600' : 'border-transparent'}`} style={{ background: 'linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%)' }}></button>
-                            <button aria-label="Dark theme" aria-pressed={theme === 'dark'} onClick={() => setTheme('dark')} className={`w-8 h-8 rounded-full border-2 ${theme === 'dark' ? 'border-indigo-600' : 'border-transparent'}`} style={{ background: '#1D1D1F' }}></button>
-                            <button aria-label="Light theme" aria-pressed={theme === 'light'} onClick={() => setTheme('light')} className={`w-8 h-8 rounded-full border-2 ${theme === 'light' ? 'border-indigo-600' : 'border-gray-200'}`} style={{ background: '#ffffff' }}></button>
-                            <button aria-label="Purple theme" aria-pressed={theme === 'purple'} onClick={() => setTheme('purple')} className={`w-8 h-8 rounded-full border-2 ${theme === 'purple' ? 'border-indigo-600' : 'border-transparent'}`} style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}></button>
-                        </div>
-                    </div>
-
-                    <div className="mt-2 pt-4 border-t border-gray-100 flex items-center justify-between">
-                        <label htmlFor="remove-branding" className="text-sm font-medium text-gray-700 cursor-pointer flex-1 flex items-center">
-                            Remove "Powered by OHC" Badge
-                            {!hasPro && (
-                                <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-indigo-100 text-indigo-800">
-                                    Pro
-                                </span>
-                            )}
-                        </label>
-                        <div className="relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in">
-                            <input type="checkbox" name="toggle" id="remove-branding" checked={removeBranding} onChange={handleToggleBranding} className="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer border-gray-300" style={{ transform: removeBranding ? 'translateX(100%)' : 'translateX(0)', borderColor: removeBranding ? '#4f46e5' : '#d1d5db', transition: 'all 0.2s ease-in-out' }}/>
-                            <label htmlFor="remove-branding" className="toggle-label block overflow-hidden h-5 rounded-full bg-gray-300 cursor-pointer" style={{ backgroundColor: removeBranding ? '#4f46e5' : '#d1d5db', transition: 'all 0.2s ease-in-out' }}></label>
+                            <button onClick={() => setTheme('gradient')} className={`w-8 h-8 rounded-full border-2 ${theme === 'gradient' ? 'border-indigo-600' : 'border-transparent'}`} style={{ background: 'linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%)' }}></button>
+                            <button onClick={() => setTheme('dark')} className={`w-8 h-8 rounded-full border-2 ${theme === 'dark' ? 'border-indigo-600' : 'border-transparent'}`} style={{ background: '#1D1D1F' }}></button>
+                            <button onClick={() => setTheme('light')} className={`w-8 h-8 rounded-full border-2 ${theme === 'light' ? 'border-indigo-600' : 'border-gray-200'}`} style={{ background: '#ffffff' }}></button>
+                            <button onClick={() => setTheme('purple')} className={`w-8 h-8 rounded-full border-2 ${theme === 'purple' ? 'border-indigo-600' : 'border-transparent'}`} style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}></button>
                         </div>
                     </div>
                 </div>
@@ -211,7 +160,7 @@ export default function ShareCardsPage() {
                  </div>
 
                  <div className="absolute bottom-6 left-6 right-6 flex justify-between items-center opacity-80">
-                     <span className="text-sm font-semibold tracking-wider uppercase">{removeBranding ? '' : 'Powered by OHC'}</span>
+                     <span className="text-sm font-semibold tracking-wider uppercase">Powered by OHC</span>
                      <span className="text-sm font-medium">{shareLink.replace('https://', '')}</span>
                  </div>
              </div>
@@ -220,49 +169,6 @@ export default function ShareCardsPage() {
              </p>
         </section>
       </main>
-
-      {/* Soft Paywall Modal */}
-      {showSoftPaywall && (
-        <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-md rounded-2xl p-8 shadow-2xl relative overflow-hidden font-inter border border-indigo-100 text-center">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-50 rounded-bl-full -z-10"></div>
-
-            <div className="flex justify-end mb-2">
-              <button
-                onClick={() => setShowSoftPaywall(false)}
-                className="text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors w-8 h-8 flex items-center justify-center"
-              >
-                <span className="text-xl leading-none">&times;</span>
-              </button>
-            </div>
-
-            <div className="w-16 h-16 bg-indigo-100 rounded-2xl flex items-center justify-center text-3xl shadow-inner text-indigo-600 mx-auto mb-6">
-              ✨
-            </div>
-            <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-3">Upgrade to Pro</h2>
-            <p className="text-gray-600 mb-6 text-sm leading-relaxed">
-              Make the Social Share Cards 100% yours. Upgrade to Pro to remove the "Powered by OHC" watermark.
-            </p>
-
-            <button
-              onClick={() => { setShowSoftPaywall(false); window.location.href = '/pricing'; }}
-              className="w-full py-4 rounded-xl font-bold text-white mb-4 transition-all shadow-md hover:shadow-lg hover:opacity-90 bg-indigo-600 hover:bg-indigo-700"
-            >
-              Upgrade to Pro
-            </button>
-
-            <div className="my-4 text-gray-400 font-medium text-sm">OR</div>
-
-            <button
-              onClick={claimTrialExtension}
-              className="w-full py-3.5 rounded-xl font-bold transition-all shadow-sm hover:bg-gray-50 flex items-center justify-center gap-2 border-2 border-[#1DA1F2] text-[#1DA1F2] bg-white"
-            >
-              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.008 5.94H5.078z"/></svg>
-              Share on X to get 7 Days Free
-            </button>
-          </div>
-        </div>
-      )}
 
       <style dangerouslySetInnerHTML={{__html: `
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap');

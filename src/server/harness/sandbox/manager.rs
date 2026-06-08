@@ -43,7 +43,6 @@ pub struct SandboxManager {
     wrapper: BashWrapper,
     violation_store: Arc<ViolationStore>,
     policy: SandboxPolicy,
-    sandbox_enabled: bool,
 }
 
 impl SandboxManager {
@@ -53,28 +52,12 @@ impl SandboxManager {
 
     pub fn new(pool: Option<PgPool>) -> Self {
         let violation_store = Arc::new(ViolationStore::new(pool.clone()));
-
-        // In a real scenario, this would query OHC-SIP Redis configurations.
-        // For now, we allow dynamic toggling or default to true.
-        let sandbox_enabled = std::env::var("OHC_HARNESS_SANDBOX_ENABLED")
-            .map(|v| v.to_lowercase() == "true" || v == "1")
-            .unwrap_or(true);
-
         SandboxManager {
             evaluator: PermissionEvaluator::new(),
             wrapper: BashWrapper::new(),
             violation_store,
             policy: SandboxPolicy::default(),
-            sandbox_enabled,
         }
-    }
-
-    pub fn should_use_sandbox(&self, _cmd: &str) -> bool {
-        self.sandbox_enabled
-    }
-
-    pub fn set_sandbox_enabled(&mut self, enabled: bool) {
-        self.sandbox_enabled = enabled;
     }
 }
 

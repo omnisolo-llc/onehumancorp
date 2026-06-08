@@ -16,8 +16,16 @@ pub async fn health_handler(
         "sync_error_count": 0,
     }));
 
-    // Fetch lightweight in-memory cache status
-    let last_prune = crate::sip::LAST_SUCCESSFUL_PRUNE.load(std::sync::atomic::Ordering::SeqCst);
+    // ADDED: Additional health metric to improve codebase
+    let pending_missions: i64 = sqlx::query_scalar("SELECT count(*) FROM agent_missions WHERE status = 'PENDING'")
+        .fetch_one(&hub.pool)
+        .await
+        .unwrap_or(0);
+
+    let failed_missions: i64 = sqlx::query_scalar("SELECT count(*) FROM agent_missions WHERE status = 'FAILED'")
+        .fetch_one(&hub.pool)
+        .await
+        .unwrap_or(0);
 
     Json(serde_json::json!({
         "mode": health.get("mode").unwrap_or(&serde_json::json!("standalone")),
@@ -26,7 +34,8 @@ pub async fn health_handler(
         "sync_backlog": health.get("local_to_cloud_sync_queue").unwrap_or(&serde_json::json!(0)),
         "sync_error_count": health.get("sync_error_count").unwrap_or(&serde_json::json!(0)),
         "hybrid_mode_ready": health.get("hybrid_mode_ready").unwrap_or(&serde_json::json!(false)),
-        "last_successful_prune_ts": last_prune,
+        "pending_missions": pending_missions,
+        "failed_missions": failed_missions,
         "mesh_active": health.get("mesh_active").unwrap_or(&serde_json::json!(false)),
         "checklist": health.get("checklist").unwrap_or(&serde_json::json!(Vec::<String>::new()))
     }))

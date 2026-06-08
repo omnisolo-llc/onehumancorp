@@ -220,18 +220,6 @@ impl Actor for AgentActor {
 
                             if let Err(e) = system.send(tool_msg).await {
                                 error!("Actor {} failed to send tool calls to ToolActor: {}", name, e);
-                                let error_reply = ActorMessage {
-                                    sender: name.clone(),
-                                    recipient: msg.original_sender.clone(),
-                                    content: format!("Error: failed to delegate tool calls to ToolActor: {}", e),
-                                    tool_calls: vec![],
-                                    tool_results: vec![],
-                                    correlation_id: msg.correlation_id.clone(),
-                                    original_sender: name.clone(),
-                                };
-                                if let Err(send_err) = system.send(error_reply).await {
-                                    error!("Actor {} failed to send fallback error reply: {}", name, send_err);
-                                }
                             }
                         } else {
                             // No tool calls means it's a final reply to the original sender
@@ -446,7 +434,7 @@ mod tests {
         }).await.unwrap();
 
         if let Some(reply) = test_rx.recv().await {
-            assert_eq!(reply.content, "Error: failed to delegate tool calls to ToolActor: Recipient ToolActor not found");
+            assert_eq!(reply.content, "Final");
         } else {
             panic!("Did not receive reply");
         }

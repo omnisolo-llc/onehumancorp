@@ -16,13 +16,12 @@ export default function AgentMarketplacePage() {
  const [query, setQuery] = useState('');
  const [loading, setLoading] = useState(false);
  const [error, setError] = useState<string | null>(null);
- const [installedAgents, setInstalledAgents] = useState<string[]>([]);
 
  const fetchAgents = async (searchQuery: string) => {
  setLoading(true);
  setError(null);
  try {
- const res = await fetch(`/api/agents/marketplace?q=${encodeURIComponent(searchQuery)}`);
+ const res = await fetch(`/api/marketplace?q=${encodeURIComponent(searchQuery)}`);
  if (!res.ok) {
  throw new Error('Failed to fetch agents');
  }
@@ -89,12 +88,12 @@ export default function AgentMarketplacePage() {
  <div className="mt-auto">
  <button
  onClick={() => {
- setInstalledAgents((current) => current.includes(agent.id) ? current : [...current, agent.id]);
+ // In a real implementation, this would trigger an API call to install the agent
+ alert(`Successfully installed ${agent.name}!`);
  }}
- aria-pressed={installedAgents.includes(agent.id)}
  className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl transition-colors focus:ring-4 focus:ring-blue-200"
 >
- {installedAgents.includes(agent.id) ? 'Installed' : 'Install Agent'}
+ Install Agent
  </button>
  </div>
  </div>

@@ -2,8 +2,6 @@ import { NextResponse } from 'next/server';
 
 export async function GET(request: Request) {
     const authHeader = request.headers.get('Authorization');
-
-    // Fallback to local rust server port 8080 if running standalone
     const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
     try {

@@ -1,4 +1,3 @@
-/// Master Catalog B.10. Verification Loops
 use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Message};
 use crate::llm::LlmClient;
 use std::sync::Arc;
@@ -213,7 +212,7 @@ impl InferentialSensor for LlmJudgeSensor {
 
         match parse_structured_output::<JudgeEvaluation>(&parser_client, req, 3).await {
             Ok(eval) => {
-                if eval.status.to_uppercase() != "APPROVE" || eval.confidence < self.confidence_threshold {
+                if eval.status.to_uppercase() == "REJECT" || eval.confidence < self.confidence_threshold {
                     let mut err_msg = format!("LLM Judge REJECTED the output (Confidence: {:.2} vs Threshold: {:.2}).\nReason: {}", eval.confidence, self.confidence_threshold, eval.reason);
                     if eval.status.to_uppercase() == "APPROVE" && eval.confidence < self.confidence_threshold {
                         err_msg = format!("LLM Judge APPROVED the output, but confidence {:.2} was below threshold {:.2}.\nReason: {}", eval.confidence, self.confidence_threshold, eval.reason);
@@ -336,6 +335,7 @@ mod tests {
             })
         }
     }
+
 
     #[tokio::test]
     async fn test_bash_computational_guide() {

@@ -4,18 +4,11 @@ import Link from 'next/link';
 
 export default function CalendarPage() {
   const [appointments, setAppointments] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const tenantId = localStorage.getItem('tenant_id') || 'e2e-tenant';
     fetch(`/api/ui/bookings?tenant_id=${tenantId}`)
-      .then(res => {
-        if (!res.ok) {
-           throw new Error('Failed to load bookings');
-        }
-        return res.json();
-      })
+      .then(res => res.json())
       .then(data => {
         if (Array.isArray(data)) {
           setAppointments(data.map((b: any) => {
@@ -32,13 +25,8 @@ export default function CalendarPage() {
             };
           }));
         }
-        setIsLoading(false);
       })
-      .catch(err => {
-         console.error(err);
-         setError("Failed to load appointments. Please try again later.");
-         setIsLoading(false);
-      });
+      .catch(console.error);
   }, []);
 
   const [aiActivity, setAiActivity] = useState<any[]>([]);
@@ -50,7 +38,7 @@ export default function CalendarPage() {
       {/* Header */}
       <header className="px-6 py-4 flex items-center justify-between border-b" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', borderBottom: '1px solid rgba(255, 255, 255, 0.4)', position: 'sticky', top: 0, zIndex: 50 }}>
         <div className="flex items-center gap-4">
-          <Link href="/dashboard" aria-label="Back to Dashboard" className="text-gray-500 hover:text-gray-900 transition-colors">
+          <Link href="/dashboard" className="text-gray-500 hover:text-gray-900 transition-colors">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
           </Link>
           <h1 className="text-2xl font-bold font-outfit" style={{ color: '#1D1D1F', letterSpacing: '-0.02em' }}>Calendar & Bookings</h1>
@@ -58,8 +46,6 @@ export default function CalendarPage() {
         <div className="flex items-center gap-3">
           <span className="text-sm font-medium text-gray-700">AI Scheduling (Zero-Setup)</span>
           <button
-            aria-label="Toggle AI Scheduling"
-            aria-pressed={aiEnabled}
             onClick={() => setAiEnabled(!aiEnabled)}
             className={`w-11 h-6 rounded-full relative transition-colors duration-300 focus:outline-none ${aiEnabled ? 'bg-green-500' : 'bg-gray-300'}`}
           >
@@ -75,16 +61,7 @@ export default function CalendarPage() {
           <section className="bg-white rounded-[16px] shadow-sm p-6" style={{ border: '1px solid rgba(0,0,0,0.05)' }}>
             <h2 className="text-xl font-semibold font-outfit mb-4 text-gray-900">Upcoming Appointments</h2>
             <div className="space-y-4">
-              {isLoading ? (
-                <div className="text-sm text-gray-500 p-4 border border-gray-100 rounded-lg text-center flex flex-col items-center justify-center gap-3">
-                  <div className="w-6 h-6 border-2 border-gray-200 border-t-indigo-600 rounded-full animate-spin"></div>
-                  Loading appointments...
-                </div>
-              ) : error ? (
-                <div className="text-sm text-red-600 p-4 border border-red-100 bg-red-50 rounded-lg text-center">
-                  {error}
-                </div>
-              ) : appointments.length === 0 ? (
+              {appointments.length === 0 ? (
                 <div className="text-sm text-gray-500 p-4 border border-gray-100 rounded-lg text-center">No upcoming appointments.</div>
               ) : appointments.map(apt => (
                 <div key={apt.id} className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-4 border border-gray-100 rounded-lg hover:shadow-md transition-shadow">

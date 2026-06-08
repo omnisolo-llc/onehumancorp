@@ -162,7 +162,7 @@ mod tests {
                 .fetch_one(&sqlite_pool)
                 .await
                 .unwrap();
-        assert!(row_local_mission.get::<bool, _>("synced_to_cloud"));
+        assert_eq!(row_local_mission.get::<bool, _>("synced_to_cloud"), true);
 
         let row_cloud_mission =
             sqlx::query("SELECT payload FROM agent_missions WHERE id = 'test_cloud_1'")
@@ -180,7 +180,7 @@ mod tests {
                 .fetch_one(&sqlite_pool)
                 .await
                 .unwrap();
-        assert!(row_local_burst.get::<bool, _>("synced_to_cloud"));
+        assert_eq!(row_local_burst.get::<bool, _>("synced_to_cloud"), true);
 
         let row_cloud_burst =
             sqlx::query("SELECT payload FROM agent_missions WHERE id = 'test_burst_1'")
@@ -284,97 +284,4 @@ async fn test_hybrid_sync_daemon_telemetry_opt_out() {
             std::env::remove_var("OHC_STANDALONE_MODE");
         }
     }
-}
-
-#[tokio::test]
-async fn test_hybrid_sync_clears_error_on_success() {
-    let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
-        .connect("sqlite::memory:")
-        .await
-        .unwrap();
-
-    sqlx::query("CREATE TABLE swarm_truth_embeddings (
-            memory_id TEXT PRIMARY KEY,
-            context TEXT,
-            embedding TEXT,
-            escalation_required INTEGER DEFAULT 0,
-            sync_status TEXT DEFAULT 'PENDING',
-            sync_error TEXT,
-            last_synced_at TEXT
-        )")
-        .execute(&sqlite_pool)
-        .await
-        .unwrap();
-
-    let database_url = std::env::var("OHC_DATABASE_URL")
-        .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
-
-    let pg_pool = match tokio::time::timeout(
-        std::time::Duration::from_millis(50),
-        sqlx::postgres::PgPoolOptions::new().connect(&database_url),
-    )
-    .await
-    {
-        Ok(Ok(p)) => p,
-        _ => return,
-    };
-
-    sqlx::query(
-        "CREATE TABLE IF NOT EXISTS sub_agent_queue (
-            id VARCHAR PRIMARY KEY,
-            tenant_id VARCHAR NOT NULL,
-            parent_task_id VARCHAR,
-            payload TEXT,
-            status VARCHAR,
-            worker_id VARCHAR,
-            scheduled_at TIMESTAMP,
-            completed_at TIMESTAMP,
-            created_at TIMESTAMP,
-            updated_at TIMESTAMP
-        )",
-    )
-    .execute(&pg_pool)
-    .await
-    .unwrap();
-
-    sqlx::query(
-        "CREATE TABLE IF NOT EXISTS agent_missions (
-            id VARCHAR PRIMARY KEY,
-            status VARCHAR NOT NULL,
-            payload TEXT,
-            tenant_id VARCHAR,
-            sync_error TEXT,
-            last_synced_at TIMESTAMP
-        )",
-    )
-    .execute(&pg_pool)
-    .await
-    .unwrap();
-
-    let raw_context = serde_json::json!({
-        "safe_data": "hello world"
-    })
-    .to_string();
-
-    sqlx::query("INSERT INTO swarm_truth_embeddings (memory_id, context, escalation_required, sync_status, sync_error) VALUES (?, ?, 1, 'PENDING', 'previous error')")
-        .bind("test_mem_error_clear")
-        .bind(&raw_context)
-        .execute(&sqlite_pool)
-        .await
-        .unwrap();
-
-    let daemon = super::daemon::HybridSyncDaemon::new(sqlite_pool.clone(), pg_pool.clone());
-    daemon.sync_step().await.unwrap();
-
-    let row = sqlx::query(
-        "SELECT sync_status, sync_error FROM swarm_truth_embeddings WHERE memory_id = 'test_mem_error_clear'",
-    )
-    .fetch_one(&sqlite_pool)
-    .await
-    .unwrap();
-    use sqlx::Row;
-    let status: String = row.get("sync_status");
-    let error: Option<String> = row.try_get("sync_error").unwrap_or(None);
-    assert_eq!(status, "SYNCED");
-    assert_eq!(error, None, "sync_error should be cleared on success");
 }

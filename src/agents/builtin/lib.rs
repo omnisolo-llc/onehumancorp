@@ -37,7 +37,6 @@ pub mod guardrails;
 pub mod memory_store;
 pub mod prompt_construction;
 pub mod json_store;
-pub mod in_memory_store;
 pub mod memory_exhaustive_tests;
 pub mod autogen;
 pub mod ralph_loop;
@@ -68,7 +67,6 @@ pub mod hibernation;
 pub mod agent_protocol;
 pub mod actor_model;
 pub mod visual_workflow;
-pub mod visual_workflow_client;
 pub mod marketplace;
 pub mod swarm_topology;
 pub mod sona_patterns;
@@ -252,11 +250,11 @@ pub async fn run_agent() -> Result<(), Box<dyn std::error::Error>> {
         if let Some(result) = run_direct_workflow_if_requested(&t).await {
             match result {
                 Ok(report) => {
-                    tracing::info!("{}", report);
+                    println!("{}", report);
                     return Ok(());
                 }
                 Err(err) => {
-                    tracing::error!("{}", err);
+                    eprintln!("{}", err);
                     std::process::exit(1);
                 }
             }

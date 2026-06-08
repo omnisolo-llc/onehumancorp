@@ -1,37 +1,18 @@
 import { Metadata, ResolvingMetadata } from 'next';
+import { redirect } from 'next/navigation';
 
 type Props = {
   searchParams: { [key: string]: string | string[] | undefined }
 }
 
-const defaultTargetUrl = '/onboarding';
-const trustedShareHosts = new Set(['ohc.app', 'onehumancorp.com']);
-
-function normalizeShareTarget(rawUrl: string) {
-  try {
-    const parsedUrl = new URL(rawUrl, 'http://localhost:3000');
-    if (parsedUrl.origin === 'http://localhost:3000') {
-      return `${parsedUrl.pathname}${parsedUrl.search}${parsedUrl.hash}`;
-    }
-    if (trustedShareHosts.has(parsedUrl.hostname)) {
-      return parsedUrl.href;
-    }
-  } catch {
-    // Fall through to the default app route.
-  }
-
-  return defaultTargetUrl;
-}
-
 export async function generateMetadata(
   { searchParams }: Props,
-  _parent: ResolvingMetadata
+  parent: ResolvingMetadata
 ): Promise<Metadata> {
   const title = typeof searchParams.title === 'string' ? searchParams.title : 'One Human Corp';
   const description = typeof searchParams.description === 'string' ? searchParams.description : 'Launch your business online instantly with OHC!';
-  const image = typeof searchParams.image === 'string' ? searchParams.image : undefined;
-  const urlParam = typeof searchParams.url === 'string' ? searchParams.url : defaultTargetUrl;
-  const targetUrl = normalizeShareTarget(urlParam);
+  const image = typeof searchParams.image === 'string' ? searchParams.image : 'https://ohc.store/default-share.png';
+  const urlParam = typeof searchParams.url === 'string' ? searchParams.url : 'https://ohc.store';
 
   return {
     title,
@@ -39,22 +20,34 @@ export async function generateMetadata(
     openGraph: {
       title,
       description,
-      images: image ? [image] : [],
-      url: targetUrl,
+      images: [image],
+      url: urlParam,
       type: 'website',
     },
     twitter: {
       card: 'summary_large_image',
       title,
       description,
-      images: image ? [image] : [],
+      images: [image],
     },
   };
 }
 
 export default function ShareCardPage({ searchParams }: Props) {
-  const urlParam = typeof searchParams.url === 'string' ? searchParams.url : defaultTargetUrl;
-  const targetUrl = normalizeShareTarget(urlParam);
+  const urlParam = typeof searchParams.url === 'string' ? searchParams.url : 'https://ohc.store';
+
+  // Basic validation to prevent arbitrary open redirects.
+  // It should ideally only redirect to relative paths or trusted domains.
+  let targetUrl = 'https://ohc.store';
+  try {
+    const parsedUrl = new URL(urlParam, 'https://ohc.store');
+    if (parsedUrl.hostname === 'ohc.store' || parsedUrl.hostname === 'ohc.app' || urlParam.startsWith('ohc://')) {
+        // Use parsedUrl.href to ensure the URL is properly formatted and escaped
+        targetUrl = parsedUrl.href;
+    }
+  } catch (e) {
+    // If parsing fails, stick to default
+  }
 
   // Sanitize for safe HTML injection
   const safeHtmlTarget = targetUrl.replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');

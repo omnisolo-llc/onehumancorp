@@ -1,16 +1,62 @@
 "use client";
 
 // Pricing Page Implementation
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { WithTooltip } from '../../components/TooltipRegistry';
-import { PoweredByOHC } from '../components/PoweredByOHC';
 
 export default function PricingPage() {
   const router = useRouter();
+  const [currentPlan, setCurrentPlan] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function fetchPlan() {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+           setCurrentPlan('Free');
+           return;
+        }
+
+        const res = await fetch('/api/billing/my-plan', {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setCurrentPlan(data.current_plan || 'Free');
+        } else {
+            setCurrentPlan('Free');
+        }
+      } catch (err) {
+        console.error("Error fetching plan data", err);
+        setCurrentPlan('Free');
+      }
+    }
+    fetchPlan();
+  }, []);
 
   const handleUpgrade = (tier: string) => {
     router.push('/checkout?tier=' + tier);
+  };
+
+  const getButtonProps = (tierName: string) => {
+    if (!currentPlan) return { text: 'Loading...', disabled: true, className: 'w-full min-h-[44px] px-4 py-2 bg-gray-200 text-gray-800 rounded-lg font-medium shadow-sm flex items-center justify-center' };
+
+    const tiers = ['Free', 'Starter', 'Pro', 'Business'];
+    const currentIndex = tiers.indexOf(currentPlan);
+    const thisIndex = tiers.indexOf(tierName);
+
+    if (thisIndex === currentIndex) {
+      return { text: 'Current Plan', disabled: true, className: 'w-full min-h-[44px] px-4 py-2 bg-gray-200 text-gray-800 rounded-lg font-medium transition-colors shadow-sm flex items-center justify-center cursor-not-allowed opacity-75' };
+    } else if (thisIndex < currentIndex) {
+      return { text: 'Downgrade', disabled: false, className: 'w-full min-h-[44px] px-4 py-2 bg-gray-100 text-gray-700 border border-gray-300 rounded-lg font-medium hover:bg-gray-200 transition-colors shadow-sm flex items-center justify-center' };
+    } else {
+      const isStarter = tierName === 'Starter';
+      const baseClass = isStarter ? 'bg-indigo-600 text-white hover:bg-indigo-700' : 'bg-gray-800 text-white hover:bg-gray-900';
+      return { text: `Upgrade to ${tierName} via Stripe`, disabled: false, className: `w-full min-h-[44px] px-4 py-2 rounded-lg font-medium transition-colors shadow-sm flex items-center justify-center ${baseClass}` };
+    }
   };
 
   return (
@@ -42,8 +88,12 @@ export default function PricingPage() {
                 <li className="flex items-center gap-2"><span>✓</span> 10 Products Limit</li>
               </ul>
             </div>
-            <button className="w-full min-h-[44px] px-4 py-2 bg-gray-200 text-gray-800 rounded-lg font-medium hover:bg-gray-300 transition-colors flex items-center justify-center" disabled>
-              Current Plan
+            <button
+                className={getButtonProps('Free').className}
+                disabled={getButtonProps('Free').disabled}
+                onClick={() => !getButtonProps('Free').disabled && handleUpgrade('Free')}
+            >
+              {getButtonProps('Free').text}
             </button>
           </div>
 
@@ -61,8 +111,12 @@ export default function PricingPage() {
                 <li className="flex items-center gap-2"><span>✓</span> 100 Products Limit</li>
               </ul>
             </div>
-            <button onClick={() => handleUpgrade('Starter')} className="w-full min-h-[44px] px-4 py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition-colors shadow-sm flex items-center justify-center">
-              Upgrade to Starter via Stripe
+            <button
+                onClick={() => !getButtonProps('Starter').disabled && handleUpgrade('Starter')}
+                className={getButtonProps('Starter').className}
+                disabled={getButtonProps('Starter').disabled}
+            >
+              {getButtonProps('Starter').text}
             </button>
           </div>
 
@@ -78,8 +132,12 @@ export default function PricingPage() {
                 <li className="flex items-center gap-2"><span>✓</span> Unlimited Products</li>
               </ul>
             </div>
-            <button onClick={() => handleUpgrade('Pro')} className="w-full min-h-[44px] px-4 py-2 bg-gray-800 text-white rounded-lg font-medium hover:bg-gray-900 transition-colors shadow-sm flex items-center justify-center">
-              Upgrade to Pro via Stripe
+            <button
+                onClick={() => !getButtonProps('Pro').disabled && handleUpgrade('Pro')}
+                className={getButtonProps('Pro').className}
+                disabled={getButtonProps('Pro').disabled}
+            >
+              {getButtonProps('Pro').text}
             </button>
           </div>
 
@@ -95,8 +153,12 @@ export default function PricingPage() {
                 <li className="flex items-center gap-2"><span>✓</span> Unlimited Products</li>
               </ul>
             </div>
-            <button onClick={() => handleUpgrade('Business')} className="w-full min-h-[44px] px-4 py-2 bg-gray-800 text-white rounded-lg font-medium hover:bg-gray-900 transition-colors shadow-sm flex items-center justify-center">
-              Upgrade to Business via Stripe
+            <button
+                onClick={() => !getButtonProps('Business').disabled && handleUpgrade('Business')}
+                className={getButtonProps('Business').className}
+                disabled={getButtonProps('Business').disabled}
+            >
+              {getButtonProps('Business').text}
             </button>
           </div>
         </div>
@@ -117,7 +179,6 @@ export default function PricingPage() {
             </div>
         </div>
 
-        <PoweredByOHC tenantId="ohc" />
       </main>
 
       <style dangerouslySetInnerHTML={{__html: `

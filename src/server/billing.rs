@@ -35,19 +35,7 @@ impl Tracker {
         }
     }
 
-    pub fn with_db(mut self, pool: sqlx::PgPool) -> Self {
-        if let Some(limiter) = self.rate_limiter.take() {
-            if let Ok(l) = Arc::try_unwrap(limiter) {
-                self.rate_limiter = Some(Arc::new(l.with_db(pool)));
-            } else {
-                // If it can't be unwrapped, we can't easily modify the inner struct,
-                // but since this is called right after initialization it should work.
-                // Alternatively, we could wrap the `db_pool` inside `RwLock` or similar,
-                // but `Arc::try_unwrap` will succeed here.
-            }
-        }
-        self
-    }
+
 
     pub fn set_auditor(&mut self, auditor: Arc<crate::services::billing::auditor::CostAuditor>) {
         self.auditor = Some(auditor);
@@ -185,14 +173,6 @@ impl Tracker {
     pub async fn get_tenant_actions_used(&self, tenant_id: &str) -> Result<u32, String> {
         if let Some(ref limiter) = self.rate_limiter {
             limiter.get_tenant_actions_used(tenant_id).await
-        } else {
-            Ok(0)
-        }
-    }
-
-    pub async fn get_agent_actions_used(&self, tenant_id: &str, agent_id: &str) -> Result<u32, String> {
-        if let Some(ref limiter) = self.rate_limiter {
-            limiter.get_agent_actions_used(tenant_id, agent_id).await
         } else {
             Ok(0)
         }

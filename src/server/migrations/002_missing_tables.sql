@@ -206,7 +206,7 @@ CREATE TABLE IF NOT EXISTS department_tasks (
     tenant_id TEXT NOT NULL,
     department TEXT NOT NULL,
     event_type TEXT NOT NULL,
-    payload JSONB NOT NULL DEFAULT '{}'::jsonb,
+    payload TEXT NOT NULL DEFAULT '{}',
     status TEXT NOT NULL DEFAULT 'PENDING',
     locked_until TIMESTAMPTZ,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
