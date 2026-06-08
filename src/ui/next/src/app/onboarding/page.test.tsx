@@ -679,4 +679,41 @@ describe('OnboardingWizard', () => {
     expect(screen.queryByText('Password must be at least 8 characters and contain a number')).not.toBeInTheDocument();
     expect(screen.queryByText('Password is required')).not.toBeInTheDocument();
   });
+
+  it('Instant Build allows launching storefront quickly', async () => {
+    const user = userEvent.setup({ delay: null });
+    act(() => {
+      useOnboardingStore.setState({ step: 0 });
+    });
+    await renderOnboardingWizard();
+
+    // Start at Step 0, click Instant Build
+    const instantBuildBtn = screen.getByRole('button', { name: /Instant Build/i });
+    await user.click(instantBuildBtn);
+
+    // Verify transition to Instant Build step (Step 10)
+    expect(await screen.findByText('Tell us about your business')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/e.g. I run a local bakery/i)).toBeInTheDocument();
+
+    // Fill bio
+    const bioInput = screen.getByPlaceholderText(/e.g. I run a local bakery/i);
+    await user.type(bioInput, 'I run a test business in a test city.');
+
+    // Mock fetch for /api/onboarding/start to resolve
+    (global.fetch as any).mockImplementation((url: string) => {
+      if (url === '/api/onboarding/start') {
+        return Promise.resolve({ ok: true, json: async () => ({}) });
+      }
+      return Promise.resolve({ ok: true, json: async () => ({ wizardState: {} }) });
+    });
+
+    // Submit
+    const generateBtn = screen.getByRole('button', { name: /Generate Storefront/i });
+    await user.click(generateBtn);
+
+    // Check if it transitions successfully
+    await waitFor(() => {
+      expect(screen.getByText("You're Live!")).toBeInTheDocument();
+    });
+  });
 });
