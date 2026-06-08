@@ -188,7 +188,7 @@ export default function LoyaltyProgramPage() {
       {/* Upgrade Modal */}
       {showUpgradeModal && (
         <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl">
+          <div className="app-card w-full max-w-md rounded-2xl p-6 shadow-2xl">
             <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">Upgrade to Pro</h2>
             <p className="text-gray-600 text-sm mb-6">Automated email campaigns are a Pro feature. Upgrade your plan to send this email to your customers and start driving more referrals.</p>
             <div className="flex gap-3 justify-end">
@@ -215,7 +215,7 @@ export default function LoyaltyProgramPage() {
         .font-outfit { font-family: 'Outfit', sans-serif; }
         .glassmorphism {
           background: rgba(255, 255, 255, 0.65);
-          backdrop-filter: blur(20px) saturate(200%);
+          backdrop-filter: blur(30px) saturate(210%);
         }
       `}} />
     </div>
