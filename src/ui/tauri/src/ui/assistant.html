@@ -126,10 +126,10 @@
       <h1>Set up your Assistant</h1>
       <p>Give your AI assistant a name and tone.</p>
 
-      <input type="text" id="assistant-name" placeholder="e.g. Jarvis" />
+      <input type="text" id="assistant-name" placeholder="e.g. Jarvis" autofocus autocomplete="name" enterkeyhint="next" />
       <div id="name-error" class="error-msg">Please enter a name for your assistant.</div>
 
-      <select id="assistant-tone">
+      <select id="assistant-tone" enterkeyhint="done">
         <option value="" disabled selected>Select a tone</option>
         <option value="Professional">Professional</option>
         <option value="Friendly">Friendly</option>
@@ -212,6 +212,20 @@
            }
         });
       }
+
+      nameInput.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+              e.preventDefault();
+              toneSelect.focus();
+          }
+      });
+
+      toneSelect.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+              e.preventDefault();
+              if (nextBtn) nextBtn.click();
+          }
+      });
 
       nameInput.addEventListener('input', () => {
           if (nameInput.value.trim()) {
