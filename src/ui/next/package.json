@@ -2,13 +2,13 @@
   "name": "next",
   "version": "1.0.0",
   "scripts": {
-    "dev": "next dev --turbo=false",
+    "dev": "next dev ",
     "build": "next build",
     "start": "next start",
     "test": "vitest run",
     "test:ui": "vitest --ui"
   },
-  "TODO_turbopack": "Remove --turbo=false from dev script once Next.js turbopack issues are resolved",
+  "TODO_turbopack": "Remove  from dev script once Next.js turbopack issues are resolved",
   "dependencies": {
     "@stripe/terminal-js": "^0.26.0",
     "@testing-library/dom": "^10.4.1",
