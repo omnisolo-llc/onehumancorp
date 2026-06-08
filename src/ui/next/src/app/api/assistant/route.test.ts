@@ -26,6 +26,7 @@ import { POST as postSupport } from './support/route';
 import { GET as getExplore, POST as postExplore, PATCH as patchExplore } from './explore/route';
 import { GET as getCloud, POST as postCloud, PATCH as patchCloud } from './cloud/route';
 import { GET as getParity } from './parity/route';
+import { GET as getBilling } from './billing/route';
 import { resetAssistantStore } from './store';
 
 function jsonRequest(url: string, body: unknown) {
@@ -1343,5 +1344,13 @@ describe('assistant API contract', () => {
       expect.objectContaining({ name: 'Extended docs gap closure', implemented: 24 }),
       expect.objectContaining({ name: 'Core docs gap closure', implemented: 24 }),
     ]));
+  });
+
+  test('billing route returns billing state', async () => {
+    const body = await (await getBilling()).json();
+    expect(body.plan).toBe('Growth');
+    expect(body.aiActionsUsed).toBe(145);
+    expect(body.storageUsedGB).toBe(12.4);
+    expect(body.estimatedNextBill).toBe(29.00);
   });
 });

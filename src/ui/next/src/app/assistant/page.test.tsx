@@ -398,6 +398,15 @@ test('opens feature panels for remote control, automations, memory, skills, conn
   for (const platform of ['Slack', 'Telegram', 'Discord', 'WeChat Work', 'Feishu', 'DingTalk', 'QQ', 'YuanbaoPai', 'WeChat ClawBot']) {
     expect(screen.getByText(platform)).toBeDefined();
   }
+
+  fireEvent.click(screen.getByRole('button', { name: 'My Plan' }));
+  expect(screen.getByText('Cost Transparency Dashboard')).toBeDefined();
+  expect(screen.getByText('Current plan')).toBeDefined();
+  expect(screen.getByText('Estimated next bill')).toBeDefined();
+  expect(screen.getByText('AI actions used this month')).toBeDefined();
+  expect(screen.getByText('Storage used')).toBeDefined();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Remote Control' }));
   expect(screen.getByText('File/Image Upload')).toBeDefined();
   expect(screen.getByText('Socket Mode')).toBeDefined();
   expect(screen.getByText('WebSocket Long Connection')).toBeDefined();
