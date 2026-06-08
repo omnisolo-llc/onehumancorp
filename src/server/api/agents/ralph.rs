@@ -30,7 +30,7 @@ where
 }
 
 async fn start_ralph_loop(
-    req: axum::extract::Request,
+    _req: axum::extract::Request,
 ) -> impl IntoResponse {
     // Fake unpacking, axum handles request nicely, mocking for compilation
 
