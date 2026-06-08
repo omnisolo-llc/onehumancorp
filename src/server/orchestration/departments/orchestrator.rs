@@ -795,6 +795,8 @@ impl DepartmentOrchestrator {
                             let expires_at = now + chrono::Duration::days(2);
                             let id = uuid::Uuid::new_v4().to_string();
 
+                            let new_price = payload.get("context").and_then(|c| c.get("new_price")).and_then(|v| v.as_f64()).unwrap_or(0.0);
+
                             // Try to insert into active_discounts, but don't fail the approval if it's not present (e.g. SQLite doesn't have the table yet in testing)
                             if let DbStore::Postgres = &self.db.store {
                                 if let Err(e) = sqlx::query("INSERT INTO active_discounts (id, tenant_id, product_id, discount_amount, expires_at) VALUES ($1, $2, $3, $4, $5)")
@@ -809,6 +811,41 @@ impl DepartmentOrchestrator {
                                     tracing::error!("Failed to insert active_discount: {}", e);
                                     let _ = self.mesh.release_lock(&lock_key, "orchestrator").await;
                                     return Err(format!("Failed to activate smart pricing discount: {}", e));
+                                }
+
+                                // Update product base price
+                                let price_cents = (new_price * 100.0).round() as i64;
+                                if let Err(e) = sqlx::query("UPDATE products SET price = $1, price_cents = $2 WHERE id = $3 AND tenant_id = $4")
+                                    .bind(new_price)
+                                    .bind(price_cents)
+                                    .bind(product_id)
+                                    .bind(tenant_id)
+                                    .execute(&self.db.pool)
+                                    .await
+                                {
+                                    tracing::error!("Failed to update product base price: {}", e);
+                                    let _ = self.mesh.release_lock(&lock_key, "orchestrator").await;
+                                    return Err(format!("Failed to update product base price: {}", e));
+                                }
+
+                                // Dispatch a simulated reorder event to the job queue
+                                let job_id = uuid::Uuid::new_v4().to_string();
+                                let reorder_payload = serde_json::json!({
+                                    "product_id": product_id,
+                                    "action": "reorder",
+                                    "quantity": 50,
+                                });
+                                if let Err(e) = sqlx::query("INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload, status) VALUES ($1, $2, $3, $4::jsonb, 'PENDING')")
+                                    .bind(job_id)
+                                    .bind(tenant_id)
+                                    .bind("inventory_reorder")
+                                    .bind(serde_json::to_string(&reorder_payload).unwrap_or_default())
+                                    .execute(&self.db.pool)
+                                    .await
+                                {
+                                    tracing::error!("Failed to dispatch reorder job: {}", e);
+                                    let _ = self.mesh.release_lock(&lock_key, "orchestrator").await;
+                                    return Err(format!("Failed to dispatch reorder job: {}", e));
                                 }
 
                                 // Invalidate Redis edge cache for the product price
