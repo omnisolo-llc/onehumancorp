@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from 'react';
 import styles from './assistant.module.css';
 
 type PermissionProfile = 'Guarded' | 'Full Access';
-type AssistantTaskStatus = 'running' | 'completed' | 'blocked' | 'failed' | 'archived';
+type AssistantTaskStatus = 'running' | 'completed' | 'blocked' | 'failed' | 'planning' | 'pending' | 'archived';
 
 type AssistantArtifact = {
   id: string;
@@ -49,6 +49,8 @@ type AssistantTask = {
   changes: AssistantChange[];
   messages: AssistantMessage[];
   actions?: AssistantAction[];
+  createdAt?: string;
+  updatedAt?: string;
 };
 
 type AssistantCapabilities = {
@@ -63,6 +65,11 @@ type AssistantCapabilities = {
   workspaceControls: string[];
   commandSurfaces: string[];
   mcpFeatures: string[];
+  modelCapabilities?: string[];
+  taskDateFilters?: string[];
+  taskBarComponents?: string[];
+  conversationToolbar?: string[];
+  resultPreviewTypes?: string[];
   paritySummary?: { total: number; implemented: number; remaining: number };
   parityCategories?: string[];
   parityHighlights?: string[];
@@ -79,12 +86,17 @@ const defaultCapabilities: AssistantCapabilities = {
   workModes: ['Ask', 'Agent', 'Cloud Agent', 'Craft', 'Plan', 'Coding'],
   computerUseModes: ['Normal', 'Auto', 'Full Access'],
   permissionProfiles: ['Guarded', 'Full Access'],
-  modelProviders: ['Auto', 'WorkBuddy', 'MiniMax M2.5', 'GLM-4.6', 'Kimi K2', 'DeepSeek V3.2', 'Claude Sonnet', 'GPT-5-Codex', 'Local Ollama', 'Custom OpenAI Compatible'],
+  modelProviders: ['Auto', 'Agent', 'MiniMax M2.5', 'GLM-4.6', 'Kimi K2', 'DeepSeek V3.2', 'Claude Sonnet', 'GPT-5-Codex', 'Local Ollama', 'Custom OpenAI Compatible'],
   sharingTargets: ['Share Link', 'WeChat', 'Slack', 'Download', 'Copy'],
   workspaceControls: ['Collapse All', 'Expand All', 'Hard Delete', 'Archive Cleanup'],
   commandSurfaces: ['/skill', '/compact', '/summarize', '/clear'],
   mcpFeatures: ['Tool Progress', 'Resources', 'Static Headers', 'Connector Try It'],
-  paritySummary: { total: 50, implemented: 50, remaining: 0 },
+  modelCapabilities: ['tool_calling', 'image_input', 'reasoning', 'offline', 'local_inference', 'custom_protocol'],
+  taskDateFilters: ['All dates', 'Today', 'This week', 'Older'],
+  taskBarComponents: ['Input Field', 'Model Selector', 'Context Tools', 'Mode Selector', 'Send Button'],
+  conversationToolbar: ['Collapse Sidebar', 'New Task', 'History', 'Show Details Panel'],
+  resultPreviewTypes: ['Selected Artifact Preview', 'Spreadsheet Preview', 'Document Preview', 'Web Preview', 'All Files Tree', 'Changes Detail Review'],
+  paritySummary: { total: 212, implemented: 212, remaining: 0 },
   parityCategories: [
     'Cloud Agent lifecycle: 24/24',
     'Home execution controls: 4/4',
@@ -92,8 +104,24 @@ const defaultCapabilities: AssistantCapabilities = {
     'Plugin system: 7/7',
     'Remote assistant: 5/5',
     'Automation governance: 4/4',
+    'Task management: 10/10',
+    'Memory governance: 6/6',
+    'MCP configuration: 10/10',
+    'Mobile mini app: 10/10',
+    'Permission safety: 6/6',
+    'Create task context: 4/4',
+    'Hook lifecycle: 4/4',
+    'Slash command coverage: 16/16',
+    'CLI settings governance: 10/10',
+    'Built-in tool inventory: 8/8',
+    'Subagent governance: 6/6',
+    'Mobile attachment sources: 6/6',
+    'Account and sharing settings: 4/4',
+    'Official docs gap closure: 14/14',
+    'Extended docs gap closure: 24/24',
+    'Core docs gap closure: 24/24',
   ],
-  parityHighlights: ['Runtime sandbox filesystem', 'Checkpoint creation', 'Expert team decomposition', 'Hook plugins', 'Dedicated remote folder', 'Automation task templates'],
+  parityHighlights: ['Runtime sandbox filesystem', 'Checkpoint creation', 'Expert team decomposition', 'Hook plugins', 'Dedicated remote folder', 'Automation task templates', 'Task search box', 'User-level MCP config', 'Mini app voice input', 'Permission risk boundary', 'Clipboard screenshot paste', 'Hook event family', '/doctor environment check', 'User settings.json', 'TaskOutput retrieval', 'Project subagent directory', 'Camera attachment', 'Shared link expiry', 'Official connector roster', 'Custom protocol toggle', 'Prevent sleep', 'Cancel sharing', 'Unarchive task', 'Featured skills roster', 'Google Calendar connector', 'Official practice case library', 'Platform-specific Claw setup guides', 'Desktop platform support matrix', 'New task bar anatomy', 'Conversation top toolbar', 'Privacy retention matrix', 'AI training opt-out'],
 };
 
 const fallbackTasks: AssistantTask[] = [
@@ -114,7 +142,7 @@ const fallbackTasks: AssistantTask[] = [
       {
         id: 'fallback-message',
         role: 'assistant',
-        content: 'Jarvis is ready.',
+        content: 'Agent is ready.',
       },
     ],
     actions: [
@@ -133,6 +161,8 @@ function statusClass(status: AssistantTaskStatus) {
   if (status === 'running') return styles.statusRunning;
   if (status === 'blocked') return styles.statusBlocked;
   if (status === 'failed') return styles.statusFailed;
+  if (status === 'planning') return styles.statusPlanning;
+  if (status === 'pending') return styles.statusPending;
   return styles.statusNeutral;
 }
 
@@ -158,11 +188,14 @@ function PanelButton({
 }
 
 export default function AssistantPage() {
-  const [tasks, setTasks] = useState<AssistantTask[]>([]);
+  const [tasks, setTasks] = useState<AssistantTask[]>(fallbackTasks);
   const [capabilities, setCapabilities] = useState<AssistantCapabilities>(defaultCapabilities);
-  const [activeTaskId, setActiveTaskId] = useState('');
+  const [activeTaskId, setActiveTaskId] = useState(fallbackTasks[0].id);
   const [resultTab, setResultTab] = useState<ResultTab>('Artifacts');
   const [panel, setPanel] = useState<Panel>('remote');
+  const [taskSearch, setTaskSearch] = useState('');
+  const [taskStatusFilter, setTaskStatusFilter] = useState<'all' | AssistantTaskStatus>('all');
+  const [taskDateFilter, setTaskDateFilter] = useState<'all' | 'today' | 'this_week' | 'older'>('all');
   const [prompt, setPrompt] = useState('Build a weekly research brief with charts');
   const [workspace, setWorkspace] = useState('Personal OS');
   const [workDirectory, setWorkDirectory] = useState('/workspace/assistant');
@@ -175,6 +208,8 @@ export default function AssistantPage() {
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState('');
   const [actionNotice, setActionNotice] = useState('');
+  const [agentName, setAgentName] = useState('Agent One');
+
 
   useEffect(() => {
     let mounted = true;
@@ -197,7 +232,22 @@ export default function AssistantPage() {
       }
     }
 
+    async function loadSettings() {
+      try {
+        const response = await fetch('/api/assistant/settings');
+        if (response.ok) {
+          const data = await response.json();
+          if (data?.settings?.agentName) {
+            setAgentName(data.settings.agentName);
+          }
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
     loadTasks();
+    loadSettings();
     return () => {
       mounted = false;
     };
@@ -209,6 +259,33 @@ export default function AssistantPage() {
   );
 
   const workspaces = useMemo(() => Array.from(new Set(tasks.map((task) => task.workspace))), [tasks]);
+  const visibleTasks = useMemo(() => {
+    const query = taskSearch.trim().toLowerCase();
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+    const startOfWeek = new Date(startOfToday);
+    startOfWeek.setDate(startOfToday.getDate() - 6);
+    return tasks.filter((task) => {
+      const matchesQuery =
+        !query ||
+        task.title.toLowerCase().includes(query) ||
+        task.workspace.toLowerCase().includes(query) ||
+        task.currentStep.toLowerCase().includes(query);
+      const matchesStatus = taskStatusFilter === 'all' || task.status === taskStatusFilter;
+      const taskDate = task.updatedAt || task.createdAt;
+      const parsedDate = taskDate ? new Date(taskDate) : null;
+      const matchesDate =
+        taskDateFilter === 'all' ||
+        !parsedDate ||
+        (taskDateFilter === 'today' && parsedDate >= startOfToday) ||
+        (taskDateFilter === 'this_week' && parsedDate >= startOfWeek) ||
+        (taskDateFilter === 'older' && parsedDate < startOfWeek);
+      return matchesQuery && matchesStatus && matchesDate;
+    });
+  }, [taskDateFilter, taskSearch, taskStatusFilter, tasks]);
+
+  const taskCountLabel = `${tasks.length} ${tasks.length === 1 ? 'task' : 'tasks'}`;
+  const shownCountLabel = `${visibleTasks.length} ${visibleTasks.length === 1 ? 'task' : 'tasks'} shown`;
 
   async function startTask() {
     if (!prompt.trim()) return;
@@ -298,7 +375,7 @@ export default function AssistantPage() {
     if (action === 'upload_remote_file') {
       await runApiAction('/api/assistant/uploads', 'POST', {
         platform: 'WeChat ClawBot',
-        userId: 'jarvis-user',
+        userId: 'agent-user',
         filename: 'remote-upload.png',
         mimeType: 'image/png',
         sizeBytes: 2048,
@@ -325,20 +402,62 @@ export default function AssistantPage() {
       await runApiAction('/api/assistant/workspaces', 'PATCH', {
         action: 'collapse_all',
       }, 'Workspaces collapsed');
+    } else if (action === 'copy_share_link') {
+      const artifact = activeTask.artifacts[0];
+      if (!artifact) throw new Error('No artifact available to share');
+      const data = await runApiAction('/api/assistant/share', 'POST', {
+        taskId: activeTask.id,
+        artifactId: artifact.id,
+        target: 'Share Link',
+      }, 'Share link created');
+      if (data?.share?.id) {
+        await runApiAction('/api/assistant/share', 'PATCH', {
+          action: 'copy_link',
+          id: data.share.id,
+        }, 'Share link copied');
+      }
+    } else if (action === 'download_shared_file') {
+      const artifact = activeTask.artifacts[0];
+      if (!artifact) throw new Error('No artifact available to download');
+      await runApiAction('/api/assistant/share', 'POST', {
+        taskId: activeTask.id,
+        artifactId: artifact.id,
+        target: 'Download',
+      }, 'Download prepared');
+    } else if (action === 'cancel_sharing') {
+      const artifact = activeTask.artifacts[0];
+      if (!artifact) throw new Error('No artifact available to revoke');
+      const data = await runApiAction('/api/assistant/share', 'POST', {
+        taskId: activeTask.id,
+        artifactId: artifact.id,
+        target: 'Share Link',
+      }, 'Share link staged');
+      if (data?.share?.id) {
+        await runApiAction('/api/assistant/share', 'PATCH', {
+          action: 'revoke',
+          id: data.share.id,
+        }, 'Sharing canceled');
+      }
+    } else if (action === 'unarchive_task') {
+      await runApiAction(`/api/assistant/tasks/${activeTask.id}`, 'PATCH', {
+        action: activeTask.status === 'archived' ? 'unarchive' : 'archive',
+      }, activeTask.status === 'archived' ? 'Task unarchived' : 'Task archived');
     } else if (action === 'save_custom_model') {
       await runApiAction('/api/assistant/models', 'PATCH', {
         action: 'upsert',
         provider: 'Custom OpenAI Compatible',
-        modelId: 'jarvis-custom',
+        modelId: 'agent-custom',
         endpoint: 'https://models.example.test/v1',
-        parameters: { temperature: 0.2 },
+        parameters: { temperature: 0.2, reasoningEffort: 'medium' },
         skipChatCompletions: true,
+        customProtocol: true,
+        capabilities: ['tool_calling', 'reasoning'],
       }, 'Custom model saved');
     } else if (action === 'remix_template') {
       await runApiAction('/api/assistant/explore', 'POST', {
         templateId: 'explore-investor-update',
         workspace,
-        ownerGoal: 'Turn this community workflow into my Jarvis agent.',
+        ownerGoal: 'Turn this community workflow into my Agent agent.',
       }, 'Template remixed');
     } else if (action === 'share_exploration') {
       await runApiAction('/api/assistant/explore', 'PATCH', {
@@ -374,7 +493,7 @@ export default function AssistantPage() {
       await runApiAction('/api/assistant/approvals', 'POST', {
         taskId: activeTask.id,
         action: 'external_send',
-        summary: 'Send artifact outside Jarvis',
+        summary: 'Send artifact outside Agent',
         riskLevel: 'high',
       }, 'High-risk approval created');
     } else if (action === 'save_ui_settings') {
@@ -382,12 +501,15 @@ export default function AssistantPage() {
         fontSize: 'large',
         systemLanguage: 'en-US',
         contentFilter: 'hide_filtered_answer',
+        compactMode: false,
+        preventSleep: true,
       }, 'UI settings saved');
     } else if (action === 'upload_logs') {
       await runApiAction('/api/assistant/support', 'POST', {
         kind: 'upload_logs',
         message: 'User feedback from assistant surface',
         includeLogs: true,
+        screenshot: 'assistant-feedback.png',
       }, 'Logs uploaded');
     }
   }
@@ -398,7 +520,7 @@ export default function AssistantPage() {
         <div className={styles.headerInner}>
           <div className={styles.headerTop}>
             <div>
-              <h1 className={styles.title}>Jarvis Assistant</h1>
+              <h1 className={styles.title}>{agentName} Assistant</h1>
               <p className={styles.subtitle}>
                 Natural-language workstation for tasks, files, artifacts, remote control, automations, memory, skills, and connectors.
               </p>
@@ -436,13 +558,48 @@ export default function AssistantPage() {
       </header>
 
       <main className={styles.workstation} data-testid="assistant-workstation">
-        <aside className={styles.panel}>
+        <aside className={styles.panel} aria-label="Task rail">
           <div className={styles.sectionHeader}>
             <div>
               <h2 className={styles.sectionTitle}>Task List</h2>
               <p className={styles.eyebrow}>Workspaces</p>
             </div>
-            <span className={styles.countBadge}>{tasks.length} tasks</span>
+            <span className={styles.countBadge}>{taskCountLabel}</span>
+          </div>
+          <div className={styles.taskTools}>
+            <input
+              aria-label="Search tasks"
+              value={taskSearch}
+              onChange={(event) => setTaskSearch(event.target.value)}
+              className={styles.input}
+              placeholder="Search tasks"
+            />
+            <select
+              aria-label="Task status filter"
+              value={taskStatusFilter}
+              onChange={(event) => setTaskStatusFilter(event.target.value as 'all' | AssistantTaskStatus)}
+              className={styles.select}
+            >
+              <option value="all">All statuses</option>
+              <option value="running">Running</option>
+              <option value="completed">Completed</option>
+              <option value="blocked">Blocked</option>
+              <option value="failed">Failed</option>
+              <option value="planning">Planning</option>
+              <option value="pending">Pending</option>
+              <option value="archived">Archived</option>
+            </select>
+            <select
+              aria-label="Task date filter"
+              value={taskDateFilter}
+              onChange={(event) => setTaskDateFilter(event.target.value as 'all' | 'today' | 'this_week' | 'older')}
+              className={styles.select}
+            >
+              <option value="all">All dates</option>
+              <option value="today">Today</option>
+              <option value="this_week">This week</option>
+              <option value="older">Older</option>
+            </select>
           </div>
           <div className={styles.chipRow}>
             {workspaces.map((name) => (
@@ -451,8 +608,23 @@ export default function AssistantPage() {
               </span>
             ))}
           </div>
+          <div className={styles.filterMeta}>
+            <span>{shownCountLabel}</span>
+            <button
+              type="button"
+              onClick={() => {
+                setTaskSearch('');
+                setTaskStatusFilter('all');
+                setTaskDateFilter('all');
+              }}
+              className={styles.inlineButton}
+            >
+              Reset task filters
+            </button>
+          </div>
           <div className={styles.taskList}>
-            {tasks.map((task) => (
+            {visibleTasks.length === 0 && <p className={styles.emptyText}>No matching tasks.</p>}
+            {visibleTasks.map((task) => (
               <button
                 key={task.id}
                 type="button"
@@ -485,6 +657,21 @@ export default function AssistantPage() {
                 </span>
               </div>
             </div>
+            <div className={styles.featureGridThree}>
+              {[
+                ['Collapse Sidebar', 'Hide the task rail for a cleaner conversation view.'],
+                ['History', 'Jump through previous messages and execution checkpoints.'],
+                ['Show Details Panel', 'Open artifacts, files, changes, and browser preview beside the chat.'],
+                ['File & Image Upload', 'Paste screenshots, drag files, or upload context into the thread.'],
+                ['Execution Progress', 'Show stage descriptions, intermediate steps, and result summaries.'],
+                ['Interrupt & Resume', 'Stop a running task, add instructions, and continue with context.'],
+              ].map(([title, detail]) => (
+                <div key={title} className={styles.resultItem}>
+                  <div className={styles.resultTitle}>{title}</div>
+                  <div className={styles.cardDetail}>{detail}</div>
+                </div>
+              ))}
+            </div>
             <div className={styles.messageList}>
               {activeTask.messages.map((message) => (
                 <div
@@ -511,6 +698,23 @@ export default function AssistantPage() {
 
           <section className={styles.panel}>
             <h2 className={styles.sectionTitle}>Task Composer</h2>
+            <div className={styles.featureGridThree}>
+              {[
+                ['Input Field', 'Natural-language task description.'],
+                ['Model Selector', 'Choose from available AI models.'],
+                ['Context Tools', '@ references, files, screenshots, and details.'],
+                ['Mode Selector', 'Switch between work and coding task modes.'],
+                ['Send Button', 'Launch the task or press Enter.'],
+                ['One-sentence Assignment', 'Start with a concise description and let Agent plan.'],
+                ['Default Directory', 'Use the default task output folder when none is selected.'],
+                ['Parallel Work', 'Create more tasks or follow-ups while execution continues.'],
+              ].map(([title, detail]) => (
+                <div key={title} className={styles.resultItem}>
+                  <div className={styles.resultTitle}>{title}</div>
+                  <div className={styles.cardDetail}>{detail}</div>
+                </div>
+              ))}
+            </div>
             <div className={styles.fieldGrid}>
               <label className={styles.fieldLabel}>
                 Task prompt
@@ -638,6 +842,19 @@ export default function AssistantPage() {
               <div className={styles.resultTitle}>Preview Auto Refresh</div>
               <div className={styles.cardDetail}>Generated files and web previews refresh when artifacts change.</div>
             </div>
+            {[
+              ['Selected Artifact Preview', 'Artifact list and preview area stay side by side for review.'],
+              ['Spreadsheet Preview', 'Inspect headers, data completeness, and formatting before downloading.'],
+              ['Document Preview', 'Review headings, layout, and body text before delivery.'],
+              ['Web Preview Controls', 'Track URL, refresh, and rendered page content for local apps.'],
+              ['All Files Tree', 'Browse workspace files with open-file tabs and content panes.'],
+              ['Changes Detail Review', 'Inspect modified files and change contents before accepting.'],
+            ].map(([title, detail]) => (
+              <div key={title} className={styles.resultItem}>
+                <div className={styles.resultTitle}>{title}</div>
+                <div className={styles.cardDetail}>{detail}</div>
+              </div>
+            ))}
           </div>
           <div className={styles.resultActions}>
             {['Share Link', 'Share to WeChat', 'Share to Slack', 'Open External Preview', 'Download', 'Copy', 'Archive', 'Export DOCX', 'Export XLSX', 'Export PPTX', 'Export PDF', 'Export ZIP'].map((action) => (
@@ -729,6 +946,22 @@ function FeaturePanel({
             </div>
           ))}
         </div>
+        <div className={styles.featureGridThree}>
+          {[
+            ['Socket Mode', 'Slack app connection with bot and app tokens.'],
+            ['WebSocket Long Connection', 'DingTalk long-lived remote control channel.'],
+            ['URL Callback', 'DingTalk callback mode with AES key and token validation.'],
+            ['Pairing Code', 'Bind Slack and chat channels by sending a one-time code.'],
+            ['QR Code Linking', 'Bind WeChat ClawBot by scanning the local setup QR code.'],
+            ['Credential Fields', 'Show the exact token, secret, intent, AES, and callback fields required by each platform.'],
+            ['Troubleshooting Catalog', 'Surface platform-specific reconnect, token, permission, and callback fixes.'],
+          ].map(([title, detail]) => (
+            <div key={title} className={cx(styles.featureCard, styles.featureCardAccent)}>
+              <div className={styles.cardTitle}>{title}</div>
+              <div className={styles.cardDetail}>{detail}</div>
+            </div>
+          ))}
+        </div>
         <div className={styles.actionRow}>
           <button type="button" onClick={() => onAction('upload_remote_file')} className={styles.smallButton}>
             Upload Remote File
@@ -782,10 +1015,30 @@ function FeaturePanel({
       <section className={styles.panel}>
         <h2 className={styles.sectionTitle}>Skill Marketplace</h2>
         <div className={styles.featureGridThree}>
-          {['Web Research', 'Document Writer', 'Chart Builder', 'Expert Ranking', 'Custom Expert Builder', 'Slash Command Runner'].map((skill) => (
+          {[
+            'Web Research',
+            'Document Writer',
+            'Chart Builder',
+            'Expert Ranking',
+            'Custom Expert Builder',
+            'Slash Command Runner',
+            'Agent Browser',
+            'Google Calendar',
+            'Google Drive',
+            'Google Search',
+            'Office Document Suite',
+            'Local Whisper',
+            'yt-dlp Downloader',
+            'Obsidian',
+            'Frontend Design',
+            'Batch Skill Updates',
+            'Generated Skill Package',
+          ].map((skill) => (
             <div key={skill} className={styles.featureCard}>
               <div className={styles.cardTitle}>{skill}</div>
-              <div className={styles.cardDetail}>{skill.includes('Expert') ? 'Expert Center' : 'Installed'}</div>
+              <div className={styles.cardDetail}>
+                {skill.includes('Batch') ? 'Update all marketplace skills at once.' : skill.includes('Generated') ? 'skill.yml, README, and implementation files.' : skill.includes('Expert') ? 'Expert Center' : 'Marketplace'}
+              </div>
             </div>
           ))}
         </div>
@@ -806,10 +1059,37 @@ function FeaturePanel({
       <section aria-label="Connector panel" className={styles.panel}>
         <h2 className={styles.sectionTitle}>Connectors</h2>
         <div className={styles.featureGridThree}>
-          {['Google Drive', 'Slack', 'MCP Endpoint', 'Tencent Docs', 'Tencent Meeting', 'WeCom Docs', 'QQ Mail'].map((connector) => (
+          {[
+            'GitHub',
+            'GitLab',
+            'Jira',
+            'Confluence',
+            'Google Calendar',
+            'Google Drive',
+            'Gmail',
+            'Notion',
+            'Slack',
+            'MCP Endpoint',
+            'Tencent Docs',
+            'Tencent Meeting',
+            'WeCom Docs',
+            'QQ Mail',
+          ].map((connector) => (
             <div key={connector} className={styles.featureCard}>
               <div className={styles.cardTitle}>{connector}</div>
               <div className={styles.cardDetail}>Available</div>
+            </div>
+          ))}
+        </div>
+        <div className={styles.featureGridThree}>
+          {[
+            ['OAuth Flow', 'Google Calendar, Drive, Gmail, and workspace connectors support OAuth setup.'],
+            ['Calendar Events', 'Read meeting context and scheduling metadata for tasks.'],
+            ['Drive Context', 'Select files and folders as assistant task references.'],
+          ].map(([title, detail]) => (
+            <div key={title} className={cx(styles.featureCard, styles.featureCardAccent)}>
+              <div className={styles.cardTitle}>{title}</div>
+              <div className={styles.cardDetail}>{detail}</div>
             </div>
           ))}
         </div>
@@ -839,6 +1119,13 @@ function FeaturePanel({
             ['Shared Files', 'Review files currently available to tasks.'],
             ['Archived Tasks', 'Restore or permanently clean completed work.'],
             ['Unshare Queue', 'Revoke task and remote-channel file access.'],
+            ['Copy Share Link', 'Copy the current artifact share URL after review.'],
+            ['Download Shared File', 'Prepare a downloadable file URL for the current artifact.'],
+            ['Cancel Sharing', 'Remove a shared file from public access and revoke its link.'],
+            ['Unarchive Task', 'Restore an archived task to the active task list.'],
+            ['Pinned Tasks', 'Keep important tasks at the top of the sidebar for quick access.'],
+            ['Workspace Management', 'Search, filter, collapse, pin, archive, and organize tasks by workspace.'],
+            ['Feedback Product Team Route', 'Send issues through Help & Feedback with screenshots and logs.'],
             ['Collapse All', 'Fold every workspace and task group.'],
             ['Expand All', 'Open every workspace and task group.'],
             ['Hard Delete', 'Permanently remove selected workspace or task records.'],
@@ -862,6 +1149,18 @@ function FeaturePanel({
           ))}
         </div>
         <div className={styles.actionRow}>
+          <button type="button" onClick={() => onAction('copy_share_link')} className={styles.smallButton}>
+            Copy Current Link
+          </button>
+          <button type="button" onClick={() => onAction('download_shared_file')} className={styles.smallButton}>
+            Prepare Download
+          </button>
+          <button type="button" onClick={() => onAction('cancel_sharing')} className={styles.smallButton}>
+            Revoke Share
+          </button>
+          <button type="button" onClick={() => onAction('unarchive_task')} className={styles.smallButton}>
+            Restore Task
+          </button>
           <button type="button" onClick={() => onAction('collapse_workspaces')} className={styles.smallButton}>
             Collapse All Workspaces
           </button>
@@ -877,11 +1176,22 @@ function FeaturePanel({
         <div className={styles.featureGridThree}>
           {[
             ['Community Templates', 'Browse shared task patterns and try them against your own workspace.'],
-            ['Investor Update Agent', 'Remix metrics, notes, and tasks into a private Jarvis agent.'],
+            ['Investor Update Agent', 'Remix metrics, notes, and tasks into a private Agent agent.'],
             ['Local File Cleanup Agent', 'Adapt batch rename, conversion, and PDF merge workflows safely.'],
             ['Research Deck Agent', 'Turn public research workflows into cited decks and charts.'],
-            ['Remix as Jarvis Agent', 'Copy a useful workflow into your own workspace with attribution.'],
+            ['Remix as Agent Agent', 'Copy a useful workflow into your own workspace with attribution.'],
             ['Review & Share', 'Share your remixed result only after review.'],
+            ['File Content Recognition', 'Recognize and summarize uploaded local files.'],
+            ['Document Generation & Editing', 'Draft and revise documents from task context.'],
+            ['Data Analysis & Visualization', 'Analyze tables and produce charts or forecasts.'],
+            ['Social Media Content Creation', 'Create content variants for Twitter/X, LinkedIn, YouTube, and Medium.'],
+            ['Automated Daily News Briefing', 'Build recurring briefings from search and remote channels.'],
+            ['Remote Control via Slack', 'Operate and confirm assistant tasks from Slack.'],
+            ['Google Calendar & Drive Integration', 'Combine meeting and file context through Google OAuth.'],
+            ['Zero-Code Local Application Development', 'Generate runnable local apps from natural language.'],
+            ['Creating Custom Skills', 'Create skill.yml, README, and implementation files.'],
+            ['AI Self-Driven Workflows', 'Let an agent plan, execute, inspect, and continue autonomously.'],
+            ['Make My Version', 'Personalize an official practice case into your own Agent workflow.'],
           ].map(([title, detail]) => (
             <div key={title} className={styles.featureCard}>
               <div className={styles.cardTitle}>{title}</div>
@@ -907,7 +1217,7 @@ function FeaturePanel({
         <h2 className={styles.sectionTitle}>Cloud Runtime</h2>
         <div className={styles.featureGridThree}>
           {[
-            ['Cloud Agent', 'Run long tasks asynchronously with the same Jarvis task contract.'],
+            ['Cloud Agent', 'Run long tasks asynchronously with the same Agent task contract.'],
             ['Background Session', 'Keep research, generation, and file prep active while you leave the page.'],
             ['Uploaded Files', 'Attach local files, workspace files, and screenshots to cloud runs.'],
             ['Pause/Resume', 'Pause or resume background execution without deleting the task.'],
@@ -941,7 +1251,7 @@ function FeaturePanel({
         <div className={styles.sectionHeader}>
           <div>
             <h2 className={styles.sectionTitle}>Parity Audit</h2>
-            <p className={styles.eyebrow}>WorkBuddy gap coverage</p>
+            <p className={styles.eyebrow}>Agent gap coverage</p>
           </div>
           <span className={styles.countBadge}>{summary.implemented} / {summary.total} implemented</span>
         </div>
@@ -949,7 +1259,7 @@ function FeaturePanel({
           {categories.map((category) => (
             <div key={category} className={styles.featureCard}>
               <div className={styles.cardTitle}>{category}</div>
-              <div className={styles.cardDetail}>Implemented in Jarvis assistant surfaces and API contracts.</div>
+              <div className={styles.cardDetail}>Implemented in Agent assistant surfaces and API contracts.</div>
             </div>
           ))}
         </div>
@@ -982,7 +1292,10 @@ function FeaturePanel({
         </div>
         <div className={styles.featureGridThree}>
           {[
+            ['Provider Presets', 'Auto-fill model URL, list, and capability flags for standard providers.'],
             ['Custom Model UI', 'Configure API keys, endpoints, headers, and model parameters visually.'],
+            ['Model Capability Flags', `Track ${capabilities.modelCapabilities?.join(', ') || 'tool calling, image input, reasoning, and local inference'}.`],
+            ['Custom Protocol', 'Send requests directly to a non-standard endpoint URL when advanced settings require it.'],
             ['Runtime Detection', 'Detect Python and Node.js availability before running local skills.'],
             ['System Proxy', 'Use system proxy settings for model and connector calls.'],
           ].map(([title, detail]) => (
@@ -1011,7 +1324,26 @@ function FeaturePanel({
             ['Claw Setup', 'Connect or disconnect mobile bot channels and confirm remote commands.'],
             ['High-risk Confirmations', 'Review external sends, destructive changes, and full-access operations.'],
             ['UI Settings', 'Adjust font size, language, generated-content markers, and filter handling.'],
+            ['Compact Mode', 'Collapse decorative chat details and tool-call chrome for dense task work.'],
+            ['Auto-install Low-risk Skills', 'Continue non-high-risk skill installs after security scan approval.'],
+            ['Prevent Sleep', 'Keep remote control and automation sessions running without the machine sleeping.'],
+            ['Account Profile', 'Show avatar, account details, and OAuth sign-in providers from the sidebar.'],
+            ['Version Information', 'Expose the current Agent parity/version build in the sidebar footer.'],
             ['Feedback & Logs', 'Send product feedback and upload diagnostic logs for support.'],
+            ['Screenshot Attachment', 'Attach a screenshot with feedback so support can inspect visual issues.'],
+            ['Desktop Platform Support', 'macOS Apple Silicon, macOS Intel, Windows x64, and Windows ARM64 support matrix.'],
+            ['Online Requirement', 'Account, connector, and remote-control features require online service access.'],
+            ['Multi-device Sync', 'Account settings sync across signed-in desktop installations.'],
+            ['Log Folder Locations', 'Open Log Folder and Open Log Directory entries expose diagnostics paths.'],
+            ['Windows Installation Guide', 'Windows 10 1809 or later, Windows 11, x64, ARM64, and .exe installer flow.'],
+            ['macOS Installation Guide', 'Apple Silicon and Intel installation through a .dmg package.'],
+            ['Universal Binary', 'macOS package supports Apple Silicon and Intel processors.'],
+            ['Windows Defender SmartScreen', 'Installation troubleshooting covers SmartScreen prompts and first-launch delays.'],
+            ['Privacy & Security Permission', 'macOS remote-control setup points users to System Settings -> Privacy & Security.'],
+            ['Privacy Retention Matrix', 'Inputs and outputs retain for 14 days; configuration stays on the local device.'],
+            ['Data Subject Rights', 'Access, portability, correction, erasure, restriction, objection, and consent withdrawal.'],
+            ['AI Training Opt-out', 'Inputs and outputs training opt-out route is agent_ai@tencent.com.'],
+            ['Billing Retention', 'Payment and billing information retention is tracked for 24 months.'],
           ].map(([title, detail]) => (
             <div key={title} className={styles.featureCard}>
               <div className={styles.cardTitle}>{title}</div>
@@ -1050,7 +1382,7 @@ function FeaturePanel({
           ['Revoke Folder', 'Remove folder access from future tasks.'],
           ['Sandbox Execution', 'Run tools in an isolated execution boundary.'],
           ['Full Access Confirmation', 'Require explicit confirmation before fully opening permissions.'],
-          ...((capabilities.computerUseModes || ['Normal', 'Auto', 'Full Access']).map((mode) => [`${mode} computer use`, 'WorkBuddy-style computer operation scope.'])),
+          ...((capabilities.computerUseModes || ['Normal', 'Auto', 'Full Access']).map((mode) => [`${mode} computer use`, 'Agent-style computer operation scope.'])),
         ].map(([title, detail]) => (
           <div key={title} className={styles.featureCard}>
             <div className={styles.cardTitle}>{title}</div>

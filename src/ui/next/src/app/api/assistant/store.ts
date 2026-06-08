@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 
 export type PermissionProfile = 'Guarded' | 'Full Access';
-export type AssistantTaskStatus = 'running' | 'completed' | 'blocked' | 'failed' | 'archived';
+export type AssistantTaskStatus = 'running' | 'completed' | 'blocked' | 'failed' | 'planning' | 'pending' | 'archived';
 
 export type AssistantArtifact = {
   id: string;
@@ -74,6 +74,7 @@ export type Automation = {
   id: string;
   name: string;
   schedule: string;
+  scheduleKind: 'hourly' | 'daily' | 'weekly' | 'one_time';
   prompt: string;
   workspace: string;
   type: 'recurring' | 'one_time';
@@ -99,6 +100,9 @@ export type SkillRecord = {
   name: string;
   category: string;
   status: 'installed' | 'disabled' | 'available';
+  version?: string;
+  updateAvailable?: boolean;
+  description?: string;
 };
 
 export type ConnectorRecord = {
@@ -107,6 +111,7 @@ export type ConnectorRecord = {
   kind: string;
   status: 'connected' | 'available' | 'needs_setup';
   features?: string[];
+  oauth?: boolean;
 };
 
 export type SharedFileRecord = {
@@ -125,6 +130,8 @@ export type ModelRecord = {
   headers: Record<string, string>;
   parameters: Record<string, string | number | boolean>;
   skipChatCompletions: boolean;
+  customProtocol?: boolean;
+  capabilities?: string[];
 };
 
 export type RuntimeRecord = {
@@ -169,8 +176,11 @@ export type ShareRecord = {
   taskId: string;
   artifactId: string;
   target: string;
-  status: 'pending_review' | 'shared';
+  status: 'pending_review' | 'shared' | 'revoked';
   previewUrl: string;
+  shareUrl: string | null;
+  downloadUrl?: string;
+  copied?: boolean;
   audit: string[];
 };
 
@@ -215,6 +225,13 @@ export type ClawChannelRecord = {
   markdownRendering: boolean;
   qrCodeUrl: string;
   credentialsConfigured: boolean;
+  credentialFields?: string[];
+  connectionModes?: string[];
+  pairingMethod?: 'pairing_code' | 'qr_code' | 'direct_message' | 'manual_credentials' | 'app_link';
+  supportsUploads?: boolean;
+  supportsMarkdown?: boolean;
+  supportsEmbeds?: boolean;
+  troubleshooting?: string[];
 };
 
 export type ClawConfirmationRecord = {
@@ -237,10 +254,52 @@ export type ApprovalRecord = {
 };
 
 export type AssistantSettings = {
+  agentName?: string;
   fontSize: 'small' | 'medium' | 'large';
   systemLanguage: 'auto' | 'en-US' | 'zh-CN';
   aiGeneratedMarker: boolean;
   contentFilter: 'friendly_notice' | 'hide_filtered_answer';
+  compactMode: boolean;
+  autoInstallLowRiskSkills: boolean;
+  preventSleep: boolean;
+  profile: {
+    name: string;
+    email: string;
+    avatarUrl: string;
+    authProviders: string[];
+  };
+  desktopPlatforms: string[];
+  onlineRequired: boolean;
+  sync: {
+    accountSettingsAcrossDevices: boolean;
+  };
+  logLocations: {
+    macOS: string;
+    Windows: string;
+  };
+  installation: {
+    Windows: {
+      installer: string;
+      requirements: string[];
+      troubleshooting: string[];
+    };
+    macOS: {
+      installer: string;
+      requirements: string[];
+      permissions: string[];
+    };
+  };
+  privacy: {
+    childrenPolicy: string;
+    dataResidency: string;
+    inputsOutputsRetention: string;
+    configurationStorage: string;
+    accountDiagnosticFeedbackRetention: string;
+    billingRetention: string;
+    trainingOptOut: string;
+    rights: string[];
+  };
+  version: string;
 };
 
 export type ExploreTemplate = {
@@ -254,6 +313,7 @@ export type ExploreTemplate = {
   connectors: string[];
   outputFormat: string;
   prompt: string;
+  mode?: string;
 };
 
 export type ExploreRemix = {
@@ -281,166 +341,236 @@ export type CloudSession = {
   updatedAt: string;
 };
 
-export type WorkBuddyParityGap = {
+export type AgentParityGap = {
   id: string;
   category: string;
   name: string;
   source: string;
-  jarvisSurface: string;
+  agentSurface: string;
   status: 'implemented';
 };
 
-export const workBuddyParityGaps: WorkBuddyParityGap[] = [
-  { id: 'cloud-runtime-filesystem', category: 'Cloud Agent lifecycle', name: 'Runtime sandbox filesystem', source: 'CloudAgent runtime', jarvisSurface: 'Cloud Runtime', status: 'implemented' },
-  { id: 'cloud-acp-sse', category: 'Cloud Agent lifecycle', name: 'ACP/SSE streaming transcript', source: 'CloudAgent realtime conversation', jarvisSurface: 'Cloud Runtime', status: 'implemented' },
-  { id: 'cloud-checkpoints', category: 'Cloud Agent lifecycle', name: 'Checkpoint creation', source: 'CloudAgent checkpoints', jarvisSurface: 'Cloud Runtime', status: 'implemented' },
-  { id: 'cloud-version-rollback', category: 'Cloud Agent lifecycle', name: 'Version rollback', source: 'CloudAgent versions', jarvisSurface: 'Cloud Runtime', status: 'implemented' },
-  { id: 'cloud-public-deploy', category: 'Cloud Agent lifecycle', name: 'Public deployment artifacts', source: 'CloudAgent deployment', jarvisSurface: 'Cloud Runtime', status: 'implemented' },
-  { id: 'cloud-manifest-editor', category: 'Cloud Agent lifecycle', name: 'Manifest editor', source: 'CloudAgent manifest', jarvisSurface: 'Cloud Runtime', status: 'implemented' },
-  { id: 'cloud-system-prompt', category: 'Cloud Agent lifecycle', name: 'System prompt field', source: 'Manifest basic config', jarvisSurface: 'Cloud Runtime', status: 'implemented' },
-  { id: 'cloud-system-prompt-file', category: 'Cloud Agent lifecycle', name: 'System prompt file', source: 'Manifest basic config', jarvisSurface: 'Cloud Runtime', status: 'implemented' },
-  { id: 'cloud-rules-manifest', category: 'Cloud Agent lifecycle', name: 'Rules manifest', source: 'Manifest capabilities', jarvisSurface: 'Cloud Runtime', status: 'implemented' },
-  { id: 'cloud-skills-manifest', category: 'Cloud Agent lifecycle', name: 'Skills manifest', source: 'Manifest capabilities', jarvisSurface: 'Cloud Runtime', status: 'implemented' },
-  { id: 'cloud-plugins-manifest', category: 'Cloud Agent lifecycle', name: 'Plugins manifest', source: 'Manifest capabilities', jarvisSurface: 'Cloud Runtime', status: 'implemented' },
-  { id: 'cloud-mcp-manifest', category: 'Cloud Agent lifecycle', name: 'MCP manifest', source: 'Manifest capabilities', jarvisSurface: 'Cloud Runtime', status: 'implemented' },
-  { id: 'cloud-subagents-manifest', category: 'Cloud Agent lifecycle', name: 'Subagents manifest', source: 'Manifest capabilities', jarvisSurface: 'Cloud Runtime', status: 'implemented' },
-  { id: 'cloud-workspace-repository', category: 'Cloud Agent lifecycle', name: 'Workspace repository import', source: 'Manifest workspace config', jarvisSurface: 'Cloud Runtime', status: 'implemented' },
-  { id: 'cloud-workspace-download', category: 'Cloud Agent lifecycle', name: 'Workspace download URL import', source: 'Manifest workspace config', jarvisSurface: 'Cloud Runtime', status: 'implemented' },
-  { id: 'cloud-workspace-ref', category: 'Cloud Agent lifecycle', name: 'Workspace ref pinning', source: 'Manifest workspace config', jarvisSurface: 'Cloud Runtime', status: 'implemented' },
-  { id: 'cloud-init-shell', category: 'Cloud Agent lifecycle', name: 'Init shell command', source: 'Manifest workspace config', jarvisSurface: 'Cloud Runtime', status: 'implemented' },
-  { id: 'cloud-init-command', category: 'Cloud Agent lifecycle', name: 'Init command', source: 'Manifest workspace config', jarvisSurface: 'Cloud Runtime', status: 'implemented' },
-  { id: 'cloud-secrets', category: 'Cloud Agent lifecycle', name: 'Secret injection', source: 'Manifest environment config', jarvisSurface: 'Cloud Runtime', status: 'implemented' },
-  { id: 'cloud-env-vars', category: 'Cloud Agent lifecycle', name: 'Environment variables', source: 'Manifest environment config', jarvisSurface: 'Cloud Runtime', status: 'implemented' },
-  { id: 'cloud-test-run', category: 'Cloud Agent lifecycle', name: 'Test Run mode', source: 'CloudAgent creation', jarvisSurface: 'Cloud Runtime', status: 'implemented' },
-  { id: 'cloud-channel-binding', category: 'Cloud Agent lifecycle', name: 'Channel binding', source: 'CloudAgent channel access', jarvisSurface: 'Cloud Runtime', status: 'implemented' },
-  { id: 'cloud-credential-vault', category: 'Cloud Agent lifecycle', name: 'Credential vault injection', source: 'Credential management', jarvisSurface: 'Cloud Runtime', status: 'implemented' },
-  { id: 'cloud-runtime-health', category: 'Cloud Agent lifecycle', name: 'Runtime health states', source: 'Runtime operations', jarvisSurface: 'Cloud Runtime', status: 'implemented' },
-  { id: 'home-env-switch', category: 'Home execution controls', name: 'Cloud/local execution switch', source: 'Homepage environment switch', jarvisSurface: 'Task Composer', status: 'implemented' },
-  { id: 'home-quick-tags', category: 'Home execution controls', name: 'Quick scenario tags', source: 'Homepage quick entries', jarvisSurface: 'Task Composer', status: 'implemented' },
-  { id: 'home-voice-input', category: 'Home execution controls', name: 'Voice input affordance', source: 'Homepage input bar', jarvisSurface: 'Task Composer', status: 'implemented' },
-  { id: 'home-attachment-skill-bar', category: 'Home execution controls', name: 'Attachment and skill input bar', source: 'Homepage input bar', jarvisSurface: 'Task Composer', status: 'implemented' },
-  { id: 'expert-industry-categories', category: 'Expert teams', name: 'Expert industry categories', source: 'Expert Center', jarvisSurface: 'Expert Center', status: 'implemented' },
-  { id: 'expert-my-experts', category: 'Expert teams', name: 'My experts workspace', source: 'Expert Center', jarvisSurface: 'Expert Center', status: 'implemented' },
-  { id: 'expert-team-decomposition', category: 'Expert teams', name: 'Expert team decomposition', source: 'Expert teams', jarvisSurface: 'Expert Center', status: 'implemented' },
-  { id: 'expert-team-members', category: 'Expert teams', name: 'Expert team member roles', source: 'Expert teams', jarvisSurface: 'Expert Center', status: 'implemented' },
-  { id: 'expert-task-examples', category: 'Expert teams', name: 'Expert task examples', source: 'Expert cards', jarvisSurface: 'Expert Center', status: 'implemented' },
-  { id: 'expert-credit-warning', category: 'Expert teams', name: 'Expert team credit warning', source: 'Expert notices', jarvisSurface: 'Expert Center', status: 'implemented' },
-  { id: 'plugin-skill-type', category: 'Plugin system', name: 'Skill plugins', source: 'Plugin system', jarvisSurface: 'System & Safety', status: 'implemented' },
-  { id: 'plugin-mcp-type', category: 'Plugin system', name: 'MCP plugins', source: 'Plugin system', jarvisSurface: 'System & Safety', status: 'implemented' },
-  { id: 'plugin-hook-type', category: 'Plugin system', name: 'Hook plugins', source: 'Plugin system', jarvisSurface: 'System & Safety', status: 'implemented' },
-  { id: 'plugin-agent-type', category: 'Plugin system', name: 'Agent plugins', source: 'Plugin system', jarvisSurface: 'System & Safety', status: 'implemented' },
-  { id: 'plugin-rule-type', category: 'Plugin system', name: 'Rule plugins', source: 'Plugin system', jarvisSurface: 'System & Safety', status: 'implemented' },
-  { id: 'plugin-installed-management', category: 'Plugin system', name: 'Installed plugin management', source: 'Plugin system', jarvisSurface: 'System & Safety', status: 'implemented' },
-  { id: 'plugin-third-party-market', category: 'Plugin system', name: 'Third-party plugin markets', source: 'Plugin system', jarvisSurface: 'System & Safety', status: 'implemented' },
-  { id: 'remote-dedicated-folder', category: 'Remote assistant', name: 'Dedicated remote folder', source: 'Remote assistant', jarvisSurface: 'Remote Control', status: 'implemented' },
-  { id: 'remote-single-session', category: 'Remote assistant', name: 'Single remote session', source: 'Remote assistant', jarvisSurface: 'Remote Control', status: 'implemented' },
-  { id: 'remote-immutable-history', category: 'Remote assistant', name: 'Remote immutable history', source: 'Remote assistant', jarvisSurface: 'Remote Control', status: 'implemented' },
-  { id: 'remote-platform-guides', category: 'Remote assistant', name: 'Platform setup guides', source: 'Remote assistant', jarvisSurface: 'Remote Control', status: 'implemented' },
-  { id: 'remote-mobile-replies', category: 'Remote assistant', name: 'Mobile result replies', source: 'Remote assistant', jarvisSurface: 'Remote Control', status: 'implemented' },
-  { id: 'automation-templates', category: 'Automation governance', name: 'Automation task templates', source: 'Automation guide', jarvisSurface: 'Automations', status: 'implemented' },
-  { id: 'automation-effective-range', category: 'Automation governance', name: 'Schedule effective date ranges', source: 'Automation guide', jarvisSurface: 'Automations', status: 'implemented' },
-  { id: 'automation-miniapp-push', category: 'Automation governance', name: 'Mini app result push', source: 'Automation guide', jarvisSurface: 'Automations', status: 'implemented' },
-  { id: 'automation-limits', category: 'Automation governance', name: 'Concurrency and runtime limits', source: 'Automation guide', jarvisSurface: 'Automations', status: 'implemented' },
-  { id: 'task-search-box', category: 'Task management', name: 'Task search box', source: 'Task management', jarvisSurface: 'Task List', status: 'implemented' },
-  { id: 'task-status-filtering', category: 'Task management', name: 'Task status filtering', source: 'Task management', jarvisSurface: 'Task List', status: 'implemented' },
-  { id: 'task-date-filtering', category: 'Task management', name: 'Task date filtering', source: 'Task management', jarvisSurface: 'Task List', status: 'implemented' },
-  { id: 'task-reset-filters', category: 'Task management', name: 'Task filter reset', source: 'Task management', jarvisSurface: 'Task List', status: 'implemented' },
-  { id: 'task-recent-section', category: 'Task management', name: 'Recent task section', source: 'Task management', jarvisSurface: 'Task List', status: 'implemented' },
-  { id: 'task-workspace-section', category: 'Task management', name: 'Workspace task section', source: 'Task management', jarvisSurface: 'Task List', status: 'implemented' },
-  { id: 'task-planning-status', category: 'Task management', name: 'Planning status', source: 'Task management', jarvisSurface: 'Task List', status: 'implemented' },
-  { id: 'task-continue-thread', category: 'Task management', name: 'Continue existing task', source: 'Task management', jarvisSurface: 'Conversation', status: 'implemented' },
-  { id: 'task-open-folder', category: 'Task management', name: 'Open task folder', source: 'Task management', jarvisSurface: 'Data Management', status: 'implemented' },
-  { id: 'task-remove-workspace', category: 'Task management', name: 'Remove workspace from list', source: 'Task management', jarvisSurface: 'Data Management', status: 'implemented' },
-  { id: 'memory-auto-extract', category: 'Memory governance', name: 'Conversation memory extraction', source: 'Memory', jarvisSurface: 'Memory', status: 'implemented' },
-  { id: 'memory-nightly-summary', category: 'Memory governance', name: 'Nightly memory summary', source: 'Memory', jarvisSurface: 'Memory', status: 'implemented' },
-  { id: 'memory-private-scope', category: 'Memory governance', name: 'Private memory scope', source: 'Memory', jarvisSurface: 'Memory', status: 'implemented' },
-  { id: 'memory-review-edit', category: 'Memory governance', name: 'Memory review and edit', source: 'Memory', jarvisSurface: 'Memory', status: 'implemented' },
-  { id: 'memory-forget-command', category: 'Memory governance', name: 'Forget by conversation command', source: 'Memory', jarvisSurface: 'Memory', status: 'implemented' },
-  { id: 'memory-import-other-ai', category: 'Memory governance', name: 'Import memory from other AI', source: 'Memory', jarvisSurface: 'Memory', status: 'implemented' },
-  { id: 'mcp-market-entry', category: 'MCP configuration', name: 'MCP market entry', source: 'MCP guide', jarvisSurface: 'Connectors', status: 'implemented' },
-  { id: 'mcp-user-config', category: 'MCP configuration', name: 'User-level MCP config', source: 'MCP guide', jarvisSurface: 'Connectors', status: 'implemented' },
-  { id: 'mcp-project-config', category: 'MCP configuration', name: 'Project-level MCP config', source: 'MCP guide', jarvisSurface: 'Connectors', status: 'implemented' },
-  { id: 'mcp-config-paths', category: 'MCP configuration', name: 'MCP config path visibility', source: 'MCP guide', jarvisSurface: 'Connectors', status: 'implemented' },
-  { id: 'mcp-wecom-template', category: 'MCP configuration', name: 'WeCom bot MCP template', source: 'MCP guide', jarvisSurface: 'Connectors', status: 'implemented' },
-  { id: 'mcp-json-editor', category: 'MCP configuration', name: 'MCP JSON editor', source: 'MCP guide', jarvisSurface: 'Connectors', status: 'implemented' },
-  { id: 'mcp-context-sharing', category: 'MCP configuration', name: 'MCP context sharing', source: 'MCP guide', jarvisSurface: 'Connectors', status: 'implemented' },
-  { id: 'mcp-tool-exposure', category: 'MCP configuration', name: 'MCP tool exposure', source: 'MCP guide', jarvisSurface: 'Connectors', status: 'implemented' },
-  { id: 'mcp-composable-workflow', category: 'MCP configuration', name: 'Composable MCP workflow', source: 'MCP guide', jarvisSurface: 'Connectors', status: 'implemented' },
-  { id: 'mcp-data-control', category: 'MCP configuration', name: 'MCP data control', source: 'MCP guide', jarvisSurface: 'Connectors', status: 'implemented' },
-  { id: 'mini-text-input', category: 'Mobile mini app', name: 'Mini app text input', source: 'Mini app overview', jarvisSurface: 'Remote Control', status: 'implemented' },
-  { id: 'mini-voice-input', category: 'Mobile mini app', name: 'Mini app voice input', source: 'Mini app overview', jarvisSurface: 'Remote Control', status: 'implemented' },
-  { id: 'mini-image-input', category: 'Mobile mini app', name: 'Mini app image input', source: 'Mini app overview', jarvisSurface: 'Remote Control', status: 'implemented' },
-  { id: 'mini-file-input', category: 'Mobile mini app', name: 'Mini app file input', source: 'Mini app overview', jarvisSurface: 'Remote Control', status: 'implemented' },
-  { id: 'mini-cloud-execution', category: 'Mobile mini app', name: 'Mini app cloud execution', source: 'Mini app overview', jarvisSurface: 'Cloud Runtime', status: 'implemented' },
-  { id: 'mini-local-remote', category: 'Mobile mini app', name: 'Mini app local remote control', source: 'Mini app overview', jarvisSurface: 'Remote Control', status: 'implemented' },
-  { id: 'mini-task-view', category: 'Mobile mini app', name: 'Mini app task view', source: 'Mini app overview', jarvisSurface: 'Task List', status: 'implemented' },
-  { id: 'mini-follow-up', category: 'Mobile mini app', name: 'Mini app follow-up messages', source: 'Mini app overview', jarvisSurface: 'Conversation', status: 'implemented' },
-  { id: 'mini-artifact-sharing', category: 'Mobile mini app', name: 'Mini app artifact sharing', source: 'Mini app overview', jarvisSurface: 'Results Panel', status: 'implemented' },
-  { id: 'mini-settings', category: 'Mobile mini app', name: 'Mini app settings', source: 'Mini app overview', jarvisSurface: 'System & Safety', status: 'implemented' },
-  { id: 'permission-risk-boundary', category: 'Permission safety', name: 'Permission risk boundary', source: 'Permission modes', jarvisSurface: 'Permissions', status: 'implemented' },
-  { id: 'permission-default-mode', category: 'Permission safety', name: 'Default permission mode', source: 'Permission modes', jarvisSurface: 'Permissions', status: 'implemented' },
-  { id: 'permission-full-access-mode', category: 'Permission safety', name: 'Full access mode', source: 'Permission modes', jarvisSurface: 'Permissions', status: 'implemented' },
-  { id: 'permission-workspace-boundary', category: 'Permission safety', name: 'Workspace permission boundary', source: 'Permission modes', jarvisSurface: 'Permissions', status: 'implemented' },
-  { id: 'permission-danger-confirm', category: 'Permission safety', name: 'Dangerous action confirmation', source: 'Permission modes', jarvisSurface: 'Permissions', status: 'implemented' },
-  { id: 'permission-temporary-full-access', category: 'Permission safety', name: 'Temporary full access guidance', source: 'Permission modes', jarvisSurface: 'Permissions', status: 'implemented' },
-  { id: 'create-work-directory', category: 'Create task context', name: 'Task work directory picker', source: 'Create task', jarvisSurface: 'Task Composer', status: 'implemented' },
-  { id: 'create-at-references', category: 'Create task context', name: '@ context references', source: 'Create task', jarvisSurface: 'Task Composer', status: 'implemented' },
-  { id: 'create-clipboard-screenshot', category: 'Create task context', name: 'Clipboard screenshot paste', source: 'Create task', jarvisSurface: 'Task Composer', status: 'implemented' },
-  { id: 'create-output-constraints', category: 'Create task context', name: 'Output constraints capture', source: 'Create task', jarvisSurface: 'Task Composer', status: 'implemented' },
-  { id: 'hook-event-family', category: 'Hook lifecycle', name: 'Hook event family', source: 'Hook reference', jarvisSurface: 'System & Safety', status: 'implemented' },
-  { id: 'hook-mcp-tool-matcher', category: 'Hook lifecycle', name: 'MCP tool hook matcher', source: 'Hook reference', jarvisSurface: 'System & Safety', status: 'implemented' },
-  { id: 'hook-permission-events', category: 'Hook lifecycle', name: 'Permission hook events', source: 'Hook reference', jarvisSurface: 'System & Safety', status: 'implemented' },
-  { id: 'hook-file-env-events', category: 'Hook lifecycle', name: 'File and environment hook events', source: 'Hook reference', jarvisSurface: 'System & Safety', status: 'implemented' },
-  { id: 'slash-help', category: 'Slash command coverage', name: '/help command', source: 'Slash commands', jarvisSurface: 'System & Safety', status: 'implemented' },
-  { id: 'slash-login', category: 'Slash command coverage', name: '/login command', source: 'Slash commands', jarvisSurface: 'System & Safety', status: 'implemented' },
-  { id: 'slash-logout', category: 'Slash command coverage', name: '/logout command', source: 'Slash commands', jarvisSurface: 'System & Safety', status: 'implemented' },
-  { id: 'slash-doctor', category: 'Slash command coverage', name: '/doctor environment check', source: 'Slash commands', jarvisSurface: 'System & Safety', status: 'implemented' },
-  { id: 'slash-status', category: 'Slash command coverage', name: '/status session check', source: 'Slash commands', jarvisSurface: 'System & Safety', status: 'implemented' },
-  { id: 'slash-add-dir', category: 'Slash command coverage', name: '/add-dir workspace access', source: 'Slash commands', jarvisSurface: 'Permissions', status: 'implemented' },
-  { id: 'slash-agents', category: 'Slash command coverage', name: '/agents management', source: 'Slash commands', jarvisSurface: 'Expert Center', status: 'implemented' },
-  { id: 'slash-branch', category: 'Slash command coverage', name: '/branch conversation fork', source: 'Slash commands', jarvisSurface: 'Conversation', status: 'implemented' },
-  { id: 'slash-btw', category: 'Slash command coverage', name: '/btw non-interrupting question', source: 'Slash commands', jarvisSurface: 'Conversation', status: 'implemented' },
-  { id: 'slash-config', category: 'Slash command coverage', name: '/config settings panel', source: 'Slash commands', jarvisSurface: 'System & Safety', status: 'implemented' },
-  { id: 'slash-context', category: 'Slash command coverage', name: '/context token analysis', source: 'Slash commands', jarvisSurface: 'System & Safety', status: 'implemented' },
-  { id: 'slash-cost', category: 'Slash command coverage', name: '/cost usage report', source: 'Slash commands', jarvisSurface: 'System & Safety', status: 'implemented' },
-  { id: 'slash-model-text-image', category: 'Slash command coverage', name: '/model text-to-image switch', source: 'Slash commands', jarvisSurface: 'Models & Runtime', status: 'implemented' },
-  { id: 'slash-model-image-image', category: 'Slash command coverage', name: '/model image-to-image switch', source: 'Slash commands', jarvisSurface: 'Models & Runtime', status: 'implemented' },
-  { id: 'slash-terminal-setup', category: 'Slash command coverage', name: '/terminal-setup shortcut binding', source: 'Slash commands', jarvisSurface: 'System & Safety', status: 'implemented' },
-  { id: 'slash-statusline', category: 'Slash command coverage', name: '/statusline configuration', source: 'Slash commands', jarvisSurface: 'System & Safety', status: 'implemented' },
-  { id: 'settings-user-json', category: 'CLI settings governance', name: 'User settings.json', source: 'Settings config', jarvisSurface: 'System & Safety', status: 'implemented' },
-  { id: 'settings-project-shared', category: 'CLI settings governance', name: 'Project shared settings', source: 'Settings config', jarvisSurface: 'System & Safety', status: 'implemented' },
-  { id: 'settings-project-local', category: 'CLI settings governance', name: 'Project local ignored settings', source: 'Settings config', jarvisSurface: 'System & Safety', status: 'implemented' },
-  { id: 'settings-env-vars', category: 'CLI settings governance', name: 'Session environment variables', source: 'Settings config', jarvisSurface: 'Models & Runtime', status: 'implemented' },
-  { id: 'settings-coauthor', category: 'CLI settings governance', name: 'Co-authored-by toggle', source: 'Settings config', jarvisSurface: 'System & Safety', status: 'implemented' },
-  { id: 'settings-disable-bypass', category: 'CLI settings governance', name: 'Disable bypass permissions', source: 'Settings config', jarvisSurface: 'Permissions', status: 'implemented' },
-  { id: 'settings-subagent-permissions', category: 'CLI settings governance', name: 'Subagent permission mode override', source: 'Settings config', jarvisSurface: 'Expert Center', status: 'implemented' },
-  { id: 'settings-auto-memory', category: 'CLI settings governance', name: 'Auto memory config', source: 'Settings config', jarvisSurface: 'Memory', status: 'implemented' },
-  { id: 'settings-typed-memory', category: 'CLI settings governance', name: 'Typed memory config', source: 'Settings config', jarvisSurface: 'Memory', status: 'implemented' },
-  { id: 'settings-team-memory', category: 'CLI settings governance', name: 'Team memory config', source: 'Settings config', jarvisSurface: 'Memory', status: 'implemented' },
-  { id: 'tool-edit', category: 'Built-in tool inventory', name: 'Targeted file editing', source: 'Settings config tool table', jarvisSurface: 'Changes', status: 'implemented' },
-  { id: 'tool-multiedit', category: 'Built-in tool inventory', name: 'MultiEdit batching', source: 'Settings config tool table', jarvisSurface: 'Changes', status: 'implemented' },
-  { id: 'tool-taskstop', category: 'Built-in tool inventory', name: 'TaskStop background cancellation', source: 'Settings config tool table', jarvisSurface: 'Task List', status: 'implemented' },
-  { id: 'tool-lsp', category: 'Built-in tool inventory', name: 'LSP code intelligence', source: 'Settings config tool table', jarvisSurface: 'Models & Runtime', status: 'implemented' },
-  { id: 'tool-notebook-edit', category: 'Built-in tool inventory', name: 'Notebook editing', source: 'Settings config tool table', jarvisSurface: 'Changes', status: 'implemented' },
-  { id: 'tool-task-output', category: 'Built-in tool inventory', name: 'TaskOutput retrieval', source: 'Settings config tool table', jarvisSurface: 'Task List', status: 'implemented' },
-  { id: 'tool-task-create-update', category: 'Built-in tool inventory', name: 'TaskCreate and TaskUpdate', source: 'Settings config tool table', jarvisSurface: 'Task List', status: 'implemented' },
-  { id: 'tool-webfetch-websearch', category: 'Built-in tool inventory', name: 'WebFetch and WebSearch tools', source: 'Settings config tool table', jarvisSurface: 'Connectors', status: 'implemented' },
-  { id: 'subagent-user-dir', category: 'Subagent governance', name: 'User subagent directory', source: 'Subagents', jarvisSurface: 'Expert Center', status: 'implemented' },
-  { id: 'subagent-project-dir', category: 'Subagent governance', name: 'Project subagent directory', source: 'Subagents', jarvisSurface: 'Expert Center', status: 'implemented' },
-  { id: 'subagent-frontmatter', category: 'Subagent governance', name: 'Subagent frontmatter config', source: 'Subagents', jarvisSurface: 'Expert Center', status: 'implemented' },
-  { id: 'subagent-tool-limits', category: 'Subagent governance', name: 'Subagent tool restrictions', source: 'Subagents', jarvisSurface: 'Expert Center', status: 'implemented' },
-  { id: 'subagent-model-override', category: 'Subagent governance', name: 'Subagent model override', source: 'Subagents', jarvisSurface: 'Expert Center', status: 'implemented' },
-  { id: 'subagent-team-member-routing', category: 'Subagent governance', name: 'Subagent team member routing', source: 'Subagents', jarvisSurface: 'Expert Center', status: 'implemented' },
-  { id: 'attach-camera', category: 'Mobile attachment sources', name: 'Camera attachment', source: 'Mini app attachments', jarvisSurface: 'Remote Control', status: 'implemented' },
-  { id: 'attach-photo-video', category: 'Mobile attachment sources', name: 'Photo and video attachment', source: 'Mini app attachments', jarvisSurface: 'Remote Control', status: 'implemented' },
-  { id: 'attach-phone-file', category: 'Mobile attachment sources', name: 'Phone file attachment', source: 'Mini app attachments', jarvisSurface: 'Remote Control', status: 'implemented' },
-  { id: 'attach-wechat-file', category: 'Mobile attachment sources', name: 'WeChat file attachment', source: 'Mini app attachments', jarvisSurface: 'Remote Control', status: 'implemented' },
-  { id: 'attach-tencent-docs', category: 'Mobile attachment sources', name: 'Tencent Docs attachment', source: 'Mini app attachments', jarvisSurface: 'Connectors', status: 'implemented' },
-  { id: 'attach-skillhub-package', category: 'Mobile attachment sources', name: 'SkillHub package attachment', source: 'Mini app attachments', jarvisSurface: 'Skills', status: 'implemented' },
-  { id: 'account-rebind-phone', category: 'Account and sharing settings', name: 'Account phone rebinding', source: 'Mini app settings', jarvisSurface: 'System & Safety', status: 'implemented' },
-  { id: 'sharing-my-shares', category: 'Account and sharing settings', name: 'My shares management', source: 'Mini app settings', jarvisSurface: 'Results Panel', status: 'implemented' },
-  { id: 'sharing-link-expiry', category: 'Account and sharing settings', name: 'Shared link expiry', source: 'Mini app settings', jarvisSurface: 'Results Panel', status: 'implemented' },
-  { id: 'sharing-revoke-link', category: 'Account and sharing settings', name: 'Revoke shared link', source: 'Mini app settings', jarvisSurface: 'Results Panel', status: 'implemented' },
+const extendedDocsGapClosureGaps: AgentParityGap[] = [
+  { id: 'docs-featured-skills-roster', category: 'Extended docs gap closure', name: 'Featured skills roster', source: 'Agent Skills docs', agentSurface: 'Skills', status: 'implemented' },
+  { id: 'docs-batch-skill-updates', category: 'Extended docs gap closure', name: 'Batch skill updates', source: 'Agent Skills docs', agentSurface: 'Skills', status: 'implemented' },
+  { id: 'docs-generated-custom-skill-package', category: 'Extended docs gap closure', name: 'Generated custom skill package', source: 'Agent Create Skills practice case', agentSurface: 'Skills', status: 'implemented' },
+  { id: 'docs-google-calendar-connector', category: 'Extended docs gap closure', name: 'Google Calendar connector', source: 'Agent Google Integration practice case', agentSurface: 'Connectors', status: 'implemented' },
+  { id: 'docs-google-oauth-flow', category: 'Extended docs gap closure', name: 'Google OAuth connector flow', source: 'Agent Google Integration practice case', agentSurface: 'Connectors', status: 'implemented' },
+  { id: 'docs-official-practice-case-library', category: 'Extended docs gap closure', name: 'Official practice case library', source: 'Agent Practice Cases docs', agentSurface: 'Explore', status: 'implemented' },
+  { id: 'docs-file-recognition-practice', category: 'Extended docs gap closure', name: 'File recognition practice template', source: 'Agent Practice Cases docs', agentSurface: 'Explore', status: 'implemented' },
+  { id: 'docs-document-generation-practice', category: 'Extended docs gap closure', name: 'Document generation practice template', source: 'Agent Practice Cases docs', agentSurface: 'Explore', status: 'implemented' },
+  { id: 'docs-data-visualization-practice', category: 'Extended docs gap closure', name: 'Data visualization practice template', source: 'Agent Practice Cases docs', agentSurface: 'Explore', status: 'implemented' },
+  { id: 'docs-social-media-practice', category: 'Extended docs gap closure', name: 'Social media practice template', source: 'Agent Practice Cases docs', agentSurface: 'Explore', status: 'implemented' },
+  { id: 'docs-daily-briefing-practice', category: 'Extended docs gap closure', name: 'Daily briefing practice template', source: 'Agent Daily Briefing practice case', agentSurface: 'Explore', status: 'implemented' },
+  { id: 'docs-remote-slack-practice', category: 'Extended docs gap closure', name: 'Remote Slack practice template', source: 'Agent Platform Integration docs', agentSurface: 'Remote Control', status: 'implemented' },
+  { id: 'docs-google-calendar-drive-practice', category: 'Extended docs gap closure', name: 'Google Calendar and Drive practice template', source: 'Agent Google Integration practice case', agentSurface: 'Explore', status: 'implemented' },
+  { id: 'docs-zero-code-local-app-practice', category: 'Extended docs gap closure', name: 'Zero-code local app practice template', source: 'Agent Practice Cases docs', agentSurface: 'Explore', status: 'implemented' },
+  { id: 'docs-custom-skill-creation-practice', category: 'Extended docs gap closure', name: 'Custom skill creation practice template', source: 'Agent Create Skills practice case', agentSurface: 'Explore', status: 'implemented' },
+  { id: 'docs-ai-self-driven-workflow', category: 'Extended docs gap closure', name: 'AI self-driven workflow template', source: 'Agent AI Self Driven practice case', agentSurface: 'Explore', status: 'implemented' },
+  { id: 'docs-platform-specific-claw-guides', category: 'Extended docs gap closure', name: 'Platform-specific Claw setup guides', source: 'Agent Platform Integration docs', agentSurface: 'Remote Control', status: 'implemented' },
+  { id: 'docs-claw-credential-schemas', category: 'Extended docs gap closure', name: 'Claw credential field schemas', source: 'Agent Platform Integration docs', agentSurface: 'Remote Control', status: 'implemented' },
+  { id: 'docs-claw-connection-mode-catalog', category: 'Extended docs gap closure', name: 'Claw connection mode catalog', source: 'Agent Platform Integration docs', agentSurface: 'Remote Control', status: 'implemented' },
+  { id: 'docs-claw-pairing-method-catalog', category: 'Extended docs gap closure', name: 'Claw pairing method catalog', source: 'Agent Platform Integration docs', agentSurface: 'Remote Control', status: 'implemented' },
+  { id: 'docs-claw-troubleshooting-catalog', category: 'Extended docs gap closure', name: 'Claw troubleshooting catalog', source: 'Agent Platform Integration docs', agentSurface: 'Remote Control', status: 'implemented' },
+  { id: 'docs-desktop-platform-support', category: 'Extended docs gap closure', name: 'Desktop platform support matrix', source: 'Agent FAQ docs', agentSurface: 'System & Safety', status: 'implemented' },
+  { id: 'docs-multi-device-account-sync', category: 'Extended docs gap closure', name: 'Multi-device account sync', source: 'Agent FAQ docs', agentSurface: 'System & Safety', status: 'implemented' },
+  { id: 'docs-log-folder-locations', category: 'Extended docs gap closure', name: 'Log folder locations', source: 'Agent FAQ docs', agentSurface: 'System & Safety', status: 'implemented' },
+];
+
+const coreDocsGapClosureGaps: AgentParityGap[] = [
+  { id: 'docs-windows-installation-guide', category: 'Core docs gap closure', name: 'Windows installation guide', source: 'Agent Windows Installation Guide', agentSurface: 'System & Safety', status: 'implemented' },
+  { id: 'docs-macos-installation-guide', category: 'Core docs gap closure', name: 'macOS installation guide', source: 'Agent Mac Installation Guide', agentSurface: 'System & Safety', status: 'implemented' },
+  { id: 'docs-new-task-bar-anatomy', category: 'Core docs gap closure', name: 'New task bar anatomy', source: 'Agent New Task Bar docs', agentSurface: 'Task Composer', status: 'implemented' },
+  { id: 'docs-one-sentence-task-assignment', category: 'Core docs gap closure', name: 'One-sentence task assignment examples', source: 'Agent Create Task docs', agentSurface: 'Task Composer', status: 'implemented' },
+  { id: 'docs-default-working-directory', category: 'Core docs gap closure', name: 'Default working directory behavior', source: 'Agent Create Task docs', agentSurface: 'Task Composer', status: 'implemented' },
+  { id: 'docs-context-tool-matrix', category: 'Core docs gap closure', name: 'Context tool matrix', source: 'Agent Create Task docs', agentSurface: 'Task Composer', status: 'implemented' },
+  { id: 'docs-parallel-task-creation', category: 'Core docs gap closure', name: 'Parallel task creation guidance', source: 'Agent Create Task docs', agentSurface: 'Task Composer', status: 'implemented' },
+  { id: 'docs-conversation-top-toolbar', category: 'Core docs gap closure', name: 'Conversation top toolbar', source: 'Agent Conversation docs', agentSurface: 'Conversation', status: 'implemented' },
+  { id: 'docs-conversation-history-jump', category: 'Core docs gap closure', name: 'Conversation history jump', source: 'Agent Conversation docs', agentSurface: 'Conversation', status: 'implemented' },
+  { id: 'docs-show-details-panel-action', category: 'Core docs gap closure', name: 'Show details panel action', source: 'Agent Conversation docs', agentSurface: 'Conversation', status: 'implemented' },
+  { id: 'docs-file-image-upload-methods', category: 'Core docs gap closure', name: 'File and image upload methods', source: 'Agent Conversation docs', agentSurface: 'Conversation', status: 'implemented' },
+  { id: 'docs-execution-progress-stages', category: 'Core docs gap closure', name: 'Execution progress stages', source: 'Agent Conversation docs', agentSurface: 'Conversation', status: 'implemented' },
+  { id: 'docs-interrupt-resume-flow', category: 'Core docs gap closure', name: 'Interrupt and resume flow', source: 'Agent Conversation docs', agentSurface: 'Conversation', status: 'implemented' },
+  { id: 'docs-selected-artifact-preview-layout', category: 'Core docs gap closure', name: 'Selected artifact preview layout', source: 'Agent Results docs', agentSurface: 'Results Panel', status: 'implemented' },
+  { id: 'docs-spreadsheet-preview', category: 'Core docs gap closure', name: 'Spreadsheet preview', source: 'Agent Results docs', agentSurface: 'Results Panel', status: 'implemented' },
+  { id: 'docs-document-preview', category: 'Core docs gap closure', name: 'Document preview', source: 'Agent Results docs', agentSurface: 'Results Panel', status: 'implemented' },
+  { id: 'docs-web-preview-controls', category: 'Core docs gap closure', name: 'Web preview controls', source: 'Agent Results docs', agentSurface: 'Results Panel', status: 'implemented' },
+  { id: 'docs-all-files-tree-tabs', category: 'Core docs gap closure', name: 'All files tree and tab view', source: 'Agent Results docs', agentSurface: 'Results Panel', status: 'implemented' },
+  { id: 'docs-changes-detail-review', category: 'Core docs gap closure', name: 'Changes detail review', source: 'Agent Results docs', agentSurface: 'Results Panel', status: 'implemented' },
+  { id: 'docs-sidebar-task-history-sections', category: 'Core docs gap closure', name: 'Sidebar task history sections', source: 'Agent Sidebar docs', agentSurface: 'Task List', status: 'implemented' },
+  { id: 'docs-feedback-product-team-route', category: 'Core docs gap closure', name: 'Feedback product-team route', source: 'Agent Help & Feedback docs', agentSurface: 'System & Safety', status: 'implemented' },
+  { id: 'docs-privacy-retention-matrix', category: 'Core docs gap closure', name: 'Privacy retention matrix', source: 'Agent Privacy Policy', agentSurface: 'System & Safety', status: 'implemented' },
+  { id: 'docs-data-subject-rights-catalog', category: 'Core docs gap closure', name: 'Data subject rights catalog', source: 'Agent Privacy Policy', agentSurface: 'System & Safety', status: 'implemented' },
+  { id: 'docs-ai-training-opt-out', category: 'Core docs gap closure', name: 'AI training opt-out', source: 'Agent Privacy Policy', agentSurface: 'System & Safety', status: 'implemented' },
+];
+
+export const agentParityGaps: AgentParityGap[] = [
+  { id: 'cloud-runtime-filesystem', category: 'Cloud Agent lifecycle', name: 'Runtime sandbox filesystem', source: 'CloudAgent runtime', agentSurface: 'Cloud Runtime', status: 'implemented' },
+  { id: 'cloud-acp-sse', category: 'Cloud Agent lifecycle', name: 'ACP/SSE streaming transcript', source: 'CloudAgent realtime conversation', agentSurface: 'Cloud Runtime', status: 'implemented' },
+  { id: 'cloud-checkpoints', category: 'Cloud Agent lifecycle', name: 'Checkpoint creation', source: 'CloudAgent checkpoints', agentSurface: 'Cloud Runtime', status: 'implemented' },
+  { id: 'cloud-version-rollback', category: 'Cloud Agent lifecycle', name: 'Version rollback', source: 'CloudAgent versions', agentSurface: 'Cloud Runtime', status: 'implemented' },
+  { id: 'cloud-public-deploy', category: 'Cloud Agent lifecycle', name: 'Public deployment artifacts', source: 'CloudAgent deployment', agentSurface: 'Cloud Runtime', status: 'implemented' },
+  { id: 'cloud-manifest-editor', category: 'Cloud Agent lifecycle', name: 'Manifest editor', source: 'CloudAgent manifest', agentSurface: 'Cloud Runtime', status: 'implemented' },
+  { id: 'cloud-system-prompt', category: 'Cloud Agent lifecycle', name: 'System prompt field', source: 'Manifest basic config', agentSurface: 'Cloud Runtime', status: 'implemented' },
+  { id: 'cloud-system-prompt-file', category: 'Cloud Agent lifecycle', name: 'System prompt file', source: 'Manifest basic config', agentSurface: 'Cloud Runtime', status: 'implemented' },
+  { id: 'cloud-rules-manifest', category: 'Cloud Agent lifecycle', name: 'Rules manifest', source: 'Manifest capabilities', agentSurface: 'Cloud Runtime', status: 'implemented' },
+  { id: 'cloud-skills-manifest', category: 'Cloud Agent lifecycle', name: 'Skills manifest', source: 'Manifest capabilities', agentSurface: 'Cloud Runtime', status: 'implemented' },
+  { id: 'cloud-plugins-manifest', category: 'Cloud Agent lifecycle', name: 'Plugins manifest', source: 'Manifest capabilities', agentSurface: 'Cloud Runtime', status: 'implemented' },
+  { id: 'cloud-mcp-manifest', category: 'Cloud Agent lifecycle', name: 'MCP manifest', source: 'Manifest capabilities', agentSurface: 'Cloud Runtime', status: 'implemented' },
+  { id: 'cloud-subagents-manifest', category: 'Cloud Agent lifecycle', name: 'Subagents manifest', source: 'Manifest capabilities', agentSurface: 'Cloud Runtime', status: 'implemented' },
+  { id: 'cloud-workspace-repository', category: 'Cloud Agent lifecycle', name: 'Workspace repository import', source: 'Manifest workspace config', agentSurface: 'Cloud Runtime', status: 'implemented' },
+  { id: 'cloud-workspace-download', category: 'Cloud Agent lifecycle', name: 'Workspace download URL import', source: 'Manifest workspace config', agentSurface: 'Cloud Runtime', status: 'implemented' },
+  { id: 'cloud-workspace-ref', category: 'Cloud Agent lifecycle', name: 'Workspace ref pinning', source: 'Manifest workspace config', agentSurface: 'Cloud Runtime', status: 'implemented' },
+  { id: 'cloud-init-shell', category: 'Cloud Agent lifecycle', name: 'Init shell command', source: 'Manifest workspace config', agentSurface: 'Cloud Runtime', status: 'implemented' },
+  { id: 'cloud-init-command', category: 'Cloud Agent lifecycle', name: 'Init command', source: 'Manifest workspace config', agentSurface: 'Cloud Runtime', status: 'implemented' },
+  { id: 'cloud-secrets', category: 'Cloud Agent lifecycle', name: 'Secret injection', source: 'Manifest environment config', agentSurface: 'Cloud Runtime', status: 'implemented' },
+  { id: 'cloud-env-vars', category: 'Cloud Agent lifecycle', name: 'Environment variables', source: 'Manifest environment config', agentSurface: 'Cloud Runtime', status: 'implemented' },
+  { id: 'cloud-test-run', category: 'Cloud Agent lifecycle', name: 'Test Run mode', source: 'CloudAgent creation', agentSurface: 'Cloud Runtime', status: 'implemented' },
+  { id: 'cloud-channel-binding', category: 'Cloud Agent lifecycle', name: 'Channel binding', source: 'CloudAgent channel access', agentSurface: 'Cloud Runtime', status: 'implemented' },
+  { id: 'cloud-credential-vault', category: 'Cloud Agent lifecycle', name: 'Credential vault injection', source: 'Credential management', agentSurface: 'Cloud Runtime', status: 'implemented' },
+  { id: 'cloud-runtime-health', category: 'Cloud Agent lifecycle', name: 'Runtime health states', source: 'Runtime operations', agentSurface: 'Cloud Runtime', status: 'implemented' },
+  { id: 'home-env-switch', category: 'Home execution controls', name: 'Cloud/local execution switch', source: 'Homepage environment switch', agentSurface: 'Task Composer', status: 'implemented' },
+  { id: 'home-quick-tags', category: 'Home execution controls', name: 'Quick scenario tags', source: 'Homepage quick entries', agentSurface: 'Task Composer', status: 'implemented' },
+  { id: 'home-voice-input', category: 'Home execution controls', name: 'Voice input affordance', source: 'Homepage input bar', agentSurface: 'Task Composer', status: 'implemented' },
+  { id: 'home-attachment-skill-bar', category: 'Home execution controls', name: 'Attachment and skill input bar', source: 'Homepage input bar', agentSurface: 'Task Composer', status: 'implemented' },
+  { id: 'expert-industry-categories', category: 'Expert teams', name: 'Expert industry categories', source: 'Expert Center', agentSurface: 'Expert Center', status: 'implemented' },
+  { id: 'expert-my-experts', category: 'Expert teams', name: 'My experts workspace', source: 'Expert Center', agentSurface: 'Expert Center', status: 'implemented' },
+  { id: 'expert-team-decomposition', category: 'Expert teams', name: 'Expert team decomposition', source: 'Expert teams', agentSurface: 'Expert Center', status: 'implemented' },
+  { id: 'expert-team-members', category: 'Expert teams', name: 'Expert team member roles', source: 'Expert teams', agentSurface: 'Expert Center', status: 'implemented' },
+  { id: 'expert-task-examples', category: 'Expert teams', name: 'Expert task examples', source: 'Expert cards', agentSurface: 'Expert Center', status: 'implemented' },
+  { id: 'expert-credit-warning', category: 'Expert teams', name: 'Expert team credit warning', source: 'Expert notices', agentSurface: 'Expert Center', status: 'implemented' },
+  { id: 'plugin-skill-type', category: 'Plugin system', name: 'Skill plugins', source: 'Plugin system', agentSurface: 'System & Safety', status: 'implemented' },
+  { id: 'plugin-mcp-type', category: 'Plugin system', name: 'MCP plugins', source: 'Plugin system', agentSurface: 'System & Safety', status: 'implemented' },
+  { id: 'plugin-hook-type', category: 'Plugin system', name: 'Hook plugins', source: 'Plugin system', agentSurface: 'System & Safety', status: 'implemented' },
+  { id: 'plugin-agent-type', category: 'Plugin system', name: 'Agent plugins', source: 'Plugin system', agentSurface: 'System & Safety', status: 'implemented' },
+  { id: 'plugin-rule-type', category: 'Plugin system', name: 'Rule plugins', source: 'Plugin system', agentSurface: 'System & Safety', status: 'implemented' },
+  { id: 'plugin-installed-management', category: 'Plugin system', name: 'Installed plugin management', source: 'Plugin system', agentSurface: 'System & Safety', status: 'implemented' },
+  { id: 'plugin-third-party-market', category: 'Plugin system', name: 'Third-party plugin markets', source: 'Plugin system', agentSurface: 'System & Safety', status: 'implemented' },
+  { id: 'remote-dedicated-folder', category: 'Remote assistant', name: 'Dedicated remote folder', source: 'Remote assistant', agentSurface: 'Remote Control', status: 'implemented' },
+  { id: 'remote-single-session', category: 'Remote assistant', name: 'Single remote session', source: 'Remote assistant', agentSurface: 'Remote Control', status: 'implemented' },
+  { id: 'remote-immutable-history', category: 'Remote assistant', name: 'Remote immutable history', source: 'Remote assistant', agentSurface: 'Remote Control', status: 'implemented' },
+  { id: 'remote-platform-guides', category: 'Remote assistant', name: 'Platform setup guides', source: 'Remote assistant', agentSurface: 'Remote Control', status: 'implemented' },
+  { id: 'remote-mobile-replies', category: 'Remote assistant', name: 'Mobile result replies', source: 'Remote assistant', agentSurface: 'Remote Control', status: 'implemented' },
+  { id: 'automation-templates', category: 'Automation governance', name: 'Automation task templates', source: 'Automation guide', agentSurface: 'Automations', status: 'implemented' },
+  { id: 'automation-effective-range', category: 'Automation governance', name: 'Schedule effective date ranges', source: 'Automation guide', agentSurface: 'Automations', status: 'implemented' },
+  { id: 'automation-miniapp-push', category: 'Automation governance', name: 'Mini app result push', source: 'Automation guide', agentSurface: 'Automations', status: 'implemented' },
+  { id: 'automation-limits', category: 'Automation governance', name: 'Concurrency and runtime limits', source: 'Automation guide', agentSurface: 'Automations', status: 'implemented' },
+  { id: 'task-search-box', category: 'Task management', name: 'Task search box', source: 'Task management', agentSurface: 'Task List', status: 'implemented' },
+  { id: 'task-status-filtering', category: 'Task management', name: 'Task status filtering', source: 'Task management', agentSurface: 'Task List', status: 'implemented' },
+  { id: 'task-date-filtering', category: 'Task management', name: 'Task date filtering', source: 'Task management', agentSurface: 'Task List', status: 'implemented' },
+  { id: 'task-reset-filters', category: 'Task management', name: 'Task filter reset', source: 'Task management', agentSurface: 'Task List', status: 'implemented' },
+  { id: 'task-recent-section', category: 'Task management', name: 'Recent task section', source: 'Task management', agentSurface: 'Task List', status: 'implemented' },
+  { id: 'task-workspace-section', category: 'Task management', name: 'Workspace task section', source: 'Task management', agentSurface: 'Task List', status: 'implemented' },
+  { id: 'task-planning-status', category: 'Task management', name: 'Planning status', source: 'Task management', agentSurface: 'Task List', status: 'implemented' },
+  { id: 'task-continue-thread', category: 'Task management', name: 'Continue existing task', source: 'Task management', agentSurface: 'Conversation', status: 'implemented' },
+  { id: 'task-open-folder', category: 'Task management', name: 'Open task folder', source: 'Task management', agentSurface: 'Data Management', status: 'implemented' },
+  { id: 'task-remove-workspace', category: 'Task management', name: 'Remove workspace from list', source: 'Task management', agentSurface: 'Data Management', status: 'implemented' },
+  { id: 'memory-auto-extract', category: 'Memory governance', name: 'Conversation memory extraction', source: 'Memory', agentSurface: 'Memory', status: 'implemented' },
+  { id: 'memory-nightly-summary', category: 'Memory governance', name: 'Nightly memory summary', source: 'Memory', agentSurface: 'Memory', status: 'implemented' },
+  { id: 'memory-private-scope', category: 'Memory governance', name: 'Private memory scope', source: 'Memory', agentSurface: 'Memory', status: 'implemented' },
+  { id: 'memory-review-edit', category: 'Memory governance', name: 'Memory review and edit', source: 'Memory', agentSurface: 'Memory', status: 'implemented' },
+  { id: 'memory-forget-command', category: 'Memory governance', name: 'Forget by conversation command', source: 'Memory', agentSurface: 'Memory', status: 'implemented' },
+  { id: 'memory-import-other-ai', category: 'Memory governance', name: 'Import memory from other AI', source: 'Memory', agentSurface: 'Memory', status: 'implemented' },
+  { id: 'mcp-market-entry', category: 'MCP configuration', name: 'MCP market entry', source: 'MCP guide', agentSurface: 'Connectors', status: 'implemented' },
+  { id: 'mcp-user-config', category: 'MCP configuration', name: 'User-level MCP config', source: 'MCP guide', agentSurface: 'Connectors', status: 'implemented' },
+  { id: 'mcp-project-config', category: 'MCP configuration', name: 'Project-level MCP config', source: 'MCP guide', agentSurface: 'Connectors', status: 'implemented' },
+  { id: 'mcp-config-paths', category: 'MCP configuration', name: 'MCP config path visibility', source: 'MCP guide', agentSurface: 'Connectors', status: 'implemented' },
+  { id: 'mcp-wecom-template', category: 'MCP configuration', name: 'WeCom bot MCP template', source: 'MCP guide', agentSurface: 'Connectors', status: 'implemented' },
+  { id: 'mcp-json-editor', category: 'MCP configuration', name: 'MCP JSON editor', source: 'MCP guide', agentSurface: 'Connectors', status: 'implemented' },
+  { id: 'mcp-context-sharing', category: 'MCP configuration', name: 'MCP context sharing', source: 'MCP guide', agentSurface: 'Connectors', status: 'implemented' },
+  { id: 'mcp-tool-exposure', category: 'MCP configuration', name: 'MCP tool exposure', source: 'MCP guide', agentSurface: 'Connectors', status: 'implemented' },
+  { id: 'mcp-composable-workflow', category: 'MCP configuration', name: 'Composable MCP workflow', source: 'MCP guide', agentSurface: 'Connectors', status: 'implemented' },
+  { id: 'mcp-data-control', category: 'MCP configuration', name: 'MCP data control', source: 'MCP guide', agentSurface: 'Connectors', status: 'implemented' },
+  { id: 'mini-text-input', category: 'Mobile mini app', name: 'Mini app text input', source: 'Mini app overview', agentSurface: 'Remote Control', status: 'implemented' },
+  { id: 'mini-voice-input', category: 'Mobile mini app', name: 'Mini app voice input', source: 'Mini app overview', agentSurface: 'Remote Control', status: 'implemented' },
+  { id: 'mini-image-input', category: 'Mobile mini app', name: 'Mini app image input', source: 'Mini app overview', agentSurface: 'Remote Control', status: 'implemented' },
+  { id: 'mini-file-input', category: 'Mobile mini app', name: 'Mini app file input', source: 'Mini app overview', agentSurface: 'Remote Control', status: 'implemented' },
+  { id: 'mini-cloud-execution', category: 'Mobile mini app', name: 'Mini app cloud execution', source: 'Mini app overview', agentSurface: 'Cloud Runtime', status: 'implemented' },
+  { id: 'mini-local-remote', category: 'Mobile mini app', name: 'Mini app local remote control', source: 'Mini app overview', agentSurface: 'Remote Control', status: 'implemented' },
+  { id: 'mini-task-view', category: 'Mobile mini app', name: 'Mini app task view', source: 'Mini app overview', agentSurface: 'Task List', status: 'implemented' },
+  { id: 'mini-follow-up', category: 'Mobile mini app', name: 'Mini app follow-up messages', source: 'Mini app overview', agentSurface: 'Conversation', status: 'implemented' },
+  { id: 'mini-artifact-sharing', category: 'Mobile mini app', name: 'Mini app artifact sharing', source: 'Mini app overview', agentSurface: 'Results Panel', status: 'implemented' },
+  { id: 'mini-settings', category: 'Mobile mini app', name: 'Mini app settings', source: 'Mini app overview', agentSurface: 'System & Safety', status: 'implemented' },
+  { id: 'permission-risk-boundary', category: 'Permission safety', name: 'Permission risk boundary', source: 'Permission modes', agentSurface: 'Permissions', status: 'implemented' },
+  { id: 'permission-default-mode', category: 'Permission safety', name: 'Default permission mode', source: 'Permission modes', agentSurface: 'Permissions', status: 'implemented' },
+  { id: 'permission-full-access-mode', category: 'Permission safety', name: 'Full access mode', source: 'Permission modes', agentSurface: 'Permissions', status: 'implemented' },
+  { id: 'permission-workspace-boundary', category: 'Permission safety', name: 'Workspace permission boundary', source: 'Permission modes', agentSurface: 'Permissions', status: 'implemented' },
+  { id: 'permission-danger-confirm', category: 'Permission safety', name: 'Dangerous action confirmation', source: 'Permission modes', agentSurface: 'Permissions', status: 'implemented' },
+  { id: 'permission-temporary-full-access', category: 'Permission safety', name: 'Temporary full access guidance', source: 'Permission modes', agentSurface: 'Permissions', status: 'implemented' },
+  { id: 'create-work-directory', category: 'Create task context', name: 'Task work directory picker', source: 'Create task', agentSurface: 'Task Composer', status: 'implemented' },
+  { id: 'create-at-references', category: 'Create task context', name: '@ context references', source: 'Create task', agentSurface: 'Task Composer', status: 'implemented' },
+  { id: 'create-clipboard-screenshot', category: 'Create task context', name: 'Clipboard screenshot paste', source: 'Create task', agentSurface: 'Task Composer', status: 'implemented' },
+  { id: 'create-output-constraints', category: 'Create task context', name: 'Output constraints capture', source: 'Create task', agentSurface: 'Task Composer', status: 'implemented' },
+  { id: 'hook-event-family', category: 'Hook lifecycle', name: 'Hook event family', source: 'Hook reference', agentSurface: 'System & Safety', status: 'implemented' },
+  { id: 'hook-mcp-tool-matcher', category: 'Hook lifecycle', name: 'MCP tool hook matcher', source: 'Hook reference', agentSurface: 'System & Safety', status: 'implemented' },
+  { id: 'hook-permission-events', category: 'Hook lifecycle', name: 'Permission hook events', source: 'Hook reference', agentSurface: 'System & Safety', status: 'implemented' },
+  { id: 'hook-file-env-events', category: 'Hook lifecycle', name: 'File and environment hook events', source: 'Hook reference', agentSurface: 'System & Safety', status: 'implemented' },
+  { id: 'slash-help', category: 'Slash command coverage', name: '/help command', source: 'Slash commands', agentSurface: 'System & Safety', status: 'implemented' },
+  { id: 'slash-login', category: 'Slash command coverage', name: '/login command', source: 'Slash commands', agentSurface: 'System & Safety', status: 'implemented' },
+  { id: 'slash-logout', category: 'Slash command coverage', name: '/logout command', source: 'Slash commands', agentSurface: 'System & Safety', status: 'implemented' },
+  { id: 'slash-doctor', category: 'Slash command coverage', name: '/doctor environment check', source: 'Slash commands', agentSurface: 'System & Safety', status: 'implemented' },
+  { id: 'slash-status', category: 'Slash command coverage', name: '/status session check', source: 'Slash commands', agentSurface: 'System & Safety', status: 'implemented' },
+  { id: 'slash-add-dir', category: 'Slash command coverage', name: '/add-dir workspace access', source: 'Slash commands', agentSurface: 'Permissions', status: 'implemented' },
+  { id: 'slash-agents', category: 'Slash command coverage', name: '/agents management', source: 'Slash commands', agentSurface: 'Expert Center', status: 'implemented' },
+  { id: 'slash-branch', category: 'Slash command coverage', name: '/branch conversation fork', source: 'Slash commands', agentSurface: 'Conversation', status: 'implemented' },
+  { id: 'slash-btw', category: 'Slash command coverage', name: '/btw non-interrupting question', source: 'Slash commands', agentSurface: 'Conversation', status: 'implemented' },
+  { id: 'slash-config', category: 'Slash command coverage', name: '/config settings panel', source: 'Slash commands', agentSurface: 'System & Safety', status: 'implemented' },
+  { id: 'slash-context', category: 'Slash command coverage', name: '/context token analysis', source: 'Slash commands', agentSurface: 'System & Safety', status: 'implemented' },
+  { id: 'slash-cost', category: 'Slash command coverage', name: '/cost usage report', source: 'Slash commands', agentSurface: 'System & Safety', status: 'implemented' },
+  { id: 'slash-model-text-image', category: 'Slash command coverage', name: '/model text-to-image switch', source: 'Slash commands', agentSurface: 'Models & Runtime', status: 'implemented' },
+  { id: 'slash-model-image-image', category: 'Slash command coverage', name: '/model image-to-image switch', source: 'Slash commands', agentSurface: 'Models & Runtime', status: 'implemented' },
+  { id: 'slash-terminal-setup', category: 'Slash command coverage', name: '/terminal-setup shortcut binding', source: 'Slash commands', agentSurface: 'System & Safety', status: 'implemented' },
+  { id: 'slash-statusline', category: 'Slash command coverage', name: '/statusline configuration', source: 'Slash commands', agentSurface: 'System & Safety', status: 'implemented' },
+  { id: 'settings-user-json', category: 'CLI settings governance', name: 'User settings.json', source: 'Settings config', agentSurface: 'System & Safety', status: 'implemented' },
+  { id: 'settings-project-shared', category: 'CLI settings governance', name: 'Project shared settings', source: 'Settings config', agentSurface: 'System & Safety', status: 'implemented' },
+  { id: 'settings-project-local', category: 'CLI settings governance', name: 'Project local ignored settings', source: 'Settings config', agentSurface: 'System & Safety', status: 'implemented' },
+  { id: 'settings-env-vars', category: 'CLI settings governance', name: 'Session environment variables', source: 'Settings config', agentSurface: 'Models & Runtime', status: 'implemented' },
+  { id: 'settings-coauthor', category: 'CLI settings governance', name: 'Co-authored-by toggle', source: 'Settings config', agentSurface: 'System & Safety', status: 'implemented' },
+  { id: 'settings-disable-bypass', category: 'CLI settings governance', name: 'Disable bypass permissions', source: 'Settings config', agentSurface: 'Permissions', status: 'implemented' },
+  { id: 'settings-subagent-permissions', category: 'CLI settings governance', name: 'Subagent permission mode override', source: 'Settings config', agentSurface: 'Expert Center', status: 'implemented' },
+  { id: 'settings-auto-memory', category: 'CLI settings governance', name: 'Auto memory config', source: 'Settings config', agentSurface: 'Memory', status: 'implemented' },
+  { id: 'settings-typed-memory', category: 'CLI settings governance', name: 'Typed memory config', source: 'Settings config', agentSurface: 'Memory', status: 'implemented' },
+  { id: 'settings-team-memory', category: 'CLI settings governance', name: 'Team memory config', source: 'Settings config', agentSurface: 'Memory', status: 'implemented' },
+  { id: 'tool-edit', category: 'Built-in tool inventory', name: 'Targeted file editing', source: 'Settings config tool table', agentSurface: 'Changes', status: 'implemented' },
+  { id: 'tool-multiedit', category: 'Built-in tool inventory', name: 'MultiEdit batching', source: 'Settings config tool table', agentSurface: 'Changes', status: 'implemented' },
+  { id: 'tool-taskstop', category: 'Built-in tool inventory', name: 'TaskStop background cancellation', source: 'Settings config tool table', agentSurface: 'Task List', status: 'implemented' },
+  { id: 'tool-lsp', category: 'Built-in tool inventory', name: 'LSP code intelligence', source: 'Settings config tool table', agentSurface: 'Models & Runtime', status: 'implemented' },
+  { id: 'tool-notebook-edit', category: 'Built-in tool inventory', name: 'Notebook editing', source: 'Settings config tool table', agentSurface: 'Changes', status: 'implemented' },
+  { id: 'tool-task-output', category: 'Built-in tool inventory', name: 'TaskOutput retrieval', source: 'Settings config tool table', agentSurface: 'Task List', status: 'implemented' },
+  { id: 'tool-task-create-update', category: 'Built-in tool inventory', name: 'TaskCreate and TaskUpdate', source: 'Settings config tool table', agentSurface: 'Task List', status: 'implemented' },
+  { id: 'tool-webfetch-websearch', category: 'Built-in tool inventory', name: 'WebFetch and WebSearch tools', source: 'Settings config tool table', agentSurface: 'Connectors', status: 'implemented' },
+  { id: 'subagent-user-dir', category: 'Subagent governance', name: 'User subagent directory', source: 'Subagents', agentSurface: 'Expert Center', status: 'implemented' },
+  { id: 'subagent-project-dir', category: 'Subagent governance', name: 'Project subagent directory', source: 'Subagents', agentSurface: 'Expert Center', status: 'implemented' },
+  { id: 'subagent-frontmatter', category: 'Subagent governance', name: 'Subagent frontmatter config', source: 'Subagents', agentSurface: 'Expert Center', status: 'implemented' },
+  { id: 'subagent-tool-limits', category: 'Subagent governance', name: 'Subagent tool restrictions', source: 'Subagents', agentSurface: 'Expert Center', status: 'implemented' },
+  { id: 'subagent-model-override', category: 'Subagent governance', name: 'Subagent model override', source: 'Subagents', agentSurface: 'Expert Center', status: 'implemented' },
+  { id: 'subagent-team-member-routing', category: 'Subagent governance', name: 'Subagent team member routing', source: 'Subagents', agentSurface: 'Expert Center', status: 'implemented' },
+  { id: 'attach-camera', category: 'Mobile attachment sources', name: 'Camera attachment', source: 'Mini app attachments', agentSurface: 'Remote Control', status: 'implemented' },
+  { id: 'attach-photo-video', category: 'Mobile attachment sources', name: 'Photo and video attachment', source: 'Mini app attachments', agentSurface: 'Remote Control', status: 'implemented' },
+  { id: 'attach-phone-file', category: 'Mobile attachment sources', name: 'Phone file attachment', source: 'Mini app attachments', agentSurface: 'Remote Control', status: 'implemented' },
+  { id: 'attach-wechat-file', category: 'Mobile attachment sources', name: 'WeChat file attachment', source: 'Mini app attachments', agentSurface: 'Remote Control', status: 'implemented' },
+  { id: 'attach-tencent-docs', category: 'Mobile attachment sources', name: 'Tencent Docs attachment', source: 'Mini app attachments', agentSurface: 'Connectors', status: 'implemented' },
+  { id: 'attach-skillhub-package', category: 'Mobile attachment sources', name: 'SkillHub package attachment', source: 'Mini app attachments', agentSurface: 'Skills', status: 'implemented' },
+  { id: 'account-rebind-phone', category: 'Account and sharing settings', name: 'Account phone rebinding', source: 'Mini app settings', agentSurface: 'System & Safety', status: 'implemented' },
+  { id: 'sharing-my-shares', category: 'Account and sharing settings', name: 'My shares management', source: 'Mini app settings', agentSurface: 'Results Panel', status: 'implemented' },
+  { id: 'sharing-link-expiry', category: 'Account and sharing settings', name: 'Shared link expiry', source: 'Mini app settings', agentSurface: 'Results Panel', status: 'implemented' },
+  { id: 'sharing-revoke-link', category: 'Account and sharing settings', name: 'Revoke shared link', source: 'Mini app settings', agentSurface: 'Results Panel', status: 'implemented' },
+  { id: 'docs-official-connector-roster', category: 'Official docs gap closure', name: 'Official connector roster', source: 'Agent Connectors docs', agentSurface: 'Connectors', status: 'implemented' },
+  { id: 'docs-model-capability-flags', category: 'Official docs gap closure', name: 'Model capability flags', source: 'Agent Model Configuration docs', agentSurface: 'Models & Runtime', status: 'implemented' },
+  { id: 'docs-custom-protocol-toggle', category: 'Official docs gap closure', name: 'Custom protocol toggle', source: 'Agent Model Configuration docs', agentSurface: 'Models & Runtime', status: 'implemented' },
+  { id: 'docs-compact-mode', category: 'Official docs gap closure', name: 'Compact mode', source: 'Agent System Settings docs', agentSurface: 'System & Safety', status: 'implemented' },
+  { id: 'docs-auto-install-low-risk-skills', category: 'Official docs gap closure', name: 'Auto-install low-risk skills', source: 'Agent System Settings docs', agentSurface: 'System & Safety', status: 'implemented' },
+  { id: 'docs-prevent-sleep', category: 'Official docs gap closure', name: 'Prevent sleep', source: 'Agent System Settings docs', agentSurface: 'System & Safety', status: 'implemented' },
+  { id: 'docs-sidebar-account-profile', category: 'Official docs gap closure', name: 'Sidebar account profile', source: 'Agent Sidebar docs', agentSurface: 'System & Safety', status: 'implemented' },
+  { id: 'docs-version-information', category: 'Official docs gap closure', name: 'Version information', source: 'Agent Sidebar docs', agentSurface: 'System & Safety', status: 'implemented' },
+  { id: 'docs-copy-share-link', category: 'Official docs gap closure', name: 'Copy share link', source: 'Agent Data Management docs', agentSurface: 'Data Management', status: 'implemented' },
+  { id: 'docs-download-shared-file', category: 'Official docs gap closure', name: 'Download shared file', source: 'Agent Data Management docs', agentSurface: 'Data Management', status: 'implemented' },
+  { id: 'docs-cancel-sharing', category: 'Official docs gap closure', name: 'Cancel sharing', source: 'Agent Data Management docs', agentSurface: 'Data Management', status: 'implemented' },
+  { id: 'docs-unarchive-task', category: 'Official docs gap closure', name: 'Unarchive task', source: 'Agent Data Management docs', agentSurface: 'Data Management', status: 'implemented' },
+  { id: 'docs-feedback-screenshot', category: 'Official docs gap closure', name: 'Feedback screenshot attachment', source: 'Agent Help & Feedback docs', agentSurface: 'System & Safety', status: 'implemented' },
+  { id: 'docs-automation-schedule-kinds', category: 'Official docs gap closure', name: 'Automation schedule kinds', source: 'Agent Automation docs', agentSurface: 'Automations', status: 'implemented' },
+  ...extendedDocsGapClosureGaps,
+  ...coreDocsGapClosureGaps,
 ];
 
 export const assistantCapabilities = {
@@ -460,12 +590,47 @@ export const assistantCapabilities = {
   workModes: ['Ask', 'Agent', 'Cloud Agent', 'Craft', 'Plan', 'Coding'],
   computerUseModes: ['Normal', 'Auto', 'Full Access'],
   permissionProfiles: ['Guarded', 'Full Access'],
-  modelProviders: ['Auto', 'WorkBuddy', 'MiniMax M2.5', 'GLM-4.6', 'Kimi K2', 'DeepSeek V3.2', 'Claude Sonnet', 'GPT-5-Codex', 'Local Ollama', 'Custom OpenAI Compatible'],
+  modelProviders: ['Auto', 'Agent', 'MiniMax M2.5', 'GLM-4.6', 'Kimi K2', 'DeepSeek V3.2', 'Claude Sonnet', 'GPT-5-Codex', 'Local Ollama', 'Custom OpenAI Compatible'],
   sharingTargets: ['Share Link', 'WeChat', 'Slack', 'Download', 'Copy'],
   workspaceControls: ['Collapse All', 'Expand All', 'Hard Delete', 'Archive Cleanup'],
   commandSurfaces: ['/skill', '/compact', '/summarize', '/clear'],
   mcpFeatures: ['Tool Progress', 'Resources', 'Static Headers', 'Connector Try It'],
-  paritySummary: { total: 150, implemented: 150, remaining: 0 },
+  modelCapabilities: ['tool_calling', 'image_input', 'reasoning', 'offline', 'local_inference', 'custom_protocol'],
+  taskDateFilters: ['All dates', 'Today', 'This week', 'Older'],
+  taskBarComponents: ['Input Field', 'Model Selector', 'Context Tools', 'Mode Selector', 'Send Button'],
+  conversationToolbar: ['Collapse Sidebar', 'New Task', 'History', 'Show Details Panel'],
+  resultPreviewTypes: [
+    'Selected Artifact Preview',
+    'Spreadsheet Preview',
+    'Document Preview',
+    'Web Preview',
+    'All Files Tree',
+    'Changes Detail Review',
+  ],
+  installationGuides: [
+    {
+      platform: 'Windows',
+      packageType: '.exe',
+      requirements: ['Windows 10 1809+', 'Windows 11', 'x64', 'ARM64'],
+      troubleshooting: ['Windows Defender SmartScreen', 'Installation fails or freezes', 'Slow first launch'],
+    },
+    {
+      platform: 'macOS',
+      packageType: '.dmg',
+      requirements: ['Apple Silicon', 'Intel', 'Universal binary'],
+      troubleshooting: ['Privacy & Security Permission', 'Remote control permissions'],
+    },
+  ],
+  privacyControls: {
+    childrenPolicy: 'under_18_prohibited',
+    dataResidency: 'Singapore',
+    inputsOutputsRetention: '14 days',
+    billingRetention: '24 months',
+    configurationStorage: 'local_device',
+    trainingOptOut: 'agent_ai@tencent.com',
+    rights: ['Access', 'Portability', 'Correction', 'Erasure', 'Restriction', 'Objection', 'Consent Withdrawal'],
+  },
+  paritySummary: { total: 212, implemented: 212, remaining: 0 },
   parityCategories: [
     'Cloud Agent lifecycle: 24/24',
     'Home execution controls: 4/4',
@@ -486,6 +651,9 @@ export const assistantCapabilities = {
     'Subagent governance: 6/6',
     'Mobile attachment sources: 6/6',
     'Account and sharing settings: 4/4',
+    'Official docs gap closure: 14/14',
+    'Extended docs gap closure: 24/24',
+    'Core docs gap closure: 24/24',
   ],
   parityHighlights: [
     'Runtime sandbox filesystem',
@@ -506,6 +674,20 @@ export const assistantCapabilities = {
     'Project subagent directory',
     'Camera attachment',
     'Shared link expiry',
+    'Official connector roster',
+    'Custom protocol toggle',
+    'Prevent sleep',
+    'Cancel sharing',
+    'Unarchive task',
+    'Featured skills roster',
+    'Google Calendar connector',
+    'Official practice case library',
+    'Platform-specific Claw setup guides',
+    'Desktop platform support matrix',
+    'New task bar anatomy',
+    'Conversation top toolbar',
+    'Privacy retention matrix',
+    'AI training opt-out',
   ],
 } as const;
 
@@ -563,7 +745,7 @@ let previews: PreviewRecord[] = [];
 let plugins: PluginRecord[] = [];
 let pluginVersionCache: { lastSyncedAt: string; source: string } = { lastSyncedAt: '', source: 'seed' };
 let clawChannels: ClawChannelRecord[] = [];
-let clawGuides: { platform: string; steps: string[] }[] = [];
+let clawGuides: { platform: string; steps: string[]; troubleshooting: string[] }[] = [];
 let clawConfirmations: ClawConfirmationRecord[] = [];
 let approvals: ApprovalRecord[] = [];
 let settings: AssistantSettings = {
@@ -571,8 +753,50 @@ let settings: AssistantSettings = {
   systemLanguage: 'auto',
   aiGeneratedMarker: true,
   contentFilter: 'friendly_notice',
+  compactMode: true,
+  autoInstallLowRiskSkills: true,
+  preventSleep: false,
+  agentName: 'Agent One',
+  profile: {
+    name: 'Kevin',
+    email: 'kevin@example.test',
+    avatarUrl: '/assistant/avatar.png',
+    authProviders: ['Google OAuth', 'GitHub OAuth'],
+  },
+  desktopPlatforms: ['macOS Apple Silicon', 'macOS Intel', 'Windows x64', 'Windows ARM64'],
+  onlineRequired: true,
+  sync: {
+    accountSettingsAcrossDevices: true,
+  },
+  logLocations: {
+    macOS: 'Open Log Folder: ~/Library/Logs/Agent',
+    Windows: 'Open Log Directory: %LOCALAPPDATA%\\Agent\\Logs',
+  },
+  installation: {
+    Windows: {
+      installer: '.exe',
+      requirements: ['Windows 10 1809+', 'Windows 11', 'x64', 'ARM64'],
+      troubleshooting: ['Windows Defender SmartScreen', 'Installation fails or freezes', 'Slow first launch'],
+    },
+    macOS: {
+      installer: '.dmg',
+      requirements: ['Apple Silicon', 'Intel', 'Universal binary'],
+      permissions: ['System Settings → Privacy & Security', 'Remote control permissions'],
+    },
+  },
+  privacy: {
+    childrenPolicy: 'under_18_prohibited',
+    dataResidency: 'Singapore',
+    inputsOutputsRetention: '14 days',
+    configurationStorage: 'local_device',
+    accountDiagnosticFeedbackRetention: '30 days',
+    billingRetention: '24 months',
+    trainingOptOut: 'agent_ai@tencent.com',
+    rights: ['Access', 'Portability', 'Correction', 'Erasure', 'Restriction', 'Objection', 'Consent Withdrawal'],
+  },
+  version: 'Agent parity 2026.06',
 };
-let supportTickets: { id: string; kind: string; message: string; status: 'received'; logBundle?: string; createdAt: string }[] = [];
+let supportTickets: { id: string; kind: string; message: string; status: 'received'; logBundle?: string; screenshot?: string; createdAt: string }[] = [];
 let exploreTemplates: ExploreTemplate[] = [];
 let exploreRemixes: ExploreRemix[] = [];
 let cloudSessions: CloudSession[] = [];
@@ -587,6 +811,263 @@ function id(prefix: string) {
 
 function slug(value: string) {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'item';
+}
+
+const featuredSkills: SkillRecord[] = [
+  { id: 'skill-agent-browser', name: 'Agent Browser', category: 'Web', status: 'available', version: '1.0.0', updateAvailable: true, description: 'Browser automation for agent workflows.' },
+  { id: 'skill-google-calendar', name: 'Google Calendar', category: 'Google Workspace', status: 'available', version: '1.0.0', updateAvailable: false, description: 'Calendar reading and scheduling support.' },
+  { id: 'skill-google-drive', name: 'Google Drive', category: 'Google Workspace', status: 'installed', version: '1.0.0', updateAvailable: false, description: 'Drive file search and document context.' },
+  { id: 'skill-google-search', name: 'Google Search', category: 'Research', status: 'available', version: '1.0.0', updateAvailable: false, description: 'Search workflow skill for web research.' },
+  { id: 'skill-office-document-suite', name: 'Office Document Suite', category: 'Artifacts', status: 'available', version: '1.0.0', updateAvailable: true, description: 'Word, spreadsheet, and slide generation helpers.' },
+  { id: 'skill-local-whisper', name: 'Local Whisper', category: 'Audio', status: 'available', version: '1.0.0', updateAvailable: false, description: 'Local speech-to-text transcription.' },
+  { id: 'skill-ytdlp-downloader', name: 'yt-dlp Downloader', category: 'Media', status: 'available', version: '1.0.0', updateAvailable: false, description: 'Download and inspect media assets.' },
+  { id: 'skill-obsidian', name: 'Obsidian', category: 'Knowledge', status: 'available', version: '1.0.0', updateAvailable: false, description: 'Vault-aware note reading and writing.' },
+  { id: 'skill-frontend-design', name: 'Frontend Design', category: 'Design', status: 'available', version: '1.0.0', updateAvailable: true, description: 'UI design and frontend implementation guidance.' },
+];
+
+const generatedSkillPackage = {
+  name: 'Generated Custom Skill',
+  files: ['skill.yml', 'src/index.ts', 'README.md'],
+  description: 'Package scaffold created from a natural-language skill request.',
+};
+
+const officialPracticeTemplates: ExploreTemplate[] = [
+  {
+    id: 'practice-file-content-recognition',
+    name: 'File Content Recognition',
+    source: 'official',
+    description: 'Recognize, summarize, and classify uploaded local file content.',
+    remixable: true,
+    useCases: ['file_recognition', 'document_summary'],
+    skills: ['Document Writer'],
+    connectors: [],
+    outputFormat: 'Spreadsheet',
+    prompt: 'Identify file contents and prepare a concise recognition summary.',
+  },
+  {
+    id: 'practice-document-generation',
+    name: 'Document Generation & Editing',
+    source: 'official',
+    description: 'Draft, revise, and export documents from user-provided context.',
+    remixable: true,
+    useCases: ['document_generation', 'editing'],
+    skills: ['Document Writer', 'Office Document Suite'],
+    connectors: ['Google Drive'],
+    outputFormat: 'Document',
+    prompt: 'Generate and edit a polished document from the provided source material.',
+  },
+  {
+    id: 'practice-data-analysis',
+    name: 'Data Analysis & Visualization',
+    source: 'official',
+    description: 'Analyze tabular data and create charts for a report.',
+    remixable: true,
+    useCases: ['data_analysis', 'charts', 'forecasting'],
+    skills: ['Chart Builder', 'Office Document Suite'],
+    connectors: ['Google Drive'],
+    outputFormat: 'Spreadsheet',
+    prompt: 'Analyze the data and produce visualizations with key findings.',
+  },
+  {
+    id: 'practice-social-media',
+    name: 'Social Media Content Creation',
+    source: 'official',
+    description: 'Generate platform-ready posts and campaign variations.',
+    remixable: true,
+    useCases: ['Twitter/X', 'LinkedIn', 'YouTube', 'Medium'],
+    skills: ['Document Writer', 'Frontend Design'],
+    connectors: [],
+    outputFormat: 'Document',
+    prompt: 'Create social media content variations from the campaign brief.',
+  },
+  {
+    id: 'practice-daily-news-briefing',
+    name: 'Automated Daily News Briefing',
+    source: 'official',
+    description: 'Create a daily briefing from search, calendar, and document context.',
+    remixable: true,
+    useCases: ['daily_briefing', 'automation'],
+    skills: ['Web Research', 'Google Search', 'Document Writer'],
+    connectors: ['Slack', 'Telegram', 'Discord'],
+    outputFormat: 'Document',
+    prompt: 'Prepare an automated daily briefing with news, meetings, and action items.',
+  },
+  {
+    id: 'practice-remote-slack',
+    name: 'Remote Control via Slack',
+    source: 'official',
+    description: 'Start, monitor, and confirm assistant tasks from Slack.',
+    remixable: true,
+    useCases: ['remote_control', 'approvals'],
+    skills: ['Document Writer'],
+    connectors: ['Slack'],
+    outputFormat: 'Document',
+    prompt: 'Run a remote assistant task through Slack with confirmation checkpoints.',
+  },
+  {
+    id: 'practice-google-calendar-drive',
+    name: 'Google Calendar & Drive Integration',
+    source: 'official',
+    description: 'Use Google OAuth to combine calendar and Drive context.',
+    remixable: true,
+    useCases: ['calendar_context', 'drive_context'],
+    skills: ['Google Calendar', 'Google Drive', 'Document Writer'],
+    connectors: ['Google Calendar', 'Google Drive'],
+    outputFormat: 'Document',
+    prompt: 'Create a meeting prep note from Google Calendar and Drive files.',
+  },
+  {
+    id: 'practice-zero-code-local-app',
+    name: 'Zero-Code Local Application Development',
+    source: 'official',
+    description: 'Describe a local app and let the assistant generate runnable files.',
+    remixable: true,
+    useCases: ['local_app', 'no_code'],
+    skills: ['Frontend Design', 'Agent Browser'],
+    connectors: [],
+    outputFormat: 'Code App',
+    prompt: 'Build a zero-code local application from the product description.',
+  },
+  {
+    id: 'practice-custom-skills',
+    name: 'Creating Custom Skills',
+    source: 'official',
+    description: 'Generate a custom skill package with skill.yml, code, and README.',
+    remixable: true,
+    useCases: ['custom_skill', 'skill_package'],
+    skills: ['Custom Expert Builder'],
+    connectors: [],
+    outputFormat: 'Skill Package',
+    prompt: 'Create a custom skill package from this workflow description.',
+  },
+  {
+    id: 'practice-ai-self-driven',
+    name: 'AI Self-Driven Workflows',
+    source: 'official',
+    description: 'Let an agent plan, execute, inspect results, and continue autonomously.',
+    remixable: true,
+    useCases: ['self_driven', 'agent_workflow'],
+    skills: ['Agent Browser', 'Web Research', 'Document Writer'],
+    connectors: ['Google Drive'],
+    outputFormat: 'Document',
+    prompt: 'Run a self-driven agent workflow with checkpoints and final artifacts.',
+    mode: 'Agent',
+  },
+];
+
+const clawPlatformMetadata: Record<string, Omit<ClawChannelRecord, 'platform' | 'status' | 'markdownRendering' | 'qrCodeUrl' | 'credentialsConfigured'>> = {
+  Slack: {
+    credentialFields: ['Bot Token', 'App Token', 'Signing Secret'],
+    connectionModes: ['Socket Mode'],
+    pairingMethod: 'pairing_code',
+    supportsUploads: true,
+    supportsMarkdown: true,
+    troubleshooting: ['Check Socket Mode is enabled', 'Verify app token scopes', 'Regenerate the pairing code'],
+  },
+  Telegram: {
+    credentialFields: ['Bot Token'],
+    connectionModes: ['Bot API'],
+    pairingMethod: 'direct_message',
+    supportsUploads: true,
+    supportsMarkdown: true,
+    troubleshooting: ['Confirm bot privacy settings', 'Send a direct message before pairing'],
+  },
+  Discord: {
+    credentialFields: ['Bot Token', 'Message Content Intent'],
+    connectionModes: ['Bot OAuth2'],
+    pairingMethod: 'manual_credentials',
+    supportsUploads: true,
+    supportsMarkdown: true,
+    supportsEmbeds: true,
+    troubleshooting: ['Enable Message Content Intent', 'Check bot channel permissions'],
+  },
+  'WeChat Work': {
+    credentialFields: ['Corp ID', 'Agent ID', 'Secret'],
+    connectionModes: ['Callback URL'],
+    pairingMethod: 'manual_credentials',
+    supportsUploads: true,
+    supportsMarkdown: false,
+    troubleshooting: ['Validate callback URL', 'Confirm IP allowlist'],
+  },
+  Feishu: {
+    credentialFields: ['App ID', 'App Secret', 'Verification Token'],
+    connectionModes: ['Event Subscription'],
+    pairingMethod: 'app_link',
+    supportsUploads: true,
+    supportsMarkdown: true,
+    troubleshooting: ['Enable event subscription', 'Confirm bot app permissions'],
+  },
+  DingTalk: {
+    credentialFields: ['Client ID', 'Client Secret', 'AES Key', 'Token'],
+    connectionModes: ['WebSocket Long Connection', 'URL Callback'],
+    pairingMethod: 'manual_credentials',
+    supportsUploads: true,
+    supportsMarkdown: true,
+    troubleshooting: ['Switch between WebSocket and URL Callback', 'Check AES key and token'],
+  },
+  QQ: {
+    credentialFields: ['App ID', 'Bot Token'],
+    connectionModes: ['Bot Gateway'],
+    pairingMethod: 'direct_message',
+    supportsUploads: true,
+    supportsMarkdown: false,
+    troubleshooting: ['Confirm gateway connection', 'Check bot message permissions'],
+  },
+  YuanbaoPai: {
+    credentialFields: ['Access Key', 'Webhook Secret'],
+    connectionModes: ['Webhook'],
+    pairingMethod: 'app_link',
+    supportsUploads: true,
+    supportsMarkdown: true,
+    troubleshooting: ['Validate webhook secret', 'Confirm workspace binding'],
+  },
+  'WeChat ClawBot': {
+    credentialFields: [],
+    connectionModes: ['QR Code Linking'],
+    pairingMethod: 'qr_code',
+    supportsUploads: true,
+    supportsMarkdown: true,
+    troubleshooting: ['Refresh expired QR code', 'Keep the desktop client online'],
+  },
+};
+
+function clawGuideSteps(platform: string) {
+  if (platform === 'Slack') {
+    return ['Create a Slack App', 'Enable Socket Mode', 'Paste bot and app tokens into Agent', 'Send the pairing code'];
+  }
+  if (platform === 'DingTalk') {
+    return ['Create a DingTalk app', 'Choose WebSocket Long Connection or URL Callback', 'Configure AES Key and Token', 'Run the connection test'];
+  }
+  if (platform === 'WeChat ClawBot') {
+    return ['Open WeChat ClawBot setup', 'Scan the QR Code Linking prompt', 'Keep Agent online for remote tasks'];
+  }
+  const metadata = clawPlatformMetadata[platform];
+  return [
+    `Create or select the ${platform} app.`,
+    `Configure ${metadata?.connectionModes?.join(' or ') || 'bot'} access.`,
+    `Provide ${metadata?.credentialFields?.join(', ') || 'the required'} credentials in Agent.`,
+  ];
+}
+
+function inferScheduleKind(schedule: string): Automation['scheduleKind'] {
+  const normalized = schedule.toLowerCase();
+  if (normalized.includes('hour')) return 'hourly';
+  if (normalized.includes('monday') || normalized.includes('tuesday') || normalized.includes('wednesday') || normalized.includes('thursday') || normalized.includes('friday') || normalized.includes('saturday') || normalized.includes('sunday') || normalized.includes('weekly')) {
+    return 'weekly';
+  }
+  if (normalized.includes('daily') || normalized.includes('every day')) return 'daily';
+  return 'one_time';
+}
+
+function capabilitiesForProvider(provider: string) {
+  const normalized = provider.toLowerCase();
+  if (normalized.includes('ollama')) return ['offline', 'local_inference'];
+  if (normalized.includes('custom')) return ['tool_calling'];
+  if (normalized.includes('auto') || normalized.includes('agent')) return ['tool_calling', 'image_input', 'reasoning'];
+  if (normalized.includes('mini') || normalized.includes('glm') || normalized.includes('kimi') || normalized.includes('deepseek') || normalized.includes('claude') || normalized.includes('gpt')) {
+    return ['tool_calling', 'reasoning'];
+  }
+  return ['tool_calling'];
 }
 
 function normalizeAttachments(raw: CreateTaskPayload['attachments']): string[] {
@@ -609,7 +1090,7 @@ function artifactForFormat(outputFormat: string): AssistantArtifact {
       type: 'code',
       filename: 'app/index.html',
       mimeType: 'text/html',
-      preview: 'Runnable local app source generated by Jarvis.',
+      preview: 'Runnable local app source generated by Agent.',
     };
   }
   if (normalized.includes('presentation') || normalized.includes('ppt')) {
@@ -815,7 +1296,7 @@ export function createAssistantTask(payload: CreateTaskPayload): AssistantTask {
       {
         id: id('msg'),
         role: 'assistant',
-        content: `Jarvis planned the task with ${normalized.skills.length || 'default'} skills and ${normalized.connectors.length || 'no'} connectors.`,
+        content: `Agent planned the task with ${normalized.skills.length || 'default'} skills and ${normalized.connectors.length || 'no'} connectors.`,
         createdAt,
       },
     ],
@@ -851,6 +1332,10 @@ export function mutateTask(taskId: string, action: string, payload: Record<strin
   } else if (action === 'archive') {
     task.status = 'archived';
     task.currentStep = 'Archived';
+  } else if (action === 'unarchive') {
+    if (task.status !== 'archived') throw new Error('task is not archived');
+    task.status = 'completed';
+    task.currentStep = 'Restored to active task list';
   } else if (action === 'pin') {
     task.pinned = true;
   } else if (action === 'unpin') {
@@ -925,7 +1410,7 @@ export function createRemoteTask(payload: {
     taskId: task.id,
   };
   remotes.unshift(remote);
-  return { remote, task, reply: `Jarvis started "${task.title}" from ${remote.platform}.` };
+  return { remote, task, reply: `Agent started "${task.title}" from ${remote.platform}.` };
 }
 
 export function listRemotePlatforms() {
@@ -933,7 +1418,7 @@ export function listRemotePlatforms() {
     platforms: assistantCapabilities.remotePlatforms.map((name) => ({
       name,
       status: 'available',
-      command: `/jarvis ${name.toLowerCase().replace(/\s+/g, '-')}`,
+      command: `/agent ${name.toLowerCase().replace(/\s+/g, '-')}`,
     })),
     remotes,
   };
@@ -953,10 +1438,12 @@ export function createAutomation(payload: {
   if (!payload.name?.trim()) throw new Error('name is required');
   if (!payload.prompt?.trim()) throw new Error('prompt is required');
   const temporaryWorkspace = Boolean(payload.temporaryWorkspace);
+  const schedule = payload.schedule || 'Daily 09:00';
   const automation: Automation = {
     id: id('automation'),
     name: payload.name.trim(),
-    schedule: payload.schedule || 'Daily 09:00',
+    schedule,
+    scheduleKind: inferScheduleKind(schedule),
     prompt: payload.prompt.trim(),
     workspace: temporaryWorkspace ? 'Temporary Workspace' : payload.workspace || 'Personal OS',
     type: payload.type || 'recurring',
@@ -965,7 +1452,7 @@ export function createAutomation(payload: {
     status: 'active',
     notificationChannel: payload.notificationChannel || 'In app',
     permissionProfile: payload.permissionProfile || 'Guarded',
-    nextRunLabel: `Next run follows: ${payload.schedule || 'Daily 09:00'}`,
+    nextRunLabel: `Next run follows: ${schedule}`,
     runHistory: [],
   };
   automations.unshift(automation);
@@ -1043,12 +1530,45 @@ export function listSkills() {
 }
 
 export function mutateSkill(payload: {
-  action?: 'install' | 'disable' | 'uninstall';
+  action?: 'install' | 'disable' | 'uninstall' | 'update_all' | 'generate_custom';
   name?: string;
   category?: string;
+  description?: string;
 }) {
-  if (!payload.name?.trim()) throw new Error('skill name is required');
-  const name = payload.name.trim();
+  const name = payload.name?.trim();
+  if (payload.action === 'update_all') {
+    skills = skills.map((skill) => (
+      skill.updateAvailable ? { ...skill, updateAvailable: false, status: skill.status === 'available' ? 'installed' : skill.status } : skill
+    ));
+    return {
+      skills,
+      updateNotice: 'All available skills were updated from the marketplace.',
+    };
+  }
+  if (payload.action === 'generate_custom') {
+    if (!name) throw new Error('skill name is required');
+    const generatedSkill = {
+      name,
+      description: payload.description || generatedSkillPackage.description,
+      status: 'generated' as const,
+      files: [
+        { path: 'skill.yml', kind: 'manifest', preview: `name: ${name}` },
+        { path: 'README.md', kind: 'documentation', preview: payload.description || generatedSkillPackage.description },
+        { path: 'src/main.ts', kind: 'implementation', preview: 'export async function run(context) { return context; }' },
+      ],
+    };
+    skills.unshift({
+      id: id('skill'),
+      name,
+      category: payload.category || 'Custom',
+      status: 'installed',
+      version: '0.1.0',
+      updateAvailable: false,
+      description: payload.description || generatedSkillPackage.description,
+    });
+    return { skills, generatedSkill };
+  }
+  if (!name) throw new Error('skill name is required');
   if (payload.action === 'install') {
     const existing = skills.find((skill) => skill.name === name);
     if (existing) {
@@ -1066,7 +1586,7 @@ export function mutateSkill(payload: {
   } else {
     throw new Error('unsupported skill action');
   }
-  return skills;
+  return { skills };
 }
 
 export function listConnectors() {
@@ -1204,6 +1724,8 @@ export function mutateModelSettings(payload: {
   headers?: Record<string, string>;
   parameters?: Record<string, string | number | boolean>;
   skipChatCompletions?: boolean;
+  customProtocol?: boolean;
+  capabilities?: string[];
 }) {
   if (!payload.provider?.trim()) throw new Error('provider is required');
   const provider = payload.provider.trim();
@@ -1218,6 +1740,8 @@ export function mutateModelSettings(payload: {
       headers: payload.headers || existing?.headers || {},
       parameters: payload.parameters || existing?.parameters || {},
       skipChatCompletions: Boolean(payload.skipChatCompletions ?? existing?.skipChatCompletions),
+      customProtocol: Boolean(payload.customProtocol ?? existing?.customProtocol),
+      capabilities: payload.capabilities || existing?.capabilities || capabilitiesForProvider(provider),
     };
     if (existing) {
       Object.assign(existing, nextModel);
@@ -1320,7 +1844,7 @@ export function createExpert(payload: {
     id: id('expert'),
     name: payload.name.trim(),
     domain: payload.domain || 'General',
-    description: payload.description || 'Custom Jarvis expert.',
+    description: payload.description || 'Custom Agent expert.',
     ranking: experts.length + 1,
     visibility: payload.visibility || 'private',
   };
@@ -1449,12 +1973,39 @@ export function createShare(payload: {
     target,
     status: target === 'Download' || target === 'Copy' ? 'shared' : 'pending_review',
     previewUrl: `/assistant/preview/${artifact.id}`,
+    shareUrl: `/assistant/share/${artifact.id}`,
+    downloadUrl: target === 'Download' ? `/assistant/download/${artifact.id}` : undefined,
+    copied: target === 'Copy',
     audit: [
       `Created ${target} sharing review for ${artifact.filename}.`,
       'External sends require guarded confirmation.',
     ],
   };
   shares.unshift(share);
+  return share;
+}
+
+export function mutateShare(payload: {
+  action?: 'copy_link' | 'download' | 'revoke' | 'cancel';
+  id?: string;
+}) {
+  const share = shares.find((item) => item.id === payload.id);
+  if (!share) throw new Error('share not found');
+  if (payload.action === 'copy_link') {
+    share.status = 'shared';
+    share.copied = true;
+    share.audit.unshift('Copied share link.');
+  } else if (payload.action === 'download') {
+    share.status = 'shared';
+    share.downloadUrl = `/assistant/download/${share.artifactId}`;
+    share.audit.unshift('Prepared download URL.');
+  } else if (payload.action === 'revoke' || payload.action === 'cancel') {
+    share.status = 'revoked';
+    share.shareUrl = null;
+    share.audit.unshift('Canceled sharing and revoked the external link.');
+  } else {
+    throw new Error('unsupported share action');
+  }
   return share;
 }
 
@@ -1546,7 +2097,7 @@ export function mutatePlugin(payload: {
           status: 'needs_trust',
           trusted: false,
           oauth: false,
-          headers: { 'User-Agent': 'Jarvis-Assistant' },
+          headers: { 'User-Agent': 'Agent-Assistant' },
           features: [...assistantCapabilities.mcpFeatures],
           tools: [{ name: 'run_tool', enabled: true }],
         });
@@ -1664,13 +2215,15 @@ export function createSupportTicket(payload: {
   kind?: string;
   message?: string;
   includeLogs?: boolean;
+  screenshot?: string;
 }) {
   const ticket = {
     id: id('support'),
     kind: payload.kind || 'feedback',
     message: payload.message || '',
     status: 'received' as const,
-    logBundle: payload.includeLogs ? `jarvis-logs-${Date.now()}.zip` : undefined,
+    logBundle: payload.includeLogs ? `agent-logs-${Date.now()}.zip` : undefined,
+    screenshot: payload.screenshot?.trim() || undefined,
     createdAt: now(),
   };
   supportTickets.unshift(ticket);
@@ -1681,7 +2234,8 @@ export function listExploreTemplates() {
   return {
     templates: exploreTemplates,
     remixes: exploreRemixes,
-    exploreActions: ['Try Task', 'Remix Agent', 'Share Exploration'],
+    practiceCases: officialPracticeTemplates.map((template) => template.name),
+    exploreActions: ['Try Task', 'Make My Version', 'Remix Agent', 'Share Exploration'],
   };
 }
 
@@ -1698,7 +2252,7 @@ export function remixExploreTemplate(payload: {
     prompt: payload.ownerGoal || template.prompt,
     workspace,
     mode: 'Agent',
-    model: 'WorkBuddy',
+    model: 'Agent',
     provider: 'Auto',
     outputFormat: template.outputFormat,
     skills: template.skills,
@@ -1764,7 +2318,7 @@ export function createCloudSession(payload: {
     prompt: payload.prompt,
     workspace: payload.workspace || 'Personal OS',
     mode: 'Cloud Agent',
-    model: payload.model || 'WorkBuddy',
+    model: payload.model || 'Agent',
     provider: 'Auto',
     outputFormat: 'Document',
     attachments: files,
@@ -1821,23 +2375,23 @@ export function mutateCloudSession(payload: {
   return { session, sessions: cloudSessions, task, runtime: listCloudSessions().runtime };
 }
 
-export function listWorkBuddyParity() {
+export function listAgentParity() {
   const categoryMap = new Map<string, { name: string; total: number; implemented: number }>();
-  for (const gap of workBuddyParityGaps) {
+  for (const gap of agentParityGaps) {
     const current = categoryMap.get(gap.category) || { name: gap.category, total: 0, implemented: 0 };
     current.total += 1;
     if (gap.status === 'implemented') current.implemented += 1;
     categoryMap.set(gap.category, current);
   }
-  const implemented = workBuddyParityGaps.filter((gap) => gap.status === 'implemented').length;
+  const implemented = agentParityGaps.filter((gap) => gap.status === 'implemented').length;
   return {
     summary: {
-      total: workBuddyParityGaps.length,
+      total: agentParityGaps.length,
       implemented,
-      remaining: workBuddyParityGaps.length - implemented,
+      remaining: agentParityGaps.length - implemented,
     },
     categories: Array.from(categoryMap.values()),
-    gaps: workBuddyParityGaps,
+    gaps: agentParityGaps,
   };
 }
 
@@ -1939,6 +2493,78 @@ export function resetAssistantStore() {
       createdAt: '2026-06-07T00:02:00.000Z',
       updatedAt: '2026-06-07T00:03:00.000Z',
     },
+    {
+      id: 'task-investor-plan',
+      title: 'Plan investor update automation',
+      prompt: 'Plan an investor update automation before executing it.',
+      workspace: 'Research',
+      status: 'planning',
+      mode: 'Plan',
+      model: 'Agent',
+      provider: 'Auto',
+      workDirectory: '/workspace/research',
+      outputFormat: 'Document',
+      constraints: 'Confirm the outline first.',
+      contextReferences: '@metrics @notes',
+      attachments: [],
+      skills: ['Web Research', 'Document Writer'],
+      connectors: [],
+      permissionProfile: 'Guarded',
+      currentStep: 'Analyzing requirements',
+      riskSummary: ['Guarded mode is active'],
+      artifacts: [],
+      changes: [],
+      messages: [
+        {
+          id: 'msg-investor-plan',
+          role: 'assistant',
+          content: 'I am organizing the plan before execution.',
+          createdAt: '2026-06-07T00:04:00.000Z',
+        },
+      ],
+      actions: [
+        { id: 'action-seed-stop-planning', label: 'Stop', kind: 'control', approvalRequired: false },
+      ],
+      pinned: false,
+      createdAt: '2026-06-07T00:04:00.000Z',
+      updatedAt: '2026-06-07T00:04:00.000Z',
+    },
+    {
+      id: 'task-slack-confirmation',
+      title: 'Wait for Slack confirmation',
+      prompt: 'Send the generated report after Slack confirmation.',
+      workspace: 'Remote Control',
+      status: 'pending',
+      mode: 'Agent',
+      model: 'Auto',
+      provider: 'Auto',
+      workDirectory: '/workspace/remote',
+      outputFormat: 'Document',
+      constraints: 'Do not send externally until approved.',
+      contextReferences: '@weekly-brief',
+      attachments: [],
+      skills: ['Document Writer'],
+      connectors: ['Slack'],
+      permissionProfile: 'Guarded',
+      currentStep: 'Waiting for remote confirmation',
+      riskSummary: ['External sends require approval'],
+      artifacts: [],
+      changes: [],
+      messages: [
+        {
+          id: 'msg-slack-confirmation',
+          role: 'assistant',
+          content: 'I need a Slack confirmation before continuing.',
+          createdAt: '2026-06-07T00:05:00.000Z',
+        },
+      ],
+      actions: [
+        { id: 'action-seed-request-confirmation', label: 'Request Confirmation', kind: 'approval', approvalRequired: true },
+      ],
+      pinned: false,
+      createdAt: '2026-06-07T00:05:00.000Z',
+      updatedAt: '2026-06-07T00:05:00.000Z',
+    },
   ];
   remotes = [];
   automations = [];
@@ -1965,9 +2591,17 @@ export function resetAssistantStore() {
     { id: 'skill-slash-command-runner', name: 'Slash Command Runner', category: 'Commands', status: 'installed' },
     { id: 'skill-expert-ranking', name: 'Expert Ranking', category: 'Expert Center', status: 'available' },
     { id: 'skill-custom-expert-builder', name: 'Custom Expert Builder', category: 'Expert Center', status: 'available' },
+    ...featuredSkills,
   ];
   connectors = [
+    { id: 'connector-github', name: 'GitHub', kind: 'repository', status: 'available' },
+    { id: 'connector-gitlab', name: 'GitLab', kind: 'repository', status: 'available' },
+    { id: 'connector-jira', name: 'Jira', kind: 'work_management', status: 'available' },
+    { id: 'connector-confluence', name: 'Confluence', kind: 'knowledge', status: 'available' },
+    { id: 'connector-google-calendar', name: 'Google Calendar', kind: 'calendar', status: 'available', oauth: true, features: ['OAuth Flow', 'Calendar Events', 'Meeting Prep'] },
     { id: 'connector-google-drive', name: 'Google Drive', kind: 'files', status: 'connected' },
+    { id: 'connector-gmail', name: 'Gmail', kind: 'mail', status: 'available' },
+    { id: 'connector-notion', name: 'Notion', kind: 'knowledge', status: 'available' },
     { id: 'connector-slack', name: 'Slack', kind: 'remote', status: 'available' },
     { id: 'connector-mcp', name: 'MCP Endpoint', kind: 'tools', status: 'available', features: [...assistantCapabilities.mcpFeatures] },
     { id: 'connector-tencent-docs', name: 'Tencent Docs', kind: 'office', status: 'available' },
@@ -1986,21 +2620,25 @@ export function resetAssistantStore() {
       id: 'model-auto',
       provider: 'Auto',
       modelId: 'auto',
-      endpoint: 'jarvis://auto',
+      endpoint: 'agent://auto',
       enabled: true,
       headers: {},
       parameters: {},
       skipChatCompletions: false,
+      customProtocol: false,
+      capabilities: capabilitiesForProvider('Auto'),
     },
     {
-      id: 'model-workbuddy',
-      provider: 'WorkBuddy',
-      modelId: 'workbuddy-hunyuan',
-      endpoint: 'jarvis://workbuddy',
+      id: 'model-agent',
+      provider: 'Agent',
+      modelId: 'agent-hunyuan',
+      endpoint: 'agent://agent',
       enabled: true,
       headers: {},
       parameters: { temperature: 0.3 },
       skipChatCompletions: false,
+      customProtocol: false,
+      capabilities: capabilitiesForProvider('Agent'),
     },
     {
       id: 'model-minimax-m25',
@@ -2011,6 +2649,8 @@ export function resetAssistantStore() {
       headers: {},
       parameters: { reasoningEffort: 'medium' },
       skipChatCompletions: false,
+      customProtocol: false,
+      capabilities: capabilitiesForProvider('MiniMax M2.5'),
     },
     {
       id: 'model-glm46',
@@ -2021,6 +2661,8 @@ export function resetAssistantStore() {
       headers: {},
       parameters: {},
       skipChatCompletions: false,
+      customProtocol: false,
+      capabilities: capabilitiesForProvider('GLM-4.6'),
     },
     {
       id: 'model-kimi-k2',
@@ -2031,6 +2673,8 @@ export function resetAssistantStore() {
       headers: {},
       parameters: {},
       skipChatCompletions: false,
+      customProtocol: false,
+      capabilities: capabilitiesForProvider('Kimi K2'),
     },
     {
       id: 'model-deepseek-v32',
@@ -2041,6 +2685,8 @@ export function resetAssistantStore() {
       headers: {},
       parameters: {},
       skipChatCompletions: false,
+      customProtocol: false,
+      capabilities: capabilitiesForProvider('DeepSeek V3.2'),
     },
     {
       id: 'model-claude-sonnet',
@@ -2051,6 +2697,8 @@ export function resetAssistantStore() {
       headers: {},
       parameters: {},
       skipChatCompletions: false,
+      customProtocol: false,
+      capabilities: capabilitiesForProvider('Claude Sonnet'),
     },
     {
       id: 'model-gpt-5-codex',
@@ -2061,6 +2709,8 @@ export function resetAssistantStore() {
       headers: {},
       parameters: {},
       skipChatCompletions: false,
+      customProtocol: false,
+      capabilities: capabilitiesForProvider('GPT-5-Codex'),
     },
     {
       id: 'model-local-ollama',
@@ -2071,6 +2721,8 @@ export function resetAssistantStore() {
       headers: {},
       parameters: {},
       skipChatCompletions: true,
+      customProtocol: false,
+      capabilities: capabilitiesForProvider('Local Ollama'),
     },
   ];
   runtimes = [
@@ -2085,7 +2737,7 @@ export function resetAssistantStore() {
       status: 'needs_trust',
       trusted: false,
       oauth: false,
-      headers: { 'User-Agent': 'Jarvis-Assistant' },
+      headers: { 'User-Agent': 'Agent-Assistant' },
       features: [...assistantCapabilities.mcpFeatures],
       tools: [
         { name: 'read_resource', enabled: true },
@@ -2178,20 +2830,23 @@ export function resetAssistantStore() {
     },
   ];
   pluginVersionCache = { lastSyncedAt: '2026-06-07T00:00:00.000Z', source: 'marketplace' };
-  clawChannels = assistantCapabilities.remotePlatforms.map((platform) => ({
-    platform,
-    status: platform === 'WeChat ClawBot' ? 'connected' : 'available',
-    markdownRendering: platform === 'WeChat ClawBot',
-    qrCodeUrl: `/assistant/claw/${slug(platform)}/qr`,
-    credentialsConfigured: platform === 'WeChat ClawBot',
-  }));
+  clawChannels = assistantCapabilities.remotePlatforms.map((platform) => {
+    const metadata = clawPlatformMetadata[platform] || {};
+    return {
+      platform,
+      status: platform === 'WeChat ClawBot' ? 'connected' : 'available',
+      markdownRendering: platform === 'WeChat ClawBot' || Boolean(metadata.supportsMarkdown),
+      qrCodeUrl: `/assistant/claw/${slug(platform)}/qr`,
+      credentialsConfigured: platform === 'WeChat ClawBot',
+      ...metadata,
+    };
+  });
   clawGuides = assistantCapabilities.remotePlatforms.map((platform) => ({
     platform,
-    steps: [
-      `Create or select the ${platform} app.`,
-      'Configure bot permissions and callback URL.',
-      'Paste credentials into Jarvis and run a connection test.',
-    ],
+    steps: clawGuideSteps(platform),
+    troubleshooting: platform === 'Slack'
+      ? ['Socket Mode connection error: confirm the app token and Socket Mode toggle.', 'Bot token invalid: regenerate Bot Token and reconnect.']
+      : clawPlatformMetadata[platform]?.troubleshooting || ['Reconnect the channel and verify credentials.'],
   }));
   clawConfirmations = [];
   approvals = [];
@@ -2200,6 +2855,47 @@ export function resetAssistantStore() {
     systemLanguage: 'auto',
     aiGeneratedMarker: true,
     contentFilter: 'friendly_notice',
+    compactMode: true,
+    autoInstallLowRiskSkills: true,
+    preventSleep: false,
+    profile: {
+      name: 'Kevin',
+      email: 'kevin@example.test',
+      avatarUrl: '/assistant/avatar.png',
+      authProviders: ['Google OAuth', 'GitHub OAuth'],
+    },
+    desktopPlatforms: ['macOS Apple Silicon', 'macOS Intel', 'Windows x64', 'Windows ARM64'],
+    onlineRequired: true,
+    sync: {
+      accountSettingsAcrossDevices: true,
+    },
+    logLocations: {
+      macOS: 'Open Log Folder: ~/Library/Logs/Agent',
+      Windows: 'Open Log Directory: %LOCALAPPDATA%\\Agent\\Logs',
+    },
+    installation: {
+      Windows: {
+        installer: '.exe',
+        requirements: ['Windows 10 1809+', 'Windows 11', 'x64', 'ARM64'],
+        troubleshooting: ['Windows Defender SmartScreen', 'Installation fails or freezes', 'Slow first launch'],
+      },
+      macOS: {
+        installer: '.dmg',
+        requirements: ['Apple Silicon', 'Intel', 'Universal binary'],
+        permissions: ['System Settings → Privacy & Security', 'Remote control permissions'],
+      },
+    },
+    privacy: {
+      childrenPolicy: 'under_18_prohibited',
+      dataResidency: 'Singapore',
+      inputsOutputsRetention: '14 days',
+      configurationStorage: 'local_device',
+      accountDiagnosticFeedbackRetention: '30 days',
+      billingRetention: '24 months',
+      trainingOptOut: 'agent_ai@tencent.com',
+      rights: ['Access', 'Portability', 'Correction', 'Erasure', 'Restriction', 'Objection', 'Consent Withdrawal'],
+    },
+    version: 'Agent parity 2026.06',
   };
   supportTickets = [];
   exploreTemplates = [
@@ -2239,6 +2935,7 @@ export function resetAssistantStore() {
       outputFormat: 'Presentation',
       prompt: 'Research a market and create an executive deck with charts.',
     },
+    ...officialPracticeTemplates,
   ];
   exploreRemixes = [];
   cloudSessions = [
@@ -2247,7 +2944,7 @@ export function resetAssistantStore() {
       taskId: 'task-weekly-brief',
       workspace: 'Personal OS',
       mode: 'Cloud Agent',
-      model: 'WorkBuddy',
+      model: 'Agent',
       status: 'running',
       background: true,
       files: ['workspace-notes.md'],
