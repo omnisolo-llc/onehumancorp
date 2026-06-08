@@ -671,14 +671,14 @@ impl AgentServiceImpl {
             todos,
             task_store,
             mailbox,
-            working_dir,
+            working_dir.clone(),
             memory_accessor,
             observation_store,
         );
 
 
         // Add create_skill tool
-        tools.push(crate::tools::create_skill::create_skill_tool());
+        tools.push(crate::tools::create_skill::create_skill_tool(working_dir.clone()));
 
         if !department.is_empty() {
             if let Ok(dep) = Department::from_str(department) {
@@ -731,7 +731,7 @@ impl AgentServiceImpl {
                 &req.department,
                 Some(Self::workspace_path()),
                 None,
-                observation_store.clone(),
+                observation_store.clone()
             )
             .await;
         let mut unarc_agent = Agent::new(llm, tools);
@@ -1066,7 +1066,7 @@ impl AgentService for AgentServiceImpl {
                 .build_tools(
                     sub_req.toolset_config.as_ref(),
                     "",
-                    working_dir,
+                    working_dir.clone(),
                     None,
                     observation_store.clone(),
                 )

@@ -1,12 +1,13 @@
 use ohc_builtin_agent_core::types::ToolError;
 use serde_json::{json, Value};
 use std::sync::Arc;
+use std::path::PathBuf;
 
 use super::{Tool, ToolExecutor};
 
 
 struct CreateSkillExecutor {
-    // We are mocking persistence for now as LongTermMemory is not exported easily
+    working_dir: Option<PathBuf>,
 }
 
 #[async_trait::async_trait]
@@ -16,20 +17,34 @@ impl ToolExecutor for CreateSkillExecutor {
         let description = args["description"].as_str().unwrap_or("");
         let instruction = args["instruction"].as_str().unwrap_or("");
 
-        let _content = format!("Skill: {}\nDescription: {}\nInstruction: {}", skill_name, description, instruction);
-        let _tags = vec!["skill".to_string(), "autonomous".to_string(), skill_name.to_string()];
+        let content = json!({
+            "name": skill_name,
+            "description": description,
+            "instruction": instruction,
+            "allowed_tools": [], // Could be expanded later
+        });
 
-        if false {
-
-            Ok(format!("Successfully created and saved curated skill '{}'. Description: {}. Instruction: {}", skill_name, description, instruction))
+        // We persist it locally in .ohc_skills directory
+        if let Some(wd) = &self.working_dir {
+            let skills_dir = wd.join(".ohc_skills");
+            if !skills_dir.exists() {
+                if let Err(e) = std::fs::create_dir_all(&skills_dir) {
+                    return Err(ToolError::Fatal(format!("Failed to create .ohc_skills dir: {}", e)));
+                }
+            }
+            let file_path = skills_dir.join(format!("{}.json", skill_name));
+            if let Err(e) = std::fs::write(&file_path, serde_json::to_string_pretty(&content).unwrap()) {
+                return Err(ToolError::Fatal(format!("Failed to write skill file: {}", e)));
+            }
+            Ok(format!("Successfully created and saved curated skill '{}' to {}. Description: {}. Instruction: {}", skill_name, file_path.display(), description, instruction))
         } else {
-            // For tests or runs without a memory store
-            Ok(format!("Successfully created curated skill '{}' (but no persistent memory store is attached). Description: {}. Instruction: {}", skill_name, description, instruction))
+            // For tests or runs without a working dir
+            Ok(format!("Successfully created curated skill '{}' (but no persistent memory store or working_dir is attached). Description: {}. Instruction: {}", skill_name, description, instruction))
         }
     }
 }
 
-pub fn create_skill_tool() -> Tool {
+pub fn create_skill_tool(working_dir: Option<PathBuf>) -> Tool {
     Tool {
         name: "CreateSkill".to_string(),
         description: "Curates recent complex trajectory into a reusable autonomous skill.".to_string(),
@@ -52,6 +67,36 @@ pub fn create_skill_tool() -> Tool {
             },
             "required": ["name", "description", "instruction"]
         }),
-        execute: Arc::new(CreateSkillExecutor {}),
+        execute: Arc::new(CreateSkillExecutor { working_dir }),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempfile::tempdir;
+
+    #[tokio::test]
+    async fn test_create_skill_executor_with_wd() {
+        let dir = tempdir().unwrap();
+        let wd = dir.path().to_path_buf();
+
+        let tool = create_skill_tool(Some(wd.clone()));
+        let args = json!({
+            "name": "MyCoolSkill",
+            "description": "It does cool things",
+            "instruction": "Do cool things always",
+        });
+
+        let res = tool.execute.execute(args).await;
+        assert!(res.is_ok());
+
+        let skill_file = wd.join(".ohc_skills/MyCoolSkill.json");
+        assert!(skill_file.exists());
+
+        let file_content = std::fs::read_to_string(skill_file).unwrap();
+        let json_val: serde_json::Value = serde_json::from_str(&file_content).unwrap();
+        assert_eq!(json_val["name"], "MyCoolSkill");
+        assert_eq!(json_val["description"], "It does cool things");
     }
 }
