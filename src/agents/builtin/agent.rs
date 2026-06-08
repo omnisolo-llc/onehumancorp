@@ -798,6 +798,8 @@ impl Agent {
                             return Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, format!("Termination: Guardrail tripwire fires (Fatal/Unexpected Tool Error): {}", err_msg))));
                         }
                         Err(crate::types::ToolError::UserFixable(err_msg)) => {
+                            let full_err = format!("USER_FIXABLE: {}", err_msg);
+                            on_event(AgentEvent::UserInterventionRequired { error: full_err.clone() });
                             return Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, format!("Termination: Guardrail tripwire fires (UserFixable): {}", err_msg))));
                         }
                         Err(crate::types::ToolError::LlmRecoverable(err_msg)) => {
