@@ -840,6 +840,66 @@ impl DepartmentOrchestrator {
                     }
                 }
 
+                // If this is a restock approval, execute the update.
+                if let Some(payload) = &original_payload {
+                    if payload.get("feature_type").and_then(|v| v.as_str()) == Some("restock") {
+                        if let Some(product_id) = payload.get("product_id").and_then(|v| v.as_str()) {
+                            let new_base_price = payload.get("suggested_price").and_then(|v| v.as_f64()).unwrap_or(0.0);
+                            if let DbStore::Postgres = &self.db.store {
+                                let _ = sqlx::query("UPDATE products SET inventory_count = inventory_count + 50, price = $3, price_cents = $4 WHERE id = $1 AND (tenant_id = $2 OR organization_id = $2)")
+                                    .bind(product_id)
+                                    .bind(tenant_id)
+                                    .bind(new_base_price)
+                                    .bind((new_base_price * 100.0) as i64)
+                                    .execute(&self.db.pool)
+                                    .await;
+                                let _ = sqlx::query("INSERT INTO job_queue (id, tenant_id, job_type, payload, status) VALUES ($1, $2, 'dispatch_supplier_reorder', $3, 'PENDING')")
+                                    .bind(uuid::Uuid::new_v4().to_string())
+                                    .bind(tenant_id)
+                                    .bind(serde_json::to_string(&payload).unwrap())
+                                    .execute(&self.db.pool)
+                                    .await;
+                            } else if let DbStore::Sqlite(pool) = &self.db.store {
+                                let _ = sqlx::query("UPDATE products SET inventory_count = inventory_count + 50, price = ?, price_cents = ? WHERE id = ? AND (tenant_id = ? OR organization_id = ?)")
+                                    .bind(new_base_price)
+                                    .bind((new_base_price * 100.0) as i64)
+                                    .bind(product_id)
+                                    .bind(tenant_id)
+                                    .bind(tenant_id)
+                                    .execute(pool)
+                                    .await;
+                            }
+                        }
+                    }
+                }
+
+                // If this is a restock approval, execute the update.
+                if let Some(payload) = &original_payload {
+                    if payload.get("feature_type").and_then(|v| v.as_str()) == Some("restock") {
+                        if let Some(product_id) = payload.get("product_id").and_then(|v| v.as_str()) {
+                            let new_base_price = payload.get("suggested_price").and_then(|v| v.as_f64()).unwrap_or(0.0);
+                            if let DbStore::Postgres = &self.db.store {
+                                let _ = sqlx::query("UPDATE products SET inventory_count = inventory_count + 50, price = $3, price_cents = $4 WHERE id = $1 AND (tenant_id = $2 OR organization_id = $2)")
+                                    .bind(product_id)
+                                    .bind(tenant_id)
+                                    .bind(new_base_price)
+                                    .bind((new_base_price * 100.0) as i64)
+                                    .execute(&self.db.pool)
+                                    .await;
+                            } else if let DbStore::Sqlite(pool) = &self.db.store {
+                                let _ = sqlx::query("UPDATE products SET inventory_count = inventory_count + 50, price = ?, price_cents = ? WHERE id = ? AND (tenant_id = ? OR organization_id = ?)")
+                                    .bind(new_base_price)
+                                    .bind((new_base_price * 100.0) as i64)
+                                    .bind(product_id)
+                                    .bind(tenant_id)
+                                    .bind(tenant_id)
+                                    .execute(pool)
+                                    .await;
+                            }
+                        }
+                    }
+                }
+
                 let payload = serde_json::json!({
                     "request_id": request_id,
                     "tenant_id": tenant_id,
@@ -909,6 +969,25 @@ impl DepartmentOrchestrator {
         self.execute_action(
             DepartmentType::BusinessAdvisory,
             "Smart Price Suggestion: Winter Scarf".to_string(),
+            tenant_id.to_string(),
+            ActionRisk::DraftForReview,
+            payload
+        ).await.map(|_| ())
+    }
+
+    pub async fn simulate_restock(&self, tenant_id: &str) -> Result<(), String> {
+        let payload = serde_json::json!({
+            "feature_type": "restock",
+            "product_id": uuid::Uuid::new_v4().to_string(),
+            "product_name": "Red Dress",
+            "remaining_stock": 0,
+            "message": "Red Dress sold out in 2 days. Demand is high. Operations Agent drafted a reorder for 50 units. Finance Agent suggests raising price from $40 to $46.",
+            "suggested_price": 46.0
+        });
+
+        self.execute_action(
+            DepartmentType::Operations,
+            "Draft restock order for Red Dress".to_string(),
             tenant_id.to_string(),
             ActionRisk::DraftForReview,
             payload
