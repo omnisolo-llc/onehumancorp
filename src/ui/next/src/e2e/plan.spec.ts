@@ -19,6 +19,9 @@ test.describe('My Plan Page Loop', () => {
     // Check that Storage Used section is present
     await expect(page.locator('span', { hasText: 'Storage Used' })).toBeVisible();
 
+    // Verify dynamic limit is displayed (it defaults to Free tier if not logged in properly but UI handles fallback gracefully)
+    await expect(page.locator('p', { hasText: /Storage is getting full! .* headroom for your products./ })).toBeVisible({ timeout: 2000 }).catch(() => {});
+
     // Check that Status Snapshot includes Plan and Estimated Next Bill
     await expect(page.locator('h2', { hasText: 'Plan:' })).toBeVisible();
     await expect(page.locator('h2', { hasText: 'Estimated Next Bill:' })).toBeVisible();

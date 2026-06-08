@@ -3,6 +3,8 @@
 // My Plan Page Implementation
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { formatStorage } from '../../utils/formatStorage';
+
 
 interface MyPlanData {
   current_plan: string;
@@ -81,13 +83,6 @@ export default function MyPlanPage() {
     }
   };
 
-  const formatStorage = (bytes: number) => {
-
-      const mb = bytes / (1024 * 1024);
-      if (mb < 1) return "< 1 MB";
-      if (mb >= 1024) return parseFloat((mb / 1024).toFixed(2)) + " GB";
-      return parseFloat(mb.toFixed(1)) + " MB";
-  };
 
   return (
     <div className="flex flex-col min-h-screen font-inter bg-gradient-to-br from-indigo-50 via-white to-purple-50 text-gray-900">
@@ -177,7 +172,12 @@ export default function MyPlanPage() {
                     {planData?.storage_limit_bytes && planData.storage_used_bytes >= planData.storage_limit_bytes && (
                         <div className="mt-3 p-3 bg-amber-50 border border-amber-100 rounded-lg text-sm text-amber-800 flex items-start gap-2">
                             <span className="text-lg">📦</span>
-                            <p>Storage is getting full! We're automatically optimizing your images to WebP to save space, but upgrading to Starter would give you 5GB of headroom for your products.</p>
+                            <p>Storage is getting full! We're automatically optimizing your images to WebP to save space, but upgrading would give you {
+                                planData.current_plan === 'Free' ? '5GB' :
+                                planData.current_plan === 'Starter' ? '50GB' :
+                                planData.current_plan === 'Pro' ? '500GB' :
+                                'Unlimited'
+                            } of headroom for your products.</p>
                         </div>
                     )}
                 </div>
