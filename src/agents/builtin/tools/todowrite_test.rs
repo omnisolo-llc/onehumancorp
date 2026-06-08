@@ -44,7 +44,8 @@ async fn test_todo_write_invalid_args() {
 
     // We expect LlmRecoverable
     let err = write_res.unwrap_err();
-    assert_eq!(err.to_string(), "Recoverable error: todowrite: todos must be an array");
+    assert!(err.to_string().contains("Recoverable error: Validation Error (Pydantic-first tool schema)"));
+    assert!(err.to_string().contains("missing field `todos`"));
 }
 
 #[tokio::test]

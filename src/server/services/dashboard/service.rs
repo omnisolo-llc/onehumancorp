@@ -56,7 +56,7 @@ impl MyDashboardService {
             tokio::spawn(async move {
                 if let Ok(agents) = s.fetch_agents_impl(&org_id_clone, mobile_optimized).await {
                     if let Some(c) = AGENTS_CACHE.get() {
-                        c.set(&cache_key_bg, agents, std::time::Duration::from_secs(5)).await;
+                        c.set(&cache_key_bg, agents, std::time::Duration::from_secs(3600)).await;
                     }
                 }
             });
@@ -64,7 +64,7 @@ impl MyDashboardService {
         }
 
         let agents = self.fetch_agents_impl(org_id, mobile_optimized).await?;
-        cache.set(&cache_key, agents.clone(), std::time::Duration::from_secs(5)).await;
+        cache.set(&cache_key, agents.clone(), std::time::Duration::from_secs(3600)).await;
         Ok(agents)
     }
 
@@ -525,6 +525,9 @@ impl DashboardService for MyDashboardService {
         let mut final_statuses = Vec::new();
         if req.mobile_optimized { final_statuses.clear(); }
 
+        let mut original_prompts_len = 0;
+        let mut compressed_prompts_len = 0;
+
         let final_agents_payload = agents
             .iter()
             .map(|a| {
@@ -543,10 +546,19 @@ impl DashboardService for MyDashboardService {
                     _ => ::server_ohc::common::Role::Unspecified as i32,
                 };
 
+                let orig_len = a.name.len();
+                if orig_len > 0 && !req.mobile_optimized {
+                    original_prompts_len += orig_len;
+                }
+
                 let name = if req.mobile_optimized {
                     String::new()
                 } else {
-                    ::server_pricing::compression::reduce_tokens(&a.name)
+                    let compressed = ::server_pricing::compression::reduce_tokens(&a.name);
+                    if orig_len > 0 {
+                        compressed_prompts_len += compressed.len();
+                    }
+                    compressed
                 };
 
                 ::server_ohc::agent::Agent {
@@ -568,22 +580,6 @@ impl DashboardService for MyDashboardService {
                 .into_iter()
                 .map(|(status, count)| StatusCount { status, count })
                 .collect();
-
-            // AI Token Efficiency (Phase 5): Audit system prompts for redundancy and compress
-            let mut original_prompts_len = 0;
-            let mut compressed_prompts_len = 0;
-
-            for agent in &agents {
-                let prompt = &agent.name;
-                let orig_len = prompt.len();
-                if orig_len > 0 {
-                    original_prompts_len += orig_len;
-
-                    let compressed = ::server_pricing::compression::reduce_tokens(prompt);
-
-                    compressed_prompts_len += compressed.len();
-                }
-            }
 
             if let Some(ref o) = org {
                 let prompt = &o.name;
@@ -880,6 +876,19 @@ mod tests {
         }
         if !res_mobile.orders.is_empty() {
             assert_eq!(res_mobile.orders[0].organization_id, "", "Mobile optimization should clear order organization_id");
+        }
+        if let Some(ref cost_summary) = res_mobile.cost_summary {
+            if !cost_summary.agents.is_empty() {
+                assert_eq!(cost_summary.agents[0].storage_usage_bytes, 0, "Mobile optimization should clear agent storage_usage_bytes");
+            }
+        }
+        if !res_mobile.bookings.is_empty() {
+            assert_eq!(res_mobile.bookings[0].organization_id, "", "Mobile optimization should clear booking organization_id");
+        }
+        if !res_mobile.products.is_empty() {
+            assert_eq!(res_mobile.products[0].organization_id, "", "Mobile optimization should clear product organization_id");
+            assert_eq!(res_mobile.products[0].description, "", "Mobile optimization should clear product description");
+            assert_eq!(res_mobile.products[0].metadata_json, "", "Mobile optimization should clear product metadata_json");
         }
     }
 
