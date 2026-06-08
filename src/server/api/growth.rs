@@ -137,6 +137,7 @@ where
         .route("/storefront/embed", get(handle_storefront_embed))
                 .route("/storefront/og-card", get(handle_og_card))
         .route("/flash-sale/embed", get(handle_flash_sale_embed))
+        .route("/campaign/goal-tracker", post(handle_generate_goal_tracker))
         .route("/milestones/check", get(handle_check_milestones))
         .route("/affiliate/generate-link", post(handle_affiliate_generate_link))
         .route("/affiliate/track", post(handle_affiliate_track))
@@ -387,6 +388,12 @@ async fn handle_send_receipt(
     Json(SendReceiptResponse { success: true, message: generated })
 }
 
+
+#[derive(Deserialize)]
+pub struct GenerateGoalTrackerRequest {
+    pub goal_name: Option<String>,
+    pub target: Option<String>,
+}
 
 #[derive(Deserialize)]
 pub struct LeadGenCampaignRequest {
@@ -1625,6 +1632,33 @@ mod tests {
         let html2 = String::from_utf8(body_bytes2.to_vec()).unwrap();
         assert!(html2.contains("Powered by OHC"));
     }
+
+    #[tokio::test]
+    async fn test_generate_goal_tracker() {
+        let pool = setup_db().await;
+        let (event_tx, _) = tokio::sync::mpsc::channel(100);
+        let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
+        let state = GrowthState { pool: pool.clone(), hub: hub.clone() };
+
+        let req = GenerateGoalTrackerRequest { goal_name: Some("100 Customers".to_string()), target: Some("100".to_string()) };
+        let res = handle_generate_goal_tracker(Extension(state.clone()), Json(req)).await;
+
+        let body_bytes = axum::body::to_bytes(res.into_response().into_body(), usize::MAX).await.unwrap();
+        let res_json: serde_json::Value = serde_json::from_slice(&body_bytes).unwrap();
+
+        assert!(res_json["widget_html"].as_str().unwrap().contains("100 Customers"));
+    }
+}
+
+async fn handle_generate_goal_tracker(
+    Extension(_state): Extension<GrowthState>,
+    Json(req): Json<GenerateGoalTrackerRequest>,
+) -> impl IntoResponse {
+    let goal_name = req.goal_name.unwrap_or_else(|| "Business Goal".to_string());
+    let target = req.target.unwrap_or_else(|| "100".to_string());
+
+    let html = format!("<div class='ohc-goal-tracker'><h3>{}</h3><p>Target: {}</p><div class='progress-bar'><div class='progress' style='width: 0%'></div></div><div style='font-size: 10px; margin-top: 10px; color: #666;'>Powered by OHC</div></div>", goal_name, target);
+    Json(serde_json::json!({ "widget_html": html }))
 }
 
 async fn handle_aggregated_team_invites_metrics(
