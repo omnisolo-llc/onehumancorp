@@ -3,6 +3,7 @@ load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 exports_files(
     [
         "autodream.rs",
+        "assistant.rs",
         "terminal_api.rs",
         "billing_api.rs",
         "billing_webhook.rs",
@@ -38,6 +39,7 @@ rust_library(
         "terminal_api.rs",
         "bazel_lib.rs",
         "autodream.rs",
+        "assistant.rs",
         "billing_api.rs",
         "billing_webhook.rs",
         "billing_webhook_test.rs",
