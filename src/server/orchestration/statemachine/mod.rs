@@ -263,6 +263,7 @@ impl DeliberationStateMachine {
                             &role,
                             &modl,
                             tokens_consumed as i64,
+                            organization_id,
                         )
                         .await;
                     }
@@ -326,6 +327,7 @@ impl DeliberationStateMachine {
                             &role,
                             &modl,
                             tokens_consumed as i64,
+                            organization_id,
                         )
                         .await;
                     }
