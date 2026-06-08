@@ -707,6 +707,7 @@ rust_test(
     deps = [
         "//src/server/common:server_common",
         "//src/server/telemetry:server_telemetry",
+        ":minimax",
         "@crates//:chrono",
         "@crates//:reqwest",
         "@crates//:serde",

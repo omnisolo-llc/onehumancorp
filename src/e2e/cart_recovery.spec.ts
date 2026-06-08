@@ -1,4 +1,5 @@
 import { test, expect } from './fixtures';
+import { Pool } from 'pg';
 
 test.describe('Abandoned Cart Recovery Growth Loop', () => {
   test.beforeEach(async ({ page }) => {
@@ -62,5 +63,28 @@ test.describe('Abandoned Cart Recovery Growth Loop', () => {
 
     // Verify success message
     await expect(page.getByText(/✅ Campaign sent to .* abandoned carts!/i)).toBeVisible({ timeout: 15000 });
+  });
+
+  test('should verify autonomous background agent cart recovery via database inspection', async ({ page }) => {
+    // Navigate to homepage just to establish a valid browser session if needed
+    await page.goto('/');
+
+    // We already have 'e2e-abandoned-checkout' seeded 2 hours ago.
+    // We verify the agent's trigger and message dispatch mechanisms by querying the job queue.
+    const dbUrl = process.env.DATABASE_URL || 'postgres://ohc:ohc@localhost:5432/ohc';
+    const pool = new Pool({ connectionString: dbUrl });
+
+    let jobFound = false;
+    for (let i = 0; i < 30; i++) {
+        const res = await pool.query(`SELECT id, status, payload FROM ohc_job_queue WHERE job_type = 'cart_recovery' AND payload->>'checkout_session_id' = 'e2e-abandoned-checkout'`);
+        if (res.rows.length > 0) {
+            jobFound = true;
+            break;
+        }
+        await new Promise(r => setTimeout(r, 1000));
+    }
+
+    expect(jobFound).toBe(true);
+    await pool.end();
   });
 });

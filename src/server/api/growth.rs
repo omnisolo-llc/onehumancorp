@@ -349,10 +349,23 @@ async fn handle_generate_cart(
 ) -> impl IntoResponse {
     let name = req.customer_name.unwrap_or_else(|| "there".to_string());
     let value = req.cart_value.unwrap_or_else(|| "$0.00".to_string());
-    let generated = format!(
-        "Hi {},\n\nWe noticed you left some items in your cart totaling {}. Did you have any questions or need help checking out?\n\nAs a special thank you for shopping with us, here is a 10% discount code to complete your purchase: COMEBACK10\n\nClick here to securely finish your checkout: https://ohc.store/checkout/recover\n\nWarmly,\nThe Team\n\n⚡ Powered by OHC",
+
+    let llm_client = crate::minimax::MinimaxClient::new(
+        std::env::var("MINIMAX_API_KEY").unwrap_or_else(|_| "fake-key".to_string())
+    );
+
+    let prompt = format!(
+        "Draft a friendly, personalized cart recovery message. \n\nCustomer Name: {}\nCart Value: {}\nCheckout URL: https://ohc.store/checkout/recover\n\nDo not include generic placeholders. Respond with only the message body. Include '⚡ Powered by OHC' at the end.",
         name, value
     );
+
+    let generated = llm_client.reason(&prompt).await.unwrap_or_else(|_| {
+        format!(
+            "Hi {},\n\nWe noticed you left some items in your cart totaling {}. Did you have any questions or need help checking out?\n\nAs a special thank you for shopping with us, here is a 10% discount code to complete your purchase: COMEBACK10\n\nClick here to securely finish your checkout: https://ohc.store/checkout/recover\n\nWarmly,\nThe Team\n\n⚡ Powered by OHC",
+            name, value
+        )
+    });
+
     Json(GenerateCartResponse {
         message: generated,
     })

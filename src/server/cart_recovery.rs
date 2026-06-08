@@ -186,7 +186,7 @@ where
         &self,
         payload: CartRecoveryJobPayload,
     ) -> Result<RecoveryDeliveryReceipt, CartRecoveryError> {
-        if payload.action_type != "cart_recovery.dispatch" {
+        if payload.action_type != "cart_recovery.draft_and_dispatch" && payload.action_type != "cart_recovery.dispatch" {
             return Err(CartRecoveryError::Dispatch(format!(
                 "unsupported cart recovery action_type '{}'",
                 payload.action_type
@@ -197,13 +197,38 @@ where
                 "cart recovery payload is missing a recipient".to_string(),
             ));
         }
-        if !self.delivery.is_configured_for(&payload.channel) {
+        let mut final_payload = payload.clone();
+
+        let llm_client = ::minimax::MinimaxClient::new(
+            std::env::var("MINIMAX_API_KEY").unwrap_or_else(|_| "fake-key".to_string())
+        );
+
+        let prompt = format!(
+            "Draft a friendly, personalized cart recovery message. \n\nCustomer ID: {}\nAmount (cents): {}\nCheckout URL: {}\n\nDo not include generic placeholders. Respond with only the message body.",
+            payload.customer_id, payload.amount_cents, payload.checkout_url
+        );
+
+        match llm_client.reason(&prompt).await {
+            Ok(body) => {
+                final_payload.body = body.trim().to_string();
+            }
+            Err(err) => {
+                tracing::warn!("Failed to generate personalized message via LLM: {}. Falling back to default template.", err);
+                let amount_str = format!("${:.2}", payload.amount_cents as f64 / 100.0);
+                final_payload.body = format!(
+                    "You left a {} checkout unfinished. Resume securely here: {}",
+                    amount_str, payload.checkout_url
+                );
+            }
+        }
+
+        if !self.delivery.is_configured_for(&final_payload.channel) {
             return Err(CartRecoveryError::MissingProviderConfig(format!(
                 "cart recovery {:?} provider is not configured",
-                payload.channel
+                final_payload.channel
             )));
         }
-        self.delivery.deliver(&payload).await
+        self.delivery.deliver(&final_payload).await
     }
 }
 
@@ -406,10 +431,10 @@ fn recovery_message_for(session: &AbandonedCheckoutSession, checkout_base_url: &
         checkout_base_url.trim_end_matches('/'),
         session.session_id
     );
-    let amount = format!("${:.2}", session.amount_cents as f64 / 100.0);
-    let body = format!(
-        "You left a {amount} checkout unfinished. Resume securely here: {checkout_url}"
-    );
+
+    // We leave the body empty here so the worker drafts it using LLM,
+    // or if the LLM fails, the worker uses its own fallback.
+    let body = String::new();
 
     if let Some(email) = session.customer_email.as_ref().filter(|email| !email.trim().is_empty()) {
         RecoveryMessage {
@@ -568,7 +593,7 @@ impl CartRecoveryDispatcher for PostgresQueueRecoveryDispatcher {
 
         let job_id = Uuid::new_v4().to_string();
         let payload = serde_json::json!({
-            "action_type": "cart_recovery.dispatch",
+            "action_type": "cart_recovery.draft_and_dispatch",
             "checkout_session_id": session.session_id,
             "customer_id": session.customer_id,
             "amount_cents": session.amount_cents,
@@ -939,7 +964,7 @@ mod tests {
         });
         let processor = CartRecoveryJobProcessor::new(delivery.clone());
         let payload = serde_json::json!({
-            "action_type": "cart_recovery.dispatch",
+            "action_type": "cart_recovery.draft_and_dispatch",
             "checkout_session_id": "stale-session",
             "customer_id": "customer-1",
             "amount_cents": 4599,
@@ -960,7 +985,7 @@ mod tests {
     async fn queued_cart_recovery_job_fails_closed_without_provider_config() {
         let processor = CartRecoveryJobProcessor::new(Arc::new(RecordingDelivery::default()));
         let payload = serde_json::json!({
-            "action_type": "cart_recovery.dispatch",
+            "action_type": "cart_recovery.draft_and_dispatch",
             "checkout_session_id": "stale-session",
             "customer_id": "customer-1",
             "amount_cents": 4599,

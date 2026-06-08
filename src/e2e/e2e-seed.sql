@@ -17,6 +17,7 @@ ALTER TABLE IF EXISTS agents DISABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS ohc_staff_member DISABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS users DISABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS tenants DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS conversational_checkout_sessions DISABLE ROW LEVEL SECURITY;
 
 INSERT INTO tenants (id, name, industry, tier)
 VALUES
@@ -116,6 +117,16 @@ SET name = EXCLUDED.name,
     preferences = EXCLUDED.preferences,
     updated_at = CURRENT_TIMESTAMP;
 
+INSERT INTO conversational_checkout_sessions (id, tenant_id, customer_id, type, amount, status, created_at, updated_at)
+VALUES
+  ('e2e-abandoned-checkout', 'e2e-tenant', 'e2e-customer-ava', 'physical', 4500, 'pending', CURRENT_TIMESTAMP - INTERVAL '2 hours', CURRENT_TIMESTAMP - INTERVAL '2 hours')
+ON CONFLICT (id) DO UPDATE
+SET customer_id = EXCLUDED.customer_id,
+    type = EXCLUDED.type,
+    amount = EXCLUDED.amount,
+    status = EXCLUDED.status,
+    updated_at = EXCLUDED.updated_at;
+
 INSERT INTO products (id, tenant_id, title, description, type, price, price_cents, currency, inventory_count, metadata)
 VALUES
   ('e2e-product-cake', 'e2e-tenant', 'Vegan Celebration Cake', 'Plant-based celebration cake for local pickup.', 'physical', 39.99, 3999, 'USD', 12, '{"seeded_by":"e2e"}'::jsonb),
@@ -198,6 +209,7 @@ ALTER TABLE IF EXISTS customer360 ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS loyalty_ledger ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS ohc_fx_rates ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS bookings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS conversational_checkout_sessions ENABLE ROW LEVEL SECURITY;
 
 ALTER TABLE IF EXISTS tenants FORCE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS users FORCE ROW LEVEL SECURITY;
@@ -215,6 +227,7 @@ ALTER TABLE IF EXISTS customer360 FORCE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS loyalty_ledger FORCE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS ohc_fx_rates FORCE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS bookings FORCE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS conversational_checkout_sessions FORCE ROW LEVEL SECURITY;
 
 ALTER TABLE IF EXISTS agent_actions ENABLE ROW LEVEL SECURITY;
 
