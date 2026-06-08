@@ -316,6 +316,10 @@ impl DB {
                 Ok(val) => return Ok(val),
                 Err(err) => {
                     let err_str = err.to_string().to_lowercase();
+                    let is_connection_drop = err_str.contains("connection closed")
+                        || err_str.contains("broken pipe")
+                        || err_str.contains("connection reset by peer")
+                        || err_str.contains("connection refused");
                     let is_sqlite_lock = self.is_sqlite()
                         && (err_str.contains("database is locked")
                             || err_str.contains("sqlite_busy"));
@@ -325,7 +329,7 @@ impl DB {
                             || err_str.contains("40001")
                             || err_str.contains("could not obtain lock"));
 
-                    if is_sqlite_lock || is_postgres_lock {
+                    if is_sqlite_lock || is_postgres_lock || is_connection_drop {
                         attempt += 1;
                         if attempt >= max_attempts {
                             let _ = ::server_telemetry::record_sqlite_retry_exhausted(
@@ -337,7 +341,9 @@ impl DB {
                                 max_attempts, err
                             )));
                         }
-                        if is_postgres_lock {
+                        if is_connection_drop {
+                            tracing::warn!("database connection drop in {}: retrying", operation);
+                        } else if is_postgres_lock {
                             tracing::warn!("postgres_skip_locked contention in {}", operation);
                         } else {
                             let _ = ::server_telemetry::record_sqlite_lock_contention(

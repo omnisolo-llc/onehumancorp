@@ -896,4 +896,44 @@ mod parity_tests {
             assert_eq!(*attempts.lock().unwrap(), 3);
         }
     }
+
+    #[tokio::test]
+    async fn test_execute_with_retry_chaos_connection_drop() {
+        let sqlite_db = setup_sqlite_db().await;
+
+        let attempts = std::sync::Arc::new(std::sync::Mutex::new(0));
+        let attempts_clone = attempts.clone();
+
+        let res: Result<(), String> = sqlite_db.execute_with_retry("test_connection_drop_sqlite", || {
+            let attempts_clone = attempts_clone.clone();
+            async move {
+                let mut a = attempts_clone.lock().unwrap();
+                *a += 1;
+                Err("connection reset by peer".to_string())
+            }
+        }).await;
+
+        assert!(res.is_err());
+        assert!(res.unwrap_err().contains("Database retry exhausted"));
+        assert_eq!(*attempts.lock().unwrap(), 10);
+
+        let pg_db = setup_postgres_db().await;
+        if let Some(db) = pg_db {
+            let attempts = std::sync::Arc::new(std::sync::Mutex::new(0));
+            let attempts_clone = attempts.clone();
+
+            let res: Result<(), String> = db.execute_with_retry("test_connection_drop_pg", || {
+                let attempts_clone = attempts_clone.clone();
+                async move {
+                    let mut a = attempts_clone.lock().unwrap();
+                    *a += 1;
+                    Err("broken pipe".to_string())
+                }
+            }).await;
+
+            assert!(res.is_err());
+            assert!(res.unwrap_err().contains("Database retry exhausted"));
+            assert_eq!(*attempts.lock().unwrap(), 10);
+        }
+    }
 }
