@@ -2968,12 +2968,6 @@ async fn ui_dashboard_unified_agent_feed_handler(
     use axum::response::IntoResponse;
     let tenant_id = ui_tenant_id(&query);
 
-    let cache_key = format!("ui_unified_agent_feed:{}", tenant_id);
-    let cache = UI_INBOX_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
-    if let Some(cached) = cache.get(&cache_key).await {
-        return (axum::http::StatusCode::OK, axum::Json(cached)).into_response();
-    }
-
     let (approvals_res, ledger_res) = tokio::join!(
         load_ui_agent_approvals_from_db(&db, &tenant_id),
         load_ui_ledger_from_db(&db, &tenant_id)
@@ -2984,8 +2978,6 @@ async fn ui_dashboard_unified_agent_feed_handler(
         "entries": ledger_res.unwrap_or_default()
     });
 
-    // Note: UI_INBOX_CACHE expects Vec<serde_json::Value>. To avoid type error, we return early and skip caching,
-    // or we could use another cache. For simplicity and correctness, we will skip caching here since this fetches fast.
     (axum::http::StatusCode::OK, axum::Json(result)).into_response()
 }
 

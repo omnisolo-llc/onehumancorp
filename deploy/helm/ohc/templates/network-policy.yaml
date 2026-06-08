@@ -20,6 +20,9 @@ spec:
           podSelector:
             matchLabels:
               app: {{ include "ohc.fullname" . }}-core
+      ports:
+        - protocol: TCP
+          port: {{ .Values.backend.service.port }}
     - from:
         - namespaceSelector:
             matchLabels:
