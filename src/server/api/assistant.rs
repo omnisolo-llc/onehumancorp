@@ -130,7 +130,8 @@ pub struct CreateTaskRequest {
     pub mode: Option<String>,
     pub model: Option<String>,
     pub provider: Option<String>,
-    pub permissionProfile: Option<String>,
+    #[serde(rename = "permissionProfile")]
+    pub permission_profile: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, sqlx::FromRow)]
@@ -179,7 +180,7 @@ pub async fn create_task_handler(
     let mode = payload.mode.unwrap_or_else(|| "Guarded".to_string());
     let model = payload.model.unwrap_or_else(|| "gpt-4o".to_string());
     let provider = payload.provider.unwrap_or_else(|| "openai".to_string());
-    let permission_profile = payload.permissionProfile.unwrap_or_else(|| "Guarded".to_string());
+    let permission_profile = payload.permission_profile.unwrap_or_else(|| "Guarded".to_string());
 
     let result: Result<AssistantTask, sqlx::Error> = sqlx::query_as(
         r#"
