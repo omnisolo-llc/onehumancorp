@@ -165,6 +165,10 @@ SET title = EXCLUDED.title,
     payload = EXCLUDED.payload,
     updated_at = CURRENT_TIMESTAMP;
 
+INSERT INTO assistant_workspaces (id, tenant_id, name)
+VALUES ('e2e-workspace-1', 'e2e-tenant', 'Main Workspace')
+ON CONFLICT (id) DO NOTHING;
+
 INSERT INTO meeting_rooms (id, tenant_id, agenda, participants)
 VALUES ('e2e-room-ops', 'e2e-tenant', 'Daily operations check-in', '["Marketing Pro","Ops Helper"]')
 ON CONFLICT (id) DO UPDATE

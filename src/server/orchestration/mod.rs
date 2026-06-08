@@ -1,3 +1,4 @@
+pub mod assistant;
 pub mod tasks;
 pub mod shared_tasks;
 #[cfg(test)]

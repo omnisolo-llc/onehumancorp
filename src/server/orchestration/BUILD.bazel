@@ -3,6 +3,7 @@ load("//bazel/rules:rust_sharded_test.bzl", "rust_sharded_test")
 
 exports_files(
     [
+        "assistant.rs",
         "chaos_test.rs",
         "dynamic_workflows.rs",
         "handoff.rs",
@@ -38,6 +39,7 @@ rust_library(
     name = "server_orchestration",
     srcs = [
         "bazel_lib.rs",
+        "assistant.rs",
         "chaos_test.rs",
         "dynamic_workflows.rs",
         "handoff.rs",

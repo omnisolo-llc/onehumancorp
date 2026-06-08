@@ -161,6 +161,13 @@
   font-weight: 720;
   line-height: 1.2;
   white-space: nowrap;
+  cursor: pointer;
+}
+
+.chipActive {
+  background: #0f766e;
+  color: #fff;
+  border-color: #0f766e;
 }
 
 .chipRow {
