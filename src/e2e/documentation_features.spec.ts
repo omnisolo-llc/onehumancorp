@@ -103,3 +103,18 @@ test.describe('Changelog UX', () => {
     await expect(page.locator('text=This is a plain paragraph test line.')).not.toBeVisible();
   });
 });
+
+test.describe('AppShell Help Button', () => {
+  test('should display Help Center link and navigate successfully', async ({ page }) => {
+    await page.goto('/dashboard');
+
+    const helpButton = page.getByRole('link', { name: 'Help Center' });
+    await expect(helpButton).toBeVisible();
+
+    await helpButton.click();
+    await expect(page).toHaveURL(/\/help/);
+
+    // Help Center should have its search input
+    await expect(page.getByPlaceholder('Search for help articles and videos...')).toBeVisible();
+  });
+});
