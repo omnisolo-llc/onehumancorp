@@ -33,15 +33,6 @@ fn greet(name: &str) -> String {
 }
 
 #[tauri::command]
-fn generate_cloud_invite() -> String {
-    let ts = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .unwrap()
-        .as_secs();
-    format!("https://cloud.ohc.network/invite/ref-{}", ts)
-}
-
-#[tauri::command]
 fn load_ai_provider() -> Result<AiProviderView, String> {
     Ok(to_provider_view(read_ai_provider_config()?))
 }
@@ -272,7 +263,6 @@ pub fn run() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .invoke_handler(tauri::generate_handler![
             greet,
-            generate_cloud_invite,
             load_ai_provider,
             save_ai_provider,
             test_ai_provider,

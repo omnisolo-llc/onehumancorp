@@ -82,7 +82,7 @@ impl UserRepository for PgUserRepository {
         validate_org_id!(org_id);
 
         let is_multitenant = ::server_config::get().multitenant;
-        let should_bypass = !is_multitenant && org_id == "system";
+        let should_bypass = !is_multitenant;
 
         let query = if should_bypass {
             "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE id = $1"
@@ -125,7 +125,7 @@ impl UserRepository for PgUserRepository {
         validate_org_id!(org_id);
 
         let is_multitenant = ::server_config::get().multitenant;
-        let should_bypass = !is_multitenant && org_id == "system";
+        let should_bypass = !is_multitenant;
 
         let query = if should_bypass {
             "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE username = $1"
@@ -167,7 +167,7 @@ impl UserRepository for PgUserRepository {
         validate_org_id!(org_id);
 
         let is_multitenant = ::server_config::get().multitenant;
-        let should_bypass = !is_multitenant && org_id == "system";
+        let should_bypass = !is_multitenant;
 
         let query = if should_bypass {
             "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE email = $1"
@@ -209,7 +209,7 @@ impl UserRepository for PgUserRepository {
         validate_org_id!(org_id);
 
         let is_multitenant = ::server_config::get().multitenant;
-        let should_bypass = !is_multitenant && org_id == "system";
+        let should_bypass = !is_multitenant;
 
         let query = if should_bypass {
             "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE oidc_subject = $1"
@@ -250,7 +250,7 @@ impl UserRepository for PgUserRepository {
     async fn list_users(&self, org_id: &str) -> Result<Vec<User>, String> {
         validate_org_id!(org_id);
         let is_multitenant = ::server_config::get().multitenant;
-        let should_bypass = !is_multitenant && org_id == "system";
+        let should_bypass = !is_multitenant;
         let query = if should_bypass {
             "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users ORDER BY created_at"
         } else {
@@ -294,19 +294,19 @@ impl UserRepository for PgUserRepository {
         validate_org_id!(org_id);
         let roles_json = serde_json::to_string(&user.roles).unwrap_or_default();
         let is_multitenant = ::server_config::get().multitenant;
-        let should_bypass = !is_multitenant && org_id == "system";
+        let should_bypass = !is_multitenant;
 
         let query = if should_bypass {
             r#"
             UPDATE users SET username=$2, email=$3, password_hash=$4, roles=$5, active=$6,
-            oidc_subject=$7, updated_at=$8
+            tenant_id=$7, oidc_subject=$8, updated_at=$9
             WHERE id=$1 RETURNING id
             "#
         } else {
             r#"
             UPDATE users SET username=$2, email=$3, password_hash=$4, roles=$5, active=$6,
-            oidc_subject=$7, updated_at=$8
-            WHERE id=$1 AND tenant_id = $9 RETURNING id
+            tenant_id=$7, oidc_subject=$8, updated_at=$9
+            WHERE id=$1 AND tenant_id = $10 RETURNING id
             "#
         };
 
@@ -324,6 +324,7 @@ impl UserRepository for PgUserRepository {
                 .bind(&user.password_hash)
                 .bind(roles_json)
                 .bind(user.active)
+                .bind(org_id)
                 .bind(&user.oidc_subject)
                 .bind(user.updated_at)
                 .fetch_optional(&mut *tx)
@@ -337,6 +338,7 @@ impl UserRepository for PgUserRepository {
                 .bind(&user.password_hash)
                 .bind(roles_json)
                 .bind(user.active)
+                .bind(org_id)
                 .bind(&user.oidc_subject)
                 .bind(user.updated_at)
                 .bind(org_id)
@@ -357,7 +359,7 @@ impl UserRepository for PgUserRepository {
     async fn delete_user(&self, id: &str, org_id: &str) -> Result<(), String> {
         validate_org_id!(org_id);
         let is_multitenant = ::server_config::get().multitenant;
-        let should_bypass = !is_multitenant && org_id == "system";
+        let should_bypass = !is_multitenant;
         let query = if should_bypass {
             "DELETE FROM users WHERE id = $1 RETURNING id"
         } else {
@@ -461,7 +463,7 @@ mod security_tests {
 
         // Cloud multitenant mode should NOT allow bypassing.
         let is_multitenant = true;
-        let org_id = "system"; let should_bypass = !is_multitenant && org_id == "system";
+        let should_bypass = !is_multitenant;
 
         // Ensure the condition strictly evaluates to false when multitenant is true.
         assert!(!should_bypass, "Cloud mode should NEVER bypass tenant filters when org_id is 'system'");

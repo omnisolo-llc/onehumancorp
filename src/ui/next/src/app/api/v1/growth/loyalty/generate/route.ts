@@ -2,37 +2,39 @@ import { NextResponse } from 'next/server';
 
 export async function POST(request: Request) {
   try {
-    const { programName, rewardValue, requiredPoints, theme, hasPro } = await request.json();
+    const body = await request.json();
 
-    // In a real implementation, this would validate the user's Pro status and tenant
-    const scriptTag = `<script src="https://ohc.app/widgets/loyalty-program.js" async></script>`;
+    // In production, BACKEND_URL would be defined. For local dev we use the default 8080.
+    const backendUrl = process.env.BACKEND_URL || 'http://localhost:8080';
+    const backendRes = await fetch(`${backendUrl}/api/v1/growth/loyalty/generate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
 
-    const escapeHtml = (unsafe: string) => {
-        if (!unsafe) return unsafe;
-        return unsafe
-             .replace(/&/g, "&amp;")
-             .replace(/</g, "&lt;")
-             .replace(/>/g, "&gt;")
-             .replace(/"/g, "&quot;")
-             .replace(/'/g, "&#039;");
-    };
+    if (backendRes.ok) {
+        const data = await backendRes.json();
+        return NextResponse.json(data);
+    } else {
+        // Fallback if backend is not available or doesn't support the route yet
+        const { store_name, give_amount, get_amount, reward_type } = body;
+        const store = store_name || 'our store';
 
-    const safeProgramName = escapeHtml(programName) || 'Loyalty Rewards';
-    const safeRewardValue = escapeHtml(rewardValue) || '$10 OFF';
-    const safeRequiredPoints = escapeHtml(requiredPoints) || '100';
-    const safeTheme = escapeHtml(theme) || 'light';
+        const formatReward = (amount: string, type: string) => {
+            return type === 'percentage' ? `${amount}% off` : `$${amount} in store credit`;
+        };
 
-    const divTag = `<div id="ohc-loyalty-program" data-program="${safeProgramName}" data-reward="${safeRewardValue}" data-points="${safeRequiredPoints}" data-theme="${safeTheme}" data-branding="${!hasPro}"></div>`;
-    const branding = !hasPro ? '\n<!-- ⚡ Powered by OHC -->' : '';
+        const giveText = formatReward(give_amount, reward_type);
+        const getText = formatReward(get_amount, reward_type);
 
-    const embedCode = `<!-- Loyalty Program Widget -->\n${divTag}\n${scriptTag}${branding}`;
+        const message = `Subject: Give ${giveText}, Get ${getText}! 🎁\n\nHi there!\n\nWe love having you as a top customer at ${store}. As a special thank you, we're inviting you to our VIP Loyalty Program!\n\nGive your friends ${giveText} their first order using your unique link. When they make a purchase, you'll get ${getText}!\n\nShare your link now: https://ohc.store/vip-loyalty\n\nThanks for your support,\nThe ${store} Team\n\n⚡ Powered by OHC`;
 
-    return NextResponse.json({ embed_code: embedCode });
+        return NextResponse.json({ message });
+    }
   } catch (error) {
-    console.error("Error generating loyalty program snippet:", error);
-    return NextResponse.json(
-        { error: 'Internal Server Error' },
-        { status: 500 }
-    );
+    console.error("Error generating loyalty campaign message:", error);
+    // Fallback if fetch fails completely
+    const message = `Subject: Share the love! 🎁\n\nHi there!\n\nWe love having you as a top customer at our store. As a special thank you, we're inviting you to our VIP Loyalty Program!\n\nShare your link with friends to earn rewards!\n\nShare your link now: https://ohc.store/vip-loyalty\n\nThanks for your support,\nThe Team\n\n⚡ Powered by OHC`;
+    return NextResponse.json({ message });
   }
 }

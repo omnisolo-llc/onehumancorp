@@ -1,56 +1,80 @@
+/**
+ * @jest-environment node
+ */
 import { POST } from './route';
-import { describe, it, expect } from 'vitest';
 
 describe('POST /api/v1/growth/discount_share/generate', () => {
-  it('generates the embed code successfully', async () => {
-    const request = new Request('http://localhost:3000/api/v1/growth/discount_share/generate', {
-      method: 'POST',
-      body: JSON.stringify({
-        campaignName: 'Summer Sale',
-        discountOffer: '20',
-        theme: 'dark',
-        productName: 'Sunglasses',
-        customerLocation: 'California',
-        timeAgo: '2 hours ago',
-        hasPro: false
-      })
+    const originalEnv = process.env;
+
+    beforeEach(() => {
+        process.env = { ...originalEnv };
+        global.fetch = vi.fn();
     });
 
-    const response = await POST(request);
-    const json = await response.json();
-
-    expect(response.status).toBe(200);
-    expect(json.embed_code).toContain('Summer Sale');
-    expect(json.embed_code).toContain('20');
-    expect(json.embed_code).toContain('dark');
-    expect(json.embed_code).toContain('Sunglasses');
-    expect(json.embed_code).toContain('California');
-    expect(json.embed_code).toContain('2 hours ago');
-    expect(json.embed_code).toContain('data-branding="true"');
-    expect(json.embed_code).toContain('<!-- ⚡ Powered by OHC -->');
-  });
-
-  it('escapes user input to prevent XSS', async () => {
-    const request = new Request('http://localhost:3000/api/v1/growth/discount_share/generate', {
-      method: 'POST',
-      body: JSON.stringify({
-        campaignName: '<script>alert(1)</script>',
-        discountOffer: '20',
-        theme: 'dark',
-        productName: '"><script>alert(1)</script>',
-        customerLocation: 'California',
-        timeAgo: '2 hours ago',
-        hasPro: true
-      })
+    afterEach(() => {
+        process.env = originalEnv;
+        vi.restoreAllMocks();
     });
 
-    const response = await POST(request);
-    const json = await response.json();
+    it('should successfully proxy the request to the backend and return data', async () => {
+        process.env.OHC_BACKEND_URL = 'http://mock-backend';
+        const mockResponseData = { share_url: 'https://ohc.app/discount/mocked?tenant=test' };
 
-    expect(response.status).toBe(200);
-    expect(json.embed_code).not.toContain('<script>alert(1)</script>');
-    expect(json.embed_code).toContain('&lt;script&gt;alert(1)&lt;/script&gt;');
-    expect(json.embed_code).not.toContain('"><script>alert(1)</script>');
-    expect(json.embed_code).toContain('&quot;&gt;&lt;script&gt;alert(1)&lt;/script&gt;');
-  });
+        (global.fetch as import("vitest").Mock).mockResolvedValueOnce({
+            ok: true,
+            json: async () => mockResponseData,
+        });
+
+        const req = new Request('http://localhost/api/v1/growth/discount_share/generate', {
+            method: 'POST',
+            headers: {
+                'authorization': 'Bearer token',
+                'cookie': 'session=abc'
+            }
+        });
+
+        const response = await POST(req);
+        const data = await response.json();
+
+        expect(global.fetch).toHaveBeenCalledWith('http://mock-backend/api/v1/growth/discount_share/generate', expect.objectContaining({
+            method: 'POST',
+            headers: expect.any(Headers)
+        }));
+
+        expect(response.status).toBe(200);
+        expect(data).toEqual(mockResponseData);
+    });
+
+    it('should return error when backend responds with an error', async () => {
+        process.env.OHC_BACKEND_URL = 'http://mock-backend';
+
+        (global.fetch as import("vitest").Mock).mockResolvedValueOnce({
+            ok: false,
+            status: 401
+        });
+
+        const req = new Request('http://localhost/api/v1/growth/discount_share/generate', {
+            method: 'POST',
+        });
+
+        const response = await POST(req);
+        const data = await response.json();
+
+        expect(response.status).toBe(401);
+        expect(data).toEqual({ error: 'Failed to generate discount share link' });
+    });
+
+    it('should handle fetch errors gracefully', async () => {
+        (global.fetch as import("vitest").Mock).mockRejectedValueOnce(new Error('Network error'));
+
+        const req = new Request('http://localhost/api/v1/growth/discount_share/generate', {
+            method: 'POST',
+        });
+
+        const response = await POST(req);
+        const data = await response.json();
+
+        expect(response.status).toBe(500);
+        expect(data).toEqual({ error: 'Internal Server Error' });
+    });
 });

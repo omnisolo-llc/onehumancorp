@@ -26,11 +26,6 @@ test.describe('Ralph Loop Agent CLI UI Interactions', () => {
     await textarea.fill('Build an e-commerce platform');
     await startButton.click();
 
-    // We expect the button state to briefly show "Starting..." or become disabled
     await expect(startButton).toBeDisabled();
-
-    // Wait for the backend to start returning progress
-    // If there's no progress returned from backend yet (which returns 404 in our mocked /progress when file doesn't exist), we just check it was clicked.
-    // The test shouldn't be flaky. Since we return a mocked success response in `ralph.rs` for /start but `get_ralph_progress` reads from `/tmp/ralph_progress.json`, we might just get 404. Let's write the file to /tmp/ralph_progress.json in the test fixture or just assume it starts.
   });
 });

@@ -30,8 +30,6 @@ export default function SettingsPage() {
   });
 
   const [isLoading, setIsLoading] = useState(true);
-  const [agentName, setAgentName] = useState("Agent One");
-
 
   useEffect(() => {
     Promise.all([
@@ -45,15 +43,6 @@ export default function SettingsPage() {
            });
         })
         .catch(e => console.error("Failed to load delivery settings", e)),
-
-      fetch("/api/assistant/settings")
-        .then(res => res.json())
-        .then(data => {
-          if (data?.settings?.agentName) {
-            setAgentName(data.settings.agentName);
-          }
-        })
-        .catch(e => console.error("Failed to load assistant settings", e)),
 
       fetch("/api/settings/voice")
         .then(res => res.json())
@@ -155,19 +144,6 @@ export default function SettingsPage() {
     }
   };
 
-  const handleAgentNameChange = async (value: string) => {
-    setAgentName(value);
-    try {
-      await fetch("/api/assistant/settings", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ agentName: value }),
-      });
-    } catch (e) {
-      console.error("Failed to save agent settings", e);
-    }
-  };
-
   const handleProvisionVoiceNumber = async () => {
     try {
       const res = await fetch("/api/settings/voice/provision", {
@@ -266,16 +242,6 @@ export default function SettingsPage() {
                     <span className={`text-sm ${isVerified ? "text-gray-800" : "text-gray-400"}`}>{label}</span>
                   </label>
                 ))}
-                <label className="flex items-center gap-3">
-                  <input
-                    aria-label="Enable Email Notifications"
-                    type="checkbox"
-                    checked={(preferences as any)["email_notifications"] || false}
-                    onChange={(e) => handlePreferenceChange("email_notifications", e.target.checked)}
-                    className="rounded"
-                  />
-                  <span className="text-sm text-gray-800">Enable Email Notifications</span>
-                </label>
               </div>
             </div>
           </div>
@@ -385,27 +351,6 @@ export default function SettingsPage() {
               )}
             </div>
           </div>
-          </div>
-        </section>
-
-        <section className="app-panel">
-          <div className="app-panel-header">
-            <div>
-              <div className="app-panel-title">Agent Settings</div>
-              <div className="app-list-subtitle">Configure your AI agent's identity.</div>
-            </div>
-          </div>
-          <div className="app-panel-body">
-            <label className="block">
-              <span className="app-metric-label">Agent Name</span>
-              <input
-                type="text"
-                value={agentName}
-                onChange={(e) => handleAgentNameChange(e.target.value)}
-                className="mt-2 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800"
-                placeholder="Agent One"
-              />
-            </label>
           </div>
         </section>
 

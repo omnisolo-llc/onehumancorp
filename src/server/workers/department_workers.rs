@@ -916,7 +916,7 @@ impl CustomerSuccessWorker {
                         .await;
                     }
 
-                    sqlx::query("UPDATE department_tasks SET status = $1, payload = jsonb_set(payload, '{generated_response}', $2), updated_at = CURRENT_TIMESTAMP WHERE id = $3")
+                    sqlx::query("UPDATE department_tasks SET status = $1, payload = jsonb_set(payload, '{drafted_message}', $2), updated_at = CURRENT_TIMESTAMP WHERE id = $3")
                         .bind(final_status)
                         .bind(&drafted_msg)
                         .bind(&id)
@@ -955,7 +955,7 @@ impl CustomerSuccessWorker {
 
                     sqlx::query("UPDATE department_tasks SET status = ?, payload = json_patch(payload, ?), updated_at = CURRENT_TIMESTAMP WHERE id = ?")
                         .bind(final_status)
-                        .bind(json!({"generated_response": drafted_msg}).to_string())
+                        .bind(json!({"drafted_message": drafted_msg}).to_string())
                         .bind(&id)
                         .execute(sqlite_pool)
                         .await

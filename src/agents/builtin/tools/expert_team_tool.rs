@@ -89,7 +89,7 @@ pub fn expert_team_tool(client: Arc<dyn LlmClient>, model: String) -> crate::Too
                 "expert_roles": {
                     "type": "array",
                     "items": { "type": "string" },
-                    "description": "Optional list of 5 expert roles. Defaults to standard expert roles."
+                    "description": "Optional list of 5 expert roles. Defaults to standard Tencent Workbuddy roles."
                 }
             },
             "required": ["task"]

@@ -25,7 +25,7 @@ export async function POST(req: Request) {
   const backendUrl = process.env.BACKEND_URL || 'http://127.0.0.1:18789';
 
   try {
-    const res = await fetch(`${backendUrl}/api/chat`, {
+    const res = await fetch(`${backendUrl}/api/agents/chat`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -39,9 +39,19 @@ export async function POST(req: Request) {
 
     const data = await res.json();
 
+    let reply = "I've received your request.";
+    let link = undefined;
+
+    if (data.success && data.department_assigned) {
+      reply = `I have routed your request to the ${data.department_assigned} department. They will take care of it!`;
+      link = { url: "/inbox", title: "Check your inbox for updates →" };
+    } else {
+      reply = "I couldn't process your request at this time. Please try again later.";
+    }
+
     return NextResponse.json({
-      reply: data.reply || "I've received your request.",
-      link: data.link
+      reply,
+      link
     });
   } catch (error) {
     console.error("Failed to connect to backend AI agent:", error);

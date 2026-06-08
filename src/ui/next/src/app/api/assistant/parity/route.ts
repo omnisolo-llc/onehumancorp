@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { listAgentParity } from '../store';
+import { listWorkBuddyParity } from '../store';
 
 export async function GET() {
-  return NextResponse.json(listAgentParity());
+  return NextResponse.json(listWorkBuddyParity());
 }

@@ -230,7 +230,7 @@ function AutoCatalogContent() {
             <input type="file" accept="image/*" className="hidden" onChange={handleFileUpload} />
           </label>
           <p className="text-sm text-gray-500 mt-4 text-center">
-            The Promoter agent will magically remove the background, write the description, and suggest a price.
+            Our AI Auto-Catalog Agent will instantly write the title, description, and suggest a price.
           </p>
           <button
             type="button"
@@ -252,7 +252,7 @@ function AutoCatalogContent() {
               <div className="h-20 bg-gray-200 rounded-md animate-pulse w-full"></div>
               <div className="h-10 bg-gray-200 rounded-md animate-pulse w-1/3"></div>
            </div>
-           <p className="text-sm font-semibold text-blue-600 animate-pulse text-center">The Promoter is working its magic...</p>
+           <p className="text-sm font-semibold text-blue-600 animate-pulse text-center">AutoDream AI is analyzing your photo...</p>
         </div>
       )}
 
@@ -268,7 +268,7 @@ function AutoCatalogContent() {
            <div className="p-5 rounded-[16px] shadow-lg flex flex-col gap-4 relative overflow-hidden"
                 style={{
                    background: 'rgba(255, 255, 255, 0.65)',
-                   backdropFilter: 'blur(20px) saturate(200%)',
+                   backdropFilter: 'blur(30px) saturate(210%)',
                    border: '1px solid rgba(255, 255, 255, 0.4)'
                 }}>
               <div className="absolute top-2 right-2 px-2 py-1 bg-gradient-to-r from-blue-500 to-purple-500 text-white text-[10px] font-bold rounded-full uppercase tracking-wider shadow-sm flex items-center gap-1">
@@ -323,7 +323,7 @@ function AutoCatalogContent() {
                           <div className={`dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${productData?.isSubscription ? 'transform translate-x-4' : ''}`}></div>
                       </div>
                       <div className="ml-3 text-gray-800 font-semibold text-sm">
-                          Enable Subscribe & Save
+                          Offer as Subscription
                       </div>
                   </label>
 
@@ -345,11 +345,11 @@ function AutoCatalogContent() {
                               </select>
                           </div>
                           <div className="flex-1">
-                              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Discount %</label>
+                              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Cutoff day</label>
                               <input
                                   type="number"
-                                  value={productData?.subscriptionDiscount || ''}
-                                  onChange={(e) => setProductData({...productData, subscriptionDiscount: e.target.value})}
+                                  value={subscriptionCutoff}
+                                  onChange={(e) => setSubscriptionCutoff(e.target.value)}
                                   className="w-full bg-white/50 border border-white/60 rounded-[8px] px-3 py-2 text-gray-900 font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                               />
                           </div>
@@ -360,9 +360,9 @@ function AutoCatalogContent() {
 
            <button
              onClick={handlePublish}
-             className="w-full py-[11px] min-h-[44px] bg-[#0066FF] text-white font-bold rounded-[8px] shadow-md hover:bg-blue-600 transition-colors text-lg flex items-center justify-center gap-2"
+             className="w-full py-3.5 bg-[#0066FF] text-white font-bold rounded-[8px] shadow-md hover:bg-blue-600 transition-colors text-lg"
            >
-             Looks Good
+             {subscriptionMode ? 'Publish Subscription' : 'Publish Product'}
            </button>
         </div>
       )}

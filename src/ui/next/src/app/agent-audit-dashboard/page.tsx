@@ -1,47 +1,8 @@
 'use client';
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import Link from 'next/link';
 
-type OHCLedgerEntry = {
-  id: string;
-  tenant_id: string;
-  event_type: string;
-  department: string;
-  payload: any;
-  created_at: string;
-};
-
 export default function AgentAuditDashboard() {
-  const [activities, setActivities] = useState<OHCLedgerEntry[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    let mounted = true;
-    async function fetchActivities() {
-      try {
-        const tenant = typeof window !== "undefined" ? localStorage.getItem("tenant_id") || localStorage.getItem("tenant") || "default" : "default";
-        const res = await fetch(`/api/agents/approvals/ledger?tenant_id=${tenant}`, {
-            headers: {
-              "x-tenant-id": tenant,
-              "x-user-id": "default",
-            },
-        });
-        if (res.ok) {
-            const data = await res.json();
-            if (mounted && data.entries) {
-                setActivities(data.entries);
-            }
-        }
-      } catch (err) {
-        console.error("Failed to load activities", err);
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    }
-    fetchActivities();
-    return () => { mounted = false; };
-  }, []);
-
  return (
  <div className="min-h-screen bg-gray-50 text-gray-900 p-8 font-inter">
  <header className="mb-8 flex items-center justify-between">
@@ -85,24 +46,15 @@ export default function AgentAuditDashboard() {
  <div className="md:col-span-1">
  <section className="app-panel h-full">
  <div className="app-panel-header">
- <h2 className="app-panel-title text-indigo-600">Cross-Agent Feed</h2>
+ <h2 className="app-panel-title text-red-600">Violation Feed</h2>
  </div>
  <div className="app-panel-body space-y-4">
-    {loading && <div className="text-sm text-gray-500">Loading...</div>}
-    {!loading && activities.length === 0 && <div className="text-sm text-gray-500">No activities found.</div>}
-    {activities.map((activity) => {
-        let desc = 'Action completed';
-        try {
-            const p = typeof activity.payload === 'string' ? JSON.parse(activity.payload) : activity.payload;
-            desc = p?.original_payload?.description || desc;
-        } catch (e) {}
-
-        return (
-            <div key={activity.id} className="p-3 glassmorphism bg-white/50 dark:bg-black/50 rounded-lg text-sm text-gray-800 dark:text-gray-200">
-                <span className="font-bold text-indigo-600 dark:text-indigo-400">[{new Date(activity.created_at).toLocaleTimeString()}]</span> {desc} ({activity.department})
-            </div>
-        );
-    })}
+ <div className="p-3 bg-red-100 rounded-lg text-sm text-red-800">
+ [10:45 AM] Sandbox memory limit exceeded in Agent #452
+ </div>
+ <div className="p-3 bg-red-100 rounded-lg text-sm text-red-800">
+ [09:12 AM] Unauthorized network access attempt blocked
+ </div>
  </div>
  </section>
  </div>

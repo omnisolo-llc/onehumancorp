@@ -87,7 +87,6 @@ define_playwright_tests(
     ci_shard_count = 1,
     data = [
         "//src/ui/next:next_app_e2e_data",
-        "//src/ui/tauri/src/ui:all_files",
     ],
     server = "//src/server:server",
     specs = glob(["*.spec.ts"]) + _NEXT_UI_E2E_SPECS + _ROOT_UI_E2E_SPECS,

@@ -86,7 +86,6 @@ impl OnboardingAgent {
 
 
     pub async fn save_onboarding_state(&self, tenant_id: &str, user_id: &str, current_step: i32, state_json: &serde_json::Value) -> Result<(), String> {
-        tracing::debug!("Saving onboarding state for tenant: {}, user: {}", tenant_id, user_id);
         let mut tx = self.hub.pool.begin().await.map_err(|e| e.to_string())?;
         crate::common::auth_utils::set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
 
@@ -131,7 +130,6 @@ impl OnboardingAgent {
 
         let cache_key = format!("agent_onboarding_state_{}_{}", tenant_id, user_id);
         let cache = ONBOARDING_STATE_AGENT_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(self.hub.redis_client.clone()));
-        tracing::debug!("Invalidating onboarding state cache for key: {}", cache_key);
         cache.invalidate(&cache_key).await;
 
         Ok(())
@@ -141,10 +139,8 @@ impl OnboardingAgent {
         let cache_key = format!("agent_onboarding_state_{}_{}", tenant_id, user_id);
         let cache = ONBOARDING_STATE_AGENT_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(self.hub.redis_client.clone()));
         if let Some(cached_state) = cache.get(&cache_key).await {
-            tracing::debug!("Cache hit for onboarding state key: {}", cache_key);
             return Ok(cached_state);
         }
-        tracing::debug!("Cache miss for onboarding state key: {}", cache_key);
 
         let mut tx = self.hub.pool.begin().await.map_err(|e| e.to_string())?;
         crate::common::auth_utils::set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
