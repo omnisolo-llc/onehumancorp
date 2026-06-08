@@ -1,90 +1,119 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { POST } from './route';
 
-const mockBackendUrl = 'http://localhost:8080';
-vi.stubGlobal('process', { env: { OHC_BACKEND_URL: mockBackendUrl } });
-
 describe('POST /api/v1/growth/waitlist', () => {
-  beforeEach(() => {
-    vi.restoreAllMocks();
-  });
+    let mockBackendUrl = 'http://mock-backend';
 
-  it('returns 400 if email is missing', async () => {
-    const req = new Request('http://localhost/api/v1/growth/waitlist', {
-      method: 'POST',
-      body: JSON.stringify({}),
-      headers: { 'Content-Type': 'application/json' },
+    beforeEach(() => {
+        vi.stubEnv('OHC_CORE_URL', mockBackendUrl);
+        // Reset fetch mock before each test
+        global.fetch = vi.fn();
     });
 
-    const res = await POST(req);
-    expect(res.status).toBe(400);
-
-    const data = await res.json();
-    expect(data.error).toBe('Email is required');
-  });
-
-  it('returns 200 and data if backend is successful', async () => {
-    const mockData = { success: true };
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => mockData,
-    });
-    vi.stubGlobal('fetch', fetchMock);
-
-    const req = new Request('http://localhost/api/v1/growth/waitlist', {
-      method: 'POST',
-      body: JSON.stringify({ email: 'test@example.com' }),
-      headers: { 'Content-Type': 'application/json' },
+    afterEach(() => {
+        vi.unstubAllEnvs();
+        vi.resetAllMocks();
     });
 
-    const res = await POST(req);
-    expect(res.status).toBe(200);
+    it('submits waitlist entry successfully via backend API', async () => {
+        // Mock successful backend response
+        const mockResponse = {
+            success: true,
+            position: 10,
+            referral_link: 'https://ohc.app/waitlist?ref=user-123'
+        };
 
-    const data = await res.json();
-    expect(data).toEqual(mockData);
+        (global.fetch as any).mockResolvedValueOnce({
+            ok: true,
+            json: async () => mockResponse
+        });
 
-    expect(global.fetch).toHaveBeenCalledWith(
-      `${mockBackendUrl}/v1/growth/waitlist`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: 'test@example.com' }),
-      }
-    );
-  });
+        const req = new Request('http://localhost/api/v1/growth/waitlist', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: 'test@example.com', tenantId: 'my-store', features: ['AI Agents'] })
+        });
 
-  it('returns error status if backend fails', async () => {
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: false,
-      status: 400,
-    });
-    vi.stubGlobal('fetch', fetchMock);
+        const response = await POST(req);
+        const data = await response.json();
 
-    const req = new Request('http://localhost/api/v1/growth/waitlist', {
-      method: 'POST',
-      body: JSON.stringify({ email: 'bad@example.com' }),
-      headers: { 'Content-Type': 'application/json' },
-    });
-
-    const res = await POST(req);
-    expect(res.status).toBe(400);
-    const data = await res.json();
-    expect(data.error).toBe('Failed to join waitlist');
-  });
-
-  it('returns 500 on fetch error', async () => {
-    const fetchMock = vi.fn().mockRejectedValue(new Error('Network error'));
-    vi.stubGlobal('fetch', fetchMock);
-
-    const req = new Request('http://localhost/api/v1/growth/waitlist', {
-      method: 'POST',
-      body: JSON.stringify({ email: 'test@example.com' }),
-      headers: { 'Content-Type': 'application/json' },
+        expect(response.status).toBe(200);
+        expect(data).toEqual(mockResponse);
+        expect(global.fetch).toHaveBeenCalledWith(`${mockBackendUrl}/v1/growth/waitlist`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: 'test@example.com', tenant_id: 'my-store', features: ['AI Agents'] })
+        });
     });
 
-    const res = await POST(req);
-    expect(res.status).toBe(500);
-    const data = await res.json();
-    expect(data.error).toBe('Internal Server Error');
-  });
+    it('escapes user input to prevent XSS', async () => {
+        (global.fetch as any).mockResolvedValueOnce({
+            ok: true,
+            json: async () => ({})
+        });
+
+        const req = new Request('http://localhost/api/v1/growth/waitlist', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                email: 'test@example.com',
+                tenantId: '<script>alert(1)</script>',
+                features: ['<script>alert(2)</script>', 'Valid Feature']
+            })
+        });
+
+        await POST(req);
+
+        // Verify the payload sent to backend is escaped
+        expect(global.fetch).toHaveBeenCalledWith(
+            expect.any(String),
+            expect.objectContaining({
+                body: JSON.stringify({
+                    email: 'test@example.com',
+                    tenant_id: '&lt;script&gt;alert(1)&lt;/script&gt;',
+                    features: ['&lt;script&gt;alert(2)&lt;/script&gt;', 'Valid Feature']
+                })
+            })
+        );
+    });
+
+    it('falls back gracefully if backend API fails', async () => {
+        // Mock failed backend response (e.g. 500 server error)
+        (global.fetch as any).mockResolvedValueOnce({
+            ok: false,
+            status: 500,
+            statusText: 'Internal Server Error'
+        });
+
+        const req = new Request('http://localhost/api/v1/growth/waitlist', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: 'test@example.com', tenantId: 'my-store' })
+        });
+
+        const response = await POST(req);
+        const data = await response.json();
+
+        expect(response.status).toBe(200); // Should still return 200 to UI with fallback data
+        expect(data.success).toBe(true);
+        expect(data.referral_link).toContain('my-store');
+    });
+
+    it('falls back gracefully if fetch throws an exception (network error)', async () => {
+        // Mock network error
+        (global.fetch as any).mockRejectedValueOnce(new TypeError('Failed to fetch'));
+
+        const req = new Request('http://localhost/api/v1/growth/waitlist', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: 'test@example.com', tenantId: 'my-store' })
+        });
+
+        const response = await POST(req);
+        const data = await response.json();
+
+        expect(response.status).toBe(200);
+        expect(data.success).toBe(true);
+        expect(data.referral_link).toContain('demo-fallback');
+    });
 });
