@@ -12,15 +12,21 @@
         display: flex;
         flex-direction: column;
         align-items: center;
-        padding-top: 50px;
+        justify-content: center;
         height: 100vh;
         box-sizing: border-box;
       }
       .container {
         max-width: 400px;
         width: 100%;
-        padding: 20px;
+        padding: 40px;
         box-sizing: border-box;
+        background: rgba(255, 255, 255, 0.65);
+        backdrop-filter: blur(30px) saturate(210%);
+        border-radius: 16px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        text-align: center;
+        border: 1px solid rgba(255, 255, 255, 0.4);
       }
       h1 {
         color: #1d1d1f;
@@ -46,9 +52,8 @@
 
       /* OHC Glassmorphism token */
       .ohc-growth-card {
-        backdrop-filter: blur(20px) saturate(200%);
-        background: rgba(255, 255, 255, 0.05);
-        border: 1px solid rgba(0, 0, 0, 0.1);
+        background: rgba(255, 255, 255, 0.5);
+        border: 1px solid rgba(255, 255, 255, 0.4);
         color: #1d1d1f;
         border-radius: 12px;
         padding: 24px;
@@ -56,11 +61,14 @@
         text-align: center;
         box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
       }
-
-      /* If dark mode is preferred for the growth card as in the docs: */
       @media (prefers-color-scheme: dark) {
+        .container {
+          background: rgba(22, 22, 26, 0.7);
+          backdrop-filter: blur(30px) saturate(210%);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+        }
         body {
-          background-color: #1d1d1f;
+          background-color: #16161a;
         }
         h1 {
           color: #f5f5f7;

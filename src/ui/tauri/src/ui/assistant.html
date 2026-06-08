@@ -213,9 +213,23 @@
         });
       }
 
+      nameInput.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+              e.preventDefault();
+              nextBtn.click();
+          }
+      });
+
       nameInput.addEventListener('input', () => {
           if (nameInput.value.trim()) {
               nameError.style.display = 'none';
+          }
+      });
+
+      toneSelect.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+              e.preventDefault();
+              nextBtn.click();
           }
       });
 
