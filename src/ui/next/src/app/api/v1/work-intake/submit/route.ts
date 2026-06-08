@@ -10,9 +10,26 @@ export async function POST(request: Request) {
     const { searchParams } = new URL(request.url);
     const tenant = searchParams.get('tenant') || 'my-business';
 
-    // In a real application, we would save this to the database
+    // Notify backend of work intake
+    const backendUrl = process.env.BACKEND_URL || 'http://127.0.0.1:18789';
+    try {
+      await fetch(`${backendUrl}/api/agents/webhook`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          tenant_id: tenant,
+          source: 'work_intake',
+          message: details,
+        }),
+      });
+    } catch (e) {
+      console.error('Failed to notify backend of work intake:', e);
+    }
 
     const html = `
+
     <!DOCTYPE html>
     <html lang="en">
     <head>

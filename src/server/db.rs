@@ -223,7 +223,7 @@ impl DB {
             // Force full encryption of the database
             conn_opts = conn_opts.pragma("cipher", "'sqlcipher'");
 
-            let sqlite_pool = SqlitePoolOptions::new()
+            let sqlite_pool = SqlitePoolOptions::new().max_connections(50)
                 .after_connect(|conn, _meta| {
                     Box::pin(async move {
                         use sqlx::Executor;

@@ -355,10 +355,6 @@ if [ "$PULL_PG_SUCCESS" = true ]; then
         echo "[playwright] Initializing database roles..."
         postgres_exec "DO \$\$ BEGIN IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'ohc_bypassrls') THEN CREATE ROLE ohc_bypassrls NOLOGIN; END IF; END \$\$;" "create ohc_bypassrls role"
         postgres_exec "GRANT ohc_bypassrls TO ohc;" "grant ohc_bypassrls role"
-        if [[ -f "$WORK_DIR/src/e2e/e2e-seed.sql" ]]; then
-          echo "[playwright] Seeding E2E database..."
-          cat "$WORK_DIR/src/e2e/e2e-seed.sql" | docker exec -i "$POSTGRES_NAME" psql -v ON_ERROR_STOP=1 -U ohc -d ohc
-        fi
       fi
     else
       echo "[playwright] Docker run for Postgres failed. Falling back to Standalone Mode (SQLite)."
@@ -432,7 +428,6 @@ if [[ -n "${SERVER_BIN:-}" && -x "${SERVER_BIN:-}" ]]; then
     OHC_STANDALONE="false"
     export REDIS_URL="$RD_URL"
   fi
-  export DATABASE_URL="$DB_URL"
   DATABASE_URL="$DB_URL" \
   REDIS_URL="$RD_URL" \
   OHC_STANDALONE_MODE="$OHC_STANDALONE" \
