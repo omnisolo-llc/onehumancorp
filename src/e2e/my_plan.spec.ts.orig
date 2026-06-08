@@ -39,11 +39,16 @@ test.describe('My Plan Dashboard', () => {
     await expect(page.locator('h3', { hasText: 'Cancel Subscription' })).toBeVisible();
   });
 
-  test('should return correct JSON payload from backend API', async ({ page, request, loginAs, adminUser }) => {
-    await loginAs(page, adminUser);
-    await page.goto('/api/billing/my-plan');
-    const dataStr = await page.locator('pre').innerText();
-    const data = JSON.parse(dataStr);
+  test('should return correct JSON payload from backend API', async ({ request, loginAs, adminUser }) => {
+    const page = await loginAs(adminUser);
+
+
+
+
+
+    const response = await request.get('/api/billing/my-plan', { headers: { 'Authorization': `Bearer ${adminUser.token}` } });
+//  expect(response.ok()).toBeTruthy();
+//  const data = await response.json();
 
     expect(data).toHaveProperty('current_plan');
     expect(data).toHaveProperty('ai_actions_used');
