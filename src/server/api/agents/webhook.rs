@@ -97,6 +97,78 @@ async fn handle_webhook(
 
     let description = format!("Incoming message from {}: {}", payload.source, payload.message);
 
+    if payload.source == "intake_form" || payload.message.to_lowercase().contains("quote") || payload.message.to_lowercase().contains("proposal") {
+        let risk = ActionRisk::DraftForReview;
+
+        let target_language = payload.target_language.as_deref().unwrap_or("en");
+        let translation = match translate_inbox_message_with_llm(
+            &payload.tenant_id,
+            &payload.source,
+            &payload.message,
+            target_language,
+        )
+        .await
+        {
+            Ok(translation) => translation,
+            Err(e) => {
+                ::server_telemetry::record_error_signal("Inbox translation failed");
+                tracing::error!("Inbox translation failed: {}", e);
+                return (StatusCode::SERVICE_UNAVAILABLE, Json(WebhookResponse { success: false, request_id: None })).into_response();
+            }
+        };
+
+        // Query LLM to generate the proposal scope and price
+        let prompt = format!(
+            "Generate a structured project proposal for this client request. Extract the requested service, suggested price (based on standard small business rates), scope, and suggested time. Output JSON ONLY with keys: service, suggested_price (number), scope, suggested_time. Client request: {}",
+            translation.translated_content
+        );
+
+        let llm_result = match std::env::var("OHC_LLM_PROVIDER").as_deref() {
+            Ok("minimax") => {
+                if let Ok(api_key) = std::env::var("MINIMAX_API_KEY") {
+                    crate::minimax::MinimaxClient::new(api_key).reason(&prompt).await.unwrap_or_else(|_| "{}".to_string())
+                } else {
+                    crate::minimax::LocalLLMClient::new().reason(&prompt).await.unwrap_or_else(|_| "{}".to_string())
+                }
+            }
+            _ => crate::minimax::LocalLLMClient::new().reason(&prompt).await.unwrap_or_else(|_| "{}".to_string()),
+        };
+
+        let parsed_llm: serde_json::Value = serde_json::from_str(&llm_result).unwrap_or_else(|_| serde_json::json!({
+            "service": "Custom Project",
+            "suggested_price": 500.0,
+            "scope": "Standard package based on inquiry.",
+            "suggested_time": "Next available slot"
+        }));
+
+        let description = format!("Draft proposal for: {}", parsed_llm["service"].as_str().unwrap_or("Custom Project"));
+        let res = orchestrator.execute_action(
+            DepartmentType::Sales,
+            description,
+            payload.tenant_id.clone(),
+            risk,
+            serde_json::json!({
+                "feature_type": "quote_draft",
+                "service": parsed_llm["service"].as_str().unwrap_or("Custom Project"),
+                "customer_inquiry": translation.translated_content,
+                "suggested_price": parsed_llm["suggested_price"].as_f64().unwrap_or(0.0),
+                "scope": parsed_llm["scope"].as_str().unwrap_or("Standard scope"),
+                "suggested_time": parsed_llm["suggested_time"].as_str().unwrap_or("TBD"),
+            }),
+        ).await;
+
+        match res {
+            Ok(req) => return (StatusCode::OK, Json(WebhookResponse { success: true, request_id: Some(req.id) })).into_response(),
+            Err(e) => {
+                if e.contains("AI Budget exhausted") {
+                    return (StatusCode::TOO_MANY_REQUESTS, Json(WebhookResponse { success: false, request_id: None })).into_response();
+                } else {
+                    return (StatusCode::INTERNAL_SERVER_ERROR, Json(WebhookResponse { success: false, request_id: None })).into_response();
+                }
+            }
+        }
+    }
+
     // We route external messages (like DMs) to the Customer Success department
     let risk = ActionRisk::DraftForReview;
 
