@@ -1,13 +1,9 @@
 import { test, expect } from '@playwright/test';
-import path from 'path';
 
 test.describe('Viral Standalone Bridge', () => {
   test('should navigate to dashboard and generate a referral link', async ({ page }) => {
-    // In Tauri, the pages are served locally or we can use the file schema directly since they are static HTML.
-    // For this E2E test, since we don't have the Tauri harness in Playwright directly mapped here,
-    // we'll load the file locally using file://
-    const successUrl = `file://${path.resolve('src/ui/tauri/src/ui/success.html')}`;
-    await page.goto(successUrl);
+    // Navigate to the success.html page being served by tauri
+    await page.goto('/success.html');
 
     // Verify we are on success page
     await expect(page.getByRole('heading', { name: "You're all set!" })).toBeVisible();
