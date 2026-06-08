@@ -10,7 +10,7 @@ import { InteractiveWalkthrough, Step } from './Walkthrough';
 // --- Walkthrough System ---
 
 type HelpArticle = { title: string; desc: string; link?: string };
-type HelpVideo = { id: number; title: string; duration: string };
+type HelpVideo = { id: number; title: string; duration: string; video_url?: string };
 type HelpTab = "center" | "chat" | "videos" | "whatsnew";
 type ChatMessage = { id: string; role: "bot" | "user"; text: string; linkUrl?: string; linkTitle?: string };
 
@@ -41,7 +41,7 @@ function normalizeVideos(data: unknown): HelpVideo[] {
   if (!Array.isArray(data)) return [];
   return data.flatMap((item) => {
     if (!isRecord(item) || typeof item.id !== "number" || typeof item.title !== "string" || typeof item.duration !== "string") return [];
-    return [{ id: item.id, title: item.title, duration: item.duration }];
+    return [{ id: item.id, title: item.title, duration: item.duration, video_url: typeof item.video_url === "string" ? item.video_url : undefined }];
   });
 }
 
