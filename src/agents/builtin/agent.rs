@@ -3448,14 +3448,6 @@ impl Agent {
                             content: String::new(),
                             error: self_correct_msg.clone(),
                         };
-                        let msg_to_push = Message {
-                            role: Role::Tool,
-                            content: String::new(),
-                            tool_calls: vec![],
-                            tool_results: vec![error_result.clone()],
-                            response_id: None,
-                            previous_response_id: None,
-                        };
                         tool_results[idx] = error_result;
                     }
                     Err(ToolError::UserFixable(msg)) => {
@@ -3714,14 +3706,6 @@ impl Agent {
                                 tool_call_id: tc.id.clone(),
                                 content: String::new(),
                                 error: self_correct_msg.clone(),
-                            };
-                            let msg_to_push = Message {
-                                role: Role::Tool,
-                                content: String::new(),
-                                tool_calls: vec![],
-                                tool_results: vec![error_result],
-                                response_id: None,
-                                previous_response_id: None,
                             };
                             error = self_correct_msg;
                             content = String::new();
