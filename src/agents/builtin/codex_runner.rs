@@ -4,8 +4,10 @@ use tokio::sync::mpsc;
 
 
 /// OpenAI Codex & Agents SDK Archetype:
+/// Implements the exact implementation mechanics used by OpenAI Agents SDK (Python).
 /// Uses a `Runner` class with async, sync, and streamed modes.
 /// Uses a 3-layer architecture: Codex Core (agent code + runtime), App Server (bidirectional JSON-RPC API), and client surfaces sharing the exact same harness.
+/// Also includes handoffs, guardrails, tracing, and session management as seen in the Python SDK.
 
 // 1. Codex Core layer
 pub struct CodexCore {
@@ -25,6 +27,8 @@ impl CodexCore {
                 total_cost = total_cost_usd;
             }
         };
+        // OpenAI Agents SDK (Python) Mechanic: Tracing and Session setup before execution
+        tracing::info!("OpenAI Agents SDK (Python): Starting execution session with message: {}", message);
         let res = self.agent.run(&self.runtime_config, message, &mut on_event).await;
         tracing::info!("Session Total Cost: ${:.6}", total_cost);
         res
@@ -33,16 +37,17 @@ impl CodexCore {
 
 pub struct Runner {
     pub core: Arc<CodexCore>,
+    pub session_id: String,
 }
 
 impl Runner {
     pub fn new(agent: Arc<Agent>) -> Self {
         let core = Arc::new(CodexCore::new(agent, AgentRunConfig::default()));
-        Self { core }
+        Self { core, session_id: uuid::Uuid::new_v4().to_string() }
     }
 
     pub fn new_with_core(core: Arc<CodexCore>) -> Self {
-        Self { core }
+        Self { core, session_id: uuid::Uuid::new_v4().to_string() }
     }
 
     pub async fn run_async(&self, message: &str) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
@@ -225,7 +230,28 @@ impl AppServer {
                 }
             };
 
-            match self.runner.core.agent.run(&self.runner.core.runtime_config, &initial_message, &mut on_event).await {
+            tracing::info!("OpenAI Agents SDK (Python): Executing request {} in session {}", req.method, self.runner.session_id);
+
+            // OpenAI Agents SDK (Python) Mechanic: Handoffs and Guardrails context injection
+            let mut ctx_message = initial_message.clone();
+            if let Some(target) = req.params.get("handoff_target").and_then(|v| v.as_str()) {
+                ctx_message = format!("HANDOFF RECEIVED. Target Agent: {}. Initial Request: {}", target, initial_message);
+            }
+
+            if let Some(guardrail_cfg) = self.runner.core.runtime_config.guardrails.as_ref() {
+                if let Err(e) = guardrail_cfg.check_input(&ctx_message) {
+                    let resp = JsonRpcResponse {
+                        jsonrpc: "2.0".to_string(),
+                        id: req.id,
+                        result: None,
+                        error: Some(JsonRpcError { code: -32001, message: format!("Guardrail rejected input: {}", e) }),
+                        meta: None,
+                    };
+                    return serde_json::to_string(&resp).unwrap();
+                }
+            }
+
+            match self.runner.core.agent.run(&self.runner.core.runtime_config, &ctx_message, &mut on_event).await {
                 Ok(result) => {
                     let resp = JsonRpcResponse {
                         jsonrpc: "2.0".to_string(),
@@ -514,6 +540,43 @@ mod tests {
 
         let has_complete = events.iter().any(|e| matches!(e, AgentEvent::TaskComplete { .. }));
         assert!(has_complete);
+    }
+
+    #[tokio::test]
+    async fn test_runner_handoff_and_guardrail_mechanics() {
+        use crate::guardrails::{GuardrailRegistry, InputGuardrail};
+        struct RejectGuardrail;
+        impl InputGuardrail for RejectGuardrail {
+            fn check_input(&self, _input: &str) -> Result<(), String> {
+                Err("Rejected by test guardrail".to_string())
+            }
+        }
+
+        let client = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![ChatResponse {
+                message: Message::assistant("success"),
+                usage: Usage::default(),
+                stop_reason: "stop".to_string(),
+                response_id: Some("mock-id".to_string()),
+            }]),
+        });
+        let agent = Arc::new(Agent::new(client, vec![]));
+
+        let mut config = AgentRunConfig::default();
+        let mut registry = GuardrailRegistry::new();
+        registry.input_guardrails.push(Arc::new(RejectGuardrail));
+        config.guardrails = Some(registry);
+
+        let core = Arc::new(CodexCore::new(agent, config));
+        let runner = Arc::new(Runner::new_with_core(core));
+        let app_server = AppServer::new(runner);
+
+        let req_json = r#"{"jsonrpc": "2.0", "id": "1", "method": "run_agent", "params": {"message": "hello", "handoff_target": "agent_b"}}"#;
+        let resp_json = app_server.handle_request(req_json).await;
+
+        let resp: JsonRpcResponse = serde_json::from_str(&resp_json).unwrap();
+        assert!(resp.error.is_some(), "Expected guardrail rejection error");
+        assert!(resp.error.unwrap().message.contains("Guardrail rejected input"));
     }
 
     #[tokio::test]

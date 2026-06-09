@@ -142,7 +142,7 @@ if (typeof window !== 'undefined') {
 
 // Add fetch mock if needed
 const originalFetch2 = global.fetch;
-global.fetch = async (url: string | URL | Request, init?: RequestInit) => {
+global.fetch = vi.fn().mockImplementation(async (url: string | URL | Request, init?: RequestInit): Promise<Response> => {
     let urlString = '';
     if (typeof url === 'string') {
         urlString = url;
@@ -153,7 +153,13 @@ global.fetch = async (url: string | URL | Request, init?: RequestInit) => {
     }
 
     if (urlString.startsWith('/')) {
-        url = 'http://localhost:3000' + urlString;
+        return Promise.resolve(new Response(JSON.stringify({
+            ok: true,
+            entries: [], metrics: {}, approvals: [], workflows: [], milestones: []
+        }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' }
+        }));
     }
     return originalFetch2(url, init);
-};
+}) as any;
