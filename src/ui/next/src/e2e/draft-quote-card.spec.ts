@@ -14,7 +14,7 @@ test.describe('Draft Quote Action Card CUJ', () => {
     await page.goto('/team');
 
     // Switch to Sales department
-    await page.getByText('Sales').click();
+    await page.getByText('The Salesperson').click();
 
     // 3. Verify the Draft Quote Suggestion card is visible
     await expect(page.getByTestId('draft-quote-card').first()).toBeVisible();
