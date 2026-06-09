@@ -26,6 +26,7 @@ exports_files(
         "fulfillment.rs",
         "shipping.rs",
 
+        "search.rs",
 
         "local_seo.rs",
     ],
@@ -60,6 +61,7 @@ rust_library(
         "fulfillment.rs",
         "shipping.rs",
 
+        "search.rs",
 
         "local_seo.rs",
         "//src/server/api/agents:approvals.rs",

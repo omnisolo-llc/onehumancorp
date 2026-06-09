@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { WithTooltip } from "../../components/TooltipRegistry";
+import { Omnibox } from "./Omnibox";
 
 type StatusItem = {
   label: string;
@@ -31,6 +32,7 @@ type IconName =
   | "inventory"
   | "orders"
   | "plus"
+  | "search"
   | "settings"
   | "setup"
   | "team";
@@ -79,6 +81,7 @@ function ShellIcon({ name }: { name: IconName }) {
     inventory: ["M4 7 12 3l8 4-8 4-8-4z", "M4 12l8 4 8-4", "M4 17l8 4 8-4"],
     orders: ["M7 4h10l2 4v16H5V8l2-4z", "M9 12h6", "M9 16h6"],
     plus: ["M12 5v14", "M5 12h14"],
+    search: ["M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"],
     settings: ["M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z", "M19.4 15a1.8 1.8 0 0 0 .36 2l.04.04a2 2 0 1 1-2.83 2.83l-.04-.04a1.8 1.8 0 0 0-2-.36 1.8 1.8 0 0 0-1.1 1.65V21a2 2 0 1 1-4 0v-.06a1.8 1.8 0 0 0-1.1-1.65 1.8 1.8 0 0 0-2 .36l-.04.04a2 2 0 1 1-2.83-2.83l.04-.04a1.8 1.8 0 0 0 .36-2 1.8 1.8 0 0 0-1.65-1.1H3a2 2 0 1 1 0-4h.06a1.8 1.8 0 0 0 1.65-1.1 1.8 1.8 0 0 0-.36-2l-.04-.04A2 2 0 1 1 7.14 3.7l.04.04a1.8 1.8 0 0 0 2 .36 1.8 1.8 0 0 0 1.1-1.65V3a2 2 0 1 1 4 0v.06a1.8 1.8 0 0 0 1.1 1.65 1.8 1.8 0 0 0 2-.36l.04-.04a2 2 0 1 1 2.83 2.83l-.04.04a1.8 1.8 0 0 0-.36 2c.29.67.93 1.1 1.65 1.1H21a2 2 0 1 1 0 4h-.06a1.8 1.8 0 0 0-1.54 1z"],
     setup: ["M4 7h16", "M4 12h10", "M4 17h7", "M17 14v6", "M14 17h6"],
     team: ["M9 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6z", "M17 12a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z", "M3.5 20a5.5 5.5 0 0 1 11 0", "M14.5 19a4 4 0 0 1 6 0"],
@@ -148,6 +151,7 @@ export function AppShell({
 }) {
   return (
     <div className="app-shell">
+      <Omnibox />
       <aside className="app-sidebar">
         <div className="app-brand">
           <div className="app-brand-mark">O</div>
@@ -175,6 +179,17 @@ export function AppShell({
             {subtitle && <p className="app-subtitle">{subtitle}</p>}
           </div>
           <div className="app-topbar-right">
+            <button
+              onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true }))}
+              className="flex items-center text-sm px-3 py-1.5 border border-gray-200 dark:border-gray-800 rounded-lg text-gray-500 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors mr-2"
+              title="Search (Cmd+K)"
+            >
+              <ShellIcon name="search" />
+              <span className="ml-2 hidden sm:inline">Search...</span>
+              <div className="hidden sm:flex items-center ml-3 px-1.5 py-0.5 rounded text-[10px] font-medium bg-gray-100 dark:bg-gray-800 text-gray-400">
+                <span className="mr-0.5">⌘</span>K
+              </div>
+            </button>
             <div className="app-status-strip">
               {statusItems.map((item) => (
                 <div key={item.label} className="app-status-item">
