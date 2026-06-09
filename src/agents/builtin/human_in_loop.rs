@@ -1,4 +1,6 @@
-use ohc_builtin_agent_core::types::{ToolCall, ToolError, HumanInLoopSpectrum, PermissionArchitecture};
+use ohc_builtin_agent_core::types::{
+    HumanInLoopSpectrum, PermissionArchitecture, ToolCall, ToolError,
+};
 
 /// HumanInLoopManager implements the SOTA Harness Patterns (2025-2026): 5. Human-in-loop as spectrum -> not binary autonomy vs control.
 pub struct HumanInLoopManager;
@@ -17,7 +19,8 @@ impl HumanInLoopManager {
         approved_tool_calls: &[String],
         manually_approved_tool_calls: &[String],
     ) -> Result<(), ToolError> {
-        let is_approved = approved_tool_calls.contains(&tc.id) || manually_approved_tool_calls.contains(&tc.id);
+        let is_approved =
+            approved_tool_calls.contains(&tc.id) || manually_approved_tool_calls.contains(&tc.id);
 
         if is_approved {
             return Ok(());
@@ -70,8 +73,10 @@ impl HumanInLoopManager {
                     )))
                 } else {
                     // Fall back to autonomous if confidence is sufficient, but also check the base permission architecture
-                    if permission_architecture == &PermissionArchitecture::Restrictive && !is_read_only {
-                         Err(ToolError::UserFixable(format!(
+                    if permission_architecture == &PermissionArchitecture::Restrictive
+                        && !is_read_only
+                    {
+                        Err(ToolError::UserFixable(format!(
                             "Mutating tool '{}' requires human approval due to restrictive base architecture.",
                             tc.name
                         )))
