@@ -115,7 +115,7 @@ pub struct JsonRpcResponse {
     pub meta: Option<serde_json::Value>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct JsonRpcError {
     pub code: i32,
     pub message: String,
@@ -144,6 +144,45 @@ impl AppServer {
                 return serde_json::to_string(&err_resp).unwrap();
             }
         };
+
+        if req.method == "ap_create_task" {
+            let server = crate::agent_protocol::AgentProtocolServer::new(self.runner.clone());
+            let req_json = serde_json::to_string(&req.params).unwrap_or_default();
+            let result = server.create_task(&req_json).await;
+            let resp = JsonRpcResponse {
+                jsonrpc: "2.0".to_string(),
+                id: req.id,
+                result: serde_json::from_str(&result).ok(),
+                error: None,
+                meta: None,
+            };
+            return serde_json::to_string(&resp).unwrap_or_default();
+        } else if req.method == "ap_get_task" {
+            let server = crate::agent_protocol::AgentProtocolServer::new(self.runner.clone());
+            let task_id = req.params.get("task_id").and_then(|v| v.as_str()).unwrap_or("");
+            let result = server.get_task(task_id).await;
+            let resp = JsonRpcResponse {
+                jsonrpc: "2.0".to_string(),
+                id: req.id,
+                result: serde_json::from_str(&result).ok(),
+                error: None,
+                meta: None,
+            };
+            return serde_json::to_string(&resp).unwrap_or_default();
+        } else if req.method == "ap_execute_step" {
+            let server = crate::agent_protocol::AgentProtocolServer::new(self.runner.clone());
+            let task_id = req.params.get("task_id").and_then(|v| v.as_str()).unwrap_or("");
+            let req_json = serde_json::to_string(&req.params).unwrap_or_default();
+            let result = server.execute_step(task_id, &req_json).await;
+            let resp = JsonRpcResponse {
+                jsonrpc: "2.0".to_string(),
+                id: req.id,
+                result: serde_json::from_str(&result).ok(),
+                error: None,
+                meta: None,
+            };
+            return serde_json::to_string(&resp).unwrap_or_default();
+        }
 
         // Helper to extract total_cost from run_async execution if needed
         // Since we modified run_async (execute), we can extract cost through events if needed
@@ -559,7 +598,31 @@ mod tests {
         // Clean up test file if it exists
         let _ = std::fs::remove_file(".test_ralph_progress.json");
 
+        // Test Agent Protocol ap_create_task method
+        let req_json_ap_create = r#"{"jsonrpc": "2.0", "id": "10", "method": "ap_create_task", "params": {"input": "do this task"}}"#;
+        let resp_json_ap_create = app_server.handle_request(req_json_ap_create).await;
+        let resp_ap_create: JsonRpcResponse = serde_json::from_str(&resp_json_ap_create).unwrap();
+        assert!(resp_ap_create.error.is_none(), "Error was: {:?}", resp_ap_create.error);
+        let created_task = resp_ap_create.result.unwrap();
+        assert_eq!(created_task.get("input").unwrap().as_str().unwrap(), "do this task");
+        let task_id = created_task.get("task_id").unwrap().as_str().unwrap().to_string();
 
+        // Test Agent Protocol ap_get_task method
+        let req_json_ap_get = format!(r#"{{"jsonrpc": "2.0", "id": "11", "method": "ap_get_task", "params": {{"task_id": "{}"}}}}"#, task_id);
+        let resp_json_ap_get = app_server.handle_request(&req_json_ap_get).await;
+        let resp_ap_get: JsonRpcResponse = serde_json::from_str(&resp_json_ap_get).unwrap();
+        assert!(resp_ap_get.error.is_none());
+        assert_eq!(resp_ap_get.result.unwrap().get("task_id").unwrap().as_str().unwrap(), task_id);
+
+        // Test Agent Protocol ap_execute_step method
+        let req_json_ap_execute = format!(r#"{{"jsonrpc": "2.0", "id": "12", "method": "ap_execute_step", "params": {{"task_id": "{}", "input": "step 1"}}}}"#, task_id);
+        let resp_json_ap_execute = app_server.handle_request(&req_json_ap_execute).await;
+        let resp_ap_execute: JsonRpcResponse = serde_json::from_str(&resp_json_ap_execute).unwrap();
+        assert!(resp_ap_execute.error.is_none());
+        let step_result = resp_ap_execute.result.unwrap();
+        assert_eq!(step_result.get("task_id").unwrap().as_str().unwrap(), task_id);
+        assert_eq!(step_result.get("status").unwrap().as_str().unwrap(), "completed");
+        assert_eq!(step_result.get("output").unwrap().as_str().unwrap(), "default output");
 
         // Test SONA endpoints
         let record_req = r#"{"jsonrpc": "2.0", "id": "1", "method": "record_sona_pattern", "params": { "id": "p1", "initial_context": "ctx", "successful_tools": ["bash"], "outcome_score": 1.0 }}"#;
