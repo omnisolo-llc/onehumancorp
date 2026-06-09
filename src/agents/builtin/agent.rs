@@ -285,7 +285,7 @@ pub struct Agent {
 }
 #[derive(Clone, Default)]
 pub struct AgentState {
-    pub messages: Vec<Message>,
+    pub messages: Vec<Message>, // DEPRECATED, prefer ShortTermMemory
     pub has_tool_calls: bool,
     pub total_tokens: i32,
     pub error_counts: std::collections::HashMap<String, u64>,
