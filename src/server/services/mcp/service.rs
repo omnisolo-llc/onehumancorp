@@ -260,7 +260,7 @@ impl McpService for MyMcpService {
 
         let grounding_content = sip_db.load_grounding_content().await;
 
-        let is_standalone = std::env::var("OHC_STANDALONE_MODE").unwrap_or_default() == "true";
+        let is_standalone = crate::is_standalone_runtime();
         let _permit = if is_standalone {
             match crate::sip::get_sqlite_limiter().try_acquire() {
                 Ok(p) => Some(p),
@@ -305,7 +305,7 @@ impl McpService for MyMcpService {
         }
 
         let req = request.into_inner();
-        let is_standalone = std::env::var("OHC_STANDALONE_MODE").unwrap_or_default() == "true";
+        let is_standalone = crate::is_standalone_runtime();
         let _permit = if is_standalone {
             match crate::sip::get_sqlite_limiter().try_acquire() {
                 Ok(p) => Some(p),

@@ -31,7 +31,7 @@ impl CloudSyncService {
 #[async_trait::async_trait]
 impl SyncDeltas for CloudSyncService {
     async fn sync_deltas(&self, deltas: Vec<SyncDelta>) -> Result<(), String> {
-        let is_standalone = env::var("OHC_STANDALONE_MODE").unwrap_or_else(|_| "false".to_string()) == "true";
+        let is_standalone = crate::is_standalone_runtime();
         let telemetry_enabled = env::var("OHC_TELEMETRY_ENABLED").unwrap_or_else(|_| "false".to_string()) == "true";
 
         if is_standalone && !telemetry_enabled {
