@@ -23,7 +23,7 @@ export function ActionSheet({ isOpen, onClose, title, children }: { isOpen: bool
       <div className="mac-glass-container w-full rounded-t-[16px] p-6 shadow-2xl animate-slide-up relative z-10">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7]">{title}</h2>
-          <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-full hover:bg-white/40 dark:hover:bg-black/40 transition-colors">
+          <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-full hover:glassmorphism/40 dark:hover:bg-black/40 transition-colors">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
           </button>
         </div>
@@ -124,7 +124,7 @@ export function QRCode({ value }: { value: string }) {
 export function SmartBlock({ type, props }: { type: string; props: any }) {
   if (type === "Hero") {
     return (
-      <div className="relative w-full overflow-hidden bg-white/20 dark:bg-black/20 min-w-[375px]">
+      <div className="relative w-full overflow-hidden glassmorphism/20 dark:bg-black/20 min-w-[375px]">
         <div
           className="absolute inset-0 bg-cover bg-center opacity-90"
           style={{ backgroundImage: `url(${props.image})` }}
@@ -151,10 +151,10 @@ export function SmartBlock({ type, props }: { type: string; props: any }) {
               )}
               <div className="flex justify-between items-start mb-1">
                 <h3 className="font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">{item.name}</h3>
-                <span className="font-bold text-[#1D1D1F] dark:text-[#F5F5F7] bg-white/50 dark:bg-white/10 backdrop-blur-sm px-2 py-1 rounded-[8px] text-sm">{item.price}</span>
+                <span className="font-bold text-[#1D1D1F] dark:text-[#F5F5F7] glassmorphism/50 dark:glassmorphism/10 backdrop-blur-sm px-2 py-1 rounded-[8px] text-sm">{item.price}</span>
               </div>
               <p className="text-sm text-gray-600 dark:text-[#A1A1A6] leading-relaxed">{item.description}</p>
-              <button className="mt-4 w-full bg-[#1D1D1F] dark:bg-white text-white dark:text-[#1D1D1F] font-semibold py-2 rounded-[8px] min-h-[44px] flex items-center justify-center hover:bg-opacity-80 transition-colors">
+              <button className="mt-4 w-full bg-[#1D1D1F] dark:glassmorphism text-white dark:text-[#1D1D1F] font-semibold py-2 rounded-[8px] min-h-[44px] flex items-center justify-center hover:bg-opacity-80 transition-colors">
                 {item.buttonText || "Order Now"}
               </button>
             </div>
@@ -198,14 +198,14 @@ export function SmartBlock({ type, props }: { type: string; props: any }) {
             href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`Check out this store and get a discount! ${props.url || '/onboarding'}`)}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex-1 bg-black dark:bg-white text-white dark:text-black flex items-center justify-center gap-2 p-3 rounded-[8px] font-semibold text-sm shadow-sm hover:shadow-md hover:scale-[1.02] transition-all max-w-[140px]"
+            className="flex-1 bg-black dark:glassmorphism text-white dark:text-black flex items-center justify-center gap-2 p-3 rounded-[8px] font-semibold text-sm shadow-sm hover:shadow-md hover:scale-[1.02] transition-all max-w-[140px]"
           >
             <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.008 5.94H5.078z"/></svg>
             Share
           </a>
           <a
             href={`/onboarding?ref=${props.tenantId || 'storefront'}-referral`}
-            className="flex-1 bg-white dark:bg-black text-black dark:text-white flex items-center justify-center gap-2 p-3 rounded-[8px] font-semibold text-sm shadow-sm hover:shadow-md hover:scale-[1.02] transition-all max-w-[140px]"
+            className="flex-1 glassmorphism dark:bg-black text-black dark:text-white flex items-center justify-center gap-2 p-3 rounded-[8px] font-semibold text-sm shadow-sm hover:shadow-md hover:scale-[1.02] transition-all max-w-[140px]"
           >
             Get Code
           </a>

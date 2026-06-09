@@ -237,7 +237,7 @@ export default function StripeTerminalClient({ amount, productId, tenantId }: { 
   };
 
   return (
-    <div className="p-6 border border-white/40 rounded-2xl shadow-lg bg-white/65 backdrop-blur-[30px] saturate-[210%] mt-6 relative">
+    <div className="p-6 border border-white/40 rounded-2xl shadow-lg glassmorphism/65 backdrop-blur-[30px] saturate-[210%] mt-6 relative">
       <h2 className="text-lg font-bold font-outfit text-gray-900 mb-2">Tap to Pay via Terminal</h2>
       <p className="text-sm text-gray-600 mb-6 font-medium">Status: {status}</p>
 
@@ -248,7 +248,7 @@ export default function StripeTerminalClient({ amount, productId, tenantId }: { 
           </button>
           <ul className="mt-4 space-y-2">
             {discoveredReaders.map(reader => (
-              <li key={reader.id} className="flex justify-between items-center p-3 border border-gray-100 rounded-xl bg-white shadow-sm">
+              <li key={reader.id} className="flex justify-between items-center p-3 border border-gray-100 rounded-xl glassmorphism shadow-sm">
                 <span className="font-medium text-gray-800 text-sm">{reader.label || reader.id}</span>
                 <button onClick={() => connectReader(reader)} className="bg-[#34C759] text-white px-4 py-1.5 rounded-lg text-sm font-bold shadow-sm shadow-green-500/20 hover:bg-green-600 transition-colors active:scale-[0.98]">
                   Connect

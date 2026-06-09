@@ -38,7 +38,7 @@ export default function SonaPatternsPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {patterns.map((p) => (
-            <div key={p.id} className="p-6 bg-white border border-gray-200 rounded-lg shadow-sm">
+            <div key={p.id} className="p-6 glassmorphism border border-gray-200 rounded-lg shadow-sm">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-xl font-semibold truncate pr-4">{p.initial_context}</h2>
                 <span className={`px-2 py-1 text-xs font-bold rounded ${p.outcome_score > 0.8 ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>

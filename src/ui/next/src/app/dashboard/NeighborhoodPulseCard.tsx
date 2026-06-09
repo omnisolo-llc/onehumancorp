@@ -59,7 +59,7 @@ export const NeighborhoodPulseCard = ({ tenant }: { tenant: string }) => {
       }}
     >
       {/* Decorative pulse element */}
-      <div className="absolute top-0 right-0 w-64 h-64 bg-white opacity-10 rounded-full blur-3xl -mr-10 -mt-10 animate-pulse"></div>
+      <div className="absolute top-0 right-0 w-64 h-64 glassmorphism opacity-10 rounded-full blur-3xl -mr-10 -mt-10 animate-pulse"></div>
 
       <div className="relative z-10">
         <h2 className="text-xl font-bold font-outfit mb-2">Neighborhood Pulse</h2>
@@ -84,7 +84,7 @@ export const NeighborhoodPulseCard = ({ tenant }: { tenant: string }) => {
               </div>
               <button
                 onClick={() => handleInvite(neighbor.id)}
-                className="px-4 py-2 bg-white text-indigo-600 rounded-lg text-sm font-semibold hover:bg-indigo-50 transition-colors shadow-sm"
+                className="px-4 py-2 glassmorphism text-indigo-600 rounded-lg text-sm font-semibold hover:bg-indigo-50 transition-colors shadow-sm"
               >
                 Invite Partner
               </button>

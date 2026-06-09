@@ -109,7 +109,7 @@ export default function GiveawayGeneratorPage() {
           </div>
 
           {giveawayLink && (
-            <div className="p-6 shadow-md bg-white border border-green-200 rounded-[16px]">
+            <div className="p-6 shadow-md glassmorphism border border-green-200 rounded-[16px]">
               <h3 className="text-lg font-bold font-outfit text-gray-900 mb-2 flex items-center gap-2">
                 <span className="text-green-500">✅</span> Link Ready!
               </h3>
@@ -139,7 +139,7 @@ export default function GiveawayGeneratorPage() {
 
         {/* Live Preview */}
         <section className="w-full md:w-1/2 flex justify-center items-start">
-             <div className="w-full max-w-sm bg-white rounded-3xl shadow-2xl overflow-hidden relative border border-gray-200 flex flex-col items-center">
+             <div className="w-full max-w-sm glassmorphism rounded-3xl shadow-2xl overflow-hidden relative border border-gray-200 flex flex-col items-center">
                  <div className="w-full h-32 bg-gradient-to-r from-purple-500 to-pink-500 relative flex items-center justify-center">
                      <span className="text-5xl drop-shadow-md">🎁</span>
                  </div>

@@ -37,7 +37,7 @@ export default function Login() {
           />
           <button
             onClick={goDashboard}
-            className="w-full bg-[#1D1D1F] dark:bg-white text-white dark:text-[#1D1D1F] min-h-[54px] p-4 rounded-[8px] font-bold shadow-[0_4px_14px_0_rgba(0,0,0,0.39)] hover:bg-black dark:hover:bg-gray-200 active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)]"
+            className="w-full bg-[#1D1D1F] dark:glassmorphism text-white dark:text-[#1D1D1F] min-h-[54px] p-4 rounded-[8px] font-bold shadow-[0_4px_14px_0_rgba(0,0,0,0.39)] hover:bg-black dark:hover:bg-gray-200 active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)]"
           >
             Log In
           </button>

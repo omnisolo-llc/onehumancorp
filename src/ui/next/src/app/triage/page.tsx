@@ -186,7 +186,7 @@ export default function TriagePage() {
                   ✨ Approve &amp; Execute
                 </button>
                 <button
-                  className="px-4 py-2 rounded-md border border-gray-300 text-gray-700 bg-white hover:bg-gray-50 flex-1 min-h-[44px] font-medium transition-colors"
+                  className="px-4 py-2 rounded-md border border-gray-300 text-gray-700 glassmorphism hover:bg-gray-50 flex-1 min-h-[44px] font-medium transition-colors"
                   data-testid="dismiss-btn"
                   onClick={() => handleDecision(selected.id, false)}
                 >

@@ -73,7 +73,7 @@ function InvoiceContent() {
   return (
     <div className="flex flex-col min-h-screen font-inter bg-[#F5F5F7]">
       <main className="p-4 md:p-8 flex-1 w-full max-w-3xl mx-auto flex flex-col justify-center gap-8">
-        <section className="bg-white p-8 md:p-12 shadow-xl border border-gray-100 relative" style={{ borderRadius: '16px' }}>
+        <section className="glassmorphism p-8 md:p-12 shadow-xl border border-gray-100 relative" style={{ borderRadius: '16px' }}>
 
           <div className="flex justify-between items-start mb-10 border-b border-gray-100 pb-8">
             <div>

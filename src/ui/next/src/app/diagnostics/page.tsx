@@ -63,13 +63,13 @@ export default function DiagnosticsPage() {
           </div>
 
           <div className="space-y-4">
-            <div className="p-4 bg-white rounded-xl border border-gray-100 shadow-sm">
+            <div className="p-4 glassmorphism rounded-xl border border-gray-100 shadow-sm">
               <span className="font-medium text-gray-900">Database Ping:</span> {healthData?.db_ping || 0} ms
             </div>
-            <div className="p-4 bg-white rounded-xl border border-gray-100 shadow-sm">
+            <div className="p-4 glassmorphism rounded-xl border border-gray-100 shadow-sm">
               <span className="font-medium text-gray-900">Sync Backlog:</span> {healthData?.sync_backlog || 0}
             </div>
-            <div className="p-4 bg-white rounded-xl border border-gray-100 shadow-sm">
+            <div className="p-4 glassmorphism rounded-xl border border-gray-100 shadow-sm">
               <span className="font-medium text-gray-900">Sync Errors:</span> {healthData?.sync_error_count || 0}
             </div>
           </div>

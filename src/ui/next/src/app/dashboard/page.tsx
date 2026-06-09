@@ -383,7 +383,7 @@ export default function Dashboard() {
                   name="migration_url"
                   value={migrationUrl}
                   onChange={(event) => setMigrationUrl(event.target.value)}
-                  className="mt-2 w-full rounded-[8px] border border-gray-200 bg-white px-3 py-2 text-sm text-[#1D1D1F] shadow-sm dark:border-white/10 dark:bg-black/30 dark:text-[#F5F5F7]"
+                  className="mt-2 w-full rounded-[8px] border border-gray-200 glassmorphism px-3 py-2 text-sm text-[#1D1D1F] shadow-sm dark:border-white/10 dark:bg-black/30 dark:text-[#F5F5F7]"
                   placeholder="mayas-cakes.myshopify.com"
                 />
               </label>
@@ -492,7 +492,7 @@ export default function Dashboard() {
         <UnifiedAgentFeed />
 
         <section>
-          <div className="mb-6 p-6 rounded-[16px] bg-white/65 dark:bg-[#16161a]/70 border border-white/40 dark:border-white/10">
+          <div className="mb-6 p-6 rounded-[16px] glassmorphism/65 dark:bg-[#16161a]/70 border border-white/40 dark:border-white/10">
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               <div className="flex items-center gap-4">
                 <div className="text-4xl">🎉</div>
@@ -550,7 +550,7 @@ export default function Dashboard() {
             </div>
 
             <div className="glassmorphism p-4 rounded-[12px] border border-indigo-200/50 bg-gradient-to-br from-indigo-50/50 to-purple-50/50 flex flex-col justify-center items-center text-center relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-16 h-16 bg-white/40 rounded-bl-full"></div>
+              <div className="absolute top-0 right-0 w-16 h-16 glassmorphism/40 rounded-bl-full"></div>
               <h4 className="text-sm font-bold font-outfit text-[#1D1D1F] mb-1 flex items-center gap-1">
                 <span className="text-indigo-500">✨</span> Advanced AI Insights
               </h4>

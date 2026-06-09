@@ -45,7 +45,7 @@ export default function LedgerPage() {
         subtitle="Recent financial activity"
       />
 
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 mt-6 p-6">
+      <div className="glassmorphism rounded-xl shadow-sm border border-slate-200 mt-6 p-6">
         {loading && <p className="text-slate-500">Loading ledger entries...</p>}
         {error && <ErrorState title="Error" message={error} />}
         {!loading && !error && entries.length === 0 && (
@@ -62,7 +62,7 @@ export default function LedgerPage() {
                   <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Amount</th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-slate-200">
+              <tbody className="glassmorphism divide-y divide-slate-200">
                 {entries.map((entry) => (
                   <tr key={entry.id}>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">

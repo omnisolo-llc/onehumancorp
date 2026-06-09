@@ -104,7 +104,7 @@ export default function SeasonalPromoPage() {
 
         {result && (
           <section id="promo-result" className="p-6 shadow-sm flex flex-col items-center justify-center text-center relative overflow-hidden" style={{ background: 'linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%)', color: '#fff', borderRadius: '16px' }}>
-            <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-bl-full -z-10"></div>
+            <div className="absolute top-0 right-0 w-32 h-32 glassmorphism/10 rounded-bl-full -z-10"></div>
             <h3 className="text-2xl font-bold font-outfit mb-2">Your Promo Code</h3>
             <p className="text-lg whitespace-pre-wrap font-semibold">{result}</p>
           </section>

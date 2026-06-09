@@ -52,7 +52,7 @@ export default function HybridLandingPage() {
       {/* Main Cards Container */}
       <div className="w-full max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12">
         {/* Card 1: Standalone */}
-        <div className="ohc-growth-card glassmorphism p-8 md:p-10 rounded-[24px] border border-white/50 shadow-xl bg-white/40 backdrop-blur-xl relative overflow-hidden group hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1">
+        <div className="ohc-growth-card glassmorphism p-8 md:p-10 rounded-[24px] border border-white/50 shadow-xl glassmorphism/40 backdrop-blur-xl relative overflow-hidden group hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1">
           <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity">
             <svg
               className="w-32 h-32 text-indigo-900"
@@ -200,7 +200,7 @@ export default function HybridLandingPage() {
         </div>
 
         {/* Card 2: Cloud */}
-        <div className="ohc-growth-card glassmorphism p-8 md:p-10 rounded-[24px] border border-white/50 shadow-xl bg-white/40 backdrop-blur-xl relative overflow-hidden group hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1">
+        <div className="ohc-growth-card glassmorphism p-8 md:p-10 rounded-[24px] border border-white/50 shadow-xl glassmorphism/40 backdrop-blur-xl relative overflow-hidden group hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1">
           <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity">
             <svg
               className="w-32 h-32 text-purple-900"

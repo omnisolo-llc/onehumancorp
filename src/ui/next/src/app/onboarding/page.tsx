@@ -1191,7 +1191,7 @@ export default function OnboardingWizard() {
                       onChange={(e) => setAiAutoRespond(e.target.checked)}
                     />
                     <div className={`w-10 h-6 rounded-full transition-colors ${aiAutoRespond ? 'bg-[#34C759]' : 'bg-gray-300 dark:bg-gray-600'} relative`}>
-                       <div className={`w-4 h-4 rounded-full bg-white absolute top-1 transition-transform ${aiAutoRespond ? 'translate-x-5' : 'translate-x-1'}`}></div>
+                       <div className={`w-4 h-4 rounded-full glassmorphism absolute top-1 transition-transform ${aiAutoRespond ? 'translate-x-5' : 'translate-x-1'}`}></div>
                     </div>
                   </label>
                 </div>

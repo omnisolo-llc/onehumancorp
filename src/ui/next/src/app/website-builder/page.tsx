@@ -294,7 +294,7 @@ export default function WebsiteBuilderPage() {
             {wizardStep !== 0 && (
               <button
                 onClick={handleBack}
-                className="absolute top-6 left-8 text-[#0071E3] font-medium text-sm hover:underline transition-all z-10 flex items-center gap-1 bg-white/50 backdrop-blur-md px-3 py-1 rounded-full shadow-sm border border-white/20"
+                className="absolute top-6 left-8 text-[#0071E3] font-medium text-sm hover:underline transition-all z-10 flex items-center gap-1 glassmorphism/50 backdrop-blur-md px-3 py-1 rounded-full shadow-sm border border-white/20"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
                 Back
@@ -307,7 +307,7 @@ export default function WebsiteBuilderPage() {
               {wizardStep !== 0 && wizardStep !== 'instant-build' && (
                 <button
                   onClick={handleSaveDraft}
-                  className="text-[#0071E3] font-medium text-sm hover:underline transition-all bg-white/50 backdrop-blur-md px-3 py-1 rounded-full shadow-sm border border-white/20"
+                  className="text-[#0071E3] font-medium text-sm hover:underline transition-all glassmorphism/50 backdrop-blur-md px-3 py-1 rounded-full shadow-sm border border-white/20"
                 >
                   Save Draft
                 </button>
@@ -351,13 +351,13 @@ export default function WebsiteBuilderPage() {
                   <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">What kind of business are you building?</h1>
                   <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 mt-6">
                     <button
-                      className="w-full text-[#1D1D1F] dark:text-[#F5F5F7] glassmorphism p-4 font-bold rounded-[8px] shadow-sm hover:bg-white/60 dark:hover:bg-white/10 transition-all text-left"
+                      className="w-full text-[#1D1D1F] dark:text-[#F5F5F7] glassmorphism p-4 font-bold rounded-[8px] shadow-sm hover:glassmorphism/60 dark:hover:glassmorphism/10 transition-all text-left"
                       onClick={() => { setBusinessType('Online Store'); setWizardStep(2); }}
                     >
                       Online Store
                     </button>
                     <button
-                      className="w-full text-[#1D1D1F] dark:text-[#F5F5F7] glassmorphism p-4 font-bold rounded-[8px] shadow-sm hover:bg-white/60 dark:hover:bg-white/10 transition-all text-left"
+                      className="w-full text-[#1D1D1F] dark:text-[#F5F5F7] glassmorphism p-4 font-bold rounded-[8px] shadow-sm hover:glassmorphism/60 dark:hover:glassmorphism/10 transition-all text-left"
                       onClick={() => { setBusinessType('Restaurant'); setWizardStep(2); }}
                     >
                       Restaurant
@@ -372,14 +372,14 @@ export default function WebsiteBuilderPage() {
                   <div id="step-3" className="mt-6 flex flex-col sm:flex-row gap-4 sm:gap-6">
                     <input
                       type="text"
-                      className="w-full glassmorphism p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-[#1D1D1F] dark:text-[#F5F5F7] bg-white/60 dark:bg-black/60 shadow-inner border border-gray-300/50 dark:border-gray-600/50  rounded-[8px]"
+                      className="w-full glassmorphism p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-[#1D1D1F] dark:text-[#F5F5F7] glassmorphism/60 dark:bg-black/60 shadow-inner border border-gray-300/50 dark:border-gray-600/50  rounded-[8px]"
                       placeholder="What is your business called?"
                       value={businessName}
                       onChange={(e) => setBusinessName(e.target.value)}
                     />
                     <input
                       type="text"
-                      className="w-full glassmorphism p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-[#1D1D1F] dark:text-[#F5F5F7] bg-white/60 dark:bg-black/60 shadow-inner border border-gray-300/50 dark:border-gray-600/50  rounded-[8px]"
+                      className="w-full glassmorphism p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-[#1D1D1F] dark:text-[#F5F5F7] glassmorphism/60 dark:bg-black/60 shadow-inner border border-gray-300/50 dark:border-gray-600/50  rounded-[8px]"
                       placeholder="e.g. Maya's Cakes"
                       value={bio}
                       onChange={(e) => setBio(e.target.value)}
@@ -399,7 +399,7 @@ export default function WebsiteBuilderPage() {
                 <>
                   <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">What do you sell?</h1>
                   <div id="step-4" className="mt-6 flex flex-col sm:flex-row gap-4 sm:gap-6">
-                    <label className="flex items-center gap-3 p-4 glassmorphism rounded-[8px] cursor-pointer hover:bg-white/60 dark:hover:bg-white/10 text-[#1D1D1F] dark:text-[#F5F5F7]">
+                    <label className="flex items-center gap-3 p-4 glassmorphism rounded-[8px] cursor-pointer hover:glassmorphism/60 dark:hover:glassmorphism/10 text-[#1D1D1F] dark:text-[#F5F5F7]">
                       <input
                         type="checkbox"
                         className="w-5 h-5 accent-[#0071E3]"
@@ -408,7 +408,7 @@ export default function WebsiteBuilderPage() {
                       />
                       <span className="font-semibold text-gray-800">Physical Products</span>
                     </label>
-                    <label className="flex items-center gap-3 p-4 glassmorphism rounded-[8px] cursor-pointer hover:bg-white/60 dark:hover:bg-white/10 text-[#1D1D1F] dark:text-[#F5F5F7]">
+                    <label className="flex items-center gap-3 p-4 glassmorphism rounded-[8px] cursor-pointer hover:glassmorphism/60 dark:hover:glassmorphism/10 text-[#1D1D1F] dark:text-[#F5F5F7]">
                       <input
                         type="checkbox"
                         className="w-5 h-5 accent-[#0071E3]"
@@ -433,14 +433,14 @@ export default function WebsiteBuilderPage() {
                   <div id="step-5" className="mt-6 flex flex-col sm:flex-row gap-4 sm:gap-6">
                     <input
                       type="text"
-                      className="w-full glassmorphism p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-[#1D1D1F] dark:text-[#F5F5F7] bg-white/60 dark:bg-black/60 shadow-inner border border-gray-300/50 dark:border-gray-600/50  rounded-[8px]"
+                      className="w-full glassmorphism p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-[#1D1D1F] dark:text-[#F5F5F7] glassmorphism/60 dark:bg-black/60 shadow-inner border border-gray-300/50 dark:border-gray-600/50  rounded-[8px]"
                       placeholder="What is the name of this product?"
                       value={productName}
                       onChange={(e) => setProductName(e.target.value)}
                     />
                     <input
                       type="text"
-                      className="w-full glassmorphism p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-[#1D1D1F] dark:text-[#F5F5F7] bg-white/60 dark:bg-black/60 shadow-inner border border-gray-300/50 dark:border-gray-600/50  rounded-[8px]"
+                      className="w-full glassmorphism p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-[#1D1D1F] dark:text-[#F5F5F7] glassmorphism/60 dark:bg-black/60 shadow-inner border border-gray-300/50 dark:border-gray-600/50  rounded-[8px]"
                       placeholder="0.00"
                       value={productPrice}
                       onChange={(e) => setProductPrice(e.target.value)}
@@ -461,13 +461,13 @@ export default function WebsiteBuilderPage() {
                   <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">How do you want to receive payments?</h1>
                   <div className="mt-6 flex flex-col sm:flex-row gap-4 sm:gap-6">
                     <button
-                      className="w-full text-[#1D1D1F] dark:text-[#F5F5F7] glassmorphism p-4 font-bold rounded-[8px] shadow-sm hover:bg-white/60 dark:hover:bg-white/10 transition-all text-left"
+                      className="w-full text-[#1D1D1F] dark:text-[#F5F5F7] glassmorphism p-4 font-bold rounded-[8px] shadow-sm hover:glassmorphism/60 dark:hover:glassmorphism/10 transition-all text-left"
                       onClick={() => { setPaymentMethod('Online'); setWizardStep(6); }}
                     >
                       Online
                     </button>
                     <button
-                      className="w-full text-[#1D1D1F] dark:text-[#F5F5F7] glassmorphism p-4 font-bold rounded-[8px] shadow-sm hover:bg-white/60 dark:hover:bg-white/10 transition-all text-left"
+                      className="w-full text-[#1D1D1F] dark:text-[#F5F5F7] glassmorphism p-4 font-bold rounded-[8px] shadow-sm hover:glassmorphism/60 dark:hover:glassmorphism/10 transition-all text-left"
                       onClick={() => { setPaymentMethod('In Person'); setWizardStep(6); }}
                     >
                       In Person
@@ -482,21 +482,21 @@ export default function WebsiteBuilderPage() {
                   <div id="step-7" className="mt-6 flex flex-col sm:flex-row gap-4 sm:gap-6">
                     <input
                       type="text"
-                      className="w-full glassmorphism p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-[#1D1D1F] dark:text-[#F5F5F7] bg-white/60 dark:bg-black/60 shadow-inner border border-gray-300/50 dark:border-gray-600/50  rounded-[8px]"
+                      className="w-full glassmorphism p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-[#1D1D1F] dark:text-[#F5F5F7] glassmorphism/60 dark:bg-black/60 shadow-inner border border-gray-300/50 dark:border-gray-600/50  rounded-[8px]"
                       placeholder="e.g. Maya Smith"
                       value={userName}
                       onChange={(e) => setUserName(e.target.value)}
                     />
                     <input
                       type="email"
-                      className="w-full glassmorphism p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-[#1D1D1F] dark:text-[#F5F5F7] bg-white/60 dark:bg-black/60 shadow-inner border border-gray-300/50 dark:border-gray-600/50  rounded-[8px]"
+                      className="w-full glassmorphism p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-[#1D1D1F] dark:text-[#F5F5F7] glassmorphism/60 dark:bg-black/60 shadow-inner border border-gray-300/50 dark:border-gray-600/50  rounded-[8px]"
                       placeholder="you@email.com"
                       value={userEmail}
                       onChange={(e) => setUserEmail(e.target.value)}
                     />
                     <input
                       type="password"
-                      className="w-full glassmorphism p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-[#1D1D1F] dark:text-[#F5F5F7] bg-white/60 dark:bg-black/60 shadow-inner border border-gray-300/50 dark:border-gray-600/50  rounded-[8px]"
+                      className="w-full glassmorphism p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-[#1D1D1F] dark:text-[#F5F5F7] glassmorphism/60 dark:bg-black/60 shadow-inner border border-gray-300/50 dark:border-gray-600/50  rounded-[8px]"
                       placeholder="Password"
                       value={userPassword}
                       onChange={(e) => setUserPassword(e.target.value)}
@@ -519,13 +519,13 @@ export default function WebsiteBuilderPage() {
                   <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Template selection</h1>
                   <div id="step-8" className="flex flex-col sm:flex-row gap-4 sm:gap-6 mt-6">
                     <button
-                      className="w-full text-[#1D1D1F] dark:text-[#F5F5F7] glassmorphism p-4 font-bold rounded-[8px] shadow-sm hover:bg-white/60 dark:hover:bg-white/10 transition-all text-left"
+                      className="w-full text-[#1D1D1F] dark:text-[#F5F5F7] glassmorphism p-4 font-bold rounded-[8px] shadow-sm hover:glassmorphism/60 dark:hover:glassmorphism/10 transition-all text-left"
                       onClick={() => { setTemplate('Modern'); setWizardStep('7.5'); }}
                     >
                       Modern
                     </button>
                     <button
-                      className="w-full text-[#1D1D1F] dark:text-[#F5F5F7] glassmorphism p-4 font-bold rounded-[8px] shadow-sm hover:bg-white/60 dark:hover:bg-white/10 transition-all text-left"
+                      className="w-full text-[#1D1D1F] dark:text-[#F5F5F7] glassmorphism p-4 font-bold rounded-[8px] shadow-sm hover:glassmorphism/60 dark:hover:glassmorphism/10 transition-all text-left"
                       onClick={() => { setTemplate('Bold'); setWizardStep('7.5'); }}
                     >
                       Bold
@@ -606,7 +606,7 @@ export default function WebsiteBuilderPage() {
                     <textarea
                       value={bio}
                       onChange={(e) => setBio(e.target.value)}
-                      className="w-full glassmorphism p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all resize-none text-[#1D1D1F] dark:text-[#F5F5F7] bg-white/60 dark:bg-black/60 shadow-inner border border-gray-300/50 dark:border-gray-600/50  rounded-[8px]"
+                      className="w-full glassmorphism p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all resize-none text-[#1D1D1F] dark:text-[#F5F5F7] glassmorphism/60 dark:bg-black/60 shadow-inner border border-gray-300/50 dark:border-gray-600/50  rounded-[8px]"
                       placeholder="e.g. I run a local bakery"
                       rows={4}
                     />
@@ -725,7 +725,7 @@ export default function WebsiteBuilderPage() {
       <div className="w-full sm:max-w-md lg:max-w-lg xl:max-w-2xl mx-auto min-h-[100dvh] sm:min-h-[812px] shadow-2xl flex flex-col relative rounded-[16px] overflow-hidden glassmorphism">
         <div className="absolute top-0 left-0 w-full bg-black/80 backdrop-blur-md text-white text-xs py-2 text-center font-medium z-50 flex justify-between px-4 items-center">
           <span>Preview Mode</span>
-          <span className="bg-white/20 px-2 py-0.5 rounded">375px</span>
+          <span className="glassmorphism/20 px-2 py-0.5 rounded">375px</span>
         </div>
 
         <div className="flex-1 overflow-y-auto pb-24 pt-8 hide-scrollbar">

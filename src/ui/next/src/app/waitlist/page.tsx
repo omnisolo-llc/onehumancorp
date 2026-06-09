@@ -38,7 +38,7 @@ export default function WaitlistPage() {
 
   return (
     <div className="flex flex-col min-h-screen font-inter bg-[#F5F5F7]">
-      <header className="px-6 py-4 flex items-center justify-between border-b sticky top-0 z-50 bg-white/65 backdrop-blur-md border-white/40">
+      <header className="px-6 py-4 flex items-center justify-between border-b sticky top-0 z-50 glassmorphism/65 backdrop-blur-md border-white/40">
         <h1 className="text-xl font-bold font-outfit text-[#1D1D1F] tracking-tight">OneHumanCorp</h1>
         <button
           onClick={() => router.push('/')}
@@ -50,7 +50,7 @@ export default function WaitlistPage() {
 
       <main className="flex-1 flex flex-col items-center justify-center p-6 md:p-12 text-center w-full max-w-2xl mx-auto">
         {isSuccess ? (
-          <div className="w-full bg-white/65 backdrop-blur-md rounded-2xl shadow-sm border border-white/40 p-8 flex flex-col items-center">
+          <div className="w-full glassmorphism/65 backdrop-blur-md rounded-2xl shadow-sm border border-white/40 p-8 flex flex-col items-center">
             <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center text-3xl mb-4 text-green-600">
               ✓
             </div>
@@ -74,7 +74,7 @@ export default function WaitlistPage() {
               Join the waitlist to be among the first to experience radical simplicity and invisible AI agents that run your business.
             </p>
 
-            <form onSubmit={handleSubmit} className="w-full max-w-md bg-white/65 backdrop-blur-md p-6 rounded-2xl shadow-sm border border-white/40">
+            <form onSubmit={handleSubmit} className="w-full max-w-md glassmorphism/65 backdrop-blur-md p-6 rounded-2xl shadow-sm border border-white/40">
               <div className="flex flex-col gap-4">
                 <div>
                   <label htmlFor="email" className="sr-only">Email address</label>

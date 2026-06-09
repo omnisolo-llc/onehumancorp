@@ -126,7 +126,7 @@ export default function ShareCardsPage() {
                             )}
                         </label>
                         <div className="relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in">
-                            <input type="checkbox" name="toggle" id="remove-branding" checked={removeBranding} onChange={handleToggleBranding} className="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer border-gray-300" style={{ transform: removeBranding ? 'translateX(100%)' : 'translateX(0)', borderColor: removeBranding ? '#4f46e5' : '#d1d5db', transition: 'all 0.2s ease-in-out' }}/>
+                            <input type="checkbox" name="toggle" id="remove-branding" checked={removeBranding} onChange={handleToggleBranding} className="toggle-checkbox absolute block w-5 h-5 rounded-full glassmorphism border-4 appearance-none cursor-pointer border-gray-300" style={{ transform: removeBranding ? 'translateX(100%)' : 'translateX(0)', borderColor: removeBranding ? '#4f46e5' : '#d1d5db', transition: 'all 0.2s ease-in-out' }}/>
                             <label htmlFor="remove-branding" className="toggle-label block overflow-hidden h-5 rounded-full bg-gray-300 cursor-pointer" style={{ backgroundColor: removeBranding ? '#4f46e5' : '#d1d5db', transition: 'all 0.2s ease-in-out' }}></label>
                         </div>
                     </div>
@@ -187,7 +187,7 @@ export default function ShareCardsPage() {
                  {/* Decorative elements */}
                  {theme !== 'light' && (
                      <>
-                        <div className="absolute top-0 left-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2"></div>
+                        <div className="absolute top-0 left-0 w-64 h-64 glassmorphism/10 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2"></div>
                         <div className="absolute bottom-0 right-0 w-64 h-64 bg-black/10 rounded-full blur-3xl translate-x-1/2 translate-y-1/2"></div>
                      </>
                  )}
@@ -199,7 +199,7 @@ export default function ShareCardsPage() {
                  )}
 
                  <div className="z-10 flex flex-col items-center">
-                    <div className="w-20 h-20 mb-6 bg-white/20 rounded-2xl shadow-inner flex items-center justify-center backdrop-blur-md border border-white/30">
+                    <div className="w-20 h-20 mb-6 glassmorphism/20 rounded-2xl shadow-inner flex items-center justify-center backdrop-blur-md border border-white/30">
                         <span className="text-4xl">🛍️</span>
                     </div>
                     <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold font-outfit mb-4 leading-tight tracking-tight drop-shadow-sm">
@@ -255,7 +255,7 @@ export default function ShareCardsPage() {
 
             <button
               onClick={claimTrialExtension}
-              className="w-full py-3.5 rounded-xl font-bold transition-all shadow-sm hover:bg-gray-50 flex items-center justify-center gap-2 border-2 border-[#1DA1F2] text-[#1DA1F2] bg-white"
+              className="w-full py-3.5 rounded-xl font-bold transition-all shadow-sm hover:bg-gray-50 flex items-center justify-center gap-2 border-2 border-[#1DA1F2] text-[#1DA1F2] glassmorphism"
             >
               <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.008 5.94H5.078z"/></svg>
               Share on X to get 7 Days Free

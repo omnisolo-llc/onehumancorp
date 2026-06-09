@@ -1,4 +1,4 @@
-import { test, expect } from './test_mocks';
+import { test, expect } from '@playwright/test';
 
 test.describe('In-Person Payment (POS) Flow', () => {
   test('should complete a tap-to-pay transaction offline and sync', async ({ page, context }) => {

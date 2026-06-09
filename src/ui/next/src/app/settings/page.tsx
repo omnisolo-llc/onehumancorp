@@ -317,7 +317,7 @@ export default function SettingsPage() {
                     value={deliverySettings.delivery_radius}
                     onChange={(e) => handleDeliverySettingChange('delivery_radius', parseFloat(e.target.value))}
                     disabled={!deliverySettings.delivery_enabled}
-                    className="mt-2 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 disabled:bg-gray-100"
+                    className="mt-2 w-full rounded-md border border-gray-300 glassmorphism px-3 py-2 text-sm text-gray-800 disabled:bg-gray-100"
                   />
                 </label>
                 <label className="block">
@@ -328,7 +328,7 @@ export default function SettingsPage() {
                     value={deliverySettings.delivery_fee}
                     onChange={(e) => handleDeliverySettingChange('delivery_fee', parseFloat(e.target.value))}
                     disabled={!deliverySettings.delivery_enabled}
-                    className="mt-2 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 disabled:bg-gray-100"
+                    className="mt-2 w-full rounded-md border border-gray-300 glassmorphism px-3 py-2 text-sm text-gray-800 disabled:bg-gray-100"
                   />
                 </label>
               </div>
@@ -362,7 +362,7 @@ export default function SettingsPage() {
                       <select
                         value={voiceSettings.voice_receptionist_persona}
                         onChange={(e) => handleVoiceSettingChange('voice_receptionist_persona', e.target.value)}
-                        className="mt-2 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800"
+                        className="mt-2 w-full rounded-md border border-gray-300 glassmorphism px-3 py-2 text-sm text-gray-800"
                       >
                         <option value="Friendly">Friendly & Casual</option>
                         <option value="Professional">Professional & Crisp</option>
@@ -409,7 +409,7 @@ export default function SettingsPage() {
                 type="text"
                 value={agentName}
                 onChange={(e) => handleAgentNameChange(e.target.value)}
-                className="mt-2 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800"
+                className="mt-2 w-full rounded-md border border-gray-300 glassmorphism px-3 py-2 text-sm text-gray-800"
                 placeholder="Agent One"
               />
             </label>

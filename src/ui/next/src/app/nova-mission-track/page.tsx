@@ -33,7 +33,7 @@ export default function MissionTrackPage() {
     <div className="min-h-screen bg-gray-50 flex justify-center font-inter">
       <div className="w-full max-w-[375px] bg-[#F5F5F7] min-h-screen shadow-xl relative flex flex-col">
         {/* Header */}
-        <header className="px-5 pt-10 pb-4 bg-white/70 sticky top-0 z-20 border-b border-gray-200">
+        <header className="px-5 pt-10 pb-4 glassmorphism/70 sticky top-0 z-20 border-b border-gray-200">
           <div className="flex justify-between items-center mb-4">
             <Link href="/dashboard" aria-label="Back to Dashboard" className="text-gray-500 hover:text-gray-900 transition-colors flex items-center justify-center min-w-[44px] min-h-[44px]">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
@@ -54,7 +54,7 @@ export default function MissionTrackPage() {
               className={`min-h-[44px] px-4 py-2 rounded-full text-sm font-semibold capitalize whitespace-nowrap transition-all ${
                 activeTab === tab
                   ? 'bg-gray-900 text-white shadow-md'
-                  : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+                  : 'glassmorphism text-gray-600 border border-gray-200 hover:bg-gray-50'
               }`}
             >
               {tab}
@@ -94,7 +94,7 @@ export default function MissionTrackPage() {
                   style={{ width: `${mission.progress}%` }}
                 >
                   {mission.status === 'active' && (
-                    <div className="absolute top-0 left-0 right-0 bottom-0 bg-white/20 animate-pulse"></div>
+                    <div className="absolute top-0 left-0 right-0 bottom-0 glassmorphism/20 animate-pulse"></div>
                   )}
                 </div>
               </div>

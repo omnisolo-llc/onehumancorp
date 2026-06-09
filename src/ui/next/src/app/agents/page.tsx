@@ -239,7 +239,7 @@ export default function AgentsPage() {
   }
   return (
     <div className="min-h-screen bg-stone-50 text-zinc-950">
-      <header className="border-b border-zinc-200 bg-white">
+      <header className="border-b border-zinc-200 glassmorphism">
         <div className="mx-auto flex w-full max-w-7xl flex-col gap-5 px-4 py-5 sm:px-6 lg:px-8">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
@@ -268,7 +268,7 @@ export default function AgentsPage() {
                   }}
                   className={`h-6 w-10 rounded-full p-1 transition-colors ${hasPro ? 'bg-teal-700' : 'bg-zinc-300'}`}
                 >
-                  <span className={`block h-4 w-4 rounded-full bg-white transition-transform ${hasPro ? 'translate-x-4' : ''}`} />
+                  <span className={`block h-4 w-4 rounded-full glassmorphism transition-transform ${hasPro ? 'translate-x-4' : ''}`} />
                 </button>
               </div>
               <div className="grid grid-cols-3 gap-2 text-center">
@@ -309,7 +309,7 @@ export default function AgentsPage() {
                 className={`whitespace-nowrap rounded-md border px-3 py-2 text-sm font-semibold ${
                   panel === id
                     ? 'border-teal-700 bg-teal-700 text-white'
-                    : 'border-zinc-200 bg-white text-zinc-700 hover:border-teal-300'
+                    : 'border-zinc-200 glassmorphism text-zinc-700 hover:border-teal-300'
                 }`}
               >
                 {label}
@@ -327,7 +327,7 @@ export default function AgentsPage() {
       </header>
       {showPaywall && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/50 p-4">
-          <div className="w-full max-w-sm rounded-lg bg-white p-5 shadow-2xl">
+          <div className="w-full max-w-sm rounded-lg glassmorphism p-5 shadow-2xl">
             <h2 className="text-2xl font-bold text-zinc-950">Upgrade to Pro</h2>
             <p className="mt-2 text-sm text-zinc-600">Unlock advanced model routing, connector automation, and higher agent budgets.</p>
             <Link href="/pricing" className="mt-4 block rounded-md bg-teal-700 px-4 py-3 text-center text-sm font-bold text-white">
@@ -449,7 +449,7 @@ function CatalogPanel({
 }) {
   return (
     <>
-      <div className="rounded-lg border border-zinc-200 bg-white p-4">
+      <div className="rounded-lg border border-zinc-200 glassmorphism p-4">
         <SectionHeader
           title={panel === 'teams' ? 'Expert Teams' : 'Browse experts'}
           detail="Search by job, pick a single expert or a coordinated team, then summon it into the task composer."
@@ -470,7 +470,7 @@ function CatalogPanel({
               key={item.id}
               type="button"
               onClick={() => summon(item)}
-              className="rounded-md border border-amber-200 bg-white px-3 py-2 text-left"
+              className="rounded-md border border-amber-200 glassmorphism px-3 py-2 text-left"
             >
               <div className="text-sm font-bold text-zinc-950">{item.name}</div>
               <div className="text-xs text-zinc-500">{item.usageCount} runs</div>
@@ -489,7 +489,7 @@ function CatalogPanel({
 function ExpertCard({ item, summon }: { item: ExpertCatalogItem; summon: (item: ExpertCatalogItem) => void }) {
   const [showDetail, setShowDetail] = useState(false);
   return (
-    <article data-testid={slugTestId(item.id)} className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm">
+    <article data-testid={slugTestId(item.id)} className="rounded-lg border border-zinc-200 glassmorphism p-4 shadow-sm">
       <div className="flex items-start gap-3">
         <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-teal-50 text-sm font-bold text-teal-800">
           {itemInitials(item.name)}
@@ -532,7 +532,7 @@ function ExpertCard({ item, summon }: { item: ExpertCatalogItem; summon: (item: 
             <button type="button" onClick={() => summon(item)} className="rounded-md bg-teal-700 px-3 py-2 text-xs font-bold text-white">
               Summon into chat
             </button>
-            <button type="button" className="rounded-md border border-teal-200 bg-white px-3 py-2 text-xs font-bold text-teal-800">
+            <button type="button" className="rounded-md border border-teal-200 glassmorphism px-3 py-2 text-xs font-bold text-teal-800">
               Favorite
             </button>
           </div>
@@ -617,7 +617,7 @@ function ComposerPanel({
   startTask: () => void;
 }) {
   return (
-    <section className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm">
+    <section className="rounded-lg border border-zinc-200 glassmorphism p-4 shadow-sm">
       <div className="flex items-start justify-between gap-3">
         <div>
           <h2 className="text-lg font-bold text-zinc-950">Task Composer</h2>
@@ -646,7 +646,7 @@ function ComposerPanel({
           <select
             value={model}
             onChange={(event) => setModel(event.target.value)}
-            className="mt-1 h-10 w-full rounded-md border border-zinc-300 bg-white px-3 text-sm"
+            className="mt-1 h-10 w-full rounded-md border border-zinc-300 glassmorphism px-3 text-sm"
           >
             {modelOptions.map((option) => (
               <option key={option}>{option}</option>
@@ -677,7 +677,7 @@ function ComposerPanel({
         </div>
         <div className="flex flex-wrap gap-2">
           {['Local Ollama', 'Vision', 'Tool use', 'Long context', 'Parallel tasks'].map((capability) => (
-            <span key={capability} className="rounded-md border border-zinc-200 bg-white px-2 py-1 text-xs font-bold text-zinc-700">
+            <span key={capability} className="rounded-md border border-zinc-200 glassmorphism px-2 py-1 text-xs font-bold text-zinc-700">
               {capability}
             </span>
           ))}
@@ -687,7 +687,7 @@ function ComposerPanel({
           <select
             value={workspace}
             onChange={(event) => setWorkspace(event.target.value)}
-            className="mt-1 h-10 w-full rounded-md border border-zinc-300 bg-white px-3 text-sm"
+            className="mt-1 h-10 w-full rounded-md border border-zinc-300 glassmorphism px-3 text-sm"
           >
             {workspaces.map((option) => (
               <option key={option}>{option}</option>
@@ -732,7 +732,7 @@ function ComposerPanel({
               aria-label="Output format"
               value={outputFormat}
               onChange={(event) => setOutputFormat(event.target.value)}
-              className="mt-1 h-10 w-full rounded-md border border-zinc-300 bg-white px-2 text-sm"
+              className="mt-1 h-10 w-full rounded-md border border-zinc-300 glassmorphism px-2 text-sm"
             >
               <option>Brief</option>
               <option>Table</option>
@@ -792,7 +792,7 @@ function ResultsPanel({
   compact?: boolean;
 }) {
   return (
-    <section className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm">
+    <section className="rounded-lg border border-zinc-200 glassmorphism p-4 shadow-sm">
       <SectionHeader
         title="Results"
         detail={compact ? undefined : 'Inspect generated artifacts, file lists, diffs, and previews before sharing or approving.'}
@@ -832,7 +832,7 @@ function ResultsPanel({
 }
 function ExtensionShortcuts({ setPanel }: { setPanel: (panel: Panel) => void }) {
   return (
-    <section className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm">
+    <section className="rounded-lg border border-zinc-200 glassmorphism p-4 shadow-sm">
       <h2 className="text-lg font-bold text-zinc-950">Extensions</h2>
       <div className="mt-3 grid grid-cols-2 gap-2">
         {[
@@ -862,7 +862,7 @@ function SkillsPanel({
   setEnabledSkills: React.Dispatch<React.SetStateAction<string[]>>;
 }) {
   return (
-    <section className="rounded-lg border border-zinc-200 bg-white p-4">
+    <section className="rounded-lg border border-zinc-200 glassmorphism p-4">
       <SectionHeader title="Skill Market" detail="Install, disable, search, upload, or create natural-language skills for experts." />
       <div className="mb-4 flex flex-wrap gap-2">
         <button className="rounded-md bg-teal-700 px-3 py-2 text-sm font-bold text-white" type="button">Find skill</button>
@@ -890,7 +890,7 @@ function SkillsPanel({
             >
               <div className="flex items-center justify-between gap-3">
                 <h3 className="font-bold text-zinc-950">{skill.name}</h3>
-                <span className="rounded-md bg-white px-2 py-1 text-xs font-semibold text-zinc-600">{enabled ? 'Enabled' : skill.status}</span>
+                <span className="rounded-md glassmorphism px-2 py-1 text-xs font-semibold text-zinc-600">{enabled ? 'Enabled' : skill.status}</span>
               </div>
               <p className="mt-2 text-sm text-zinc-600">{skill.description}</p>
             </button>
@@ -908,7 +908,7 @@ function ConnectorsPanel({
   setEnabledConnectors: React.Dispatch<React.SetStateAction<string[]>>;
 }) {
   return (
-    <section className="rounded-lg border border-zinc-200 bg-white p-4">
+    <section className="rounded-lg border border-zinc-200 glassmorphism p-4">
       <SectionHeader title="Connector Center" detail="Connect external data and service actions for expert tasks." />
       <div className="mb-4 grid gap-3 md:grid-cols-3">
         {['Create custom connector', 'MCP endpoint', 'Notification channel'].map((label) => (
@@ -935,7 +935,7 @@ function ConnectorsPanel({
             >
               <div className="flex items-center justify-between gap-3">
                 <h3 className="font-bold text-zinc-950">{connector.name}</h3>
-                <span className="rounded-md bg-white px-2 py-1 text-xs font-semibold text-zinc-600">
+                <span className="rounded-md glassmorphism px-2 py-1 text-xs font-semibold text-zinc-600">
                   {enabled ? 'Selected' : connector.status}
                 </span>
               </div>
@@ -949,7 +949,7 @@ function ConnectorsPanel({
 }
 function AutomationsPanel() {
   return (
-    <section className="rounded-lg border border-zinc-200 bg-white p-4">
+    <section className="rounded-lg border border-zinc-200 glassmorphism p-4">
       <SectionHeader title="Scheduled Tasks" detail="Configure recurring expert runs with prompt, workspace, model, skills, connectors, and notifications." />
       <div className="mb-4 grid gap-3 md:grid-cols-3">
         <label className="text-sm font-bold text-zinc-700">
@@ -979,7 +979,7 @@ function AutomationsPanel() {
 }
 function MemoryPanel() {
   return (
-    <section className="rounded-lg border border-zinc-200 bg-white p-4">
+    <section className="rounded-lg border border-zinc-200 glassmorphism p-4">
       <SectionHeader title="Conversation Memory" detail="Review, edit, import, remember, and forget durable business context." />
       <div className="mb-4 flex flex-wrap gap-2">
         <button type="button" className="rounded-md bg-teal-700 px-3 py-2 text-sm font-bold text-white">Remember this</button>
@@ -1000,7 +1000,7 @@ function MemoryPanel() {
 }
 function ExplorePanel({ summon }: { summon: (item: ExpertCatalogItem) => void }) {
   return (
-    <section className="rounded-lg border border-zinc-200 bg-white p-4">
+    <section className="rounded-lg border border-zinc-200 glassmorphism p-4">
       <SectionHeader title="Explore Templates" detail="Curated examples prefill prompt, expert, skills, and connector choices." />
       <div className="grid gap-3 md:grid-cols-2">
         {exploreTemplates.map((template, index) => (
@@ -1020,7 +1020,7 @@ function ExplorePanel({ summon }: { summon: (item: ExpertCatalogItem) => void })
 }
 function RemotePanel() {
   return (
-    <section className="rounded-lg border border-zinc-200 bg-white p-4">
+    <section className="rounded-lg border border-zinc-200 glassmorphism p-4">
       <SectionHeader title="Remote Assistant Control" detail="Summon experts and receive notifications from business chat tools." />
       <div className="mb-4 rounded-md border border-zinc-200 bg-zinc-50 p-3 text-sm font-bold text-zinc-800">
         /summon Growth Strategist
@@ -1038,7 +1038,7 @@ function RemotePanel() {
 }
 function DataPanel() {
   return (
-    <section className="rounded-lg border border-zinc-200 bg-white p-4">
+    <section className="rounded-lg border border-zinc-200 glassmorphism p-4">
       <SectionHeader title="Data Management" detail="Manage shared files, task archives, generated outputs, and workspace history." />
       <div className="grid gap-3 md:grid-cols-3">
         {['Shared files', 'Archived tasks', 'Generated outputs', 'Workspace history', 'Download center', 'Unshare queue'].map((item) => (
@@ -1052,7 +1052,7 @@ function DataPanel() {
 }
 function OperationsPanel() {
   return (
-    <section className="rounded-lg border border-zinc-200 bg-white p-4">
+    <section className="rounded-lg border border-zinc-200 glassmorphism p-4">
       <SectionHeader title="AI Departments" detail="Operational agents stay visible for backwards-compatible business management." />
       <div className="grid gap-3 md:grid-cols-2">
         {departments.map((department) => (
@@ -1071,7 +1071,7 @@ function OperationsPanel() {
 }
 function WorkflowsPanel({ workflows }: { workflows: WorkflowRecord[] }) {
   return (
-    <section className="rounded-lg border border-zinc-200 bg-white p-4">
+    <section className="rounded-lg border border-zinc-200 glassmorphism p-4">
       <SectionHeader title="Workflows" detail="Active expert and expert-team runs." />
       {workflows.length === 0 ? (
         <p className="rounded-md border border-dashed border-zinc-300 p-4 text-sm text-zinc-600">No workflows yet.</p>
@@ -1095,7 +1095,7 @@ function WorkflowsPanel({ workflows }: { workflows: WorkflowRecord[] }) {
 }
 function FeedPanel({ feed }: { feed: ApprovalItem[] }) {
   return (
-    <section className="rounded-lg border border-zinc-200 bg-white p-4">
+    <section className="rounded-lg border border-zinc-200 glassmorphism p-4">
       <SectionHeader title="Activity Feed" detail="Realtime expert and department activity." />
       {feed.length === 0 ? (
         <p className="rounded-md border border-dashed border-zinc-300 p-4 text-sm text-zinc-600">No activity yet.</p>
@@ -1120,7 +1120,7 @@ function ApprovalsPanel({
   decideApproval: (id: string, approved: boolean) => void;
 }) {
   return (
-    <section className="rounded-lg border border-zinc-200 bg-white p-4">
+    <section className="rounded-lg border border-zinc-200 glassmorphism p-4">
       <SectionHeader title="Needs Approval" detail="Review high-risk drafts before experts execute or send." />
       {approvals.length === 0 ? (
         <div className="rounded-md border border-dashed border-zinc-300 p-4">
@@ -1137,7 +1137,7 @@ function ApprovalsPanel({
                 <button
                   type="button"
                   onClick={() => decideApproval(item.id, false)}
-                  className="h-10 flex-1 rounded-md border border-zinc-300 bg-white text-sm font-bold text-zinc-700"
+                  className="h-10 flex-1 rounded-md border border-zinc-300 glassmorphism text-sm font-bold text-zinc-700"
                 >
                   Edit Draft
                 </button>

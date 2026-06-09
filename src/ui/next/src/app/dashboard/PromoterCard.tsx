@@ -5,7 +5,7 @@ import Link from 'next/link';
 
 export function PromoterCard() {
   return (
-    <div className="bg-white rounded-[24px] shadow-sm border border-gray-100 overflow-hidden mt-6 mb-6">
+    <div className="glassmorphism rounded-[24px] shadow-sm border border-gray-100 overflow-hidden mt-6 mb-6">
       <div className="bg-gradient-to-r from-indigo-500 to-purple-500 p-1"></div>
       <div className="p-6">
         <div className="flex justify-between items-start">

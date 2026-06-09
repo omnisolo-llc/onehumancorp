@@ -29,7 +29,7 @@ export function VideoTutorialList() {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center py-12 backdrop-filter backdrop-blur-xl bg-white/30">
+      <div className="flex justify-center items-center py-12 backdrop-filter backdrop-blur-xl glassmorphism/30">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
       </div>
     );
@@ -53,7 +53,7 @@ export function VideoTutorialList() {
             <div className="w-full aspect-[9/16] sm:aspect-video bg-gray-900 relative flex items-center justify-center">
               {/* Play button overlay */}
               <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors flex items-center justify-center">
-                <div className="w-12 h-12 bg-white/30 backdrop-blur-md rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
+                <div className="w-12 h-12 glassmorphism/30 backdrop-blur-md rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
                   <svg className="w-6 h-6 text-white ml-1" fill="currentColor" viewBox="0 0 24 24">
                     <path d="M8 5v14l11-7z" />
                   </svg>
@@ -80,7 +80,7 @@ export function VideoTutorialList() {
             {/* Header */}
             <div className="absolute top-0 left-0 right-0 p-4 bg-gradient-to-b from-black/90 to-transparent z-10 flex justify-between items-start pt-6">
               <h3 className="text-white font-bold font-outfit text-base pr-4 line-clamp-2 drop-shadow-md leading-tight">{activeVideo.title}</h3>
-              <button onClick={() => setActiveVideo(null)} className="text-white/80 hover:text-white bg-white/20 hover:bg-white/30 backdrop-blur-md border border-white/20 rounded-full p-2 transition-all min-h-[44px] min-w-[44px] flex items-center justify-center flex-shrink-0" aria-label="Close video">
+              <button onClick={() => setActiveVideo(null)} className="text-white/80 hover:text-white glassmorphism/20 hover:glassmorphism/30 backdrop-blur-md border border-white/20 rounded-full p-2 transition-all min-h-[44px] min-w-[44px] flex items-center justify-center flex-shrink-0" aria-label="Close video">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
             </div>

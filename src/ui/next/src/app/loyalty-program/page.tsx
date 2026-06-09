@@ -61,7 +61,7 @@ export default function LoyaltyProgramPage() {
   return (
     <div className="flex flex-col min-h-screen font-inter bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
       {/* Header */}
-      <header className="px-6 py-4 flex items-center justify-between border-b sticky top-0 z-50 bg-white/65 backdrop-blur-md border-white/40">
+      <header className="px-6 py-4 flex items-center justify-between border-b sticky top-0 z-50 glassmorphism/65 backdrop-blur-md border-white/40">
          <h1 className="text-2xl font-bold font-outfit text-[#1D1D1F] tracking-tight">Customer Loyalty Program 🤝</h1>
          <div className="flex items-center gap-3">
              <button onClick={() => router.push('/dashboard')} className="px-4 py-2 bg-gray-200 rounded-md text-sm font-medium hover:bg-gray-300 transition-colors">
@@ -90,7 +90,7 @@ export default function LoyaltyProgramPage() {
                   <select
                     value={rewardType}
                     onChange={(e) => setRewardType(e.target.value)}
-                    className="w-full bg-white/50 border border-gray-200 rounded-lg p-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+                    className="w-full glassmorphism/50 border border-gray-200 rounded-lg p-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
                   >
                     <option value="percentage">% Discount</option>
                     <option value="fixed">$ Store Credit</option>
@@ -104,7 +104,7 @@ export default function LoyaltyProgramPage() {
                     value={giveAmount}
                     onChange={(e) => setGiveAmount(e.target.value)}
                     placeholder="e.g. 10"
-                    className="w-full bg-white/50 border border-gray-200 rounded-lg p-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+                    className="w-full glassmorphism/50 border border-gray-200 rounded-lg p-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
                   />
                   <p className="text-xs text-gray-500 mt-1">Discount for the referred friend.</p>
                 </div>
@@ -116,7 +116,7 @@ export default function LoyaltyProgramPage() {
                     value={getAmount}
                     onChange={(e) => setGetAmount(e.target.value)}
                     placeholder="e.g. 10"
-                    className="w-full bg-white/50 border border-gray-200 rounded-lg p-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+                    className="w-full glassmorphism/50 border border-gray-200 rounded-lg p-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
                   />
                   <p className="text-xs text-gray-500 mt-1">Reward for the referring customer.</p>
                 </div>
@@ -148,7 +148,7 @@ export default function LoyaltyProgramPage() {
 
              {generatedDraft ? (
                <div className="glassmorphism rounded-2xl shadow-sm border border-white/40 overflow-hidden flex flex-col h-full min-h-[400px]">
-                  <div className="bg-white/40 border-b border-gray-200 p-4 flex gap-2 items-center">
+                  <div className="glassmorphism/40 border-b border-gray-200 p-4 flex gap-2 items-center">
                     <div className="flex gap-1.5">
                       <div className="w-3 h-3 rounded-full bg-red-400"></div>
                       <div className="w-3 h-3 rounded-full bg-yellow-400"></div>
@@ -164,7 +164,7 @@ export default function LoyaltyProgramPage() {
                       spellCheck={false}
                     />
                   </div>
-                  <div className="bg-white/40 border-t border-gray-200 p-4 flex justify-between items-center">
+                  <div className="glassmorphism/40 border-t border-gray-200 p-4 flex justify-between items-center">
                     <span className="text-xs text-gray-500">Drafted by The Promoter AI Agent</span>
                     <button
                       onClick={handleSend}

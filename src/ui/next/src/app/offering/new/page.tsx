@@ -98,7 +98,7 @@ export default function NewOfferingPage() {
                     type="text"
                     value={offeringData.title}
                     onChange={(e) => setOfferingData({...offeringData, title: e.target.value})}
-                    className="w-full bg-white/50 border border-white/60 rounded-[8px] px-3 py-2 text-gray-900 font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                    className="w-full glassmorphism/50 border border-white/60 rounded-[8px] px-3 py-2 text-gray-900 font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                   />
               </div>
 
@@ -108,7 +108,7 @@ export default function NewOfferingPage() {
                     value={offeringData.description}
                     onChange={(e) => setOfferingData({...offeringData, description: e.target.value})}
                     rows={4}
-                    className="w-full bg-white/50 border border-white/60 rounded-[8px] px-3 py-2 text-sm text-gray-800 leading-relaxed focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                    className="w-full glassmorphism/50 border border-white/60 rounded-[8px] px-3 py-2 text-sm text-gray-800 leading-relaxed focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                   />
               </div>
 
@@ -119,7 +119,7 @@ export default function NewOfferingPage() {
                         type="text"
                         value={offeringData.type}
                         onChange={(e) => setOfferingData({...offeringData, type: e.target.value})}
-                        className="w-full bg-white/50 border border-white/60 rounded-[8px] px-3 py-2 text-gray-900 font-semibold text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                        className="w-full glassmorphism/50 border border-white/60 rounded-[8px] px-3 py-2 text-gray-900 font-semibold text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                       />
                   </div>
                   <div className="flex-1">
@@ -130,7 +130,7 @@ export default function NewOfferingPage() {
                             type="text"
                             value={offeringData.price}
                             onChange={(e) => setOfferingData({...offeringData, price: e.target.value})}
-                            className="w-full bg-white/50 border border-white/60 rounded-[8px] pl-7 pr-3 py-2 text-gray-900 font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                            className="w-full glassmorphism/50 border border-white/60 rounded-[8px] pl-7 pr-3 py-2 text-gray-900 font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                           />
                       </div>
                   </div>

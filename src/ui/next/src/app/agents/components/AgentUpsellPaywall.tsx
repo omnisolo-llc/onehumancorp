@@ -111,7 +111,7 @@ export function AgentUpsellPaywall({ onClose, onSuccess }: AgentUpsellPaywallPro
                   type="text"
                   readOnly
                   value={referralLink}
-                  className="flex-1 bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-600 focus:outline-none"
+                  className="flex-1 glassmorphism border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-600 focus:outline-none"
                 />
                 <button
                   onClick={() => {

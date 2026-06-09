@@ -9,13 +9,13 @@ export function FloatingActionButton() {
     <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3">
       {isOpen && (
         <div className="flex flex-col gap-2 mb-2 animate-in slide-in-from-bottom-5">
-          <Link href="/offering/new" className="px-4 py-2 bg-white text-gray-900 rounded-full shadow-lg font-semibold border border-gray-200 hover:bg-gray-50 whitespace-nowrap">
+          <Link href="/offering/new" className="px-4 py-2 glassmorphism text-gray-900 rounded-full shadow-lg font-semibold border border-gray-200 hover:bg-gray-50 whitespace-nowrap">
             📝 New Offering
           </Link>
-          <Link href="/products/new" className="px-4 py-2 bg-white text-gray-900 rounded-full shadow-lg font-semibold border border-gray-200 hover:bg-gray-50 whitespace-nowrap">
+          <Link href="/products/new" className="px-4 py-2 glassmorphism text-gray-900 rounded-full shadow-lg font-semibold border border-gray-200 hover:bg-gray-50 whitespace-nowrap">
             📦 New Product
           </Link>
-          <Link href="/services/new" className="px-4 py-2 bg-white text-gray-900 rounded-full shadow-lg font-semibold border border-gray-200 hover:bg-gray-50 whitespace-nowrap">
+          <Link href="/services/new" className="px-4 py-2 glassmorphism text-gray-900 rounded-full shadow-lg font-semibold border border-gray-200 hover:bg-gray-50 whitespace-nowrap">
             📅 New Service
           </Link>
         </div>

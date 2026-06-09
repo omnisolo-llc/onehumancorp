@@ -90,8 +90,8 @@ function normalizeInternalHref(href: string): string | null {
   if (href.startsWith('javascript:')) return 'javascript:';
 
   try {
-    const url = new URL(href, 'http://localhost:3000');
-    if (url.origin !== 'http://localhost:3000') return null;
+    const url = new URL(href, ((process.env.BASE_URL || 'http://localhost:18789')));
+    if (url.origin !== ((process.env.BASE_URL || 'http://localhost:18789'))) return null;
     return `${url.pathname}${url.search}`;
   } catch {
     return null;
@@ -119,7 +119,7 @@ function externalHostAllowed(hostname: string) {
 
 function isFakeOHCUrl(href: string) {
   try {
-    const url = new URL(href, 'http://localhost:3000');
+    const url = new URL(href, ((process.env.BASE_URL || 'http://localhost:18789')));
     return url.protocol === 'ohc:' || url.hostname === 'ohc.store' || url.hostname.endsWith('.ohc.store');
   } catch {
     return href.startsWith('ohc://') || href.includes('ohc.store');
@@ -476,8 +476,8 @@ test.describe('comprehensive UI contract', () => {
           continue;
         }
 
-        const url = new URL(link.href, 'http://localhost:3000');
-        if (url.origin === 'http://localhost:3000') continue;
+        const url = new URL(link.href, ((process.env.BASE_URL || 'http://localhost:18789')));
+        if (url.origin === ((process.env.BASE_URL || 'http://localhost:18789'))) continue;
 
         if (!['http:', 'https:'].includes(url.protocol)) {
           failures.push(`${target} uses unexpected protocol ${url.protocol}`);

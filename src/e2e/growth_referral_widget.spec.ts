@@ -6,7 +6,7 @@ import { test, expect } from '@playwright/test';
 test.describe('Growth Referral Widget', () => {
   test('generates and copies link correctly', async ({ page }) => {
     // Navigate to dashboard
-    await page.goto('http://localhost:3000/dashboard');
+    await page.goto('/dashboard');
 
     // Ensure the widget is visible
     const getLinkButton = page.getByRole('button', { name: 'Get My Invite Link' });

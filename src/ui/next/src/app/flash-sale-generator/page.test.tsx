@@ -29,7 +29,7 @@ describe('FlashSaleGeneratorPage', () => {
     const darkButton = screen.getByRole('button', { name: 'Dark' });
     fireEvent.click(darkButton);
 
-    expect(darkButton.className).toContain('bg-white');
+    expect(darkButton.className).toContain('glassmorphism');
   });
 
   it('opens modal and displays embed code', () => {

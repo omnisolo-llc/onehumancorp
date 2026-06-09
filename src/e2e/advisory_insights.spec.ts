@@ -8,7 +8,7 @@ test.describe('Advisory Insights User Journey', () => {
 
     // For this e2e, we'll navigate to the advisory dashboard and assert that
     // the UI receives a summary from the mocked endpoint logic.
-    await page.goto('http://localhost:3000/');
+    await page.goto('/');
 
     // Simulate user flow by activating advisory dash
     await page.evaluate(() => {

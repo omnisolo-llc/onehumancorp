@@ -30,7 +30,7 @@ function GiveawayEnterContent() {
   return (
     <div className="min-h-screen font-inter flex flex-col" style={{ backgroundColor: '#F5F5F7' }}>
       <main className="flex-1 flex flex-col items-center justify-center p-4">
-        <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden relative border border-gray-200 flex flex-col items-center">
+        <div className="w-full max-w-md glassmorphism rounded-3xl shadow-2xl overflow-hidden relative border border-gray-200 flex flex-col items-center">
             <div className="w-full h-32 bg-gradient-to-r from-purple-500 to-pink-500 relative flex items-center justify-center">
                 <span className="text-5xl drop-shadow-md">🎁</span>
             </div>
@@ -95,7 +95,7 @@ function GiveawayEnterContent() {
 
                       <div className="relative py-2">
                         <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-200"></div></div>
-                        <div className="relative flex justify-center"><span className="bg-white px-2 text-xs text-gray-500 uppercase font-semibold">Or share via</span></div>
+                        <div className="relative flex justify-center"><span className="glassmorphism px-2 text-xs text-gray-500 uppercase font-semibold">Or share via</span></div>
                       </div>
 
                       <div className="flex gap-2">

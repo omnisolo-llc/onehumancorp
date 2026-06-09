@@ -69,7 +69,7 @@ export default function ExpertTeamPage() {
       )}
 
       {result && (
-        <div className="mt-8 p-6 bg-white border rounded-lg shadow-sm">
+        <div className="mt-8 p-6 glassmorphism border rounded-lg shadow-sm">
           <h2 className="text-xl font-bold mb-4 border-b pb-2">Final Delivered Output</h2>
           <pre className="whitespace-pre-wrap text-sm text-gray-800 font-mono overflow-auto max-h-[600px]">
             {result}

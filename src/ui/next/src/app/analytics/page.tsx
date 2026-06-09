@@ -32,7 +32,7 @@ export default function AnalyticsPage() {
   return (
     <div className="flex flex-col min-h-screen font-inter" style={{ backgroundColor: '#F5F5F7' }}>
       {/* Header */}
-      <header className="px-6 py-4 flex items-center justify-between border-b sticky top-0 z-50 bg-white/65 backdrop-blur-md border-white/40 shadow-sm">
+      <header className="px-6 py-4 flex items-center justify-between border-b sticky top-0 z-50 glassmorphism/65 backdrop-blur-md border-white/40 shadow-sm">
          <h1 className="text-2xl font-bold font-outfit" style={{ color: '#1D1D1F', letterSpacing: '-0.02em' }}>Business Analytics 📊</h1>
          <div className="flex items-center gap-3">
              <button onClick={() => router.push('/dashboard')} className="px-4 py-2 bg-gray-200 rounded-md text-sm font-medium hover:bg-gray-300 transition-colors">
@@ -124,7 +124,7 @@ export default function AnalyticsPage() {
 
            {!hasPro && (
                <div className="absolute inset-0 z-10 flex items-center justify-center">
-                   <div className="bg-white/90 p-8 rounded-2xl shadow-xl border border-gray-200 text-center max-w-sm">
+                   <div className="glassmorphism/90 p-8 rounded-2xl shadow-xl border border-gray-200 text-center max-w-sm">
                        <div className="text-4xl mb-3">🔒</div>
                        <h3 className="text-xl font-bold font-outfit text-gray-900 mb-2">Unlock Advanced Insights</h3>
                        <p className="text-sm text-gray-600 mb-6">See exactly where your traffic is coming from and predict buyer behavior with our Pro Plan.</p>

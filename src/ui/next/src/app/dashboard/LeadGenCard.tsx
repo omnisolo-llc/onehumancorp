@@ -74,7 +74,7 @@ export default function LeadGenCard({ tenantId }: { tenantId: string }) {
             inputMode="numeric"
             value={budget}
             onChange={e => setBudget(e.target.value)}
-            className="w-full px-3 py-2 bg-white/50 dark:bg-black/20 border border-gray-200 dark:border-gray-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 glassmorphism/50 dark:bg-black/20 border border-gray-200 dark:border-gray-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="e.g. 50"
             data-testid="lead-gen-budget"
           />
@@ -86,7 +86,7 @@ export default function LeadGenCard({ tenantId }: { tenantId: string }) {
             inputMode="numeric"
             value={zipCode}
             onChange={e => setZipCode(e.target.value)}
-            className="w-full px-3 py-2 bg-white/50 dark:bg-black/20 border border-gray-200 dark:border-gray-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 glassmorphism/50 dark:bg-black/20 border border-gray-200 dark:border-gray-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="e.g. 90210"
             data-testid="lead-gen-zip"
           />

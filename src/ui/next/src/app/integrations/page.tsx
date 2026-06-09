@@ -161,7 +161,7 @@ export default function Integrations() {
                     onClick={() => setTwilioChannels(prev => ({ ...prev, [key]: !prev[key as keyof typeof twilioChannels] }))}
                     className={`w-12 h-6 rounded-full transition-colors relative ${value ? 'bg-[#34C759]' : 'bg-gray-300'}`}
                   >
-                    <div className={`w-5 h-5 bg-white rounded-full absolute top-0.5 transition-transform ${value ? 'translate-x-6' : 'translate-x-0.5'}`} />
+                    <div className={`w-5 h-5 glassmorphism rounded-full absolute top-0.5 transition-transform ${value ? 'translate-x-6' : 'translate-x-0.5'}`} />
                   </button>
                 </div>
               ))}
@@ -187,7 +187,7 @@ export default function Integrations() {
             <h1 className="text-3xl font-bold font-outfit mb-1">Tool Integrations</h1>
             <p className="text-gray-400 text-sm">Supercharge your workflow by connecting your favorite tools.</p>
           </div>
-          <div className="hidden md:block w-16 h-16 bg-white/10 rounded-2xl border border-white/20 flex items-center justify-center text-3xl">
+          <div className="hidden md:block w-16 h-16 glassmorphism/10 rounded-2xl border border-white/20 flex items-center justify-center text-3xl">
             🧩
           </div>
         </div>
@@ -205,7 +205,7 @@ export default function Integrations() {
               className={`px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition-colors ${
                 activeTab === tab
                   ? "bg-gray-900 text-white"
-                  : "bg-white text-gray-600 border border-gray-200 hover:bg-gray-50"
+                  : "glassmorphism text-gray-600 border border-gray-200 hover:bg-gray-50"
               }`}
             >
               {tab.charAt(0).toUpperCase() + tab.slice(1)}

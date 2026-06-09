@@ -245,7 +245,7 @@ export default function TerminalPage() {
 
            <div className="flex gap-4 mb-12">
               {[...Array(4)].map((_, i) => (
-                <div key={i} className={`w-4 h-4 rounded-full border-2 ${pin.length > i ? 'bg-white border-white' : 'border-gray-600'}`}></div>
+                <div key={i} className={`w-4 h-4 rounded-full border-2 ${pin.length > i ? 'glassmorphism border-white' : 'border-gray-600'}`}></div>
               ))}
            </div>
 
@@ -288,10 +288,10 @@ export default function TerminalPage() {
 
   return (
      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 font-inter py-10">
-      <div className="w-[375px] h-[812px] bg-white shadow-2xl overflow-hidden flex flex-col relative border-x border-gray-200">
+      <div className="w-[375px] h-[812px] glassmorphism shadow-2xl overflow-hidden flex flex-col relative border-x border-gray-200">
 
         {/* Header */}
-        <div className="pt-12 pb-6 px-6 bg-white/65 backdrop-blur-[30px] border-b border-gray-200 sticky top-0 z-10 flex justify-between items-center">
+        <div className="pt-12 pb-6 px-6 glassmorphism/65 backdrop-blur-[30px] border-b border-gray-200 sticky top-0 z-10 flex justify-between items-center">
           <div>
             <h1 className="text-2xl font-bold font-outfit text-gray-900 tracking-tight">{activeStaff.name}</h1>
             <p className="text-blue-600 font-medium text-sm mt-1">{t(activeStaff.role)}</p>
@@ -349,7 +349,7 @@ export default function TerminalPage() {
              <button
                 onClick={handleNewOrder}
                 disabled={reserving}
-                className={`bg-white p-4 rounded-2xl shadow-sm border border-gray-100 text-left ${reserving ? 'opacity-50' : 'active:scale-[0.98]'}`}
+                className={`glassmorphism p-4 rounded-2xl shadow-sm border border-gray-100 text-left ${reserving ? 'opacity-50' : 'active:scale-[0.98]'}`}
              >
                <div className="text-blue-500 mb-2">
                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>

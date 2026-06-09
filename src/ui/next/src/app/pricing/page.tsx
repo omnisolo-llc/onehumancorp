@@ -15,7 +15,7 @@ export default function PricingPage() {
 
   return (
     <div className="flex flex-col min-h-screen font-inter bg-gradient-to-br from-indigo-50 via-white to-purple-50 text-gray-900">
-      <header className="px-4 md:px-6 py-4 flex flex-col md:flex-row items-center justify-between gap-4 sticky top-0 z-50 bg-white/70 backdrop-blur-xl saturate-200 border-b border-white/40 shadow-sm">
+      <header className="px-4 md:px-6 py-4 flex flex-col md:flex-row items-center justify-between gap-4 sticky top-0 z-50 glassmorphism/70 backdrop-blur-xl saturate-200 border-b border-white/40 shadow-sm">
         <WithTooltip id="pricing-tier-tooltip" defaultText="Select the plan that best fits your business needs.">
           <h1 className="text-2xl font-bold font-outfit text-center md:text-left text-gray-900 tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-gray-900 to-gray-600">Pricing Plans</h1>
         </WithTooltip>
@@ -31,7 +31,7 @@ export default function PricingPage() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {/* Free Tier */}
-          <div className="p-6 md:p-8 flex flex-col justify-between bg-white/60 backdrop-blur-2xl saturate-200 border border-white/40 shadow-lg rounded-[24px] hover:shadow-xl transition-shadow duration-300">
+          <div className="p-6 md:p-8 flex flex-col justify-between glassmorphism/60 backdrop-blur-2xl saturate-200 border border-white/40 shadow-lg rounded-[24px] hover:shadow-xl transition-shadow duration-300">
             <div>
               <h3 className="text-2xl font-bold font-outfit mb-2 text-gray-900">Free</h3>
               <p className="text-xl font-semibold mb-4 text-gray-900">$0 <span className="text-sm font-normal text-gray-500">/ month</span></p>
@@ -48,7 +48,7 @@ export default function PricingPage() {
           </div>
 
           {/* Starter Tier */}
-          <div className="p-6 md:p-8 flex flex-col justify-between relative bg-white/80 backdrop-blur-2xl saturate-200 border border-indigo-200 shadow-xl rounded-[24px] hover:shadow-2xl transition-shadow duration-300">
+          <div className="p-6 md:p-8 flex flex-col justify-between relative glassmorphism/80 backdrop-blur-2xl saturate-200 border border-indigo-200 shadow-xl rounded-[24px] hover:shadow-2xl transition-shadow duration-300">
             <div className="absolute top-0 right-0 bg-indigo-600 text-white text-xs font-bold px-3 py-1 rounded-bl-xl rounded-tr-[24px]">Recommended</div>
             <div>
               <h3 className="text-2xl font-bold font-outfit mb-2 text-gray-900">Starter</h3>
@@ -67,7 +67,7 @@ export default function PricingPage() {
           </div>
 
           {/* Pro Tier */}
-          <div className="p-6 md:p-8 flex flex-col justify-between bg-white/60 backdrop-blur-2xl saturate-200 border border-white/40 shadow-lg rounded-[24px] hover:shadow-xl transition-shadow duration-300">
+          <div className="p-6 md:p-8 flex flex-col justify-between glassmorphism/60 backdrop-blur-2xl saturate-200 border border-white/40 shadow-lg rounded-[24px] hover:shadow-xl transition-shadow duration-300">
             <div>
               <h3 className="text-2xl font-bold font-outfit mb-2 text-gray-900">Pro</h3>
               <p className="text-xl font-semibold mb-4 text-gray-900">$79 <span className="text-sm font-normal text-gray-500">/ month</span></p>
@@ -84,7 +84,7 @@ export default function PricingPage() {
           </div>
 
           {/* Business Tier */}
-          <div className="p-6 md:p-8 flex flex-col justify-between bg-white/60 backdrop-blur-2xl saturate-200 border border-white/40 shadow-lg rounded-[24px] hover:shadow-xl transition-shadow duration-300">
+          <div className="p-6 md:p-8 flex flex-col justify-between glassmorphism/60 backdrop-blur-2xl saturate-200 border border-white/40 shadow-lg rounded-[24px] hover:shadow-xl transition-shadow duration-300">
             <div>
               <h3 className="text-2xl font-bold font-outfit mb-2 text-gray-900">Business</h3>
               <p className="text-xl font-semibold mb-4 text-gray-900">$299 <span className="text-sm font-normal text-gray-500">/ month</span></p>
@@ -105,7 +105,7 @@ export default function PricingPage() {
             <p className="text-sm text-gray-600 px-2">100% money back guarantee. Secure SSL payments powered by Stripe.</p>
         </div>
 
-        <div className="mt-8 p-6 md:p-8 bg-white/60 backdrop-blur-2xl saturate-200 border border-white/40 shadow-lg rounded-[24px] w-full">
+        <div className="mt-8 p-6 md:p-8 glassmorphism/60 backdrop-blur-2xl saturate-200 border border-white/40 shadow-lg rounded-[24px] w-full">
             <h2 className="text-xl font-bold font-outfit mb-4">Frequently Asked Questions</h2>
             <div className="mb-4">
                 <h3 className="font-semibold">How do I upgrade, downgrade, or cancel?</h3>

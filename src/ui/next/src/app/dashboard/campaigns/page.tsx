@@ -311,7 +311,7 @@ export default function CampaignOrchestrationPage() {
           <div className="app-panel-body">
             {actionStatus && <p className="mb-3 app-list-subtitle" role="status">{actionStatus}</p>}
             {draft ? (
-              <pre className="min-h-[220px] whitespace-pre-wrap rounded-[8px] border border-gray-200 bg-white p-4 text-sm text-gray-800 shadow-sm dark:border-white/10 dark:bg-black/30 dark:text-gray-100">
+              <pre className="min-h-[220px] whitespace-pre-wrap rounded-[8px] border border-gray-200 glassmorphism p-4 text-sm text-gray-800 shadow-sm dark:border-white/10 dark:bg-black/30 dark:text-gray-100">
                 {draft}
               </pre>
             ) : (
