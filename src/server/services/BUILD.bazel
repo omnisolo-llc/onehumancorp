@@ -8,6 +8,8 @@ exports_files(
         "cache_invalidator.rs",
         "wizard.rs",
         "quoting/mod.rs",
+        "agent_feed/mod.rs",
+        "agent_feed/service.rs",
         ],
     visibility = ["//visibility:public"],
 )
@@ -21,6 +23,8 @@ rust_library(
         "cache_invalidator.rs",
         "wizard.rs",
         "quoting/mod.rs",
+        "agent_feed/mod.rs",
+        "agent_feed/service.rs",
         "//src/server/services/agent:department/mod.rs",
         "//src/server/services/agent:department/service.rs",
         "//src/server/services/agent:mod.rs",
