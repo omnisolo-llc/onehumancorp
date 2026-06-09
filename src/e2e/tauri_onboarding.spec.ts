@@ -27,10 +27,17 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
         await route.fulfill({ contentType: 'text/html', body: content });
     });
 
+
     await page.route('/success.html', async route => {
         const content = fs.readFileSync(path.join(tauriUiDir, 'success.html'), 'utf-8');
         await route.fulfill({ contentType: 'text/html', body: content });
     });
+
+    await page.route('/styles.css', async route => {
+        const content = fs.readFileSync(path.join(tauriUiDir, 'styles.css'), 'utf-8');
+        await route.fulfill({ contentType: 'text/css', body: content });
+    });
+
 
     // Mock the Tauri invoke API.
     // We use sessionStorage to preserve state across page navigations in Playwright
@@ -97,10 +104,17 @@ test.describe('Tauri Dashboard UI and UX Improvements', () => {
 
     const tauriUiDir = path.join(workspaceRoot, 'src/ui/tauri/src/ui');
 
+
     await page.route('/dashboard.html', async route => {
         const content = fs.readFileSync(path.join(tauriUiDir, 'dashboard.html'), 'utf-8');
         await route.fulfill({ contentType: 'text/html', body: content });
     });
+
+    await page.route('/styles.css', async route => {
+        const content = fs.readFileSync(path.join(tauriUiDir, 'styles.css'), 'utf-8');
+        await route.fulfill({ contentType: 'text/css', body: content });
+    });
+
 
     await page.addInitScript(() => {
       window.__TAURI__ = {
@@ -119,7 +133,7 @@ test.describe('Tauri Dashboard UI and UX Improvements', () => {
 
     // Check that the container class has the updated glassmorphism properties
     const container = page.locator('.container');
-    await expect(container).toHaveCSS('backdrop-filter', 'blur(30px) saturate(210%)');
+    await expect(container).toHaveCSS('backdrop-filter', 'blur(30px) saturate(2.1)');
     await expect(container).toHaveCSS('border-radius', '16px');
     await expect(container).toHaveCSS('background-color', 'rgba(255, 255, 255, 0.65)');
     await expect(container).toHaveCSS('border', '1px solid rgba(255, 255, 255, 0.4)');
@@ -147,10 +161,17 @@ test.describe('Tauri Dashboard UI and UX Improvements', () => {
         await route.fulfill({ contentType: 'text/html', body: content });
     });
 
+
     await page.route('/success.html', async route => {
         const content = fs.readFileSync(path.join(tauriUiDir, 'success.html'), 'utf-8');
         await route.fulfill({ contentType: 'text/html', body: content });
     });
+
+    await page.route('/styles.css', async route => {
+        const content = fs.readFileSync(path.join(tauriUiDir, 'styles.css'), 'utf-8');
+        await route.fulfill({ contentType: 'text/css', body: content });
+    });
+
 
     await page.addInitScript(() => {
       window.__TAURI__ = {

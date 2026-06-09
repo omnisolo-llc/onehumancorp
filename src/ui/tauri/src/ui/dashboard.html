@@ -1,37 +1,13 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>OHC Dashboard</title>
+    <link rel="stylesheet" href="styles.css" />
     <style>
-      body {
-        font-family: "Outfit", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-        background-color: #f5f5f7;
-        margin: 0;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        height: 100vh;
-        box-sizing: border-box;
-      }
-      .container {
-        max-width: 400px;
-        width: 100%;
-        padding: 40px;
-        box-sizing: border-box;
-        background: rgba(255, 255, 255, 0.65);
-        backdrop-filter: blur(30px) saturate(210%);
-        border-radius: 16px;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-        text-align: center;
-        border: 1px solid rgba(255, 255, 255, 0.4);
-      }
       h1 {
-        color: #1d1d1f;
         font-size: 28px;
-        font-weight: 700;
         margin-bottom: 5px;
       }
       .subtitle {
@@ -62,20 +38,6 @@
         box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
       }
       @media (prefers-color-scheme: dark) {
-        .container {
-          background: rgba(22, 22, 26, 0.7);
-          backdrop-filter: blur(30px) saturate(210%);
-          border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        body {
-          background-color: #16161a;
-        }
-        h1 {
-          color: #f5f5f7;
-        }
-        .subtitle {
-          color: #a1a1a6;
-        }
         .status-badge {
           background-color: #333336;
           color: #f5f5f7;
@@ -101,27 +63,9 @@
       }
 
       button {
-        background-color: #0066FF;
-        color: white;
-        border: none;
-        padding: 14px 24px;
-        border-radius: 8px;
-        font-size: 16px;
-        font-weight: 600;
-        cursor: pointer;
-        width: 100%;
-        transition: background-color 0.2s, transform 0.1s;
-        box-shadow: 0 4px 14px 0 rgba(0, 102, 255, 0.39);
         display: flex;
         justify-content: center;
         align-items: center;
-        min-height: 44px; /* touch target size */
-      }
-      button:hover {
-        background-color: #0052cc;
-      }
-      button:active {
-        transform: scale(0.98);
       }
 
       .link-container {
@@ -178,67 +122,86 @@
 
       <div class="ohc-growth-card">
         <h2>Grow Your Team</h2>
-        <p>Bridge your local sovereignty with cloud-native collaboration. Invite a team member to view agents in a secure cloud tenant.</p>
+        <p>
+          Bridge your local sovereignty with cloud-native collaboration. Invite
+          a team member to view agents in a secure cloud tenant.
+        </p>
 
         <button id="generate-link-btn">Get My Invite Link</button>
 
         <div class="link-container" id="link-container">
-          <input type="text" class="link-input" id="referral-link" readonly value="" />
+          <input
+            type="text"
+            class="link-input"
+            id="referral-link"
+            readonly
+            value=""
+          />
           <div class="action-buttons">
             <button class="btn-secondary" id="copy-btn">Copy</button>
-            <button class="btn-secondary" id="share-whatsapp-btn">Share on WhatsApp</button>
+            <button class="btn-secondary" id="share-whatsapp-btn">
+              Share on WhatsApp
+            </button>
           </div>
         </div>
       </div>
     </div>
 
     <script>
-      const name = localStorage.getItem('businessName');
+      const name = localStorage.getItem("businessName");
       if (name) {
-          document.getElementById('dashboard-title').innerText = `${name} Dashboard`;
+        document.getElementById("dashboard-title").innerText =
+          `${name} Dashboard`;
       }
 
-      const generateBtn = document.getElementById('generate-link-btn');
-      const linkContainer = document.getElementById('link-container');
-      const copyBtn = document.getElementById('copy-btn');
-      const referralLink = document.getElementById('referral-link');
+      const generateBtn = document.getElementById("generate-link-btn");
+      const linkContainer = document.getElementById("link-container");
+      const copyBtn = document.getElementById("copy-btn");
+      const referralLink = document.getElementById("referral-link");
 
-      generateBtn.addEventListener('click', () => {
+      generateBtn.addEventListener("click", () => {
         generateBtn.innerText = "Generating...";
         // Call the real Tauri backend
         if (window.__TAURI__ && window.__TAURI__.core) {
-          window.__TAURI__.core.invoke("generate_cloud_invite").then((link) => {
-            referralLink.value = link;
-            generateBtn.style.display = 'none';
-            linkContainer.style.display = 'block';
-          }).catch((err) => {
-            console.error(err);
-            referralLink.value = "https://cloud.ohc.network/invite/fallback";
-            generateBtn.style.display = 'none';
-            linkContainer.style.display = 'block';
-          });
+          window.__TAURI__.core
+            .invoke("generate_cloud_invite")
+            .then((link) => {
+              referralLink.value = link;
+              generateBtn.style.display = "none";
+              linkContainer.style.display = "block";
+            })
+            .catch((err) => {
+              console.error(err);
+              referralLink.value = "https://cloud.ohc.network/invite/fallback";
+              generateBtn.style.display = "none";
+              linkContainer.style.display = "block";
+            });
         } else {
           // Playwright mock environment fallback if Tauri API isn't injected
-          referralLink.value = "https://cloud.ohc.network/invite/test-" + Date.now();
-          generateBtn.style.display = 'none';
-          linkContainer.style.display = 'block';
+          referralLink.value =
+            "https://cloud.ohc.network/invite/test-" + Date.now();
+          generateBtn.style.display = "none";
+          linkContainer.style.display = "block";
         }
       });
 
-      copyBtn.addEventListener('click', () => {
+      copyBtn.addEventListener("click", () => {
         referralLink.select();
-        document.execCommand('copy');
+        document.execCommand("copy");
         copyBtn.innerText = "Copied!";
         setTimeout(() => {
           copyBtn.innerText = "Copy";
         }, 2000);
       });
 
-      const shareWhatsAppBtn = document.getElementById('share-whatsapp-btn');
-      shareWhatsAppBtn.addEventListener('click', () => {
+      const shareWhatsAppBtn = document.getElementById("share-whatsapp-btn");
+      shareWhatsAppBtn.addEventListener("click", () => {
         const link = referralLink.value;
         const text = `Join my team on OHC! Here is your invite link:\n\n${link}\n\n⚡ Powered by OHC`;
-        window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+        window.open(
+          `https://wa.me/?text=${encodeURIComponent(text)}`,
+          "_blank",
+        );
       });
     </script>
   </body>
