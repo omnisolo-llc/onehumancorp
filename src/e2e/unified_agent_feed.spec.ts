@@ -14,6 +14,7 @@ test.describe("Unified Agent Feed Mobile UX", () => {
         query: `
           INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, payload, created_at, updated_at)
           VALUES
+            ('e2e-feed-test-promoter', 'e2e-tenant', 'marketing', 'The Promoter generated social media captions for your new product. Review and schedule.', 'DRAFT', 'LOW', '{"feature_type": "promoter_draft", "title": "Draft Social Post: New Product", "captions": {"tiktok": "Check this out!"}}'::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
             ('e2e-feed-test-1', 'e2e-tenant', 'operations', '3 new orders to fulfill', 'DRAFT', 'LOW', '{"feature_type": "fulfillment_batch", "message": "Batch process 3 orders?"}'::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
             ('e2e-feed-test-2', 'e2e-tenant', 'marketing', 'Draft promo email?', 'DRAFT', 'LOW', '{"context": {"weekly_health_report": true}, "message": "Send promo?"}'::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
           ON CONFLICT (id) DO UPDATE SET status = 'DRAFT', updated_at = CURRENT_TIMESTAMP;
@@ -33,6 +34,15 @@ test.describe("Unified Agent Feed Mobile UX", () => {
 
     await expect(opsCard).toBeVisible();
     await expect(marketingCard).toBeVisible();
+
+
+    const promoterCard = page.locator("text=The Promoter generated social media captions").first();
+    await expect(promoterCard).toBeVisible();
+
+    const approvePromoterBtn = page.locator('button[data-testid="approve-promoter-draft"]').first();
+    await expect(approvePromoterBtn).toBeVisible();
+    await approvePromoterBtn.click();
+    await expect(promoterCard).not.toBeVisible();
 
     // 5. Verify touch targets on the default Approve button (has min-h-[44px] class)
     // We can't strictly test min-height CSS but we can click them to verify interaction

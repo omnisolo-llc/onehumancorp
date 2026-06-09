@@ -1056,8 +1056,8 @@ let db_for_products = self.db.clone();
                                             if attempts == MAX_RETRIES {
                                                 let _ = sqlx::query(
                                                     r#"
-                                                    INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
-                                                    VALUES ($1, $2, 'AI Agent Paused: Marketing', 'The AI agent responsible for drafting social posts is paused because the AI service is unavailable.', 'PENDING', 'P2', 'LOW', 'PENDING', 'System is paused. Please manually draft the social post.')
+                                                    INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, payload, created_at, updated_at)
+                                                    VALUES ($1, $2, 'marketing', 'The AI agent responsible for drafting social posts is paused because the AI service is unavailable.', 'DRAFT', 'LOW', '{"feature_type": "promoter_draft", "title": "AI Agent Paused: Marketing"}'::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
                                                     "#
                                                 )
                                                 .bind(Uuid::new_v4().to_string())
@@ -1079,19 +1079,24 @@ let db_for_products = self.db.clone();
                                 let task_id = Uuid::new_v4().to_string();
                                 let title = format!("Draft Social Post: {}", product_name);
                                 let description = "The Promoter generated social media captions for your new product. Review and schedule.";
-                                let proposed_content = serde_json::to_string(&parsed).unwrap_or_default();
+                                let payload = serde_json::json!({
+                                    "feature_type": "promoter_draft",
+                                    "title": title,
+                                    "captions": parsed
+                                });
+                                let redacted = ::server_telemetry::redact_interface_pii(payload);
+                                let proposed_content = serde_json::to_string(&redacted).unwrap_or_else(|_| "{}".to_string());
 
                                 match &db_for_products.store {
                                     crate::db::DbStore::Postgres => {
                                         let _ = sqlx::query(
                                             r#"
-                                            INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
-                                            VALUES ($1, $2, $3, $4, 'PENDING', 'P2', 'LOW', 'PENDING', $5)
+                                            INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, payload, created_at, updated_at)
+                                            VALUES ($1, $2, 'marketing', $3, 'DRAFT', 'LOW', $4::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
                                             "#
                                         )
                                         .bind(&task_id)
                                         .bind(&org_id)
-                                        .bind(&title)
                                         .bind(&description)
                                         .bind(&proposed_content)
                                         .execute(&db_for_products.pool)
@@ -1100,13 +1105,12 @@ let db_for_products = self.db.clone();
                                     crate::db::DbStore::Sqlite(pool) => {
                                         let _ = sqlx::query(
                                             r#"
-                                            INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
-                                            VALUES (?, ?, ?, ?, 'PENDING', 'P2', 'LOW', 'PENDING', ?)
+                                            INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, payload, created_at, updated_at)
+                                            VALUES (?, ?, 'marketing', ?, 'DRAFT', 'LOW', ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
                                             "#
                                         )
                                         .bind(&task_id)
                                         .bind(&org_id)
-                                        .bind(&title)
                                         .bind(&description)
                                         .bind(&proposed_content)
                                         .execute(pool)
