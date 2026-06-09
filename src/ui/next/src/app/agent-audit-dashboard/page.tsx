@@ -85,7 +85,7 @@ export default function AgentAuditDashboard() {
  <div className="md:col-span-1">
  <section className="app-panel h-full">
  <div className="app-panel-header">
- <h2 className="app-panel-title text-indigo-600">Cross-Agent Feed</h2>
+ <h2 className="app-panel-title text-indigo-600">Violation Feed</h2>
  </div>
  <div className="app-panel-body space-y-4">
     {loading && <div className="text-sm text-gray-500">Loading...</div>}
