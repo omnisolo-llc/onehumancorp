@@ -94,6 +94,7 @@ rust_library(
         "//src/server/integrations/listmonk:server_integrations_listmonk",
         "//src/server/integrations/mailchimp:server_integrations_mailchimp",
         "//src/server/integrations/manychat:server_integrations_manychat",
+        "//src/server/integrations/distributed_lock:server_integrations_distributed_lock",
         "//src/server/integrations/nats:server_integrations_nats",
         "//src/server/integrations/pubsub:server_integrations_pubsub",
         "//src/server/integrations/razorpay:server_integrations_razorpay",

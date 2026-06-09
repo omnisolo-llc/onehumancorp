@@ -1,0 +1,33 @@
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+
+exports_files(["Cargo.toml"])
+
+rust_library(
+    name = "server_integrations_distributed_lock",
+    srcs = [
+        "lock.rs",
+        "mod.rs",
+        "lock_test.rs",
+    ],
+    crate_root = "mod.rs",
+    edition = "2024",
+    visibility = ["//visibility:public"],
+    proc_macro_deps = [
+        "@crates//:async-trait",
+    ],
+    deps = [
+        "@crates//:serde",
+        "@crates//:serde_json",
+        "@crates//:tokio",
+        "@crates//:tracing",
+        "@crates//:uuid",
+        "@crates//:redis",
+    ],
+)
+
+rust_test(
+    name = "server_integrations_distributed_lock_test",
+    size = "small",
+    crate = ":server_integrations_distributed_lock",
+    edition = "2024",
+)
