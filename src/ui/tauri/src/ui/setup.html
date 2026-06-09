@@ -126,7 +126,7 @@
       <p>We'll use this to set up your workspace.</p>
       <input type="text" id="business-name" placeholder="e.g. Maya's Bakery" />
       <div id="name-error" class="error-msg">Business Name must be at least 3 characters.</div>
-      <button id="next-btn">Next</button>
+      <button id="next-btn" data-tooltip="Click to save your business name and proceed.">Next</button>
     </div>
     <script>
       const nextBtn = document.getElementById('next-btn');
@@ -202,5 +202,7 @@
           }
       });
     </script>
+    <script src="tooltips.js"></script>
+    <script src="help_chat.js"></script>
   </body>
 </html>

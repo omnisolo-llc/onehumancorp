@@ -180,12 +180,12 @@
         <h2>Grow Your Team</h2>
         <p>Bridge your local sovereignty with cloud-native collaboration. Invite a team member to view agents in a secure cloud tenant.</p>
 
-        <button id="generate-link-btn">Get My Invite Link</button>
+        <button id="generate-link-btn" data-tooltip="Click here to share access with a team member.">Get My Invite Link</button>
 
         <div class="link-container" id="link-container">
           <input type="text" class="link-input" id="referral-link" readonly value="" />
           <div class="action-buttons">
-            <button class="btn-secondary" id="copy-btn">Copy</button>
+            <button class="btn-secondary" id="copy-btn" data-tooltip="Copy the referral link to your clipboard.">Copy</button>
             <button class="btn-secondary" id="share-whatsapp-btn">Share on WhatsApp</button>
           </div>
         </div>
@@ -241,5 +241,7 @@
         window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
       });
     </script>
+    <script src="tooltips.js"></script>
+    <script src="help_chat.js"></script>
   </body>
 </html>
