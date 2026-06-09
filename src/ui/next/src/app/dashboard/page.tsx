@@ -14,6 +14,8 @@ import { WithTooltip } from "../../components/TooltipRegistry";
 import GrowthReferralWidget from "../components/GrowthReferralWidget";
 import { SmartBlock } from "../builder/components";
 import { UnifiedAgentFeed } from "./UnifiedAgentFeed";
+import { ReviewFeedCard } from './ReviewFeedCard';
+
 import { NeighborhoodPulseCard } from "./NeighborhoodPulseCard";
 import { PromoterCard } from "./PromoterCard";
 import { ViralLoopPerformanceWidget } from "./ViralLoopPerformanceWidget";
@@ -85,6 +87,7 @@ export default function Dashboard() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [messages, setMessages] = useState<InboxMessage[]>([]);
   const [supply, setSupply] = useState<SupplyPayload>({ vendors: [], raw_materials: [], bom_items: [] });
+  const [dashboardData, setDashboardData] = useState<any>({ pendingReviews: [] });
   const [loading, setLoading] = useState(true);
   const [ledgerBalance, setLedgerBalance] = useState<number | null>(null);
   const [ledgerCurrency, setLedgerCurrency] = useState<string>("USD");
@@ -432,6 +435,59 @@ export default function Dashboard() {
         <div className="mb-6 flex gap-4"><Link href="/assistant" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">Open WorkBuddy Assistant</Link></div>
 
         <PromoterCard />
+
+        {dashboardData?.pendingReviews?.map((item: any, idx: number) => (
+             <ReviewFeedCard
+               key={idx}
+               review={{
+                 id: item.review?.id || "",
+                 rating: item.review?.rating || 5,
+                 content: item.review?.content || '',
+                 source: item.review?.source || 'sms',
+                 createdAtUnix: item.review?.createdAtUnix || Date.now() / 1000
+               }}
+               response={{
+                 id: item.response?.id || "",
+                 draftedContent: item.response?.draftedContent || "",
+                 status: item.response?.status || "draft"
+               }}
+               onApprove={async (id, content) => {
+                 try {
+                     // Optimistic update
+                     setDashboardData((prev: any) => ({
+                         ...prev,
+                         pendingReviews: prev.pendingReviews.filter((r: any) => r?.response?.id !== id)
+                     }));
+                     const res = await fetch('/api/reviews/action', {
+                         method: 'POST',
+                         headers: { 'Content-Type': 'application/json' },
+                         body: JSON.stringify({ action: 'approve', responseId: id, content })
+                     });
+                     if (!res.ok) {
+                         // Rollback if needed
+                         console.error("Failed to approve");
+                     }
+                 } catch (e) { console.error(e); }
+               }}
+               onDismiss={async (id) => {
+                 try {
+                     // Optimistic update
+                     setDashboardData((prev: any) => ({
+                         ...prev,
+                         pendingReviews: prev.pendingReviews.filter((r: any) => r?.response?.id !== id)
+                     }));
+                     const res = await fetch('/api/reviews/action', {
+                         method: 'POST',
+                         headers: { 'Content-Type': 'application/json' },
+                         body: JSON.stringify({ action: 'dismiss', responseId: id })
+                     });
+                     if (!res.ok) {
+                         console.error("Failed to dismiss");
+                     }
+                 } catch (e) { console.error(e); }
+               }}
+             />
+        ))}
 
         <UnifiedAgentFeed />
 
