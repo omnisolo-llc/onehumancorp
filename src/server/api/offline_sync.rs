@@ -13,6 +13,7 @@ pub struct OfflineMutation {
     pub currency: Option<String>,
     pub mutation_type: Option<String>,
     pub payload: Option<String>,
+    pub is_sold_out: Option<bool>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -78,25 +79,29 @@ pub async fn offline_sync_handler(
 
             let mut db_tx = db_clone.begin().await.unwrap();
 
-            let query = "SELECT inventory_count FROM products WHERE id = $1 AND tenant_id = $2 FOR UPDATE";
-            let current_stock = sqlx::query(query)
+            let query = "SELECT inventory_count, is_sold_out FROM products WHERE id = $1 AND tenant_id = $2 FOR UPDATE";
+            let product_row = sqlx::query(query)
                 .bind(&mutation.product_id)
                 .bind(&tenant_id_clone)
                 .fetch_optional(&mut *db_tx)
                 .await;
 
-            match current_stock {
+            match product_row {
                 Ok(Some(row)) => {
                     let stock: i32 = sqlx::Row::get(&row, "inventory_count");
+                    let current_is_sold_out: bool = sqlx::Row::get(&row, "is_sold_out");
+
                     let mut is_conflict = false;
                     if stock < mutation.quantity_deducted {
                         is_conflict = true;
                     }
 
                     let new_stock = std::cmp::max(0, stock - mutation.quantity_deducted);
+                    let new_is_sold_out = mutation.is_sold_out.unwrap_or(current_is_sold_out);
 
-                    let _ = sqlx::query("UPDATE products SET inventory_count = $1 WHERE id = $2 AND tenant_id = $3")
+                    let _ = sqlx::query("UPDATE products SET inventory_count = $1, is_sold_out = $2 WHERE id = $3 AND tenant_id = $4")
                         .bind(new_stock)
+                        .bind(new_is_sold_out)
                         .bind(&mutation.product_id)
                         .bind(&tenant_id_clone)
                         .execute(&mut *db_tx)
@@ -161,6 +166,7 @@ pub async fn offline_sync_handler(
                             "product_id": mutation.product_id,
                             "transaction_id": mutation.transaction_id,
                             "quantity_deducted": mutation.quantity_deducted,
+                            "is_sold_out": new_is_sold_out,
                             "tenant_id": tenant_id_clone
                         }).to_string().into_bytes(),
                     };

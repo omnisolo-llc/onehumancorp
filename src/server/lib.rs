@@ -2447,6 +2447,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let bus = std::sync::Arc::new(crate::msgbus::MemoryBus::new());
 
     let mut products_rx = hub.subscribe_teammate_mesh("products_inbox".to_string());
+    let mut inventory_rx = hub.subscribe_teammate_mesh("mesh:inventory:updated".to_string());
     let orch_clone = dept_orchestrator.clone();
     tokio::spawn(async move {
         while let Ok(event) = products_rx.recv().await {
@@ -2461,6 +2462,26 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                             payload: payload_json,
                         };
                         let _ = orch_clone.dispatch_event(dept_event).await;
+                    }
+                }
+            }
+        }
+    });
+
+    let orch_inventory_clone = dept_orchestrator.clone();
+    tokio::spawn(async move {
+        while let Ok(event) = inventory_rx.recv().await {
+            if event.action == "InventoryUpdated" {
+                if let Ok(payload_str) = String::from_utf8(event.payload.clone()) {
+                    if let Ok(payload_json) = serde_json::from_str::<serde_json::Value>(&payload_str) {
+                        let tenant_id = payload_json.get("tenant_id").and_then(|v| v.as_str()).unwrap_or("system").to_string();
+                        let dept_event = crate::orchestration::departments::types::DepartmentEvent {
+                            id: uuid::Uuid::new_v4().to_string(),
+                            tenant_id,
+                            event_type: "tenant.inventory.updated".to_string(),
+                            payload: payload_json,
+                        };
+                        let _ = orch_inventory_clone.dispatch_event(dept_event).await;
                     }
                 }
             }

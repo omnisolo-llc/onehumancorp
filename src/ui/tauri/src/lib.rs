@@ -1,4 +1,6 @@
 use tauri::Manager;
+use rusqlite::{params, Connection};
+use std::sync::Mutex;
 
 #[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -26,6 +28,36 @@ struct AiProviderTestResult {
     status: u16,
     message: String,
 }
+
+#[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct LocalProduct {
+    id: String,
+    title: String,
+    inventory_count: i32,
+    is_sold_out: bool,
+}
+
+#[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct OfflineAction {
+    id: i64,
+    product_id: String,
+    is_sold_out: bool,
+    timestamp_ms: i64,
+}
+
+#[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct LocalOrder {
+    id: String,
+    customer_name: String,
+    total_amount: f64,
+    status: String,
+    created_at: String,
+}
+
+struct DbState(Mutex<Connection>);
 
 #[tauri::command]
 fn greet(name: &str) -> String {
@@ -450,6 +482,199 @@ macro_rules! tauri_build_context {
 #[cfg(ohc_bazel_tauri_context)]
 tauri_build_context!();
 
+#[tauri::command]
+fn get_local_menu(state: tauri::State<DbState>) -> Result<Vec<LocalProduct>, String> {
+    let conn = state.0.lock().map_err(|e| e.to_string())?;
+    let mut stmt = conn
+        .prepare("SELECT id, title, inventory_count, is_sold_out FROM products ORDER BY title ASC")
+        .map_err(|e| e.to_string())?;
+    let product_iter = stmt
+        .query_map([], |row| {
+            Ok(LocalProduct {
+                id: row.get(0)?,
+                title: row.get(1)?,
+                inventory_count: row.get(2)?,
+                is_sold_out: row.get(3)?,
+            })
+        })
+        .map_err(|e| e.to_string())?;
+
+    let mut products = Vec::new();
+    for product in product_iter {
+        products.push(product.map_err(|e| e.to_string())?);
+    }
+    Ok(products)
+}
+
+#[tauri::command]
+fn toggle_sold_out(
+    id: String,
+    is_sold_out: bool,
+    state: tauri::State<DbState>,
+) -> Result<(), String> {
+    let conn = state.0.lock().map_err(|e| e.to_string())?;
+    conn.execute(
+        "UPDATE products SET is_sold_out = ? WHERE id = ?",
+        params![is_sold_out, id],
+    )
+    .map_err(|e| e.to_string())?;
+
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_millis() as i64;
+
+    conn.execute(
+        "INSERT INTO offline_actions (product_id, is_sold_out, timestamp_ms) VALUES (?, ?, ?)",
+        params![id, is_sold_out, now],
+    )
+    .map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
+#[tauri::command]
+fn get_local_orders(state: tauri::State<DbState>) -> Result<Vec<LocalOrder>, String> {
+    let conn = state.0.lock().map_err(|e| e.to_string())?;
+    let mut stmt = conn
+        .prepare("SELECT id, customer_name, total_amount, status, created_at FROM orders ORDER BY created_at DESC")
+        .map_err(|e| e.to_string())?;
+    let order_iter = stmt
+        .query_map([], |row| {
+            Ok(LocalOrder {
+                id: row.get(0)?,
+                customer_name: row.get(1)?,
+                total_amount: row.get(2)?,
+                status: row.get(3)?,
+                created_at: row.get(4)?,
+            })
+        })
+        .map_err(|e| e.to_string())?;
+
+    let mut orders = Vec::new();
+    for order in order_iter {
+        orders.push(order.map_err(|e| e.to_string())?);
+    }
+    Ok(orders)
+}
+
+#[tauri::command]
+async fn sync_offline_actions(state: tauri::State<'_, DbState>) -> Result<bool, String> {
+    let actions = {
+        let conn = state.0.lock().map_err(|e| e.to_string())?;
+        let mut stmt = conn
+            .prepare("SELECT id, product_id, is_sold_out, timestamp_ms FROM offline_actions ORDER BY timestamp_ms ASC")
+            .map_err(|e| e.to_string())?;
+        let action_iter = stmt
+            .query_map([], |row| {
+                Ok(OfflineAction {
+                    id: row.get(0)?,
+                    product_id: row.get(1)?,
+                    is_sold_out: row.get(2)?,
+                    timestamp_ms: row.get(3)?,
+                })
+            })
+            .map_err(|e| e.to_string())?;
+
+        let mut actions = Vec::new();
+        for action in action_iter {
+            actions.push(action.map_err(|e| e.to_string())?);
+        }
+        actions
+    };
+
+    if actions.is_empty() {
+        return Ok(true);
+    }
+
+    let mutations: Vec<serde_json::Value> = actions
+        .iter()
+        .map(|a| {
+            serde_json::json!({
+                "transaction_id": format!("off-{}", a.id),
+                "product_id": a.product_id,
+                "quantity_deducted": 0,
+                "is_sold_out": a.is_sold_out,
+            })
+        })
+        .collect();
+
+    let backend_url =
+        std::env::var("BACKEND_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string());
+    let url = format!("{}/api/v1/sync/offline", backend_url);
+    let tenant_id =
+        std::env::var("OHC_DEFAULT_TENANT_ID").unwrap_or_else(|_| "default".to_string());
+
+    let client = reqwest::Client::new();
+    let res = client
+        .post(&url)
+        .header(
+            "x-spiffe-id",
+            format!("spiffe://ohc/org/{}/agent/mobile", tenant_id),
+        )
+        .json(&serde_json::json!({ "mutations": mutations }))
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    if res.status().is_success() {
+        let conn = state.0.lock().map_err(|e| e.to_string())?;
+        conn.execute("DELETE FROM offline_actions", [])
+            .map_err(|e| e.to_string())?;
+
+        // Also refresh local products and orders from backend
+        let menu_url = format!("{}/api/v1/catalog/products?tenant_id={}", backend_url, tenant_id);
+        if let Ok(menu_res) = client.get(menu_url).send().await {
+            if menu_res.status().is_success() {
+                if let Ok(products) = menu_res.json::<Vec<serde_json::Value>>().await {
+                    let _ = conn.execute("DELETE FROM products", []);
+                    for p in products {
+                        let _ = conn.execute(
+                            "INSERT INTO products (id, title, inventory_count, is_sold_out) VALUES (?, ?, ?, ?)",
+                            params![
+                                p["id"].as_str().unwrap_or(""),
+                                p["title"].as_str().unwrap_or(""),
+                                p["inventory_count"].as_i64().unwrap_or(0),
+                                p["is_sold_out"].as_bool().unwrap_or(false),
+                            ],
+                        );
+                    }
+                }
+            }
+        }
+
+        let orders_url = format!("{}/api/ui/orders?tenant_id={}", backend_url, tenant_id);
+        if let Ok(orders_res) = client.get(orders_url).send().await {
+            if orders_res.status().is_success() {
+                if let Ok(orders) = orders_res.json::<Vec<serde_json::Value>>().await {
+                    let _ = conn.execute("DELETE FROM orders", []);
+                    for o in orders {
+                        let _ = conn.execute(
+                            "INSERT INTO orders (id, customer_name, total_amount, status, created_at) VALUES (?, ?, ?, ?, ?)",
+                            params![
+                                o["id"].as_str().unwrap_or(""),
+                                o["customer_name"].as_str().unwrap_or("Guest"),
+                                o["total_amount"].as_f64().unwrap_or(0.0),
+                                o["status"].as_str().unwrap_or(""),
+                                o["created_at"].as_str().unwrap_or(""),
+                            ],
+                        );
+                    }
+                }
+            }
+        }
+
+        Ok(true)
+    } else {
+        Err(format!("Backend sync failed: {}", res.status()))
+    }
+}
+
+#[tauri::command]
+fn get_backend_url() -> String {
+    std::env::var("BACKEND_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     #[cfg(ohc_bazel_tauri_context)]
@@ -458,7 +683,48 @@ pub fn run() {
     #[cfg(not(ohc_bazel_tauri_context))]
     let context = tauri::generate_context!();
 
+    let db_path = ".ohc/local_pos.db";
+    if let Some(parent) = std::path::Path::new(db_path).parent() {
+        std::fs::create_dir_all(parent).unwrap_or_default();
+    }
+    let conn = Connection::open(db_path).expect("failed to open local sqlite db");
+
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS products (
+            id TEXT PRIMARY KEY,
+            title TEXT NOT NULL,
+            inventory_count INTEGER DEFAULT 0,
+            is_sold_out BOOLEAN DEFAULT 0
+        )",
+        [],
+    )
+    .expect("failed to create local products table");
+
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS orders (
+            id TEXT PRIMARY KEY,
+            customer_name TEXT,
+            total_amount REAL,
+            status TEXT,
+            created_at TEXT
+        )",
+        [],
+    )
+    .expect("failed to create local orders table");
+
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS offline_actions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            product_id TEXT NOT NULL,
+            is_sold_out BOOLEAN NOT NULL,
+            timestamp_ms INTEGER NOT NULL
+        )",
+        [],
+    )
+    .expect("failed to create local actions table");
+
     tauri::Builder::default()
+        .manage(DbState(Mutex::new(conn)))
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .invoke_handler(tauri::generate_handler![
@@ -473,6 +739,11 @@ pub fn run() {
             get_help_article,
             get_help_videos,
             get_changelog,
+            get_local_menu,
+            get_local_orders,
+            toggle_sold_out,
+            sync_offline_actions,
+            get_backend_url,
         ])
         .setup(|app| {
             let window = app.get_webview_window("main").unwrap();

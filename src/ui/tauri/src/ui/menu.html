@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Menu Management</title>
+    <style>
+      body {
+        font-family: "Outfit", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        background-color: #f5f5f7;
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        min-height: 100vh;
+        box-sizing: border-box;
+        padding: 20px;
+      }
+      .container {
+        max-width: 375px;
+        width: 100%;
+        background: rgba(255, 255, 255, 0.65);
+        backdrop-filter: blur(30px) saturate(210%);
+        border-radius: 16px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        padding: 20px;
+        box-sizing: border-box;
+      }
+      h1 {
+        color: #1d1d1f;
+        font-size: 24px;
+        font-weight: 700;
+        margin-bottom: 20px;
+        text-align: center;
+      }
+      .status-banner {
+        font-size: 12px;
+        padding: 8px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        text-align: center;
+        font-weight: 600;
+      }
+      .status-online {
+        background: #e1f5fe;
+        color: #01579b;
+      }
+      .status-offline {
+        background: #fff3e0;
+        color: #e65100;
+      }
+      .product-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 16px;
+        background: rgba(255, 255, 255, 0.5);
+        border-radius: 12px;
+        margin-bottom: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.4);
+      }
+      .product-info h3 {
+        margin: 0;
+        font-size: 16px;
+        color: #1d1d1f;
+      }
+      .product-info p {
+        margin: 4px 0 0;
+        font-size: 14px;
+        color: #86868b;
+      }
+      /* Toggle Switch */
+      .switch {
+        position: relative;
+        display: inline-block;
+        width: 50px;
+        height: 28px;
+      }
+      .switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+      }
+      .slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background-color: #ccc;
+        transition: .4s;
+        border-radius: 28px;
+      }
+      .slider:before {
+        position: absolute;
+        content: "";
+        height: 20px;
+        width: 20px;
+        left: 4px;
+        bottom: 4px;
+        background-color: white;
+        transition: .4s;
+        border-radius: 50%;
+      }
+      input:checked + .slider {
+        background-color: #0066FF;
+      }
+      input:checked + .slider:before {
+        transform: translateX(22px);
+      }
+      .back-btn {
+        margin-top: 20px;
+        background: none;
+        border: none;
+        color: #0066FF;
+        font-weight: 600;
+        cursor: pointer;
+        font-size: 14px;
+        text-decoration: none;
+        display: block;
+        text-align: center;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        body { background-color: #16161a; }
+        .container {
+          background: rgba(22, 22, 26, 0.7);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        h1 { color: #f5f5f7; }
+        .product-item {
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .product-info h3 { color: #f5f5f7; }
+        .product-info p { color: #a1a1a6; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div id="network-status" class="status-banner status-online">Connected Online</div>
+      <h1>Daily Menu</h1>
+      <div id="product-list">
+        <!-- Products will be loaded here -->
+        <p style="text-align: center; color: #86868b;">Loading menu...</p>
+      </div>
+      <a href="dashboard.html" class="back-btn">← Back to Dashboard</a>
+    </div>
+
+    <script>
+      const productList = document.getElementById('product-list');
+      const networkStatus = document.getElementById('network-status');
+
+      async function loadMenu() {
+        try {
+          const products = await window.__TAURI__.core.invoke('get_local_menu');
+          renderMenu(products);
+        } catch (err) {
+          console.error(err);
+          productList.innerHTML = `<p style="color: red;">Error loading menu: ${err}</p>`;
+        }
+      }
+
+      function renderMenu(products) {
+        if (products.length === 0) {
+          productList.innerHTML = `<p style="text-align: center; color: #86868b;">No products found.</p>`;
+          return;
+        }
+        productList.innerHTML = products.map(p => `
+          <div class="product-item">
+            <div class="product-info">
+              <h3>${p.title}</h3>
+              <p>Stock: ${p.inventoryCount}</p>
+            </div>
+            <label class="switch" title="Toggle Sold Out">
+              <input type="checkbox" ${p.isSoldOut ? 'checked' : ''} onchange="handleToggle('${p.id}', this.checked)">
+              <span class="slider"></span>
+            </label>
+          </div>
+        `).join('');
+      }
+
+      async function handleToggle(id, isSoldOut) {
+        try {
+          await window.__TAURI__.core.invoke('toggle_sold_out', { id, isSoldOut });
+          if (navigator.onLine) {
+            sync();
+          }
+        } catch (err) {
+          alert('Failed to update status: ' + err);
+        }
+      }
+
+      async function sync() {
+        try {
+          const success = await window.__TAURI__.core.invoke('sync_offline_actions');
+          if (success) {
+            console.log('Synced successfully');
+          }
+        } catch (err) {
+          console.warn('Sync failed (probably offline):', err);
+        }
+      }
+
+      window.addEventListener('online', () => {
+        networkStatus.innerText = 'Connected Online';
+        networkStatus.className = 'status-banner status-online';
+        sync();
+      });
+
+      window.addEventListener('offline', () => {
+        networkStatus.innerText = 'Working Offline';
+        networkStatus.className = 'status-banner status-offline';
+      });
+
+      // Initial check
+      if (!navigator.onLine) {
+        networkStatus.innerText = 'Working Offline';
+        networkStatus.className = 'status-banner status-offline';
+      }
+
+      document.addEventListener('DOMContentLoaded', loadMenu);
+    </script>
+  </body>
+</html>

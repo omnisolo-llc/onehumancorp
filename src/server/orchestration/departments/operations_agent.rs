@@ -25,6 +25,7 @@ impl Department for OperationsAgent {
             "tenant.subscription.fulfillment_batch.created".to_string(),
             "LowStockAlert".to_string(),
             "PosSyncFailure".to_string(),
+            "tenant.inventory.updated".to_string(),
         ]
     }
 
@@ -49,6 +50,15 @@ impl Department for OperationsAgent {
             "PosSyncFailure" => {
                 let transaction_id = event.payload.get("transaction_id").and_then(|v| v.as_str()).unwrap_or("unknown");
                 format!("Review POS offline sync discrepancy for transaction {}", transaction_id)
+            },
+            "tenant.inventory.updated" => {
+                let product_id = event.payload.get("product_id").and_then(|v| v.as_str()).unwrap_or("unknown");
+                let is_sold_out = event.payload.get("is_sold_out").and_then(|v| v.as_bool()).unwrap_or(false);
+                if is_sold_out {
+                    format!("URGENT: Product {} marked sold out. Review affected pre-orders and notify customers.", product_id)
+                } else {
+                    format!("Inventory updated for product {}", product_id)
+                }
             },
             "tenant.subscription.fulfillment_batch.created" => {
                 let batch_id = event

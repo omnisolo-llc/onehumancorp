@@ -146,6 +146,7 @@ rust_library(
     visibility = ["//visibility:public"],
     deps = [
         "@crates//:reqwest",
+        "@crates//:rusqlite",
         "@crates//:serde",
         "@crates//:serde_json",
         "@crates//:tauri",
