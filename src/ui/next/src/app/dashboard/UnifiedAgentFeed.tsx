@@ -450,14 +450,14 @@ export function UnifiedAgentFeed() {
                       >
                         Approve & Send Proposal
                       </button>
-                      <button
-                        onClick={() => handleDecision(approval.id, false)}
+                      <a
+                        href={`/quoting?id=${approval.id}`}
                         className="flex-1 min-h-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex items-center justify-center"
                         aria-label="Edit Draft"
                         data-testid="edit-quote-draft"
                       >
                         Edit Draft
-                      </button>
+                      </a>
                     </div>
                   ) : approval.payload?.context?.smart_pricing === true ? (
                     <div className="flex flex-col sm:flex-row gap-3 w-full">
@@ -526,14 +526,14 @@ export function UnifiedAgentFeed() {
                         Approve & Send Proposal
                       </button>
                       <div className="flex flex-col sm:flex-row gap-3 w-full">
-                        <button
-                          onClick={() => {}}
+                        <a
+                          href={`/quoting?id=${approval.id}`}
                           className="flex-1 min-h-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex items-center justify-center"
                           aria-label="Edit Draft"
                           data-testid="edit-proposal"
                         >
                           Edit Draft
-                        </button>
+                        </a>
                         <button
                           onClick={() => handleDecision(approval.id, false)}
                           className="flex-1 min-h-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex items-center justify-center"

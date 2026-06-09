@@ -8,13 +8,16 @@ vi.mock('./components/FAB', () => ({
 import { expect, test, vi } from 'vitest';
 
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({
-    push: vi.fn(),
-    replace: vi.fn(),
-    prefetch: vi.fn(),
-  }),
-  usePathname: () => '',
-  useSearchParams: () => new URLSearchParams(),
+  useRouter() {
+    return {
+      push: vi.fn(),
+      replace: vi.fn(),
+      prefetch: vi.fn(),
+    };
+  },
+  usePathname() {
+    return "/dashboard";
+  }
 }));
 
 // Mock fetch to prevent valid Undici errors regarding absolute URLs or missing globals
@@ -24,18 +27,16 @@ global.fetch = vi.fn(() => Promise.resolve({
 })) as any;
 
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({
-    push: vi.fn(),
-    replace: vi.fn(),
-    prefetch: vi.fn(),
-    back: vi.fn(),
-    forward: vi.fn(),
-    refresh: vi.fn(),
-    pathname: '/',
-    query: {},
-  }),
-  usePathname: () => '/',
-  useSearchParams: () => new URLSearchParams(),
+  useRouter() {
+    return {
+      push: vi.fn(),
+      replace: vi.fn(),
+      prefetch: vi.fn(),
+    };
+  },
+  usePathname() {
+    return "/dashboard";
+  }
 }));
 
 test('renders dashboard with actionable feed', async () => {
