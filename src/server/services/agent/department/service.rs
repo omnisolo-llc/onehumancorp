@@ -49,3 +49,68 @@ impl DepartmentService {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use async_trait::async_trait;
+    use std::sync::atomic::{AtomicBool, Ordering};
+    use crate::orchestration::mesh::CentrifugeNode;
+    use ohc_builtin_agent::mesh::transport::InProcessTransport;
+
+    // A mock Bus implementation for testing
+    struct MockBus {
+        subscribed: AtomicBool,
+    }
+
+    impl MockBus {
+        fn new() -> Self {
+            MockBus {
+                subscribed: AtomicBool::new(false),
+            }
+        }
+    }
+
+    #[async_trait]
+    impl Bus for MockBus {
+        async fn publish(&self, _msg: Message) -> Result<(), String> {
+            Ok(())
+        }
+
+        async fn subscribe(
+            &self,
+            _topic: String,
+            _handler: Box<dyn Fn(Message) + Send + Sync>,
+        ) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+            self.subscribed.store(true, Ordering::SeqCst);
+            Ok(Box::new(|| {}))
+        }
+    }
+
+    #[tokio::test]
+    async fn test_department_service_creation_and_start() {
+        // Because env variables mutate global state causing concurrency issues during tests,
+        // we'll rely on the orchestrator init skipping DB tests if not set, or we skip our test.
+        // Or we just instantiate DB if possible, but actually we can just pass an Option-based mocked DB to Orchestrator?
+        // Wait, DepartmentOrchestrator::new takes Arc<crate::db::DB>.
+        // We will just do what orchestrator's tests do: check if env is set, if not, return early.
+
+        if std::env::var("OHC_DATABASE_URL").is_err() {
+            // To prevent test failures locally where this isn't set, we skip the test cleanly.
+            // Bazel sets required envs if configured via action_env or test_env.
+            println!("Skipping test_department_service_creation_and_start because OHC_DATABASE_URL is not set.");
+            return;
+        }
+
+        let db = Arc::new(crate::db::DB::new().await.unwrap());
+        let transport = Arc::new(InProcessTransport::new());
+        let mesh = Arc::new(CentrifugeNode::new(transport));
+        let orchestrator = Arc::new(DepartmentOrchestrator::new(db, mesh));
+
+        let mock_bus = Arc::new(MockBus::new());
+        let service = DepartmentService::new(mock_bus.clone(), orchestrator);
+
+        assert!(service.start().await.is_ok());
+        assert!(mock_bus.subscribed.load(Ordering::SeqCst));
+    }
+}
