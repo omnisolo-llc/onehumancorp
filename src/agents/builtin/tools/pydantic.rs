@@ -112,4 +112,28 @@ mod tests {
             panic!("Expected LlmRecoverable error about missing field");
         }
     }
+
+    #[tokio::test]
+    async fn test_pydantic_adapter_failure_long_snippet() {
+        let adapter = PydanticAdapter::new(MyExecutor);
+        let long_string = "a".repeat(200);
+        let result = adapter.execute(serde_json::json!({ "foo": long_string, "bar": "not a number" })).await;
+        assert!(result.is_err());
+
+        if let Err(ToolError::LlmRecoverable(msg)) = result {
+            assert!(msg.contains("Validation Error (Pydantic-first tool schema)"));
+            assert!(msg.contains("Semantic validation failed"));
+            assert!(msg.contains("...")); // Verifies the snippet truncation logic
+            assert!(msg.len() < 500); // Ensures the error message didn't blow up
+        } else {
+            panic!("Expected LlmRecoverable error with truncated snippet");
+        }
+    }
+
+    #[tokio::test]
+    async fn test_pydantic_adapter_new_arc() {
+        let adapter = PydanticAdapter::new_arc(Arc::new(MyExecutor));
+        let result = adapter.execute(serde_json::json!({ "foo": "arc_test", "bar": 456 })).await.unwrap();
+        assert_eq!(result, "arc_test-456");
+    }
 }
