@@ -358,11 +358,12 @@ pub async fn commit_inventory_handler(
     let pool = crate::db::get_pool();
     if let Ok(mut tx) = pool.begin().await {
         if let Ok(_) = crate::common::auth_utils::set_org_context(&mut *tx, &tenant_id).await {
-            let current_stock = sqlx::query("SELECT inventory_count FROM products WHERE id = $1 AND tenant_id = $2 FOR UPDATE")
+            let current_stock = sqlx::query("SELECT inventory_count, title FROM products WHERE id = $1 AND tenant_id = $2 FOR UPDATE")
                 .bind(&req_data.product_id).bind(&tenant_id).fetch_optional(&mut *tx).await.unwrap_or(None);
 
             if let Some(row) = current_stock {
                 let stock: i32 = sqlx::Row::get(&row, "inventory_count");
+                let title: String = sqlx::Row::get(&row, "title");
                 if stock < req_data.quantity {
                     let _ = tx.rollback().await;
                     return (axum::http::StatusCode::OK, Json(serde_json::json!({
@@ -388,11 +389,20 @@ pub async fn commit_inventory_handler(
                         .bind(job_id).bind(&tenant_id).bind(&job_payload).execute(&mut *tx).await;
 
                     let action_request_id = uuid::Uuid::new_v4().to_string();
-                    let payload = serde_json::json!({
-                        "product_id": req_data.product_id,
-                        "remaining_stock": new_stock,
-                        "suggested_action": "Restock Item"
-                    }).to_string();
+                    let payload = if new_stock == 0 {
+                        serde_json::json!({
+                            "product_id": req_data.product_id,
+                            "remaining_stock": new_stock,
+                            "suggested_action": "Restock Item",
+                            "notification_message": format!("{} sold out. Would you like to draft a restock order?", title)
+                        }).to_string()
+                    } else {
+                        serde_json::json!({
+                            "product_id": req_data.product_id,
+                            "remaining_stock": new_stock,
+                            "suggested_action": "Restock Item"
+                        }).to_string()
+                    };
                     let _ = sqlx::query("INSERT INTO agent_action_requests (id, tenant_id, action_type, status, confidence_score, product_id, payload, created_at, updated_at) VALUES ($1, $2, 'Reorder', 'Pending', 0.95, $3, $4::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
                         .bind(&action_request_id).bind(&tenant_id).bind(&req_data.product_id).bind(&payload).execute(&mut *tx).await;
                 }

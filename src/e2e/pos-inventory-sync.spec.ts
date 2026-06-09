@@ -5,7 +5,7 @@ test.describe('POS Inventory Sync', () => {
     await memberPage.goto('/pos/terminal');
 
     // In a real e2e, we would process a transaction using UI. We simulate the backend call below instead
-    const reserveRes = await memberPage.request.post('/api/pos/reserve', {
+    const reserveRes = await memberPage.request.post('/api/pos/terminal/reserve', {
         data: {
             tenant_id: 'e2e-tenant',
             product_id: 'prod_123',
@@ -17,7 +17,7 @@ test.describe('POS Inventory Sync', () => {
       const lockData = await reserveRes.json();
       expect(lockData.success).toBe(true);
 
-      const reserveRes2 = await memberPage.request.post('/api/pos/reserve', {
+      const reserveRes2 = await memberPage.request.post('/api/pos/terminal/reserve', {
           data: {
               tenant_id: 'e2e-tenant',
               product_id: 'prod_123',

@@ -40,7 +40,7 @@ impl PosSyncWorker {
             let product_id = mutation["product_id"].as_str().unwrap();
             let quantity_deducted = mutation["quantity_deducted"].as_i64().unwrap();
 
-            let current_stock_res = sqlx::query("SELECT inventory_count FROM products WHERE id = $1 AND tenant_id = $2 FOR UPDATE")
+            let current_stock_res = sqlx::query("SELECT inventory_count, title FROM products WHERE id = $1 AND tenant_id = $2 FOR UPDATE")
                 .bind(product_id)
                 .bind(&job.tenant_id)
                 .fetch_optional(&mut *tx)
@@ -48,6 +48,7 @@ impl PosSyncWorker {
 
             if let Ok(Some(row)) = current_stock_res {
                 let stock: i32 = sqlx::Row::get(&row, "inventory_count");
+                let title: String = sqlx::Row::get(&row, "title");
                 let is_conflict = stock < quantity_deducted as i32;
 
                 let _ = sqlx::query("UPDATE products SET inventory_count = GREATEST(0, inventory_count - $1) WHERE id = $2 AND tenant_id = $3")
@@ -60,11 +61,20 @@ impl PosSyncWorker {
                 let new_stock = std::cmp::max(0, stock - quantity_deducted as i32);
                 if new_stock <= 5 && !is_conflict {
                     let action_request_id = uuid::Uuid::new_v4().to_string();
-                    let payload = serde_json::json!({
-                        "product_id": product_id,
-                        "remaining_stock": new_stock,
-                        "suggested_action": "Restock Item"
-                    }).to_string();
+                    let payload = if new_stock == 0 {
+                        serde_json::json!({
+                            "product_id": product_id,
+                            "remaining_stock": new_stock,
+                            "suggested_action": "Restock Item",
+                            "notification_message": format!("{} sold out. Would you like to draft a restock order?", title)
+                        }).to_string()
+                    } else {
+                        serde_json::json!({
+                            "product_id": product_id,
+                            "remaining_stock": new_stock,
+                            "suggested_action": "Restock Item"
+                        }).to_string()
+                    };
                     let _ = sqlx::query("INSERT INTO agent_action_requests (id, tenant_id, action_type, status, confidence_score, product_id, payload, created_at, updated_at) VALUES ($1, $2, 'Reorder', 'Pending', 0.95, $3, $4::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
                         .bind(&action_request_id).bind(&job.tenant_id).bind(product_id).bind(&payload).execute(&mut *tx).await;
                 }
@@ -105,7 +115,7 @@ impl PosSyncWorker {
                         let qty = item.get("quantity").and_then(|v| v.as_i64()).unwrap_or(1);
                         if product_id.is_empty() { continue; }
 
-                        let current_stock_res = sqlx::query("SELECT inventory_count FROM products WHERE id = $1 AND tenant_id = $2 FOR UPDATE")
+                        let current_stock_res = sqlx::query("SELECT inventory_count, title FROM products WHERE id = $1 AND tenant_id = $2 FOR UPDATE")
                             .bind(product_id)
                             .bind(&job.tenant_id)
                             .fetch_optional(&mut *tx)
@@ -113,6 +123,7 @@ impl PosSyncWorker {
 
                         if let Ok(Some(row)) = current_stock_res {
                             let stock: i32 = sqlx::Row::get(&row, "inventory_count");
+                            let title: String = sqlx::Row::get(&row, "title");
                             let is_conflict = stock < qty as i32;
 
                             let _ = sqlx::query("UPDATE products SET inventory_count = GREATEST(0, inventory_count - $1) WHERE id = $2 AND tenant_id = $3")
@@ -125,11 +136,20 @@ impl PosSyncWorker {
                             let new_stock = std::cmp::max(0, stock - qty as i32);
                             if new_stock <= 5 && !is_conflict {
                                 let action_request_id = uuid::Uuid::new_v4().to_string();
-                                let payload = serde_json::json!({
-                                    "product_id": product_id,
-                                    "remaining_stock": new_stock,
-                                    "suggested_action": "Restock Item"
-                                }).to_string();
+                                let payload = if new_stock == 0 {
+                                    serde_json::json!({
+                                        "product_id": product_id,
+                                        "remaining_stock": new_stock,
+                                        "suggested_action": "Restock Item",
+                                        "notification_message": format!("{} sold out. Would you like to draft a restock order?", title)
+                                    }).to_string()
+                                } else {
+                                    serde_json::json!({
+                                        "product_id": product_id,
+                                        "remaining_stock": new_stock,
+                                        "suggested_action": "Restock Item"
+                                    }).to_string()
+                                };
                                 let _ = sqlx::query("INSERT INTO agent_action_requests (id, tenant_id, action_type, status, confidence_score, product_id, payload, created_at, updated_at) VALUES ($1, $2, 'Reorder', 'Pending', 0.95, $3, $4::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
                                     .bind(&action_request_id).bind(&job.tenant_id).bind(product_id).bind(&payload).execute(&mut *tx).await;
                             }
