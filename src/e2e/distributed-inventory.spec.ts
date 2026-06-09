@@ -19,7 +19,7 @@ test.describe('Distributed Inventory Sync via UI', () => {
 
     // Now we simulate concurrent checkout in the background via API
     // This acquires the lock
-    const onlineLockReq = await request.post('/api/v1/payments/terminal/reserve', {
+    const onlineLockReq = await request.post('/api/pos/terminal/reserve', {
         data: {
           tenant_id: 'default_tenant',
           product_id: 'prod_123',
@@ -47,7 +47,7 @@ test.describe('Distributed Inventory Sync via UI', () => {
     expect(statusText).toContain('Failed to reserve') || expect(statusText).toContain('Reserving');
 
     // 3. We commit the background api checkout
-    const commitReq = await request.post('/api/v1/payments/terminal/commit', {
+    const commitReq = await request.post('/api/pos/terminal/commit', {
         data: {
           tenant_id: 'default_tenant',
           product_id: 'prod_123',
@@ -83,7 +83,7 @@ test.describe('Distributed Inventory Sync via UI', () => {
      await expect(page.getByRole('status')).toHaveText(/New Order Total/);
 
      // 4. Concurrently simulate an online checkout
-     const onlineLockReq = await request.post('/api/v1/payments/terminal/reserve', {
+     const onlineLockReq = await request.post('/api/pos/terminal/reserve', {
         data: {
           tenant_id: 'default_tenant',
           product_id: 'prod_123',
