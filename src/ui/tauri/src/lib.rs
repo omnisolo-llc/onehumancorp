@@ -33,12 +33,38 @@ fn greet(name: &str) -> String {
 }
 
 #[tauri::command]
-fn generate_cloud_invite() -> String {
-    let ts = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .unwrap()
-        .as_secs();
-    format!("https://cloud.ohc.network/invite/ref-{}", ts)
+async fn generate_cloud_invite() -> Result<String, String> {
+    let backend_url = std::env::var("BACKEND_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string());
+    let url = format!("{}/api/v1/growth/cloud-bridge/invite", backend_url);
+
+    let client_res = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(5))
+        .build();
+
+    if let Ok(client) = client_res {
+        let request = client
+            .post(&url)
+            .header("Content-Type", "application/json")
+            .json(&serde_json::json!({
+                "team_id": "default-team",
+                "inviter_id": "standalone-user",
+                "invitee_id": "team-member@example.com"
+            }));
+
+        if let Ok(response) = request.send().await {
+            if response.status().is_success() {
+                if let Ok(json) = response.json::<serde_json::Value>().await {
+                    if let Some(link) = json.get("invite_link").and_then(|v| v.as_str()) {
+                        return Ok(link.to_string());
+                    }
+                }
+            }
+        }
+    }
+
+    // Fallback if the request fails (e.g. offline) or isn't successful
+    let ts = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs();
+    Ok(format!("https://cloud.ohc.network/invite/ref-{}", ts))
 }
 
 #[tauri::command]
