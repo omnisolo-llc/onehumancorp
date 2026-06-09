@@ -109,7 +109,7 @@ export default function MyPlanPage() {
         <section className="p-6 md:p-8 shadow-lg bg-white/65 backdrop-blur-3xl saturate-200 border border-white/50 rounded-2xl md:rounded-[24px] hover:shadow-xl transition-shadow duration-300 w-full">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div>
-                    <h2 id="my-plan-name" className="text-sm font-medium text-gray-500 mb-1">Plan:</h2>
+                    <h2 id="my-plan-name" className="text-sm font-medium text-gray-500 mb-1">Current Plan</h2>
                     <p className="text-3xl font-bold font-outfit text-gray-900">{planData?.current_plan}</p>
                     <span className="inline-block px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded mt-2">Active</span>
                 </div>
