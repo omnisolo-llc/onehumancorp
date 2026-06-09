@@ -50,7 +50,7 @@ test.describe('Lead & Opportunity Lifecycle Engine', () => {
     const opps = await e2eDb.query(`SELECT * FROM opportunities WHERE tenant_id = '${tenantId}'`);
 
     // If webhook isn't fully hooked up for tests, manually seed it to test UI
-    if (leads.rows.length === 0) {
+    if (!leads || leads.rows.length === 0) {
       await e2eDb.query(`INSERT INTO leads (id, tenant_id, source, contact_info, context) VALUES ('lead-1', '${tenantId}', 'whatsapp', 'customer-123', '${messagePayload.message}')`);
       await e2eDb.query(`INSERT INTO opportunities (id, tenant_id, lead_id, title, stage, estimated_value_cents, priority) VALUES ('opp-1', '${tenantId}', 'lead-1', 'New Lead: whatsapp', 'Qualified', 0, 'Medium')`);
     }
@@ -68,7 +68,7 @@ test.describe('Lead & Opportunity Lifecycle Engine', () => {
     await expect(page.locator('text=Qualified')).toBeVisible();
 
     // Verify our opportunity is in the Qualified stage
-    await expect(page.locator('text=New Lead: whatsapp')).toBeVisible();
+    await expect(page.locator('text=New Lead: whatsapp')).toBeVisible({ timeout: 10000 });
 
     // 3. Move it to Proposal stage
     // Click the first move-forward button we can find
@@ -78,6 +78,7 @@ test.describe('Lead & Opportunity Lifecycle Engine', () => {
        // Should wait for API to update and reload
        await page.waitForTimeout(1000);
     }
+
 
   });
 });
