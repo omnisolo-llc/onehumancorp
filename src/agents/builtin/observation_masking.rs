@@ -149,7 +149,8 @@ impl JetBrainsObservationMasker {
                                 }
 
                                 // Fallback to raw string masking
-                                let preview_chars = 100;
+                                // Adapt preview size to the allowed size limit
+                                let preview_chars = std::cmp::max(100, self.size_limit / 4);
                                 let char_count = tr.content.chars().count();
                                 if char_count > preview_chars * 2 {
                                     let start_preview: String =
@@ -237,6 +238,7 @@ mod tests {
                 .contains("[Observation Masked")
         );
         assert!(messages[0].tool_results[0].content.contains("call_1"));
+        assert!(messages[0].tool_results[0].content.contains("AAAAA")); // should contain the prefix
 
         // Last message should NOT be masked
         assert!(
