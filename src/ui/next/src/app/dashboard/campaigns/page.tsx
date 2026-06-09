@@ -240,22 +240,22 @@ export default function CampaignOrchestrationPage() {
       actions={[{ label: "Dashboard", href: "/dashboard", icon: "dashboard" }]}
     >
       <section className="app-grid metrics !grid-cols-2 lg:!grid-cols-4 mb-6">
-        <div className="app-card">
+        <div className="app-card glassmorphism">
           <div className="app-metric-label">Customers</div>
           <div className="app-metric-value">{metrics.active_customers || 0}</div>
           <div className="app-metric-note">From dashboard metrics</div>
         </div>
-        <div className="app-card">
+        <div className="app-card glassmorphism">
           <div className="app-metric-label">Orders</div>
           <div className="app-metric-value">{orders.length}</div>
           <div className="app-metric-note">{loading ? "Loading order rows" : "Available targets"}</div>
         </div>
-        <div className="app-card">
+        <div className="app-card glassmorphism">
           <div className="app-metric-label">Open Inbox</div>
           <div className="app-metric-value">{openMessages}</div>
           <div className="app-metric-note">Customer context</div>
         </div>
-        <div className="app-card">
+        <div className="app-card glassmorphism">
           <div className="app-metric-label">Low Stock</div>
           <div className="app-metric-value">{lowStockCount}</div>
           <div className="app-metric-note">Supply risk before promotions</div>
@@ -265,7 +265,7 @@ export default function CampaignOrchestrationPage() {
       {error && <div className="app-badge bad mb-4">{error}</div>}
 
       <section className="app-grid two">
-        <div className="app-panel">
+        <div className="app-panel glassmorphism">
           <div className="app-panel-header">
             <div>
               <div className="app-panel-title">Campaign Command Queue</div>
@@ -298,7 +298,7 @@ export default function CampaignOrchestrationPage() {
           </div>
         </div>
 
-        <div className="app-panel">
+        <div className="app-panel glassmorphism">
           <div className="app-panel-header">
             <div>
               <div className="app-panel-title">Review & Launch</div>

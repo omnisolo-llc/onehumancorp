@@ -201,7 +201,7 @@ export default function SettingsPage() {
           <p className="app-list-subtitle">Manage integrations, local routing, and security.</p>
         </header>
 
-        <section className="app-panel">
+        <section className="app-panel glassmorphism">
           <div className="app-panel-header">
             <div>
               <div className="app-panel-title">SMS Notifications & Security</div>
@@ -298,7 +298,7 @@ export default function SettingsPage() {
         </section>
 
         <section className="app-grid two">
-          <div className="app-panel">
+          <div className="app-panel glassmorphism">
             <div className="app-panel-header">
               <div>
                 <div className="app-panel-title">Local Delivery Setup</div>
@@ -346,7 +346,7 @@ export default function SettingsPage() {
             </div>
           </div>
 
-          <div className="app-panel">
+          <div className="app-panel glassmorphism">
             <div className="app-panel-header">
               <div>
                 <div className="app-panel-title">AI Voice Receptionist</div>
@@ -406,7 +406,7 @@ export default function SettingsPage() {
           </div>
         </section>
 
-        <section className="app-panel">
+        <section className="app-panel glassmorphism">
           <div className="app-panel-header">
             <div>
               <div className="app-panel-title">Agent Settings</div>
@@ -427,7 +427,7 @@ export default function SettingsPage() {
           </div>
         </section>
 
-        <section className="app-panel">
+        <section className="app-panel glassmorphism">
           <div className="app-panel-header">
             <div>
               <div className="app-panel-title">Change Password</div>

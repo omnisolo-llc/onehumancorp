@@ -117,7 +117,7 @@ export default function InboxPage() {
     >
       {actionStatus && <div className="mb-4 app-badge good" role="status">{actionStatus}</div>}
       <div className="app-grid two">
-        <section className="app-panel">
+        <section className="app-panel glassmorphism">
           <div className="app-panel-header">
             <div>
               <div className="app-panel-title">Message Queue</div>
@@ -149,7 +149,7 @@ export default function InboxPage() {
           </div>
         </section>
 
-        <section className="app-panel">
+        <section className="app-panel glassmorphism">
           <div className="app-panel-header">
             <div className="app-panel-title">Conversation Detail</div>
           </div>
@@ -185,11 +185,11 @@ export default function InboxPage() {
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <div className="app-card">
+                <div className="app-card glassmorphism">
                   <div className="app-metric-label">Status</div>
                   <div className="mt-2"><span className={`app-badge ${badgeTone(selected.status)}`}>{selected.status || "Open"}</span></div>
                 </div>
-                <div className="app-card">
+                <div className="app-card glassmorphism">
                   <div className="app-metric-label">Created</div>
                   <div className="mt-2 text-sm font-semibold text-gray-900">{selected.created_at || "Unknown"}</div>
                 </div>

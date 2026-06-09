@@ -55,7 +55,7 @@ export default function AgentAuditDashboard() {
 
  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
  <div className="md:col-span-2 space-y-6">
- <section className="app-panel">
+ <section className="app-panel glassmorphism">
  <div className="app-panel-header">
  <h2 className="app-panel-title">Cost Tracker</h2>
  </div>
@@ -65,7 +65,7 @@ export default function AgentAuditDashboard() {
  </div>
  </section>
 
- <section className="app-card">
+ <section className="app-card glassmorphism">
  <h2 className="text-xl font-bold font-outfit mb-4">Operations</h2>
  <div className="flex items-center gap-4">
  <div className="w-3 h-3 rounded-full bg-green-500" ></div>
@@ -73,7 +73,7 @@ export default function AgentAuditDashboard() {
  </div>
  </section>
 
- <section className="app-card">
+ <section className="app-card glassmorphism">
  <h2 className="text-xl font-bold font-outfit mb-4">Marketing & Advertising</h2>
  <div className="flex items-center gap-4">
  <div className="w-3 h-3 rounded-full bg-green-500" ></div>

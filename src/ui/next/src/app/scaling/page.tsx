@@ -28,7 +28,7 @@ export default function ScalingPage() {
         { label: 'Range', value: `${minInstances}-${maxInstances}`, tone: 'neutral' },
       ]}
     >
-      <section id="scaling-screen" className="app-panel">
+      <section id="scaling-screen" className="app-panel glassmorphism">
         <div className="app-panel-header">
           <div>
             <div className="app-panel-title">Instance Range</div>
@@ -38,7 +38,7 @@ export default function ScalingPage() {
         </div>
 
         <div className="app-panel-body">
-          <div className="app-card">
+          <div className="app-card glassmorphism">
             <div className="app-metric-label">Current Scale</div>
             <div className="mt-2 text-4xl font-bold text-gray-900">{instances} instances</div>
             <p className="mt-2 text-sm text-gray-600" role="status">{message}</p>

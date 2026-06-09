@@ -45,7 +45,7 @@ export default function ProductsPage() {
       ]}
       actions={[{ label: "New Product", href: "/products/new", primary: true }]}
     >
-      <section className="app-panel">
+      <section className="app-panel glassmorphism">
         <div className="app-panel-header">
           <div>
             <div className="app-panel-title">Imported Products</div>

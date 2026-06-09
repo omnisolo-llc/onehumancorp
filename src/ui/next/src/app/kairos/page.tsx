@@ -135,7 +135,7 @@ function KairosContent() {
       {error && <div className="mb-4 app-badge bad">{error}</div>}
 
       <div className="app-grid two">
-        <section id="kairos-brain" className="app-panel">
+        <section id="kairos-brain" className="app-panel glassmorphism">
           <div className="app-panel-header">
             <div>
               <div className="app-panel-title">Shared Task List</div>
@@ -169,7 +169,7 @@ function KairosContent() {
           )}
         </section>
 
-        <section id="kairos-memory" className="app-panel">
+        <section id="kairos-memory" className="app-panel glassmorphism">
           <div className="app-panel-header">
             <div>
               <div className="app-panel-title">AutoDream Memory</div>
@@ -183,7 +183,7 @@ function KairosContent() {
             <div className="app-panel-body">
               <div className="grid grid-cols-1 gap-3">
                 {Object.entries(memoryStats).map(([key, value]) => (
-                  <div key={key} className="app-card">
+                  <div key={key} className="app-card glassmorphism">
                     <div className="app-metric-label">{key.replaceAll("_", " ")}</div>
                     <div className="app-metric-value">{String(value)}</div>
                   </div>

@@ -110,7 +110,7 @@ export default function TriagePage() {
       </div>
 
       <div className="app-grid two">
-        <section className="app-panel">
+        <section className="app-panel glassmorphism">
           <div className="app-panel-header">
             <div>
               <div className="app-panel-title">Triage Queue</div>
@@ -139,7 +139,7 @@ export default function TriagePage() {
           </div>
         </section>
 
-        <section className="app-panel">
+        <section className="app-panel glassmorphism">
           <div className="app-panel-header">
             <div className="app-panel-title">Triage Detail</div>
           </div>
@@ -167,11 +167,11 @@ export default function TriagePage() {
               )}
 
               <div className="grid grid-cols-2 gap-3 mb-6">
-                <div className="app-card">
+                <div className="app-card glassmorphism">
                   <div className="app-metric-label">Priority</div>
                   <div className="mt-2"><span className={`app-badge ${badgeTone(selected.priority)}`}>{selected.priority || "Normal"}</span></div>
                 </div>
-                <div className="app-card">
+                <div className="app-card glassmorphism">
                   <div className="app-metric-label">Created</div>
                   <div className="mt-2 text-sm font-semibold text-gray-900">{new Date(selected.created_at || Date.now()).toLocaleString()}</div>
                 </div>

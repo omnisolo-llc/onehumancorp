@@ -62,7 +62,7 @@ export default function OrdersPage() {
       ]}
       actions={[{ label: "Dashboard", href: "/dashboard" }]}
     >
-      <div className="app-panel">
+      <div className="app-panel glassmorphism">
         <div className="app-panel-header">
           <div>
             <div className="app-panel-title">Order List</div>

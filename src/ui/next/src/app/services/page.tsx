@@ -27,7 +27,7 @@ export default function ServicesPage() {
         { label: 'Memory', value: '128MB', tone: 'good' },
       ]}
     >
-      <section id="services-screen" className="app-panel">
+      <section id="services-screen" className="app-panel glassmorphism">
         <div className="app-panel-header">
           <div>
             <div className="app-panel-title">Runtime Controls</div>

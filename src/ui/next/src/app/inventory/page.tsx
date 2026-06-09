@@ -70,7 +70,7 @@ export default function InventoryDashboard() {
       ]}
     >
       <div className="app-grid two">
-        <section className="app-panel">
+        <section className="app-panel glassmorphism">
           <div className="app-panel-header">
             <div>
               <div className="app-panel-title">Raw Materials</div>
@@ -109,7 +109,7 @@ export default function InventoryDashboard() {
           )}
         </section>
 
-        <section className="app-panel">
+        <section className="app-panel glassmorphism">
           <div className="app-panel-header">
             <div className="app-panel-title">Vendors</div>
           </div>
