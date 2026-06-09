@@ -160,7 +160,7 @@ export default function MyPlanPage() {
                     <div className="flex justify-between items-center mb-2">
                         <span className="font-medium text-gray-700">Storage Used</span>
                         <span className="text-sm font-semibold text-gray-900">
-                            {formatStorage(planData?.storage_used_bytes || 0)} / {planData?.storage_limit_bytes === null ? 'Unlimited' : formatStorage(planData?.storage_limit_bytes || 0)}
+                            {formatStorage(planData?.storage_used_bytes || 0)} <span className="storage-used-indicator">/ {planData?.storage_limit_bytes === null ? 'Unlimited' : formatStorage(planData?.storage_limit_bytes || 0)}</span>
                         </span>
                     </div>
                     <div className="w-full bg-green-100 rounded-full h-3">

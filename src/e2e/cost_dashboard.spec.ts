@@ -43,7 +43,7 @@ test.describe('Cost Dashboard "My Plan" functionality', () => {
     await expect(proPage.locator('text=/ Unlimited')).toHaveCount(1);
 
     // Ensure the page renders / 50 GB for Storage
-    await expect(proPage.locator('text=/ 50 GB').first()).toBeVisible();
+    await expect(proPage.locator('.storage-used-indicator', { hasText: '/ 50 GB' }).first()).toBeVisible();
 
     await proPage.close();
     await context.close();
@@ -73,7 +73,7 @@ test.describe('Cost Dashboard "My Plan" functionality', () => {
     await proPage.waitForLoadState('networkidle');
 
     const storageCard = proPage.locator('div', { has: proPage.locator('text="Storage Used"') }).first();
-    await expect(storageCard.locator('text=/ 50 GB').first()).toBeVisible();
+    await expect(storageCard.locator('.storage-used-indicator', { hasText: '/ 50 GB' }).first()).toBeVisible();
 
     await proPage.close();
     await context.close();

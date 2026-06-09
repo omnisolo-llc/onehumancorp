@@ -137,7 +137,7 @@ impl RedisRateLimiter {
         if tier.is_none() {
             if let Some(pool) = &self.db_pool {
                 use sqlx::Row;
-                if let Ok(record) = sqlx::query("SELECT plan_tier FROM tenants WHERE id = $1")
+                if let Ok(record) = sqlx::query("SELECT COALESCE(plan_tier, tier) as plan_tier FROM tenants WHERE id = $1")
                     .bind(tenant_id)
                     .fetch_one(pool)
                     .await
@@ -183,6 +183,24 @@ impl RedisRateLimiter {
         let mut conn = self.get_connection().await?;
         let storage_key = format!("tenant:{}:storage_used_bytes", tenant_id);
         let used: Option<i64> = conn.get(&storage_key).await.map_err(|e| e.to_string())?;
+
+        if used.is_none() || used.unwrap_or(0) == 0 {
+            if let Some(pool) = &self.db_pool {
+                use sqlx::Row;
+                if let Ok(record) = sqlx::query("SELECT SUM(value) as total FROM telemetry_buffer WHERE metric_name = 'ohc_storage_rw_cost' AND (labels_json::jsonb)->>'tenant_id' = $1")
+                    .bind(tenant_id)
+                    .fetch_one(pool)
+                    .await
+                {
+                    if let Ok(t) = record.try_get::<Option<f64>, _>("total") {
+                        if let Some(total) = t {
+                            return Ok(total as i64);
+                        }
+                    }
+                }
+            }
+        }
+
         Ok(used.unwrap_or(0))
     }
 
