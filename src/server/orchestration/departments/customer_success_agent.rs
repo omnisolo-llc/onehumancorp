@@ -110,50 +110,67 @@ impl Department for CustomerSuccessAgent {
 
         if event.event_type == "tenant.message.received" || event.event_type == "tenant.omnichannel.message.received" {
             let message = event.payload.get("message").and_then(|v| v.as_str()).unwrap_or("");
+            let source = event.payload.get("source").and_then(|v| v.as_str()).unwrap_or("");
+            let sender_id = event.payload.get("sender_id").and_then(|v| v.as_str()).unwrap_or("");
+            let inbox_id = event.payload.get("inbox_message_id").and_then(|v| v.as_str()).unwrap_or("");
 
-            let query_embedding = match std::env::var("OHC_INBOX_DRAFT_LLM_PROVIDER")
-                .or_else(|_| std::env::var("OHC_LLM_PROVIDER"))
-                .as_deref()
-            {
-                Ok("minimax") => {
-                    let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_else(|_| "fake-key".to_string());
-                    crate::minimax::MinimaxClient::new(api_key).generate_embedding(message).await.unwrap_or_else(|_| vec![0.0; 1536])
+            // The webhook might have already passed the translation and drafted reply in the payload.
+            // If they are missing, we should do the generation here.
+            let pre_generated_response = event.payload.get("generated_response").and_then(|v| v.as_str()).unwrap_or("");
+            let (generated_response, context_summary) = if pre_generated_response.is_empty() {
+                let query_embedding = match std::env::var("OHC_INBOX_DRAFT_LLM_PROVIDER")
+                    .or_else(|_| std::env::var("OHC_LLM_PROVIDER"))
+                    .as_deref()
+                {
+                    Ok("minimax") => {
+                        let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_else(|_| "fake-key".to_string());
+                        crate::minimax::MinimaxClient::new(api_key).generate_embedding(message).await.unwrap_or_else(|_| vec![0.0; 1536])
+                    }
+                    _ => {
+                        crate::minimax::LocalLLMClient::new().generate_embedding(message).await.unwrap_or_else(|_| vec![0.0; 1536])
+                    }
+                };
+
+                let memories = self.orchestrator.query_long_term_memory(&event.tenant_id, &query_embedding, 5).await.unwrap_or_default();
+
+                let mut context_summary = if !memories.is_empty() {
+                    memories.join("
+")
+                } else {
+                    "No relevant memory found.".to_string()
+                };
+
+                if let Ok(inventory_summary) = self.orchestrator.get_inventory_summary(&event.tenant_id).await {
+                    context_summary.push_str("
+
+");
+                    context_summary.push_str(&inventory_summary);
                 }
-                _ => {
-                    crate::minimax::LocalLLMClient::new().generate_embedding(message).await.unwrap_or_else(|_| vec![0.0; 1536])
-                }
-            };
 
-            let memories = self.orchestrator.query_long_term_memory(&event.tenant_id, &query_embedding, 5).await.unwrap_or_default();
+                let prompt = format!(
+                    "Write one concise, warm customer-service reply for an omnichannel SMB inbox. Do not invent policies, availability, prices, or order state. Use the provided inventory context if asked about product availability. Tenant: {}. Source: {}. Customer message: {}
 
-            let mut context_summary = if !memories.is_empty() {
-                memories.join("\n")
+Context:
+{}",
+                    event.tenant_id, source, message, context_summary
+                );
+                let compressed_prompt = crate::pricing::compression::reduce_tokens(&prompt);
+
+                let draft = match std::env::var("OHC_INBOX_DRAFT_LLM_PROVIDER")
+                    .or_else(|_| std::env::var("OHC_LLM_PROVIDER"))
+                    .as_deref()
+                {
+                    Ok("minimax") => {
+                        let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_else(|_| "fake-key".to_string());
+                        crate::minimax::MinimaxClient::new(api_key).reason(&compressed_prompt).await.unwrap_or_else(|_| "Thank you for your message. We will get back to you shortly.".to_string())
+                    }
+                    _ => {
+                        crate::minimax::LocalLLMClient::new().reason(&compressed_prompt).await.unwrap_or_else(|_| "Thank you for your message. We will get back to you shortly.".to_string())
+                    }
+                };
+                (draft, context_summary)
             } else {
-                "No relevant memory found.".to_string()
-            };
-
-            if let Ok(inventory_summary) = self.orchestrator.get_inventory_summary(&event.tenant_id).await {
-                context_summary.push_str("\n\n");
-                context_summary.push_str(&inventory_summary);
-            }
-
-            let prompt = format!(
-                "Write one concise, warm customer-service reply for an omnichannel SMB inbox. Do not invent policies, availability, prices, or order state. Use the provided inventory context if asked about product availability. Tenant: {}. Customer message: {}\n\nContext:\n{}",
-                event.tenant_id, message, context_summary
-            );
-            let compressed_prompt = crate::pricing::compression::reduce_tokens(&prompt);
-
-            let generated_response = match std::env::var("OHC_INBOX_DRAFT_LLM_PROVIDER")
-                .or_else(|_| std::env::var("OHC_LLM_PROVIDER"))
-                .as_deref()
-            {
-                Ok("minimax") => {
-                    let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_else(|_| "fake-key".to_string());
-                    crate::minimax::MinimaxClient::new(api_key).reason(&compressed_prompt).await.unwrap_or_else(|_| "Thank you for your message. We will get back to you shortly.".to_string())
-                }
-                _ => {
-                    crate::minimax::LocalLLMClient::new().reason(&compressed_prompt).await.unwrap_or_else(|_| "Thank you for your message. We will get back to you shortly.".to_string())
-                }
+                (pre_generated_response.to_string(), "No additional context requested by webhook pre-draft.".to_string())
             };
 
             let description = if risk == ActionRisk::AutoExecute {
@@ -162,13 +179,14 @@ impl Department for CustomerSuccessAgent {
                 "Draft email for review".to_string()
             };
 
-            let inbox_id = event.payload.get("inbox_message_id").and_then(|v| v.as_str()).unwrap_or("");
             if !inbox_id.is_empty() {
                 let _ = self.orchestrator.update_inbox_message_draft(inbox_id, &event.tenant_id, &generated_response).await;
             }
 
             let action_payload = serde_json::json!({
                 "feature_type": "ambassador_reply",
+                "source": source,
+                "sender_id": sender_id,
                 "original_message": if message.is_empty() { "Do you have vegan options for birthday cakes?" } else { message },
                 "generated_response": generated_response,
                 "context_used": context_summary,

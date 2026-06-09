@@ -55,8 +55,7 @@ pub async fn meta_webhook_post_handler(
     headers: HeaderMap,
     body_bytes: axum::body::Bytes,
 ) -> impl IntoResponse {
-    let _hub = &state.hub;
-    // 1. Verify Signature
+    // 1. Validate Webhook Signature
     let secret = match std::env::var("META_APP_SECRET") {
         Ok(s) if !s.is_empty() => s,
         _ => {
@@ -109,67 +108,8 @@ pub async fn meta_webhook_post_handler(
                     if let Some(message) = event.get("message") {
                         let sender_id = event.get("sender").and_then(|s| s.get("id")).and_then(|i| i.as_str()).unwrap_or("unknown");
                         let text = message.get("text").and_then(|t| t.as_str()).unwrap_or("");
-
-                        if !text.is_empty() {
-                            tracing::info!("Received Meta message from {}: {}", sender_id, text);
-
-                            // Try to look up the tenant ID by sender id. For now, use "system" or let the DB logic handle it
-
-                                      let _identifier = message.get("recipient").and_then(|r: &serde_json::Value| r.get("id")).and_then(|i: &serde_json::Value| i.as_str()).unwrap_or("unknown");
-                                      let tenant_id = "test_tenant".to_string(); // Replace with actual DB lookup based on `identifier`
-
-                            let inbox_id = Uuid::new_v4().to_string();
-                            let source = "instagram".to_string();
-
-                            // Insert into inbox_messages
-                            let pool = &state.db.pool;
-                            let insert_result = match &state.db.store {
-                                crate::db::DbStore::Postgres => {
-                                    sqlx::query(
-                                        "INSERT INTO inbox_messages (id, tenant_id, source, content, draft_reply, status) VALUES ($1, $2, $3, $4, '', 'pending')"
-                                    )
-                                    .bind(&inbox_id)
-                                    .bind(&tenant_id)
-                                    .bind(&source)
-                                    .bind(&text)
-                                    .execute(pool)
-                                    .await.map(|_| ())
-                                },
-                                crate::db::DbStore::Sqlite(sqlite_pool) => {
-                                    sqlx::query(
-                                        "INSERT INTO inbox_messages (id, tenant_id, source, content, draft_reply, status) VALUES (?, ?, ?, ?, '', 'pending')"
-                                    )
-                                    .bind(&inbox_id)
-                                    .bind(&tenant_id)
-                                    .bind(&source)
-                                    .bind(&text)
-                                    .execute(sqlite_pool)
-                                    .await.map(|_| ())
-                                }
-                            };
-
-                            if let Err(e) = insert_result {
-                                tracing::error!("Failed to insert inbox message: {}", e);
-                            }
-
-                            // Dispatch event
-                            let event = crate::orchestration::departments::types::DepartmentEvent {
-                                id: Uuid::new_v4().to_string(),
-                                tenant_id: tenant_id.clone(),
-                                event_type: "tenant.omnichannel.message.received".to_string(),
-                                payload: serde_json::json!({
-                                    "source": source,
-                                    "message": text,
-                                    "sender_id": sender_id,
-                                    "inbox_message_id": inbox_id,
-                                }),
-                            };
-
-                            let orchestrator_clone = state.orchestrator.clone();
-                            tokio::spawn(async move {
-                                let _ = orchestrator_clone.dispatch_event(event).await;
-                            });
-                        }
+                        let _identifier = message.get("recipient").and_then(|r: &serde_json::Value| r.get("id")).and_then(|i: &serde_json::Value| i.as_str()).unwrap_or("unknown");
+                        process_meta_message(&state, "instagram", sender_id, text, _identifier).await;
                     }
                 }
             } else if let Some(changes) = entry.get("changes").and_then(|c| c.as_array()) {
@@ -179,64 +119,8 @@ pub async fn meta_webhook_post_handler(
                              for message in messages {
                                   let sender_id = message.get("from").and_then(|f| f.as_str()).unwrap_or("unknown");
                                   let text = message.get("text").and_then(|t| t.get("body")).and_then(|b| b.as_str()).unwrap_or("");
-
-                                  if !text.is_empty() {
-                                      tracing::info!("Received Meta WhatsApp message from {}: {}", sender_id, text);
-
-
-                                      let _identifier = message.get("recipient").and_then(|r: &serde_json::Value| r.get("id")).and_then(|i: &serde_json::Value| i.as_str()).unwrap_or("unknown");
-                                      let tenant_id = "test_tenant".to_string(); // Replace with actual DB lookup based on `identifier`
-
-                                      let inbox_id = Uuid::new_v4().to_string();
-                                      let source = "whatsapp".to_string();
-
-                                      let pool = &state.db.pool;
-                                      let insert_result = match &state.db.store {
-                                          crate::db::DbStore::Postgres => {
-                                              sqlx::query(
-                                                  "INSERT INTO inbox_messages (id, tenant_id, source, content, draft_reply, status) VALUES ($1, $2, $3, $4, '', 'pending')"
-                                              )
-                                              .bind(&inbox_id)
-                                              .bind(&tenant_id)
-                                              .bind(&source)
-                                              .bind(&text)
-                                              .execute(pool)
-                                    .await.map(|_| ())
-                                          },
-                                          crate::db::DbStore::Sqlite(sqlite_pool) => {
-                                              sqlx::query(
-                                                  "INSERT INTO inbox_messages (id, tenant_id, source, content, draft_reply, status) VALUES (?, ?, ?, ?, '', 'pending')"
-                                              )
-                                              .bind(&inbox_id)
-                                              .bind(&tenant_id)
-                                              .bind(&source)
-                                              .bind(&text)
-                                              .execute(sqlite_pool)
-                                    .await.map(|_| ())
-                                          }
-                                      };
-
-                                      if let Err(e) = insert_result {
-                                          tracing::error!("Failed to insert inbox message: {}", e);
-                                      }
-
-                                      let event = crate::orchestration::departments::types::DepartmentEvent {
-                                          id: Uuid::new_v4().to_string(),
-                                          tenant_id: tenant_id.clone(),
-                                          event_type: "tenant.omnichannel.message.received".to_string(),
-                                          payload: serde_json::json!({
-                                              "source": source,
-                                              "message": text,
-                                              "sender_id": sender_id,
-                                              "inbox_message_id": inbox_id,
-                                          }),
-                                      };
-
-                                      let orchestrator_clone = state.orchestrator.clone();
-                                      tokio::spawn(async move {
-                                          let _ = orchestrator_clone.dispatch_event(event).await;
-                                      });
-                                  }
+                                  let _identifier = message.get("recipient").and_then(|r: &serde_json::Value| r.get("id")).and_then(|i: &serde_json::Value| i.as_str()).unwrap_or("unknown");
+                                  process_meta_message(&state, "whatsapp", sender_id, text, _identifier).await;
                              }
                          }
                      }
@@ -247,6 +131,77 @@ pub async fn meta_webhook_post_handler(
 
     StatusCode::OK.into_response()
 }
+
+async fn process_meta_message(state: &MetaWebhookState, source: &str, sender_id: &str, text: &str, _identifier: &str) {
+    if text.is_empty() {
+        return;
+    }
+    tracing::info!("Received Meta {} message from {}: {}", source, sender_id, text);
+
+    // Try to look up the tenant ID by sender id. For now, use "system" or let the DB logic handle it
+    let tenant_id = "test_tenant".to_string(); // Replace with actual DB lookup based on `identifier`
+
+    let inbox_id = Uuid::new_v4().to_string();
+
+    let pool = &state.db.pool;
+    let insert_result = match &state.db.store {
+        crate::db::DbStore::Postgres => {
+            sqlx::query(
+                "INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, source_language, target_language, draft_reply, status, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, 'Unknown', 'English', '', 'pending', NOW(), NOW())"
+            )
+            .bind(&inbox_id)
+            .bind(&tenant_id)
+            .bind(source)
+            .bind(text)
+            .bind(text)
+            .execute(pool)
+            .await.map(|_| ())
+        },
+        crate::db::DbStore::Sqlite(sqlite_pool) => {
+            sqlx::query(
+                "INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, source_language, target_language, draft_reply, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, 'Unknown', 'English', '', 'pending', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+            )
+            .bind(&inbox_id)
+            .bind(&tenant_id)
+            .bind(source)
+            .bind(text)
+            .bind(text)
+            .execute(sqlite_pool)
+            .await.map(|_| ())
+        }
+    };
+
+    if let Err(e) = insert_result {
+        tracing::error!("Failed to insert omni_inbox_message: {}", e);
+    }
+
+    // Instead of synchronously calling the LLM here, we dispatch an async job.
+    let job_id = Uuid::new_v4().to_string();
+    let job_payload = serde_json::json!({
+        "action": "process_inbox_message",
+        "tenant_id": tenant_id,
+        "source": source,
+        "message": text,
+        "sender_id": sender_id,
+        "inbox_message_id": inbox_id,
+    });
+
+    let insert_job = match &state.db.store {
+        crate::db::DbStore::Postgres => {
+            sqlx::query("INSERT INTO ohc_job_queue (id, tenant_id, queue_name, payload, status) VALUES ($1, $2, 'agents_queue', $3, 'pending')")
+                .bind(&job_id).bind(&tenant_id).bind(&job_payload).execute(pool).await
+        }
+        crate::db::DbStore::Sqlite(sqlite_pool) => {
+            sqlx::query("INSERT INTO ohc_job_queue (id, tenant_id, queue_name, payload, status) VALUES (?, ?, 'agents_queue', ?, 'pending')")
+                .bind(&job_id).bind(&tenant_id).bind(&job_payload).execute(sqlite_pool).await
+        }
+    };
+
+    if let Err(e) = insert_job {
+        tracing::error!("Failed to insert job: {}", e);
+    }
+}
+
 
 #[cfg(test)]
 mod tests {
