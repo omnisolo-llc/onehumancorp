@@ -264,6 +264,7 @@ message SyncOfflineTransactionsRequest {
   string tenant_id = 1;
   string client_id = 2;
   repeated PosOfflineTransaction transactions = 3;
+  optional string session_id = 4;
 }
 
 message SyncOfflineTransactionsResponse {
