@@ -45,8 +45,9 @@ test.describe('Dashboard UX', () => {
     await page.goto('/dashboard');
 
     await expect(page.locator('a[href="/referrals"]')).toBeVisible();
-    await expect(page.locator('a[href="/milestones"] h3', { hasText: 'Milestones' })).toBeVisible();
+    await expect(page.locator('a[href="/milestones"]')).toBeVisible();
     await expect(page.locator('a[href="/milestones"] h3')).toHaveText('Milestones');
+    await expect(page.locator('a[href="/milestones"] div.text-2xl', { hasText: '🏆' })).toHaveAttribute('aria-hidden', 'true');
     await expect(page.locator('a[href="/share-cards"]')).toBeVisible();
   });
 });
