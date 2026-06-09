@@ -34,7 +34,7 @@ pub trait MeshTransport: Send + Sync {
 pub struct InProcessTransport {
     subs: DashMap<String, broadcast::Sender<Message>>,
     presence: DashMap<String, (String, std::time::Instant)>,
-    locks: DashMap<String, (String, i64)>,
+    locks: std::sync::Mutex<std::collections::HashMap<String, (String, i64)>>,
 }
 
 impl InProcessTransport {
@@ -42,7 +42,7 @@ impl InProcessTransport {
         InProcessTransport {
             subs: DashMap::new(),
             presence: DashMap::new(),
-            locks: DashMap::new(),
+            locks: std::sync::Mutex::new(std::collections::HashMap::new()),
         }
     }
 }
@@ -80,13 +80,13 @@ impl MeshTransport for InProcessTransport {
     async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> {
         let expires_at = chrono::Utc::now().timestamp_millis() + (ttl_seconds * 1000) as i64;
 
-        use dashmap::mapref::entry::Entry;
-        match self.locks.entry(resource.to_string()) {
-            Entry::Vacant(v) => {
+        let mut locks = self.locks.lock().unwrap();
+        match locks.entry(resource.to_string()) {
+            std::collections::hash_map::Entry::Vacant(v) => {
                 v.insert((owner.to_string(), expires_at));
                 Ok(true)
             }
-            Entry::Occupied(mut o) => {
+            std::collections::hash_map::Entry::Occupied(mut o) => {
                 let (stored_owner, stored_exp) = o.get();
                 if stored_owner == owner || *stored_exp <= chrono::Utc::now().timestamp_millis() {
                     o.insert((owner.to_string(), expires_at));
@@ -99,7 +99,13 @@ impl MeshTransport for InProcessTransport {
     }
 
     async fn release_lock(&self, resource: &str, owner: &str) -> Result<(), String> {
-        self.locks.remove_if(&resource.to_string(), |_, (stored_owner, _)| stored_owner == owner);
+        let mut locks = self.locks.lock().unwrap();
+        if let std::collections::hash_map::Entry::Occupied(o) = locks.entry(resource.to_string()) {
+            let (stored_owner, _) = o.get();
+            if stored_owner == owner {
+                o.remove();
+            }
+        }
         Ok(())
     }
     async fn register_presence(&self, agent_id: &str, status: &str, ttl_seconds: u64) -> Result<(), String> {
