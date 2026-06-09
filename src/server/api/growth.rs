@@ -670,7 +670,7 @@ async fn handle_storefront_embed(
 
     let branding = if !has_pro {
         format!(r#"<div class="footer">
-            <a href="ohc://join?ref={safe_tenant}" target="_blank">⚡ Powered by OHC</a>
+            <a href="/api/v1/growth/referrals/click?target=/onboarding&ref={safe_tenant}" target="_blank">⚡ Powered by OHC</a>
         </div>"#)
     } else {
         "".to_string()
