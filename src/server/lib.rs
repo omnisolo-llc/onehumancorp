@@ -4244,6 +4244,22 @@ async fn create_ui_bom_item_handler(
             }
             axum::Json(serde_json::json!({"success": true}))
         }))
+        .route("/api/walkthroughs", axum::routing::get(|| async {
+            let mut walkthroughs = HashMap::new();
+            walkthroughs.insert("store_setup".to_string(), serde_json::json!([
+                {"target": "generate-link-btn", "text": "Step 1: Set up your store."},
+                {"target": "share-whatsapp-btn", "text": "Step 2: Share it with your friends."}
+            ]));
+            walkthroughs.insert("accept_payment".to_string(), serde_json::json!([
+                {"target": "payments-tab", "text": "Step 1: Navigate to the Payments tab."},
+                {"target": "connect-bank-btn", "text": "Step 2: Connect your bank account securely."}
+            ]));
+            walkthroughs.insert("activate_agent".to_string(), serde_json::json!([
+                {"target": "agents-tab", "text": "Step 1: Click on AI Agents."},
+                {"target": "hire-agent-btn", "text": "Step 2: Hire a new AI helper to answer customer emails!"}
+            ]));
+            axum::Json(walkthroughs)
+        }))
         .route("/api/videos", axum::routing::get(crate::api::docs::list_videos))
         .route("/api/changelog", axum::routing::get(crate::api::docs::get_changelog))
         .route("/api/api-docs-spec", axum::routing::get(crate::api::docs::get_api_docs_spec))
