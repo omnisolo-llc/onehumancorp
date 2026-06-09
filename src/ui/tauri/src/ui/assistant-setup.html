@@ -38,7 +38,7 @@
         font-size: 14px;
         margin-bottom: 20px;
       }
-      input {
+      input, select {
         width: 100%;
         padding: 14px;
         min-height: 44px;
@@ -49,7 +49,7 @@
         font-size: 16px;
         background: rgba(255, 255, 255, 0.5);
       }
-      input:focus {
+      input:focus, select:focus {
         outline: none;
         border-color: #0066FF;
       }
@@ -73,7 +73,6 @@
       button:active {
         transform: scale(0.98);
       }
-
       .error-msg {
         color: #FF3B30;
         font-size: 12px;
@@ -108,72 +107,111 @@
         p {
           color: #A1A1A6;
         }
-        input {
+        input, select {
           background: rgba(255, 255, 255, 0.1);
           border: 1px solid rgba(255, 255, 255, 0.2);
           color: #F5F5F7;
         }
-        input:focus {
+        input:focus, select:focus {
           border-color: #0066FF;
           background: rgba(255, 255, 255, 0.15);
+        }
+        select option {
+          background-color: #16161a;
+          color: #F5F5F7;
         }
       }
     </style>
   </head>
   <body>
     <div class="container" id="form-container">
-      <h1>What's the name of your business?</h1>
-      <p>We'll use this to set up your workspace.</p>
-      <input type="text" id="business-name" placeholder="e.g. Maya's Bakery" />
-      <div id="name-error" class="error-msg">Business Name must be at least 3 characters.</div>
+      <h1>Set up your Assistant</h1>
+      <p>Give your AI assistant a name and tone.</p>
+
+      <input type="text" id="assistant-name" placeholder="e.g. Jarvis" />
+      <div id="name-error" class="error-msg">Please enter a name for your assistant.</div>
+
+      <select id="assistant-tone">
+        <option value="" disabled selected>Select a tone</option>
+        <option value="Professional">Professional</option>
+        <option value="Friendly">Friendly</option>
+        <option value="Concise">Concise</option>
+      </select>
+      <div id="tone-error" class="error-msg">Please select a tone.</div>
+
       <button id="next-btn">Next</button>
     </div>
     <script>
       const nextBtn = document.getElementById('next-btn');
-      const nameInput = document.getElementById('business-name');
+      const nameInput = document.getElementById('assistant-name');
+      const toneSelect = document.getElementById('assistant-tone');
       const nameError = document.getElementById('name-error');
+      const toneError = document.getElementById('tone-error');
       const container = document.getElementById('form-container');
 
       // Load existing state
       if (window.__TAURI__ && window.__TAURI__.core) {
         window.__TAURI__.core.invoke("get_onboarding_state").then((state) => {
-          if (state && state.businessName) {
-            nameInput.value = state.businessName;
+          if (state && state.assistantName) {
+            nameInput.value = state.assistantName;
+          }
+          if (state && state.assistantTone) {
+            toneSelect.value = state.assistantTone;
           }
         }).catch(console.error);
       } else {
-        const stored = localStorage.getItem('businessName');
-        if (stored) {
-          nameInput.value = stored;
-        }
+        const storedName = localStorage.getItem('assistantName');
+        if (storedName) nameInput.value = storedName;
+
+        const storedTone = localStorage.getItem('assistantTone');
+        if (storedTone) toneSelect.value = storedTone;
       }
 
       if (nextBtn) {
         nextBtn.addEventListener('click', () => {
+           let isValid = true;
            const name = nameInput.value.trim();
-           if (name.length >= 3) {
+           const tone = toneSelect.value;
+
+           if (!name || name.length < 3) {
+               nameError.style.display = 'block';
+               nameInput.style.borderColor = '#FF3B30';
+               isValid = false;
+           } else {
                nameError.style.display = 'none';
                nameInput.style.borderColor = 'rgba(255, 255, 255, 0.5)';
+           }
+
+           if (!tone) {
+               toneError.style.display = 'block';
+               toneSelect.style.borderColor = '#FF3B30';
+               isValid = false;
+           } else {
+               toneError.style.display = 'none';
+               toneSelect.style.borderColor = 'rgba(255, 255, 255, 0.5)';
+           }
+
+           if (isValid) {
                if (window.__TAURI__ && window.__TAURI__.core) {
                  nextBtn.disabled = true;
                  nextBtn.innerText = "Saving...";
                  window.__TAURI__.core.invoke("get_onboarding_state").then((state) => {
-                   state.businessName = name;
+                   state.assistantName = name;
+                   state.assistantTone = tone;
                    return window.__TAURI__.core.invoke("save_onboarding_state", { state });
                  }).then(() => {
-                   window.location.href = "assistant-setup.html";
+                   window.location.href = "success.html";
                  }).catch((err) => {
                    console.error(err);
                    nextBtn.disabled = false;
                    nextBtn.innerText = "Next";
                  });
                } else {
-                 localStorage.setItem('businessName', name);
-                 window.location.href = "assistant-setup.html";
+                 localStorage.setItem('assistantName', name);
+                 localStorage.setItem('assistantTone', tone);
+                 window.location.href = "success.html";
                }
            } else {
-               nameError.style.display = 'block';
-               nameInput.style.borderColor = '#FF3B30';
                container.classList.remove('animate-shake');
                void container.offsetWidth; // trigger reflow
                container.classList.add('animate-shake');
@@ -196,6 +234,34 @@
       });
 
       nameInput.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+              e.preventDefault();
+              toneSelect.focus();
+          }
+      });
+
+      toneSelect.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+              e.preventDefault();
+              nextBtn.click();
+          }
+      });
+
+      toneSelect.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+              e.preventDefault();
+              nextBtn.click();
+          }
+      });
+
+      toneSelect.addEventListener('change', () => {
+          if (toneSelect.value) {
+              toneError.style.display = 'none';
+              toneSelect.style.borderColor = 'rgba(255, 255, 255, 0.5)';
+          }
+      });
+
+      toneSelect.addEventListener('keydown', (e) => {
           if (e.key === 'Enter') {
               e.preventDefault();
               nextBtn.click();
