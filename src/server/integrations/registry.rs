@@ -634,7 +634,7 @@ impl IntegrationsRegistry {
         }
         Err("integration not found or not supported".to_string())
     }
-    pub async fn fetch_rates(&self, integration_id: &str, weight: f64, dimensions: &str) -> Result<Vec<crate::integrations::shippo::client::ShippoRate>, String> {
+    pub async fn fetch_rates(&self, integration_id: &str, weight: f64, dimensions: &str, address_to: Option<serde_json::Value>) -> Result<Vec<crate::integrations::shippo::client::ShippoRate>, String> {
         let client = {
             if integration_id == "shippo" {
                 let clients = self.shippo_clients.read().unwrap();
@@ -644,9 +644,31 @@ impl IntegrationsRegistry {
             }
         };
         if let Some(c) = client {
-            return c.fetch_rates(weight, dimensions).await;
+            return c.fetch_rates(weight, dimensions, address_to).await;
         }
         Err("integration not found or not supported".to_string())
+    }
+
+    pub async fn shippo_create_sub_account(&self, email: &str, company_name: &str) -> Result<String, String> {
+        let client = {
+            let clients = self.shippo_clients.read().unwrap();
+            clients.get("shippo").cloned()
+        };
+        if let Some(c) = client {
+            return c.create_sub_account(email, company_name).await;
+        }
+        Err("Shippo integration not connected".to_string())
+    }
+
+    pub async fn shippo_validate_address(&self, address: &serde_json::Value) -> Result<bool, String> {
+        let client = {
+            let clients = self.shippo_clients.read().unwrap();
+            clients.get("shippo").cloned()
+        };
+        if let Some(c) = client {
+            return c.validate_address(address).await;
+        }
+        Err("Shippo integration not connected".to_string())
     }
 
     pub async fn purchase_label(&self, integration_id: &str, rate_id: &str) -> Result<crate::integrations::shippo::client::PurchaseLabelResponse, String> {

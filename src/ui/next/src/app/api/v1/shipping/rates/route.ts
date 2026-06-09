@@ -26,7 +26,8 @@ export async function POST(req: Request) {
       return NextResponse.json(await res.json());
     }
 
-    return NextResponse.json({ error: 'Failed to fetch shipping rates' }, { status: res.status });
+    const data = await res.json().catch(() => ({}));
+    return NextResponse.json({ error: data.error || 'Failed to fetch shipping rates' }, { status: res.status });
   } catch {
     return NextResponse.json({ error: 'Backend connection failed' }, { status: 500 });
   }

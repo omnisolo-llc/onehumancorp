@@ -154,6 +154,7 @@ where
         .route("/rates", post(fetch_rates))
         .route("/label", post(purchase_label))
         .route("/webhook/doordash", post(doordash_webhook))
+        .route("/webhook/shippo", post(shippo_webhook))
         .with_state(state)
 }
 

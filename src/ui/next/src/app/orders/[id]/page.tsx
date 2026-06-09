@@ -20,23 +20,46 @@ export default function OrderDetailsPage() {
   const [selectedRate, setSelectedRate] = useState<string | null>(null);
   const [purchasing, setPurchasing] = useState(false);
   const [labelUrl, setLabelUrl] = useState<string | null>(null);
+
+  const [addressLine1, setAddressLine1] = useState('123 Main St');
+  const [addressCity, setAddressCity] = useState('San Francisco');
+  const [addressState, setAddressState] = useState('CA');
+  const [addressZip, setAddressZip] = useState('94105');
+  const [addressCountry, setAddressCountry] = useState('US');
+  const [addressError, setAddressError] = useState('');
+
   const [sendingReceipt, setSendingReceipt] = useState(false);
   const [receiptSent, setReceiptSent] = useState(false);
 
   const fetchRates = async () => {
     setLoadingRates(true);
+    setAddressError('');
     try {
       const res = await fetch('/api/v1/shipping/rates', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ orderId, weight, dimensions })
+        body: JSON.stringify({
+            orderId,
+            weight,
+            dimensions,
+            address: {
+                street1: addressLine1,
+                city: addressCity,
+                state: addressState,
+                zip: addressZip,
+                country: addressCountry
+            }
+        })
       });
-      const data = await res.json();
-      if (data.rates) {
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.rates) {
         setRates(data.rates);
+      } else {
+        setAddressError(data.error || 'Failed to fetch rates. Address may be invalid.');
       }
     } catch (e) {
       console.error(e);
+      setAddressError('Network error occurred while fetching rates.');
     } finally {
       setLoadingRates(false);
     }
@@ -199,6 +222,11 @@ export default function OrderDetailsPage() {
                   </div>
                 </div>
 
+                {addressError && (
+                    <div className="p-3 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg">
+                        {addressError}
+                    </div>
+                )}
                 <button
                   onClick={fetchRates}
                   disabled={loadingRates}

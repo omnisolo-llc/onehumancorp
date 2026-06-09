@@ -59,14 +59,18 @@ impl ShippoClient {
             .map_err(|e| format!("{var_name} must be valid Shippo address JSON: {e}"))
     }
 
-    pub async fn fetch_rates(&self, weight: f64, dimensions: &str) -> Result<Vec<ShippoRate>, String> {
+    pub async fn fetch_rates(&self, weight: f64, dimensions: &str, address_to: Option<serde_json::Value>) -> Result<Vec<ShippoRate>, String> {
         self.validate_credentials()?;
         if weight <= 0.0 {
             return Err("shipment weight must be positive".to_string());
         }
 
         let address_from = Self::configured_address("SHIPPO_ADDRESS_FROM_JSON")?;
-        let address_to = Self::configured_address("SHIPPO_ADDRESS_TO_JSON")?;
+        let mut addr_to = address_to.unwrap_or_else(|| Self::configured_address("SHIPPO_ADDRESS_TO_JSON").unwrap_or_default());
+        if addr_to.is_object() {
+            addr_to.as_object_mut().unwrap().insert("validate".to_string(), json!(true));
+        }
+
         let parcel = json!({
             "length": dimensions,
             "width": "1",
@@ -77,7 +81,7 @@ impl ShippoClient {
         });
         let payload = json!({
             "address_from": address_from,
-            "address_to": address_to,
+            "address_to": addr_to,
             "parcels": [parcel],
             "async": false,
         });
@@ -127,6 +131,74 @@ impl ShippoClient {
                 days,
             })
         }).collect())
+    }
+
+    pub async fn validate_address(&self, address: &serde_json::Value) -> Result<bool, String> {
+        self.validate_credentials()?;
+
+        let mut payload = address.clone();
+        if payload.is_object() {
+            payload.as_object_mut().unwrap().insert("validate".to_string(), json!(true));
+        }
+
+        let resp = self.http_client
+            .post(format!("{}/addresses/", Self::api_base()))
+            .header("Authorization", format!("ShippoToken {}", self.api_key.trim()))
+            .header("Content-Type", "application/json")
+            .header("SHIPPO-API-VERSION", "2018-02-08")
+            .json(&payload)
+            .send()
+            .await
+            .map_err(|e| format!("Shippo address request failed: {e}"))?;
+
+        let status = resp.status();
+        let body: serde_json::Value = resp.json().await
+            .map_err(|e| format!("Shippo address response was not JSON: {e}"))?;
+
+        if !status.is_success() {
+            return Err(format!("Shippo address API error {status}: {body}"));
+        }
+
+        let is_valid = body.get("validation_results")
+            .and_then(|v| v.get("is_valid"))
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false);
+
+        Ok(is_valid)
+    }
+
+    pub async fn create_sub_account(&self, email: &str, company_name: &str) -> Result<String, String> {
+        self.validate_credentials()?;
+
+        let resp = self.http_client
+            .post(format!("{}/shippo-accounts/", Self::api_base()))
+            .header("Authorization", format!("ShippoToken {}", self.api_key.trim()))
+            .header("Content-Type", "application/json")
+            .header("SHIPPO-API-VERSION", "2018-02-08")
+            .json(&json!({
+                "email": email,
+                "first_name": "Tenant",
+                "last_name": "Owner",
+                "company_name": company_name,
+                "platform": "OneHumanCorp"
+            }))
+            .send()
+            .await
+            .map_err(|e| format!("Shippo sub-account request failed: {e}"))?;
+
+        let status = resp.status();
+        let body: serde_json::Value = resp.json().await
+            .map_err(|e| format!("Shippo sub-account response was not JSON: {e}"))?;
+
+        if !status.is_success() {
+            return Err(format!("Shippo sub-account API error {status}: {body}"));
+        }
+
+        let object_id = body.get("object_id")
+            .and_then(|v| v.as_str())
+            .ok_or_else(|| "Shippo sub-account response missing object_id".to_string())?;
+
+        Ok(object_id.to_string())
     }
 
     pub async fn purchase_label(&self, rate_id: &str) -> Result<PurchaseLabelResponse, String> {
@@ -183,7 +255,7 @@ mod tests {
     #[tokio::test]
     async fn fetch_rates_requires_real_shippo_credentials() {
         let client = ShippoClient::new("dummy_token".to_string());
-        let err = client.fetch_rates(16.0, "10x8x4").await.unwrap_err();
+        let err = client.fetch_rates(16.0, "10x8x4", None).await.unwrap_err();
         assert!(err.contains("Shippo API token is required"));
     }
 
