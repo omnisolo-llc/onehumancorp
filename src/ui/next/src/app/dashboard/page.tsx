@@ -245,7 +245,25 @@ export default function Dashboard() {
     window.addEventListener("offline", updateOfflineStatus);
     window.addEventListener("storage", updateOfflineStatus);
 
-    return () => {
+
+
+  async function handleApproveDraft(approvalId: string) {
+    try {
+      const token = localStorage.getItem("token") || "";
+      const res = await fetch(`/api/agents/approvals/${approvalId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+        body: JSON.stringify({ approved: true })
+      });
+      if (res.ok) {
+        setApprovals(prev => prev.filter(a => a.id !== approvalId));
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  return () => {
       window.removeEventListener("online", updateOfflineStatus);
       window.removeEventListener("online", handleSync);
       window.removeEventListener("offline", updateOfflineStatus);
@@ -611,6 +629,23 @@ export default function Dashboard() {
               <Link href="/inventory" className="app-button">Inventory</Link>
             </div>
             <div className="app-list">
+                            {approvals.filter(a => a.payload?.feature_type === 'ambassador_reply').map(approval => (
+                <div key={approval.id} className="app-list-item flex flex-col items-start gap-3">
+                  <div className="w-full">
+                    <div className="app-list-title">Action Required: Approve Reply</div>
+                    <div className="app-list-subtitle font-semibold text-gray-900 mt-1">1 New Message from {approval.payload?.source || "Instagram DM"}</div>
+                    <div className="app-list-subtitle mt-2 bg-gray-50 p-2 rounded border border-gray-100 text-xs italic">"{approval.payload?.original_message || approval.payload?.message || "Customer message"}"</div>
+                    <div className="app-list-subtitle mt-2 p-2 rounded bg-blue-50 border border-blue-100 text-blue-900 text-sm">
+                      <span className="font-semibold text-blue-800 text-xs uppercase mb-1 block">AI Draft</span>
+                      {approval.payload?.generated_response || approval.payload?.draft_reply || "Ready to send."}
+                    </div>
+                  </div>
+                  <div className="flex gap-2 w-full mt-1">
+                    <button type="button" className="app-btn-primary flex-1 py-2" onClick={() => handleApproveDraft(approval.id)}>✨ 1-Tap Approve</button>
+                    <Link href="/inbox" className="app-button flex-1 py-2 text-center bg-gray-100">Edit</Link>
+                  </div>
+                </div>
+              ))}
               {metrics.pending_orders > 0 && (
                 <div className="app-list-item">
                   <div>
@@ -638,7 +673,7 @@ export default function Dashboard() {
                   <span className="app-badge">Inbox</span>
                 </div>
               )}
-              {!loading && metrics.pending_orders === 0 && lowStockCount === 0 && messages.length === 0 && (
+              {!loading && metrics.pending_orders === 0 && lowStockCount === 0 && messages.length === 0 && approvals.filter(a => a.payload?.feature_type === "ambassador_reply").length === 0 && (
                 <div className="app-empty">No database-backed actions are currently open.</div>
               )}
             </div>
