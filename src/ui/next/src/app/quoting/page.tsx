@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { motion, AnimatePresence } from "framer-motion";
-import { FiCheck, FiX, FiDollarSign, FiClock, FiPlus, FiMessageSquare } from "react-icons/fi";
+
+
 
 // Mock data type - In a real app this would come from an API
 interface QuoteItem {
@@ -108,7 +108,7 @@ export default function MobileQuotingPage() {
       <header className="sticky top-0 z-10 bg-white/80 backdrop-blur-xl border-b border-gray-200 px-4 py-4 shadow-sm">
         <div className="flex items-center justify-between">
           <Link href="/dashboard" className="text-gray-500 hover:text-gray-900 transition-colors">
-            <FiX className="text-2xl" />
+            X
           </Link>
           <h1 className="text-lg font-semibold text-gray-900">Review Draft Quote</h1>
           <div className="w-6" /> {/* Spacer for centering */}
@@ -136,7 +136,7 @@ export default function MobileQuotingPage() {
 
         {/* AI Suggestions Badge */}
         <div className="flex items-center space-x-2 text-sm text-purple-700 bg-purple-50 px-3 py-2 rounded-lg font-medium">
-          <FiMessageSquare />
+          MSG
           <span>AI drafted this based on "Leaky Pipe" heuristics</span>
         </div>
 
@@ -145,12 +145,12 @@ export default function MobileQuotingPage() {
           <h3 className="font-semibold text-gray-900 px-1">Itemized Breakdown</h3>
 
           <div className="space-y-3">
-            <AnimatePresence>
+            <div>
               {activeQuote.items.map((item) => (
-                <motion.div
+                <div
                   key={item.id}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
+
+
                   className={`bg-white rounded-xl p-4 border transition-all ${item.selected ? 'border-gray-200 shadow-sm' : 'border-gray-100 opacity-60'}`}
                 >
                   <div className="flex justify-between items-start mb-2">
@@ -160,7 +160,7 @@ export default function MobileQuotingPage() {
                           onClick={() => toggleOptionalItem(item.id)}
                           className={`w-6 h-6 rounded-full flex items-center justify-center border transition-colors ${item.selected ? 'bg-blue-600 border-blue-600 text-white' : 'border-gray-300 text-transparent'}`}
                         >
-                          <FiCheck className="text-sm" />
+                          CHK
                         </button>
                       )}
                       <div>
@@ -183,13 +183,13 @@ export default function MobileQuotingPage() {
                       />
                     </div>
                   </div>
-                </motion.div>
+                </div>
               ))}
-            </AnimatePresence>
+            </div>
           </div>
 
           <button className="w-full py-3 flex items-center justify-center space-x-2 text-blue-600 font-medium bg-blue-50 rounded-xl hover:bg-blue-100 transition-colors">
-            <FiPlus />
+            +
             <span>Add custom item</span>
           </button>
         </section>
@@ -225,7 +225,7 @@ export default function MobileQuotingPage() {
           >
             {activeQuote.status === 'SENT' ? (
                 <>
-                  <FiCheck className="text-lg" />
+                  CHK
                   <span>Sent to Customer</span>
                 </>
             ) : (

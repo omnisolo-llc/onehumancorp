@@ -2,11 +2,11 @@ import { NextResponse } from 'next/server';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const tenantId = searchParams.get('tenant_id') || 'default';
+  const tenantId = searchParams.get('tenant') || 'default';
 
   try {
     const backendUrl = process.env.BACKEND_URL || 'http://localhost:8080';
-    const backendRes = await fetch(`${backendUrl}/api/v1/growth/milestones/check?tenant_id=${tenantId}`);
+    const backendRes = await fetch(`${backendUrl}/api/v1/growth/milestones/check?tenant=${tenantId}`);
 
     if (backendRes.ok) {
         const data = await backendRes.json();

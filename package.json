@@ -16,8 +16,7 @@
     "react": "^19.2.5",
     "swagger-ui-react": "^5.32.6",
     "ts-proto": "^2.11.6",
-    "zod": "^3.23.0",
-    "@playwright/test": "^1.50.1"
+    "zod": "^3.23.0"
   },
   "devDependencies": {
     "@bazel/bazelisk": "^1.28.1",

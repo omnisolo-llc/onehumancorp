@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { PageHeader } from "@/components/layout/PageHeader";
-import { ErrorState } from "@/components/layout/ErrorState";
+
+
 
 interface LedgerEntry {
   id: string;
@@ -40,14 +40,11 @@ export default function LedgerPage() {
 
   return (
     <div className="flex flex-col flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 h-full bg-slate-50/50">
-      <PageHeader
-        title="Ledger Statement"
-        subtitle="Recent financial activity"
-      />
+      <div><h1>Ledger Statement</h1><p>Recent financial activity</p></div>
 
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 mt-6 p-6">
         {loading && <p className="text-slate-500">Loading ledger entries...</p>}
-        {error && <ErrorState title="Error" message={error} />}
+        {error && <div>{error}</div>}
         {!loading && !error && entries.length === 0 && (
           <p className="text-slate-500">No recent activity.</p>
         )}
