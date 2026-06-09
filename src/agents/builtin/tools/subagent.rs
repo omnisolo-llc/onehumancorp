@@ -1,10 +1,25 @@
-use crate::{Tool, ToolExecutor};
+use crate::Tool;
 use ohc_builtin_agent_core::types::ToolError;
 use server_ohc::agent::service::SubAgentResponse;
-use serde_json::{json, Value};
+use serde_json::json;
 use std::sync::Arc;
+use serde::Deserialize;
+use super::pydantic::{PydanticAdapter, PydanticToolExecutor};
 
 
+// Pydantic-first tool schema validation: SubagentArgs
+#[derive(Deserialize)]
+struct SubagentArgs {
+    task: String,
+    #[serde(default = "default_mode")]
+    mode: String,
+    #[serde(default)]
+    parent_context_file: Option<String>,
+}
+
+fn default_mode() -> String {
+    "fork".to_string()
+}
 
 pub struct SubagentExecutor {
     pub runner: Arc<dyn crate::runner::CommandRunner>,
@@ -87,10 +102,10 @@ impl SubagentExecutor {
 }
 
 #[async_trait::async_trait]
-impl ToolExecutor for SubagentExecutor {
-    async fn execute(&self, args: Value) -> Result<String, ToolError> {
-        let raw_task = args.get("task").and_then(|v| v.as_str()).unwrap_or("");
-        let mode = args.get("mode").and_then(|v| v.as_str()).unwrap_or("fork");
+impl PydanticToolExecutor<SubagentArgs> for SubagentExecutor {
+    async fn execute_typed(&self, args: SubagentArgs) -> Result<String, ToolError> {
+        let raw_task = args.task.trim();
+        let mode = args.mode;
         
         if raw_task.is_empty() {
             return Err(ToolError::LlmRecoverable("Task cannot be empty".to_string()));
@@ -156,7 +171,7 @@ impl ToolExecutor for SubagentExecutor {
                 Err(e) => Err(ToolError::LlmRecoverable(format!("Subagent failed: {}", e))),
             }
         } else if mode == "fork" {
-            let parent_context_file = args.get("parent_context_file").and_then(|v| v.as_str()).unwrap_or("");
+            let parent_context_file = args.parent_context_file.unwrap_or_default();
 
             let mut envs = vec![];
             if let Ok(addr) = std::env::var("OHC_AGENT_ADDRESS") {
@@ -333,7 +348,44 @@ pub fn subagent_tool(runner: Arc<dyn crate::runner::CommandRunner>, llm: Option<
             },
             "required": ["task", "mode"]
         }),
-        execute: Arc::new(SubagentExecutor { runner, llm }),
+        execute: Arc::new(PydanticAdapter::new(SubagentExecutor { runner, llm })),
+    }
+}
+
+#[cfg(test)]
+mod test_subagent_pydantic {
+    use super::*;
+    use crate::runner::CommandRunner;
+    use std::process::Output;
+    use ohc_builtin_agent_core::types::ToolError;
+    use crate::ToolExecutor;
+
+    struct MockRunner;
+    #[async_trait::async_trait]
+    impl CommandRunner for MockRunner {
+        async fn run(&self, _command: &str, _args: &[&str], _dir: Option<&std::path::Path>, _envs: Vec<(String, String)>) -> Result<Output, std::io::Error> {
+            Ok(Output { status: std::os::unix::process::ExitStatusExt::from_raw(0), stdout: b"success".to_vec(), stderr: b"".to_vec() })
+        }
+    }
+
+    #[tokio::test]
+    async fn test_subagent_pydantic_validation() {
+        let runner = Arc::new(MockRunner);
+        let tool = subagent_tool(runner, None);
+
+        // Missing required field 'task'
+        let args = json!({
+            "mode": "fork"
+        });
+
+        let result = tool.execute.execute(args).await;
+        assert!(result.is_err());
+        if let Err(ToolError::LlmRecoverable(msg)) = result {
+            assert!(msg.contains("Validation Error (Pydantic-first tool schema)"));
+            assert!(msg.contains("missing field `task`"));
+        } else {
+            panic!("Expected LlmRecoverable error for missing 'task'");
+        }
     }
 }
 
