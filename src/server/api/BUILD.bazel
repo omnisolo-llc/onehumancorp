@@ -3,6 +3,8 @@ load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 exports_files(
     [
         "autodream.rs",
+        "search.rs",
+        "search_test.rs",
         "terminal_api.rs",
         "billing_api.rs",
         "billing_webhook.rs",
@@ -28,6 +30,8 @@ exports_files(
 
 
         "local_seo.rs",
+        "search.rs",
+        "search_test.rs",
     ],
     visibility = ["//visibility:public"],
 )
