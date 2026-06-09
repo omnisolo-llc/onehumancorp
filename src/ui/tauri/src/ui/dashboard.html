@@ -265,6 +265,126 @@
       }
 
     </style>
+
+    <style>
+      /* Walkthrough Styles */
+      .ohc-walkthrough-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: transparent;
+        z-index: 99998;
+        display: none;
+      }
+      .ohc-walkthrough-highlight {
+        position: fixed;
+        z-index: 99999;
+        border-radius: 8px;
+        box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.4);
+        pointer-events: none; z-index: 99999;
+        display: none;
+        transition: all 0.3s ease;
+        padding: 4px;
+        margin: -4px;
+      }
+      .ohc-walkthrough-popover {
+        pointer-events: auto !important; pointer-events: auto;
+        position: fixed;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(20px) saturate(210%);
+        -webkit-backdrop-filter: blur(20px) saturate(210%);
+        border: 1px solid rgba(255, 255, 255, 0.6);
+        border-radius: 12px;
+        padding: 20px;
+        width: 300px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+        z-index: 100000;
+        display: none;
+        flex-direction: column;
+        transition: opacity 0.3s ease, transform 0.3s ease;
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      .ohc-walkthrough-popover.visible {
+        display: flex;
+        opacity: 1;
+        transform: translateY(0);
+      }
+      .ohc-walkthrough-header {
+        font-weight: 700;
+        font-size: 18px;
+        margin-bottom: 8px;
+        color: #1d1d1f;
+      }
+      .ohc-walkthrough-content {
+        font-size: 14px;
+        color: #86868b;
+        margin-bottom: 20px;
+        line-height: 1.4;
+      }
+      .ohc-walkthrough-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .ohc-walkthrough-steps {
+        font-size: 12px;
+        color: #86868b;
+      }
+      .ohc-walkthrough-buttons {
+        display: flex;
+        gap: 8px;
+      }
+      .ohc-walkthrough-buttons button {
+        padding: 6px 12px;
+        border-radius: 16px;
+        border: none;
+        font-size: 14px;
+        cursor: pointer;
+        font-weight: 600;
+      }
+      .ohc-walkthrough-btn-close {
+        background: none;
+        color: #86868b;
+      }
+      .ohc-walkthrough-btn-next {
+        background: #0066FF;
+        color: white;
+      }
+      #start-tour-btn {
+        margin-top: 10px;
+        margin-bottom: 10px;
+        padding: 8px 16px;
+        border-radius: 20px;
+        border: 1px solid #0066FF;
+        background: transparent;
+        color: #0066FF;
+        cursor: pointer;
+        font-weight: 600;
+        transition: background 0.2s, color 0.2s;
+      }
+      #start-tour-btn:hover {
+        background: #0066FF;
+        color: white;
+      }
+      @media (max-width: 375px) {
+        .ohc-walkthrough-popover {
+          width: calc(100vw - 40px);
+          left: 20px;
+        }
+      }
+      @media (prefers-color-scheme: dark) {
+        .ohc-walkthrough-popover {
+          background: rgba(22, 22, 26, 0.95);
+          border-color: rgba(255, 255, 255, 0.1);
+        }
+        .ohc-walkthrough-header { color: #f5f5f7; }
+        .ohc-walkthrough-btn-close { color: #f5f5f7; }
+      }
+    </style>
+
   </head>
   <body>
     <!-- Omnibox Modal -->
@@ -280,6 +400,7 @@
 
       <h1 id="dashboard-title">Dashboard</h1>
       <div class="subtitle">Your private agentic workspace.</div>
+      <button id="start-tour-btn">Start Tour</button>
 
       <div class="ohc-growth-card">
         <h2>Grow Your Team</h2>
@@ -769,5 +890,157 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 </script>
+
+    <!-- Walkthrough Elements -->
+    <div class="ohc-walkthrough-overlay" id="ohc-walkthrough-overlay"></div>
+    <div class="ohc-walkthrough-highlight" id="ohc-walkthrough-highlight"></div>
+    <div class="ohc-walkthrough-popover" id="ohc-walkthrough-popover">
+      <div class="ohc-walkthrough-header" id="ohc-walkthrough-header">Title</div>
+      <div class="ohc-walkthrough-content" id="ohc-walkthrough-content">Content goes here.</div>
+      <div class="ohc-walkthrough-footer">
+        <span class="ohc-walkthrough-steps" id="ohc-walkthrough-steps">1 of 3</span>
+        <div class="ohc-walkthrough-buttons">
+          <button class="ohc-walkthrough-btn-close" id="ohc-walkthrough-btn-close">Skip</button>
+          <button class="ohc-walkthrough-btn-next" id="ohc-walkthrough-btn-next">Next</button>
+        </div>
+      </div>
+    </div>
+
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const steps = [
+        {
+            target: '.ohc-growth-card',
+            title: 'Set up your store',
+            content: 'Follow the 10-Minute Setup Wizard to build your storefront, add products, and configure your basic settings.'
+        },
+        {
+            target: '#generate-link-btn',
+            title: 'Invite your Team',
+            content: 'Click here to generate a secure link to invite team members to this workspace.'
+        },
+        {
+            target: '#ohc-help-btn',
+            title: 'Activate your AI Support Agent',
+            content: 'Need help or want to activate your AI support bot? Click here to manage your AI agents.'
+        }
+    ];
+
+    let currentStep = 0;
+    const overlay = document.getElementById('ohc-walkthrough-overlay');
+    const highlight = document.getElementById('ohc-walkthrough-highlight');
+    const popover = document.getElementById('ohc-walkthrough-popover');
+    const header = document.getElementById('ohc-walkthrough-header');
+    const content = document.getElementById('ohc-walkthrough-content');
+    const stepCounter = document.getElementById('ohc-walkthrough-steps');
+    const btnClose = document.getElementById('ohc-walkthrough-btn-close');
+    const btnNext = document.getElementById('ohc-walkthrough-btn-next');
+    const startTourBtn = document.getElementById('start-tour-btn');
+
+    function positionPopover(targetEl) {
+        const rect = targetEl.getBoundingClientRect();
+
+        // Setup highlight
+        highlight.style.display = 'block';
+        highlight.style.top = rect.top + 'px';
+        highlight.style.left = rect.left + 'px';
+        highlight.style.width = rect.width + 'px';
+        highlight.style.height = rect.height + 'px';
+
+        // Position popover (default to below)
+        let top = rect.bottom + 15;
+        let left = rect.left + (rect.width / 2) - 150; // Center popover (300px width / 2)
+
+        // Adjust bounds
+        if (left < 10) left = 10;
+        if (left + 300 > window.innerWidth - 10) left = window.innerWidth - 310;
+
+        if (top + 150 > window.innerHeight) {
+            // Flip to above if no room below
+            top = rect.top - 150 - 15;
+        }
+
+        // Apply media query overrides for mobile
+        if (window.innerWidth <= 400) {
+             left = Math.max(10, (window.innerWidth - 300) / 2);
+             top = rect.bottom + 15;
+             if (top + 150 > window.innerHeight) {
+                top = rect.top - 150 - 15;
+             }
+        }
+
+        popover.style.top = top + 'px';
+        popover.style.left = left + 'px';
+    }
+
+    function showStep(index) {
+        if (index < 0 || index >= steps.length) {
+            endWalkthrough();
+            return;
+        }
+
+        const step = steps[index];
+        const targetEl = document.querySelector(step.target);
+
+        if (!targetEl) {
+            console.warn('Walkthrough target not found:', step.target);
+            showStep(index + 1);
+            return;
+        }
+
+        header.textContent = step.title;
+        content.textContent = step.content;
+        stepCounter.textContent = `${index + 1} of ${steps.length}`;
+
+        if (index === steps.length - 1) {
+            btnNext.textContent = 'Finish';
+        } else {
+            btnNext.textContent = 'Next';
+        }
+
+        targetEl.scrollIntoView({ block: 'center' });
+
+        setTimeout(() => {
+            positionPopover(targetEl);
+            popover.classList.add('visible');
+        }, 300);
+    }
+
+    function startWalkthrough() {
+        currentStep = 0;
+        overlay.style.display = 'block';
+        showStep(currentStep);
+    }
+
+    function endWalkthrough() {
+        overlay.style.display = 'none';
+        highlight.style.display = 'none';
+        popover.classList.remove('visible');
+    }
+
+    if (startTourBtn) {
+        startTourBtn.addEventListener('click', startWalkthrough);
+    }
+
+    btnClose.addEventListener('click', endWalkthrough);
+
+    btnNext.addEventListener('click', () => {
+        popover.classList.remove('visible');
+        setTimeout(() => {
+            currentStep++;
+            showStep(currentStep);
+        }, 300);
+    });
+
+    window.addEventListener('resize', () => {
+        if (popover.classList.contains('visible')) {
+            const targetEl = document.querySelector(steps[currentStep].target);
+            if (targetEl) positionPopover(targetEl);
+        }
+    });
+});
+</script>
+
   </body>
 </html>

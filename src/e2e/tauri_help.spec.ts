@@ -33,6 +33,36 @@ test.describe('Help Center and Contextual Help (Tauri UI)', () => {
     await expect(page.locator('text=Getting Paid').first()).toBeVisible();
   });
 
+  test('Persona: Business Owner uses interactive walkthrough', async ({ page }) => {
+    await page.goto('/ui/dashboard.html');
+
+    // Wait for the start tour button
+    const startTourBtn = page.locator('button#start-tour-btn');
+    await expect(startTourBtn).toBeVisible();
+
+    // Start the tour
+    await startTourBtn.click();
+
+    // Check first step
+    const popover = page.locator('div#ohc-walkthrough-popover');
+    await expect(popover).toHaveClass(/visible/);
+    await expect(page.locator('div#ohc-walkthrough-header').first()).toContainText('Welcome to your Workspace');
+
+    // Check navigation
+    const nextBtn = page.locator('button#ohc-walkthrough-btn-next');
+    await nextBtn.click();
+
+    // Check second step
+    await expect(page.locator('div#ohc-walkthrough-header').first()).toContainText('Invite your Team');
+
+    // Check close
+    const closeBtn = page.locator('button#ohc-walkthrough-btn-close');
+    await closeBtn.click();
+
+    // Verify walkthrough is closed
+    await expect(popover).not.toHaveClass(/visible/);
+  });
+
   test('Persona: Business Owner views the Changelog', async ({ page }) => {
     await page.goto('/ui/changelog.html');
     await expect(page.locator('text=Release Notes & Changelog').first()).toBeVisible();
