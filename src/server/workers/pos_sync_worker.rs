@@ -93,6 +93,17 @@ impl PosSyncWorker {
                 let cache = crate::builder::edge::get_edge_cache();
                 let _ = cache.invalidate_by_tag(&format!("entity:product:{}", product_id)).await;
                 let _ = cache.invalidate_by_tag(&format!("tenant-id:{}", job.tenant_id)).await;
+
+                let pool_clone = self.db.pool.clone();
+                let tenant_id_clone = uuid::Uuid::parse_str(&job.tenant_id).unwrap_or_default();
+                tokio::spawn(async move {
+                    if let Ok(sites) = crate::builder::db::list_sites(&pool_clone, tenant_id_clone).await {
+                        for site in sites {
+                            let cache_key = format!("edge_site_{}_{}_en-US", tenant_id_clone, site.id);
+                            let _ = crate::builder::edge::regenerate_cache(pool_clone.clone(), tenant_id_clone, site.id, cache_key, crate::builder::edge::get_edge_cache()).await;
+                        }
+                    }
+                });
             }
         }
 
@@ -104,6 +115,22 @@ impl PosSyncWorker {
                         let product_id = item.get("product_id").and_then(|v| v.as_str()).unwrap_or("");
                         let qty = item.get("quantity").and_then(|v| v.as_i64()).unwrap_or(1);
                         if product_id.is_empty() { continue; }
+
+                        let locker: Box<dyn crate::orchestration::locks::DistributedLock> = if std::env::var("OHC_STANDALONE_MODE").unwrap_or_default() == "true" {
+                            Box::new(crate::orchestration::locks::StandaloneLock::new())
+                        } else {
+                            let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1:6379".to_string());
+                            let client = redis::Client::open(redis_url).unwrap();
+                            Box::new(crate::orchestration::locks::RedisLock::new(client))
+                        };
+
+                        let _lock_guard = match locker.acquire_resource(&job.tenant_id, "inventory", product_id).await {
+                            Ok(guard) => guard,
+                            Err(_) => {
+                                tracing::warn!("Failed to acquire lock for offline sync reconciliation: inventory:{}", product_id);
+                                continue;
+                            }
+                        };
 
                         let current_stock_res = sqlx::query("SELECT inventory_count FROM products WHERE id = $1 AND tenant_id = $2 FOR UPDATE")
                             .bind(product_id)
@@ -158,13 +185,25 @@ impl PosSyncWorker {
                             let cache = crate::builder::edge::get_edge_cache();
                             let _ = cache.invalidate_by_tag(&format!("entity:product:{}", product_id)).await;
                             let _ = cache.invalidate_by_tag(&format!("tenant-id:{}", job.tenant_id)).await;
+
+                            let pool_clone = self.db.pool.clone();
+                            let tenant_id_clone = uuid::Uuid::parse_str(&job.tenant_id).unwrap_or_default();
+                            tokio::spawn(async move {
+                                if let Ok(sites) = crate::builder::db::list_sites(&pool_clone, tenant_id_clone).await {
+                                    for site in sites {
+                                        let cache_key = format!("edge_site_{}_{}_en-US", tenant_id_clone, site.id);
+                                        let _ = crate::builder::edge::regenerate_cache(pool_clone.clone(), tenant_id_clone, site.id, cache_key, crate::builder::edge::get_edge_cache()).await;
+                                    }
+                                }
+                            });
                         }
                     }
                 }
             }
         }
 
-        sqlx::query("INSERT INTO ohc_universal_ledger (tenant_id, event_type, payload) VALUES ($1, 'offline_pos_sync', $2::jsonb)")
+        sqlx::query("INSERT INTO ohc_universal_ledger (id, tenant_id, department, action_type, state_change) VALUES ($1, $2, 'Operations', 'offline_pos_sync', $3::jsonb)")
+            .bind(uuid::Uuid::new_v4().to_string())
             .bind(&job.tenant_id)
             .bind(&job.payload)
             .execute(&mut *tx)
@@ -239,7 +278,7 @@ mod tests {
             .fetch_one(&pool).await.unwrap();
         assert_eq!(tx_status.0, "RESOLVED");
 
-        let ledger_count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM ohc_universal_ledger WHERE event_type = 'offline_pos_sync'")
+        let ledger_count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM ohc_universal_ledger WHERE action_type = 'offline_pos_sync'")
             .fetch_one(&pool).await.unwrap();
         assert!(ledger_count.0 > 0);
 
