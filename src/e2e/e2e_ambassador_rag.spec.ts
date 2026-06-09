@@ -24,7 +24,7 @@ test.describe('Ambassador RAG Pipeline', () => {
           messaging: [
             {
               sender: { id: "test_sender" },
-              recipient: { id: "test_tenant" },
+              recipient: { id: "e2e-tenant" },
               message: { text: "Do you have vegan cakes today?" }
             }
           ]

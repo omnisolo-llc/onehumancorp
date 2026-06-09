@@ -107,11 +107,12 @@ pub async fn meta_webhook_post_handler(
                 for event in messaging {
                     if let Some(message) = event.get("message") {
                         let sender_id = event.get("sender").and_then(|s| s.get("id")).and_then(|i| i.as_str()).unwrap_or("unknown");
+                        let recipient_id = event.get("recipient").and_then(|r| r.get("id")).and_then(|i| i.as_str()).unwrap_or("test_tenant");
                         let text = message.get("text").and_then(|t| t.as_str()).unwrap_or("");
 
                         if !text.is_empty() {
                             tracing::info!("Received Meta message from {}: {}", sender_id, text);
-                            let tenant_id = "test_tenant".to_string(); // Future: look up by recipient
+                            let tenant_id = recipient_id.to_string(); // Future: look up by recipient
                             let source = "instagram".to_string();
                             process_omnichannel_message(&state, tenant_id, source, sender_id.to_string(), text.to_string()).await;
                         }
@@ -123,11 +124,12 @@ pub async fn meta_webhook_post_handler(
                          if let Some(messages) = value.get("messages").and_then(|m| m.as_array()) {
                              for message in messages {
                                   let sender_id = message.get("from").and_then(|f| f.as_str()).unwrap_or("unknown");
+                                  let recipient_id = value.get("metadata").and_then(|m| m.get("display_phone_number")).and_then(|p| p.as_str()).unwrap_or("test_tenant");
                                   let text = message.get("text").and_then(|t| t.get("body")).and_then(|b| b.as_str()).unwrap_or("");
 
                                   if !text.is_empty() {
                                       tracing::info!("Received Meta WhatsApp message from {}: {}", sender_id, text);
-                                      let tenant_id = "test_tenant".to_string(); // Future: look up by recipient
+                                      let tenant_id = recipient_id.to_string(); // Future: look up by recipient
                                       let source = "whatsapp".to_string();
                                       process_omnichannel_message(&state, tenant_id, source, sender_id.to_string(), text.to_string()).await;
                                   }
