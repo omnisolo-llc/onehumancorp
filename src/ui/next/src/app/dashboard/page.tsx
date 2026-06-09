@@ -196,24 +196,26 @@ export default function Dashboard() {
 
       try {
         const userId = localStorage.getItem("user_id") || "default";
-        const [metricsRes, ordersRes, inboxRes, supplyRes, onboardingRes] = await Promise.all([
+        const [metricsRes, ordersRes, inboxRes, supplyRes, onboardingRes, unifiedFeedRes] = await Promise.all([
           fetch(`/api/ui/dashboard/metrics?tenant_id=${tenant}`),
           fetch(`/api/ui/orders?tenant_id=${tenant}`),
           fetch(`/api/ui/inbox/messages?tenant_id=${tenant}`),
           fetch(`/api/ui/supply?tenant_id=${tenant}`),
           fetch(`/api/onboarding/state`, { headers: { 'X-Tenant-ID': tenant, 'X-User-ID': userId } }),
+          fetch(`/api/ui/dashboard/feed?tenant_id=${tenant}`),
         ]);
 
         if (!metricsRes.ok || !ordersRes.ok || !inboxRes.ok || !supplyRes.ok) {
           throw new Error("One or more database-backed UI endpoints failed");
         }
 
-        const [metricsData, ordersData, inboxData, supplyData, onboardingData] = await Promise.all([
+        const [metricsData, ordersData, inboxData, supplyData, onboardingData, unifiedFeedData] = await Promise.all([
           metricsRes.json(),
           ordersRes.json(),
           inboxRes.json(),
           supplyRes.json(),
           onboardingRes.ok ? onboardingRes.json() : Promise.resolve(null),
+          unifiedFeedRes.ok ? unifiedFeedRes.json() : Promise.resolve({ pending_approvals: [], activities: [] }),
         ]);
 
         if (onboardingData?.wizardState?.aiAgents) {
@@ -230,8 +232,8 @@ export default function Dashboard() {
           raw_materials: Array.isArray(supplyData?.raw_materials) ? supplyData.raw_materials : [],
           bom_items: Array.isArray(supplyData?.bom_items) ? supplyData.bom_items : [],
         });
-        setApprovals(Array.isArray(unifiedFeedData.pending_approvals) ? unifiedFeedData.pending_approvals : []);
-        setActivities(Array.isArray(unifiedFeedData.activities) ? unifiedFeedData.activities : []);
+        setApprovals(Array.isArray(unifiedFeedData?.pending_approvals) ? unifiedFeedData.pending_approvals : []);
+        setActivities(Array.isArray(unifiedFeedData?.activities) ? unifiedFeedData.activities : []);
       } catch (e: any) {
         setError(e?.message || "Failed to load dashboard data");
       } finally {
@@ -500,7 +502,7 @@ export default function Dashboard() {
              />
         ))}
 
-        <UnifiedAgentFeed initialApprovals={approvals} initialActivities={activities} />
+        <UnifiedAgentFeed />
 
         <section>
           <div className="mb-6 p-6 rounded-[16px] bg-white/65 dark:bg-[#16161a]/70 border border-white/40 dark:border-white/10">
