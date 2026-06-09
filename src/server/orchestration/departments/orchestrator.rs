@@ -35,7 +35,9 @@ pub enum AgentTriggerType {
 pub trait BaseAgent: Send + Sync {
     fn agent_id(&self) -> String;
     fn trigger_type(&self) -> AgentTriggerType;
-    async fn execute(&self, payload: serde_json::Value) -> Result<(), String>;
+    async fn execute(&self, _payload: serde_json::Value) -> Result<(), String> {
+        Ok(())
+    }
 }
 
 #[async_trait::async_trait]
@@ -46,7 +48,7 @@ pub trait Department: Send + Sync {
     async fn query_memory(&self, query: &str) -> Result<Vec<String>, String>;
     async fn request_approval(&self, description: String, tenant_id: String, risk: ActionRisk) -> Result<ApprovalRequest, String>;
     fn get_config(&self, tenant_id: &str) -> Option<DepartmentConfig>;
-    fn set_config(&mut self, tenant_id: String, config: DepartmentConfig);
+    fn set_config(&mut self, _tenant_id: String, _config: DepartmentConfig) {}
 }
 
 pub struct DummyDepartment {
