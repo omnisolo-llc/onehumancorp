@@ -31,17 +31,17 @@ pub fn decompress_lossless(data: &str) -> Result<String, String> {
     String::from_utf8(decompressed).map_err(|e| e.to_string())
 }
 
+// STOP_WORDS must be sorted alphabetically for binary search to work
 static STOP_WORDS: &[&str] = &[
-    "a", "an", "the", "is", "are",
-    "and", "or", "but", "in", "on",
-    "at", "to", "for", "with", "by",
-    "about", "as", "of",
+    "a", "about", "an", "and", "are", "as", "at",
+    "but", "by", "for", "in", "is", "of", "on",
+    "or", "the", "to", "with",
 ];
 
 pub fn reduce_tokens(data: &str) -> String {
     data.split_whitespace()
         .filter(|word| {
-            !STOP_WORDS.iter().any(|&stop_word| word.eq_ignore_ascii_case(stop_word))
+            STOP_WORDS.binary_search_by(|&stop_word| stop_word.to_ascii_lowercase().cmp(&word.to_ascii_lowercase())).is_err()
         })
         .fold(String::with_capacity(data.len()), |mut acc, w| {
             if !acc.is_empty() {
