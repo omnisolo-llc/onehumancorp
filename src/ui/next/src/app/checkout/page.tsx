@@ -352,8 +352,28 @@ function CheckoutContent() {
               </div>
               <p className="text-indigo-800 text-xs font-medium">
                 Give a 20% discount to friends and get a 10% commission when they
-                make their first purchase! ⚡ Powered by OHC
+                make their first purchase!
               </p>
+
+              {/* Interactive Powered by OHC Growth Widget */}
+              <div className="bg-white/80 rounded-xl p-4 border border-indigo-200 shadow-sm flex items-center justify-between mt-4">
+                <div>
+                    <h4 className="font-bold text-sm text-gray-900 mb-1">Start your own business with OHC</h4>
+                    <p className="text-xs text-gray-600">Get powerful tools to sell online instantly.</p>
+                </div>
+                <a
+                    href={`/onboarding?ref=${tenant}&source=checkout_growth_loop`}
+                    target="_blank"
+                    className="flex flex-col items-center gap-1 group no-underline"
+                >
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400 group-hover:text-indigo-500 transition-colors">
+                        ⚡ Powered by OHC
+                    </span>
+                    <span className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold py-2 px-4 rounded-lg shadow-sm transition-colors">
+                        Claim Your Store
+                    </span>
+                </a>
+              </div>
             </div>
 
             <div className="space-y-4">
@@ -394,7 +414,7 @@ function CheckoutContent() {
 
               <div className="flex flex-col gap-3 mb-6">
                 <a
-                  href={`https://wa.me/?text=${encodeURIComponent(`I just bought an amazing product from this store! Use my link to get 20% off your first order: ${referralLink} ⚡ Powered by OHC`)}`}
+                  href={`https://wa.me/?text=${encodeURIComponent(`I just bought an amazing product from this store! Use my link to get 20% off your first order: ${referralLink}`)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center justify-center gap-2 bg-[#25D366] text-white p-3 rounded-xl font-semibold text-sm shadow-sm hover:bg-[#20bd5a] transition-all"
@@ -409,7 +429,7 @@ function CheckoutContent() {
                   WhatsApp
                 </a>
                 <a
-                  href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`I just bought an amazing product from this store! Use my link to get 20% off your first order: ${referralLink} ⚡ Powered by OHC`)}`}
+                  href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`I just bought an amazing product from this store! Use my link to get 20% off your first order: ${referralLink}`)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center justify-center gap-2 bg-black text-white p-3 rounded-xl font-semibold text-sm shadow-sm hover:bg-gray-800 transition-all"
@@ -424,7 +444,7 @@ function CheckoutContent() {
                   X (Twitter)
                 </a>
                 <a
-                  href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(referralLink)}&quote=${encodeURIComponent(`I just bought an amazing product from this store! Use my link to get 20% off your first order: ${referralLink} ⚡ Powered by OHC`)}`}
+                  href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(referralLink)}&quote=${encodeURIComponent(`I just bought an amazing product from this store! Use my link to get 20% off your first order: ${referralLink}`)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center justify-center gap-2 bg-[#1877F2]/80 text-white p-3 rounded-xl font-semibold text-sm shadow-sm hover:bg-[#166fe5] transition-all"
