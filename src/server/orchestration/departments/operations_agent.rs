@@ -1,6 +1,5 @@
 use crate::orchestration::departments::orchestrator::{BaseAgent, AgentTriggerType, DepartmentOrchestrator, Department};
 use crate::orchestration::departments::types::{DepartmentType, DepartmentEvent, DepartmentConfig, ApprovalRequest, ActionRisk};
-use serde_json::Value;
 
 pub struct OperationsAgent {
     orchestrator: std::sync::Arc<DepartmentOrchestrator>,
@@ -95,8 +94,6 @@ impl Department for OperationsAgent {
         Some(DepartmentConfig { tone_of_voice: "professional".to_string(), auto_approve_limits: 10.0 })
     }
 
-    fn set_config(&mut self, _tenant_id: String, _config: DepartmentConfig) {
-    }
 
     async fn query_memory(&self, _query: &str) -> Result<Vec<String>, String> {
         Ok(vec![])
@@ -117,9 +114,6 @@ impl BaseAgent for OperationsAgent {
         AgentTriggerType::EventDriven
     }
 
-    async fn execute(&self, _payload: Value) -> Result<(), String> {
-        Ok(())
-    }
 }
 
 #[cfg(test)]

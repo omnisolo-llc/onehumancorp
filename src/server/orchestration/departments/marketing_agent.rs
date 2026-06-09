@@ -1,6 +1,5 @@
 use crate::orchestration::departments::orchestrator::{BaseAgent, AgentTriggerType, DepartmentOrchestrator, Department};
 use crate::orchestration::departments::types::{DepartmentType, DepartmentEvent, DepartmentConfig, ApprovalRequest, ActionRisk};
-use serde_json::Value;
 use std::sync::Arc;
 
 #[async_trait::async_trait]
@@ -315,8 +314,6 @@ impl Department for MarketingAgent {
         None
     }
 
-    fn set_config(&mut self, _tenant_id: String, _config: DepartmentConfig) {
-    }
 
     async fn query_memory(&self, _query: &str) -> Result<Vec<String>, String> {
         Ok(vec![])
@@ -337,9 +334,6 @@ impl BaseAgent for MarketingAgent {
         AgentTriggerType::EventDriven
     }
 
-    async fn execute(&self, _payload: Value) -> Result<(), String> {
-        Ok(())
-    }
 }
 
 #[cfg(test)]

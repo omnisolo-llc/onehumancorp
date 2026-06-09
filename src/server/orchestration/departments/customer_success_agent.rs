@@ -1,6 +1,5 @@
 use crate::orchestration::departments::orchestrator::{BaseAgent, AgentTriggerType, DepartmentOrchestrator, Department};
 use crate::orchestration::departments::types::{DepartmentType, DepartmentEvent, DepartmentConfig, ApprovalRequest, ActionRisk};
-use serde_json::Value;
 use std::collections::HashMap;
 
 pub struct CustomerSuccessAgent {
@@ -238,9 +237,6 @@ impl BaseAgent for CustomerSuccessAgent {
         AgentTriggerType::EventDriven
     }
 
-    async fn execute(&self, _payload: Value) -> Result<(), String> {
-        Ok(())
-    }
 }
 
 #[cfg(test)]
