@@ -54,39 +54,13 @@ ALTER TABLE IF EXISTS ledger_accounts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS ledger_transactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS ledger_entries ENABLE ROW LEVEL SECURITY;
 
--- Ensure RLS allows us to insert ledger data
-ALTER TABLE IF EXISTS ledger_accounts DISABLE ROW LEVEL SECURITY;
-ALTER TABLE IF EXISTS ledger_transactions DISABLE ROW LEVEL SECURITY;
-ALTER TABLE IF EXISTS ledger_entries DISABLE ROW LEVEL SECURITY;
-
--- Seed Ledger Data
-INSERT INTO ledger_accounts (id, tenant_id, name, type, balance, currency, created_at, updated_at)
-VALUES ('acct-1', 'e2e-tenant', 'main', 'asset', 1500.00, 'USD', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-ON CONFLICT (id) DO UPDATE
-SET balance = EXCLUDED.balance,
-    updated_at = EXCLUDED.updated_at;
-
-INSERT INTO ledger_transactions (id, tenant_id, description, status, metadata, created_at, updated_at)
-VALUES ('txn-1', 'e2e-tenant', 'Initial deposit', 'completed', '{}', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-ON CONFLICT (id) DO UPDATE
-SET status = EXCLUDED.status,
-    updated_at = EXCLUDED.updated_at;
-
-INSERT INTO ledger_entries (id, tenant_id, transaction_id, account_id, amount, currency, direction, type, created_at)
-VALUES ('entry-1', 'e2e-tenant', 'txn-1', 'acct-1', 1500.00, 'USD', 'credit', 'payment', CURRENT_TIMESTAMP)
-ON CONFLICT (id) DO NOTHING;
-
-ALTER TABLE IF EXISTS ledger_accounts ENABLE ROW LEVEL SECURITY;
-ALTER TABLE IF EXISTS ledger_transactions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE IF EXISTS ledger_entries ENABLE ROW LEVEL SECURITY;
-
 INSERT INTO users (id, username, email, password_hash, roles, active, tenant_id, created_at, updated_at)
 VALUES
   (
     'e2e-admin-user',
     'test@example.com',
     'test@example.com',
-    '$2b$10$hmVhunI7Fq2ZzQ0PguAH5OeXUyb/gNAORUpLPD2g44Ik9/Fd9sM7a',
+    '$2b0$hmVhunI7Fq2ZzQ0PguAH5OeXUyb/gNAORUpLPD2g44Ik9/Fd9sM7a',
     ARRAY['ADMIN'],
     TRUE,
     'e2e-tenant',
@@ -97,7 +71,7 @@ VALUES
     'e2e-team-member',
     'member@example.com',
     'member@example.com',
-    '$2b$10$DO879TauCkftPAQhaF3wt.34Fd4ntX8KrtpeQCoOa43kwLNxKqkLK',
+    '$2b0$DO879TauCkftPAQhaF3wt.34Fd4ntX8KrtpeQCoOa43kwLNxKqkLK',
     ARRAY['OPERATOR'],
     TRUE,
     'e2e-tenant',
@@ -108,7 +82,7 @@ VALUES
     'e2e-unlimited-admin-user',
     'pro@example.com',
     'pro@example.com',
-    '$2b$10$hmVhunI7Fq2ZzQ0PguAH5OeXUyb/gNAORUpLPD2g44Ik9/Fd9sM7a',
+    '$2b0$hmVhunI7Fq2ZzQ0PguAH5OeXUyb/gNAORUpLPD2g44Ik9/Fd9sM7a',
     ARRAY['ADMIN'],
     TRUE,
     'e2e-tenant-unlimited',
@@ -142,8 +116,8 @@ VALUES
 ('e2e-approval-social', 'e2e-tenant', 'marketing', 'Generated 7-day social media plan for Vegan Celebration Cake', 'DRAFT', 'LOW', '{"feature_type": "social_calendar"}'::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
 ('e2e-approval-cart', 'e2e-tenant', 'sales', 'Abandoned cart recovery: 10% discount for Sarah', 'DRAFT', 'HIGH', '{"feature_type": "abandoned_cart", "context": {"abandoned_carts_count": 3, "potential_revenue": 120.00}}'::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
 ('e2e-approval-review', 'e2e-tenant', 'customer_success', '3 customers haven''t reviewed their orders. Request reviews?', 'DRAFT', 'HIGH', '{"feature_type": "automated_review_request", "target": "recent_unreviewed_orders", "count": 3}'::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-('e2e-approval-pricing', 'e2e-tenant', 'business_advisory', 'Smart Price Suggestion: Vegan Celebration Cake', 'PENDING', 'HIGH', '{"context": {"smart_pricing": true, "product_id": "e2e-product-cake", "product_name": "Vegan Celebration Cake", "old_price": 39.99, "new_price": 45.00, "discount_amount": -5.01, "sales_projection": "+$150", "stagnant_days": 10, "margin_percent": 45}}'::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-,('e2e-approval-quote-draft', 'e2e-tenant', 'sales', 'Draft Quote Ready: Fix leaking sink for John Doe', 'PENDING', 'HIGH', '{"feature_type": "quote_draft", "customer_inquiry": "How much to fix a leaking sink? Here is a picture", "suggested_price": 150.0, "scope": "Fix leaking sink including labor and standard materials.", "suggested_time": "Tomorrow at 2 PM", "generated_response": "Based on our past projects, I can offer Fix leaking sink starting at 50.00. Should I send over the formal agreement?", "service": "Fix leaking sink", "price": 150.0}'::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+('e2e-approval-pricing', 'e2e-tenant', 'business_advisory', 'Smart Price Suggestion: Vegan Celebration Cake', 'PENDING', 'HIGH', '{"context": {"smart_pricing": true, "product_id": "e2e-product-cake", "product_name": "Vegan Celebration Cake", "old_price": 39.99, "new_price": 45.00, "discount_amount": -5.01, "sales_projection": "+50", "stagnant_days": 10, "margin_percent": 45}}'::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+,('e2e-approval-quote-draft', 'e2e-tenant', 'sales', 'Draft Quote Ready: Fix leaking sink for John Doe', 'PENDING', 'HIGH', '{"feature_type": "quote_draft", "quote_id": "e2e-quote-leaky-sink", "customer_inquiry": "How much to fix a leaking sink? Here is a picture", "suggested_price": 150.0, "scope": "Fix leaking sink including labor and standard materials.", "suggested_time": "Tomorrow at 2 PM", "generated_response": "Based on our past projects, I can offer Fix leaking sink starting at 50.00. Should I send over the formal agreement?", "service": "Fix leaking sink", "price": 150.0}'::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
 ON CONFLICT (id) DO UPDATE
 SET status = EXCLUDED.status,
     updated_at = CURRENT_TIMESTAMP;
@@ -238,6 +212,7 @@ ON CONFLICT DO NOTHING;
 
 ALTER TABLE IF EXISTS tenants ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS business_milestones ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS agents ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS ohc_staff_member ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS products ENABLE ROW LEVEL SECURITY;
@@ -255,6 +230,7 @@ ALTER TABLE IF EXISTS bookings ENABLE ROW LEVEL SECURITY;
 
 ALTER TABLE IF EXISTS tenants FORCE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS users FORCE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS business_milestones FORCE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS agents FORCE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS ohc_staff_member FORCE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS products FORCE ROW LEVEL SECURITY;
@@ -337,6 +313,11 @@ INSERT INTO triage_proposed_actions (id, triage_item_id, tenant_id, action_type,
 VALUES
   ('action-test-1', 'triage-test-1', 'test-tenant', 'Draft Reply', 'Hi Maya! I can definitely help with the custom cake. It will be $50.'),
   ('action-test-2', 'triage-test-2', 'test-tenant', 'Draft Reply', 'We deliver between 9 AM and 5 PM on weekdays.')
+ON CONFLICT (id) DO NOTHING;
+
+-- Seed 10th order milestone for e2e-tenant
+INSERT INTO business_milestones (id, tenant_id, milestone_type, reached_at)
+VALUES ('ms_e2e_10th_order', 'e2e-tenant', '10th_order', NOW())
 ON CONFLICT (id) DO NOTHING;
 
 -- Sales Assistant Quoting Journey data

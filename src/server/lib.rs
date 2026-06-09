@@ -4367,6 +4367,15 @@ async fn create_ui_bom_item_handler(
         });
     }
 
+    // Start Temp File Cleanup Background Task
+    tokio::spawn(async move {
+        let mut interval = tokio::time::interval(std::time::Duration::from_secs(3600));
+        loop {
+            interval.tick().await;
+            crate::utils::fs::cleanup_stale_temp_files();
+        }
+    });
+
     // Start Scheduler Background Task
     let hub_for_sched = hub.clone();
 
