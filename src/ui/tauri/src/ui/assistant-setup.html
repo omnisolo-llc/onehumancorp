@@ -3,269 +3,148 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>OHC Setup</title>
+    <title>AI Assistant - OHC</title>
+    <link rel="stylesheet" href="styles.css">
     <style>
-      body {
-        font-family: "Outfit", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-        background-color: #f5f5f7;
-        margin: 0;
+      .agent-badge {
         display: flex;
         align-items: center;
-        justify-content: center;
-        height: 100vh;
-      }
-      .container {
-        background: rgba(255, 255, 255, 0.65);
-        backdrop-filter: blur(30px) saturate(210%);
-        -webkit-backdrop-filter: blur(30px) saturate(210%);
-        padding: 40px;
-        border-radius: 16px;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-        text-align: center;
-        max-width: 400px;
-        width: 100%;
-        border: 1px solid rgba(255, 255, 255, 0.4);
-        box-sizing: border-box;
-      }
-      h1 {
-        margin-top: 0;
-        color: #1d1d1f;
-        font-size: 24px;
-        font-weight: 700;
-      }
-      p {
-        color: #86868b;
-        font-size: 14px;
-        margin-bottom: 20px;
-      }
-      input, select {
-        width: 100%;
-        padding: 14px;
-        min-height: 44px;
-        margin-bottom: 20px;
-        border: 1px solid rgba(255, 255, 255, 0.5);
-        border-radius: 8px;
-        box-sizing: border-box;
-        font-size: 16px;
-        background: rgba(255, 255, 255, 0.5);
-      }
-      input:focus, select:focus {
-        outline: none;
-        border-color: #0066FF;
-      }
-      button {
-        background-color: #0066FF;
-        color: white;
-        border: none;
-        padding: 14px 24px;
-        min-height: 44px;
-        border-radius: 8px;
-        font-size: 16px;
-        font-weight: 600;
-        cursor: pointer;
-        width: 100%;
-        transition: background-color 0.2s, transform 0.1s;
-        box-shadow: 0 4px 14px 0 rgba(0, 102, 255, 0.39);
-      }
-      button:hover {
-        background-color: #0052cc;
-      }
-      button:active {
-        transform: scale(0.98);
-      }
-      .error-msg {
-        color: #FF3B30;
-        font-size: 12px;
-        margin-top: -15px;
-        margin-bottom: 15px;
-        display: none;
+        gap: 10px;
+        padding: 10px 14px;
+        background: rgba(0, 102, 255, 0.05);
+        border: 1px solid rgba(0, 102, 255, 0.1);
+        border-radius: 10px;
+        margin-bottom: 8px;
         text-align: left;
+        font-size: 13px;
+        color: #1d1d1f;
       }
-
-      @keyframes shake {
-        0%, 100% { transform: translateX(0); }
-        25% { transform: translateX(-5px); }
-        75% { transform: translateX(5px); }
-      }
-      .animate-shake {
-        animation: shake 0.2s ease-in-out 0s 2;
-      }
-
+      .agent-badge i { font-size: 18px; }
       @media (prefers-color-scheme: dark) {
-        body {
-          background-color: #16161a;
-        }
-        .container {
-          background: rgba(22, 22, 26, 0.7);
-          backdrop-filter: blur(30px) saturate(210%);
-          -webkit-backdrop-filter: blur(30px) saturate(210%);
-          border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        h1 {
-          color: #F5F5F7;
-        }
-        p {
-          color: #A1A1A6;
-        }
-        input, select {
-          background: rgba(255, 255, 255, 0.1);
-          border: 1px solid rgba(255, 255, 255, 0.2);
-          color: #F5F5F7;
-        }
-        input:focus, select:focus {
-          border-color: #0066FF;
-          background: rgba(255, 255, 255, 0.15);
-        }
-        select option {
-          background-color: #16161a;
-          color: #F5F5F7;
+        .agent-badge {
+          background: rgba(255, 255, 255, 0.05);
+          border-color: rgba(255, 255, 255, 0.1);
+          color: #f5f5f7;
         }
       }
     </style>
   </head>
   <body>
     <div class="container" id="form-container">
-      <h1>Set up your Assistant</h1>
-      <p>Give your AI assistant a name and tone.</p>
+      <div class="step-indicator">
+        <div class="step-dot"></div>
+        <div class="step-dot active"></div>
+        <div class="step-dot"></div>
+      </div>
 
+      <h1>Your AI Team</h1>
+      <p style="color: #86868b; margin-bottom: 24px;">Configure your primary assistant and meet your team.</p>
+
+      <div style="text-align: left; margin-bottom: 8px; font-weight: 600; font-size: 14px;">Assistant Name</div>
       <input type="text" id="assistant-name" placeholder="e.g. Jarvis" />
-      <div id="name-error" class="error-msg">Please enter a name for your assistant.</div>
+      <div id="name-error" class="error-msg">Please enter a name (min 3 chars).</div>
 
+      <div style="text-align: left; margin-bottom: 8px; font-weight: 600; font-size: 14px;">Tone</div>
       <select id="assistant-tone">
         <option value="" disabled selected>Select a tone</option>
-        <option value="Professional">Professional</option>
-        <option value="Friendly">Friendly</option>
-        <option value="Concise">Concise</option>
+        <option value="Professional">💼 Professional</option>
+        <option value="Friendly">👋 Friendly</option>
+        <option value="Concise">⚡ Concise</option>
       </select>
       <div id="tone-error" class="error-msg">Please select a tone.</div>
 
-      <button id="next-btn">Next</button>
+      <div style="text-align: left; margin-top: 20px; margin-bottom: 12px; font-weight: 600; font-size: 14px;">Your Automatic Department Agents</div>
+      <div id="agent-team">
+        <div class="agent-badge"><span>📋 The Manager (Operations)</span></div>
+        <div class="agent-badge"><span>📣 The Promoter (Marketing)</span></div>
+        <div class="agent-badge"><span>🤝 The Ambassador (Customer Success)</span></div>
+      </div>
+
+      <div style="margin-top: 24px; display: flex; gap: 12px;">
+        <button class="secondary" id="back-btn" style="flex: 1;">Back</button>
+        <button id="next-btn" style="flex: 2;">Finish Setup</button>
+      </div>
     </div>
+
     <script>
       const nextBtn = document.getElementById('next-btn');
+      const backBtn = document.getElementById('back-btn');
       const nameInput = document.getElementById('assistant-name');
       const toneSelect = document.getElementById('assistant-tone');
       const nameError = document.getElementById('name-error');
       const toneError = document.getElementById('tone-error');
       const container = document.getElementById('form-container');
 
-      // Load existing state
-      if (window.__TAURI__ && window.__TAURI__.core) {
-        window.__TAURI__.core.invoke("get_onboarding_state").then((state) => {
-          if (state && state.assistantName) {
-            nameInput.value = state.assistantName;
-          }
-          if (state && state.assistantTone) {
-            toneSelect.value = state.assistantTone;
-          }
-        }).catch(console.error);
-      } else {
-        const storedName = localStorage.getItem('assistantName');
-        if (storedName) nameInput.value = storedName;
+      async function loadState() {
+        let state = {};
+        if (window.__TAURI__ && window.__TAURI__.core) {
+          try {
+            state = await window.__TAURI__.core.invoke("get_onboarding_state");
+          } catch (e) { console.error(e); }
+        } else {
+          state = JSON.parse(localStorage.getItem('ohc_onboarding_state') || '{}');
+        }
 
-        const storedTone = localStorage.getItem('assistantTone');
-        if (storedTone) toneSelect.value = storedTone;
+        if (state.assistantName) nameInput.value = state.assistantName;
+        if (state.assistantTone) toneSelect.value = state.assistantTone;
       }
 
-      if (nextBtn) {
-        nextBtn.addEventListener('click', () => {
-           let isValid = true;
-           const name = nameInput.value.trim();
-           const tone = toneSelect.value;
+      loadState();
 
-           if (!name || name.length < 3) {
-               nameError.style.display = 'block';
-               nameInput.style.borderColor = '#FF3B30';
-               isValid = false;
-           } else {
-               nameError.style.display = 'none';
-               nameInput.style.borderColor = 'rgba(255, 255, 255, 0.5)';
-           }
-
-           if (!tone) {
-               toneError.style.display = 'block';
-               toneSelect.style.borderColor = '#FF3B30';
-               isValid = false;
-           } else {
-               toneError.style.display = 'none';
-               toneSelect.style.borderColor = 'rgba(255, 255, 255, 0.5)';
-           }
-
-           if (isValid) {
-               if (window.__TAURI__ && window.__TAURI__.core) {
-                 nextBtn.disabled = true;
-                 nextBtn.innerText = "Saving...";
-                 window.__TAURI__.core.invoke("get_onboarding_state").then((state) => {
-                   state.assistantName = name;
-                   state.assistantTone = tone;
-                   return window.__TAURI__.core.invoke("save_onboarding_state", { state });
-                 }).then(() => {
-                   window.location.href = "success.html";
-                 }).catch((err) => {
-                   console.error(err);
-                   nextBtn.disabled = false;
-                   nextBtn.innerText = "Next";
-                 });
-               } else {
-                 localStorage.setItem('assistantName', name);
-                 localStorage.setItem('assistantTone', tone);
-                 window.location.href = "success.html";
-               }
-           } else {
-               container.classList.remove('animate-shake');
-               void container.offsetWidth; // trigger reflow
-               container.classList.add('animate-shake');
-           }
-        });
-      }
-
-      nameInput.addEventListener('keydown', (e) => {
-          if (e.key === 'Enter') {
-              e.preventDefault();
-              nextBtn.click();
-          }
+      backBtn.addEventListener('click', () => {
+        window.location.href = "setup.html";
       });
 
-      nameInput.addEventListener('input', () => {
-          if (nameInput.value.trim().length >= 3) {
-              nameError.style.display = 'none';
-              nameInput.style.borderColor = 'rgba(255, 255, 255, 0.5)';
-          }
-      });
+      nextBtn.addEventListener('click', async () => {
+        const name = nameInput.value.trim();
+        const tone = toneSelect.value;
+        let isValid = true;
 
-      nameInput.addEventListener('keydown', (e) => {
-          if (e.key === 'Enter') {
-              e.preventDefault();
-              toneSelect.focus();
-          }
-      });
+        if (name.length < 3) {
+          nameError.style.display = 'block';
+          nameInput.style.borderColor = '#FF3B30';
+          isValid = false;
+        } else {
+          nameError.style.display = 'none';
+          nameInput.style.borderColor = '';
+        }
 
-      toneSelect.addEventListener('keydown', (e) => {
-          if (e.key === 'Enter') {
-              e.preventDefault();
-              nextBtn.click();
-          }
-      });
+        if (!tone) {
+          toneError.style.display = 'block';
+          toneSelect.style.borderColor = '#FF3B30';
+          isValid = false;
+        } else {
+          toneError.style.display = 'none';
+          toneSelect.style.borderColor = '';
+        }
 
-      toneSelect.addEventListener('keydown', (e) => {
-          if (e.key === 'Enter') {
-              e.preventDefault();
-              nextBtn.click();
-          }
-      });
+        if (isValid) {
+          const newState = { assistantName: name, assistantTone: tone };
 
-      toneSelect.addEventListener('change', () => {
-          if (toneSelect.value) {
-              toneError.style.display = 'none';
-              toneSelect.style.borderColor = 'rgba(255, 255, 255, 0.5)';
+          if (window.__TAURI__ && window.__TAURI__.core) {
+            nextBtn.disabled = true;
+            nextBtn.innerText = "Finalizing...";
+            try {
+              const state = await window.__TAURI__.core.invoke("get_onboarding_state");
+              Object.assign(state, newState);
+              await window.__TAURI__.core.invoke("save_onboarding_state", { state });
+              window.location.href = "success.html";
+            } catch (err) {
+              console.error(err);
+              nextBtn.disabled = false;
+              nextBtn.innerText = "Finish Setup";
+            }
+          } else {
+            const state = JSON.parse(localStorage.getItem('ohc_onboarding_state') || '{}');
+            Object.assign(state, newState);
+            localStorage.setItem('ohc_onboarding_state', JSON.stringify(state));
+            window.location.href = "success.html";
           }
-      });
-
-      toneSelect.addEventListener('keydown', (e) => {
-          if (e.key === 'Enter') {
-              e.preventDefault();
-              nextBtn.click();
-          }
+        } else {
+          container.classList.remove('animate-shake');
+          void container.offsetWidth;
+          container.classList.add('animate-shake');
+        }
       });
     </script>
   </body>

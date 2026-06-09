@@ -50,6 +50,7 @@ fn load_ai_provider() -> Result<AiProviderView, String> {
 #[serde(rename_all = "camelCase")]
 struct OnboardingState {
     business_name: Option<String>,
+    industry: Option<String>,
     assistant_name: Option<String>,
     assistant_tone: Option<String>,
 }
