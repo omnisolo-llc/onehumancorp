@@ -49,3 +49,27 @@ impl DepartmentService {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::msgbus::MemoryBus;
+    use crate::orchestration::mesh::CentrifugeNode;
+    use ohc_builtin_agent::mesh::transport::InProcessTransport;
+
+    #[tokio::test]
+    async fn test_department_service_creation() {
+        unsafe { std::env::set_var("OHC_DATABASE_URL", "sqlite::memory:"); } //("OHC_DATABASE_URL", "sqlite::memory:");
+        let db = Arc::new(crate::db::DB::new().await.unwrap());
+        let transport = Arc::new(InProcessTransport::new());
+        let mesh = Arc::new(CentrifugeNode::new(transport));
+        let orchestrator = Arc::new(DepartmentOrchestrator::new(db, mesh));
+
+        let bus = Arc::new(MemoryBus::new());
+
+        let service = DepartmentService::new(bus, orchestrator);
+
+        let result = service.start().await;
+        assert!(result.is_ok());
+    }
+}
