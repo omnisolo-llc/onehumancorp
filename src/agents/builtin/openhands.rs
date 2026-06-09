@@ -10,6 +10,10 @@ pub enum Action {
     RunCommand { command: String },
     WriteFile { path: String, content: String },
     AgentMessage { content: String },
+    ToolExecutionStarted { tool_name: String, args: String },
+    ToolExecutionCompleted { tool_name: String, result: String },
+    LlmRequestStarted { prompt_length: usize },
+    LlmResponseReceived { response: String, usage: Option<usize> },
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -25,6 +29,15 @@ pub enum Observation {
     AgentReply {
         content: String,
     },
+    GuardrailTriggered {
+        reason: String,
+    },
+    CheckpointSaved {
+        checkpoint_id: String,
+    },
+    AgentStateChanged {
+        new_state: String,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -35,23 +48,38 @@ pub enum EventType {
 
 pub struct EventStream {
     sender: broadcast::Sender<EventType>,
+    history: std::sync::Arc<tokio::sync::RwLock<std::collections::VecDeque<EventType>>>,
+    max_history: usize,
 }
 
 impl EventStream {
     pub fn new(capacity: usize) -> Self {
         let (sender, _) = broadcast::channel(capacity);
-        Self { sender }
+        Self {
+            sender,
+            history: std::sync::Arc::new(tokio::sync::RwLock::new(std::collections::VecDeque::new())),
+            max_history: 1000,
+        }
     }
 
     pub fn subscribe(&self) -> broadcast::Receiver<EventType> {
         self.sender.subscribe()
     }
 
-    pub fn publish(
+    pub async fn publish(
         &self,
         event: EventType,
     ) -> Result<usize, broadcast::error::SendError<EventType>> {
+        let mut hist = self.history.write().await;
+        if hist.len() >= self.max_history {
+            hist.pop_front();
+        }
+        hist.push_back(event.clone());
         self.sender.send(event)
+    }
+
+    pub async fn get_history(&self) -> Vec<EventType> {
+        self.history.read().await.iter().cloned().collect()
     }
 }
 
@@ -68,7 +96,7 @@ mod tests {
         let action = EventType::Action(Action::RunCommand {
             command: "ls -la".to_string(),
         });
-        stream.publish(action.clone()).unwrap();
+        stream.publish(action.clone()).await.unwrap();
 
         let recv1 = rx1.recv().await.unwrap();
         let recv2 = rx2.recv().await.unwrap();
@@ -82,9 +110,14 @@ mod tests {
             stderr: "".to_string(),
         });
 
-        stream.publish(obs.clone()).unwrap();
+        stream.publish(obs.clone()).await.unwrap();
 
         assert_eq!(rx1.recv().await.unwrap(), obs);
         assert_eq!(rx2.recv().await.unwrap(), obs);
+
+        let history = stream.get_history().await;
+        assert_eq!(history.len(), 2);
+        assert_eq!(history[0], action);
+        assert_eq!(history[1], obs);
     }
 }

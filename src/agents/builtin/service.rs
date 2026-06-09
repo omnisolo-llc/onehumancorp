@@ -986,6 +986,34 @@ impl AgentService for AgentServiceImpl {
                         content: format!("Guardrail Tripped: {}", reason),
                         ..Default::default()
                     },
+                    AgentEvent::ToolExecutionStarted { tool_name, arguments } => RunTaskEvent {
+                        r#type: EventType::TextChunk as i32,
+                        content: format!("[EventStream] Tool Execution Started: {} with args {:?}", tool_name, arguments),
+                        ..Default::default()
+                    },
+                    AgentEvent::ToolExecutionCompleted { tool_name, result } => RunTaskEvent {
+                        r#type: EventType::TextChunk as i32,
+                        content: format!("[EventStream] Tool Execution Completed: {} => ({} bytes)", tool_name, result.len()),
+                        ..Default::default()
+                    },
+                    AgentEvent::LlmRequestStarted { prompt_length } => RunTaskEvent {
+                        r#type: EventType::TextChunk as i32,
+                        content: format!("[EventStream] LLM Request Started: {} chars prompt", prompt_length),
+                        ..Default::default()
+                    },
+                    AgentEvent::LlmResponseReceived { usage, .. } => {
+                        let tokens = usage.unwrap_or(0);
+                        RunTaskEvent {
+                            r#type: EventType::TextChunk as i32,
+                            content: format!("[EventStream] LLM Response Received: {} tokens used", tokens),
+                            ..Default::default()
+                        }
+                    },
+                    AgentEvent::StateChanged { new_state } => RunTaskEvent {
+                        r#type: EventType::TextChunk as i32,
+                        content: format!("[EventStream] Agent State Changed: {}", new_state),
+                        ..Default::default()
+                    },
                 };
                 let _ = tx_clone.try_send(Ok(pb));
             };

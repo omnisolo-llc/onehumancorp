@@ -71,6 +71,24 @@ pub enum AgentEvent {
     CostUpdate {
         total_cost_usd: f64,
     },
+    ToolExecutionStarted {
+        tool_name: String,
+        arguments: serde_json::Value,
+    },
+    ToolExecutionCompleted {
+        tool_name: String,
+        result: String,
+    },
+    LlmRequestStarted {
+        prompt_length: usize,
+    },
+    LlmResponseReceived {
+        response: String,
+        usage: Option<usize>,
+    },
+    StateChanged {
+        new_state: String,
+    },
 }
 
 /// Configuration for a single agent run.
@@ -763,9 +781,17 @@ impl Agent {
             };
 
             // 2. Call LLM API
+            let prompt_len = system_prompt.len() + messages.iter().map(|m| m.content.len()).sum::<usize>();
+            on_event(AgentEvent::LlmRequestStarted { prompt_length: prompt_len });
+
             let resp = self.llm.chat(req).await?;
             let msg = resp.message;
             let usage = resp.usage;
+
+            on_event(AgentEvent::LlmResponseReceived {
+                response: msg.content.clone(),
+                usage: Some((usage.input_tokens + usage.output_tokens) as usize),
+            });
 
             total_tokens += usage.input_tokens + usage.output_tokens;
             let turn_cost = ::server_pricing::calculator::calculate_cost(
@@ -935,6 +961,11 @@ impl Agent {
 
                 let tool = session_tools.iter().find(|t| t.name == tc.name);
                 if let Some(tool) = tool {
+                    on_event(AgentEvent::ToolExecutionStarted {
+                        tool_name: tc.name.clone(),
+                        arguments: tc.arguments.clone(),
+                    });
+
                     let res = crate::tool_executor_engine::ToolExecutionEngine::execute_tool_with_langgraph_mechanics(
                         tool,
                         tc,
@@ -943,6 +974,10 @@ impl Agent {
 
                     match res {
                         Ok(r) => {
+                            on_event(AgentEvent::ToolExecutionCompleted {
+                                tool_name: tc.name.clone(),
+                                result: r.clone(),
+                            });
                             on_event(AgentEvent::ToolCall {
                                 name: tc.name.clone(),
                                 args_json: tc.arguments.to_string(),
