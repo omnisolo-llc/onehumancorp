@@ -292,6 +292,7 @@ impl Store {
     }
 
     pub fn create_user(&self, username: String, email: String, password: String, roles: Vec<String>, org_id: String) -> Result<User, String> {
+        self.validate_org_id(&org_id)?;
         if username.is_empty() {
             return Err("username is required".to_string());
         }
@@ -370,7 +371,7 @@ impl Store {
         }
     }
 
-    fn validate_org_id(&self, org_id: &str) -> Result<(), String> {
+    pub fn validate_org_id(&self, org_id: &str) -> Result<(), String> {
         if ::server_config::get().multitenant {
             if org_id.trim().eq_ignore_ascii_case("system") {
                 return Err("tenant_id 'system' cannot be queried in multi-tenant mode".into());
@@ -922,4 +923,20 @@ mod store_tests {
 #[cfg(test)]
 mod tests {
     pub mod multitenancy_isolation;
+}
+
+#[cfg(test)]
+mod tests_create_user_isolation {
+    use super::*;
+
+    #[test]
+    fn test_store_create_user_multitenant_isolation() {
+        let store = Store::new();
+        let multitenant = ::server_config::get().multitenant;
+        let res = store.create_user("test".to_string(), "test@test".to_string(), "password123".to_string(), vec![], "system".to_string());
+        if multitenant {
+            assert!(res.is_err());
+            assert_eq!(res.unwrap_err(), "tenant_id 'system' cannot be queried in multi-tenant mode");
+        }
+    }
 }
