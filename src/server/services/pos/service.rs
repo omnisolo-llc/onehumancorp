@@ -172,7 +172,7 @@ impl PosService for MyPosService {
         }
 
         let req = request.into_inner();
-        let tenant_id = if req.tenant_id.is_empty() { auth_tenant } else { req.tenant_id };
+        let tenant_id = auth_tenant;
 
         let session_id = uuid::Uuid::new_v4().to_string();
         let pool = crate::db::get_pool();
@@ -226,7 +226,7 @@ impl PosService for MyPosService {
         }
 
         let req = request.into_inner();
-        let tenant_id = if req.tenant_id.is_empty() { auth_tenant } else { req.tenant_id };
+        let tenant_id = auth_tenant;
 
         let pool = crate::db::get_pool();
 
@@ -281,7 +281,7 @@ impl PosService for MyPosService {
         }
 
         let req = request.into_inner();
-        let tenant_id = if req.tenant_id.is_empty() { auth_tenant } else { req.tenant_id };
+        let tenant_id = auth_tenant;
 
         let pool = crate::db::get_pool();
 
