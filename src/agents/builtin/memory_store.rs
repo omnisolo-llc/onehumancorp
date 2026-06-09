@@ -382,6 +382,56 @@ impl VectorRepository {
         Ok(())
     }
 
+    pub async fn get_by_id(&self, id: &str) -> Result<Option<EmbeddingRecord>, String> {
+        match &self.store {
+            VectorMemoryStore::Postgres(pool) => {
+                let row = sqlx::query("SELECT id, tenant_id, COALESCE(agent_id, '') as agent_id, content, embedding::text as embedding, source_type, created_at, last_referenced_at, reference_count, reliability_score, owner_override, metadata FROM consolidated_memory WHERE id = $1")
+                    .bind(id)
+                    .fetch_optional(pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+                Ok(row.and_then(|r| Self::parse_record_row(&r).ok()))
+            }
+            VectorMemoryStore::Sqlite(pool) => {
+                let row = sqlx::query("SELECT id, tenant_id, COALESCE(agent_id, '') as agent_id, content, embedding, source_type, created_at, last_referenced_at, reference_count, reliability_score, owner_override, metadata FROM consolidated_memory WHERE id = ?")
+                    .bind(id)
+                    .fetch_optional(pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+                Ok(row.and_then(|r| Self::parse_record_row(&r).ok()))
+            }
+        }
+    }
+
+    fn parse_record_row<R>(row: &R) -> Result<EmbeddingRecord, String>
+    where
+        R: sqlx::Row,
+        for<'c> &'c str: sqlx::ColumnIndex<R>,
+        for<'c> String: sqlx::Decode<'c, R::Database> + sqlx::Type<R::Database>,
+        for<'c> Vec<u8>: sqlx::Decode<'c, R::Database> + sqlx::Type<R::Database>,
+        for<'c> i32: sqlx::Decode<'c, R::Database> + sqlx::Type<R::Database>,
+        for<'c> bool: sqlx::Decode<'c, R::Database> + sqlx::Type<R::Database>,
+        for<'c> DateTime<Utc>: sqlx::Decode<'c, R::Database> + sqlx::Type<R::Database>,
+    {
+        let emb_str: String = row.try_get("embedding").unwrap_or_else(|_| String::from_utf8(row.get::<Vec<u8>, _>("embedding")).unwrap_or_default());
+        let embedding: Vec<f32> = serde_json::from_str(&emb_str).unwrap_or_default();
+
+        Ok(EmbeddingRecord {
+            id: row.try_get("id").map_err(|e| e.to_string())?,
+            tenant_id: row.try_get("tenant_id").map_err(|e| e.to_string())?,
+            agent_id: row.try_get::<Option<String>, _>("agent_id").unwrap_or_default().unwrap_or_default(),
+            content: row.try_get("content").map_err(|e| e.to_string())?,
+            embedding,
+            source_type: row.try_get("source_type").map_err(|e| e.to_string())?,
+            created_at: row.try_get("created_at").map_err(|e| e.to_string())?,
+            last_referenced_at: row.try_get("last_referenced_at").map_err(|e| e.to_string())?,
+            reference_count: row.try_get("reference_count").map_err(|e| e.to_string())?,
+            reliability_score: row.try_get("reliability_score").map_err(|e| e.to_string())?,
+            owner_override: row.try_get("owner_override").map_err(|e| e.to_string())?,
+            metadata: row.try_get("metadata").unwrap_or(None),
+        })
+    }
+
     pub async fn delete(&self, id: &str) -> Result<(), String> {
         match &self.store {
             VectorMemoryStore::Postgres(pool) => {
