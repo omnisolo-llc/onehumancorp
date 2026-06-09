@@ -34,7 +34,7 @@ test.describe('Dashboard - Ambassador Agent Approval', () => {
     await expect(approvalCard.getByText('AI Draft')).toBeVisible();
 
     // 4. Click 1-Tap Approve
-    const approveBtn = approvalCard.getByRole('button', { name: /1-Tap Approve/ });
+    const approveBtn = approvalCard.getByTestId('approve-proposal');
     await expect(approveBtn).toBeVisible();
     await approveBtn.click();
 
