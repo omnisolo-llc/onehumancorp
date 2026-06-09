@@ -20,14 +20,14 @@ test.describe('My Plan Page Loop', () => {
     await expect(page.locator('span', { hasText: 'Storage Used' })).toBeVisible();
 
     // Check that Status Snapshot includes Plan and Estimated Next Bill
-    await expect(page.locator('h2', { hasText: 'Plan:' })).toBeVisible();
-    await expect(page.locator('h2', { hasText: 'Estimated Next Bill:' })).toBeVisible();
+    await expect(page.locator('h2', { hasText: 'Current Plan' })).toBeVisible();
+    await expect(page.locator('h2', { hasText: 'Estimated Next Bill' })).toBeVisible();
 
     // Check for "Upgrade Plan" or "View Upgrade Plans" buttons
-    await expect(page.locator('button', { hasText: 'View Upgrade Plans' })).toBeVisible();
+    await expect(page.locator('button', { hasText: 'Upgrade Plan' })).toBeVisible();
 
     // Check navigation buttons work correctly
-    await page.locator('button', { hasText: 'View Upgrade Plans' }).click();
+    await page.locator('button', { hasText: 'Upgrade Plan' }).click();
     await expect(page).toHaveURL('/pricing');
   });
 });
