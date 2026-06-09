@@ -270,7 +270,7 @@ function CheckoutContent() {
               disabled={isProcessing}
               className="w-full px-4 py-3 bg-indigo-50 text-indigo-700 rounded-lg font-medium hover:bg-indigo-100 transition-colors border border-indigo-100 shadow-sm flex items-center justify-center gap-2"
             >
-              Tap to Pay (Stripe Terminal)
+              Pay with Stripe
             </button>
           </WithTooltip>
 
