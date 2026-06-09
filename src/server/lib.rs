@@ -2917,14 +2917,19 @@ async fn ui_dashboard_analytics_briefing_handler(
     use axum::response::IntoResponse;
     let tenant_id = ui_tenant_id(&query);
 
-    let metrics = load_ui_dashboard_metrics(&db, &tenant_id).await.unwrap_or(UiDashboardMetrics {
+    let (metrics_res, inbox_messages_res) = tokio::join!(
+        load_ui_dashboard_metrics(&db, &tenant_id),
+        load_ui_inbox_from_db(&db, &tenant_id)
+    );
+
+    let metrics = metrics_res.unwrap_or(UiDashboardMetrics {
         active_customers: 0,
         pending_orders: 0,
         total_sales: 0.0,
         total_campaigns_sent: 0,
     });
 
-    let inbox_messages = load_ui_inbox_from_db(&db, &tenant_id).await.unwrap_or_default();
+    let inbox_messages = inbox_messages_res.unwrap_or_default();
     let unanswered_dms = inbox_messages.iter().filter(|m| m.get("status").and_then(|s| s.as_str()).unwrap_or("") != "closed").count();
 
     let total_sales_formatted = format!("${:.2}", metrics.total_sales);
