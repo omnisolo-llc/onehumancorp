@@ -698,54 +698,6 @@ impl NativeBookingService {
         BookingSoftLockStore::for_service(self.redis_client.clone())
     }
 
-    pub async fn confirm_booking(
-        &self,
-        booking_id: &str,
-    ) -> Result<(), Status> {
-        let pool = crate::db::get_pool();
-        let mut tx = pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
-
-        // Extract tenant_id from the booking
-        let tenant_id: String = sqlx::query_scalar("SELECT tenant_id FROM bookings WHERE id = $1")
-            .bind(booking_id)
-            .fetch_one(&mut *tx)
-            .await
-            .map_err(|e| Status::internal(format!("Booking not found: {}", e)))?;
-
-        // Update booking state
-        let update_res = sqlx::query("UPDATE bookings SET status = 'confirmed', updated_at = CURRENT_TIMESTAMP WHERE id = $1 AND status IN ('pending', 'pending_payment')")
-            .bind(booking_id)
-            .execute(&mut *tx)
-            .await
-            .map_err(|e| Status::internal(e.to_string()))?;
-
-        if update_res.rows_affected() == 0 {
-            let _ = tx.rollback().await;
-            return Err(Status::failed_precondition("Booking cannot be confirmed from current state"));
-        }
-
-        // Simulate confirmation email via shared_tasks
-        let task_id = Uuid::new_v4().to_string();
-        let title = format!("Send Confirmation Email for Booking {}", booking_id);
-        let desc = "Automatically send booking confirmation after successful deposit / confirmation.".to_string();
-
-        if let Err(e) = sqlx::query(
-            "INSERT INTO shared_tasks (id, organization_id, title, description, status) VALUES ($1, $2, $3, $4, 'PENDING')"
-        )
-        .bind(task_id)
-        .bind(&tenant_id)
-        .bind(title)
-        .bind(desc)
-        .execute(&mut *tx)
-        .await {
-             let _ = tx.rollback().await;
-             return Err(Status::internal(e.to_string()));
-        }
-
-        tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
-        Ok(())
-    }
-
     async fn product_inventory_capacity(
         tenant_id: &str,
         product_id: &str,
@@ -972,11 +924,10 @@ impl BookingEngineService for NativeBookingService {
         }
 
         let initial_status = if req.requires_deposit { "pending_payment" } else { "pending" };
-        let payment_intent_id = if req.requires_deposit { Some(format!("pi_test_{}", Uuid::new_v4().to_string().replace("-", ""))) } else { None };
 
         if let Err(e) = sqlx::query(
-            "INSERT INTO bookings (id, tenant_id, customer_id, product_id, start_time, end_time, status, payment_intent_id) \
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"
+            "INSERT INTO bookings (id, tenant_id, customer_id, product_id, start_time, end_time, status) \
+             VALUES ($1, $2, $3, $4, $5, $6, $7)"
         )
         .bind(&booking_id)
         .bind(&tenant_id)
@@ -985,7 +936,6 @@ impl BookingEngineService for NativeBookingService {
         .bind(start_time)
         .bind(end_time)
         .bind(initial_status)
-        .bind(&payment_intent_id)
         .execute(&mut *tx)
         .await
         {

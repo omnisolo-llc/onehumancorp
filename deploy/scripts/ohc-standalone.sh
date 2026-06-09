@@ -89,19 +89,15 @@ echo -e "  ${GREEN}✓ UI Desktop app started with PID $APP_PID${RESET}"
 
 # Launch the Prometheus agent
 if [ "$OHC_TELEMETRY_ENABLED" = "true" ]; then
-  if command -v docker >/dev/null 2>&1; then
-    docker rm -f ohc-prometheus-agent >/dev/null 2>&1 || true
-    docker run --name ohc-prometheus-agent \
-      --memory="32m" --cpus="0.05" \
-      --log-driver json-file --log-opt max-size=10m --log-opt max-file=3 \
-      --network host \
-      -v $(pwd)/deploy/docker/prometheus/prometheus-agent.yml:/etc/prometheus/prometheus.yml \
-      prom/prometheus:latest --config.file=/etc/prometheus/prometheus.yml --enable-feature=agent > /dev/null 2>&1 &
-    PROMETHEUS_PID=$!
-    echo -e "  ${GREEN}✓ Prometheus agent started in Docker (resource constrained) with PID $PROMETHEUS_PID${RESET}"
-  else
-    echo -e "  ${DIM}⚠ Docker unavailable. Gracefully continuing without telemetry.${RESET}"
-  fi
+  docker rm -f ohc-prometheus-agent >/dev/null 2>&1 || true
+  docker run --name ohc-prometheus-agent \
+    --memory="32m" --cpus="0.05" \
+    --log-driver json-file --log-opt max-size=10m --log-opt max-file=3 \
+    --network host \
+    -v $(pwd)/deploy/docker/prometheus/prometheus-agent.yml:/etc/prometheus/prometheus.yml \
+    prom/prometheus:latest --config.file=/etc/prometheus/prometheus.yml --enable-feature=agent > /dev/null 2>&1 &
+  PROMETHEUS_PID=$!
+  echo -e "  ${GREEN}✓ Prometheus agent started in Docker (resource constrained) with PID $PROMETHEUS_PID${RESET}"
 fi
 
 # Trap INT and EXIT signals to gracefully shutdown all local processes
@@ -117,10 +113,8 @@ function cleanup {
   find "${OHC_RUNTIME_DIR}/.cache/" -type f -delete > /dev/null 2>&1 || true
   find "${OHC_RUNTIME_DIR}/downloads/" -type f -delete > /dev/null 2>&1 || true
 
-  if command -v docker >/dev/null 2>&1; then
-    docker stop ohc-prometheus-agent > /dev/null 2>&1 || true
-    docker rm ohc-prometheus-agent > /dev/null 2>&1 || true
-  fi
+  docker stop ohc-prometheus-agent > /dev/null 2>&1 || true
+  docker rm ohc-prometheus-agent > /dev/null 2>&1 || true
 
   # Wait for processes to exit
   wait $APP_PID 2>/dev/null || true

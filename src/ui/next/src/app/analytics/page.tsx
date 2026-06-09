@@ -48,7 +48,7 @@ export default function AnalyticsPage() {
         <section>
           <h2 className="text-xl font-bold font-outfit text-gray-900 mb-4">Core Metrics (30 Days)</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="app-card p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-between">
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-between">
               <div className="text-sm font-medium text-gray-500 mb-1">Total Revenue</div>
               <div className="text-3xl font-bold font-outfit text-gray-900">$4,250.00</div>
               <div className="text-xs font-semibold text-green-500 mt-2 flex items-center gap-1">
@@ -57,7 +57,7 @@ export default function AnalyticsPage() {
               </div>
             </div>
 
-            <div className="app-card p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-between">
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-between">
               <div className="text-sm font-medium text-gray-500 mb-1">Active Customers</div>
               <div className="text-3xl font-bold font-outfit text-gray-900">142</div>
               <div className="text-xs font-semibold text-green-500 mt-2 flex items-center gap-1">
@@ -66,7 +66,7 @@ export default function AnalyticsPage() {
               </div>
             </div>
 
-            <div className="app-card p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-between">
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col justify-between">
               <div className="text-sm font-medium text-gray-500 mb-1">Conversion Rate</div>
               <div className="text-3xl font-bold font-outfit text-gray-900">3.8%</div>
               <div className="text-xs font-semibold text-gray-400 mt-2 flex items-center gap-1">
@@ -85,7 +85,7 @@ export default function AnalyticsPage() {
            </h2>
 
            <div className={`grid grid-cols-1 md:grid-cols-2 gap-6 transition-all duration-500 ${!hasPro ? 'filter blur-sm select-none pointer-events-none opacity-60' : ''}`}>
-               <div className="app-card p-6 rounded-2xl shadow-sm border border-gray-100 h-64 flex flex-col">
+               <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 h-64 flex flex-col">
                    <h3 className="font-semibold text-gray-800 mb-4">Traffic Sources</h3>
                    <div className="flex-1 flex flex-col justify-center items-center gap-3">
                        {/* Mock Chart representation */}
@@ -103,7 +103,7 @@ export default function AnalyticsPage() {
                    </div>
                </div>
 
-               <div className="app-card p-6 rounded-2xl shadow-sm border border-gray-100 h-64 flex flex-col">
+               <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 h-64 flex flex-col">
                    <h3 className="font-semibold text-gray-800 mb-4">AI Buying Intent</h3>
                    <div className="flex-1 flex flex-col justify-center gap-4">
                        <div>
@@ -124,7 +124,7 @@ export default function AnalyticsPage() {
 
            {!hasPro && (
                <div className="absolute inset-0 z-10 flex items-center justify-center">
-                   <div className="bg-white/90 p-8 rounded-2xl shadow-xl border border-gray-200 text-center max-w-sm">
+                   <div className="bg-white/90 backdrop-blur-md p-8 rounded-2xl shadow-xl border border-gray-200 text-center max-w-sm">
                        <div className="text-4xl mb-3">🔒</div>
                        <h3 className="text-xl font-bold font-outfit text-gray-900 mb-2">Unlock Advanced Insights</h3>
                        <p className="text-sm text-gray-600 mb-6">See exactly where your traffic is coming from and predict buyer behavior with our Pro Plan.</p>
@@ -143,7 +143,7 @@ export default function AnalyticsPage() {
       {/* Soft Paywall Modal */}
       {showSoftPaywall && (
         <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
-          <div className="app-card w-full max-w-md rounded-2xl p-8 shadow-2xl relative overflow-hidden font-inter border border-indigo-100 text-center">
+          <div className="bg-white w-full max-w-md rounded-2xl p-8 shadow-2xl relative overflow-hidden font-inter border border-indigo-100 text-center">
             <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-50 rounded-bl-full -z-10"></div>
 
             <div className="flex justify-end mb-2">

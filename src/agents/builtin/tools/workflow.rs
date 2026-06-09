@@ -55,7 +55,7 @@ impl WorkflowExecutor {
             WorkflowShard {
                 label: "frontend-node-reviewer",
                 title: "Node, TypeScript, frontend, and Playwright code",
-                scope: "package.json, pnpm-workspace.yaml, playwright.config.ts, vitest.config.ts, src/cli/**",
+                scope: "package.json, pnpm-workspace.yaml, playwright.config.ts, vitest.config.ts, src/cli/**, verification_tests/**",
             },
             WorkflowShard {
                 label: "deploy-observability-reviewer",
@@ -70,7 +70,7 @@ impl WorkflowExecutor {
             WorkflowShard {
                 label: "test-coverage-reviewer",
                 title: "Test coverage and validation strategy",
-                scope: "all BUILD.bazel targets, deploy/tests/**, scripts/*test*, package test scripts",
+                scope: "all BUILD.bazel targets, verification_tests/**, deploy/tests/**, scripts/*test*, package test scripts",
             },
         ];
 

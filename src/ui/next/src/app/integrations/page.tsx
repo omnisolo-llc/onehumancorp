@@ -104,7 +104,7 @@ export default function Integrations() {
       {/* WhatsApp Cloud API Connect Modal */}
       {showWhatsAppModal && (
         <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4 backdrop-blur-sm">
-          <div className="app-card w-full max-w-md rounded-2xl p-6 shadow-2xl relative overflow-hidden font-inter">
+          <div className="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl relative overflow-hidden font-inter">
             <div className="flex justify-between items-start mb-4">
               <div className="w-12 h-12 bg-green-50 rounded-xl flex items-center justify-center text-2xl text-green-600 border border-green-100">
                 💬
@@ -135,7 +135,7 @@ export default function Integrations() {
       {/* Twilio Conversations Connect Modal */}
       {showTwilioModal && (
         <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4 backdrop-blur-sm">
-          <div className="app-card w-full max-w-md rounded-2xl p-6 shadow-2xl relative overflow-hidden font-inter">
+          <div className="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl relative overflow-hidden font-inter">
             <div className="flex justify-between items-start mb-4">
               <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center text-2xl text-blue-600 border border-blue-100">
                 🔔
