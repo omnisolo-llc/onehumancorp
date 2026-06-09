@@ -170,7 +170,7 @@ export default function StripeTerminalClient({ amount, productId, tenantId }: { 
 
     let lockId = '';
     try {
-      const reserveRes = await fetch('/api/v1/payments/terminal/reserve', {
+      const reserveRes = await fetch('/api/pos/terminal/reserve', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tenant_id: tenantId, product_id: productId, quantity: 1, ttl_seconds: 15 })
@@ -214,7 +214,7 @@ export default function StripeTerminalClient({ amount, productId, tenantId }: { 
         setStatus('Payment successful. Committing inventory...');
 
         try {
-          const commitRes = await fetch('/api/v1/payments/terminal/commit', {
+          const commitRes = await fetch('/api/pos/terminal/commit', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ tenant_id: tenantId, product_id: productId, quantity: 1, lock_id: lockId })
