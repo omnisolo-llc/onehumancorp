@@ -148,7 +148,7 @@ export function HelpChat() {
   return (
     <div className="help-chat-wrapper">
       {/* Floating Button */}
-      <div className="fixed bottom-24 right-6 z-[9999]">
+      <div className="fixed bottom-28 right-6 z-[9999]">
         {!isOpen && (
           <button
             onClick={() => setIsOpen(true)}

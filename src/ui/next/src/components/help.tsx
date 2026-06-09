@@ -221,7 +221,7 @@ export function HelpWidget() {
 
       {open && (
         <div id="help-widget-container" data-ui-overlay="true" className="fixed bottom-24 right-4 sm:right-6 w-[calc(100vw-32px)] sm:w-[380px] h-[75vh] sm:h-[550px] max-h-[700px] bg-white/70 backdrop-blur-[30px] saturate-200 rounded-3xl shadow-2xl flex flex-col overflow-hidden z-[90] border border-white/50 transition-all font-inter">
-          <div className="flex border-b border-white/30 bg-white/40 backdrop-blur-md overflow-x-auto scrollbar-hide">
+          <div className="flex border-b border-white/30 bg-white/50 backdrop-blur-lg overflow-x-auto scrollbar-hide rounded-t-3xl shadow-sm">
             {helpTabs.map((t) => (
               <button
                 key={t.id}
