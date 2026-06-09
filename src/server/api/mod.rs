@@ -26,4 +26,5 @@ pub mod fulfillment;
 pub mod local_seo;
 pub mod mcp_webhook;
 pub mod booking;
+pub mod recovery;
 pub mod search;

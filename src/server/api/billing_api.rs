@@ -30,6 +30,7 @@ pub struct AgentCostRow {
 pub struct CostDashboardResponse {
     pub total_revenue: i64,
     pub total_costs: i64,
+    pub projected_monthly_cost: i64,
     pub llm_cost: i64,
     pub storage_cost: i64,
     pub payment_fees: i64,
@@ -218,7 +219,7 @@ pub async fn cost_dashboard_handler(
                 auth.org_id.clone()
             }
         },
-        None => return Json(CostDashboardResponse { total_revenue: 0, total_costs: 0, llm_cost: 0, storage_cost: 0, payment_fees: 0, network_cost: 0, compute_cost: 0, bandwidth_savings: 0, cache_hit_rate: 0.0, cost_per_1k_tokens: 0.0, period_start: "2024-05-01".to_string(), period_end: "2024-05-31".to_string(), trend: vec![], agent_costs: vec![], department_tier_usage: empty_department_tier_usage_response() })
+        None => return Json(CostDashboardResponse { total_revenue: 0, total_costs: 0, projected_monthly_cost: 0, llm_cost: 0, storage_cost: 0, payment_fees: 0, network_cost: 0, compute_cost: 0, bandwidth_savings: 0, cache_hit_rate: 0.0, cost_per_1k_tokens: 0.0, period_start: "2024-05-01".to_string(), period_end: "2024-05-31".to_string(), trend: vec![], agent_costs: vec![], department_tier_usage: empty_department_tier_usage_response() })
     };
 
     let cache = COST_DASHBOARD_CACHE.get_or_init(|| HybridCache::new(None));
@@ -252,8 +253,9 @@ pub async fn cost_dashboard_handler(
         )
     });
 
+    let hub_clone_for_storage = hub_clone.clone();
     let storage_future = tokio::task::spawn(async move {
-        hub_clone.tracker().get_tenant_storage_used(&tenant_id_clone).await.unwrap_or(0)
+        hub_clone_for_storage.tracker().get_tenant_storage_used(&tenant_id_clone).await.unwrap_or(0)
     });
 
     let trend_future = tokio::task::spawn({
@@ -272,7 +274,15 @@ pub async fn cost_dashboard_handler(
         }
     });
 
-    let (storage_res, auditor_res, trend_res, agent_costs_res) = tokio::join!(storage_future, auditor_future, trend_future, agent_costs_future);
+    let department_future = tokio::task::spawn({
+        let h = hub_clone.clone();
+        let t = tenant_id.clone();
+        async move {
+            department_tier_usage_for_tenant(&h, &t).await
+        }
+    });
+
+    let (storage_res, auditor_res, trend_res, agent_costs_res, department_res) = tokio::join!(storage_future, auditor_future, trend_future, agent_costs_future, department_future);
 
     let storage_bytes = storage_res.unwrap_or(0);
     let (llm_cost_f64, total_revenue_f64, payment_fees_f64, compute_cost_f64, network_cost_f64, bandwidth_savings_f64, total_tokens, cached_tokens) = auditor_res.unwrap_or((0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0, 0));
@@ -296,12 +306,12 @@ pub async fn cost_dashboard_handler(
     let storage_cost_f64 = storage_gb * 0.10; // $0.10 per GB
 
     let total_costs_f64 = llm_cost_f64 + storage_cost_f64 + payment_fees_f64 + compute_cost_f64 + network_cost_f64;
-
-    let department_tier_usage = department_tier_usage_for_tenant(&hub, &tenant_id).await;
+    let department_tier_usage = department_res.unwrap_or_else(|_| empty_department_tier_usage_response());
 
     let resp = CostDashboardResponse {
         total_revenue: (total_revenue_f64 * 100.0).round() as i64,
         total_costs: (total_costs_f64 * 100.0).round() as i64,
+        projected_monthly_cost: (total_costs_f64 * 100.0 * 30.0 / 7.0).round() as i64,
         llm_cost: (llm_cost_f64 * 100.0).round() as i64,
         storage_cost: (storage_cost_f64 * 100.0).round() as i64,
         payment_fees: (payment_fees_f64 * 100.0).round() as i64,
