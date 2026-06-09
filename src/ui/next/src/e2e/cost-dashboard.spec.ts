@@ -19,6 +19,9 @@ test.describe('Cost Dashboard Loop', () => {
     // Check that Total Costs is displayed
     await expect(page.locator('h2', { hasText: 'Total Costs' }).first()).toBeVisible();
 
+    // Check that Projected Monthly Cost is displayed
+    await expect(page.locator('h2', { hasText: 'Projected Monthly Cost' })).toBeVisible();
+
     // Check that Cost Breakdown section is present
     await expect(page.locator('h2', { hasText: 'Cost Breakdown' })).toBeVisible();
 
