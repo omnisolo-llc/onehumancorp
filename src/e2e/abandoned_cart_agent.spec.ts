@@ -1,28 +1,39 @@
 import { test, expect } from './fixtures';
 
 test.describe('Automated Cart Recovery Agent', () => {
-  test('Agent automatically dispatches AI generated message for abandoned cart', async ({ page, request }) => {
-    // 1. Merchant views their dashboard to confirm baseline
-    await page.goto('/dashboard');
-    await expect(page.getByRole('heading', { name: /Dashboard|Overview/i })).toBeVisible({ timeout: 15000 });
+  test('Agent automatically dispatches AI generated message for abandoned cart', async ({ page }) => {
+    // 1. Navigate to the Cart Recovery page
+    await page.goto('/cart-recovery');
 
-    // 2. We mock the server-side trigger for cart recovery because waiting 4 hours in an E2E test is impossible
-    // In a real environment, this is triggered via PostgreSQL SKIP LOCKED on a schedule.
-    const triggerRes = await request.post('/api/v1/growth/campaign/send-cart', {
-        data: {
-           customer_name: "Alice",
-           cart_value: "$45.00"
-        }
-    });
+    // Wait for the page to load and check the title
+    await expect(page.getByRole('heading', { name: /Abandoned Cart Recovery/i })).toBeVisible({ timeout: 15000 });
+
+    // Ensure the truthful count is displayed for abandoned carts (we seeded 1)
+    await expect(page.getByRole('button', { name: /Send to 1 Abandoned Carts/i })).toBeVisible({ timeout: 15000 });
+
+    // Enter test values to generate context
+    await page.getByLabel(/Customer Name/i).fill('Alice');
+    await page.getByLabel(/Cart Value/i).fill('$45.00');
+
+    // 2. Click Generate AI Campaign
+    await page.getByRole('button', { name: /Generate AI Campaign/i }).click();
+
+    // Verify draft is generated (the backend mocked text or real text)
+    await expect(page.locator('text=Hi Alice')).toBeVisible({ timeout: 15000 });
+
+    // 3. Click Send to 1 Abandoned Carts
+    await page.getByRole('button', { name: /Send to 1 Abandoned Carts/i }).click();
+
+    // Verify success message
+    await expect(page.locator('text=Campaign sent to 1 abandoned carts!')).toBeVisible({ timeout: 15000 });
 
     // Wait for the action to log
     await page.waitForTimeout(500);
 
-    // 3. Navigate to a report or dashboard feed where the merchant can see the action log
-    // We check the agent activity log or the Business Advisory Report
+    // 4. Navigate to agent-feed where the merchant can see the action log
     await page.goto('/agent-feed');
 
     // The feed should mention the cart recovery agent took action, verifying the whole cycle
-    await expect(page.locator('body')).toContainText(/recovered|abandoned cart|Salesperson/i, { timeout: 15000 });
+    await expect(page.locator('body')).toContainText(/cart_recovery_sent/i, { timeout: 15000 });
   });
 });

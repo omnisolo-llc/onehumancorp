@@ -20,14 +20,13 @@ export default function CartRecoveryPage() {
       setHasPro(localStorage.getItem('has_pro') === 'true');
     }
 
-    // Fetch the real number of abandoned carts from the backend or mock data
     const fetchAbandonedCartsCount = async () => {
       try {
         const res = await fetch('/api/v1/growth/campaign/abandoned-carts-count');
         const data = await res.json();
         setAbandonedCartsCount(data.count || 0);
       } catch (e) {
-        setAbandonedCartsCount(0); // Fallback real-looking data
+        setAbandonedCartsCount(0);
       }
     };
     fetchAbandonedCartsCount();
@@ -80,23 +79,23 @@ export default function CartRecoveryPage() {
   };
 
   const handleSend = async () => {
-    // Making a simulated API call to the backend to "send" the emails
     try {
-      const res = await fetch('/api/v1/growth/campaign/send', {
+      const res = await fetch('/api/v1/growth/campaign/send-cart', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-           name: "Abandoned Cart Recovery",
-           subject: "Recover your cart",
-           body: generatedDraft,
-           target_segment: "abandoned_carts"
+           customer_name: customerName,
+           cart_value: cartValue,
+           draft: generatedDraft || ""
         })
       });
-      setIsSent(true);
+      if (res.ok) {
+        setIsSent(true);
+      } else {
+        console.error("Failed to send cart recovery");
+      }
     } catch (e) {
       console.error(e);
-      // Fallback for UI if backend is completely unreachable
-      setIsSent(true);
     }
   };
 

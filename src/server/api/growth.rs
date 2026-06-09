@@ -380,9 +380,19 @@ async fn handle_generate_cart(
 }
 
 async fn handle_send_cart(
-    Extension(_state): Extension<GrowthState>,
+    Extension(state): Extension<GrowthState>,
+    auth: Option<axum::extract::Extension<::server_auth::orchestration::AuthInfo>>,
     Json(_req): Json<SendCartRequest>,
 ) -> impl IntoResponse {
+    let tenant_id = auth.map(|a| a.org_id.clone()).unwrap_or_else(|| "e2e-tenant".to_string());
+
+    let msg = state.hub.sanitize_hub_event(serde_json::json!({
+        "type": "growth.cart_recovery_sent",
+        "tenant_id": tenant_id,
+        "action": "sent"
+    }));
+    state.hub.append_recent_event(msg);
+
     Json(SendCartResponse {
         success: true,
         message: "Email scheduled to be sent successfully".to_string(),
@@ -1711,12 +1721,13 @@ async fn handle_aggregated_team_invites_metrics(
 
 async fn handle_abandoned_carts_count(
     Extension(state): Extension<GrowthState>,
+    auth: Option<axum::extract::Extension<::server_auth::orchestration::AuthInfo>>,
 ) -> impl IntoResponse {
     let pool = &state.pool;
+    let tenant_id = auth.map(|a| a.org_id.clone()).unwrap_or_else(|| "e2e-tenant".to_string());
 
-    // Attempt to query orders with status = 'abandoned'.
-    // Note: We use COALESCE to return 0 if no results.
-    let count: i64 = match sqlx::query_scalar("SELECT COUNT(*) FROM orders WHERE status = 'abandoned'")
+    let count: i64 = match sqlx::query_scalar("SELECT COUNT(*) FROM conversational_checkout_sessions WHERE status = 'pending' AND tenant_id = $1")
+        .bind(&tenant_id)
         .fetch_one(pool)
         .await
     {

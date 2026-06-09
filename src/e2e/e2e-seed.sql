@@ -338,3 +338,8 @@ VALUES
   ('action-test-1', 'triage-test-1', 'test-tenant', 'Draft Reply', 'Hi Maya! I can definitely help with the custom cake. It will be $50.'),
   ('action-test-2', 'triage-test-2', 'test-tenant', 'Draft Reply', 'We deliver between 9 AM and 5 PM on weekdays.')
 ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO conversational_checkout_sessions (id, tenant_id, customer_id, type, amount, status, created_at, updated_at)
+VALUES
+  ('seed_cart_session_1', 'e2e-tenant', 'seed-customer-1', 'full', 4500, 'pending', NOW() - INTERVAL '2 hours', NOW() - INTERVAL '2 hours')
+ON CONFLICT (id) DO NOTHING;
