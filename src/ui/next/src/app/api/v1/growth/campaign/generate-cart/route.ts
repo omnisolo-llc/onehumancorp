@@ -37,7 +37,7 @@ export async function POST(request: Request) {
     });
 
     if (!backendRes.ok) {
-      console.error(`Backend API error: ${backendRes.status} ${backendRes.statusText}`);
+      console.warn(`Backend API warn: ${backendRes.status} ${backendRes.statusText}`);
       // Fallback for demo purposes if backend is not available
       const branding = isPro ? '' : '\n\n⚡ Powered by OHC';
       return NextResponse.json({
@@ -49,7 +49,7 @@ export async function POST(request: Request) {
     return NextResponse.json(data);
 
   } catch (error) {
-    console.error("Error generating cart recovery draft:", error);
+    console.warn("Warn generating cart recovery draft:", error);
     // Fallback for demo purposes if network error
     return NextResponse.json(
         {

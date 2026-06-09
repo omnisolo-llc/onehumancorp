@@ -737,6 +737,7 @@ impl DB {
                         owner_id TEXT,
                         business_name TEXT,
                         tier TEXT,
+                        subdomain TEXT,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         _sync_status TEXT DEFAULT 'pending',
