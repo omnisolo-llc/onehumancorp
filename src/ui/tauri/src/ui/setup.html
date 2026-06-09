@@ -38,7 +38,7 @@
         font-size: 14px;
         margin-bottom: 20px;
       }
-      input {
+      input, select {
         width: 100%;
         padding: 14px;
         min-height: 44px;
@@ -47,11 +47,14 @@
         border-radius: 8px;
         box-sizing: border-box;
         font-size: 16px;
-        background: rgba(255, 255, 255, 0.5);
-      }
-      input:focus {
+        background: rgba(255, 255, 255, 0.1);
         outline: none;
+        transition: border-color 0.2s, background 0.2s;
+        color: #1d1d1f;
+      }
+      input:focus, select:focus {
         border-color: #0066FF;
+        background: rgba(255, 255, 255, 0.15);
       }
       button {
         background-color: #0066FF;
@@ -65,7 +68,6 @@
         cursor: pointer;
         width: 100%;
         transition: background-color 0.2s, transform 0.1s;
-        box-shadow: 0 4px 14px 0 rgba(0, 102, 255, 0.39);
       }
       button:hover {
         background-color: #0052cc;
@@ -73,23 +75,46 @@
       button:active {
         transform: scale(0.98);
       }
-
       .error-msg {
         color: #FF3B30;
         font-size: 12px;
         margin-top: -15px;
         margin-bottom: 15px;
-        display: none;
         text-align: left;
+        display: none;
       }
-
       @keyframes shake {
         0%, 100% { transform: translateX(0); }
         25% { transform: translateX(-5px); }
         75% { transform: translateX(5px); }
       }
       .animate-shake {
-        animation: shake 0.2s ease-in-out 0s 2;
+        animation: shake 0.4s ease-in-out;
+      }
+      .step {
+        display: none;
+      }
+      .step.active {
+        display: block;
+      }
+      .back-btn {
+        background: none;
+        color: #0066FF;
+        border: none;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        padding: 0;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        min-height: auto;
+        width: auto;
+      }
+      .back-btn:hover {
+        background: none;
+        text-decoration: underline;
       }
 
       @media (prefers-color-scheme: dark) {
@@ -108,12 +133,12 @@
         p {
           color: #A1A1A6;
         }
-        input {
+        input, select {
           background: rgba(255, 255, 255, 0.1);
           border: 1px solid rgba(255, 255, 255, 0.2);
           color: #F5F5F7;
         }
-        input:focus {
+        input:focus, select:focus {
           border-color: #0066FF;
           background: rgba(255, 255, 255, 0.15);
         }
@@ -122,63 +147,84 @@
   </head>
   <body>
     <div class="container" id="form-container">
-      <h1>What's the name of your business?</h1>
-      <p>We'll use this to set up your workspace.</p>
-      <input type="text" id="business-name" placeholder="e.g. Maya's Bakery" />
-      <div id="name-error" class="error-msg">Business Name must be at least 3 characters.</div>
-      <button id="next-btn" data-tooltip="Click to save your business name and proceed.">Next</button>
+      <div id="step1" class="step active">
+        <h1>What's the name of your business?</h1>
+        <p>We'll use this to set up your workspace.</p>
+        <input type="text" id="business-name" placeholder="e.g. Maya's Bakery" />
+        <div id="name-error" class="error-msg">Business Name must be at least 3 characters.</div>
+        <button id="next-btn-1" data-tooltip="Click to proceed to the next step.">Next</button>
+      </div>
+
+      <div id="step2" class="step">
+        <button class="back-btn" id="back-btn-1">
+          <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg> Back
+        </button>
+        <h1>Set up your Assistant</h1>
+        <p>Give your AI assistant a name and tone.</p>
+        <input type="text" id="assistant-name" placeholder="e.g. Jarvis" />
+        <div id="assistant-name-error" class="error-msg">Please enter a name for your assistant.</div>
+        <select id="assistant-tone">
+          <option value="" disabled selected>Select a tone</option>
+          <option value="Professional">Professional</option>
+          <option value="Friendly">Friendly</option>
+          <option value="Concise">Concise</option>
+        </select>
+        <div id="tone-error" class="error-msg">Please select a tone.</div>
+        <button id="next-btn-2">Save & Finish</button>
+      </div>
     </div>
     <script>
-      const nextBtn = document.getElementById('next-btn');
+      const nextBtn1 = document.getElementById('next-btn-1');
+      const nextBtn2 = document.getElementById('next-btn-2');
+      const backBtn1 = document.getElementById('back-btn-1');
       const nameInput = document.getElementById('business-name');
       const nameError = document.getElementById('name-error');
+
+      const assistantNameInput = document.getElementById('assistant-name');
+      const assistantNameError = document.getElementById('assistant-name-error');
+      const toneSelect = document.getElementById('assistant-tone');
+      const toneError = document.getElementById('tone-error');
+
       const container = document.getElementById('form-container');
+      const step1 = document.getElementById('step1');
+      const step2 = document.getElementById('step2');
 
       // Load existing state
       if (window.__TAURI__ && window.__TAURI__.core) {
         window.__TAURI__.core.invoke("get_onboarding_state").then((state) => {
-          if (state && state.businessName) {
-            nameInput.value = state.businessName;
+          if (state) {
+            if (state.businessName) nameInput.value = state.businessName;
+            if (state.assistantName) assistantNameInput.value = state.assistantName;
+            if (state.assistantTone) toneSelect.value = state.assistantTone;
           }
         }).catch(console.error);
       } else {
-        const stored = localStorage.getItem('businessName');
-        if (stored) {
-          nameInput.value = stored;
-        }
+        const storedBusinessName = localStorage.getItem('businessName');
+        if (storedBusinessName) nameInput.value = storedBusinessName;
+
+        const storedAssistantName = localStorage.getItem('assistantName');
+        if (storedAssistantName) assistantNameInput.value = storedAssistantName;
+
+        const storedTone = localStorage.getItem('assistantTone');
+        if (storedTone) toneSelect.value = storedTone;
       }
 
-      if (nameInput) {
-        nameInput.addEventListener("keydown", (e) => {
-          if (e.key === "Enter") {
-            e.preventDefault();
-            nextBtn.click();
-          }
-        });
+      function showStep(stepId) {
+        document.querySelectorAll('.step').forEach(el => el.classList.remove('active'));
+        document.getElementById(stepId).classList.add('active');
       }
-      if (nextBtn) {
-        nextBtn.addEventListener('click', () => {
+
+      if (backBtn1) {
+        backBtn1.addEventListener('click', () => showStep('step1'));
+      }
+
+      if (nextBtn1) {
+        nextBtn1.addEventListener('click', () => {
            const name = nameInput.value.trim();
            if (name.length >= 3) {
                nameError.style.display = 'none';
                nameInput.style.borderColor = 'rgba(255, 255, 255, 0.5)';
-               if (window.__TAURI__ && window.__TAURI__.core) {
-                 nextBtn.disabled = true;
-                 nextBtn.innerText = "Saving...";
-                 window.__TAURI__.core.invoke("get_onboarding_state").then((state) => {
-                   state.businessName = name;
-                   return window.__TAURI__.core.invoke("save_onboarding_state", { state });
-                 }).then(() => {
-                   window.location.href = "assistant-setup.html";
-                 }).catch((err) => {
-                   console.error(err);
-                   nextBtn.disabled = false;
-                   nextBtn.innerText = "Next";
-                 });
-               } else {
-                 localStorage.setItem('businessName', name);
-                 window.location.href = "assistant-setup.html";
-               }
+               showStep('step2');
            } else {
                nameError.style.display = 'block';
                nameInput.style.borderColor = '#FF3B30';
@@ -189,385 +235,445 @@
         });
       }
 
-      nameInput.addEventListener('keydown', (e) => {
-          if (e.key === 'Enter') {
-              e.preventDefault();
-              nextBtn.click();
-          }
-      });
+      if (nameInput) {
+        nameInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                nextBtn1.click();
+            }
+        });
 
-      nameInput.addEventListener('input', () => {
-          if (nameInput.value.trim().length >= 3) {
-              nameError.style.display = 'none';
-              nameInput.style.borderColor = 'rgba(255, 255, 255, 0.5)';
-          }
-      });
+        nameInput.addEventListener('input', () => {
+            if (nameInput.value.trim().length >= 3) {
+                nameError.style.display = 'none';
+                nameInput.style.borderColor = 'rgba(255, 255, 255, 0.5)';
+            }
+        });
+      }
 
-      nameInput.addEventListener('keydown', (e) => {
-          if (e.key === 'Enter') {
-              e.preventDefault();
-              nextBtn.click();
-          }
-      });
+      if (nextBtn2) {
+        nextBtn2.addEventListener('click', () => {
+           let isValid = true;
+           const businessName = nameInput.value.trim();
+           const assistantName = assistantNameInput.value.trim();
+           const tone = toneSelect.value;
+
+           if (!assistantName || assistantName.length < 3) {
+               assistantNameError.style.display = 'block';
+               assistantNameInput.style.borderColor = '#FF3B30';
+               isValid = false;
+           } else {
+               assistantNameError.style.display = 'none';
+               assistantNameInput.style.borderColor = 'rgba(255, 255, 255, 0.5)';
+           }
+
+           if (!tone) {
+               toneError.style.display = 'block';
+               toneSelect.style.borderColor = '#FF3B30';
+               isValid = false;
+           } else {
+               toneError.style.display = 'none';
+               toneSelect.style.borderColor = 'rgba(255, 255, 255, 0.5)';
+           }
+
+           if (isValid) {
+               if (window.__TAURI__ && window.__TAURI__.core) {
+                 nextBtn2.disabled = true;
+                 nextBtn2.innerText = "Saving...";
+                 window.__TAURI__.core.invoke("get_onboarding_state").then((state) => {
+                   state = state || {};
+                   state.businessName = businessName;
+                   state.assistantName = assistantName;
+                   state.assistantTone = tone;
+                   return window.__TAURI__.core.invoke("save_onboarding_state", { state });
+                 }).then(() => {
+                   window.location.href = "success.html";
+                 }).catch((err) => {
+                   console.error(err);
+                   nextBtn2.disabled = false;
+                   nextBtn2.innerText = "Save & Finish";
+                 });
+               } else {
+                 localStorage.setItem('businessName', businessName);
+                 localStorage.setItem('assistantName', assistantName);
+                 localStorage.setItem('assistantTone', tone);
+                 window.location.href = "success.html";
+               }
+           } else {
+               container.classList.remove('animate-shake');
+               void container.offsetWidth; // trigger reflow
+               container.classList.add('animate-shake');
+           }
+        });
+      }
+
+      if (assistantNameInput) {
+          assistantNameInput.addEventListener('keydown', (e) => {
+              if (e.key === 'Enter') {
+                  e.preventDefault();
+                  toneSelect.focus();
+              }
+          });
+          assistantNameInput.addEventListener('input', () => {
+              if (assistantNameInput.value.trim().length >= 3) {
+                  assistantNameError.style.display = 'none';
+                  assistantNameInput.style.borderColor = 'rgba(255, 255, 255, 0.5)';
+              }
+          });
+      }
+
+      if (toneSelect) {
+          toneSelect.addEventListener('change', () => {
+              if (toneSelect.value) {
+                  toneError.style.display = 'none';
+                  toneSelect.style.borderColor = 'rgba(255, 255, 255, 0.5)';
+              }
+          });
+          toneSelect.addEventListener('keydown', (e) => {
+              if (e.key === 'Enter') {
+                  e.preventDefault();
+                  nextBtn2.click();
+              }
+          });
+      }
     </script>
-    <script>
-document.addEventListener('DOMContentLoaded', () => {
-    // Inject tooltip CSS
-    const style = document.createElement('style');
-    style.textContent = `
-        .ohc-tooltip {
-            position: fixed;
-            background: rgba(255, 255, 255, 0.85);
-            backdrop-filter: blur(20px) saturate(210%);
-            -webkit-backdrop-filter: blur(20px) saturate(210%);
-            border: 1px solid rgba(255, 255, 255, 0.6);
-            border-radius: 12px;
-            padding: 12px 16px;
-            color: #1d1d1f;
-            font-family: "Outfit", -apple-system, BlinkMacSystemFont, sans-serif;
-            font-size: 14px;
-            line-height: 1.4;
-            max-width: 250px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-            z-index: 10000;
-            pointer-events: none;
-            opacity: 0;
-            transform: translateY(10px);
-            transition: opacity 0.2s ease, transform 0.2s ease;
-            text-align: center;
-        }
-        .ohc-tooltip.visible {
-            opacity: 1;
-            transform: translateY(0);
-        }
-        @media (prefers-color-scheme: dark) {
-            .ohc-tooltip {
-                background: rgba(22, 22, 26, 0.85);
-                border-color: rgba(255, 255, 255, 0.1);
-                color: #f5f5f7;
-            }
-        }
-    `;
-    document.head.appendChild(style);
+    <style>
+      #ohc-tooltip {
+          position: fixed;
+          background: rgba(0, 0, 0, 0.85);
+          color: white;
+          padding: 8px 12px;
+          border-radius: 6px;
+          font-size: 12px;
+          pointer-events: none;
+          z-index: 10000;
+          opacity: 0;
+          transition: opacity 0.2s;
+          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+          max-width: 200px;
+          text-align: center;
+          box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+          backdrop-filter: blur(10px);
+          -webkit-backdrop-filter: blur(10px);
+      }
+      #ohc-tooltip.visible {
+          opacity: 1;
+      }
+  </style>
+  <div id="ohc-tooltip"></div>
+  <script>
+  document.addEventListener('DOMContentLoaded', () => {
+      const tooltipEl = document.getElementById('ohc-tooltip');
+      let hideTimeout;
 
-    const tooltipEl = document.createElement('div');
-    tooltipEl.className = 'ohc-tooltip';
-    document.body.appendChild(tooltipEl);
+      function showTooltip(e, text) {
+          clearTimeout(hideTimeout);
+          tooltipEl.textContent = text;
 
-    let hideTimeout;
+          const rect = e.target.getBoundingClientRect();
+          let top = rect.bottom + 8;
+          let left = rect.left + (rect.width / 2) - (tooltipEl.offsetWidth / 2);
 
-    function showTooltip(e, text) {
-        clearTimeout(hideTimeout);
-        tooltipEl.textContent = text;
+          // Constrain to viewport
+          if (left < 10) left = 10;
+          if (left + tooltipEl.offsetWidth > window.innerWidth - 10) {
+              left = window.innerWidth - tooltipEl.offsetWidth - 10;
+          }
+          if (top + tooltipEl.offsetHeight > window.innerHeight - 10) {
+              top = rect.top - tooltipEl.offsetHeight - 8;
+          }
 
-        const targetRect = e.target.getBoundingClientRect();
+          tooltipEl.style.top = `${top}px`;
+          tooltipEl.style.left = `${left}px`;
+          tooltipEl.classList.add('visible');
+      }
 
-        // Position below the element by default
-        let top = targetRect.bottom + 10;
-        let left = targetRect.left + (targetRect.width / 2) - (tooltipEl.offsetWidth / 2);
+      function hideTooltip() {
+          hideTimeout = setTimeout(() => {
+              tooltipEl.classList.remove('visible');
+          }, 100); // slight delay to prevent flicker
+      }
 
-        // Adjust if it goes off screen
-        if (left < 10) left = 10;
-        if (left + tooltipEl.offsetWidth > window.innerWidth - 10) {
-            left = window.innerWidth - tooltipEl.offsetWidth - 10;
-        }
+      // Desktop hover
+      document.addEventListener('mouseover', (e) => {
+          const target = e.target.closest('[data-tooltip]');
+          if (target) {
+              showTooltip(e, target.getAttribute('data-tooltip'));
+          }
+      });
 
-        if (top + tooltipEl.offsetHeight > window.innerHeight - 10) {
-            // Position above if it doesn't fit below
-            top = targetRect.top - tooltipEl.offsetHeight - 10;
-        }
+      document.addEventListener('mouseout', (e) => {
+          if (e.target.closest('[data-tooltip]')) {
+              hideTooltip();
+          }
+      });
 
-        tooltipEl.style.top = `${top}px`;
-        tooltipEl.style.left = `${left}px`;
-        tooltipEl.classList.add('visible');
-    }
+      // Mobile long press (contextmenu) or touchstart
+      let touchTimeout;
+      document.addEventListener('touchstart', (e) => {
+          const target = e.target.closest('[data-tooltip]');
+          if (target) {
+              touchTimeout = setTimeout(() => {
+                  showTooltip(e, target.getAttribute('data-tooltip'));
+              }, 500); // 500ms long press
+          }
+      });
 
-    function hideTooltip() {
-        hideTimeout = setTimeout(() => {
-            tooltipEl.classList.remove('visible');
-        }, 100); // slight delay to prevent flicker
-    }
+      document.addEventListener('touchend', () => {
+          clearTimeout(touchTimeout);
+          hideTooltip();
+      });
 
-    // Desktop hover
-    document.addEventListener('mouseover', (e) => {
-        const target = e.target.closest('[data-tooltip]');
-        if (target) {
-            showTooltip(e, target.getAttribute('data-tooltip'));
-        }
-    });
+      document.addEventListener('touchmove', () => {
+          clearTimeout(touchTimeout);
+          hideTooltip();
+      });
+  });
 
-    document.addEventListener('mouseout', (e) => {
-        if (e.target.closest('[data-tooltip]')) {
-            hideTooltip();
-        }
-    });
+  </script>
+      <script>
+  document.addEventListener('DOMContentLoaded', () => {
+      // Inject chat CSS
+      const style = document.createElement('style');
+      style.textContent = `
+          #ohc-help-btn {
+              position: fixed;
+              bottom: 20px;
+              right: 20px;
+              width: 56px;
+              height: 56px;
+              border-radius: 28px;
+              background: #0066FF;
+              color: white;
+              border: none;
+              box-shadow: 0 4px 14px rgba(0, 102, 255, 0.4);
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              cursor: pointer;
+              z-index: 9999;
+              transition: transform 0.2s;
+          }
+          #ohc-help-btn:hover {
+              transform: scale(1.05);
+          }
+          #ohc-help-btn svg {
+              width: 28px;
+              height: 28px;
+              fill: none;
+              stroke: currentColor;
+              stroke-width: 2;
+          }
+          #ohc-help-chat-overlay {
+              position: fixed;
+              bottom: 90px;
+              right: 20px;
+              width: 350px;
+              height: 500px;
+              max-height: calc(100vh - 120px);
+              max-width: calc(100vw - 40px);
+              background: rgba(255, 255, 255, 0.85);
+              backdrop-filter: blur(30px) saturate(210%);
+              -webkit-backdrop-filter: blur(30px) saturate(210%);
+              border: 1px solid rgba(255, 255, 255, 0.6);
+              border-radius: 20px;
+              box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+              display: none;
+              flex-direction: column;
+              z-index: 9998;
+              overflow: hidden;
+              font-family: "Outfit", sans-serif;
+              transform-origin: bottom right;
+              animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+          }
+          @keyframes popIn {
+              0% { transform: scale(0.5); opacity: 0; }
+              100% { transform: scale(1); opacity: 1; }
+          }
+          #ohc-help-chat-header {
+              padding: 15px 20px;
+              border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              background: rgba(255, 255, 255, 0.5);
+          }
+          #ohc-help-chat-header h3 {
+              margin: 0;
+              font-size: 16px;
+              color: #1d1d1f;
+          }
+          #ohc-help-close {
+              background: none;
+              border: none;
+              color: #86868b;
+              cursor: pointer;
+              padding: 5px;
+          }
+          #ohc-help-close:hover { color: #1d1d1f; }
+          #ohc-help-messages {
+              flex-grow: 1;
+              padding: 20px;
+              overflow-y: auto;
+              display: flex;
+              flex-direction: column;
+              gap: 15px;
+          }
+          .msg {
+              max-width: 85%;
+              padding: 12px 16px;
+              border-radius: 18px;
+              font-size: 14px;
+              line-height: 1.4;
+          }
+          .msg-user {
+              align-self: flex-end;
+              background: #0066FF;
+              color: white;
+              border-bottom-right-radius: 4px;
+          }
+          .msg-ai {
+              align-self: flex-start;
+              background: rgba(0, 0, 0, 0.05);
+              color: #1d1d1f;
+              border-bottom-left-radius: 4px;
+          }
+          .msg-ai a {
+              color: #0066FF;
+              font-weight: 600;
+              text-decoration: none;
+              display: block;
+              margin-top: 5px;
+          }
+          #ohc-help-input-area {
+              padding: 15px;
+              border-top: 1px solid rgba(0, 0, 0, 0.1);
+              display: flex;
+              gap: 10px;
+              background: rgba(255, 255, 255, 0.5);
+          }
+          #ohc-help-input {
+              flex-grow: 1;
+              border: 1px solid rgba(0, 0, 0, 0.2);
+              border-radius: 20px;
+              padding: 10px 15px;
+              outline: none;
+              background: rgba(255, 255, 255, 0.8);
+              font-size: 14px;
+          }
+          #ohc-help-input:focus { border-color: #0066FF; }
+          #ohc-help-send {
+              background: #0066FF;
+              color: white;
+              border: none;
+              width: 40px;
+              height: 40px;
+              border-radius: 20px;
+              cursor: pointer;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+          }
 
-    // Mobile long press (contextmenu) or touchstart
-    let touchTimeout;
-    document.addEventListener('touchstart', (e) => {
-        const target = e.target.closest('[data-tooltip]');
-        if (target) {
-            touchTimeout = setTimeout(() => {
-                showTooltip(e, target.getAttribute('data-tooltip'));
-            }, 500); // 500ms long press
-        }
-    });
+          @media (prefers-color-scheme: dark) {
+              #ohc-help-chat-overlay {
+                  background: rgba(22, 22, 26, 0.85);
+                  border-color: rgba(255, 255, 255, 0.1);
+              }
+              #ohc-help-chat-header, #ohc-help-input-area {
+                  background: rgba(0, 0, 0, 0.2);
+                  border-color: rgba(255, 255, 255, 0.1);
+              }
+              #ohc-help-chat-header h3 { color: #f5f5f7; }
+              .msg-ai {
+                  background: rgba(255, 255, 255, 0.1);
+                  color: #f5f5f7;
+              }
+              #ohc-help-input {
+                  background: rgba(0, 0, 0, 0.3);
+                  border-color: rgba(255, 255, 255, 0.2);
+                  color: white;
+              }
+          }
+      `;
+      document.head.appendChild(style);
 
-    document.addEventListener('touchend', () => {
-        clearTimeout(touchTimeout);
-        hideTooltip();
-    });
+      // Inject HTML
+      const btn = document.createElement('button');
+      btn.id = 'ohc-help-btn';
+      btn.setAttribute('aria-label', 'Open help chat');
+      btn.innerHTML = `<svg viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
+      document.body.appendChild(btn);
 
-    document.addEventListener('touchmove', () => {
-        clearTimeout(touchTimeout);
-        hideTooltip();
-    });
-});
+      const overlay = document.createElement('div');
+      overlay.id = 'ohc-help-chat-overlay';
+      overlay.innerHTML = `
+          <div id="ohc-help-chat-header">
+              <h3>Ask AI Help</h3>
+              <button id="ohc-help-close" aria-label="Close help chat">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path></svg>
+              </button>
+          </div>
+          <div id="ohc-help-messages">
+              <div class="msg msg-ai">Hi! I am your AI Help Agent! How can I assist you with OHC today?</div>
+          </div>
+          <div id="ohc-help-input-area">
+              <input type="text" id="ohc-help-input" placeholder="Ask me anything..." />
+              <button id="ohc-help-send" aria-label="Send message">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
+              </button>
+          </div>
+      `;
+      document.body.appendChild(overlay);
 
-</script>
-    <script>
-document.addEventListener('DOMContentLoaded', () => {
-    // Inject chat CSS
-    const style = document.createElement('style');
-    style.textContent = `
-        #ohc-help-btn {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            width: 56px;
-            height: 56px;
-            border-radius: 28px;
-            background: #0066FF;
-            color: white;
-            border: none;
-            box-shadow: 0 4px 14px rgba(0, 102, 255, 0.4);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            z-index: 9999;
-            transition: transform 0.2s;
-        }
-        #ohc-help-btn:hover {
-            transform: scale(1.05);
-        }
-        #ohc-help-btn svg {
-            width: 28px;
-            height: 28px;
-            fill: none;
-            stroke: currentColor;
-            stroke-width: 2;
-        }
-        #ohc-help-chat-overlay {
-            position: fixed;
-            bottom: 90px;
-            right: 20px;
-            width: 350px;
-            height: 500px;
-            max-height: calc(100vh - 120px);
-            max-width: calc(100vw - 40px);
-            background: rgba(255, 255, 255, 0.85);
-            backdrop-filter: blur(30px) saturate(210%);
-            -webkit-backdrop-filter: blur(30px) saturate(210%);
-            border: 1px solid rgba(255, 255, 255, 0.6);
-            border-radius: 20px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
-            display: none;
-            flex-direction: column;
-            z-index: 9998;
-            overflow: hidden;
-            font-family: "Outfit", sans-serif;
-            transform-origin: bottom right;
-            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-        @keyframes popIn {
-            0% { transform: scale(0.5); opacity: 0; }
-            100% { transform: scale(1); opacity: 1; }
-        }
-        #ohc-help-chat-header {
-            padding: 15px 20px;
-            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: rgba(255, 255, 255, 0.5);
-        }
-        #ohc-help-chat-header h3 {
-            margin: 0;
-            font-size: 16px;
-            color: #1d1d1f;
-        }
-        #ohc-help-close {
-            background: none;
-            border: none;
-            color: #86868b;
-            cursor: pointer;
-            padding: 5px;
-        }
-        #ohc-help-close:hover { color: #1d1d1f; }
-        #ohc-help-messages {
-            flex-grow: 1;
-            padding: 20px;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
-        .msg {
-            max-width: 85%;
-            padding: 12px 16px;
-            border-radius: 18px;
-            font-size: 14px;
-            line-height: 1.4;
-        }
-        .msg-user {
-            align-self: flex-end;
-            background: #0066FF;
-            color: white;
-            border-bottom-right-radius: 4px;
-        }
-        .msg-ai {
-            align-self: flex-start;
-            background: rgba(0, 0, 0, 0.05);
-            color: #1d1d1f;
-            border-bottom-left-radius: 4px;
-        }
-        .msg-ai a {
-            color: #0066FF;
-            font-weight: 600;
-            text-decoration: none;
-            display: block;
-            margin-top: 5px;
-        }
-        #ohc-help-input-area {
-            padding: 15px;
-            border-top: 1px solid rgba(0, 0, 0, 0.1);
-            display: flex;
-            gap: 10px;
-            background: rgba(255, 255, 255, 0.5);
-        }
-        #ohc-help-input {
-            flex-grow: 1;
-            border: 1px solid rgba(0, 0, 0, 0.2);
-            border-radius: 20px;
-            padding: 10px 15px;
-            outline: none;
-            background: rgba(255, 255, 255, 0.8);
-            font-size: 14px;
-        }
-        #ohc-help-input:focus { border-color: #0066FF; }
-        #ohc-help-send {
-            background: #0066FF;
-            color: white;
-            border: none;
-            width: 40px;
-            height: 40px;
-            border-radius: 20px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
+      const closeBtn = document.getElementById('ohc-help-close');
+      const messages = document.getElementById('ohc-help-messages');
+      const input = document.getElementById('ohc-help-input');
+      const sendBtn = document.getElementById('ohc-help-send');
 
-        @media (prefers-color-scheme: dark) {
-            #ohc-help-chat-overlay {
-                background: rgba(22, 22, 26, 0.85);
-                border-color: rgba(255, 255, 255, 0.1);
-            }
-            #ohc-help-chat-header, #ohc-help-input-area {
-                background: rgba(0, 0, 0, 0.2);
-                border-color: rgba(255, 255, 255, 0.1);
-            }
-            #ohc-help-chat-header h3 { color: #f5f5f7; }
-            .msg-ai {
-                background: rgba(255, 255, 255, 0.1);
-                color: #f5f5f7;
-            }
-            #ohc-help-input {
-                background: rgba(0, 0, 0, 0.3);
-                border-color: rgba(255, 255, 255, 0.2);
-                color: white;
-            }
-        }
-    `;
-    document.head.appendChild(style);
+      btn.addEventListener('click', () => {
+          overlay.style.display = 'flex';
+          input.focus();
+      });
 
-    // Inject HTML
-    const btn = document.createElement('button');
-    btn.id = 'ohc-help-btn';
-    btn.setAttribute('aria-label', 'Open help chat');
-    btn.innerHTML = `<svg viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
-    document.body.appendChild(btn);
+      closeBtn.addEventListener('click', () => {
+          overlay.style.display = 'none';
+      });
 
-    const overlay = document.createElement('div');
-    overlay.id = 'ohc-help-chat-overlay';
-    overlay.innerHTML = `
-        <div id="ohc-help-chat-header">
-            <h3>Ask AI Help</h3>
-            <button id="ohc-help-close" aria-label="Close help chat">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path></svg>
-            </button>
-        </div>
-        <div id="ohc-help-messages">
-            <div class="msg msg-ai">Hi! I am your AI Help Agent! How can I assist you with OHC today?</div>
-        </div>
-        <div id="ohc-help-input-area">
-            <input type="text" id="ohc-help-input" placeholder="Ask me anything..." />
-            <button id="ohc-help-send" aria-label="Send message">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
-            </button>
-        </div>
-    `;
-    document.body.appendChild(overlay);
+      async function sendMessage() {
+          const text = input.value.trim();
+          if (!text) return;
 
-    const closeBtn = document.getElementById('ohc-help-close');
-    const messages = document.getElementById('ohc-help-messages');
-    const input = document.getElementById('ohc-help-input');
-    const sendBtn = document.getElementById('ohc-help-send');
+          // Add user msg
+          const uMsg = document.createElement('div');
+          uMsg.className = 'msg msg-user';
+          uMsg.textContent = text;
+          messages.appendChild(uMsg);
+          input.value = '';
+          messages.scrollTop = messages.scrollHeight;
 
-    btn.addEventListener('click', () => {
-        overlay.style.display = 'flex';
-        input.focus();
-    });
+          // Fake AI response based on tests and common queries
+          setTimeout(() => {
+              const aiMsg = document.createElement('div');
+              aiMsg.className = 'msg msg-ai';
 
-    closeBtn.addEventListener('click', () => {
-        overlay.style.display = 'none';
-    });
+              if (text.toLowerCase().includes('credit card') || text.toLowerCase().includes('pay')) {
+                  aiMsg.innerHTML = `You can accept credit cards by connecting your bank account in the Payments section.<br/><a href="help_article.html?id=payments">Read the full article →</a>`;
+              } else {
+                  aiMsg.innerHTML = `I can help you with that! Check out our Help Center for a detailed guide.<br/><a href="help.html">Read the full article →</a>`;
+              }
 
-    async function sendMessage() {
-        const text = input.value.trim();
-        if (!text) return;
+              messages.appendChild(aiMsg);
+              messages.scrollTop = messages.scrollHeight;
+          }, 800);
+      }
 
-        // Add user msg
-        const uMsg = document.createElement('div');
-        uMsg.className = 'msg msg-user';
-        uMsg.textContent = text;
-        messages.appendChild(uMsg);
-        input.value = '';
-        messages.scrollTop = messages.scrollHeight;
+      sendBtn.addEventListener('click', sendMessage);
+      input.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') sendMessage();
+      });
+  });
 
-        // Fake AI response based on tests and common queries
-        setTimeout(() => {
-            const aiMsg = document.createElement('div');
-            aiMsg.className = 'msg msg-ai';
-
-            if (text.toLowerCase().includes('credit card') || text.toLowerCase().includes('pay')) {
-                aiMsg.innerHTML = `You can accept credit cards by connecting your bank account in the Payments section.<br/><a href="help_article.html?id=payments">Read the full article →</a>`;
-            } else {
-                aiMsg.innerHTML = `I can help you with that! Check out our Help Center for a detailed guide.<br/><a href="help.html">Read the full article →</a>`;
-            }
-
-            messages.appendChild(aiMsg);
-            messages.scrollTop = messages.scrollHeight;
-        }, 800);
-    }
-
-    sendBtn.addEventListener('click', sendMessage);
-    input.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') sendMessage();
-    });
-});
-
-</script>
+  </script>
   </body>
 </html>
