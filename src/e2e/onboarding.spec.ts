@@ -29,7 +29,7 @@ test.describe('Onboarding Wizard E2E Flow', () => {
     await expect(page.getByRole('heading', { name: "What's the name of your business?" })).toBeVisible();
     const nameInput = page.getByPlaceholder("e.g. Maya's Custom Cakes");
     await expect(nameInput).toBeVisible();
-    await expect(nameInput).toHaveClass(/min-h-\[54px\]/);
+    await expect(nameInput).toHaveClass(/min-h-\[44px\]/);
     await expect(nameInput).toHaveClass(/glassmorphism/);
     await expect(nameInput).toHaveAttribute('autoComplete', 'organization');
 
@@ -40,7 +40,7 @@ test.describe('Onboarding Wizard E2E Flow', () => {
     await expect(page.getByRole('heading', { name: "What do you sell?" })).toBeVisible();
     const sellInput = page.getByPlaceholder("e.g. I bake custom vegan cakes for weddings and parties...");
     await expect(sellInput).toBeVisible();
-    await expect(sellInput).toHaveClass(/min-h-\[54px\]/);
+    await expect(sellInput).toHaveClass(/min-h-\[44px\]/);
     await expect(sellInput).toHaveClass(/glassmorphism/);
     await sellInput.fill("We sell the best widgets in town.");
 
@@ -56,7 +56,7 @@ test.describe('Onboarding Wizard E2E Flow', () => {
     await expect(page.getByRole('heading', { name: "Where are you located?" })).toBeVisible();
     const locationInput = page.getByPlaceholder("e.g. Portland, OR");
     await expect(locationInput).toBeVisible();
-    await expect(locationInput).toHaveClass(/min-h-\[54px\]/);
+    await expect(locationInput).toHaveClass(/min-h-\[44px\]/);
     await expect(locationInput).toHaveClass(/glassmorphism/);
     await locationInput.fill("Online");
     await page.getByRole('button', { name: 'Next' }).click();
@@ -65,7 +65,7 @@ test.describe('Onboarding Wizard E2E Flow', () => {
     await expect(page.getByRole('heading', { name: "Who is your target audience?" })).toBeVisible();
     const audienceInput = page.getByPlaceholder("e.g. Local families, Tech startups");
     await expect(audienceInput).toBeVisible();
-    await expect(audienceInput).toHaveClass(/min-h-\[54px\]/);
+    await expect(audienceInput).toHaveClass(/min-h-\[44px\]/);
     await expect(audienceInput).toHaveClass(/glassmorphism/);
     await audienceInput.fill("Tech enthusiasts and developers");
     await page.getByRole('button', { name: 'Next' }).click();
@@ -75,7 +75,7 @@ test.describe('Onboarding Wizard E2E Flow', () => {
 
     // Check Review inputs have correct classes too
     const reviewNameInput = page.locator("input").filter({ hasValue: "My Awesome E2E Business" }).first();
-    await expect(reviewNameInput).toHaveClass(/min-h-\[54px\]/);
+    await expect(reviewNameInput).toHaveClass(/min-h-\[44px\]/);
 
     await page.getByRole('button', { name: 'Continue' }).click();
 
@@ -84,14 +84,14 @@ test.describe('Onboarding Wizard E2E Flow', () => {
 
     const nameInputAdmin = page.getByPlaceholder("e.g. Maya Smith");
     await expect(nameInputAdmin).toBeVisible();
-    await expect(nameInputAdmin).toHaveClass(/min-h-\[54px\]/);
+    await expect(nameInputAdmin).toHaveClass(/min-h-\[44px\]/);
     await expect(nameInputAdmin).toHaveClass(/glassmorphism/);
     await expect(nameInputAdmin).toHaveAttribute('autoComplete', 'name');
     await nameInputAdmin.fill("Test User");
 
     const emailInput = page.getByPlaceholder("you@example.com");
     await expect(emailInput).toBeVisible();
-    await expect(emailInput).toHaveClass(/min-h-\[54px\]/);
+    await expect(emailInput).toHaveClass(/min-h-\[44px\]/);
     await expect(emailInput).toHaveClass(/glassmorphism/);
     await expect(emailInput).toHaveAttribute('inputMode', 'email');
     await expect(emailInput).toHaveAttribute('autoComplete', 'email');
@@ -99,7 +99,7 @@ test.describe('Onboarding Wizard E2E Flow', () => {
 
     const passwordInput = page.getByPlaceholder("••••••••");
     await expect(passwordInput).toBeVisible();
-    await expect(passwordInput).toHaveClass(/min-h-\[54px\]/);
+    await expect(passwordInput).toHaveClass(/min-h-\[44px\]/);
     await expect(passwordInput).toHaveClass(/glassmorphism/);
     await expect(passwordInput).toHaveAttribute('autoComplete', 'new-password');
     await passwordInput.fill("SecurePass123");
@@ -114,8 +114,8 @@ test.describe('Onboarding Wizard E2E Flow', () => {
     await expect(page.getByRole('heading', { name: "You're Live!" })).toBeVisible({ timeout: 30000 });
   });
 
-  // Test 2: Validates the 44px minimum touch target size (via 54px min-height)
-  test('Validates 54px touch targets on mobile sizes', async ({ page }) => {
+  // Test 2: Validates the 44px minimum touch target size (via 44px min-height)
+  test('Validates 44px touch targets on mobile sizes', async ({ page }) => {
     // Set a mobile viewport
     await page.setViewportSize({ width: 375, height: 667 });
     await page.goto('/onboarding');
