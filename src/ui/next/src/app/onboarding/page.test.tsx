@@ -750,4 +750,30 @@ describe('OnboardingWizard', () => {
       expect(screen.getByText("You're Live!")).toBeInTheDocument();
     });
   });
+
+  it('Handles Save Draft button functionality', async () => {
+    const user = userEvent.setup({ delay: null });
+
+    // Mock the draft save success
+    (global.fetch as any).mockImplementation((url: string) => {
+      if (url === '/api/onboarding/draft') { return Promise.resolve({ ok: true, json: async () => ({}) }); }
+      return Promise.resolve({ ok: true, json: async () => ({ wizardState: {} }) });
+    });
+
+    await renderOnboardingWizard();
+
+    // Chat Step 1
+    const nameInput = screen.getByPlaceholderText(/Maya's Custom Cakes/i);
+    await user.type(nameInput, 'Draft Bakery');
+
+    // Click Save Draft
+    const saveDraftBtn = screen.getByRole('button', { name: /Save Draft/i });
+    await user.click(saveDraftBtn);
+
+    // Verify it saved
+    expect(global.fetch).toHaveBeenCalledWith('/api/onboarding/draft', expect.objectContaining({ method: 'POST' }));
+    await waitFor(() => {
+      expect(screen.getByText('Draft Saved!')).toBeInTheDocument();
+    });
+  });
 });

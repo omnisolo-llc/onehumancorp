@@ -14,6 +14,8 @@ import { WithTooltip } from "../../components/TooltipRegistry";
 import GrowthReferralWidget from "../components/GrowthReferralWidget";
 import { SmartBlock } from "../builder/components";
 import { UnifiedAgentFeed } from "./UnifiedAgentFeed";
+import { ReviewFeedCard } from './ReviewFeedCard';
+
 import { NeighborhoodPulseCard } from "./NeighborhoodPulseCard";
 import { PromoterCard } from "./PromoterCard";
 import { ViralLoopPerformanceWidget } from "./ViralLoopPerformanceWidget";
@@ -85,6 +87,7 @@ export default function Dashboard() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [messages, setMessages] = useState<InboxMessage[]>([]);
   const [supply, setSupply] = useState<SupplyPayload>({ vendors: [], raw_materials: [], bom_items: [] });
+  const [dashboardData, setDashboardData] = useState<any>({ pendingReviews: [] });
   const [loading, setLoading] = useState(true);
   const [ledgerBalance, setLedgerBalance] = useState<number | null>(null);
   const [ledgerCurrency, setLedgerCurrency] = useState<string>("USD");
@@ -433,6 +436,59 @@ export default function Dashboard() {
 
         <PromoterCard />
 
+        {dashboardData?.pendingReviews?.map((item: any, idx: number) => (
+             <ReviewFeedCard
+               key={idx}
+               review={{
+                 id: item.review?.id || "",
+                 rating: item.review?.rating || 5,
+                 content: item.review?.content || '',
+                 source: item.review?.source || 'sms',
+                 createdAtUnix: item.review?.createdAtUnix || Date.now() / 1000
+               }}
+               response={{
+                 id: item.response?.id || "",
+                 draftedContent: item.response?.draftedContent || "",
+                 status: item.response?.status || "draft"
+               }}
+               onApprove={async (id, content) => {
+                 try {
+                     // Optimistic update
+                     setDashboardData((prev: any) => ({
+                         ...prev,
+                         pendingReviews: prev.pendingReviews.filter((r: any) => r?.response?.id !== id)
+                     }));
+                     const res = await fetch('/api/reviews/action', {
+                         method: 'POST',
+                         headers: { 'Content-Type': 'application/json' },
+                         body: JSON.stringify({ action: 'approve', responseId: id, content })
+                     });
+                     if (!res.ok) {
+                         // Rollback if needed
+                         console.error("Failed to approve");
+                     }
+                 } catch (e) { console.error(e); }
+               }}
+               onDismiss={async (id) => {
+                 try {
+                     // Optimistic update
+                     setDashboardData((prev: any) => ({
+                         ...prev,
+                         pendingReviews: prev.pendingReviews.filter((r: any) => r?.response?.id !== id)
+                     }));
+                     const res = await fetch('/api/reviews/action', {
+                         method: 'POST',
+                         headers: { 'Content-Type': 'application/json' },
+                         body: JSON.stringify({ action: 'dismiss', responseId: id })
+                     });
+                     if (!res.ok) {
+                         console.error("Failed to dismiss");
+                     }
+                 } catch (e) { console.error(e); }
+               }}
+             />
+        ))}
+
         <UnifiedAgentFeed />
 
         <section>
@@ -699,6 +755,15 @@ export default function Dashboard() {
               </div>
               <h3 className="text-xl font-bold font-outfit text-gray-900 dark:text-white mb-2">Customer Loyalty</h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">Set up a 'Give X, Get Y' referral program and generate campaigns.</p>
+            </Link>
+
+            <Link href="/customer-referral-program" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+              <div className="flex items-start justify-between mb-4">
+                <div className="w-12 h-12 rounded-full bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">💸</div>
+                <div className="text-emerald-600 dark:text-emerald-400 font-semibold text-sm bg-emerald-50 dark:bg-emerald-900/30 px-3 py-1 rounded-full">Referrals</div>
+              </div>
+              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Customer Referral Program</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Launch a Give $10, Get $10 program to turn your customers into advocates.</p>
             </Link>
 
             <Link href="/share-cards" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
