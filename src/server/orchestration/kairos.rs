@@ -123,9 +123,10 @@ impl KairosOrchestrator {
                     if result.rows_affected() > 0 {
                         let trans_id = uuid::Uuid::new_v4().to_string();
                         sqlx::query(
-                            "INSERT INTO state_machine_transitions (id, task_id, from_state, to_state, agent_id, transitioned_at) VALUES ($1, $2, 'IN_PROGRESS', 'COMPLETED', $3, $4)"
+                            "INSERT INTO state_machine_transitions (id, tenant_id, entity_id, entity_type, from_state, to_state, agent_id, occurred_at) VALUES ($1, $2, $3, 'task', 'IN_PROGRESS', 'COMPLETED', $4, $5)"
                         )
                         .bind(trans_id)
+                        .bind(&organization_id)
                         .bind(task_id)
                         .bind(agent_id)
                         .bind(now)
@@ -167,9 +168,10 @@ impl KairosOrchestrator {
                     if result.rows_affected() > 0 {
                         let trans_id = uuid::Uuid::new_v4().to_string();
                         sqlx::query(
-                            "INSERT INTO state_machine_transitions (id, task_id, from_state, to_state, agent_id, transitioned_at) VALUES (?, ?, 'IN_PROGRESS', 'COMPLETED', ?, ?)"
+                            "INSERT INTO state_machine_transitions (id, tenant_id, entity_id, entity_type, from_state, to_state, agent_id, occurred_at) VALUES (?, ?, ?, 'task', 'IN_PROGRESS', 'COMPLETED', ?, ?)"
                         )
                         .bind(trans_id)
+                        .bind(&organization_id)
                         .bind(task_id)
                         .bind(agent_id)
                         .bind(now.to_rfc3339())
@@ -238,13 +240,14 @@ impl KairosOrchestrator {
                         let trans_id = uuid::Uuid::new_v4().to_string();
                         sqlx::query(
                             r#"
-                            INSERT INTO state_machine_transitions (id, task_id, from_state, to_state, agent_id, transitioned_at)
-                            VALUES ($1, $2, 'PENDING', 'IN_PROGRESS', $3, $4)
+                            INSERT INTO state_machine_transitions (id, tenant_id, entity_id, entity_type, from_state, to_state, agent_id, occurred_at) VALUES ($1, $2, $3, 'task', 'PENDING', 'IN_PROGRESS', $4, $5)
                             "#
                         )
                         .bind(trans_id)
+                        .bind(&organization_id)
                         .bind(&id_str)
                         .bind(agent_id)
+                        .bind(now)
                         .bind(now)
                         .execute(&mut *tx)
                         .await?;
@@ -312,11 +315,11 @@ impl KairosOrchestrator {
                         let trans_id = uuid::Uuid::new_v4().to_string();
                         sqlx::query(
                             r#"
-                            INSERT INTO state_machine_transitions (id, task_id, from_state, to_state, agent_id, transitioned_at)
-                            VALUES (?, ?, 'PENDING', 'IN_PROGRESS', ?, ?)
+                            INSERT INTO state_machine_transitions (id, tenant_id, entity_id, entity_type, from_state, to_state, agent_id, occurred_at) VALUES (?, ?, ?, 'task', 'PENDING', 'IN_PROGRESS', ?, ?)
                             "#
                         )
                         .bind(trans_id)
+                        .bind(&organization_id)
                         .bind(&task.id)
                         .bind(agent_id)
                         .bind(now.to_rfc3339())
@@ -550,11 +553,11 @@ impl KairosOrchestrator {
                         let trans_id = uuid::Uuid::new_v4().to_string();
                         sqlx::query(
                             r#"
-                            INSERT INTO state_machine_transitions (id, task_id, from_state, to_state, agent_id, transitioned_at)
-                            VALUES ($1, $2, 'PENDING', 'IN_PROGRESS', $3, $4)
+                            INSERT INTO state_machine_transitions (id, tenant_id, entity_id, entity_type, from_state, to_state, agent_id, occurred_at) VALUES ($1, $2, $3, 'task', 'PENDING', 'IN_PROGRESS', $4, $5)
                             "#
                         )
                         .bind(trans_id)
+                        .bind(&organization_id)
                         .bind(&id)
                         .bind(agent_id)
                         .bind(now)
@@ -641,11 +644,11 @@ impl KairosOrchestrator {
                         let trans_id = uuid::Uuid::new_v4().to_string();
                         sqlx::query(
                             r#"
-                            INSERT INTO state_machine_transitions (id, task_id, from_state, to_state, agent_id, transitioned_at)
-                            VALUES (?, ?, 'PENDING', 'IN_PROGRESS', ?, ?)
+                            INSERT INTO state_machine_transitions (id, tenant_id, entity_id, entity_type, from_state, to_state, agent_id, occurred_at) VALUES (?, ?, ?, 'task', 'PENDING', 'IN_PROGRESS', ?, ?)
                             "#
                         )
                         .bind(trans_id)
+                        .bind(&organization_id)
                         .bind(&task.id)
                         .bind(agent_id)
                         .bind(now.to_rfc3339())
@@ -733,11 +736,14 @@ mod tests {
         sqlx::query(
             "CREATE TABLE IF NOT EXISTS state_machine_transitions (
                 id TEXT PRIMARY KEY,
-                task_id TEXT,
-                from_state TEXT,
-                to_state TEXT,
+                tenant_id TEXT DEFAULT 'system',
+                entity_id TEXT,
+                entity_type TEXT,
+                from_state TEXT NOT NULL,
+                to_state TEXT NOT NULL,
                 agent_id TEXT,
-                transitioned_at TEXT
+                reason TEXT,
+                occurred_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
             )"
         )
         .execute(&pool)
@@ -804,11 +810,14 @@ mod tests {
         sqlx::query(
             "CREATE TABLE IF NOT EXISTS state_machine_transitions (
                 id TEXT PRIMARY KEY,
-                task_id TEXT,
-                from_state TEXT,
-                to_state TEXT,
+                tenant_id TEXT DEFAULT 'system',
+                entity_id TEXT,
+                entity_type TEXT,
+                from_state TEXT NOT NULL,
+                to_state TEXT NOT NULL,
                 agent_id TEXT,
-                transitioned_at TEXT
+                reason TEXT,
+                occurred_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
             )"
         )
         .execute(&pool)
@@ -882,11 +891,14 @@ mod tests {
         sqlx::query(
             "CREATE TABLE IF NOT EXISTS state_machine_transitions (
                 id TEXT PRIMARY KEY,
-                task_id TEXT,
-                from_state TEXT,
-                to_state TEXT,
+                tenant_id TEXT DEFAULT 'system',
+                entity_id TEXT,
+                entity_type TEXT,
+                from_state TEXT NOT NULL,
+                to_state TEXT NOT NULL,
                 agent_id TEXT,
-                transitioned_at TEXT
+                reason TEXT,
+                occurred_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
             )"
         )
         .execute(&pool)
@@ -998,11 +1010,14 @@ mod tests {
         sqlx::query(
             "CREATE TABLE IF NOT EXISTS state_machine_transitions (
                 id TEXT PRIMARY KEY,
-                task_id TEXT,
-                from_state TEXT,
-                to_state TEXT,
+                tenant_id TEXT DEFAULT 'system',
+                entity_id TEXT,
+                entity_type TEXT,
+                from_state TEXT NOT NULL,
+                to_state TEXT NOT NULL,
                 agent_id TEXT,
-                transitioned_at TEXT
+                reason TEXT,
+                occurred_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
             )"
         )
         .execute(&pool)

@@ -151,8 +151,7 @@ impl SharedTaskOrchestrator {
                     let trans_id = uuid::Uuid::new_v4().to_string();
                     sqlx::query(
                         r#"
-                        INSERT INTO state_machine_transitions (id, task_id, from_state, to_state, agent_id, transitioned_at)
-                        VALUES ($1, $2, 'PENDING', 'ASSIGNED', $3, $4)
+                        INSERT INTO state_machine_transitions (id, tenant_id, entity_id, entity_type, from_state, to_state, agent_id, occurred_at) VALUES ($1, $2, $3, 'task', 'PENDING', 'ASSIGNED', $4, $5)
                         "#
                     )
                     .bind(trans_id)
@@ -228,8 +227,7 @@ impl SharedTaskOrchestrator {
                     let trans_id = uuid::Uuid::new_v4().to_string();
                     sqlx::query(
                         r#"
-                        INSERT INTO state_machine_transitions (id, task_id, from_state, to_state, agent_id, transitioned_at)
-                        VALUES (?, ?, 'PENDING', 'ASSIGNED', ?, ?)
+                        INSERT INTO state_machine_transitions (id, tenant_id, entity_id, entity_type, from_state, to_state, agent_id, occurred_at) VALUES (?, ?, ?, 'task', 'PENDING', 'ASSIGNED', ?, ?)
                         "#
                     )
                     .bind(trans_id)
@@ -347,8 +345,7 @@ impl SharedTaskOrchestrator {
                 let trans_id = uuid::Uuid::new_v4().to_string();
                 sqlx::query(
                     r#"
-                    INSERT INTO state_machine_transitions (id, task_id, from_state, to_state, agent_id, transitioned_at)
-                    VALUES (?, ?, ?, ?, ?, ?)
+                    INSERT INTO state_machine_transitions (id, tenant_id, entity_id, entity_type, from_state, to_state, agent_id, occurred_at) VALUES (?, ?, ?, 'task', ?, ?, ?, ?)
                     "#
                 )
                 .bind(trans_id)

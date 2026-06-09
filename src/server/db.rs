@@ -1700,3 +1700,80 @@ mod e2e_tenant_isolation_swarm_tasks_tests {
         assert_eq!(count_t2.0, 0, "tenant_2 should NOT see tenant_1's task due to RLS");
     }
 }
+
+#[cfg(test)]
+mod e2e_tenant_isolation_state_machine_tests {
+    #[tokio::test]
+    async fn test_tenant_data_isolation_state_machine() {
+        if std::env::var("OHC_DATABASE_URL").is_err() {
+            return;
+        }
+
+        let database_url = std::env::var("OHC_DATABASE_URL").expect("Database URL or operation failed in test");
+        let _pool = sqlx::postgres::PgPoolOptions::new()
+            .after_release(|conn, _meta| {
+                Box::pin(async move {
+                    use sqlx::Executor;
+                    conn.execute("DISCARD ALL").await?;
+                    Ok(true)
+                })
+            })
+            .acquire_timeout(std::time::Duration::from_millis(50))
+            .before_acquire(|conn, _meta| {
+                Box::pin(async move {
+                    use sqlx::Executor;
+                    conn.execute("SET app.current_tenant = 'tenant_1'").await?;
+                    Ok(true)
+                })
+            })
+            .connect_lazy(&database_url)
+            .expect("Database URL or operation failed in test");
+
+        let _pool2 = sqlx::postgres::PgPoolOptions::new()
+            .after_release(|conn, _meta| {
+                Box::pin(async move {
+                    use sqlx::Executor;
+                    conn.execute("DISCARD ALL").await?;
+                    Ok(true)
+                })
+            })
+            .acquire_timeout(std::time::Duration::from_millis(50))
+            .before_acquire(|conn, _meta| {
+                Box::pin(async move {
+                    use sqlx::Executor;
+                    conn.execute("SET app.current_tenant = 'tenant_2'").await?;
+                    Ok(true)
+                })
+            })
+            .connect_lazy(&database_url)
+            .expect("Database URL or operation failed in test");
+
+        // 1) Clear out state_machine_transitions
+        sqlx::query("DELETE FROM state_machine_transitions").execute(&_pool).await.expect("Database URL or operation failed in test");
+
+        let unique_id = format!("sm_{}", uuid::Uuid::new_v4());
+
+        // 2) Insert as tenant_1
+        sqlx::query("INSERT INTO state_machine_transitions (id, entity_id, entity_type, from_state, to_state, tenant_id) VALUES ($1, 'e1', 'task', 'PENDING', 'IN_PROGRESS', 'tenant_1')")
+            .bind(&unique_id)
+            .execute(&_pool)
+            .await
+            .expect("Database URL or operation failed in test");
+
+        // 3) Verify tenant_1 can see it
+        let count_t1: (i64,) = sqlx::query_as("SELECT count(*) FROM state_machine_transitions WHERE id = $1")
+            .bind(&unique_id)
+            .fetch_one(&_pool)
+            .await
+            .expect("Database URL or operation failed in test");
+        assert_eq!(count_t1.0, 1, "tenant_1 should see their own transition");
+
+        // 4) Verify tenant_2 cannot see it
+        let count_t2: (i64,) = sqlx::query_as("SELECT count(*) FROM state_machine_transitions WHERE id = $1")
+            .bind(&unique_id)
+            .fetch_one(&_pool2)
+            .await
+            .expect("Database URL or operation failed in test");
+        assert_eq!(count_t2.0, 0, "tenant_2 should NOT see tenant_1's transition due to RLS");
+    }
+}

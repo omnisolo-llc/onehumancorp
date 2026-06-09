@@ -93,13 +93,16 @@ async fn test_shared_task_orchestrator_sqlite() {
         );
 
         CREATE TABLE IF NOT EXISTS state_machine_transitions (
-            id TEXT PRIMARY KEY,
-            task_id TEXT,
-            from_state TEXT,
-            to_state TEXT,
-            agent_id TEXT,
-            transitioned_at TEXT
-        );
+                    id TEXT PRIMARY KEY,
+                    tenant_id TEXT DEFAULT 'system',
+                    entity_id TEXT NOT NULL,
+                    entity_type TEXT NOT NULL DEFAULT 'task',
+                    from_state TEXT NOT NULL,
+                    to_state TEXT NOT NULL,
+                    agent_id TEXT,
+                    reason TEXT,
+                    occurred_at TEXT DEFAULT CURRENT_TIMESTAMP
+                );
         "#
     )
     .execute(&pool)
@@ -171,13 +174,16 @@ async fn test_shared_task_orchestrator_sqlite_dependencies() {
         );
 
         CREATE TABLE IF NOT EXISTS state_machine_transitions (
-            id TEXT PRIMARY KEY,
-            task_id TEXT,
-            from_state TEXT,
-            to_state TEXT,
-            agent_id TEXT,
-            transitioned_at TEXT
-        );
+                    id TEXT PRIMARY KEY,
+                    tenant_id TEXT DEFAULT 'system',
+                    entity_id TEXT NOT NULL,
+                    entity_type TEXT NOT NULL DEFAULT 'task',
+                    from_state TEXT NOT NULL,
+                    to_state TEXT NOT NULL,
+                    agent_id TEXT,
+                    reason TEXT,
+                    occurred_at TEXT DEFAULT CURRENT_TIMESTAMP
+                );
         "#
     )
     .execute(&pool)
@@ -269,13 +275,16 @@ async fn test_shared_task_orchestrator_update_and_list_sqlite() {
         );
 
         CREATE TABLE IF NOT EXISTS state_machine_transitions (
-            id TEXT PRIMARY KEY,
-            task_id TEXT,
-            from_state TEXT,
-            to_state TEXT,
-            agent_id TEXT,
-            transitioned_at TEXT
-        );
+                    id TEXT PRIMARY KEY,
+                    tenant_id TEXT DEFAULT 'system',
+                    entity_id TEXT NOT NULL,
+                    entity_type TEXT NOT NULL DEFAULT 'task',
+                    from_state TEXT NOT NULL,
+                    to_state TEXT NOT NULL,
+                    agent_id TEXT,
+                    reason TEXT,
+                    occurred_at TEXT DEFAULT CURRENT_TIMESTAMP
+                );
         "#
     )
     .execute(&pool)
@@ -443,13 +452,16 @@ async fn test_shared_task_orchestrator_concurrent_claim() {
         );
 
         CREATE TABLE IF NOT EXISTS state_machine_transitions (
-            id TEXT PRIMARY KEY,
-            task_id TEXT,
-            from_state TEXT,
-            to_state TEXT,
-            agent_id TEXT,
-            transitioned_at TEXT
-        );
+                    id TEXT PRIMARY KEY,
+                    tenant_id TEXT DEFAULT 'system',
+                    entity_id TEXT NOT NULL,
+                    entity_type TEXT NOT NULL DEFAULT 'task',
+                    from_state TEXT NOT NULL,
+                    to_state TEXT NOT NULL,
+                    agent_id TEXT,
+                    reason TEXT,
+                    occurred_at TEXT DEFAULT CURRENT_TIMESTAMP
+                );
         "#
     )
     .execute(&pool)

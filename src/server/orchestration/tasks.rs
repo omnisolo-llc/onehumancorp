@@ -186,7 +186,7 @@ impl TaskDecompositionService {
                 // Use FOR UPDATE SKIP LOCKED
                 let row_opt = sqlx::query(
                     r#"
-                    SELECT st.id FROM shared_tasks_decomposition st
+                    SELECT st.id, st.organization_id FROM shared_tasks_decomposition st
                     WHERE (st.status = 'PENDING' OR st.ultraplan_phase = 'APPROVED')
                     AND NOT EXISTS (
                         SELECT 1
@@ -211,6 +211,7 @@ impl TaskDecompositionService {
                 };
 
                 let id: String = row.get("id");
+                let organization_id: String = row.try_get("organization_id").unwrap_or_else(|_| "system".to_string());
 
                 // Transition state
                 sqlx::query(
@@ -231,11 +232,11 @@ impl TaskDecompositionService {
                 let trans_id = uuid::Uuid::new_v4().to_string();
                 sqlx::query(
                     r#"
-                    INSERT INTO state_machine_transitions (id, task_id, from_state, to_state, agent_id, transitioned_at)
-                    VALUES ($1, $2, 'PENDING', 'IN_PROGRESS', $3, $4)
+                    INSERT INTO state_machine_transitions (id, tenant_id, entity_id, entity_type, from_state, to_state, agent_id, occurred_at) VALUES ($1, $2, $3, 'task', 'PENDING', 'IN_PROGRESS', $4, $5)
                     "#
                 )
                 .bind(trans_id)
+                .bind(&organization_id)
                 .bind(&id)
                 .bind(agent_id)
                 .bind(now)
@@ -302,7 +303,7 @@ impl TaskDecompositionService {
                         )
                         LIMIT 1
                     )
-                    RETURNING id
+                    RETURNING id, organization_id
                     "#,
                 )
                 .bind(agent_id)
@@ -320,18 +321,19 @@ impl TaskDecompositionService {
                 };
 
                 let id: String = row.get("id");
+                let organization_id: String = row.try_get("organization_id").unwrap_or_else(|_| "system".to_string());
 
                 let trans_id = uuid::Uuid::new_v4().to_string();
                 sqlx::query(
                     r#"
-                    INSERT INTO state_machine_transitions (id, task_id, from_state, to_state, agent_id, transitioned_at)
-                    VALUES (?, ?, 'PENDING', 'IN_PROGRESS', ?, ?)
+                    INSERT INTO state_machine_transitions (id, tenant_id, entity_id, entity_type, from_state, to_state, agent_id, occurred_at) VALUES (?, ?, ?, 'task', 'PENDING', 'IN_PROGRESS', ?, ?)
                     "#
                 )
                 .bind(trans_id)
+                .bind(&organization_id)
                 .bind(&id)
                 .bind(agent_id)
-                .bind(now)
+                .bind(now.to_rfc3339())
                 .execute(&mut *tx)
                 .await
                 .map_err(|e| e.to_string())?;
@@ -630,7 +632,7 @@ impl TaskDecompositionService {
                 let tokens_consumed: i32 = old_status_row.try_get("tokens_consumed").unwrap_or(0);
                 let agent_role: Option<String> = old_status_row.try_get("agent_role").unwrap_or(None);
                 let model: Option<String> = old_status_row.try_get("model").unwrap_or(None);
-                let org_id: String = old_status_row.try_get("organization_id").unwrap_or_else(|_| organization_id_opt.unwrap_or_default());
+                let org_id: String = old_status_row.try_get("organization_id").unwrap_or_else(|_| organization_id_opt.clone().unwrap_or_default());
 
                 let payload_update = serde_json::to_string(&serde_json::json!({"error": reason}))
                     .unwrap_or_else(|_| "{}".to_string());
@@ -648,11 +650,12 @@ impl TaskDecompositionService {
                 let trans_id = uuid::Uuid::new_v4().to_string();
                 sqlx::query(
                     r#"
-                    INSERT INTO state_machine_transitions (id, task_id, from_state, to_state, agent_id, transitioned_at)
-                    VALUES ($1, $2, $3, $4, $5, $6)
+                    INSERT INTO state_machine_transitions (id, tenant_id, entity_id, entity_type, from_state, to_state, agent_id, occurred_at)
+                    VALUES ($1, $2, $3, 'task', $4, $5, $6, $7)
                     "#
                 )
                 .bind(trans_id)
+                .bind(organization_id_opt.clone().unwrap_or_else(|| "system".to_string()))
                 .bind(task_id)
                 .bind(&old_status)
                 .bind("FAILED")
@@ -713,11 +716,11 @@ impl TaskDecompositionService {
                 let trans_id = uuid::Uuid::new_v4().to_string();
                 sqlx::query(
                     r#"
-                    INSERT INTO state_machine_transitions (id, task_id, from_state, to_state, agent_id, transitioned_at)
-                    VALUES (?, ?, ?, ?, ?, ?)
+                    INSERT INTO state_machine_transitions (id, tenant_id, entity_id, entity_type, from_state, to_state, agent_id, occurred_at) VALUES (?, ?, ?, 'task', ?, ?, ?, ?)
                     "#
                 )
                 .bind(trans_id)
+                .bind(organization_id_opt.clone().unwrap_or_else(|| "system".to_string()))
                 .bind(task_id)
                 .bind(old_status)
                 .bind("FAILED")
@@ -740,8 +743,10 @@ impl TaskDecompositionService {
         agent_id: &str,
     ) -> Result<(), String> {
         let now = Utc::now();
+        let mut organization_id_opt = None;
+        if let Ok(task) = self.get_task(id).await {
+            organization_id_opt = Some(task.organization_id.clone());
         if new_status == "COMPLETED" {
-            if let Ok(task) = self.get_task(id).await {
                 let now_ms = now.timestamp_millis();
                 let updated_ms = task.updated_at.timestamp_millis();
                 let latency = ((now_ms - updated_ms).max(0) as f64) / 1000.0;
@@ -785,11 +790,12 @@ impl TaskDecompositionService {
                 let trans_id = uuid::Uuid::new_v4().to_string();
                 sqlx::query(
                     r#"
-                    INSERT INTO state_machine_transitions (id, task_id, from_state, to_state, agent_id, transitioned_at)
-                    VALUES ($1, $2, $3, $4, $5, $6)
+                    INSERT INTO state_machine_transitions (id, tenant_id, entity_id, entity_type, from_state, to_state, agent_id, occurred_at)
+                    VALUES ($1, $2, $3, 'task', $4, $5, $6, $7)
                     "#
                 )
                 .bind(trans_id)
+                .bind(organization_id_opt.clone().unwrap_or_else(|| "system".to_string()))
                 .bind(id)
                 .bind(old_status)
                 .bind(new_status)
@@ -838,11 +844,11 @@ impl TaskDecompositionService {
                 let trans_id = uuid::Uuid::new_v4().to_string();
                 sqlx::query(
                     r#"
-                    INSERT INTO state_machine_transitions (id, task_id, from_state, to_state, agent_id, transitioned_at)
-                    VALUES (?, ?, ?, ?, ?, ?)
+                    INSERT INTO state_machine_transitions (id, tenant_id, entity_id, entity_type, from_state, to_state, agent_id, occurred_at) VALUES (?, ?, ?, 'task', ?, ?, ?, ?)
                     "#
                 )
                 .bind(trans_id)
+                .bind(organization_id_opt.clone().unwrap_or_else(|| "system".to_string()))
                 .bind(id)
                 .bind(old_status)
                 .bind(new_status)
@@ -901,7 +907,7 @@ mod tests {
             "CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, ultraplan_phase TEXT, deliberation_log TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)"
         ).execute(&pool).await.unwrap();
         sqlx::query(
-            "CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)"
+            "CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, tenant_id TEXT DEFAULT \'system\', entity_id TEXT NOT NULL, entity_type TEXT NOT NULL DEFAULT \'task\', from_state TEXT NOT NULL, to_state TEXT NOT NULL, agent_id TEXT, reason TEXT, occurred_at TEXT DEFAULT CURRENT_TIMESTAMP)"
         ).execute(&pool).await.unwrap();
 
         let db = Arc::new(crate::db::DB {
@@ -1057,7 +1063,7 @@ mod tests {
             "CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, ultraplan_phase TEXT, deliberation_log TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)"
         ).execute(&pool).await.unwrap();
         sqlx::query(
-            "CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)"
+            "CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, tenant_id TEXT DEFAULT \'system\', entity_id TEXT NOT NULL, entity_type TEXT NOT NULL DEFAULT \'task\', from_state TEXT NOT NULL, to_state TEXT NOT NULL, agent_id TEXT, reason TEXT, occurred_at TEXT DEFAULT CURRENT_TIMESTAMP)"
         ).execute(&pool).await.unwrap();
 
         let db = Arc::new(crate::db::DB {
@@ -1564,7 +1570,7 @@ mod chaos_tests {
             "CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, ultraplan_phase TEXT, deliberation_log TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)"
         ).execute(&pool).await.unwrap();
         sqlx::query(
-            "CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)"
+            "CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, tenant_id TEXT DEFAULT \'system\', entity_id TEXT NOT NULL, entity_type TEXT NOT NULL DEFAULT \'task\', from_state TEXT NOT NULL, to_state TEXT NOT NULL, agent_id TEXT, reason TEXT, occurred_at TEXT DEFAULT CURRENT_TIMESTAMP)"
         ).execute(&pool).await.unwrap();
 
         let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new()
@@ -1656,7 +1662,7 @@ mod chaos_tests {
             "CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, ultraplan_phase TEXT, deliberation_log TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)"
         ).execute(&pool).await.unwrap();
         sqlx::query(
-            "CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)"
+            "CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, tenant_id TEXT DEFAULT \'system\', entity_id TEXT NOT NULL, entity_type TEXT NOT NULL DEFAULT \'task\', from_state TEXT NOT NULL, to_state TEXT NOT NULL, agent_id TEXT, reason TEXT, occurred_at TEXT DEFAULT CURRENT_TIMESTAMP)"
         ).execute(&pool).await.unwrap();
 
         let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new()

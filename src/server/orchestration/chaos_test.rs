@@ -456,20 +456,16 @@ mod chaos_tests {
 
         sqlx::query(
             "CREATE TABLE IF NOT EXISTS state_machine_transitions (
-                id TEXT PRIMARY KEY,
-                tenant_id TEXT,
-                entity_id TEXT,
-                entity_type TEXT,
-                from_state TEXT,
-                to_state TEXT,
-                agent_id TEXT,
-                reason TEXT,
-                occurred_at TEXT
-            )",
-        )
-        .execute(&dummy_sqlite_pool)
-        .await
-        .unwrap();
+                    id TEXT PRIMARY KEY,
+                    tenant_id TEXT DEFAULT 'system',
+                    entity_id TEXT NOT NULL,
+                    entity_type TEXT NOT NULL DEFAULT 'task',
+                    from_state TEXT NOT NULL,
+                    to_state TEXT NOT NULL,
+                    agent_id TEXT,
+                    reason TEXT,
+                    occurred_at TEXT DEFAULT CURRENT_TIMESTAMP
+                );
 
         let task_id = "test-partial-task";
         sqlx::query(

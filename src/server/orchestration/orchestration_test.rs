@@ -46,11 +46,14 @@ async fn test_task_decomposition_service() {
 
                 CREATE TABLE IF NOT EXISTS state_machine_transitions (
                     id TEXT PRIMARY KEY,
-                    task_id TEXT NOT NULL REFERENCES shared_tasks_decomposition(id),
+                    tenant_id TEXT DEFAULT 'system',
+                    entity_id TEXT NOT NULL,
+                    entity_type TEXT NOT NULL DEFAULT 'task',
                     from_state TEXT NOT NULL,
                     to_state TEXT NOT NULL,
                     agent_id TEXT,
-                    transitioned_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                    reason TEXT,
+                    occurred_at TEXT DEFAULT CURRENT_TIMESTAMP
                 );
                 "#
             )
@@ -88,11 +91,14 @@ async fn test_task_decomposition_service() {
 
                 CREATE TABLE IF NOT EXISTS state_machine_transitions (
                     id TEXT PRIMARY KEY,
-                    task_id TEXT NOT NULL REFERENCES shared_tasks_decomposition(id),
+                    tenant_id TEXT DEFAULT 'system',
+                    entity_id TEXT NOT NULL,
+                    entity_type TEXT NOT NULL DEFAULT 'task',
                     from_state TEXT NOT NULL,
                     to_state TEXT NOT NULL,
                     agent_id TEXT,
-                    transitioned_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    reason TEXT,
+                    occurred_at TEXT DEFAULT CURRENT_TIMESTAMP
                 );
                 "#
             )
@@ -248,11 +254,14 @@ async fn test_task_decomposition_dag_blocked() {
                 r#"
                 CREATE TABLE IF NOT EXISTS state_machine_transitions (
                     id TEXT PRIMARY KEY,
-                    task_id TEXT NOT NULL REFERENCES shared_tasks_decomposition(id),
+                    tenant_id TEXT DEFAULT 'system',
+                    entity_id TEXT NOT NULL,
+                    entity_type TEXT NOT NULL DEFAULT 'task',
                     from_state TEXT NOT NULL,
                     to_state TEXT NOT NULL,
                     agent_id TEXT,
-                    transitioned_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    reason TEXT,
+                    occurred_at TEXT DEFAULT CURRENT_TIMESTAMP
                 );
                 "#
             ).execute(sqlite_pool).await.unwrap();
@@ -374,11 +383,14 @@ async fn test_task_decomposition_service_fail_task() {
 
                 CREATE TABLE IF NOT EXISTS state_machine_transitions (
                     id TEXT PRIMARY KEY,
-                    task_id TEXT NOT NULL REFERENCES shared_tasks_decomposition(id),
+                    tenant_id TEXT DEFAULT 'system',
+                    entity_id TEXT NOT NULL,
+                    entity_type TEXT NOT NULL DEFAULT 'task',
                     from_state TEXT NOT NULL,
                     to_state TEXT NOT NULL,
                     agent_id TEXT,
-                    transitioned_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                    reason TEXT,
+                    occurred_at TEXT DEFAULT CURRENT_TIMESTAMP
                 );
                 "#
             ).execute(&db.pool).await.unwrap();
@@ -413,11 +425,14 @@ async fn test_task_decomposition_service_fail_task() {
 
                 CREATE TABLE IF NOT EXISTS state_machine_transitions (
                     id TEXT PRIMARY KEY,
-                    task_id TEXT NOT NULL REFERENCES shared_tasks_decomposition(id),
+                    tenant_id TEXT DEFAULT 'system',
+                    entity_id TEXT NOT NULL,
+                    entity_type TEXT NOT NULL DEFAULT 'task',
                     from_state TEXT NOT NULL,
                     to_state TEXT NOT NULL,
                     agent_id TEXT,
-                    transitioned_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    reason TEXT,
+                    occurred_at TEXT DEFAULT CURRENT_TIMESTAMP
                 );
                 "#
             ).execute(sqlite_pool).await.unwrap();
