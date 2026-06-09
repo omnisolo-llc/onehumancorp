@@ -158,7 +158,7 @@ export function HelpChat() {
         {!isOpen && (
           <button
             onClick={() => setIsOpen(true)}
-            className="bg-blue-600/95 text-white p-4 rounded-full shadow-2xl hover:shadow-xl hover:scale-105 transition-all flex items-center justify-center gap-2 group backdrop-blur-[20px] saturate-200"
+            className="bg-blue-600/95 text-white p-4 rounded-full shadow-2xl hover:shadow-xl hover:scale-105 transition-all flex items-center justify-center gap-2 group backdrop-blur-[30px] saturate-[210%]"
             aria-label="Open help chat"
             aria-expanded={isOpen}
             aria-controls="ai-chat-interface"
@@ -173,11 +173,11 @@ export function HelpChat() {
 
       {/* Chat Interface */}
       {isOpen && (
-        <div id="ai-chat-interface" className="fixed bottom-24 right-6 z-[9999] w-[350px] max-w-[calc(100vw-32px)] bg-white/70 backdrop-blur-[20px] saturate-200 rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.1)] flex flex-col overflow-hidden border border-white/60 animate-slide-up-chat">
+        <div id="ai-chat-interface" className="fixed bottom-24 right-6 z-[9999] w-[350px] max-w-[calc(100vw-32px)] bg-white/65 backdrop-blur-[30px] saturate-[210%] rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.1)] flex flex-col overflow-hidden border border-white/40 animate-slide-up-chat">
           {/* Header */}
           <div
             id="ai-chat-header"
-            className="bg-blue-600/95 text-white p-4 flex justify-between items-center backdrop-blur-[20px]"
+            className="bg-blue-600/95 text-white p-4 flex justify-between items-center backdrop-blur-[30px]"
           >
             <div className="flex items-center gap-2">
               <span className="text-xl drop-shadow-md">✨</span>
@@ -224,8 +224,8 @@ export function HelpChat() {
                 <div
                   className={`px-4 py-3 rounded-2xl max-w-[85%] leading-relaxed shadow-[0_2px_10px_rgba(0,0,0,0.02)] ${
                     msg.sender === "user"
-                      ? "bg-blue-600/95 backdrop-blur-[20px] saturate-200 text-white rounded-br-sm border border-blue-500/50"
-                      : "bg-white/90 backdrop-blur-[20px] saturate-200 border border-white/80 text-gray-800 rounded-bl-sm"
+                      ? "bg-blue-600/95 backdrop-blur-[30px] saturate-[210%] text-white rounded-br-sm border border-blue-500/50"
+                      : "bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-white/40 text-gray-800 rounded-bl-sm"
                   }`}
                   dangerouslySetInnerHTML={{
                     __html: DOMPurify.sanitize(msg.text),
@@ -234,7 +234,7 @@ export function HelpChat() {
                 {msg.link && (
                   <a
                     href={msg.link.url}
-                    className="mt-2 ml-1 text-blue-600 hover:text-blue-800 text-xs font-bold hover:underline bg-blue-50/90 backdrop-blur-[20px] px-3.5 py-1.5 rounded-full border border-blue-100 flex items-center shadow-sm transition-all hover:bg-blue-100/90"
+                    className="mt-2 ml-1 text-blue-600 hover:text-blue-800 text-xs font-bold hover:underline bg-blue-50/90 backdrop-blur-[30px] px-3.5 py-1.5 rounded-full border border-blue-100 flex items-center shadow-sm transition-all hover:bg-blue-100/90"
                   >
                     {msg.link.title}
                   </a>
@@ -243,7 +243,7 @@ export function HelpChat() {
             ))}
             {isLoading && (
               <div className="flex flex-col items-start animate-pulse">
-                <div className="px-4 py-3 rounded-2xl max-w-[85%] bg-white/90 backdrop-blur-[20px] saturate-200 border border-white/80 text-gray-800 rounded-bl-sm shadow-[0_2px_10px_rgba(0,0,0,0.02)] flex gap-1">
+                <div className="px-4 py-3 rounded-2xl max-w-[85%] bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-white/40 text-gray-800 rounded-bl-sm shadow-[0_2px_10px_rgba(0,0,0,0.02)] flex gap-1">
                   <div
                     className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
                     style={{ animationDelay: "0ms" }}
@@ -265,7 +265,7 @@ export function HelpChat() {
           {/* Input */}
           <form
             onSubmit={handleSend}
-            className="p-3 bg-white/60 backdrop-blur-[20px] saturate-200 border-t border-white/50 flex gap-2"
+            className="p-3 bg-white/60 backdrop-blur-[30px] saturate-[210%] border-t border-white/40 flex gap-2"
           >
             <input
               type="text"
@@ -273,12 +273,12 @@ export function HelpChat() {
               onChange={(e) => setInputValue(e.target.value)}
               placeholder="Ask me anything..."
               disabled={isLoading}
-              className="flex-1 bg-white/70 backdrop-blur-[20px] saturate-200 border border-white/60 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 font-inter shadow-inner disabled:opacity-70 disabled:bg-gray-50/70"
+              className="flex-1 bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-white/40 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 font-inter shadow-inner disabled:opacity-70 disabled:bg-gray-50/70"
             />
             <button
               type="submit"
               disabled={!inputValue.trim() || isLoading}
-              className="bg-blue-600/95 backdrop-blur-[20px] text-white p-2.5 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-700/95 transition-all shadow-[0_4px_12px_rgba(37,99,235,0.2)] active:scale-95"
+              className="bg-blue-600/95 backdrop-blur-[30px] text-white p-2.5 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-700/95 transition-all shadow-[0_4px_12px_rgba(37,99,235,0.2)] active:scale-95"
               aria-label="Send message"
             >
               {isLoading ? (
