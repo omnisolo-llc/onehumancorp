@@ -272,8 +272,29 @@ export function UnifiedAgentFeed() {
                   <h3 className="text-lg font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] leading-snug mt-1">
                     {approval.description}
                   </h3>
-                  {(approval.payload?.context || approval.payload?.remaining_stock !== undefined || approval.payload?.feature_type === "quote_draft") && (
+                  {(approval.payload?.context || approval.payload?.remaining_stock !== undefined || approval.payload?.feature_type === "quote_draft" || approval.payload?.feature_type === "social_post_draft") && (
                     <div className="mt-2 flex flex-col gap-1 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+                      {approval.payload?.feature_type === "social_post_draft" && (
+                        <div className="mb-4 p-4 rounded-xl bg-purple-50/50 dark:bg-purple-900/10 border border-purple-100 dark:border-purple-900/30 flex flex-col gap-3" data-testid="social-post-draft-card">
+                          <div className="flex items-center gap-2 text-purple-800 dark:text-purple-300 font-semibold text-sm">
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-3.14 8.167-7.22" />
+                            </svg>
+                            Promoter Agent Drafts
+                          </div>
+
+                          <div className="flex flex-col gap-2 mt-2">
+                            <div className="bg-white dark:bg-gray-800 p-3 rounded-lg border border-gray-100 dark:border-gray-700">
+                              <div className="text-[10px] uppercase font-bold text-gray-400 mb-1">Instagram / Facebook</div>
+                              <div className="text-sm text-gray-800 dark:text-gray-200">{approval.payload.instagram || approval.payload.facebook}</div>
+                            </div>
+                            <div className="bg-white dark:bg-gray-800 p-3 rounded-lg border border-gray-100 dark:border-gray-700">
+                              <div className="text-[10px] uppercase font-bold text-gray-400 mb-1">TikTok</div>
+                              <div className="text-sm text-gray-800 dark:text-gray-200">{approval.payload.tiktok}</div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                       {approval.payload?.feature_type === "quote_draft" && (
                         <div className="mb-4 p-4 rounded-xl bg-blue-50/50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/30 flex flex-col gap-3" data-testid="draft-quote-card">
                           <div className="flex items-center gap-2 text-blue-800 dark:text-blue-300 font-semibold text-sm">
@@ -436,6 +457,25 @@ export function UnifiedAgentFeed() {
                         className="flex-1 min-h-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex items-center justify-center"
                         aria-label="Dismiss"
                         data-testid="dismiss-stockout"
+                      >
+                        Dismiss
+                      </button>
+                    </div>
+                  ) : approval.payload?.feature_type === "social_post_draft" ? (
+                    <div className="flex flex-col sm:flex-row gap-3 w-full">
+                      <button
+                        onClick={() => handleDecision(approval.id, true)}
+                        className="flex-1 min-h-[44px] px-4 rounded-[8px] bg-purple-600 text-white font-medium hover:bg-purple-700 transition-colors shadow-md flex items-center justify-center"
+                        aria-label="Approve & Schedule"
+                        data-testid="approve-social-post"
+                      >
+                        Approve & Schedule
+                      </button>
+                      <button
+                        onClick={() => handleDecision(approval.id, false)}
+                        className="flex-1 min-h-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex items-center justify-center"
+                        aria-label="Dismiss Draft"
+                        data-testid="dismiss-social-post"
                       >
                         Dismiss
                       </button>

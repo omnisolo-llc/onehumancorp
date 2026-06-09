@@ -1081,34 +1081,46 @@ let db_for_products = self.db.clone();
                                 let description = "The Promoter generated social media captions for your new product. Review and schedule.";
                                 let proposed_content = serde_json::to_string(&parsed).unwrap_or_default();
 
+                                // Prepare payload for agent_approvals
+                                let now = chrono::Utc::now();
+                                let approval_payload = serde_json::json!({
+                                    "feature_type": "social_post_draft",
+                                    "tiktok": parsed.get("tiktok").and_then(|v| v.as_str()).unwrap_or(""),
+                                    "instagram": parsed.get("instagram").and_then(|v| v.as_str()).unwrap_or(""),
+                                    "facebook": parsed.get("facebook").and_then(|v| v.as_str()).unwrap_or(""),
+                                });
+                                let payload_str = serde_json::to_value(&approval_payload).unwrap();
+
                                 match &db_for_products.store {
                                     crate::db::DbStore::Postgres => {
                                         let _ = sqlx::query(
                                             r#"
-                                            INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
-                                            VALUES ($1, $2, $3, $4, 'PENDING', 'P2', 'LOW', 'PENDING', $5)
+                                            INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, payload, created_at, updated_at)
+                                            VALUES ($1, $2, 'marketing', $3, 'DRAFT', 'HIGH', $4, $5, $6)
                                             "#
                                         )
                                         .bind(&task_id)
                                         .bind(&org_id)
-                                        .bind(&title)
                                         .bind(&description)
-                                        .bind(&proposed_content)
+                                        .bind(&payload_str)
+                                        .bind(now)
+                                        .bind(now)
                                         .execute(&db_for_products.pool)
                                         .await;
                                     },
                                     crate::db::DbStore::Sqlite(pool) => {
                                         let _ = sqlx::query(
                                             r#"
-                                            INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
-                                            VALUES (?, ?, ?, ?, 'PENDING', 'P2', 'LOW', 'PENDING', ?)
+                                            INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, payload, created_at, updated_at)
+                                            VALUES (?, ?, 'marketing', ?, 'DRAFT', 'HIGH', ?, ?, ?)
                                             "#
                                         )
                                         .bind(&task_id)
                                         .bind(&org_id)
-                                        .bind(&title)
                                         .bind(&description)
-                                        .bind(&proposed_content)
+                                        .bind(payload_str.to_string())
+                                        .bind(now.to_rfc3339())
+                                        .bind(now.to_rfc3339())
                                         .execute(pool)
                                         .await;
                                     }
