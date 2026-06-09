@@ -129,6 +129,7 @@ export default function Dashboard() {
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncErrorCount, setSyncErrorCount] = useState(0);
   const [activeDepartments, setActiveDepartments] = useState<string[]>([]);
+  const [approvals, setApprovals] = useState<any[]>([]);
 
   useEffect(() => {
     try {
@@ -324,26 +325,32 @@ export default function Dashboard() {
       />
 
       <div className="mb-4 flex flex-wrap gap-2">
-        <button
-          type="button"
-          onClick={() => {
-            try {
-              localStorage.setItem("TEST_WALKTHROUGH", "true");
-            } catch {
-              // ignore storage failures
-            }
-            setIsWalkthroughOpen(true);
-          }}
-          className="app-button"
-        >
-          Start Tour
-        </button>
-        <button type="button" onClick={() => router.push("/business-setup")} className="app-button">
-          Launch Site
-        </button>
-        <button type="button" onClick={() => setShowMigration((open) => !open)} className="app-button">
-          Migrate Existing Store
-        </button>
+        <WithTooltip id="start-tour-btn-tooltip" defaultText="Take an interactive tour of your new dashboard.">
+          <button
+            type="button"
+            onClick={() => {
+              try {
+                localStorage.setItem("TEST_WALKTHROUGH", "true");
+              } catch {
+                // ignore storage failures
+              }
+              setIsWalkthroughOpen(true);
+            }}
+            className="app-button"
+          >
+            Start Tour
+          </button>
+        </WithTooltip>
+        <WithTooltip id="launch-site-btn-tooltip" defaultText="Publish your AI-generated storefront to the world.">
+          <button type="button" onClick={() => router.push("/business-setup")} className="app-button">
+            Launch Site
+          </button>
+        </WithTooltip>
+        <WithTooltip id="migrate-store-btn-tooltip" defaultText="Import your existing products from Shopify, Square, or Wix.">
+          <button type="button" onClick={() => setShowMigration((open) => !open)} className="app-button">
+            Migrate Existing Store
+          </button>
+        </WithTooltip>
         <div id="queue-dashboard" className={offlineQueueCount > 0 ? "app-badge warn block" : "hidden"}>
           {offlineQueueCount} Payments Pending Sync
         </div>
