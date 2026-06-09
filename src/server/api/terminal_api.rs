@@ -13,6 +13,10 @@ pub struct TerminalTokenResponse {
 pub struct PaymentIntentRequest {
     pub amount_cents: i64,
     pub currency: String,
+    #[serde(default)]
+    pub product_id: Option<String>,
+    #[serde(default)]
+    pub order_id: Option<String>,
 }
 
 #[derive(serde::Serialize)]
@@ -655,7 +659,13 @@ pub async fn create_payment_intent_handler(
 
     let client = crate::integrations::stripe::client::StripeClient::new(stripe_key);
     match client.require_api_key() {
-        Ok(_) => match client.create_terminal_payment_intent(&tenant_id, req_data.amount_cents, &req_data.currency).await {
+        Ok(_) => match client.create_terminal_payment_intent(
+            &tenant_id,
+            req_data.amount_cents,
+            &req_data.currency,
+            req_data.product_id.as_deref(),
+            req_data.order_id.as_deref()
+        ).await {
             Ok(client_secret) => Json(Ok(PaymentIntentResponse { client_secret })),
             Err(e) => Json(Err(e)),
         },

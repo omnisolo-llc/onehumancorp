@@ -12,10 +12,13 @@ export async function POST(req: Request) {
     const body = await req.json();
     const amount = Number(body.amount ?? body.amount_cents);
     const currency = String(body.currency || "usd").toLowerCase();
+    const product_id = body.product_id ? String(body.product_id) : undefined;
+    const order_id = body.order_id ? String(body.order_id) : undefined;
+
     const res = await fetch(`${backendUrl}/api/v1/payments/terminal/intent`, {
       method: "POST",
       headers: backendHeaders(req, true),
-      body: JSON.stringify({ amount_cents: amount, currency }),
+      body: JSON.stringify({ amount_cents: amount, currency, product_id, order_id }),
     });
     const data = await res.json();
     if (!res.ok || data?.Err) {

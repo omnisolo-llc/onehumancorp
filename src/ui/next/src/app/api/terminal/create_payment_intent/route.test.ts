@@ -19,7 +19,7 @@ describe("POST /api/terminal/create_payment_intent", () => {
       json: async () => ({ client_secret: "pi_live_secret" }),
     });
 
-    const body = { amount: 4500, currency: "usd" };
+    const body = { amount: 4500, currency: "usd", product_id: "prod_123", order_id: "order_456" };
     const req = new Request("http://localhost/api/terminal/create_payment_intent", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -33,7 +33,7 @@ describe("POST /api/terminal/create_payment_intent", () => {
       "http://backend.internal/api/v1/payments/terminal/intent",
       expect.objectContaining({
         method: "POST",
-        body: JSON.stringify({ amount_cents: 4500, currency: "usd" }),
+        body: JSON.stringify({ amount_cents: 4500, currency: "usd", product_id: "prod_123", order_id: "order_456" }),
       }),
     );
   });
