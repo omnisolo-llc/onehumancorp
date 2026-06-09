@@ -375,6 +375,23 @@ impl DepartmentOrchestrator {
                 .await;
             }
         }
+
+        // Publish SSE event
+        let payload = serde_json::json!({
+            "event_type": "approval_request",
+            "data": {
+                "id": req.id,
+                "tenant_id": req.tenant_id,
+                "department": req.department.to_string(),
+                "description": req.description,
+                "status": status_str,
+                "action_risk": req.action_risk.to_string(),
+                "payload": req.payload.clone()
+            }
+        });
+        let payload_bytes = serde_json::to_vec(&payload).unwrap_or_default();
+        let topic = format!("agent_feed:{}", req.tenant_id);
+        let _ = self.mesh.publish(&topic, payload_bytes).await;
     }
 
     pub async fn get_pending_approvals(&self, tenant_id: &str, cursor: Option<String>, limit: i64) -> Vec<ApprovalRequest> {
@@ -920,6 +937,21 @@ impl DepartmentOrchestrator {
                 let topic = format!("agent:{}:approved", dep);
                 let _ = self.mesh.publish(&topic, payload_bytes).await;
 
+                // Publish SSE event
+                let sse_payload = serde_json::json!({
+                    "event_type": "approval_decision",
+                    "data": {
+                        "request_id": request_id,
+                        "tenant_id": tenant_id,
+                        "department": dep,
+                        "status": "APPROVED",
+                        "original_payload": original_payload,
+                    }
+                });
+                let sse_payload_bytes = serde_json::to_vec(&sse_payload).unwrap_or_default();
+                let sse_topic = format!("agent_feed:{}", tenant_id);
+                let _ = self.mesh.publish(&sse_topic, sse_payload_bytes).await;
+
                 // Add to ledger
                 if let crate::db::DbStore::Postgres = &self.db.store {
                     let entry_id = Uuid::new_v4().to_string();
@@ -940,6 +972,21 @@ impl DepartmentOrchestrator {
                         }
                     }
                 }
+            } else {
+                // Publish SSE event for rejection
+                let sse_payload = serde_json::json!({
+                    "event_type": "approval_decision",
+                    "data": {
+                        "request_id": request_id,
+                        "tenant_id": tenant_id,
+                        "department": dep,
+                        "status": "REJECTED",
+                        "original_payload": original_payload,
+                    }
+                });
+                let sse_payload_bytes = serde_json::to_vec(&sse_payload).unwrap_or_default();
+                let sse_topic = format!("agent_feed:{}", tenant_id);
+                let _ = self.mesh.publish(&sse_topic, sse_payload_bytes).await;
             }
         }
 
