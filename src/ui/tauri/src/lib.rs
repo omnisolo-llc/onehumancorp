@@ -52,6 +52,10 @@ struct OnboardingState {
     business_name: Option<String>,
     assistant_name: Option<String>,
     assistant_tone: Option<String>,
+    work_context: Option<String>,
+    categories: Option<String>,
+    tagline: Option<String>,
+    first_offer: Option<String>,
 }
 
 fn onboarding_state_path() -> std::path::PathBuf {
