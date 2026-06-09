@@ -10,7 +10,7 @@ export default function HelpCenterPage() {
   const [selectedVideo, setSelectedVideo] = useState<{id: number, title: string, duration: string, video_url: string} | null>(null);
 
   useEffect(() => {
-    const url = searchQuery.trim() ? `/api/help/search?q=${encodeURIComponent(searchQuery.trim())}` : '/api/help';
+    const url = searchQuery.trim() ? `/api/help/search?q=${encodeURIComponent(searchQuery.trim())}` : '/api/help/search?q=';
     fetch(url)
       .then(res => res.json())
       .then(data => setArticles(data))

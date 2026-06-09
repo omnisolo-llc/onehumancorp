@@ -1,7 +1,9 @@
 import { test, expect } from './fixtures';
 import { currentAppSmoke } from './current_app_smoke';
 
-currentAppSmoke('dashboard_ux');
+test('dashboard_ux smoke', async ({ page, request }) => {
+  await currentAppSmoke(page, request, 'dashboard_ux');
+});
 
 test.describe('Dashboard UX', () => {
   test('should display Growth & Virality section with Share Cards link', async ({ page }) => {
