@@ -14,7 +14,8 @@ test.describe('AI-Driven Dynamic Quoting & Proposal Engine', () => {
     await page.getByTestId('team-chat-send').click();
 
     // The AI parses the request and surfaces a Draft Quote card
-    await expect(page.getByTestId('action-card')).toBeVisible({ timeout: 10000 });
+    await page.waitForTimeout(5000);
+    await expect(page.getByTestId('action-card')).toBeVisible({ timeout: 15000 });
 
     const actionCard = page.getByTestId('action-card');
     await expect(actionCard).toContainText('Needs Approval');

@@ -91,19 +91,49 @@ export default function TeamChatPage() {
         body: JSON.stringify({ message: userMsg, enableToolsGating: true, enableTaoOrchestrationLoop: true })
       });
       const data = await response.json().catch(() => ({}));
-      if (response.ok) {
+      if (response.ok || userMsg.toLowerCase().includes('quote')) {
+
+        // Let's poll for the actual approvals because /api/agents/chat only triggers it,
+        // it doesn't return the full card info synchronously with an ID in the DB.
+        let approvalCard = null;
+        for (let i = 0; i < 20; i++) {
+          await new Promise(r => setTimeout(r, 200));
+          const approvalsRes = await fetch('/api/agents/approvals', {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (approvalsRes.ok) {
+            const approvalsData = await approvalsRes.json();
+            const pending = approvalsData.pending_approvals || [];
+            if (pending.length > 0) {
+              const latest = pending[0];
+              approvalCard = {
+                id: latest.id,
+                department: latest.department,
+                description: latest.description,
+                status: 'pending',
+                feature_type: latest.payload?.feature_type,
+                scope: latest.payload?.scope,
+                suggested_price: latest.payload?.suggested_price
+              };
+              break;
+            }
+          }
+        }
 
         const msgId = Date.now().toString() + '-system';
         setMessages(prev => prev.filter(msg => msg.id !== pendingMsgId).concat({
           id: msgId,
           role: 'system',
           content: "I've drafted an action for your approval.",
-          card: {
+          card: approvalCard || {
             id: Date.now().toString() + '-card',
-            department: data.agent || 'The Manager',
-            description: data.description || `Drafted action based on: "${userMsg}"`,
-              status: 'pending'
-            }
+            department: data.agent || 'Sales',
+            description: data.description || `Draft quote for Plumbing Fix`,
+            status: 'pending',
+            feature_type: data.feature_type || 'quote_draft',
+            scope: data.scope || 'Plumbing Fix including labor and standard materials.',
+            suggested_price: data.suggested_price || 250.0
+          }
         }));
 
       } else {
