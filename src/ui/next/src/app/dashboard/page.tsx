@@ -383,7 +383,7 @@ export default function Dashboard() {
           <SmartBlock type="PoweredBy" props={{ tenantId: tenantId(), isPremium: false }} />
       </div>
 
-      <section className="app-panel mb-6">
+      <section className="app-panel glassmorphism border border-white/40 dark:border-white/10 mb-6">
         <div className="app-panel-header">
           <div>
             <h2 className="app-panel-title">2024 Store Wrapped</h2>
@@ -398,7 +398,7 @@ export default function Dashboard() {
       </section>
 
       {showMigration && (
-        <section className="app-panel mb-6">
+        <section className="app-panel glassmorphism border border-white/40 dark:border-white/10 mb-6">
           <div className="app-panel-header">
             <div>
               <div className="app-panel-title">Store Migration</div>
@@ -584,7 +584,7 @@ export default function Dashboard() {
         </section>
 
         <section className="app-grid two">
-          <WalkthroughTarget id="operations-map-target" className="app-panel">
+          <WalkthroughTarget id="operations-map-target" className="app-panel glassmorphism border border-white/40 dark:border-white/10">
             <div className="app-panel-header">
               <div>
                 <div className="app-panel-title">Operations Map</div>
@@ -613,7 +613,7 @@ export default function Dashboard() {
             </div>
           </WalkthroughTarget>
 
-          <div className="app-panel">
+          <div className="app-panel glassmorphism border border-white/40 dark:border-white/10">
             <div className="app-panel-header">
               <div className="app-panel-title">Action Required</div>
               <Link href="/inventory" className="app-button">Inventory</Link>
@@ -672,7 +672,7 @@ export default function Dashboard() {
 
 
         <section className="app-grid two">
-          <div className="app-panel">
+          <div className="app-panel glassmorphism border border-white/40 dark:border-white/10">
             <div className="app-panel-header">
               <WithTooltip id="recent-orders-tooltip" defaultText="View the latest orders placed by your customers."><div className="app-panel-title">Recent Orders</div></WithTooltip>
               <Link href="/orders" className="app-button">View All</Link>
@@ -705,7 +705,7 @@ export default function Dashboard() {
             )}
           </div>
 
-          <div className="app-panel">
+          <div className="app-panel glassmorphism border border-white/40 dark:border-white/10">
             <div className="app-panel-header">
               <WithTooltip id="inbox-activity-tooltip" defaultText="Keep track of recent customer messages."><div className="app-panel-title">Inbox Activity</div></WithTooltip>
               <Link href="/inbox" className="app-button">Open Inbox</Link>
