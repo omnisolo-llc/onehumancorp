@@ -122,7 +122,50 @@ export function UnifiedAgentFeed() {
     }
 
     fetchAll();
-    return () => { mounted = false; };
+
+    // Connect to SSE for real-time updates
+    let events: EventSource | null = null;
+    if (typeof EventSource !== 'undefined') {
+      events = new EventSource('/api/agents/events');
+      events.onmessage = (event) => {
+        try {
+          const item = JSON.parse(event.data);
+          if (!item?.id) return;
+
+          if (String(item.status || item.event_type || '').toLowerCase() === 'draft') {
+            setApprovals(current => {
+              if (current.find(a => a.id === item.id)) return current;
+              return [item, ...current];
+            });
+          } else {
+            setActivities(current => {
+              if (current.find(a => a.id === item.id)) return current;
+
+              const newActivity: OHCLedgerEntry = {
+                id: item.id,
+                tenant_id: item.tenant_id || "default",
+                event_type: item.event_type || item.status || "Completed",
+                department: item.department || "General",
+                payload: typeof item.payload === 'object' ? JSON.stringify({ original_payload: item.payload }) : item.payload,
+                created_at: item.created_at || new Date().toISOString()
+              };
+              return [newActivity, ...current];
+            });
+          }
+        } catch (err) {
+          console.error("Failed to parse realtime event", err);
+        }
+      };
+
+      events.onerror = (err) => {
+        console.error("SSE connection error:", err);
+      };
+    }
+
+    return () => {
+      mounted = false;
+      if (events) events.close();
+    };
   }, []);
 
   const handleDecision = async (id: string, approved: boolean) => {

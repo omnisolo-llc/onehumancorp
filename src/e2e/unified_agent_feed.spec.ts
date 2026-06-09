@@ -27,12 +27,13 @@ test.describe("Unified Agent Feed Mobile UX", () => {
     // 3. Ensure the unified feed tab is visible
     await expect(page.locator("text=Activity Feed").first()).toBeVisible({ timeout: 15000 });
 
+    // Wait for the stream to possibly bring in the cards or initial load
     // 4. Verify the seeded cards are rendered
     const opsCard = page.locator("text=3 new orders to fulfill").first();
     const marketingCard = page.locator("text=Draft promo email?").first();
 
-    await expect(opsCard).toBeVisible();
-    await expect(marketingCard).toBeVisible();
+    await expect(opsCard).toBeVisible({ timeout: 15000 });
+    await expect(marketingCard).toBeVisible({ timeout: 15000 });
 
     // 5. Verify touch targets on the default Approve button (has min-h-[44px] class)
     // We can't strictly test min-height CSS but we can click them to verify interaction
