@@ -1,8 +1,8 @@
-use redis::AsyncCommands;
 use async_trait::async_trait;
+use dashmap::DashMap;
+use redis::AsyncCommands;
 use std::sync::Arc;
 use tokio::sync::broadcast;
-use dashmap::DashMap;
 
 pub use crate::proto::hub::TeammateMeshEvent as Message;
 /// MeshTransport is the core interface for the Teammate Mesh APIs.
@@ -16,16 +16,30 @@ pub trait MeshTransport: Send + Sync {
     async fn publish(&self, topic: &str, message: Message) -> Result<(), String>;
 
     /// Subscribes to a topic/channel, returning a cancellation function.
-    async fn subscribe(&self, topic: &str, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String>;
+    async fn subscribe(
+        &self,
+        topic: &str,
+        handler: Box<dyn Fn(Message) + Send + Sync>,
+    ) -> Result<Box<dyn Fn() + Send + Sync>, String>;
 
     /// Acquires a distributed lock on a resource for a specified duration.
-    async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String>;
+    async fn acquire_lock(
+        &self,
+        resource: &str,
+        owner: &str,
+        ttl_seconds: u64,
+    ) -> Result<bool, String>;
 
     /// Releases a previously acquired distributed lock.
     async fn release_lock(&self, resource: &str, owner: &str) -> Result<(), String>;
 
     /// Registers the agent's presence status in the mesh.
-    async fn register_presence(&self, agent_id: &str, status: &str, ttl_seconds: u64) -> Result<(), String>;
+    async fn register_presence(
+        &self,
+        agent_id: &str,
+        status: &str,
+        ttl_seconds: u64,
+    ) -> Result<(), String>;
 
     /// Returns a list of all active agents and their statuses.
     async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String>;
@@ -56,11 +70,19 @@ impl MeshTransport for InProcessTransport {
         Ok(())
     }
 
-    async fn subscribe(&self, topic: &str, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
-        let tx = self.subs.entry(topic.to_string()).or_insert_with(|| {
-            let (tx, _) = broadcast::channel(100);
-            tx
-        }).clone();
+    async fn subscribe(
+        &self,
+        topic: &str,
+        handler: Box<dyn Fn(Message) + Send + Sync>,
+    ) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+        let tx = self
+            .subs
+            .entry(topic.to_string())
+            .or_insert_with(|| {
+                let (tx, _) = broadcast::channel(100);
+                tx
+            })
+            .clone();
 
         let mut rx = tx.subscribe();
 
@@ -77,7 +99,12 @@ impl MeshTransport for InProcessTransport {
         Ok(cancel)
     }
 
-    async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> {
+    async fn acquire_lock(
+        &self,
+        resource: &str,
+        owner: &str,
+        ttl_seconds: u64,
+    ) -> Result<bool, String> {
         let expires_at = chrono::Utc::now().timestamp_millis() + (ttl_seconds * 1000) as i64;
 
         use dashmap::mapref::entry::Entry;
@@ -99,12 +126,21 @@ impl MeshTransport for InProcessTransport {
     }
 
     async fn release_lock(&self, resource: &str, owner: &str) -> Result<(), String> {
-        self.locks.remove_if(&resource.to_string(), |_, (stored_owner, _)| stored_owner == owner);
+        self.locks
+            .remove_if(&resource.to_string(), |_, (stored_owner, _)| {
+                stored_owner == owner
+            });
         Ok(())
     }
-    async fn register_presence(&self, agent_id: &str, status: &str, ttl_seconds: u64) -> Result<(), String> {
+    async fn register_presence(
+        &self,
+        agent_id: &str,
+        status: &str,
+        ttl_seconds: u64,
+    ) -> Result<(), String> {
         let expires_at = std::time::Instant::now() + std::time::Duration::from_secs(ttl_seconds);
-        self.presence.insert(agent_id.to_string(), (status.to_string(), expires_at));
+        self.presence
+            .insert(agent_id.to_string(), (status.to_string(), expires_at));
         Ok(())
     }
 
@@ -112,7 +148,9 @@ impl MeshTransport for InProcessTransport {
         let now = std::time::Instant::now();
 
         // Remove expired
-        let expired_keys: Vec<String> = self.presence.iter()
+        let expired_keys: Vec<String> = self
+            .presence
+            .iter()
             .filter(|entry| entry.value().1 <= now)
             .map(|entry| entry.key().clone())
             .collect();
@@ -121,14 +159,15 @@ impl MeshTransport for InProcessTransport {
             self.presence.remove(&key);
         }
 
-        let agents = self.presence.iter()
+        let agents = self
+            .presence
+            .iter()
             .map(|entry| (entry.key().clone(), entry.value().0.clone()))
             .collect();
 
         Ok(agents)
     }
 }
-
 
 #[derive(Clone)]
 pub struct PgTransport {
@@ -140,8 +179,16 @@ impl PgTransport {
     pub async fn new(db_url: &str) -> Result<Self, String> {
         use sqlx::postgres::PgPoolOptions;
         let pool = PgPoolOptions::new()
-            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
-            .connect(db_url).await.map_err(|e| e.to_string())?;
+            .after_release(|conn, _meta| {
+                Box::pin(async move {
+                    use sqlx::Executor;
+                    conn.execute("DISCARD ALL").await?;
+                    Ok(true)
+                })
+            })
+            .connect(db_url)
+            .await
+            .map_err(|e| e.to_string())?;
 
         // Initialize schema
         sqlx::query(
@@ -151,19 +198,28 @@ impl PgTransport {
                 payload BYTEA NOT NULL,
                 created_at TIMESTAMPTZ DEFAULT NOW(),
                 msg_id TEXT
-            )"
-        ).execute(&pool).await.map_err(|e| e.to_string())?;
+            )",
+        )
+        .execute(&pool)
+        .await
+        .map_err(|e| e.to_string())?;
 
         sqlx::query(
             "CREATE TABLE IF NOT EXISTS mesh_checkpoints (
                 subscriber_id TEXT PRIMARY KEY,
                 last_id BIGINT NOT NULL
-            )"
-        ).execute(&pool).await.map_err(|e| e.to_string())?;
+            )",
+        )
+        .execute(&pool)
+        .await
+        .map_err(|e| e.to_string())?;
 
         // Attempt to add the column, ignoring error if it already exists
-        match sqlx::query("ALTER TABLE mesh_messages ADD COLUMN msg_id TEXT").execute(&pool).await {
-            Ok(_) => {},
+        match sqlx::query("ALTER TABLE mesh_messages ADD COLUMN msg_id TEXT")
+            .execute(&pool)
+            .await
+        {
+            Ok(_) => {}
             Err(e) => {
                 let err_str = e.to_string();
                 if !err_str.contains("duplicate column") && !err_str.contains("already exists") {
@@ -177,16 +233,22 @@ impl PgTransport {
                 resource TEXT PRIMARY KEY,
                 owner TEXT NOT NULL,
                 expires_at TIMESTAMPTZ NOT NULL
-            )"
-        ).execute(&pool).await.map_err(|e| e.to_string())?;
+            )",
+        )
+        .execute(&pool)
+        .await
+        .map_err(|e| e.to_string())?;
 
         sqlx::query(
             "CREATE TABLE IF NOT EXISTS mesh_presence (
                 agent_id TEXT PRIMARY KEY,
                 status TEXT NOT NULL,
                 expires_at TIMESTAMPTZ NOT NULL
-            )"
-        ).execute(&pool).await.map_err(|e| e.to_string())?;
+            )",
+        )
+        .execute(&pool)
+        .await
+        .map_err(|e| e.to_string())?;
 
         let subs = DashMap::new();
 
@@ -194,18 +256,19 @@ impl PgTransport {
     }
 
     pub async fn start_worker(&self) {
+        use opentelemetry::{KeyValue, global};
         use prost::Message as ProstMessage;
-        use opentelemetry::{global, KeyValue};
         let pool = self.pool.clone();
         let subs = self.subs.clone();
 
         let subscriber_id = "builtin_agent_node".to_string();
-        let mut last_id: i64 = sqlx::query_scalar("SELECT last_id FROM mesh_checkpoints WHERE subscriber_id = $1")
-            .bind(&subscriber_id)
-            .fetch_optional(&pool)
-            .await
-            .unwrap_or(Some(0))
-            .unwrap_or(0);
+        let mut last_id: i64 =
+            sqlx::query_scalar("SELECT last_id FROM mesh_checkpoints WHERE subscriber_id = $1")
+                .bind(&subscriber_id)
+                .fetch_optional(&pool)
+                .await
+                .unwrap_or(Some(0))
+                .unwrap_or(0);
 
         let meter = global::meter("ohc.postgres");
         let skip_locked_counter = meter.u64_counter("ohc_postgres_skip_locked_total").build();
@@ -241,9 +304,11 @@ impl PgTransport {
             }
 
             // Cleanup old messages (keep last 1 hour)
-            let _ = sqlx::query("DELETE FROM mesh_messages WHERE created_at < NOW() - INTERVAL '1 hour'")
-                .execute(&pool)
-                .await;
+            let _ = sqlx::query(
+                "DELETE FROM mesh_messages WHERE created_at < NOW() - INTERVAL '1 hour'",
+            )
+            .execute(&pool)
+            .await;
 
             tokio::time::sleep(std::time::Duration::from_millis(50)).await;
         }
@@ -279,11 +344,19 @@ impl MeshTransport for PgTransport {
         Ok(())
     }
 
-    async fn subscribe(&self, topic: &str, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
-        let tx = self.subs.entry(topic.to_string()).or_insert_with(|| {
-            let (tx, _) = broadcast::channel(100);
-            tx
-        }).clone();
+    async fn subscribe(
+        &self,
+        topic: &str,
+        handler: Box<dyn Fn(Message) + Send + Sync>,
+    ) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+        let tx = self
+            .subs
+            .entry(topic.to_string())
+            .or_insert_with(|| {
+                let (tx, _) = broadcast::channel(100);
+                tx
+            })
+            .clone();
 
         let mut rx = tx.subscribe();
 
@@ -300,7 +373,12 @@ impl MeshTransport for PgTransport {
         Ok(cancel)
     }
 
-    async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> {
+    async fn acquire_lock(
+        &self,
+        resource: &str,
+        owner: &str,
+        ttl_seconds: u64,
+    ) -> Result<bool, String> {
         // Cleanup expired locks
         let _ = sqlx::query("DELETE FROM mesh_locks WHERE expires_at <= NOW()")
             .execute(&self.pool)
@@ -334,7 +412,12 @@ impl MeshTransport for PgTransport {
         Ok(())
     }
 
-    async fn register_presence(&self, agent_id: &str, status: &str, ttl_seconds: u64) -> Result<(), String> {
+    async fn register_presence(
+        &self,
+        agent_id: &str,
+        status: &str,
+        ttl_seconds: u64,
+    ) -> Result<(), String> {
         sqlx::query(
             "INSERT INTO mesh_presence (agent_id, status, expires_at) VALUES ($1, $2, NOW() + CAST($3 AS INTERVAL))
              ON CONFLICT(agent_id) DO UPDATE SET status = EXCLUDED.status, expires_at = EXCLUDED.expires_at"
@@ -353,11 +436,10 @@ impl MeshTransport for PgTransport {
             .execute(&self.pool)
             .await;
 
-        let rows: Result<Vec<(String, String)>, _> = sqlx::query_as(
-            "SELECT agent_id, status FROM mesh_presence"
-        )
-        .fetch_all(&self.pool)
-        .await;
+        let rows: Result<Vec<(String, String)>, _> =
+            sqlx::query_as("SELECT agent_id, status FROM mesh_presence")
+                .fetch_all(&self.pool)
+                .await;
 
         match rows {
             Ok(r) => Ok(r),
@@ -382,19 +464,28 @@ impl SqliteTransport {
                 payload BLOB NOT NULL,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 msg_id TEXT
-            )"
-        ).execute(&pool).await.map_err(|e| e.to_string())?;
+            )",
+        )
+        .execute(&pool)
+        .await
+        .map_err(|e| e.to_string())?;
 
         sqlx::query(
             "CREATE TABLE IF NOT EXISTS mesh_checkpoints (
                 subscriber_id TEXT PRIMARY KEY,
                 last_id BIGINT NOT NULL
-            )"
-        ).execute(&pool).await.map_err(|e| e.to_string())?;
+            )",
+        )
+        .execute(&pool)
+        .await
+        .map_err(|e| e.to_string())?;
 
         // Attempt to add the column, ignoring error if it already exists
-        match sqlx::query("ALTER TABLE mesh_messages ADD COLUMN msg_id TEXT").execute(&pool).await {
-            Ok(_) => {},
+        match sqlx::query("ALTER TABLE mesh_messages ADD COLUMN msg_id TEXT")
+            .execute(&pool)
+            .await
+        {
+            Ok(_) => {}
             Err(e) => {
                 let err_str = e.to_string();
                 if !err_str.contains("duplicate column") && !err_str.contains("already exists") {
@@ -408,16 +499,22 @@ impl SqliteTransport {
                 resource TEXT PRIMARY KEY,
                 owner TEXT NOT NULL,
                 expires_at DATETIME NOT NULL
-            )"
-        ).execute(&pool).await.map_err(|e| e.to_string())?;
+            )",
+        )
+        .execute(&pool)
+        .await
+        .map_err(|e| e.to_string())?;
 
         sqlx::query(
             "CREATE TABLE IF NOT EXISTS mesh_presence (
                 agent_id TEXT PRIMARY KEY,
                 status TEXT NOT NULL,
                 expires_at DATETIME NOT NULL
-            )"
-        ).execute(&pool).await.map_err(|e| e.to_string())?;
+            )",
+        )
+        .execute(&pool)
+        .await
+        .map_err(|e| e.to_string())?;
 
         let subs = DashMap::new();
 
@@ -430,12 +527,13 @@ impl SqliteTransport {
         let subs = self.subs.clone();
 
         let subscriber_id = "builtin_agent_node".to_string();
-        let mut last_id: i64 = sqlx::query_scalar("SELECT last_id FROM mesh_checkpoints WHERE subscriber_id = ?")
-            .bind(&subscriber_id)
-            .fetch_optional(&pool)
-            .await
-            .unwrap_or(Some(0))
-            .unwrap_or(0);
+        let mut last_id: i64 =
+            sqlx::query_scalar("SELECT last_id FROM mesh_checkpoints WHERE subscriber_id = ?")
+                .bind(&subscriber_id)
+                .fetch_optional(&pool)
+                .await
+                .unwrap_or(Some(0))
+                .unwrap_or(0);
 
         loop {
             // Poll for new messages (SQLite doesn't support SKIP LOCKED)
@@ -467,9 +565,11 @@ impl SqliteTransport {
             }
 
             // Cleanup old messages (keep last 1 hour)
-            let _ = sqlx::query("DELETE FROM mesh_messages WHERE created_at < datetime('now', '-1 hour')")
-                .execute(&pool)
-                .await;
+            let _ = sqlx::query(
+                "DELETE FROM mesh_messages WHERE created_at < datetime('now', '-1 hour')",
+            )
+            .execute(&pool)
+            .await;
 
             tokio::time::sleep(std::time::Duration::from_millis(50)).await;
         }
@@ -505,11 +605,19 @@ impl MeshTransport for SqliteTransport {
         Ok(())
     }
 
-    async fn subscribe(&self, topic: &str, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
-        let tx = self.subs.entry(topic.to_string()).or_insert_with(|| {
-            let (tx, _) = broadcast::channel(100);
-            tx
-        }).clone();
+    async fn subscribe(
+        &self,
+        topic: &str,
+        handler: Box<dyn Fn(Message) + Send + Sync>,
+    ) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+        let tx = self
+            .subs
+            .entry(topic.to_string())
+            .or_insert_with(|| {
+                let (tx, _) = broadcast::channel(100);
+                tx
+            })
+            .clone();
 
         let mut rx = tx.subscribe();
 
@@ -526,7 +634,12 @@ impl MeshTransport for SqliteTransport {
         Ok(cancel)
     }
 
-    async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> {
+    async fn acquire_lock(
+        &self,
+        resource: &str,
+        owner: &str,
+        ttl_seconds: u64,
+    ) -> Result<bool, String> {
         // Cleanup expired locks
         let _ = sqlx::query("DELETE FROM mesh_locks WHERE expires_at <= datetime('now')")
             .execute(&self.pool)
@@ -560,7 +673,12 @@ impl MeshTransport for SqliteTransport {
         Ok(())
     }
 
-    async fn register_presence(&self, agent_id: &str, status: &str, ttl_seconds: u64) -> Result<(), String> {
+    async fn register_presence(
+        &self,
+        agent_id: &str,
+        status: &str,
+        ttl_seconds: u64,
+    ) -> Result<(), String> {
         sqlx::query(
             "INSERT INTO mesh_presence (agent_id, status, expires_at) VALUES (?, ?, datetime('now', ?))
              ON CONFLICT(agent_id) DO UPDATE SET status = EXCLUDED.status, expires_at = EXCLUDED.expires_at"
@@ -579,11 +697,10 @@ impl MeshTransport for SqliteTransport {
             .execute(&self.pool)
             .await;
 
-        let rows: Result<Vec<(String, String)>, _> = sqlx::query_as(
-            "SELECT agent_id, status FROM mesh_presence"
-        )
-        .fetch_all(&self.pool)
-        .await;
+        let rows: Result<Vec<(String, String)>, _> =
+            sqlx::query_as("SELECT agent_id, status FROM mesh_presence")
+                .fetch_all(&self.pool)
+                .await;
 
         match rows {
             Ok(r) => Ok(r),
@@ -593,7 +710,6 @@ impl MeshTransport for SqliteTransport {
 }
 
 pub struct RedisPubSubTransport {
-
     client: redis::Client,
     publish_conn: tokio::sync::Mutex<redis::aio::MultiplexedConnection>,
 }
@@ -601,7 +717,10 @@ pub struct RedisPubSubTransport {
 impl RedisPubSubTransport {
     pub async fn new(redis_url: &str) -> Result<Self, String> {
         let client = redis::Client::open(redis_url).map_err(|e| e.to_string())?;
-        let publish_conn = client.get_multiplexed_tokio_connection().await.map_err(|e| e.to_string())?;
+        let publish_conn = client
+            .get_multiplexed_tokio_connection()
+            .await
+            .map_err(|e| e.to_string())?;
 
         Ok(RedisPubSubTransport {
             client,
@@ -624,11 +743,19 @@ impl MeshTransport for RedisPubSubTransport {
         Ok(())
     }
 
-    async fn subscribe(&self, topic: &str, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
-        use prost::Message as ProstMessage;
+    async fn subscribe(
+        &self,
+        topic: &str,
+        handler: Box<dyn Fn(Message) + Send + Sync>,
+    ) -> Result<Box<dyn Fn() + Send + Sync>, String> {
         use futures_util::StreamExt;
+        use prost::Message as ProstMessage;
 
-        let mut pubsub = self.client.get_async_pubsub().await.map_err(|e| e.to_string())?;
+        let mut pubsub = self
+            .client
+            .get_async_pubsub()
+            .await
+            .map_err(|e| e.to_string())?;
 
         pubsub.subscribe(topic).await.map_err(|e| e.to_string())?;
         let mut stream = pubsub.into_on_message();
@@ -650,11 +777,17 @@ impl MeshTransport for RedisPubSubTransport {
         Ok(cancel)
     }
 
-    async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> {
+    async fn acquire_lock(
+        &self,
+        resource: &str,
+        owner: &str,
+        ttl_seconds: u64,
+    ) -> Result<bool, String> {
         let mut conn = self.publish_conn.lock().await;
         let key = format!("lock:{}", resource);
 
-        let script = redis::Script::new(r#"
+        let script = redis::Script::new(
+            r#"
             local current_owner = redis.call("get", KEYS[1])
             if not current_owner or current_owner == ARGV[1] then
                 redis.call("set", KEYS[1], ARGV[1], "EX", ARGV[2])
@@ -662,28 +795,47 @@ impl MeshTransport for RedisPubSubTransport {
             else
                 return 0
             end
-        "#);
+        "#,
+        );
 
-        let res: i32 = script.key(&key).arg(owner).arg(ttl_seconds).invoke_async(&mut *conn).await.map_err(|e| e.to_string())?;
+        let res: i32 = script
+            .key(&key)
+            .arg(owner)
+            .arg(ttl_seconds)
+            .invoke_async(&mut *conn)
+            .await
+            .map_err(|e| e.to_string())?;
         Ok(res == 1)
     }
 
     async fn release_lock(&self, resource: &str, owner: &str) -> Result<(), String> {
         let mut conn = self.publish_conn.lock().await;
         let key = format!("lock:{}", resource);
-        let script = redis::Script::new(r#"
+        let script = redis::Script::new(
+            r#"
             if redis.call("get", KEYS[1]) == ARGV[1] then
                 return redis.call("del", KEYS[1])
             else
                 return 0
             end
-        "#);
+        "#,
+        );
 
-        let _: i32 = script.key(&key).arg(owner).invoke_async(&mut *conn).await.map_err(|e| e.to_string())?;
+        let _: i32 = script
+            .key(&key)
+            .arg(owner)
+            .invoke_async(&mut *conn)
+            .await
+            .map_err(|e| e.to_string())?;
         Ok(())
     }
 
-    async fn register_presence(&self, agent_id: &str, status: &str, ttl_seconds: u64) -> Result<(), String> {
+    async fn register_presence(
+        &self,
+        agent_id: &str,
+        status: &str,
+        ttl_seconds: u64,
+    ) -> Result<(), String> {
         let mut conn = self.publish_conn.lock().await;
         let key = format!("presence:{}", agent_id);
         let _: () = redis::cmd("SET")
@@ -707,7 +859,11 @@ impl MeshTransport for RedisPubSubTransport {
 
         let mut active = Vec::new();
         for key in keys {
-            let status: Option<String> = redis::cmd("GET").arg(&key).query_async(&mut *conn).await.map_err(|e| e.to_string())?;
+            let status: Option<String> = redis::cmd("GET")
+                .arg(&key)
+                .query_async(&mut *conn)
+                .await
+                .map_err(|e| e.to_string())?;
             if let Some(s) = status {
                 let agent_id = key.strip_prefix("presence:").unwrap_or(&key).to_string();
                 active.push((agent_id, s));
@@ -728,17 +884,17 @@ impl NatsTransport {
         let js = async_nats::jetstream::new(client.clone());
         let kv = match js.get_key_value("mesh_locks").await {
             Ok(store) => store,
-            Err(_) => js.create_key_value(async_nats::jetstream::kv::Config {
-                bucket: "mesh_locks".to_string(),
-                history: 1,
-                ..Default::default()
-            }).await.map_err(|e| e.to_string())?
+            Err(_) => js
+                .create_key_value(async_nats::jetstream::kv::Config {
+                    bucket: "mesh_locks".to_string(),
+                    history: 1,
+                    ..Default::default()
+                })
+                .await
+                .map_err(|e| e.to_string())?,
         };
 
-        Ok(Self {
-            client,
-            kv,
-        })
+        Ok(Self { client, kv })
     }
 }
 
@@ -748,15 +904,26 @@ impl MeshTransport for NatsTransport {
         use prost::Message as ProstMessage;
         let mut buf = Vec::new();
         message.encode(&mut buf).map_err(|e| e.to_string())?;
-        self.client.publish(topic.to_string(), buf.into()).await.map_err(|e| e.to_string())?;
+        self.client
+            .publish(topic.to_string(), buf.into())
+            .await
+            .map_err(|e| e.to_string())?;
         Ok(())
     }
 
-    async fn subscribe(&self, topic: &str, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
-        use prost::Message as ProstMessage;
+    async fn subscribe(
+        &self,
+        topic: &str,
+        handler: Box<dyn Fn(Message) + Send + Sync>,
+    ) -> Result<Box<dyn Fn() + Send + Sync>, String> {
         use futures::StreamExt;
+        use prost::Message as ProstMessage;
 
-        let mut subscriber = self.client.subscribe(topic.to_string()).await.map_err(|e| e.to_string())?;
+        let mut subscriber = self
+            .client
+            .subscribe(topic.to_string())
+            .await
+            .map_err(|e| e.to_string())?;
 
         let worker = tokio::spawn(async move {
             while let Some(msg) = subscriber.next().await {
@@ -771,7 +938,12 @@ impl MeshTransport for NatsTransport {
         }))
     }
 
-    async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> {
+    async fn acquire_lock(
+        &self,
+        resource: &str,
+        owner: &str,
+        ttl_seconds: u64,
+    ) -> Result<bool, String> {
         let expires_at = chrono::Utc::now().timestamp() + ttl_seconds as i64;
         let payload = format!("{}:{}", owner, expires_at);
 
@@ -780,7 +952,15 @@ impl MeshTransport for NatsTransport {
             if let Some((stored_owner, stored_exp)) = entry_str.split_once(':') {
                 if let Ok(exp) = stored_exp.parse::<i64>() {
                     if exp <= chrono::Utc::now().timestamp() || stored_owner == owner {
-                        match self.kv.update(resource, payload.clone().into_bytes().into(), entry.revision).await {
+                        match self
+                            .kv
+                            .update(
+                                resource,
+                                payload.clone().into_bytes().into(),
+                                entry.revision,
+                            )
+                            .await
+                        {
                             Ok(_) => return Ok(true),
                             Err(_) => return Ok(false),
                         }
@@ -809,18 +989,29 @@ impl MeshTransport for NatsTransport {
             if let Some((stored_owner, _)) = entry_str.split_once(':') {
                 if stored_owner == owner {
                     let payload = format!("{}:0", owner);
-                    let _ = self.kv.update(resource, payload.into_bytes().into(), entry.revision).await;
+                    let _ = self
+                        .kv
+                        .update(resource, payload.into_bytes().into(), entry.revision)
+                        .await;
                 }
             }
         }
         Ok(())
     }
 
-    async fn register_presence(&self, agent_id: &str, status: &str, ttl_seconds: u64) -> Result<(), String> {
+    async fn register_presence(
+        &self,
+        agent_id: &str,
+        status: &str,
+        ttl_seconds: u64,
+    ) -> Result<(), String> {
         let key = format!("presence_{}", agent_id);
         let expires_at = chrono::Utc::now().timestamp() + ttl_seconds as i64;
         let payload = format!("{}:{}", status, expires_at);
-        self.kv.put(&key, payload.into_bytes().into()).await.map_err(|e| e.to_string())?;
+        self.kv
+            .put(&key, payload.into_bytes().into())
+            .await
+            .map_err(|e| e.to_string())?;
         Ok(())
     }
 
@@ -850,9 +1041,6 @@ impl MeshTransport for NatsTransport {
     }
 }
 
-
-
-
 #[derive(Clone)]
 pub struct Peer {
     pub id: String,
@@ -871,7 +1059,11 @@ pub struct MeshOverlayTransport {
 
 impl MeshOverlayTransport {
     pub async fn new(inner: Arc<dyn MeshTransport>, udp_port: u16, tcp_port: u16) -> Self {
-        let udp_socket = Arc::new(tokio::net::UdpSocket::bind(format!("0.0.0.0:{}", udp_port)).await.expect("Failed to bind UDP"));
+        let udp_socket = Arc::new(
+            tokio::net::UdpSocket::bind(format!("0.0.0.0:{}", udp_port))
+                .await
+                .expect("Failed to bind UDP"),
+        );
 
         let transport = MeshOverlayTransport {
             inner,
@@ -902,7 +1094,12 @@ impl MeshOverlayTransport {
                     use prost::Message as ProstMessage;
 
                     // Check if it's an ACK (magic bytes 0xAA 0xBB 0xCC 0xDD)
-                    if len > 4 && buf[0] == 0xAA && buf[1] == 0xBB && buf[2] == 0xCC && buf[3] == 0xDD {
+                    if len > 4
+                        && buf[0] == 0xAA
+                        && buf[1] == 0xBB
+                        && buf[2] == 0xCC
+                        && buf[3] == 0xDD
+                    {
                         if let Ok(msg_id) = String::from_utf8(buf[4..len].to_vec()) {
                             if let Some((_, tx)) = ack_map.remove(&msg_id) {
                                 let _ = tx.send(());
@@ -927,7 +1124,9 @@ impl MeshOverlayTransport {
         // TCP Listener
         let inner_tcp = self.inner.clone();
         tokio::spawn(async move {
-            if let Ok(listener) = tokio::net::TcpListener::bind(format!("0.0.0.0:{}", tcp_port)).await {
+            if let Ok(listener) =
+                tokio::net::TcpListener::bind(format!("0.0.0.0:{}", tcp_port)).await
+            {
                 loop {
                     if let Ok((mut stream, _)) = listener.accept().await {
                         let inner_tcp_clone = inner_tcp.clone();
@@ -936,8 +1135,12 @@ impl MeshOverlayTransport {
                             let mut len_buf = [0u8; 4];
                             if stream.read_exact(&mut len_buf).await.is_ok() {
                                 let len = u32::from_be_bytes(len_buf) as usize;
-                                if len > 10 * 1024 * 1024 { // 10MB max limit
-                                    tracing::warn!("Rejecting oversized mesh message: {} bytes", len);
+                                if len > 10 * 1024 * 1024 {
+                                    // 10MB max limit
+                                    tracing::warn!(
+                                        "Rejecting oversized mesh message: {} bytes",
+                                        len
+                                    );
                                     return;
                                 }
                                 let mut buf = vec![0u8; len];
@@ -1046,7 +1249,11 @@ impl MeshTransport for MeshOverlayTransport {
         Ok(())
     }
 
-    async fn subscribe(&self, topic: &str, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+    async fn subscribe(
+        &self,
+        topic: &str,
+        handler: Box<dyn Fn(Message) + Send + Sync>,
+    ) -> Result<Box<dyn Fn() + Send + Sync>, String> {
         self.inner.subscribe(topic, handler).await
     }
 
@@ -1055,7 +1262,12 @@ impl MeshTransport for MeshOverlayTransport {
         self.inner.add_peer(peer);
     }
 
-    async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> {
+    async fn acquire_lock(
+        &self,
+        resource: &str,
+        owner: &str,
+        ttl_seconds: u64,
+    ) -> Result<bool, String> {
         self.inner.acquire_lock(resource, owner, ttl_seconds).await
     }
 
@@ -1063,8 +1275,15 @@ impl MeshTransport for MeshOverlayTransport {
         self.inner.release_lock(resource, owner).await
     }
 
-    async fn register_presence(&self, agent_id: &str, status: &str, ttl_seconds: u64) -> Result<(), String> {
-        self.inner.register_presence(agent_id, status, ttl_seconds).await
+    async fn register_presence(
+        &self,
+        agent_id: &str,
+        status: &str,
+        ttl_seconds: u64,
+    ) -> Result<(), String> {
+        self.inner
+            .register_presence(agent_id, status, ttl_seconds)
+            .await
     }
 
     async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> {
@@ -1090,32 +1309,54 @@ impl MeshTransport for UniversalTransportBridge {
     async fn publish(&self, topic: &str, message: Message) -> Result<(), String> {
         self.inner.publish(topic, message).await
     }
-    async fn subscribe(&self, topic: &str, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+    async fn subscribe(
+        &self,
+        topic: &str,
+        handler: Box<dyn Fn(Message) + Send + Sync>,
+    ) -> Result<Box<dyn Fn() + Send + Sync>, String> {
         self.inner.subscribe(topic, handler).await
     }
-    async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> {
+    async fn acquire_lock(
+        &self,
+        resource: &str,
+        owner: &str,
+        ttl_seconds: u64,
+    ) -> Result<bool, String> {
         self.inner.acquire_lock(resource, owner, ttl_seconds).await
     }
     async fn release_lock(&self, resource: &str, owner: &str) -> Result<(), String> {
         self.inner.release_lock(resource, owner).await
     }
-    async fn register_presence(&self, agent_id: &str, status: &str, ttl_seconds: u64) -> Result<(), String> {
-        self.inner.register_presence(agent_id, status, ttl_seconds).await
+    async fn register_presence(
+        &self,
+        agent_id: &str,
+        status: &str,
+        ttl_seconds: u64,
+    ) -> Result<(), String> {
+        self.inner
+            .register_presence(agent_id, status, ttl_seconds)
+            .await
     }
     async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> {
         self.inner.get_active_agents().await
     }
 }
 
-pub async fn create_transport(redis_url: Option<&str>, is_cloud: bool) -> Result<Arc<dyn MeshTransport>, String> {
+pub async fn create_transport(
+    redis_url: Option<&str>,
+    is_cloud: bool,
+) -> Result<Arc<dyn MeshTransport>, String> {
     if let Ok(nats_url) = std::env::var("NATS_URL") {
         match NatsTransport::new(&nats_url).await {
             Ok(t) => {
                 tracing::info!("Initialized NatsTransport");
                 return Ok(Arc::new(UniversalTransportBridge::new(Arc::new(t))));
-            },
+            }
             Err(e) => {
-                tracing::warn!("Failed to initialize NatsTransport: {}. Falling back to default transport.", e);
+                tracing::warn!(
+                    "Failed to initialize NatsTransport: {}. Falling back to default transport.",
+                    e
+                );
             }
         }
     }
@@ -1126,9 +1367,12 @@ pub async fn create_transport(redis_url: Option<&str>, is_cloud: bool) -> Result
                 Ok(t) => {
                     tracing::info!("Initialized RedisPubSubTransport");
                     return Ok(Arc::new(UniversalTransportBridge::new(Arc::new(t))));
-                },
+                }
                 Err(e) => {
-                    return Err(format!("Failed to initialize RedisPubSubTransport in cloud mode: {}", e));
+                    return Err(format!(
+                        "Failed to initialize RedisPubSubTransport in cloud mode: {}",
+                        e
+                    ));
                 }
             }
         } else {
@@ -1139,18 +1383,24 @@ pub async fn create_transport(redis_url: Option<&str>, is_cloud: bool) -> Result
     // Standalone fallback
     if let Ok(db_url) = std::env::var("OHC_DATABASE_URL") {
         if db_url.starts_with("sqlite") {
-            match sqlx::sqlite::SqlitePoolOptions::new().connect(&db_url).await {
-                Ok(pool) => {
-                    match SqliteTransport::new(pool).await {
-                        Ok(t) => {
-                            let t_clone = t.clone();
-                            tokio::spawn(async move { t_clone.start_worker().await; });
-                            tracing::debug!("Initialized SqliteTransport (Standalone)");
-                            return Ok(Arc::new(UniversalTransportBridge::new(Arc::new(t))));
-                        },
-                        Err(e) => {
-                            tracing::debug!("Failed to initialize SqliteTransport (Standalone): {}. Falling back to InProcessTransport.", e);
-                        }
+            match sqlx::sqlite::SqlitePoolOptions::new()
+                .connect(&db_url)
+                .await
+            {
+                Ok(pool) => match SqliteTransport::new(pool).await {
+                    Ok(t) => {
+                        let t_clone = t.clone();
+                        tokio::spawn(async move {
+                            t_clone.start_worker().await;
+                        });
+                        tracing::debug!("Initialized SqliteTransport (Standalone)");
+                        return Ok(Arc::new(UniversalTransportBridge::new(Arc::new(t))));
+                    }
+                    Err(e) => {
+                        tracing::debug!(
+                            "Failed to initialize SqliteTransport (Standalone): {}. Falling back to InProcessTransport.",
+                            e
+                        );
                     }
                 },
                 Err(e) => {
@@ -1165,15 +1415,20 @@ pub async fn create_transport(redis_url: Option<&str>, is_cloud: bool) -> Result
             Ok(t) => {
                 tracing::info!("Initialized RedisPubSubTransport (Standalone)");
                 return Ok(Arc::new(UniversalTransportBridge::new(Arc::new(t))));
-            },
+            }
             Err(e) => {
-                tracing::warn!("Failed to initialize RedisPubSubTransport (Standalone): {}. Falling back to InProcessTransport.", e);
+                tracing::warn!(
+                    "Failed to initialize RedisPubSubTransport (Standalone): {}. Falling back to InProcessTransport.",
+                    e
+                );
             }
         }
     }
 
     tracing::info!("Initialized InProcessTransport");
-    Ok(Arc::new(UniversalTransportBridge::new(Arc::new(InProcessTransport::new()))))
+    Ok(Arc::new(UniversalTransportBridge::new(Arc::new(
+        InProcessTransport::new(),
+    ))))
 }
 
 #[cfg(test)]
@@ -1325,7 +1580,6 @@ Content-Length: 0
         assert!(received.load(Ordering::SeqCst));
     }
 
-
     use super::*;
     use std::sync::atomic::{AtomicBool, Ordering};
 
@@ -1336,7 +1590,9 @@ Content-Length: 0
         // In this test, we just ensure it handles the dummy DB gracefully without panicking if it times out
         if let Ok(transport) = transport_res {
             let t_clone = transport.clone();
-            tokio::spawn(async move { t_clone.start_worker().await; });
+            tokio::spawn(async move {
+                t_clone.start_worker().await;
+            });
 
             let received = Arc::new(AtomicBool::new(false));
             let received_clone = received.clone();
@@ -1347,7 +1603,10 @@ Content-Length: 0
                 }
             });
 
-            let cancel = transport.subscribe("ipc_test_topic", handler).await.unwrap();
+            let cancel = transport
+                .subscribe("ipc_test_topic", handler)
+                .await
+                .unwrap();
             tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
 
             let msg = Message {
@@ -1384,15 +1643,18 @@ Content-Length: 0
             let _ = transport.publish("ipc_checkpoint_topic", msg).await;
 
             let t_clone = transport.clone();
-            tokio::spawn(async move { t_clone.start_worker().await; });
+            tokio::spawn(async move {
+                t_clone.start_worker().await;
+            });
 
             tokio::time::sleep(tokio::time::Duration::from_millis(150)).await;
 
             let subscriber_id = "builtin_agent_node".to_string();
-            let _last_id: Result<i64, _> = sqlx::query_scalar("SELECT last_id FROM mesh_checkpoints WHERE subscriber_id = $1")
-                .bind(&subscriber_id)
-                .fetch_one(&transport.pool)
-                .await;
+            let _last_id: Result<i64, _> =
+                sqlx::query_scalar("SELECT last_id FROM mesh_checkpoints WHERE subscriber_id = $1")
+                    .bind(&subscriber_id)
+                    .fetch_one(&transport.pool)
+                    .await;
         }
     }
 
@@ -1402,7 +1664,9 @@ Content-Length: 0
         let transport_res = PgTransport::new(&db_url).await;
         if let Ok(transport) = transport_res {
             let t_clone = transport.clone();
-            tokio::spawn(async move { t_clone.start_worker().await; });
+            tokio::spawn(async move {
+                t_clone.start_worker().await;
+            });
 
             let _ = transport.acquire_lock("ipc_resource", "agent_1", 10).await;
             let _ = transport.acquire_lock("ipc_resource", "agent_1", 20).await;
@@ -1413,7 +1677,6 @@ Content-Length: 0
             let _ = transport.acquire_lock("ipc_resource", "agent_2", 10).await;
         }
     }
-
 
     #[tokio::test]
     async fn test_memory_transport() {
@@ -1454,12 +1717,18 @@ Content-Length: 0
 
     #[tokio::test]
     async fn test_sqlite_transport() {
-        let pool = sqlx::sqlite::SqlitePoolOptions::new().max_connections(1).connect("sqlite::memory:").await.unwrap();
+        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
         let transport_res = SqliteTransport::new(pool).await;
 
         if let Ok(transport) = transport_res {
             let t_clone = transport.clone();
-            tokio::spawn(async move { t_clone.start_worker().await; });
+            tokio::spawn(async move {
+                t_clone.start_worker().await;
+            });
 
             let received = Arc::new(AtomicBool::new(false));
             let received_clone = received.clone();
@@ -1470,7 +1739,10 @@ Content-Length: 0
                 }
             });
 
-            let cancel = transport.subscribe("sqlite_test_topic", handler).await.unwrap();
+            let cancel = transport
+                .subscribe("sqlite_test_topic", handler)
+                .await
+                .unwrap();
             tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
 
             let msg = Message {
@@ -1492,7 +1764,11 @@ Content-Length: 0
 
     #[tokio::test]
     async fn test_sqlite_transport_checkpoints() {
-        let pool = sqlx::sqlite::SqlitePoolOptions::new().max_connections(1).connect("sqlite::memory:").await.unwrap();
+        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
         let transport_res = SqliteTransport::new(pool).await;
 
         if let Ok(transport) = transport_res {
@@ -1507,15 +1783,18 @@ Content-Length: 0
             let _ = transport.publish("sqlite_checkpoint_topic", msg).await;
 
             let t_clone = transport.clone();
-            tokio::spawn(async move { t_clone.start_worker().await; });
+            tokio::spawn(async move {
+                t_clone.start_worker().await;
+            });
 
             tokio::time::sleep(tokio::time::Duration::from_millis(150)).await;
 
             let subscriber_id = "builtin_agent_node".to_string();
-            let last_id: Result<i64, _> = sqlx::query_scalar("SELECT last_id FROM mesh_checkpoints WHERE subscriber_id = ?")
-                .bind(&subscriber_id)
-                .fetch_one(&transport.pool)
-                .await;
+            let last_id: Result<i64, _> =
+                sqlx::query_scalar("SELECT last_id FROM mesh_checkpoints WHERE subscriber_id = ?")
+                    .bind(&subscriber_id)
+                    .fetch_one(&transport.pool)
+                    .await;
 
             assert!(last_id.is_ok());
         }
@@ -1523,37 +1802,68 @@ Content-Length: 0
 
     #[tokio::test]
     async fn test_sqlite_transport_locking() {
-        let pool = sqlx::sqlite::SqlitePoolOptions::new().max_connections(1).connect("sqlite::memory:").await.unwrap();
+        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
         let transport_res = SqliteTransport::new(pool).await;
 
         if let Ok(transport) = transport_res {
             let t_clone = transport.clone();
-            tokio::spawn(async move { t_clone.start_worker().await; });
+            tokio::spawn(async move {
+                t_clone.start_worker().await;
+            });
 
-            let acq1 = transport.acquire_lock("sqlite_resource", "agent_1", 10).await.unwrap();
+            let acq1 = transport
+                .acquire_lock("sqlite_resource", "agent_1", 10)
+                .await
+                .unwrap();
             assert!(acq1);
 
-            let acq2 = transport.acquire_lock("sqlite_resource", "agent_1", 20).await.unwrap();
+            let acq2 = transport
+                .acquire_lock("sqlite_resource", "agent_1", 20)
+                .await
+                .unwrap();
             assert!(acq2);
 
-            let acq3 = transport.acquire_lock("sqlite_resource", "agent_2", 10).await.unwrap();
+            let acq3 = transport
+                .acquire_lock("sqlite_resource", "agent_2", 10)
+                .await
+                .unwrap();
             assert!(!acq3);
 
-            transport.release_lock("sqlite_resource", "agent_1").await.unwrap();
+            transport
+                .release_lock("sqlite_resource", "agent_1")
+                .await
+                .unwrap();
 
-            let acq4 = transport.acquire_lock("sqlite_resource", "agent_2", 10).await.unwrap();
+            let acq4 = transport
+                .acquire_lock("sqlite_resource", "agent_2", 10)
+                .await
+                .unwrap();
             assert!(acq4);
         }
     }
 
     #[tokio::test]
     async fn test_sqlite_transport_presence() {
-        let pool = sqlx::sqlite::SqlitePoolOptions::new().max_connections(1).connect("sqlite::memory:").await.unwrap();
+        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
         let transport_res = SqliteTransport::new(pool).await;
 
         if let Ok(transport) = transport_res {
-            transport.register_presence("agent_1", "online", 10).await.unwrap();
-            transport.register_presence("agent_2", "busy", 10).await.unwrap();
+            transport
+                .register_presence("agent_1", "online", 10)
+                .await
+                .unwrap();
+            transport
+                .register_presence("agent_2", "busy", 10)
+                .await
+                .unwrap();
 
             let mut agents = transport.get_active_agents().await.unwrap();
             agents.sort();
@@ -1581,27 +1891,48 @@ Content-Length: 0
         let transport = InProcessTransport::new();
 
         // Test lock acquisition
-        let acquired = transport.acquire_lock("my_resource", "agent_1", 10).await.unwrap();
+        let acquired = transport
+            .acquire_lock("my_resource", "agent_1", 10)
+            .await
+            .unwrap();
         assert!(acquired);
 
         // Test re-acquisition by same owner
-        let reacquired = transport.acquire_lock("my_resource", "agent_1", 20).await.unwrap();
+        let reacquired = transport
+            .acquire_lock("my_resource", "agent_1", 20)
+            .await
+            .unwrap();
         assert!(reacquired);
 
         // Test mutual exclusion
-        let acquired_again = transport.acquire_lock("my_resource", "agent_2", 10).await.unwrap();
+        let acquired_again = transport
+            .acquire_lock("my_resource", "agent_2", 10)
+            .await
+            .unwrap();
         assert!(!acquired_again);
 
         // Test attempted release by WRONG owner
-        transport.release_lock("my_resource", "agent_2").await.unwrap();
-        let still_locked = transport.acquire_lock("my_resource", "agent_3", 10).await.unwrap();
+        transport
+            .release_lock("my_resource", "agent_2")
+            .await
+            .unwrap();
+        let still_locked = transport
+            .acquire_lock("my_resource", "agent_3", 10)
+            .await
+            .unwrap();
         assert!(!still_locked);
 
         // Test lock release by CORRECT owner
-        transport.release_lock("my_resource", "agent_1").await.unwrap();
+        transport
+            .release_lock("my_resource", "agent_1")
+            .await
+            .unwrap();
 
         // Test lock acquisition after release
-        let acquired_after_release = transport.acquire_lock("my_resource", "agent_2", 10).await.unwrap();
+        let acquired_after_release = transport
+            .acquire_lock("my_resource", "agent_2", 10)
+            .await
+            .unwrap();
         assert!(acquired_after_release);
     }
 
@@ -1610,7 +1941,10 @@ Content-Length: 0
         let transport = InProcessTransport::new();
 
         // Acquire lock with short TTL (1 second)
-        let acquired = transport.acquire_lock("expiring_resource", "agent_1", 1).await.unwrap();
+        let acquired = transport
+            .acquire_lock("expiring_resource", "agent_1", 1)
+            .await
+            .unwrap();
         assert!(acquired);
 
         // Second agent should be able to acquire lock after expiration. Poll to
@@ -1618,7 +1952,11 @@ Content-Length: 0
         let deadline = tokio::time::Instant::now() + tokio::time::Duration::from_secs(5);
         let mut acquired_after_expiration = false;
         while tokio::time::Instant::now() < deadline {
-            if transport.acquire_lock("expiring_resource", "agent_2", 10).await.unwrap() {
+            if transport
+                .acquire_lock("expiring_resource", "agent_2", 10)
+                .await
+                .unwrap()
+            {
                 acquired_after_expiration = true;
                 break;
             }
@@ -1632,16 +1970,28 @@ Content-Length: 0
         let transport = InProcessTransport::new();
 
         // Register presence
-        transport.register_presence("agent_1", "online", 10).await.unwrap();
-        transport.register_presence("agent_2", "busy", 1).await.unwrap();
+        transport
+            .register_presence("agent_1", "online", 10)
+            .await
+            .unwrap();
+        transport
+            .register_presence("agent_2", "busy", 1)
+            .await
+            .unwrap();
 
         // Get active agents
         let mut active_agents = transport.get_active_agents().await.unwrap();
         active_agents.sort();
 
         assert_eq!(active_agents.len(), 2);
-        assert_eq!(active_agents[0], ("agent_1".to_string(), "online".to_string()));
-        assert_eq!(active_agents[1], ("agent_2".to_string(), "busy".to_string()));
+        assert_eq!(
+            active_agents[0],
+            ("agent_1".to_string(), "online".to_string())
+        );
+        assert_eq!(
+            active_agents[1],
+            ("agent_2".to_string(), "busy".to_string())
+        );
 
         // Wait for agent_2 presence to expire
         tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
@@ -1649,7 +1999,10 @@ Content-Length: 0
         // Get active agents again
         let active_agents_after_expiration = transport.get_active_agents().await.unwrap();
         assert_eq!(active_agents_after_expiration.len(), 1);
-        assert_eq!(active_agents_after_expiration[0], ("agent_1".to_string(), "online".to_string()));
+        assert_eq!(
+            active_agents_after_expiration[0],
+            ("agent_1".to_string(), "online".to_string())
+        );
     }
 
     #[tokio::test]
@@ -1657,7 +2010,6 @@ Content-Length: 0
         // Needs running Redis instance
         let transport = RedisPubSubTransport::new("redis://localhost:6379").await;
         if transport.is_err() {
-
             return;
         }
         let transport = transport.unwrap();
@@ -1676,7 +2028,10 @@ Content-Length: 0
         // Wait for connection to settle
         tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
 
-        let cancel = transport.subscribe("test_topic_redis", handler).await.unwrap();
+        let cancel = transport
+            .subscribe("test_topic_redis", handler)
+            .await
+            .unwrap();
 
         // Wait for subscription to propagate
         tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
@@ -1689,17 +2044,20 @@ Content-Length: 0
             msg_id: uuid::Uuid::new_v4().to_string(),
         };
 
-        transport.publish("test_topic_redis", msg.clone()).await.unwrap();
+        transport
+            .publish("test_topic_redis", msg.clone())
+            .await
+            .unwrap();
 
         // Use timeout to prevent hanging test
         let result = tokio::time::timeout(std::time::Duration::from_secs(2), rx.recv()).await;
 
         assert!(result.is_ok());
         if let Ok(Some(received_msg)) = result {
-             assert_eq!(received_msg.action, "test_topic_redis");
-             assert_eq!(received_msg.payload, b"hello redis");
+            assert_eq!(received_msg.action, "test_topic_redis");
+            assert_eq!(received_msg.payload, b"hello redis");
         } else {
-             panic!("Did not receive message");
+            panic!("Did not receive message");
         }
 
         cancel();
@@ -1711,11 +2069,17 @@ Content-Length: 0
         let bridge = UniversalTransportBridge::new(inner);
 
         // Test lock acquisition
-        let acquired = bridge.acquire_lock("bridge_resource", "agent_1", 10).await.unwrap();
+        let acquired = bridge
+            .acquire_lock("bridge_resource", "agent_1", 10)
+            .await
+            .unwrap();
         assert!(acquired);
 
         // Test presence
-        bridge.register_presence("agent_1", "online", 10).await.unwrap();
+        bridge
+            .register_presence("agent_1", "online", 10)
+            .await
+            .unwrap();
         let agents = bridge.get_active_agents().await.unwrap();
         assert_eq!(agents.len(), 1);
 
@@ -1729,7 +2093,10 @@ Content-Length: 0
             }
         });
 
-        let _cancel = bridge.subscribe("test_bridge_topic", handler).await.unwrap();
+        let _cancel = bridge
+            .subscribe("test_bridge_topic", handler)
+            .await
+            .unwrap();
 
         let msg = Message {
             agent_id: "test".to_string(),

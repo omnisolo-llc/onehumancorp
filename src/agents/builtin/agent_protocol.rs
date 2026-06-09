@@ -77,7 +77,8 @@ impl AgentProtocolServer {
             Err(_) => {
                 return serde_json::to_string(&ErrorResponse {
                     error: "Invalid request".to_string(),
-                }).unwrap_or_else(|_| r#"{"error": "Serialization failed"}"#.to_string());
+                })
+                .unwrap_or_else(|_| r#"{"error": "Serialization failed"}"#.to_string());
             }
         };
 
@@ -91,9 +92,9 @@ impl AgentProtocolServer {
             artifacts: vec![],
         };
 
-        serde_json::to_string(&resp).unwrap_or_else(|_| r#"{"error": "Serialization failed"}"#.to_string())
+        serde_json::to_string(&resp)
+            .unwrap_or_else(|_| r#"{"error": "Serialization failed"}"#.to_string())
     }
-
 
     /// GET /ap/v1/agent/tasks/{task_id}
 
@@ -115,7 +116,8 @@ impl AgentProtocolServer {
             additional_input: None,
             artifacts: vec![],
         };
-        serde_json::to_string(&resp).unwrap_or_else(|_| r#"{"error": "Serialization failed"}"#.to_string())
+        serde_json::to_string(&resp)
+            .unwrap_or_else(|_| r#"{"error": "Serialization failed"}"#.to_string())
     }
 
     /// POST /ap/v1/agent/tasks/{task_id}/steps
@@ -125,7 +127,8 @@ impl AgentProtocolServer {
             Err(_) => {
                 return serde_json::to_string(&ErrorResponse {
                     error: "Invalid request".to_string(),
-                }).unwrap_or_else(|_| r#"{"error": "Serialization failed"}"#.to_string());
+                })
+                .unwrap_or_else(|_| r#"{"error": "Serialization failed"}"#.to_string());
             }
         };
 
@@ -144,7 +147,8 @@ impl AgentProtocolServer {
                     is_last: true,
                     artifacts: vec![],
                 };
-                serde_json::to_string(&resp).unwrap_or_else(|_| r#"{"error": "Serialization failed"}"#.to_string())
+                serde_json::to_string(&resp)
+                    .unwrap_or_else(|_| r#"{"error": "Serialization failed"}"#.to_string())
             }
             Err(e) => {
                 let resp = Step {
@@ -157,7 +161,8 @@ impl AgentProtocolServer {
                     is_last: true,
                     artifacts: vec![],
                 };
-                serde_json::to_string(&resp).unwrap_or_else(|_| r#"{"error": "Serialization failed"}"#.to_string())
+                serde_json::to_string(&resp)
+                    .unwrap_or_else(|_| r#"{"error": "Serialization failed"}"#.to_string())
             }
         }
     }
@@ -166,7 +171,7 @@ impl AgentProtocolServer {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::agent::{Agent};
+    use crate::agent::Agent;
     use crate::llm::LlmClient;
     use crate::types::{ChatRequest, ChatResponse, Message, Usage};
 
@@ -174,7 +179,10 @@ mod tests {
 
     #[async_trait::async_trait]
     impl LlmClient for MockLlmClient {
-        async fn chat(&self, _req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+        async fn chat(
+            &self,
+            _req: ChatRequest,
+        ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
             Ok(ChatResponse {
                 message: Message::assistant("agent protocol success"),
                 usage: Usage::default(),
@@ -208,7 +216,6 @@ mod tests {
         assert_eq!(step_resp.status, StepStatus::Completed);
         assert!(step_resp.is_last);
     }
-
 
     #[tokio::test]
     async fn test_agent_protocol_get_task() {
@@ -255,7 +262,10 @@ mod tests {
 
     #[async_trait::async_trait]
     impl LlmClient for FailingMockLlmClient {
-        async fn chat(&self, _req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+        async fn chat(
+            &self,
+            _req: ChatRequest,
+        ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
             Err("LLM execution failed".into())
         }
     }

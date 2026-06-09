@@ -1,5 +1,5 @@
-use std::sync::Arc;
 use futures::future::join_all;
+use std::sync::Arc;
 
 /// SOTA Harness Patterns (2025-2026): 4. Scalable multi-agent -> single-user CLI to 1000+ agent cloud deployments
 
@@ -35,13 +35,28 @@ pub struct CloudOrchestrator {
 }
 
 impl CloudOrchestrator {
-    pub fn new(mode: DeploymentMode, nodes: Vec<Arc<dyn AgentNode>>, max_retries: usize, concurrency_limit: usize, timeout_secs: u64) -> Self {
-        Self { mode, nodes, max_retries, concurrency_limit, timeout_secs }
+    pub fn new(
+        mode: DeploymentMode,
+        nodes: Vec<Arc<dyn AgentNode>>,
+        max_retries: usize,
+        concurrency_limit: usize,
+        timeout_secs: u64,
+    ) -> Self {
+        Self {
+            mode,
+            nodes,
+            max_retries,
+            concurrency_limit,
+            timeout_secs,
+        }
     }
 
     /// Distributes tasks across the fleet of agents.
     /// Simulates scaling from a single-user CLI context to 1000+ cloud agents.
-    pub async fn distribute_and_execute(&self, tasks: Vec<TaskChunk>) -> Result<Vec<TaskResult>, String> {
+    pub async fn distribute_and_execute(
+        &self,
+        tasks: Vec<TaskChunk>,
+    ) -> Result<Vec<TaskResult>, String> {
         if tasks.is_empty() {
             return Ok(Vec::new());
         }
@@ -97,12 +112,17 @@ impl CloudOrchestrator {
                             retries += 1;
                             if retries <= max_retries {
                                 // Exponential backoff
-                                let backoff = std::time::Duration::from_millis(100 * 2_u64.pow(retries as u32 - 1));
+                                let backoff = std::time::Duration::from_millis(
+                                    100 * 2_u64.pow(retries as u32 - 1),
+                                );
                                 tokio::time::sleep(backoff).await;
                             }
                         }
 
-                        Err(format!("Task {} failed after {} retries: {}", task.id, max_retries, last_error))
+                        Err(format!(
+                            "Task {} failed after {} retries: {}",
+                            task.id, max_retries, last_error
+                        ))
                     };
                     futures.push(tokio::spawn(fut));
                 }
@@ -156,9 +176,18 @@ mod tests {
     async fn test_scalable_multi_agent_retries() {
         // Fails 2 times, succeeds on the 3rd. Max retries is 3.
         let node = Arc::new(FailingAgentNode::new(2));
-        let orchestrator = CloudOrchestrator::new(DeploymentMode::CloudDistributed, vec![node.clone() as Arc<dyn AgentNode>], 3, 10, 60);
+        let orchestrator = CloudOrchestrator::new(
+            DeploymentMode::CloudDistributed,
+            vec![node.clone() as Arc<dyn AgentNode>],
+            3,
+            10,
+            60,
+        );
 
-        let tasks = vec![TaskChunk { id: "retry1".to_string(), payload: "Data".to_string() }];
+        let tasks = vec![TaskChunk {
+            id: "retry1".to_string(),
+            payload: "Data".to_string(),
+        }];
         let results = orchestrator.distribute_and_execute(tasks).await.unwrap();
 
         assert_eq!(results.len(), 1);
@@ -170,9 +199,18 @@ mod tests {
     async fn test_scalable_multi_agent_retries_exceeded() {
         // Fails 4 times. Max retries is 2.
         let node = Arc::new(FailingAgentNode::new(4));
-        let orchestrator = CloudOrchestrator::new(DeploymentMode::CloudDistributed, vec![node.clone() as Arc<dyn AgentNode>], 2, 10, 60);
+        let orchestrator = CloudOrchestrator::new(
+            DeploymentMode::CloudDistributed,
+            vec![node.clone() as Arc<dyn AgentNode>],
+            2,
+            10,
+            60,
+        );
 
-        let tasks = vec![TaskChunk { id: "retry2".to_string(), payload: "Data".to_string() }];
+        let tasks = vec![TaskChunk {
+            id: "retry2".to_string(),
+            payload: "Data".to_string(),
+        }];
         let result = orchestrator.distribute_and_execute(tasks).await;
 
         assert!(result.is_err());
@@ -198,9 +236,18 @@ mod tests {
     async fn test_scalable_multi_agent_timeout() {
         let node = Arc::new(TimeoutAgentNode);
         // Timeout set to 1 second, but task takes 3 seconds
-        let orchestrator = CloudOrchestrator::new(DeploymentMode::CloudDistributed, vec![node.clone() as Arc<dyn AgentNode>], 0, 10, 1);
+        let orchestrator = CloudOrchestrator::new(
+            DeploymentMode::CloudDistributed,
+            vec![node.clone() as Arc<dyn AgentNode>],
+            0,
+            10,
+            1,
+        );
 
-        let tasks = vec![TaskChunk { id: "timeout1".to_string(), payload: "Data".to_string() }];
+        let tasks = vec![TaskChunk {
+            id: "timeout1".to_string(),
+            payload: "Data".to_string(),
+        }];
         let result = orchestrator.distribute_and_execute(tasks).await;
 
         assert!(result.is_err());
@@ -236,11 +283,18 @@ mod tests {
     #[tokio::test]
     async fn test_scalable_multi_agent_local_cli() {
         let node = Arc::new(MockAgentNode::new());
-        let orchestrator = CloudOrchestrator::new(DeploymentMode::LocalCli, vec![node.clone()], 3, 10, 60);
+        let orchestrator =
+            CloudOrchestrator::new(DeploymentMode::LocalCli, vec![node.clone()], 3, 10, 60);
 
         let tasks = vec![
-            TaskChunk { id: "1".to_string(), payload: "Data A".to_string() },
-            TaskChunk { id: "2".to_string(), payload: "Data B".to_string() },
+            TaskChunk {
+                id: "1".to_string(),
+                payload: "Data A".to_string(),
+            },
+            TaskChunk {
+                id: "2".to_string(),
+                payload: "Data B".to_string(),
+            },
         ];
 
         let results = orchestrator.distribute_and_execute(tasks).await.unwrap();
@@ -260,7 +314,8 @@ mod tests {
             nodes.push(node as Arc<dyn AgentNode>);
         }
 
-        let orchestrator = CloudOrchestrator::new(DeploymentMode::CloudDistributed, nodes, 3, 100, 60);
+        let orchestrator =
+            CloudOrchestrator::new(DeploymentMode::CloudDistributed, nodes, 3, 100, 60);
 
         let mut tasks = Vec::new();
         // Send 1000 tasks

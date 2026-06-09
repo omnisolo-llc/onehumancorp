@@ -1,14 +1,17 @@
 #[cfg(test)]
 mod exhaustive_tests {
-    use crate::memory_store::{VectorRepository, EmbeddingRecord};
+    use crate::memory_store::{EmbeddingRecord, VectorRepository};
     use chrono::Utc;
-    use std::sync::Arc;
     use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
     use std::str::FromStr;
+    use std::sync::Arc;
 
     async fn setup_repo() -> Arc<VectorRepository> {
         let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
-        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+        let pool = SqlitePoolOptions::new()
+            .connect_with(conn_opts)
+            .await
+            .unwrap();
         sqlx::query("CREATE TABLE IF NOT EXISTS consolidated_memory (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, agent_id TEXT, content TEXT NOT NULL, embedding TEXT, source_type TEXT NOT NULL, created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP, last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP, reference_count INTEGER DEFAULT 0, reliability_score INTEGER DEFAULT 50, owner_override BOOLEAN DEFAULT FALSE, metadata TEXT);").execute(&pool).await.unwrap();
         Arc::new(VectorRepository::new_sqlite(pool))
     }
@@ -3812,20 +3815,22 @@ mod exhaustive_tests {
         let resolved = repo.auto_resolve_conflicts().await.unwrap();
         assert!(resolved <= 2);
     }
-
 }
 
 #[cfg(test)]
 mod tests_added_for_coverage {
-    use crate::memory_store::{VectorRepository, EmbeddingRecord};
+    use crate::memory_store::{EmbeddingRecord, VectorRepository};
     use chrono::Utc;
-    use std::sync::Arc;
     use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
     use std::str::FromStr;
+    use std::sync::Arc;
 
     async fn setup_repo() -> Arc<VectorRepository> {
         let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
-        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+        let pool = SqlitePoolOptions::new()
+            .connect_with(conn_opts)
+            .await
+            .unwrap();
         sqlx::query("CREATE TABLE IF NOT EXISTS consolidated_memory (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, agent_id TEXT, content TEXT NOT NULL, embedding TEXT, source_type TEXT NOT NULL, created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP, last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP, reference_count INTEGER DEFAULT 0, reliability_score INTEGER DEFAULT 50, owner_override BOOLEAN DEFAULT FALSE, metadata TEXT);").execute(&pool).await.unwrap();
         Arc::new(VectorRepository::new_sqlite(pool))
     }
@@ -3846,7 +3851,7 @@ mod tests_added_for_coverage {
             source_type: "NOTE".to_string(),
             created_at: now,
             last_referenced_at: now, // recent, but low reliability
-            reference_count: 10, // high ref count, but low reliability
+            reference_count: 10,     // high ref count, but low reliability
             reliability_score: 19,
             owner_override: false,
             metadata: None,
@@ -3888,14 +3893,19 @@ mod tests_added_for_coverage {
         repo.upsert(&rec2).await.unwrap();
         repo.upsert(&rec3).await.unwrap();
 
-        repo.prune_stale(now - chrono::Duration::days(180)).await.unwrap();
+        repo.prune_stale(now - chrono::Duration::days(180))
+            .await
+            .unwrap();
 
         // Check if pruned correctly
-        let results = repo.cross_department_search("tenant_prune", &vec![0.5; 10], 10).await.unwrap();
+        let results = repo
+            .cross_department_search("tenant_prune", &vec![0.5; 10], 10)
+            .await
+            .unwrap();
         let ids: Vec<String> = results.iter().map(|r| r.id.clone()).collect();
 
         assert!(!ids.contains(&"rec_prune_1".to_string())); // pruned due to low reliability
-        assert!(ids.contains(&"rec_prune_2".to_string()));  // kept due to owner override
+        assert!(ids.contains(&"rec_prune_2".to_string())); // kept due to owner override
         assert!(!ids.contains(&"rec_prune_3".to_string())); // pruned due to being stale TASK_SUMMARY
     }
 

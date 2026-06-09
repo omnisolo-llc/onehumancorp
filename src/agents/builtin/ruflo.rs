@@ -1,7 +1,7 @@
+use futures::future::join_all;
 use ohc_builtin_agent_core::types::{ChatRequest, Message};
 use ohc_builtin_agent_llm::LlmClient;
 use std::sync::Arc;
-use futures::future::join_all;
 
 /// Ruflo Unique Harness Innovations: Swarm coordination topologies
 /// Hierarchical, mesh, adaptive with consensus
@@ -108,7 +108,10 @@ mod tests {
 
     #[async_trait::async_trait]
     impl LlmClient for MockLlmClient {
-        async fn chat(&self, req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+        async fn chat(
+            &self,
+            req: ChatRequest,
+        ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
             let role = req.system;
             let output = if role.contains("Lead") {
                 format!("Lead Agent Output: {}", self.resp)
@@ -127,14 +130,19 @@ mod tests {
 
     #[tokio::test]
     async fn test_hierarchical_swarm() {
-        let lead_llm = Arc::new(MockLlmClient { resp: "Synthesis complete.".to_string() });
-        let worker_llm = Arc::new(MockLlmClient { resp: "Task executed.".to_string() });
+        let lead_llm = Arc::new(MockLlmClient {
+            resp: "Synthesis complete.".to_string(),
+        });
+        let worker_llm = Arc::new(MockLlmClient {
+            resp: "Task executed.".to_string(),
+        });
 
         let lead = SwarmAgent::new("Lead", lead_llm);
         let worker1 = SwarmAgent::new("Worker1", worker_llm.clone());
         let worker2 = SwarmAgent::new("Worker2", worker_llm);
 
-        let coordinator = SwarmCoordinator::new(lead, vec![worker1, worker2], SwarmTopology::Hierarchical);
+        let coordinator =
+            SwarmCoordinator::new(lead, vec![worker1, worker2], SwarmTopology::Hierarchical);
         let result = coordinator.execute("Do this task").await.unwrap();
 
         assert!(result.contains("Lead Agent Output: Synthesis complete."));
@@ -142,8 +150,12 @@ mod tests {
 
     #[tokio::test]
     async fn test_mesh_swarm() {
-        let lead_llm = Arc::new(MockLlmClient { resp: "Consensus reached.".to_string() });
-        let worker_llm = Arc::new(MockLlmClient { resp: "My vote is yes.".to_string() });
+        let lead_llm = Arc::new(MockLlmClient {
+            resp: "Consensus reached.".to_string(),
+        });
+        let worker_llm = Arc::new(MockLlmClient {
+            resp: "My vote is yes.".to_string(),
+        });
 
         let lead = SwarmAgent::new("Lead", lead_llm);
         let worker1 = SwarmAgent::new("Worker1", worker_llm.clone());
@@ -159,7 +171,10 @@ mod tests {
 
     #[async_trait::async_trait]
     impl LlmClient for AdaptiveMockLlmClient {
-        async fn chat(&self, req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+        async fn chat(
+            &self,
+            req: ChatRequest,
+        ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
             let output = if req.system.contains("COMPLEX") {
                 "COMPLEX".to_string()
             } else {
@@ -190,7 +205,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_sona_neural_patterns() {
-        let llm = Arc::new(MockLlmClient { resp: "Execution complete.".to_string() });
+        let llm = Arc::new(MockLlmClient {
+            resp: "Execution complete.".to_string(),
+        });
         let lead = SwarmAgent::new("Lead", llm.clone());
         let worker = SwarmAgent::new("Worker", llm);
         let memory = std::sync::Arc::new(SonaMemoryStore::new());
@@ -207,7 +224,11 @@ mod tests {
         assert!(pattern_opt.is_some());
         let pattern = pattern_opt.unwrap();
         assert_eq!(pattern.task_signature, task1);
-        assert!(pattern.successful_trajectory.contains("Lead Agent Output: Execution complete."));
+        assert!(
+            pattern
+                .successful_trajectory
+                .contains("Lead Agent Output: Execution complete.")
+        );
 
         // Second execution should pick up the hint
         // Wait, the MockLlmClient ignores the actual prompt and just returns self.resp
@@ -215,7 +236,10 @@ mod tests {
         struct HintMockLlmClient;
         #[async_trait::async_trait]
         impl LlmClient for HintMockLlmClient {
-            async fn chat(&self, req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+            async fn chat(
+                &self,
+                req: ChatRequest,
+            ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
                 let msg_content = &req.messages[0].content;
                 let output = if msg_content.contains("SONA Trajectory Hint") {
                     "Hint recognized".to_string()
@@ -285,7 +309,11 @@ impl SwarmCoordinator {
         let active_topology = if self.topology == SwarmTopology::Adaptive {
             // Adaptive logic: Lead agent evaluates complexity
             let eval_instruction = "Assess the complexity of the following task. Reply ONLY with 'COMPLEX' or 'SIMPLE'.";
-            let complexity = self.lead_agent.process_task(task, eval_instruction).await.unwrap_or_else(|_| "SIMPLE".to_string());
+            let complexity = self
+                .lead_agent
+                .process_task(task, eval_instruction)
+                .await
+                .unwrap_or_else(|_| "SIMPLE".to_string());
             if complexity.contains("COMPLEX") {
                 SwarmTopology::Mesh
             } else {
@@ -304,7 +332,10 @@ impl SwarmCoordinator {
                     let instruction = "Provide a specialized solution for this task.";
                     futures.push(Box::pin(async move {
                         worker.process_task(&task_clone, instruction).await
-                    }) as std::pin::Pin<Box<dyn std::future::Future<Output = Result<String, String>> + Send>>);
+                    })
+                        as std::pin::Pin<
+                            Box<dyn std::future::Future<Output = Result<String, String>> + Send>,
+                        >);
                 }
 
                 let results = join_all(futures).await;
@@ -316,9 +347,13 @@ impl SwarmCoordinator {
                 }
 
                 // Lead agent synthesizes
-                let synthesis_instruction = "Synthesize the following worker outputs into a final cohesive response.";
-                let final_prompt = format!("Original Task: {}\n\nWorker Outputs:\n{}", task, aggregated);
-                self.lead_agent.process_task(&final_prompt, synthesis_instruction).await
+                let synthesis_instruction =
+                    "Synthesize the following worker outputs into a final cohesive response.";
+                let final_prompt =
+                    format!("Original Task: {}\n\nWorker Outputs:\n{}", task, aggregated);
+                self.lead_agent
+                    .process_task(&final_prompt, synthesis_instruction)
+                    .await
             }
             SwarmTopology::Mesh | SwarmTopology::Adaptive => {
                 // Mesh: All agents (including lead) evaluate, vote/consensus on the answer
@@ -331,13 +366,24 @@ impl SwarmCoordinator {
 
                 futures.push(Box::pin(async move {
                     self.lead_agent.process_task(&lead_clone, instruction).await
-                }) as std::pin::Pin<Box<dyn std::future::Future<Output = Result<String, String>> + Send>>);
+                })
+                    as std::pin::Pin<
+                        Box<dyn std::future::Future<Output = Result<String, String>> + Send>,
+                    >);
 
                 for worker in &self.workers {
                     let task_clone = task.to_string();
                     futures.push(Box::pin(async move {
-                        worker.process_task(&task_clone, "Analyze the task and provide your independent solution.").await
-                    }) as std::pin::Pin<Box<dyn std::future::Future<Output = Result<String, String>> + Send>>);
+                        worker
+                            .process_task(
+                                &task_clone,
+                                "Analyze the task and provide your independent solution.",
+                            )
+                            .await
+                    })
+                        as std::pin::Pin<
+                            Box<dyn std::future::Future<Output = Result<String, String>> + Send>,
+                        >);
                 }
 
                 let results = join_all(futures).await;
@@ -350,8 +396,13 @@ impl SwarmCoordinator {
 
                 // Consensus mechanism (Simulated by Lead agent acting as consensus resolver)
                 let consensus_instruction = "Review the following independent agent solutions for the task. Find the consensus or majority opinion and provide the final definitive answer.";
-                let final_prompt = format!("Original Task: {}\n\nAgent Solutions:\n{}", task, all_outputs);
-                self.lead_agent.process_task(&final_prompt, consensus_instruction).await
+                let final_prompt = format!(
+                    "Original Task: {}\n\nAgent Solutions:\n{}",
+                    task, all_outputs
+                );
+                self.lead_agent
+                    .process_task(&final_prompt, consensus_instruction)
+                    .await
             }
         };
 
@@ -359,7 +410,11 @@ impl SwarmCoordinator {
             if let Some(memory) = &self.sona_memory {
                 let extract_instruction = "Extract a concise SONA trajectory pattern from the execution outcome. What were the key steps taken to solve this task? Return ONLY the trajectory steps.";
                 let trajectory_prompt = format!("Task: {}\nResult: {}\n", original_task, res_str);
-                if let Ok(trajectory) = self.lead_agent.process_task(&trajectory_prompt, extract_instruction).await {
+                if let Ok(trajectory) = self
+                    .lead_agent
+                    .process_task(&trajectory_prompt, extract_instruction)
+                    .await
+                {
                     let pattern = SonaPattern {
                         task_signature: original_task.clone(), // In a real system, LLM extracts the signature
                         successful_trajectory: trajectory,

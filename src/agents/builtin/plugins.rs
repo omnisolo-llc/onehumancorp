@@ -18,7 +18,9 @@ pub struct PluginManager {
 
 impl PluginManager {
     pub fn new() -> Self {
-        Self { plugins: Vec::new() }
+        Self {
+            plugins: Vec::new(),
+        }
     }
 
     pub fn register_plugin(&mut self, plugin: Arc<dyn ClaudePlugin>) {
@@ -43,13 +45,19 @@ mod tests {
     struct DummyPlugin;
 
     impl ClaudePlugin for DummyPlugin {
-        fn name(&self) -> &str { "DummyPlugin" }
-        fn description(&self) -> &str { "A dummy plugin" }
+        fn name(&self) -> &str {
+            "DummyPlugin"
+        }
+        fn description(&self) -> &str {
+            "A dummy plugin"
+        }
         fn get_tools(&self) -> Vec<Tool> {
             vec![] // Return empty tools for testing
         }
         fn setup(&self, config: &mut AgentRunConfig) -> Result<(), String> {
-            config.developer_instructions.push_str("\n[DummyPlugin Setup]");
+            config
+                .developer_instructions
+                .push_str("\n[DummyPlugin Setup]");
             Ok(())
         }
     }
@@ -62,7 +70,11 @@ mod tests {
         let mut config = AgentRunConfig::default();
         let tools = manager.setup_all(&mut config).unwrap();
 
-        assert!(config.developer_instructions.contains("[DummyPlugin Setup]"));
+        assert!(
+            config
+                .developer_instructions
+                .contains("[DummyPlugin Setup]")
+        );
         assert_eq!(tools.len(), 0);
     }
 }

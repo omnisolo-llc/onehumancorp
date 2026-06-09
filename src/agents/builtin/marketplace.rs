@@ -22,9 +22,12 @@ impl Marketplace {
 
         let coder = AgentDefinition {
             name: "Senior Rust Developer".to_string(),
-            description: "An expert in Rust capable of building concurrent and safe systems.".to_string(),
+            description: "An expert in Rust capable of building concurrent and safe systems."
+                .to_string(),
             role: "Developer".to_string(),
-            system_prompt: "You are a senior Rust developer. Write idiomatic, safe, and concurrent Rust code.".to_string(),
+            system_prompt:
+                "You are a senior Rust developer. Write idiomatic, safe, and concurrent Rust code."
+                    .to_string(),
         };
         registry.insert(coder.name.clone(), coder);
 
@@ -32,7 +35,9 @@ impl Marketplace {
             name: "Technical Writer".to_string(),
             description: "Produces high-quality technical documentation.".to_string(),
             role: "Writer".to_string(),
-            system_prompt: "You are a technical writer. Create clear, concise, and accurate documentation.".to_string(),
+            system_prompt:
+                "You are a technical writer. Create clear, concise, and accurate documentation."
+                    .to_string(),
         };
         registry.insert(writer.name.clone(), writer);
 
@@ -46,7 +51,10 @@ impl Marketplace {
 
     /// Download/fetch a specific agent by name.
     pub fn download_agent(&self, name: &str) -> Result<AgentDefinition, String> {
-        self.registry.get(name).cloned().ok_or_else(|| format!("Agent '{}' not found in the marketplace.", name))
+        self.registry
+            .get(name)
+            .cloned()
+            .ok_or_else(|| format!("Agent '{}' not found in the marketplace.", name))
     }
 }
 
@@ -82,6 +90,9 @@ mod tests {
         let marketplace = Marketplace::new();
         let result = marketplace.download_agent("Non-existent Agent");
         assert!(result.is_err());
-        assert_eq!(result.unwrap_err(), "Agent 'Non-existent Agent' not found in the marketplace.");
+        assert_eq!(
+            result.unwrap_err(),
+            "Agent 'Non-existent Agent' not found in the marketplace."
+        );
     }
 }
