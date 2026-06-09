@@ -82,6 +82,7 @@ pub fn router<S: Clone + Send + Sync + 'static>(hub: Arc<Hub>) -> axum::Router<S
 #[derive(serde::Deserialize)]
 pub struct CreateCheckoutSessionRequest {
     pub tier: String,
+    pub product_id: Option<String>,
 }
 
 #[derive(serde::Serialize)]
@@ -93,32 +94,72 @@ pub async fn create_checkout_session_handler(
     _headers: HeaderMap,
     State(hub): State<Arc<Hub>>,
     request: axum::extract::Request,
-) -> Result<Json<CreateCheckoutSessionResponse>, StatusCode> {
+) -> axum::response::Response {
+    use axum::response::IntoResponse;
+
     let tenant_id = match request.extensions().get::<::server_auth::orchestration::AuthInfo>() {
         Some(auth) if !auth.org_id.is_empty() => auth.org_id.clone(),
         Some(_) => "default".to_string(),
-        None => return Err(StatusCode::UNAUTHORIZED),
+        None => return (StatusCode::UNAUTHORIZED, "Unauthorized").into_response(),
     };
 
-    let body_bytes = axum::body::to_bytes(request.into_body(), 1024 * 64).await.map_err(|_| StatusCode::BAD_REQUEST)?;
-    let req: CreateCheckoutSessionRequest = serde_json::from_slice(&body_bytes).map_err(|_| StatusCode::BAD_REQUEST)?;
+    let body_bytes = match axum::body::to_bytes(request.into_body(), 1024 * 64).await {
+        Ok(b) => b,
+        Err(_) => return (StatusCode::BAD_REQUEST, "Bad request").into_response(),
+    };
+    let req: CreateCheckoutSessionRequest = match serde_json::from_slice(&body_bytes) {
+        Ok(r) => r,
+        Err(_) => return (StatusCode::BAD_REQUEST, "Bad request body").into_response(),
+    };
+
+    if let Some(product_id) = &req.product_id {
+        // Online checkout inventory reservation (5 minutes)
+        if let Some(client) = &hub.redis_client {
+            if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
+                let lock_key = format!("ohc:lock:{}:inventory:{}", tenant_id, product_id);
+                let lock_id = uuid::Uuid::new_v4().to_string();
+                let ttl = 300; // 5 minutes
+
+                let acquired: bool = redis::cmd("SET")
+                    .arg(&lock_key)
+                    .arg(&lock_id)
+                    .arg("EX")
+                    .arg(ttl)
+                    .arg("NX")
+                    .query_async(&mut conn)
+                    .await
+                    .unwrap_or(false);
+
+                if !acquired {
+                    // Item just sold out / is locked by POS or another online cart
+                    return (
+                        StatusCode::CONFLICT,
+                        Json(serde_json::json!({
+                            "error": "Item just sold out",
+                            "message": "This item was just reserved by another customer."
+                        }))
+                    ).into_response();
+                }
+            }
+        }
+    }
 
     let amount_usd = match req.tier.to_lowercase().as_str() {
         "starter" => 29.0,
         "pro" => 79.0,
         "business" => 299.0,
-        _ => return Err(StatusCode::BAD_REQUEST),
+        _ => return (StatusCode::BAD_REQUEST, "Bad tier").into_response(),
     };
 
     if let Some(client) = &hub.tracker().stripe_client {
         // Assume price_id corresponds to the tier directly or is generated. We pass the tier name as the price_id for now.
         match client.create_checkout_session(&req.tier, &tenant_id, amount_usd).await {
-            Ok(url) => Ok(Json(CreateCheckoutSessionResponse { checkout_url: url })),
-            Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
+            Ok(url) => (StatusCode::OK, Json(CreateCheckoutSessionResponse { checkout_url: url })).into_response(),
+            Err(_) => (StatusCode::INTERNAL_SERVER_ERROR, "Stripe error").into_response(),
         }
     } else {
         // Fallback for tests / missing Stripe config
-        Ok(Json(CreateCheckoutSessionResponse { checkout_url: format!("https://checkout.stripe.com/pay/test_{}_{}", req.tier, tenant_id) }))
+        (StatusCode::OK, Json(CreateCheckoutSessionResponse { checkout_url: format!("https://checkout.stripe.com/pay/test_{}_{}", req.tier, tenant_id) })).into_response()
     }
 }
 
