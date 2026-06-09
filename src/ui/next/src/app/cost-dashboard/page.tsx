@@ -15,6 +15,7 @@ interface DailyCost {
 interface CostDashboardData {
   total_revenue: number;
   total_costs: number;
+  projected_monthly_cost: number;
   compute_cost?: number;
   llm_cost: number;
   storage_cost: number;
@@ -157,10 +158,14 @@ export default function CostDashboardPage() {
             </div>
 
             <div className="app-panel-body p-6">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                     <div className="app-card hover:-translate-y-1 hover:shadow-md transition-all duration-300 group">
                         <h2 className="text-sm font-medium text-gray-500 mb-1">Total Costs</h2>
                         <p id="cost-dashboard-total" className="text-3xl font-bold font-outfit text-gray-900">{formatCurrency(data?.total_costs || 0)}</p>
+                    </div>
+                    <div className="app-card hover:-translate-y-1 hover:shadow-md transition-all duration-300 group">
+                        <h2 className="text-sm font-medium text-gray-500 mb-1">Projected Monthly Cost</h2>
+                        <p id="cost-dashboard-projected" className="text-3xl font-bold font-outfit text-indigo-600">{formatCurrency(data?.projected_monthly_cost || 0)}</p>
                     </div>
                     <div className="app-card hover:-translate-y-1 hover:shadow-md transition-all duration-300 group">
                         <h2 className="text-sm font-medium text-gray-500 mb-1">Total Revenue</h2>
@@ -183,16 +188,25 @@ export default function CostDashboardPage() {
 
             <div className="app-panel-body p-6 space-y-4">
                 <div className="flex flex-col app-card hover:-translate-y-1 hover:shadow-md transition-all duration-300">
-                    <h3 className="font-medium text-gray-900 mb-2">7-Day Trend</h3>
+                    <h3 className="font-medium text-gray-900 mb-4">7-Day Trend</h3>
                     {data?.trend && data.trend.length > 0 ? (
-                        <ul id="cost-dashboard-trend" className="space-y-2">
-                            {data.trend.map((daily, index) => (
-                                <li key={index} className="flex justify-between items-center border-b border-gray-200 pb-2 last:border-b-0 last:pb-0">
-                                    <span className="text-sm text-gray-700">{daily.date}</span>
-                                    <span className="text-sm font-medium text-gray-900">{formatCurrency(daily.total_cost)}</span>
-                                </li>
-                            ))}
-                        </ul>
+                        <div className="flex items-end h-32 gap-2 mt-4" id="cost-dashboard-trend">
+                            {data.trend.map((daily, index) => {
+                                const maxCost = Math.max(...data.trend.map(d => d.total_cost), 1);
+                                const heightPercent = Math.max((daily.total_cost / maxCost) * 100, 5);
+                                return (
+                                    <div key={index} className="flex-1 flex flex-col items-center gap-2 group">
+                                        <div className="w-full bg-indigo-50/50 rounded-t-md relative flex items-end justify-center group-hover:bg-indigo-100 transition-colors" style={{ height: '100px' }}>
+                                            <div className="w-full bg-indigo-500 rounded-t-md transition-all duration-500 group-hover:bg-indigo-600" style={{ height: `${heightPercent}%` }}></div>
+                                            <div className="absolute -top-8 bg-gray-900 text-white text-xs py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10 shadow-lg">
+                                                {formatCurrency(daily.total_cost)}
+                                            </div>
+                                        </div>
+                                        <span className="text-xs text-gray-500 font-medium whitespace-nowrap">{daily.date.split('-').slice(1).join('/')}</span>
+                                    </div>
+                                );
+                            })}
+                        </div>
                     ) : (
                         <p className="text-sm text-gray-500">No trend data yet.</p>
                     )}
