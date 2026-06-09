@@ -158,7 +158,7 @@ export function HelpChat() {
             aria-controls="ai-chat-interface"
           >
             <span className="text-xl">✨</span>
-            <span className="font-outfit font-bold max-w-0 overflow-hidden group-hover:max-w-xs transition-all duration-300 whitespace-nowrap px-0 group-hover:px-2">
+            <span className="font-outfit font-bold max-w-0 overflow-hidden group-hover:max-w-[150px] sm:group-hover:max-w-xs transition-all duration-300 whitespace-nowrap px-0 group-hover:px-2">
               Ask anything
             </span>
           </button>

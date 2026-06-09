@@ -41,13 +41,15 @@ test.describe('Help Center', () => {
         // Search for an article that matches My Store
         const searchInput = page.getByPlaceholder('Search for help articles and videos...');
 
-        const responsePromise = page.waitForResponse(response => response.url().includes("/api/help/search") && response.status() === 200);
-        await searchInput.fill('My Store');
-        await responsePromise;
+
+        const [response] = await Promise.all([
+            page.waitForResponse(response => response.url().includes("/api/help/search") && response.ok()),
+            searchInput.fill('My Store')
+        ]);
 
         // Wait for UI to update
         const articleLink = page.locator('a[href="/help/my-store"]');
-        await expect(articleLink).toBeVisible({ timeout: 10000 });
+        await expect(articleLink).toBeVisible();
     });
 
     test('should open help chat and send a message', async ({ page }) => {
