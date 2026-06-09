@@ -21,6 +21,7 @@ pub struct WebhookPayload {
     pub source: String,
     #[serde(default)]
     pub target_language: Option<String>,
+    pub sender_id: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -242,6 +243,7 @@ async fn handle_webhook(
             "generated_response": draft_reply,
             "feature_type": "ambassador_reply",
             "inbox_message_id": id,
+            "sender_id": payload.sender_id.unwrap_or_default(),
         }),
     }).await;
 

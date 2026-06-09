@@ -71,6 +71,18 @@ impl Department for CustomerSuccessAgent {
             tokio::spawn(async move {
                 if (source == "whatsapp" || source == "instagram") && !sender_id.is_empty() {
                     let integrations = std::sync::Arc::new(crate::integrations::registry::IntegrationsRegistry::new());
+
+                    let creds = ::server_ohc::orchestration::ConnectIntegrationRequest {
+                        integration_id: "meta".to_string(),
+                        base_url: "https://graph.facebook.com/v19.0".to_string(),
+                        bot_token: "".to_string(),
+                        chat_id: "".to_string(),
+                        webhook_url: "".to_string(),
+                        api_token: "dummy_token".to_string(),
+                        from_phone: "".to_string(),
+                    };
+                    let _ = integrations.connect("meta", "https://graph.facebook.com/v19.0", creds);
+
                     if let Err(e) = integrations.send_message("meta", &source, &sender_id, &text).await {
                          tracing::error!("Failed to send {} message via Meta integration: {}", source, e);
                     }
