@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import { WalkthroughTarget } from '../components/Walkthrough';
 import { WalkthroughProvider, HelpWidget } from '../components/help';
 import { TooltipProvider } from '../components/TooltipRegistry';
+import { Omnibox } from '../components/Omnibox';
 
 import { HelpChat } from "../components/HelpChat";
 import { RateLimitWarningProvider } from '../components/RateLimitWarning';
@@ -30,6 +31,7 @@ export default function RootLayout({
               {children}
               <WalkthroughTarget id="help-widget-container"><HelpWidget /></WalkthroughTarget>
               <HelpChat />
+              <Omnibox />
             </WalkthroughProvider>
                   </TooltipProvider>
         </RateLimitWarningProvider>
