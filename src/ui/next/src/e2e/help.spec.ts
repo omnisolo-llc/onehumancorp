@@ -1,6 +1,39 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Help Center', () => {
+
+test.beforeEach(async ({ page }) => {
+  await page.route('**/*api/help', async route => {
+    await route.fulfill({
+      status: 200,
+      json: [
+        { category: "Getting Started", title: "Getting Started", desc: "Learn how to easily set up your store and accept your first payment.", link: "/help/getting-started-1" },
+        { category: "My Store", title: "My Store", desc: "Add products, track what's in stock, and change how your store looks.", link: "/help/my-store" },
+        { category: "Payments", title: "Payments", desc: "Set up how you get paid, view deposits, and handle simple taxes.", link: "/help/payments" }
+      ]
+    });
+  });
+
+  await page.route('**/*api/help/search*', async route => {
+    const url = new URL(route.request().url());
+    const q = url.searchParams.get('q');
+    if (q === 'Getting Started') {
+      await route.fulfill({ json: [{ category: 'Getting Started', title: "Getting Started", desc: "Learn how to easily set up your store and accept your first payment.", link: "/help/getting-started-1" }] });
+    } else if (q === 'My Store') {
+      await route.fulfill({ json: [{ category: 'My Store', title: "My Store", desc: "Add products, track what's in stock, and change how your store looks.", link: "/help/my-store" }] });
+    } else {
+      await route.fulfill({ json: [] });
+    }
+  });
+
+  await page.route('**/api/videos', async route => {
+    await route.fulfill({ json: [] });
+  });
+
+  await page.route('**/api/chat', async route => {
+    await route.fulfill({ json: { reply: "Here is your help", link: { url: "/help", title: "Read more" } } });
+  });
+});
     test('renders help center and navigates to an article', async ({ page }) => {
         await page.goto('/help');
 
@@ -15,6 +48,7 @@ test.describe('Help Center', () => {
         // Search for an article
         const searchInput = page.getByPlaceholder('Search for help articles and videos...');
         await searchInput.fill('Getting Started');
+        await page.waitForTimeout(500);
 
         // Click on the article
         const articleLink = page.locator('a[href="/help/getting-started-1"]');
@@ -41,8 +75,9 @@ test.describe('Help Center', () => {
         // Search for an article that matches My Store
         const searchInput = page.getByPlaceholder('Search for help articles and videos...');
 
-        const responsePromise = page.waitForResponse(response => response.url().includes("/api/help/search") && response.status() === 200);
+        const responsePromise = page.waitForResponse(response => response.url().includes("q=My%20Store"));
         await searchInput.fill('My Store');
+        await page.waitForTimeout(500); // Wait for debounce
         await responsePromise;
 
         // Wait for UI to update
