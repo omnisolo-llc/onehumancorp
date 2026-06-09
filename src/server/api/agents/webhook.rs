@@ -200,8 +200,8 @@ async fn handle_webhook(
     let id = Uuid::new_v4().to_string();
     let _ = sqlx::query(
         r#"
-        INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, source_language, target_language, draft_reply, status, created_at, updated_at)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'unread', NOW(), NOW())
+        INSERT INTO inbox_messages (id, tenant_id, source, original_content, content, translated_from_language, draft_reply, status, created_at)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, 'unread', NOW())
         "#
     )
     .bind(&id)
@@ -210,7 +210,6 @@ async fn handle_webhook(
     .bind(&translation.original_content)
     .bind(&translation.translated_content)
     .bind(&translation.source_language)
-    .bind(&translation.target_language)
     .bind(&draft_reply)
     .execute(&pool)
     .await;
