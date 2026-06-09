@@ -104,12 +104,61 @@ where
         let mut turns = Vec::new();
         for template in &self.templates {
             let prompt = agent_prompt(template, task, &turns)?;
-            let raw = self.llm.reason(&prompt).await?;
+
+            let mut attempt = 0;
+            let max_attempts = 3;
+            let mut raw = String::new();
+
+            while attempt < max_attempts {
+                match tokio::time::timeout(std::time::Duration::from_secs(60), self.llm.reason(&prompt)).await {
+                    Ok(Ok(resp)) => {
+                        raw = resp;
+                        break;
+                    }
+                    Ok(Err(e)) => {
+                        attempt += 1;
+                        if attempt == max_attempts {
+                            return Err(format!("Agent {} failed after 3 attempts or API is unavailable. Agent paused: {}", template.id, e));
+                        }
+                    }
+                    Err(_) => {
+                        attempt += 1;
+                        if attempt == max_attempts {
+                            return Err(format!("Agent {} failed after 3 attempts or API is unavailable. Agent paused: timeout", template.id));
+                        }
+                    }
+                }
+            }
+
             let turn = match parse_and_validate_agent_turn(&raw, template, &turns) {
                 Ok(turn) => turn,
                 Err(parse_err) => {
                     let repair_prompt = repair_prompt(template, &raw, &parse_err)?;
-                    let repaired = self.llm.reason(&repair_prompt).await?;
+
+                    let mut repair_attempt = 0;
+                    let mut repaired = String::new();
+
+                    while repair_attempt < max_attempts {
+                        match tokio::time::timeout(std::time::Duration::from_secs(60), self.llm.reason(&repair_prompt)).await {
+                            Ok(Ok(resp)) => {
+                                repaired = resp;
+                                break;
+                            }
+                            Ok(Err(e)) => {
+                                repair_attempt += 1;
+                                if repair_attempt == max_attempts {
+                                    return Err(format!("Agent {} failed after 3 attempts or API is unavailable. Agent paused: {}", template.id, e));
+                                }
+                            }
+                            Err(_) => {
+                                repair_attempt += 1;
+                                if repair_attempt == max_attempts {
+                                    return Err(format!("Agent {} failed after 3 attempts or API is unavailable. Agent paused: timeout", template.id));
+                                }
+                            }
+                        }
+                    }
+
                     parse_and_validate_agent_turn(&repaired, template, &turns)?
                 }
             };
