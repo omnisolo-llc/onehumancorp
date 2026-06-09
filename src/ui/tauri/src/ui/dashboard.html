@@ -167,9 +167,110 @@
           background-color: #48484a;
         }
       }
+      /* Omnibox Global Search Styles */
+      #omnibox-trigger-container {
+        width: 100%;
+        padding: 10px;
+        box-sizing: border-box;
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        background: inherit;
+      }
+      #omnibox-trigger {
+        width: 100%;
+        padding: 12px 16px;
+        border-radius: 8px;
+        border: 1px solid rgba(128, 128, 128, 0.3);
+        background: rgba(255, 255, 255, 0.8);
+        color: #86868b;
+        font-size: 14px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+      }
+      @media (prefers-color-scheme: dark) {
+        #omnibox-trigger {
+          background: rgba(0, 0, 0, 0.2);
+          border: 1px solid rgba(255, 255, 255, 0.2);
+          color: #a1a1a6;
+        }
+      }
+      #omnibox-overlay {
+        display: none;
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0, 0, 0, 0.4);
+        backdrop-filter: blur(10px);
+        z-index: 9999;
+        align-items: flex-start;
+        justify-content: center;
+        padding-top: 10vh;
+      }
+      #omnibox-container {
+        width: 90%;
+        max-width: 600px;
+        background: rgba(255, 255, 255, 0.65);
+        backdrop-filter: blur(30px) saturate(210%);
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        border-radius: 12px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+      @media (prefers-color-scheme: dark) {
+        #omnibox-container {
+          background: rgba(22, 22, 26, 0.7);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+      }
+      #omnibox-input {
+        width: 100%;
+        border: none;
+        background: transparent;
+        padding: 20px;
+        font-size: 18px;
+        color: inherit;
+        outline: none;
+        box-sizing: border-box;
+      }
+      #omnibox-results {
+        max-height: 400px;
+        overflow-y: auto;
+        border-top: 1px solid rgba(128, 128, 128, 0.2);
+      }
+      .omnibox-item {
+        padding: 15px 20px;
+        cursor: pointer;
+        display: flex;
+        flex-direction: column;
+        border-bottom: 1px solid rgba(128, 128, 128, 0.1);
+        color: inherit;
+      }
+      .omnibox-item:hover {
+        background: rgba(0, 102, 255, 0.1);
+      }
+      .omnibox-item-title {
+        font-weight: 600;
+        font-size: 16px;
+      }
+      .omnibox-item-subtitle {
+        font-size: 13px;
+        opacity: 0.7;
+        margin-top: 4px;
+      }
     </style>
   </head>
   <body>
+    <div id="omnibox-trigger-container">
+        <div id="omnibox-trigger">
+            <span>Search customers, orders, messages...</span>
+            <span style="font-size: 12px; background: rgba(128,128,128,0.2); padding: 2px 6px; border-radius: 4px;">Cmd+K</span>
+        </div>
+    </div>
     <div class="container">
       <div class="status-badge">🟢 Standalone Mode (Zero Data Leakage)</div>
 
@@ -239,6 +340,122 @@
         const link = referralLink.value;
         const text = `Join my team on OHC! Here is your invite link:\n\n${link}\n\n⚡ Powered by OHC`;
         window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+      });
+    </script>
+    <!-- Omnibox HTML -->
+    <div id="omnibox-overlay">
+      <div id="omnibox-container">
+        <input type="text" id="omnibox-input" placeholder="Search customers, orders, messages, invoices... (Cmd+K to close)" autocomplete="off" />
+        <div id="omnibox-results"></div>
+      </div>
+    </div>
+    <!-- Omnibox Script -->
+    <script>
+      const omniboxOverlay = document.getElementById("omnibox-overlay");
+      const omniboxInput = document.getElementById("omnibox-input");
+      const omniboxResults = document.getElementById("omnibox-results");
+      const omniboxTrigger = document.getElementById("omnibox-trigger");
+
+      let debounceTimer;
+
+      omniboxTrigger.addEventListener("click", openOmnibox);
+
+      document.addEventListener("keydown", (e) => {
+        if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+          e.preventDefault();
+          if (omniboxOverlay.style.display === "flex") {
+            closeOmnibox();
+          } else {
+            openOmnibox();
+          }
+        }
+        if (e.key === "Escape" && omniboxOverlay.style.display === "flex") {
+          closeOmnibox();
+        }
+      });
+
+      function openOmnibox() {
+        omniboxOverlay.style.display = "flex";
+        omniboxInput.focus();
+      }
+
+      function closeOmnibox() {
+        omniboxOverlay.style.display = "none";
+        omniboxInput.value = "";
+        omniboxResults.innerHTML = "";
+      }
+
+      omniboxOverlay.addEventListener("click", (e) => {
+        if (e.target === omniboxOverlay) closeOmnibox();
+      });
+
+      omniboxInput.addEventListener("input", (e) => {
+        const query = e.target.value.trim();
+        clearTimeout(debounceTimer);
+        if (!query) {
+          omniboxResults.innerHTML = "";
+          return;
+        }
+
+        debounceTimer = setTimeout(() => {
+          fetch(`/api/v1/search?q=${encodeURIComponent(query)}`)
+            .then(res => res.json())
+            .then(data => {
+              omniboxResults.innerHTML = "";
+              if (!data.results || data.results.length === 0) {
+                const div = document.createElement("div");
+                div.className = "omnibox-item";
+                const title = document.createElement("div");
+                title.className = "omnibox-item-title";
+                title.textContent = "No results found.";
+                div.appendChild(title);
+                omniboxResults.appendChild(div);
+                return;
+              }
+
+              data.results.forEach(item => {
+                const div = document.createElement("div");
+                div.className = "omnibox-item";
+
+                const titleDiv = document.createElement("div");
+                titleDiv.className = "omnibox-item-title";
+                titleDiv.textContent = item.title;
+
+                const badge = document.createElement("span");
+                badge.style.opacity = "0.5";
+                badge.style.fontSize = "12px";
+                badge.style.marginLeft = "8px";
+                badge.style.border = "1px solid currentColor";
+                badge.style.borderRadius = "4px";
+                badge.style.padding = "2px 4px";
+                badge.textContent = item.entity_type;
+                titleDiv.appendChild(badge);
+
+                const subDiv = document.createElement("div");
+                subDiv.className = "omnibox-item-subtitle";
+                subDiv.textContent = item.subtitle;
+
+                div.appendChild(titleDiv);
+                div.appendChild(subDiv);
+
+                div.addEventListener("click", () => {
+                   closeOmnibox();
+                   const entityToRoute = {
+                       customer: `/customers/${item.id}`,
+                       order: `/orders/${item.id}`,
+                       invoice: `/invoices/${item.id}`,
+                       message: `/inbox/${item.id}`
+                   };
+                   if (entityToRoute[item.entity_type]) {
+                       window.location.href = entityToRoute[item.entity_type];
+                   }
+                });
+                omniboxResults.appendChild(div);
+              });
+            }).catch(err => {
+              console.error(err);
+            });
+        }, 300);
       });
     </script>
   </body>
