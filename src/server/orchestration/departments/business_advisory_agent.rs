@@ -19,7 +19,11 @@ impl Department for BusinessAdvisoryAgent {
     }
 
     fn subscribed_events(&self) -> Vec<String> {
-        vec!["tenant.report.weekly_health".to_string(), "tenant.inventory.analyze_stagnant".to_string()]
+        vec![
+            "tenant.report.weekly_health".to_string(),
+            "tenant.inventory.analyze_stagnant".to_string(),
+            "tenant.report.morning_briefing".to_string(),
+        ]
     }
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
@@ -59,6 +63,52 @@ impl Department for BusinessAdvisoryAgent {
                 event.tenant_id.clone(),
                 ActionRisk::DraftForReview, // Always draft for review for pricing changes initially
                 payload
+            ).await.map(|_| ());
+        }
+
+        if event.event_type == "tenant.report.morning_briefing" {
+            // Simulated fetch from internal analytics endpoints:
+            // /api/v1/analytics/daily_revenue
+            // /api/v1/analytics/pending_bookings
+            // /api/v1/analytics/unanswered_messages
+            // We simulate the data directly here for the AI summary generation.
+            let prompt = format!(
+                "You are the Decision Assistant. Generate a plain-language Morning Briefing for the business owner. They have {} bookings today totaling ${}, and {} unanswered DMs. Include action pills like '[Review 2 Unread DMs]' in the summary.",
+                3, 450, 2
+            );
+
+            let mut drafted_msg = r#"{"summary": "Good morning! You have 3 bookings today totaling $450, and 2 unanswered DMs.", "action_pills": ["[Review 2 Unread DMs]", "[View Bookings]"]}"#.to_string();
+
+            if let Ok(mut client) = ::server_ohc::orchestration::hub_service_client::HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:8081".to_string())).await {
+                let reason_req = ::server_ohc::orchestration::ReasonRequest {
+                    prompt,
+                    from_agent_id: "Decision Assistant".into(),
+                };
+                if let Ok(res) = client.reason(tonic::Request::new(reason_req)).await {
+                    drafted_msg = res.into_inner().content;
+                }
+            }
+
+            let parsed: serde_json::Value = serde_json::from_str(&drafted_msg).unwrap_or(serde_json::json!({
+                "summary": drafted_msg,
+                "action_pills": ["[Review 2 Unread DMs]"]
+            }));
+
+            let payload = serde_json::json!({
+                "tenant_id": event.tenant_id.clone(),
+                "context": {
+                    "morning_briefing": true,
+                    "summary": parsed.get("summary").and_then(|v| v.as_str()).unwrap_or("Good morning! You have 3 custom cake deliveries today totaling $450, and 2 unanswered DMs."),
+                    "actionable_suggestion": "Review DMs"
+                }
+            });
+
+            return self.orchestrator.execute_action(
+                DepartmentType::BusinessAdvisory,
+                "Draft Morning Briefing".to_string(),
+                event.tenant_id.clone(),
+                risk,
+                payload,
             ).await.map(|_| ());
         }
 

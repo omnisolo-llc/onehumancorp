@@ -29,6 +29,7 @@ exports_files(
 
         "local_seo.rs",
         "recovery.rs",
+        "analytics_api.rs",
     ],
     visibility = ["//visibility:public"],
 )
@@ -36,6 +37,7 @@ exports_files(
 rust_library(
     name = "server_api",
     srcs = [
+        "analytics_api.rs",
         "terminal_api.rs",
         "bazel_lib.rs",
         "autodream.rs",

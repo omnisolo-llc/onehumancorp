@@ -17,6 +17,7 @@ import { UnifiedAgentFeed } from "./UnifiedAgentFeed";
 import { ReviewFeedCard } from './ReviewFeedCard';
 
 import { NeighborhoodPulseCard } from "./NeighborhoodPulseCard";
+import MorningBriefingCard from "./MorningBriefingCard";
 import { PromoterCard } from "./PromoterCard";
 import { ViralLoopPerformanceWidget } from "./ViralLoopPerformanceWidget";
 import { SuccessMilestoneAlert } from "./SuccessMilestoneAlert";
@@ -288,6 +289,8 @@ export default function Dashboard() {
         <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Welcome back, {userName}.</h2>
         <p className="text-gray-600 dark:text-gray-400">Your agents are working on your behalf.</p>
       </div>
+
+      <MorningBriefingCard tenantId={tenantId()} />
 
       <NeighborhoodPulseCard tenant={tenantId()} />
       <FloatingActionButton />
