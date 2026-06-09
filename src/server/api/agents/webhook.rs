@@ -189,7 +189,7 @@ async fn handle_webhook(
         }
     };
 
-    let draft_reply = match generate_inbox_draft_reply(&payload.tenant_id, &payload.source, &translation).await {
+    let draft_reply = match super::translation::generate_inbox_draft_reply(&payload.tenant_id, &payload.source, &translation).await {
         Ok(d) => d,
         Err(e) => {
             tracing::error!("Failed to generate draft reply: {}", e);
@@ -201,8 +201,8 @@ async fn handle_webhook(
     let id = Uuid::new_v4().to_string();
     let _ = sqlx::query(
         r#"
-        INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, source_language, target_language, draft_reply, status, created_at, updated_at)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'unread', NOW(), NOW())
+        INSERT INTO inbox_messages (id, tenant_id, source, original_content, content, translated_from_language, draft_reply, status, created_at)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, 'unread', NOW())
         "#
     )
     .bind(&id)
@@ -211,7 +211,6 @@ async fn handle_webhook(
     .bind(&translation.original_content)
     .bind(&translation.translated_content)
     .bind(&translation.source_language)
-    .bind(&translation.target_language)
     .bind(&draft_reply)
     .execute(&pool)
     .await;
@@ -259,27 +258,3 @@ async fn handle_webhook(
     }
 }
 
-async fn generate_inbox_draft_reply(
-    tenant_id: &str,
-    source: &str,
-    translation: &InboxTranslation,
-) -> Result<String, String> {
-    let prompt = format!(
-        "Write one concise, warm customer-service reply in {} for an omnichannel SMB inbox. Do not invent policies, availability, prices, or order state. Tenant: {tenant_id}. Source: {source}. Customer message: {}",
-        translation.target_language,
-        translation.translated_content
-    );
-    let compressed_prompt = crate::pricing::compression::reduce_tokens(&prompt);
-
-    match std::env::var("OHC_INBOX_DRAFT_LLM_PROVIDER")
-        .or_else(|_| std::env::var("OHC_LLM_PROVIDER"))
-        .as_deref()
-    {
-        Ok("minimax") => {
-            let api_key = std::env::var("MINIMAX_API_KEY")
-                .map_err(|_| "MINIMAX_API_KEY is required for minimax inbox draft generation".to_string())?;
-            crate::minimax::MinimaxClient::new(api_key).reason(&compressed_prompt).await
-        }
-        _ => crate::minimax::LocalLLMClient::new().reason(&compressed_prompt).await,
-    }
-}

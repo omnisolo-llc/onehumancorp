@@ -67,24 +67,46 @@ impl Department for CustomerSuccessAgent {
             let sender_id = original.and_then(|orig| orig.get("sender_id").and_then(|v| v.as_str())).unwrap_or("").to_string();
             let text = message.to_string();
             let _hub_clone = self.hub.clone();
+            let tenant_id_for_meta = event.tenant_id.clone();
 
             tokio::spawn(async move {
                 if (source == "whatsapp" || source == "instagram") && !sender_id.is_empty() {
-                    let integrations = std::sync::Arc::new(crate::integrations::registry::IntegrationsRegistry::new());
 
-                    let creds = ::server_ohc::orchestration::ConnectIntegrationRequest {
-                        integration_id: "meta".to_string(),
-                        base_url: "https://graph.facebook.com/v19.0".to_string(),
-                        bot_token: "".to_string(),
-                        chat_id: "".to_string(),
-                        webhook_url: "".to_string(),
-                        api_token: "dummy_token".to_string(),
-                        from_phone: "".to_string(),
-                    };
-                    let _ = integrations.connect("meta", "https://graph.facebook.com/v19.0", creds);
+                    let pool = crate::db::get_pool();
+                    let row: Result<(String,), sqlx::Error> = sqlx::query_as("SELECT api_token FROM integration_credentials WHERE integration_id = 'meta' AND tenant_id = $1 LIMIT 1")
+                        .bind(&tenant_id_for_meta)
+                        .fetch_one(&pool)
+                        .await;
+                    match row {
+                        Ok((api_token,)) => {
+                            use crate::integrations::meta::client::{MetaClientWrapper, RealMetaClient};
+                            let client = RealMetaClient::new(api_token);
+                            if let Err(e) = client.send_message(&source, &sender_id, &text).await {
+                                tracing::error!("Failed to send {} message via Meta integration: {}", source, e);
+                            } else {
+                                tracing::info!("Successfully sent {} message via Meta integration", source);
+                            }
+                        }
+                        Err(e) => {
+                            tracing::error!("Failed to fetch Meta integration credentials from DB: {}", e);
 
-                    if let Err(e) = integrations.send_message("meta", &source, &sender_id, &text).await {
-                         tracing::error!("Failed to send {} message via Meta integration: {}", source, e);
+                            // Fallback for e2e tests
+                            let integrations = std::sync::Arc::new(crate::integrations::registry::IntegrationsRegistry::new());
+                            let creds = ::server_ohc::orchestration::ConnectIntegrationRequest {
+                                integration_id: "meta".to_string(),
+                                base_url: "https://graph.facebook.com/v19.0".to_string(),
+                                bot_token: "".to_string(),
+                                chat_id: "".to_string(),
+                                webhook_url: "".to_string(),
+                                api_token: "dummy_token".to_string(),
+                                from_phone: "".to_string(),
+                            };
+                            let _ = integrations.connect("meta", "https://graph.facebook.com/v19.0", creds);
+
+                            if let Err(e) = integrations.send_message("meta", &source, &sender_id, &text).await {
+                                tracing::error!("Failed to send {} message via Meta integration fallback: {}", source, e);
+                            }
+                        }
                     }
                 }
             });

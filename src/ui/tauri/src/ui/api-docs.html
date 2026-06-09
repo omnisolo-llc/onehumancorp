@@ -3,205 +3,171 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>OHC Setup</title>
+    <title>API Documentation</title>
     <style>
       body {
         font-family: "Outfit", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
         background-color: #f5f5f7;
         margin: 0;
         display: flex;
+        flex-direction: column;
         align-items: center;
-        justify-content: center;
-        height: 100vh;
+        padding: 40px 20px;
+        box-sizing: border-box;
+        min-height: 100vh;
       }
       .container {
+        max-width: 800px;
+        width: 100%;
+        box-sizing: border-box;
+      }
+      .back-link {
+        display: inline-flex;
+        align-items: center;
+        color: #0066FF;
+        text-decoration: none;
+        font-weight: 600;
+        margin-bottom: 20px;
+        font-size: 14px;
+        padding: 8px 0;
+        min-height: 44px;
+      }
+      .back-link svg {
+        width: 16px;
+        height: 16px;
+        margin-right: 5px;
+      }
+      .back-link:hover {
+        text-decoration: underline;
+      }
+      .header {
+        margin-bottom: 40px;
+        text-align: center;
+      }
+      h1 {
+        color: #1d1d1f;
+        font-size: 32px;
+        font-weight: 800;
+        margin: 0;
+        letter-spacing: -0.5px;
+      }
+      .subtitle {
+        color: #86868b;
+        font-size: 16px;
+        margin-top: 10px;
+      }
+      .badge {
+        display: inline-block;
+        background-color: #FF9500;
+        color: white;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: 700;
+        margin-right: 10px;
+        vertical-align: middle;
+      }
+      .docs-card {
         background: rgba(255, 255, 255, 0.65);
         backdrop-filter: blur(30px) saturate(210%);
         -webkit-backdrop-filter: blur(30px) saturate(210%);
+        border-radius: 24px;
         padding: 40px;
-        border-radius: 16px;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-        text-align: center;
-        max-width: 400px;
-        width: 100%;
-        border: 1px solid rgba(255, 255, 255, 0.4);
-        box-sizing: border-box;
+        border: 1px solid rgba(255, 255, 255, 0.6);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.04);
+        margin-bottom: 30px;
       }
-      h1 {
-        margin-top: 0;
+
+      /* Swagger-like minimal UI */
+      .endpoint {
+        border: 1px solid rgba(0,0,0,0.1);
+        border-radius: 8px;
+        margin-bottom: 15px;
+        overflow: hidden;
+      }
+      .endpoint-header {
+        display: flex;
+        align-items: center;
+        padding: 12px 15px;
+        background: rgba(0,0,0,0.02);
+        cursor: pointer;
+      }
+      .endpoint-method {
+        font-family: monospace;
+        font-weight: bold;
+        padding: 4px 8px;
+        border-radius: 4px;
+        margin-right: 15px;
+        font-size: 14px;
+      }
+      .method-get { background: #E1F0FF; color: #0066FF; }
+      .method-post { background: #E8F5E9; color: #34C759; }
+      .endpoint-path {
+        font-family: monospace;
+        font-weight: 600;
         color: #1d1d1f;
-        font-size: 24px;
-        font-weight: 700;
+        font-size: 14px;
       }
-      p {
+      .endpoint-summary {
+        margin-left: auto;
         color: #86868b;
         font-size: 14px;
-        margin-bottom: 20px;
-      }
-      input {
-        width: 100%;
-        padding: 14px;
-        min-height: 44px;
-        margin-bottom: 20px;
-        border: 1px solid rgba(255, 255, 255, 0.5);
-        border-radius: 8px;
-        box-sizing: border-box;
-        font-size: 16px;
-        background: rgba(255, 255, 255, 0.5);
-      }
-      input:focus {
-        outline: none;
-        border-color: #0066FF;
-      }
-      button {
-        background-color: #0066FF;
-        color: white;
-        border: none;
-        padding: 14px 24px;
-        min-height: 44px;
-        border-radius: 8px;
-        font-size: 16px;
-        font-weight: 600;
-        cursor: pointer;
-        width: 100%;
-        transition: background-color 0.2s, transform 0.1s;
-        box-shadow: 0 4px 14px 0 rgba(0, 102, 255, 0.39);
-      }
-      button:hover {
-        background-color: #0052cc;
-      }
-      button:active {
-        transform: scale(0.98);
-      }
-
-      .error-msg {
-        color: #FF3B30;
-        font-size: 12px;
-        margin-top: -15px;
-        margin-bottom: 15px;
-        display: none;
-        text-align: left;
-      }
-
-      @keyframes shake {
-        0%, 100% { transform: translateX(0); }
-        25% { transform: translateX(-5px); }
-        75% { transform: translateX(5px); }
-      }
-      .animate-shake {
-        animation: shake 0.2s ease-in-out 0s 2;
       }
 
       @media (prefers-color-scheme: dark) {
-        body {
-          background-color: #16161a;
-        }
-        .container {
+        body { background-color: #16161a; }
+        .docs-card {
           background: rgba(22, 22, 26, 0.7);
-          backdrop-filter: blur(30px) saturate(210%);
-          -webkit-backdrop-filter: blur(30px) saturate(210%);
-          border: 1px solid rgba(255, 255, 255, 0.1);
+          border-color: rgba(255, 255, 255, 0.1);
         }
-        h1 {
-          color: #F5F5F7;
-        }
-        p {
-          color: #A1A1A6;
-        }
-        input {
-          background: rgba(255, 255, 255, 0.1);
-          border: 1px solid rgba(255, 255, 255, 0.2);
-          color: #F5F5F7;
-        }
-        input:focus {
-          border-color: #0066FF;
-          background: rgba(255, 255, 255, 0.15);
-        }
+        h1, .endpoint-path { color: #f5f5f7; }
+        .subtitle { color: #a1a1a6; }
+        .endpoint { border-color: rgba(255,255,255,0.1); }
+        .endpoint-header { background: rgba(255,255,255,0.02); }
+        .method-get { background: rgba(0, 102, 255, 0.2); }
+        .method-post { background: rgba(52, 199, 89, 0.2); }
       }
     </style>
   </head>
   <body>
-    <div class="container" id="form-container">
-      <h1>What's the name of your business?</h1>
-      <p>We'll use this to set up your workspace.</p>
-      <input type="text" id="business-name" placeholder="e.g. Maya's Bakery" />
-      <div id="name-error" class="error-msg">Business Name must be at least 3 characters.</div>
-      <button id="next-btn" data-tooltip="Click to save your business name and proceed.">Next</button>
+    <div class="container">
+      <a href="dashboard.html" class="back-link">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+        Back to Dashboard
+      </a>
+
+      <div class="header">
+        <h1><span class="badge">Advanced:</span> OHC Advanced API Reference</h1>
+        <p class="subtitle">Integrate your custom checkout or external tools directly with OHC.</p>
+      </div>
+
+      <div class="docs-card">
+        <div class="endpoint">
+          <div class="endpoint-header">
+            <span class="endpoint-method method-get">GET</span>
+            <span class="endpoint-path">/api/v1/catalog/items</span>
+            <span class="endpoint-summary">List Catalog Items</span>
+          </div>
+        </div>
+
+        <div class="endpoint">
+          <div class="endpoint-header">
+            <span class="endpoint-method method-post">POST</span>
+            <span class="endpoint-path">/api/v1/catalog/items</span>
+            <span class="endpoint-summary">Create a new Catalog Item</span>
+          </div>
+        </div>
+
+        <div class="endpoint">
+          <div class="endpoint-header">
+            <span class="endpoint-method method-post">POST</span>
+            <span class="endpoint-path">/api/agents/task</span>
+            <span class="endpoint-summary">Dispatch a task</span>
+          </div>
+        </div>
+      </div>
     </div>
-    <script>
-      const nextBtn = document.getElementById('next-btn');
-      const nameInput = document.getElementById('business-name');
-      const nameError = document.getElementById('name-error');
-      const container = document.getElementById('form-container');
 
-      // Load existing state
-      if (window.__TAURI__ && window.__TAURI__.core) {
-        window.__TAURI__.core.invoke("get_onboarding_state").then((state) => {
-          if (state && state.businessName) {
-            nameInput.value = state.businessName;
-          }
-        }).catch(console.error);
-      } else {
-        const stored = localStorage.getItem('businessName');
-        if (stored) {
-          nameInput.value = stored;
-        }
-      }
-
-      if (nextBtn) {
-        nextBtn.addEventListener('click', () => {
-           const name = nameInput.value.trim();
-           if (name.length >= 3) {
-               nameError.style.display = 'none';
-               nameInput.style.borderColor = 'rgba(255, 255, 255, 0.5)';
-               if (window.__TAURI__ && window.__TAURI__.core) {
-                 nextBtn.disabled = true;
-                 nextBtn.innerText = "Saving...";
-                 window.__TAURI__.core.invoke("get_onboarding_state").then((state) => {
-                   state.businessName = name;
-                   return window.__TAURI__.core.invoke("save_onboarding_state", { state });
-                 }).then(() => {
-                   window.location.href = "assistant.html";
-                 }).catch((err) => {
-                   console.error(err);
-                   nextBtn.disabled = false;
-                   nextBtn.innerText = "Next";
-                 });
-               } else {
-                 localStorage.setItem('businessName', name);
-                 window.location.href = "assistant.html";
-               }
-           } else {
-               nameError.style.display = 'block';
-               nameInput.style.borderColor = '#FF3B30';
-               container.classList.remove('animate-shake');
-               void container.offsetWidth; // trigger reflow
-               container.classList.add('animate-shake');
-           }
-        });
-      }
-
-      nameInput.addEventListener('keydown', (e) => {
-          if (e.key === 'Enter') {
-              e.preventDefault();
-              nextBtn.click();
-          }
-      });
-
-      nameInput.addEventListener('input', () => {
-          if (nameInput.value.trim().length >= 3) {
-              nameError.style.display = 'none';
-              nameInput.style.borderColor = 'rgba(255, 255, 255, 0.5)';
-          }
-      });
-
-      nameInput.addEventListener('keydown', (e) => {
-          if (e.key === 'Enter') {
-              e.preventDefault();
-              nextBtn.click();
-          }
-      });
-    </script>
     <script>
 document.addEventListener('DOMContentLoaded', () => {
     // Inject tooltip CSS
