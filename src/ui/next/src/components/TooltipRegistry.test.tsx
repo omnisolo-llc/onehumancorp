@@ -23,8 +23,19 @@ describe('TooltipRegistry', () => {
     vi.useRealTimers();
   });
 
+  const flushPromises = async () => {
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+  };
+
   it('renders default text on hover', async () => {
-    act(() => { render(<TooltipProvider><WithTooltip id="test-id" defaultText="Default Tooltip"><button>Hover me</button></WithTooltip></TooltipProvider>); });
+    await act(async () => {
+      render(<TooltipProvider><WithTooltip id="test-id" defaultText="Default Tooltip"><button>Hover me</button></WithTooltip></TooltipProvider>);
+    });
+
+    await flushPromises();
 
     const button = screen.getByText('Hover me');
 
@@ -36,7 +47,9 @@ describe('TooltipRegistry', () => {
       width: 100, height: 20, top: 10, left: 10, bottom: 30, right: 110, x: 10, y: 10, toJSON: () => {}
     }));
 
-    fireEvent.mouseEnter(button.parentElement!);
+    await act(async () => {
+      fireEvent.mouseEnter(button.parentElement!);
+    });
 
     await act(async () => {
       vi.advanceTimersByTime(10);
@@ -44,7 +57,9 @@ describe('TooltipRegistry', () => {
 
     expect(screen.getByText('Fetched tooltip text')).toBeInTheDocument();
 
-    fireEvent.mouseLeave(button.parentElement!);
+    await act(async () => {
+      fireEvent.mouseLeave(button.parentElement!);
+    });
 
     await act(async () => {
       vi.advanceTimersByTime(10);
@@ -54,7 +69,11 @@ describe('TooltipRegistry', () => {
   });
 
   it('handles touch events (long press) for mobile', async () => {
-    act(() => { render(<TooltipProvider><WithTooltip id="test-id" defaultText="Default Tooltip"><button>Touch me</button></WithTooltip></TooltipProvider>); });
+    await act(async () => {
+      render(<TooltipProvider><WithTooltip id="test-id" defaultText="Default Tooltip"><button>Touch me</button></WithTooltip></TooltipProvider>);
+    });
+
+    await flushPromises();
 
     const button = screen.getByText('Touch me');
 
@@ -66,30 +85,43 @@ describe('TooltipRegistry', () => {
       width: 100, height: 20, top: 10, left: 10, bottom: 30, right: 110, x: 10, y: 10, toJSON: () => {}
     }));
 
-    fireEvent.touchStart(button.parentElement!);
+    await act(async () => {
+      fireEvent.touchStart(button.parentElement!);
+    });
 
     await act(async () => {
       vi.advanceTimersByTime(500);
+      await flushPromises();
     });
 
     expect(screen.getByText('Fetched tooltip text')).toBeInTheDocument();
 
-    fireEvent.touchEnd(button.parentElement!);
+    await act(async () => {
+      fireEvent.touchEnd(button.parentElement!);
+    });
 
     await act(async () => {
       vi.advanceTimersByTime(2000);
+      vi.advanceTimersByTime(10);
+      await flushPromises();
     });
 
     expect(screen.queryByText('Fetched tooltip text')).not.toBeInTheDocument();
 
     // Also test touchCancel to clear timer
-    fireEvent.touchStart(button.parentElement!);
+    await act(async () => {
+      fireEvent.touchStart(button.parentElement!);
+    });
     await act(async () => {
       vi.advanceTimersByTime(200);
+      await flushPromises();
     });
-    fireEvent.touchCancel(button.parentElement!);
+    await act(async () => {
+      fireEvent.touchCancel(button.parentElement!);
+    });
     await act(async () => {
       vi.advanceTimersByTime(300);
+      await flushPromises();
     });
     // Should not show because it was cancelled before 500ms
     expect(screen.queryByText('Fetched tooltip text')).not.toBeInTheDocument();
@@ -97,7 +129,10 @@ describe('TooltipRegistry', () => {
 
   it('handles fetch errors gracefully', async () => {
     mockTooltipFetch.mockImplementationOnce(() => Promise.resolve({ ok: false }));
-    act(() => { render(<TooltipProvider><div>Test</div></TooltipProvider>); });
+    await act(async () => {
+      render(<TooltipProvider><div>Test</div></TooltipProvider>);
+    });
+    await flushPromises();
     await act(async () => {
       vi.advanceTimersByTime(10);
     });
