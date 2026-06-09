@@ -67,7 +67,7 @@ async fn enqueue_batch(&self, jobs: Vec<Job>) -> Result<(), String> {
                  .push_bind(job.job_type.clone())
                  .push_bind(payload_json)
                  .push_bind("PENDING")
-                 .push_bind(next_retry_at)
+                 .push_bind(next_retry_at.to_rfc3339())
                  .push_bind(job.tenant_id.clone());
             });
 
@@ -109,7 +109,7 @@ async fn enqueue_batch(&self, jobs: Vec<Job>) -> Result<(), String> {
         .bind(&job.parent_task_id)
         .bind(&job.job_type)
         .bind(payload_json)
-        .bind(next_retry_at)
+        .bind(next_retry_at.to_rfc3339())
         .bind(&job.tenant_id)
         .execute(&*self.pool)
         .await
