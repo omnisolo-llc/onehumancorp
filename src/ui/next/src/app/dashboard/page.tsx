@@ -129,6 +129,22 @@ export default function Dashboard() {
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncErrorCount, setSyncErrorCount] = useState(0);
   const [activeDepartments, setActiveDepartments] = useState<string[]>([]);
+  const [approvals, setApprovals] = useState<any[]>([]);
+
+  const handleApproveDraft = async (id: string) => {
+    try {
+      const res = await fetch(`/api/agents/approvals/${id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'approve' })
+      });
+      if (res.ok) {
+        setApprovals(prev => prev.filter(a => a.id !== id));
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   useEffect(() => {
     try {
