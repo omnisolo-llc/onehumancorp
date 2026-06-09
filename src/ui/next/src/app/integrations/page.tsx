@@ -58,6 +58,15 @@ export default function Integrations() {
       setStatusMessage("Follow the Embedded Signup flow to connect WhatsApp.");
       return;
     }
+    if (id === 'meta') {
+      if (window.confirm("Connect Meta Graph API?")) {
+        setIntegrations(prev => prev.map(integration =>
+          integration.id === id ? { ...integration, status: "connected" } : integration
+        ));
+        setStatusMessage("Meta Graph API connected.");
+      }
+      return;
+    }
     setStatusMessage(`Connecting ${integration?.name || id}...`);
     try {
       const res = await fetch(`/api/integrations/${id}/connect`, { method: "POST" });

@@ -111,7 +111,7 @@ pub async fn meta_webhook_post_handler(
 
                         if !text.is_empty() {
                             tracing::info!("Received Meta message from {}: {}", sender_id, text);
-                            let tenant_id = "test_tenant".to_string(); // Future: look up by recipient
+                            let tenant_id = "e2e-tenant".to_string(); // Future: look up by recipient
                             let source = "instagram".to_string();
                             process_omnichannel_message(&state, tenant_id, source, sender_id.to_string(), text.to_string()).await;
                         }
@@ -127,7 +127,7 @@ pub async fn meta_webhook_post_handler(
 
                                   if !text.is_empty() {
                                       tracing::info!("Received Meta WhatsApp message from {}: {}", sender_id, text);
-                                      let tenant_id = "test_tenant".to_string(); // Future: look up by recipient
+                                      let tenant_id = "e2e-tenant".to_string(); // Future: look up by recipient
                                       let source = "whatsapp".to_string();
                                       process_omnichannel_message(&state, tenant_id, source, sender_id.to_string(), text.to_string()).await;
                                   }

@@ -38,7 +38,8 @@ test.describe('Ambassador RAG Pipeline', () => {
     const signature = `sha256=${hmac.update(payloadStr).digest('hex')}`;
 
     // Send the webhook
-    const res = await request.post('/api/v1/webhooks/meta', {
+    const apiBase = process.env.OHC_API_URL || process.env.BACKEND_URL || process.env.BASE_URL || 'http://localhost:8080';
+    const res = await request.post(`${apiBase}/api/v1/webhooks/meta`, {
       data: payloadStr,
       headers: {
         'Content-Type': 'application/json',
