@@ -21,6 +21,7 @@ pub struct IntakeData {
 pub struct IntakeProduct {
     pub name: String,
     pub price: String,
+    pub variants: Option<Vec<String>>,
 }
 
 #[derive(Clone)]
@@ -35,7 +36,57 @@ impl OnboardingAgent {
         let minimax = std::env::var("MINIMAX_API_KEY")
             .ok()
             .map(|key| std::sync::Arc::new(MinimaxClient::new(key)));
-        OnboardingAgent { db, hub, minimax }
+        let agent = OnboardingAgent { db, hub, minimax };
+        agent.start_worker();
+        agent
+    }
+
+    fn start_worker(&self) {
+        let agent_clone = self.clone();
+        tokio::spawn(async move {
+            let mut interval = tokio::time::interval(std::time::Duration::from_secs(3));
+            loop {
+                interval.tick().await;
+
+                let mut tx = match agent_clone.db.pool.begin().await {
+                    Ok(t) => t,
+                    Err(_) => continue,
+                };
+
+                let job = sqlx::query(
+                    "SELECT id, tenant_id, payload FROM ohc_job_queue
+                     WHERE job_type = 'zero_click_generation' AND status = 'PENDING' AND next_retry_at <= NOW()
+                     FOR UPDATE SKIP LOCKED LIMIT 1"
+                )
+                .fetch_optional(&mut *tx)
+                .await;
+
+                if let Ok(Some(row)) = job {
+                    use sqlx::Row;
+                    let job_id: String = row.get("id");
+                    let tenant_id: String = row.get("tenant_id");
+                    let payload: serde_json::Value = row.get("payload");
+
+                    let _ = sqlx::query("UPDATE ohc_job_queue SET status = 'PROCESSING', updated_at = NOW() WHERE id = $1")
+                        .bind(&job_id).execute(&mut *tx).await;
+                    let _ = tx.commit().await;
+
+                    let user_id = payload.get("user_id").and_then(|u| u.as_str()).unwrap_or("").to_string();
+                    let prompt = payload.get("prompt").and_then(|p| p.as_str()).unwrap_or("").to_string();
+
+                    if let Err(e) = agent_clone.process_zero_click_generation(&tenant_id, &user_id, &prompt).await {
+                        tracing::error!("Zero click generation failed for job {}: {}", job_id, e);
+                        let _ = sqlx::query("UPDATE ohc_job_queue SET status = 'FAILED', updated_at = NOW() WHERE id = $1")
+                            .bind(&job_id).execute(&agent_clone.db.pool).await;
+                    } else {
+                        let _ = sqlx::query("UPDATE ohc_job_queue SET status = 'COMPLETED', updated_at = NOW() WHERE id = $1")
+                            .bind(&job_id).execute(&agent_clone.db.pool).await;
+                    }
+                } else {
+                    let _ = tx.commit().await;
+                }
+            }
+        });
     }
 
     pub async fn process_intake(&self, input: &str) -> Result<IntakeData, String> {
@@ -44,7 +95,7 @@ impl OnboardingAgent {
         let prompt = format!(
             "You are the OHC Onboarding Expert. Extract structured business information from the following user description.
             If the input is an Instagram/social link, infer the business details from the context of a small business.
-            Return ONLY a valid JSON object with fields: business_name, business_type, categories (array), initial_products (array of objects with 'name' and 'price' as string), location (string), target_audience (string).
+            Return ONLY a valid JSON object with fields: business_name, business_type, categories (array), initial_products (array of objects with 'name' as string, 'price' as string, and optional 'variants' as array of strings), location (string), target_audience (string).
 
             Valid categories are: physical, digital, services, food, subscriptions.
             Business type should be a friendly name like 'Home Bakery', 'Freelance Handyman', 'Boutique', etc.
@@ -84,6 +135,126 @@ impl OnboardingAgent {
         Ok(data)
     }
 
+
+    pub async fn enqueue_zero_click(&self, tenant_id: &str, user_id: &str, input: &str) -> Result<(), String> {
+        let job_payload = json!({
+            "user_id": user_id,
+            "prompt": input
+        });
+
+        // Insert a preliminary generating state
+        let initial_state = json!({ "status": "generating" });
+        self.save_onboarding_state(tenant_id, user_id, 1, &initial_state).await?;
+
+        let job_id = uuid::Uuid::new_v4().to_string();
+        let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
+        ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
+
+        sqlx::query(
+            "INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload, status, next_retry_at)
+             VALUES ($1, $2, $3, $4, 'PENDING', CURRENT_TIMESTAMP)"
+        )
+        .bind(&job_id)
+        .bind(tenant_id)
+        .bind("zero_click_generation")
+        .bind(&job_payload)
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| e.to_string())?;
+
+        tx.commit().await.map_err(|e| e.to_string())?;
+
+        Ok(())
+    }
+
+    pub async fn process_zero_click_generation(&self, tenant_id: &str, user_id: &str, input: &str) -> Result<(), String> {
+        // Process Intake using the AI
+        let intake_data = self.process_intake(input).await?;
+
+        // Create the necessary products and variants
+        let mut created_products = Vec::new();
+        let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
+        ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
+
+        // Insert tenant to satisfy foreign keys
+        sqlx::query("INSERT INTO tenants (id, name, industry) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING")
+            .bind(tenant_id)
+            .bind(&intake_data.business_name)
+            .bind(&intake_data.business_type)
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| e.to_string())?;
+
+        // Insert user to satisfy potential foreign keys
+        sqlx::query("INSERT INTO users (id, username, email, tenant_id) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING")
+            .bind(user_id)
+            .bind(format!("user-{}", user_id))
+            .bind(format!("{}@example.com", user_id))
+            .bind(tenant_id)
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| e.to_string())?;
+
+        let strategy = match intake_data.business_type.as_str() {
+            "Service Business" => "booking",
+            _ => "physical",
+        };
+
+        for product in &intake_data.initial_products {
+            let price_cents = (product.price.parse::<f64>().unwrap_or(0.0) * 100.0) as i64;
+            let prod_id = format!("prod-{}", uuid::Uuid::new_v4());
+
+            let variants_json = if let Some(variants) = &product.variants {
+                json!({"variants": variants})
+            } else {
+                json!({})
+            };
+
+            sqlx::query("INSERT INTO products (id, tenant_id, title, description, price_cents, type, metadata) VALUES ($1, $2, $3, $4, $5, $6, $7)")
+                .bind(&prod_id)
+                .bind(tenant_id)
+                .bind(&product.name)
+                .bind("Generated by Zero-Click Onboarding")
+                .bind(price_cents)
+                .bind(strategy)
+                .bind(variants_json)
+                .execute(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?;
+
+            created_products.push(json!({
+                "id": prod_id,
+                "name": product.name,
+                "price": product.price,
+                "variants": product.variants,
+            }));
+        }
+
+        tx.commit().await.map_err(|e| e.to_string())?;
+
+        // Create Onboarding State
+        let current_step = 5; // Launched
+        let state_json = json!({
+            "status": "launched",
+            "zero_click": true,
+            "business_name": intake_data.business_name,
+            "business_type": intake_data.business_type,
+            "location": intake_data.location,
+            "target_audience": intake_data.target_audience,
+            "categories": intake_data.categories,
+            "generated_products": created_products,
+            "ai_agents": ["Operations", "Marketing", "Finance"],
+            "website_template": "Modern",
+        });
+
+        // Seed default AI agents
+        let _ = self.seed_default_agents(tenant_id).await;
+
+        // Save onboarding state
+        self.save_onboarding_state(tenant_id, user_id, current_step, &state_json).await?;
+
+        Ok(())
+    }
 
     pub async fn save_onboarding_state(&self, tenant_id: &str, user_id: &str, current_step: i32, state_json: &serde_json::Value) -> Result<(), String> {
         tracing::debug!("Saving onboarding state for tenant: {}, user: {}", tenant_id, user_id);

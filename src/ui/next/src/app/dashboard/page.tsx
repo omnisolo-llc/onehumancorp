@@ -87,6 +87,7 @@ function statusTone(status?: string) {
 
 export default function Dashboard() {
   const router = useRouter();
+  const [isZeroClickSuccess, setIsZeroClickSuccess] = useState(false);
   const [metrics, setMetrics] = useState<DashboardMetrics>(emptyMetrics);
   const [orders, setOrders] = useState<Order[]>([]);
   const [messages, setMessages] = useState<InboxMessage[]>([]);
@@ -99,6 +100,12 @@ export default function Dashboard() {
   const [ledgerLoading, setLedgerLoading] = useState(true);
 
   useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('zero_click_success') === 'true') {
+        setIsZeroClickSuccess(true);
+      }
+    }
     async function fetchLedgerBalance() {
       try {
         const res = await fetch("/api/ledger/accounts");
@@ -311,6 +318,34 @@ export default function Dashboard() {
         { label: "New Product", href: "/products/new", primary: true },
       ]}
     >
+      {isZeroClickSuccess && (
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 rounded-2xl p-6 shadow-sm mb-6 relative overflow-hidden">
+          <div className="absolute top-0 right-0 p-4 opacity-10">
+            <svg className="w-24 h-24 text-blue-500" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L2 22h20L12 2zm0 3.8l7.2 14.2H4.8L12 5.8z"/></svg>
+          </div>
+          <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                <span className="flex h-3 w-3 relative">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-blue-500"></span>
+                </span>
+                Generation Complete!
+              </h2>
+              <p className="mt-2 text-gray-600 max-w-2xl">
+                The Operations Agent has set up your initial product catalog based on your description.
+                Tap the catalog below to edit your products or approve the drafts.
+              </p>
+            </div>
+            <div className="flex-shrink-0">
+              <Link href="/products" className="inline-flex items-center justify-center px-5 py-2.5 bg-blue-600 text-white font-medium rounded-xl hover:bg-blue-700 transition-colors">
+                Review Catalog
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="mb-6 p-6 rounded-[16px] glassmorphism border border-white/40 dark:border-white/10">
         <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Welcome back, {userName}.</h2>
         <p className="text-gray-600 dark:text-gray-400">Your agents are working on your behalf.</p>

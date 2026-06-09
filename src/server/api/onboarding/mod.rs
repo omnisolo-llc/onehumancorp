@@ -11,6 +11,7 @@ pub fn router(agent: Arc<OnboardingAgent>) -> Router<Arc<dyn ohc_builtin_agent::
     let r = Router::new()
         .route("/start", post(start_onboarding))
         .route("/intake", post(process_intake_handler))
+        .route("/generate", post(generate_onboarding_handler))
         .route("/state", get(get_state).post(save_state))
         .route("/launch", post(launch_onboarding))
         .route("/draft", get(get_draft).post(save_draft))
@@ -24,6 +25,33 @@ pub fn router(agent: Arc<OnboardingAgent>) -> Router<Arc<dyn ohc_builtin_agent::
 #[derive(serde::Deserialize)]
 pub struct IntakeRequest {
     pub description: String,
+}
+
+#[derive(serde::Deserialize)]
+pub struct ZeroClickRequest {
+    pub prompt: String,
+}
+
+async fn generate_onboarding_handler(
+    State(agent): State<Arc<OnboardingAgent>>,
+    Extension(auth_info): Extension<::server_auth::orchestration::AuthInfo>,
+    Json(payload): Json<ZeroClickRequest>,
+) -> Result<Json<serde_json::Value>, axum::http::StatusCode> {
+    let tenant_id = auth_info.org_id.clone();
+    let user_id = auth_info.agent_id.clone();
+
+    match agent.enqueue_zero_click(&tenant_id, &user_id, &payload.prompt).await {
+        Ok(_) => {
+            Ok(Json(serde_json::json!({
+                "tenant_id": tenant_id,
+                "status": "enqueued"
+            })))
+        },
+        Err(error) => {
+            tracing::error!("zero click enqueue error: {}", error);
+            Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
 }
 
 async fn process_intake_handler(
