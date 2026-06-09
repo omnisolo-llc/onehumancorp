@@ -50,6 +50,173 @@
         margin-bottom: 20px;
       }
 
+
+      .milestone-card {
+        background: rgba(255, 255, 255, 0.65);
+        backdrop-filter: blur(30px) saturate(210%);
+        border: 1px solid rgba(0, 102, 255, 0.3);
+        border-radius: 16px;
+        padding: 24px;
+        margin-bottom: 30px;
+        text-align: center;
+        box-shadow: 0 10px 40px rgba(0, 102, 255, 0.15);
+        display: none;
+        animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        position: relative;
+        overflow: hidden;
+      }
+      @media (prefers-color-scheme: dark) {
+        .milestone-card {
+          background: rgba(22, 22, 26, 0.85);
+          border: 1px solid rgba(0, 102, 255, 0.5);
+          box-shadow: 0 10px 40px rgba(0, 102, 255, 0.2);
+        }
+      }
+      .milestone-card::before {
+        content: '';
+        position: absolute;
+        top: -50px; right: -50px;
+        width: 100px; height: 100px;
+        background: rgba(0, 102, 255, 0.2);
+        filter: blur(40px);
+        border-radius: 50%;
+        pointer-events: none;
+      }
+      .milestone-card::after {
+        content: '';
+        position: absolute;
+        bottom: -50px; left: -50px;
+        width: 100px; height: 100px;
+        background: rgba(138, 43, 226, 0.2);
+        filter: blur(40px);
+        border-radius: 50%;
+        pointer-events: none;
+      }
+      .milestone-icon {
+        font-size: 48px;
+        margin-bottom: 15px;
+        display: inline-block;
+        background: #fff;
+        width: 80px; height: 80px;
+        line-height: 80px;
+        border-radius: 50%;
+        box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+        border: 1px solid rgba(0, 102, 255, 0.2);
+        position: relative;
+        z-index: 2;
+      }
+      @media (prefers-color-scheme: dark) {
+        .milestone-icon {
+          background: #1c1c1e;
+          border: 1px solid rgba(0, 102, 255, 0.4);
+        }
+      }
+      .milestone-badge {
+        display: inline-block;
+        background: rgba(0, 102, 255, 0.1);
+        color: #0066FF;
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-size: 11px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-bottom: 10px;
+        border: 1px solid rgba(0, 102, 255, 0.2);
+      }
+      @media (prefers-color-scheme: dark) {
+        .milestone-badge {
+          background: rgba(0, 102, 255, 0.2);
+          color: #66a3ff;
+        }
+      }
+      .milestone-title {
+        font-size: 22px;
+        font-weight: 800;
+        color: #1d1d1f;
+        margin: 0 0 10px 0;
+        position: relative;
+        z-index: 2;
+      }
+      @media (prefers-color-scheme: dark) {
+        .milestone-title {
+          color: #f5f5f7;
+        }
+      }
+      .milestone-desc {
+        font-size: 14px;
+        color: #86868b;
+        margin-bottom: 20px;
+        line-height: 1.4;
+        position: relative;
+        z-index: 2;
+      }
+      .milestone-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        position: relative;
+        z-index: 2;
+      }
+      .btn-primary {
+        background-color: #0066FF;
+        color: white;
+        border: none;
+        padding: 14px 24px;
+        border-radius: 8px;
+        font-size: 15px;
+        font-weight: 600;
+        cursor: pointer;
+        width: 100%;
+        transition: background-color 0.2s, transform 0.1s;
+        box-shadow: 0 4px 14px 0 rgba(0, 102, 255, 0.39);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 8px;
+        min-height: 44px;
+      }
+      .btn-primary:hover {
+        background-color: #0052cc;
+      }
+      .btn-primary:active {
+        transform: scale(0.98);
+      }
+      .btn-outline {
+        background-color: transparent;
+        color: #1d1d1f;
+        border: 1px solid rgba(0,0,0,0.2);
+        padding: 14px 24px;
+        border-radius: 8px;
+        font-size: 15px;
+        font-weight: 600;
+        cursor: pointer;
+        width: 100%;
+        transition: background-color 0.2s, transform 0.1s;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 8px;
+        min-height: 44px;
+      }
+      @media (prefers-color-scheme: dark) {
+        .btn-outline {
+          color: #f5f5f7;
+          border: 1px solid rgba(255,255,255,0.2);
+        }
+      }
+      .btn-outline:hover {
+        background-color: rgba(0,0,0,0.05);
+      }
+      @media (prefers-color-scheme: dark) {
+        .btn-outline:hover {
+          background-color: rgba(255,255,255,0.05);
+        }
+      }
+      .btn-outline:active {
+        transform: scale(0.98);
+      }
+
       /* OHC Glassmorphism token */
       .ohc-growth-card {
         background: rgba(255, 255, 255, 0.5);
@@ -394,6 +561,24 @@
     <div class="container">
       <div class="status-badge">🟢 Standalone Mode (Zero Data Leakage)</div>
 
+
+      <div id="milestone-container" class="milestone-card" data-testid="success-milestone-alert">
+        <div class="milestone-badge">Milestone Unlocked</div>
+        <div class="milestone-icon" id="milestone-icon">✨</div>
+        <h2 class="milestone-title" id="milestone-title">Loading...</h2>
+        <p class="milestone-desc" id="milestone-desc">Loading...</p>
+        <div class="milestone-actions">
+          <button class="btn-primary" id="milestone-copy-btn" data-testid="milestone-share-btn">
+            <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" /></svg>
+            Copy Link
+          </button>
+          <button class="btn-outline" id="milestone-x-btn">
+            <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.008 5.94H5.078z"/></svg>
+            Share on X
+          </button>
+        </div>
+      </div>
+
       <h1 id="dashboard-title">Dashboard</h1>
       <div class="subtitle">Your private agentic workspace.</div>
 
@@ -505,6 +690,79 @@
       if (name) {
           document.getElementById('dashboard-title').innerText = `${name} Dashboard`;
       }
+
+
+      // Milestone logic
+      async function checkMilestones() {
+        try {
+          const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'e2e-tenant';
+          // Using exact backend URL from playwright config for API requests
+          let url = `/api/v1/growth/milestones/check?tenant=${encodeURIComponent(tenantId)}`;
+
+          const res = await fetch(url);
+          if (res.ok) {
+            const data = await res.json();
+            const reachedMilestone = data.milestones && data.milestones.find(m => m.reached);
+            if (reachedMilestone) {
+              document.getElementById('milestone-title').innerText = reachedMilestone.title;
+              document.getElementById('milestone-desc').innerText = reachedMilestone.description;
+
+              const iconMap = {
+                  'first_sale': '🎉',
+                  '10th_order': '📈',
+                  '100_visitors': '🚀',
+                  '5_referrals': '🤝',
+                  'revenue_1k': '💰'
+              };
+              document.getElementById('milestone-icon').innerText = iconMap[reachedMilestone.id] || '✨';
+
+              document.getElementById('milestone-container').style.display = 'block';
+
+              // Button events
+              const copyBtn = document.getElementById('milestone-copy-btn');
+              const xBtn = document.getElementById('milestone-x-btn');
+
+              async function getInviteLink() {
+                if (window.__TAURI__ && window.__TAURI__.core) {
+                  try {
+                    return await window.__TAURI__.core.invoke("generate_cloud_invite");
+                  } catch(e) {
+                    return "https://cloud.ohc.network/invite/fallback";
+                  }
+                } else {
+                  return "https://cloud.ohc.network/invite/test-" + Date.now();
+                }
+              }
+
+              copyBtn.addEventListener('click', async () => {
+                const link = await getInviteLink();
+                const tempInput = document.createElement('input');
+                tempInput.value = link;
+                document.body.appendChild(tempInput);
+                tempInput.select();
+                document.execCommand('copy');
+                document.body.removeChild(tempInput);
+
+                const originalText = copyBtn.innerHTML;
+                copyBtn.innerHTML = '<svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Copied Link!';
+                setTimeout(() => {
+                  copyBtn.innerHTML = originalText;
+                }, 2000);
+              });
+
+              xBtn.addEventListener('click', async () => {
+                const link = await getInviteLink();
+                const text = `I just hit a huge business milestone (${reachedMilestone.title}) using OHC! Launch your own store today: ${link}`;
+                window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, '_blank');
+              });
+            }
+          }
+        } catch (e) {
+          console.error("Failed to check milestones", e);
+        }
+      }
+      checkMilestones();
+
 
       const generateBtn = document.getElementById('generate-link-btn');
       const linkContainer = document.getElementById('link-container');
