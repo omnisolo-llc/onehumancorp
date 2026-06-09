@@ -46,6 +46,7 @@ static UI_ORDERS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<V
 static UI_BOOKINGS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<Vec<serde_json::Value>>> = std::sync::OnceLock::new();
 static UI_INBOX_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<Vec<serde_json::Value>>> = std::sync::OnceLock::new();
 static UI_DASHBOARD_METRICS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<serde_json::Value>> = std::sync::OnceLock::new();
+static UI_UNIFIED_AGENT_FEED_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<serde_json::Value>> = std::sync::OnceLock::new();
 static METRICS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<HttpMetricsResponse>> = std::sync::OnceLock::new();
 
 pub fn get_redis_client() -> Option<redis::Client> {
@@ -3145,7 +3146,7 @@ async fn ui_dashboard_unified_agent_feed_handler(
     let tenant_id = ui_tenant_id(&query);
 
     let cache_key = format!("ui_unified_agent_feed:{}", tenant_id);
-    let cache = UI_INBOX_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
+    let cache = UI_UNIFIED_AGENT_FEED_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
     if let Some(cached) = cache.get(&cache_key).await {
         return (axum::http::StatusCode::OK, axum::Json(cached)).into_response();
     }
@@ -3160,8 +3161,7 @@ async fn ui_dashboard_unified_agent_feed_handler(
         "entries": ledger_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default()
     });
 
-    // Note: UI_INBOX_CACHE expects Vec<serde_json::Value>. To avoid type error, we return early and skip caching,
-    // or we could use another cache. For simplicity and correctness, we will skip caching here since this fetches fast.
+    let _ = cache.set(&cache_key, result.clone(), std::time::Duration::from_secs(10)).await;
     (axum::http::StatusCode::OK, axum::Json(result)).into_response()
 }
 
