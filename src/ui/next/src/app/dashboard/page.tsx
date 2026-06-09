@@ -2,11 +2,6 @@
 import { FloatingActionButton } from "./FAB";
 import { MorningBriefingCard } from "./MorningBriefingCard";
 
-
-
-
-
-
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -92,6 +87,7 @@ export default function Dashboard() {
   const [messages, setMessages] = useState<InboxMessage[]>([]);
   const [supply, setSupply] = useState<SupplyPayload>({ vendors: [], raw_materials: [], bom_items: [] });
   const [dashboardData, setDashboardData] = useState<any>({ pendingReviews: [] });
+  const [approvals, setApprovals] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [ledgerBalance, setLedgerBalance] = useState<number | null>(null);
   const [ledgerCurrency, setLedgerCurrency] = useState<string>("USD");
@@ -117,6 +113,7 @@ export default function Dashboard() {
     }
     fetchLedgerBalance();
   }, []);
+
   const [error, setError] = useState("");
   const [isOffline, setIsOffline] = useState(false);
   const [offlineQueueCount, setOfflineQueueCount] = useState(0);
@@ -129,7 +126,22 @@ export default function Dashboard() {
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncErrorCount, setSyncErrorCount] = useState(0);
   const [activeDepartments, setActiveDepartments] = useState<string[]>([]);
-  const [approvals, setApprovals] = useState<any[]>([]);
+
+  const handleApproveDraft = async (approvalId: string) => {
+    try {
+      const token = localStorage.getItem("token") || "";
+      const res = await fetch(`/api/agents/approvals/${approvalId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+        body: JSON.stringify({ approved: true })
+      });
+      if (res.ok) {
+        setDashboardData((prev: any) => ({ ...prev, pendingReviews: prev.pendingReviews.filter((a: any) => a.id !== approvalId) }));
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   useEffect(() => {
     try {
@@ -172,11 +184,8 @@ export default function Dashboard() {
             setSyncErrorCount(data.failed_count);
           }
 
-          // Re-fetch queue in case new items were added during the sync
           const currentQueueStr = localStorage.getItem("ohc_offline_queue") || "[]";
           const currentQueue = JSON.parse(currentQueueStr);
-          // Remove exactly the items we just synced (by matching id and timestamp or simply slicing by length)
-          // Simple slice is safe if we assume append-only queue
           const remainingQueue = currentQueue.slice(queue.length);
           localStorage.setItem("ohc_offline_queue", JSON.stringify(remainingQueue));
           setOfflineQueueCount(remainingQueue.length);
@@ -195,24 +204,26 @@ export default function Dashboard() {
 
       try {
         const userId = localStorage.getItem("user_id") || "default";
-        const [metricsRes, ordersRes, inboxRes, supplyRes, onboardingRes] = await Promise.all([
+        const [metricsRes, ordersRes, inboxRes, supplyRes, onboardingRes, approvalsRes] = await Promise.all([
           fetch(`/api/ui/dashboard/metrics?tenant_id=${tenant}`),
           fetch(`/api/ui/orders?tenant_id=${tenant}`),
           fetch(`/api/ui/inbox/messages?tenant_id=${tenant}`),
           fetch(`/api/ui/supply?tenant_id=${tenant}`),
           fetch(`/api/onboarding/state`, { headers: { 'X-Tenant-ID': tenant, 'X-User-ID': userId } }),
+          fetch(`/api/agents/approvals?tenant_id=${tenant}`)
         ]);
 
         if (!metricsRes.ok || !ordersRes.ok || !inboxRes.ok || !supplyRes.ok) {
           throw new Error("One or more database-backed UI endpoints failed");
         }
 
-        const [metricsData, ordersData, inboxData, supplyData, onboardingData] = await Promise.all([
+        const [metricsData, ordersData, inboxData, supplyData, onboardingData, approvalsData] = await Promise.all([
           metricsRes.json(),
           ordersRes.json(),
           inboxRes.json(),
           supplyRes.json(),
           onboardingRes.ok ? onboardingRes.json() : Promise.resolve(null),
+          approvalsRes.ok ? approvalsRes.json() : Promise.resolve([]),
         ]);
 
         if (onboardingData?.wizardState?.aiAgents) {
@@ -229,6 +240,7 @@ export default function Dashboard() {
           raw_materials: Array.isArray(supplyData?.raw_materials) ? supplyData.raw_materials : [],
           bom_items: Array.isArray(supplyData?.bom_items) ? supplyData.bom_items : [],
         });
+        setApprovals(Array.isArray(approvalsData?.approvals) ? approvalsData.approvals : (Array.isArray(approvalsData) ? approvalsData : []));
       } catch (e: any) {
         setError(e?.message || "Failed to load dashboard data");
       } finally {
@@ -244,25 +256,7 @@ export default function Dashboard() {
     window.addEventListener("offline", updateOfflineStatus);
     window.addEventListener("storage", updateOfflineStatus);
 
-
-
-  async function handleApproveDraft(approvalId: string) {
-    try {
-      const token = localStorage.getItem("token") || "";
-      const res = await fetch(`/api/agents/approvals/${approvalId}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
-        body: JSON.stringify({ approved: true })
-      });
-      if (res.ok) {
-        setApprovals(prev => prev.filter(a => a.id !== approvalId));
-      }
-    } catch (e) {
-      console.error(e);
-    }
-  }
-
-  return () => {
+    return () => {
       window.removeEventListener("online", updateOfflineStatus);
       window.removeEventListener("online", handleSync);
       window.removeEventListener("offline", updateOfflineStatus);
@@ -479,7 +473,6 @@ export default function Dashboard() {
                }}
                onApprove={async (id, content) => {
                  try {
-                     // Optimistic update
                      setDashboardData((prev: any) => ({
                          ...prev,
                          pendingReviews: prev.pendingReviews.filter((r: any) => r?.response?.id !== id)
@@ -490,14 +483,12 @@ export default function Dashboard() {
                          body: JSON.stringify({ action: 'approve', responseId: id, content })
                      });
                      if (!res.ok) {
-                         // Rollback if needed
                          console.error("Failed to approve");
                      }
                  } catch (e) { console.error(e); }
                }}
                onDismiss={async (id) => {
                  try {
-                     // Optimistic update
                      setDashboardData((prev: any) => ({
                          ...prev,
                          pendingReviews: prev.pendingReviews.filter((r: any) => r?.response?.id !== id)
@@ -574,8 +565,6 @@ export default function Dashboard() {
                 <div className="app-metric-note">Materials below threshold</div>
               </div>
             </div>
-
-
           </div>
         </section>
 
@@ -615,7 +604,7 @@ export default function Dashboard() {
               <Link href="/inventory" className="app-button">Inventory</Link>
             </div>
             <div className="app-list">
-                            {approvals.filter(a => a.payload?.feature_type === 'ambassador_reply').map(approval => (
+              {approvals.filter((a: any) => a.payload?.feature_type === 'ambassador_reply').map(approval => (
                 <div key={approval.id} className="app-list-item flex flex-col items-start gap-3">
                   <div className="w-full">
                     <div className="app-list-title">Action Required: Approve Reply</div>
@@ -659,7 +648,7 @@ export default function Dashboard() {
                   <span className="app-badge">Inbox</span>
                 </div>
               )}
-              {!loading && metrics.pending_orders === 0 && lowStockCount === 0 && messages.length === 0 && approvals.filter(a => a.payload?.feature_type === "ambassador_reply").length === 0 && (
+              {!loading && metrics.pending_orders === 0 && lowStockCount === 0 && messages.length === 0 && (approvals).filter((a: any) => a.payload?.feature_type === "ambassador_reply").length === 0 && (
                 <div className="app-empty">No database-backed actions are currently open.</div>
               )}
             </div>
@@ -772,7 +761,6 @@ export default function Dashboard() {
                 <div className="text-purple-600 dark:text-purple-400 font-semibold text-sm bg-purple-50 dark:bg-purple-900/30 px-3 py-1 rounded-full">Share</div>
               </div>
               <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Milestones</h3>
-
               <p className="text-sm text-gray-600 dark:text-gray-400">Track and share your business achievements with your audience.</p>
             </Link>
 
@@ -901,7 +889,6 @@ export default function Dashboard() {
               <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Flash Sale Generator</h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">Create high-converting flash sale countdown widgets.</p>
             </Link>
-
 
             <Link href="/marketing/lead-gen" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">

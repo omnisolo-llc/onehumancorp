@@ -1,11 +1,50 @@
 import { test, expect } from '@playwright/test';
+import * as path from 'path';
+import * as fs from 'fs';
 
 test.describe('OHC Premium Onboarding Wizard', () => {
-  // We use the local python server for these tests since Bazel build is restricted
-  const BASE_URL = 'http://localhost:8000';
+  const tauriUiDir = path.join(process.cwd(), 'src/ui/tauri/src/ui');
+
+  const routeHandler = async (route) => {
+    const url = new URL(route.request().url());
+    const filename = path.basename(url.pathname);
+    const filepath = path.join(tauriUiDir, filename);
+    if (fs.existsSync(filepath)) {
+      const content = fs.readFileSync(filepath);
+      let contentType = 'text/html';
+      if (filename.endsWith('.css')) contentType = 'text/css';
+      else if (filename.endsWith('.js')) contentType = 'application/javascript';
+      await route.fulfill({ contentType, body: content });
+    } else {
+      await route.continue();
+    }
+  };
+
+  test.beforeEach(async ({ page }) => {
+    await page.route('http://mock/**', routeHandler);
+
+    await page.addInitScript(() => {
+      window.__TAURI__ = {
+        core: {
+          invoke: async (cmd: string, args: any) => {
+            if (cmd === 'get_onboarding_state') {
+              const state = sessionStorage.getItem('mockState');
+              return state ? JSON.parse(state) : {};
+            } else if (cmd === 'save_onboarding_state') {
+              const state = sessionStorage.getItem('mockState');
+              const currentState = state ? JSON.parse(state) : {};
+              sessionStorage.setItem('mockState', JSON.stringify({ ...currentState, ...args.state }));
+              return null;
+            }
+            return {};
+          }
+        }
+      };
+    });
+  });
 
   test('Maya Persona: Full Onboarding Journey', async ({ page }) => {
-    await page.goto(`${BASE_URL}/index.html`);
+    await page.goto('http://mock/index.html');
 
     // Step 0: Welcome
     await expect(page.getByRole('heading', { name: 'Welcome to OHC' })).toBeVisible();
@@ -43,29 +82,25 @@ test.describe('OHC Premium Onboarding Wizard', () => {
 
   test('Responsive Layout: 375px Verification', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 });
-    await page.goto(`${BASE_URL}/setup.html`);
+    await page.goto('http://mock/setup.html');
 
     const container = page.locator('.container');
     const box = await container.boundingBox();
-    // Ensure container doesn't overflow horizontally on 375px
     expect(box?.width).toBeLessThanOrEqual(375);
 
-    // Verify touch targets (inputs and buttons should be at least 48px high in our styles.css)
     const nameInput = page.getByPlaceholder("e.g. Maya's Bakery");
     const inputBtn = await nameInput.boundingBox();
     expect(inputBtn?.height).toBeGreaterThanOrEqual(44);
   });
 
   test('State Persistence: Refresh during wizard', async ({ page }) => {
-    await page.goto(`${BASE_URL}/setup.html`);
+    await page.goto('http://mock/setup.html');
     await page.getByPlaceholder("e.g. Maya's Bakery").fill("Persistent Business");
     await page.getByText("🏢 Agency").click();
 
-    // Simulate navigation/save (using localStorage in dev mode)
     await page.getByRole('button', { name: 'Next' }).click();
     await expect(page.getByRole('heading', { name: 'Your AI Team' })).toBeVisible();
 
-    // Go back and refresh
     await page.getByRole('button', { name: 'Back' }).click();
     await page.reload();
 
@@ -74,7 +109,7 @@ test.describe('OHC Premium Onboarding Wizard', () => {
   });
 
   test('Industry Selection Interaction Audit', async ({ page }) => {
-    await page.goto(`${BASE_URL}/setup.html`);
+    await page.goto('http://mock/setup.html');
 
     const bakery = page.getByText("🍰 Bakery");
     const agency = page.getByText("🏢 Agency");
@@ -90,11 +125,9 @@ test.describe('OHC Premium Onboarding Wizard', () => {
 
   test('Dark Mode Visual Audit', async ({ page }) => {
     await page.emulateMedia({ colorScheme: 'dark' });
-    await page.goto(`${BASE_URL}/index.html`);
+    await page.goto('http://mock/index.html');
 
-    // Verify background color changes
     const bodyColor = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
-    // rgb(22, 22, 26) is our dark mode background
     expect(bodyColor).toBe('rgb(22, 22, 26)');
   });
 });
