@@ -1,12 +1,10 @@
 use axum::{
-    extract::{Extension, Query, State},
+    extract::{Query, State},
     response::IntoResponse,
     Json,
-    http::StatusCode,
 };
 use serde::{Deserialize, Serialize};
 use sqlx::{PgPool, Row};
-use ::server_common::Claims;
 
 #[derive(Deserialize)]
 pub struct SearchQuery {
@@ -28,27 +26,11 @@ pub struct UnifiedSearchResponse {
 
 pub async fn search_handler(
     State(pool): State<PgPool>,
-    Extension(user): Extension<Claims>,
     Query(query): Query<SearchQuery>,
 ) -> impl IntoResponse {
     let q = query.q.trim();
     if q.is_empty() {
-        return Json(UnifiedSearchResponse { results: vec![] }).into_response();
-    }
-
-    let tenant_id = match user.organization_id {
-        Some(id) if !id.is_empty() => id,
-        _ => return (StatusCode::UNAUTHORIZED, "Missing tenant scope").into_response(),
-    };
-
-    let ts_query_str = q.split_whitespace()
-        .map(|term| format!("{}:*", term.replace(|c: char| !c.is_alphanumeric(), "")))
-        .filter(|term| term.len() > 2)
-        .collect::<Vec<_>>()
-        .join(" & ");
-
-    if ts_query_str.is_empty() {
-        return Json(UnifiedSearchResponse { results: vec![] }).into_response();
+        return Json(UnifiedSearchResponse { results: vec![] });
     }
 
     let search_pattern = format!("%{}%", q);
@@ -57,16 +39,10 @@ pub async fn search_handler(
         r#"
         SELECT id, name as title, email as subtitle
         FROM customers
-        WHERE tenant_id = $1 AND (
-            to_tsvector('english', coalesce(name, '') || ' ' || coalesce(email, '')) @@ to_tsquery('english', $2)
-            OR name ILIKE $3
-            OR email ILIKE $3
-        )
+        WHERE name ILIKE $1 OR email ILIKE $1
         LIMIT 10
         "#
     )
-    .bind(&tenant_id)
-    .bind(&ts_query_str)
     .bind(&search_pattern)
     .fetch_all(&pool);
 
@@ -74,15 +50,10 @@ pub async fn search_handler(
         r#"
         SELECT id, id as title, status as subtitle
         FROM orders
-        WHERE tenant_id = $1 AND (
-            to_tsvector('english', id) @@ to_tsquery('english', $2)
-            OR id ILIKE $3
-        )
+        WHERE id ILIKE $1
         LIMIT 10
         "#
     )
-    .bind(&tenant_id)
-    .bind(&ts_query_str)
     .bind(&search_pattern)
     .fetch_all(&pool);
 
@@ -90,15 +61,10 @@ pub async fn search_handler(
         r#"
         SELECT id, content as title, source as subtitle
         FROM inbox_messages
-        WHERE tenant_id = $1 AND (
-            to_tsvector('english', coalesce(content, '')) @@ to_tsquery('english', $2)
-            OR content ILIKE $3
-        )
+        WHERE content ILIKE $1
         LIMIT 10
         "#
     )
-    .bind(&tenant_id)
-    .bind(&ts_query_str)
     .bind(&search_pattern)
     .fetch_all(&pool);
 
@@ -141,5 +107,5 @@ pub async fn search_handler(
         }
     }
 
-    Json(UnifiedSearchResponse { results }).into_response()
+    Json(UnifiedSearchResponse { results })
 }
