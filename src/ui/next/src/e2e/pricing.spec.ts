@@ -20,7 +20,7 @@ test.describe('Pricing Page Loop', () => {
     await expect(page.locator('button', { hasText: 'Upgrade to Business via Stripe' })).toBeVisible();
 
     // Check navigation works
-    await page.locator('button', { hasText: 'Back to Dashboard' }).click();
+    await page.locator('button', { hasText: 'Back' }).click();
     await expect(page).toHaveURL('/dashboard');
   });
 });

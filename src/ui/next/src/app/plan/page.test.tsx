@@ -57,7 +57,7 @@ describe('MyPlanPage', () => {
     expect(screen.getByText('500 MB / 5 GB')).toBeDefined();
   });
 
-  it('navigates to dashboard when clicking "Back to Dashboard"', async () => {
+  it('navigates to dashboard when clicking "Back"', async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({ current_plan: 'Free', next_bill_estimated: 0, ai_actions_used: 0, storage_used_bytes: 0 }),
@@ -66,7 +66,7 @@ describe('MyPlanPage', () => {
     render(<MyPlanPage />);
     await waitFor(() => expect(screen.queryByText('Loading...')).toBeNull());
 
-    fireEvent.click(screen.getByText('Back to Dashboard'));
+    fireEvent.click(screen.getByText('Back'));
     expect(mockPush).toHaveBeenCalledWith('/dashboard');
   });
 
