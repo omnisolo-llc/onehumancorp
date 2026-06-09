@@ -1,3 +1,6 @@
+import { test, expect } from './fixtures';
 import { currentAppSmoke } from './current_app_smoke';
 
-currentAppSmoke('lens_audit');
+test('lens audit', async ({ page, request }) => {
+  await currentAppSmoke(page, request, 'lens_audit');
+});
