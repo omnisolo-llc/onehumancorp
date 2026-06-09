@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { ReviewFeedCard } from './ReviewFeedCard';
 
@@ -29,7 +29,7 @@ describe('ReviewFeedCard', () => {
     render(<ReviewFeedCard review={review} response={response} onApprove={onApprove} onDismiss={vi.fn()} />);
 
     const btn = screen.getByText('Approve & Post');
-    fireEvent.click(btn);
+    await act(async () => { fireEvent.click(btn); });
     expect(onApprove).toHaveBeenCalledWith('resp1', 'Thank you for your feedback.');
   });
 
@@ -38,7 +38,7 @@ describe('ReviewFeedCard', () => {
     render(<ReviewFeedCard review={review} response={response} onApprove={vi.fn()} onDismiss={onDismiss} />);
 
     const btn = screen.getByText('Dismiss');
-    fireEvent.click(btn);
+    await act(async () => { fireEvent.click(btn); });
     expect(onDismiss).toHaveBeenCalledWith('resp1');
   });
 
@@ -47,13 +47,13 @@ describe('ReviewFeedCard', () => {
     render(<ReviewFeedCard review={review} response={response} onApprove={onApprove} onDismiss={vi.fn()} />);
 
     const editBtn = screen.getByText('Edit');
-    fireEvent.click(editBtn);
+    await act(async () => { fireEvent.click(editBtn); });
 
     const textarea = screen.getByRole('textbox');
-    fireEvent.change(textarea, { target: { value: 'Edited response!' } });
+    await act(async () => { fireEvent.change(textarea, { target: { value: 'Edited response!' } }); });
 
     const btn = screen.getByText('Approve & Post');
-    fireEvent.click(btn);
+    await act(async () => { fireEvent.click(btn); });
     expect(onApprove).toHaveBeenCalledWith('resp1', 'Edited response!');
   });
 });

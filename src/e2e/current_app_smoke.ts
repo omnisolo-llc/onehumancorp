@@ -1,10 +1,9 @@
-import { expect, test } from './fixtures';
+import { expect } from './fixtures';
+import { Page, APIRequestContext } from '@playwright/test';
 
-export function currentAppSmoke(label: string) {
-  test(`current embedded app smoke: ${label}`, async ({ page, request }) => {
-    test.setTimeout(180000);
+export async function currentAppSmoke(page: Page, request: APIRequestContext, label: string) {
 
-    await page.setViewportSize({ width: 375, height: 812 });
+  await page.setViewportSize({ width: 375, height: 812 });
 
     await page.goto('/login');
     await page.fill('input[placeholder="Email or Username"]', 'Maya');
@@ -77,5 +76,4 @@ export function currentAppSmoke(label: string) {
     const networkCost = page.locator('#cost-dashboard-network');
     await expect(networkCost).toBeVisible();
     expect(await networkCost.innerText()).toMatch(/^\$[\d,]+\.\d{2}$/);
-  });
 }

@@ -1,6 +1,6 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
-test.describe('Help Center and Contextual Help', () => {
+test.describe('Help Center', () => {
   test('Persona: Business Owner uses help center and chat', async ({ page }) => {
     // Navigate to dashboard
     await page.goto('/dashboard?test_chat=true');
