@@ -338,3 +338,20 @@ VALUES
   ('action-test-1', 'triage-test-1', 'test-tenant', 'Draft Reply', 'Hi Maya! I can definitely help with the custom cake. It will be $50.'),
   ('action-test-2', 'triage-test-2', 'test-tenant', 'Draft Reply', 'We deliver between 9 AM and 5 PM on weekdays.')
 ON CONFLICT (id) DO NOTHING;
+
+-- Sales Assistant Quoting Journey data
+INSERT INTO customers (id, tenant_id, name, email)
+VALUES ('e2e-customer-john', 'e2e-tenant', 'John Doe', 'john@example.com')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO quotes (id, tenant_id, customer_id, status, total_amount)
+VALUES ('e2e-quote-leaky-sink', 'e2e-tenant', 'e2e-customer-john', 'DRAFT', 15000)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO quote_line_items (id, quote_id, description, unit_price_cents, quantity, is_optional)
+VALUES ('e2e-item-sink-fix', 'e2e-quote-leaky-sink', 'Fix leaking sink', 15000, 1, false)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, payload)
+VALUES ('e2e-approval-quote-journey', 'e2e-tenant', 'sales', 'Draft Quote Ready: Fix leaking sink for John Doe', 'DRAFT', 'HIGH', '{"feature_type": "quote_draft", "quote_id": "e2e-quote-leaky-sink", "customer_inquiry": "How much to fix a leaking sink?", "suggested_price": 150.0}'::jsonb)
+ON CONFLICT (id) DO NOTHING;

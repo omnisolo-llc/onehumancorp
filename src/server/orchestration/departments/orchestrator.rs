@@ -127,7 +127,8 @@ pub struct DepartmentOrchestrator {
     agents: RwLock<HashMap<String, Arc<tokio::sync::RwLock<dyn BaseAgent>>>>,
     event_subscriptions: RwLock<HashMap<String, Vec<DepartmentType>>>,
     memory_repo: Arc<VectorRepository>,
-    mesh: Arc<dyn TeammateMesh>,
+    pub mesh: Arc<dyn TeammateMesh>,
+    pub db: Arc<crate::db::DB>,
     action_counter: Counter<u64>,
     approval_counter: Counter<u64>,
 }

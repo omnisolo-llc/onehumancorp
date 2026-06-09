@@ -106,7 +106,51 @@ impl SalesQuoteIntentPlanner for RuntimeSalesQuoteIntentPlanner {
     }
 }
 
+use uuid::Uuid;
+
 impl SalesAgent {
+    async fn create_draft_quote(
+        &self,
+        tenant_id: &str,
+        customer_id: Uuid,
+        line_items: Vec<crate::services::quoting::QuoteLineItemReq>,
+    ) -> Result<Uuid, String> {
+        let quote_id = Uuid::new_v4();
+        let pool = &self.orchestrator.db.pool;
+
+        let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
+
+        sqlx::query(
+            "INSERT INTO quotes (id, tenant_id, customer_id, status) VALUES ($1, $2, $3, $4)"
+        )
+        .bind(quote_id)
+        .bind(tenant_id)
+        .bind(customer_id)
+        .bind("DRAFT")
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| e.to_string())?;
+
+        for item in line_items {
+            sqlx::query(
+                "INSERT INTO quote_line_items (id, quote_id, description, unit_price_cents, quantity, is_optional) VALUES ($1, $2, $3, $4, $5, $6)"
+            )
+            .bind(Uuid::new_v4())
+            .bind(quote_id)
+            .bind(item.description)
+            .bind(item.unit_price_cents)
+            .bind(item.quantity)
+            .bind(item.is_optional)
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| e.to_string())?;
+        }
+
+        tx.commit().await.map_err(|e| e.to_string())?;
+
+        Ok(quote_id)
+    }
+
     async fn generate_embedding(&self, text: &str) -> Vec<f32> {
         match std::env::var("OHC_SALES_LLM_PROVIDER")
             .or_else(|_| std::env::var("OHC_LLM_PROVIDER"))
@@ -259,6 +303,16 @@ impl Department for SalesAgent {
                             std::env::var("STRIPE_API_KEY").unwrap_or_else(|_| "sk_test_123".to_string()),
                         );
 
+                        if let Some(quote_id) = payload.get("quote_id").and_then(|v| v.as_str()) {
+                            let pool = &self.orchestrator.db.pool;
+                            if let Ok(id) = Uuid::parse_str(quote_id) {
+                                let _ = sqlx::query("UPDATE quotes SET status = 'SENT', updated_at = NOW() WHERE id = $1")
+                                    .bind(id)
+                                    .execute(pool)
+                                    .await;
+                            }
+                        }
+
                         match stripe_client.create_checkout_session("price_dummy", "cus_dummy", deposit_amount).await {
                             Ok(url) => {
                                 tracing::info!("Generated deposit link: {}", url);
@@ -355,9 +409,26 @@ impl Department for SalesAgent {
                     "quote_generated_from_message",
                 );
 
+                let customer_id = event.payload.get("customer_id")
+                    .and_then(|v| v.as_str())
+                    .and_then(|s| Uuid::parse_str(s).ok())
+                    .unwrap_or_else(Uuid::new_v4);
+
+                let line_items = vec![
+                    crate::services::quoting::QuoteLineItemReq {
+                        description: scope.clone(),
+                        unit_price_cents: (price * 100.0) as i64,
+                        quantity: 1,
+                        is_optional: false,
+                    }
+                ];
+
+                let quote_id = self.create_draft_quote(&event.tenant_id, customer_id, line_items).await?;
+
                 let action_payload = serde_json::json!({
                     "inbox_message_id": event.payload.get("inbox_message_id").and_then(|v| v.as_str()).unwrap_or(""),
                     "feature_type": "quote_draft",
+                    "quote_id": quote_id,
                     "customer_inquiry": intent.original_message,
                     "suggested_price": price,
                     "scope": scope,
