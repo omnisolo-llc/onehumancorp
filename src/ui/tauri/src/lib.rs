@@ -33,12 +33,47 @@ fn greet(name: &str) -> String {
 }
 
 #[tauri::command]
-fn generate_cloud_invite() -> String {
+async fn generate_cloud_invite() -> Result<String, String> {
+    let backend_url = std::env::var("BACKEND_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string());
+    let url = format!("{}/api/v1/growth/team-invites", backend_url);
+
+    let body = serde_json::json!({
+        "team_id": "standalone-team",
+        "inviter_id": "standalone-user",
+        "invitee_id": "cloud-user"
+    });
+
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(5))
+        .build()
+        .map_err(|e| e.to_string())?;
+
+    let response = client
+        .post(&url)
+        .header("Content-Type", "application/json")
+        .json(&body)
+        .send()
+        .await;
+
+    match response {
+        Ok(res) if res.status().is_success() => {
+            #[derive(serde::Deserialize)]
+            struct InviteResponse {
+                invite_link: String,
+            }
+            if let Ok(data) = res.json::<InviteResponse>().await {
+                return Ok(data.invite_link);
+            }
+        }
+        _ => {}
+    }
+
+    // Fallback if backend is unavailable
     let ts = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap()
         .as_secs();
-    format!("https://cloud.ohc.network/invite/ref-{}", ts)
+    Ok(format!("https://cloud.ohc.network/invite/ref-{}", ts))
 }
 
 #[tauri::command]

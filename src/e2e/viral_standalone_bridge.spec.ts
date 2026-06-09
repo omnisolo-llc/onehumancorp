@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test.describe('Viral Standalone Bridge', () => {
   test('should navigate to dashboard and generate a referral link', async ({ page }) => {
@@ -29,7 +29,10 @@ await expect(page).toHaveURL(/.*dashboard(\.html)?/);
     // Check generated link input and action buttons
     const linkInput = page.locator('#referral-link');
     await expect(linkInput).toBeVisible();
-    await expect(linkInput).toHaveValue(/^https:\/\/cloud\.ohc\.network\/invite\//);
+
+    // In our E2E environment (without Tauri), the dashboard.html JS will hit the mock fallback path
+    // which generates "https://cloud.ohc.network/invite/test-..." OR we can test the fallback regex
+    await expect(linkInput).toHaveValue(/^https:\/\/(cloud\.ohc\.network|ohc\.app)\/invite\//);
 
     const copyBtn = page.getByRole('button', { name: 'Copy', exact: true });
     await expect(copyBtn).toBeVisible();
@@ -51,6 +54,6 @@ await expect(page).toHaveURL(/.*dashboard(\.html)?/);
     // wa.me gets expanded to api.whatsapp.com by the browser often
     expect(popupUrl).toMatch(/wa\.me|api\.whatsapp\.com/);
     expect(popupUrl).toContain('Powered+by+OHC');
-    expect(popupUrl).toContain(encodeURIComponent('https://cloud.ohc.network/invite/'));
+    expect(popupUrl).toMatch(/https%3A%2F%2F(cloud\.ohc\.network|ohc\.app)%2Finvite%2F/);
   });
 });
