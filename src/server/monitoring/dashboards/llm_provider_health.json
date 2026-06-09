@@ -60,7 +60,7 @@
       "datasource": "Prometheus",
       "targets": [
         {
-          "expr": "sum(rate(ohc_agent_cost[5m])) by (organization_id)",
+          "expr": "(sum(rate(ohc_agent_cost_cents[5m])) by (organization_id)) / 100",
           "legendFormat": "{{organization_id}}",
           "refId": "A"
         }
@@ -98,7 +98,7 @@
       "datasource": "Prometheus",
       "targets": [
         {
-          "expr": "sum(rate(ohc_api_call_cost[5m])) by (entity)",
+          "expr": "(sum(rate(ohc_api_call_cost_cents[5m])) by (entity)) / 100",
           "legendFormat": "{{entity}}",
           "refId": "A"
         }

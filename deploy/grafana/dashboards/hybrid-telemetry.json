@@ -4132,7 +4132,7 @@
       },
       "targets": [
         {
-          "expr": "sum(rate(ohc_token_usage_by_outcome_total{outcome=\"SUCCESS\"}[1h])) by (tenant_id) / sum(rate(ohc_agent_cost_total[1h])) by (tenant_id)",
+          "expr": "sum(rate(ohc_token_usage_by_outcome_total{outcome=\"SUCCESS\"}[1h])) by (tenant_id) / sum(rate(ohc_agent_cost_cents_total[1h])) by (tenant_id)",
           "format": "time_series",
           "legendFormat": "ROI Score"
         }

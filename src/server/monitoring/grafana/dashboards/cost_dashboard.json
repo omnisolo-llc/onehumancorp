@@ -84,7 +84,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(rate(ohc_agent_cost_total{organization_id=\"$tenant\"}[5m])) by (agent_id)",
+          "expr": "(sum(rate(ohc_agent_cost_cents_total{organization_id=\"$tenant\"}[5m])) by (agent_id)) / 100",
           "interval": "",
           "legendFormat": "{{agent_id}}",
           "refId": "A"
@@ -159,7 +159,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(rate(ohc_api_call_cost_total{organization_id=\"$tenant\"}[5m])) by (entity)",
+          "expr": "(sum(rate(ohc_api_call_cost_cents_total{organization_id=\"$tenant\"}[5m])) by (entity)) / 100",
           "interval": "",
           "legendFormat": "{{entity}}",
           "refId": "A"
@@ -333,7 +333,7 @@
           "value": "$__all"
         },
         "datasource": "Prometheus",
-        "definition": "label_values(ohc_agent_cost_total, organization_id)",
+        "definition": "label_values(ohc_agent_cost_cents_total, organization_id)",
         "description": null,
         "error": null,
         "hide": 0,
@@ -343,7 +343,7 @@
         "name": "tenant",
         "options": [],
         "query": {
-          "query": "label_values(ohc_agent_cost_total, organization_id)",
+          "query": "label_values(ohc_agent_cost_cents_total, organization_id)",
           "refId": "StandardVariableQuery"
         },
         "refresh": 1,
