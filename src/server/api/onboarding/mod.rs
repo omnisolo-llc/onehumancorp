@@ -9,6 +9,7 @@ use ::server_ohc::orchestration::{StartOnboardingRequest, StartOnboardingRespons
 
 pub fn router(agent: Arc<OnboardingAgent>) -> Router<Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport>> {
     let r = Router::new()
+        .route("/generate", post(generate_zero_click))
         .route("/start", post(start_onboarding))
         .route("/intake", post(process_intake_handler))
         .route("/state", get(get_state).post(save_state))
@@ -19,6 +20,25 @@ pub fn router(agent: Arc<OnboardingAgent>) -> Router<Arc<dyn ohc_builtin_agent::
 
     // Convert to accept MeshTransport state
     Router::new().merge(r)
+}
+
+
+#[derive(serde::Deserialize)]
+pub struct GenerateZeroClickRequest {
+    pub prompt: String,
+}
+
+async fn generate_zero_click(
+    State(agent): State<Arc<OnboardingAgent>>,
+    Json(payload): Json<GenerateZeroClickRequest>,
+) -> Result<Json<StartOnboardingResponse>, axum::http::StatusCode> {
+    match agent.generate_zero_click(&payload.prompt).await {
+        Ok(res) => Ok(Json(res)),
+        Err(e) => {
+            tracing::error!("Zero-click generation failed: {}", e);
+            Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
 }
 
 #[derive(serde::Deserialize)]

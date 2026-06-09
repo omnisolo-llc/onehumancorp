@@ -38,6 +38,42 @@ impl OnboardingAgent {
         OnboardingAgent { db, hub, minimax }
     }
 
+
+    pub async fn generate_zero_click(&self, prompt: &str) -> Result<StartOnboardingResponse, String> {
+        let intake_data = self.process_intake(prompt).await?;
+
+        let mut req = StartOnboardingRequest {
+            business_type: intake_data.business_type.clone(),
+            company_name: intake_data.business_name.clone(),
+            company_description: prompt.to_string(),
+            selling_categories: intake_data.categories.clone(),
+            payment_pref: "online".to_string(),
+            admin_email: format!("owner@{}", intake_data.business_name.to_lowercase().replace(" ", "").replace("'", "")),
+            admin_name: "Owner".to_string(),
+            admin_password: "password123".to_string(),
+            website_template: "Modern".to_string(),
+            first_product_name: "TBD".to_string(),
+            first_product_price: "0.00".to_string(),
+            domain_choice: "subdomain".to_string(),
+            price_type: "fixed".to_string(),
+            location: intake_data.location.unwrap_or_default(),
+            target_audience: intake_data.target_audience.unwrap_or_default(),
+            initial_products_list: intake_data.initial_products.iter().map(|p| {
+                ::server_ohc::orchestration::ProductDraft {
+                    name: p.name.clone(),
+                    price: p.price.clone(),
+                }
+            }).collect(),
+        };
+
+        if let Some(first) = intake_data.initial_products.first() {
+            req.first_product_name = first.name.clone();
+            req.first_product_price = first.price.clone();
+        }
+
+        self.start_onboarding(req).await
+    }
+
     pub async fn process_intake(&self, input: &str) -> Result<IntakeData, String> {
         let minimax = self.minimax.as_ref().ok_or("MiniMax API key not configured")?;
 
@@ -49,7 +85,7 @@ impl OnboardingAgent {
             Valid categories are: physical, digital, services, food, subscriptions.
             Business type should be a friendly name like 'Home Bakery', 'Freelance Handyman', 'Boutique', etc.
 
-            Description: \"{}\"
+            Description: {}
 
             Example JSON:
             {{
@@ -2591,6 +2627,7 @@ mod tests {
             price_type: "fixed".to_string(),
             location: "New York, USA".to_string(),
             target_audience: "Anyone".to_string(),
+            initial_products_list: vec![],
         };
 
         let req_categories = req.selling_categories.clone();
@@ -2669,6 +2706,7 @@ mod tests {
             price_type: "fixed".to_string(),
             location: "Oakland, CA".to_string(),
             target_audience: "Anyone".to_string(),
+            initial_products_list: vec![],
         };
 
         let state = onboarding_feature_state(&req, "Maya Studio", &req.business_type, &req.location);
@@ -2711,6 +2749,7 @@ mod tests {
             price_type: "fixed".to_string(),
             location: "London, UK".to_string(),
             target_audience: "Anyone".to_string(),
+            initial_products_list: vec![],
         };
 
         let res_service = agent.start_onboarding(req_service).await.unwrap();
@@ -2750,6 +2789,7 @@ mod tests {
             price_type: "fixed".to_string(),
             location: "Austin, TX".to_string(),
             target_audience: "Anyone".to_string(),
+            initial_products_list: vec![],
         };
 
         let res_food = agent.start_onboarding(req_food).await.unwrap();

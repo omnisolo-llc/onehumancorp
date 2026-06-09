@@ -294,6 +294,12 @@ message CreateTerminalTokenResponse {
   string token = 2;
 }
 
+
+message ProductDraft {
+  string name = 1;
+  string price = 2;
+}
+
 message StartOnboardingRequest {
   string business_type = 1;
   string company_name = 2;
@@ -310,6 +316,7 @@ message StartOnboardingRequest {
   string price_type = 13;
   string location = 14;
   string target_audience = 15;
+  repeated ProductDraft initial_products_list = 16;
 }
 
 message StartOnboardingResponse {
