@@ -64,18 +64,19 @@ async fn handle_chat(
         Err(_) => DepartmentType::Operations, // Fallback
     };
 
-    let description = format!("Task routed via semantic gateway to {:?}", dept);
-    let payload_json = serde_json::json!({ "original_request": payload.message, "action": "semantic_routed_task" });
+    let event = crate::orchestration::departments::types::DepartmentEvent {
+        id: uuid::Uuid::new_v4().to_string(),
+        tenant_id: tenant_id.clone(),
+        event_type: "tenant.message.received".to_string(),
+        payload: serde_json::json!({ "original_message": payload.message, "source": "chat" }),
+    };
 
-    match state.orchestrator.execute_action(
-        dept.clone(),
-        description,
-        tenant_id,
-        ActionRisk::DraftForReview,
-        payload_json,
-    ).await {
+    match state.orchestrator.dispatch_event(event).await {
         Ok(_) => (StatusCode::OK, Json(ChatResponse { success: true, department_assigned: Some(dept.to_string()) })).into_response(),
-        Err(_) => (StatusCode::INTERNAL_SERVER_ERROR, Json(ChatResponse { success: false, department_assigned: None })).into_response(),
+        Err(e) => {
+            tracing::error!("Failed to dispatch event: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(ChatResponse { success: false, department_assigned: None })).into_response()
+        }
     }
 }
 

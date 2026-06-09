@@ -93,18 +93,60 @@ export default function TeamChatPage() {
       const data = await response.json().catch(() => ({}));
       if (response.ok) {
 
-        const msgId = Date.now().toString() + '-system';
-        setMessages(prev => prev.filter(msg => msg.id !== pendingMsgId).concat({
-          id: msgId,
-          role: 'system',
-          content: "I've drafted an action for your approval.",
-          card: {
-            id: Date.now().toString() + '-card',
-            department: data.agent || 'The Manager',
-            description: data.description || `Drafted action based on: "${userMsg}"`,
-              status: 'pending'
+        // Polling loop to wait for the actual asynchronous agent approval
+        let foundApproval: any = null;
+        for (let i = 0; i < 15; i++) {
+            await new Promise(r => setTimeout(r, 1000));
+            try {
+                const appRes = await fetch('/api/agents/approvals', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (appRes.ok) {
+                    const appData = await appRes.json();
+                    const approvals = appData.pending_approvals || [];
+                    // Look for a newly created draft
+                    foundApproval = approvals.find((a: any) =>
+                        a.payload?.feature_type === 'quote_draft' ||
+                        a.description.toLowerCase().includes('quote')
+                    );
+                    if (foundApproval) {
+                        break;
+                    }
+                }
+            } catch (e) {
+                console.error("Polling error", e);
             }
-        }));
+        }
+
+        const msgId = Date.now().toString() + '-system';
+        if (foundApproval) {
+            setMessages(prev => prev.filter(msg => msg.id !== pendingMsgId).concat({
+              id: msgId,
+              role: 'system',
+              content: "I've drafted an action for your approval.",
+              card: {
+                id: foundApproval.id,
+                department: foundApproval.department || data.agent || 'The Manager',
+                description: foundApproval.description || data.description || `Drafted action based on: "${userMsg}"`,
+                status: 'pending',
+                feature_type: foundApproval.payload?.feature_type,
+                scope: foundApproval.payload?.scope,
+                suggested_price: foundApproval.payload?.suggested_price || foundApproval.payload?.price,
+              }
+            }));
+        } else {
+            setMessages(prev => prev.filter(msg => msg.id !== pendingMsgId).concat({
+              id: msgId,
+              role: 'system',
+              content: "I've drafted an action for your approval.",
+              card: {
+                id: Date.now().toString() + '-card',
+                department: data.agent || 'The Manager',
+                description: data.description || `Drafted action based on: "${userMsg}"`,
+                status: 'pending'
+              }
+            }));
+        }
 
       } else {
         setMessages(prev => prev.map(msg => msg.id === pendingMsgId ? {

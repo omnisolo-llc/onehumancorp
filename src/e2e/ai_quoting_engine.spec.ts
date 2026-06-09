@@ -14,10 +14,16 @@ test.describe('AI-Driven Dynamic Quoting & Proposal Engine', () => {
     await page.getByTestId('team-chat-send').click();
 
     // The AI parses the request and surfaces a Draft Quote card
-    await expect(page.getByTestId('action-card')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByTestId('action-card')).toBeVisible({ timeout: 20000 });
 
     const actionCard = page.getByTestId('action-card');
     await expect(actionCard).toContainText('Needs Approval');
+
+    // Assert real quote fields are present
+    const draftQuoteCard = page.getByTestId('draft-quote-card');
+    await expect(draftQuoteCard).toBeVisible();
+    await expect(draftQuoteCard).toContainText('Scope of Work:');
+    await expect(draftQuoteCard).toContainText('Calculated Total:');
 
     // Tap "Approve & Execute" or "Approve & Send"
     const approveBtn = actionCard.getByTestId('approve-action-btn');
@@ -25,6 +31,6 @@ test.describe('AI-Driven Dynamic Quoting & Proposal Engine', () => {
     await approveBtn.click();
 
     // The status should change to Approved
-    await expect(actionCard).toContainText('Approved', { timeout: 5000 });
+    await expect(actionCard).toContainText('Approved', { timeout: 10000 });
   });
 });
