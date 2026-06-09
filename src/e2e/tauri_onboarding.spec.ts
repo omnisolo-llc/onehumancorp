@@ -119,7 +119,7 @@ test.describe('Tauri Dashboard UI and UX Improvements', () => {
 
     // Check that the container class has the updated glassmorphism properties
     const container = page.locator('.container');
-    await expect(container).toHaveCSS('backdrop-filter', 'blur(30px) saturate(210%)');
+    await expect(container).toHaveCSS('backdrop-filter', /blur\(30px\) saturate\((210%|2\.1)\)/);
     await expect(container).toHaveCSS('border-radius', '16px');
     await expect(container).toHaveCSS('background-color', 'rgba(255, 255, 255, 0.65)');
     await expect(container).toHaveCSS('border', '1px solid rgba(255, 255, 255, 0.4)');

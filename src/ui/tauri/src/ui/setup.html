@@ -122,15 +122,18 @@
     <div class="container" id="form-container">
       <h1>What's the name of your business?</h1>
       <p>We'll use this to set up your workspace.</p>
-      <input type="text" id="business-name" placeholder="e.g. Maya's Bakery" />
-      <div id="name-error" class="error-msg">Please enter a name for your business.</div>
-      <button id="next-btn">Next</button>
+      <form id="setup-form">
+        <input type="text" id="business-name" placeholder="e.g. Maya's Bakery" />
+        <div id="name-error" class="error-msg">Please enter a name for your business.</div>
+        <button type="submit" id="next-btn">Next</button>
+      </form>
     </div>
     <script>
       const nextBtn = document.getElementById('next-btn');
       const nameInput = document.getElementById('business-name');
       const nameError = document.getElementById('name-error');
       const container = document.getElementById('form-container');
+      const setupForm = document.getElementById('setup-form');
 
       // Load existing state
       if (window.__TAURI__ && window.__TAURI__.core) {
@@ -146,8 +149,9 @@
         }
       }
 
-      if (nextBtn) {
-        nextBtn.addEventListener('click', () => {
+      if (setupForm) {
+        setupForm.addEventListener('submit', (e) => {
+           e.preventDefault();
            const name = nameInput.value.trim();
            if (name) {
                nameError.style.display = 'none';
@@ -176,13 +180,6 @@
            }
         });
       }
-
-      nameInput.addEventListener('keydown', (e) => {
-          if (e.key === 'Enter') {
-              e.preventDefault();
-              nextBtn.click();
-          }
-      });
 
       nameInput.addEventListener('input', () => {
           if (nameInput.value.trim()) {

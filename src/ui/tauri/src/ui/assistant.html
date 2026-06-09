@@ -126,6 +126,7 @@
       <h1>Set up your Assistant</h1>
       <p>Give your AI assistant a name and tone.</p>
 
+      <form id="assistant-form">
       <input type="text" id="assistant-name" placeholder="e.g. Jarvis" />
       <div id="name-error" class="error-msg">Please enter a name for your assistant.</div>
 
@@ -137,7 +138,8 @@
       </select>
       <div id="tone-error" class="error-msg">Please select a tone.</div>
 
-      <button id="next-btn">Next</button>
+      <button type="submit" id="next-btn">Next</button>
+      </form>
     </div>
     <script>
       const nextBtn = document.getElementById('next-btn');
@@ -146,6 +148,7 @@
       const nameError = document.getElementById('name-error');
       const toneError = document.getElementById('tone-error');
       const container = document.getElementById('form-container');
+      const assistantForm = document.getElementById('assistant-form');
 
       // Load existing state
       if (window.__TAURI__ && window.__TAURI__.core) {
@@ -165,8 +168,9 @@
         if (storedTone) toneSelect.value = storedTone;
       }
 
-      if (nextBtn) {
-        nextBtn.addEventListener('click', () => {
+      if (assistantForm) {
+        assistantForm.addEventListener('submit', (e) => {
+           e.preventDefault();
            let isValid = true;
            const name = nameInput.value.trim();
            const tone = toneSelect.value;
@@ -213,12 +217,6 @@
         });
       }
 
-      nameInput.addEventListener('keydown', (e) => {
-          if (e.key === 'Enter') {
-              e.preventDefault();
-              nextBtn.click();
-          }
-      });
 
       nameInput.addEventListener('input', () => {
           if (nameInput.value.trim()) {
@@ -226,12 +224,6 @@
           }
       });
 
-      toneSelect.addEventListener('keydown', (e) => {
-          if (e.key === 'Enter') {
-              e.preventDefault();
-              nextBtn.click();
-          }
-      });
 
       toneSelect.addEventListener('change', () => {
           if (toneSelect.value) {
