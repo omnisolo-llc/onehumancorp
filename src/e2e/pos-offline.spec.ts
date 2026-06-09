@@ -1,24 +1,64 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
-test.describe('Offline-Capable POS Engine', () => {
-  test('Persona: Business Owner can sync offline transactions when back online', async ({ request, page }) => {
-    // Navigate to ensure basic UI is alive
-    await page.goto('/dashboard');
-
-    // Simulate mobile app syncing 2 offline transactions using the REST/gRPC backend endpoint.
-    // In our tests, the api is usually available under standard path. We use Playwright's `request`.
-    // Wait, the PosService is pure gRPC so we might not be able to hit it easily without a proto client.
-    // However, E2E tests for gRPC endpoints are better served inside Rust or if the frontend calls it, it will use grpc-web.
-    // Let's assert that the E2E framework is happy that the page loads and we'll trust our Rust unit tests for the gRPC logic,
-    // or we can invoke the endpoint if transcoded.
-
-    await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
-
-    // Since we are mocking the offline transaction, we will just prove the backend doesn't crash on standard endpoints.
-    const res = await request.post('/api/chat', {
-        data: { message: "Can you confirm my recent offline POS transactions are syncing?" }
+test.describe('POS Offline Terminal', () => {
+  test.beforeEach(async ({ page, context }) => {
+    await context.clearCookies();
+    await page.goto('/pos/terminal');
+    await page.evaluate(() => {
+        localStorage.clear();
     });
+    await page.reload();
+  });
 
-    expect(res.ok()).toBeTruthy();
+  test('Processes payment offline and queues it for sync', async ({ page, context }) => {
+    // 1. Check initial UI load
+    await expect(page.getByText('Terminal Locked')).toBeVisible();
+
+    // Unlock POS with pin '1111'
+    for (let i = 0; i < 4; i++) {
+       await page.getByRole('button', { name: '1' }).click();
+    }
+
+    // Verify logged in view
+    await expect(page.getByText('Clock In')).toBeVisible();
+    await page.getByRole('button', { name: 'Clock In' }).click();
+
+    // 2. Discover readers and Connect (simulates StartSession)
+    await page.getByRole('button', { name: 'Discover Readers' }).click();
+
+    // We expect at least one simulated reader to be available to connect
+    const connectButton = page.getByRole('button', { name: 'Connect' }).first();
+    await expect(connectButton).toBeVisible({ timeout: 5000 });
+    await connectButton.click();
+
+    await expect(page.getByText('Connected to reader')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('Connected, but session start failed')).toBeHidden();
+
+    // 3. Toggle Offline mode
+    await context.setOffline(true);
+    await page.evaluate(() => window.dispatchEvent(new Event('offline')));
+    await expect(page.locator('text=Offline Mode').first()).toBeVisible();
+
+    // 4. Process Payment offline
+    await page.locator('button', { hasText: 'Charge $' }).click();
+
+    // Wait for offline process simulation
+    await expect(page.locator('text=Payment saved offline')).toBeVisible({ timeout: 5000 });
+
+    // Verify localStorage has the queued transaction
+    const tx = await page.evaluate(() => JSON.parse(localStorage.getItem('ohc_offline_pos_tx') || '[]'));
+    expect(tx.length).toBe(1);
+    expect(tx[0].amount_cents).toBeGreaterThan(0);
+
+    // 5. Restore network
+    await context.setOffline(false);
+    await page.evaluate(() => window.dispatchEvent(new Event('online')));
+    await expect(page.locator('text=Offline Mode').first()).toBeHidden();
+
+    // Wait for sync to complete (interval is 5s)
+    await expect(async () => {
+        const remainingTx = await page.evaluate(() => JSON.parse(localStorage.getItem('ohc_offline_pos_tx') || '[]'));
+        expect(remainingTx.length).toBe(0);
+    }).toPass({ timeout: 15000 });
   });
 });

@@ -43,6 +43,13 @@ test.describe('Onboarding Wizard E2E Flow', () => {
     await expect(sellInput).toHaveClass(/min-h-\[54px\]/);
     await expect(sellInput).toHaveClass(/glassmorphism/);
     await sellInput.fill("We sell the best widgets in town.");
+
+    // Test Save Draft
+    const saveDraftButton = page.locator('button', { hasText: 'Save Draft' });
+    await expect(saveDraftButton).toBeVisible();
+    await saveDraftButton.click();
+    await expect(page.getByText('Draft Saved!')).toBeVisible({ timeout: 5000 });
+
     await page.getByRole('button', { name: 'Next' }).click();
 
     // Step 3: Location
@@ -67,7 +74,7 @@ test.describe('Onboarding Wizard E2E Flow', () => {
     await expect(page.getByRole('heading', { name: "Review Details" })).toBeVisible({ timeout: 30000 });
 
     // Check Review inputs have correct classes too
-    const reviewNameInput = page.locator('input[value="My Awesome E2E Business"]');
+    const reviewNameInput = page.locator("input").filter({ hasValue: "My Awesome E2E Business" }).first();
     await expect(reviewNameInput).toHaveClass(/min-h-\[54px\]/);
 
     await page.getByRole('button', { name: 'Continue' }).click();
