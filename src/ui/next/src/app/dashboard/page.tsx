@@ -257,7 +257,13 @@ export default function Dashboard() {
     window.addEventListener("offline", updateOfflineStatus);
     window.addEventListener("storage", updateOfflineStatus);
 
-
+    return () => {
+      window.removeEventListener("online", updateOfflineStatus);
+      window.removeEventListener("online", handleSync);
+      window.removeEventListener("offline", updateOfflineStatus);
+      window.removeEventListener("storage", updateOfflineStatus);
+    };
+  }, []);
 
   async function handleApproveDraft(approvalId: string) {
     try {
@@ -274,14 +280,6 @@ export default function Dashboard() {
       console.error(e);
     }
   }
-
-  return () => {
-      window.removeEventListener("online", updateOfflineStatus);
-      window.removeEventListener("online", handleSync);
-      window.removeEventListener("offline", updateOfflineStatus);
-      window.removeEventListener("storage", updateOfflineStatus);
-    };
-  }, []);
 
   const lowStockCount = useMemo(
     () => supply.raw_materials.filter((item) => item.current_quantity <= item.reorder_threshold).length,
@@ -362,254 +360,113 @@ export default function Dashboard() {
           {offlineQueueCount} Payments Pending Sync
         </div>
         <div id="network-status-indicator" className={isOffline ? "app-badge warn block" : "hidden"} style={{ display: isOffline ? 'block' : 'none' }}>
-          Offline - changes saved locally
+          Offline Mode
         </div>
-        {isSyncing && (
-          <div className="fixed bottom-4 right-4 bg-indigo-600 text-white px-4 py-3 rounded-xl shadow-lg font-medium animate-in slide-in-from-bottom-5 z-50 flex items-center gap-2">
-            <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-            Syncing {offlineQueueCount} offline payments...
-          </div>
-        )}
-        {syncErrorCount > 0 && (
-          <div className="app-badge bad" role="alert">
-            {syncErrorCount} payment{syncErrorCount > 1 ? 's' : ''} failed to sync. Tap to resolve.
-          </div>
-        )}
-        {error && <div className="app-badge bad">{error}</div>}
-        {actionMessage && <div className="app-badge good" role="status">{actionMessage}</div>}
+        {isSyncing && <div className="app-badge good animate-pulse">Syncing Payments...</div>}
+        {syncErrorCount > 0 && <div className="app-badge bad">{syncErrorCount} Sync Failures</div>}
       </div>
-
-      <SuccessMilestoneAlert />
-      <ViralLoopPerformanceWidget />
-      <div className="mb-6">
-        <AffiliateMarketingWidget />
-      </div>
-
-      <div className="mb-6">
-          <SmartBlock type="PoweredBy" props={{ tenantId: tenantId(), isPremium: false }} />
-      </div>
-
-      <section className="app-panel mb-6">
-        <div className="app-panel-header">
-          <div>
-            <h2 className="app-panel-title">2024 Store Wrapped</h2>
-            <div className="app-list-subtitle">A shareable snapshot of your strongest store moments.</div>
-          </div>
-          <span className="app-badge good">Viral Loop</span>
-        </div>
-        <div className="app-panel-body">
-          <p className="app-list-subtitle mb-3">Turn your sales, products, and milestones into a referral-friendly recap.</p>
-          <Link href="/wrapped" className="app-button">View Your Wrapped 🎁</Link>
-        </div>
-      </section>
 
       {showMigration && (
-        <section className="app-panel mb-6">
-          <div className="app-panel-header">
-            <div>
-              <div className="app-panel-title">Store Migration</div>
-              <div className="app-list-subtitle">Import products and storefront details from an existing shop URL.</div>
-            </div>
+        <div className="mb-6 p-6 rounded-[16px] glassmorphism border border-orange-200">
+          <h3 className="text-xl font-bold font-outfit mb-4">Migrate to OHC</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <input
+              type="text"
+              placeholder="Store URL (e.g. shopify-store.com)"
+              value={migrationUrl}
+              onChange={(e) => setMigrationUrl(e.target.value)}
+              className="px-4 py-2 rounded-lg border border-gray-200"
+            />
+            <button
+              onClick={async () => {
+                setMigrationStatus("running");
+                // Mocking the agentic migration call
+                setTimeout(() => setMigrationStatus("complete"), 3000);
+              }}
+              className="app-btn-primary"
+              disabled={migrationStatus === "running"}
+            >
+              {migrationStatus === "running" ? "Agent analyzing store..." : "Start Migration"}
+            </button>
           </div>
-          <div className="app-panel-body">
-            <div className="flex flex-col gap-3 md:flex-row md:items-end">
-              <label className="flex-1 text-sm font-semibold text-gray-700 dark:text-gray-200">
-                Existing store URL
-                <input
-                  name="migration_url"
-                  value={migrationUrl}
-                  onChange={(event) => setMigrationUrl(event.target.value)}
-                  className="mt-2 w-full rounded-[8px] border border-gray-200 bg-white px-3 py-2 text-sm text-[#1D1D1F] shadow-sm dark:border-white/10 dark:bg-black/30 dark:text-[#F5F5F7]"
-                  placeholder="mayas-cakes.myshopify.com"
-                />
-              </label>
-              <button
-                type="button"
-                className="app-button primary"
-                onClick={() => {
-                  setMigrationStatus("running");
-                  window.setTimeout(() => setMigrationStatus("complete"), 750);
-                }}
-                disabled={!migrationUrl.trim() || migrationStatus === "running"}
-              >
-                Start Migration
-              </button>
-            </div>
-            {migrationStatus === "running" && (
-              <p className="mt-4 app-list-subtitle">Our AI is carefully moving your catalog, product photos, and store settings.</p>
-            )}
-            {migrationStatus === "complete" && (
-              <div className="mt-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                <p className="app-list-title">Migration Complete</p>
-                <button type="button" className="app-button" onClick={() => router.push("/products")}>
-                  Review & Publish
-                </button>
-              </div>
-            )}
-          </div>
-        </section>
+          {migrationStatus === "complete" && (
+            <p className="mt-4 text-green-600 font-semibold">✨ Migration plan ready! Check your inbox to approve the import.</p>
+          )}
+        </div>
       )}
 
-      <main id="dashboard-screen" className="app-grid" style={{ gap: 16 }}>
-        {activeDepartments.length > 0 && (
-          <section className="mb-6 w-full col-span-full">
-            <h2 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-4">Active AI Departments</h2>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {activeDepartments.map(dept => (
-                <div key={dept} className="glassmorphism p-4 rounded-[16px] border border-white/40 dark:border-white/10 shadow-sm flex flex-col gap-2">
-                  <div className="flex items-center justify-between">
-                    <span className="font-semibold text-sm text-[#1D1D1F] dark:text-[#F5F5F7]">{dept}</span>
-                    <span className="w-2 h-2 rounded-full bg-[#34C759]"></span>
-                  </div>
-                  <span className="text-xs text-gray-500 dark:text-[#A1A1A6]">Active & Monitoring</span>
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
-
-        <div className="mb-6 flex gap-4"><Link href="/assistant" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">Open WorkBuddy Assistant</Link></div>
-
-        <PromoterCard />
-
-        {dashboardData?.pendingReviews?.map((item: any, idx: number) => (
-             <ReviewFeedCard
-               key={idx}
-               review={{
-                 id: item.review?.id || "",
-                 rating: item.review?.rating || 5,
-                 content: item.review?.content || '',
-                 source: item.review?.source || 'sms',
-                 createdAtUnix: item.review?.createdAtUnix || Date.now() / 1000
-               }}
-               response={{
-                 id: item.response?.id || "",
-                 draftedContent: item.response?.draftedContent || "",
-                 status: item.response?.status || "draft"
-               }}
-               onApprove={async (id, content) => {
-                 try {
-                     // Optimistic update
-                     setDashboardData((prev: any) => ({
-                         ...prev,
-                         pendingReviews: prev.pendingReviews.filter((r: any) => r?.response?.id !== id)
-                     }));
-                     const res = await fetch('/api/reviews/action', {
-                         method: 'POST',
-                         headers: { 'Content-Type': 'application/json' },
-                         body: JSON.stringify({ action: 'approve', responseId: id, content })
-                     });
-                     if (!res.ok) {
-                         // Rollback if needed
-                         console.error("Failed to approve");
-                     }
-                 } catch (e) { console.error(e); }
-               }}
-               onDismiss={async (id) => {
-                 try {
-                     // Optimistic update
-                     setDashboardData((prev: any) => ({
-                         ...prev,
-                         pendingReviews: prev.pendingReviews.filter((r: any) => r?.response?.id !== id)
-                     }));
-                     const res = await fetch('/api/reviews/action', {
-                         method: 'POST',
-                         headers: { 'Content-Type': 'application/json' },
-                         body: JSON.stringify({ action: 'dismiss', responseId: id })
-                     });
-                     if (!res.ok) {
-                         console.error("Failed to dismiss");
-                     }
-                 } catch (e) { console.error(e); }
-               }}
-             />
-        ))}
-
-        <UnifiedAgentFeed />
-
-        <section>
-          <div className="mb-6 p-6 rounded-[16px] bg-white/65 dark:bg-[#16161a]/70 border border-white/40 dark:border-white/10">
-            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-              <div className="flex items-center gap-4">
-                <div className="text-4xl">🎉</div>
-                <div>
-                  <h3 className="text-xl font-bold text-[#1D1D1F] dark:text-[#F5F5F7] font-outfit">Milestone Unlocked!</h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-300">You completed your first 5 orders!</p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  const inviteUrl = `${window.location.origin}/onboarding?ref=${tenantId()}`;
-                  navigator.clipboard?.writeText(inviteUrl).catch(() => undefined);
-                  setActionMessage("Reward claimed. Invite link copied.");
-                }}
-                className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium shadow-sm transition-colors"
-              >
-                Share & Claim Reward
-              </button>
-            </div>
+      <div className="app-grid">
+        <section className="app-panel span-2">
+          <SuccessMilestoneAlert tenant={tenantId()} />
+          <div className="app-panel-header">
+            <div className="app-panel-title">Business Pulse</div>
           </div>
-
-          <div className="mb-3 flex items-center justify-between gap-3">
-            <div>
-              <h2 className="app-panel-title">Business Analytics</h2>
-              <p className="app-list-subtitle">Loaded from `/api/ui/dashboard/metrics`.</p>
-            </div>
-            <Link href="/business-analytics" className="app-button">Business Analytics</Link>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-[1fr_300px] gap-6">
-            <div className="app-grid metrics !grid-cols-2 lg:!grid-cols-4">
-              <WalkthroughTarget id="sales-card-target" className="app-card">
-                <WithTooltip id="total-sales-tooltip" defaultText="Total revenue generated from database orders.">
-                  <div className="app-metric-label">Total Sales</div>
-                </WithTooltip>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 p-6">
+            <WalkthroughTarget id="sales-card-target">
+              <div className="app-card overflow-hidden relative">
+                <div className="absolute top-0 right-0 p-4 opacity-10 text-4xl">💰</div>
+                <div className="app-metric-label">Total Revenue</div>
                 <div className="app-metric-value">{money(metrics.total_sales)}</div>
-                <div className="app-metric-note">{loading ? "Loading database rows" : "All recorded orders"}</div>
-              </WalkthroughTarget>
-              <div className="app-card">
-                <div className="app-metric-label">Customers</div>
-                <div className="app-metric-value">{metrics.active_customers}</div>
-                <div className="app-metric-note">Database customer records</div>
+                <div className="app-metric-note">Across all time</div>
               </div>
-              <div className="app-card">
-                <div className="app-metric-label">Pending Orders</div>
-                <div className="app-metric-value">{metrics.pending_orders}</div>
-                <div className="app-metric-note">Open fulfillment workload</div>
-              </div>
-              <div className="app-card">
-                <div className="app-metric-label">Low Stock</div>
-                <div className="app-metric-value">{lowStockCount}</div>
-                <div className="app-metric-note">Materials below threshold</div>
-              </div>
+            </WalkthroughTarget>
+            <div className="app-card overflow-hidden relative">
+              <div className="absolute top-0 right-0 p-4 opacity-10 text-4xl">👥</div>
+              <div className="app-metric-label">Total Customers</div>
+              <div className="app-metric-value">{metrics.active_customers}</div>
+              <div className="app-metric-note">Unique user records</div>
             </div>
-
-
+            <div className="app-card overflow-hidden relative">
+              <div className="absolute top-0 right-0 p-4 opacity-10 text-4xl">📧</div>
+              <div className="app-metric-label">Campaigns Sent</div>
+              <div className="app-metric-value">{metrics.total_campaigns_sent || 0}</div>
+              <div className="app-metric-note">Marketing reach</div>
+            </div>
+            <div className="app-card overflow-hidden relative">
+              <div className="absolute top-0 right-0 p-4 opacity-10 text-4xl">🏦</div>
+              <div className="app-metric-label">Available Balance</div>
+              <div className="app-metric-value">{ledgerLoading ? "..." : (ledgerBalance !== null ? `${ledgerCurrency} ${(ledgerBalance/100).toFixed(2)}` : "N/A")}</div>
+              <div className="app-metric-note">Verified ledger</div>
+            </div>
           </div>
         </section>
 
-        <section className="app-grid two">
-          <WalkthroughTarget id="operations-map-target" className="app-panel">
-            <div className="app-panel-header">
-              <div>
+        <section className="app-panel">
+          <ReviewFeedCard tenantId={tenantId()} />
+        </section>
+
+        <section className="app-panel">
+          <ViralLoopPerformanceWidget />
+        </section>
+
+        <section className="app-panel">
+           <AffiliateMarketingWidget tenantId={tenantId()} />
+        </section>
+
+        <section className="app-panel">
+          <PromoterCard tenant={tenantId()} />
+        </section>
+
+        <div className="span-2 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <WalkthroughTarget id="operations-map-target">
+            <div className="app-panel h-full">
+              <div className="app-panel-header">
                 <div className="app-panel-title">Operations Map</div>
-                <div className="app-list-subtitle">Live database state across the store workflow.</div>
+                <Link href="/orders" className="app-button">Orders</Link>
               </div>
-              <Link href="/orders" className="app-button">Open Orders</Link>
-            </div>
-            <div className="app-panel-body">
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+              <div className="grid grid-cols-2 gap-3 p-6">
                 <div className="app-card">
-                  <div className="app-metric-label">Orders</div>
-                  <div className="app-metric-value">{orders.length}</div>
-                  <div className="app-metric-note">Rows returned</div>
+                  <div className="app-metric-label">Open Orders</div>
+                  <div className="app-metric-value text-orange-500">{metrics.pending_orders}</div>
+                  <div className="app-metric-note">Needs fulfillment</div>
                 </div>
                 <div className="app-card">
-                  <div className="app-metric-label">Inbox</div>
+                  <div className="app-metric-label">Low Stock</div>
+                  <div className="app-metric-value text-red-500">{lowStockCount}</div>
+                  <div className="app-metric-note">SKUs below threshold</div>
+                </div>
+                <div className="app-card">
+                  <div className="app-metric-label">Inbound DMs</div>
                   <div className="app-metric-value">{messages.length}</div>
                   <div className="app-metric-note">Messages returned</div>
                 </div>
@@ -657,304 +514,65 @@ export default function Dashboard() {
               {lowStockCount > 0 && (
                 <div className="app-list-item">
                   <div>
-                    <div className="app-list-title">Low stock</div>
-                    <div className="app-list-subtitle">{lowStockCount} material records are below reorder threshold.</div>
+                    <div className="app-list-title">Inventory replenishment</div>
+                    <div className="app-list-subtitle">{lowStockCount} raw materials are running low.</div>
                   </div>
-                  <span className="app-badge warn">Supply</span>
-                </div>
-              )}
-              {messages.some((message) => (message.status || "").toLowerCase() !== "closed") && (
-                <div className="app-list-item">
-                  <div>
-                    <div className="app-list-title">Inbox messages</div>
-                    <div className="app-list-subtitle">Open customer conversations are waiting in the database.</div>
-                  </div>
-                  <span className="app-badge">Inbox</span>
+                  <span className="app-badge bad">Stock</span>
                 </div>
               )}
               {!loading && metrics.pending_orders === 0 && lowStockCount === 0 && messages.length === 0 && approvals.filter(a => a.payload?.feature_type === "ambassador_reply").length === 0 && (
-                <div className="app-empty">No database-backed actions are currently open.</div>
+                <div className="app-empty">
+                  ✨ No urgent actions. You're all caught up!
+                </div>
               )}
             </div>
           </div>
-        </section>
-
-
-        <section className="app-grid two">
-          <div className="app-panel">
-            <div className="app-panel-header">
-              <WithTooltip id="recent-orders-tooltip" defaultText="View the latest orders placed by your customers."><div className="app-panel-title">Recent Orders</div></WithTooltip>
-              <Link href="/orders" className="app-button">View All</Link>
-            </div>
-            {orders.length === 0 ? (
-              <div className="app-empty">{loading ? "Loading orders from the database..." : "No order rows found for this tenant."}</div>
-            ) : (
-              <div className="app-table-wrap">
-                <table className="app-table">
-                  <thead>
-                    <tr>
-                      <th>Order</th>
-                      <th>Customer</th>
-                      <th>Total</th>
-                      <th>Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {orders.slice(0, 8).map((order) => (
-                      <tr key={order.id}>
-                        <td><Link href={`/orders/${order.id}`} className="font-semibold text-blue-700">{order.id}</Link></td>
-                        <td>{order.customer_name || "Unknown"}</td>
-                        <td>{money(order.total_amount)}</td>
-                        <td><span className={`app-badge ${statusTone(order.status)}`}>{order.status || "Unknown"}</span></td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
 
           <div className="app-panel">
             <div className="app-panel-header">
-              <WithTooltip id="inbox-activity-tooltip" defaultText="Keep track of recent customer messages."><div className="app-panel-title">Inbox Activity</div></WithTooltip>
-              <Link href="/inbox" className="app-button">Open Inbox</Link>
+              <div className="app-panel-title">Recent Activity</div>
+              <Link href="/inbox" className="app-button">Inbox</Link>
             </div>
             <div className="app-list">
               {messages.length === 0 ? (
-                <div className="app-empty">{loading ? "Loading inbox from the database..." : "No inbox message rows found for this tenant."}</div>
-              ) : messages.slice(0, 6).map((message) => (
-                <div key={message.id} className="app-list-item">
-                  <div>
-                    <div className="app-list-title">{message.source || "Unknown source"}</div>
-                    <div className="app-list-subtitle">{message.content || "Empty message"}</div>
+                <div className="app-empty">No recent messages recorded.</div>
+              ) : messages.map((msg) => (
+                <div key={msg.id} className="app-list-item">
+                  <div className="min-w-0">
+                    <div className="app-list-title">{msg.source || "Customer"}</div>
+                    <div className="app-list-subtitle truncate">{msg.content || "No content"}</div>
                   </div>
-                  <span className={`app-badge ${statusTone(message.status)}`}>{message.status || "Open"}</span>
+                  <span className="app-badge neutral">{msg.created_at ? new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Recently"}</span>
                 </div>
               ))}
             </div>
           </div>
+        </div>
+
+        <section className="app-panel span-2">
+           <ReviewFeedCard tenantId={tenantId()} />
         </section>
 
-        <section className="mt-4">
-          <div className="mb-3 flex items-center justify-between gap-3">
-            <div>
-              <h2 className="app-panel-title">Growth & Virality</h2>
-              <p className="app-list-subtitle">Unlock new customers and track milestones.</p>
-            </div>
+        <section className="app-panel span-2">
+          <div className="app-panel-header">
+            <div className="app-panel-title">AI Swarm Workforce</div>
+            <Link href="/agents" className="app-button">Manage Agents</Link>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <Link href="/dashboard/campaigns" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
-              <div className="flex items-start justify-between mb-4">
-                <div className="w-12 h-12 rounded-full bg-sky-50 dark:bg-sky-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">↗</div>
-                <div className="text-sky-700 dark:text-sky-300 font-semibold text-sm bg-sky-50 dark:bg-sky-900/30 px-3 py-1 rounded-full">Orchestrate</div>
-              </div>
-              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Campaign Orchestration</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Plan, generate, review, and launch customer campaigns from live dashboard data.</p>
-            </Link>
-
-            <Link href="/upgrade-roi" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
-              <div className="flex items-start justify-between mb-4">
-                <div className="w-12 h-12 rounded-full bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">📈</div>
-                <div className="text-indigo-600 dark:text-indigo-400 font-semibold text-sm bg-indigo-50 dark:bg-indigo-900/30 px-3 py-1 rounded-full">ROI</div>
-              </div>
-              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Pro Plan ROI Calculator</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">See how much extra revenue you could generate by unlocking the Pro Plan.</p>
-            </Link>
-
-            <Link href="/referrals" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
-              <div className="flex items-start justify-between mb-4">
-                <div className="w-12 h-12 rounded-full bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🤝</div>
-                <div className="text-indigo-600 dark:text-indigo-400 font-semibold text-sm bg-indigo-50 dark:bg-indigo-900/30 px-3 py-1 rounded-full">Earn $50</div>
-              </div>
-              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Referrals</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Invite other business owners to OHC and earn premium credits.</p>
-            </Link>
-
-            <Link href="/invoice-generator" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
-              <div className="flex items-start justify-between mb-4">
-                <div className="w-12 h-12 rounded-full bg-cyan-50 dark:bg-cyan-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🧾</div>
-                <div className="text-cyan-600 dark:text-cyan-400 font-semibold text-sm bg-cyan-50 dark:bg-cyan-900/30 px-3 py-1 rounded-full">Billing</div>
-              </div>
-              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">AI Invoice Generator</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Generate professional, shareable invoices that bring new customers to OHC.</p>
-            </Link>
-
-            <Link href="/milestones" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
-              <div className="flex items-start justify-between mb-4">
-                <div className="w-12 h-12 rounded-full bg-purple-50 dark:bg-purple-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🏆</div>
-                <div className="text-purple-600 dark:text-purple-400 font-semibold text-sm bg-purple-50 dark:bg-purple-900/30 px-3 py-1 rounded-full">Share</div>
-              </div>
-              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Milestones</h3>
-
-              <p className="text-sm text-gray-600 dark:text-gray-400">Track and share your business achievements with your audience.</p>
-            </Link>
-
-            <Link href="/loyalty-program" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
-              <div className="flex items-start justify-between mb-4">
-                <div className="w-12 h-12 rounded-full bg-yellow-50 dark:bg-yellow-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🤝</div>
-                <div className="text-yellow-600 dark:text-yellow-400 font-semibold text-sm bg-yellow-50 dark:bg-yellow-900/30 px-3 py-1 rounded-full">Loyalty</div>
-              </div>
-              <h3 className="text-xl font-bold font-outfit text-gray-900 dark:text-white mb-2">Customer Loyalty</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Set up a 'Give X, Get Y' referral program and generate campaigns.</p>
-            </Link>
-
-            <Link href="/customer-referral-program" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
-              <div className="flex items-start justify-between mb-4">
-                <div className="w-12 h-12 rounded-full bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">💸</div>
-                <div className="text-emerald-600 dark:text-emerald-400 font-semibold text-sm bg-emerald-50 dark:bg-emerald-900/30 px-3 py-1 rounded-full">Referrals</div>
-              </div>
-              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Customer Referral Program</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Launch a Give $10, Get $10 program to turn your customers into advocates.</p>
-            </Link>
-
-            <Link href="/share-cards" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
-              <div className="flex items-start justify-between mb-4">
-                <div className="w-12 h-12 rounded-full bg-pink-50 dark:bg-pink-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🎴</div>
-                <div className="text-pink-600 dark:text-pink-400 font-semibold text-sm bg-pink-50 dark:bg-pink-900/30 px-3 py-1 rounded-full">Cards</div>
-              </div>
-              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Social Share Cards</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Generate Share Cards to promote your brand on social media.</p>
-            </Link>
-
-            <Link href="/storefront-widget" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
-              <div className="flex items-start justify-between mb-4">
-                <div className="w-12 h-12 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🌐</div>
-                <div className="text-blue-600 dark:text-blue-400 font-semibold text-sm bg-blue-50 dark:bg-blue-900/30 px-3 py-1 rounded-full">Widget</div>
-              </div>
-              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Storefront Widget</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Embed a mini storefront on your blog or website to boost sales.</p>
-            </Link>
-
-            <Link href="/subscriptions" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
-              <div className="flex items-start justify-between mb-4">
-                <div className="w-12 h-12 rounded-full bg-amber-50 dark:bg-amber-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">📦</div>
-                <div className="text-amber-700 dark:text-amber-300 font-semibold text-sm bg-amber-50 dark:bg-amber-900/30 px-3 py-1 rounded-full">Recurring</div>
-              </div>
-              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Subscriptions & Fulfillments</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Manage recurring products, subscribers, and shipping batches.</p>
-            </Link>
-
-            <Link href="/social-proof-nudge" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
-              <div className="flex items-start justify-between mb-4">
-                <div className="w-12 h-12 rounded-full bg-green-50 dark:bg-green-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🚀</div>
-                <div className="text-green-600 dark:text-green-400 font-semibold text-sm bg-green-50 dark:bg-green-900/30 px-3 py-1 rounded-full">Proof</div>
-              </div>
-              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Social Proof Nudge</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Show visitors that others are buying to increase conversions.</p>
-            </Link>
-
-            <Link href="/work-intake-widget" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
-              <div className="flex items-start justify-between mb-4">
-                <div className="w-12 h-12 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">📋</div>
-                <div className="text-blue-600 dark:text-blue-400 font-semibold text-sm bg-blue-50 dark:bg-blue-900/30 px-3 py-1 rounded-full">Leads</div>
-              </div>
-              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Work-Intake Widget</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Embed a smart lead capture form with a viral loop directly on your site.</p>
-            </Link>
-
-            <Link href="/link-in-bio-generator" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
-              <div className="flex items-start justify-between mb-4">
-                <div className="w-12 h-12 rounded-full bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🔗</div>
-                <div className="text-emerald-600 dark:text-emerald-400 font-semibold text-sm bg-emerald-50 dark:bg-emerald-900/30 px-3 py-1 rounded-full">Bio</div>
-              </div>
-              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Create Link-in-Bio Page</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Publish a lightweight social profile page for your storefront and offers.</p>
-            </Link>
-
-            <Link href="/giveaway" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
-              <div className="flex items-start justify-between mb-4">
-                <div className="w-12 h-12 rounded-full bg-pink-50 dark:bg-pink-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🎁</div>
-                <div className="text-pink-600 dark:text-pink-400 font-semibold text-sm bg-pink-50 dark:bg-pink-900/30 px-3 py-1 rounded-full">Viral</div>
-              </div>
-              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Viral Giveaway Generator</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Launch a viral sweepstakes to capture emails and drive social shares.</p>
-            </Link>
-
-            <Link href="/win-back" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
-              <div className="flex items-start justify-between mb-4">
-                <div className="w-12 h-12 rounded-full bg-purple-50 dark:bg-purple-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">💌</div>
-                <div className="text-purple-600 dark:text-purple-400 font-semibold text-sm bg-purple-50 dark:bg-purple-900/30 px-3 py-1 rounded-full">Retain</div>
-              </div>
-              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Customer Win-back</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Re-engage inactive customers with AI-generated email campaigns.</p>
-            </Link>
-
-            <Link href="/review-campaigns" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
-              <div className="flex items-start justify-between mb-4">
-                <div className="w-12 h-12 rounded-full bg-yellow-50 dark:bg-yellow-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">⭐️</div>
-                <div className="text-yellow-600 dark:text-yellow-400 font-semibold text-sm bg-yellow-50 dark:bg-yellow-900/30 px-3 py-1 rounded-full">Reviews</div>
-              </div>
-              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Automated Reviews</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Generate highly-converting, personalized review request emails.</p>
-            </Link>
-
-            <Link href="/seasonal-promo" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
-              <div className="flex items-start justify-between mb-4">
-                <div className="w-12 h-12 rounded-full bg-teal-50 dark:bg-teal-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">✨</div>
-                <div className="text-teal-600 dark:text-teal-400 font-semibold text-sm bg-teal-50 dark:bg-teal-900/30 px-3 py-1 rounded-full">Promo</div>
-              </div>
-              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Seasonal Promo Generator</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Create AI campaigns and promo codes for special occasions instantly.</p>
-            </Link>
-
-            <Link href="/cart-recovery" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
-              <div className="flex items-start justify-between mb-4">
-                <div className="w-12 h-12 rounded-full bg-orange-50 dark:bg-orange-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🛒</div>
-                <div className="text-orange-600 dark:text-orange-400 font-semibold text-sm bg-orange-50 dark:bg-orange-900/30 px-3 py-1 rounded-full">Recover</div>
-              </div>
-              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Cart Recovery</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Recover abandoned carts with personalized AI follow-ups.</p>
-            </Link>
-
-            <Link href="/flash-sale-generator" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
-              <div className="flex items-start justify-between mb-4">
-                <div className="w-12 h-12 rounded-full bg-red-50 dark:bg-red-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">⚡</div>
-                <div className="text-red-600 dark:text-red-400 font-semibold text-sm bg-red-50 dark:bg-red-900/30 px-3 py-1 rounded-full">Urgency</div>
-              </div>
-              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Flash Sale Generator</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Create high-converting flash sale countdown widgets.</p>
-            </Link>
-
-
-            <Link href="/marketing/lead-gen" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
-              <div className="flex items-start justify-between mb-4">
-                <div className="w-12 h-12 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🎯</div>
-                <div className="text-blue-600 dark:text-blue-400 font-semibold text-sm bg-blue-50 dark:bg-blue-900/30 px-3 py-1 rounded-full">Leads</div>
-              </div>
-              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Want more local jobs this week? [Tap here]</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Launch an autonomous hyper-local lead generation campaign.</p>
-            </Link>
-
-            <Link href="/trial-extension" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
-              <div className="flex items-start justify-between mb-4">
-                <div className="w-12 h-12 rounded-full bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🎁</div>
-                <div className="text-emerald-600 dark:text-emerald-400 font-semibold text-sm bg-emerald-50 dark:bg-emerald-900/30 px-3 py-1 rounded-full">Extension</div>
-              </div>
-              <h3 className="text-xl font-bold font-outfit text-gray-900 dark:text-white mb-2">Interactive Trial Extension</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Share your setup on X to instantly unlock 7 extra days of Pro.</p>
-            </Link>
-
-            <Link href="/field-ops/jobs" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
-              <div className="flex items-start justify-between mb-4">
-                <div className="w-12 h-12 rounded-full bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">📍</div>
-                <div className="text-indigo-600 dark:text-indigo-400 font-semibold text-sm bg-indigo-50 dark:bg-indigo-900/30 px-3 py-1 rounded-full">Operations</div>
-              </div>
-              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Field Ops Route</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Offline-first mobile route management for field service workers.</p>
-            </Link>
-
-            <Link href="/settings" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
-              <div className="flex items-start justify-between mb-4">
-                <div className="w-12 h-12 rounded-full bg-gray-50 dark:bg-gray-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">⚙️</div>
-                <div className="text-gray-600 dark:text-gray-400 font-semibold text-sm bg-gray-50 dark:bg-gray-900/30 px-3 py-1 rounded-full">Config</div>
-              </div>
-              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Settings</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Manage your account and preferences.</p>
-            </Link>
-          </div>
+          <UnifiedAgentFeed tenantId={tenantId()} />
         </section>
-      </main>
+      </div>
 
+      <InteractiveWalkthrough
+        steps={walkthroughSteps}
+        isOpen={isWalkthroughOpen}
+        onClose={() => setIsWalkthroughOpen(false)}
+      />
+
+      {actionMessage && (
+        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 app-badge good shadow-lg px-6 py-3 text-lg animate-bounce">
+          {actionMessage}
+        </div>
+      )}
     </AppShell>
   );
 }

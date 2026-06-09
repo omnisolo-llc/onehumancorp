@@ -1126,11 +1126,15 @@ let db_for_products = self.db.clone();
                                     }
                                 }
 
-                                let parsed: serde_json::Value = serde_json::from_str(&drafted_msg).unwrap_or(serde_json::json!({
+                                let mut parsed: serde_json::Value = serde_json::from_str(&drafted_msg).unwrap_or(serde_json::json!({
                                     "tiktok": "Check out our new product!",
                                     "instagram": "New arrival! Link in bio.",
                                     "facebook": "We just added a new product to our store."
                                 }));
+
+                                if let Some(obj) = parsed.as_object_mut() {
+                                    obj.insert("feature_type".to_string(), serde_json::json!("social_post_draft"));
+                                }
 
                                 let task_id = Uuid::new_v4().to_string();
                                 let title = format!("Draft Social Post: {}", product_name);
