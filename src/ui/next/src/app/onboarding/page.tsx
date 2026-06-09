@@ -345,15 +345,6 @@ export default function OnboardingWizard() {
     setIsLoading(true);
     setError('');
     setStep(4); syncStateToBackend({ step: 4 }); // Go to loading screen
-    const safetyTimeout = setTimeout(() => {
-      // Fallback if API fails to respond in time
-      setStartResult({ message: 'Fallback: Your business has been successfully launched.' });
-      setStep(5);
-        syncStateToBackend({ step: 5 });
-      setIsLoading(false);
-    }, 3000);
-
-
     try {
       const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
       const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
@@ -386,11 +377,9 @@ export default function OnboardingWizard() {
 
       const result = await startRes.json().catch(() => ({}));
       if (!startRes.ok) {
-        clearTimeout(safetyTimeout);
         throw new Error(result.error || result.message || 'Failed to start onboarding');
       }
 
-      clearTimeout(safetyTimeout);
       setStartResult(result);
       localStorage.setItem('has_onboarded', 'true');
       if (result.organization_id) {
@@ -404,7 +393,6 @@ export default function OnboardingWizard() {
     } catch (err: any) {
       console.error(err);
       setError(err.message || 'An error occurred during onboarding');
-      clearTimeout(safetyTimeout);
       setStep(3); syncStateToBackend({ step: 3 }); // Go back to last input screen on error
     } finally {
       setIsLoading(false);
@@ -509,51 +497,10 @@ export default function OnboardingWizard() {
                   onClick={async () => {
                     if (!bio.trim()) return;
                     setIsLoading(true);
-                    let completed = false;
-                    const finishWithFallback = async () => {
-                      if (completed) return;
-                      completed = true;
-                      setBusinessName('My Business');
-                      setBusinessType('Online Store');
-                      setFirstProductName('First Product');
-                      setFirstProductPrice('10.00');
-
-                      try {
-                        const tenantIdStr = localStorage.getItem('tenant_id') || 'default';
-                        const userIdStr = localStorage.getItem('user_id') || 'default';
-
-                        const startRes = await fetchWithRetry('/api/onboarding/start', {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': tenantIdStr, 'X-User-ID': userIdStr },
-                          body: JSON.stringify({
-                            company_name: 'My Business',
-                            admin_email: adminEmail || 'admin@example.com',
-                            admin_name: adminName || 'Admin',
-                            admin_password: adminPassword || 'password123',
-                            business_type: 'Online Store',
-                            first_product_name: 'First Product',
-                            first_product_price: '10.00',
-                            price_type: 'physical',
-                            location: 'Unknown',
-                            ai_agents: ['Operations', 'Marketing', 'Finance', 'Legal', 'Advisory'],
-                            auto_respond: true
-                          })
-                        });
-                        const startData = await startRes.json();
-                        setStartResult(startData);
-                        setIsLoading(false);
-                        setStep(5);
-                        syncStateToBackend({ step: 5 });
-                      } catch (e) {
-                        setIsLoading(false);
-                        setError('Failed to launch. Please try again.');
-                      }
-                    };
-                    const safetyTimeout = window.setTimeout(finishWithFallback, 15000);
 
                     try {
-                      const tenantIdStr = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || 'default' : 'default';
-                      const userIdStr = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'default' : 'default';
+                      const tenantIdStr = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
+                      const userIdStr = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
 
                       const res = await fetch('/api/onboarding/intake', {
                         method: 'POST',
@@ -567,9 +514,6 @@ export default function OnboardingWizard() {
 
                       const data = await res.json();
                       if (res.ok) {
-                        completed = true;
-                        window.clearTimeout(safetyTimeout);
-
                         const inferredBusinessName = data.business_name || 'My Business';
                         const inferredBusinessType = data.business_type || 'Online Store';
                         const inferredProductName = data.initial_products?.[0]?.name || 'First Product';
@@ -599,18 +543,28 @@ export default function OnboardingWizard() {
                           })
                         });
 
+                        if (!startRes.ok) {
+                          const startData = await startRes.json().catch(() => ({}));
+                          throw new Error(startData.error || startData.message || 'Failed to start onboarding');
+                        }
+
                         const startData = await startRes.json();
                         setStartResult(startData);
-                        setIsLoading(false);
+                        if (startData.organization_id) {
+                            localStorage.setItem('tenant_id', startData.organization_id);
+                            localStorage.setItem('tenant', startData.organization_id);
+                        }
+                        localStorage.setItem('has_onboarded', 'true');
                         setStep(5);
                         syncStateToBackend({ step: 5 });
                       } else {
-                        console.error('Failed to parse intake:', data);
-                        finishWithFallback();
+                        throw new Error(data.error || data.message || 'Failed to analyze business details');
                       }
-                    } catch (err) {
+                    } catch (err: any) {
                       console.error(err);
-                      finishWithFallback();
+                      setError(err.message || 'Failed to launch. Please try again.');
+                    } finally {
+                      setIsLoading(false);
                     }
                   }}
                   disabled={!bio.trim() || isLoading}
