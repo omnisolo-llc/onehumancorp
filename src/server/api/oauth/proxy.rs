@@ -44,15 +44,34 @@ pub async fn handle_oauth_callback(
             let tunnel_base_url = std::env::var("OHC_TUNNEL_BASE_URL")
                 .unwrap_or_else(|_| "https://tunnel.ohc.network".to_string());
 
-            let mut redirect_url = format!("{}/{}/oauth/callback?code={}&state={}",
-                tunnel_base_url,
-                urlencoding::encode(&tunnel_id),
-                urlencoding::encode(&query.code),
-                urlencoding::encode(&actual_state));
-            for (k, v) in query.extra {
-                redirect_url.push_str(&format!("&{}={}", urlencoding::encode(&k), urlencoding::encode(&v)));
+            let mut parsed_url = match url::Url::parse(&tunnel_base_url) {
+                Ok(u) => u,
+                Err(_) => {
+                    return (
+                        axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+                        "Invalid tunnel base URL configuration.",
+                    )
+                        .into_response();
+                }
+            };
+
+            // Safely append the tunnel_id and callback path
+            if let Ok(mut segments) = parsed_url.path_segments_mut() {
+                segments.push(&tunnel_id).push("oauth").push("callback");
             }
-            return Redirect::temporary(&redirect_url).into_response();
+
+            parsed_url.query_pairs_mut()
+                .append_pair("code", &query.code)
+                .append_pair("state", actual_state);
+
+            for (k, v) in query.extra {
+                // Prevent overriding reserved query parameters
+                if k != "code" && k != "state" {
+                    parsed_url.query_pairs_mut().append_pair(&k, &v);
+                }
+            }
+
+            return Redirect::temporary(parsed_url.as_str()).into_response();
         }
     }
 

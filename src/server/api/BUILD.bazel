@@ -165,6 +165,7 @@ rust_library(
         "@crates//:tonic",
         "@crates//:tracing",
         "@crates//:tracing-subscriber",
+        "@crates//:url",
         "@crates//:urlencoding",
         "@crates//:tree-sitter",
         "@crates//:tree-sitter-bash",
