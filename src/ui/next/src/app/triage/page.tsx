@@ -29,6 +29,8 @@ function badgeTone(priority?: string) {
   return "neutral";
 }
 
+import Link from 'next/link';
+
 export default function TriagePage() {
   const [items, setItems] = useState<TriageItem[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);

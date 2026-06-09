@@ -295,3 +295,27 @@ pub struct AvailabilityBlock {
     pub created_at: Option<DateTime<Utc>>,
     pub updated_at: Option<DateTime<Utc>>,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct Lead {
+    pub id: String,
+    pub tenant_id: String,
+    pub source: String,
+    pub contact_info: String,
+    pub context: Option<String>,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct Opportunity {
+    pub id: String,
+    pub tenant_id: String,
+    pub lead_id: Option<String>,
+    pub title: String,
+    pub stage: String,
+    pub estimated_value: f64,
+    pub priority: String,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
+}

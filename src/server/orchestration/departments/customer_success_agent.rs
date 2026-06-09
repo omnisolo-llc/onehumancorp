@@ -126,6 +126,28 @@ impl Department for CustomerSuccessAgent {
 
         if event.event_type == "tenant.message.received" || event.event_type == "tenant.omnichannel.message.received" {
             let message = event.payload.get("message").and_then(|v| v.as_str()).unwrap_or("");
+            let source = event.payload.get("source").and_then(|v| v.as_str()).unwrap_or("Unknown");
+            let contact_info = event.payload.get("customer_id").and_then(|v| v.as_str()).unwrap_or("Unknown");
+
+            // Evaluate intent for Lead creation
+            if message.to_lowercase().contains("quote") || message.to_lowercase().contains("estimate") || message.to_lowercase().contains("pricing") || message.to_lowercase().contains("cost") || message.to_lowercase().contains("interested") {
+                tracing::info!("High-intent message detected, creating lead for tenant {}", event.tenant_id);
+                let lead = crate::domain::repository::models::Lead {
+                    id: uuid::Uuid::new_v4().to_string(),
+                    tenant_id: event.tenant_id.clone(),
+                    source: source.to_string(),
+                    contact_info: contact_info.to_string(),
+                    context: Some(message.to_string()),
+                    created_at: Some(chrono::Utc::now()),
+                    updated_at: Some(chrono::Utc::now()),
+                };
+                let repo = crate::domain::repository::crm_repo::CrmRepository::new((*self.orchestrator.db).clone());
+                if let Err(e) = repo.create_lead(&lead).await {
+                    tracing::error!("Failed to create lead in CustomerSuccessAgent: {}", e);
+                }
+            }
+
+            let message = event.payload.get("message").and_then(|v| v.as_str()).unwrap_or("");
 
             let query_embedding = match std::env::var("OHC_INBOX_DRAFT_LLM_PROVIDER")
                 .or_else(|_| std::env::var("OHC_LLM_PROVIDER"))

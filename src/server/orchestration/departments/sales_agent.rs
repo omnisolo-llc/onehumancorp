@@ -247,6 +247,22 @@ impl Department for SalesAgent {
                         let customer_inquiry = payload.get("customer_inquiry").and_then(|v| v.as_str()).unwrap_or("Unknown");
                         let deposit_amount = suggested_price * 0.20; // 20% deposit
 
+                        let repo = crate::domain::repository::crm_repo::CrmRepository::new((*self.orchestrator.db).clone());
+                        let opp = crate::domain::repository::models::Opportunity {
+                            id: uuid::Uuid::new_v4().to_string(),
+                            tenant_id: event.tenant_id.clone(),
+                            lead_id: None,
+                            title: format!("Quote for {}", customer_inquiry),
+                            stage: "Proposal".to_string(),
+                            estimated_value: suggested_price,
+                            priority: "Medium".to_string(),
+                            created_at: Some(chrono::Utc::now()),
+                            updated_at: Some(chrono::Utc::now()),
+                        };
+                        if let Err(e) = repo.create_opportunity(&opp).await {
+                            tracing::error!("Failed to create opportunity in SalesAgent: {}", e);
+                        }
+
                         tracing::info!(
                             "Executing approved quote draft for inquiry: '{}'. Suggested price: ${}. Deposit: ${}",
                             customer_inquiry,
