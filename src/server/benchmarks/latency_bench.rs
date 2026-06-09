@@ -444,7 +444,7 @@ pub async fn bench_queue(name: &str, queue: Arc<dyn TaskQueue>) {
                 parent_task_id: format!("parent_{}_{}_{}", name, run_id, i),
                 job_type: "test_agent".to_string(),
                 payload: "{}".to_string(),
-                status: "PENDING".to_string(),
+                status: "QUEUED".to_string(),
                 retry_count: 0,
                 max_retries: 3,
                 next_retry_at: Utc::now(),

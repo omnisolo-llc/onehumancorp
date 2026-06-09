@@ -352,23 +352,20 @@ pub async fn department_tier_usage_for_tenant(hub: &Arc<Hub>, tenant_id: &str) -
     let current_plan = plan_name(&tier).to_string();
     let period = current_usage_period();
     let departments = departments_res.unwrap_or_default();
-
-    let mut futures = Vec::new();
+    let mut all_keys = Vec::new();
     for department in &departments {
-        for key in department_usage_keys(department) {
-            let tracker = hub.tracker();
-            let tenant_id = tenant_id.to_string();
-            futures.push(async move {
-                let used = tracker.get_agent_actions_used(&tenant_id, &key).await.unwrap_or(0);
-                (key, used)
-            });
-        }
+        all_keys.extend(department_usage_keys(department));
     }
+    all_keys.sort();
+    all_keys.dedup();
 
+    let tracker = hub.tracker();
+    let usage_values = tracker.mget_agent_actions_used(tenant_id, &all_keys).await.unwrap_or_else(|_| vec![0; all_keys.len()]);
     let mut usage_by_key = HashMap::new();
-    for (key, used) in futures::future::join_all(futures).await {
+    for (key, used) in all_keys.into_iter().zip(usage_values.into_iter()) {
         usage_by_key.insert(key, used);
     }
+
 
     build_department_tier_usage_response(current_plan, tier, period, departments, |agent_id| {
         usage_by_key.get(agent_id).copied().unwrap_or(0)
