@@ -797,6 +797,72 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_ml_resilience_visual_workflow_timeout() {
+        let graph = WorkflowGraph {
+            nodes: vec![
+                Node {
+                    id: "in".to_string(),
+                    node_type: NodeType::Input {
+                        name: "input_var".to_string(),
+                    },
+                },
+                Node {
+                    id: "llm1".to_string(),
+                    node_type: NodeType::Llm {
+                        prompt_template: "Should timeout: {{in}}".to_string(),
+                    },
+                },
+                Node {
+                    id: "out".to_string(),
+                    node_type: NodeType::Output,
+                },
+            ],
+            edges: vec![
+                Edge {
+                    source: "in".to_string(),
+                    target: "llm1".to_string(),
+                },
+                Edge {
+                    source: "llm1".to_string(),
+                    target: "out".to_string(),
+                },
+            ],
+        };
+
+        struct TimeoutLlmClient;
+        #[async_trait::async_trait]
+        impl crate::llm::LlmClient for TimeoutLlmClient {
+            async fn chat(
+                &self,
+                _req: crate::types::ChatRequest,
+            ) -> Result<crate::types::ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+                // Simulate a hang that exceeds a 60-second limit (or any other timeout logic).
+                // We'll just return an error directly simulating a timeout failure from the runtime.
+                tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+                Err("LLM Request Timed Out".into())
+            }
+        }
+
+        let agent = Arc::new(Agent::new(Arc::new(TimeoutLlmClient), vec![]));
+        let mut config = AgentRunConfig::default();
+        config.max_retries = 0; // Prevent retries so the test completes quickly
+
+        let executor = WorkflowExecutor::new(graph, agent, vec![], HashMap::new(), config);
+
+        let mut inputs = HashMap::new();
+        inputs.insert("in".to_string(), "trigger".to_string());
+
+        let result = tokio::time::timeout(std::time::Duration::from_millis(1500), executor.execute(inputs)).await;
+
+        // Verify that the executor gracefully bubbles up the LLM error instead of panicking
+        assert!(result.is_ok(), "Workflow execution should not hang indefinitely");
+        let inner_result = result.unwrap();
+        assert!(inner_result.is_err(), "Workflow execution must fail when LLM times out");
+        // The error message is formatted as "LLM node {} failed: {}"
+        assert!(inner_result.unwrap_err().contains("LLM Request Timed Out"));
+    }
+
+    #[tokio::test]
     async fn test_visual_workflow_subagent() {
         let graph = WorkflowGraph {
             nodes: vec![
