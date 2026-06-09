@@ -206,6 +206,20 @@ pub fn format_pydantic_error(e: &serde_json::Error, args_str: Option<&str>) -> S
     msg
 }
 
+/// A version of format_pydantic_error that takes a string message instead of a serde_json::Error.
+/// Used when validation fails via manual checks rather than serde deserialization.
+pub fn format_pydantic_error_string(error_msg: &str, args_str: Option<&str>) -> String {
+    let mut msg = format!(
+        "Validation Error (Pydantic-first tool schema): Failed to parse arguments.\nReason: Semantic validation failed: {}",
+        error_msg
+    );
+    if let Some(snippet) = args_str {
+        msg.push_str(&format!("\nProvided arguments snippet: {}", snippet));
+    }
+    msg.push_str("\nPlease strictly follow the tool's JSON schema and try again.");
+    msg
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

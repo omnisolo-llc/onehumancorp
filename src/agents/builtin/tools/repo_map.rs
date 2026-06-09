@@ -27,71 +27,8 @@ impl RepoMapExecutor {
         Self { workspace_path }
     }
 
-    fn try_tree_sitter_parse(content: &str, ext: &str) -> Option<Vec<String>> {
-        let language = match ext {
-            "rs" => tree_sitter_rust::LANGUAGE.into(),
-            "py" => tree_sitter_python::LANGUAGE.into(),
-            "ts" | "tsx" => tree_sitter_typescript::LANGUAGE_TYPESCRIPT.into(),
-            "go" => tree_sitter_go::LANGUAGE.into(),
-            _ => return None, // Fall back to regex for others
-        };
-
-        let mut parser = tree_sitter::Parser::new();
-        if parser.set_language(&language).is_err() {
-            return None;
-        }
-
-        let tree = parser.parse(content, None)?;
-        let mut cursor = tree.walk();
-        let mut sigs = Vec::new();
-
-        Self::walk_tree(&mut cursor, content, &mut sigs);
-
-        Some(sigs)
-    }
-
-    fn walk_tree(cursor: &mut tree_sitter::TreeCursor, content: &str, sigs: &mut Vec<String>) {
-        let node = cursor.node();
-        let kind = node.kind();
-
-        // Very basic capturing of relevant definition nodes across supported languages
-        if kind == "function_item" || kind == "struct_item" || kind == "enum_item" || kind == "trait_item" // Rust
-            || kind == "function_definition" || kind == "class_definition" // Python
-            || kind == "function_declaration" || kind == "class_declaration" || kind == "interface_declaration" || kind == "type_alias_declaration" // TS
-            || kind == "function_declaration" || kind == "type_declaration" || kind == "method_declaration" // Go
-        {
-            if let Ok(text) = node.utf8_text(content.as_bytes()) {
-                // Extract just the first line (signature)
-                if let Some(first_line) = text.lines().next() {
-                    let clean = first_line.trim_end_matches('{').trim_end_matches(':').trim();
-                    sigs.push(clean.to_string());
-                }
-            }
-        }
-
-        // Only traverse children if we didn't just capture a top-level def (to keep it a high-level map),
-        // or for Python classes where methods are children, we might want to traverse.
-        // For simplicity in a RepoMap, usually we just want top-level or one level deep.
-        if cursor.goto_first_child() {
-            loop {
-                Self::walk_tree(cursor, content, sigs);
-                if !cursor.goto_next_sibling() {
-                    break;
-                }
-            }
-            cursor.goto_parent();
-        }
-    }
-
     fn extract_signatures(content: &str, ext: &str) -> Vec<String> {
-        // Try tree-sitter first
-        if let Some(sigs) = Self::try_tree_sitter_parse(content, ext) {
-            if !sigs.is_empty() {
-                return sigs;
-            }
-        }
-
-        // Fallback to regex
+        // Fallback to regex since tree-sitter is removed
         let mut sigs = Vec::new();
         match ext {
             "rs" => {
