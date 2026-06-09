@@ -102,13 +102,24 @@ impl Actor for ToolActor {
                     let tool = agent.tools.iter().find(|t| t.name == tc.name);
                     match tool {
                         Some(t) => {
-                            let res = t.execute.execute(tc.arguments.clone()).await;
+                            let res = crate::tool_executor_engine::ToolExecutionEngine::execute_tool_with_langgraph_mechanics(
+                                t,
+                                tc,
+                                2
+                            ).await;
                             match res {
                                 Ok(content) => {
                                     tool_results.push(ToolResult {
                                         tool_call_id: tc.id.clone(),
                                         content,
                                         error: String::new(),
+                                    });
+                                }
+                                Err(crate::types::ToolError::LlmRecoverable(msg)) => {
+                                    tool_results.push(ToolResult {
+                                        tool_call_id: tc.id.clone(),
+                                        content: String::new(),
+                                        error: msg,
                                     });
                                 }
                                 Err(e) => {
