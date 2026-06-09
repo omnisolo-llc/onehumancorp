@@ -40,8 +40,8 @@ ALTER TABLE quotes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE quote_line_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE pricing_heuristics ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY tenant_isolation_quotes ON quotes USING (tenant_id = current_setting('app.current_tenant', true));
+CREATE POLICY tenant_isolation_quotes ON quotes USING (tenant_id = current_setting('ohc.current_tenant', true));
 CREATE POLICY tenant_isolation_quote_line_items ON quote_line_items USING (
-    quote_id IN (SELECT id FROM quotes WHERE tenant_id = current_setting('app.current_tenant', true))
+    quote_id IN (SELECT id FROM quotes WHERE tenant_id = current_setting('ohc.current_tenant', true))
 );
-CREATE POLICY tenant_isolation_pricing_heuristics ON pricing_heuristics USING (tenant_id = current_setting('app.current_tenant', true));
+CREATE POLICY tenant_isolation_pricing_heuristics ON pricing_heuristics USING (tenant_id = current_setting('ohc.current_tenant', true));
