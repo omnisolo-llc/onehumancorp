@@ -194,8 +194,8 @@ body {
 }
 
 .app-card {
-  background: rgba(255, 255, 255, 0.65);
-  backdrop-filter: blur(30px) saturate(210%);
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(20px) saturate(200%);
   border: 1px solid rgba(255, 255, 255, 0.4);
   border-radius: 16px;
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
@@ -204,14 +204,14 @@ body {
 @media (prefers-color-scheme: dark) {
   .app-card {
     background: rgba(22, 22, 26, 0.7);
-    backdrop-filter: blur(30px) saturate(210%);
+    backdrop-filter: blur(20px) saturate(200%);
     border: 1px solid rgba(255, 255, 255, 0.1);
   }
 }
 
 .app-panel {
-  background: rgba(255, 255, 255, 0.65);
-  backdrop-filter: blur(30px) saturate(210%);
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(20px) saturate(200%);
   border: 1px solid rgba(255, 255, 255, 0.4);
   border-radius: 16px;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
@@ -221,7 +221,7 @@ body {
 @media (prefers-color-scheme: dark) {
   .app-panel {
     background: rgba(22, 22, 26, 0.7);
-    backdrop-filter: blur(30px) saturate(210%);
+    backdrop-filter: blur(20px) saturate(200%);
     border: 1px solid rgba(255, 255, 255, 0.1);
   }
 }
@@ -527,8 +527,8 @@ body {
 }
 
 .ohc-hybrid-panel {
-    backdrop-filter: blur(30px) saturate(210%);
-    background: rgba(255, 255, 255, 0.65);
+    backdrop-filter: blur(20px) saturate(200%);
+    background: rgba(255, 255, 255, 0.03);
     border: 1px solid rgba(255, 255, 255, 0.4);
     font-family: 'Outfit', 'Inter', sans-serif;
     color: #1D1D1F;
@@ -539,8 +539,8 @@ body {
 }
 
 .glassmorphism {
-  background: rgba(255, 255, 255, 0.65);
-  backdrop-filter: blur(30px) saturate(210%);
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(20px) saturate(200%);
   border: 1px solid rgba(255, 255, 255, 0.4);
   border-radius: 16px;
 }
@@ -548,7 +548,7 @@ body {
 @media (prefers-color-scheme: dark) {
   .glassmorphism {
     background: rgba(22, 22, 26, 0.7);
-    backdrop-filter: blur(30px) saturate(210%);
+    backdrop-filter: blur(20px) saturate(200%);
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 16px;
   }
