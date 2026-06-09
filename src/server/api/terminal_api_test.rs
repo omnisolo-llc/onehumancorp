@@ -76,7 +76,7 @@ async fn test_create_payment_intent_authenticated() {
                 .uri("/intent")
                 .method("POST")
                 .header("Content-Type", "application/json")
-                .body(Body::from(r#"{"amount_cents": 1500, "currency": "usd"}"#))
+                .body(Body::from(r#"{"amount_cents": 1500, "currency": "usd", "product_id": "prod_123", "quantity": 1, "order_id": "order_123"}"#))
                 .unwrap(),
         )
         .await
@@ -100,7 +100,7 @@ async fn test_create_payment_intent_unauthenticated() {
                 .uri("/intent")
                 .method("POST")
                 .header("Content-Type", "application/json")
-                .body(Body::from(r#"{"amount_cents": 1000, "currency": "usd"}"#))
+                .body(Body::from(r#"{"amount_cents": 1000, "currency": "usd", "product_id": "prod_123", "quantity": 1, "order_id": "order_123"}"#))
                 .unwrap(),
         )
         .await
@@ -151,7 +151,7 @@ async fn test_create_payment_intent_authenticated_via_router() {
         .uri("/intent")
         .method("POST")
         .header("Content-Type", "application/json")
-        .body(Body::from(r#"{"amount_cents": 1500, "currency": "usd"}"#))
+        .body(Body::from(r#"{"amount_cents": 1500, "currency": "usd", "product_id": "prod_123", "quantity": 1, "order_id": "order_123"}"#))
         .unwrap();
 
     req.extensions_mut().insert(::server_auth::orchestration::AuthInfo {

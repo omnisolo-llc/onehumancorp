@@ -491,6 +491,75 @@ async fn test_webhook_security_replay_protection() {
 }
 
 #[tokio::test]
+async fn test_stripe_webhook_payment_intent_succeeded_pos() {
+    let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1/".to_string());
+
+    // Only run if redis is available
+    let client = match redis::Client::open(redis_url) {
+        Ok(c) => c,
+        Err(_) => return,
+    };
+
+    if client.get_multiplexed_async_connection().await.is_err() {
+        return;
+    }
+
+    let rate_limiter = std::sync::Arc::new(RedisRateLimiter::new(client.clone()));
+    let db = match DB::new().await {
+        Ok(d) => d,
+        Err(_) => return,
+    };
+
+    let webhook_state = WebhookState {
+        rate_limiter: rate_limiter.clone(),
+        db_pool: db.pool.clone(),
+        db: std::sync::Arc::new(db),
+    };
+
+    let app = Router::new()
+        .route("/api/v1/webhooks/stripe", post(stripe_webhook_handler))
+        .with_state(webhook_state);
+
+    let payload = json!({
+        "id": "evt_test_pi",
+        "type": "payment_intent.succeeded",
+        "data": {
+            "object": {
+                "amount": 1500,
+                "metadata": {
+                    "source": "in_person",
+                    "tenant_id": "test_tenant",
+                    "product_id": "test_product",
+                    "quantity": "2",
+                    "order_id": "test_order"
+                }
+            }
+        }
+    });
+
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let addr = listener.local_addr().unwrap();
+
+    tokio::spawn(async move {
+        axum::serve(listener, app).await.unwrap();
+    });
+
+    // Wait for server to start
+    tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+
+    let client_req = reqwest::Client::new();
+
+    let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs();
+    let valid_sig = format!("t={},v1=valid_sig", now);
+
+    let response = client_req.post(format!("http://{}/api/v1/webhooks/stripe", addr))
+        .header("Stripe-Signature", valid_sig)
+        .json(&payload).send().await.unwrap();
+
+    assert_eq!(response.status(), reqwest::StatusCode::OK);
+}
+
+#[tokio::test]
 async fn test_stripe_webhook_pos_transaction() {
     let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1/".to_string());
 

@@ -355,8 +355,23 @@ pub async fn stripe_webhook_handler(
 ) -> impl IntoResponse {
 
     match payload.r#type.as_str() {
-        "terminal.reader.action.succeeded" | "pos_transaction" => {
+        "terminal.reader.action.succeeded" | "pos_transaction" | "payment_intent.succeeded" => {
             let obj = &payload.data.object;
+
+            if payload.r#type.as_str() == "payment_intent.succeeded" {
+                let source = obj.get("metadata")
+                    .and_then(|m| m.get("source"))
+                    .and_then(|s| s.as_str());
+                if source != Some("in_person") {
+                    // Note: Online payment_intents usually use checkout.session.completed for inventory lock release
+                    // We only process in_person intents here for deduction.
+                    return StatusCode::OK.into_response();
+                }
+
+                if let Some(tenant_id) = obj.get("metadata").and_then(|m| m.get("tenant_id")).and_then(|id| id.as_str()) {
+                    let _ = ::server_telemetry::record_api_call_cost(&webhook_state.db.pool, tenant_id, "pos_in_person_revenue", obj.get("amount").and_then(|a| a.as_i64()).unwrap_or(0) as f64 / 100.0).await;
+                }
+            }
 
             let tenant_id_opt = obj.get("metadata")
                 .and_then(|m| m.get("tenant_id"))
