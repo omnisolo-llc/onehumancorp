@@ -31,7 +31,7 @@ type LedgerResponse = {
   entries: OHCLedgerEntry[];
 };
 
-export function UnifiedAgentFeed() {
+export function UnifiedAgentFeed({ initialApprovals, initialActivities }: { initialApprovals?: any[], initialActivities?: any[] }) {
   const [approvals, setApprovals] = useState<ApprovalRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");

@@ -3,6 +3,7 @@ load("@rules_shell//shell:sh_test.bzl", "sh_test")
 load("//bazel/rules/playwright:playwright_tests.bzl", "define_playwright_tests")
 
 _NEXT_UI_E2E_SPECS = [
+    "//src/ui/next:src/e2e/abandoned_cart.spec.ts",
     "//src/ui/next:src/e2e/agentic-booking.spec.ts",
     "//src/ui/next:src/e2e/ambassador-reply.spec.ts",
     "//src/ui/next:src/e2e/api-docs.spec.ts",
