@@ -1030,14 +1030,17 @@ impl DB {
                 sqlx::query("INSERT INTO agent_memories (id, tenant_id, task_id, raw_content, summary_embedding) VALUES (?, ?, ?, ?, ?)").bind(id).bind(org_id).bind(task_id).bind(content).bind(embedding).execute(sqlite_pool).await?;
             }
             DbStore::Postgres => {
+                let mut tx = self.pool.begin().await?;
+                ::server_common::auth_utils::set_org_context(&mut *tx, org_id).await?;
                 sqlx::query("INSERT INTO agent_memories (id, tenant_id, task_id, raw_content, summary_embedding) VALUES ($1, $2, $3, $4, $5)")
                 .bind(id)
                 .bind(org_id)
                 .bind(task_id)
                 .bind(content)
                 .bind(embedding)
-                .execute(&self.pool)
+                .execute(&mut *tx)
                 .await?;
+                tx.commit().await?;
             }
         };
 
@@ -1068,6 +1071,8 @@ impl DB {
                     .await?;
             }
             DbStore::Postgres => {
+                let mut tx = self.pool.begin().await?;
+                ::server_common::auth_utils::set_org_context(&mut *tx, org_id).await?;
                 sqlx::query("INSERT INTO autodream_memories (id, tenant_id, agent_id, task_id, content, embedding, source_type) VALUES ($1, $2, $3, $4, $5, $6::vector, $7)")
                     .bind(id)
                     .bind(org_id)
@@ -1076,8 +1081,9 @@ impl DB {
                     .bind(content)
                     .bind(embedding)
                     .bind(source_type)
-                    .execute(&self.pool)
+                    .execute(&mut *tx)
                     .await?;
+                tx.commit().await?;
             }
         }
         Ok(())
@@ -1107,6 +1113,8 @@ impl DB {
                     .await?;
             }
             DbStore::Postgres => {
+                let mut tx = self.pool.begin().await?;
+                ::server_common::auth_utils::set_org_context(&mut *tx, org_id).await?;
                 sqlx::query("INSERT INTO knowledge_embeddings (id, tenant_id, agent_id, task_id, content, embedding, source_type) VALUES ($1, $2, $3, $4, $5, $6::vector, $7)")
                     .bind(uuid::Uuid::parse_str(id).unwrap_or_else(|_| uuid::Uuid::new_v4()))
                     .bind(org_id)
@@ -1115,8 +1123,9 @@ impl DB {
                     .bind(content)
                     .bind(embedding)
                     .bind(source_type)
-                    .execute(&self.pool)
+                    .execute(&mut *tx)
                     .await?;
+                tx.commit().await?;
             }
         }
         Ok(())
@@ -1135,10 +1144,11 @@ impl DB {
                      SET status = 'blocked',
                          mission_log = CASE WHEN mission_log IS NULL OR mission_log = '' THEN $1 ELSE mission_log || '\n' || $1 END,
                          updated_at = CURRENT_TIMESTAMP
-                     WHERE id = $2"
+                     WHERE id = $2 AND tenant_id = $3"
                 )
                 .bind(blockers)
                 .bind(mission_id)
+                .bind(tenant_id)
                 .execute(sqlite_pool)
                 .await?;
             }
@@ -1171,12 +1181,13 @@ impl DB {
         match &self.store {
             DbStore::Sqlite(sqlite_pool) => {
                 let query = if table == "swarm_tasks" {
-                    "UPDATE swarm_tasks SET auto_dreamed = 1 WHERE id = ?"
+                    "UPDATE swarm_tasks SET auto_dreamed = 1 WHERE id = ? AND tenant_id = ?"
                 } else {
-                    "UPDATE shared_tasks SET auto_dreamed = 1 WHERE id = ?"
+                    "UPDATE shared_tasks SET auto_dreamed = 1 WHERE id = ? AND organization_id = ?"
                 };
                 sqlx::query(query)
                     .bind(task_id)
+                    .bind(tenant_id)
                     .execute(sqlite_pool)
                     .await?;
             }

@@ -117,6 +117,7 @@ describe('CostDashboardPage', () => {
     expect(screen.getAllByText(/150/)[0]).toBeDefined();
     expect(screen.getAllByText(/\/ 10000/)[0]).toBeDefined();
     // Storage used
+    expect(screen.getByText(/2 MB/)).toBeDefined();
     expect(screen.getAllByText(/2.0 MB/)[0]).toBeDefined();
     // Next bill estimated
     expect(screen.getByText('$29.00')).toBeDefined(); // Since Next bill estimated uses formatCurrency which divides by 100
@@ -222,7 +223,7 @@ describe('CostDashboardPage', () => {
     });
 
     expect(screen.getAllByText(/\/ 0/)[0]).toBeDefined();
-    expect(screen.getAllByText(/\/ 0 MB/)[0]).toBeDefined();
+    expect(screen.getAllByText(/\/ < 1 MB/)[0]).toBeDefined();
   });
 
   test('renders unlimited limits properly', async () => {
