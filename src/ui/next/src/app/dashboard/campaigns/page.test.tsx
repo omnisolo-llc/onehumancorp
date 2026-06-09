@@ -2,6 +2,7 @@ import { TooltipProvider } from "../../../components/TooltipRegistry";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import CampaignOrchestrationPage from "./page";
+import { AppRouterContext } from "next/dist/shared/lib/app-router-context.shared-runtime";
 
 const responses: Record<string, unknown> = {
   "/api/ui/dashboard/metrics": {
@@ -60,9 +61,11 @@ describe("CampaignOrchestrationPage", () => {
     global.fetch = fetchMock as any;
 
     render(
-      <TooltipProvider>
-        <CampaignOrchestrationPage />
-      </TooltipProvider>,
+      <AppRouterContext.Provider value={{} as any}>
+        <TooltipProvider>
+          <CampaignOrchestrationPage />
+        </TooltipProvider>
+      </AppRouterContext.Provider>
     );
 
     await waitFor(() => {

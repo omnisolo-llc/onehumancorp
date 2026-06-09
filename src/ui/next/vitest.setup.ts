@@ -93,7 +93,16 @@ if (typeof global.fetch === 'undefined') {
         return Promise.resolve(new Response(JSON.stringify({
             ok: true,
             // Provide sensible defaults for the failed API calls in tests
-            metrics: {}, approvals: [], workflows: [], milestones: []
+            metrics: {}, approvals: [], workflows: [], milestones: [], activities: []
+        }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' }
+        }));
+    }
+    if (typeof url === 'string' && url.startsWith('http://localhost/')) {
+        return Promise.resolve(new Response(JSON.stringify({
+            ok: true,
+            metrics: {}, approvals: [], workflows: [], milestones: [], activities: [], payload: {}, entries: []
         }), {
             status: 200,
             headers: { 'Content-Type': 'application/json' }
@@ -155,7 +164,16 @@ global.fetch = vi.fn().mockImplementation(async (url: string | URL | Request, in
     if (urlString.startsWith('/')) {
         return Promise.resolve(new Response(JSON.stringify({
             ok: true,
-            entries: [], metrics: {}, approvals: [], workflows: [], milestones: []
+            entries: [], metrics: {}, approvals: [], workflows: [], milestones: [], activities: []
+        }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' }
+        }));
+    }
+    if (urlString.startsWith('http://localhost/')) {
+        return Promise.resolve(new Response(JSON.stringify({
+            ok: true,
+            entries: [], metrics: {}, approvals: [], workflows: [], milestones: [], activities: [], payload: {}
         }), {
             status: 200,
             headers: { 'Content-Type': 'application/json' }
