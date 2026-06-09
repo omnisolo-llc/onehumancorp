@@ -425,7 +425,7 @@ export default function OnboardingWizard() {
       <div id="setup-screen" className="w-full sm:max-w-md lg:max-w-lg xl:max-w-2xl mx-auto overflow-hidden flex flex-col min-h-[640px] sm:min-h-[812px] relative rounded-[16px] glassmorphism border border-white/20 shadow-2xl">
         <div className="px-6 pt-5 text-center">
           <h1 className="text-xl font-bold text-[#1D1D1F] dark:text-[#F5F5F7]">Setup</h1>
-          <p className="text-sm text-gray-500 dark:text-[#A1A1A6]">Your business, live in minutes.</p>
+          <p className="text-sm font-inter text-gray-500 dark:text-[#A1A1A6]">Your business, live in minutes.</p>
         </div>
         {/* Progress Bar */}
         <div className="h-1.5 w-full bg-gray-200 overflow-hidden">
@@ -450,7 +450,7 @@ export default function OnboardingWizard() {
                 </svg>
               </div>
               <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">10-Minute Setup Wizard</h2>
-              <p className="text-gray-500 dark:text-[#A1A1A6] text-sm text-center mb-8 leading-relaxed max-w-sm">
+              <p className="font-inter text-gray-500 dark:text-[#A1A1A6] text-sm text-center mb-8 leading-relaxed max-w-sm">
                 Zero tech skills needed. We do the heavy lifting. Review and add any extra details to help our AI generate the perfect store.
               </p>
 
@@ -479,7 +479,7 @@ export default function OnboardingWizard() {
               </button>
               <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Tell us about your business</h2>
               <div className="flex items-center justify-between mb-6 w-full">
-                <p className="text-gray-500 dark:text-[#A1A1A6] text-sm">
+                <p className="font-inter text-gray-500 dark:text-[#A1A1A6] text-sm">
                   Our AI will handle the rest in 30 seconds.
                 </p>
               </div>
@@ -632,7 +632,7 @@ export default function OnboardingWizard() {
                 <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in">
                   <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">What's the name of your business?</h2>
                   <div className="flex items-center justify-between mb-6">
-                    <p className="text-gray-500 dark:text-[#A1A1A6] text-sm">
+                    <p className="font-inter text-gray-500 dark:text-[#A1A1A6] text-sm">
                       Our AI will instantly generate your storefront, products, and back-office agents.
                     </p>
                     <button
@@ -699,7 +699,7 @@ export default function OnboardingWizard() {
                   </button>
                   <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">What do you sell?</h2>
                   <div className="flex items-center justify-between mb-6">
-                    <p className="text-gray-500 dark:text-[#A1A1A6] text-sm">
+                    <p className="font-inter text-gray-500 dark:text-[#A1A1A6] text-sm">
                       Tell us a bit about your products or services.
                     </p>
                     <button
@@ -764,7 +764,7 @@ export default function OnboardingWizard() {
                   </button>
                   <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Where are you located?</h2>
                   <div className="flex items-center justify-between mb-6">
-                    <p className="text-gray-500 dark:text-[#A1A1A6] text-sm">
+                    <p className="font-inter text-gray-500 dark:text-[#A1A1A6] text-sm">
                       This helps us set up your shipping and tax settings.
                     </p>
                     <button
@@ -830,7 +830,7 @@ export default function OnboardingWizard() {
                   </button>
                   <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Who is your target audience?</h2>
                   <div className="flex items-center justify-between mb-6">
-                    <p className="text-gray-500 dark:text-[#A1A1A6] text-sm">
+                    <p className="font-inter text-gray-500 dark:text-[#A1A1A6] text-sm">
                       This helps our AI generate the perfect storefront copy and select the best tools for your business.
                     </p>
                     <button
@@ -906,7 +906,7 @@ export default function OnboardingWizard() {
               </button>
               <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Review Details</h2>
               <div className="flex items-center justify-between mb-6">
-                <p className="text-gray-500 dark:text-[#A1A1A6] text-sm">
+                <p className="font-inter text-gray-500 dark:text-[#A1A1A6] text-sm">
                   Here's what our AI figured out. Feel free to tweak these.
                 </p>
                 <button
@@ -930,7 +930,14 @@ export default function OnboardingWizard() {
                     value={businessName}
                     onChange={(e) => {
                       setBusinessName(e.target.value);
-                      setValidationErrors(prev => { const { businessName, ...rest } = prev; return rest; });
+                      if (e.target.value.trim().length >= 3) {
+                        setValidationErrors(prev => { const { businessName, ...rest } = prev; return rest; });
+                      }
+                    }}
+                    onBlur={(e) => {
+                      if (e.target.value.trim().length > 0 && e.target.value.trim().length < 3) {
+                        setValidationErrors(prev => ({ ...prev, businessName: 'Business Name must be at least 3 characters.' }));
+                      }
                     }}
                     className={`w-full p-3 sm:p-4 rounded-[8px] border ${validationErrors.businessName ? 'border-red-500' : 'border-white/50 dark:border-white/10 focus:border-[#0066FF]'} outline-none glassmorphism min-h-[54px] text-[#1D1D1F] dark:text-[#F5F5F7]`}
                   />
@@ -1038,7 +1045,7 @@ export default function OnboardingWizard() {
               </button>
               <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Style & Team</h2>
               <div className="flex items-center justify-between mb-6">
-                <p className="text-gray-500 dark:text-[#A1A1A6] text-sm">
+                <p className="font-inter text-gray-500 dark:text-[#A1A1A6] text-sm">
                   Pick your storefront vibe. We'll automatically assign the best AI agents to manage it.
                 </p>
                 <button
@@ -1165,7 +1172,7 @@ export default function OnboardingWizard() {
 
                 <div className="pt-2 border-t border-white/50 dark:border-white/10">
                   <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2">Auto-Configured AI Departments</label>
-                  <p className="text-gray-500 dark:text-[#A1A1A6] text-xs mb-2">
+                  <p className="font-inter text-gray-500 dark:text-[#A1A1A6] text-xs mb-2">
                     Here are the AI departments we've configured for you.
                   </p>
                   <div className="flex flex-col sm:flex-row flex-wrap gap-2 mt-2">
@@ -1225,10 +1232,10 @@ export default function OnboardingWizard() {
                </div>
                <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-4">Building Your Business...</h2>
                <div className="space-y-2">
-                 <p className="text-gray-500 dark:text-[#A1A1A6] text-sm animate-pulse">Generating your product catalog</p>
-                 <p className="text-gray-500 dark:text-[#A1A1A6] text-sm animate-pulse" style={{ animationDelay: '0.5s' }}>Configuring payment settings</p>
-                 <p className="text-gray-500 dark:text-[#A1A1A6] text-sm animate-pulse" style={{ animationDelay: '1s' }}>Designing your storefront</p>
-                 <p className="text-gray-500 dark:text-[#A1A1A6] text-sm animate-pulse" style={{ animationDelay: '1.5s' }}>Onboarding your AI agents</p>
+                 <p className="font-inter text-gray-500 dark:text-[#A1A1A6] text-sm animate-pulse">Generating your product catalog</p>
+                 <p className="font-inter text-gray-500 dark:text-[#A1A1A6] text-sm animate-pulse" style={{ animationDelay: '0.5s' }}>Configuring payment settings</p>
+                 <p className="font-inter text-gray-500 dark:text-[#A1A1A6] text-sm animate-pulse" style={{ animationDelay: '1s' }}>Designing your storefront</p>
+                 <p className="font-inter text-gray-500 dark:text-[#A1A1A6] text-sm animate-pulse" style={{ animationDelay: '1.5s' }}>Onboarding your AI agents</p>
                </div>
              </div>
           )}
@@ -1241,13 +1248,13 @@ export default function OnboardingWizard() {
                 </svg>
               </div>
               <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">You're Live!</h2>
-              <p className="text-gray-500 dark:text-[#A1A1A6] text-sm mb-8 px-4">
+              <p className="font-inter text-gray-500 dark:text-[#A1A1A6] text-sm mb-8 px-4">
                 {startResult.message || "Your business has been successfully launched."}
               </p>
 
               <div className="w-full space-y-3 mt-auto">
                 <div className="p-3 glassmorphism rounded-[8px] flex flex-col items-center mb-6">
-                   <p className="text-xs text-gray-500 dark:text-[#A1A1A6] uppercase font-bold tracking-wider mb-2">Your Shareable Link</p>
+                   <p className="text-xs font-inter text-gray-500 dark:text-[#A1A1A6] uppercase font-bold tracking-wider mb-2">Your Shareable Link</p>
                    <div className="flex items-center gap-2">
                       <span className="text-[#0066FF] font-semibold">my-business.ohc.app</span>
                    </div>
