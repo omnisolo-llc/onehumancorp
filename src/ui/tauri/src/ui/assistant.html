@@ -179,7 +179,7 @@
                isValid = false;
            } else {
                nameError.style.display = 'none';
-               nameInput.style.borderColor = 'rgba(255, 255, 255, 0.5)';
+               nameInput.style.borderColor = ''; // reset to default
            }
 
            if (!tone) {
@@ -188,7 +188,7 @@
                isValid = false;
            } else {
                toneError.style.display = 'none';
-               toneSelect.style.borderColor = 'rgba(255, 255, 255, 0.5)';
+               toneSelect.style.borderColor = ''; // reset to default
            }
 
            if (isValid) {
@@ -229,7 +229,14 @@
       nameInput.addEventListener('input', () => {
           if (nameInput.value.trim().length >= 3) {
               nameError.style.display = 'none';
-              nameInput.style.borderColor = 'rgba(255, 255, 255, 0.5)';
+              nameInput.style.borderColor = ''; // reset to default
+          }
+      });
+
+      toneSelect.addEventListener('change', () => {
+          if (toneSelect.value) {
+              toneError.style.display = 'none';
+              toneSelect.style.borderColor = ''; // reset to default
           }
       });
 
