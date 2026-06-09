@@ -93,6 +93,7 @@ export default function Dashboard() {
   const [supply, setSupply] = useState<SupplyPayload>({ vendors: [], raw_materials: [], bom_items: [] });
   const [dashboardData, setDashboardData] = useState<any>({ pendingReviews: [] });
   const [loading, setLoading] = useState(true);
+  const [approvals, setApprovals] = useState<any[]>([]);
   const [ledgerBalance, setLedgerBalance] = useState<number | null>(null);
   const [ledgerCurrency, setLedgerCurrency] = useState<string>("USD");
   const [ledgerLoading, setLedgerLoading] = useState(true);
