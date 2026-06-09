@@ -1,3 +1,6 @@
+import { test } from './fixtures';
 import { currentAppSmoke } from './current_app_smoke';
 
-currentAppSmoke('dashboard_nav');
+test('dashboard_nav', async ({ page, request }) => {
+  await currentAppSmoke(page, request, 'dashboard_nav');
+});

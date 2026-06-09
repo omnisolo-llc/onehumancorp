@@ -1,7 +1,9 @@
 import { test, expect } from './fixtures';
 import { currentAppSmoke } from './current_app_smoke';
 
-currentAppSmoke('viral_referral');
+test('viral_referral', async ({ page, request }) => {
+  await currentAppSmoke(page, request, 'viral_referral');
+});
 
 test.describe('Viral Referral Loop', () => {
   test('should display referral page with steps and copy-link functionality', async ({ page }) => {

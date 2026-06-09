@@ -1,3 +1,6 @@
+import { test } from './fixtures';
 import { currentAppSmoke } from './current_app_smoke';
 
-currentAppSmoke('market_gap_analysis');
+test('market_gap_analysis', async ({ page, request }) => {
+  await currentAppSmoke(page, request, 'market_gap_analysis');
+});

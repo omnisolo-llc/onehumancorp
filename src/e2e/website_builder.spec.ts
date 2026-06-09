@@ -1,3 +1,6 @@
+import { test } from './fixtures';
 import { currentAppSmoke } from './current_app_smoke';
 
-currentAppSmoke('website_builder');
+test('website_builder', async ({ page, request }) => {
+  await currentAppSmoke(page, request, 'website_builder');
+});

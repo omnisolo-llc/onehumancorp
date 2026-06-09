@@ -1,3 +1,6 @@
+import { test } from './fixtures';
 import { currentAppSmoke } from './current_app_smoke';
 
-currentAppSmoke('seasonal_promo_paywall');
+test('seasonal_promo_paywall', async ({ page, request }) => {
+  await currentAppSmoke(page, request, 'seasonal_promo_paywall');
+});
