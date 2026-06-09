@@ -1,16 +1,20 @@
 use axum::{
     extract::{Extension, State, Path, Query},
-    response::IntoResponse,
+    response::{IntoResponse, sse::{Event, Sse}},
     http::StatusCode,
     routing::{get, post},
     Router,
     Json,
 };
+use std::convert::Infallible;
+use futures_util::stream::{self, Stream};
 use std::sync::Arc;
 use serde::{Deserialize, Serialize};
 use crate::orchestration::departments::orchestrator::DepartmentOrchestrator;
 use crate::orchestration::departments::types::ApprovalRequest;
 use ::server_common::Claims;
+use tokio_stream::wrappers::ReceiverStream;
+use tokio_stream::StreamExt;
 
 
 #[derive(Serialize)]
@@ -43,11 +47,57 @@ where
         .route("/", get(list_approvals))
         .route("/activity", get(list_activity_feed))
         .route("/ledger", get(list_ledger_entries))
+        .route("/stream", get(stream_approvals))
         .route("/simulate-smart-pricing", post(simulate_smart_pricing))
         .route("/simulate-quote-draft", post(simulate_quote_draft))
         .route("/simulate-stockout-reorder", post(simulate_stockout_reorder))
         .route("/{id}", post(decide_approval))
         .with_state(orchestrator)
+}
+
+async fn stream_approvals(
+    State(orchestrator): State<Arc<DepartmentOrchestrator>>,
+    Extension(claims): Extension<Claims>,
+) -> impl IntoResponse {
+    let tenant_id = match claims.organization_id.as_deref() {
+        Some(org_id) => org_id.to_string(),
+        None => return (StatusCode::UNAUTHORIZED, "Unauthorized".into_response()),
+    };
+
+    let mesh = orchestrator.mesh();
+    let topic = format!("tenant:{}:agent_approvals", tenant_id);
+    let (tx, rx) = tokio::sync::mpsc::channel(100);
+
+    let mut subscriber = mesh.subscribe(&topic).await.unwrap();
+
+    let tx_clone = tx.clone();
+    tokio::spawn(async move {
+        loop {
+            tokio::select! {
+                msg_opt = subscriber.next() => {
+                    if let Some(msg) = msg_opt {
+                        if let Ok(payload) = msg.get_payload() {
+                            let event = Event::default().data(payload);
+                            if tx_clone.send(Ok::<_, Infallible>(event)).await.is_err() {
+                                break;
+                            }
+                        }
+                    } else {
+                        break;
+                    }
+                }
+                _ = tx_clone.closed() => {
+                    tracing::debug!("Client disconnected, cleaning up SSE stream for tenant {}", tenant_id);
+                    let _ = subscriber.unsub().await;
+                    break;
+                }
+            }
+        }
+    });
+
+    Sse::new(ReceiverStream::new(rx))
+        .keep_alive(axum::response::sse::KeepAlive::new())
+        .into_response()
 }
 
 async fn simulate_stockout_reorder(
@@ -207,5 +257,32 @@ async fn list_ledger_entries(
     match orchestrator.get_ledger_entries(&tenant_id, limit as i64).await {
         Ok(entries) => (StatusCode::OK, Json(serde_json::json!({ "entries": entries }))).into_response(),
         Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e }))).into_response(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use axum::http::Request;
+    use axum::body::Body;
+    use tower::ServiceExt; // for `oneshot`
+    use crate::orchestration::departments::orchestrator::DepartmentOrchestrator;
+
+    #[tokio::test]
+    async fn test_stream_approvals_unauthorized() {
+        let pool = sqlx::PgPool::connect("postgres://postgres:postgres@localhost:5432/ohc").await.unwrap();
+        let mesh = Arc::new(crate::orchestration::mesh::TeammateMesh::new("redis://localhost").await.unwrap());
+        let orchestrator = Arc::new(DepartmentOrchestrator::new(pool, mesh));
+
+        let app = router(orchestrator);
+
+        let req = Request::builder()
+            .uri("/stream")
+            .method("GET")
+            .body(Body::empty())
+            .unwrap();
+
+        let response = app.oneshot(req).await.unwrap();
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
     }
 }
