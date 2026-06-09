@@ -121,13 +121,13 @@
     </style>
   </head>
   <body>
-    <div class="container" id="form-container">
+    <form class="container" id="form-container">
       <h1>What's the name of your business?</h1>
       <p>We'll use this to set up your workspace.</p>
       <input type="text" id="business-name" placeholder="e.g. Maya's Bakery" />
       <div id="name-error" class="error-msg">Business Name must be at least 3 characters.</div>
-      <button id="next-btn" data-tooltip="Click to save your business name and proceed.">Next</button>
-    </div>
+      <button type="submit" id="next-btn" data-tooltip="Click to save your business name and proceed.">Next</button>
+    </form>
     <script>
       const nextBtn = document.getElementById('next-btn');
       const nameInput = document.getElementById('business-name');
@@ -148,8 +148,10 @@
         }
       }
 
-      if (nextBtn) {
-        nextBtn.addEventListener('click', () => {
+      const form = document.getElementById('form-container');
+      if (form) {
+        form.addEventListener('submit', (e) => {
+           e.preventDefault();
            const name = nameInput.value.trim();
            if (name.length >= 3) {
                nameError.style.display = 'none';
@@ -181,12 +183,7 @@
         });
       }
 
-      nameInput.addEventListener('keydown', (e) => {
-          if (e.key === 'Enter') {
-              e.preventDefault();
-              nextBtn.click();
-          }
-      });
+
 
       nameInput.addEventListener('input', () => {
           if (nameInput.value.trim().length >= 3) {
@@ -195,12 +192,7 @@
           }
       });
 
-      nameInput.addEventListener('keydown', (e) => {
-          if (e.key === 'Enter') {
-              e.preventDefault();
-              nextBtn.click();
-          }
-      });
+
     </script>
     <script>
 document.addEventListener('DOMContentLoaded', () => {

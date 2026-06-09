@@ -124,7 +124,7 @@
     </style>
   </head>
   <body>
-    <div class="container" id="form-container">
+    <form class="container" id="form-container">
       <h1>Set up your Assistant</h1>
       <p>Give your AI assistant a name and tone.</p>
 
@@ -139,8 +139,8 @@
       </select>
       <div id="tone-error" class="error-msg">Please select a tone.</div>
 
-      <button id="next-btn">Next</button>
-    </div>
+      <button type="submit" id="next-btn">Next</button>
+    </form>
     <script>
       const nextBtn = document.getElementById('next-btn');
       const nameInput = document.getElementById('assistant-name');
@@ -167,8 +167,10 @@
         if (storedTone) toneSelect.value = storedTone;
       }
 
-      if (nextBtn) {
-        nextBtn.addEventListener('click', () => {
+      const form = document.getElementById('form-container');
+      if (form) {
+        form.addEventListener('submit', (e) => {
+           e.preventDefault();
            let isValid = true;
            const name = nameInput.value.trim();
            const tone = toneSelect.value;
@@ -219,12 +221,7 @@
         });
       }
 
-      nameInput.addEventListener('keydown', (e) => {
-          if (e.key === 'Enter') {
-              e.preventDefault();
-              nextBtn.click();
-          }
-      });
+
 
       nameInput.addEventListener('input', () => {
           if (nameInput.value.trim().length >= 3) {
@@ -233,26 +230,11 @@
           }
       });
 
-      nameInput.addEventListener('keydown', (e) => {
-          if (e.key === 'Enter') {
-              e.preventDefault();
-              toneSelect.focus();
-          }
-      });
 
-      toneSelect.addEventListener('keydown', (e) => {
-          if (e.key === 'Enter') {
-              e.preventDefault();
-              nextBtn.click();
-          }
-      });
 
-      toneSelect.addEventListener('keydown', (e) => {
-          if (e.key === 'Enter') {
-              e.preventDefault();
-              nextBtn.click();
-          }
-      });
+
+
+
 
       toneSelect.addEventListener('change', () => {
           if (toneSelect.value) {
@@ -261,12 +243,7 @@
           }
       });
 
-      toneSelect.addEventListener('keydown', (e) => {
-          if (e.key === 'Enter') {
-              e.preventDefault();
-              nextBtn.click();
-          }
-      });
+
     </script>
   </body>
 </html>
