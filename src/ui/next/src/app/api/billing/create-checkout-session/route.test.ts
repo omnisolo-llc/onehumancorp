@@ -34,7 +34,8 @@ describe("POST /api/billing/create-checkout-session", () => {
   });
 
   it("should handle backend errors", async () => {
-    (global.fetch as any).mockRejectedValue(new Error("Network Error"));
+    const error = new Error("Network Error");
+    (global.fetch as any).mockRejectedValue(error);
 
     const req = new Request("http://localhost/api/billing/create-checkout-session", {
       method: "POST",
