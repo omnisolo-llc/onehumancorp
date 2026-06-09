@@ -822,6 +822,23 @@ impl BookingEngineService for NativeBookingService {
             if let (Some(s), Some(e)) = (st, et) { Some((s, e)) } else { None }
         }).collect();
 
+        // Incorporate availability_ledger into blocked slots
+        let ledger_rows = sqlx::query(
+            "SELECT start_time, end_time FROM availability_ledger WHERE tenant_id = $1 AND product_id = $2 AND start_time::date = $3::date AND status IN ('BLOCKED', 'BOOKED')"
+        )
+        .bind(&tenant_id)
+        .bind(&product_id)
+        .bind(&date_str)
+        .fetch_all(&mut *tx)
+        .await
+        .map_err(|e| Status::internal(e.to_string()))?;
+
+        let mut blocked_slots: Vec<(DateTime<Utc>, DateTime<Utc>)> = ledger_rows.into_iter().filter_map(|row| {
+            let st: Option<DateTime<Utc>> = row.get("start_time");
+            let et: Option<DateTime<Utc>> = row.get("end_time");
+            if let (Some(s), Some(e)) = (st, et) { Some((s, e)) } else { None }
+        }).collect();
+
         // Fetch exceptions / business hours from availability_schedules (if any)
         let schedule_rows = sqlx::query(
             "SELECT business_hours, exceptions FROM availability_schedules WHERE tenant_id = $1"
@@ -831,7 +848,6 @@ impl BookingEngineService for NativeBookingService {
         .await
         .map_err(|e| Status::internal(e.to_string()))?;
 
-        let mut blocked_slots = Vec::new();
         for row in schedule_rows {
              let exceptions_json: serde_json::Value = row.try_get("exceptions").unwrap_or(serde_json::json!([]));
              if let Some(arr) = exceptions_json.as_array() {
@@ -994,6 +1010,26 @@ impl BookingEngineService for NativeBookingService {
             return Err(Status::internal(e.to_string()));
         }
 
+        // Add to availability_ledger
+        let ledger_id = uuid::Uuid::new_v4().to_string();
+        if let Err(e) = sqlx::query(
+            "INSERT INTO availability_ledger (id, tenant_id, product_id, start_time, end_time, status, booking_id) \
+             VALUES ($1, $2, $3, $4, $5, 'BOOKED', $6)"
+        )
+        .bind(&ledger_id)
+        .bind(&tenant_id)
+        .bind(&product_id)
+        .bind(start_time)
+        .bind(end_time)
+        .bind(&booking_id)
+        .execute(&mut *tx)
+        .await
+        {
+            let _ = tx.rollback().await;
+            let _ = soft_locks.release(&capacity_lock).await;
+            return Err(Status::internal(e.to_string()));
+        }
+
         if let Err(e) = tx.commit().await {
             let _ = soft_locks.release(&capacity_lock).await;
             return Err(Status::internal(e.to_string()));
@@ -1044,9 +1080,17 @@ impl BookingEngineService for NativeBookingService {
             let pos_lock_key = format!("ohc:lock:{}:inventory:{}", req.tenant_id, req.product_id);
             if let Some(client) = &self.redis_client {
                 if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
-                    let is_locked: bool = redis::cmd("EXISTS").arg(&pos_lock_key).query_async(&mut conn).await.unwrap_or(false);
-                    if is_locked {
-                        return Err(Status::resource_exhausted("Product inventory is currently being checked out in-store"));
+                    let acquired: bool = redis::cmd("SET")
+                        .arg(&pos_lock_key)
+                        .arg(&session_id)
+                        .arg("EX")
+                        .arg(15) // 15 seconds lock, same as terminal_api.rs
+                        .arg("NX")
+                        .query_async(&mut conn)
+                        .await
+                        .unwrap_or(false);
+                    if !acquired {
+                        return Err(Status::resource_exhausted("Item is currently being checked out by another customer"));
                     }
                 }
             }

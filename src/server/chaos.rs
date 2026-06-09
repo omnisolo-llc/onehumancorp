@@ -1041,7 +1041,7 @@ mod tests {
         let consecutive_failures = Arc::new(AtomicUsize::new(0));
         let cf_clone = consecutive_failures.clone();
 
-        let mut api_call = move || -> Result<(), String> {
+        let api_call = move || -> Result<(), String> {
             let current = cf_clone.fetch_add(1, Ordering::SeqCst) + 1;
             if current <= 3 {
                 Err("API Rate Limit Exceeded".to_string())

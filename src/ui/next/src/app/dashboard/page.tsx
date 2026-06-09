@@ -14,10 +14,13 @@ import { WithTooltip } from "../../components/TooltipRegistry";
 import GrowthReferralWidget from "../components/GrowthReferralWidget";
 import { SmartBlock } from "../builder/components";
 import { UnifiedAgentFeed } from "./UnifiedAgentFeed";
+import { ReviewFeedCard } from './ReviewFeedCard';
+
 import { NeighborhoodPulseCard } from "./NeighborhoodPulseCard";
 import { PromoterCard } from "./PromoterCard";
 import { ViralLoopPerformanceWidget } from "./ViralLoopPerformanceWidget";
 import { SuccessMilestoneAlert } from "./SuccessMilestoneAlert";
+import AffiliateMarketingWidget from "./AffiliateMarketingWidget";
 
 type DashboardMetrics = {
   active_customers: number;
@@ -84,7 +87,32 @@ export default function Dashboard() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [messages, setMessages] = useState<InboxMessage[]>([]);
   const [supply, setSupply] = useState<SupplyPayload>({ vendors: [], raw_materials: [], bom_items: [] });
+  const [dashboardData, setDashboardData] = useState<any>({ pendingReviews: [] });
   const [loading, setLoading] = useState(true);
+  const [ledgerBalance, setLedgerBalance] = useState<number | null>(null);
+  const [ledgerCurrency, setLedgerCurrency] = useState<string>("USD");
+  const [ledgerLoading, setLedgerLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchLedgerBalance() {
+      try {
+        const res = await fetch("/api/ledger/accounts");
+        if (res.ok) {
+          const data = await res.json();
+          const mainAccount = data.accounts?.find((a: any) => a.name === "main");
+          if (mainAccount) {
+            setLedgerBalance(mainAccount.balance);
+            setLedgerCurrency(mainAccount.currency);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch ledger balance", err);
+      } finally {
+        setLedgerLoading(false);
+      }
+    }
+    fetchLedgerBalance();
+  }, []);
   const [error, setError] = useState("");
   const [isOffline, setIsOffline] = useState(false);
   const [offlineQueueCount, setOfflineQueueCount] = useState(0);
@@ -317,6 +345,9 @@ export default function Dashboard() {
 
       <SuccessMilestoneAlert />
       <ViralLoopPerformanceWidget />
+      <div className="mb-6">
+        <AffiliateMarketingWidget />
+      </div>
 
       <div className="mb-6">
           <SmartBlock type="PoweredBy" props={{ tenantId: tenantId(), isPremium: false }} />
@@ -404,6 +435,59 @@ export default function Dashboard() {
         <div className="mb-6 flex gap-4"><Link href="/assistant" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">Open WorkBuddy Assistant</Link></div>
 
         <PromoterCard />
+
+        {dashboardData?.pendingReviews?.map((item: any, idx: number) => (
+             <ReviewFeedCard
+               key={idx}
+               review={{
+                 id: item.review?.id || "",
+                 rating: item.review?.rating || 5,
+                 content: item.review?.content || '',
+                 source: item.review?.source || 'sms',
+                 createdAtUnix: item.review?.createdAtUnix || Date.now() / 1000
+               }}
+               response={{
+                 id: item.response?.id || "",
+                 draftedContent: item.response?.draftedContent || "",
+                 status: item.response?.status || "draft"
+               }}
+               onApprove={async (id, content) => {
+                 try {
+                     // Optimistic update
+                     setDashboardData((prev: any) => ({
+                         ...prev,
+                         pendingReviews: prev.pendingReviews.filter((r: any) => r?.response?.id !== id)
+                     }));
+                     const res = await fetch('/api/reviews/action', {
+                         method: 'POST',
+                         headers: { 'Content-Type': 'application/json' },
+                         body: JSON.stringify({ action: 'approve', responseId: id, content })
+                     });
+                     if (!res.ok) {
+                         // Rollback if needed
+                         console.error("Failed to approve");
+                     }
+                 } catch (e) { console.error(e); }
+               }}
+               onDismiss={async (id) => {
+                 try {
+                     // Optimistic update
+                     setDashboardData((prev: any) => ({
+                         ...prev,
+                         pendingReviews: prev.pendingReviews.filter((r: any) => r?.response?.id !== id)
+                     }));
+                     const res = await fetch('/api/reviews/action', {
+                         method: 'POST',
+                         headers: { 'Content-Type': 'application/json' },
+                         body: JSON.stringify({ action: 'dismiss', responseId: id })
+                     });
+                     if (!res.ok) {
+                         console.error("Failed to dismiss");
+                     }
+                 } catch (e) { console.error(e); }
+               }}
+             />
+        ))}
 
         <UnifiedAgentFeed />
 
@@ -645,6 +729,15 @@ export default function Dashboard() {
               <p className="text-sm text-gray-600 dark:text-gray-400">Invite other business owners to OHC and earn premium credits.</p>
             </Link>
 
+            <Link href="/invoice-generator" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+              <div className="flex items-start justify-between mb-4">
+                <div className="w-12 h-12 rounded-full bg-cyan-50 dark:bg-cyan-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🧾</div>
+                <div className="text-cyan-600 dark:text-cyan-400 font-semibold text-sm bg-cyan-50 dark:bg-cyan-900/30 px-3 py-1 rounded-full">Billing</div>
+              </div>
+              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">AI Invoice Generator</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Generate professional, shareable invoices that bring new customers to OHC.</p>
+            </Link>
+
             <Link href="/milestones" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-purple-50 dark:bg-purple-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🏆</div>
@@ -789,6 +882,15 @@ export default function Dashboard() {
               </div>
               <h3 className="text-xl font-bold font-outfit text-gray-900 dark:text-white mb-2">Interactive Trial Extension</h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">Share your setup on X to instantly unlock 7 extra days of Pro.</p>
+            </Link>
+
+            <Link href="/field-ops/jobs" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+              <div className="flex items-start justify-between mb-4">
+                <div className="w-12 h-12 rounded-full bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">📍</div>
+                <div className="text-indigo-600 dark:text-indigo-400 font-semibold text-sm bg-indigo-50 dark:bg-indigo-900/30 px-3 py-1 rounded-full">Operations</div>
+              </div>
+              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Field Ops Route</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Offline-first mobile route management for field service workers.</p>
             </Link>
 
             <Link href="/settings" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">

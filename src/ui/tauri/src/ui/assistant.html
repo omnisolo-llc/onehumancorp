@@ -17,6 +17,7 @@
       .container {
         background: rgba(255, 255, 255, 0.65);
         backdrop-filter: blur(30px) saturate(210%);
+        -webkit-backdrop-filter: blur(30px) saturate(210%);
         padding: 40px;
         border-radius: 16px;
         box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
@@ -97,6 +98,7 @@
         .container {
           background: rgba(22, 22, 26, 0.7);
           backdrop-filter: blur(30px) saturate(210%);
+          -webkit-backdrop-filter: blur(30px) saturate(210%);
           border: 1px solid rgba(255, 255, 255, 0.1);
         }
         h1 {
@@ -147,30 +149,68 @@
       const toneError = document.getElementById('tone-error');
       const container = document.getElementById('form-container');
 
+      // Load existing state
+      if (window.__TAURI__ && window.__TAURI__.core) {
+        window.__TAURI__.core.invoke("get_onboarding_state").then((state) => {
+          if (state && state.assistantName) {
+            nameInput.value = state.assistantName;
+          }
+          if (state && state.assistantTone) {
+            toneSelect.value = state.assistantTone;
+          }
+        }).catch(console.error);
+      } else {
+        const storedName = localStorage.getItem('assistantName');
+        if (storedName) nameInput.value = storedName;
+
+        const storedTone = localStorage.getItem('assistantTone');
+        if (storedTone) toneSelect.value = storedTone;
+      }
+
       if (nextBtn) {
         nextBtn.addEventListener('click', () => {
            let isValid = true;
            const name = nameInput.value.trim();
            const tone = toneSelect.value;
 
-           if (!name) {
+           if (!name || name.length < 3) {
                nameError.style.display = 'block';
+               nameInput.style.borderColor = '#FF3B30';
                isValid = false;
            } else {
                nameError.style.display = 'none';
+               nameInput.style.borderColor = 'rgba(255, 255, 255, 0.5)';
            }
 
            if (!tone) {
                toneError.style.display = 'block';
+               toneSelect.style.borderColor = '#FF3B30';
                isValid = false;
            } else {
                toneError.style.display = 'none';
+               toneSelect.style.borderColor = 'rgba(255, 255, 255, 0.5)';
            }
 
            if (isValid) {
-               localStorage.setItem('assistantName', name);
-               localStorage.setItem('assistantTone', tone);
-               window.location.href = "success.html";
+               if (window.__TAURI__ && window.__TAURI__.core) {
+                 nextBtn.disabled = true;
+                 nextBtn.innerText = "Saving...";
+                 window.__TAURI__.core.invoke("get_onboarding_state").then((state) => {
+                   state.assistantName = name;
+                   state.assistantTone = tone;
+                   return window.__TAURI__.core.invoke("save_onboarding_state", { state });
+                 }).then(() => {
+                   window.location.href = "success.html";
+                 }).catch((err) => {
+                   console.error(err);
+                   nextBtn.disabled = false;
+                   nextBtn.innerText = "Next";
+                 });
+               } else {
+                 localStorage.setItem('assistantName', name);
+                 localStorage.setItem('assistantTone', tone);
+                 window.location.href = "success.html";
+               }
            } else {
                container.classList.remove('animate-shake');
                void container.offsetWidth; // trigger reflow
@@ -179,15 +219,45 @@
         });
       }
 
+      nameInput.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+              e.preventDefault();
+              nextBtn.click();
+          }
+      });
+
       nameInput.addEventListener('input', () => {
-          if (nameInput.value.trim()) {
+          if (nameInput.value.trim().length >= 3) {
               nameError.style.display = 'none';
+              nameInput.style.borderColor = 'rgba(255, 255, 255, 0.5)';
+          }
+      });
+
+      nameInput.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+              e.preventDefault();
+              toneSelect.focus();
+          }
+      });
+
+      toneSelect.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+              e.preventDefault();
+              nextBtn.click();
           }
       });
 
       toneSelect.addEventListener('change', () => {
           if (toneSelect.value) {
               toneError.style.display = 'none';
+              toneSelect.style.borderColor = 'rgba(255, 255, 255, 0.5)';
+          }
+      });
+
+      toneSelect.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+              e.preventDefault();
+              nextBtn.click();
           }
       });
     </script>

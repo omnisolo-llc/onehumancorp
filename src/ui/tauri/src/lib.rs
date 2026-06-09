@@ -46,6 +46,127 @@ fn load_ai_provider() -> Result<AiProviderView, String> {
     Ok(to_provider_view(read_ai_provider_config()?))
 }
 
+#[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct OnboardingState {
+    business_name: Option<String>,
+    assistant_name: Option<String>,
+    assistant_tone: Option<String>,
+}
+
+fn onboarding_state_path() -> std::path::PathBuf {
+    std::env::var("OHC_ONBOARDING_STATE_PATH")
+        .ok()
+        .filter(|value| !value.trim().is_empty())
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(|| std::path::PathBuf::from(".ohc/onboarding.json"))
+}
+
+#[tauri::command]
+async fn get_onboarding_state(_app_handle: tauri::AppHandle) -> Result<OnboardingState, String> {
+    // Determine tenant/user dynamically from args or state (here we default or check env for test)
+    let tenant_id = std::env::var("OHC_DEFAULT_TENANT_ID").unwrap_or_else(|_| "default".to_string());
+    let user_id = std::env::var("OHC_DEFAULT_USER_ID").unwrap_or_else(|_| "default".to_string());
+
+    // Attempt to fetch from backend
+    let backend_url = std::env::var("BACKEND_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string());
+    let url = format!("{}/api/onboarding/state", backend_url);
+
+    let request = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(3))
+        .build()
+        .map_err(|err| err.to_string())?
+        .get(&url)
+        .header("X-Tenant-ID", tenant_id)
+        .header("X-User-ID", user_id);
+
+    if let Ok(response) = request.send().await {
+        if response.status().is_success() {
+            if let Ok(state) = response.json::<OnboardingState>().await {
+                // Return successfully from backend
+                return Ok(state);
+            }
+        }
+    }
+
+    // Fallback to local file
+    let path = onboarding_state_path();
+    if !path.exists() {
+        return Ok(OnboardingState {
+            business_name: None,
+            assistant_name: None,
+            assistant_tone: None,
+        });
+    }
+
+    let content = std::fs::read_to_string(path).map_err(|err| err.to_string())?;
+    let state = serde_json::from_str::<OnboardingState>(&content).map_err(|err| err.to_string())?;
+    Ok(state)
+}
+
+#[tauri::command]
+async fn save_onboarding_state(state: OnboardingState, _app_handle: tauri::AppHandle) -> Result<(), String> {
+    let tenant_id = std::env::var("OHC_DEFAULT_TENANT_ID").unwrap_or_else(|_| "default".to_string());
+    let user_id = std::env::var("OHC_DEFAULT_USER_ID").unwrap_or_else(|_| "default".to_string());
+
+    // Attempt to save to backend
+    let backend_url = std::env::var("BACKEND_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string());
+    let url = format!("{}/api/onboarding/state", backend_url);
+
+    let request = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(3))
+        .build()
+        .map_err(|err| err.to_string())?
+        .post(&url)
+        .header("X-Tenant-ID", tenant_id)
+        .header("X-User-ID", user_id)
+        .header("Content-Type", "application/json")
+        .json(&state);
+
+    // Fire and forget, or wait for success
+    let _ = request.send().await;
+
+    // Fallback/mirror to local file
+    let path = onboarding_state_path();
+    if let Some(parent) = path.parent() {
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::DirBuilderExt;
+            std::fs::DirBuilder::new()
+                .recursive(true)
+                .mode(0o700)
+                .create(parent)
+                .unwrap_or_default();
+        }
+        #[cfg(not(unix))]
+        {
+            std::fs::create_dir_all(parent).unwrap_or_default();
+        }
+    }
+
+    if let Ok(json) = serde_json::to_string_pretty(&state) {
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::OpenOptionsExt;
+            use std::io::Write;
+            if let Ok(mut file) = std::fs::OpenOptions::new()
+                .write(true)
+                .create(true)
+                .truncate(true)
+                .mode(0o600)
+                .open(path) {
+                let _ = file.write_all(format!("{json}\n").as_bytes());
+            }
+        }
+        #[cfg(not(unix))]
+        {
+            let _ = std::fs::write(path, format!("{json}\n"));
+        }
+    }
+
+    Ok(())
+}
+
 #[tauri::command]
 fn save_ai_provider(config: AiProviderConfig) -> Result<AiProviderView, String> {
     let mut current = read_ai_provider_config()?;
@@ -276,6 +397,8 @@ pub fn run() {
             load_ai_provider,
             save_ai_provider,
             test_ai_provider,
+            get_onboarding_state,
+            save_onboarding_state,
         ])
         .setup(|app| {
             let window = app.get_webview_window("main").unwrap();

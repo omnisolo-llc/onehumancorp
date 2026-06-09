@@ -1,6 +1,5 @@
 pub mod oauth;
 pub mod offline_sync;
-pub mod field_service;
 pub mod mesh_handler;
 pub mod autodream;
 pub mod terminal_api;
