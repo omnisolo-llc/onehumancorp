@@ -106,11 +106,11 @@ export default function CostDashboardPage() {
 
       <main id="cost-dashboard-screen" className="p-4 md:p-8 flex-1 max-w-4xl mx-auto w-full flex flex-col gap-6">
 
-        <section className="app-panel bg-white/60 backdrop-blur-2xl saturate-200 border border-white/40 shadow-lg rounded-[24px] hover:shadow-xl transition-shadow duration-300">
-            <div className="app-panel-header px-6 py-4 border-b border-white/40">
-                <h2 className="app-panel-title text-xl font-bold font-outfit text-gray-900">Advisory Summary</h2>
+        <section className="app-panel">
+            <div className="app-panel-header">
+                <h2 className="app-panel-title">Advisory Summary</h2>
             </div>
-            <div className="app-panel-body p-6">
+            <div className="app-panel-body">
                 <p className="text-gray-700 font-medium leading-relaxed">
                   Cost and tier usage are based on connected backend billing, storage, network, and agent department usage signals.
                 </p>
@@ -150,13 +150,13 @@ export default function CostDashboardPage() {
         </section>
 
         {/* Overview Section */}
-        <section className="app-panel bg-white/60 backdrop-blur-2xl saturate-200 border border-white/40 shadow-lg rounded-[24px] hover:shadow-xl transition-shadow duration-300">
-            <div className="app-panel-header flex justify-between items-center px-6 py-4 border-b border-white/40">
-               <h2 className="app-panel-title text-xl font-bold font-outfit text-gray-900">Cost Transparency</h2>
+        <section className="app-panel">
+            <div className="app-panel-header">
+               <h2 className="app-panel-title">Cost Transparency</h2>
                <span id="cost-dashboard-period" className="text-sm text-gray-500 font-medium">Period: {data?.period_start} to {data?.period_end}</span>
             </div>
 
-            <div className="app-panel-body p-6">
+            <div className="app-panel-body">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div className="app-card hover:-translate-y-1 hover:shadow-md transition-all duration-300 group">
                         <h2 className="text-sm font-medium text-gray-500 mb-1">Total Costs</h2>
@@ -176,12 +176,12 @@ export default function CostDashboardPage() {
         </section>
 
         {/* Breakdown Section */}
-        <section className="app-panel bg-white/60 backdrop-blur-2xl saturate-200 border border-white/40 shadow-lg rounded-[24px] hover:shadow-xl transition-shadow duration-300">
-            <div className="app-panel-header px-6 py-4 border-b border-white/40">
-                <h2 className="app-panel-title text-xl font-bold font-outfit text-gray-900">Cost Breakdown</h2>
+        <section className="app-panel">
+            <div className="app-panel-header">
+                <h2 className="app-panel-title">Cost Breakdown</h2>
             </div>
 
-            <div className="app-panel-body p-6 space-y-4">
+            <div className="app-panel-body space-y-4">
                 <div className="flex flex-col app-card hover:-translate-y-1 hover:shadow-md transition-all duration-300">
                     <h3 className="font-medium text-gray-900 mb-2">7-Day Trend</h3>
                     {data?.trend && data.trend.length > 0 ? (

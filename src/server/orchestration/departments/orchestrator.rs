@@ -524,7 +524,7 @@ impl DepartmentOrchestrator {
                 tx.commit().await.map_err(|e| e.to_string())?;
                 Ok(entries)
             },
-            crate::db::DbStore::Sqlite(_pool) => {
+            crate::db::DbStore::Sqlite(pool) => {
                 // Return empty for sqlite in tests to avoid rewrite
                 Ok(vec![])
             }
@@ -833,10 +833,10 @@ impl DepartmentOrchestrator {
                 if let Some(payload) = &original_payload {
                     if payload.get("context").and_then(|c| c.get("smart_pricing")).and_then(|v| v.as_bool()).unwrap_or(false) {
                         if let Some(product_id) = payload.get("context").and_then(|c| c.get("product_id")).and_then(|v| v.as_str()) {
-                            let _discount_amount = payload.get("context").and_then(|c| c.get("discount_amount")).and_then(|v| v.as_f64()).unwrap_or(0.0);
+                            let discount_amount = payload.get("context").and_then(|c| c.get("discount_amount")).and_then(|v| v.as_f64()).unwrap_or(0.0);
                             let now = Utc::now();
-                            let _expires_at = now + chrono::Duration::days(2);
-                            let _id = uuid::Uuid::new_v4().to_string();
+                            let expires_at = now + chrono::Duration::days(2);
+                            let id = uuid::Uuid::new_v4().to_string();
 
                             let new_price = payload.get("context").and_then(|c| c.get("new_price")).and_then(|v| v.as_f64()).unwrap_or(0.0);
                             let new_price_cents = (new_price * 100.0) as i64;

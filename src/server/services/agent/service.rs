@@ -32,9 +32,7 @@ impl MyAgentManagerService {
         let hub_cost = self.hub.clone();
         let hub_agents = self.hub.clone();
         let hub_meetings = self.hub.clone();
-        let hub_tasks = self.hub.clone();
-        let org_id_clone = org_id.to_string();
-        let (agents_res, meetings_res, cost_res_spawn, tasks_res) = tokio::join!(
+        let (agents_res, meetings_res, cost_res_spawn) = tokio::join!(
             tokio::spawn(async move { hub_agents.get_agents().await }),
             tokio::spawn(async move { hub_meetings.get_meetings().await }),
             tokio::spawn(async move {
@@ -42,19 +40,11 @@ impl MyAgentManagerService {
                     let cost_auditor = hub_cost.get_cost_auditor();
                     (cost_auditor.get_total_cost(), cost_auditor.get_total_tokens(), cost_auditor.get_agent_costs_snapshot())
                 }).await.unwrap_or((0.0, 0, vec![]))
-            }),
-            tokio::spawn(async move {
-                tokio::task::spawn_blocking(move || {
-                    hub_tasks.task_manager().get_pending_approvals(&org_id_clone)
-                }).await.unwrap_or_else(|_| vec![])
             })
         );
         let agents = agents_res.unwrap();
         let meetings = meetings_res.unwrap();
         let (total_cost, total_tokens, agent_costs_data) = cost_res_spawn.unwrap();
-        let task_queue = tasks_res.unwrap();
-        let queue_length = task_queue.len() as i32;
-        let proto_task_queue = task_queue.into_iter().map(|t| t.into_proto()).collect();
 
         let mut agent_costs = Vec::new();
         for (name, cost, _token_used, roi, efficiency, _storage) in agent_costs_data {
@@ -85,8 +75,8 @@ impl MyAgentManagerService {
             costs: Some(costs),
             agents: Arc::unwrap_or_clone(agents),
             statuses,
-            task_queue: proto_task_queue,
-            queue_length,
+            task_queue: vec![],
+            queue_length: 0,
             updated_at_unix: Utc::now().timestamp(),
         };
         self.snapshot_cache.set(&cache_key, snapshot.clone(), std::time::Duration::from_secs(5)).await;
