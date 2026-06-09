@@ -741,7 +741,7 @@ mod chaos_tests {
     async fn test_cloud_degradation_fallback() {
         let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Cloud");
         // We use an empty db pool but with CloudStateManager to see fail-safes on lock acquisition timeout
-        let dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).max_connections(1).acquire_timeout(std::time::Duration::from_millis(50))
+        let dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().max_connections(1).acquire_timeout(std::time::Duration::from_millis(50))
             .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
             .unwrap();
 
