@@ -10,18 +10,33 @@ export default function HelpCenterPage() {
   const [selectedVideo, setSelectedVideo] = useState<{id: number, title: string, duration: string, video_url: string} | null>(null);
 
   useEffect(() => {
+    const abortController = new AbortController();
     const url = searchQuery.trim() ? `/api/help/search?q=${encodeURIComponent(searchQuery.trim())}` : '/api/help';
-    fetch(url)
+
+    fetch(url, { signal: abortController.signal })
       .then(res => res.json())
       .then(data => setArticles(data))
-      .catch(console.error);
+      .catch(e => {
+        if (e.name !== 'AbortError') {
+          console.error(e);
+        }
+      });
+
+    return () => abortController.abort();
   }, [searchQuery]);
 
   useEffect(() => {
-    fetch('/api/videos')
+    const abortController = new AbortController();
+    fetch('/api/videos', { signal: abortController.signal })
       .then(res => res.json())
       .then(data => setVideos(data))
-      .catch(console.error);
+      .catch(e => {
+        if (e.name !== 'AbortError') {
+          console.error(e);
+        }
+      });
+
+    return () => abortController.abort();
   }, []);
 
   const filteredArticles = articles;
@@ -41,12 +56,12 @@ export default function HelpCenterPage() {
             placeholder="Search for help articles and videos..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full p-4 rounded-2xl border border-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-[0_8px_32px_rgba(0,0,0,0.05)] text-gray-900 backdrop-blur-[20px] saturate-200 bg-white/70 hover:bg-white/80 min-h-[44px] text-base placeholder:text-gray-500 transition-all"
+            className="w-full p-4 rounded-[8px] border border-[rgba(255,255,255,0.4)] focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-[0_8px_32px_rgba(0,0,0,0.05)] text-gray-900 backdrop-blur-[30px] saturate-[210%] bg-[rgba(255,255,255,0.65)] hover:bg-white/80 min-h-[44px] text-base placeholder:text-gray-500 transition-all"
           />
         </div>
 
         {filteredArticles.length === 0 && filteredVideos.length === 0 ? (
-          <div className="flex flex-col items-center justify-center bg-white/40 backdrop-blur-[20px] saturate-200 py-16 px-4 rounded-2xl border border-white/30 shadow-[0_4px_16px_rgba(0,0,0,0.02)]">
+          <div className="flex flex-col items-center justify-center bg-[rgba(255,255,255,0.65)] backdrop-blur-[30px] saturate-[210%] py-16 px-4 rounded-[16px] border border-[rgba(255,255,255,0.4)] shadow-[0_4px_16px_rgba(0,0,0,0.02)]">
             <svg className="w-16 h-16 text-gray-400 mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
@@ -70,7 +85,7 @@ export default function HelpCenterPage() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                       {filteredArticles.filter(a => (a.category || "General") === category).map((article, idx) => (
                         <Link key={idx} href={article.link} className="block group">
-                          <div className="app-card backdrop-blur-[20px] saturate-200 p-6 rounded-2xl shadow-[0_4px_16px_rgba(0,0,0,0.04)] border border-white/50 group-hover:border-blue-300 group-hover:shadow-[0_0_15px_rgba(59,130,246,0.5)] group-hover:-translate-y-1 hover:bg-white/80 transition-all duration-300 cursor-pointer h-full flex flex-col min-h-[140px]">
+                          <div className="app-card bg-[rgba(255,255,255,0.65)] backdrop-blur-[30px] saturate-[210%] p-6 rounded-[16px] shadow-[0_4px_16px_rgba(0,0,0,0.04)] border border-[rgba(255,255,255,0.4)] group-hover:border-blue-300 group-hover:shadow-[0_0_15px_rgba(59,130,246,0.5)] group-hover:-translate-y-1 hover:bg-white/80 transition-all duration-300 cursor-pointer h-full flex flex-col min-h-[140px]">
                             <h3 className="text-xl font-bold font-outfit text-blue-600 mb-3 group-hover:text-blue-700">{article.title}</h3>
                             <p className="text-gray-600 leading-relaxed flex-grow">{article.desc}</p>
                           </div>

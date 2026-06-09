@@ -92,6 +92,7 @@ export default function Dashboard() {
   const [messages, setMessages] = useState<InboxMessage[]>([]);
   const [supply, setSupply] = useState<SupplyPayload>({ vendors: [], raw_materials: [], bom_items: [] });
   const [dashboardData, setDashboardData] = useState<any>({ pendingReviews: [] });
+  const [approvals, setApprovals] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [ledgerBalance, setLedgerBalance] = useState<number | null>(null);
   const [ledgerCurrency, setLedgerCurrency] = useState<string>("USD");
@@ -243,7 +244,13 @@ export default function Dashboard() {
     window.addEventListener("offline", updateOfflineStatus);
     window.addEventListener("storage", updateOfflineStatus);
 
-
+    return () => {
+      window.removeEventListener("online", updateOfflineStatus);
+      window.removeEventListener("online", handleSync);
+      window.removeEventListener("offline", updateOfflineStatus);
+      window.removeEventListener("storage", updateOfflineStatus);
+    };
+  }, []);
 
   async function handleApproveDraft(approvalId: string) {
     try {
@@ -260,14 +267,6 @@ export default function Dashboard() {
       console.error(e);
     }
   }
-
-  return () => {
-      window.removeEventListener("online", updateOfflineStatus);
-      window.removeEventListener("online", handleSync);
-      window.removeEventListener("offline", updateOfflineStatus);
-      window.removeEventListener("storage", updateOfflineStatus);
-    };
-  }, []);
 
   const lowStockCount = useMemo(
     () => supply.raw_materials.filter((item) => item.current_quantity <= item.reorder_threshold).length,

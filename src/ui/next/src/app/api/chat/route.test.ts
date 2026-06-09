@@ -35,6 +35,10 @@ describe('chat API', () => {
   });
 
   it('returns successful reply for valid message', async () => {
+    // If backend is running, it returns a reply. Otherwise, it falls back to the catch block.
+    // For hermetic test, we should mock fetch to simulate backend failure.
+    const originalFetch = global.fetch;
+    global.fetch = vi.fn().mockRejectedValue(new Error("Network Error"));
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     // In vitest environment without backend, it falls through to the catch block
@@ -49,5 +53,6 @@ describe('chat API', () => {
     expect(data.reply).toContain("I'm having trouble connecting to my brain right now");
 
     expect(consoleSpy).toHaveBeenCalled();
+    global.fetch = originalFetch;
   });
 });
