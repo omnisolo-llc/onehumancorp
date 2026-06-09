@@ -591,3 +591,11 @@ body {
     background: rgba(255, 255, 255, 0.1);
   }
 }
+
+.border-\[\#FF3B30\] {
+  border-color: #FF3B30;
+}
+
+.text-\[\#FF3B30\] {
+  color: #FF3B30;
+}
