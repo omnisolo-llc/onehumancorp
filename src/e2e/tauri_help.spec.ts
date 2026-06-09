@@ -37,7 +37,7 @@ test.describe('Help Center and Contextual Help (Tauri UI)', () => {
     // Check if HelpChat component is accessible
     const chatButton = page.locator('button[aria-label="Open help chat"]');
     await expect(chatButton).toBeVisible();
-    await chatButton.click({ force: true });
+    await chatButton.click();
     await expect(page.locator('text=Ask AI Help').first()).toBeVisible();
 
     const input = page.locator('input[placeholder="Ask me anything..."]');
@@ -48,7 +48,7 @@ test.describe('Help Center and Contextual Help (Tauri UI)', () => {
     await expect(page.locator('text=I am your AI Help Agent!').first()).toBeVisible();
     await expect(page.locator('text=Read the full article').first()).toBeVisible();
 
-    await page.locator('button[aria-label="Close help chat"]').click({ force: true });
+    await page.locator('button[aria-label="Close help chat"]').click();
 
     // Go to /help
     await page.goto('/ui/help.html');
