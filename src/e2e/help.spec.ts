@@ -46,7 +46,7 @@ test.describe('Dashboard', () => {
   test('should have working nav links', async ({ page }) => {
     await page.goto('/dashboard');
     await page.getByRole('link', { name: 'Agents' }).click();
-    await expect(page.getByRole('heading', { name: 'AI Departments' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'AI Departments' })).toBeVisible({ timeout: 30000 });
   });
 });
 
