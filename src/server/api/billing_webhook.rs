@@ -397,13 +397,20 @@ pub async fn stripe_webhook_handler(
                                     .map(|_| ())
                             }
                             crate::db::DbStore::Postgres => {
-                                sqlx::query("UPDATE products SET inventory_count = GREATEST(0, inventory_count - $1) WHERE id = $2 AND tenant_id = $3")
+                                let res = sqlx::query("UPDATE products SET inventory_count = GREATEST(0, inventory_count - $1) WHERE id = $2 AND tenant_id = $3")
                                     .bind(quantity)
                                     .bind(product_id)
                                     .bind(tenant_id)
                                     .execute(&webhook_state.db.pool)
                                     .await
-                                    .map(|_| ())
+                                    .map(|_| ());
+
+                                let _ = sqlx::query("NOTIFY edge_cache_invalidation, $1")
+                                    .bind(format!("tenant-id:{}", tenant_id))
+                                    .execute(&webhook_state.db.pool)
+                                    .await;
+
+                                res
                             }
                         };
 

@@ -375,6 +375,10 @@ pub async fn commit_inventory_handler(
                 let _ = sqlx::query("UPDATE products SET inventory_count = $1 WHERE id = $2 AND tenant_id = $3")
                     .bind(new_stock).bind(&req_data.product_id).bind(&tenant_id).execute(&mut *tx).await;
 
+                let _ = sqlx::query("NOTIFY edge_cache_invalidation, $1")
+                    .bind(format!("tenant-id:{}", tenant_id))
+                    .execute(&mut *tx).await;
+
                 if new_stock <= 5 {
                     let job_id = uuid::Uuid::new_v4().to_string();
                     let job_payload = serde_json::json!({

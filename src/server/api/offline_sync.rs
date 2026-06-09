@@ -102,6 +102,11 @@ pub async fn offline_sync_handler(
                         .execute(&mut *db_tx)
                         .await;
 
+                    let _ = sqlx::query("NOTIFY edge_cache_invalidation, $1")
+                        .bind(format!("tenant-id:{}", tenant_id_clone))
+                        .execute(&mut *db_tx)
+                        .await;
+
                     if is_conflict {
                         let ai_task_id = uuid::Uuid::new_v4().to_string();
                         let ai_payload = serde_json::json!({
