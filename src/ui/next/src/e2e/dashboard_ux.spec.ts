@@ -1,4 +1,4 @@
-import { test, expect } from './fixtures';
+import { test, expect } from '@playwright/test';
 import { currentAppSmoke } from './current_app_smoke';
 
 currentAppSmoke('dashboard_ux');
