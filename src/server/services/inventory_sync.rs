@@ -5,13 +5,13 @@ use tonic::{Request, Response, Status};
 use uuid::Uuid;
 
 pub struct MyInventorySyncService {
-    db: Arc<crate::db::DB>,
+    _db: Arc<crate::db::DB>,
     redis_client: Option<redis::Client>,
 }
 
 impl MyInventorySyncService {
     pub fn new(db: Arc<crate::db::DB>, redis_client: Option<redis::Client>) -> Self {
-        Self { db, redis_client }
+        Self { _db: db, redis_client }
     }
 }
 
@@ -183,6 +183,21 @@ impl InventorySyncService for MyInventorySyncService {
                     .bind(job_id)
                     .bind(&tenant_id)
                     .bind(&job_payload)
+                    .execute(&mut *tx)
+                    .await
+                    .map_err(|e| Status::internal(e.to_string()))?;
+
+                let action_request_id = Uuid::new_v4().to_string();
+                let action_payload = serde_json::json!({
+                    "product_id": req.product_id,
+                    "remaining_stock": new_stock,
+                    "suggested_action": "Restock Item"
+                }).to_string();
+                sqlx::query("INSERT INTO agent_action_requests (id, tenant_id, action_type, status, confidence_score, product_id, payload, created_at, updated_at) VALUES ($1, $2, 'Reorder', 'Pending', 0.95, $3, $4::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
+                    .bind(&action_request_id)
+                    .bind(&tenant_id)
+                    .bind(&req.product_id)
+                    .bind(&action_payload)
                     .execute(&mut *tx)
                     .await
                     .map_err(|e| Status::internal(e.to_string()))?;
