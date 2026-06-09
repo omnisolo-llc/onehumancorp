@@ -11,6 +11,14 @@ pub trait Reducer<S>: Send + Sync {
     fn reduce(&self, state: &mut S, update: S);
 }
 
+/// Observes state transitions and events during the execution of a StateGraph.
+pub trait GraphObserver<S>: Send + Sync {
+    fn on_node_start(&self, node_name: &str, state: &S);
+    fn on_node_end(&self, node_name: &str, state: &S, update: &S);
+    fn on_graph_start(&self, entry_point: &str, state: &S);
+    fn on_graph_end(&self, state: &S);
+}
+
 pub type BoxFuture<'a, T> = Pin<Box<dyn Future<Output = T> + Send + 'a>>;
 pub type NodeFn<S> = Arc<dyn Fn(S) -> BoxFuture<'static, Result<S, String>> + Send + Sync>;
 pub type ConditionFn<S> = Arc<dyn Fn(&S) -> String + Send + Sync>;
@@ -21,6 +29,7 @@ pub struct StateGraph<S> {
     conditional_edges: HashMap<String, ConditionFn<S>>,
     entry_point: Option<String>,
     reducer: Arc<dyn Reducer<S>>,
+    observer: Option<Arc<dyn GraphObserver<S>>>,
 }
 
 pub const END: &str = "__END__";
@@ -33,6 +42,7 @@ impl<S: Clone + Send + Sync + 'static> StateGraph<S> {
             conditional_edges: HashMap::new(),
             entry_point: None,
             reducer,
+            observer: None,
         }
     }
 
@@ -62,6 +72,11 @@ impl<S: Clone + Send + Sync + 'static> StateGraph<S> {
         self.entry_point = Some(node.to_string());
     }
 
+    pub fn set_observer(&mut self, observer: Arc<dyn GraphObserver<S>>) {
+        self.observer = Some(observer);
+    }
+
+
     pub async fn run(&self, initial_state: S) -> Result<S, String> {
         let mut current_state = initial_state;
         let mut current_node = self.entry_point.clone().ok_or("Entry point not set")?;
@@ -69,15 +84,28 @@ impl<S: Clone + Send + Sync + 'static> StateGraph<S> {
         let mut iterations = 0;
         let max_iterations = 100;
 
+        if let Some(obs) = &self.observer {
+            obs.on_graph_start(&current_node, &current_state);
+        }
+
         while current_node != END {
             if iterations >= max_iterations {
                 return Err("Max iterations reached".to_string());
             }
             iterations += 1;
 
+            if let Some(obs) = &self.observer {
+                obs.on_node_start(&current_node, &current_state);
+            }
+
             let node_fn = self.nodes.get(&current_node).ok_or_else(|| format!("Node not found: {}", current_node))?;
 
             let update = node_fn(current_state.clone()).await?;
+
+            if let Some(obs) = &self.observer {
+                obs.on_node_end(&current_node, &current_state, &update);
+            }
+
             self.reducer.reduce(&mut current_state, update);
 
             if let Some(cond_fn) = self.conditional_edges.get(&current_node) {
@@ -87,6 +115,10 @@ impl<S: Clone + Send + Sync + 'static> StateGraph<S> {
             } else {
                 current_node = END.to_string();
             }
+        }
+
+        if let Some(obs) = &self.observer {
+            obs.on_graph_end(&current_state);
         }
 
         Ok(current_state)
@@ -188,5 +220,93 @@ mod tests {
         assert_eq!(final_state.messages[1], "assistant: (tool_call: search weather)");
         assert_eq!(final_state.messages[2], "tool: Sunny");
         assert_eq!(final_state.messages[3], "assistant: The weather is sunny.");
+    }
+
+    #[derive(Default, Clone)]
+    struct MockObserver {
+        events: Arc<tokio::sync::Mutex<Vec<String>>>,
+    }
+
+    impl GraphObserver<TypedAgentState> for MockObserver {
+        fn on_node_start(&self, node_name: &str, _state: &TypedAgentState) {
+            let mut ev = self.events.try_lock().unwrap();
+            ev.push(format!("start_{}", node_name));
+        }
+
+        fn on_node_end(&self, node_name: &str, _state: &TypedAgentState, _update: &TypedAgentState) {
+            let mut ev = self.events.try_lock().unwrap();
+            ev.push(format!("end_{}", node_name));
+        }
+
+        fn on_graph_start(&self, entry_point: &str, _state: &TypedAgentState) {
+            let mut ev = self.events.try_lock().unwrap();
+            ev.push(format!("graph_start_{}", entry_point));
+        }
+
+        fn on_graph_end(&self, _state: &TypedAgentState) {
+            let mut ev = self.events.try_lock().unwrap();
+            ev.push("graph_end".to_string());
+        }
+    }
+
+    #[tokio::test]
+    async fn test_langgraph_observability() {
+        let mut graph = StateGraph::<TypedAgentState>::new(Arc::new(TypedReducer));
+
+        let observer = Arc::new(MockObserver::default());
+        graph.set_observer(observer.clone());
+
+        graph.add_node("llm_call", |state| async move {
+            let turn = state.messages.len();
+            if turn < 2 {
+                Ok(TypedAgentState {
+                    messages: vec!["assistant: (tool_call: search weather)".to_string()],
+                    has_tool_calls: true,
+                })
+            } else {
+                Ok(TypedAgentState {
+                    messages: vec!["assistant: The weather is sunny.".to_string()],
+                    has_tool_calls: false,
+                })
+            }
+        });
+
+        graph.add_node("tool_node", |_state| async move {
+            Ok(TypedAgentState {
+                messages: vec!["tool: Sunny".to_string()],
+                has_tool_calls: false,
+            })
+        });
+
+        graph.add_edge("tool_node", "llm_call");
+
+        graph.add_conditional_edges("llm_call", |state| {
+            if state.has_tool_calls {
+                "tool_node".to_string()
+            } else {
+                END.to_string()
+            }
+        });
+
+        graph.set_entry_point("llm_call");
+
+        let initial_state = TypedAgentState {
+            messages: vec!["user: What is the weather?".to_string()],
+            has_tool_calls: false,
+        };
+
+        let _ = graph.run(initial_state).await.unwrap();
+
+        let events = observer.events.lock().await;
+        assert_eq!(*events, vec![
+            "graph_start_llm_call",
+            "start_llm_call",
+            "end_llm_call",
+            "start_tool_node",
+            "end_tool_node",
+            "start_llm_call",
+            "end_llm_call",
+            "graph_end"
+        ]);
     }
 }
