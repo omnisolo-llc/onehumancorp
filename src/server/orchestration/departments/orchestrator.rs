@@ -834,6 +834,24 @@ impl DepartmentOrchestrator {
                     }
                 }
 
+                // If this is a Social Promotion approval, mark as scheduled and publish event
+                if let Some(payload) = &original_payload {
+                    if payload.get("feature_type").and_then(|v| v.as_str()) == Some("social_promotion") {
+                        let product_name = payload.get("product_name").and_then(|v| v.as_str()).unwrap_or("Unknown Product");
+                        tracing::info!("Social promotion approved for {}. Scheduling posts...", product_name);
+
+                        let promotion_payload = serde_json::json!({
+                            "action": "schedule_posts",
+                            "product_name": product_name,
+                            "captions": payload.get("captions"),
+                            "image_url": payload.get("image_url"),
+                            "scheduled_at": (Utc::now() + chrono::Duration::minutes(5)).to_rfc3339(),
+                        });
+                        let topic = "agent:marketing:social_scheduled".to_string();
+                        let _ = self.mesh.publish(&topic, serde_json::to_vec(&promotion_payload).unwrap_or_default()).await;
+                    }
+                }
+
                 // If this is a Smart Pricing approval, execute the price change in the database directly.
                 if let Some(payload) = &original_payload {
                     if payload.get("context").and_then(|c| c.get("smart_pricing")).and_then(|v| v.as_bool()).unwrap_or(false) {

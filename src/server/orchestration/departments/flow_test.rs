@@ -310,7 +310,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_marketing_product_created_social_post() {
+    async fn test_marketing_product_created_social_promotion() {
         if std::env::var("OHC_DATABASE_URL").is_err() {
             return;
         }
@@ -325,7 +325,7 @@ mod tests {
         let marketing_agent = Arc::new(RwLock::new(MarketingAgent::new(orchestrator.clone())));
         orchestrator.register_department(marketing_agent.clone()).await;
 
-        let tenant_id = "test-tenant-marketing-post".to_string();
+        let tenant_id = "test-tenant-marketing-promo".to_string();
 
         match &db.store {
             DbStore::Postgres => {
@@ -356,17 +356,30 @@ mod tests {
         let res = orchestrator.dispatch_event(event).await;
         assert!(res.is_ok());
 
-        let mut has_social_post_draft = false;
+        let mut has_promo_draft = false;
+        let mut request_id = String::new();
         for _ in 0..10 {
-            tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+            tokio::time::sleep(std::time::Duration::from_millis(100)).await;
             let pending = orchestrator.get_pending_approvals(&tenant_id, None, 100).await;
-            if pending.iter().any(|req| req.description.contains("Draft Instagram post for Vegan Chocolate Cake")) {
-                has_social_post_draft = true;
+            if let Some(req) = pending.iter().find(|req| req.description.contains("New product detected! Schedule a post to drive sales?")) {
+                has_promo_draft = true;
+                request_id = req.id.clone();
+
+                // Verify payload has variants
+                if let Some(payload) = &req.payload {
+                    assert_eq!(payload.get("feature_type").and_then(|v| v.as_str()), Some("social_promotion"));
+                    assert!(payload.get("captions").is_some());
+                    assert!(payload.get("captions").and_then(|c| c.get("tiktok")).is_some());
+                }
                 break;
             }
         }
 
-        assert!(has_social_post_draft, "Marketing Agent should draft a social post when a product is created.");
+        assert!(has_promo_draft, "Marketing Agent should draft a social promotion when a product is created.");
+
+        // Test approval
+        let decide_res = orchestrator.decide_approval(&request_id, &tenant_id, true).await;
+        assert!(decide_res.is_ok());
     }
 
     #[tokio::test]
