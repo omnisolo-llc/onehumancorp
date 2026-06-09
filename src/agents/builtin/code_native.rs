@@ -188,7 +188,6 @@ mod tests {
 
     struct GenerateDataTool;
 
-    #[async_trait::async_trait]
     impl CodeNativeTool for GenerateDataTool {
         async fn execute_native(
             &self,
@@ -204,7 +203,6 @@ mod tests {
 
     struct ProcessDataTool;
 
-    #[async_trait::async_trait]
     impl CodeNativeTool for ProcessDataTool {
         async fn execute_native(
             &self,
@@ -236,7 +234,6 @@ mod tests {
 
     struct FailingTool;
 
-    #[async_trait::async_trait]
     impl CodeNativeTool for FailingTool {
         async fn execute_native(
             &self,

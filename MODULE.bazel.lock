@@ -2992,7 +2992,7 @@
           "FILE:@@//src/agents/builtin/Cargo.toml 5c9cf405ddde8717711fb50ee8f442478314cecc5a55b2f763129d1f8eea54f6",
           "FILE:@@//src/agents/builtin/core/Cargo.toml 6b2359762231a761209064162d34d7cb4f969ba313c98a23038815b5ee0bb8ac",
           "FILE:@@//src/agents/builtin/llm/Cargo.toml 27a6ab8b4a1f2e3b54c27d1eb3be0a88f3fd3e91c54edb7eecb6fcfaf18325e6",
-          "FILE:@@//src/agents/builtin/tools/Cargo.toml 7667b27bc6ac98844dbc3c0cd5ae9ec3f909c99bd92e155d4f1b8ff18e76e749",
+          "FILE:@@//src/agents/builtin/tools/Cargo.toml e3a47da3b7299df1da54db7004f2a3b2f42a471255c45419a0293f1b40aac1c4",
           "FILE:@@//src/server/integrations/meta/Cargo.toml 56d595982f6de12131e8817dacd076859232e6e88a9bd675ec21fa2fda455f61",
           "FILE:@@//src/server/integrations/jitsi/Cargo.toml b994735f7f6a594e038fcb2601a2ed002fcf66530be7cc69529a10ed7fff952d",
           "FILE:@@//src/server/integrations/alipay/Cargo.toml 326cae43b7759f35b2c6101439bcfd658eec8b8202cd3f0a243842ddbc2233d9",
