@@ -88,47 +88,55 @@ describe('WebsiteBuilderPage', () => {
     render(<WebsiteBuilderPage />);
 
     // Step 0
-    fireEvent.click(screen.getByText('Start My Business'));
+    act(() => { fireEvent.click(screen.getByText('Start My Business')); });
 
     // Step 1
-    fireEvent.click(screen.getByText('Online Store'));
+    act(() => { fireEvent.click(screen.getByText('Online Store')); });
 
     // Step 2
-    fireEvent.change(screen.getByPlaceholderText('What is your business called?'), { target: { value: 'My Shop' } });
-    fireEvent.click(screen.getByText('Next'));
+    act(() => {
+      fireEvent.change(screen.getByPlaceholderText('What is your business called?'), { target: { value: 'My Shop' } });
+      fireEvent.click(screen.getByText('Next'));
+    });
 
     // Step 3
-    fireEvent.click(screen.getByLabelText('Physical Products'));
-    fireEvent.click(screen.getByText('Next'));
+    act(() => {
+      fireEvent.click(screen.getByLabelText('Physical Products'));
+      fireEvent.click(screen.getByText('Next'));
+    });
 
     // Step 4
-    fireEvent.change(screen.getByPlaceholderText('What is the name of this product?'), { target: { value: 'T-Shirt' } });
-    fireEvent.change(screen.getByPlaceholderText('0.00'), { target: { value: '25.00' } });
-    fireEvent.click(screen.getByText('Next'));
+    act(() => {
+      fireEvent.change(screen.getByPlaceholderText('What is the name of this product?'), { target: { value: 'T-Shirt' } });
+      fireEvent.change(screen.getByPlaceholderText('0.00'), { target: { value: '25.00' } });
+      fireEvent.click(screen.getByText('Next'));
+    });
 
     // Step 5
-    fireEvent.click(screen.getByText('Online'));
+    act(() => { fireEvent.click(screen.getByText('Online')); });
 
     // Step 6
-    fireEvent.change(screen.getByPlaceholderText('e.g. Maya Smith'), { target: { value: 'Test User' } });
-    fireEvent.change(screen.getByPlaceholderText('you@email.com'), { target: { value: 'test@example.com' } });
-    fireEvent.change(screen.getByPlaceholderText('Password'), { target: { value: 'password123' } });
-    fireEvent.click(screen.getByText('Next'));
+    act(() => {
+      fireEvent.change(screen.getByPlaceholderText('e.g. Maya Smith'), { target: { value: 'Test User' } });
+      fireEvent.change(screen.getByPlaceholderText('you@email.com'), { target: { value: 'test@example.com' } });
+      fireEvent.change(screen.getByPlaceholderText('Password'), { target: { value: 'password123' } });
+      fireEvent.click(screen.getByText('Next'));
+    });
 
     // Step 7
-    fireEvent.click(screen.getByText('Modern'));
+    act(() => { fireEvent.click(screen.getByText('Modern')); });
 
     // Step 7.5
-    fireEvent.click(screen.getByText('Next'));
+    act(() => { fireEvent.click(screen.getByText('Next')); });
 
     // Step 8
-    fireEvent.click(screen.getByText('Free OHC Domain'));
+    act(() => { fireEvent.click(screen.getByText('Free OHC Domain')); });
 
     // Step 8.5
-    fireEvent.click(screen.getByText('Next'));
+    act(() => { fireEvent.click(screen.getByText('Next')); });
 
     // Step 9
-    fireEvent.click(screen.getByText('Publish my business'));
+    act(() => { fireEvent.click(screen.getByText('Publish my business')); });
 
     // Verify generating screen
     expect(screen.getByText('Agents are building your store...')).toBeInTheDocument();
@@ -170,9 +178,13 @@ describe('WebsiteBuilderPage', () => {
 
     render(<WebsiteBuilderPage />);
 
-    fireEvent.click(screen.getByText('Instant Build'));
-    fireEvent.change(screen.getByPlaceholderText('e.g. I run a local bakery'), { target: { value: 'I run a local bakery' } });
-    fireEvent.click(screen.getByText('Generate Storefront'));
+    act(() => { fireEvent.click(screen.getByText('Instant Build')); });
+    act(() => {
+      fireEvent.change(screen.getByPlaceholderText('e.g. I run a local bakery'), { target: { value: 'I run a local bakery' } });
+    });
+    act(() => {
+      fireEvent.click(screen.getByText('Generate Storefront'));
+    });
 
     // Status changes to 'generating', wait for it
     await waitFor(() => {
@@ -282,9 +294,13 @@ describe('WebsiteBuilderPage', () => {
     await waitFor(() => { expect(global.fetch).toHaveBeenCalled(); });
 
     // Trigger something that changes status (e.g. going through the instant build flow generates a live status)
-    fireEvent.click(screen.getByText('Instant Build'));
-    fireEvent.change(screen.getByPlaceholderText('e.g. I run a local bakery'), { target: { value: 'I run a local bakery' } });
-    fireEvent.click(screen.getByText('Generate Storefront'));
+    act(() => { fireEvent.click(screen.getByText('Instant Build')); });
+    act(() => {
+      fireEvent.change(screen.getByPlaceholderText('e.g. I run a local bakery'), { target: { value: 'I run a local bakery' } });
+    });
+    act(() => {
+      fireEvent.click(screen.getByText('Generate Storefront'));
+    });
 
     // Status changes to 'generating', wait for it
     await waitFor(() => {
