@@ -85,34 +85,39 @@ export default function TerminalPage() {
           setSyncCount(events.length + posTransactions.length);
           setSyncing(true);
           try {
+            const syncTasks = [];
             if (events.length > 0) {
-              const res = await fetch('/api/staff/timecard', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(events)
-              });
-              if (res.ok) {
-                OfflineStore.clearEvents();
-              }
+              syncTasks.push(
+                fetch("/api/staff/timecard", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify(events)
+                }).then(res => { if (res.ok) OfflineStore.clearEvents(); })
+              );
             }
 
             if (posTransactions.length > 0) {
-              const sessionId = localStorage.getItem('ohc_active_terminal_session_id');
-              const res = await fetch('/api/pos/transactions/sync', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ session_id: sessionId, transactions: posTransactions })
-              });
-              if (res.ok) {
-                const data = await res.json();
-                if (data.failed_transaction_ids && data.failed_transaction_ids.length > 0) {
-                  const failedTxs = posTransactions.filter((tx: any) => data.failed_transaction_ids.includes(tx.client_id || tx.id));
-                  OfflineStore.setPosTransactions(failedTxs);
-                } else {
-                  OfflineStore.clearPosTransactions();
-                }
-              }
+              const sessionId = localStorage.getItem("ohc_active_terminal_session_id");
+              syncTasks.push(
+                fetch("/api/pos/transactions/sync", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ session_id: sessionId, transactions: posTransactions })
+                }).then(async (res) => {
+                  if (res.ok) {
+                    const data = await res.json();
+                    if (data.failed_transaction_ids && data.failed_transaction_ids.length > 0) {
+                      const failedTxs = posTransactions.filter((tx: any) => data.failed_transaction_ids.includes(tx.client_id || tx.id));
+                      OfflineStore.setPosTransactions(failedTxs);
+                    } else {
+                      OfflineStore.clearPosTransactions();
+                    }
+                  }
+                })
+              );
             }
+            await Promise.all(syncTasks);
+
           } catch (e) {
             console.error("Sync failed", e);
           } finally {

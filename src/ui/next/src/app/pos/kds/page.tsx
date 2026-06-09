@@ -53,22 +53,28 @@ export default function KDSPage() {
           const orderEvents = events.filter((e: any) => e.type === 'UPDATE_ORDER_STATUS');
           const inventoryEvents = events.filter((e: any) => e.type === 'TOGGLE_SOLD_OUT');
 
+          const tasks = [];
           if (orderEvents.length > 0) {
-            await fetch('/api/pos/orders', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(orderEvents)
-            });
+            tasks.push(
+              fetch("/api/pos/orders", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(orderEvents)
+              })
+            );
           }
-
           if (inventoryEvents.length > 0) {
-            await fetch('/api/pos/inventory', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(inventoryEvents)
-            });
+            tasks.push(
+              fetch("/api/pos/inventory", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(inventoryEvents)
+              })
+            );
           }
-
+          if (tasks.length > 0) {
+              await Promise.all(tasks);
+          }
           OfflineStore.clearEvents();
         } catch (e) {
           console.error("Sync failed", e);
