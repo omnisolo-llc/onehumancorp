@@ -145,7 +145,7 @@ export default function KDSPage() {
       <div className="w-[375px] h-[812px] bg-gradient-to-br from-white/40 to-white/10 backdrop-blur-xl shadow-2xl overflow-hidden flex flex-col relative border-x border-gray-200">
 
         {/* Header */}
-        <div className="pt-12 pb-4 px-6 glassmorphism/65 backdrop-blur-[30px] shadow-sm border-b border-gray-200 sticky top-0 z-10 flex justify-between items-center">
+        <div className="pt-12 pb-4 px-6 bg-white/65 backdrop-blur-[30px] shadow-sm border-b border-gray-200 sticky top-0 z-10 flex justify-between items-center">
           <div>
             <h1 className="text-xl font-bold text-gray-900">{texts.kds}</h1>
             {isOffline && <span className="text-red-500 font-bold text-sm bg-red-100 px-2 py-1 rounded-md">{texts.offline}</span>}

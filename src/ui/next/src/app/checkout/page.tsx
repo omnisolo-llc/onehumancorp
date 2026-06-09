@@ -289,7 +289,7 @@ function CheckoutContent() {
               placeholder="Enter delivery address..."
               value={deliveryAddress}
               onChange={(e) => setDeliveryAddress(e.target.value)}
-              className="flex-1 glassmorphism border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+              className="flex-1 bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
             />
             <button
               onClick={checkDeliveryEligibility}
@@ -530,7 +530,7 @@ function CheckoutContent() {
                   <div className="w-full border-t border-gray-200"></div>
                 </div>
                 <div className="relative flex justify-center">
-                  <span className="glassmorphism px-2 text-xs text-gray-500 uppercase font-semibold tracking-wide">
+                  <span className="bg-white px-2 text-xs text-gray-500 uppercase font-semibold tracking-wide">
                     Or Share Via
                   </span>
                 </div>

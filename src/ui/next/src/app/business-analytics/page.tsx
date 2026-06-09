@@ -150,7 +150,7 @@ export default function BusinessAnalytics() {
 
            {!hasPro && (
                <div className="absolute inset-0 z-10 flex items-center justify-center">
-                   <div className="glassmorphism/90 p-8 rounded-2xl shadow-xl border border-gray-200 text-center max-w-sm">
+                   <div className="bg-white/90 p-8 rounded-2xl shadow-xl border border-gray-200 text-center max-w-sm">
                        <div className="text-4xl mb-3">🔮</div>
                        <h3 className="text-xl font-bold font-outfit text-gray-900 mb-2">See The Future</h3>
                        <p className="text-sm text-gray-600 mb-6">Unlock predictive AI insights to forecast revenue, track cohort retention, and optimize your growth strategy.</p>

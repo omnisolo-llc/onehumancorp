@@ -58,7 +58,7 @@ export default function FieldOpsJobsPage() {
 
       <div className="space-y-4">
         {jobs.map(job => (
-          <div key={job.id} className="glassmorphism rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+          <div key={job.id} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
             <div className="p-5 border-b border-gray-100 bg-gray-50/50">
               <div className="flex justify-between items-start mb-2">
                 <h3 className="font-bold text-lg text-gray-900">{job.customer}</h3>

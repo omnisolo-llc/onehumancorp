@@ -56,7 +56,7 @@ export default function GiftCardsPage() {
                     type="number"
                     value={value}
                     onChange={(e) => setValue(e.target.value)}
-                    className="w-full pl-8 pr-4 py-2 rounded-xl border border-gray-300 glassmorphism shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all font-semibold"
+                    className="w-full pl-8 pr-4 py-2 rounded-xl border border-gray-300 bg-white shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all font-semibold"
                     min="5"
                     max="1000"
                   />
@@ -98,11 +98,11 @@ export default function GiftCardsPage() {
                 style={{ background: 'linear-gradient(135deg, #FF9A9E 0%, #FECFEF 99%, #FECFEF 100%)', boxShadow: '0 20px 40px rgba(0,0,0,0.1)' }}>
 
                {/* Decorative elements */}
-               <div className="absolute top-0 right-0 w-64 h-64 glassmorphism/20 rounded-full blur-3xl translate-x-1/3 -translate-y-1/3 pointer-events-none"></div>
+               <div className="absolute top-0 right-0 w-64 h-64 bg-white/20 rounded-full blur-3xl translate-x-1/3 -translate-y-1/3 pointer-events-none"></div>
                <div className="absolute bottom-0 left-0 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl -translate-x-1/3 translate-y-1/3 pointer-events-none"></div>
 
                <div className="z-10 flex flex-col items-center text-center w-full">
-                  <div className="w-16 h-16 glassmorphism/30 rounded-2xl flex items-center justify-center text-3xl mb-4 backdrop-blur-md shadow-inner border border-white/40">
+                  <div className="w-16 h-16 bg-white/30 rounded-2xl flex items-center justify-center text-3xl mb-4 backdrop-blur-md shadow-inner border border-white/40">
                     🎁
                   </div>
                   <h3 className="text-2xl font-bold font-outfit tracking-wide uppercase drop-shadow-sm opacity-90">Digital Gift Card</h3>
@@ -114,7 +114,7 @@ export default function GiftCardsPage() {
                {/* Viral Loop Footer */}
                {!removeBranding && (
                   <div className="absolute bottom-4 left-0 w-full flex justify-center z-20">
-                     <span className="text-xs font-bold tracking-widest uppercase opacity-80 mix-blend-overlay shadow-sm px-3 py-1 glassmorphism/10 rounded-full backdrop-blur-md">
+                     <span className="text-xs font-bold tracking-widest uppercase opacity-80 mix-blend-overlay shadow-sm px-3 py-1 bg-white/10 rounded-full backdrop-blur-md">
                          ⚡ Powered by OHC
                      </span>
                   </div>
@@ -123,7 +123,7 @@ export default function GiftCardsPage() {
 
            {/* Share Modal */}
            {showShareModal && (
-             <div className="mt-4 p-6 rounded-2xl glassmorphism shadow-lg border border-gray-100 flex flex-col gap-4 animate-in slide-in-from-bottom-4">
+             <div className="mt-4 p-6 rounded-2xl bg-white shadow-lg border border-gray-100 flex flex-col gap-4 animate-in slide-in-from-bottom-4">
                 <h3 className="text-lg font-bold font-outfit text-gray-900">Share Your Gift Card</h3>
                 <p className="text-sm text-gray-600">Send this link directly to your customer. They can claim it securely online.</p>
 

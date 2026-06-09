@@ -105,7 +105,7 @@ export default function MobileQuotingPage() {
   return (
     <div className="min-h-screen bg-gray-100 font-sans pb-24">
       {/* Top Navigation */}
-      <header className="sticky top-0 z-10 glassmorphism/80 backdrop-blur-xl border-b border-gray-200 px-4 py-4 shadow-sm">
+      <header className="sticky top-0 z-10 bg-white/80 backdrop-blur-xl border-b border-gray-200 px-4 py-4 shadow-sm">
         <div className="flex items-center justify-between">
           <Link href="/dashboard" className="text-gray-500 hover:text-gray-900 transition-colors">
             <FiX className="text-2xl" />
@@ -151,7 +151,7 @@ export default function MobileQuotingPage() {
                   key={item.id}
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className={`glassmorphism rounded-xl p-4 border transition-all ${item.selected ? 'border-gray-200 shadow-sm' : 'border-gray-100 opacity-60'}`}
+                  className={`bg-white rounded-xl p-4 border transition-all ${item.selected ? 'border-gray-200 shadow-sm' : 'border-gray-100 opacity-60'}`}
                 >
                   <div className="flex justify-between items-start mb-2">
                     <div className="flex items-center space-x-3">
@@ -209,7 +209,7 @@ export default function MobileQuotingPage() {
       </main>
 
       {/* Floating Action Bar */}
-      <div className="fixed bottom-0 left-0 right-0 p-4 glassmorphism/90 backdrop-blur-xl border-t border-gray-200 shadow-lg pb-safe">
+      <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/90 backdrop-blur-xl border-t border-gray-200 shadow-lg pb-safe">
         <div className="max-w-md mx-auto flex space-x-3">
           <button className="flex-1 py-3.5 px-4 bg-gray-100 text-gray-700 font-semibold rounded-xl hover:bg-gray-200 transition-colors">
             Edit Later

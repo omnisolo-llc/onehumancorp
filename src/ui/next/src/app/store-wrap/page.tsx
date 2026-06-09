@@ -86,7 +86,7 @@ export default function StoreWrapPage() {
         <h1 className="text-xl font-bold font-outfit tracking-tight text-white/90">Store Wrap-Up 🎁</h1>
         <button
           onClick={() => router.push('/dashboard')}
-          className="px-4 py-2 glassmorphism/20 hover:glassmorphism/30 backdrop-blur-md rounded-full text-sm font-medium transition-colors border border-white/10"
+          className="px-4 py-2 bg-white/20 hover:bg-white/30 backdrop-blur-md rounded-full text-sm font-medium transition-colors border border-white/10"
         >
           Close
         </button>
@@ -95,9 +95,9 @@ export default function StoreWrapPage() {
       {/* Progress Bars */}
       <div className="absolute top-16 left-0 w-full px-6 flex gap-2 z-50">
         {slides.map((_, i) => (
-          <div key={i} className="h-1.5 flex-1 glassmorphism/20 rounded-full overflow-hidden">
+          <div key={i} className="h-1.5 flex-1 bg-white/20 rounded-full overflow-hidden">
             <div
-              className="h-full glassmorphism rounded-full transition-all duration-300"
+              className="h-full bg-white rounded-full transition-all duration-300"
               style={{ width: i <= currentSlide ? '100%' : '0%' }}
             />
           </div>
@@ -133,7 +133,7 @@ export default function StoreWrapPage() {
                       setCopied(true);
                       setTimeout(() => setCopied(false), 2000);
                     }}
-                    className={`w-full py-4 rounded-2xl text-lg font-bold transition-all shadow-xl flex items-center justify-center gap-2 ${copied ? 'bg-green-400 text-green-900' : 'glassmorphism text-gray-900 hover:scale-105 active:scale-95'}`}
+                    className={`w-full py-4 rounded-2xl text-lg font-bold transition-all shadow-xl flex items-center justify-center gap-2 ${copied ? 'bg-green-400 text-green-900' : 'bg-white text-gray-900 hover:scale-105 active:scale-95'}`}
                   >
                     {copied ? 'Link Copied!' : 'Copy Invite Link'}
                   </button>

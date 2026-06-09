@@ -84,14 +84,14 @@ export default function ReviewCampaignsPage() {
                   {/* Reputation Settings */}
           <section className="w-full md:w-full p-6 shadow-md mb-8" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
             <h3 className="text-xl font-semibold font-outfit mb-4" style={{ color: '#1D1D1F' }}>Reputation Management Settings</h3>
-            <div className="flex items-center justify-between p-4 glassmorphism rounded-lg border border-gray-200">
+            <div className="flex items-center justify-between p-4 bg-white rounded-lg border border-gray-200">
               <div>
                 <p className="font-semibold text-gray-900">Auto-request reviews after completed orders</p>
                 <p className="text-sm text-gray-500">The OHC Ambassador Agent will automatically text customers asking for a review 2 hours after you mark a job complete.</p>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
                 <input type="checkbox" className="sr-only peer" checked={autoRequest} onChange={(e) => { setAutoRequest(e.target.checked); /* In real app, call API to save setting */ }} />
-                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:glassmorphism after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
               </label>
             </div>
           </section>
@@ -118,7 +118,7 @@ export default function ReviewCampaignsPage() {
                   id="customer-segment"
                   value={customerSegment}
                   onChange={(e) => setCustomerSegment(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 glassmorphism"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
                 >
                   <option value="recent">Recent Buyers (Last 14 Days)</option>
                   <option value="loyal">Repeat Customers</option>

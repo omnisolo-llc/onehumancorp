@@ -102,7 +102,7 @@ export default function SocialProofNudgePage() {
                         <select
                             value={timeAgo}
                             onChange={(e) => setTimeAgo(e.target.value)}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 glassmorphism"
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
                         >
                             <option value="just now">Just now</option>
                             <option value="2 minutes ago">2 minutes ago</option>

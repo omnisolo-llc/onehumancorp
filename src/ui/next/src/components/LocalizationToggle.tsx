@@ -23,7 +23,7 @@ export const LocalizationToggle: React.FC = () => {
     <div className="relative">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 px-3 py-1.5 rounded-lg glassmorphism/60 backdrop-blur-xl border border-white/40 shadow-sm hover:glassmorphism/80 transition-all text-sm font-medium"
+        className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/60 backdrop-blur-xl border border-white/40 shadow-sm hover:bg-white/80 transition-all text-sm font-medium"
       >
         <span>{locales.find(l => l.code === locale)?.flag}</span>
         <span className="text-gray-900">{currency}</span>
@@ -35,7 +35,7 @@ export const LocalizationToggle: React.FC = () => {
             className="fixed inset-0 z-40"
             onClick={() => setIsOpen(false)}
           />
-          <div className="absolute top-full mt-2 right-0 w-48 rounded-2xl glassmorphism/70 backdrop-blur-2xl border border-white/50 shadow-2xl z-50 p-2 animate-in fade-in zoom-in duration-200">
+          <div className="absolute top-full mt-2 right-0 w-48 rounded-2xl bg-white/70 backdrop-blur-2xl border border-white/50 shadow-2xl z-50 p-2 animate-in fade-in zoom-in duration-200">
             <div className="mb-2">
               <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-2 mb-1">Language</p>
               {locales.map((l) => (
@@ -46,7 +46,7 @@ export const LocalizationToggle: React.FC = () => {
                     setIsOpen(false);
                   }}
                   className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm transition-colors ${
-                    locale === l.code ? 'bg-blue-500 text-white' : 'text-gray-700 hover:glassmorphism/50'
+                    locale === l.code ? 'bg-blue-500 text-white' : 'text-gray-700 hover:bg-white/50'
                   }`}
                 >
                   <span>{l.flag}</span>
@@ -66,7 +66,7 @@ export const LocalizationToggle: React.FC = () => {
                       setIsOpen(false);
                     }}
                     className={`flex flex-col items-center justify-center p-2 rounded-xl text-xs transition-colors ${
-                      currency === c.code ? 'bg-blue-500 text-white' : 'text-gray-700 hover:glassmorphism/50'
+                      currency === c.code ? 'bg-blue-500 text-white' : 'text-gray-700 hover:bg-white/50'
                     }`}
                   >
                     <span className="text-lg font-bold">{c.symbol}</span>

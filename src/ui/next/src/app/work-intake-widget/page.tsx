@@ -63,14 +63,14 @@ export default function WorkIntakeWidgetPage() {
                         <button
                             aria-pressed={theme === 'light'}
                             onClick={() => setTheme('light')}
-                            className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${theme === 'light' ? 'glassmorphism shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
+                            className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${theme === 'light' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
                         >
                             Light
                         </button>
                         <button
                             aria-pressed={theme === 'dark'}
                             onClick={() => setTheme('dark')}
-                            className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${theme === 'dark' ? 'glassmorphism shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
+                            className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${theme === 'dark' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
                         >
                             Dark
                         </button>
@@ -113,7 +113,7 @@ export default function WorkIntakeWidgetPage() {
                 </div>
             </div>
 
-            <div className="p-6 rounded-[20px] glassmorphism border border-gray-200 shadow-sm flex flex-col justify-center gap-4">
+            <div className="p-6 rounded-[20px] bg-white border border-gray-200 shadow-sm flex flex-col justify-center gap-4">
                <h3 className="font-semibold text-gray-900">Embed on Your Website</h3>
                <p className="text-sm text-gray-600">Copy this code snippet to add the widget directly to your own site, Notion document, or blog.</p>
                <button
@@ -130,14 +130,14 @@ export default function WorkIntakeWidgetPage() {
              <h2 className="text-xl font-semibold font-outfit self-start" style={{ color: '#1D1D1F' }}>Live Preview</h2>
 
              {/* Realistic mock environment wrapper */}
-             <div className="w-full max-w-2xl glassmorphism rounded-xl overflow-hidden border border-gray-300 shadow-2xl relative mt-4">
+             <div className="w-full max-w-2xl bg-white rounded-xl overflow-hidden border border-gray-300 shadow-2xl relative mt-4">
                  <div className="bg-gray-100 border-b border-gray-300 px-4 py-3 flex items-center gap-2">
                      <div className="flex gap-1.5">
                          <div className="w-3 h-3 rounded-full bg-red-400"></div>
                          <div className="w-3 h-3 rounded-full bg-yellow-400"></div>
                          <div className="w-3 h-3 rounded-full bg-green-400"></div>
                      </div>
-                     <div className="ml-4 glassmorphism px-3 py-1 rounded border border-gray-200 text-xs text-gray-500 flex-1 text-center font-mono">
+                     <div className="ml-4 bg-white px-3 py-1 rounded border border-gray-200 text-xs text-gray-500 flex-1 text-center font-mono">
                          yourwebsite.com
                      </div>
                  </div>
@@ -200,7 +200,7 @@ export default function WorkIntakeWidgetPage() {
                     <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
                          <button
                             onClick={handleCopy}
-                            className="p-2 glassmorphism rounded-lg border shadow-sm text-gray-600 hover:text-blue-600 transition-colors"
+                            className="p-2 bg-white rounded-lg border shadow-sm text-gray-600 hover:text-blue-600 transition-colors"
                             title="Copy to clipboard"
                         >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2 2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>

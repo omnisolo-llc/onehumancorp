@@ -25,7 +25,7 @@ export default function UpgradeROIPage() {
   return (
     <div className="flex flex-col min-h-screen font-inter bg-[#F5F5F7]">
       {/* Header */}
-      <header className="px-4 md:px-6 py-4 flex items-center justify-between border-b sticky top-0 z-50 glassmorphism/65 backdrop-blur-md border-white/40">
+      <header className="px-4 md:px-6 py-4 flex items-center justify-between border-b sticky top-0 z-50 bg-white/65 backdrop-blur-md border-white/40">
         <h1 className="text-xl md:text-2xl font-bold font-outfit text-[#1D1D1F] tracking-tight">Pro Plan ROI Calculator 📈</h1>
         <button
           onClick={() => router.push('/dashboard')}
@@ -37,7 +37,7 @@ export default function UpgradeROIPage() {
 
       <main className="p-4 md:p-8 flex-1 w-full max-w-5xl mx-auto flex flex-col md:flex-row gap-6 md:gap-8 items-start">
         {/* Input Section */}
-        <section className="w-full md:w-1/2 p-6 md:p-8 shadow-md glassmorphism/65 backdrop-blur-md border border-white/40 rounded-2xl">
+        <section className="w-full md:w-1/2 p-6 md:p-8 shadow-md bg-white/65 backdrop-blur-md border border-white/40 rounded-2xl">
           <div className="mb-6">
              <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">Calculate Your Growth</h2>
              <p className="text-sm text-gray-600">
@@ -101,11 +101,11 @@ export default function UpgradeROIPage() {
              <h2 className="text-xl font-bold font-outfit mb-6 text-gray-200">Your Projected Impact</h2>
 
              <div className="grid grid-cols-2 gap-4 mb-8">
-                 <div className="p-4 glassmorphism/10 rounded-xl border border-white/5 backdrop-blur-sm">
+                 <div className="p-4 bg-white/10 rounded-xl border border-white/5 backdrop-blur-sm">
                      <p className="text-xs text-gray-400 uppercase tracking-wider font-semibold mb-1">Current Revenue</p>
                      <p className="text-2xl font-bold">${currentRevenue.toLocaleString()}</p>
                  </div>
-                 <div className="p-4 glassmorphism/10 rounded-xl border border-indigo-500/30 backdrop-blur-sm relative">
+                 <div className="p-4 bg-white/10 rounded-xl border border-indigo-500/30 backdrop-blur-sm relative">
                      <div className="absolute -top-2 -right-2 bg-indigo-500 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">With Pro</div>
                      <p className="text-xs text-indigo-200 uppercase tracking-wider font-semibold mb-1">Projected Revenue</p>
                      <p className="text-2xl font-bold text-white">${Math.round(projectedRevenue).toLocaleString()}</p>

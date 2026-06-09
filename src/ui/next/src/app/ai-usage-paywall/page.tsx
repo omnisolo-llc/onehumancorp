@@ -88,7 +88,7 @@ export default function AiUsagePaywallPage() {
         <p className="text-gray-500 text-lg">Monitor your AI automation and unlock unlimited capabilities.</p>
       </div>
 
-      <div className="w-full max-w-2xl p-8 rounded-[24px] glassmorphism/60 backdrop-blur-2xl saturate-200 border border-white/40 shadow-xl mb-8 relative overflow-hidden">
+      <div className="w-full max-w-2xl p-8 rounded-[24px] bg-white/60 backdrop-blur-2xl saturate-200 border border-white/40 shadow-xl mb-8 relative overflow-hidden">
         {/* Glow effect */}
         <div className="absolute top-0 right-0 -mt-20 -mr-20 w-64 h-64 bg-blue-400/20 rounded-full blur-[80px] pointer-events-none"></div>
 
@@ -117,7 +117,7 @@ export default function AiUsagePaywallPage() {
           <div className="space-y-4 mb-8 border-t border-gray-100 pt-6 relative z-10">
             <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4">Breakdown by Department</h3>
             {departments.map((dept) => (
-              <div key={dept.id} className="flex justify-between items-center p-4 glassmorphism/80 rounded-xl shadow-sm border border-gray-50">
+              <div key={dept.id} className="flex justify-between items-center p-4 bg-white/80 rounded-xl shadow-sm border border-gray-50">
                 <div className="flex items-center gap-3">
                    <div className={`w-2 h-2 rounded-full ${dept.soft_limit_reached ? 'bg-red-500' : 'bg-green-500'}`}></div>
                    <div>

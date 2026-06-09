@@ -67,7 +67,7 @@ export default function MilestonesPage() {
   return (
     <div className="flex flex-col min-h-screen font-inter bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
       {/* Header */}
-      <header className="px-6 py-4 flex items-center justify-between border-b sticky top-0 z-50 glassmorphism/65 backdrop-blur-md border-white/40">
+      <header className="px-6 py-4 flex items-center justify-between border-b sticky top-0 z-50 bg-white/65 backdrop-blur-md border-white/40">
         <h1 className="text-2xl font-bold font-outfit text-[#1D1D1F] tracking-tight">Success Milestones 🏆</h1>
         <button
           onClick={() => router.push('/dashboard')}
@@ -77,7 +77,7 @@ export default function MilestonesPage() {
         </button>
       </header>
 
-      <main className="p-6 md:p-8 flex-1 max-w-5xl mx-auto w-full flex flex-col md:flex-row gap-8 backdrop-blur-xl glassmorphism/60 shadow-sm border border-white/50 rounded-2xl">
+      <main className="p-6 md:p-8 flex-1 max-w-5xl mx-auto w-full flex flex-col md:flex-row gap-8 backdrop-blur-xl bg-white/60 shadow-sm border border-white/50 rounded-2xl">
 
         {/* Milestones List */}
         <section className="w-full md:w-1/2 flex flex-col gap-4">
@@ -94,8 +94,8 @@ export default function MilestonesPage() {
                             onClick={() => m.reached && setSelectedMilestone(m.id)}
                             className={`p-4 rounded-2xl transition-all ${
                                 m.reached
-                                ? 'glassmorphism hover:border-indigo-300 hover:shadow-md cursor-pointer'
-                                : 'glassmorphism opacity-60 cursor-not-allowed'
+                                ? 'bg-white hover:border-indigo-300 hover:shadow-md cursor-pointer'
+                                : 'bg-white opacity-60 cursor-not-allowed'
                             } ${selectedMilestone === m.id ? 'ring-2 ring-indigo-500 shadow-md' : ''}`}
                         >
                             <div className="flex items-center gap-4">
@@ -167,7 +167,7 @@ export default function MilestonesPage() {
                                         setCopied(true);
                                         setTimeout(() => setCopied(false), 2000);
                                     }}
-                                    className={`w-full py-3 rounded-xl text-sm font-bold transition-all shadow-sm ${copied ? 'bg-green-100 text-green-700' : 'glassmorphism text-gray-800 hover:brightness-95'}`}
+                                    className={`w-full py-3 rounded-xl text-sm font-bold transition-all shadow-sm ${copied ? 'bg-green-100 text-green-700' : 'bg-white text-gray-800 hover:brightness-95'}`}
                                 >
                                     {copied ? 'Copied Message!' : 'Copy Share Message'}
                                 </button>
@@ -209,7 +209,7 @@ export default function MilestonesPage() {
                         </div>
                     );
                 })() : (
-                    <div className="w-full aspect-square md:aspect-[4/3] rounded-3xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-gray-400 glassmorphism">
+                    <div className="w-full aspect-square md:aspect-[4/3] rounded-3xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-gray-400 bg-white">
                         <span className="text-4xl mb-4">🏆</span>
                         <p className="font-medium text-sm">Select an unlocked milestone</p>
                     </div>

@@ -162,7 +162,7 @@ export default function ReferralsPage() {
           </div>
         </div>
 
-        <div className="ohc-growth-card glassmorphism p-6 rounded-[16px] border border-white/40 dark:border-white/10 shadow-lg mb-8">
+        <div className="ohc-growth-card bg-white p-6 rounded-[16px] border border-white/40 dark:border-white/10 shadow-lg mb-8">
             <h3 className="text-xl font-bold font-outfit text-gray-900 dark:text-white mb-2">Cloud Bridge Invite</h3>
             <p className="text-sm text-gray-600 dark:text-gray-300 mb-6">Generate an invite link to provision a cloud-native tenant and bring a team member on board.</p>
             <div className="flex flex-col sm:flex-row gap-3">
@@ -172,7 +172,7 @@ export default function ReferralsPage() {
                     value={cloudInviteEmail}
                     onChange={(e) => setCloudInviteEmail(e.target.value)}
                     placeholder="Team member email (e.g., test@example.com)"
-                    className="flex-1 glassmorphism dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="flex-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
                 <button
                     disabled={isGeneratingCloudInvite}
@@ -245,14 +245,14 @@ export default function ReferralsPage() {
                <div className="space-y-3">
                    <button
                      onClick={() => setDataAction('Referral logs are ready to review.')}
-                     className="w-full glassmorphism border border-gray-200 text-gray-800 font-bold py-3 rounded-xl text-sm hover:bg-gray-50 transition-colors flex items-center justify-center gap-2"
+                     className="w-full bg-white border border-gray-200 text-gray-800 font-bold py-3 rounded-xl text-sm hover:bg-gray-50 transition-colors flex items-center justify-center gap-2"
                    >
                        <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
                        View Referral Logs
                    </button>
                    <button
                      onClick={() => setDataAction('Growth data export has started.')}
-                     className="w-full glassmorphism border border-gray-200 text-gray-800 font-bold py-3 rounded-xl text-sm hover:bg-gray-50 transition-colors flex items-center justify-center gap-2"
+                     className="w-full bg-white border border-gray-200 text-gray-800 font-bold py-3 rounded-xl text-sm hover:bg-gray-50 transition-colors flex items-center justify-center gap-2"
                    >
                        <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
                        Export Data

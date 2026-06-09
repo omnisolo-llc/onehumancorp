@@ -56,7 +56,7 @@ export default function GrowthReferralWidget() {
   };
 
   return (
-    <div className="ohc-growth-card glassmorphism p-6 rounded-[16px] border border-white/40 dark:border-white/10 shadow-lg mb-6">
+    <div className="ohc-growth-card bg-white p-6 rounded-[16px] border border-white/40 dark:border-white/10 shadow-lg mb-6">
       <div className="flex flex-col md:flex-row gap-6 items-center">
         <div className="flex-1">
           <div className="inline-flex items-center gap-2 mb-2 px-3 py-1 rounded-full bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 text-sm font-semibold">
@@ -82,7 +82,7 @@ export default function GrowthReferralWidget() {
             </button>
           ) : (
             <div className="flex flex-col gap-3 w-full md:w-auto">
-              <div className="flex items-center gap-2 glassmorphism/50 dark:bg-black/20 p-2 rounded-lg border border-gray-200 dark:border-gray-700">
+              <div className="flex items-center gap-2 bg-white/50 dark:bg-black/20 p-2 rounded-lg border border-gray-200 dark:border-gray-700">
                 <input
                   type="text"
                   readOnly

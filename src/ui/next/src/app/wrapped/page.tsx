@@ -52,7 +52,7 @@ export default function Wrapped() {
       id: 'intro',
       content: (
         <div className="flex flex-col items-center justify-center h-full text-center p-8 space-y-6 animate-fade-in-up" style={{ opacity: 1 }}>
-           <div className="w-24 h-24 glassmorphism/20 rounded-full flex items-center justify-center text-5xl mb-4 backdrop-blur-sm border border-white/30 shadow-xl">
+           <div className="w-24 h-24 bg-white/20 rounded-full flex items-center justify-center text-5xl mb-4 backdrop-blur-sm border border-white/30 shadow-xl">
              🌟
            </div>
            <h1 className="text-4xl md:text-6xl font-black font-outfit drop-shadow-md tracking-tight">Your OHC Wrapped</h1>
@@ -80,7 +80,7 @@ export default function Wrapped() {
       content: (
         <div className="flex flex-col items-center justify-center h-full text-center p-8 space-y-6 animate-fade-in-up" style={{ opacity: 1 }}>
            <h3 className="text-2xl font-bold font-outfit opacity-90 uppercase tracking-widest drop-shadow-sm">Top Seller</h3>
-           <div className="w-32 h-32 glassmorphism/30 rounded-3xl flex items-center justify-center text-6xl backdrop-blur-md shadow-lg border border-white/40 rotate-3 transition-transform hover:rotate-0">
+           <div className="w-32 h-32 bg-white/30 rounded-3xl flex items-center justify-center text-6xl backdrop-blur-md shadow-lg border border-white/40 rotate-3 transition-transform hover:rotate-0">
              🛍️
            </div>
            <h2 className="text-4xl md:text-5xl font-bold font-outfit drop-shadow-md">{metrics.topProduct}</h2>
@@ -97,8 +97,8 @@ export default function Wrapped() {
           <h2 className="text-3xl font-bold font-outfit drop-shadow-md mb-2">Share Your Success</h2>
 
           {/* Shareable Card Preview */}
-          <div id="share-card" className="w-full max-w-sm aspect-[4/5] glassmorphism/10 backdrop-blur-xl rounded-3xl border border-white/30 shadow-2xl overflow-hidden relative flex flex-col p-6">
-             <div className="absolute top-0 right-0 w-32 h-32 glassmorphism/20 rounded-full blur-2xl translate-x-1/2 -translate-y-1/2 pointer-events-none"></div>
+          <div id="share-card" className="w-full max-w-sm aspect-[4/5] bg-white/10 backdrop-blur-xl rounded-3xl border border-white/30 shadow-2xl overflow-hidden relative flex flex-col p-6">
+             <div className="absolute top-0 right-0 w-32 h-32 bg-white/20 rounded-full blur-2xl translate-x-1/2 -translate-y-1/2 pointer-events-none"></div>
              <div className="absolute bottom-0 left-0 w-32 h-32 bg-black/10 rounded-full blur-2xl -translate-x-1/2 translate-y-1/2 pointer-events-none"></div>
 
              <div className="flex-1 flex flex-col justify-center items-center text-center space-y-4 z-10">
@@ -147,7 +147,7 @@ export default function Wrapped() {
 
   return (
     <div className="fixed inset-0 w-full h-screen bg-[#1D1D1F] z-[100] flex flex-col font-inter overflow-hidden">
-      <div className="absolute left-6 bottom-6 z-50 rounded-2xl glassmorphism/15 px-4 py-3 text-white backdrop-blur-md border border-white/20 shadow-xl">
+      <div className="absolute left-6 bottom-6 z-50 rounded-2xl bg-white/15 px-4 py-3 text-white backdrop-blur-md border border-white/20 shadow-xl">
         <h2 className="text-sm font-bold uppercase tracking-widest">Top Seller</h2>
         <p className="text-base font-semibold">{metrics.topProduct}</p>
         <span className="mt-1 inline-block text-xs font-bold opacity-90">Powered by OHC</span>
@@ -155,9 +155,9 @@ export default function Wrapped() {
       {/* Progress Bars */}
       <div className="absolute top-0 left-0 right-0 p-4 flex gap-2 z-50">
         {slides.map((_, i) => (
-          <div key={i} className="flex-1 h-1.5 glassmorphism/20 rounded-full overflow-hidden">
+          <div key={i} className="flex-1 h-1.5 bg-white/20 rounded-full overflow-hidden">
              <div
-               className="h-full glassmorphism transition-all duration-[300ms] ease-out"
+               className="h-full bg-white transition-all duration-[300ms] ease-out"
                style={{
                   width: i < currentSlide ? '100%' : i === currentSlide ? '100%' : '0%',
                   opacity: i <= currentSlide ? 1 : 0
@@ -170,7 +170,7 @@ export default function Wrapped() {
       {/* Close Button */}
       <button
         onClick={() => router.push('/dashboard')}
-        className="absolute top-8 right-6 z-50 w-10 h-10 glassmorphism/10 hover:glassmorphism/20 backdrop-blur-md rounded-full flex items-center justify-center text-white transition-colors"
+        className="absolute top-8 right-6 z-50 w-10 h-10 bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center text-white transition-colors"
         aria-label="Close"
       >
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" /></svg>
@@ -209,7 +209,7 @@ export default function Wrapped() {
                     setCopied(true);
                     setTimeout(() => setCopied(false), 2000);
                 }}
-                className={`w-full py-4 rounded-2xl text-sm font-bold transition-all shadow-xl backdrop-blur-md flex items-center justify-center gap-2 ${copied ? 'bg-green-500 text-white' : 'glassmorphism/20 text-white hover:glassmorphism/30 border border-white/30'}`}
+                className={`w-full py-4 rounded-2xl text-sm font-bold transition-all shadow-xl backdrop-blur-md flex items-center justify-center gap-2 ${copied ? 'bg-green-500 text-white' : 'bg-white/20 text-white hover:bg-white/30 border border-white/30'}`}
              >
                 {copied ? 'Link Copied!' : 'Copy Link'}
              </button>

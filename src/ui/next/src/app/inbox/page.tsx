@@ -180,7 +180,7 @@ export default function InboxPage() {
               </div>
               <div className="mb-4">
                 <div className="app-metric-label">Draft Reply</div>
-                <div className="mt-2 rounded-md border border-gray-200 glassmorphism p-3 text-sm leading-6 text-gray-800">
+                <div className="mt-2 rounded-md border border-gray-200 bg-white p-3 text-sm leading-6 text-gray-800">
                   {selected.draft_reply || "No draft reply stored for this message."}
                 </div>
               </div>

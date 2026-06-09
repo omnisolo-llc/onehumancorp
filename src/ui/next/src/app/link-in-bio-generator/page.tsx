@@ -118,7 +118,7 @@ export default function LinkInBioGeneratorPage() {
                 <h2 className="text-xl font-semibold font-outfit mb-4" style={{ color: '#1D1D1F' }}>Links</h2>
                 <div className="flex flex-col gap-4">
                     {links.map((link, index) => (
-                        <div key={link.id} className="p-4 border border-gray-200 rounded-lg glassmorphism">
+                        <div key={link.id} className="p-4 border border-gray-200 rounded-lg bg-white">
                             <div className="flex justify-between items-center mb-2">
                                 <span className="text-xs font-bold text-gray-500 uppercase tracking-wide">Link {index + 1}</span>
                                 <button onClick={() => removeLink(link.id)} className="text-red-500 hover:text-red-700 text-xs font-medium">Remove</button>
@@ -170,13 +170,13 @@ export default function LinkInBioGeneratorPage() {
 
         {/* Live Preview */}
         <section className="w-full md:w-1/2 flex justify-center items-start">
-             <div className="w-[375px] h-[812px] glassmorphism rounded-[40px] shadow-2xl overflow-hidden relative border-[8px] border-gray-900 flex flex-col items-center">
+             <div className="w-[375px] h-[812px] bg-white rounded-[40px] shadow-2xl overflow-hidden relative border-[8px] border-gray-900 flex flex-col items-center">
                  {/* Notch */}
                  <div className="absolute top-0 w-40 h-6 bg-gray-900 rounded-b-2xl z-50"></div>
 
                  <div className="w-full h-full flex flex-col items-center overflow-y-auto pt-16 pb-12 px-6 transition-all duration-300" style={getThemeStyles()}>
 
-                     <div className="w-24 h-24 rounded-full glassmorphism/20 shadow-inner flex items-center justify-center backdrop-blur-md mb-4 mt-4 border border-white/30 text-4xl">
+                     <div className="w-24 h-24 rounded-full bg-white/20 shadow-inner flex items-center justify-center backdrop-blur-md mb-4 mt-4 border border-white/30 text-4xl">
                          ✨
                      </div>
 

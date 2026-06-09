@@ -30,7 +30,7 @@ function BookingForm() {
   if (submitted) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 font-inter p-6">
-        <div className="w-full max-w-[375px] glassmorphism/65 backdrop-blur-[30px] rounded-[24px] p-8 shadow-2xl text-center border border-white/40">
+        <div className="w-full max-w-[375px] bg-white/65 backdrop-blur-[30px] rounded-[24px] p-8 shadow-2xl text-center border border-white/40">
           <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center text-3xl mx-auto mb-6">✅</div>
           <h1 className="text-2xl font-bold font-outfit text-gray-900 mb-2">Request Sent!</h1>
           <p className="text-gray-600 text-sm leading-relaxed">
@@ -58,10 +58,10 @@ function BookingForm() {
 
   return (
     <div className="flex flex-col items-center min-h-screen bg-gray-50 font-inter py-10">
-      <div className="w-[375px] max-w-[375px] min-h-[812px] glassmorphism shadow-2xl overflow-hidden flex flex-col relative border-x border-gray-200">
+      <div className="w-[375px] max-w-[375px] min-h-[812px] bg-white shadow-2xl overflow-hidden flex flex-col relative border-x border-gray-200">
 
         {/* Header */}
-        <div className="pt-12 pb-6 px-6 glassmorphism sticky top-0 z-10 border-b border-gray-100">
+        <div className="pt-12 pb-6 px-6 bg-white sticky top-0 z-10 border-b border-gray-100">
           <h1 className="text-2xl font-bold font-outfit text-gray-900 tracking-tight">Request a Service</h1>
           <p className="text-gray-500 text-sm mt-1">Tell us what you need, and we'll send a quote and available times.</p>
         </div>
@@ -76,7 +76,7 @@ function BookingForm() {
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="e.g. I have a leaky faucet in the kitchen that needs fixing."
-              className="w-full min-h-[120px] bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:glassmorphism transition-all"
+              className="w-full min-h-[120px] bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
             />
           </div>
 

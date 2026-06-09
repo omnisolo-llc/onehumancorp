@@ -37,7 +37,7 @@ export default function ChaosReportPage() {
         </div>
         <button
           onClick={() => setIsDarkMode(!isDarkMode)}
-          className={`px-4 py-2 rounded-full text-sm font-medium ${isDarkMode ? 'glassmorphism/10 hover:glassmorphism/20' : 'bg-black/5 hover:bg-black/10'} transition-colors`}
+          className={`px-4 py-2 rounded-full text-sm font-medium ${isDarkMode ? 'bg-white/10 hover:bg-white/20' : 'bg-black/5 hover:bg-black/10'} transition-colors`}
         >
           Toggle {isDarkMode ? 'Light' : 'Dark'} Mode
         </button>
@@ -68,7 +68,7 @@ export default function ChaosReportPage() {
                   className={`w-full rounded-t-md transition-all duration-500 ${isDarkMode ? 'bg-blue-500/80' : 'bg-blue-500/60'} group-hover:bg-blue-400 relative`}
                   style={{ height: `${Math.max(5, Math.min(100, val / 10))}%` }}
                 >
-                  <div className={`absolute -top-8 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity text-xs font-bold px-2 py-1 rounded ${isDarkMode ? 'bg-gray-800 text-white' : 'glassmorphism shadow text-gray-900'}`}>
+                  <div className={`absolute -top-8 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity text-xs font-bold px-2 py-1 rounded ${isDarkMode ? 'bg-gray-800 text-white' : 'bg-white shadow text-gray-900'}`}>
                     {val}ms
                   </div>
                 </div>

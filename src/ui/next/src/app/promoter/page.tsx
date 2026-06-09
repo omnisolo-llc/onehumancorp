@@ -89,7 +89,7 @@ export default function PromoterPage() {
 
           {/* Input Form */}
           <div className="lg:col-span-1">
-            <div className="glassmorphism rounded-[24px] shadow-sm border border-gray-100 p-6">
+            <div className="bg-white rounded-[24px] shadow-sm border border-gray-100 p-6">
               <h2 className="text-xl font-bold text-gray-900 font-outfit mb-4">Promote a Product</h2>
               <p className="text-gray-600 text-sm mb-6">Let OHC's AI write engaging social media posts to drive traffic to your storefront.</p>
 
@@ -153,7 +153,7 @@ export default function PromoterPage() {
           {/* Results Area */}
           <div className="lg:col-span-2 space-y-6">
             {!generatedPosts && !isGenerating && (
-              <div className="glassmorphism rounded-[24px] shadow-sm border border-gray-100 p-12 text-center h-full flex flex-col items-center justify-center">
+              <div className="bg-white rounded-[24px] shadow-sm border border-gray-100 p-12 text-center h-full flex flex-col items-center justify-center">
                 <div className="w-16 h-16 bg-indigo-50 rounded-2xl flex items-center justify-center text-3xl mb-4">
                   🤖
                 </div>
@@ -163,7 +163,7 @@ export default function PromoterPage() {
             )}
 
             {isGenerating && (
-              <div className="glassmorphism/50 backdrop-blur-sm rounded-[24px] shadow-sm border border-gray-100 p-12 text-center h-full flex flex-col items-center justify-center animate-pulse">
+              <div className="bg-white/50 backdrop-blur-sm rounded-[24px] shadow-sm border border-gray-100 p-12 text-center h-full flex flex-col items-center justify-center animate-pulse">
                 <div className="text-4xl mb-4 animate-bounce">⚡</div>
                 <h3 className="text-lg font-bold text-gray-900">Crafting your content...</h3>
               </div>
@@ -172,7 +172,7 @@ export default function PromoterPage() {
             {generatedPosts && !isGenerating && (
               <>
                 {/* Instagram Card */}
-                <div className="glassmorphism rounded-[24px] shadow-sm border border-gray-100 overflow-hidden">
+                <div className="bg-white rounded-[24px] shadow-sm border border-gray-100 overflow-hidden">
                   <div className="bg-gradient-to-r from-pink-500 via-red-500 to-yellow-500 p-1"></div>
                   <div className="p-6">
                     <div className="flex justify-between items-center mb-4">
@@ -199,7 +199,7 @@ export default function PromoterPage() {
                 </div>
 
                 {/* Twitter Card */}
-                <div className="glassmorphism rounded-[24px] shadow-sm border border-gray-100 overflow-hidden">
+                <div className="bg-white rounded-[24px] shadow-sm border border-gray-100 overflow-hidden">
                   <div className="bg-blue-400 p-1"></div>
                   <div className="p-6">
                     <div className="flex justify-between items-center mb-4">
@@ -226,7 +226,7 @@ export default function PromoterPage() {
                 </div>
 
                 {/* Email Card */}
-                <div className="glassmorphism rounded-[24px] shadow-sm border border-gray-100 overflow-hidden">
+                <div className="bg-white rounded-[24px] shadow-sm border border-gray-100 overflow-hidden">
                   <div className="bg-green-500 p-1"></div>
                   <div className="p-6">
                     <div className="flex justify-between items-center mb-4">

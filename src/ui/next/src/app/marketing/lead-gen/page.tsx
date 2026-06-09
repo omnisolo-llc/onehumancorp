@@ -49,7 +49,7 @@ export default function LeadGenCampaignPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 p-4 sm:p-6 lg:p-8 flex items-center justify-center font-inter">
-      <div className="w-full max-w-md mx-auto glassmorphism p-8 rounded-2xl border border-white/50 shadow-xl">
+      <div className="w-full max-w-md mx-auto bg-white p-8 rounded-2xl border border-white/50 shadow-xl">
         <div className="mb-6">
           <Link href="/dashboard" className="text-sm font-semibold text-blue-600 hover:text-blue-800 transition-colors">
             &larr; Back to Dashboard
@@ -93,7 +93,7 @@ export default function LeadGenCampaignPage() {
                   placeholder="50"
                   value={budget}
                   onChange={(e) => setBudget(e.target.value)}
-                  className="w-full pl-8 pr-4 py-3 glassmorphism/50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                  className="w-full pl-8 pr-4 py-3 bg-white/50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
                 />
               </div>
             </div>
@@ -109,7 +109,7 @@ export default function LeadGenCampaignPage() {
                 placeholder="90210"
                 value={zipCode}
                 onChange={(e) => setZipCode(e.target.value)}
-                className="w-full px-4 py-3 glassmorphism/50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                className="w-full px-4 py-3 bg-white/50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
               />
             </div>
 

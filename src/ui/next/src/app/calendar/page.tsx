@@ -63,7 +63,7 @@ export default function CalendarPage() {
             onClick={() => setAiEnabled(!aiEnabled)}
             className={`w-11 h-6 rounded-full relative transition-colors duration-300 focus:outline-none ${aiEnabled ? 'bg-green-500' : 'bg-gray-300'}`}
           >
-            <span className={`absolute top-1 left-1 glassmorphism w-4 h-4 rounded-full transition-transform duration-300 ${aiEnabled ? 'translate-x-5' : 'translate-x-0'}`} />
+            <span className={`absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform duration-300 ${aiEnabled ? 'translate-x-5' : 'translate-x-0'}`} />
           </button>
         </div>
       </header>
@@ -128,7 +128,7 @@ export default function CalendarPage() {
                   <div className="flex items-center justify-center w-10 h-10 rounded-full border border-white bg-blue-100 text-blue-500 shadow shrink-0  z-10">
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
                   </div>
-                  <div className="w-[calc(100%-4rem)]  glassmorphism p-4 rounded border border-gray-100 shadow-sm ml-4 ">
+                  <div className="w-[calc(100%-4rem)]  bg-white p-4 rounded border border-gray-100 shadow-sm ml-4 ">
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-xs font-semibold text-gray-500">{activity.time}</span>
                     </div>

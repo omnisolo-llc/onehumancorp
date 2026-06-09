@@ -40,7 +40,7 @@ export default function SmartPricingPage() {
             onClick={() => setEnabled(!enabled)}
             className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${enabled ? 'bg-green-500' : 'bg-gray-300'}`}
           >
-            <span className={`inline-block h-4 w-4 transform rounded-full glassmorphism transition-transform ${enabled ? 'translate-x-6' : 'translate-x-1'}`} />
+            <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${enabled ? 'translate-x-6' : 'translate-x-1'}`} />
           </button>
         </div>
 
@@ -60,7 +60,7 @@ export default function SmartPricingPage() {
                 onClick={() => setDiscountPerishables(!discountPerishables)}
                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${discountPerishables ? 'bg-blue-500' : 'bg-gray-300'}`}
               >
-                <span className={`inline-block h-4 w-4 transform rounded-full glassmorphism transition-transform ${discountPerishables ? 'translate-x-6' : 'translate-x-1'}`} />
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${discountPerishables ? 'translate-x-6' : 'translate-x-1'}`} />
               </button>
             </div>
 
@@ -76,7 +76,7 @@ export default function SmartPricingPage() {
                 onClick={() => setSurgePricing(!surgePricing)}
                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${surgePricing ? 'bg-blue-500' : 'bg-gray-300'}`}
               >
-                <span className={`inline-block h-4 w-4 transform rounded-full glassmorphism transition-transform ${surgePricing ? 'translate-x-6' : 'translate-x-1'}`} />
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${surgePricing ? 'translate-x-6' : 'translate-x-1'}`} />
               </button>
             </div>
 
@@ -105,7 +105,7 @@ export default function SmartPricingPage() {
                     <p className="font-bold text-green-600" data-testid="preview-min-price">${minPrice}</p>
                   </div>
                   <div className="flex-1 border-t-2 border-dashed border-gray-300 mx-4 relative">
-                     <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 glassmorphism px-2 text-xs font-bold text-gray-800 rounded shadow-sm border">$10.00</div>
+                     <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white px-2 text-xs font-bold text-gray-800 rounded shadow-sm border">$10.00</div>
                   </div>
                   <div className="text-center">
                     <p className="text-xs text-gray-500 mb-1">Ceiling</p>

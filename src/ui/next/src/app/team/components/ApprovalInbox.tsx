@@ -59,10 +59,10 @@ export default function ApprovalInbox({
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 font-inter py-10">
       <div className="w-[375px] max-w-[375px] min-h-[812px] bg-gradient-to-br from-gray-50 to-gray-100 shadow-2xl overflow-hidden flex flex-col relative border-x border-gray-200">
         {/* Header */}
-        <div className="pt-12 pb-6 px-6 glassmorphism/65 backdrop-blur-[30px] border-b border-white/40 sticky top-0 z-10 flex items-center gap-4">
+        <div className="pt-12 pb-6 px-6 bg-white/65 backdrop-blur-[30px] border-b border-white/40 sticky top-0 z-10 flex items-center gap-4">
           <button
             onClick={onBack}
-            className="w-[44px] h-[44px] flex items-center justify-center rounded-full glassmorphism shadow-sm border border-gray-100 text-gray-500 hover:text-gray-900 transition-colors"
+            className="w-[44px] h-[44px] flex items-center justify-center rounded-full bg-white shadow-sm border border-gray-100 text-gray-500 hover:text-gray-900 transition-colors"
           >
             <svg
               className="w-5 h-5"
@@ -89,7 +89,7 @@ export default function ApprovalInbox({
         </div>
 
         {/* Settings Toggle */}
-        <div className="px-6 py-4 glassmorphism/40 border-b border-white/40 flex items-center justify-between">
+        <div className="px-6 py-4 bg-white/40 border-b border-white/40 flex items-center justify-between">
           <span className="text-sm font-medium text-gray-700">
             Review all messages before sending
           </span>
@@ -98,7 +98,7 @@ export default function ApprovalInbox({
             className={`w-12 h-6 rounded-full p-1 transition-colors flex ${reviewAll ? "bg-blue-500 justify-end" : "bg-gray-300 justify-start"}`}
           >
             <div
-              className={`w-4 h-4 glassmorphism rounded-full transition-transform`}
+              className={`w-4 h-4 bg-white rounded-full transition-transform`}
             />
           </button>
         </div>
@@ -390,7 +390,7 @@ export default function ApprovalInbox({
                           (day, idx) => (
                             <div
                               key={day}
-                              className="flex-shrink-0 w-24 glassmorphism rounded-lg border border-purple-100 p-2 shadow-sm"
+                              className="flex-shrink-0 w-24 bg-white rounded-lg border border-purple-100 p-2 shadow-sm"
                             >
                               <div className="text-[10px] font-bold text-gray-400 uppercase mb-1">
                                 {day}

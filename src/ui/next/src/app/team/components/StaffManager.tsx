@@ -92,7 +92,7 @@ export default function StaffManager() {
        )}
 
        {showAddForm ? (
-         <form onSubmit={handleAddStaff} className="mt-4 glassmorphism rounded-2xl p-4 border border-gray-200 shadow-sm">
+         <form onSubmit={handleAddStaff} className="mt-4 bg-white rounded-2xl p-4 border border-gray-200 shadow-sm">
             <h3 className="font-semibold text-gray-900 mb-3">Add New Staff</h3>
 
             <div className="space-y-3">

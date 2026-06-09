@@ -64,7 +64,7 @@ export default function LinkInBioPublicPage() {
              <div className="w-full max-w-[480px] min-h-screen relative flex flex-col items-center shadow-2xl transition-all duration-300" style={getThemeStyles()}>
                  <div className="w-full h-full flex flex-col items-center overflow-y-auto pt-16 pb-12 px-6">
 
-                     <div className="w-24 h-24 rounded-full glassmorphism/20 shadow-inner flex items-center justify-center backdrop-blur-md mb-6 mt-4 border border-white/30 text-4xl">
+                     <div className="w-24 h-24 rounded-full bg-white/20 shadow-inner flex items-center justify-center backdrop-blur-md mb-6 mt-4 border border-white/30 text-4xl">
                          ✨
                      </div>
 
