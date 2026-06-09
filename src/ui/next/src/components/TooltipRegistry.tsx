@@ -39,6 +39,15 @@ export function TooltipProvider({ children }: { children: ReactNode }) {
     return () => { mounted = false; };
   }, []);
 
+  const [windowWidth, setWindowWidth] = useState(1000);
+
+  useEffect(() => {
+    setWindowWidth(window.innerWidth);
+    const handleResize = () => setWindowWidth(window.innerWidth);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   return (
     <TooltipContext.Provider value={{ activeTooltip, setActiveTooltip, tooltipRect, setTooltipRect, tooltipText, setTooltipText, getTooltip: (id: string) => tooltips[id] }}>
       {children}
@@ -47,7 +56,7 @@ export function TooltipProvider({ children }: { children: ReactNode }) {
           className="fixed z-[100] bg-white/80 text-gray-900 text-sm font-inter p-3 rounded-lg shadow-[0_8px_30px_rgb(0,0,0,0.12)] pointer-events-none w-64 max-w-[calc(100vw-32px)] mx-4 text-center leading-relaxed backdrop-blur-[20px] saturate-200 border border-white/50 animate-fade-in-up"
           style={{
             top: tooltipRect.top - 10,
-            left: tooltipRect.left + tooltipRect.width / 2,
+            left: Math.max(128, Math.min(windowWidth - 128, tooltipRect.left + tooltipRect.width / 2)),
             transform: 'translate(-50%, -100%)'
           }}
         >
