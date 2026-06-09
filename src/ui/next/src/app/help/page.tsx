@@ -8,14 +8,25 @@ export default function HelpCenterPage() {
   const [videos, setVideos] = useState<{id: number, title: string, duration: string, video_url: string}[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedVideo, setSelectedVideo] = useState<{id: number, title: string, duration: string, video_url: string} | null>(null);
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
 
   useEffect(() => {
-    const url = searchQuery.trim() ? `/api/help/search?q=${encodeURIComponent(searchQuery.trim())}` : '/api/help';
+    const handler = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 300);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [searchQuery]);
+
+  useEffect(() => {
+    const url = debouncedSearchQuery.trim() ? `/api/help/search?q=${encodeURIComponent(debouncedSearchQuery.trim())}` : '/api/help';
     fetch(url)
       .then(res => res.json())
       .then(data => setArticles(data))
       .catch(console.error);
-  }, [searchQuery]);
+  }, [debouncedSearchQuery]);
 
   useEffect(() => {
     fetch('/api/videos')

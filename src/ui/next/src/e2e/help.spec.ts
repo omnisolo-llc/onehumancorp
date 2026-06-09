@@ -46,7 +46,7 @@ test.describe('Help Center', () => {
             page.waitForResponse(response =>
                 response.url().includes('/api/help/search') && (response.status() === 200 || response.status() === 304)
             ),
-            searchInput.pressSequentially('My Store', { delay: 100 })
+            searchInput.fill('My Store')
         ]);
 
         // Wait for UI to update
