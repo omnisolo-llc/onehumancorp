@@ -378,7 +378,7 @@ async fn handle_send_receipt(
     let tenant_id = req.tenant_id.unwrap_or_else(|| "my-store".to_string());
 
     let generated = format!(
-        "Hi {},\n\nThank you for your order! Your payment of {} for order {} has been received.\n\nWarmly,\nThe Team\n\n<!-- ⚡ Powered by OHC -->\n<a href=\"/api/v1/growth/referrals/click?target=/onboarding&ref={}\">Powered by OHC - Start your business today</a>",
+        "Hi {},\n\nThank you for your order! Your payment of {} for order {} has been received.\n\nWarmly,\nThe Team\n\n<!-- ⚡ Powered by OHC -->\n<a href=\"https://ohc.store/join?ref={}\">Powered by OHC - Start your business today</a>",
         email, amount, order_id, tenant_id
     );
 
