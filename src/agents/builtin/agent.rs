@@ -3448,7 +3448,7 @@ impl Agent {
                             content: String::new(),
                             error: self_correct_msg.clone(),
                         };
-                        let msg_to_push = Message {
+                        let _msg_to_push = Message {
                             role: Role::Tool,
                             content: String::new(),
                             tool_calls: vec![],
@@ -3715,7 +3715,7 @@ impl Agent {
                                 content: String::new(),
                                 error: self_correct_msg.clone(),
                             };
-                            let msg_to_push = Message {
+                            let _msg_to_push = Message {
                                 role: Role::Tool,
                                 content: String::new(),
                                 tool_calls: vec![],
