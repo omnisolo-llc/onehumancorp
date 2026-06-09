@@ -27,6 +27,17 @@
         border: 1px solid rgba(255, 255, 255, 0.4);
         box-sizing: border-box;
       }
+
+      @media (max-width: 414px) {
+        .container {
+          padding: 24px;
+          margin: 10px;
+          max-width: calc(100% - 20px);
+        }
+        h1 {
+          font-size: 20px;
+        }
+      }
       h1 {
         margin-top: 0;
         color: #1d1d1f;
@@ -34,7 +45,7 @@
         font-weight: 700;
       }
       p {
-        color: #86868b;
+        color: #48484a;
         font-size: 14px;
         margin-bottom: 20px;
       }
@@ -106,7 +117,7 @@
           color: #F5F5F7;
         }
         p {
-          color: #A1A1A6;
+          color: #d2d2d7;
         }
         input {
           background: rgba(255, 255, 255, 0.1);
@@ -158,31 +169,40 @@
       .radio-option {
         display: flex;
         align-items: center;
-        gap: 10px;
+        gap: 12px;
         background: rgba(255, 255, 255, 0.5);
         border: 1px solid rgba(255, 255, 255, 0.5);
-        padding: 12px 16px;
-        border-radius: 8px;
+        padding: 14px 16px;
+        border-radius: 12px;
         cursor: pointer;
-        transition: border-color 0.2s, background 0.2s;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        min-height: 56px;
       }
       .radio-option:hover {
-        background: rgba(255, 255, 255, 0.7);
+        background: rgba(255, 255, 255, 0.8);
+        transform: translateY(-1px);
       }
       .radio-option.selected {
         border-color: #0066FF;
         background: rgba(0, 102, 255, 0.1);
+        box-shadow: 0 4px 12px rgba(0, 102, 255, 0.1);
+      }
+      .tone-option {
+        padding: 20px 16px;
+        flex-direction: row;
+        justify-content: flex-start;
+        text-align: left;
       }
       .radio-option input[type="radio"] {
         display: none;
       }
       .radio-label {
-        font-weight: 500;
+        font-weight: 600;
         color: #1d1d1f;
       }
       .radio-desc {
         font-size: 12px;
-        color: #86868b;
+        color: #48484a;
         margin-top: 2px;
       }
 
@@ -226,6 +246,9 @@
         }
         .radio-label {
           color: #F5F5F7;
+        }
+        .radio-desc {
+          color: #A1A1A6;
         }
         .btn-secondary {
           border-color: rgba(255, 255, 255, 0.2);
@@ -310,18 +333,38 @@
 
       <!-- Step 4: Assistant Setup -->
       <div class="step" id="step-assistant">
-        <h1>Set up your Assistant</h1>
+        <h1 id="step-assistant-h1">Set up your Assistant</h1>
         <p>Give your AI assistant a name and tone.</p>
 
-        <input type="text" id="assistant-name" placeholder="e.g. Jarvis" />
+        <input type="text" id="assistant-name" placeholder="e.g. Jarvis" aria-label="Assistant Name" />
         <div id="assistant-name-error" class="error-msg">Please enter a name for your assistant.</div>
 
-        <select id="assistant-tone">
-          <option value="" disabled selected>Select a tone</option>
-          <option value="Professional">Professional</option>
-          <option value="Friendly">Friendly</option>
-          <option value="Concise">Concise</option>
-        </select>
+        <div class="radio-group" id="tone-group" role="radiogroup" aria-labelledby="step-assistant-h1">
+          <label class="radio-option tone-option" tabindex="0" role="radio" aria-checked="false" data-tone="Professional">
+            <input type="radio" name="assistant_tone" value="Professional" style="display:none" />
+            <div style="font-size: 24px;" aria-hidden="true">👔</div>
+            <div style="flex-grow: 1; text-align: left;">
+              <div class="radio-label">Professional</div>
+              <div class="radio-desc">Polished, formal, and authoritative.</div>
+            </div>
+          </label>
+          <label class="radio-option tone-option" tabindex="0" role="radio" aria-checked="false" data-tone="Friendly">
+            <input type="radio" name="assistant_tone" value="Friendly" style="display:none" />
+            <div style="font-size: 24px;" aria-hidden="true">😊</div>
+            <div style="flex-grow: 1; text-align: left;">
+              <div class="radio-label">Friendly</div>
+              <div class="radio-desc">Warm, approachable, and helpful.</div>
+            </div>
+          </label>
+          <label class="radio-option tone-option" tabindex="0" role="radio" aria-checked="false" data-tone="Concise">
+            <input type="radio" name="assistant_tone" value="Concise" style="display:none" />
+            <div style="font-size: 24px;" aria-hidden="true">⚡</div>
+            <div style="flex-grow: 1; text-align: left;">
+              <div class="radio-label">Concise</div>
+              <div class="radio-desc">Fast, direct, and efficient.</div>
+            </div>
+          </label>
+        </div>
         <div id="tone-error" class="error-msg">Please select a tone.</div>
 
         <div class="btn-group">
@@ -353,7 +396,7 @@
           name: document.getElementById('business-name'),
           tagline: document.getElementById('business-tagline'),
           assistantName: document.getElementById('assistant-name'),
-          assistantTone: document.getElementById('assistant-tone'),
+          toneOptions: document.querySelectorAll('.tone-option'),
           firstOffer: document.getElementById('first-offer')
       };
 
@@ -379,9 +422,31 @@
       // Handle radio buttons selection visual state
       inputs.context.forEach(radio => {
           radio.addEventListener('change', (e) => {
-              document.querySelectorAll('.radio-option').forEach(el => el.classList.remove('selected'));
+              document.querySelectorAll('#context-group .radio-option').forEach(el => el.classList.remove('selected'));
               e.target.closest('.radio-option').classList.add('selected');
               errors.context.style.display = 'none';
+          });
+      });
+
+      // Handle tone cards
+      inputs.toneOptions.forEach(card => {
+          const selectTone = () => {
+              inputs.toneOptions.forEach(el => {
+                  el.classList.remove('selected');
+                  el.setAttribute('aria-checked', 'false');
+              });
+              card.classList.add('selected');
+              card.setAttribute('aria-checked', 'true');
+              state.assistantTone = card.getAttribute('data-tone');
+              errors.assistantTone.style.display = 'none';
+          };
+
+          card.addEventListener('click', selectTone);
+          card.addEventListener('keydown', (e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  selectTone();
+              }
           });
       });
 
@@ -414,20 +479,21 @@
           if (state.tagline) inputs.tagline.value = state.tagline;
           if (state.categories) inputs.categories.value = state.categories;
           if (state.assistantName) inputs.assistantName.value = state.assistantName;
-          if (state.assistantTone) inputs.assistantTone.value = state.assistantTone;
           if (state.firstOffer) inputs.firstOffer.value = state.firstOffer;
 
-          if (state.workContext) {
-              inputs.context.forEach(r => {
-                  if (r.value === state.workContext) {
-                      r.checked = true;
-                      r.closest('.radio-option').classList.add('selected');
+          if (state.assistantTone) {
+              inputs.toneOptions.forEach(card => {
+                  if (card.getAttribute('data-tone') === state.assistantTone) {
+                      card.classList.add('selected');
+                      card.setAttribute('aria-checked', 'true');
                   }
               });
           }
-          if (state.work_context) {
+
+          if (state.workContext || state.work_context) {
+              const val = state.workContext || state.work_context;
               inputs.context.forEach(r => {
-                  if (r.value === state.work_context) {
+                  if (r.value === val) {
                       r.checked = true;
                       r.closest('.radio-option').classList.add('selected');
                   }
@@ -485,12 +551,11 @@
                   state.assistantName = inputs.assistantName.value.trim();
               }
 
-              if (!inputs.assistantTone.value) {
+              if (!state.assistantTone) {
                   errors.assistantTone.style.display = 'block';
                   isValid = false;
               } else {
                   errors.assistantTone.style.display = 'none';
-                  state.assistantTone = inputs.assistantTone.value;
               }
           }
           else if (stepId === 'step-offer') {
@@ -515,6 +580,7 @@
       function goToStep(stepId) {
           document.querySelectorAll('.step').forEach(el => el.classList.remove('active'));
           document.getElementById(stepId).classList.add('active');
+          window.scrollTo(0, 0);
       }
 
       document.querySelectorAll('.next-step-btn').forEach(btn => {

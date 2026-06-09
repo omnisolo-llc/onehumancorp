@@ -110,7 +110,7 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
     await expect(page.locator('#assistant-name')).toHaveCSS('border-color', 'rgb(255, 59, 48)');
 
     await page.getByPlaceholder("e.g. Jarvis").fill("Jarvis");
-    await page.locator('#assistant-tone').selectOption('Professional');
+    await page.locator('.tone-option[data-tone="Professional"]').click();
     await page.locator('#step-assistant').getByRole('button', { name: 'Next' }).click();
 
     // Step 5: Offer
@@ -163,7 +163,7 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
     await newPage.locator('#step-name').getByRole('button', { name: 'Next' }).click();
 
     await expect(newPage.getByPlaceholder("e.g. Jarvis")).toHaveValue("Jarvis");
-    await expect(newPage.locator('#assistant-tone')).toHaveValue('Professional');
+    await expect(newPage.locator('.tone-option[data-tone="Professional"]')).toHaveClass(/selected/);
     await newPage.locator('#step-assistant').getByRole('button', { name: 'Next' }).click();
 
     // Step 5: Offer

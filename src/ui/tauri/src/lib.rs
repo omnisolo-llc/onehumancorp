@@ -100,6 +100,10 @@ async fn get_onboarding_state(_app_handle: tauri::AppHandle) -> Result<Onboardin
             business_name: None,
             assistant_name: None,
             assistant_tone: None,
+            work_context: None,
+            categories: None,
+            tagline: None,
+            first_offer: None,
         });
     }
 
