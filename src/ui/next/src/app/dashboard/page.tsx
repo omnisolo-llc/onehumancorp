@@ -130,6 +130,10 @@ export default function Dashboard() {
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncErrorCount, setSyncErrorCount] = useState(0);
   const [activeDepartments, setActiveDepartments] = useState<string[]>([]);
+
+
+
+
   const handleApproveDraft = async (approvalId: string) => {
     try {
       const token = localStorage.getItem("token") || "";
