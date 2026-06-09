@@ -18,9 +18,17 @@ pub struct IntakeData {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct IntakeProductVariant {
+    pub name: String,
+    pub price_modifier: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct IntakeProduct {
     pub name: String,
     pub price: String,
+    pub description: Option<String>,
+    pub variants: Option<Vec<IntakeProductVariant>>,
 }
 
 #[derive(Clone)]
@@ -44,7 +52,8 @@ impl OnboardingAgent {
         let prompt = format!(
             "You are the OHC Onboarding Expert. Extract structured business information from the following user description.
             If the input is an Instagram/social link, infer the business details from the context of a small business.
-            Return ONLY a valid JSON object with fields: business_name, business_type, categories (array), initial_products (array of objects with 'name' and 'price' as string), location (string), target_audience (string).
+            Return ONLY a valid JSON object with fields: business_name, business_type, categories (array), initial_products (array of objects with 'name' and 'price' as string, 'description' as string, and 'variants' as an optional array of objects with 'name' and 'price_modifier' as strings), location (string), target_audience (string).
+            Ensure there are at least 3 relevant initial products inferred from the business description.
 
             Valid categories are: physical, digital, services, food, subscriptions.
             Business type should be a friendly name like 'Home Bakery', 'Freelance Handyman', 'Boutique', etc.
@@ -59,8 +68,15 @@ impl OnboardingAgent {
               \"location\": \"Austin, TX\",
               \"target_audience\": \"Vegans and people looking for custom cakes\",
               \"initial_products\": [
-                {{\"name\": \"Custom Chocolate Cake\", \"price\": \"45.00\"}},
-                {{\"name\": \"Dozen Cupcakes\", \"price\": \"24.00\"}}
+                {{\"name\": \"Custom Chocolate Cake\", \"price\": \"45.00\", \"description\": \"A delicious vegan chocolate cake\", \"variants\": [
+                    {{\"name\": \"6-inch\", \"price_modifier\": \"0.00\"}},
+                    {{\"name\": \"8-inch\", \"price_modifier\": \"15.00\"}}
+                ]}},
+                {{\"name\": \"Dozen Cupcakes\", \"price\": \"24.00\", \"description\": \"A dozen assorted vegan cupcakes\", \"variants\": [
+                    {{\"name\": \"Vanilla\", \"price_modifier\": \"0.00\"}},
+                    {{\"name\": \"Chocolate\", \"price_modifier\": \"2.00\"}}
+                ]}},
+                {{\"name\": \"Custom Sugar Cookies\", \"price\": \"30.00\", \"description\": \"Beautifully decorated custom cookies\", \"variants\": []}}
               ]
             }}",
             input
@@ -183,6 +199,7 @@ impl OnboardingAgent {
 
         // Use organization id as tenant id if not provided
         let _tenant_id = org_id.clone();
+        let domain_choice = req.domain_choice.clone();
 
         let user_id = format!("usr-{}", uuid::Uuid::new_v4());
         let email = req.admin_email.clone();
@@ -198,12 +215,48 @@ impl OnboardingAgent {
         let business_type_clone = business_type.clone();
 
         let agent_clone_product = self.clone();
+        let req_initial_products = req.initial_products.clone();
+
         let product_future = tokio::task::spawn(async move {
-            if !req_first_product_name.is_empty() {
-                agent_clone_product.create_product(&org_id_clone1, &req_first_product_name, &req_first_product_price, &req_price_type, &business_type_clone).await
+            if !req_initial_products.is_empty() {
+                for product in req_initial_products {
+                    let variants_converted: Option<Vec<IntakeProductVariant>> = if product.variants.is_empty() {
+                        None
+                    } else {
+                        Some(product.variants.into_iter().map(|v| IntakeProductVariant {
+                            name: v.name,
+                            price_modifier: v.price_modifier,
+                        }).collect())
+                    };
+
+                    let payload = serde_json::json!({
+                        "name": product.name,
+                        "price": product.price,
+                        "price_type": req_price_type,
+                        "business_type": business_type_clone,
+                        "description": product.description,
+                        "variants": variants_converted,
+                    });
+
+                    let job_id = uuid::Uuid::new_v4().to_string();
+                    if let Err(e) = sqlx::query(
+                        "INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload, status, next_retry_at)
+                         VALUES ($1, $2, $3, $4, 'PENDING', CURRENT_TIMESTAMP)"
+                    )
+                    .bind(&job_id)
+                    .bind(&org_id_clone1)
+                    .bind("onboarding_generate_catalog")
+                    .bind(serde_json::to_string(&payload).unwrap_or_default())
+                    .execute(&agent_clone_product.db.pool)
+                    .await
+                    {
+                        tracing::error!("Failed to enqueue catalog generation job: {}", e);
+                    }
+                }
+                Ok(())
+            } else if !req_first_product_name.is_empty() {
+                agent_clone_product.create_product(&org_id_clone1, &req_first_product_name, &req_first_product_price, &req_price_type, &business_type_clone, None, None).await
             } else {
-                // If it's a "born live" conversational intake, we might have multiple products
-                // but for now we follow the legacy pattern or seed based on type
                 agent_clone_product.generate_initial_products(&org_id_clone1, &business_type_clone).await
             }
         });
@@ -323,6 +376,20 @@ impl OnboardingAgent {
 
         sqlx::query(
             r#"
+            INSERT INTO tenants (tenant_id, business_name, tier, subdomain)
+            VALUES ($1, $2, 'free', $3)
+            ON CONFLICT (tenant_id) DO UPDATE SET subdomain = EXCLUDED.subdomain
+            "#
+        )
+        .bind(&org_id)
+        .bind(&company_name)
+        .bind(&domain_choice)
+        .execute(&self.db.pool)
+        .await
+        .map_err(|e| e.to_string())?;
+
+        sqlx::query(
+            r#"
             INSERT INTO users (id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at)
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
             "#
@@ -362,7 +429,7 @@ impl OnboardingAgent {
         })
     }
 
-    async fn create_product(&self, org_id: &str, name: &str, price_str: &str, price_type: &str, business_type: &str) -> Result<(), String> {
+    async fn create_product(&self, org_id: &str, name: &str, price_str: &str, price_type: &str, business_type: &str, description: Option<&str>, variants: Option<&Vec<IntakeProductVariant>>) -> Result<(), String> {
         let price_cents = (price_str.parse::<f64>().unwrap_or(0.0) * 100.0) as i64;
         let strategy = match business_type {
             "Service Business" => "booking",
@@ -374,13 +441,32 @@ impl OnboardingAgent {
             .bind(&id)
             .bind(org_id)
             .bind(name)
-            .bind("Added during onboarding")
+            .bind(description.unwrap_or("Added during onboarding"))
             .bind(price_cents)
             .bind(strategy)
             .bind(json!({"price_type": price_type}))
             .execute(&self.db.pool)
             .await
             .map_err(|e| e.to_string())?;
+
+
+        if let Some(vars) = variants {
+            for variant in vars {
+                let variant_id = format!("var-{}", uuid::Uuid::new_v4());
+                let var_price_modifier = (variant.price_modifier.parse::<f64>().unwrap_or(0.0) * 100.0) as i64;
+                sqlx::query("INSERT INTO product_variants (id, tenant_id, product_id, name, sku, price_modifier, inventory_count) VALUES ($1, $2, $3, $4, $5, $6, $7)")
+                    .bind(&variant_id)
+                    .bind(org_id)
+                    .bind(&id)
+                    .bind(&variant.name)
+                    .bind("")
+                    .bind(var_price_modifier)
+                    .bind(0)
+                    .execute(&self.db.pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+            }
+        }
 
         let event_payload = json!({
             "product_id": id,
@@ -2591,6 +2677,7 @@ mod tests {
             price_type: "fixed".to_string(),
             location: "New York, USA".to_string(),
             target_audience: "Anyone".to_string(),
+            initial_products: vec![],
         };
 
         let req_categories = req.selling_categories.clone();
@@ -2628,6 +2715,97 @@ mod tests {
         assert_eq!(users[0].get::<String, _>("email"), "admin@test.com");
         assert_eq!(users[0].get::<String, _>("username"), "Admin User");
         assert!(users[0].get::<String, _>("roles").contains("admin"));
+    }
+
+
+    #[tokio::test]
+    async fn test_process_intake_and_variants() {
+        let db = match setup_test_db().await {
+            Some(db) => db,
+            None => return,
+        };
+        let (tx, _) = tokio::sync::mpsc::channel(10);
+        let hub = std::sync::Arc::new(crate::hub::Hub::new(tx, db.pool.clone()));
+        let mut agent = OnboardingAgent::new(db.clone(), hub);
+
+        if std::env::var("MINIMAX_API_KEY").is_err() {
+            agent.minimax = Some(std::sync::Arc::new(MinimaxClient::new("fake-key".to_string())));
+        }
+
+        let input = "I sell custom vegan cakes in Austin, Texas. Maya's Cakes.";
+        let res = agent.process_intake(input).await;
+        assert!(res.is_ok());
+        let data = res.unwrap();
+
+        assert_eq!(data.business_name, "Maya's Cakes");
+        assert!(data.initial_products.len() >= 1);
+
+        // Also test creating the variants via start_onboarding directly with the mocked data
+        let req = StartOnboardingRequest {
+            business_type: data.business_type,
+            company_name: data.business_name,
+            company_description: input.to_string(),
+            selling_categories: data.categories,
+            payment_pref: "online".to_string(),
+            admin_email: "test@example.com".to_string(),
+            admin_name: "Test Admin".to_string(),
+            admin_password: "password".to_string(),
+            website_template: "Modern".to_string(),
+            first_product_name: "Cake".to_string(),
+            first_product_price: "45.00".to_string(),
+            domain_choice: "subdomain".to_string(),
+            price_type: "fixed".to_string(),
+            location: data.location.unwrap_or_default(),
+            target_audience: data.target_audience.unwrap_or_default(),
+            initial_products: data.initial_products.into_iter().map(|p| {
+                ::server_ohc::orchestration::IntakeProductProto {
+                    name: p.name,
+                    price: p.price,
+                    description: p.description.unwrap_or_default(),
+                    variants: p.variants.unwrap_or_default().into_iter().map(|v| {
+                        ::server_ohc::orchestration::IntakeProductVariantProto {
+                            name: v.name,
+                            price_modifier: v.price_modifier,
+                        }
+                    }).collect(),
+                }
+            }).collect(),
+        };
+
+        let start_res = agent.start_onboarding(req).await;
+        assert!(start_res.is_ok());
+
+        let resp = start_res.unwrap();
+        assert!(resp.success);
+        let org_id = resp.organization_id;
+
+        use sqlx::Row;
+
+        // Verify products are added
+        let products = sqlx::query("SELECT id, name FROM products WHERE organization_id = $1")
+            .bind(&org_id)
+            .fetch_all(&agent.db.pool)
+            .await
+            .unwrap();
+
+        assert!(!products.is_empty());
+
+        let mut has_variants = false;
+        for product in &products {
+            let pid: String = product.get("id");
+            let variants = sqlx::query("SELECT id, name FROM product_variants WHERE product_id = $1")
+                .bind(&pid)
+                .fetch_all(&agent.db.pool)
+                .await
+                .unwrap();
+
+            if !variants.is_empty() {
+                has_variants = true;
+                break;
+            }
+        }
+
+        assert!(has_variants, "There should be at least one product variant created.");
     }
 
     #[tokio::test]
@@ -2669,6 +2847,7 @@ mod tests {
             price_type: "fixed".to_string(),
             location: "Oakland, CA".to_string(),
             target_audience: "Anyone".to_string(),
+            initial_products: vec![],
         };
 
         let state = onboarding_feature_state(&req, "Maya Studio", &req.business_type, &req.location);
@@ -2711,6 +2890,7 @@ mod tests {
             price_type: "fixed".to_string(),
             location: "London, UK".to_string(),
             target_audience: "Anyone".to_string(),
+            initial_products: vec![],
         };
 
         let res_service = agent.start_onboarding(req_service).await.unwrap();
@@ -2750,6 +2930,7 @@ mod tests {
             price_type: "fixed".to_string(),
             location: "Austin, TX".to_string(),
             target_audience: "Anyone".to_string(),
+            initial_products: vec![],
         };
 
         let res_food = agent.start_onboarding(req_food).await.unwrap();

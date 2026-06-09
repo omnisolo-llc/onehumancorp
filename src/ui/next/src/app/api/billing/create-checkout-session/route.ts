@@ -23,7 +23,7 @@ export async function POST(req: Request) {
     const data = await res.json();
     return NextResponse.json(data, { status: res.status });
   } catch (error) {
-    console.error('Error proxying to backend:', error);
+    console.warn('Warn proxying to backend:', error);
     return NextResponse.json(
       { message: 'Internal Server Error' },
       { status: 500 }

@@ -72,6 +72,7 @@ Go to the AI Departments page to see all the helpers you can hire. They are orga
 - **Finance & Payments (The Accountant)**: Makes sure money flows right and provides financial visibility.
 - **Legal & Compliance (The Protector)**: Keeps your business safe.
 - **Business Advisory (The Advisor)**: Acts as your personal consultant.
+- **Discovery (The Scout)**: Discovers new opportunities and paths.
 
 ### Giving Them Tasks
 Once you hire a helper, you can tell them what to do. You just type what you need in plain English. For example, "Write an email to my customers about a summer sale." The helper will do the work and show it to you.

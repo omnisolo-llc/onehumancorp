@@ -1,4 +1,4 @@
-#![allow(dead_code)]
+
 
 use crate::provider::{
     BuiltinProvider, ClaudeProvider, Credentials, GeminiProvider, IronClawProvider,

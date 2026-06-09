@@ -211,24 +211,26 @@ export default function Dashboard() {
 
       try {
         const userId = localStorage.getItem("user_id") || "default";
-        const [metricsRes, ordersRes, inboxRes, supplyRes, onboardingRes] = await Promise.all([
+        const [metricsRes, ordersRes, inboxRes, supplyRes, onboardingRes, approvalsRes] = await Promise.all([
           fetch(`/api/ui/dashboard/metrics?tenant_id=${tenant}`),
           fetch(`/api/ui/orders?tenant_id=${tenant}`),
           fetch(`/api/ui/inbox/messages?tenant_id=${tenant}`),
           fetch(`/api/ui/supply?tenant_id=${tenant}`),
           fetch(`/api/onboarding/state`, { headers: { 'X-Tenant-ID': tenant, 'X-User-ID': userId } }),
+          fetch(`/api/agents/approvals?tenant_id=${tenant}`)
         ]);
 
         if (!metricsRes.ok || !ordersRes.ok || !inboxRes.ok || !supplyRes.ok) {
           throw new Error("One or more database-backed UI endpoints failed");
         }
 
-        const [metricsData, ordersData, inboxData, supplyData, onboardingData] = await Promise.all([
+        const [metricsData, ordersData, inboxData, supplyData, onboardingData, approvalsData] = await Promise.all([
           metricsRes.json(),
           ordersRes.json(),
           inboxRes.json(),
           supplyRes.json(),
           onboardingRes.ok ? onboardingRes.json() : Promise.resolve(null),
+          approvalsRes.ok ? approvalsRes.json() : Promise.resolve([]),
         ]);
 
         if (onboardingData?.wizardState?.aiAgents) {
@@ -245,6 +247,7 @@ export default function Dashboard() {
           raw_materials: Array.isArray(supplyData?.raw_materials) ? supplyData.raw_materials : [],
           bom_items: Array.isArray(supplyData?.bom_items) ? supplyData.bom_items : [],
         });
+        setApprovals(Array.isArray(approvalsData?.approvals) ? approvalsData.approvals : (Array.isArray(approvalsData) ? approvalsData : []));
       } catch (e: any) {
         setError(e?.message || "Failed to load dashboard data");
       } finally {
@@ -380,7 +383,7 @@ export default function Dashboard() {
           <SmartBlock type="PoweredBy" props={{ tenantId: tenantId(), isPremium: false }} />
       </div>
 
-      <section className="app-panel mb-6">
+      <section className="app-panel glassmorphism border border-white/40 dark:border-white/10 mb-6">
         <div className="app-panel-header">
           <div>
             <h2 className="app-panel-title">2024 Store Wrapped</h2>
@@ -395,7 +398,7 @@ export default function Dashboard() {
       </section>
 
       {showMigration && (
-        <section className="app-panel mb-6">
+        <section className="app-panel glassmorphism border border-white/40 dark:border-white/10 mb-6">
           <div className="app-panel-header">
             <div>
               <div className="app-panel-title">Store Migration</div>
@@ -581,7 +584,7 @@ export default function Dashboard() {
         </section>
 
         <section className="app-grid two">
-          <WalkthroughTarget id="operations-map-target" className="app-panel">
+          <WalkthroughTarget id="operations-map-target" className="app-panel glassmorphism border border-white/40 dark:border-white/10">
             <div className="app-panel-header">
               <div>
                 <div className="app-panel-title">Operations Map</div>
@@ -610,7 +613,7 @@ export default function Dashboard() {
             </div>
           </WalkthroughTarget>
 
-          <div className="app-panel">
+          <div className="app-panel glassmorphism border border-white/40 dark:border-white/10">
             <div className="app-panel-header">
               <div className="app-panel-title">Action Required</div>
               <Link href="/inventory" className="app-button">Inventory</Link>
@@ -669,7 +672,7 @@ export default function Dashboard() {
 
 
         <section className="app-grid two">
-          <div className="app-panel">
+          <div className="app-panel glassmorphism border border-white/40 dark:border-white/10">
             <div className="app-panel-header">
               <WithTooltip id="recent-orders-tooltip" defaultText="View the latest orders placed by your customers."><div className="app-panel-title">Recent Orders</div></WithTooltip>
               <Link href="/orders" className="app-button">View All</Link>
@@ -702,7 +705,7 @@ export default function Dashboard() {
             )}
           </div>
 
-          <div className="app-panel">
+          <div className="app-panel glassmorphism border border-white/40 dark:border-white/10">
             <div className="app-panel-header">
               <WithTooltip id="inbox-activity-tooltip" defaultText="Keep track of recent customer messages."><div className="app-panel-title">Inbox Activity</div></WithTooltip>
               <Link href="/inbox" className="app-button">Open Inbox</Link>
