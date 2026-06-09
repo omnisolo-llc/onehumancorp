@@ -56,6 +56,15 @@ export default function HelpCenterPage() {
             <p className="text-center text-gray-500 mt-2 text-sm">
               Try adjusting your search terms or ask our AI assistant for help.
             </p>
+            <button
+              className="mt-6 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-full shadow-md transition-all min-h-[44px]"
+              onClick={() => {
+                const event = new CustomEvent('open-help-chat');
+                window.dispatchEvent(event);
+              }}
+            >
+              Ask AI Support Agent
+            </button>
           </div>
         ) : (
           <div className="space-y-12">

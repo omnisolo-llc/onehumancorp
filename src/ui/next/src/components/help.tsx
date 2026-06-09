@@ -149,6 +149,15 @@ export function HelpWidget() {
   ]);
   const [chatInput, setChatInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+
+  useEffect(() => {
+    const handleOpenHelpChat = () => {
+      setOpen(true);
+      setTab("chat");
+    };
+    window.addEventListener('open-help-chat', handleOpenHelpChat);
+    return () => window.removeEventListener('open-help-chat', handleOpenHelpChat);
+  }, []);
   const nextMessageId = useRef(1);
 
   const [helpArticles, setHelpArticles] = useState<HelpArticle[]>([]);
