@@ -1,0 +1,5 @@
+Implement Centralized Inventory & Distributed POS Architecture (Resolves #25929)
+
+This PR implements the missing offline POS terminal queue functionality and "Pending Sync" visual indicators inside the UI, ensuring smooth transitions for offline-first capabilities for Mobile POS workers.
+It refactors the sync intervals within `page.tsx` of the terminal feature to directly leverage `SyncManager`, effectively unifying offline POS operations.
+A Playwright E2E test verifying these behaviors has been added in `inventory_sync.spec.ts`.

@@ -25,6 +25,35 @@ test.describe('Distributed Inventory Sync POS', () => {
     // or 500/200 depending on mock state. The key is the route exists.
     expect(res.status()).toBeGreaterThanOrEqual(200);
   });
+
+  test('should display Pending Sync visual indicator when offline and transaction is queued', async ({ page }) => {
+    await page.goto('/pos/terminal');
+    await expect(page.locator('text=Terminal Locked')).toBeVisible();
+
+    // Mock offline state
+    await page.evaluate(() => {
+      Object.defineProperty(navigator, 'onLine', { value: false });
+      window.dispatchEvent(new Event('offline'));
+    });
+
+    await expect(page.locator('text=Offline Mode').first()).toBeVisible();
+
+    // Add a fake transaction to SyncManager queue
+    await page.evaluate(() => {
+      const currentQueue = JSON.parse(localStorage.getItem('ohc_offline_queue') || '[]');
+      currentQueue.push({
+        type: 'tap_to_pay',
+        id: 'fake_tx_123',
+        product_id: 'test_product',
+        amount: 5000,
+      });
+      localStorage.setItem('ohc_offline_queue', JSON.stringify(currentQueue));
+      window.dispatchEvent(new Event('ohc_queue_updated'));
+    });
+
+    // The UI should now say Pending Sync (1) instead of Offline Mode
+    await expect(page.locator('text=Pending Sync (1)').first()).toBeVisible();
+  });
 });
 
 test.describe('Low Stock Restock Action Card', () => {
