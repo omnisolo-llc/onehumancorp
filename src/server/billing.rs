@@ -234,7 +234,7 @@ impl Tracker {
         self.get_tenant_cost_cents(tenant_id)
     }
 
-    pub fn get_tenant_storage_cost_cents(&self, tenant_id: &str) -> i64 {
+    pub fn get_tenant_storage_cost_cents(&self, _tenant_id: &str) -> i64 {
         0 // Calculated dynamically on API layer for the dashboard
     }
 
