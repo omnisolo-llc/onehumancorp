@@ -145,6 +145,7 @@ export default function OnboardingWizard() {
         businessName,
         whatYouSell,
         location,
+        targetAudience,
         businessType,
         categories,
         websiteTemplate,
