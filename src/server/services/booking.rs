@@ -1084,7 +1084,7 @@ impl BookingEngineService for NativeBookingService {
                         .arg(&pos_lock_key)
                         .arg(&session_id)
                         .arg("EX")
-                        .arg(15) // 15 seconds lock, same as terminal_api.rs
+                        .arg(300) // 5 minutes lock for online checkout
                         .arg("NX")
                         .query_async(&mut conn)
                         .await
@@ -1108,7 +1108,12 @@ impl BookingEngineService for NativeBookingService {
             .map_err(Status::internal)?
             .ok_or_else(|| Status::resource_exhausted("Product inventory is currently fully held"))?;
 
-        let inventory_lock_id = inventory_lock.key;
+        let inventory_lock_id = if inventory_capacity <= 1 {
+            // For single-capacity items, the true lock is the Redis lock we acquired
+            format!("ohc:lock:{}:inventory:{}", req.tenant_id, req.product_id)
+        } else {
+            inventory_lock.key
+        };
 
         let checkout_url = format!("https://checkout.stripe.com/pay/cs_test_{}", session_id.replace("-", ""));
 
