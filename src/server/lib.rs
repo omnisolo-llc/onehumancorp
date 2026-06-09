@@ -2917,14 +2917,19 @@ async fn ui_dashboard_analytics_briefing_handler(
     use axum::response::IntoResponse;
     let tenant_id = ui_tenant_id(&query);
 
-    let metrics = load_ui_dashboard_metrics(&db, &tenant_id).await.unwrap_or(UiDashboardMetrics {
+    let (metrics_res, inbox_messages_res) = tokio::join!(
+        load_ui_dashboard_metrics(&db, &tenant_id),
+        load_ui_inbox_from_db(&db, &tenant_id)
+    );
+
+    let metrics = metrics_res.unwrap_or(UiDashboardMetrics {
         active_customers: 0,
         pending_orders: 0,
         total_sales: 0.0,
         total_campaigns_sent: 0,
     });
 
-    let inbox_messages = load_ui_inbox_from_db(&db, &tenant_id).await.unwrap_or_default();
+    let inbox_messages = inbox_messages_res.unwrap_or_default();
     let unanswered_dms = inbox_messages.iter().filter(|m| m.get("status").and_then(|s| s.as_str()).unwrap_or("") != "closed").count();
 
     let total_sales_formatted = format!("${:.2}", metrics.total_sales);
@@ -3120,17 +3125,17 @@ async fn ui_dashboard_unified_feed_handler(
     }
 
     let (metrics_res, orders_res, messages_res, supply_res) = tokio::join!(
-        tokio::spawn({ let db = db.clone(); let t = tenant_id.clone(); async move { load_ui_dashboard_metrics(&db, &t).await } }),
-        tokio::spawn({ let db = db.clone(); let t = tenant_id.clone(); async move { load_ui_orders_from_db(&db, &t).await } }),
-        tokio::spawn({ let db = db.clone(); let t = tenant_id.clone(); async move { load_ui_inbox_from_db(&db, &t).await } }),
-        tokio::spawn({ let db = db.clone(); let t = tenant_id.clone(); async move { load_ui_supply_from_db(&db, &t).await } })
+        load_ui_dashboard_metrics(&db, &tenant_id),
+        load_ui_orders_from_db(&db, &tenant_id),
+        load_ui_inbox_from_db(&db, &tenant_id),
+        load_ui_supply_from_db(&db, &tenant_id)
     );
 
     let result = serde_json::json!({
-        "metrics": metrics_res.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound)).map(|m| serde_json::to_value(m).unwrap_or_default()).unwrap_or_default(),
-        "orders": orders_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default(),
-        "inbox": messages_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default(),
-        "supply": supply_res.unwrap_or_else(|_| Ok(serde_json::json!({}))).unwrap_or_default()
+        "metrics": metrics_res.map(|m| serde_json::to_value(m).unwrap_or_default()).unwrap_or_default(),
+        "orders": orders_res.unwrap_or_default(),
+        "inbox": messages_res.unwrap_or_default(),
+        "supply": supply_res.unwrap_or_else(|_| serde_json::json!({}))
     });
 
     let _ = cache.set(&cache_key, result.clone(), std::time::Duration::from_secs(10)).await;
@@ -3151,13 +3156,13 @@ async fn ui_dashboard_unified_agent_feed_handler(
     }
 
     let (approvals_res, ledger_res) = tokio::join!(
-        tokio::spawn({ let db = db.clone(); let t = tenant_id.clone(); async move { load_ui_agent_approvals_from_db(&db, &t).await } }),
-        tokio::spawn({ let db = db.clone(); let t = tenant_id.clone(); async move { load_ui_ledger_from_db(&db, &t).await } })
+        load_ui_agent_approvals_from_db(&db, &tenant_id),
+        load_ui_ledger_from_db(&db, &tenant_id)
     );
 
     let result = serde_json::json!({
-        "pending_approvals": approvals_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default(),
-        "entries": ledger_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default()
+        "pending_approvals": approvals_res.unwrap_or_default(),
+        "entries": ledger_res.unwrap_or_default()
     });
 
     // Note: UI_INBOX_CACHE expects Vec<serde_json::Value>. To avoid type error, we return early and skip caching,

@@ -211,24 +211,24 @@ export default function Dashboard() {
 
       try {
         const userId = localStorage.getItem("user_id") || "default";
-        const [metricsRes, ordersRes, inboxRes, supplyRes, onboardingRes, approvalsRes] = await Promise.all([
-          fetch(`/api/ui/dashboard/metrics?tenant_id=${tenant}`),
-          fetch(`/api/ui/orders?tenant_id=${tenant}`),
-          fetch(`/api/ui/inbox/messages?tenant_id=${tenant}`),
-          fetch(`/api/ui/supply?tenant_id=${tenant}`),
+        const [unifiedRes, onboardingRes, approvalsRes] = await Promise.all([
+          fetch(`/api/ui/dashboard/unified-feed?tenant_id=${tenant}`),
+
+
+
           fetch(`/api/onboarding/state`, { headers: { 'X-Tenant-ID': tenant, 'X-User-ID': userId } }),
           fetch(`/api/agents/approvals?tenant_id=${tenant}`)
         ]);
 
-        if (!metricsRes.ok || !ordersRes.ok || !inboxRes.ok || !supplyRes.ok) {
+        if (!unifiedRes.ok) {
           throw new Error("One or more database-backed UI endpoints failed");
         }
 
-        const [metricsData, ordersData, inboxData, supplyData, onboardingData, approvalsData] = await Promise.all([
-          metricsRes.json(),
-          ordersRes.json(),
-          inboxRes.json(),
-          supplyRes.json(),
+        const [unifiedData, onboardingData, approvalsData] = await Promise.all([
+          unifiedRes.json(),
+
+
+
           onboardingRes.ok ? onboardingRes.json() : Promise.resolve(null),
           approvalsRes.ok ? approvalsRes.json() : Promise.resolve([]),
         ]);
@@ -239,13 +239,13 @@ export default function Dashboard() {
           setActiveDepartments([]);
         }
 
-        setMetrics({ ...emptyMetrics, ...metricsData });
-        setOrders(Array.isArray(ordersData) ? ordersData : []);
-        setMessages(Array.isArray(inboxData) ? inboxData : []);
+        setMetrics({ ...emptyMetrics, ...unifiedData.metrics });
+        setOrders(Array.isArray(unifiedData.orders) ? unifiedData.orders : []);
+        setMessages(Array.isArray(unifiedData.inbox) ? unifiedData.inbox : []);
         setSupply({
-          vendors: Array.isArray(supplyData?.vendors) ? supplyData.vendors : [],
-          raw_materials: Array.isArray(supplyData?.raw_materials) ? supplyData.raw_materials : [],
-          bom_items: Array.isArray(supplyData?.bom_items) ? supplyData.bom_items : [],
+          vendors: Array.isArray(unifiedData.supply?.vendors) ? unifiedData.supply?.vendors : [],
+          raw_materials: Array.isArray(unifiedData.supply?.raw_materials) ? unifiedData.supply?.raw_materials : [],
+          bom_items: Array.isArray(unifiedData.supply?.bom_items) ? unifiedData.supply?.bom_items : [],
         });
         setApprovals(Array.isArray(approvalsData?.approvals) ? approvalsData.approvals : (Array.isArray(approvalsData) ? approvalsData : []));
       } catch (e: any) {
