@@ -21,8 +21,8 @@ describe('Agent Marketplace Page', () => {
       json: async () => [
         {
           id: 'agent-1',
-          name: 'Data Analyst',
-          description: 'Analyzes CSV files',
+          name: 'Senior Rust Developer',
+          description: 'An expert in Rust capable of building concurrent and safe systems.',
           author: 'AutoGPT',
           version: '1.0.0',
           endpoint: 'https://marketplace.example.com/agents/agent-1',
@@ -44,9 +44,9 @@ describe('Agent Marketplace Page', () => {
     render(<AgentMarketplacePage />);
 
     await waitFor(() => {
-      expect(screen.getByText('Data Analyst')).toBeInTheDocument();
+      expect(screen.getByText('Senior Rust Developer')).toBeInTheDocument();
     });
-    expect(screen.getByText('Analyzes CSV files')).toBeInTheDocument();
+    expect(screen.getByText('An expert in Rust capable of building concurrent and safe systems.')).toBeInTheDocument();
     expect(screen.getByText('AutoGPT')).toBeInTheDocument();
 
   });
