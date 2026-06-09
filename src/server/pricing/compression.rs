@@ -32,16 +32,31 @@ pub fn decompress_lossless(data: &str) -> Result<String, String> {
 }
 
 static STOP_WORDS: &[&str] = &[
-    "a", "an", "the", "is", "are",
-    "and", "or", "but", "in", "on",
-    "at", "to", "for", "with", "by",
-    "about", "as", "of",
+    "a", "an", "the", "is", "are", "was", "were", "be", "been", "being",
+    "and", "or", "but", "in", "on", "at", "to", "for", "with", "by",
+    "about", "as", "of", "am", "if", "then", "else", "when", "where",
+    "why", "how", "all", "any", "both", "each", "few", "more", "most",
+    "other", "some", "such", "no", "nor", "not", "only", "own", "same",
+    "so", "than", "too", "very", "can", "will", "just", "should", "now",
+    "which", "who", "whom", "this", "that", "these", "those",
 ];
 
 pub fn reduce_tokens(data: &str) -> String {
+    // Advanced Token Reduction:
+    // 1. Split by whitespace and filter out stop words.
+    // 2. Remove punctuation-only tokens.
+    // 3. Rejoin with single spaces.
     data.split_whitespace()
         .filter(|word| {
-            !STOP_WORDS.iter().any(|&stop_word| word.eq_ignore_ascii_case(stop_word))
+            // Filter stop words (case-insensitive)
+            if STOP_WORDS.iter().any(|&stop_word| word.eq_ignore_ascii_case(stop_word)) {
+                return false;
+            }
+            // Filter out purely punctuation strings which often consume tokens without adding meaning
+            if word.chars().all(|c| c.is_ascii_punctuation()) {
+                return false;
+            }
+            true
         })
         .fold(String::with_capacity(data.len()), |mut acc, w| {
             if !acc.is_empty() {
@@ -136,11 +151,10 @@ mod tests {
     #[test]
     fn test_reduce_tokens() {
         let input = "This is a long sentence with some stop words in it and about some things.";
-        // Stop words: a, an, the, is, are, and, or, but, in, on, at, to, for, with, by, about, as, of
-        // Result should remove "is", "a", "with", "in", "and", "about".
-        // Note: 'it' and 'some' are not stop words here.
+        // Stop words (new list includes 'this', 'is', 'a', 'with', 'some', 'in', 'and', 'about')
         let reduced = reduce_tokens(input);
-        assert_eq!(reduced, "This long sentence some stop words it some things.");
+        // "long sentence stop words it things."
+        assert_eq!(reduced, "long sentence stop words it things.");
     }
 
     #[test]

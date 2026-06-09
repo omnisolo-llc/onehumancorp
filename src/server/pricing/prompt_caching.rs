@@ -149,4 +149,19 @@ mod tests {
         thread::sleep(Duration::from_millis(20));
         assert!(cache.get("What is the capital of France?").is_none());
     }
+
+    #[test]
+    fn test_prompt_cache_get_with_cost_cents_fallback() {
+        unsafe {
+            std::env::set_var("OHC_LLM_MODEL", "local-model");
+            std::env::set_var("MISER_TOKEN_RATIO", "0.0002");
+        }
+        let cache = PromptCache::new(Duration::from_secs(10));
+        cache.set("Test", "Response", 1000);
+
+        let (response, cost) = cache.get_with_cost_cents("Test");
+        assert!(response.is_some());
+        // 1000 tokens * 0.0002 * 100 = 20 cents
+        assert_eq!(cost, 20);
+    }
 }

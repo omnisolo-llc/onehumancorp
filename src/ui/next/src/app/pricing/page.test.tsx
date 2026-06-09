@@ -26,16 +26,16 @@ describe('PricingPage', () => {
 
   it('renders the pricing page', () => {
     render(<PricingPage />);
-    expect(screen.getByText('Pricing Plans')).toBeDefined();
-    expect(screen.getByText('Free')).toBeDefined();
-    expect(screen.getByText('Starter')).toBeDefined();
-    expect(screen.getByText('Pro')).toBeDefined();
-    expect(screen.getByText('Business')).toBeDefined();
+    expect(screen.getByText('Subscription Plans')).toBeDefined();
+    expect(screen.getAllByText('Free')[0]).toBeDefined();
+    expect(screen.getAllByText('Starter')[0]).toBeDefined();
+    expect(screen.getAllByText('Pro')[0]).toBeDefined();
+    expect(screen.getAllByText('Business')[0]).toBeDefined();
   });
 
   it('navigates to checkout when upgrading to Starter', () => {
     render(<PricingPage />);
-    const upgradeButton = screen.getByText('Upgrade to Starter via Stripe');
+    const upgradeButton = screen.getByText('Upgrade to Starter');
     fireEvent.click(upgradeButton);
     expect(mockPush).toHaveBeenCalledWith('/checkout?tier=Starter');
   });

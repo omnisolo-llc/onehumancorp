@@ -166,10 +166,20 @@ impl MinimaxClient {
         }
 
         // 2. Optimize Prompt
+        // context-aware truncation logic to stay within token limits and optimize costs
         let optimized_prompt = if prompt.starts_with('{') {
             minify_json_prompt(prompt)
         } else {
-            truncate_by_word_count(prompt, 2000) // Safety truncation
+            // Intelligent truncation: Keep first 800 words and last 800 words
+            // This preserves system instructions/context and the actual user request.
+            let words: Vec<&str> = prompt.split_whitespace().collect();
+            if words.len() > 1600 {
+                let first_part = words[..800].join(" ");
+                let last_part = words[words.len() - 800..].join(" ");
+                format!("{} ... [TRUNCATED FOR COST EFFICIENCY] ... {}", first_part, last_part)
+            } else {
+                prompt.to_string()
+            }
         };
 
         let client = reqwest::Client::new();
@@ -489,3 +499,62 @@ impl LocalLLMClient {
     }
 }
 
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_minimax_client_truncation() {
+        let client = MinimaxClient::new("fake-key".to_string());
+
+        // Create a prompt with more than 1600 words
+        let mut long_prompt = String::new();
+        for i in 0..2000 {
+            long_prompt.push_str(&format!("word{} ", i));
+        }
+
+        // This should trigger the truncation logic in internal_reason
+        // We can't easily call internal_reason directly because it's private and uses reqwest
+        // But reason() calls it through deduplicator.
+        // Actually, internal_reason is private, but reason is public.
+        // Since api_key is "fake-key", it returns mock responses, but those mocks check for "maya", "alex", etc.
+        // Let's check if our truncation preserves "maya" if it's at the end.
+
+        let mut maya_prompt = String::new();
+        for i in 0..1000 {
+            maya_prompt.push_str(&format!("word{} ", i));
+        }
+        maya_prompt.push_str("maya ");
+        for i in 1001..2000 {
+            maya_prompt.push_str(&format!("word{} ", i));
+        }
+
+        // If truncation works correctly (keeping first 800 and last 800),
+        // "maya" at index 1000 will be TRUNCATED if it's not in the first 800 or last 800.
+        // 2000 words. first 800 is 0..800. last 800 is 1200..2000.
+        // word 1000 (maya) is in the middle and should be removed.
+
+        let res = client.reason(&maya_prompt).await.unwrap();
+        // Should NOT contain Maya's Cakes because "maya" was truncated
+        assert!(res.contains("Generic Business"));
+
+        // Now put maya in the first 800
+        let mut first_maya = String::new();
+        first_maya.push_str("maya ");
+        for i in 0..2000 {
+            first_maya.push_str(&format!("word{} ", i));
+        }
+        let res2 = client.reason(&first_maya).await.unwrap();
+        assert!(res2.contains("Maya's Cakes"));
+
+        // Now put maya in the last 800
+        let mut last_maya = String::new();
+        for i in 0..2000 {
+            last_maya.push_str(&format!("word{} ", i));
+        }
+        last_maya.push_str("maya ");
+        let res3 = client.reason(&last_maya).await.unwrap();
+        assert!(res3.contains("Maya's Cakes"));
+    }
+}

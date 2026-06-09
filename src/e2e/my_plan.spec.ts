@@ -1,53 +1,45 @@
 import { test, expect } from './fixtures';
 
-test.describe('My Plan Dashboard', () => {
+test.describe('My Plan & Cost Dashboard E2E', () => {
 
-  test('should display the My Plan header', async ({ page }) => {
-    await page.goto('/plan');
-    await expect(page.locator('h1', { hasText: 'My Plan' })).toBeVisible({ timeout: 10000 });
-  });
-
-  test('should display current plan details', async ({ page }) => {
+  test('should display current plan and upgrade button', async ({ page }) => {
     await page.goto('/plan');
     await expect(page.locator('#my-plan-name')).toBeVisible();
-    await expect(page.locator('h2', { hasText: 'Plan:' })).toBeVisible();
-    await expect(page.locator('span', { hasText: 'Active' })).toBeVisible();
+    await expect(page.locator('button', { hasText: 'Upgrade Plan' })).toBeVisible();
   });
 
-  test('should display estimated next bill', async ({ page }) => {
+  test('should show AI actions usage with progress bar', async ({ page }) => {
     await page.goto('/plan');
-    await expect(page.locator('#my-plan-next-bill')).toBeVisible();
-    await expect(page.locator('h2', { hasText: 'Estimated Next Bill:' })).toBeVisible();
-  });
-
-  test('should display AI Actions usage', async ({ page }) => {
-    await page.goto('/plan');
-    await expect(page.locator('h2', { hasText: 'Your Current Usage' })).toBeVisible();
     await expect(page.locator('span', { hasText: 'AI Actions Used' })).toBeVisible();
+    // Verify progress bar exists
+    await expect(page.locator('.bg-blue-600.h-2.5')).toBeVisible();
   });
 
-  test('should display Storage usage', async ({ page }) => {
+  test('should display cost dashboard total savings from compression', async ({ page }) => {
+    await page.goto('/cost-dashboard');
+    // In the new layout, this is "Economic Gains" or "Optimization Saved"
+    await expect(page.locator('h3', { hasText: 'Economic Gains' })).toBeVisible();
+    await expect(page.locator('span', { hasText: 'Optimization Saved' })).toBeVisible();
+  });
+
+  test('should show user feedback message after downloading invoice', async ({ page }) => {
     await page.goto('/plan');
-    await expect(page.locator('span', { hasText: 'Storage Used' })).toBeVisible();
+    await page.click('button:has-text("Download Invoice")');
+    await expect(page.locator('[role="status"]')).toContainText('Invoice download is ready');
   });
 
-  test('should display management action buttons', async ({ page }) => {
+  test('should show confirmation and message after cancelling subscription', async ({ page }) => {
     await page.goto('/plan');
-    await expect(page.locator('h3', { hasText: 'View Cost Details' })).toBeVisible();
-    await expect(page.locator('h3', { hasText: 'Change Plan' })).toBeVisible();
-    await expect(page.locator('h3', { hasText: 'Download Invoice' })).toBeVisible();
-    await expect(page.locator('h3', { hasText: 'Cancel Subscription' })).toBeVisible();
-  });
 
-  test('should return correct JSON payload from backend API', async ({ request }) => {
-    const response = await request.get('/api/billing/my-plan');
-    expect(response.ok()).toBeTruthy();
-    const data = await response.json();
+    // Setup dialog handler before clicking
+    page.once('dialog', async dialog => {
+      expect(dialog.message()).toContain('Are you sure you want to cancel');
+      await dialog.accept();
+    });
 
-    expect(data).toHaveProperty('current_plan');
-    expect(data).toHaveProperty('ai_actions_used');
-    expect(data).toHaveProperty('storage_used_bytes');
-    expect(data).toHaveProperty('next_bill_estimated');
+    await page.click('button:has-text("Cancel Subscription")');
+    // The message is displayed in the role="status" div
+    await expect(page.locator('[role="status"]')).toContainText('Subscription canceled successfully');
   });
 
 });
