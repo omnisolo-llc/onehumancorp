@@ -116,6 +116,24 @@ impl GrowthService for MyGrowthService {
 
         tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
 
+        let review_event = serde_json::json!({
+            "review_id": review_id,
+            "customer_id": req.customer_id,
+            "order_id": req.order_id,
+            "rating": req.rating,
+            "comment": req.comment
+        });
+        let job_id = uuid::Uuid::new_v4().to_string();
+        let pool_clone = self.pool.clone();
+        let tenant_id_clone = tenant_id.clone();
+        tokio::spawn(async move {
+            let _ = sqlx::query("INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload, status, next_retry_at) VALUES ($1, $2, 'tenant.review.received', $3, 'PENDING', CURRENT_TIMESTAMP)")
+                .bind(&job_id)
+                .bind(&tenant_id_clone)
+                .bind(&review_event)
+                .execute(&pool_clone).await;
+        });
+
         Ok(Response::new(SubmitReviewResponse {
             review_id,
             generated_referral_link,
