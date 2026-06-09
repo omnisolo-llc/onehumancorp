@@ -1964,6 +1964,7 @@ async fn get_pending_approvals(
                     crate::orchestration::departments::types::ApprovalStatus::PendingApproval => "PENDING_APPROVAL".to_string(),
                     crate::orchestration::departments::types::ApprovalStatus::Approved => "APPROVED".to_string(),
                     crate::orchestration::departments::types::ApprovalStatus::Rejected => "REJECTED".to_string(),
+                    crate::orchestration::departments::types::ApprovalStatus::Paused => "PAUSED".to_string(),
                 },
                 assigned_agent_id: "".to_string(),
                 priority: "High".to_string(),
@@ -1979,6 +1980,7 @@ async fn get_pending_approvals(
                     crate::orchestration::departments::types::ApprovalStatus::PendingApproval => "PENDING".to_string(),
                     crate::orchestration::departments::types::ApprovalStatus::Approved => "APPROVED".to_string(),
                     crate::orchestration::departments::types::ApprovalStatus::Rejected => "REJECTED".to_string(),
+                    crate::orchestration::departments::types::ApprovalStatus::Paused => "PAUSED".to_string(),
                 },
                 proposed_content,
             }
@@ -2904,6 +2906,67 @@ async fn load_ui_orders_from_db(db: &crate::db::DB, tenant_id: &str) -> Result<V
                 })).collect())
         }
     }
+}
+
+
+async fn ui_dashboard_analytics_briefing_handler(
+    axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
+    axum::extract::Query(query): axum::extract::Query<UiTenantQuery>,
+) -> axum::response::Response {
+    use axum::response::IntoResponse;
+    let tenant_id = ui_tenant_id(&query);
+
+    let metrics = load_ui_dashboard_metrics(&db, &tenant_id).await.unwrap_or(UiDashboardMetrics {
+        active_customers: 0,
+        pending_orders: 0,
+        total_sales: 0.0,
+        total_campaigns_sent: 0,
+    });
+
+    let inbox_messages = load_ui_inbox_from_db(&db, &tenant_id).await.unwrap_or_default();
+    let unanswered_dms = inbox_messages.iter().filter(|m| m.get("status").and_then(|s| s.as_str()).unwrap_or("") != "closed").count();
+
+    let total_sales_formatted = format!("${:.2}", metrics.total_sales);
+
+    let summary = format!("Good morning. You have {} pending orders totaling {}, and {} unanswered DMs.", metrics.pending_orders, total_sales_formatted, unanswered_dms);
+
+    (axum::http::StatusCode::OK, axum::Json(serde_json::json!({
+        "briefing": summary
+    }))).into_response()
+}
+
+#[derive(serde::Deserialize)]
+struct AnalyticsChatRequest {
+    message: String,
+}
+
+async fn ui_dashboard_analytics_chat_handler(
+    axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
+    axum::extract::Query(query): axum::extract::Query<UiTenantQuery>,
+    axum::Json(payload): axum::Json<AnalyticsChatRequest>,
+) -> axum::response::Response {
+    use axum::response::IntoResponse;
+    let tenant_id = ui_tenant_id(&query);
+    let text = payload.message.to_lowercase();
+
+    let response_text = if text.contains("dm") || text.contains("message") {
+        let inbox_messages = load_ui_inbox_from_db(&db, &tenant_id).await.unwrap_or_default();
+        let senders: Vec<String> = inbox_messages.iter().take(3).filter_map(|m| m.get("source").and_then(|s| s.as_str()).map(|s| s.to_string())).collect();
+        if senders.is_empty() {
+            "You have no recent messages.".to_string()
+        } else {
+            format!("Your latest messages are from: {}.", senders.join(", "))
+        }
+    } else if text.contains("order") || text.contains("booking") || text.contains("revenue") || text.contains("sale") {
+        let metrics = load_ui_dashboard_metrics(&db, &tenant_id).await.unwrap_or(UiDashboardMetrics { active_customers: 0, pending_orders: 0, total_sales: 0.0, total_campaigns_sent: 0 });
+        format!("You currently have {} pending orders, with a total expected revenue of ${:.2}.", metrics.pending_orders, metrics.total_sales)
+    } else {
+        "I am your Decision Assistant. I can help you check orders, messages, and revenue.".to_string()
+    };
+
+    (axum::http::StatusCode::OK, axum::Json(serde_json::json!({
+        "reply": response_text
+    }))).into_response()
 }
 
 async fn load_ui_inbox_from_db(db: &crate::db::DB, tenant_id: &str) -> Result<Vec<serde_json::Value>, sqlx::Error> {
@@ -3848,9 +3911,11 @@ async fn create_ui_bom_item_handler(
             }
         }))
         .route("/api/integrations/manychat/draft", axum::routing::post(generate_manychat_draft_handler))
-        .route("/api/ui/dashboard/metrics", axum::routing::get(ui_dashboard_metrics_handler).with_state(db.clone()))
+                .route("/api/ui/dashboard/metrics", axum::routing::get(ui_dashboard_metrics_handler).with_state(db.clone()))
         .route("/api/ui/dashboard/unified-feed", axum::routing::get(ui_dashboard_unified_feed_handler).with_state(db.clone()))
         .route("/api/ui/dashboard/unified-agent-feed", axum::routing::get(ui_dashboard_unified_agent_feed_handler).with_state(db.clone()))
+        .route("/api/ui/dashboard/analytics/briefing", axum::routing::get(ui_dashboard_analytics_briefing_handler).with_state(db.clone()))
+        .route("/api/ui/dashboard/analytics/chat", axum::routing::post(ui_dashboard_analytics_chat_handler).with_state(db.clone()))
         .route("/api/ui/orders", axum::routing::get(list_ui_orders_handler).with_state(db.clone()))
         .route("/api/ui/bookings", axum::routing::get(list_ui_bookings_handler).with_state(db.clone()))
         .route("/api/ui/inbox/messages", axum::routing::get(list_ui_inbox_handler).with_state(db.clone()))
@@ -4304,7 +4369,7 @@ async fn create_ui_bom_item_handler(
 
     tokio::spawn(async move {
         let mut interval = tokio::time::interval(std::time::Duration::from_secs(1));
-        let mut prune_interval = tokio::time::interval(std::time::Duration::from_secs(60));
+        let mut prune_interval = tokio::time::interval(std::time::Duration::from_secs(300));
         loop {
             tokio::select! {
                 _ = prune_interval.tick() => {
@@ -4312,6 +4377,10 @@ async fn create_ui_bom_item_handler(
                     if let Err(e) = sip_db.prune_stale_missions(chrono::Duration::days(7)).await {
                         ::server_telemetry::record_error_signal("failed to prune stale missions");
                         tracing::error!("failed to prune stale missions: {}", e);
+                    }
+                    if let Err(e) = sip_db.cleanup_stagnant_missions(chrono::Duration::minutes(5)).await {
+                        ::server_telemetry::record_error_signal("failed to cleanup stagnant missions");
+                        tracing::error!("failed to cleanup stagnant missions: {}", e);
                     }
                 }
                 _ = interval.tick() => {
