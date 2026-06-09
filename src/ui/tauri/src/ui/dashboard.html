@@ -331,12 +331,30 @@
       });
 
       copyBtn.addEventListener('click', () => {
-        referralLink.select();
-        document.execCommand('copy');
-        copyBtn.innerText = "Copied!";
-        setTimeout(() => {
-          copyBtn.innerText = "Copy";
-        }, 2000);
+        const link = referralLink.value;
+        const text = `Join my team on OHC! Here is your invite link:\n\n${link}\n\n⚡ Powered by OHC`;
+
+        navigator.clipboard.writeText(text).then(() => {
+          copyBtn.innerText = "Copied!";
+          setTimeout(() => {
+            copyBtn.innerText = "Copy";
+          }, 2000);
+        }).catch(err => {
+          console.error('Failed to copy: ', err);
+          // Fallback to older execCommand method if clipboard API fails
+          // For legacy compatibility, write text to a temporary element to copy it
+          const tempInput = document.createElement("textarea");
+          tempInput.value = text;
+          document.body.appendChild(tempInput);
+          tempInput.select();
+          document.execCommand("copy");
+          document.body.removeChild(tempInput);
+
+          copyBtn.innerText = "Copied!";
+          setTimeout(() => {
+            copyBtn.innerText = "Copy";
+          }, 2000);
+        });
       });
 
       const shareWhatsAppBtn = document.getElementById('share-whatsapp-btn');
