@@ -167,9 +167,114 @@
           background-color: #48484a;
         }
       }
+
+      /* Omnibox Modal Styles */
+      #omnibox-overlay {
+        display: none;
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0, 0, 0, 0.2);
+        backdrop-filter: blur(4px);
+        z-index: 1000;
+        align-items: flex-start;
+        justify-content: center;
+        padding-top: 10vh;
+      }
+      #omnibox-modal {
+        width: 100%;
+        max-width: 600px;
+        background: rgba(255, 255, 255, 0.9);
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        border-radius: 12px;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+      }
+      @media (prefers-color-scheme: dark) {
+        #omnibox-modal {
+          background: rgba(28, 28, 30, 0.9);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+      }
+      #omnibox-input {
+        width: 100%;
+        padding: 16px 20px;
+        font-size: 18px;
+        border: none;
+        background: transparent;
+        outline: none;
+        color: #1d1d1f;
+      }
+      @media (prefers-color-scheme: dark) {
+        #omnibox-input {
+          color: #f5f5f7;
+        }
+      }
+      #omnibox-results {
+        max-height: 50vh;
+        overflow-y: auto;
+        border-top: 1px solid rgba(0, 0, 0, 0.1);
+      }
+      @media (prefers-color-scheme: dark) {
+        #omnibox-results {
+          border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+      }
+      .omnibox-item {
+        padding: 12px 20px;
+        cursor: pointer;
+        border-bottom: 1px solid rgba(0,0,0,0.05);
+        text-align: left;
+      }
+      @media (prefers-color-scheme: dark) {
+        .omnibox-item {
+          border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+      }
+      .omnibox-item:hover {
+        background: rgba(0, 0, 0, 0.05);
+      }
+      @media (prefers-color-scheme: dark) {
+        .omnibox-item:hover {
+          background: rgba(255, 255, 255, 0.05);
+        }
+      }
+      .omnibox-title {
+        font-weight: 600;
+        font-size: 15px;
+        color: #1d1d1f;
+      }
+      .omnibox-subtitle {
+        font-size: 13px;
+        color: #86868b;
+      }
+      .omnibox-type {
+        float: right;
+        font-size: 11px;
+        background: #e5e5ea;
+        padding: 2px 6px;
+        border-radius: 4px;
+        text-transform: uppercase;
+        color: #1d1d1f;
+      }
+      @media (prefers-color-scheme: dark) {
+        .omnibox-title { color: #f5f5f7; }
+        .omnibox-subtitle { color: #a1a1a6; }
+        .omnibox-type { background: #333336; color: #f5f5f7; }
+      }
+
     </style>
   </head>
   <body>
+    <!-- Omnibox Modal -->
+    <div id="omnibox-overlay">
+      <div id="omnibox-modal" onclick="event.stopPropagation()">
+        <input type="text" id="omnibox-input" placeholder="Search customers, orders, messages... (Cmd+K)" autocomplete="off" />
+        <div id="omnibox-results"></div>
+      </div>
+    </div>
+
     <div class="container">
       <div class="status-badge">🟢 Standalone Mode (Zero Data Leakage)</div>
 
@@ -240,6 +345,70 @@
         const text = `Join my team on OHC! Here is your invite link:\n\n${link}\n\n⚡ Powered by OHC`;
         window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
       });
+
+      // Omnibox logic
+      const omniboxOverlay = document.getElementById('omnibox-overlay');
+      const omniboxInput = document.getElementById('omnibox-input');
+      const omniboxResults = document.getElementById('omnibox-results');
+      let omniboxTimer = null;
+
+      document.addEventListener('keydown', (e) => {
+        if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+          e.preventDefault();
+          if (omniboxOverlay.style.display === 'flex') {
+            omniboxOverlay.style.display = 'none';
+          } else {
+            omniboxOverlay.style.display = 'flex';
+            omniboxInput.focus();
+            omniboxInput.value = '';
+            omniboxResults.innerHTML = '<div style="padding: 20px; text-align: center; color: #86868b;">Type to search your workspace</div>';
+          }
+        } else if (e.key === 'Escape' && omniboxOverlay.style.display === 'flex') {
+          omniboxOverlay.style.display = 'none';
+        }
+      });
+
+      omniboxOverlay.addEventListener('click', () => {
+        omniboxOverlay.style.display = 'none';
+      });
+
+      omniboxInput.addEventListener('input', (e) => {
+        const query = e.target.value.trim();
+        if (!query) {
+          omniboxResults.innerHTML = '<div style="padding: 20px; text-align: center; color: #86868b;">Type to search your workspace</div>';
+          return;
+        }
+
+        clearTimeout(omniboxTimer);
+        omniboxTimer = setTimeout(async () => {
+          try {
+            // For Tauri app, fallback to local fetch if API not injected directly
+            // Adjust port if necessary, typically 18789 for Tauri dev server
+            let url = `/api/v1/search?q=${encodeURIComponent(query)}`;
+            if (window.__TAURI__ === undefined && location.protocol === 'file:') {
+               url = `http://localhost:18789/api/v1/search?q=${encodeURIComponent(query)}`;
+            }
+            const res = await fetch(url);
+            const data = await res.json();
+
+            if (data.success && data.results && data.results.length > 0) {
+              omniboxResults.innerHTML = data.results.map(item => `
+                <div class="omnibox-item" onclick="alert('Navigating to ${item.route}'); document.getElementById('omnibox-overlay').style.display='none';">
+                  <div class="omnibox-type">${item.entity_type}</div>
+                  <div class="omnibox-title">${item.title}</div>
+                  <div class="omnibox-subtitle">${item.subtitle}</div>
+                </div>
+              `).join('');
+            } else {
+              omniboxResults.innerHTML = `<div style="padding: 20px; text-align: center; color: #86868b;">No results found for "${query}"</div>`;
+            }
+          } catch (err) {
+            console.error(err);
+            omniboxResults.innerHTML = '<div style="padding: 20px; text-align: center; color: #86868b;">Error fetching results.</div>';
+          }
+        }, 300);
+      });
+
     </script>
   </body>
 </html>
