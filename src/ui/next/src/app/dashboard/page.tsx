@@ -230,8 +230,8 @@ export default function Dashboard() {
           raw_materials: Array.isArray(supplyData?.raw_materials) ? supplyData.raw_materials : [],
           bom_items: Array.isArray(supplyData?.bom_items) ? supplyData.bom_items : [],
         });
-        setApprovals(Array.isArray(unifiedFeedData.pending_approvals) ? unifiedFeedData.pending_approvals : []);
-        setActivities(Array.isArray(unifiedFeedData.activities) ? unifiedFeedData.activities : []);
+        setApprovals(Array.isArray(dashboardData.pendingReviews) ? dashboardData.pendingReviews : []);
+        setActivities(Array.isArray(dashboardData.activities) ? dashboardData.activities : []);
       } catch (e: any) {
         setError(e?.message || "Failed to load dashboard data");
       } finally {
@@ -500,7 +500,7 @@ export default function Dashboard() {
              />
         ))}
 
-        <UnifiedAgentFeed initialApprovals={approvals} initialActivities={activities} />
+        <UnifiedAgentFeed />
 
         <section>
           <div className="mb-6 p-6 rounded-[16px] bg-white/65 dark:bg-[#16161a]/70 border border-white/40 dark:border-white/10">
