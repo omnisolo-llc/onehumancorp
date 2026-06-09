@@ -278,5 +278,61 @@ test.describe('Tauri Dashboard UI and UX Improvements', () => {
     await expect(page).toHaveURL(/.*success\.html/);
     await expect(page.getByText('Workspace created for My Cool Bakery. Jarvis is ready to help.')).toBeVisible();
   });
+
+  test('Help chat overlay opens, accepts messages, and returns AI responses', async ({ page }) => {
+    // Navigate to the live local app since we can't intercept the network directly.
+    await page.goto('/setup.html');
+
+    // Setup a clean state to prevent false negatives from test flakiness
+    await page.addInitScript(() => {
+      // Mock window.__TAURI__ if it is missing
+      if (typeof window !== "undefined" && !window.__TAURI__) {
+          window.__TAURI__ = {
+              core: {
+                  invoke: async () => ({}) // simple mock for get_onboarding_state
+              }
+          }
+      }
+    });
+
+    // Help button should be visible
+    const helpBtn = page.locator('#ohc-help-btn');
+    await expect(helpBtn).toBeVisible();
+
+    // Chat overlay should be hidden initially
+    const chatOverlay = page.locator('#ohc-help-chat-overlay');
+    await expect(chatOverlay).toBeHidden();
+
+    // Click help button to open chat
+    await helpBtn.click();
+    await expect(chatOverlay).toBeVisible();
+
+    // Default AI message should be visible
+    await expect(page.locator('.msg-ai').first()).toContainText('Hi! I am your AI Help Agent!');
+
+    // Type and send a message
+    const input = page.locator('#ohc-help-input');
+    await input.fill('How do I set up credit card payments?');
+
+    const sendBtn = page.locator('#ohc-help-send');
+    await sendBtn.click();
+
+    // Verify user message appears
+    await expect(page.locator('.msg-user')).toContainText('How do I set up credit card payments?');
+
+    // Wait for the mock AI response
+    await expect(page.locator('.msg-ai').nth(1)).toContainText('You can accept credit cards by connecting your bank account in the Payments section.');
+
+    // Test Enter key submission
+    await input.fill('Another question');
+    await input.press('Enter');
+    await expect(page.locator('.msg-user').nth(1)).toContainText('Another question');
+    await expect(page.locator('.msg-ai').nth(2)).toContainText('I can help you with that! Check out our Help Center for a detailed guide.');
+
+    // Close chat
+    const closeBtn = page.locator('#ohc-help-close');
+    await closeBtn.click();
+    await expect(chatOverlay).toBeHidden();
+  });
 });
 
