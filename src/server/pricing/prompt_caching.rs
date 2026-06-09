@@ -13,13 +13,19 @@ pub struct CachedResponse {
 pub struct PromptCache {
     cache: Arc<DashMap<String, CachedResponse>>,
     default_ttl: Duration,
+    max_capacity: usize,
 }
 
 impl PromptCache {
     pub fn new(default_ttl: Duration) -> Self {
+        Self::with_capacity(default_ttl, 1000)
+    }
+
+    pub fn with_capacity(default_ttl: Duration, max_capacity: usize) -> Self {
         PromptCache {
             cache: Arc::new(DashMap::new()),
             default_ttl,
+            max_capacity,
         }
     }
 
@@ -27,6 +33,10 @@ impl PromptCache {
         let entry = self.cache.get(prompt);
         if let Some(entry_ref) = entry {
             if entry_ref.created_at.elapsed() <= entry_ref.ttl {
+                // Update access time for LRU-like eviction
+                // DashMap doesn't easily support mutable iteration without locking.
+                // We'll update created_at as an access time surrogate if we needed strict LRU,
+                // but since it has TTL, we just return it. True LRU eviction will sort by created_at.
                 return Some(entry_ref.clone());
             }
             drop(entry_ref);
@@ -74,12 +84,45 @@ impl PromptCache {
     }
 
     pub fn set_with_ttl(&self, prompt: &str, response: &str, token_count: usize, ttl: Duration) {
+        if self.cache.len() >= self.max_capacity {
+            self.evict_oldest();
+        }
         self.cache.insert(prompt.to_string(), CachedResponse {
             text: response.to_string(),
             created_at: Instant::now(),
             token_count,
             ttl,
         });
+    }
+
+    fn evict_oldest(&self) {
+        // Clear expired first to see if that frees enough space
+        self.clear_expired();
+
+        let len = self.cache.len();
+        if len < self.max_capacity {
+            return;
+        }
+
+        // We need to evict entries to get back down to 90% of max capacity
+        let target_len = (self.max_capacity as f64 * 0.9) as usize;
+        let to_remove = len.saturating_sub(target_len);
+
+        if to_remove == 0 {
+            return;
+        }
+
+        // Sort by created_at to remove the oldest items.
+        // DashMap iter() locks the shards, so we collect keys first to minimize lock time.
+        let mut entries: Vec<(String, Instant)> = self.cache.iter()
+            .map(|kv| (kv.key().clone(), kv.value().created_at))
+            .collect();
+
+        entries.sort_unstable_by_key(|(_, time)| *time);
+
+        for (key, _) in entries.into_iter().take(to_remove) {
+            self.cache.remove(&key);
+        }
     }
 
     pub fn clear_expired(&self) {
@@ -144,6 +187,32 @@ mod tests {
         let (response_with_cost, cost) = cache.get_with_cost_cents("What is the capital of France?");
         assert!(response_with_cost.is_none());
         assert_eq!(cost, 0);
+    }
+
+    #[test]
+    fn test_prompt_cache_capacity_eviction() {
+        let cache = PromptCache::with_capacity(Duration::from_secs(10), 3);
+
+        // Insert 3 items
+        cache.set("key1", "val1", 1);
+        thread::sleep(Duration::from_millis(10));
+        cache.set("key2", "val2", 1);
+        thread::sleep(Duration::from_millis(10));
+        cache.set("key3", "val3", 1);
+
+        assert_eq!(cache.cache.len(), 3);
+
+        // Insert 4th item, triggering eviction
+        // target capacity is 90% of 3 = 2.
+        // currently 3 items, len = 3. target_len = 2. to_remove = 3 - 2 = 1.
+        thread::sleep(Duration::from_millis(10));
+        cache.set("key4", "val4", 1);
+
+        assert_eq!(cache.cache.len(), 3); // 3 items inserted, 1 removed (oldest) + 1 newly inserted
+        assert!(cache.get("key1").is_none()); // key1 was oldest, should be gone
+        assert!(cache.get("key2").is_some());
+        assert!(cache.get("key3").is_some());
+        assert!(cache.get("key4").is_some());
     }
 
     #[test]
