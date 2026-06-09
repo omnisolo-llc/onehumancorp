@@ -49,3 +49,55 @@ impl DepartmentService {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::Arc;
+    use tokio::sync::Mutex;
+    use async_trait::async_trait;
+    use crate::msgbus::{Bus, Message};
+    use crate::orchestration::departments::orchestrator::DepartmentOrchestrator;
+    use crate::orchestration::mesh::CentrifugeNode;
+    use ohc_builtin_agent::mesh::transport::InProcessTransport;
+
+    struct MockBus {
+        handlers: Arc<Mutex<Vec<Box<dyn Fn(Message) + Send + Sync>>>>,
+    }
+
+    #[async_trait]
+    impl Bus for MockBus {
+        async fn publish(&self, _msg: Message) -> Result<(), String> {
+            Ok(())
+        }
+        async fn subscribe(&self, _topic: String, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+            let mut handlers = self.handlers.lock().await;
+            handlers.push(handler);
+            Ok(Box::new(|| {}))
+        }
+    }
+
+    #[tokio::test]
+    async fn test_department_service_creation() {
+        if std::env::var("OHC_DATABASE_URL").is_err() {
+            return;
+        }
+
+        let db = Arc::new(crate::db::DB::new().await.unwrap());
+        let transport = Arc::new(InProcessTransport::new());
+        let mesh = Arc::new(CentrifugeNode::new(transport));
+
+        let orchestrator = Arc::new(DepartmentOrchestrator::new(db, mesh));
+
+        let handlers = Arc::new(Mutex::new(Vec::new()));
+        let mock_bus = Arc::new(MockBus { handlers: handlers.clone() });
+
+        let service = DepartmentService::new(mock_bus, orchestrator);
+
+        let result = service.start().await;
+        assert!(result.is_ok());
+
+        let handlers_lock = handlers.lock().await;
+        assert_eq!(handlers_lock.len(), 1);
+    }
+}
