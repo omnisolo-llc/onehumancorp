@@ -92,7 +92,6 @@ export default function Dashboard() {
   const [messages, setMessages] = useState<InboxMessage[]>([]);
   const [supply, setSupply] = useState<SupplyPayload>({ vendors: [], raw_materials: [], bom_items: [] });
   const [approvals, setApprovals] = useState<any[]>([]);
-  const [activities, setActivities] = useState<any[]>([]);
   const [dashboardData, setDashboardData] = useState<any>({ pendingReviews: [] });
   const [loading, setLoading] = useState(true);
   const [ledgerBalance, setLedgerBalance] = useState<number | null>(null);
@@ -131,6 +130,22 @@ export default function Dashboard() {
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncErrorCount, setSyncErrorCount] = useState(0);
   const [activeDepartments, setActiveDepartments] = useState<string[]>([]);
+
+  const handleApproveDraft = async (approvalId: string) => {
+    try {
+      const token = localStorage.getItem("token") || "";
+      const res = await fetch(`/api/agents/approvals/${approvalId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+        body: JSON.stringify({ approved: true })
+      });
+      if (res.ok) {
+        setDashboardData((prev: any) => ({ ...prev, pendingReviews: prev.pendingReviews.filter((a: any) => a.id !== approvalId) }));
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   useEffect(() => {
     try {
@@ -196,24 +211,26 @@ export default function Dashboard() {
 
       try {
         const userId = localStorage.getItem("user_id") || "default";
-        const [metricsRes, ordersRes, inboxRes, supplyRes, onboardingRes] = await Promise.all([
+        const [metricsRes, ordersRes, inboxRes, supplyRes, onboardingRes, approvalsRes] = await Promise.all([
           fetch(`/api/ui/dashboard/metrics?tenant_id=${tenant}`),
           fetch(`/api/ui/orders?tenant_id=${tenant}`),
           fetch(`/api/ui/inbox/messages?tenant_id=${tenant}`),
           fetch(`/api/ui/supply?tenant_id=${tenant}`),
           fetch(`/api/onboarding/state`, { headers: { 'X-Tenant-ID': tenant, 'X-User-ID': userId } }),
+          fetch(`/api/agents/approvals?tenant_id=${tenant}`)
         ]);
 
         if (!metricsRes.ok || !ordersRes.ok || !inboxRes.ok || !supplyRes.ok) {
           throw new Error("One or more database-backed UI endpoints failed");
         }
 
-        const [metricsData, ordersData, inboxData, supplyData, onboardingData] = await Promise.all([
+        const [metricsData, ordersData, inboxData, supplyData, onboardingData, approvalsData] = await Promise.all([
           metricsRes.json(),
           ordersRes.json(),
           inboxRes.json(),
           supplyRes.json(),
           onboardingRes.ok ? onboardingRes.json() : Promise.resolve(null),
+          approvalsRes.ok ? approvalsRes.json() : Promise.resolve([]),
         ]);
 
         if (onboardingData?.wizardState?.aiAgents) {
@@ -230,8 +247,7 @@ export default function Dashboard() {
           raw_materials: Array.isArray(supplyData?.raw_materials) ? supplyData.raw_materials : [],
           bom_items: Array.isArray(supplyData?.bom_items) ? supplyData.bom_items : [],
         });
-        setApprovals(Array.isArray(unifiedFeedData.pending_approvals) ? unifiedFeedData.pending_approvals : []);
-        setActivities(Array.isArray(unifiedFeedData.activities) ? unifiedFeedData.activities : []);
+        setApprovals(Array.isArray(approvalsData?.approvals) ? approvalsData.approvals : (Array.isArray(approvalsData) ? approvalsData : []));
       } catch (e: any) {
         setError(e?.message || "Failed to load dashboard data");
       } finally {
@@ -249,21 +265,6 @@ export default function Dashboard() {
 
 
 
-  async function handleApproveDraft(approvalId: string) {
-    try {
-      const token = localStorage.getItem("token") || "";
-      const res = await fetch(`/api/agents/approvals/${approvalId}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
-        body: JSON.stringify({ approved: true })
-      });
-      if (res.ok) {
-        setApprovals(prev => prev.filter(a => a.id !== approvalId));
-      }
-    } catch (e) {
-      console.error(e);
-    }
-  }
 
   return () => {
       window.removeEventListener("online", updateOfflineStatus);
@@ -518,7 +519,7 @@ export default function Dashboard() {
              />
         ))}
 
-        <UnifiedAgentFeed initialApprovals={approvals} initialActivities={activities} />
+        <UnifiedAgentFeed />
 
         <section>
           <div className="mb-6 p-6 rounded-[16px] bg-white/65 dark:bg-[#16161a]/70 border border-white/40 dark:border-white/10">
@@ -618,7 +619,7 @@ export default function Dashboard() {
               <Link href="/inventory" className="app-button">Inventory</Link>
             </div>
             <div className="app-list">
-                            {approvals.filter(a => a.payload?.feature_type === 'ambassador_reply').map(approval => (
+                            {(dashboardData?.pendingReviews || []).filter((a: any) => a.payload?.feature_type === 'ambassador_reply').map(approval => (
                 <div key={approval.id} className="app-list-item flex flex-col items-start gap-3">
                   <div className="w-full">
                     <div className="app-list-title">Action Required: Approve Reply</div>
@@ -662,7 +663,7 @@ export default function Dashboard() {
                   <span className="app-badge">Inbox</span>
                 </div>
               )}
-              {!loading && metrics.pending_orders === 0 && lowStockCount === 0 && messages.length === 0 && approvals.filter(a => a.payload?.feature_type === "ambassador_reply").length === 0 && (
+              {!loading && metrics.pending_orders === 0 && lowStockCount === 0 && messages.length === 0 && (dashboardData?.pendingReviews || []).filter((a: any) => a.payload?.feature_type === "ambassador_reply").length === 0 && (
                 <div className="app-empty">No database-backed actions are currently open.</div>
               )}
             </div>
