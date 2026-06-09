@@ -5,6 +5,7 @@ use tokio::sync::mpsc;
 use tracing::{debug, error, info};
 
 use crate::agent::{Agent, AgentRunConfig};
+use crate::tool_executor_engine::ToolExecutionEngine;
 use ohc_builtin_agent_core::types::{ChatRequest, Message, ToolCall, ToolResult};
 
 /// SOTA Harness Patterns (2025-2026): 1. Actor-model message passing -> replacing classic ReAct loops
@@ -102,7 +103,7 @@ impl Actor for ToolActor {
                     let tool = agent.tools.iter().find(|t| t.name == tc.name);
                     match tool {
                         Some(t) => {
-                            let res = t.execute.execute(tc.arguments.clone()).await;
+                            let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(t, tc, 2).await;
                             match res {
                                 Ok(content) => {
                                     tool_results.push(ToolResult {
@@ -115,7 +116,14 @@ impl Actor for ToolActor {
                                     tool_results.push(ToolResult {
                                         tool_call_id: tc.id.clone(),
                                         content: String::new(),
-                                        error: e.to_string(),
+                                        error: match e {
+                                            ohc_builtin_agent_core::types::ToolError::LlmRecoverable(msg) => msg,
+                                            ohc_builtin_agent_core::types::ToolError::UserFixable(msg) => msg,
+                                            ohc_builtin_agent_core::types::ToolError::Fatal(msg) => format!("Fatal Error: {}", msg),
+                                            ohc_builtin_agent_core::types::ToolError::Transient(msg) => format!("Transient Error: {}", msg),
+                                            ohc_builtin_agent_core::types::ToolError::Unexpected(msg) => format!("Unexpected Error: {}", msg),
+                                            ohc_builtin_agent_core::types::ToolError::HandoffRequested(msg) => format!("Handoff Requested: {}", msg),
+                                        },
                                     });
                                 }
                             }
