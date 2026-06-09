@@ -25,6 +25,7 @@ exports_files(
         "catalog.rs",
         "fulfillment.rs",
         "shipping.rs",
+        "omnibox.rs",
 
 
         "local_seo.rs",

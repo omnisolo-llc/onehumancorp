@@ -4094,6 +4094,7 @@ async fn create_ui_bom_item_handler(
         )
         .nest("/api/v1/autodream", api::autodream::router(autodream_worker.clone()))
         .nest("/api/v1/dynamic-workflows", api::dynamic_workflows::router(dynamic_workflow_manager.clone()))
+        .nest("/api/v1/omnibox", api::omnibox::router(db_for_sales.pool.clone()))
         .nest("/api/billing", api::billing_api::router(hub.clone()))
         .nest("/api/subscriptions", api::subscription::router_with_orchestrator(hub.clone(), Some(dept_orchestrator.clone())))
         .nest("/api/fulfillment", api::fulfillment::router(db.pool.clone()))

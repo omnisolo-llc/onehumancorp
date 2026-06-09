@@ -1,0 +1,96 @@
+.omnibox-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(4px);
+  z-index: 9999;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding-top: 10vh;
+}
+
+.omnibox-container {
+  width: 100%;
+  max-width: 600px;
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.omnibox-input {
+  width: 100%;
+  padding: 16px 20px;
+  font-size: 1.2rem;
+  border: none;
+  background: transparent;
+  outline: none;
+  color: #333;
+}
+
+.omnibox-input::placeholder {
+  color: #888;
+}
+
+.omnibox-loading {
+  padding: 12px 20px;
+  color: #666;
+  font-size: 0.9rem;
+  font-style: italic;
+}
+
+.omnibox-results {
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.omnibox-section {
+  padding: 12px 0;
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.omnibox-section h3 {
+  margin: 0;
+  padding: 0 20px 8px;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #666;
+}
+
+.omnibox-item {
+  padding: 12px 20px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.omnibox-item:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.omnibox-item-title {
+  font-weight: 500;
+  color: #222;
+}
+
+.omnibox-item-subtitle {
+  font-size: 0.85rem;
+  color: #666;
+}
+
+.omnibox-empty {
+  padding: 20px;
+  text-align: center;
+  color: #888;
+}
