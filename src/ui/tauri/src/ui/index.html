@@ -98,6 +98,15 @@
            window.location.href = "setup.html";
         });
       }
+
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          if (startBtn) {
+            startBtn.click();
+          }
+        }
+      });
     </script>
   </body>
 </html>

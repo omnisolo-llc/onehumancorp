@@ -171,6 +171,15 @@
         nameInput.addEventListener("keydown", (e) => {
           if (e.key === "Enter") {
             e.preventDefault();
+            toneSelect.focus();
+          }
+        });
+      }
+
+      if (toneSelect) {
+        toneSelect.addEventListener("keydown", (e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
             nextBtn.click();
           }
         });
@@ -227,12 +236,7 @@
         });
       }
 
-      nameInput.addEventListener('keydown', (e) => {
-          if (e.key === 'Enter') {
-              e.preventDefault();
-              nextBtn.click();
-          }
-      });
+
 
       nameInput.addEventListener('input', () => {
           if (nameInput.value.trim().length >= 3) {
@@ -241,26 +245,11 @@
           }
       });
 
-      nameInput.addEventListener('keydown', (e) => {
-          if (e.key === 'Enter') {
-              e.preventDefault();
-              toneSelect.focus();
-          }
-      });
 
-      toneSelect.addEventListener('keydown', (e) => {
-          if (e.key === 'Enter') {
-              e.preventDefault();
-              nextBtn.click();
-          }
-      });
 
-      toneSelect.addEventListener('keydown', (e) => {
-          if (e.key === 'Enter') {
-              e.preventDefault();
-              nextBtn.click();
-          }
-      });
+
+
+
 
       toneSelect.addEventListener('change', () => {
           if (toneSelect.value) {
@@ -269,12 +258,7 @@
           }
       });
 
-      toneSelect.addEventListener('keydown', (e) => {
-          if (e.key === 'Enter') {
-              e.preventDefault();
-              nextBtn.click();
-          }
-      });
+
     </script>
   </body>
 </html>

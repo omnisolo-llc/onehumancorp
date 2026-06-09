@@ -278,5 +278,72 @@ test.describe('Tauri Dashboard UI and UX Improvements', () => {
     await expect(page).toHaveURL(/.*success\.html/);
     await expect(page.getByText('Workspace created for My Cool Bakery. Jarvis is ready to help.')).toBeVisible();
   });
+
+  test('Start Onboarding button triggers via Enter key and navigates to setup', async ({ page }) => {
+    const workspaceRoot = process.env.TEST_WORKSPACE
+        ? require('path').join(process.env.TEST_SRCDIR, process.env.TEST_WORKSPACE)
+        : process.cwd();
+
+    const tauriUiDir = require('path').join(workspaceRoot, 'src/ui/tauri/src/ui');
+
+    await page.route('/index.html', async route => {
+        const content = require('fs').readFileSync(require('path').join(tauriUiDir, 'index.html'), 'utf-8');
+        await route.fulfill({ contentType: 'text/html', body: content });
+    });
+
+    await page.route('/setup.html', async route => {
+        const content = require('fs').readFileSync(require('path').join(tauriUiDir, 'setup.html'), 'utf-8');
+        await route.fulfill({ contentType: 'text/html', body: content });
+    });
+
+    await page.goto('/index.html');
+    await expect(page.getByRole('heading', { name: "Welcome to OHC" })).toBeVisible();
+
+    // Press Enter to submit
+    await page.keyboard.press('Enter');
+
+    // It should navigate to setup.html
+    await expect(page).toHaveURL(/.*setup\.html/);
+    await expect(page.getByRole('heading', { name: "What's the name of your business?" })).toBeVisible();
+  });
+
+  test('Success page navigates to Assistant when Go to Assistant button is clicked', async ({ page }) => {
+    const workspaceRoot = process.env.TEST_WORKSPACE
+        ? require('path').join(process.env.TEST_SRCDIR, process.env.TEST_WORKSPACE)
+        : process.cwd();
+
+    const tauriUiDir = require('path').join(workspaceRoot, 'src/ui/tauri/src/ui');
+
+    await page.route('/success.html', async route => {
+        const content = require('fs').readFileSync(require('path').join(tauriUiDir, 'success.html'), 'utf-8');
+        await route.fulfill({ contentType: 'text/html', body: content });
+    });
+
+    await page.route('/assistant.html', async route => {
+        const content = require('fs').readFileSync(require('path').join(tauriUiDir, 'assistant.html'), 'utf-8');
+        await route.fulfill({ contentType: 'text/html', body: content });
+    });
+
+    await page.addInitScript(() => {
+      window.__TAURI__ = {
+        core: {
+          invoke: async (cmd, args) => {
+            if (cmd === 'get_onboarding_state') {
+              return { businessName: 'Test Business', assistantName: 'Test Assistant' };
+            }
+            throw new Error(`Unhandled command: ${cmd}`);
+          }
+        }
+      };
+    });
+
+    await page.goto('/success.html');
+    await expect(page.getByRole('heading', { name: "You're all set!" })).toBeVisible();
+
+    await page.getByRole('button', { name: 'Go to Assistant' }).click();
+
+    // It should navigate to assistant.html
+    await expect(page).toHaveURL(/.*assistant\.html/);
+  });
 });
 
