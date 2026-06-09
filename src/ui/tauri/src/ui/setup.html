@@ -44,9 +44,11 @@
       </div>
       <div id="industry-error" class="error-msg">Please select an industry.</div>
 
-      <button id="next-btn">Next</button>
+      <button id="next-btn" data-tooltip="Click here to save your business details and proceed.">Next</button>
     </div>
 
+    <script src="tooltips.js"></script>
+    <script src="help-chat.js"></script>
     <script>
       const nextBtn = document.getElementById('next-btn');
       const nameInput = document.getElementById('business-name');
@@ -140,15 +142,5 @@
         }
       });
     </script>
-    <style>
-      @keyframes shake {
-        0%, 100% { transform: translateX(0); }
-        25% { transform: translateX(-5px); }
-        75% { transform: translateX(5px); }
-      }
-      .animate-shake {
-        animation: shake 0.2s ease-in-out 0s 2;
-      }
-    </style>
   </body>
 </html>

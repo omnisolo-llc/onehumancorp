@@ -33,9 +33,11 @@
       <h1>You're all set!</h1>
       <p id="success-msg" style="color: #86868b; margin-bottom: 32px;">Workspace created and assistant ready.</p>
 
-      <button id="finish-btn">Go to Dashboard</button>
+      <button id="finish-btn" data-tooltip="Welcome to OHC! Your journey starts here.">Go to Dashboard</button>
     </div>
 
+    <script src="tooltips.js"></script>
+    <script src="help-chat.js"></script>
     <script>
       const finishBtn = document.getElementById('finish-btn');
       const successMsg = document.getElementById('success-msg');
