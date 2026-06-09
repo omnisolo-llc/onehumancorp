@@ -101,6 +101,7 @@
           backdrop-filter: blur(30px) saturate(210%);
           -webkit-backdrop-filter: blur(30px) saturate(210%);
           border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 16px;
         }
         h1 {
           color: #F5F5F7;
@@ -417,18 +418,12 @@
           if (state.assistantTone) inputs.assistantTone.value = state.assistantTone;
           if (state.firstOffer) inputs.firstOffer.value = state.firstOffer;
 
-          if (state.workContext) {
+          const contextVal = state.workContext || state.work_context;
+          if (contextVal) {
               inputs.context.forEach(r => {
-                  if (r.value === state.workContext) {
+                  if (r.value === contextVal) {
                       r.checked = true;
-                      r.closest('.radio-option').classList.add('selected');
-                  }
-              });
-          }
-          if (state.work_context) {
-              inputs.context.forEach(r => {
-                  if (r.value === state.work_context) {
-                      r.checked = true;
+                      document.querySelectorAll('.radio-option').forEach(el => el.classList.remove('selected'));
                       r.closest('.radio-option').classList.add('selected');
                   }
               });
