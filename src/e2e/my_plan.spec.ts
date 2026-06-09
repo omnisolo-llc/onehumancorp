@@ -23,12 +23,12 @@ test.describe('My Plan Dashboard', () => {
   test('should display AI Actions usage', async ({ page }) => {
     await page.goto('/plan');
     await expect(page.locator('h2', { hasText: 'Your Current Usage' })).toBeVisible();
-    await expect(page.locator('span', { hasText: 'AI Actions Used' })).toBeVisible();
+    await expect(page.locator('span', { hasText: 'AI actions used this month' })).toBeVisible();
   });
 
   test('should display Storage usage', async ({ page }) => {
     await page.goto('/plan');
-    await expect(page.locator('span', { hasText: 'Storage Used' })).toBeVisible();
+    await expect(page.locator('span', { hasText: 'Storage used' })).toBeVisible();
   });
 
   test('should display management action buttons', async ({ page }) => {

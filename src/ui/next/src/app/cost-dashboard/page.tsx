@@ -142,11 +142,11 @@ export default function CostDashboardPage() {
                       <p className="text-2xl font-bold text-gray-900 mt-1">{myPlanData?.current_plan || 'Free'}</p>
                   </div>
                   <div className="p-4 rounded-xl app-card">
-                      <h3 className="text-sm font-medium text-gray-500">AI Actions Used</h3>
+                      <h3 className="text-sm font-medium text-gray-500">AI actions used this month</h3>
                       <p className="text-2xl font-bold text-gray-900 mt-1">{myPlanData?.ai_actions_used || 0} <span className="text-sm text-gray-500 font-normal">{myPlanData?.ai_actions_limit != null ? `/ ${myPlanData.ai_actions_limit}` : '/ Unlimited'}</span></p>
                   </div>
                   <div className="p-4 rounded-xl app-card">
-                      <h3 className="text-sm font-medium text-gray-500">Storage Used</h3>
+                      <h3 className="text-sm font-medium text-gray-500">Storage used</h3>
                       <p className="text-2xl font-bold text-gray-900 mt-1">{formatStorage(myPlanData?.storage_used_bytes || 0)} <span className="text-sm text-gray-500 font-normal">{myPlanData?.storage_limit_bytes != null ? `/ ${formatStorage(myPlanData.storage_limit_bytes)}` : '/ Unlimited'}</span></p>
                   </div>
                   <div className="p-4 rounded-xl app-card">
