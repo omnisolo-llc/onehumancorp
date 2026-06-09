@@ -585,12 +585,58 @@ export default function WebsiteBuilderPage() {
                   <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Review your choices</h1>
                   <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 mt-6">
                     <button
-                      className="w-full min-h-[54px] bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all"
-                      onClick={() => {
+                      className="w-full min-h-[54px] bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all disabled:opacity-50"
+                      onClick={async () => {
                         setStatus('generating');
-                        setTimeout(() => {
-                           setStatus('live');
-                        }, 2000);
+                        try {
+                          const res = await fetch('/api/onboarding/start', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                              admin_email: userEmail,
+                              admin_name: userName,
+                              admin_password: userPassword,
+                              company_name: businessName,
+                              business_type: businessType,
+                              location: 'Online',
+                              first_product_name: productName,
+                              first_product_price: productPrice,
+                              price_type: 'one_time'
+                            })
+                          });
+                          if (res.ok) {
+                            const data = await res.json();
+                            const tenantId = data.organization_id;
+
+                            // Retrieve existing user_id if we have one, otherwise don't blindly set it to tenant_id
+                            const existingUser = localStorage.getItem('user_id') || `usr-${Date.now()}`;
+
+                            if (tenantId) {
+                                localStorage.setItem('tenant_id', tenantId);
+                                localStorage.setItem('user_id', existingUser);
+                                const launchRes = await fetch('/api/onboarding/launch', {
+                                    method: 'POST',
+                                    headers: { 'X-Tenant-ID': tenantId, 'X-User-ID': existingUser }
+                                });
+
+                                if (launchRes.ok) {
+                                    setStatus('live');
+                                } else {
+                                    setStatus('idle');
+                                    console.error('Failed to launch onboarding, response not ok');
+                                }
+                            } else {
+                                setStatus('idle');
+                                console.error('Failed to start onboarding, no organization_id returned');
+                            }
+                          } else {
+                            setStatus('idle');
+                            console.error('Failed to start onboarding, response not ok');
+                          }
+                        } catch (err) {
+                          setStatus('idle');
+                          console.error('Failed to start onboarding', err);
+                        }
                       }}
                     >
                       Publish my business
