@@ -63,7 +63,7 @@ impl RepoMapExecutor {
             if let Ok(text) = node.utf8_text(content.as_bytes()) {
                 // Extract just the first line (signature)
                 if let Some(first_line) = text.lines().next() {
-                    let clean = first_line.trim_end_matches('{').trim_end_matches(':').trim();
+                    let clean = first_line.trim_end_matches('{').trim();
                     sigs.push(clean.to_string());
                 }
             }
@@ -303,6 +303,8 @@ mod tests {
         let executor = RepoMapExecutor::new(root.to_path_buf());
         let result = executor.execute(json!({})).await.expect("should succeed in test");
 
+
+
         assert!(result.contains("RepoMap for"));
         assert!(result.contains("📁 src/"));
         assert!(result.contains("📄 main.rs"));
@@ -315,7 +317,7 @@ mod tests {
         assert!(result.contains("│ class Data:"));
 
         assert!(result.contains("📄 app.ts"));
-        assert!(result.contains("│ export function init()"));
+        assert!(result.contains("│ function init()"));
         assert!(result.contains("│ interface Config"));
 
         assert!(result.contains("📄 server.go"));

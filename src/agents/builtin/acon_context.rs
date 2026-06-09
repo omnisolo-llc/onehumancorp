@@ -5,12 +5,15 @@ use crate::types::{Message, Role};
 pub struct AconConfig {
     /// Number of recent messages to preserve completely.
     pub preserve_recent_messages_count: usize,
+    /// Optional character limit to keep at the start of the output.
+    pub soft_truncation_limit: Option<usize>,
 }
 
 impl Default for AconConfig {
     fn default() -> Self {
         Self {
             preserve_recent_messages_count: 2,
+            soft_truncation_limit: None,
         }
     }
 }
@@ -39,9 +42,17 @@ impl AconStrategy {
                             && !tr.content.starts_with("[ACON:")
                             && !tr.content.is_empty()
                         {
-                            tr.content =
-                                "[ACON: Tool output omitted to prioritize reasoning traces.]"
-                                    .to_string();
+                                                        if let Some(limit) = self.config.soft_truncation_limit {
+                                if tr.content.len() > limit {
+                                    let mut truncated = tr.content.chars().take(limit).collect::<String>();
+                                    truncated.push_str("\n... [ACON: Remaining tool output omitted to prioritize reasoning traces.]");
+                                    tr.content = truncated;
+                                }
+                            } else {
+                                tr.content =
+                                    "[ACON: Tool output omitted to prioritize reasoning traces.]"
+                                        .to_string();
+                            }
                         }
                     }
                 }
@@ -107,6 +118,7 @@ mod tests {
 
         let config = AconConfig {
             preserve_recent_messages_count: 2,
+            soft_truncation_limit: None,
         };
         apply_acon_strategy(&mut messages, &config);
 
@@ -124,5 +136,49 @@ mod tests {
 
         // Second tool message is within the recent preserved count
         assert_eq!(messages[2].tool_results[0].content, "Another tool result");
+    }
+
+    #[test]
+    fn test_apply_acon_strategy_with_soft_truncation() {
+        let mut messages = vec![
+            Message {
+                role: Role::Tool,
+                content: String::new(),
+                tool_calls: vec![],
+                tool_results: vec![ToolResult {
+                    tool_call_id: "call_1".to_string(),
+                    content: "This is a very long text that should be truncated by ACON soft limit to preserve some initial context.".to_string(),
+                    error: String::new(),
+                }],
+                response_id: None,
+                previous_response_id: None,
+            },
+            Message {
+                role: Role::Assistant,
+                content: "Hmm...".to_string(),
+                tool_calls: vec![],
+                tool_results: vec![],
+                response_id: None,
+                previous_response_id: None,
+            },
+            Message {
+                role: Role::Assistant,
+                content: "Final".to_string(),
+                tool_calls: vec![],
+                tool_results: vec![],
+                response_id: None,
+                previous_response_id: None,
+            },
+        ];
+
+        let config = AconConfig {
+            preserve_recent_messages_count: 1,
+            soft_truncation_limit: Some(10),
+        };
+        apply_acon_strategy(&mut messages, &config);
+
+        let masked = &messages[0].tool_results[0].content;
+        assert!(masked.starts_with("This is a "));
+        assert!(masked.contains("[ACON: Remaining tool output omitted"));
     }
 }
