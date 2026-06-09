@@ -38,11 +38,13 @@ test.describe('Help Center', () => {
         // Verify Help Center title
         await expect(page.locator('h1', { hasText: 'Help Center' })).toBeVisible();
 
+        // Wait for hydration to complete by checking for initial content
+        await expect(page.locator('h2', { hasText: 'Getting Started' })).toBeVisible({ timeout: 15000 });
+
         // Search for an article that matches My Store
         const searchInput = page.getByPlaceholder('Search for help articles and videos...');
 
-
-        const [response] = await Promise.all([
+const [response] = await Promise.all([
             page.waitForResponse(response => response.url().includes("/api/help/search") && response.ok()),
             searchInput.fill('My Store')
         ]);
@@ -54,6 +56,9 @@ test.describe('Help Center', () => {
 
     test('should open help chat and send a message', async ({ page }) => {
         await page.goto('/help');
+
+        // Wait for hydration to complete by checking for initial content
+        await expect(page.locator('h2', { hasText: 'Getting Started' })).toBeVisible({ timeout: 15000 });
 
         // Find and click the floating Ask anything button
         const chatButton = page.locator('button[aria-label="Open help chat"]');
