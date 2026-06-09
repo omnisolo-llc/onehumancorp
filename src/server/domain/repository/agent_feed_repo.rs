@@ -1,10 +1,6 @@
 use sqlx::{PgPool, FromRow};
 use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
-use std::sync::Arc;
-use tokio::sync::Mutex;
-use crate::db::DbStore;
-
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct AgentFeedItem {
     pub id: String,
@@ -97,7 +93,6 @@ mod tests {
     use crate::domain::repository::agent_feed_repo::{AgentFeedRepository, AgentFeedItem};
     use chrono::Utc;
     use sqlx::PgPool;
-    use std::sync::Arc;
     use uuid::Uuid;
 
     #[tokio::test]

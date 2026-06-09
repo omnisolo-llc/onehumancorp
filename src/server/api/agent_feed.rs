@@ -130,13 +130,7 @@ async fn update_feed_item_state(
 
 #[cfg(test)]
 mod tests {
-    use axum::{
-        body::Body,
-        http::{Request, StatusCode},
-    };
-    use tower::ServiceExt;
     use crate::api::agent_feed;
-    use std::sync::Arc;
     use sqlx::PgPool;
 
     #[tokio::test]
