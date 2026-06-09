@@ -83,15 +83,34 @@ export default function MobileQuotingPage() {
       .reduce((sum, item) => sum + (item.price * item.quantity), 0);
   };
 
-  const handleApprove = () => {
+  const handleApprove = async () => {
     if (!activeQuote) return;
-    // In a real app, this would make an API call to approve and send via Stripe
-    setQuotes(prev => prev.map(q =>
-      q.id === activeQuoteId ? { ...q, status: 'SENT' as const } : q
-    ));
-    setTimeout(() => {
-        alert("Quote approved and Stripe Payment Link sent!");
-    }, 500);
+    // Real App: Send request to actual backend
+    try {
+        const response = await fetch('/api/v1/quoting/quotes/approve-draft', {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                quoteId: activeQuote.id,
+                items: activeQuote.items.filter(item => item.selected),
+            })
+        });
+
+        if (response.ok) {
+            setQuotes(prev => prev.map(q =>
+              q.id === activeQuoteId ? { ...q, status: 'SENT' as const } : q
+            ));
+            setTimeout(() => {
+                alert("Quote approved and Stripe Payment Link sent!");
+            }, 500);
+        } else {
+            console.error("Failed to approve quote");
+        }
+    } catch (e) {
+        console.error("Error approving quote", e);
+    }
   };
 
   if (!activeQuote) {
