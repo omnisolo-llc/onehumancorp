@@ -44,10 +44,9 @@ test.describe('Help Center', () => {
         // Search for an article that matches My Store
         const searchInput = page.getByPlaceholder('Search for help articles and videos...');
 
-        await Promise.all([
-            page.waitForResponse(response => response.url().includes("/api/help/search") && response.status() === 200),
-            searchInput.fill('My Store')
-        ]);
+        const responsePromise = page.waitForResponse(response => response.url().includes("/api/help/search?q=My%20Store") && response.status() === 200);
+        await searchInput.fill('My Store');
+        await responsePromise;
 
         // Wait for UI to update
         const articleLink = page.locator('a[href="/help/my-store"]');
@@ -78,7 +77,9 @@ test.describe('Help Center', () => {
         await chatInput.fill(testMessage);
         const sendButton = page.locator('button[aria-label="Send message"]');
         await expect(sendButton).toBeVisible();
+        const responsePromise = page.waitForResponse(response => response.url().includes("/api/agents/chat") && response.status() === 200);
         await sendButton.dispatchEvent('click');
+        await responsePromise;
 
         // Assert that the message appears in the chat
         const sentMessage = page.locator('div', { hasText: testMessage }).last();
