@@ -869,30 +869,36 @@ impl DepartmentOrchestrator {
                                     .execute(pool)
                                     .await;
                             }
-                        }
-                    }
-                }
 
-                // If this is a restock approval, execute the update.
-                if let Some(payload) = &original_payload {
-                    if payload.get("feature_type").and_then(|v| v.as_str()) == Some("restock") {
-                        if let Some(product_id) = payload.get("product_id").and_then(|v| v.as_str()) {
-                            let new_base_price = payload.get("suggested_price").and_then(|v| v.as_f64()).unwrap_or(0.0);
+                            // Dispatch simulated reorder to job queue
+                            let reorder_payload = serde_json::json!({
+                                "items": [{"product_id": product_id, "quantity": 50}]
+                            });
+
                             if let DbStore::Postgres = &self.db.store {
-                                let _ = sqlx::query("UPDATE products SET inventory_count = inventory_count + 50, price = $3, price_cents = $4 WHERE id = $1 AND (tenant_id = $2 OR organization_id = $2)")
-                                    .bind(product_id)
+                                let task_id = uuid::Uuid::new_v4().to_string();
+                                if let Err(e) = sqlx::query("INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status) VALUES ($1, $2, $3, $4, $5, $6)")
+                                    .bind(&task_id)
                                     .bind(tenant_id)
-                                    .bind(new_base_price)
-                                    .bind((new_base_price * 100.0) as i64)
+                                    .bind("operations")
+                                    .bind("OrderPlaced")
+                                    .bind(serde_json::to_string(&reorder_payload).unwrap_or_default())
+                                    .bind("PENDING")
                                     .execute(&self.db.pool)
-                                    .await;
+                                    .await
+                                {
+                                    tracing::error!("Failed to dispatch reorder task: {}", e);
+                                }
                             } else if let DbStore::Sqlite(pool) = &self.db.store {
-                                let _ = sqlx::query("UPDATE products SET inventory_count = inventory_count + 50, price = ?, price_cents = ? WHERE id = ? AND (tenant_id = ? OR organization_id = ?)")
-                                    .bind(new_base_price)
-                                    .bind((new_base_price * 100.0) as i64)
-                                    .bind(product_id)
+                                let task_id = uuid::Uuid::new_v4().to_string();
+                                // Ignore sqlite error if table not exists in tests
+                                let _ = sqlx::query("INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status) VALUES (?, ?, ?, ?, ?, ?)")
+                                    .bind(&task_id)
                                     .bind(tenant_id)
-                                    .bind(tenant_id)
+                                    .bind("operations")
+                                    .bind("OrderPlaced")
+                                    .bind(serde_json::to_string(&reorder_payload).unwrap_or_default())
+                                    .bind("PENDING")
                                     .execute(pool)
                                     .await;
                             }
