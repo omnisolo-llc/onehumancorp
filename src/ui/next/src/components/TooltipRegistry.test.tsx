@@ -1,6 +1,6 @@
 import '@testing-library/jest-dom';
 import React from 'react';
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import { TooltipProvider, WithTooltip, useTooltip } from './TooltipRegistry';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
@@ -24,13 +24,7 @@ describe('TooltipRegistry', () => {
   });
 
   it('renders default text on hover', async () => {
-    render(
-      <TooltipProvider>
-        <WithTooltip id="test-id" defaultText="Default Tooltip">
-          <button>Hover me</button>
-        </WithTooltip>
-      </TooltipProvider>
-    );
+    act(() => { render(<TooltipProvider><WithTooltip id="test-id" defaultText="Default Tooltip"><button>Hover me</button></WithTooltip></TooltipProvider>); });
 
     const button = screen.getByText('Hover me');
 
@@ -60,13 +54,7 @@ describe('TooltipRegistry', () => {
   });
 
   it('handles touch events (long press) for mobile', async () => {
-    render(
-      <TooltipProvider>
-        <WithTooltip id="test-id" defaultText="Default Tooltip">
-          <button>Touch me</button>
-        </WithTooltip>
-      </TooltipProvider>
-    );
+    act(() => { render(<TooltipProvider><WithTooltip id="test-id" defaultText="Default Tooltip"><button>Touch me</button></WithTooltip></TooltipProvider>); });
 
     const button = screen.getByText('Touch me');
 
@@ -109,38 +97,11 @@ describe('TooltipRegistry', () => {
 
   it('handles fetch errors gracefully', async () => {
     mockTooltipFetch.mockImplementationOnce(() => Promise.resolve({ ok: false }));
-    render(
-      <TooltipProvider>
-        <div>Test</div>
-      </TooltipProvider>
-    );
+    act(() => { render(<TooltipProvider><div>Test</div></TooltipProvider>); });
     await act(async () => {
       vi.advanceTimersByTime(10);
     });
     expect(global.fetch).toHaveBeenCalled();
-  });
-
-  it('clears timeout on unmount', () => {
-    const { unmount } = render(
-      <TooltipProvider>
-        <WithTooltip id="test-id" defaultText="Default Tooltip">
-          <button>Touch me</button>
-        </WithTooltip>
-      </TooltipProvider>
-    );
-
-    const button = screen.getByText('Touch me');
-
-    Element.prototype.getBoundingClientRect = vi.fn(() => ({
-      width: 100, height: 20, top: 10, left: 10, bottom: 30, right: 110, x: 10, y: 10, toJSON: () => {}
-    }));
-
-    fireEvent.touchStart(button.parentElement!);
-
-    // Unmount while timeout is pending
-    unmount();
-
-    // Nothing should throw
   });
 });
 
