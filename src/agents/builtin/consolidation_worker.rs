@@ -1,8 +1,8 @@
 use crate::memory_store::VectorRepository;
-use std::sync::Arc;
-use tokio::time::sleep;
-use std::time::Duration;
 use chrono::Utc;
+use std::sync::Arc;
+use std::time::Duration;
+use tokio::time::sleep;
 
 pub struct ConsolidationWorker {
     pub repository: Arc<VectorRepository>,
@@ -11,7 +11,11 @@ pub struct ConsolidationWorker {
 }
 
 impl ConsolidationWorker {
-    pub fn new(repository: Arc<VectorRepository>, poll_interval: Duration, pruning_threshold_days: i64) -> Self {
+    pub fn new(
+        repository: Arc<VectorRepository>,
+        poll_interval: Duration,
+        pruning_threshold_days: i64,
+    ) -> Self {
         Self {
             repository,
             poll_interval,
@@ -50,7 +54,10 @@ mod tests {
 
     async fn setup_sqlite_repo() -> Arc<VectorRepository> {
         let conn_opts = sqlx::sqlite::SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
-        let pool = sqlx::sqlite::SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .connect_with(conn_opts)
+            .await
+            .unwrap();
 
         let _ = sqlx::query(
             "CREATE TABLE IF NOT EXISTS consolidated_memory (
@@ -66,8 +73,11 @@ mod tests {
                 reliability_score INTEGER DEFAULT 50,
                 owner_override BOOLEAN DEFAULT FALSE,
                 metadata TEXT
-            );"
-        ).execute(&pool).await.unwrap();
+            );",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
 
         Arc::new(VectorRepository::new_sqlite(pool))
     }
@@ -106,14 +116,21 @@ mod tests {
         assert!(pruned_success);
 
         // Verify it was pruned
-        let results = repo.cross_department_search("org_maya", &v1, 10).await.unwrap();
+        let results = repo
+            .cross_department_search("org_maya", &v1, 10)
+            .await
+            .unwrap();
         assert!(results.is_empty(), "Record should have been pruned");
     }
 
     #[tokio::test]
     async fn test_consolidation_worker_spawn() {
         let repo = setup_sqlite_repo().await;
-        let worker = Arc::new(ConsolidationWorker::new(repo.clone(), Duration::from_millis(50), 180));
+        let worker = Arc::new(ConsolidationWorker::new(
+            repo.clone(),
+            Duration::from_millis(50),
+            180,
+        ));
 
         let handle = worker.spawn_background_task();
 
