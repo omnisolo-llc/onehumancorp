@@ -847,103 +847,22 @@ pub async fn advisory_insights_handler(
         }
     };
 
-    // Gather context from DB and order counts concurrently
-    let (org_res, active_orders_res) = tokio::join!(
-        async {
-            let cache_key = format!("advisory:org:{}", tenant_id);
-            let cache = ORG_CACHE_ADVISORY.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
-            if let Some(org) = cache.get(&cache_key).await {
-                return Ok(org);
-            }
+    let analytics_tool = ohc_builtin_agent::tools::analytics::AnalyticsExecutor {};
+    let args = ohc_builtin_agent::tools::analytics::AnalyticsArgs { tenant_id: tenant_id.clone() };
+    let data = match ohc_builtin_agent::tools::pydantic::PydanticToolExecutor::execute_typed(&analytics_tool, args).await {
+        Ok(s) => s,
+        Err(_) => "{}".to_string(),
+    };
 
-            let result = match &db.store {
-                crate::db::DbStore::Postgres => {
-                    sqlx::query_as::<_, (String, String)>(
-                        "SELECT name, COALESCE(industry, '') FROM tenants WHERE id = $1"
-                    )
-                    .bind(&tenant_id)
-                    .fetch_optional(&db.pool)
-                    .await
-                }
-                crate::db::DbStore::Sqlite(pool) => {
-                    sqlx::query_as::<_, (String, String)>(
-                        "SELECT name, COALESCE(industry, '') FROM tenants WHERE id = $1"
-                    )
-                    .bind(&tenant_id)
-                    .fetch_optional(pool)
-                    .await
-                }
-            };
-
-            if let Ok(ref org) = result {
-                cache.set(&cache_key, org.clone(), std::time::Duration::from_secs(3600)).await;
-            }
-            result
-        },
-        async {
-            let cache_key = format!("advisory:orders:{}", tenant_id);
-            let cache = ACTIVE_ORDERS_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
-            if let Some(orders) = cache.get(&cache_key).await {
-                return Ok(orders);
-            }
-
-            let result = match &db.store {
-                crate::db::DbStore::Postgres => {
-                    sqlx::query_scalar::<_, i64>(
-                        "SELECT count(*) FROM orders WHERE tenant_id = $1 AND status != 'delivered'"
-                    )
-                    .bind(&tenant_id)
-                    .fetch_one(&db.pool)
-                    .await
-                }
-                crate::db::DbStore::Sqlite(pool) => {
-                    sqlx::query_scalar::<_, i64>(
-                        "SELECT count(*) FROM orders WHERE tenant_id = $1 AND status != 'delivered'"
-                    )
-                    .bind(&tenant_id)
-                    .fetch_one(pool)
-                    .await
-                }
-            };
-
-            if let Ok(orders) = result {
-                cache.set(&cache_key, orders, std::time::Duration::from_secs(5)).await;
-            }
-            result
-        }
-    );
-
-    let org_data = org_res;
-    let orders_data = active_orders_res;
-
-    let (business_name, industry) = org_data
-        .unwrap_or(None)
-        .unwrap_or_else(|| ("A business".to_string(), "".to_string()));
-
-    let active_orders = orders_data.unwrap_or(0);
-
-    use sha2::{Digest, Sha256};
-    let mut hasher = Sha256::new();
-    hasher.update(format!("{}:{}:{}", business_name, industry, active_orders).as_bytes());
-    let stats_hash = format!("{:x}", hasher.finalize());
-    let insight_cache_key = format!("advisory:insight:{}:{}", tenant_id, stats_hash);
-
-    let insight_cache = ADVISORY_INSIGHT_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
-    if let Some(insight) = insight_cache.get(&insight_cache_key).await {
-        return (StatusCode::OK, axum::Json(serde_json::json!({ "summary": insight }))).into_response();
-    }
-
-    let prompt = format!("You are a business advisory agent. Business context: A {} business named {}. The business currently has {} active orders to fulfill. Provide a short, plain language insight (about 2 sentences) summarizing this performance and suggesting an actionable next step, like running a promo or checking the inbox. Make it warm and accessible.", industry, business_name, active_orders);
+    let prompt = format!("You are a business advisory agent. Business context stats: {}. Provide a short, plain language Morning Briefing (about 2 sentences) summarizing this performance and suggesting an actionable next step, like running a promo or checking the inbox. Make it warm and accessible.", data);
     let compressed_prompt = ::server_pricing::compression::reduce_tokens(&prompt);
 
     let client = crate::minimax::MinimaxClient::new(api_key);
     match client.reason(&compressed_prompt).await {
         Ok(output) => {
-            insight_cache.set(&insight_cache_key, output.clone(), std::time::Duration::from_secs(300)).await;
             (StatusCode::OK, axum::Json(serde_json::json!({ "summary": output }))).into_response()
         }
         Err(e) => {
-            ::server_telemetry::record_error_signal("MiniMax advisory insights failed");
             tracing::error!("MiniMax advisory insights failed: {}", e);
             (
                 StatusCode::BAD_GATEWAY,
@@ -953,6 +872,79 @@ pub async fn advisory_insights_handler(
         }
     }
 }
+
+#[derive(serde::Deserialize)]
+pub struct AdvisoryChatRequest {
+    pub message: String,
+}
+
+pub async fn advisory_chat_handler(
+    db: std::sync::Arc<db::DB>,
+    store: std::sync::Arc<crate::auth::Store>,
+    headers: axum::http::HeaderMap,
+    axum::Json(payload): axum::Json<AdvisoryChatRequest>,
+) -> axum::response::Response {
+    use axum::http::StatusCode;
+    use axum::response::IntoResponse;
+
+    let auth_header = match headers.get("authorization").and_then(|v| v.to_str().ok()) {
+        Some(h) => h,
+        None => return (StatusCode::UNAUTHORIZED, "Missing authorization header").into_response(),
+    };
+
+    let token = if auth_header.to_lowercase().starts_with("bearer ") {
+        &auth_header[7..]
+    } else {
+        auth_header
+    };
+
+    let claims = match store.validate_token(token).await {
+        Ok(c) => c,
+        Err(_) => return (StatusCode::UNAUTHORIZED, "Invalid token").into_response(),
+    };
+
+    let tenant_id = match claims.organization_id {
+        Some(id) if !id.trim().is_empty() => id,
+        _ => return (StatusCode::FORBIDDEN, "Tenant ID not found in claims").into_response(),
+    };
+
+    let api_key = match std::env::var("MINIMAX_API_KEY") {
+        Ok(key) if !key.trim().is_empty() => key,
+        _ => {
+            return (
+                StatusCode::SERVICE_UNAVAILABLE,
+                axum::Json(HttpErrorResponse { error: "MINIMAX_API_KEY is required".to_string() }),
+            )
+                .into_response();
+        }
+    };
+
+    let analytics_tool = ohc_builtin_agent::tools::analytics::AnalyticsExecutor {};
+    let args = ohc_builtin_agent::tools::analytics::AnalyticsArgs { tenant_id: tenant_id.clone() };
+    let data = match ohc_builtin_agent::tools::pydantic::PydanticToolExecutor::execute_typed(&analytics_tool, args).await {
+        Ok(s) => s,
+        Err(_) => "{}".to_string(),
+    };
+
+    let prompt = format!("You are a business advisory agent responding to the user's chat message. Use these stats as context if relevant: {}. User message: {}", data, payload.message);
+    let compressed_prompt = ::server_pricing::compression::reduce_tokens(&prompt);
+
+    let client = crate::minimax::MinimaxClient::new(api_key);
+    match client.reason(&compressed_prompt).await {
+        Ok(output) => {
+            (StatusCode::OK, axum::Json(serde_json::json!({ "reply": output }))).into_response()
+        }
+        Err(e) => {
+            tracing::error!("MiniMax advisory chat failed: {}", e);
+            (
+                StatusCode::BAD_GATEWAY,
+                axum::Json(HttpErrorResponse { error: "AI advisory chat failed".to_string() }),
+            )
+                .into_response()
+        }
+    }
+}
+
 
 async fn draft_reply_handler(
     db: std::sync::Arc<db::DB>,
@@ -4134,6 +4126,14 @@ async fn create_ui_bom_item_handler(
                 let db = db.clone();
                 let store = std::sync::Arc::new(crate::auth::Store::new());
                 move |headers: axum::http::HeaderMap| async move { advisory_insights_handler(db, store, headers).await }
+            }),
+        )
+        .route(
+            "/api/v1/advisory/chat",
+            axum::routing::post({
+                let db = db.clone();
+                let store = std::sync::Arc::new(crate::auth::Store::new());
+                move |headers: axum::http::HeaderMap, payload| async move { advisory_chat_handler(db, store, headers, payload).await }
             }),
         )
         .nest("/api/v1/autodream", api::autodream::router(autodream_worker.clone()))
