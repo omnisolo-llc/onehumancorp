@@ -81,8 +81,31 @@ export function UnifiedAgentFeed() {
           if (feedData.pending_approvals) {
             setApprovals(feedData.pending_approvals);
           }
-          if (activityData.entries) {
+          // Fallback to fetch from approvals activity endpoint if ledger entries are empty/missing
+          if (activityData.entries && activityData.entries.length > 0) {
             setActivities(activityData.entries);
+          } else {
+            const fallbackRes = await fetch(`/api/agents/approvals/activity?tenant_id=${tenant}`, {
+              headers: {
+                "x-tenant-id": tenant,
+                "x-user-id": "default",
+              },
+            });
+            if (fallbackRes.ok) {
+              const fallbackData = await fallbackRes.json();
+              if (fallbackData.pending_approvals) {
+                // Map ApprovalRequest to OHCLedgerEntry format
+                const mappedActivities = fallbackData.pending_approvals.map((a: any) => ({
+                  id: a.id,
+                  tenant_id: a.tenant_id,
+                  event_type: a.status,
+                  department: a.department,
+                  payload: typeof a.payload === 'object' ? JSON.stringify({ original_payload: a.payload }) : a.payload,
+                  created_at: new Date().toISOString() // We don't have created_at in ApprovalRequest, so use current time
+                }));
+                setActivities(mappedActivities);
+              }
+            }
           }
         }
       } catch (err: any) {
@@ -581,14 +604,24 @@ export function UnifiedAgentFeed() {
                   <span className="text-xs font-bold font-outfit uppercase tracking-wider text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-1 rounded-md">
                     {activity.department.replace('_', ' ')}
                   </span>
-                  <span className="text-xs font-bold font-outfit uppercase tracking-wider px-2 py-1 rounded-md text-green-600 bg-green-50 dark:text-green-400 dark:bg-green-900/30">
-                    APPROVED
-                  </span>
+                  {activity.event_type === 'Paused' || activity.event_type === 'PAUSED' ? (
+                    <span className="text-xs font-bold font-outfit uppercase tracking-wider px-2 py-1 rounded-md text-yellow-600 bg-yellow-50 dark:text-yellow-400 dark:bg-yellow-900/30">
+                      PAUSED
+                    </span>
+                  ) : (
+                    <span className="text-xs font-bold font-outfit uppercase tracking-wider px-2 py-1 rounded-md text-green-600 bg-green-50 dark:text-green-400 dark:bg-green-900/30">
+                      {activity.event_type === 'Approved' || activity.event_type === 'APPROVED' ? 'APPROVED' : activity.event_type}
+                    </span>
+                  )}
                 </div>
                 <h3 className="text-md font-semibold font-inter text-[#1D1D1F] dark:text-[#F5F5F7] leading-snug">
                   {(() => {
                     try {
                       const p = typeof activity.payload === 'string' ? JSON.parse(activity.payload) : activity.payload;
+                      // Fallback logic specific to Paused state that gets stored inside proposed_content
+                      if (p?.original_payload?.proposed_content?.includes("System is paused")) {
+                          return p.original_payload.proposed_content;
+                      }
                       return p?.original_payload?.description || 'Action completed';
                     } catch (e) {
                       return 'Action completed';
