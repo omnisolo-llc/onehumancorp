@@ -5,12 +5,12 @@ test.describe('Cross Device Onboarding CUJ', () => {
     // 1. Owner starts onboarding directly from the current route.
     await page.goto('/onboarding');
 
-    // Inject fixed IDs to ensure it matches
-    await page.evaluate(() => {
-      localStorage.setItem('tenant_id', 'storefront');
-      localStorage.setItem('user_id', 'test-user');
-    });
-    await page.goto('/onboarding');
+    // Wait for localStorage to be populated
+    await page.waitForFunction(() => localStorage.getItem('tenant_id') !== null);
+
+    // Capture the dynamically generated IDs
+    const tenantId = await page.evaluate(() => localStorage.getItem('tenant_id'));
+    const userId = await page.evaluate(() => localStorage.getItem('user_id'));
 
     // Sometimes the welcome screen shows first, we need to click Start Onboarding to get to the business details
     const startButton = page.getByRole('link', { name: 'Start Onboarding' });
@@ -44,10 +44,10 @@ test.describe('Cross Device Onboarding CUJ', () => {
 
     // We need to inject the same local storage user ID so the backend knows it's the same user
     await newPage.goto('/dashboard'); // Navigate to the same domain first
-    await newPage.evaluate(() => {
-      localStorage.setItem('tenant_id', 'storefront');
-      localStorage.setItem('user_id', 'test-user');
-    });
+    await newPage.evaluate(([tId, uId]) => {
+      localStorage.setItem('tenant_id', tId);
+      localStorage.setItem('user_id', uId);
+    }, [tenantId, userId]);
 
     await newPage.goto('/onboarding'); // Re-navigate so it picks up the correct user id
 

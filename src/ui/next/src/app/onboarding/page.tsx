@@ -72,8 +72,8 @@ export default function OnboardingWizard() {
   const initialStateLoaded = useRef(false);
 
   const syncStateToBackend = async (overrideState: Partial<any> = {}) => {
-    const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
-    const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
+    const tenantId = typeof localStorage !== 'undefined' ? (localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || (() => { const id = 'tmp-tenant-' + Math.random().toString(36).substring(2, 15); localStorage.setItem('tenant_id', id); return id; })()) : 'tmp-tenant-1';
+    const userId = typeof localStorage !== 'undefined' ? (localStorage.getItem('user_id') || (() => { const id = 'tmp-user-' + Math.random().toString(36).substring(2, 15); localStorage.setItem('user_id', id); return id; })()) : 'tmp-user-1';
 
     const wizardState = {
       step,
@@ -137,8 +137,8 @@ export default function OnboardingWizard() {
     setError('');
 
     try {
-      const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
-      const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
+      const tenantId = typeof localStorage !== 'undefined' ? (localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || (() => { const id = 'tmp-tenant-' + Math.random().toString(36).substring(2, 15); localStorage.setItem('tenant_id', id); return id; })()) : 'tmp-tenant-1';
+      const userId = typeof localStorage !== 'undefined' ? (localStorage.getItem('user_id') || (() => { const id = 'tmp-user-' + Math.random().toString(36).substring(2, 15); localStorage.setItem('user_id', id); return id; })()) : 'tmp-user-1';
 
       const wizardState = {
         step,
@@ -183,8 +183,8 @@ export default function OnboardingWizard() {
 
   // Read state from server on mount
   useEffect(() => {
-    const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
-    const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
+    const tenantId = typeof localStorage !== 'undefined' ? (localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || (() => { const id = 'tmp-tenant-' + Math.random().toString(36).substring(2, 15); localStorage.setItem('tenant_id', id); return id; })()) : 'tmp-tenant-1';
+    const userId = typeof localStorage !== 'undefined' ? (localStorage.getItem('user_id') || (() => { const id = 'tmp-user-' + Math.random().toString(36).substring(2, 15); localStorage.setItem('user_id', id); return id; })()) : 'tmp-user-1';
 
     Promise.all([
       fetch('/api/onboarding/draft', { headers: { 'X-Tenant-ID': tenantId, 'X-User-ID': userId } })
@@ -232,8 +232,8 @@ export default function OnboardingWizard() {
     // Only save if we are past the initial state
     if (step === 1 && !businessName && !whatYouSell && !location && !targetAudience) return;
 
-    const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
-    const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
+    const tenantId = typeof localStorage !== 'undefined' ? (localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || (() => { const id = 'tmp-tenant-' + Math.random().toString(36).substring(2, 15); localStorage.setItem('tenant_id', id); return id; })()) : 'tmp-tenant-1';
+    const userId = typeof localStorage !== 'undefined' ? (localStorage.getItem('user_id') || (() => { const id = 'tmp-user-' + Math.random().toString(36).substring(2, 15); localStorage.setItem('user_id', id); return id; })()) : 'tmp-user-1';
 
     const wizardState = {
       step,
@@ -276,8 +276,8 @@ export default function OnboardingWizard() {
     setError('');
 
     try {
-      const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
-      const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
+      const tenantId = typeof localStorage !== 'undefined' ? (localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || (() => { const id = 'tmp-tenant-' + Math.random().toString(36).substring(2, 15); localStorage.setItem('tenant_id', id); return id; })()) : 'tmp-tenant-1';
+      const userId = typeof localStorage !== 'undefined' ? (localStorage.getItem('user_id') || (() => { const id = 'tmp-user-' + Math.random().toString(36).substring(2, 15); localStorage.setItem('user_id', id); return id; })()) : 'tmp-user-1';
 
       const combinedDescription = `Business Name: ${businessName}\nWhat we sell: ${whatYouSell}\nLocation: ${location}\nTarget Audience: ${targetAudience}`;
 
@@ -351,8 +351,8 @@ export default function OnboardingWizard() {
     setError('');
     setStep(4); syncStateToBackend({ step: 4 }); // Go to loading screen
     try {
-      const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
-      const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
+      const tenantId = typeof localStorage !== 'undefined' ? (localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || (() => { const id = 'tmp-tenant-' + Math.random().toString(36).substring(2, 15); localStorage.setItem('tenant_id', id); return id; })()) : 'tmp-tenant-1';
+      const userId = typeof localStorage !== 'undefined' ? (localStorage.getItem('user_id') || (() => { const id = 'tmp-user-' + Math.random().toString(36).substring(2, 15); localStorage.setItem('user_id', id); return id; })()) : 'tmp-user-1';
 
       const startRes = await fetchWithRetry('/api/onboarding/start', {
         method: 'POST',
@@ -504,8 +504,8 @@ export default function OnboardingWizard() {
                     setIsLoading(true);
 
                     try {
-                      const tenantIdStr = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
-                      const userIdStr = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
+                      const tenantIdStr = typeof localStorage !== 'undefined' ? (localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || (() => { const id = 'tmp-tenant-' + Math.random().toString(36).substring(2, 15); localStorage.setItem('tenant_id', id); return id; })()) : 'tmp-tenant-1';
+                      const userIdStr = typeof localStorage !== 'undefined' ? (localStorage.getItem('user_id') || (() => { const id = 'tmp-user-' + Math.random().toString(36).substring(2, 15); localStorage.setItem('user_id', id); return id; })()) : 'tmp-user-1';
 
                       const res = await fetch('/api/onboarding/intake', {
                         method: 'POST',
