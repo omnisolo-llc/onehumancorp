@@ -105,6 +105,22 @@ impl PosSyncWorker {
                         let qty = item.get("quantity").and_then(|v| v.as_i64()).unwrap_or(1);
                         if product_id.is_empty() { continue; }
 
+                        let locker: Box<dyn crate::orchestration::locks::DistributedLock> = if std::env::var("OHC_STANDALONE_MODE").unwrap_or_default() == "true" {
+                            Box::new(crate::orchestration::locks::StandaloneLock::new())
+                        } else {
+                            let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1:6379".to_string());
+                            let client = redis::Client::open(redis_url).unwrap();
+                            Box::new(crate::orchestration::locks::RedisLock::new(client))
+                        };
+
+                        let _lock_guard = match locker.acquire_resource(&job.tenant_id, "inventory", product_id).await {
+                            Ok(guard) => guard,
+                            Err(_) => {
+                                tracing::warn!("Failed to acquire lock for offline sync reconciliation: inventory:{}", product_id);
+                                continue;
+                            }
+                        };
+
                         let current_stock_res = sqlx::query("SELECT inventory_count FROM products WHERE id = $1 AND tenant_id = $2 FOR UPDATE")
                             .bind(product_id)
                             .bind(&job.tenant_id)
