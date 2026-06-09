@@ -272,7 +272,7 @@ impl Department for MarketingAgent {
             }
         }
 
-        if event.event_type == "tenant.product.created" || event.event_type == "tenant.inventory.updated" {
+        if event.event_type == "tenant.inventory.updated" {
             let product_name = event.payload.get("name").and_then(|v| v.as_str()).unwrap_or("New Product");
             let description = event.payload.get("description").and_then(|v| v.as_str()).unwrap_or("");
             let images = event.payload.get("images").and_then(|v| v.as_array());
