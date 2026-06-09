@@ -8,6 +8,7 @@ use axum::{
 use std::sync::Arc;
 use crate::hub::Hub;
 use serde::{Deserialize, Serialize};
+use ohc_builtin_agent::marketplace::Marketplace;
 
 #[derive(Deserialize, Debug)]
 pub struct HireAgentRequest {
@@ -125,31 +126,10 @@ async fn list_agents_handler(State(hub): State<Arc<Hub>>) -> impl IntoResponse {
 }
 
 pub async fn list_marketplace_agents() -> impl IntoResponse {
-    let agents = serde_json::json!([
-        {
-            "id": "agent-1",
-            "name": "Data Analyst",
-            "description": "Analyzes CSV files and generates beautiful charts. (AutoGPT Agent Marketplace)",
-            "author": "AutoGPT",
-            "version": "1.0.0",
-            "endpoint": "https://marketplace.example.com/agents/agent-1"
-        },
-        {
-            "id": "agent-2",
-            "name": "SEO Optimizer",
-            "description": "Optimizes your storefront content for better search engine rankings.",
-            "author": "AutoGPT",
-            "version": "2.1.0",
-            "endpoint": "https://marketplace.example.com/agents/agent-2"
-        },
-        {
-            "id": "agent-3",
-            "name": "Customer Service Bot",
-            "description": "Handles basic customer inquiries and manages refunds automatically.",
-            "author": "Community",
-            "version": "1.5.0",
-            "endpoint": "https://marketplace.example.com/agents/agent-3"
-        }
-    ]);
-    (StatusCode::OK, Json(agents)).into_response()
+    let marketplace = Marketplace::new();
+    let agents = marketplace.list_agents();
+
+    // Transform into a JSON format expected by the frontend
+    let json_agents = serde_json::to_value(agents).unwrap_or_else(|_| serde_json::json!([]));
+    (StatusCode::OK, Json(json_agents)).into_response()
 }
