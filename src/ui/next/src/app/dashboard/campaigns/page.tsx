@@ -97,23 +97,18 @@ export default function CampaignOrchestrationPage() {
       setError("");
 
       try {
-        const [metricsRes, ordersRes, inboxRes, supplyRes] = await Promise.all([
-          fetch(`/api/ui/dashboard/metrics?tenant_id=${tenant}`),
-          fetch(`/api/ui/orders?tenant_id=${tenant}`),
-          fetch(`/api/ui/inbox/messages?tenant_id=${tenant}`),
-          fetch(`/api/ui/supply?tenant_id=${tenant}`),
-        ]);
+        const unifiedRes = await fetch(`/api/ui/dashboard/unified-feed?tenant_id=${tenant}`);
 
-        if (!metricsRes.ok || !ordersRes.ok || !inboxRes.ok || !supplyRes.ok) {
+        if (!unifiedRes.ok) {
           throw new Error("Campaign context could not be loaded from the backend UI endpoints.");
         }
 
-        const [metricsData, ordersData, inboxData, supplyData] = await Promise.all([
-          metricsRes.json(),
-          ordersRes.json(),
-          inboxRes.json(),
-          supplyRes.json(),
-        ]);
+        const unifiedData = await unifiedRes.json();
+
+        const metricsData = unifiedData.metrics || {};
+        const ordersData = unifiedData.orders || [];
+        const inboxData = unifiedData.inbox || [];
+        const supplyData = unifiedData.supply || {};
 
         setMetrics({ ...emptyMetrics, ...metricsData });
         setOrders(Array.isArray(ordersData) ? ordersData : []);
