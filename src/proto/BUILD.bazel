@@ -4,6 +4,7 @@ load("//bazel/rules:proto_rust_library.bzl", "proto_rust_library")
 
 exports_files([
     "agent.proto",
+    "agent_feed.proto",
     "agent_service.proto",
     "app.proto",
     "billing.proto",
@@ -280,6 +281,21 @@ proto_library(
 proto_rust_library(
     name = "ledger",
     proto = ":ledger_proto",
+    use_grpc = True,
+    visibility = ["//visibility:public"],
+)
+
+# ── Agent Feed ───────────────────────────────────────────────────────────────
+
+proto_library(
+    name = "agent_feed_proto",
+    srcs = ["agent_feed.proto"],
+    visibility = ["//visibility:public"],
+)
+
+proto_rust_library(
+    name = "agent_feed",
+    proto = ":agent_feed_proto",
     use_grpc = True,
     visibility = ["//visibility:public"],
 )

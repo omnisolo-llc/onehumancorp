@@ -1,0 +1,4 @@
+# This is handled inside src/server/BUILD.bazel now.
+
+exports_files(["service.rs"])
+exports_files(["mod.rs"])
