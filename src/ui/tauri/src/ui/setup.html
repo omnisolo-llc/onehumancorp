@@ -13,132 +13,103 @@
         <div class="step-dot"></div>
         <div class="step-dot"></div>
       </div>
-
       <h1>Business Profile</h1>
       <p style="color: #86868b; margin-bottom: 24px;">Tell us about your business.</p>
-
       <div style="text-align: left; margin-bottom: 8px; font-weight: 600; font-size: 14px;">Business Name</div>
       <input type="text" id="business-name" placeholder="e.g. Maya's Bakery" />
       <div id="name-error" class="error-msg">Business Name must be at least 3 characters.</div>
-
       <div style="text-align: left; margin-bottom: 12px; font-weight: 600; font-size: 14px;">Industry</div>
       <div class="grid-select" id="industry-select">
-        <div class="select-card" data-value="Bakery">
-          <span>🍰 Bakery</span>
-        </div>
-        <div class="select-card" data-value="Field Service">
-          <span>🛠️ Field Service</span>
-        </div>
-        <div class="select-card" data-value="Boutique">
-          <span>👗 Boutique</span>
-        </div>
-        <div class="select-card" data-value="Creator">
-          <span>🎨 Creator</span>
-        </div>
-        <div class="select-card" data-value="Food Cart">
-          <span>🚛 Food Cart</span>
-        </div>
-        <div class="select-card" data-value="Agency">
-          <span>🏢 Agency</span>
-        </div>
+        <div class="select-card" data-value="Bakery"><span>🍰 Bakery</span></div>
+        <div class="select-card" data-value="Field Service"><span>🛠️ Field Service</span></div>
+        <div class="select-card" data-value="Boutique"><span>👗 Boutique</span></div>
+        <div class="select-card" data-value="Creator"><span>🎨 Creator</span></div>
+        <div class="select-card" data-value="Food Cart"><span>🚛 Food Cart</span></div>
+        <div class="select-card" data-value="Agency"><span>🏢 Agency</span></div>
       </div>
       <div id="industry-error" class="error-msg">Please select an industry.</div>
-
       <button id="next-btn" data-tooltip="Click here to save your business details and proceed.">Next</button>
     </div>
-
-    <script src="shared.js"></script>
     <script>
-      const nextBtn = document.getElementById('next-btn');
-      const nameInput = document.getElementById('business-name');
-      const nameError = document.getElementById('name-error');
-      const industryError = document.getElementById('industry-error');
-      const industryCards = document.querySelectorAll('#industry-select .select-card');
-      const container = document.getElementById('form-container');
+document.addEventListener('DOMContentLoaded', () => {
+    const tooltipEl = document.createElement('div');
+    tooltipEl.className = 'ohc-tooltip';
+    document.body.appendChild(tooltipEl);
+    let hideTimeout;
+    function showTooltip(e, text) {
+        clearTimeout(hideTimeout);
+        tooltipEl.textContent = text;
+        const rect = e.target.getBoundingClientRect();
+        let top = rect.bottom + 10, left = rect.left + (rect.width / 2) - (tooltipEl.offsetWidth / 2);
+        if (left < 10) left = 10;
+        if (left + tooltipEl.offsetWidth > window.innerWidth - 10) left = window.innerWidth - tooltipEl.offsetWidth - 10;
+        if (top + tooltipEl.offsetHeight > window.innerHeight - 10) top = rect.top - tooltipEl.offsetHeight - 10;
+        tooltipEl.style.top = `${top}px`; tooltipEl.style.left = `${left}px`;
+        tooltipEl.classList.add('visible');
+    }
+    function hideTooltip() { hideTimeout = setTimeout(() => tooltipEl.classList.remove('visible'), 100); }
+    document.addEventListener('mouseover', (e) => { const t = e.target.closest('[data-tooltip]'); if (t) showTooltip(e, t.getAttribute('data-tooltip')); });
+    document.addEventListener('mouseout', (e) => { if (e.target.closest('[data-tooltip]')) hideTooltip(); });
+    let touchTimeout;
+    document.addEventListener('touchstart', (e) => { const t = e.target.closest('[data-tooltip]'); if (t) touchTimeout = setTimeout(() => showTooltip(e, t.getAttribute('data-tooltip')), 500); });
+    document.addEventListener('touchend', () => { clearTimeout(touchTimeout); hideTooltip(); });
+});
 
+document.addEventListener('DOMContentLoaded', () => {
+    const btn = document.createElement('button');
+    btn.id = 'ohc-help-btn'; btn.setAttribute('aria-label', 'Open help chat');
+    btn.innerHTML = `<svg viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
+    document.body.appendChild(btn);
+    const overlay = document.createElement('div');
+    overlay.id = 'ohc-help-chat-overlay';
+    overlay.innerHTML = `<div id="ohc-help-chat-header"><h3>Ask AI Help</h3><button id="ohc-help-close" aria-label="Close help chat"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path></svg></button></div><div id="ohc-help-messages"><div class="msg msg-ai">Hi! I am your AI Help Agent! How can I assist you with OHC today?</div></div><div id="ohc-help-input-area"><input type="text" id="ohc-help-input" placeholder="Ask me anything..." /><button id="ohc-help-send" aria-label="Send message"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg></button></div>`;
+    document.body.appendChild(overlay);
+    const closeBtn = document.getElementById('ohc-help-close'), messages = document.getElementById('ohc-help-messages'), input = document.getElementById('ohc-help-input'), sendBtn = document.getElementById('ohc-help-send');
+    btn.addEventListener('click', () => { overlay.style.display = 'flex'; input.focus(); });
+    closeBtn.addEventListener('click', () => { overlay.style.display = 'none'; });
+    async function sendMessage() {
+        const text = input.value.trim(); if (!text) return;
+        const uMsg = document.createElement('div'); uMsg.className = 'msg msg-user'; uMsg.textContent = text;
+        messages.appendChild(uMsg); input.value = ''; messages.scrollTop = messages.scrollHeight;
+        setTimeout(() => {
+            const aiMsg = document.createElement('div'); aiMsg.className = 'msg msg-ai';
+            if (text.toLowerCase().includes('credit card') || text.toLowerCase().includes('pay')) aiMsg.innerHTML = `You can accept credit cards by connecting your bank account in the Payments section.<br/><a href="help_article.html?id=payments">Read the full article →</a>`;
+            else aiMsg.innerHTML = `I can help you with that! Check out our Help Center for a detailed guide.<br/><a href="help.html">Read the full article →</a>`;
+            messages.appendChild(aiMsg); messages.scrollTop = messages.scrollHeight;
+        }, 800);
+    }
+    sendBtn.addEventListener('click', sendMessage);
+    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendMessage(); });
+});
+    </script>
+    <script>
+      const nextBtn = document.getElementById('next-btn'), nameInput = document.getElementById('business-name'), nameError = document.getElementById('name-error'), industryError = document.getElementById('industry-error'), industryCards = document.querySelectorAll('#industry-select .select-card'), container = document.getElementById('form-container');
       let selectedIndustry = null;
-
       industryCards.forEach(card => {
         card.addEventListener('click', () => {
-          industryCards.forEach(c => c.classList.remove('selected'));
-          card.classList.add('selected');
-          selectedIndustry = card.getAttribute('data-value');
-          industryError.style.display = 'none';
+          industryCards.forEach(c => c.classList.remove('selected')); card.classList.add('selected');
+          selectedIndustry = card.getAttribute('data-value'); industryError.style.display = 'none';
         });
       });
-
       async function loadState() {
         let state = {};
-        if (window.__TAURI__ && window.__TAURI__.core) {
-          try {
-            state = await window.__TAURI__.core.invoke("get_onboarding_state");
-          } catch (e) { console.error(e); }
-        } else {
-          state = JSON.parse(localStorage.getItem('ohc_onboarding_state') || '{}');
-        }
-
+        if (window.__TAURI__ && window.__TAURI__.core) try { state = await window.__TAURI__.core.invoke("get_onboarding_state"); } catch (e) {}
+        else state = JSON.parse(localStorage.getItem('ohc_onboarding_state') || '{}');
         if (state.businessName) nameInput.value = state.businessName;
-        if (state.industry) {
-          selectedIndustry = state.industry;
-          const card = document.querySelector(`.select-card[data-value="${state.industry}"]`);
-          if (card) card.classList.add('selected');
-        }
+        if (state.industry) { selectedIndustry = state.industry; const card = document.querySelector(`.select-card[data-value="${state.industry}"]`); if (card) card.classList.add('selected'); }
       }
-
       loadState();
-
       nextBtn.addEventListener('click', async () => {
-        const name = nameInput.value.trim();
-        let isValid = true;
-
-        if (name.length < 3) {
-          nameError.style.display = 'block';
-          nameInput.style.borderColor = '#FF3B30';
-          isValid = false;
-        } else {
-          nameError.style.display = 'none';
-          nameInput.style.borderColor = '';
-        }
-
-        if (!selectedIndustry) {
-          industryError.style.display = 'block';
-          isValid = false;
-        }
-
+        const name = nameInput.value.trim(); let isValid = true;
+        if (name.length < 3) { nameError.style.display = 'block'; nameInput.style.borderColor = '#FF3B30'; isValid = false; } else { nameError.style.display = 'none'; nameInput.style.borderColor = ''; }
+        if (!selectedIndustry) { industryError.style.display = 'block'; isValid = false; }
         if (isValid) {
           const newState = { businessName: name, industry: selectedIndustry };
-
           if (window.__TAURI__ && window.__TAURI__.core) {
-            nextBtn.disabled = true;
-            nextBtn.innerText = "Saving...";
-            try {
-              const state = await window.__TAURI__.core.invoke("get_onboarding_state");
-              Object.assign(state, newState);
-              await window.__TAURI__.core.invoke("save_onboarding_state", { state });
-              window.location.href = "assistant-setup.html";
-            } catch (err) {
-              console.error(err);
-              nextBtn.disabled = false;
-              nextBtn.innerText = "Next";
-            }
-          } else {
-            const state = JSON.parse(localStorage.getItem('ohc_onboarding_state') || '{}');
-            Object.assign(state, newState);
-            localStorage.setItem('ohc_onboarding_state', JSON.stringify(state));
-            window.location.href = "assistant-setup.html";
-          }
-        } else {
-          container.classList.remove('animate-shake');
-          void container.offsetWidth;
-          container.classList.add('animate-shake');
-        }
-      });
-
-      nameInput.addEventListener('input', () => {
-        if (nameInput.value.trim().length >= 3) {
-          nameError.style.display = 'none';
-          nameInput.style.borderColor = '';
-        }
+            nextBtn.disabled = true; nextBtn.innerText = "Saving...";
+            try { const state = await window.__TAURI__.core.invoke("get_onboarding_state"); Object.assign(state, newState); await window.__TAURI__.core.invoke("save_onboarding_state", { state }); window.location.href = "assistant-setup.html"; } catch (err) { nextBtn.disabled = false; nextBtn.innerText = "Next"; }
+          } else { const state = JSON.parse(localStorage.getItem('ohc_onboarding_state') || '{}'); Object.assign(state, newState); localStorage.setItem('ohc_onboarding_state', JSON.stringify(state)); window.location.href = "assistant-setup.html"; }
+        } else { container.classList.remove('animate-shake'); void container.offsetWidth; container.classList.add('animate-shake'); }
       });
     </script>
   </body>

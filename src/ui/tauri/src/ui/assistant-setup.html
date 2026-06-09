@@ -6,44 +6,18 @@
     <title>AI Assistant - OHC</title>
     <link rel="stylesheet" href="styles.css">
     <style>
-      .agent-badge {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        padding: 10px 14px;
-        background: rgba(0, 102, 255, 0.05);
-        border: 1px solid rgba(0, 102, 255, 0.1);
-        border-radius: 10px;
-        margin-bottom: 8px;
-        text-align: left;
-        font-size: 13px;
-        color: #1d1d1f;
-      }
-      .agent-badge i { font-size: 18px; }
-      @media (prefers-color-scheme: dark) {
-        .agent-badge {
-          background: rgba(255, 255, 255, 0.05);
-          border-color: rgba(255, 255, 255, 0.1);
-          color: #f5f5f7;
-        }
-      }
+      .agent-badge { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: rgba(0, 102, 255, 0.05); border: 1px solid rgba(0, 102, 255, 0.1); border-radius: 10px; margin-bottom: 8px; text-align: left; font-size: 13px; color: #1d1d1f; }
+      @media (prefers-color-scheme: dark) { .agent-badge { background: rgba(255, 255, 255, 0.05); border-color: rgba(255, 255, 255, 0.1); color: #f5f5f7; } }
     </style>
   </head>
   <body>
     <div class="container" id="form-container">
-      <div class="step-indicator">
-        <div class="step-dot"></div>
-        <div class="step-dot active"></div>
-        <div class="step-dot"></div>
-      </div>
-
+      <div class="step-indicator"><div class="step-dot"></div><div class="step-dot active"></div><div class="step-dot"></div></div>
       <h1>Your AI Team</h1>
       <p style="color: #86868b; margin-bottom: 24px;">Configure your primary assistant and meet your team.</p>
-
       <div style="text-align: left; margin-bottom: 8px; font-weight: 600; font-size: 14px;">Assistant Name</div>
       <input type="text" id="assistant-name" placeholder="e.g. Jarvis" />
       <div id="name-error" class="error-msg">Please enter a name (min 3 chars).</div>
-
       <div style="text-align: left; margin-bottom: 8px; font-weight: 600; font-size: 14px;">Tone</div>
       <select id="assistant-tone">
         <option value="" disabled selected>Select a tone</option>
@@ -52,100 +26,91 @@
         <option value="Concise">⚡ Concise</option>
       </select>
       <div id="tone-error" class="error-msg">Please select a tone.</div>
-
       <div style="text-align: left; margin-top: 20px; margin-bottom: 12px; font-weight: 600; font-size: 14px;">Your Automatic Department Agents</div>
       <div id="agent-team">
         <div class="agent-badge"><span>📋 The Manager (Operations)</span></div>
         <div class="agent-badge"><span>📣 The Promoter (Marketing)</span></div>
         <div class="agent-badge"><span>🤝 The Ambassador (Customer Success)</span></div>
       </div>
-
       <div style="margin-top: 24px; display: flex; gap: 12px;">
         <button class="secondary" id="back-btn" style="flex: 1;" data-tooltip="Need to change business details? Go back.">Back</button>
         <button id="next-btn" style="flex: 2;" data-tooltip="All set? Click here to launch your workspace.">Finish Setup</button>
       </div>
     </div>
-
-    <script src="shared.js"></script>
     <script>
-      const nextBtn = document.getElementById('next-btn');
-      const backBtn = document.getElementById('back-btn');
-      const nameInput = document.getElementById('assistant-name');
-      const toneSelect = document.getElementById('assistant-tone');
-      const nameError = document.getElementById('name-error');
-      const toneError = document.getElementById('tone-error');
-      const container = document.getElementById('form-container');
+document.addEventListener('DOMContentLoaded', () => {
+    const tooltipEl = document.createElement('div');
+    tooltipEl.className = 'ohc-tooltip';
+    document.body.appendChild(tooltipEl);
+    let hideTimeout;
+    function showTooltip(e, text) {
+        clearTimeout(hideTimeout);
+        tooltipEl.textContent = text;
+        const rect = e.target.getBoundingClientRect();
+        let top = rect.bottom + 10, left = rect.left + (rect.width / 2) - (tooltipEl.offsetWidth / 2);
+        if (left < 10) left = 10;
+        if (left + tooltipEl.offsetWidth > window.innerWidth - 10) left = window.innerWidth - tooltipEl.offsetWidth - 10;
+        if (top + tooltipEl.offsetHeight > window.innerHeight - 10) top = rect.top - tooltipEl.offsetHeight - 10;
+        tooltipEl.style.top = `${top}px`; tooltipEl.style.left = `${left}px`;
+        tooltipEl.classList.add('visible');
+    }
+    function hideTooltip() { hideTimeout = setTimeout(() => tooltipEl.classList.remove('visible'), 100); }
+    document.addEventListener('mouseover', (e) => { const t = e.target.closest('[data-tooltip]'); if (t) showTooltip(e, t.getAttribute('data-tooltip')); });
+    document.addEventListener('mouseout', (e) => { if (e.target.closest('[data-tooltip]')) hideTooltip(); });
+    let touchTimeout;
+    document.addEventListener('touchstart', (e) => { const t = e.target.closest('[data-tooltip]'); if (t) touchTimeout = setTimeout(() => showTooltip(e, t.getAttribute('data-tooltip')), 500); });
+    document.addEventListener('touchend', () => { clearTimeout(touchTimeout); hideTooltip(); });
+});
 
+document.addEventListener('DOMContentLoaded', () => {
+    const btn = document.createElement('button');
+    btn.id = 'ohc-help-btn'; btn.setAttribute('aria-label', 'Open help chat');
+    btn.innerHTML = `<svg viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
+    document.body.appendChild(btn);
+    const overlay = document.createElement('div');
+    overlay.id = 'ohc-help-chat-overlay';
+    overlay.innerHTML = `<div id="ohc-help-chat-header"><h3>Ask AI Help</h3><button id="ohc-help-close" aria-label="Close help chat"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path></svg></button></div><div id="ohc-help-messages"><div class="msg msg-ai">Hi! I am your AI Help Agent! How can I assist you with OHC today?</div></div><div id="ohc-help-input-area"><input type="text" id="ohc-help-input" placeholder="Ask me anything..." /><button id="ohc-help-send" aria-label="Send message"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg></button></div>`;
+    document.body.appendChild(overlay);
+    const closeBtn = document.getElementById('ohc-help-close'), messages = document.getElementById('ohc-help-messages'), input = document.getElementById('ohc-help-input'), sendBtn = document.getElementById('ohc-help-send');
+    btn.addEventListener('click', () => { overlay.style.display = 'flex'; input.focus(); });
+    closeBtn.addEventListener('click', () => { overlay.style.display = 'none'; });
+    async function sendMessage() {
+        const text = input.value.trim(); if (!text) return;
+        const uMsg = document.createElement('div'); uMsg.className = 'msg msg-user'; uMsg.textContent = text;
+        messages.appendChild(uMsg); input.value = ''; messages.scrollTop = messages.scrollHeight;
+        setTimeout(() => {
+            const aiMsg = document.createElement('div'); aiMsg.className = 'msg msg-ai';
+            if (text.toLowerCase().includes('credit card') || text.toLowerCase().includes('pay')) aiMsg.innerHTML = `You can accept credit cards by connecting your bank account in the Payments section.<br/><a href="help_article.html?id=payments">Read the full article →</a>`;
+            else aiMsg.innerHTML = `I can help you with that! Check out our Help Center for a detailed guide.<br/><a href="help.html">Read the full article →</a>`;
+            messages.appendChild(aiMsg); messages.scrollTop = messages.scrollHeight;
+        }, 800);
+    }
+    sendBtn.addEventListener('click', sendMessage);
+    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendMessage(); });
+});
+    </script>
+    <script>
+      const nextBtn = document.getElementById('next-btn'), backBtn = document.getElementById('back-btn'), nameInput = document.getElementById('assistant-name'), toneSelect = document.getElementById('assistant-tone'), nameError = document.getElementById('name-error'), toneError = document.getElementById('tone-error'), container = document.getElementById('form-container');
       async function loadState() {
         let state = {};
-        if (window.__TAURI__ && window.__TAURI__.core) {
-          try {
-            state = await window.__TAURI__.core.invoke("get_onboarding_state");
-          } catch (e) { console.error(e); }
-        } else {
-          state = JSON.parse(localStorage.getItem('ohc_onboarding_state') || '{}');
-        }
-
+        if (window.__TAURI__ && window.__TAURI__.core) try { state = await window.__TAURI__.core.invoke("get_onboarding_state"); } catch (e) {}
+        else state = JSON.parse(localStorage.getItem('ohc_onboarding_state') || '{}');
         if (state.assistantName) nameInput.value = state.assistantName;
         if (state.assistantTone) toneSelect.value = state.assistantTone;
       }
-
       loadState();
-
-      backBtn.addEventListener('click', () => {
-        window.location.href = "setup.html";
-      });
-
+      backBtn.addEventListener('click', () => { window.location.href = "setup.html"; });
       nextBtn.addEventListener('click', async () => {
-        const name = nameInput.value.trim();
-        const tone = toneSelect.value;
-        let isValid = true;
-
-        if (name.length < 3) {
-          nameError.style.display = 'block';
-          nameInput.style.borderColor = '#FF3B30';
-          isValid = false;
-        } else {
-          nameError.style.display = 'none';
-          nameInput.style.borderColor = '';
-        }
-
-        if (!tone) {
-          toneError.style.display = 'block';
-          toneSelect.style.borderColor = '#FF3B30';
-          isValid = false;
-        } else {
-          toneError.style.display = 'none';
-          toneSelect.style.borderColor = '';
-        }
-
+        const name = nameInput.value.trim(), tone = toneSelect.value; let isValid = true;
+        if (name.length < 3) { nameError.style.display = 'block'; nameInput.style.borderColor = '#FF3B30'; isValid = false; } else { nameError.style.display = 'none'; nameInput.style.borderColor = ''; }
+        if (!tone) { toneError.style.display = 'block'; toneSelect.style.borderColor = '#FF3B30'; isValid = false; } else { toneError.style.display = 'none'; toneSelect.style.borderColor = ''; }
         if (isValid) {
           const newState = { assistantName: name, assistantTone: tone };
-
           if (window.__TAURI__ && window.__TAURI__.core) {
-            nextBtn.disabled = true;
-            nextBtn.innerText = "Finalizing...";
-            try {
-              const state = await window.__TAURI__.core.invoke("get_onboarding_state");
-              Object.assign(state, newState);
-              await window.__TAURI__.core.invoke("save_onboarding_state", { state });
-              window.location.href = "success.html";
-            } catch (err) {
-              console.error(err);
-              nextBtn.disabled = false;
-              nextBtn.innerText = "Finish Setup";
-            }
-          } else {
-            const state = JSON.parse(localStorage.getItem('ohc_onboarding_state') || '{}');
-            Object.assign(state, newState);
-            localStorage.setItem('ohc_onboarding_state', JSON.stringify(state));
-            window.location.href = "success.html";
-          }
-        } else {
-          container.classList.remove('animate-shake');
-          void container.offsetWidth;
-          container.classList.add('animate-shake');
-        }
+            nextBtn.disabled = true; nextBtn.innerText = "Finalizing...";
+            try { const state = await window.__TAURI__.core.invoke("get_onboarding_state"); Object.assign(state, newState); await window.__TAURI__.core.invoke("save_onboarding_state", { state }); window.location.href = "success.html"; } catch (err) { nextBtn.disabled = false; nextBtn.innerText = "Finish Setup"; }
+          } else { const state = JSON.parse(localStorage.getItem('ohc_onboarding_state') || '{}'); Object.assign(state, newState); localStorage.setItem('ohc_onboarding_state', JSON.stringify(state)); window.location.href = "success.html"; }
+        } else { container.classList.remove('animate-shake'); void container.offsetWidth; container.classList.add('animate-shake'); }
       });
     </script>
   </body>
