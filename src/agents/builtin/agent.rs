@@ -73,6 +73,21 @@ pub enum AgentEvent {
     },
 }
 
+pub type HumanInputFn = std::sync::Arc<dyn Fn(&str) -> std::pin::Pin<Box<dyn std::future::Future<Output = Option<String>> + Send>> + Send + Sync>;
+
+#[derive(Clone)]
+pub struct HumanInputCallbackWrapper(pub Option<HumanInputFn>);
+
+impl std::fmt::Debug for HumanInputCallbackWrapper {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if self.0.is_some() {
+            write!(f, "Some(<callback>)")
+        } else {
+            write!(f, "None")
+        }
+    }
+}
+
 /// Configuration for a single agent run.
 #[derive(Debug, Clone)]
 pub struct AgentRunConfig {
@@ -116,6 +131,7 @@ pub struct AgentRunConfig {
     pub allowed_tools: Option<Vec<String>>,
     pub high_risk_tools: Vec<String>,
     pub approved_tool_calls: Vec<String>,
+    pub human_input_callback: crate::agent::HumanInputCallbackWrapper,
     pub thread_id: Option<String>,
     pub resume_from_checkpoint_id: Option<String>,
     pub enable_single_agent_maximization: bool,
@@ -203,6 +219,7 @@ impl Default for AgentRunConfig {
             injected_context: None,
             allowed_tools: None,
             high_risk_tools: vec![],
+            human_input_callback: crate::agent::HumanInputCallbackWrapper(None),
             approved_tool_calls: vec![],
             thread_id: None,
             resume_from_checkpoint_id: None,
@@ -963,6 +980,26 @@ impl Agent {
                             )));
                         }
                         Err(crate::types::ToolError::UserFixable(err_msg)) => {
+                            if let Some(ref cb) = cfg.human_input_callback.0 {
+                                if let Some(human_input) = cb(&err_msg).await {
+                                    on_event(AgentEvent::UserInterventionRequired { error: err_msg.clone() });
+                                    let error_result = crate::types::ToolResult {
+                                        tool_call_id: tc.id.clone(),
+                                        content: String::new(),
+                                        error: format!("USER_FIXABLE: {}. Human provided fix: {}", err_msg, human_input),
+                                    };
+                                    let msg_to_push = crate::types::Message {
+                                        role: crate::types::Role::Tool,
+                                        content: String::new(),
+                                        tool_calls: vec![],
+                                        tool_results: vec![error_result],
+                                        response_id: None,
+                                        previous_response_id: None,
+                                    };
+                                    messages.push(msg_to_push);
+                                    continue;
+                                }
+                            }
                             let full_err = format!("USER_FIXABLE: {}", err_msg);
                             on_event(AgentEvent::UserInterventionRequired {
                                 error: full_err.clone(),
@@ -3459,10 +3496,22 @@ impl Agent {
                         tool_results[idx] = error_result;
                     }
                     Err(ToolError::UserFixable(msg)) => {
-                        let err = format!("USER_FIXABLE: {}", msg);
-                        on_event(AgentEvent::UserInterventionRequired { error: err.clone() });
-                        return Err(err.into());
-                    }
+                            if let Some(ref cb) = final_cfg.human_input_callback.0 {
+                                if let Some(human_input) = cb(&msg).await {
+                                    on_event(AgentEvent::UserInterventionRequired { error: msg.clone() });
+                                    let idx = tool_calls.iter().position(|t| t.id == tc.id).unwrap();
+                                    tool_results[idx] = crate::types::ToolResult {
+                                        tool_call_id: tc.id.clone(),
+                                        content: String::new(),
+                                        error: format!("USER_FIXABLE: {}. Human provided fix: {}", msg, human_input),
+                                    };
+                                    continue;
+                                }
+                            }
+                            let err = format!("USER_FIXABLE: {}", msg);
+                            on_event(AgentEvent::UserInterventionRequired { error: err.clone() });
+                            return Err(err.into());
+                        }
                     Err(ToolError::Fatal(msg)) => {
                         let err = format!("Fatal tool error: {}", msg);
                         on_event(AgentEvent::TaskError { error: err.clone() });
@@ -3551,6 +3600,18 @@ impl Agent {
                 {
                     match e {
                         ToolError::UserFixable(msg) => {
+                            if let Some(ref cb) = final_cfg.human_input_callback.0 {
+                                if let Some(human_input) = cb(&msg).await {
+                                    on_event(AgentEvent::UserInterventionRequired { error: msg.clone() });
+                                    let idx = tool_calls.iter().position(|t| t.id == tc.id).unwrap();
+                                    tool_results[idx] = crate::types::ToolResult {
+                                        tool_call_id: tc.id.clone(),
+                                        content: String::new(),
+                                        error: format!("USER_FIXABLE: {}. Human provided fix: {}", msg, human_input),
+                                    };
+                                    continue;
+                                }
+                            }
                             let err = format!("USER_FIXABLE: {}", msg);
                             on_event(AgentEvent::UserInterventionRequired { error: err.clone() });
                             return Err(err.into());
@@ -3728,6 +3789,18 @@ impl Agent {
                             break;
                         }
                         Err(ToolError::UserFixable(msg)) => {
+                            if let Some(ref cb) = final_cfg.human_input_callback.0 {
+                                if let Some(human_input) = cb(&msg).await {
+                                    on_event(AgentEvent::UserInterventionRequired { error: msg.clone() });
+                                    let idx = tool_calls.iter().position(|t| t.id == tc.id).unwrap();
+                                    tool_results[idx] = crate::types::ToolResult {
+                                        tool_call_id: tc.id.clone(),
+                                        content: String::new(),
+                                        error: format!("USER_FIXABLE: {}. Human provided fix: {}", msg, human_input),
+                                    };
+                                    continue;
+                                }
+                            }
                             let err = format!("USER_FIXABLE: {}", msg);
                             on_event(AgentEvent::UserInterventionRequired { error: err.clone() });
                             return Err(err.into());
@@ -5165,6 +5238,91 @@ mod tests {
             err_str.contains("Guardrail tripwire fires (UserFixable): needs human")
                 || err_str.contains("User aborted")
         );
+    }
+
+
+    #[tokio::test]
+    async fn test_human_input_callback_user_fixable() {
+        let llm = Arc::new(crate::agent::tests::MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                crate::types::ChatResponse {
+                    message: crate::types::Message {
+                        role: crate::types::Role::Assistant,
+                        content: String::new(),
+                        tool_calls: vec![crate::types::ToolCall {
+                            id: "call_1".to_string(),
+                            name: "user_fixable_tool".to_string(),
+                            arguments: serde_json::json!({}),
+                        }],
+                        tool_results: vec![],
+                        response_id: None,
+                        previous_response_id: None,
+                    },
+                    usage: crate::types::Usage::default(),
+                    stop_reason: "tool_calls".to_string(),
+                    response_id: Some("mock-id-1".to_string()),
+                },
+                crate::types::ChatResponse {
+                    message: crate::types::Message::assistant("Done after human fix"),
+                    usage: crate::types::Usage::default(),
+                    stop_reason: "stop".to_string(),
+                    response_id: Some("mock-id-2".to_string()),
+                }
+            ]),
+        });
+
+        struct UserFixableExecutor;
+        #[async_trait::async_trait]
+        impl crate::tools::ToolExecutor for UserFixableExecutor {
+            async fn execute(&self, _args: serde_json::Value) -> Result<String, crate::types::ToolError> {
+                Err(crate::types::ToolError::UserFixable("Missing external auth token".to_string()))
+            }
+        }
+
+        let dummy_tool = crate::tools::Tool {
+            name: "user_fixable_tool".to_string(),
+            description: "A tool".to_string(),
+            parameters: serde_json::json!({}),
+            is_read_only: false,
+            execute: Arc::new(UserFixableExecutor),
+        };
+
+        let agent = Agent::new(llm as Arc<dyn LlmClient>, vec![dummy_tool]);
+        let mut cfg = AgentRunConfig::default();
+        cfg.max_iterations = 5;
+        cfg.enable_tao_orchestration_loop = true;
+        cfg.human_input_callback = crate::agent::HumanInputCallbackWrapper(Some(Arc::new(|msg: &str| {
+            let msg = msg.to_string();
+            Box::pin(async move {
+                if msg.contains("Missing external auth token") {
+                    Some("Here is the token: 12345".to_string())
+                } else {
+                    None
+                }
+            })
+        })));
+
+        let mut events = vec![];
+        let mut on_event = |e| {
+            events.push(e);
+        };
+
+        let res = agent
+            .run_tao_orchestration_loop(&cfg, "Hello", &agent.tools, &mut on_event)
+            .await;
+
+        assert!(res.is_ok());
+        let final_response = res.unwrap();
+        assert_eq!(final_response, "Done after human fix");
+
+        let found_intervention_event = events.iter().any(|e| {
+            if let AgentEvent::UserInterventionRequired { error } = e {
+                error.contains("Missing external auth token")
+            } else {
+                false
+            }
+        });
+        assert!(found_intervention_event, "Should have emitted UserInterventionRequired event");
     }
 
     #[tokio::test]
