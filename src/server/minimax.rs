@@ -133,7 +133,7 @@ impl MinimaxClient {
                     "initial_products": [{"name": "Custom Vegan Cake", "price": "45.00"}],
                     "suggested_features": ["menu", "booking", "online_store"]
                 }"#.to_string());
-            } else if lower_prompt.contains("alex") {
+            } else if lower_prompt.contains("alex") || lower_prompt.contains("art shop") {
                 return Ok(r#"{
                     "business_name": "Alex Art",
                     "business_type": "Retail",
