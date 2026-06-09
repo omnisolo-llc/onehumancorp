@@ -338,3 +338,8 @@ VALUES
   ('action-test-1', 'triage-test-1', 'test-tenant', 'Draft Reply', 'Hi Maya! I can definitely help with the custom cake. It will be $50.'),
   ('action-test-2', 'triage-test-2', 'test-tenant', 'Draft Reply', 'We deliver between 9 AM and 5 PM on weekdays.')
 ON CONFLICT (id) DO NOTHING;
+
+-- Seed 10th order milestone for e2e-tenant
+INSERT INTO business_milestones (id, tenant_id, milestone_type, reached_at)
+VALUES ('ms_e2e_10th_order', 'e2e-tenant', '10th_order', NOW())
+ON CONFLICT (id) DO NOTHING;
