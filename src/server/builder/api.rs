@@ -542,6 +542,19 @@ async fn create_block(
     let cache = crate::builder::edge::get_edge_cache();
     cache.invalidate_by_tag(&format!("tenant-id:{}", tenant_id)).await;
 
+    let pool_clone = pool.clone();
+    tokio::spawn(async move {
+        let site_id_query = sqlx::query_scalar::<_, Uuid>("SELECT site_id FROM builder_pages WHERE id = $1")
+            .bind(page_id)
+            .fetch_optional(&pool_clone)
+            .await;
+
+        if let Ok(Some(site_id)) = site_id_query {
+            let cache_key = format!("edge_site_{}_{}_en-US", tenant_id, site_id);
+            let _ = crate::builder::edge::regenerate_cache(pool_clone.clone(), tenant_id, site_id, cache_key, cache.clone()).await;
+        }
+    });
+
     Ok(Json(BlockResponse {
         id: block.id,
         block_type: block.block_type,
@@ -575,6 +588,20 @@ async fn update_block(
 
     let cache = crate::builder::edge::get_edge_cache();
     cache.invalidate_by_tag(&format!("tenant-id:{}", tenant_id)).await;
+
+    let pool_clone = pool.clone();
+    let page_id = existing_block.page_id;
+    tokio::spawn(async move {
+        let site_id_query = sqlx::query_scalar::<_, Uuid>("SELECT site_id FROM builder_pages WHERE id = $1")
+            .bind(page_id)
+            .fetch_optional(&pool_clone)
+            .await;
+
+        if let Ok(Some(site_id)) = site_id_query {
+            let cache_key = format!("edge_site_{}_{}_en-US", tenant_id, site_id);
+            let _ = crate::builder::edge::regenerate_cache(pool_clone.clone(), tenant_id, site_id, cache_key, cache.clone()).await;
+        }
+    });
 
     Ok(Json(BlockResponse {
         id: block.id,

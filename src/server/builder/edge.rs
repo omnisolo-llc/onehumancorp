@@ -152,7 +152,7 @@ pub async fn handle_edge_request_impl(
     Ok(response)
 }
 
-async fn regenerate_cache(
+pub async fn regenerate_cache(
     pool: PgPool,
     tenant_id: Uuid,
     site_id: Uuid,
