@@ -87,6 +87,7 @@ function statusTone(status?: string) {
 
 export default function Dashboard() {
   const router = useRouter();
+  const approvals: any[] = [];
   const [metrics, setMetrics] = useState<DashboardMetrics>(emptyMetrics);
   const [orders, setOrders] = useState<Order[]>([]);
   const [messages, setMessages] = useState<InboxMessage[]>([]);
