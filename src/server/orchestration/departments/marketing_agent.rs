@@ -206,8 +206,15 @@ impl MarketingAgent {
     }
 
     pub async fn draft_product_caption(&self, product_name: &str, description: &str) -> String {
-        let prompt = format!("Draft a short, engaging Instagram caption for a new or restocked product named '{}'. Description: '{}'. Keep it energetic and include 3 relevant hashtags.", product_name, description);
-        let fallback = format!("Check out our new {}!", product_name);
+        let prompt = format!(
+            "You are The Promoter, an AI social media manager. Generate 3 variant captions (TikTok, Instagram, Facebook) to promote the new product '{}'. Description: '{}'. Format the output as JSON with keys 'tiktok', 'instagram', 'facebook'.",
+            product_name, description
+        );
+        let fallback = serde_json::json!({
+            "tiktok": format!("Check out our new {}!", product_name),
+            "instagram": format!("New arrival: {}! Link in bio.", product_name),
+            "facebook": format!("We just added {} to our store. Check it out!", product_name)
+        }).to_string();
         self.copy_client.draft_caption(&prompt, &fallback).await
     }
 
@@ -233,7 +240,6 @@ impl Department for MarketingAgent {
             "tenant.insight.trending".to_string(),
             "tenant.product.created".to_string(),
             "tenant.job.completed".to_string(),
-            "tenant.product.created".to_string(),
             "tenant.inventory.updated".to_string(),
         ]
     }
@@ -289,16 +295,21 @@ impl Department for MarketingAgent {
 
             let optimized_image_url = self.optimize_product_image_url(image_url).await;
 
-            let draft_copy = self.draft_product_caption(product_name, description).await;
+            let draft_json = self.draft_product_caption(product_name, description).await;
+            let captions: serde_json::Value = serde_json::from_str(&draft_json).unwrap_or(serde_json::json!({
+                "tiktok": format!("Check out our new {}!", product_name),
+                "instagram": format!("New arrival: {}! Link in bio.", product_name),
+                "facebook": format!("We just added {} to our store. Check it out!", product_name)
+            }));
 
             let payload = serde_json::json!({
-                "feature_type": "social_post",
+                "feature_type": "social_promotion",
                 "product_name": product_name,
                 "image_url": optimized_image_url,
-                "draft_copy": draft_copy
+                "captions": captions
             });
 
-            let action_desc = format!("Draft Instagram post for {}", product_name);
+            let action_desc = format!("Draft multi-platform social posts for {}", product_name);
             return self.orchestrator()?.execute_action(DepartmentType::Marketing, action_desc, event.tenant_id.clone(), risk, payload).await.map(|_| ());
         }
 

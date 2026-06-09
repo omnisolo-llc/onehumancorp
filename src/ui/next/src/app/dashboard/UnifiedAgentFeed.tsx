@@ -31,6 +31,39 @@ type LedgerResponse = {
   entries: OHCLedgerEntry[];
 };
 
+function SocialPromotionPreview({ payload }: { payload: any }) {
+  const [platform, setPlatform] = useState<"tiktok" | "instagram" | "facebook">("instagram");
+  const captions = payload?.captions || {};
+
+  return (
+    <div className="mt-2 flex flex-col gap-3 p-4 bg-indigo-50/30 dark:bg-indigo-900/10 rounded-xl border border-indigo-100 dark:border-indigo-900/30">
+      <div className="flex gap-2 p-1 bg-gray-100 dark:bg-gray-800 rounded-lg w-fit">
+        {(['instagram', 'tiktok', 'facebook'] as const).map((p) => (
+          <button
+            key={p}
+            onClick={() => setPlatform(p)}
+            className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${
+              platform === p
+                ? "bg-white dark:bg-gray-700 shadow-sm text-indigo-600 dark:text-indigo-400"
+                : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+            }`}
+          >
+            {p.charAt(0).toUpperCase() + p.slice(1)}
+          </button>
+        ))}
+      </div>
+      <div className="text-sm font-medium text-gray-800 dark:text-gray-200 bg-white dark:bg-gray-900/50 p-3 rounded-lg border border-gray-100 dark:border-gray-800 min-h-[60px]">
+        {captions[platform] || "No caption generated."}
+      </div>
+      {payload?.image_url && (
+        <div className="relative aspect-square w-24 h-24 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 shadow-sm">
+           <img src={payload.image_url} alt="Product" className="object-cover w-full h-full" />
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function UnifiedAgentFeed() {
   const [approvals, setApprovals] = useState<ApprovalRequest[]>([]);
   const [loading, setLoading] = useState(true);
@@ -272,8 +305,11 @@ export function UnifiedAgentFeed() {
                   <h3 className="text-lg font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] leading-snug mt-1">
                     {approval.description}
                   </h3>
-                  {(approval.payload?.context || approval.payload?.remaining_stock !== undefined || approval.payload?.feature_type === "quote_draft") && (
+                  {(approval.payload?.context || approval.payload?.remaining_stock !== undefined || approval.payload?.feature_type === "quote_draft" || approval.payload?.feature_type === "social_promotion") && (
                     <div className="mt-2 flex flex-col gap-1 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+                      {approval.payload?.feature_type === "social_promotion" && (
+                        <SocialPromotionPreview payload={approval.payload} />
+                      )}
                       {approval.payload?.feature_type === "quote_draft" && (
                         <div className="mb-4 p-4 rounded-xl bg-blue-50/50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/30 flex flex-col gap-3" data-testid="draft-quote-card">
                           <div className="flex items-center gap-2 text-blue-800 dark:text-blue-300 font-semibold text-sm">
@@ -421,7 +457,26 @@ export function UnifiedAgentFeed() {
                 </div>
 
                 <div className="flex flex-col gap-3 w-full mt-2">
-                  {approval.payload?.feature_type === 'stockout_restock_and_price' ? (
+                  {approval.payload?.feature_type === 'social_promotion' ? (
+                    <div className="flex flex-col sm:flex-row gap-3 w-full">
+                      <button
+                        onClick={() => handleDecision(approval.id, true)}
+                        className="flex-1 min-h-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-colors shadow-md flex items-center justify-center"
+                        aria-label="Approve & Schedule"
+                        data-testid="approve-social-promotion"
+                      >
+                        Approve & Schedule
+                      </button>
+                      <button
+                        onClick={() => handleDecision(approval.id, false)}
+                        className="flex-1 min-h-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex items-center justify-center"
+                        aria-label="Dismiss"
+                        data-testid="dismiss-social-promotion"
+                      >
+                        Dismiss
+                      </button>
+                    </div>
+                  ) : approval.payload?.feature_type === 'stockout_restock_and_price' ? (
                     <div className="flex flex-col sm:flex-row gap-3 w-full">
                       <button
                         onClick={() => handleDecision(approval.id, true)}

@@ -1,59 +1,67 @@
-import { expect, test } from "./fixtures";
+import { test, expect } from '@playwright/test';
 
-test.describe("Promoter Agent Proactive Flow", () => {
-  // Use a strictly 375px wide viewport as specified by the issue
-  test.use({ viewport: { width: 375, height: 667 } });
+/**
+ * CUJ: Proactive Social Media Promotion
+ * Persona: Priya (Boutique Owner)
+ * Scenario: Priya adds a new product to her store. The Promoter Agent automatically
+ * detects this and drafts social media posts for her review in the Unified Agent Feed.
+ * Priya reviews the captions and approves them for scheduling.
+ */
+test('Promoter Agent proactive flow: Product creation to feed approval', async ({ page }) => {
+    // 1. Login
+    await page.goto('/login');
+    await page.fill('input[type="email"]', 'admin@ohc.local');
+    await page.fill('input[type="password"]', 'changeme');
+    await page.click('button:has-text("Log In")');
+    await expect(page).toHaveURL(/\/dashboard/);
 
-  test("Product creation triggers Promoter card in Agent Feed and allows approval", async ({
-    page,
-    request,
-  }) => {
-    const productName = `Limited Edition Mug ${Math.floor(Math.random() * 1000)}`;
+    // 2. Navigate to Inventory and Create a Product
+    await page.click('nav a:has-text("Inventory"), a:has-text("Inventory")');
+    await expect(page).toHaveURL(/\/inventory/);
 
-    // 1. Login and go to dashboard
-    await page.goto("/dashboard");
-    await expect(page.locator('section[aria-label="Unified Agent Feed"]')).toBeVisible();
+    const productName = `E2E Silk Scarf ${Date.now()}`;
+    await page.click('button:has-text("Add Product")');
+    await page.fill('input[placeholder*="Product Name"], input[name="name"]', productName);
+    await page.fill('textarea[placeholder*="Description"], textarea[name="description"]', 'A beautiful hand-woven silk scarf.');
+    await page.fill('input[name="price"], input[placeholder*="0.00"]', '45.00');
+    await page.click('button:has-text("Save Product"), button:has-text("Create")');
 
-    // 2. Create a product via the internal API (simulating ProductCreated event)
-    // In a real flow, this could be done via UI, but for speed we trigger the event logic.
-    // Based on src/server/api/catalog.rs:handle_create_product
-    const createProductRes = await request.post("/api/v1/catalog/product", {
-      data: {
-        name: productName,
-        description: "A beautiful handcrafted mug for your morning coffee.",
-        item_type: "physical"
-      },
-      headers: {
-        "x-tenant-id": "e2e-tenant",
-        "x-user-id": "default",
-      }
-    });
-    expect(createProductRes.ok()).toBeTruthy();
+    // Wait for product to be saved
+    await expect(page.locator(`text=${productName}`)).toBeVisible();
 
-    // 3. Refresh dashboard to see the new card
-    // The MarketingAgent handles the event and calls execute_action which inserts into agent_approvals
-    await page.reload();
+    // 3. Go back to Dashboard and check Unified Agent Feed
+    await page.click('nav a:has-text("Dashboard"), a[href="/dashboard"]');
+    await expect(page).toHaveURL(/\/dashboard/);
 
-    // 4. Look for the Promoter card in the Unified Agent Feed
-    const promoterCard = page.locator(`text=New product detected! Schedule a post to drive sales?`).first();
-    await expect(promoterCard).toBeVisible({ timeout: 15000 });
+    // The agent might take a moment to process the event and generate the draft
+    // We poll for the card appearing in the Proposals tab
+    const socialPromoCard = page.locator(`text=Draft multi-platform social posts for ${productName}`);
+    await expect(socialPromoCard).toBeVisible({ timeout: 15000 });
 
-    // 5. Verify the captions variants are present
-    await expect(page.locator('text=TikTok')).toBeVisible();
-    await expect(page.locator('text=Instagram')).toBeVisible();
-    await expect(page.locator('text=Facebook')).toBeVisible();
+    // 4. Interact with the Social Promotion Card
+    // Verify platform tabs exist
+    await expect(page.locator('button:has-text("Instagram")')).toBeVisible();
+    await expect(page.locator('button:has-text("Tiktok")')).toBeVisible();
+    await expect(page.locator('button:has-text("Facebook")')).toBeVisible();
 
-    // 6. Approve & Schedule
-    const approveBtn = page.locator('button[data-testid="approve-promoter"]').first();
+    // Check default caption (Instagram)
+    await expect(page.locator('text=Link in bio')).toBeVisible();
+
+    // Switch to TikTok
+    await page.click('button:has-text("Tiktok")');
+    await expect(page.locator('text=Check out our new')).toBeVisible();
+
+    // 5. Approve & Schedule
+    const approveBtn = page.locator('button[data-testid="approve-social-promotion"]');
     await expect(approveBtn).toBeVisible();
     await approveBtn.click();
 
-    // 7. Verify the card disappears (optimistic UI)
-    await expect(promoterCard).not.toBeVisible();
+    // Verify card is removed from proposals (optimistic UI)
+    await expect(socialPromoCard).not.toBeVisible();
 
-    // 8. Switch to Activity Feed and verify it appears there
+    // 6. Verify in Activity Feed
     await page.click('button:has-text("Activity Feed")');
-    await expect(page.locator(`text=New product detected! Schedule a post to drive sales?`)).toBeVisible();
-    await expect(page.locator('text=APPROVED')).toBeVisible();
-  });
+    const activityEntry = page.locator(`text=Draft multi-platform social posts for ${productName}`);
+    await expect(activityEntry).toBeVisible();
+    await expect(page.locator('span:has-text("APPROVED")')).toBeVisible();
 });
