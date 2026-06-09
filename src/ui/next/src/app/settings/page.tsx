@@ -281,6 +281,17 @@ export default function SettingsPage() {
                   />
                   <span className="text-sm text-gray-800">Enable Email Notifications</span>
                 </label>
+                <label className="flex items-center gap-3">
+                  <input
+                    aria-label="Enable Push Notifications"
+                    type="checkbox"
+                    checked={(preferences as any)["push_notifications"] || false}
+                    onChange={(e) => handlePreferenceChange("push_notifications", e.target.checked)}
+                    className="rounded"
+                  />
+                  <span className="text-sm text-gray-800">Enable Push Notifications</span>
+
+                </label>
               </div>
             </div>
           </div>

@@ -370,6 +370,76 @@ fn endpoint_url(base_url: &str, endpoint: &str) -> String {
     format!("{}/{}", base_url.trim_end_matches('/'), endpoint)
 }
 
+#[tauri::command]
+async fn get_help_articles() -> Result<serde_json::Value, String> {
+    let backend_url = std::env::var("BACKEND_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string());
+    let url = format!("{}/api/help", backend_url);
+
+    let request = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(5))
+        .build()
+        .map_err(|err| err.to_string())?
+        .get(&url);
+
+    let response = request.send().await.map_err(|err| err.to_string())?;
+    if response.status().is_success() {
+        let json: serde_json::Value = response.json().await.map_err(|err| err.to_string())?;
+        Ok(json)
+    } else {
+        Err(format!("Backend returned {}", response.status()))
+    }
+}
+
+#[tauri::command]
+async fn get_help_article(id: String) -> Result<serde_json::Value, String> {
+    let backend_url = std::env::var("BACKEND_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string());
+    let url = format!("{}/api/help/{}", backend_url, id);
+
+    let request = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(5))
+        .build()
+        .map_err(|err| err.to_string())?
+        .get(&url);
+
+    let response = request.send().await.map_err(|err| err.to_string())?;
+    if response.status().is_success() {
+        let json: serde_json::Value = response.json().await.map_err(|err| err.to_string())?;
+        Ok(json)
+    } else {
+        Err(format!("Backend returned {}", response.status()))
+    }
+}
+
+#[tauri::command]
+async fn get_help_videos() -> Result<serde_json::Value, String> {
+    // For now, mock the videos as the endpoint is partially mocked anyway
+    Ok(serde_json::json!([
+        { "id": 1, "title": "How to set up your first store easily", "duration": "1:20", "video_url": "https://www.w3schools.com/html/mov_bbb.mp4" },
+        { "id": 2, "title": "Accept your first payment", "duration": "1:15", "video_url": "https://www.w3schools.com/html/mov_bbb.mp4" }
+    ]))
+}
+
+
+#[tauri::command]
+async fn get_changelog() -> Result<serde_json::Value, String> {
+    let backend_url = std::env::var("BACKEND_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string());
+    let url = format!("{}/api/changelog", backend_url);
+
+    let request = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(5))
+        .build()
+        .map_err(|err| err.to_string())?
+        .get(&url);
+
+    let response = request.send().await.map_err(|err| err.to_string())?;
+    if response.status().is_success() {
+        let json: serde_json::Value = response.json().await.map_err(|err| err.to_string())?;
+        Ok(json)
+    } else {
+        Err(format!("Backend returned {}", response.status()))
+    }
+}
+
 #[cfg(ohc_bazel_tauri_context)]
 macro_rules! tauri_build_context {
     () => {
@@ -399,6 +469,10 @@ pub fn run() {
             test_ai_provider,
             get_onboarding_state,
             save_onboarding_state,
+            get_help_articles,
+            get_help_article,
+            get_help_videos,
+            get_changelog,
         ])
         .setup(|app| {
             let window = app.get_webview_window("main").unwrap();
