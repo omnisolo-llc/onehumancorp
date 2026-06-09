@@ -41,30 +41,32 @@
       input {
         width: 100%;
         padding: 14px;
-        min-height: 44px;
+        min-height: 54px;
         margin-bottom: 20px;
         border: 1px solid rgba(255, 255, 255, 0.5);
         border-radius: 8px;
         box-sizing: border-box;
         font-size: 16px;
         background: rgba(255, 255, 255, 0.5);
+        transition: border-color 0.2s, background-color 0.2s, box-shadow 0.2s;
       }
       input:focus {
         outline: none;
         border-color: #0066FF;
+        box-shadow: 0 0 0 3px rgba(0, 102, 255, 0.2);
       }
       button {
         background-color: #0066FF;
         color: white;
         border: none;
         padding: 14px 24px;
-        min-height: 44px;
+        min-height: 54px;
         border-radius: 8px;
         font-size: 16px;
         font-weight: 600;
         cursor: pointer;
         width: 100%;
-        transition: background-color 0.2s, transform 0.1s;
+        transition: background-color 0.2s, transform 0.1s, box-shadow 0.2s;
         box-shadow: 0 4px 14px 0 rgba(0, 102, 255, 0.39);
       }
       button:hover {
@@ -92,6 +94,33 @@
         animation: shake 0.2s ease-in-out 0s 2;
       }
 
+      .progress-indicator {
+        font-size: 12px;
+        color: #86868b;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        font-weight: 600;
+        margin-bottom: 12px;
+        display: block;
+      }
+      .progress-dots {
+        display: flex;
+        justify-content: center;
+        gap: 6px;
+        margin-bottom: 24px;
+      }
+      .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 4px;
+        background-color: #d1d1d6;
+        transition: background-color 0.2s, transform 0.2s;
+      }
+      .dot.active {
+        background-color: #0066FF;
+        transform: scale(1.2);
+      }
+
       @media (prefers-color-scheme: dark) {
         body {
           background-color: #16161a;
@@ -101,6 +130,15 @@
           backdrop-filter: blur(30px) saturate(210%);
           -webkit-backdrop-filter: blur(30px) saturate(210%);
           border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .progress-indicator {
+          color: #A1A1A6;
+        }
+        .dot {
+          background-color: #3a3a3c;
+        }
+        .dot.active {
+          background-color: #0066FF;
         }
         h1 {
           color: #F5F5F7;
@@ -122,6 +160,11 @@
   </head>
   <body>
     <div class="container" id="form-container">
+      <span class="progress-indicator">Step 1 of 2</span>
+      <div class="progress-dots">
+        <div class="dot active"></div>
+        <div class="dot"></div>
+      </div>
       <h1>What's the name of your business?</h1>
       <p>We'll use this to set up your workspace.</p>
       <input type="text" id="business-name" placeholder="e.g. Maya's Bakery" />
