@@ -226,7 +226,7 @@ export default function CostDashboardPage() {
                     </div>
                     <div className="text-left sm:text-right w-full sm:w-auto">
                         <span id="cost-dashboard-llm" className="text-lg font-semibold text-gray-900 block">{formatCurrency(data?.llm_cost || 0)}</span>
-                        <span className="text-xs text-gray-500 font-medium">Efficiency: {data?.cache_hit_rate}% cache hit rate, ${data?.cost_per_1k_tokens.toFixed(4)}/1k tokens</span>
+                        <span className="text-xs text-gray-500 font-medium">Efficiency: {data?.cache_hit_rate}% cache hit rate, ${data?.cost_per_1k_tokens?.toFixed(4) || "0.0000"}/1k tokens</span>
                     </div>
                 </div>
 
