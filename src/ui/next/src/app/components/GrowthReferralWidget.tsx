@@ -16,7 +16,6 @@ export default function GrowthReferralWidget() {
       const inviterId = typeof window !== 'undefined' ? (localStorage.getItem('user_id') || 'local-user') : 'local-user';
 
       const res = await fetch('/api/v1/growth/team-invites', {
-
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -24,6 +23,7 @@ export default function GrowthReferralWidget() {
         body: JSON.stringify({
           team_id: tenantId,
           inviter_id: inviterId,
+          invitee_id: 'pending-invite',
         }),
       });
       if (!res.ok) {
@@ -56,8 +56,9 @@ export default function GrowthReferralWidget() {
   };
 
   return (
-    <div className="ohc-growth-card glassmorphism p-6 rounded-[16px] border border-white/40 dark:border-white/10 shadow-lg mb-6">
-      <div className="flex flex-col md:flex-row gap-6 items-center">
+    <div className="ohc-growth-card flex flex-col gap-8">
+      <div className="glassmorphism p-6 rounded-[16px] border border-white/40 dark:border-white/10 shadow-lg mb-6">
+        <div className="flex flex-col md:flex-row gap-6 items-center">
         <div className="flex-1">
           <div className="inline-flex items-center gap-2 mb-2 px-3 py-1 rounded-full bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 text-sm font-semibold">
             <span>🚀 Sovereign-to-Cloud Bridge</span>
@@ -105,6 +106,37 @@ export default function GrowthReferralWidget() {
             </div>
           )}
           {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
+        </div>
+        </div>
+      </div>
+
+      <div className="glassmorphism p-6 rounded-[16px] border border-white/40 dark:border-white/10 shadow-lg">
+        <div className="flex flex-col md:flex-row gap-6 items-center">
+          <div className="flex-1">
+            <div className="inline-flex items-center gap-2 mb-2 px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-sm font-semibold">
+              <span>🌐 Viral Storefront Embed</span>
+            </div>
+            <h2 className="text-2xl font-bold font-outfit text-gray-900 dark:text-white mb-2">
+              Embed Your Business
+            </h2>
+            <p className="text-gray-600 dark:text-gray-300 text-sm flex items-center gap-2">
+              <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+              Put your storefront anywhere. Includes a built-in referral loop to reward you when other owners join through your embed.
+            </p>
+          </div>
+
+          <div className="w-full md:w-auto">
+            <button
+              onClick={() => {
+                const tenantId = typeof window !== 'undefined' ? (localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default-team') : 'default-team';
+                navigator.clipboard.writeText(`<iframe src="https://ohc.app/api/v1/growth/storefront/embed?tenant=${tenantId}" width="100%" height="600" frameborder="0" style="border-radius: 12px; border: 1px solid #eaeaea;"></iframe>\n<div style="text-align:center; font-size:12px; margin-top:8px;"><a href="https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref=${tenantId}" target="_blank" style="color:#6b7280;text-decoration:none;">⚡ Powered by OHC</a></div>`);
+                alert('Embed code copied to clipboard!');
+              }}
+              className="w-full app-button bg-blue-600 hover:bg-blue-700 text-white border-none py-3 px-6 text-sm"
+            >
+              Copy Embed Code
+            </button>
+          </div>
         </div>
       </div>
     </div>
