@@ -25,6 +25,10 @@ exports_files(
         "catalog.rs",
         "fulfillment.rs",
         "shipping.rs",
+        "pos.rs",
+
+
+
 
 
         "local_seo.rs",
@@ -60,7 +64,7 @@ rust_library(
         "catalog.rs",
         "fulfillment.rs",
         "shipping.rs",
-
+        "pos.rs",
 
         "local_seo.rs",
         "recovery.rs",

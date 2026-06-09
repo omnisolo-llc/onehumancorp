@@ -3858,6 +3858,8 @@ async fn create_ui_bom_item_handler(
         .route("/api/ui/inbox/messages", axum::routing::get(list_ui_inbox_handler).with_state(db.clone()))
         .route("/api/ui/triage", axum::routing::get(list_ui_triage_handler).with_state(db.clone()))
         .route("/api/ui/triage/action", axum::routing::post(update_ui_triage_action_handler).with_state(db.clone()))
+        .route("/api/pos/orders", axum::routing::get(api::pos::get_orders_handler).post(api::pos::post_orders_handler).delete(api::pos::delete_orders_handler).with_state(db.pool.clone()))
+        .route("/api/pos/inventory", axum::routing::get(api::pos::get_inventory_handler).post(api::pos::post_inventory_handler).delete(api::pos::delete_inventory_handler).with_state(db.pool.clone()))
         .route("/api/ui/supply", axum::routing::get(list_ui_supply_handler).with_state(db.clone()))
         .route("/api/ui/supply/vendors", axum::routing::post(create_ui_supply_vendor_handler).with_state(db.clone()))
         .route("/api/ui/supply/raw-materials", axum::routing::post(create_ui_raw_material_handler).with_state(db.clone()))
