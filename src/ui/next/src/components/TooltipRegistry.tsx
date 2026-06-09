@@ -61,7 +61,7 @@ export function TooltipProvider({ children }: { children: ReactNode }) {
           }}
         >
           {tooltipText}
-          <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-solid border-t-white/80 border-t-8 border-x-transparent border-x-8 border-b-0"></div>
+          <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-solid border-t-white/90 border-t-8 border-x-transparent border-x-8 border-b-0"></div>
         </div>
       )}
       <style dangerouslySetInnerHTML={{__html: `
