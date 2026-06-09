@@ -245,7 +245,7 @@ async fn enqueue_batch(&self, jobs: Vec<Job>) -> Result<(), String> {
             } else {
                 // Exponential backoff
                 let backoff_seconds = 1 << next_attempt;
-                let new_next_retry_at = (chrono::Utc::now() + chrono::Duration::seconds(backoff_seconds as i64)).to_rfc3339();
+                let new_next_retry_at = (chrono::Utc::now() + chrono::Duration::seconds(backoff_seconds as i64));
                 sqlx::query("UPDATE ohc_job_queue SET status = 'PENDING', retry_count = $1, next_retry_at = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3")
                     .bind(next_attempt)
                     .bind(new_next_retry_at)
