@@ -1,5 +1,5 @@
-use ohc_builtin_agent_core::types::ToolCall;
 use crate::guardrails::ToolGuardrail;
+use ohc_builtin_agent_core::types::ToolCall;
 use std::collections::HashSet;
 
 /// Anthropic Mechanic: 3-stage tool gating:
@@ -41,7 +41,8 @@ impl ToolGuardrail for AnthropicToolGater {
         }
 
         // Stage 2: Session permission check
-        if !self.session_allowed_tools.is_empty() && !self.session_allowed_tools.contains(&tc.name) {
+        if !self.session_allowed_tools.is_empty() && !self.session_allowed_tools.contains(&tc.name)
+        {
             return Err(format!(
                 "Anthropic Guardrail Stage 2 (Permission) tripped: Tool '{}' is not allowed in this session.",
                 tc.name
@@ -134,7 +135,11 @@ mod tests {
     fn test_anthropic_all_stages() {
         let gater = AnthropicToolGater::new(
             false, // untrusted
-            vec!["read_file".to_string(), "list_files".to_string(), "execute_bash".to_string()],
+            vec![
+                "read_file".to_string(),
+                "list_files".to_string(),
+                "execute_bash".to_string(),
+            ],
             vec!["read_file".to_string(), "execute_bash".to_string()],
             vec!["execute_bash".to_string()],
         );
@@ -145,7 +150,12 @@ mod tests {
 
         // Fail Stage 2
         let list_files_tc = make_tool_call("list_files");
-        assert!(gater.check_tool(&list_files_tc).unwrap_err().contains("Stage 2"));
+        assert!(
+            gater
+                .check_tool(&list_files_tc)
+                .unwrap_err()
+                .contains("Stage 2")
+        );
 
         // Fail Stage 3
         let bash_tc = make_tool_call("execute_bash");

@@ -1,5 +1,7 @@
 "use client";
 import { FloatingActionButton } from "./FAB";
+import { MorningBriefingCard } from "./MorningBriefingCard";
+
 
 
 
@@ -12,6 +14,8 @@ import { AppShell } from "../components/AppShell";
 import { InteractiveWalkthrough, WalkthroughTarget } from "../../components/Walkthrough";
 import { WithTooltip } from "../../components/TooltipRegistry";
 import GrowthReferralWidget from "../components/GrowthReferralWidget";
+import AiTimeSavingsWidget from "../components/AiTimeSavingsWidget";
+
 import { SmartBlock } from "../builder/components";
 import { UnifiedAgentFeed } from "./UnifiedAgentFeed";
 import { ReviewFeedCard } from './ReviewFeedCard';
@@ -87,6 +91,8 @@ export default function Dashboard() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [messages, setMessages] = useState<InboxMessage[]>([]);
   const [supply, setSupply] = useState<SupplyPayload>({ vendors: [], raw_materials: [], bom_items: [] });
+  const [approvals, setApprovals] = useState<any[]>([]);
+  const [activities, setActivities] = useState<any[]>([]);
   const [dashboardData, setDashboardData] = useState<any>({ pendingReviews: [] });
   const [loading, setLoading] = useState(true);
   const [ledgerBalance, setLedgerBalance] = useState<number | null>(null);
@@ -224,6 +230,8 @@ export default function Dashboard() {
           raw_materials: Array.isArray(supplyData?.raw_materials) ? supplyData.raw_materials : [],
           bom_items: Array.isArray(supplyData?.bom_items) ? supplyData.bom_items : [],
         });
+        setApprovals(Array.isArray(unifiedFeedData.pending_approvals) ? unifiedFeedData.pending_approvals : []);
+        setActivities(Array.isArray(unifiedFeedData.activities) ? unifiedFeedData.activities : []);
       } catch (e: any) {
         setError(e?.message || "Failed to load dashboard data");
       } finally {
@@ -289,8 +297,11 @@ export default function Dashboard() {
         <p className="text-gray-600 dark:text-gray-400">Your agents are working on your behalf.</p>
       </div>
 
+      <AiTimeSavingsWidget />
       <NeighborhoodPulseCard tenant={tenantId()} />
       <FloatingActionButton />
+
+      <MorningBriefingCard tenant={tenantId()} />
 
       <InteractiveWalkthrough
         steps={walkthroughSteps}
@@ -489,7 +500,7 @@ export default function Dashboard() {
              />
         ))}
 
-        <UnifiedAgentFeed />
+        <UnifiedAgentFeed initialApprovals={approvals} initialActivities={activities} />
 
         <section>
           <div className="mb-6 p-6 rounded-[16px] bg-white/65 dark:bg-[#16161a]/70 border border-white/40 dark:border-white/10">
@@ -549,22 +560,7 @@ export default function Dashboard() {
               </div>
             </div>
 
-            <div className="glassmorphism p-4 rounded-[12px] border border-indigo-200/50 bg-gradient-to-br from-indigo-50/50 to-purple-50/50 flex flex-col justify-center items-center text-center relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-16 h-16 bg-white/40 rounded-bl-full"></div>
-              <h4 className="text-sm font-bold font-outfit text-[#1D1D1F] mb-1 flex items-center gap-1">
-                <span className="text-indigo-500">✨</span> Advanced AI Insights
-              </h4>
-              <p className="text-xs text-gray-600 mb-3">Unlock predictive analytics and AI-driven growth recommendations.</p>
-              <button
-                onClick={() => {
-                  setActionMessage('Opening Pro pricing for Advanced AI Insights.');
-                  router.push('/pricing');
-                }}
-                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg shadow-sm transition-colors w-full"
-              >
-                Upgrade to Pro
-              </button>
-            </div>
+
           </div>
         </section>
 

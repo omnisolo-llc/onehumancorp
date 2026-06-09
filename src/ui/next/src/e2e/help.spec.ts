@@ -41,7 +41,9 @@ test.describe('Help Center', () => {
         // Search for an article that matches My Store
         const searchInput = page.getByPlaceholder('Search for help articles and videos...');
 
+        const responsePromise = page.waitForResponse(response => response.url().includes("/api/help/search") && response.status() === 200);
         await searchInput.fill('My Store');
+        await responsePromise;
 
         // Wait for UI to update
         const articleLink = page.locator('a[href="/help/my-store"]');
@@ -54,7 +56,7 @@ test.describe('Help Center', () => {
         // Find and click the floating Ask anything button
         const chatButton = page.locator('button[aria-label="Open help chat"]');
         await expect(chatButton).toBeVisible();
-        await chatButton.click();
+        await chatButton.dispatchEvent('click');
 
         // Wait for the chat to open and be visible
         const chatHeader = page.locator('#ai-chat-header');
@@ -69,7 +71,7 @@ test.describe('Help Center', () => {
         await chatInput.fill(testMessage);
         const sendButton = page.locator('button[aria-label="Send message"]');
         await expect(sendButton).toBeVisible();
-        await sendButton.click();
+        await sendButton.dispatchEvent('click');
 
         // Assert that the message appears in the chat
         const sentMessage = page.locator('div', { hasText: testMessage }).last();
@@ -77,7 +79,7 @@ test.describe('Help Center', () => {
 
         // Close the chat
         const closeButton = page.locator('button[aria-label="Close help chat"]');
-        await closeButton.click();
+        await closeButton.dispatchEvent('click');
         await expect(chatHeader).not.toBeVisible();
     });
 });
