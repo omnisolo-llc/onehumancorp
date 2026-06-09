@@ -15,7 +15,6 @@ import GrowthReferralWidget from "../components/GrowthReferralWidget";
 import { SmartBlock } from "../builder/components";
 import { UnifiedAgentFeed } from "./UnifiedAgentFeed";
 import { NeighborhoodPulseCard } from "./NeighborhoodPulseCard";
-import { PromoterCard } from "./PromoterCard";
 import { ViralLoopPerformanceWidget } from "./ViralLoopPerformanceWidget";
 import { SuccessMilestoneAlert } from "./SuccessMilestoneAlert";
 
@@ -402,13 +401,10 @@ export default function Dashboard() {
         )}
 
         <div className="mb-6 flex gap-4"><Link href="/assistant" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">Open WorkBuddy Assistant</Link></div>
-
-        <PromoterCard />
-
         <UnifiedAgentFeed />
 
         <section>
-          <div className="mb-6 p-6 rounded-[16px] bg-white/65 dark:bg-[#16161a]/70 border border-white/40 dark:border-white/10">
+          <div className="mb-6 p-6 rounded-[16px] bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] saturate-[210%] border border-white/40 dark:border-white/10">
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               <div className="flex items-center gap-4">
                 <div className="text-4xl">🎉</div>

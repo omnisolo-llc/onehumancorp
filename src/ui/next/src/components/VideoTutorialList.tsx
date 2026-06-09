@@ -48,7 +48,7 @@ export function VideoTutorialList() {
       <h2 className="text-2xl font-extrabold font-outfit text-gray-900 mb-6 text-center sm:text-left">Video Tutorials</h2>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {videos.map(video => (
-          <div key={video.id} onClick={() => setActiveVideo(video)} className="app-card rounded-2xl shadow-sm border border-gray-100 overflow-hidden group hover:shadow-md transition-all cursor-pointer flex flex-col">
+          <div key={video.id} onClick={() => setActiveVideo(video)} className="bg-white/80 backdrop-blur-[20px] saturate-200 rounded-2xl shadow-sm border border-gray-100 overflow-hidden group hover:shadow-md transition-all cursor-pointer flex flex-col">
             {/* Mock video player area (portrait optimized 9:16 approx for mobile shorts feel, or standard 16:9) */}
             <div className="w-full aspect-[9/16] sm:aspect-video bg-gray-900 relative flex items-center justify-center">
               {/* Play button overlay */}
