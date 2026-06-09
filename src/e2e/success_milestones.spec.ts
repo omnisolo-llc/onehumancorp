@@ -1,3 +1,6 @@
+import { test } from '@playwright/test';
 import { currentAppSmoke } from './current_app_smoke';
 
-currentAppSmoke('success_milestones');
+test('smoke test success_milestones', async ({ page, request }) => {
+  await currentAppSmoke(page, request, 'success_milestones');
+});

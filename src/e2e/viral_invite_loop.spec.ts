@@ -1,7 +1,9 @@
 import { test, expect } from './fixtures';
 import { currentAppSmoke } from './current_app_smoke';
 
-currentAppSmoke('viral_invite_loop');
+test('smoke test viral_invite_loop', async ({ page, request }) => {
+  await currentAppSmoke(page, request, 'viral_invite_loop');
+});
 
 test.describe('Viral Invite Loop on Team Page', () => {
   test('should display GrowthReferralWidget and generate a link', async ({ page }) => {

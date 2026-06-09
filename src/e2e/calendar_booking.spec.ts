@@ -1,7 +1,9 @@
 import { test, expect } from './fixtures';
 import { currentAppSmoke } from './current_app_smoke';
 
-currentAppSmoke('calendar_booking');
+test('smoke test calendar_booking', async ({ page, request }) => {
+  await currentAppSmoke(page, request, 'calendar_booking');
+});
 
 test.describe('Calendar & Bookings', () => {
   test('should display upcoming bookings from database on the provider dashboard', async ({ page }) => {

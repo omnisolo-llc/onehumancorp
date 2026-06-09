@@ -1,7 +1,9 @@
 import { test, expect } from './fixtures';
 import { currentAppSmoke } from './current_app_smoke';
 
-currentAppSmoke('viral_ai_savings_widget');
+test('smoke test viral_ai_savings_widget', async ({ page, request }) => {
+  await currentAppSmoke(page, request, 'viral_ai_savings_widget');
+});
 
 test.describe('Viral AI Time Savings Widget Growth Loop', () => {
   test('should display the widget on dashboard and handle the trial extension loop', async ({ page }) => {

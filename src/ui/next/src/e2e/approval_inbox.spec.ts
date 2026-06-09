@@ -1,4 +1,4 @@
-import { expect, test } from './fixtures';
+import { test, expect } from './fixtures';
 
 test.describe('Unified Agent Feed Mobile Test', () => {
   test.use({ viewport: { width: 375, height: 812 } });

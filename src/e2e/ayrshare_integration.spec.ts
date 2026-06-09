@@ -1,3 +1,6 @@
+import { test } from '@playwright/test';
 import { currentAppSmoke } from './current_app_smoke';
 
-currentAppSmoke('ayrshare_integration');
+test('smoke test ayrshare_integration', async ({ page, request }) => {
+  await currentAppSmoke(page, request, 'ayrshare_integration');
+});

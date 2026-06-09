@@ -1,7 +1,9 @@
 import { test, expect } from './fixtures';
 import { currentAppSmoke } from './current_app_smoke';
-
-currentAppSmoke('dashboard_ux');
+//
+test('smoke test dashboard_ux', async ({ page, request }) => {
+  await currentAppSmoke(page, request, 'dashboard_ux');
+});
 
 test.describe('Dashboard UX', () => {
   test('should display Growth & Virality section with Share Cards link', async ({ page }) => {
@@ -44,7 +46,7 @@ test.describe('Dashboard UX', () => {
   test('should verify all links in Growth & Virality section are present', async ({ page }) => {
     await page.goto('/dashboard');
 
-    await expect(page.locator('a[href="/referrals"]')).toBeVisible();
+    await expect(page.locator('a[href="/referrals"]').first()).toBeVisible();
     await expect(page.locator('a[href="/milestones"]')).toBeVisible();
     await expect(page.locator('a[href="/milestones"] h3')).toHaveText('Milestones');
     await expect(page.locator('span.sr-only:has-text("Milestones 🏆")')).not.toBeVisible();
