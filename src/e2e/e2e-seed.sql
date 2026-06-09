@@ -338,3 +338,12 @@ VALUES
   ('action-test-1', 'triage-test-1', 'test-tenant', 'Draft Reply', 'Hi Maya! I can definitely help with the custom cake. It will be $50.'),
   ('action-test-2', 'triage-test-2', 'test-tenant', 'Draft Reply', 'We deliver between 9 AM and 5 PM on weekdays.')
 ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO availability_blocks (id, tenant_id, service_id, start_time, end_time, is_available)
+VALUES
+  ('e2e-avail-block-1', 'e2e-tenant', 'e2e-product-class', CURRENT_TIMESTAMP + interval '1 day', CURRENT_TIMESTAMP + interval '1 day 8 hours', true)
+ON CONFLICT (id) DO UPDATE
+SET start_time = EXCLUDED.start_time,
+    end_time = EXCLUDED.end_time,
+    is_available = EXCLUDED.is_available,
+    updated_at = CURRENT_TIMESTAMP;

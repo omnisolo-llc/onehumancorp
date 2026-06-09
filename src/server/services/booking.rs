@@ -353,12 +353,12 @@ use ::server_ohc::app::{
     ConversationalCheckoutSession,
 };
 
-const TIMESLOT_LOCK_TTL: Duration = Duration::from_secs(60);
+pub const TIMESLOT_LOCK_TTL: Duration = Duration::from_secs(60);
 const INVENTORY_LOCK_TTL: Duration = Duration::from_secs(15 * 60);
 const INVENTORY_CAPACITY_LOCK_TTL: Duration = Duration::from_secs(10);
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-struct SoftLockReceipt {
+pub struct SoftLockReceipt {
     key: String,
     owner: String,
 }
@@ -398,7 +398,7 @@ impl LocalBookingSoftLockStore {
         true
     }
 
-    async fn release(&self, key: &str, owner: &str) -> bool {
+    pub async fn release(&self, key: &str, owner: &str) -> bool {
         let mut locks = self.locks.lock().await;
         Self::prune_expired(&mut locks);
         match locks.get(key) {
@@ -426,13 +426,13 @@ impl LocalBookingSoftLockStore {
 }
 
 #[derive(Clone)]
-struct BookingSoftLockStore {
-    redis_client: Option<redis::Client>,
-    local: Arc<LocalBookingSoftLockStore>,
+pub struct BookingSoftLockStore {
+    pub redis_client: Option<redis::Client>,
+    pub local: Arc<LocalBookingSoftLockStore>,
 }
 
 impl BookingSoftLockStore {
-    fn for_service(redis_client: Option<redis::Client>) -> Self {
+    pub fn for_service(redis_client: Option<redis::Client>) -> Self {
         static LOCAL_LOCKS: OnceLock<Arc<LocalBookingSoftLockStore>> = OnceLock::new();
         Self {
             redis_client,
@@ -442,6 +442,7 @@ impl BookingSoftLockStore {
         }
     }
 
+
     #[cfg(test)]
     fn isolated_for_tests() -> Self {
         Self {
@@ -450,7 +451,7 @@ impl BookingSoftLockStore {
         }
     }
 
-    async fn acquire_capacity_lock(
+    pub async fn acquire_capacity_lock(
         &self,
         tenant_id: &str,
         product_id: &str,
@@ -522,7 +523,7 @@ impl BookingSoftLockStore {
         Ok(acquired)
     }
 
-    async fn release(&self, receipt: &SoftLockReceipt) -> Result<bool, String> {
+    pub async fn release(&self, receipt: &SoftLockReceipt) -> Result<bool, String> {
         if let Some(client) = &self.redis_client {
             return redis_release_if_owner(client, &receipt.key, &receipt.owner).await;
         }
