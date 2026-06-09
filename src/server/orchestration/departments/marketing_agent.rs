@@ -235,10 +235,25 @@ impl Department for MarketingAgent {
             "tenant.job.completed".to_string(),
             "tenant.product.created".to_string(),
             "tenant.inventory.updated".to_string(),
+            "tenant.website.updated".to_string(),
         ]
     }
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
+        if event.event_type == "tenant.website.updated" {
+            let site_id = event.payload.get("site_id").and_then(|v| v.as_str()).unwrap_or("unknown");
+            let payload = serde_json::json!({
+                "site_id": site_id,
+            });
+            return self.orchestrator()?.execute_action(
+                DepartmentType::Marketing,
+                "Trigger Agentic SEO Pre-rendering".to_string(),
+                event.tenant_id.clone(),
+                ActionRisk::AutoExecute,
+                payload,
+            ).await.map(|_| ());
+        }
+
         let risk = ActionRisk::DraftForReview;
 
 
