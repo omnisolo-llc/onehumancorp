@@ -25,6 +25,7 @@ impl Department for OperationsAgent {
             "tenant.subscription.fulfillment_batch.created".to_string(),
             "LowStockAlert".to_string(),
             "PosSyncFailure".to_string(),
+            "tenant.inventory.reconcile".to_string(),
         ]
     }
 
@@ -49,6 +50,21 @@ impl Department for OperationsAgent {
             "PosSyncFailure" => {
                 let transaction_id = event.payload.get("transaction_id").and_then(|v| v.as_str()).unwrap_or("unknown");
                 format!("Review POS offline sync discrepancy for transaction {}", transaction_id)
+            },
+            "tenant.inventory.reconcile" => {
+                let sku = event.payload.get("sku").and_then(|v| v.as_str()).unwrap_or("unknown");
+                let engine = crate::services::inventory_reconciliation::InventoryReconciliationEngine::new(self.orchestrator.db());
+                if let Ok(plan) = engine.reconcile_product(&event.tenant_id, sku).await {
+                     self.orchestrator.execute_action(
+                        DepartmentType::Operations,
+                        format!("Reconcile inventory for SKU: {} across multi-channel sales", sku),
+                        event.tenant_id.clone(),
+                        ActionRisk::DraftForReview,
+                        serde_json::to_value(&plan).unwrap_or_default(),
+                    ).await?;
+                    return Ok(());
+                }
+                format!("Reconcile inventory for SKU: {} across multi-channel sales", sku)
             },
             "tenant.subscription.fulfillment_batch.created" => {
                 let batch_id = event

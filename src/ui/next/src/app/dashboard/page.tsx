@@ -50,6 +50,16 @@ type InboxMessage = {
   created_at?: string;
 };
 
+type ApprovalRequest = {
+  id: string;
+  tenant_id: string;
+  department: string;
+  description: string;
+  status: string;
+  action_risk: string;
+  payload?: any;
+};
+
 type SupplyPayload = {
   vendors: unknown[];
   raw_materials: Array<{
@@ -91,6 +101,7 @@ export default function Dashboard() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [messages, setMessages] = useState<InboxMessage[]>([]);
   const [supply, setSupply] = useState<SupplyPayload>({ vendors: [], raw_materials: [], bom_items: [] });
+  const [approvals, setApprovals] = useState<ApprovalRequest[]>([]);
   const [dashboardData, setDashboardData] = useState<any>({ pendingReviews: [] });
   const [loading, setLoading] = useState(true);
   const [ledgerBalance, setLedgerBalance] = useState<number | null>(null);
@@ -194,24 +205,26 @@ export default function Dashboard() {
 
       try {
         const userId = localStorage.getItem("user_id") || "default";
-        const [metricsRes, ordersRes, inboxRes, supplyRes, onboardingRes] = await Promise.all([
+        const [metricsRes, ordersRes, inboxRes, supplyRes, onboardingRes, approvalsRes] = await Promise.all([
           fetch(`/api/ui/dashboard/metrics?tenant_id=${tenant}`),
           fetch(`/api/ui/orders?tenant_id=${tenant}`),
           fetch(`/api/ui/inbox/messages?tenant_id=${tenant}`),
           fetch(`/api/ui/supply?tenant_id=${tenant}`),
           fetch(`/api/onboarding/state`, { headers: { 'X-Tenant-ID': tenant, 'X-User-ID': userId } }),
+          fetch(`/api/agents/approvals?organization_id=${tenant}`),
         ]);
 
         if (!metricsRes.ok || !ordersRes.ok || !inboxRes.ok || !supplyRes.ok) {
           throw new Error("One or more database-backed UI endpoints failed");
         }
 
-        const [metricsData, ordersData, inboxData, supplyData, onboardingData] = await Promise.all([
+        const [metricsData, ordersData, inboxData, supplyData, onboardingData, approvalsData] = await Promise.all([
           metricsRes.json(),
           ordersRes.json(),
           inboxRes.json(),
           supplyRes.json(),
           onboardingRes.ok ? onboardingRes.json() : Promise.resolve(null),
+          approvalsRes.ok ? approvalsRes.json() : Promise.resolve({ tasks: [] }),
         ]);
 
         if (onboardingData?.wizardState?.aiAgents) {
@@ -223,6 +236,7 @@ export default function Dashboard() {
         setMetrics({ ...emptyMetrics, ...metricsData });
         setOrders(Array.isArray(ordersData) ? ordersData : []);
         setMessages(Array.isArray(inboxData) ? inboxData : []);
+        setApprovals(Array.isArray(approvalsData?.tasks) ? approvalsData.tasks : []);
         setSupply({
           vendors: Array.isArray(supplyData?.vendors) ? supplyData.vendors : [],
           raw_materials: Array.isArray(supplyData?.raw_materials) ? supplyData.raw_materials : [],

@@ -246,13 +246,13 @@ impl OperationsWorker {
                         SET status = 'IN_PROGRESS', locked_until = $1, updated_at = CURRENT_TIMESTAMP
                         WHERE id = (
                             SELECT id FROM department_tasks
-                            WHERE status = 'PENDING' AND department = 'operations' AND (event_type = 'OrderReceived' OR event_type = 'OrderPlaced')
+                            WHERE status = 'PENDING' AND department = 'operations' AND (event_type = 'OrderReceived' OR event_type = 'OrderPlaced' OR event_type = 'InventorySyncRequested')
                             AND (locked_until IS NULL OR locked_until < CURRENT_TIMESTAMP)
                             ORDER BY created_at ASC
                             LIMIT 1
                             FOR UPDATE SKIP LOCKED
                         )
-                        RETURNING id, tenant_id, payload
+                        RETURNING id, tenant_id, payload, event_type
                         "#
                     )
                     .bind(Utc::now() + chrono::Duration::minutes(5))
@@ -260,7 +260,7 @@ impl OperationsWorker {
                     .await
                     .map_err(|e| e.to_string())?;
 
-                    let res = row.map(|r| (r.get::<String, _>("id"), r.get::<String, _>("tenant_id"), r.get::<serde_json::Value, _>("payload")));
+                    let res = row.map(|r| (r.get::<String, _>("id"), r.get::<String, _>("tenant_id"), r.get::<serde_json::Value, _>("payload"), r.get::<String, _>("event_type")));
                     tx.commit().await.map_err(|e| e.to_string())?;
                     res
                 },
@@ -268,8 +268,8 @@ impl OperationsWorker {
                     let mut tx = sqlite_pool.begin().await.map_err(|e| e.to_string())?;
                     let row = sqlx::query(
                         r#"
-                        SELECT id, tenant_id, payload FROM department_tasks
-                        WHERE status = 'PENDING' AND department = 'operations' AND (event_type = 'OrderReceived' OR event_type = 'OrderPlaced')
+                        SELECT id, tenant_id, payload, event_type FROM department_tasks
+                        WHERE status = 'PENDING' AND department = 'operations' AND (event_type = 'OrderReceived' OR event_type = 'OrderPlaced' OR event_type = 'InventorySyncRequested')
                         AND (locked_until IS NULL OR locked_until < CURRENT_TIMESTAMP)
                         ORDER BY created_at ASC
                         LIMIT 1
@@ -282,6 +282,7 @@ impl OperationsWorker {
                     let res = if let Some(r) = row {
                         let id: String = r.get("id");
                         let tenant_id: String = r.get("tenant_id");
+                        let event_type: String = r.get("event_type");
                         let payload_str: String = r.get("payload");
                         let payload: serde_json::Value = serde_json::from_str(&payload_str).unwrap_or(json!({}));
 
@@ -292,7 +293,7 @@ impl OperationsWorker {
                         .bind(&id)
                         .execute(&mut *tx).await.map_err(|e| e.to_string())?;
 
-                        Some((id, tenant_id, payload))
+                        Some((id, tenant_id, payload, event_type))
                     } else {
                         None
                     };
@@ -309,8 +310,63 @@ impl OperationsWorker {
         };
 
         let processed = task.is_some();
-        if let Some((id, tenant_id, payload)) = task {
+        if let Some((id, tenant_id, payload, event_type)) = task {
             let mut final_status = "COMPLETED";
+
+            if event_type == "InventorySyncRequested" {
+                let sku = payload.get("sku").and_then(|v| v.as_str()).unwrap_or("unknown");
+                let engine = crate::services::inventory_reconciliation::InventoryReconciliationEngine::new(db.clone());
+                if let Ok(plan) = engine.reconcile_product(&tenant_id, sku).await {
+                    let task_id = Uuid::new_v4().to_string();
+                    let title = format!("Reconcile Inventory: {}", plan.product_name);
+                    let description = format!("Discrepancy detected for SKU: {}. Multi-channel sync required.", sku);
+                    let proposed_payload = serde_json::to_string(&plan).unwrap_or_default();
+
+                    match &db.store {
+                        crate::db::DbStore::Postgres => {
+                            let _ = sqlx::query(
+                                r#"
+                                INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
+                                VALUES ($1, $2, $3, $4, 'PENDING', 'P1', 'HIGH', 'PENDING', $5)
+                                "#
+                            )
+                            .bind(&task_id)
+                            .bind(&tenant_id)
+                            .bind(&title)
+                            .bind(&description)
+                            .bind(&proposed_payload)
+                            .execute(&db.pool)
+                            .await;
+
+                            let _ = sqlx::query("UPDATE department_tasks SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = $1")
+                                .bind(&id)
+                                .execute(&db.pool)
+                                .await;
+                        },
+                        crate::db::DbStore::Sqlite(pool) => {
+                             let _ = sqlx::query(
+                                r#"
+                                INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
+                                VALUES (?, ?, ?, ?, 'PENDING', 'P1', 'HIGH', 'PENDING', ?)
+                                "#
+                            )
+                            .bind(&task_id)
+                            .bind(&tenant_id)
+                            .bind(&title)
+                            .bind(&description)
+                            .bind(&proposed_payload)
+                            .execute(pool)
+                            .await;
+
+                            let _ = sqlx::query("UPDATE department_tasks SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = ?")
+                                .bind(&id)
+                                .execute(pool)
+                                .await;
+                        }
+                    }
+                }
+                return Ok(true);
+            }
 
             // Check inventory levels
             let items = payload.get("items").and_then(|v| v.as_array());

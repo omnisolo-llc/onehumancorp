@@ -64,6 +64,7 @@ rust_library(
 
         "local_seo.rs",
         "recovery.rs",
+        "inventory_webhook.rs",
         "//src/server/api/agents:approvals.rs",
         "//src/server/api/agents:chat.rs",
         "//src/server/api/agents:hire.rs",

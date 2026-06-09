@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "../components/AppShell";
+import { ReconciliationCard } from "./ReconciliationCard";
 
 type TriageItem = {
   id: string;
@@ -160,8 +161,14 @@ export default function TriagePage() {
               {selected.action_type && (
                 <div className="mb-6">
                   <div className="app-metric-label">Proposed Action: {selected.action_type}</div>
-                  <div className="mt-2 rounded-md border border-blue-200 bg-blue-50 p-4 text-sm leading-6 text-blue-900 font-medium">
-                    {selected.action_payload || "No specific payload"}
+                  <div className="mt-2">
+                    {selected.action_type === 'INVENTORY_RECONCILE' || (selected.action_payload && selected.action_payload.includes('platform_counts')) ? (
+                      <ReconciliationCard payload={selected.action_payload || "{}"} />
+                    ) : (
+                      <div className="rounded-md border border-blue-200 bg-blue-50 p-4 text-sm leading-6 text-blue-900 font-medium">
+                        {selected.action_payload || "No specific payload"}
+                      </div>
+                    )}
                   </div>
                 </div>
               )}

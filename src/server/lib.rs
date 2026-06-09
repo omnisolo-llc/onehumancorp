@@ -4303,6 +4303,9 @@ async fn create_ui_bom_item_handler(
             default_config: ohc_builtin_agent::agent::AgentRunConfig::default(),
         })))
         .merge(meta_webhook_router)
+        .route("/api/v1/webhooks/shopify/inventory", axum::routing::post(api::inventory_webhook::shopify_inventory_webhook_handler).with_state(api::inventory_webhook::InventoryWebhookState { db: db.clone(), orchestrator: dept_orchestrator.clone() }))
+        .route("/api/v1/webhooks/square/inventory", axum::routing::post(api::inventory_webhook::square_inventory_webhook_handler).with_state(api::inventory_webhook::InventoryWebhookState { db: db.clone(), orchestrator: dept_orchestrator.clone() }))
+        .route("/api/v1/webhooks/woocommerce/inventory", axum::routing::post(api::inventory_webhook::woocommerce_inventory_webhook_handler).with_state(api::inventory_webhook::InventoryWebhookState { db: db.clone(), orchestrator: dept_orchestrator.clone() }))
         .merge(health_router)
         .fallback(api_not_found_handler);
 
