@@ -219,7 +219,12 @@
         networkStatus.className = 'status-banner status-offline';
       }
 
-      document.addEventListener('DOMContentLoaded', loadMenu);
+      document.addEventListener('DOMContentLoaded', () => {
+        loadMenu();
+        if (navigator.onLine) {
+          sync();
+        }
+      });
     </script>
   </body>
 </html>

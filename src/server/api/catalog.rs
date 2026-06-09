@@ -307,8 +307,36 @@ async fn handle_generate_offering(
     (axum::http::StatusCode::OK, Json(response_json)).into_response()
 }
 
+async fn handle_list_products(
+    Extension(hub): Extension<Arc<Hub>>,
+    axum::extract::Query(query): axum::extract::Query<super::UiTenantQuery>,
+) -> impl IntoResponse {
+    let tenant_id = query
+        .tenant_id
+        .or(query.tenant)
+        .unwrap_or_else(|| "default".to_string());
+
+    let products = match sqlx::query("SELECT id, title, inventory_count, is_sold_out FROM products WHERE tenant_id = $1")
+        .bind(&tenant_id)
+        .fetch_all(&hub.pool)
+        .await {
+            Ok(rows) => rows.into_iter().map(|row| {
+                serde_json::json!({
+                    "id": row.get::<String, _>("id"),
+                    "title": row.get::<String, _>("title"),
+                    "inventory_count": row.get::<i32, _>("inventory_count"),
+                    "is_sold_out": row.get::<bool, _>("is_sold_out"),
+                })
+            }).collect::<Vec<_>>(),
+            Err(_) => vec![],
+        };
+
+    Json(products)
+}
+
 pub fn router<S: Clone + Send + Sync + 'static>(hub: Arc<Hub>) -> Router<S> {
     Router::new()
+        .route("/products", axum::routing::get(handle_list_products))
         .route("/product", post(handle_create_product))
         .route("/generate", post(handle_generate_offering))
         .layer(Extension(hub))
