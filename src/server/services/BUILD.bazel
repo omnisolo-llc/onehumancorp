@@ -8,7 +8,7 @@ exports_files(
         "cache_invalidator.rs",
         "wizard.rs",
         "quoting/mod.rs",
-    ],
+        ],
     visibility = ["//visibility:public"],
 )
 
