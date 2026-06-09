@@ -26,7 +26,7 @@ test.describe('Cost Dashboard & Plan Limits UI', () => {
 
     // Verify data placeholders or limits are populated (Even if it says Free or Loading, these labels should exist)
     await expect(page.getByText('Estimated Next Bill')).toBeVisible();
-    await expect(page.getByText('AI Actions Used')).toBeVisible();
+    await expect(page.getByText('AI actions used this month')).toBeVisible();
 
     // Verify actions
     const upgradeButton = page.getByRole('button', { name: 'Upgrade Plan' });
