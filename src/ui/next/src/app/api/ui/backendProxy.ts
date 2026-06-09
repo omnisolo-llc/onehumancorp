@@ -26,3 +26,20 @@ export async function proxyBackendGet(req: Request, backendPath: string) {
     return NextResponse.json({ error: "Backend connection failed" }, { status: 500 });
   }
 }
+
+export async function proxyBackendPost(req: Request, backendPath: string) {
+  const backendUrl = process.env.BACKEND_URL || "http://127.0.0.1:18789";
+  const { search } = new URL(req.url);
+
+  try {
+    const body = await req.json();
+    const res = await fetch(`${backendUrl}${backendPath}${search}`, {
+      method: "POST",
+      headers: backendHeaders(req, true),
+      body: JSON.stringify(body),
+    });
+    return NextResponse.json(await res.json(), { status: res.status });
+  } catch {
+    return NextResponse.json({ error: "Backend connection failed" }, { status: 500 });
+  }
+}
