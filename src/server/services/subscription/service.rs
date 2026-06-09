@@ -1,4 +1,4 @@
-use crate::domain::subscription::{
+use crate::domain::subscription::{SubscriptionSchedule, RecurringInvoice,
     FulfillmentBatch, FulfillmentStatus, SubscriptionPlan, Subscriber, SubscriptionStatus,
 };
 use crate::db::{DB, DbStore};

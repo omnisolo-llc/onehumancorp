@@ -1,75 +1,50 @@
-'use client';
+issue_title: "Implement Agentic Subscription & Recurring Revenue Engine"
+issue_description: |
+  # Research Report: Agentic Subscription & Recurring Revenue Engine
 
-import React, { useState, useEffect } from 'react';
-import Link from 'next/link';
+  ## 1. Problem Statement
+  Small business owners (e.g., Leo the Music Tutor, Priya the Boutique Owner) currently lack a frictionless way to offer subscriptions or recurring packages. Existing platforms like Shopify require expensive third-party apps (e.g., Recharge, Skio) which add a complex "app tax", disconnect the user experience, and lack agentic intelligence. Wix and Squarespace offer basic recurring billing, but require significant manual management when payments fail or customers want to pause. Owners need an invisible AI engine that handles the entire lifecycle of subscriptions, from initial offer to automated follow-up.
 
-export default function SubscriptionsPage() {
-  const [plans, setPlans] = useState<any[]>([]);
-  const [subscribers, setSubscribers] = useState<any[]>([]);
-  const [batches, setBatches] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [labelStatus, setLabelStatus] = useState('');
+  ## 2. Research Report
+  - **Market Context**: Subscriptions represent a massive growth sector for SMBs. However, the onboarding and management UX for tools like Shopify+Recharge is built for dedicated e-commerce managers, not solopreneurs operating from a 375px mobile screen.
+  - **The OHC Opportunity**: By building a native subscription engine into OHC, we eliminate the need for third-party billing apps. More importantly, we can deploy the Finance and Customer Success Agents to actively manage the recurring relationships—drafting retention messages, automatically handling paused subscriptions, and updating inventory dynamically.
+  - **Competitor Gaps**:
+    - *Shopify*: Relies on third-party apps for subscriptions. Poor integrated mobile management.
+    - *Wix*: Native subscriptions exist but are passive; no AI intervention for churn or pauses.
+    - *Stripe Billing*: Excellent API, but requires the user to build their own UI or use Stripe's generic portals, which break the unified brand experience.
 
-  useEffect(() => {
-    setLoading(true);
-    fetch('/api/subscriptions')
-      .then(res => res.json())
-      .then(data => {
-        if (data.plans) setPlans(data.plans);
-        if (data.subscribers) setSubscribers(data.subscribers);
-        if (data.batches) setBatches(data.batches);
-      })
-      .catch(err => console.error('Failed to fetch subscriptions:', err))
-      .finally(() => setLoading(false));
-  }, []);
+  ## 3. Design Doc
+  ### Architecture & Data Model (PostgreSQL)
+  - `SubscriptionPlan`: The base configuration (e.g., "4 Lessons/Month", "$20/mo Coffee Bean Delivery"). Includes pricing, billing interval, and linked `Product` or `Service`.
+  - `Subscriber`: The customer entity linked to a `SubscriptionPlan`.
+  - `SubscriptionSchedule`: Tracks the state (active, paused, cancelled) and next billing date.
+  - `RecurringInvoice`: The generated invoice linked to the schedule and Stripe integration.
 
-  return (
-    <div className="p-4 max-w-[375px] mx-auto min-h-screen bg-gray-50 flex flex-col font-inter pb-20">
-      <div className="flex items-center mb-6 border-b border-gray-200 pb-4">
-        <Link href="/dashboard" className="text-blue-500 font-semibold mr-4">&lt; Back</Link>
-        <h1 className="text-xl font-bold font-outfit text-gray-900">Subscriptions</h1>
-      </div>
+  ### AI Agent Integration
+  - **Finance Agent**: Automatically monitors Stripe webhook events for failed payments. Instead of just sending a generic email, it drafts a personalized message ("Hi [Name], your card on file for the monthly cake box failed. Update it here: [Link]") and pushes it to the owner's Agent Feed for one-tap approval.
+  - **Customer Success Agent**: Identifies subscribers approaching renewal or those who have paused, drafting re-engagement offers.
+  - **Operations Agent**: Automatically triggers fulfillment tasks or books recurring calendar blocks based on the active `SubscriptionSchedule`.
 
-      <div className="mb-6">
-        <h2 className="text-lg font-bold text-gray-900 mb-3">Active Plans</h2>
-        {plans.map(p => (
-          <div key={p.id} className="p-4 rounded-xl shadow-sm mb-3" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)' }}>
-            <h3 className="font-bold text-gray-900">{p.name}</h3>
-            <p className="text-sm text-gray-500">${(p.price_cents / 100).toFixed(2)} / {p.frequency}</p>
-          </div>
-        ))}
-      </div>
+  ### Mobile UX Flow (375px)
+  1. **Owner Creation Flow**: From the OHC app, the owner creates a new product and simply toggles "Offer as Subscription". They set the frequency (e.g., Weekly, Monthly) via large touch targets.
+  2. **Customer Purchase Flow**: A clean, unified checkout experience where the subscription terms are clearly displayed alongside a seamless Stripe deposit/payment flow.
+  3. **Owner Dashboard**: The Agent Feed surfaces actionable cards: "3 subscriptions are renewing tomorrow. Ensure inventory is ready." or "1 payment failed. Send follow-up?"
 
-      <div className="mb-6">
-        <h2 className="text-lg font-bold text-gray-900 mb-3">Subscribers ({subscribers.length})</h2>
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-          {subscribers.map((s, i) => (
-            <div key={s.id} className={`p-4 flex justify-between items-center ${i !== subscribers.length - 1 ? 'border-b border-gray-100' : ''}`}>
-              <span className="font-medium text-gray-800">Customer #{s.customer_id.substring(0,6)}</span>
-              <span className="text-xs font-bold px-2 py-1 rounded-full bg-green-100 text-green-700">{s.status}</span>
-            </div>
-          ))}
-        </div>
-      </div>
+  ## 4. Implementation Prompt
+  **Feature Name**: Agentic Subscription & Recurring Revenue Engine
+  **Target Persona**: Leo the Music Tutor (needs recurring lesson packages) & Maya the Baker (needs monthly cake box subscriptions).
+  **Outcome**: Users can natively offer products or services on a recurring basis. The system autonomously manages billing cycles, and AI agents surface retention and payment-failure actions to the owner's feed.
 
-      <div>
-        <h2 className="text-lg font-bold text-gray-900 mb-3">Upcoming Fulfillments</h2>
-        {labelStatus && <p className="mb-3 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-sm font-semibold text-blue-800" role="status">{labelStatus}</p>}
-        {batches.map(b => (
-          <div key={b.id} className="p-4 rounded-xl shadow-sm mb-3" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)' }}>
-            <div className="flex justify-between items-start mb-2">
-              <h3 className="font-bold text-gray-900">Ship on {b.fulfillment_date}</h3>
-              <span className="text-xs font-bold px-2 py-1 rounded-full bg-blue-100 text-blue-700">{b.subscriber_count} boxes</span>
-            </div>
-            <button
-              className="w-full mt-2 py-2 bg-gray-900 text-white rounded-lg font-bold shadow-sm hover:bg-black transition-colors text-sm"
-              onClick={() => setLabelStatus(`Labels queued for ${b.subscriber_count} boxes shipping on ${b.fulfillment_date}.`)}
-            >
-              Print Labels
-            </button>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
+  **Next Actions**:
+  1. Implement the core PostgreSQL data models (`SubscriptionPlan`, `Subscriber`, `SubscriptionSchedule`) with strict multi-tenant isolation.
+  2. Integrate Stripe Billing/Invoicing logic to handle the recurring payment cycles seamlessly.
+  3. Develop the Mobile-First Owner UI (375px) to create and manage subscriptions without complex menus.
+  4. Build the Finance Agent capability to catch failed recurring payments and push actionable drafts to the Agent Feed.
+
+  **Priority**: P1
+  **Estimated Scope**: Large
+issue_priority: P1
+issue_category: research
+issue_type: task
+issue_label: [agent-report]
+assignees: []

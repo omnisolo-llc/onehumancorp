@@ -34,6 +34,24 @@ pub struct Subscriber {
     pub created_at: i64,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SubscriptionSchedule {
+    pub id: String,
+    pub tenant_id: String,
+    pub subscriber_id: String,
+    pub plan_id: String,
+    pub status: String,
+    pub next_billing_date: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RecurringInvoice {
+    pub id: String,
+    pub tenant_id: String,
+    pub schedule_id: String,
+    pub status: String,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum FulfillmentStatus {
     Pending,
