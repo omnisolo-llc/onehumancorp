@@ -2296,6 +2296,10 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let competitor_audit_worker = crate::workers::competitor_audit::CompetitorAuditWorker::new(db.clone());
     competitor_audit_worker.start();
 
+    // Start Proactive Agent Worker
+    let proactive_agent_worker = crate::workers::proactive_agent::ProactiveAgentWorker::new(db.clone());
+    proactive_agent_worker.start();
+
     let ops_worker = crate::workers::department_workers::OperationsWorker::new(db.clone());
     let promoter_worker = crate::workers::department_workers::PromoterWorker::new(db.clone(), hub.clone());
     promoter_worker.start();
@@ -3813,6 +3817,7 @@ async fn create_ui_bom_item_handler(
         .nest("/api/agents/chat", api::agents::chat::router(dept_orchestrator.clone(), semantic_router.clone()))
         .nest("/api/agents/webhook", api::agents::webhook::router(dept_orchestrator.clone()))
         .nest("/api/v1/booking/request", api::booking::request::router(dept_orchestrator.clone()))
+        .merge(api::proactive::proactive_routes())
         .nest("/api/agents/mission", api::agents::mission::handoff::router(std::sync::Arc::new(crate::sip::SipDB::new(db.pool.clone(), "default".to_string()))))
         .route("/api/telemetry/sync", axum::routing::post(api::telemetry::sync_telemetry_handler))
         .route_layer(axum::middleware::from_fn_with_state(

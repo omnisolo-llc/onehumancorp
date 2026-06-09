@@ -26,7 +26,7 @@ exports_files(
         "fulfillment.rs",
         "shipping.rs",
 
-
+        "proactive.rs",
         "local_seo.rs",
     ],
     visibility = ["//visibility:public"],
@@ -60,7 +60,7 @@ rust_library(
         "fulfillment.rs",
         "shipping.rs",
 
-
+        "proactive.rs",
         "local_seo.rs",
         "//src/server/api/agents:approvals.rs",
         "//src/server/api/agents:chat.rs",

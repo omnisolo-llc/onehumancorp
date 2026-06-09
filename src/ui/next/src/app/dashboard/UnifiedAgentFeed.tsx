@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import GrowthReferralWidget from "../components/GrowthReferralWidget";
+import ProactiveActionCard, { ProactiveAction } from "./ProactiveActionCard";
 
 type ApprovalRequest = {
   id: string;
@@ -33,15 +34,24 @@ type LedgerResponse = {
 
 export function UnifiedAgentFeed() {
   const [approvals, setApprovals] = useState<ApprovalRequest[]>([]);
+  const [proactiveActions, setProactiveActions] = useState<ProactiveAction[]>(
+    [],
+  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [activeTab, setActiveTab] = useState<"proposals" | "activity">("proposals");
+  const [activeTab, setActiveTab] = useState<"proposals" | "activity">(
+    "proposals",
+  );
   const [activities, setActivities] = useState<OHCLedgerEntry[]>([]);
   const [activityLoading, setActivityLoading] = useState(false);
 
   const tenantId = () => {
     if (typeof window === "undefined") return "default";
-    return localStorage.getItem("tenant_id") || localStorage.getItem("tenant") || "default";
+    return (
+      localStorage.getItem("tenant_id") ||
+      localStorage.getItem("tenant") ||
+      "default"
+    );
   };
 
   useEffect(() => {
@@ -53,7 +63,7 @@ export function UnifiedAgentFeed() {
         setActivityLoading(true);
         const tenant = tenantId();
 
-        const [feedRes, activityRes] = await Promise.all([
+        const [feedRes, activityRes, proactiveRes] = await Promise.all([
           fetch(`/api/agents/approvals?tenant_id=${tenant}`, {
             headers: {
               "x-tenant-id": tenant,
@@ -65,16 +75,27 @@ export function UnifiedAgentFeed() {
               "x-tenant-id": tenant,
               "x-user-id": "default",
             },
-          })
+          }),
+          fetch(`/api/proactive/actions`, {
+            headers: {
+              "x-tenant-id": tenant,
+              "x-user-id": "default",
+            },
+          }),
         ]);
 
         if (!feedRes.ok) {
           throw new Error("Failed to load agent feed");
         }
 
-        const [feedData, activityData] = await Promise.all([
+        const [feedData, activityData, proactiveData] = await Promise.all([
           feedRes.json(),
-          activityRes.ok ? activityRes.json() : Promise.resolve({ pending_approvals: [] })
+          activityRes.ok
+            ? activityRes.json()
+            : Promise.resolve({ pending_approvals: [] }),
+          proactiveRes.ok
+            ? proactiveRes.json()
+            : Promise.resolve({ actions: [] }),
         ]);
 
         if (mounted) {
@@ -83,6 +104,9 @@ export function UnifiedAgentFeed() {
           }
           if (activityData.entries) {
             setActivities(activityData.entries);
+          }
+          if (proactiveData.actions) {
+            setProactiveActions(proactiveData.actions);
           }
         }
       } catch (err: any) {
@@ -99,12 +123,14 @@ export function UnifiedAgentFeed() {
     }
 
     fetchAll();
-    return () => { mounted = false; };
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   const handleDecision = async (id: string, approved: boolean) => {
     // Optimistic UI update
-    setApprovals(prev => prev.filter(app => app.id !== id));
+    setApprovals((prev) => prev.filter((app) => app.id !== id));
 
     try {
       const tenant = tenantId();
@@ -120,12 +146,15 @@ export function UnifiedAgentFeed() {
 
       if (!res.ok) {
         // If it fails, we might want to fetch again to restore state
-        const refreshRes = await fetch(`/api/agents/approvals?tenant_id=${tenant}`, {
-            headers: { "x-tenant-id": tenant, "x-user-id": "default" }
-        });
+        const refreshRes = await fetch(
+          `/api/agents/approvals?tenant_id=${tenant}`,
+          {
+            headers: { "x-tenant-id": tenant, "x-user-id": "default" },
+          },
+        );
         if (refreshRes.ok) {
-            const data: ApprovalsResponse = await refreshRes.json();
-            setApprovals(data.pending_approvals);
+          const data: ApprovalsResponse = await refreshRes.json();
+          setApprovals(data.pending_approvals);
         }
         throw new Error("Failed to submit decision");
       }
@@ -133,8 +162,6 @@ export function UnifiedAgentFeed() {
       setError(err.message || "Action failed");
     }
   };
-
-
 
   if (error) {
     return (
@@ -177,18 +204,32 @@ export function UnifiedAgentFeed() {
                 Loading Agent Proposals...
               </div>
             )}
-            {!loading && approvals.length === 0 && (
-              <div className="w-full flex flex-col items-center gap-6 p-6 glassmorphism rounded-[16px] border border-white/40 dark:border-white/10 shadow-sm opacity-90 text-center">
-                <div className="text-3xl mb-2">✨</div>
-                <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7]">All caught up!</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                  Your agents are currently monitoring the business. While you're here, why not help us grow?
-                </p>
-                <div className="w-full max-w-md text-left">
-                   <GrowthReferralWidget />
-                </div>
+
+            {!loading && proactiveActions.length > 0 && (
+              <div className="w-full flex flex-col gap-4 mb-4">
+                {proactiveActions.map((action) => (
+                  <ProactiveActionCard key={action.id} action={action} />
+                ))}
               </div>
             )}
+
+            {!loading &&
+              approvals.length === 0 &&
+              proactiveActions.length === 0 && (
+                <div className="w-full flex flex-col items-center gap-6 p-6 glassmorphism rounded-[16px] border border-white/40 dark:border-white/10 shadow-sm opacity-90 text-center">
+                  <div className="text-3xl mb-2">✨</div>
+                  <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7]">
+                    All caught up!
+                  </h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                    Your agents are currently monitoring the business. While
+                    you're here, why not help us grow?
+                  </p>
+                  <div className="w-full max-w-md text-left">
+                    <GrowthReferralWidget />
+                  </div>
+                </div>
+              )}
             {approvals.map((approval) => (
               <div
                 key={approval.id}
@@ -197,9 +238,9 @@ export function UnifiedAgentFeed() {
                 <div className="flex flex-col gap-1">
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-1 rounded-md">
-                      {approval.department.replace('_', ' ')}
+                      {approval.department.replace("_", " ")}
                     </span>
-                    {approval.action_risk === 'HIGH' && (
+                    {approval.action_risk === "HIGH" && (
                       <span className="text-xs font-bold uppercase tracking-wider text-red-600 bg-red-50 px-2 py-1 rounded-md">
                         Requires Review
                       </span>
@@ -208,56 +249,101 @@ export function UnifiedAgentFeed() {
                   <h3 className="text-lg font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] leading-snug mt-1">
                     {approval.description}
                   </h3>
-                  {(approval.payload?.context || approval.payload?.remaining_stock !== undefined || approval.payload?.feature_type === "quote_draft") && (
+                  {(approval.payload?.context ||
+                    approval.payload?.remaining_stock !== undefined ||
+                    approval.payload?.feature_type === "quote_draft") && (
                     <div className="mt-2 flex flex-col gap-1 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
                       {approval.payload?.feature_type === "quote_draft" && (
-                        <div className="mb-4 p-4 rounded-xl bg-blue-50/50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/30 flex flex-col gap-3" data-testid="draft-quote-card">
+                        <div
+                          className="mb-4 p-4 rounded-xl bg-blue-50/50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/30 flex flex-col gap-3"
+                          data-testid="draft-quote-card"
+                        >
                           <div className="flex items-center gap-2 text-blue-800 dark:text-blue-300 font-semibold text-sm">
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            <svg
+                              className="w-5 h-5"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                              />
                             </svg>
-                            Draft Quote: {approval.payload.service || 'Plumbing Fix'} for Customer
+                            Draft Quote:{" "}
+                            {approval.payload.service || "Plumbing Fix"} for
+                            Customer
                           </div>
                           <div className="text-xs text-blue-700 dark:text-blue-400 font-medium">
                             {approval.payload.customer_inquiry}
                           </div>
                           <div className="bg-white dark:bg-gray-800 p-3 rounded-lg border border-blue-100 dark:border-blue-900/50 relative mt-2">
-                            <div className="text-[10px] uppercase font-bold text-gray-400 mb-2">AI Proposed Quote</div>
+                            <div className="text-[10px] uppercase font-bold text-gray-400 mb-2">
+                              AI Proposed Quote
+                            </div>
                             <div className="space-y-2">
                               <div className="flex justify-between">
-                                <span className="text-xs text-gray-500">Calculated Total:</span>
-                                <span className="text-xs font-semibold text-gray-900 dark:text-gray-100">${approval.payload.suggested_price}</span>
+                                <span className="text-xs text-gray-500">
+                                  Calculated Total:
+                                </span>
+                                <span className="text-xs font-semibold text-gray-900 dark:text-gray-100">
+                                  ${approval.payload.suggested_price}
+                                </span>
                               </div>
                               <div className="flex justify-between">
-                                <span className="text-xs text-gray-500">Scope of Work:</span>
-                                <span className="text-xs font-medium text-gray-800 dark:text-gray-200">{approval.payload.scope}</span>
+                                <span className="text-xs text-gray-500">
+                                  Scope of Work:
+                                </span>
+                                <span className="text-xs font-medium text-gray-800 dark:text-gray-200">
+                                  {approval.payload.scope}
+                                </span>
                               </div>
                               <div className="flex justify-between">
-                                <span className="text-xs text-gray-500">Suggested Time:</span>
-                                <span className="text-xs font-medium text-gray-800 dark:text-gray-200">{approval.payload.suggested_time}</span>
+                                <span className="text-xs text-gray-500">
+                                  Suggested Time:
+                                </span>
+                                <span className="text-xs font-medium text-gray-800 dark:text-gray-200">
+                                  {approval.payload.suggested_time}
+                                </span>
                               </div>
                             </div>
                           </div>
                         </div>
                       )}
-                      {approval.payload?.feature_type === 'stockout_restock_and_price' ? (
+                      {approval.payload?.feature_type ===
+                      "stockout_restock_and_price" ? (
                         <>
                           <div className="flex justify-between items-center text-sm mb-1">
-                            <span className="text-gray-500 dark:text-gray-400">Current Price:</span>
+                            <span className="text-gray-500 dark:text-gray-400">
+                              Current Price:
+                            </span>
                             <span className="font-semibold text-gray-400 dark:text-gray-500 line-through">
-                               ${Number(approval.payload.old_price).toFixed(2)}
+                              ${Number(approval.payload.old_price).toFixed(2)}
                             </span>
                           </div>
                           <div className="flex justify-between items-center text-sm mb-1">
-                            <span className="text-gray-500 dark:text-gray-400">Suggested Price:</span>
-                            <span className="font-bold text-green-600 dark:text-green-400 text-base" data-testid="stockout-new-price">
-                               ${Number(approval.payload.new_price).toFixed(2)}
+                            <span className="text-gray-500 dark:text-gray-400">
+                              Suggested Price:
+                            </span>
+                            <span
+                              className="font-bold text-green-600 dark:text-green-400 text-base"
+                              data-testid="stockout-new-price"
+                            >
+                              ${Number(approval.payload.new_price).toFixed(2)}
                             </span>
                           </div>
                           <div className="flex justify-between items-center text-sm mb-1">
-                            <span className="text-gray-500 dark:text-gray-400">Reorder Quantity:</span>
-                            <span className="font-bold text-blue-600 dark:text-blue-400 text-base" data-testid="stockout-reorder">
-                               {approval.payload.suggested_reorder_quantity} Units
+                            <span className="text-gray-500 dark:text-gray-400">
+                              Reorder Quantity:
+                            </span>
+                            <span
+                              className="font-bold text-blue-600 dark:text-blue-400 text-base"
+                              data-testid="stockout-reorder"
+                            >
+                              {approval.payload.suggested_reorder_quantity}{" "}
+                              Units
                             </span>
                           </div>
                           <div className="text-sm font-medium text-gray-800 dark:text-gray-200 mt-2">
@@ -267,84 +353,157 @@ export function UnifiedAgentFeed() {
                       ) : approval.payload?.context?.smart_pricing === true ? (
                         <>
                           <div className="flex justify-between items-center text-sm mb-1">
-                            <span className="text-gray-500 dark:text-gray-400">Current Price:</span>
+                            <span className="text-gray-500 dark:text-gray-400">
+                              Current Price:
+                            </span>
                             <span className="font-semibold text-gray-400 dark:text-gray-500 line-through">
-                              ${Number(approval.payload.context.old_price).toFixed(2)}
+                              $
+                              {Number(
+                                approval.payload.context.old_price,
+                              ).toFixed(2)}
                             </span>
                           </div>
                           <div className="flex justify-between items-center text-sm mb-1">
-                            <span className="text-gray-500 dark:text-gray-400">Suggested Price:</span>
-                            <span className="font-bold text-green-600 dark:text-green-400 text-base" data-testid="smart-pricing-new-price">
-                              ${Number(approval.payload.context.new_price).toFixed(2)}
+                            <span className="text-gray-500 dark:text-gray-400">
+                              Suggested Price:
+                            </span>
+                            <span
+                              className="font-bold text-green-600 dark:text-green-400 text-base"
+                              data-testid="smart-pricing-new-price"
+                            >
+                              $
+                              {Number(
+                                approval.payload.context.new_price,
+                              ).toFixed(2)}
                             </span>
                           </div>
                           <div className="flex justify-between items-center text-sm">
-                            <span className="text-gray-500 dark:text-gray-400">Sales Projection:</span>
-                            <span className="font-semibold text-indigo-600 dark:text-indigo-400" data-testid="smart-pricing-sales-projection">
+                            <span className="text-gray-500 dark:text-gray-400">
+                              Sales Projection:
+                            </span>
+                            <span
+                              className="font-semibold text-indigo-600 dark:text-indigo-400"
+                              data-testid="smart-pricing-sales-projection"
+                            >
                               {approval.payload.context.sales_projection}
                             </span>
                           </div>
                         </>
-                      ) : approval.payload?.feature_type === 'quote_draft' ? (
+                      ) : approval.payload?.feature_type === "quote_draft" ? (
                         <div className="flex flex-col gap-2">
                           <div className="flex justify-between items-center text-sm">
-                            <span className="text-gray-500 dark:text-gray-400">Context:</span>
-                            <span className="font-semibold text-gray-900 dark:text-gray-100">{approval.payload.customer_inquiry || 'Client Inquiry'}</span>
+                            <span className="text-gray-500 dark:text-gray-400">
+                              Context:
+                            </span>
+                            <span className="font-semibold text-gray-900 dark:text-gray-100">
+                              {approval.payload.customer_inquiry ||
+                                "Client Inquiry"}
+                            </span>
                           </div>
                           <div className="flex justify-between items-center text-sm">
-                            <span className="text-gray-500 dark:text-gray-400">Scope:</span>
-                            <span className="font-semibold text-gray-900 dark:text-gray-100">{approval.payload.scope || approval.payload.service}</span>
+                            <span className="text-gray-500 dark:text-gray-400">
+                              Scope:
+                            </span>
+                            <span className="font-semibold text-gray-900 dark:text-gray-100">
+                              {approval.payload.scope ||
+                                approval.payload.service}
+                            </span>
                           </div>
                           <div className="flex justify-between items-center text-sm">
-                            <span className="text-gray-500 dark:text-gray-400">Timeline:</span>
-                            <span className="font-semibold text-gray-900 dark:text-gray-100">{approval.payload.suggested_time || 'TBD'}</span>
+                            <span className="text-gray-500 dark:text-gray-400">
+                              Timeline:
+                            </span>
+                            <span className="font-semibold text-gray-900 dark:text-gray-100">
+                              {approval.payload.suggested_time || "TBD"}
+                            </span>
                           </div>
                           <div className="flex justify-between items-center text-sm">
-                            <span className="text-gray-500 dark:text-gray-400">Price:</span>
+                            <span className="text-gray-500 dark:text-gray-400">
+                              Price:
+                            </span>
                             <span className="font-semibold text-green-600 dark:text-green-400">
-                              ${Number(approval.payload.suggested_price || approval.payload.price || 0).toFixed(2)}
+                              $
+                              {Number(
+                                approval.payload.suggested_price ||
+                                  approval.payload.price ||
+                                  0,
+                              ).toFixed(2)}
                             </span>
                           </div>
                         </div>
                       ) : (
                         <>
-                          {approval.payload?.context?.weekly_health_report === true ? (                            <div className="flex flex-col gap-2">
+                          {approval.payload?.context?.weekly_health_report ===
+                          true ? (
+                            <div className="flex flex-col gap-2">
                               <div className="text-sm text-gray-700 dark:text-gray-300">
-                                <span className="font-semibold">Summary:</span> {approval.payload.context.summary}
+                                <span className="font-semibold">Summary:</span>{" "}
+                                {approval.payload.context.summary}
                               </div>
                               <div className="text-sm text-indigo-600 dark:text-indigo-400 font-medium">
-                                <span className="font-semibold text-gray-700 dark:text-gray-300">Suggestion:</span> {approval.payload.context.actionable_suggestion}
+                                <span className="font-semibold text-gray-700 dark:text-gray-300">
+                                  Suggestion:
+                                </span>{" "}
+                                {approval.payload.context.actionable_suggestion}
                               </div>
                             </div>
                           ) : (
                             <>
-                              {approval.payload?.context?.abandoned_carts_count !== undefined && (
+                              {approval.payload?.context
+                                ?.abandoned_carts_count !== undefined && (
                                 <div className="flex justify-between items-center text-sm">
-                                  <span className="text-gray-500 dark:text-gray-400">Abandoned Carts:</span>
-                                  <span className="font-semibold text-gray-900 dark:text-gray-100">{approval.payload.context.abandoned_carts_count}</span>
-                                </div>
-                              )}
-                              {approval.payload?.context?.potential_revenue !== undefined && (
-                                <div className="flex justify-between items-center text-sm">
-                                  <span className="text-gray-500 dark:text-gray-400">Potential Revenue:</span>
-                                  <span className="font-semibold text-green-600 dark:text-green-400">
-                                    ${Number(approval.payload.context.potential_revenue).toFixed(2)}
+                                  <span className="text-gray-500 dark:text-gray-400">
+                                    Abandoned Carts:
+                                  </span>
+                                  <span className="font-semibold text-gray-900 dark:text-gray-100">
+                                    {
+                                      approval.payload.context
+                                        .abandoned_carts_count
+                                    }
                                   </span>
                                 </div>
                               )}
-                              {approval.payload?.remaining_stock !== undefined && (
+                              {approval.payload?.context?.potential_revenue !==
+                                undefined && (
+                                <div className="flex justify-between items-center text-sm">
+                                  <span className="text-gray-500 dark:text-gray-400">
+                                    Potential Revenue:
+                                  </span>
+                                  <span className="font-semibold text-green-600 dark:text-green-400">
+                                    $
+                                    {Number(
+                                      approval.payload.context
+                                        .potential_revenue,
+                                    ).toFixed(2)}
+                                  </span>
+                                </div>
+                              )}
+                              {approval.payload?.remaining_stock !==
+                                undefined && (
                                 <div className="flex flex-col gap-2">
                                   <div className="flex justify-between items-center text-sm">
-                                    <span className="text-gray-500 dark:text-gray-400">Product ID:</span>
-                                    <span className="font-semibold text-gray-900 dark:text-gray-100">{approval.payload.product_id}</span>
+                                    <span className="text-gray-500 dark:text-gray-400">
+                                      Product ID:
+                                    </span>
+                                    <span className="font-semibold text-gray-900 dark:text-gray-100">
+                                      {approval.payload.product_id}
+                                    </span>
                                   </div>
                                   <div className="flex justify-between items-center text-sm">
-                                    <span className="text-gray-500 dark:text-gray-400">Remaining Stock:</span>
-                                    <span className="font-semibold text-red-600 dark:text-red-400">{approval.payload.remaining_stock}</span>
+                                    <span className="text-gray-500 dark:text-gray-400">
+                                      Remaining Stock:
+                                    </span>
+                                    <span className="font-semibold text-red-600 dark:text-red-400">
+                                      {approval.payload.remaining_stock}
+                                    </span>
                                   </div>
                                   <div className="flex justify-between items-center text-sm">
-                                    <span className="text-gray-500 dark:text-gray-400">Alert Message:</span>
-                                    <span className="font-semibold text-gray-900 dark:text-gray-100">{approval.payload.message}</span>
+                                    <span className="text-gray-500 dark:text-gray-400">
+                                      Alert Message:
+                                    </span>
+                                    <span className="font-semibold text-gray-900 dark:text-gray-100">
+                                      {approval.payload.message}
+                                    </span>
                                   </div>
                                 </div>
                               )}
@@ -357,7 +516,8 @@ export function UnifiedAgentFeed() {
                 </div>
 
                 <div className="flex flex-col gap-3 w-full mt-2">
-                  {approval.payload?.feature_type === 'stockout_restock_and_price' ? (
+                  {approval.payload?.feature_type ===
+                  "stockout_restock_and_price" ? (
                     <div className="flex flex-col sm:flex-row gap-3 w-full">
                       <button
                         onClick={() => handleDecision(approval.id, true)}
@@ -414,7 +574,8 @@ export function UnifiedAgentFeed() {
                         Dismiss
                       </button>
                     </div>
-                  ) : approval.payload?.context?.weekly_health_report === true ? (
+                  ) : approval.payload?.context?.weekly_health_report ===
+                    true ? (
                     <div className="flex flex-col sm:flex-row gap-3 w-full">
                       <button
                         onClick={() => handleDecision(approval.id, true)}
@@ -432,7 +593,8 @@ export function UnifiedAgentFeed() {
                       >
                         Dismiss
                       </button>
-                    </div>                  ) : approval.payload?.remaining_stock !== undefined ? (
+                    </div>
+                  ) : approval.payload?.remaining_stock !== undefined ? (
                     <div className="flex flex-col sm:flex-row gap-3 w-full">
                       <button
                         onClick={() => handleDecision(approval.id, true)}
@@ -451,7 +613,7 @@ export function UnifiedAgentFeed() {
                         Dismiss
                       </button>
                     </div>
-                  ) : approval.payload?.feature_type === 'quote_draft' ? (
+                  ) : approval.payload?.feature_type === "quote_draft" ? (
                     <>
                       <button
                         onClick={() => handleDecision(approval.id, true)}
@@ -531,32 +693,39 @@ export function UnifiedAgentFeed() {
               </div>
             )}
             <div className="flex flex-col gap-3 min-w-[320px] max-w-full">
-            {activities.map((activity) => (
-              <div
-                key={activity.id}
-                className="glassmorphism p-5 rounded-[16px] border border-white/40 dark:border-white/10 shadow-sm flex flex-col gap-3 opacity-90 min-h-[44px]"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold font-outfit uppercase tracking-wider text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-1 rounded-md">
-                    {activity.department.replace('_', ' ')}
-                  </span>
-                  <span className="text-xs font-bold font-outfit uppercase tracking-wider px-2 py-1 rounded-md text-green-600 bg-green-50 dark:text-green-400 dark:bg-green-900/30">
-                    APPROVED
+              {activities.map((activity) => (
+                <div
+                  key={activity.id}
+                  className="glassmorphism p-5 rounded-[16px] border border-white/40 dark:border-white/10 shadow-sm flex flex-col gap-3 opacity-90 min-h-[44px]"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold font-outfit uppercase tracking-wider text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-1 rounded-md">
+                      {activity.department.replace("_", " ")}
+                    </span>
+                    <span className="text-xs font-bold font-outfit uppercase tracking-wider px-2 py-1 rounded-md text-green-600 bg-green-50 dark:text-green-400 dark:bg-green-900/30">
+                      APPROVED
+                    </span>
+                  </div>
+                  <h3 className="text-md font-semibold font-inter text-[#1D1D1F] dark:text-[#F5F5F7] leading-snug">
+                    {(() => {
+                      try {
+                        const p =
+                          typeof activity.payload === "string"
+                            ? JSON.parse(activity.payload)
+                            : activity.payload;
+                        return (
+                          p?.original_payload?.description || "Action completed"
+                        );
+                      } catch (e) {
+                        return "Action completed";
+                      }
+                    })()}
+                  </h3>
+                  <span className="text-xs text-gray-500 font-inter">
+                    {new Date(activity.created_at).toLocaleString()}
                   </span>
                 </div>
-                <h3 className="text-md font-semibold font-inter text-[#1D1D1F] dark:text-[#F5F5F7] leading-snug">
-                  {(() => {
-                    try {
-                      const p = typeof activity.payload === 'string' ? JSON.parse(activity.payload) : activity.payload;
-                      return p?.original_payload?.description || 'Action completed';
-                    } catch (e) {
-                      return 'Action completed';
-                    }
-                  })()}
-                </h3>
-                <span className="text-xs text-gray-500 font-inter">{new Date(activity.created_at).toLocaleString()}</span>
-              </div>
-            ))}
+              ))}
             </div>
           </>
         )}
