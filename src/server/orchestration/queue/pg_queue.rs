@@ -18,22 +18,14 @@ impl TaskQueue for PgTaskQueue {
 async fn enqueue_batch(&self, jobs: Vec<Job>) -> Result<(), String> {
         if jobs.is_empty() { return Ok(()); }
         ::server_telemetry::record_queue_length_sync(jobs.len() as i32, ::server_telemetry::get_deployment_mode());
-
-        let mut ids = Vec::with_capacity(jobs.len());
-        let mut parent_task_ids = Vec::with_capacity(jobs.len());
-        let mut job_types = Vec::with_capacity(jobs.len());
-        let mut payloads = Vec::with_capacity(jobs.len());
-        let mut statuses = Vec::with_capacity(jobs.len());
-        let mut next_retry_ats = Vec::with_capacity(jobs.len());
-        let mut tenant_ids = Vec::with_capacity(jobs.len());
+        let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
 
         let mut current_depths = std::collections::HashMap::new();
+
         let mut unique_tenants = std::collections::HashSet::new();
         for job in &jobs {
             unique_tenants.insert(job.tenant_id.clone());
         }
-
-        let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
 
         let tenants_vec: Vec<String> = unique_tenants.into_iter().collect();
         if !tenants_vec.is_empty() {
@@ -42,7 +34,6 @@ async fn enqueue_batch(&self, jobs: Vec<Job>) -> Result<(), String> {
                 .fetch_all(&mut *tx)
                 .await
             {
-                use sqlx::Row;
                 for row in rows {
                     let org_id: String = row.try_get(0).unwrap_or_default();
                     let count: i64 = row.try_get(1).unwrap_or(0);
@@ -52,6 +43,14 @@ async fn enqueue_batch(&self, jobs: Vec<Job>) -> Result<(), String> {
         }
 
         let bursts_threshold = 10;
+
+        let mut ids = Vec::with_capacity(jobs.len());
+        let mut parent_task_ids = Vec::with_capacity(jobs.len());
+        let mut job_types = Vec::with_capacity(jobs.len());
+        let mut payloads = Vec::with_capacity(jobs.len());
+        let mut statuses = Vec::with_capacity(jobs.len());
+        let mut next_retry_ats = Vec::with_capacity(jobs.len());
+        let mut tenant_ids = Vec::with_capacity(jobs.len());
 
         for job in &jobs {
             let depth = *current_depths.get(&job.tenant_id).unwrap_or(&0);
