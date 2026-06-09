@@ -48,7 +48,10 @@ impl<T: DeserializeOwned> OutputParser<T> for StructuredOutputParser<T> {
                 if let Some(data) = call.arguments.get("data") {
                     return match serde_json::from_value::<T>(data.clone()) {
                         Ok(parsed) => Ok(parsed),
-                        Err(e) => Err(crate::types::format_pydantic_error(&e, None)),
+                        Err(e) => {
+                            let snippet = data.to_string();
+                            Err(crate::types::format_pydantic_error(&e, Some(&snippet)))
+                        }
                     };
                 } else {
                     return Err(
@@ -243,51 +246,6 @@ pub async fn parse_structured_output<T: DeserializeOwned + Send + Sync>(
 mod tests {
     use super::*;
 
-    #[tokio::test]
-    async fn test_parse_structured_output_serde_error_classification() {
-        let client = Arc::new(MockLlmClient {
-            responses: Mutex::new(vec![
-                create_tool_call_resp(
-                    "structured_output",
-                    serde_json::json!({"data": {"result": 123}}),
-                ), // Should be a string
-                create_tool_call_resp(
-                    "structured_output",
-                    serde_json::json!({"data": {"result": "recovered"}}),
-                ),
-            ]),
-        });
-
-        let req = create_test_req();
-        let result: Result<TestOutput, _> =
-            parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 2).await;
-
-        // It should recover on the second try
-        assert!(result.is_ok());
-        assert_eq!(result.unwrap().result, "recovered");
-
-        // Need to check the requests to ensure the prompt contained the "Semantic validation failed"
-        // Let's modify the test to just check if it fails with the right message when max_retries = 0
-        let client_fail = Arc::new(MockLlmClient {
-            responses: Mutex::new(vec![create_tool_call_resp(
-                "structured_output",
-                serde_json::json!({"data": {"result": 123}}),
-            )]),
-        });
-
-        let req2 = create_test_req();
-        let result_fail: Result<TestOutput, _> =
-            parse_structured_output(&(client_fail as Arc<dyn LlmClientForParser>), req2, 0).await;
-
-        assert!(result_fail.is_err());
-        match result_fail {
-            Err(ToolError::LlmRecoverable(msg)) => {
-                assert!(msg.contains("Semantic validation failed"));
-            }
-            _ => panic!("Expected LlmRecoverable error for schema mismatch"),
-        }
-    }
-
     use crate::types::{ChatResponse, Usage};
     use serde::Deserialize;
     use tokio::sync::Mutex;
@@ -318,6 +276,94 @@ mod tests {
                     response_id: Some("mock-id".to_string()),
                 })
             }
+        }
+    }
+
+    struct RecordingLlmClient {
+        responses: Mutex<Vec<ChatResponse>>,
+        requests: Mutex<Vec<ChatRequest>>,
+    }
+
+    #[async_trait::async_trait]
+    impl LlmClientForParser for RecordingLlmClient {
+        async fn chat(
+            &self,
+            req: ChatRequest,
+        ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+            self.requests.lock().await.push(req);
+            let mut resps = self.responses.lock().await;
+            if !resps.is_empty() {
+                Ok(resps.remove(0))
+            } else {
+                Ok(ChatResponse {
+                    message: Message::assistant("default"),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                    response_id: Some("mock-id".to_string()),
+                })
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_parse_structured_output_serde_error_classification() {
+        let client = Arc::new(RecordingLlmClient {
+            responses: Mutex::new(vec![
+                create_tool_call_resp(
+                    "structured_output",
+                    serde_json::json!({"data": {"result": 123}}),
+                ), // Should be a string
+                create_tool_call_resp(
+                    "structured_output",
+                    serde_json::json!({"data": {"result": "recovered"}}),
+                ),
+            ]),
+            requests: Mutex::new(vec![]),
+        });
+
+        let req = create_test_req();
+        let result: Result<TestOutput, _> =
+            parse_structured_output(&(client.clone() as Arc<dyn LlmClientForParser>), req, 2).await;
+
+        // It should recover on the second try
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap().result, "recovered");
+
+        // Verify the requests sent to the LLM to ensure the prompt contained the "Semantic validation failed"
+        // and importantly, the snippet of the failing arguments JSON.
+        let requests = client.requests.lock().await;
+        assert_eq!(requests.len(), 2);
+
+        // The second request should contain the error context from the first attempt
+        let retry_req = &requests[1];
+        let last_msg = retry_req.messages.last().expect("Should have a Tool message");
+
+        assert_eq!(last_msg.role, crate::types::Role::Tool);
+        assert!(!last_msg.tool_results.is_empty());
+        let tool_result = &last_msg.tool_results[0];
+
+        assert!(tool_result.error.contains("Semantic validation failed"));
+        assert!(tool_result.error.contains("Provided arguments snippet: {\"result\":123}"));
+
+        // Let's modify the test to just check if it fails with the right message when max_retries = 0
+        let client_fail = Arc::new(MockLlmClient {
+            responses: Mutex::new(vec![create_tool_call_resp(
+                "structured_output",
+                serde_json::json!({"data": {"result": 123}}),
+            )]),
+        });
+
+        let req2 = create_test_req();
+        let result_fail: Result<TestOutput, _> =
+            parse_structured_output(&(client_fail as Arc<dyn LlmClientForParser>), req2, 0).await;
+
+        assert!(result_fail.is_err());
+        match result_fail {
+            Err(ToolError::LlmRecoverable(msg)) => {
+                assert!(msg.contains("Semantic validation failed"));
+                assert!(msg.contains("Provided arguments snippet: {\"result\":123}"));
+            }
+            _ => panic!("Expected LlmRecoverable error for schema mismatch"),
         }
     }
 
