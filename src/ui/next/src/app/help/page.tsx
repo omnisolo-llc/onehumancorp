@@ -85,7 +85,7 @@ export default function HelpCenterPage() {
             {filteredVideos.length > 0 && (
               <section>
                 <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-6">Video Tutorials</h2>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   {filteredVideos.map((v) => (
                     <div key={v.id} onClick={() => setSelectedVideo(v)} className="aspect-[9/16] bg-gray-200 rounded-2xl flex items-center justify-center relative overflow-hidden group shadow-sm border border-white/30 cursor-pointer hover:shadow-md transition-all">
                       <div className="absolute inset-0 bg-black/30 group-hover:bg-black/20 transition-all"></div>
