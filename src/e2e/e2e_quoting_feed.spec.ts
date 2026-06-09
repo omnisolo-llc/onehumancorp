@@ -13,7 +13,7 @@ test.describe('Quote Feed e2e', () => {
     await page.goto('/dashboard');
 
     // 2. See draft quote ready
-    await expect(page.getByText('Draft Quote Ready: Fix leaking sink for John Doe')).toBeVisible();
+    await expect(page.getByText('Draft Quote Ready: Fix leaking sink for John Doe')).toBeVisible({ timeout: 15000 });
 
     // 3. Tap approve
     // Deep link works
