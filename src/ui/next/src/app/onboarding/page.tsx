@@ -30,6 +30,15 @@ function IconLabel({ icon, children }: { icon: SetupIconName; children: React.Re
   );
 }
 
+function generateSubdomain(name: string): string {
+  if (!name || name.trim() === '') return 'my-business.ohc.app';
+  const cleanName = name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  return cleanName ? `${cleanName}.ohc.app` : 'my-business.ohc.app';
+}
+
 export default function OnboardingWizard() {
   const {
     step, setStep,
@@ -1249,7 +1258,7 @@ export default function OnboardingWizard() {
                 <div className="p-3 glassmorphism rounded-[8px] flex flex-col items-center mb-6">
                    <p className="text-xs text-gray-500 dark:text-[#A1A1A6] uppercase font-bold tracking-wider mb-2">Your Shareable Link</p>
                    <div className="flex items-center gap-2">
-                      <span className="text-[#0066FF] font-semibold">my-business.ohc.app</span>
+                      <span className="text-[#0066FF] font-semibold">{generateSubdomain(businessName)}</span>
                    </div>
                 </div>
 
