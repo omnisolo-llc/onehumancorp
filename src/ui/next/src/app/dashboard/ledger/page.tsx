@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { PageHeader } from "@/components/layout/PageHeader";
-import { ErrorState } from "@/components/layout/ErrorState";
+import { PageHeader } from "../../../components/layout/PageHeader";
+import { ErrorState } from "../../../components/layout/ErrorState";
 
 interface LedgerEntry {
   id: string;

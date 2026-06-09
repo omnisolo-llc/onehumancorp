@@ -206,12 +206,13 @@ export default function Dashboard() {
           throw new Error("One or more database-backed UI endpoints failed");
         }
 
-        const [metricsData, ordersData, inboxData, supplyData, onboardingData] = await Promise.all([
+        const [metricsData, ordersData, inboxData, supplyData, onboardingData, unifiedFeedData] = await Promise.all([
           metricsRes.json(),
           ordersRes.json(),
           inboxRes.json(),
           supplyRes.json(),
           onboardingRes.ok ? onboardingRes.json() : Promise.resolve(null),
+          fetch('/api/ui/dashboard/feed').then(res => res.ok ? res.json() : { pending_approvals: [], activities: [] }),
         ]);
 
         if (onboardingData?.wizardState?.aiAgents) {

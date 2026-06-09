@@ -33,7 +33,12 @@ export default function HelpCenterPage() {
   return (
     <div className="min-h-screen bg-[#F5F5F7] py-12 px-4 sm:px-6 lg:px-8 font-inter">
       <div className="max-w-4xl mx-auto">
-        <h1 className="text-3xl sm:text-4xl font-extrabold font-outfit text-[#1D1D1F] mb-8 text-center tracking-tight">Help Center</h1>
+        <h1 className="text-3xl sm:text-4xl font-extrabold font-outfit text-[#1D1D1F] mb-2 text-center tracking-tight">Help Center</h1>
+        <div className="flex justify-center mb-8">
+            <Link href="/api-docs" className="text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors">
+              Advanced: API Documentation
+            </Link>
+        </div>
 
         <div className="mb-10 w-full sm:w-3/4 mx-auto">
           <input
