@@ -13,6 +13,10 @@ pub struct TerminalTokenResponse {
 pub struct PaymentIntentRequest {
     pub amount_cents: i64,
     pub currency: String,
+
+
+    pub product_id: Option<String>,
+
 }
 
 #[derive(serde::Serialize)]
@@ -654,6 +658,34 @@ pub async fn create_payment_intent_handler(
     let stripe_key = std::env::var("STRIPE_API_KEY").unwrap_or_default();
 
     let client = crate::integrations::stripe::client::StripeClient::new(stripe_key);
+
+
+    // Reserve inventory if product is specified
+    if let Some(ref product_id) = req_data.product_id {
+        let lock_id = uuid::Uuid::new_v4().to_string();
+        let lock_key = format!("ohc:lock:{}:inventory:{}", tenant_id, product_id);
+
+        if let Some(redis_client) = &_hub.redis_client {
+            if let Ok(mut conn) = redis_client.get_multiplexed_async_connection().await {
+                // Short 15-second lock for rapid tap-to-pay
+                let acquired: bool = redis::cmd("SET")
+                    .arg(&lock_key)
+                    .arg(&lock_id)
+                    .arg("EX")
+                    .arg(15)
+                    .arg("NX")
+                    .query_async(&mut conn)
+                    .await
+                    .unwrap_or(false);
+
+                if !acquired {
+                    return Json(Err("Item just sold out or is currently being checked out".to_string()));
+                }
+            }
+        }
+    }
+
+
     match client.require_api_key() {
         Ok(_) => match client.create_terminal_payment_intent(&tenant_id, req_data.amount_cents, &req_data.currency).await {
             Ok(client_secret) => Json(Ok(PaymentIntentResponse { client_secret })),

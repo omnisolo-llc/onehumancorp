@@ -218,3 +218,5 @@ rust_sharded_test(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
 )
+
+exports_files(["inventory_sync.rs"])

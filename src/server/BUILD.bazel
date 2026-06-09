@@ -252,6 +252,10 @@ SERVER_RS_SRCS = [
     "//src/server/services/sync:telemetry_sync.rs",
     "//src/server/services/pos:mod.rs",
     "//src/server/services/pos:service.rs",
+
+
+    "//src/server/services:inventory_sync.rs",
+
     "//src/server/services/collective:mod.rs",
     "//src/server/services/collective:service.rs",
     "//src/server/storage:local_provider.rs",
