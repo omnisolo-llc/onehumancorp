@@ -14,6 +14,8 @@ impl Tracker {
                 *v = "[REDACTED]".to_string();
             } else if ::server_telemetry::is_email(v) {
                 *v = "[EMAIL_REDACTED]".to_string();
+            } else if ::server_telemetry::is_pii_value_pattern(v) {
+                *v = "[REDACTED]".to_string();
             }
         }
         sanitized_props
@@ -47,6 +49,9 @@ mod tests {
         props.insert("email".to_string(), "user@example.com".to_string());
         props.insert("contact".to_string(), "contact@test.com".to_string());
         props.insert("billing_address".to_string(), "123 Main St".to_string());
+        props.insert("safe_field_ssn".to_string(), "123-45-6789".to_string());
+        props.insert("safe_field_cc".to_string(), "4111-1111-1111-1111".to_string());
+        props.insert("safe_field_api_key".to_string(), "sk-1234567890abcdefg".to_string());
 
         let sanitized = tracker.sanitize_props(props);
 
@@ -55,6 +60,9 @@ mod tests {
         assert_eq!(sanitized.get("email").unwrap(), "[REDACTED]");
         assert_eq!(sanitized.get("contact").unwrap(), "[EMAIL_REDACTED]");
         assert_eq!(sanitized.get("billing_address").unwrap(), "[REDACTED]");
+        assert_eq!(sanitized.get("safe_field_ssn").unwrap(), "[REDACTED]");
+        assert_eq!(sanitized.get("safe_field_cc").unwrap(), "[REDACTED]");
+        assert_eq!(sanitized.get("safe_field_api_key").unwrap(), "[REDACTED]");
     }
 
     #[test]
