@@ -41,16 +41,25 @@ impl PromptCache {
         let res = self.get(prompt);
         let cost = if let Some(ref r) = res {
             tracing::info!("💰 Miser cost optimization: Prompt cache hit saved {} tokens", r.token_count);
-            // Use heuristic token efficiency logic directly to accurately estimate savings.
-            let model = std::env::var("OHC_LLM_MODEL").unwrap_or_else(|_| "gpt-4o".to_string());
-            let ratio = super::calculator::calculate_heuristic_token_efficiency(r.token_count as i64, 0, &model);
-            // Fallback back to standard cache estimation if ratio is 0
+
+            // Fast-path: Avoid taking OS environment locks on every cache hit
+            static MODEL: std::sync::OnceLock<String> = std::sync::OnceLock::new();
+            static FALLBACK_RATIO: std::sync::OnceLock<f64> = std::sync::OnceLock::new();
+
+            let model = MODEL.get_or_init(|| {
+                std::env::var("OHC_LLM_MODEL").unwrap_or_else(|_| "gpt-4o".to_string())
+            });
+
+            let ratio = super::calculator::calculate_heuristic_token_efficiency(r.token_count as i64, 0, model);
+
             if ratio == 0.0 {
-                let fallback_ratio = std::env::var("MISER_TOKEN_RATIO")
-                    .unwrap_or_else(|_| "0.0001".to_string())
-                    .parse::<f64>()
-                    .unwrap_or(0.0001);
-                (r.token_count as f64 * fallback_ratio * 100.0).round() as i64
+                let fallback_ratio = FALLBACK_RATIO.get_or_init(|| {
+                    std::env::var("MISER_TOKEN_RATIO")
+                        .unwrap_or_else(|_| "0.0001".to_string())
+                        .parse::<f64>()
+                        .unwrap_or(0.0001)
+                });
+                (r.token_count as f64 * *fallback_ratio * 100.0).round() as i64
             } else {
                 (ratio * 100.0).round() as i64
             }
