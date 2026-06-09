@@ -1,6 +1,11 @@
 use crate::types::{ChatRequest, Message};
 use futures::future::join_all;
 
+/// Tencent Workbuddy (Expert Team) Feature
+/// Product: Tencent Cloud Intelligent Agent Platform
+/// Reference impl (BP-Factory): 6-person specialized agent team for business plans
+/// Lead agent (Project Director) + Domain experts (Industry Researcher, Financial Analyst, Strategic Analyst) + Quality control (Process Supervisor, Quality Auditor)
+
 #[async_trait::async_trait]
 pub trait ExpertTeamLlmClient: Send + Sync {
     async fn chat(
