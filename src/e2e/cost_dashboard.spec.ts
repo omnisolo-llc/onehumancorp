@@ -14,8 +14,8 @@ test.describe('Cost Dashboard "My Plan" functionality', () => {
     await expect(page.locator('text=My Plan').first()).toBeVisible();
     await expect(page.locator('section.app-card').first()).toBeVisible();
     await expect(page.locator('text=Current Plan').first()).toBeVisible();
-    await expect(page.locator('text=AI Actions Used').first()).toBeVisible();
-    await expect(page.locator('text=Storage Used').first()).toBeVisible();
+    await expect(page.locator('text=AI actions used this month').first()).toBeVisible();
+    await expect(page.locator('text=Storage used').first()).toBeVisible();
     await expect(page.locator('text=Estimated Next Bill').first()).toBeVisible();
     await expect(page.locator('button:has-text("Upgrade")').first()).toBeVisible();
 
@@ -49,7 +49,7 @@ test.describe('Cost Dashboard "My Plan" functionality', () => {
     await context.close();
   });
 
-  test('Cost Dashboard displays AI Actions Used correctly without limits', async ({ unlimitedAdminUser, loginAs, browser }) => {
+  test('Cost Dashboard displays AI actions used this month correctly without limits', async ({ unlimitedAdminUser, loginAs, browser }) => {
     const context = await browser.newContext();
     const proPage = await context.newPage();
     await loginAs(proPage, unlimitedAdminUser);
@@ -57,14 +57,14 @@ test.describe('Cost Dashboard "My Plan" functionality', () => {
     await proPage.goto('/plan');
     await proPage.waitForLoadState('networkidle');
 
-    const aiActionsCard = proPage.locator('div', { has: proPage.locator('span', { hasText: 'AI Actions Used' }) }).first();
+    const aiActionsCard = proPage.locator('div', { has: proPage.locator('span', { hasText: 'AI actions used this month' }) }).first();
     await expect(aiActionsCard.locator('span', { hasText: '/ Unlimited' }).first()).toBeVisible();
 
     await proPage.close();
     await context.close();
   });
 
-  test('Cost Dashboard displays Storage Used correctly for Pro tenants (50 GB)', async ({ unlimitedAdminUser, loginAs, browser }) => {
+  test('Cost Dashboard displays Storage used correctly for Pro tenants (50 GB)', async ({ unlimitedAdminUser, loginAs, browser }) => {
     const context = await browser.newContext();
     const proPage = await context.newPage();
     await loginAs(proPage, unlimitedAdminUser);
@@ -72,7 +72,7 @@ test.describe('Cost Dashboard "My Plan" functionality', () => {
     await proPage.goto('/plan');
     await proPage.waitForLoadState('networkidle');
 
-    const storageCard = proPage.locator('div', { has: proPage.locator('span', { hasText: 'Storage Used' }) }).first();
+    const storageCard = proPage.locator('div', { has: proPage.locator('span', { hasText: 'Storage used' }) }).first();
     await expect(storageCard.locator('span', { hasText: '/ 50 GB' }).first()).toBeVisible();
 
     await proPage.close();
