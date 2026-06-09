@@ -1044,7 +1044,7 @@ let db_for_products = self.db.clone();
                                 cache.invalidate_by_tag(&format!("entity:product:{}", pid)).await;
                                 cache.invalidate_by_tag(&format!("tenant-id:{}", org_id)).await;
 
-                                let pool_clone = _db.pool.clone();
+                                let pool_clone = db_for_products.pool.clone();
                                 let tenant_id_clone = uuid::Uuid::parse_str(&org_id).unwrap_or_default();
                                 tokio::spawn(async move {
                                     if let Ok(sites) = crate::builder::db::list_sites(&pool_clone, tenant_id_clone).await {
