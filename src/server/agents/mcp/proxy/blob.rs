@@ -96,7 +96,7 @@ impl BlobProvider for S3BlobProvider {
 }
 
 pub fn create_blob_provider() -> Arc<dyn BlobProvider> {
-    let is_standalone = env::var("OHC_STANDALONE_MODE").unwrap_or_else(|_| "false".to_string()) == "true";
+    let is_standalone = crate::is_standalone_runtime();
     let is_multitenant = env::var("OHC_MULTITENANT").unwrap_or_else(|_| "false".to_string()) == "true";
 
     if is_multitenant && !is_standalone {

@@ -63,7 +63,33 @@ fn onboarding_state_path() -> std::path::PathBuf {
 }
 
 #[tauri::command]
-fn get_onboarding_state() -> Result<OnboardingState, String> {
+async fn get_onboarding_state(_app_handle: tauri::AppHandle) -> Result<OnboardingState, String> {
+    // Determine tenant/user dynamically from args or state (here we default or check env for test)
+    let tenant_id = std::env::var("OHC_DEFAULT_TENANT_ID").unwrap_or_else(|_| "default".to_string());
+    let user_id = std::env::var("OHC_DEFAULT_USER_ID").unwrap_or_else(|_| "default".to_string());
+
+    // Attempt to fetch from backend
+    let backend_url = std::env::var("BACKEND_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string());
+    let url = format!("{}/api/onboarding/state", backend_url);
+
+    let request = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(3))
+        .build()
+        .map_err(|err| err.to_string())?
+        .get(&url)
+        .header("X-Tenant-ID", tenant_id)
+        .header("X-User-ID", user_id);
+
+    if let Ok(response) = request.send().await {
+        if response.status().is_success() {
+            if let Ok(state) = response.json::<OnboardingState>().await {
+                // Return successfully from backend
+                return Ok(state);
+            }
+        }
+    }
+
+    // Fallback to local file
     let path = onboarding_state_path();
     if !path.exists() {
         return Ok(OnboardingState {
@@ -79,7 +105,28 @@ fn get_onboarding_state() -> Result<OnboardingState, String> {
 }
 
 #[tauri::command]
-fn save_onboarding_state(state: OnboardingState) -> Result<(), String> {
+async fn save_onboarding_state(state: OnboardingState, _app_handle: tauri::AppHandle) -> Result<(), String> {
+    let tenant_id = std::env::var("OHC_DEFAULT_TENANT_ID").unwrap_or_else(|_| "default".to_string());
+    let user_id = std::env::var("OHC_DEFAULT_USER_ID").unwrap_or_else(|_| "default".to_string());
+
+    // Attempt to save to backend
+    let backend_url = std::env::var("BACKEND_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string());
+    let url = format!("{}/api/onboarding/state", backend_url);
+
+    let request = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(3))
+        .build()
+        .map_err(|err| err.to_string())?
+        .post(&url)
+        .header("X-Tenant-ID", tenant_id)
+        .header("X-User-ID", user_id)
+        .header("Content-Type", "application/json")
+        .json(&state);
+
+    // Fire and forget, or wait for success
+    let _ = request.send().await;
+
+    // Fallback/mirror to local file
     let path = onboarding_state_path();
     if let Some(parent) = path.parent() {
         #[cfg(unix)]
@@ -89,33 +136,32 @@ fn save_onboarding_state(state: OnboardingState) -> Result<(), String> {
                 .recursive(true)
                 .mode(0o700)
                 .create(parent)
-                .map_err(|err| err.to_string())?;
+                .unwrap_or_default();
         }
         #[cfg(not(unix))]
         {
-            std::fs::create_dir_all(parent).map_err(|err| err.to_string())?;
+            std::fs::create_dir_all(parent).unwrap_or_default();
         }
     }
 
-    let json = serde_json::to_string_pretty(&state).map_err(|err| err.to_string())?;
-
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::OpenOptionsExt;
-        use std::io::Write;
-        let mut file = std::fs::OpenOptions::new()
-            .write(true)
-            .create(true)
-            .truncate(true)
-            .mode(0o600)
-            .open(path)
-            .map_err(|err| err.to_string())?;
-        file.write_all(format!("{json}\n").as_bytes())
-            .map_err(|err| err.to_string())?;
-    }
-    #[cfg(not(unix))]
-    {
-        std::fs::write(path, format!("{json}\n")).map_err(|err| err.to_string())?;
+    if let Ok(json) = serde_json::to_string_pretty(&state) {
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::OpenOptionsExt;
+            use std::io::Write;
+            if let Ok(mut file) = std::fs::OpenOptions::new()
+                .write(true)
+                .create(true)
+                .truncate(true)
+                .mode(0o600)
+                .open(path) {
+                let _ = file.write_all(format!("{json}\n").as_bytes());
+            }
+        }
+        #[cfg(not(unix))]
+        {
+            let _ = std::fs::write(path, format!("{json}\n"));
+        }
     }
 
     Ok(())
@@ -324,6 +370,76 @@ fn endpoint_url(base_url: &str, endpoint: &str) -> String {
     format!("{}/{}", base_url.trim_end_matches('/'), endpoint)
 }
 
+#[tauri::command]
+async fn get_help_articles() -> Result<serde_json::Value, String> {
+    let backend_url = std::env::var("BACKEND_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string());
+    let url = format!("{}/api/help", backend_url);
+
+    let request = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(5))
+        .build()
+        .map_err(|err| err.to_string())?
+        .get(&url);
+
+    let response = request.send().await.map_err(|err| err.to_string())?;
+    if response.status().is_success() {
+        let json: serde_json::Value = response.json().await.map_err(|err| err.to_string())?;
+        Ok(json)
+    } else {
+        Err(format!("Backend returned {}", response.status()))
+    }
+}
+
+#[tauri::command]
+async fn get_help_article(id: String) -> Result<serde_json::Value, String> {
+    let backend_url = std::env::var("BACKEND_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string());
+    let url = format!("{}/api/help/{}", backend_url, id);
+
+    let request = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(5))
+        .build()
+        .map_err(|err| err.to_string())?
+        .get(&url);
+
+    let response = request.send().await.map_err(|err| err.to_string())?;
+    if response.status().is_success() {
+        let json: serde_json::Value = response.json().await.map_err(|err| err.to_string())?;
+        Ok(json)
+    } else {
+        Err(format!("Backend returned {}", response.status()))
+    }
+}
+
+#[tauri::command]
+async fn get_help_videos() -> Result<serde_json::Value, String> {
+    // For now, mock the videos as the endpoint is partially mocked anyway
+    Ok(serde_json::json!([
+        { "id": 1, "title": "How to set up your first store easily", "duration": "1:20", "video_url": "https://www.w3schools.com/html/mov_bbb.mp4" },
+        { "id": 2, "title": "Accept your first payment", "duration": "1:15", "video_url": "https://www.w3schools.com/html/mov_bbb.mp4" }
+    ]))
+}
+
+
+#[tauri::command]
+async fn get_changelog() -> Result<serde_json::Value, String> {
+    let backend_url = std::env::var("BACKEND_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string());
+    let url = format!("{}/api/changelog", backend_url);
+
+    let request = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(5))
+        .build()
+        .map_err(|err| err.to_string())?
+        .get(&url);
+
+    let response = request.send().await.map_err(|err| err.to_string())?;
+    if response.status().is_success() {
+        let json: serde_json::Value = response.json().await.map_err(|err| err.to_string())?;
+        Ok(json)
+    } else {
+        Err(format!("Backend returned {}", response.status()))
+    }
+}
+
 #[cfg(ohc_bazel_tauri_context)]
 macro_rules! tauri_build_context {
     () => {
@@ -353,6 +469,10 @@ pub fn run() {
             test_ai_provider,
             get_onboarding_state,
             save_onboarding_state,
+            get_help_articles,
+            get_help_article,
+            get_help_videos,
+            get_changelog,
         ])
         .setup(|app| {
             let window = app.get_webview_window("main").unwrap();

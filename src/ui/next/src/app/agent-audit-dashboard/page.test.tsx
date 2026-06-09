@@ -26,6 +26,6 @@ describe('Agent Audit Dashboard', () => {
 
   it('renders Violation Feed', () => {
     render(<AgentAuditDashboard />);
-    expect(screen.getByText('Cross-Agent Feed')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Cross-Agent Feed' })).toBeInTheDocument();
   });
 });

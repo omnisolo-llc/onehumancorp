@@ -176,7 +176,28 @@ async fn handle_trial_extension_claim(
         Err(_) => return Err(StatusCode::BAD_REQUEST),
     };
 
-    match sqlx::query("UPDATE tenants SET plan_tier = 'pro' WHERE id = $1 OR tenant_id = $1")
+    // First check if already claimed
+    let has_claimed: Option<bool> = match sqlx::query_scalar("SELECT has_claimed_trial_extension FROM tenants WHERE id = $1 OR tenant_id = $1")
+        .bind(parsed_uuid)
+        .fetch_optional(&state.pool)
+        .await
+    {
+        Ok(result) => result,
+        Err(e) => {
+            tracing::error!("Failed to query tenant for trial extension check: {}", e);
+            return Err(StatusCode::INTERNAL_SERVER_ERROR);
+        }
+    };
+
+    if let Some(claimed) = has_claimed {
+        if claimed {
+            return Err(StatusCode::BAD_REQUEST);
+        }
+    } else {
+        return Err(StatusCode::NOT_FOUND);
+    }
+
+    match sqlx::query("UPDATE tenants SET plan_tier = 'pro', has_claimed_trial_extension = true WHERE id = $1 OR tenant_id = $1")
         .bind(parsed_uuid)
         .execute(&state.pool)
         .await
@@ -378,7 +399,7 @@ async fn handle_send_receipt(
     let tenant_id = req.tenant_id.unwrap_or_else(|| "my-store".to_string());
 
     let generated = format!(
-        "Hi {},\n\nThank you for your order! Your payment of {} for order {} has been received.\n\nWarmly,\nThe Team\n\n<!-- ⚡ Powered by OHC -->\n<a href=\"/api/v1/growth/referrals/click?target=/onboarding&ref={}\">Powered by OHC - Start your business today</a>",
+        "Hi {},\n\nThank you for your order! Your payment of {} for order {} has been received.\n\nWarmly,\nThe Team\n\n<!-- ⚡ Powered by OHC -->\n<a href=\"https://ohc.store/join?ref={}\">Powered by OHC - Start your business today</a>",
         email, amount, order_id, tenant_id
     );
 
@@ -1488,7 +1509,7 @@ mod tests {
         let state = GrowthState { pool: pool.clone(), hub: hub.clone() };
 
         let tenant_id = "55555555-5555-5555-5555-555555555555";
-        sqlx::query("INSERT INTO tenants (id, business_name, plan_tier) VALUES ($1::uuid, 'Test Starter', 'starter') ON CONFLICT (id) DO UPDATE SET plan_tier = 'starter'")
+        sqlx::query("INSERT INTO tenants (id, business_name, plan_tier) VALUES ($1::uuid, 'Test Starter', 'starter') ON CONFLICT (id) DO UPDATE SET plan_tier = 'starter', has_claimed_trial_extension = false")
             .bind(tenant_id)
             .execute(&pool).await.unwrap();
 
@@ -1506,6 +1527,17 @@ mod tests {
             .fetch_one(&pool).await.unwrap();
 
         assert_eq!(plan_tier, "pro");
+
+        let has_claimed: bool = sqlx::query_scalar("SELECT has_claimed_trial_extension FROM tenants WHERE id = $1::uuid")
+            .bind(tenant_id)
+            .fetch_one(&pool).await.unwrap();
+
+        assert!(has_claimed);
+
+        // Try claiming again, it should fail
+        let res_again = super::handle_trial_extension_claim(Extension(state.clone()), axum::extract::Extension(auth_info.clone())).await;
+        assert!(res_again.is_err());
+        assert_eq!(res_again.unwrap_err(), StatusCode::BAD_REQUEST);
     }
 
     #[tokio::test]

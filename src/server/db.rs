@@ -49,6 +49,17 @@ pub struct DB {
     pub store: DbStore,
 }
 
+
+#[derive(serde::Serialize)]
+pub struct SearchResult {
+    pub id: String,
+    pub entity_type: String,
+    pub title: String,
+    pub subtitle: String,
+    pub route: String,
+}
+
+
 impl DB {
     pub fn is_sqlite(&self) -> bool {
         match &self.store {
@@ -323,6 +334,168 @@ impl DB {
                 store: DbStore::Postgres,
             })
         }
+    }
+
+
+    pub async fn search_workspace(
+        &self,
+        tenant_id: &str,
+        query: &str,
+    ) -> Result<Vec<SearchResult>, String> {
+        let query_lower = format!("%{}%", query.to_lowercase());
+        let mut results = Vec::new();
+
+        match &self.store {
+            DbStore::Sqlite(sqlite_pool) => {
+                // Search Customers
+                let customer_rows = sqlx::query("SELECT id, name, email FROM customers WHERE tenant_id = ? AND (LOWER(name) LIKE ? OR LOWER(email) LIKE ?) LIMIT 10")
+                    .bind(tenant_id)
+                    .bind(&query_lower)
+                    .bind(&query_lower)
+                    .fetch_all(sqlite_pool)
+                    .await
+                    .map_err(|e| format!("DB Error: {}", e))?;
+
+                for row in customer_rows {
+                    use sqlx::Row;
+                    let id: String = row.get("id");
+                    let name: String = row.try_get("name").unwrap_or_default();
+                    let email: String = row.try_get("email").unwrap_or_default();
+                    results.push(SearchResult {
+                        id: id.clone(),
+                        entity_type: "customer".to_string(),
+                        title: name,
+                        subtitle: email,
+                        route: format!("/customers/{}", id),
+                    });
+                }
+
+                // Search Orders
+                let order_rows = sqlx::query("SELECT id, status, total_amount FROM orders WHERE tenant_id = ? AND (LOWER(id) LIKE ? OR LOWER(status) LIKE ?) LIMIT 10")
+                    .bind(tenant_id)
+                    .bind(&query_lower)
+                    .bind(&query_lower)
+                    .fetch_all(sqlite_pool)
+                    .await
+                    .map_err(|e| format!("DB Error: {}", e))?;
+
+                for row in order_rows {
+                    use sqlx::Row;
+                    let id: String = row.get("id");
+                    let status: String = row.try_get("status").unwrap_or_default();
+                    let amount: f64 = row.try_get("total_amount").unwrap_or(0.0);
+                    results.push(SearchResult {
+                        id: id.clone(),
+                        entity_type: "order".to_string(),
+                        title: format!("Order {}", id),
+                        subtitle: format!("{} - ${:.2}", status, amount),
+                        route: format!("/orders/{}", id),
+                    });
+                }
+
+                // Search Messages
+                let message_rows = sqlx::query("SELECT id, source, content FROM inbox_messages WHERE tenant_id = ? AND (LOWER(content) LIKE ? OR LOWER(source) LIKE ?) LIMIT 10")
+                    .bind(tenant_id)
+                    .bind(&query_lower)
+                    .bind(&query_lower)
+                    .fetch_all(sqlite_pool)
+                    .await
+                    .map_err(|e| format!("DB Error: {}", e))?;
+
+                for row in message_rows {
+                    use sqlx::Row;
+                    let id: String = row.get("id");
+                    let source: String = row.try_get("source").unwrap_or_default();
+                    let content: String = row.try_get("content").unwrap_or_default();
+                    let snippet = if content.len() > 50 {
+                        format!("{}...", &content[0..47])
+                    } else {
+                        content
+                    };
+                    results.push(SearchResult {
+                        id: id.clone(),
+                        entity_type: "message".to_string(),
+                        title: format!("Message via {}", source),
+                        subtitle: snippet,
+                        route: format!("/inbox/{}", id),
+                    });
+                }
+            }
+            DbStore::Postgres => {
+                // Search Customers
+                let customer_rows = sqlx::query("SELECT id, name, email FROM customers WHERE tenant_id = $1 AND (name ILIKE $2 OR email ILIKE $2) LIMIT 10")
+                    .bind(tenant_id)
+                    .bind(&query_lower)
+                    .fetch_all(&self.pool)
+                    .await
+                    .map_err(|e| format!("DB Error: {}", e))?;
+
+                for row in customer_rows {
+                    use sqlx::Row;
+                    let id: String = row.get("id");
+                    let name: String = row.try_get("name").unwrap_or_default();
+                    let email: String = row.try_get("email").unwrap_or_default();
+                    results.push(SearchResult {
+                        id: id.clone(),
+                        entity_type: "customer".to_string(),
+                        title: name,
+                        subtitle: email,
+                        route: format!("/customers/{}", id),
+                    });
+                }
+
+                // Search Orders
+                let order_rows = sqlx::query("SELECT id, status, total_amount FROM orders WHERE tenant_id = $1 AND (id ILIKE $2 OR status ILIKE $2) LIMIT 10")
+                    .bind(tenant_id)
+                    .bind(&query_lower)
+                    .fetch_all(&self.pool)
+                    .await
+                    .map_err(|e| format!("DB Error: {}", e))?;
+
+                for row in order_rows {
+                    use sqlx::Row;
+                    let id: String = row.get("id");
+                    let status: String = row.try_get("status").unwrap_or_default();
+                    let amount: f64 = row.try_get("total_amount").unwrap_or(0.0);
+                    results.push(SearchResult {
+                        id: id.clone(),
+                        entity_type: "order".to_string(),
+                        title: format!("Order {}", id),
+                        subtitle: format!("{} - ${:.2}", status, amount),
+                        route: format!("/orders/{}", id),
+                    });
+                }
+
+                // Search Messages
+                let message_rows = sqlx::query("SELECT id, source, content FROM inbox_messages WHERE tenant_id = $1 AND (content ILIKE $2 OR source ILIKE $2) LIMIT 10")
+                    .bind(tenant_id)
+                    .bind(&query_lower)
+                    .fetch_all(&self.pool)
+                    .await
+                    .map_err(|e| format!("DB Error: {}", e))?;
+
+                for row in message_rows {
+                    use sqlx::Row;
+                    let id: String = row.get("id");
+                    let source: String = row.try_get("source").unwrap_or_default();
+                    let content: String = row.try_get("content").unwrap_or_default();
+                    let snippet = if content.len() > 50 {
+                        format!("{}...", &content[0..47])
+                    } else {
+                        content
+                    };
+                    results.push(SearchResult {
+                        id: id.clone(),
+                        entity_type: "message".to_string(),
+                        title: format!("Message via {}", source),
+                        subtitle: snippet,
+                        route: format!("/inbox/{}", id),
+                    });
+                }
+            }
+        }
+
+        Ok(results)
     }
 
     pub async fn execute_with_retry<F, Fut, T, E>(&self, operation: &str, mut f: F) -> Result<T, E>

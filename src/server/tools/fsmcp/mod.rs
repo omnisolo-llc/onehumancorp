@@ -67,7 +67,7 @@ pub struct FsMcpTool {
 
 impl FsMcpTool {
     pub fn new(storage_provider: Option<Arc<dyn Provider>>) -> Self {
-        let is_standalone = env::var("OHC_STANDALONE_MODE").unwrap_or_else(|_| "false".to_string()) == "true";
+        let is_standalone = crate::is_standalone_runtime();
         let local_base_dir = if let Ok(home) = env::var("HOME") {
             PathBuf::from(home).join(".ohc-local-data/fs")
         } else {
