@@ -118,7 +118,7 @@ impl MinimaxClient {
 
     async fn internal_reason(&self, prompt: &str) -> Result<String, String> {
         // 1. Check Cache
-        if let (Some(cached), _) = self.cache.get_with_cost_cents(prompt) {
+        if let (Some(cached), _cost_cents) = self.cache.get_with_cost_cents(prompt) {
             tracing::info!("Prompt cache hit (saved ~{} tokens)", cached.token_count);
             return Ok(cached.text);
         }
@@ -133,7 +133,7 @@ impl MinimaxClient {
                     "initial_products": [{"name": "Custom Vegan Cake", "price": "45.00"}],
                     "suggested_features": ["menu", "booking", "online_store"]
                 }"#.to_string());
-            } else if lower_prompt.contains("alex") {
+            } else if lower_prompt.contains("alex") || lower_prompt.contains("art shop") {
                 return Ok(r#"{
                     "business_name": "Alex Art",
                     "business_type": "Retail",
@@ -243,7 +243,7 @@ impl MinimaxClient {
         let (tx, rx) = tokio::sync::mpsc::channel(100);
 
         // 1. Check Cache
-        if let (Some(cached), _) = self.cache.get_with_cost_cents(prompt) {
+        if let (Some(cached), _cost_cents) = self.cache.get_with_cost_cents(prompt) {
             tracing::info!("Prompt cache hit in stream (saved ~{} tokens)", cached.token_count);
             let cached_text = cached.text.clone();
             tokio::spawn(async move {
@@ -437,7 +437,7 @@ impl LocalLLMClient {
     }
 
     async fn internal_reason(&self, prompt: &str) -> Result<String, String> {
-        if let (Some(cached), _) = self.cache.get_with_cost_cents(prompt) {
+        if let (Some(cached), _cost_cents) = self.cache.get_with_cost_cents(prompt) {
             tracing::info!("Prompt cache hit (saved ~{} tokens)", cached.token_count);
             return Ok(cached.text);
         }
