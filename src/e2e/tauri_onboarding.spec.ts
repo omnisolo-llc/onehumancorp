@@ -192,6 +192,8 @@ test.describe('Tauri Dashboard UI and UX Improvements', () => {
           invoke: async (cmd, args) => {
             if (cmd === 'generate_cloud_invite') {
               return "https://cloud.ohc.network/invite/mock-test";
+            } else if (cmd === 'get_onboarding_state') {
+              return { businessName: 'Test Business' };
             }
             throw new Error(`Unhandled command: ${cmd}`);
           }

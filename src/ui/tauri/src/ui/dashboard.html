@@ -298,9 +298,21 @@
     </div>
 
     <script>
-      const name = localStorage.getItem('businessName');
-      if (name) {
+      const setTitle = (name) => {
+        if (name) {
           document.getElementById('dashboard-title').innerText = `${name} Dashboard`;
+        }
+      };
+
+      if (window.__TAURI__ && window.__TAURI__.core) {
+        window.__TAURI__.core.invoke("get_onboarding_state").then((state) => {
+          if (state && state.businessName) {
+            setTitle(state.businessName);
+          }
+        }).catch(console.error);
+      } else {
+        const name = localStorage.getItem('businessName');
+        setTitle(name);
       }
 
       const generateBtn = document.getElementById('generate-link-btn');
