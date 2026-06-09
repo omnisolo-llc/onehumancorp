@@ -356,18 +356,20 @@ pub async fn department_tier_usage_for_tenant(hub: &Arc<Hub>, tenant_id: &str) -
     let mut futures = Vec::new();
     for department in &departments {
         for key in department_usage_keys(department) {
-            let tracker = hub.tracker();
+            let tracker = hub.tracker().clone();
             let tenant_id = tenant_id.to_string();
-            futures.push(async move {
+            futures.push(tokio::spawn(async move {
                 let used = tracker.get_agent_actions_used(&tenant_id, &key).await.unwrap_or(0);
                 (key, used)
-            });
+            }));
         }
     }
 
     let mut usage_by_key = HashMap::new();
-    for (key, used) in futures::future::join_all(futures).await {
-        usage_by_key.insert(key, used);
+    for res in futures::future::join_all(futures).await {
+        if let Ok((key, used)) = res {
+            usage_by_key.insert(key, used);
+        }
     }
 
     build_department_tier_usage_response(current_plan, tier, period, departments, |agent_id| {
