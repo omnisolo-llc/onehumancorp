@@ -261,9 +261,7 @@ export default function AssistantPage() {
       }
     }
 
-    loadTasks();
-    loadSettings();
-    loadBilling();
+    Promise.all([loadTasks(), loadSettings(), loadBilling()]);
     return () => {
       mounted = false;
     };
