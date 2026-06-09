@@ -666,7 +666,7 @@ pub async fn create_payment_intent_handler(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tonic::Request;
+
         // tests go here
     use sqlx::postgres::PgPoolOptions;
 
