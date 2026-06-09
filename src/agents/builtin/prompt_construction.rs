@@ -101,18 +101,40 @@ impl HierarchicalPromptBuilder {
 
         let mut source_name = "User Instructions";
         let mut user_instr = if cfg.user_instructions.is_empty() {
-            let mut combined_agents_md = String::new();
+            let mut contents = Vec::new();
             let mut current_dir = std::env::current_dir().ok();
             while let Some(dir) = current_dir {
                 let agents_file = dir.join("AGENTS.md");
                 if let Ok(content) = std::fs::read_to_string(&agents_file) {
-                    if !combined_agents_md.is_empty() {
-                        combined_agents_md.insert_str(0, "\n\n");
-                    }
-                    combined_agents_md.insert_str(0, &content);
+                    contents.push(content);
                 }
                 current_dir = dir.parent().map(|p| p.to_path_buf());
             }
+
+            let mut combined_agents_md = String::new();
+            let limit = 32768;
+
+            // Prioritize more deeply nested files.
+            // `contents` has deepest first because we started at current_dir and went up.
+            for content in contents {
+                if combined_agents_md.is_empty() {
+                    combined_agents_md.push_str(&content);
+                } else {
+                    let addition = format!("\n\n{}", content);
+                    combined_agents_md.push_str(&addition);
+                }
+
+                if combined_agents_md.len() > limit {
+                    let mut end_idx = limit;
+                    while end_idx > 0 && !combined_agents_md.is_char_boundary(end_idx) {
+                        end_idx -= 1;
+                    }
+                    combined_agents_md.truncate(end_idx);
+                    combined_agents_md.push_str("\n... [AGENTS.md TRUNCATED TO 32KiB]");
+                    break;
+                }
+            }
+
             if !combined_agents_md.is_empty() {
                 source_name = "AGENTS.md";
             }
@@ -122,8 +144,8 @@ impl HierarchicalPromptBuilder {
             cfg.user_instructions.clone()
         };
 
-        let mut end_idx = 32768;
-        if user_instr.len() > 32768 {
+        if source_name == "User Instructions" && user_instr.len() > 32768 {
+            let mut end_idx = 32768;
             while end_idx > 0 && !user_instr.is_char_boundary(end_idx) {
                 end_idx -= 1;
             }
@@ -188,6 +210,85 @@ impl HierarchicalPromptBuilder {
 mod tests {
     use super::*;
     use crate::types::{Message, Role};
+
+    use std::fs;
+    use tempfile::tempdir;
+
+    #[test]
+    fn test_cascading_agents_md_truncation() {
+        let dir = tempdir().unwrap();
+
+        let root_dir = dir.path().join("root");
+        let child_dir = root_dir.join("child");
+        let grandchild_dir = child_dir.join("grandchild");
+
+        fs::create_dir_all(&grandchild_dir).unwrap();
+
+        // Root is very long, but lowest priority (read last)
+        let root_content = "A".repeat(20000);
+        fs::write(root_dir.join("AGENTS.md"), &root_content).unwrap();
+
+        // Child is medium
+        let child_content = "B".repeat(10000);
+        fs::write(child_dir.join("AGENTS.md"), &child_content).unwrap();
+
+        // Grandchild is highest priority (read first)
+        let grandchild_content = "C".repeat(10000);
+        fs::write(grandchild_dir.join("AGENTS.md"), &grandchild_content).unwrap();
+
+        // Total is 40,000 bytes > 32,768 bytes.
+        // It reads grandchild first, then child, then root.
+        // So combined is: grandchild + child + root.
+        // Thus, "C"s should all be there, "B"s should all be there, and "A"s will be truncated.
+
+        let original_dir = std::env::current_dir().unwrap();
+        std::env::set_current_dir(&grandchild_dir).unwrap();
+
+        let cfg = AgentRunConfig::default();
+        let builder = HierarchicalPromptBuilder::new(&cfg, &[]);
+        let built = builder.build();
+
+        std::env::set_current_dir(original_dir).unwrap();
+
+        assert!(built.contains(&grandchild_content), "Grandchild content (highest priority) should be fully present");
+        assert!(built.contains(&child_content), "Child content should be fully present");
+
+        // Root content should be partially present and truncated.
+        assert!(built.contains("AAAA"), "Should contain some of root");
+        assert!(built.contains("[AGENTS.md TRUNCATED TO 32KiB]"), "Should contain truncation warning");
+
+        // Total size of user instructions part should be around 32,768 + length of the truncation warning message.
+        // Let's just check the length of the string `built`. It includes the headers "[User Instructions]\n".
+        let user_instructions_section_len = built.len() - "[User Instructions]\n".len();
+        assert!(user_instructions_section_len <= 33000, "Output should be bounded to around 32KiB + padding");
+    }
+
+    #[test]
+    fn test_cascading_agents_md_truncation_char_boundary() {
+        let dir = tempdir().unwrap();
+        let root_dir = dir.path().join("root");
+        fs::create_dir_all(&root_dir).unwrap();
+
+        // Exactly 32,766 bytes of "A", plus a 4-byte emoji "😊"
+        // Total size = 32770 bytes. The 32768 limit falls right in the middle of the emoji.
+        let mut content = "A".repeat(32766);
+        content.push_str("😊");
+        fs::write(root_dir.join("AGENTS.md"), &content).unwrap();
+
+        let original_dir = std::env::current_dir().unwrap();
+        std::env::set_current_dir(&root_dir).unwrap();
+
+        let cfg = AgentRunConfig::default();
+        let builder = HierarchicalPromptBuilder::new(&cfg, &[]);
+        let built = builder.build();
+
+        std::env::set_current_dir(original_dir).unwrap();
+
+        assert!(built.contains("[AGENTS.md TRUNCATED TO 32KiB]"));
+        // The emoji should be completely stripped (meaning we go back to 32766)
+        assert!(!built.contains("😊"), "Emoji should be stripped to respect char boundary");
+        assert!(built.contains(&"A".repeat(32766)), "Preceding ASCII should remain intact");
+    }
 
     #[test]
     fn test_apply_lost_in_the_middle_prevention_long_conversation() {
