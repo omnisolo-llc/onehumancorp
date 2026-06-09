@@ -43,6 +43,13 @@ test.describe('Onboarding Wizard E2E Flow', () => {
     await expect(sellInput).toHaveClass(/min-h-\[54px\]/);
     await expect(sellInput).toHaveClass(/glassmorphism/);
     await sellInput.fill("We sell the best widgets in town.");
+
+    // Test Save Draft
+    const saveDraftButton = page.locator('button', { hasText: 'Save Draft' });
+    await expect(saveDraftButton).toBeVisible();
+    await saveDraftButton.click();
+    await expect(page.getByText('Draft Saved!')).toBeVisible({ timeout: 5000 });
+
     await page.getByRole('button', { name: 'Next' }).click();
 
     // Step 3: Location
