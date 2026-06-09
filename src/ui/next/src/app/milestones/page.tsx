@@ -1,22 +1,28 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 interface Milestone {
   id: string;
   title: string;
   description: string;
   reached: boolean;
+  reward_claimed: boolean;
+  reward_type: string;
 }
 
 export default function MilestonesPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [selectedMilestone, setSelectedMilestone] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isClaiming, setIsClaiming] = useState(false);
   const [tenantId, setTenantId] = useState('DEFAULT');
+
+  const claimId = searchParams.get('claim');
 
   useEffect(() => {
     const tid = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'DEFAULT' : 'DEFAULT';
@@ -28,10 +34,14 @@ export default function MilestonesPage() {
         const data = await response.json();
         if (data && data.milestones) {
           setMilestones(data.milestones);
-          // Auto-select first unlocked milestone
-          const firstUnlocked = data.milestones.find((m: Milestone) => m.reached);
-          if (firstUnlocked) {
-            setSelectedMilestone(firstUnlocked.id);
+
+          if (claimId) {
+            setSelectedMilestone(claimId);
+          } else {
+            // Auto-select first unlocked but unclaimed milestone
+            const firstUnclaimed = data.milestones.find((m: Milestone) => m.reached && !m.reward_claimed);
+            const firstUnlocked = data.milestones.find((m: Milestone) => m.reached);
+            setSelectedMilestone(firstUnclaimed?.id || firstUnlocked?.id || null);
           }
         }
       } catch (e) {
@@ -86,11 +96,11 @@ export default function MilestonesPage() {
                         <div
                             key={m.id}
                             onClick={() => m.reached && setSelectedMilestone(m.id)}
-                            className={`p-4 rounded-2xl transition-all ${
+                            className={`p-4 rounded-2xl transition-all border border-white/40 ${
                                 m.reached
-                                ? 'glassmorphism hover:border-indigo-300 hover:shadow-md cursor-pointer'
-                                : 'glassmorphism opacity-60 cursor-not-allowed'
-                            } ${selectedMilestone === m.id ? 'ring-2 ring-indigo-500 shadow-md' : ''}`}
+                                ? 'ohc-glass hover:border-indigo-300 hover:shadow-xl cursor-pointer'
+                                : 'ohc-glass opacity-50 cursor-not-allowed'
+                            } ${selectedMilestone === m.id ? 'ring-2 ring-indigo-500 shadow-lg scale-[1.02]' : ''}`}
                         >
                             <div className="flex items-center gap-4">
                                 <div className={`w-12 h-12 rounded-full flex items-center justify-center text-2xl ${m.reached ? 'bg-indigo-50' : 'bg-gray-200 grayscale'}`}>
@@ -174,6 +184,47 @@ export default function MilestonesPage() {
                                     <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.008 5.94H5.078z"/></svg>
                                     Share on X
                                 </a>
+                                {activeM.reached && !activeM.reward_claimed ? (
+                                    <button
+                                        onClick={async () => {
+                                            setIsClaiming(true);
+                                            // 1. Open share intent
+                                            window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`, '_blank');
+
+                                            // 2. Claim reward
+                                            try {
+                                                const res = await fetch('/api/v1/growth/milestones/claim-reward', {
+                                                    method: 'POST',
+                                                    headers: { 'Content-Type': 'application/json' },
+                                                    body: JSON.stringify({ milestone_id: activeM.id })
+                                                });
+                                                if (res.ok) {
+                                                    const claimData = await res.json();
+                                                    alert(claimData.message);
+                                                    // Refresh milestones
+                                                    const refreshRes = await fetch(`/api/v1/growth/milestones/check?tenant=${tenantId}`);
+                                                    const newData = await refreshRes.json();
+                                                    setMilestones(newData.milestones);
+                                                }
+                                            } catch (err) {
+                                                console.error("Failed to claim reward", err);
+                                            } finally {
+                                                setIsClaiming(false);
+                                            }
+                                        }}
+                                        disabled={isClaiming}
+                                        className="w-full py-4 rounded-xl text-lg font-extrabold transition-all shadow-lg bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:brightness-110 flex items-center justify-center gap-3 animate-pulse-slow disabled:opacity-50"
+                                    >
+                                        {isClaiming ? 'Verifying...' : `Share & Unlock ${activeM.reward_type}`}
+                                        <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.008 5.94H5.078z"/></svg>
+                                    </button>
+                                ) : activeM.reward_claimed ? (
+                                    <div className="w-full py-4 rounded-xl text-lg font-extrabold bg-green-50 text-green-700 border border-green-200 flex items-center justify-center gap-2">
+                                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
+                                        {activeM.reward_type} Active
+                                    </div>
+                                ) : null}
+
                                 <button
                                     onClick={() => router.push('/referrals?ref=milestone')}
                                     className="w-full py-3 rounded-xl text-sm font-bold transition-all shadow-sm bg-indigo-50 text-indigo-700 hover:bg-indigo-100 flex items-center justify-center gap-2 mt-2"

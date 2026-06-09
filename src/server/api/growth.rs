@@ -4,7 +4,7 @@
 use std::sync::OnceLock;
 use crate::utils::cache::HybridCache;
 
-pub static MILESTONES_CACHE: OnceLock<HybridCache<Vec<String>>> = OnceLock::new();
+pub static MILESTONES_CACHE: OnceLock<HybridCache<serde_json::Value>> = OnceLock::new();
 pub static TEAM_INVITES_CACHE: OnceLock<HybridCache<TeamInvitesResponse>> = OnceLock::new();
 pub static METRICS_CACHE: OnceLock<HybridCache<TeamInvitesMetricsResponse>> = OnceLock::new();
 pub static ONBOARDING_METRICS_CACHE: OnceLock<HybridCache<OnboardingMetricsResponse>> = OnceLock::new();
@@ -106,6 +106,8 @@ pub struct Milestone {
     pub title: String,
     pub description: String,
     pub reached: bool,
+    pub reward_claimed: bool,
+    pub reward_type: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -157,6 +159,7 @@ where
         .route("/onboarding-metrics", get(handle_onboarding_metrics))
         .route("/discount_share/generate", post(handle_generate_discount_share))
         .route("/milestone/card", get(handle_get_milestone_card))
+        .route("/milestones/claim-reward", post(handle_claim_reward))
         .route("/trial-extension/claim", post(handle_trial_extension_claim))
         .layer(Extension(GrowthState { pool, hub }))
 }
@@ -165,6 +168,101 @@ where
 pub struct TrialExtensionClaimResponse {
     pub success: bool,
     pub message: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ClaimRewardRequest {
+    pub milestone_id: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ClaimRewardResponse {
+    pub success: bool,
+    pub message: String,
+}
+
+async fn handle_claim_reward(
+    Extension(state): Extension<GrowthState>,
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
+    Json(req): Json<ClaimRewardRequest>,
+) -> Result<Json<ClaimRewardResponse>, StatusCode> {
+    let tenant_id = auth_info.org_id.clone();
+
+    let mut tx = state.pool.begin().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    // 1. Check if milestone is reached
+    let row = sqlx::query("SELECT milestone_type, reward_claimed_at FROM business_milestones WHERE tenant_id = $1 AND milestone_type = $2")
+        .bind(&tenant_id)
+        .bind(&req.milestone_id)
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(|e| {
+            tracing::error!("Failed to query milestone: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+
+    if let Some(r) = row {
+        use sqlx::Row;
+        let reward_claimed_at: Option<chrono::DateTime<chrono::Utc>> = r.try_get("reward_claimed_at").unwrap_or(None);
+
+        if reward_claimed_at.is_some() {
+            return Ok(Json(ClaimRewardResponse {
+                success: false,
+                message: "Reward already claimed".to_string(),
+            }));
+        }
+
+        // 2. Update tenant plan to Pro
+        let parsed_uuid = match uuid::Uuid::parse_str(&tenant_id) {
+            Ok(u) => u,
+            Err(_) => {
+                // Handle non-UUID tenant IDs (e.g. "DEFAULT") if they exist in tenants table
+                let res = sqlx::query("UPDATE tenants SET plan_tier = 'pro' WHERE id = $1")
+                    .bind(&tenant_id)
+                    .execute(&mut *tx)
+                    .await;
+                if let Err(e) = res {
+                     tracing::error!("Failed to update plan_tier for non-uuid tenant: {}", e);
+                }
+                uuid::Uuid::nil() // placeholder
+            },
+        };
+
+        if parsed_uuid != uuid::Uuid::nil() {
+            sqlx::query("UPDATE tenants SET plan_tier = 'pro' WHERE id = $1 OR tenant_id = $1")
+                .bind(parsed_uuid)
+                .execute(&mut *tx)
+                .await
+                .map_err(|e| {
+                    tracing::error!("Failed to update plan_tier: {}", e);
+                    StatusCode::INTERNAL_SERVER_ERROR
+                })?;
+        }
+
+        // 3. Mark reward as claimed and record share
+        sqlx::query("UPDATE business_milestones SET reward_claimed_at = CURRENT_TIMESTAMP, shared_at = CURRENT_TIMESTAMP WHERE tenant_id = $1 AND milestone_type = $2")
+            .bind(&tenant_id)
+            .bind(&req.milestone_id)
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| {
+                tracing::error!("Failed to mark reward as claimed: {}", e);
+                StatusCode::INTERNAL_SERVER_ERROR
+            })?;
+
+        tx.commit().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+        // Invalidate milestones cache
+        let cache = MILESTONES_CACHE.get_or_init(|| HybridCache::new(None));
+        cache.invalidate(&format!("growth:milestones:{}", tenant_id)).await;
+
+        Ok(Json(ClaimRewardResponse {
+            success: true,
+            message: "Success! Your Pro features are now active for the next 7 days.".to_string(),
+        }))
+    } else {
+        Err(StatusCode::NOT_FOUND)
+    }
 }
 
 async fn handle_trial_extension_claim(
@@ -820,18 +918,23 @@ async fn handle_check_milestones(
 
     let cache_key = format!("growth:milestones:{}", tenant_id);
     let cache = MILESTONES_CACHE.get_or_init(|| HybridCache::new(None));
-    let reached_types = if let Some(cached_types) = cache.get(&cache_key).await {
-        cached_types
+
+    let reached_map: std::collections::HashMap<String, bool> = if let Some(cached_val) = cache.get(&cache_key).await {
+        serde_json::from_value(cached_val).unwrap_or_default()
     } else {
-        let rows = sqlx::query("SELECT milestone_type FROM business_milestones WHERE tenant_id = $1")
+        let rows = sqlx::query("SELECT milestone_type, reward_claimed_at FROM business_milestones WHERE tenant_id = $1")
             .bind(tenant_id)
             .fetch_all(&state.pool)
             .await
             .unwrap_or_default();
         use sqlx::Row;
-        let types: Vec<String> = rows.into_iter().map(|r| r.get("milestone_type")).collect();
-        cache.set(&cache_key, types.clone(), std::time::Duration::from_secs(60)).await;
-        types
+        let map: std::collections::HashMap<String, bool> = rows.into_iter().map(|r| {
+            let m_type: String = r.get("milestone_type");
+            let claimed = r.try_get::<Option<chrono::DateTime<chrono::Utc>>, _>("reward_claimed_at").unwrap_or(None).is_some();
+            (m_type, claimed)
+        }).collect();
+        let _ = cache.set(&cache_key, serde_json::to_value(&map).unwrap_or(serde_json::Value::Null), std::time::Duration::from_secs(60)).await;
+        map
     };
 
     let milestones = vec![
@@ -839,37 +942,49 @@ async fn handle_check_milestones(
             id: "first_sale".to_string(),
             title: "🎉 Milestone: First Sale!".to_string(),
             description: "Congratulations on your first sale!".to_string(),
-            reached: reached_types.contains(&"first_sale".to_string()),
+            reached: reached_map.contains_key("first_sale"),
+            reward_claimed: *reached_map.get("first_sale").unwrap_or(&false),
+            reward_type: "7-day Pro Extension".to_string(),
         },
         Milestone {
             id: "10th_order".to_string(),
             title: "🎉 Milestone: 10th Order!".to_string(),
             description: "You've successfully processed your 10th order on OHC.".to_string(),
-            reached: reached_types.contains(&"10th_order".to_string()),
+            reached: reached_map.contains_key("10th_order"),
+            reward_claimed: *reached_map.get("10th_order").unwrap_or(&false),
+            reward_type: "7-day Pro Extension".to_string(),
         },
         Milestone {
             id: "100_visitors".to_string(),
             title: "🚀 100 Visitors Today!".to_string(),
             description: "Your storefront reached 100 visitors today!".to_string(),
-            reached: reached_types.contains(&"100_visitors".to_string()),
+            reached: reached_map.contains_key("100_visitors"),
+            reward_claimed: *reached_map.get("100_visitors").unwrap_or(&false),
+            reward_type: "7-day Pro Extension".to_string(),
         },
         Milestone {
             id: "5_referrals".to_string(),
             title: "🤝 High Connector!".to_string(),
             description: "You've successfully referred 5 other businesses to OHC.".to_string(),
-            reached: reached_types.contains(&"5_referrals".to_string()),
+            reached: reached_map.contains_key("5_referrals"),
+            reward_claimed: *reached_map.get("5_referrals").unwrap_or(&false),
+            reward_type: "7-day Pro Extension".to_string(),
         },
         Milestone {
             id: "revenue_1k".to_string(),
             title: "💰 Four-Figure Club".to_string(),
             description: "Your business has surpassed $1,000 in total revenue!".to_string(),
-            reached: reached_types.contains(&"revenue_1k".to_string()),
+            reached: reached_map.contains_key("revenue_1k"),
+            reward_claimed: *reached_map.get("revenue_1k").unwrap_or(&false),
+            reward_type: "7-day Pro Extension".to_string(),
         },
         Milestone {
             id: "100_orders".to_string(),
             title: "📦 Century of Orders".to_string(),
             description: "You've successfully fulfilled 100 orders on OHC!".to_string(),
-            reached: reached_types.contains(&"100_orders".to_string()),
+            reached: reached_map.contains_key("100_orders"),
+            reward_claimed: *reached_map.get("100_orders").unwrap_or(&false),
+            reward_type: "7-day Pro Extension".to_string(),
         },
     ];
     Json(MilestonesResponse { milestones })
@@ -1633,6 +1748,50 @@ mod tests {
         let body_bytes2 = axum::body::to_bytes(res2.into_body(), usize::MAX).await.unwrap();
         let html2 = String::from_utf8(body_bytes2.to_vec()).unwrap();
         assert!(html2.contains("Powered by OHC"));
+    }
+
+    #[tokio::test]
+    async fn test_handle_claim_reward() {
+        let pool = setup_db().await;
+        if sqlx::query("SELECT 1").execute(&pool).await.is_err() {
+            tracing::debug!("Skipping DB test, DB not available");
+            return;
+        }
+
+        let (event_tx, _) = tokio::sync::mpsc::channel(100);
+        let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
+        let state = GrowthState { pool: pool.clone(), hub: hub.clone() };
+
+        let tenant_id = uuid::Uuid::new_v4().to_string();
+        sqlx::query("INSERT INTO tenants (id, business_name, plan_tier) VALUES ($1, 'Test Reward', 'free') ON CONFLICT DO NOTHING")
+            .bind(&tenant_id)
+            .execute(&pool).await.unwrap();
+
+        sqlx::query("INSERT INTO business_milestones (id, tenant_id, milestone_type, reached_at) VALUES ($1, $2, 'first_sale', CURRENT_TIMESTAMP)")
+            .bind(uuid::Uuid::new_v4().to_string())
+            .bind(&tenant_id)
+            .execute(&pool).await.unwrap();
+
+        let auth_info = ::server_auth::orchestration::AuthInfo {
+            spiffe_id: format!("spiffe://ohc.app/{}", tenant_id),
+            org_id: tenant_id.clone(),
+            agent_id: "test-agent".to_string(),
+        };
+
+        let req = ClaimRewardRequest { milestone_id: "first_sale".to_string() };
+        let res = super::handle_claim_reward(Extension(state.clone()), axum::extract::Extension(auth_info), Json(req)).await.unwrap();
+        assert!(res.0.success);
+        assert!(res.0.message.contains("Pro features are now active"));
+
+        let plan_tier: String = sqlx::query_scalar("SELECT plan_tier FROM tenants WHERE id = $1")
+            .bind(&tenant_id)
+            .fetch_one(&pool).await.unwrap();
+        assert_eq!(plan_tier, "pro");
+
+        let claimed_at: Option<chrono::DateTime<chrono::Utc>> = sqlx::query_scalar("SELECT reward_claimed_at FROM business_milestones WHERE tenant_id = $1 AND milestone_type = 'first_sale'")
+            .bind(&tenant_id)
+            .fetch_one(&pool).await.unwrap();
+        assert!(claimed_at.is_some());
     }
 }
 
