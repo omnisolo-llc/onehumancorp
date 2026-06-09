@@ -114,6 +114,11 @@ impl CostAuditor {
         let current_tenant_cost = tenant_costs.entry(event.tenant_id.clone()).or_insert(0.0);
         *current_tenant_cost += cost;
 
+        // The LLM token cost is specifically tracked here for the dashboard
+        // So tenant_costs is exactly the LLM cost.
+        // Is there any other cost recorded in tenant_costs? No.
+        // So auditor.get_tenant_cost_cents() is correct for LLM cost.
+
         // Detect anomalies (simple threshold check)
         if cost > 10.0 {
             tracing::warn!("Anomaly detected: High token usage cost ({})", cost);
