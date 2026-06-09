@@ -148,6 +148,14 @@
         }
       }
 
+      if (nameInput) {
+        nameInput.addEventListener("keydown", (e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            nextBtn.click();
+          }
+        });
+      }
       if (nextBtn) {
         nextBtn.addEventListener('click', () => {
            const name = nameInput.value.trim();
@@ -161,7 +169,7 @@
                    state.businessName = name;
                    return window.__TAURI__.core.invoke("save_onboarding_state", { state });
                  }).then(() => {
-                   window.location.href = "assistant.html";
+                   window.location.href = "assistant-setup.html";
                  }).catch((err) => {
                    console.error(err);
                    nextBtn.disabled = false;
@@ -169,7 +177,7 @@
                  });
                } else {
                  localStorage.setItem('businessName', name);
-                 window.location.href = "assistant.html";
+                 window.location.href = "assistant-setup.html";
                }
            } else {
                nameError.style.display = 'block';
