@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
+import { WithTooltip } from '../../components/TooltipRegistry';
 import Link from 'next/link';
 
 export default function HelpCenterPage() {
@@ -56,6 +57,7 @@ export default function HelpCenterPage() {
             <p className="text-center text-gray-500 mt-2 text-sm">
               Try adjusting your search terms or ask our AI assistant for help.
             </p>
+            <WithTooltip id="ask-ai-tooltip" defaultText="Open AI Help Chat to get answers instantly.">
             <button
               className="mt-6 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-full shadow-md transition-all min-h-[44px]"
               onClick={() => {
@@ -65,6 +67,7 @@ export default function HelpCenterPage() {
             >
               Ask AI Support Agent
             </button>
+            </WithTooltip>
           </div>
         ) : (
           <div className="space-y-12">
@@ -128,7 +131,7 @@ export default function HelpCenterPage() {
             </div>
             <div className="aspect-video w-full bg-gray-900 flex items-center justify-center relative">
               <video
-                src={selectedVideo.video_url || ""}
+                src={selectedVideo.video_url || undefined}
                 controls
                 autoPlay
                 className="w-full h-full object-contain"

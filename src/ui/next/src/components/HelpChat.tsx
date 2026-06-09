@@ -78,6 +78,12 @@ export function HelpChat() {
     scrollToBottom();
   }, [messages, isOpen, isLoading]);
 
+  useEffect(() => {
+    const handleOpenHelpChat = () => setIsOpen(true);
+    window.addEventListener('open-help-chat', handleOpenHelpChat);
+    return () => window.removeEventListener('open-help-chat', handleOpenHelpChat);
+  }, []);
+
   const handleSend = async (e?: React.FormEvent) => {
     e?.preventDefault();
     const messageText = inputValue.trim();

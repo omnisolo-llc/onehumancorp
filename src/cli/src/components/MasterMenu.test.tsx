@@ -69,7 +69,7 @@ describe('MasterMenu', () => {
   });
 
   test('handles keyboard interaction (return)', () => {
-    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const logSpy = vi.spyOn(console, 'info').mockImplementation(() => {});
     const { stdin } = render(<MasterMenu />);
     stdin.write('\r');
     expect(logSpy).toHaveBeenCalledWith('Executing Run Developer Setup...');
