@@ -848,7 +848,7 @@ document.addEventListener('DOMContentLoaded', () => {
           videoModalTitle.innerText = title;
           videoModalDuration.innerText = duration;
           videoModal.style.display = 'flex';
-          videoPlayer.play().catch(e => console.log("Auto-play prevented", e));
+          videoPlayer.play().catch(e => console.warn("Auto-play prevented", e));
       };
 
       closeVideoBtn.addEventListener('click', () => {

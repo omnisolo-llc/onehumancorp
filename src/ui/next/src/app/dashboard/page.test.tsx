@@ -39,6 +39,14 @@ vi.mock('next/navigation', () => ({
 }));
 
 test('renders dashboard with actionable feed', async () => {
+  global.fetch = vi.fn(() => Promise.resolve({
+    ok: true,
+    json: () => Promise.resolve({})
+  })) as any;
+  global.fetch = vi.fn(() => Promise.resolve({
+    ok: true,
+    json: () => Promise.resolve({})
+  })) as any;
   const { act } = await import('@testing-library/react');
   await act(async () => {
     render(<TooltipProvider><Dashboard /></TooltipProvider>);

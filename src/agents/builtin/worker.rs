@@ -1,4 +1,4 @@
-#![allow(dead_code)]
+
 
 use std::sync::Arc;
 use tracing::{info, debug, error};

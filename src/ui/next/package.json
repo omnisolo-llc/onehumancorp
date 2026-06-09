@@ -8,7 +8,6 @@
     "test": "vitest run",
     "test:ui": "vitest --ui"
   },
-  "TODO_turbopack": "Remove --turbo=false from dev script once Next.js turbopack issues are resolved",
   "dependencies": {
     "@stripe/terminal-js": "^0.26.0",
     "@testing-library/dom": "^10.4.1",
