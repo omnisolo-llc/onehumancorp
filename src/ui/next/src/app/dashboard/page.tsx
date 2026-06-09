@@ -34,6 +34,15 @@ type Order = {
   created_at?: string;
 };
 
+type TriageItem = {
+  id: string;
+  source?: string;
+  content?: string;
+  priority?: string;
+  draft_reply?: string;
+  status?: string;
+};
+
 type InboxMessage = {
   id: string;
   source?: string;
@@ -83,6 +92,7 @@ export default function Dashboard() {
   const [metrics, setMetrics] = useState<DashboardMetrics>(emptyMetrics);
   const [orders, setOrders] = useState<Order[]>([]);
   const [messages, setMessages] = useState<InboxMessage[]>([]);
+  const [triageItems, setTriageItems] = useState<TriageItem[]>([]);
   const [supply, setSupply] = useState<SupplyPayload>({ vendors: [], raw_materials: [], bom_items: [] });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -162,22 +172,24 @@ export default function Dashboard() {
 
       try {
         const userId = localStorage.getItem("user_id") || "default";
-        const [metricsRes, ordersRes, inboxRes, supplyRes, onboardingRes] = await Promise.all([
+        const [metricsRes, ordersRes, inboxRes, triageRes, supplyRes, onboardingRes] = await Promise.all([
           fetch(`/api/ui/dashboard/metrics?tenant_id=${tenant}`),
           fetch(`/api/ui/orders?tenant_id=${tenant}`),
           fetch(`/api/ui/inbox/messages?tenant_id=${tenant}`),
+          fetch(`/api/ui/triage?tenant_id=${tenant}`),
           fetch(`/api/ui/supply?tenant_id=${tenant}`),
           fetch(`/api/onboarding/state`, { headers: { 'X-Tenant-ID': tenant, 'X-User-ID': userId } }),
         ]);
 
-        if (!metricsRes.ok || !ordersRes.ok || !inboxRes.ok || !supplyRes.ok) {
+        if (!metricsRes.ok || !ordersRes.ok || !inboxRes.ok || !triageRes.ok || !supplyRes.ok) {
           throw new Error("One or more database-backed UI endpoints failed");
         }
 
-        const [metricsData, ordersData, inboxData, supplyData, onboardingData] = await Promise.all([
+        const [metricsData, ordersData, inboxData, triageData, supplyData, onboardingData] = await Promise.all([
           metricsRes.json(),
           ordersRes.json(),
           inboxRes.json(),
+          triageRes.json(),
           supplyRes.json(),
           onboardingRes.ok ? onboardingRes.json() : Promise.resolve(null),
         ]);
@@ -191,6 +203,7 @@ export default function Dashboard() {
         setMetrics({ ...emptyMetrics, ...metricsData });
         setOrders(Array.isArray(ordersData) ? ordersData : []);
         setMessages(Array.isArray(inboxData) ? inboxData : []);
+        setTriageItems(Array.isArray(triageData) ? triageData : []);
         setSupply({
           vendors: Array.isArray(supplyData?.vendors) ? supplyData.vendors : [],
           raw_materials: Array.isArray(supplyData?.raw_materials) ? supplyData.raw_materials : [],
@@ -587,6 +600,38 @@ export default function Dashboard() {
                 </table>
               </div>
             )}
+          </div>
+
+
+          <div className="app-panel mt-4">
+            <div className="app-panel-header">
+              <WithTooltip id="triage-activity-tooltip" defaultText="Keep track of recent customer messages."><div className="app-panel-title">Needs Your Attention</div></WithTooltip>
+              <Link href="/triage" className="app-button">Open Triage</Link>
+            </div>
+            <div className="app-list">
+              {triageItems.length === 0 ? (
+                <div className="app-empty">{loading ? "Loading triage items from the database..." : "No triage items found for this tenant."}</div>
+              ) : triageItems.slice(0, 3).map((item) => (
+                <div key={item.id} className="app-list-item" style={{display: 'flex', flexDirection: 'column'}}>
+                  <div style={{display: 'flex', justifyContent: 'space-between', width: '100%'}}>
+                    <div className="app-list-title">{item.source || "Unknown source"}</div>
+                    <span className={`app-badge ${item.priority === 'Urgent' ? 'bad' : item.priority === 'Action Needed' ? 'warn' : 'neutral'}`}>{item.priority || "FYI"}</span>
+                  </div>
+                  <div className="app-list-subtitle mt-1">{item.content || "Empty message"}</div>
+                  {item.status !== "resolved" && (
+                     <button
+                        className="app-btn-primary mt-2"
+                        onClick={async () => {
+                           try {
+                             await fetch(`/api/ui/triage/${item.id}/approve`, { method: "POST" });
+                             setTriageItems(prev => prev.filter(i => i.id !== item.id));
+                           } catch (e) {}
+                        }}
+                     >✨ Approve</button>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
 
           <div className="app-panel">

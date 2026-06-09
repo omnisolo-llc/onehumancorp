@@ -5,6 +5,8 @@ ALTER TABLE IF EXISTS meeting_transcripts DISABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS meeting_rooms DISABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS agent_inbox DISABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS inbox_messages DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS triage_items DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS proposed_actions DISABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS shared_tasks DISABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS orders DISABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS customers DISABLE ROW LEVEL SECURITY;
@@ -182,6 +184,13 @@ VALUES
   ('e2e-inbox-msg-1', 'e2e-tenant', 'Instagram DM', 'Do you have vegan options for birthday cakes?', 'Hi there! Yes, we do offer vegan birthday cakes. They start at $45. Would you like to see our menu?', 'pending'),
   ('e2e-inbox-msg-2', 'e2e-tenant', 'WhatsApp', 'Can I schedule a consultation for my wedding?', 'Hi! Absolutely. I have availability this Thursday at 2pm or Friday at 10am. Which works best for you?', 'pending')
 ON CONFLICT DO NOTHING;
+INSERT INTO triage_items (id, tenant_id, source, content, priority, draft_reply, status)
+VALUES
+  ('e2e-triage-1', 'e2e-tenant', 'Instagram DM', 'Can I get a custom cake quote?', 'Action Needed', 'Drafted a custom quote for $120. Approve to send.', 'pending'),
+  ('e2e-triage-2', 'e2e-tenant', 'Website Form', 'Urgent: I need a cake delivered tomorrow!', 'Urgent', 'I can accommodate this if approved now. Drafted rush delivery quote.', 'pending'),
+  ('e2e-triage-3', 'e2e-tenant', 'WhatsApp', 'Do you do cupcakes?', 'FYI', 'Yes we do! Would you like a menu?', 'pending')
+ON CONFLICT DO NOTHING;
+
 
 ALTER TABLE IF EXISTS tenants ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS users ENABLE ROW LEVEL SECURITY;
@@ -193,6 +202,8 @@ ALTER TABLE IF EXISTS orders ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS shared_tasks ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS agent_inbox ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS inbox_messages ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS triage_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS proposed_actions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS meeting_rooms ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS meeting_transcripts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS customer360 ENABLE ROW LEVEL SECURITY;
@@ -210,6 +221,8 @@ ALTER TABLE IF EXISTS orders FORCE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS shared_tasks FORCE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS agent_inbox FORCE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS inbox_messages FORCE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS triage_items FORCE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS proposed_actions FORCE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS meeting_rooms FORCE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS meeting_transcripts FORCE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS customer360 FORCE ROW LEVEL SECURITY;

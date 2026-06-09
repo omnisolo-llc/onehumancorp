@@ -2715,6 +2715,136 @@ fn ui_tenant_id(query: &UiTenantQuery) -> String {
         .to_string()
 }
 
+static UI_TRIAGE_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<Vec<serde_json::Value>>> = std::sync::OnceLock::new();
+
+async fn list_ui_triage_handler(
+    axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
+    axum::extract::Query(query): axum::extract::Query<UiTenantQuery>,
+) -> axum::response::Response {
+    use axum::response::IntoResponse;
+    use sqlx::Row;
+    let tenant_id = ui_tenant_id(&query);
+
+    let cache_key = format!("ui_triage:{}", tenant_id);
+    let cache = UI_TRIAGE_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
+    if let Some(cached) = cache.get(&cache_key).await {
+        return (axum::http::StatusCode::OK, axum::Json(cached)).into_response();
+    }
+
+    let items = match &db.store {
+        crate::db::DbStore::Postgres => {
+            match sqlx::query(
+                "SELECT id,
+                        COALESCE(source, '') AS source,
+                        COALESCE(content, '') AS content,
+                        COALESCE(priority, '') AS priority,
+                        COALESCE(draft_reply, '') AS draft_reply,
+                        COALESCE(status, '') AS status,
+                        COALESCE(created_at::text, '') AS created_at
+                 FROM triage_items
+                 WHERE tenant_id = $1
+                 ORDER BY created_at DESC
+                 LIMIT 50"
+            )
+                .bind(&tenant_id)
+                .fetch_all(&db.pool)
+                .await {
+                    Ok(rows) => Ok(rows.into_iter().map(|row| serde_json::json!({
+                        "id": row.get::<String, _>("id"),
+                        "source": row.get::<String, _>("source"),
+                        "content": row.get::<String, _>("content"),
+                        "priority": row.get::<String, _>("priority"),
+                        "draft_reply": row.get::<String, _>("draft_reply"),
+                        "status": row.get::<String, _>("status"),
+                        "created_at": row.get::<String, _>("created_at"),
+                    })).collect::<Vec<_>>()),
+                    Err(e) => {
+                        ::server_telemetry::record_error_signal("Failed to fetch Postgres triage rows");
+                        tracing::error!("Failed to fetch triage rows: {}", e);
+                        Err(())
+                    }
+                }
+        },
+        crate::db::DbStore::Sqlite(pool) => {
+            match sqlx::query(
+                "SELECT id,
+                        COALESCE(source, '') AS source,
+                        COALESCE(content, '') AS content,
+                        COALESCE(priority, '') AS priority,
+                        COALESCE(draft_reply, '') AS draft_reply,
+                        COALESCE(status, '') AS status,
+                        COALESCE(CAST(created_at AS TEXT), '') AS created_at
+                 FROM triage_items
+                 WHERE tenant_id = ?
+                 ORDER BY created_at DESC
+                 LIMIT 50"
+            )
+                .bind(&tenant_id)
+                .fetch_all(pool)
+                .await {
+                    Ok(rows) => Ok(rows.into_iter().map(|row| serde_json::json!({
+                        "id": row.get::<String, _>("id"),
+                        "source": row.get::<String, _>("source"),
+                        "content": row.get::<String, _>("content"),
+                        "priority": row.get::<String, _>("priority"),
+                        "draft_reply": row.get::<String, _>("draft_reply"),
+                        "status": row.get::<String, _>("status"),
+                        "created_at": row.get::<String, _>("created_at"),
+                    })).collect::<Vec<_>>()),
+                    Err(e) => {
+                        ::server_telemetry::record_error_signal("Failed to fetch Sqlite triage rows");
+                        tracing::error!("Failed to fetch triage rows: {}", e);
+                        Err(())
+                    }
+                }
+        }
+    };
+
+    match items {
+        Ok(data) => {
+            let _ = cache.set(&cache_key, data.clone(), std::time::Duration::from_secs(5)).await;
+            (axum::http::StatusCode::OK, axum::Json(data)).into_response()
+        },
+        Err(_) => (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!([]))).into_response()
+    }
+}
+
+async fn approve_ui_triage_handler(
+    axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
+    axum::extract::Path(id): axum::extract::Path<String>,
+) -> axum::response::Response {
+    use axum::response::IntoResponse;
+    let update_res = match &db.store {
+        crate::db::DbStore::Postgres => {
+            sqlx::query("UPDATE triage_items SET status = 'resolved' WHERE id = $1")
+                .bind(&id)
+                .execute(&db.pool)
+                .await
+                .map(|_| ())
+        },
+        crate::db::DbStore::Sqlite(pool) => {
+             sqlx::query("UPDATE triage_items SET status = 'resolved' WHERE id = ?")
+                .bind(&id)
+                .execute(pool)
+                .await
+                .map(|_| ())
+        }
+    };
+
+    match update_res {
+        Ok(_) => {
+            (axum::http::StatusCode::OK, axum::Json(serde_json::json!({"success": true}))).into_response()
+        },
+        Err(e) => {
+            ::server_telemetry::record_error_signal("Failed to update triage item");
+            tracing::error!("Failed to approve triage row: {}", e);
+            (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": e.to_string()}))).into_response()
+        }
+    }
+}
+
+
+
 #[derive(Debug, Clone, serde::Serialize)]
 pub(crate) struct UiDashboardMetrics {
     active_customers: i64,
@@ -3745,6 +3875,8 @@ async fn create_ui_bom_item_handler(
         .route("/api/ui/orders", axum::routing::get(list_ui_orders_handler).with_state(db.clone()))
         .route("/api/ui/bookings", axum::routing::get(list_ui_bookings_handler).with_state(db.clone()))
         .route("/api/ui/inbox/messages", axum::routing::get(list_ui_inbox_handler).with_state(db.clone()))
+        .route("/api/ui/triage", axum::routing::get(list_ui_triage_handler).with_state(db.clone()))
+        .route("/api/ui/triage/{id}/approve", axum::routing::post(approve_ui_triage_handler).with_state(db.clone()))
         .route("/api/ui/supply", axum::routing::get(list_ui_supply_handler).with_state(db.clone()))
         .route("/api/ui/supply/vendors", axum::routing::post(create_ui_supply_vendor_handler).with_state(db.clone()))
         .route("/api/ui/supply/raw-materials", axum::routing::post(create_ui_raw_material_handler).with_state(db.clone()))
