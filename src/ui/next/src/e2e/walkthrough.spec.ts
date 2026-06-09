@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 test.describe('Interactive Walkthroughs', () => {
   test('renders help widget and completes the store setup walkthrough', async ({ page }) => {
     // Navigate to a page with the walkthrough target and the help widget
-    await page.goto('/dashboard'); // or /storefront-builder which has bio-input
+    await page.goto('/dashboard?test_walkthrough=true'); // or /storefront-builder which has bio-input
 
     // Open the help widget
     const helpButton = page.locator('#help-widget-container button').first();
@@ -20,7 +20,7 @@ test.describe('Interactive Walkthroughs', () => {
     // or just mock the route if possible. We will assume the Tour redirects or we just navigate to where bio-input is.
 
     // Instead of dashboard, let's go straight to builder since that's where the target elements are:
-    await page.goto('/builder');
+    await page.goto('/builder?test_walkthrough=true');
 
     // Re-open help widget on the right page
     const builderHelpButton = page.locator('#help-widget-container button').first();
@@ -50,7 +50,7 @@ test.describe('Interactive Walkthroughs', () => {
   });
 
   test('user can exit the walkthrough early by clicking the skip/close button', async ({ page }) => {
-    await page.goto('/builder');
+    await page.goto('/builder?test_walkthrough=true');
 
     // Re-open help widget
     const builderHelpButton = page.locator('#help-widget-container button').first();
