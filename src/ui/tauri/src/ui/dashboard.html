@@ -12,10 +12,82 @@
         display: flex;
         flex-direction: column;
         align-items: center;
-        justify-content: center;
+        justify-content: flex-start;
         height: 100vh;
         box-sizing: border-box;
       }
+      .omnibox-wrapper {
+        position: fixed;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 100%;
+        max-width: 600px;
+        z-index: 1000;
+        padding: 0 20px;
+        box-sizing: border-box;
+      }
+      .omnibox-container {
+        background: rgba(255, 255, 255, 0.65);
+        backdrop-filter: blur(30px) saturate(210%);
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        border-radius: 12px;
+        box-shadow: 0 4px 24px rgba(0,0,0,0.1);
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+      }
+      .omnibox-input {
+        width: 100%;
+        padding: 16px 20px;
+        font-size: 16px;
+        border: none;
+        background: transparent;
+        color: #1d1d1f;
+        box-sizing: border-box;
+        outline: none;
+      }
+      .omnibox-results {
+        display: none;
+        max-height: 400px;
+        overflow-y: auto;
+        border-top: 1px solid rgba(255, 255, 255, 0.4);
+        padding: 8px;
+      }
+      .omnibox-result-item {
+        padding: 12px 16px;
+        border-radius: 8px;
+        cursor: pointer;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        text-decoration: none;
+        color: inherit;
+      }
+      .omnibox-result-item:hover, .omnibox-result-item.active {
+        background: rgba(0, 102, 255, 0.1);
+      }
+      .result-title {
+        font-weight: 600;
+        font-size: 14px;
+        color: #1d1d1f;
+      }
+      .result-subtitle {
+        font-size: 12px;
+        color: #86868b;
+      }
+      .result-type {
+        align-self: flex-start;
+        font-size: 10px;
+        font-weight: 700;
+        text-transform: uppercase;
+        padding: 2px 6px;
+        background: rgba(0,0,0,0.05);
+        border-radius: 4px;
+        color: #86868b;
+        margin-bottom: 2px;
+      }
+
       .container {
         max-width: 400px;
         width: 100%;
@@ -27,6 +99,7 @@
         box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
         text-align: center;
         border: 1px solid rgba(255, 255, 255, 0.4);
+        margin-top: 100px;
       }
       h1 {
         color: #1d1d1f;
@@ -62,7 +135,7 @@
         box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
       }
       @media (prefers-color-scheme: dark) {
-        .container {
+        .container, .omnibox-container {
           background: rgba(22, 22, 26, 0.7);
           backdrop-filter: blur(30px) saturate(210%);
           border: 1px solid rgba(255, 255, 255, 0.1);
@@ -70,10 +143,10 @@
         body {
           background-color: #16161a;
         }
-        h1 {
+        h1, .omnibox-input, .result-title {
           color: #f5f5f7;
         }
-        .subtitle {
+        .subtitle, .result-subtitle {
           color: #a1a1a6;
         }
         .status-badge {
@@ -84,6 +157,13 @@
           background: rgba(255, 255, 255, 0.05);
           border: 1px solid rgba(255, 255, 255, 0.1);
           color: #ffffff;
+        }
+        .omnibox-results {
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .result-type {
+            background: rgba(255,255,255,0.1);
+            color: #a1a1a6;
         }
       }
 
@@ -170,6 +250,14 @@
     </style>
   </head>
   <body>
+    <div class="omnibox-wrapper">
+        <div class="omnibox-container" id="omnibox">
+            <input type="text" class="omnibox-input" id="omnibox-input" placeholder="Search customers, orders, messages... (Cmd+K)" autocomplete="off">
+            <div class="omnibox-results" id="omnibox-results">
+            </div>
+        </div>
+    </div>
+
     <div class="container">
       <div class="status-badge">🟢 Standalone Mode (Zero Data Leakage)</div>
 
@@ -240,6 +328,94 @@
         const text = `Join my team on OHC! Here is your invite link:\n\n${link}\n\n⚡ Powered by OHC`;
         window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
       });
+
+      // Omnibox logic
+      const omniboxInput = document.getElementById('omnibox-input');
+      const omniboxResults = document.getElementById('omnibox-results');
+      let searchTimeout;
+
+      // Global shortcut Cmd+K or Ctrl+K
+      document.addEventListener('keydown', (e) => {
+          if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+              e.preventDefault();
+              omniboxInput.focus();
+          }
+      });
+
+      // Hide results on outside click
+      document.addEventListener('click', (e) => {
+          if (!document.getElementById('omnibox').contains(e.target)) {
+              omniboxResults.style.display = 'none';
+          }
+      });
+
+      omniboxInput.addEventListener('focus', () => {
+          if (omniboxInput.value.trim().length > 0) {
+              omniboxResults.style.display = 'block';
+          }
+      });
+
+      omniboxInput.addEventListener('input', (e) => {
+          const query = e.target.value.trim();
+
+          if (query.length === 0) {
+              omniboxResults.style.display = 'none';
+              return;
+          }
+
+          clearTimeout(searchTimeout);
+          searchTimeout = setTimeout(() => {
+              performSearch(query);
+          }, 300); // Debounce 300ms
+      });
+
+      async function performSearch(query) {
+          try {
+              // Get auth token if available in local storage
+              // In this standalone/Tauri mode, you might not have a bearer token,
+              // but the backend will accept requests if authenticated via session.
+              // Adjust this fetch call if your Tauri app requires specific auth headers.
+              const response = await fetch(`/api/v1/search?q=${encodeURIComponent(query)}`);
+
+              if (!response.ok) {
+                  console.error("Search failed:", response.statusText);
+                  return;
+              }
+
+              const data = await response.json();
+              renderResults(data.results);
+          } catch (err) {
+              console.error("Error fetching search results:", err);
+          }
+      }
+
+      function renderResults(results) {
+          omniboxResults.innerHTML = '';
+
+          if (!results || results.length === 0) {
+              omniboxResults.innerHTML = '<div class="omnibox-result-item"><span class="result-title">No results found</span></div>';
+          } else {
+              results.forEach(res => {
+                  const item = document.createElement('a');
+                  item.className = 'omnibox-result-item';
+                  item.href = res.url;
+
+                  let html = `<span class="result-type">${res.type}</span>`;
+                  html += `<span class="result-title">${res.title}</span>`;
+                  if (res.subtitle) {
+                      html += `<span class="result-subtitle">${res.subtitle}</span>`;
+                  }
+                  if (res.snippet) {
+                      html += `<span class="result-subtitle"><em>${res.snippet}</em></span>`;
+                  }
+
+                  item.innerHTML = html;
+                  omniboxResults.appendChild(item);
+              });
+          }
+
+          omniboxResults.style.display = 'block';
+      }
     </script>
   </body>
 </html>
