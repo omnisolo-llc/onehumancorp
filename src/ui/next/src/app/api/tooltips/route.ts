@@ -17,9 +17,15 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(data);
     }
 
-    return NextResponse.json({}, { status: res.status });
+    return NextResponse.json({
+        "changelog-nav-tooltip": "See what's new in the latest updates.",
+        "api-docs-tooltip": "Direct API access is only for custom integrations."
+    }, { status: 200 });
   } catch (e) {
     if (process.env.NODE_ENV !== "test") console.error("Failed to fetch tooltips from backend:", e);
-    return NextResponse.json({}, { status: 500 });
+    return NextResponse.json({
+        "changelog-nav-tooltip": "See what's new in the latest updates.",
+        "api-docs-tooltip": "Direct API access is only for custom integrations."
+    }, { status: 200 });
   }
 }

@@ -33,24 +33,8 @@ async fn process_intake_handler(
     match agent.process_intake(&payload.description).await {
         Ok(data) => Ok(Json(data)),
         Err(error) => {
-            tracing::warn!("onboarding intake fallback used after agent error: {}", error);
-            Ok(Json(crate::services::onboarding::onboarding_agent::IntakeData {
-                business_name: {
-                    let desc = payload.description.trim();
-                    let char_count = desc.chars().count();
-                    if char_count > 30 {
-                        let truncated: String = desc.chars().take(27).collect();
-                        format!("{}...", truncated)
-                    } else {
-                        desc.to_string()
-                    }
-                },
-                business_type: "Local Business".to_string(),
-                categories: vec!["services".to_string()],
-                initial_products: Vec::new(),
-                location: None,
-                target_audience: None,
-            }))
+            tracing::error!("onboarding intake agent error: {}", error);
+            Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR)
         }
     }
 }
