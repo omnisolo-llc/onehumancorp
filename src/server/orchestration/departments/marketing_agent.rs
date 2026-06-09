@@ -233,8 +233,8 @@ impl Department for MarketingAgent {
             "tenant.insight.trending".to_string(),
             "tenant.product.created".to_string(),
             "tenant.job.completed".to_string(),
-            "tenant.product.created".to_string(),
             "tenant.inventory.updated".to_string(),
+            "tenant.website.updated".to_string(),
         ]
     }
 
@@ -268,6 +268,27 @@ impl Department for MarketingAgent {
                         risk,
                         payload,
                     ).await.map(|_| ());
+                }
+            }
+        }
+
+        if event.event_type == "tenant.website.updated" {
+            if let Some(site_id_str) = event.payload.get("site_id").and_then(|v| v.as_str()) {
+                if let Ok(site_id) = uuid::Uuid::parse_str(site_id_str) {
+                    if let Ok(tenant_id) = uuid::Uuid::parse_str(&event.tenant_id) {
+                        let action_desc = format!("Trigger Agentic SEO Pre-rendering for site {}", site_id);
+                        self.orchestrator()?.execute_action(
+                            DepartmentType::Marketing,
+                            action_desc,
+                            event.tenant_id.clone(),
+                            ActionRisk::AutoExecute,
+                            serde_json::json!({ "site_id": site_id_str })
+                        ).await.map_err(|e| e.to_string())?;
+
+                        let pool = self.orchestrator()?.db().pool.clone();
+                        crate::builder::jobs::enqueue_publish_site_job(&pool, tenant_id, site_id).await.map_err(|e| e.to_string())?;
+                        return Ok(());
+                    }
                 }
             }
         }

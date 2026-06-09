@@ -25,6 +25,7 @@ impl Department for OperationsAgent {
             "tenant.subscription.fulfillment_batch.created".to_string(),
             "LowStockAlert".to_string(),
             "PosSyncFailure".to_string(),
+            "tenant.inventory.updated".to_string(),
         ]
     }
 
@@ -41,6 +42,10 @@ impl Department for OperationsAgent {
         };
 
         let action_description = match event.event_type.as_str() {
+            "tenant.inventory.updated" => {
+                let product_id = event.payload.get("product_id").and_then(|v| v.as_str()).unwrap_or("unknown");
+                format!("Invalidate edge cache for updated inventory of product {}", product_id)
+            },
             "tenant.order.created" => "Process Order & Update Inventory".to_string(),
             "LowStockAlert" => {
                 let product_id = event.payload.get("product_id").and_then(|v| v.as_str()).unwrap_or("unknown");
@@ -76,6 +81,15 @@ impl Department for OperationsAgent {
             risk,
             event.payload.clone(),
         ).await?;
+
+        if event.event_type == "tenant.inventory.updated" {
+            let cache = crate::builder::edge::get_edge_cache();
+            if let Some(product_id) = event.payload.get("product_id").and_then(|v| v.as_str()) {
+                cache.invalidate_by_tag(&format!("entity:product:{}", product_id)).await;
+            }
+            cache.invalidate_by_tag(&format!("tenant-id:{}", event.tenant_id)).await;
+            return Ok(());
+        }
 
         if event.event_type == "tenant.subscription.fulfillment_batch.created" {
             return Ok(());

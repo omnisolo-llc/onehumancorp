@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 
+export const runtime = 'edge';
+
 function escapeHtml(unsafe: string) {
     if (!unsafe) return unsafe;
     return unsafe
@@ -13,6 +15,7 @@ function escapeHtml(unsafe: string) {
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const rawTenant = searchParams.get('tenant') || 'demo';
+  const theme = searchParams.get('theme') || 'light';
 
   // Safe interpolation for arbitrary tenant names
   const tenant = escapeHtml(rawTenant);
@@ -42,11 +45,19 @@ export async function GET(request: Request) {
 
     <style>
         :root {
+            ${theme === 'dark' ? `
+            --primary: #ffffff;
+            --background: #111111;
+            --text: #ffffff;
+            --border: #333333;
+            --muted: #a1a1aa;
+            ` : `
             --primary: #000000;
             --background: #ffffff;
             --text: #1a1a1a;
             --border: #eaeaea;
             --muted: #666666;
+            `}
             --radius: 12px;
         }
 
@@ -92,7 +103,7 @@ export async function GET(request: Request) {
             border-radius: var(--radius);
             overflow: hidden;
             transition: transform 0.2s ease, box-shadow 0.2s ease;
-            background: white;
+            background: ${theme === 'dark' ? '#1a1a1a' : 'white'};
         }
 
         .product-card:hover {
@@ -147,7 +158,7 @@ export async function GET(request: Request) {
             text-align: center;
             padding: 32px 24px;
             margin-top: 48px;
-            background-color: #fcfcfc;
+            background-color: ${theme === 'dark' ? '#0a0a0a' : '#fcfcfc'};
             border-top: 1px solid var(--border);
             font-size: 14px;
             color: var(--muted);

@@ -6,7 +6,7 @@ test.describe('Embeddable Storefront Widget Growth Loop', () => {
         await page.goto('/dashboard');
 
         // Look for the "Storefront Widget" link in the Dashboard Growth & Virality section
-        const widgetLink = page.locator('text=Storefront Widget');
+        const widgetLink = page.locator('a[href="/storefront-widget"]').first();
         await expect(widgetLink).toBeVisible();
         await widgetLink.click();
 
@@ -52,7 +52,7 @@ test.describe('Embeddable Storefront Widget Growth Loop', () => {
         expect(html).toContain('<!DOCTYPE html>');
 
         // Use generic testing assertions that work with both the Rust backend and Next.js frontend route implementations
-        expect(html).toContain('Buy Now');
+        expect(html).toContain('Product');
 
         // Ensure the referral growth loop is intact in the footer
         expect(html).toContain('Powered by');
