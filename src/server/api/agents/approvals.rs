@@ -46,6 +46,7 @@ where
         .route("/simulate-smart-pricing", post(simulate_smart_pricing))
         .route("/simulate-quote-draft", post(simulate_quote_draft))
         .route("/simulate-stockout-reorder", post(simulate_stockout_reorder))
+        .route("/simulate-inventory-reconciliation", post(simulate_inventory_reconciliation))
         .route("/{id}", post(decide_approval))
         .with_state(orchestrator)
 }
@@ -96,6 +97,24 @@ async fn simulate_quote_draft(
         Ok(_) => (StatusCode::OK, Json(DecisionResponse { success: true })).into_response(),
         Err(e) => {
             tracing::error!("Failed to simulate quote draft: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, Json(DecisionResponse { success: false })).into_response()
+        }
+    }
+}
+
+async fn simulate_inventory_reconciliation(
+    State(orchestrator): State<Arc<DepartmentOrchestrator>>,
+    Extension(claims): Extension<Claims>,
+) -> impl IntoResponse {
+    let tenant_id = match claims.organization_id.as_deref() {
+        Some(org_id) => org_id.to_string(),
+        None => return (StatusCode::UNAUTHORIZED, Json(DecisionResponse { success: false })).into_response(),
+    };
+
+    match orchestrator.reconcile_inventory_conflict(&tenant_id, "test-product-123", 5, "Shopify").await {
+        Ok(_) => (StatusCode::OK, Json(DecisionResponse { success: true })).into_response(),
+        Err(e) => {
+            tracing::error!("Failed to simulate inventory reconciliation: {}", e);
             (StatusCode::INTERNAL_SERVER_ERROR, Json(DecisionResponse { success: false })).into_response()
         }
     }

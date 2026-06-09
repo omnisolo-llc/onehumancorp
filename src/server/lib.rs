@@ -2648,6 +2648,9 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .route("/api/v1/health", axum::routing::get(api::health::health_handler))
         .with_state(hub.clone());
 
+    let ecommerce_webhook_router = axum::Router::new()
+        .nest("/api/v1/webhooks/ecommerce", api::ecommerce_webhook::router(dept_orchestrator.clone()));
+
     let db_for_login = db.clone();
 async fn generate_manychat_draft_handler() -> axum::response::Response {
     use axum::response::IntoResponse;
@@ -4303,6 +4306,7 @@ async fn create_ui_bom_item_handler(
             default_config: ohc_builtin_agent::agent::AgentRunConfig::default(),
         })))
         .merge(meta_webhook_router)
+        .merge(ecommerce_webhook_router)
         .merge(health_router)
         .fallback(api_not_found_handler);
 

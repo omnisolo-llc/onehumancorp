@@ -515,6 +515,33 @@ export function UnifiedAgentFeed() {
                         Dismiss
                       </button>
                     </div>
+                  ) : approval.payload?.feature_type === 'inventory_reconciliation' ? (
+                    <div className="flex flex-col sm:flex-row gap-3 w-full">
+                      <button
+                        onClick={() => handleDecision(approval.id, true)}
+                        className="flex-1 min-h-[44px] px-4 rounded-[8px] bg-indigo-600 text-white font-medium hover:bg-indigo-700 transition-colors shadow-md flex items-center justify-center"
+                        aria-label="Approve & Send Sync"
+                        data-testid="approve-sync"
+                      >
+                        Approve & Send
+                      </button>
+                      <button
+                        onClick={() => {}}
+                        className="flex-1 min-h-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex items-center justify-center"
+                        aria-label="Edit Sync Reply"
+                        data-testid="edit-sync"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleDecision(approval.id, false)}
+                        className="flex-1 min-h-[44px] px-4 rounded-[8px] bg-red-100 hover:bg-red-200 text-red-600 dark:bg-red-900/30 dark:hover:bg-red-900/50 dark:text-red-400 transition-colors flex items-center justify-center"
+                        aria-label="Discard Sync"
+                        data-testid="discard-sync"
+                      >
+                        Discard
+                      </button>
+                    </div>
                   ) : approval.payload?.feature_type === 'quote_draft' ? (
                     <>
                       <button

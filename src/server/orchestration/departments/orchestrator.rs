@@ -982,6 +982,47 @@ impl DepartmentOrchestrator {
         ).await.map(|_| ())
     }
 
+    pub async fn reconcile_inventory_conflict(&self, tenant_id: &str, product_id: &str, remote_stock: i32, platform: &str) -> Result<(), String> {
+        let pool = crate::db::get_pool();
+        let current_stock: i32 = match sqlx::query("SELECT inventory_count FROM products WHERE tenant_id = $1 AND id = $2")
+            .bind(tenant_id)
+            .bind(product_id)
+            .fetch_one(&pool)
+            .await {
+                Ok(row) => {
+                    use sqlx::Row;
+                    row.get("inventory_count")
+                },
+                Err(_) => return Ok(()) // Product not found, ignore sync issue for simplicity here
+            };
+
+        if current_stock != remote_stock {
+            let msg = format!("Inventory discrepancy detected on {}. OHC recorded {} units, but platform reports {} units.", platform, current_stock, remote_stock);
+
+            let draft_reply = format!("Hi there, we encountered a temporary sync issue with our {} inventory regarding your requested item. We actually have {} units remaining. We have corrected the system. Feel free to re-order now!", platform, remote_stock);
+
+            let payload = serde_json::json!({
+                "feature_type": "inventory_reconciliation",
+                "product_id": product_id,
+                "old_stock": current_stock,
+                "new_stock": remote_stock,
+                "platform": platform,
+                "message": msg,
+                "draft_reply": draft_reply,
+            });
+
+            self.execute_action(
+                DepartmentType::CustomerSuccess,
+                format!("Inventory Reconciliation: {} Sync Issue", platform),
+                tenant_id.to_string(),
+                ActionRisk::DraftForReview,
+                payload
+            ).await.map(|_| ())
+        } else {
+            Ok(())
+        }
+    }
+
     pub async fn simulate_smart_pricing(&self, tenant_id: &str) -> Result<(), String> {
         let payload = serde_json::json!({
             "context": {
