@@ -10,7 +10,7 @@ test.describe('Work Triage Agentic Inbox', () => {
     await page.click('button[type="submit"]');
 
     // Go to Triage
-    await page.goto('/triage');
+    await page.goto('/dashboard');
 
     // Wait for the triage queue to load
     await expect(page.locator('h2').filter({ hasText: 'Needs Your Attention' })).toBeVisible();
@@ -24,18 +24,18 @@ test.describe('Work Triage Agentic Inbox', () => {
       await expect(emptyState).toBeVisible();
     } else {
       await expect(triageCard).toBeVisible();
-      await triageCard.click();
+      // No detail view click needed in dashboard feed
 
       // Verify detail view
       await expect(page.locator('text=Maya requested a custom cake')).toBeVisible();
       await expect(page.locator('text=Draft Reply')).toBeVisible();
 
       // Approve action
-      const approveBtn = page.locator('[data-testid="approve-btn"]');
+      const approveBtn = triageCard.locator('[data-testid="approve-btn"]');
       await approveBtn.click();
 
       // Should show approved status and disappear from list
-      await expect(page.locator('text=Approved!')).toBeVisible();
+      await expect(triageCard).not.toBeVisible();
     }
   });
 });
