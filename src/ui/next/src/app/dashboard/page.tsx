@@ -1,5 +1,7 @@
 "use client";
 import { FloatingActionButton } from "./FAB";
+import { MorningBriefingCard } from "./MorningBriefingCard";
+
 
 
 
@@ -292,6 +294,8 @@ export default function Dashboard() {
       <NeighborhoodPulseCard tenant={tenantId()} />
       <FloatingActionButton />
 
+      <MorningBriefingCard tenant={tenantId()} />
+
       <InteractiveWalkthrough
         steps={walkthroughSteps}
         isOpen={isWalkthroughOpen}
@@ -549,22 +553,7 @@ export default function Dashboard() {
               </div>
             </div>
 
-            <div className="glassmorphism p-4 rounded-[12px] border border-indigo-200/50 bg-gradient-to-br from-indigo-50/50 to-purple-50/50 flex flex-col justify-center items-center text-center relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-16 h-16 bg-white/40 rounded-bl-full"></div>
-              <h4 className="text-sm font-bold font-outfit text-[#1D1D1F] mb-1 flex items-center gap-1">
-                <span className="text-indigo-500">✨</span> Advanced AI Insights
-              </h4>
-              <p className="text-xs text-gray-600 mb-3">Unlock predictive analytics and AI-driven growth recommendations.</p>
-              <button
-                onClick={() => {
-                  setActionMessage('Opening Pro pricing for Advanced AI Insights.');
-                  router.push('/pricing');
-                }}
-                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg shadow-sm transition-colors w-full"
-              >
-                Upgrade to Pro
-              </button>
-            </div>
+
           </div>
         </section>
 
