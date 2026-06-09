@@ -38,8 +38,8 @@ describe('Agent Audit Dashboard', () => {
     expect(await screen.findByText('Marketing & Advertising')).toBeInTheDocument();
   });
 
-  it('renders Violation Feed', async () => {
+  it('renders Violation Feed', () => {
     render(<AgentAuditDashboard />);
-    expect(await screen.findByText('Cross-Agent Feed')).toBeInTheDocument();
+    expect(screen.getByText('Cross-Agent Feed')).toBeInTheDocument();
   });
 });
