@@ -28,6 +28,58 @@ SET name = EXCLUDED.name,
     tier = EXCLUDED.tier,
     updated_at = CURRENT_TIMESTAMP;
 
+-- Ensure RLS allows us to insert ledger data
+ALTER TABLE IF EXISTS ledger_accounts DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS ledger_transactions DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS ledger_entries DISABLE ROW LEVEL SECURITY;
+
+-- Seed Ledger Data
+INSERT INTO ledger_accounts (id, tenant_id, name, type, balance, currency, created_at, updated_at)
+VALUES ('acct-1', 'e2e-tenant', 'main', 'asset', 1500.00, 'USD', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+ON CONFLICT (id) DO UPDATE
+SET balance = EXCLUDED.balance,
+    updated_at = EXCLUDED.updated_at;
+
+INSERT INTO ledger_transactions (id, tenant_id, description, status, metadata, created_at, updated_at)
+VALUES ('txn-1', 'e2e-tenant', 'Initial deposit', 'completed', '{}', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+ON CONFLICT (id) DO UPDATE
+SET status = EXCLUDED.status,
+    updated_at = EXCLUDED.updated_at;
+
+INSERT INTO ledger_entries (id, tenant_id, transaction_id, account_id, amount, currency, direction, type, created_at)
+VALUES ('entry-1', 'e2e-tenant', 'txn-1', 'acct-1', 1500.00, 'USD', 'credit', 'payment', CURRENT_TIMESTAMP)
+ON CONFLICT (id) DO NOTHING;
+
+ALTER TABLE IF EXISTS ledger_accounts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS ledger_transactions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS ledger_entries ENABLE ROW LEVEL SECURITY;
+
+-- Ensure RLS allows us to insert ledger data
+ALTER TABLE IF EXISTS ledger_accounts DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS ledger_transactions DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS ledger_entries DISABLE ROW LEVEL SECURITY;
+
+-- Seed Ledger Data
+INSERT INTO ledger_accounts (id, tenant_id, name, type, balance, currency, created_at, updated_at)
+VALUES ('acct-1', 'e2e-tenant', 'main', 'asset', 1500.00, 'USD', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+ON CONFLICT (id) DO UPDATE
+SET balance = EXCLUDED.balance,
+    updated_at = EXCLUDED.updated_at;
+
+INSERT INTO ledger_transactions (id, tenant_id, description, status, metadata, created_at, updated_at)
+VALUES ('txn-1', 'e2e-tenant', 'Initial deposit', 'completed', '{}', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+ON CONFLICT (id) DO UPDATE
+SET status = EXCLUDED.status,
+    updated_at = EXCLUDED.updated_at;
+
+INSERT INTO ledger_entries (id, tenant_id, transaction_id, account_id, amount, currency, direction, type, created_at)
+VALUES ('entry-1', 'e2e-tenant', 'txn-1', 'acct-1', 1500.00, 'USD', 'credit', 'payment', CURRENT_TIMESTAMP)
+ON CONFLICT (id) DO NOTHING;
+
+ALTER TABLE IF EXISTS ledger_accounts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS ledger_transactions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS ledger_entries ENABLE ROW LEVEL SECURITY;
+
 INSERT INTO users (id, username, email, password_hash, roles, active, tenant_id, created_at, updated_at)
 VALUES
   (
@@ -91,6 +143,7 @@ VALUES
 ('e2e-approval-cart', 'e2e-tenant', 'sales', 'Abandoned cart recovery: 10% discount for Sarah', 'DRAFT', 'HIGH', '{"feature_type": "abandoned_cart", "context": {"abandoned_carts_count": 3, "potential_revenue": 120.00}}'::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
 ('e2e-approval-review', 'e2e-tenant', 'customer_success', '3 customers haven''t reviewed their orders. Request reviews?', 'DRAFT', 'HIGH', '{"feature_type": "automated_review_request", "target": "recent_unreviewed_orders", "count": 3}'::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
 ('e2e-approval-pricing', 'e2e-tenant', 'business_advisory', 'Smart Price Suggestion: Vegan Celebration Cake', 'PENDING', 'HIGH', '{"context": {"smart_pricing": true, "product_id": "e2e-product-cake", "product_name": "Vegan Celebration Cake", "old_price": 39.99, "new_price": 45.00, "discount_amount": -5.01, "sales_projection": "+$150", "stagnant_days": 10, "margin_percent": 45}}'::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+,('e2e-approval-quote-draft', 'e2e-tenant', 'sales', 'Draft Quote Ready: Fix leaking sink for John Doe', 'PENDING', 'HIGH', '{"feature_type": "quote_draft", "customer_inquiry": "How much to fix a leaking sink? Here is a picture", "suggested_price": 150.0, "scope": "Fix leaking sink including labor and standard materials.", "suggested_time": "Tomorrow at 2 PM", "generated_response": "Based on our past projects, I can offer Fix leaking sink starting at 50.00. Should I send over the formal agreement?", "service": "Fix leaking sink", "price": 150.0}'::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
 ON CONFLICT (id) DO UPDATE
 SET status = EXCLUDED.status,
     updated_at = CURRENT_TIMESTAMP;
@@ -216,6 +269,12 @@ ALTER TABLE IF EXISTS customer360 FORCE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS loyalty_ledger FORCE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS ohc_fx_rates FORCE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS bookings FORCE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS ledger_accounts FORCE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS ledger_transactions FORCE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS ledger_entries FORCE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS ledger_accounts FORCE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS ledger_transactions FORCE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS ledger_entries FORCE ROW LEVEL SECURITY;
 
 ALTER TABLE IF EXISTS agent_actions ENABLE ROW LEVEL SECURITY;
 
@@ -266,3 +325,16 @@ ALTER TABLE IF EXISTS customer_timeline FORCE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS depletion_logs FORCE ROW LEVEL SECURITY;
 
 COMMIT;
+
+-- Triage seed data
+INSERT INTO triage_items (id, tenant_id, source, priority, context, status)
+VALUES
+  ('triage-test-1', 'test-tenant', 'Instagram DM', 'Urgent', 'Maya requested a custom cake for Friday', 'pending'),
+  ('triage-test-2', 'test-tenant', 'WhatsApp', 'Medium', 'Question about delivery times', 'pending')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO triage_proposed_actions (id, triage_item_id, tenant_id, action_type, payload)
+VALUES
+  ('action-test-1', 'triage-test-1', 'test-tenant', 'Draft Reply', 'Hi Maya! I can definitely help with the custom cake. It will be $50.'),
+  ('action-test-2', 'triage-test-2', 'test-tenant', 'Draft Reply', 'We deliver between 9 AM and 5 PM on weekdays.')
+ON CONFLICT (id) DO NOTHING;

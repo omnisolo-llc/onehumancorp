@@ -121,25 +121,42 @@ impl OperationsWorker {
                         .unwrap_or_else(|_| "test-key".to_string());
                     let minimax = crate::minimax::MinimaxClient::new(api_key);
 
-                    let (translated_name, translated_desc) = match timeout(AI_AGENT_TIMEOUT, minimax.reason(&prompt)).await {
-                        Ok(Ok(res)) => {
-                            // Strip backticks if any
-                            let clean_res = res.trim_matches('`').trim_start_matches("json\n").trim_end();
-                            if let Ok(translated_json) = serde_json::from_str::<serde_json::Value>(clean_res) {
-                                (
-                                    translated_json.get("name").and_then(|v| v.as_str()).unwrap_or("").to_string(),
-                                    translated_json.get("description").and_then(|v| v.as_str()).unwrap_or("").to_string()
-                                )
-                            } else {
-                                all_success = false;
-                                (String::new(), String::new())
+                    let mut attempts = 0;
+                    let mut translated_name = String::new();
+                    let mut translated_desc = String::new();
+
+                    while attempts < MAX_RETRIES {
+                        match timeout(AI_AGENT_TIMEOUT, minimax.reason(&prompt)).await {
+                            Ok(Ok(res)) => {
+                                // Strip backticks if any
+                                let clean_res = res.trim_matches('`').trim_start_matches("json\n").trim_end();
+                                if let Ok(translated_json) = serde_json::from_str::<serde_json::Value>(clean_res) {
+                                    translated_name = translated_json.get("name").and_then(|v| v.as_str()).unwrap_or("").to_string();
+                                    translated_desc = translated_json.get("description").and_then(|v| v.as_str()).unwrap_or("").to_string();
+                                    break;
+                                }
+                                // Fall through to retry on bad JSON
                             }
+                            _ => {}
                         }
-                        _ => {
+
+                        // Error handling branch for both timeout and bad JSON
+                        attempts += 1;
+                        if attempts == MAX_RETRIES {
                             all_success = false;
-                            (String::new(), String::new())
+                            let _ = sqlx::query(
+                                r#"
+                                INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
+                                VALUES ($1, $2, 'AI Agent Paused: Localization', 'The AI agent responsible for localization is paused because the AI service is unavailable.', 'PENDING', 'P1', 'LOW', 'PENDING', 'System is paused. Please manually translate product details.')
+                                "#
+                            )
+                            .bind(Uuid::new_v4().to_string())
+                            .bind(&tenant_id)
+                            .execute(&db.pool)
+                            .await;
                         }
-                    };
+                        tokio::time::sleep(Duration::from_secs(2u64.pow(attempts))).await;
+                    }
 
                     if translated_name.is_empty() {
                         // For testing if LLM fails
@@ -152,7 +169,7 @@ impl OperationsWorker {
                         let res1 = sqlx::query(
                             "INSERT INTO ohc_i18n_strings (id, tenant_id, locale, key, value) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (tenant_id, locale, key) DO UPDATE SET value = EXCLUDED.value"
                         )
-                        .bind(uuid::Uuid::new_v4().to_string())
+                        .bind(Uuid::new_v4().to_string())
                         .bind(&tenant_id)
                         .bind(&lang)
                         .bind(&name_key)
@@ -162,7 +179,7 @@ impl OperationsWorker {
                         let res2 = sqlx::query(
                             "INSERT INTO ohc_i18n_strings (id, tenant_id, locale, key, value) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (tenant_id, locale, key) DO UPDATE SET value = EXCLUDED.value"
                         )
-                        .bind(uuid::Uuid::new_v4().to_string())
+                        .bind(Uuid::new_v4().to_string())
                         .bind(&tenant_id)
                         .bind(&lang)
                         .bind(&desc_key)
@@ -181,7 +198,7 @@ impl OperationsWorker {
                     let res1 = sqlx::query(
                         "INSERT INTO ohc_i18n_strings (id, tenant_id, locale, key, value) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (tenant_id, locale, key) DO UPDATE SET value = EXCLUDED.value"
                     )
-                    .bind(uuid::Uuid::new_v4().to_string())
+                    .bind(Uuid::new_v4().to_string())
                     .bind(&tenant_id)
                     .bind(&lang)
                     .bind(&name_key)
@@ -191,7 +208,7 @@ impl OperationsWorker {
                     let res2 = sqlx::query(
                         "INSERT INTO ohc_i18n_strings (id, tenant_id, locale, key, value) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (tenant_id, locale, key) DO UPDATE SET value = EXCLUDED.value"
                     )
-                    .bind(uuid::Uuid::new_v4().to_string())
+                    .bind(Uuid::new_v4().to_string())
                     .bind(&tenant_id)
                     .bind(&lang)
                     .bind(&desc_key)
@@ -1036,18 +1053,34 @@ let db_for_products = self.db.clone();
                                         },
                                         _ => {
                                             attempts += 1;
+                                            if attempts == MAX_RETRIES {
+                                                let _ = sqlx::query(
+                                                    r#"
+                                                    INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
+                                                    VALUES ($1, $2, 'AI Agent Paused: Marketing', 'The AI agent responsible for drafting social posts is paused because the AI service is unavailable.', 'PENDING', 'P2', 'LOW', 'PENDING', 'System is paused. Please manually draft the social post.')
+                                                    "#
+                                                )
+                                                .bind(Uuid::new_v4().to_string())
+                                                .bind(&org_id)
+                                                .execute(&db_for_products.pool)
+                                                .await;
+                                            }
                                             tokio::time::sleep(std::time::Duration::from_secs(2u64.pow(attempts))).await;
                                         }
                                     }
                                 }
 
-                                let parsed: serde_json::Value = serde_json::from_str(&drafted_msg).unwrap_or(serde_json::json!({
+                                let mut parsed: serde_json::Value = serde_json::from_str(&drafted_msg).unwrap_or(serde_json::json!({
                                     "tiktok": "Check out our new product!",
                                     "instagram": "New arrival! Link in bio.",
                                     "facebook": "We just added a new product to our store."
                                 }));
 
-                                let task_id = uuid::Uuid::new_v4().to_string();
+                                if let Some(obj) = parsed.as_object_mut() {
+                                    obj.insert("feature_type".to_string(), serde_json::json!("social_post_draft"));
+                                }
+
+                                let task_id = Uuid::new_v4().to_string();
                                 let title = format!("Draft Social Post: {}", product_name);
                                 let description = "The Promoter generated social media captions for your new product. Review and schedule.";
                                 let proposed_content = serde_json::to_string(&parsed).unwrap_or_default();
@@ -1091,6 +1124,7 @@ let db_for_products = self.db.clone();
             }
         });
 
+        let db_for_onboarding = self.db.clone();
         tokio::spawn(async move {
             while let Ok(event) = promoter_rx.recv().await {
                 if event.action == "OnboardingStarted" {
@@ -1098,6 +1132,7 @@ let db_for_products = self.db.clone();
                         if let Ok(payload_json) = serde_json::from_str::<serde_json::Value>(&payload_str) {
                             let session_id = payload_json.get("session_id").and_then(|s| s.as_str()).unwrap_or("").to_string();
                             let bio = payload_json.get("bio").and_then(|b| b.as_str()).unwrap_or("").to_string();
+                            let tenant_id = payload_json.get("organization_id").and_then(|o| o.as_str()).unwrap_or("system").to_string();
 
                             if !session_id.is_empty() {
                                 let prompt = format!("Extract business information from this bio: \"{}\". Return JSON with keys: company_name, business_type (one of: Online Store, Service Business, Restaurant / Food, Creative / Portfolio, Local Business, Other), product_name, product_price, company_description, domain_choice (free or custom), website_template.", bio);
@@ -1128,6 +1163,18 @@ let db_for_products = self.db.clone();
                                         },
                                         _ => {
                                             attempts += 1;
+                                            if attempts == MAX_RETRIES {
+                                                let _ = sqlx::query(
+                                                    r#"
+                                                    INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
+                                                    VALUES ($1, $2, 'AI Agent Paused: Onboarding', 'The AI agent responsible for storefront generation is paused because the AI service is unavailable.', 'PENDING', 'P1', 'LOW', 'PENDING', 'System is paused. Please generate your storefront later.')
+                                                    "#
+                                                )
+                                                .bind(Uuid::new_v4().to_string())
+                                                .bind(&tenant_id)
+                                                .execute(&db_for_onboarding.pool)
+                                                .await;
+                                            }
                                             tokio::time::sleep(Duration::from_secs(2u64.pow(attempts))).await;
                                         }
                                     }
@@ -1140,7 +1187,7 @@ let db_for_products = self.db.clone();
                                     action: "StorefrontGenerated".to_string(),
                                     status: "completed".to_string(),
                                     payload: out_payload,
-                                    msg_id: uuid::Uuid::new_v4().to_string(),
+                                    msg_id: Uuid::new_v4().to_string(),
                                 };
                                 let _ = hub.publish_teammate_event(format!("onboarding_{}", session_id), out_event);
                             }
@@ -1246,7 +1293,7 @@ impl AdvisorWorker {
                             if let Ok(mut client) = ::server_ohc::orchestration::hub_service_client::HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:8081".to_string())).await {
                                 let publish_req = ::server_ohc::orchestration::PublishMeshEventRequest {
                                     event: Some(::server_ohc::orchestration::MeshEvent {
-                                        event_id: uuid::Uuid::new_v4().to_string(),
+                                        event_id: Uuid::new_v4().to_string(),
                                         topic: "tenant.report.weekly_health".to_string(),
                                         payload: serde_json::to_string(&payload).unwrap_or_default().into_bytes(),
                                         ..Default::default()
@@ -1259,12 +1306,24 @@ impl AdvisorWorker {
                             Err("Hub call failed".to_string())
                         };
 
-                        match tokio::time::timeout(std::time::Duration::from_secs(5), hub_op).await {
+                        match tokio::time::timeout(AI_AGENT_TIMEOUT, hub_op).await {
                             Ok(Ok(_)) => {
                                 break;
                             },
                             _ => {
                                 attempts += 1;
+                                if attempts == MAX_RETRIES {
+                                    let _ = sqlx::query(
+                                        r#"
+                                        INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
+                                        VALUES ($1, $2, 'AI Agent Paused: Advisory', 'The AI agent responsible for answering questions is paused because the AI service is unavailable.', 'PENDING', 'P2', 'LOW', 'PENDING', 'System is paused. Please ask your question again later.')
+                                        "#
+                                    )
+                                    .bind(Uuid::new_v4().to_string())
+                                    .bind(&tenant_id)
+                                    .execute(&db.pool)
+                                    .await;
+                                }
                                 tokio::time::sleep(std::time::Duration::from_secs(2u64.pow(attempts))).await;
                             }
                         }

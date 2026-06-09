@@ -183,6 +183,7 @@ impl OnboardingAgent {
 
         // Use organization id as tenant id if not provided
         let _tenant_id = org_id.clone();
+        let domain_choice = req.domain_choice.clone();
 
         let user_id = format!("usr-{}", uuid::Uuid::new_v4());
         let email = req.admin_email.clone();
@@ -320,6 +321,20 @@ impl OnboardingAgent {
         let roles_json = serde_json::to_string(&vec!["admin"]).unwrap_or_default();
         let now = chrono::Utc::now();
         let oidc_subject = "";
+
+        sqlx::query(
+            r#"
+            INSERT INTO tenants (tenant_id, business_name, tier, subdomain)
+            VALUES ($1, $2, 'free', $3)
+            ON CONFLICT (tenant_id) DO UPDATE SET subdomain = EXCLUDED.subdomain
+            "#
+        )
+        .bind(&org_id)
+        .bind(&company_name)
+        .bind(&domain_choice)
+        .execute(&self.db.pool)
+        .await
+        .map_err(|e| e.to_string())?;
 
         sqlx::query(
             r#"

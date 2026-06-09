@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { AppShell } from "../components/AppShell";
+import { WithTooltip } from "../../components/TooltipRegistry";
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -220,9 +221,11 @@ export default function SettingsPage() {
                 className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-800"
               />
               {!isVerifying && !isVerified && (
-                <button onClick={handleVerify} className="app-button primary" type="button">
-                  Verify Number
-                </button>
+                <WithTooltip id="settings-verify-tooltip" defaultText="Verify your number to receive critical notifications.">
+                  <button onClick={handleVerify} className="app-button primary" type="button">
+                    Verify Number
+                  </button>
+                </WithTooltip>
               )}
 
               {smsStatus && <p className="text-sm font-medium text-blue-700" role="status">{smsStatus}</p>}
@@ -239,9 +242,11 @@ export default function SettingsPage() {
                       onChange={(e) => setOtp(e.target.value)}
                       className="w-28 rounded-md border border-gray-300 px-3 py-2 text-center text-sm text-gray-800"
                     />
-                    <button onClick={handleConfirm} className="app-button primary" type="button">
-                      Confirm OTP
-                    </button>
+                    <WithTooltip id="settings-otp-tooltip" defaultText="Click to confirm the code sent to your phone.">
+                      <button onClick={handleConfirm} className="app-button primary" type="button">
+                        Confirm OTP
+                      </button>
+                    </WithTooltip>
                   </div>
                 </div>
               )}
@@ -276,6 +281,17 @@ export default function SettingsPage() {
                   />
                   <span className="text-sm text-gray-800">Enable Email Notifications</span>
                 </label>
+                <label className="flex items-center gap-3">
+                  <input
+                    aria-label="Enable Push Notifications"
+                    type="checkbox"
+                    checked={(preferences as any)["push_notifications"] || false}
+                    onChange={(e) => handlePreferenceChange("push_notifications", e.target.checked)}
+                    className="rounded"
+                  />
+                  <span className="text-sm text-gray-800">Enable Push Notifications</span>
+
+                </label>
               </div>
             </div>
           </div>
@@ -290,16 +306,18 @@ export default function SettingsPage() {
               </div>
             </div>
             <div className="app-panel-body space-y-4">
-              <label className="flex items-center justify-between rounded-md border border-gray-200 p-3 text-sm text-gray-700">
-                <span>Enable Local Delivery</span>
-                <input
-                  aria-label="Enable Local Delivery"
-                  type="checkbox"
-                  checked={deliverySettings.delivery_enabled}
-                  onChange={(e) => handleDeliverySettingChange('delivery_enabled', e.target.checked)}
-                  className="rounded"
-                />
-              </label>
+              <WithTooltip id="settings-delivery-tooltip" defaultText="Turn this on to offer local delivery to your customers.">
+                <label className="flex items-center justify-between rounded-md border border-gray-200 p-3 text-sm text-gray-700 cursor-pointer">
+                  <span>Enable Local Delivery</span>
+                  <input
+                    aria-label="Enable Local Delivery"
+                    type="checkbox"
+                    checked={deliverySettings.delivery_enabled}
+                    onChange={(e) => handleDeliverySettingChange('delivery_enabled', e.target.checked)}
+                    className="rounded cursor-pointer"
+                  />
+                </label>
+              </WithTooltip>
 
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <label className="block">

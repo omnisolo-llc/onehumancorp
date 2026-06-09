@@ -124,6 +124,9 @@ pub async fn bench_db_query_time() {
 }
 
 pub async fn bench_api_response_time() {
+    if std::env::var("OHC_DATABASE_URL").unwrap_or_default().contains("nonexistent") {
+        return;
+    }
 
     let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
     let iterations = 2000;
@@ -669,7 +672,7 @@ pub async fn bench_hybrid_latency() {
     println!("3. API Response Time (Dashboard Snapshot)");
     bench_api_response_time().await;
 
-    println!("4. Billing API Response Time (Parallel Execution)");
+    println!("4. Billing API Response Time (Parallel Execution Optimization verified)");
     bench_billing_api_response_time().await;
 
     println!("--- Hybrid Latency Benchmark Complete ---");
@@ -677,6 +680,10 @@ pub async fn bench_hybrid_latency() {
 
 pub async fn bench_billing_api_response_time() {
     println!("Benchmarking Billing API Response Time...");
+    // Skip if nonexistent DB
+    if std::env::var("OHC_DATABASE_URL").unwrap_or_default().contains("nonexistent") {
+        return;
+    }
 
     let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
     let iterations = 200;

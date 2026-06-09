@@ -3,192 +3,310 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>OHC Setup</title>
+    <title>OHC Assistant Workstation</title>
     <style>
       body {
         font-family: "Outfit", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
         background-color: #f5f5f7;
         margin: 0;
         display: flex;
-        align-items: center;
-        justify-content: center;
+        flex-direction: column;
         height: 100vh;
+        overflow: hidden;
       }
-      .container {
+
+      /* OHC Translucent Glass Theme */
+      .glass-panel {
         background: rgba(255, 255, 255, 0.65);
         backdrop-filter: blur(30px) saturate(210%);
-        padding: 40px;
-        border-radius: 16px;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-        text-align: center;
-        max-width: 400px;
-        width: 100%;
+        -webkit-backdrop-filter: blur(30px) saturate(210%);
         border: 1px solid rgba(255, 255, 255, 0.4);
-        box-sizing: border-box;
       }
-      h1 {
-        margin-top: 0;
-        color: #1d1d1f;
-        font-size: 24px;
+
+      /* Top Bar */
+      header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 10px 20px;
+        z-index: 10;
+      }
+      .header-title {
         font-weight: 700;
+        font-size: 18px;
+        color: #1d1d1f;
       }
-      p {
-        color: #86868b;
+      .top-actions {
+        display: flex;
+        gap: 15px;
+      }
+      .top-actions a {
+        text-decoration: none;
+        color: #0066FF;
+        font-weight: 500;
         font-size: 14px;
+        transition: opacity 0.2s;
+      }
+      .top-actions a:hover {
+        opacity: 0.8;
+      }
+
+      /* Main Layout */
+      .workspace {
+        display: flex;
+        flex: 1;
+        overflow: hidden;
+      }
+
+      /* Left Rail */
+      .left-rail {
+        width: 250px;
+        border-right: 1px solid rgba(0, 0, 0, 0.1);
+        display: flex;
+        flex-direction: column;
+        padding: 20px;
+        box-sizing: border-box;
+      }
+      .rail-section {
         margin-bottom: 20px;
       }
-      input, select {
-        width: 100%;
-        padding: 14px;
-        min-height: 44px;
-        margin-bottom: 20px;
-        border: 1px solid rgba(255, 255, 255, 0.5);
+      .rail-title {
+        font-size: 12px;
+        text-transform: uppercase;
+        color: #86868b;
+        font-weight: 600;
+        margin-bottom: 10px;
+      }
+      .task-item {
+        padding: 10px;
         border-radius: 8px;
-        box-sizing: border-box;
-        font-size: 16px;
+        cursor: pointer;
+        margin-bottom: 5px;
+        font-size: 14px;
+        color: #1d1d1f;
         background: rgba(255, 255, 255, 0.5);
       }
-      input:focus, select:focus {
+      .task-item:hover, .task-item.active {
+        background: rgba(0, 102, 255, 0.1);
+        color: #0066FF;
+      }
+      .empty-state {
+        color: #86868b;
+        font-style: italic;
+        font-size: 13px;
+        padding: 10px;
+      }
+
+      /* Center Conversation */
+      .center-conversation {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        border-right: 1px solid rgba(0, 0, 0, 0.1);
+        background-color: transparent;
+      }
+      .task-header {
+        padding: 20px;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+      }
+      .task-title {
+        font-size: 20px;
+        font-weight: 600;
+        margin: 0 0 5px 0;
+      }
+      .task-status {
+        font-size: 12px;
+        color: #86868b;
+      }
+      .messages {
+        flex: 1;
+        padding: 20px;
+        overflow-y: auto;
+      }
+      .message {
+        margin-bottom: 20px;
+        padding: 15px;
+        border-radius: 12px;
+        max-width: 80%;
+      }
+      .message.user {
+        background: rgba(0, 102, 255, 0.1);
+        align-self: flex-end;
+        margin-left: auto;
+      }
+      .message.assistant {
+        background: rgba(255, 255, 255, 0.8);
+      }
+      .composer {
+        padding: 20px;
+        border-top: 1px solid rgba(0, 0, 0, 0.1);
+      }
+      .composer-input {
+        width: 100%;
+        padding: 15px;
+        border: 1px solid rgba(0, 0, 0, 0.1);
+        border-radius: 8px;
+        font-size: 14px;
+        box-sizing: border-box;
+        resize: none;
+        background: rgba(255, 255, 255, 0.8);
+      }
+      .composer-input:focus {
         outline: none;
         border-color: #0066FF;
       }
-      button {
-        background-color: #0066FF;
-        color: white;
-        border: none;
-        padding: 14px 24px;
-        min-height: 44px;
-        border-radius: 8px;
-        font-size: 16px;
-        font-weight: 600;
-        cursor: pointer;
-        width: 100%;
-        transition: background-color 0.2s, transform 0.1s;
-        box-shadow: 0 4px 14px 0 rgba(0, 102, 255, 0.39);
-      }
-      button:hover {
-        background-color: #0052cc;
-      }
-      button:active {
-        transform: scale(0.98);
-      }
-      .error-msg {
-        color: #FF3B30;
-        font-size: 12px;
-        margin-top: -15px;
-        margin-bottom: 15px;
-        display: none;
-        text-align: left;
-      }
 
-      @keyframes shake {
-        0%, 100% { transform: translateX(0); }
-        25% { transform: translateX(-5px); }
-        75% { transform: translateX(5px); }
+      /* Right Panel */
+      .right-panel {
+        width: 300px;
+        display: flex;
+        flex-direction: column;
+        padding: 20px;
+        box-sizing: border-box;
       }
-      .animate-shake {
-        animation: shake 0.2s ease-in-out 0s 2;
+      .panel-tabs {
+        display: flex;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+        margin-bottom: 20px;
+      }
+      .panel-tab {
+        padding: 10px 15px;
+        font-size: 14px;
+        cursor: pointer;
+        color: #86868b;
+        border-bottom: 2px solid transparent;
+      }
+      .panel-tab.active {
+        color: #0066FF;
+        border-bottom-color: #0066FF;
+        font-weight: 500;
+      }
+      .result-item {
+        padding: 10px;
+        background: rgba(255, 255, 255, 0.5);
+        border-radius: 8px;
+        margin-bottom: 10px;
+        font-size: 13px;
+        display: flex;
+        align-items: center;
+      }
+      .result-icon {
+        margin-right: 10px;
+        font-size: 16px;
       }
 
       @media (prefers-color-scheme: dark) {
         body {
           background-color: #16161a;
+          color: #F5F5F7;
         }
-        .container {
+        .glass-panel {
           background: rgba(22, 22, 26, 0.7);
-          backdrop-filter: blur(30px) saturate(210%);
           border: 1px solid rgba(255, 255, 255, 0.1);
         }
-        h1 {
+        .header-title, .task-title, .task-item {
           color: #F5F5F7;
         }
-        p {
-          color: #A1A1A6;
+        .left-rail, .center-conversation, .task-header, .composer, .panel-tabs {
+          border-color: rgba(255, 255, 255, 0.1);
         }
-        input, select {
+        .task-item {
+          background: rgba(255, 255, 255, 0.05);
+        }
+        .message.assistant, .composer-input, .result-item {
           background: rgba(255, 255, 255, 0.1);
-          border: 1px solid rgba(255, 255, 255, 0.2);
           color: #F5F5F7;
-        }
-        input:focus, select:focus {
-          border-color: #0066FF;
-          background: rgba(255, 255, 255, 0.15);
-        }
-        select option {
-          background-color: #16161a;
-          color: #F5F5F7;
+          border-color: rgba(255, 255, 255, 0.2);
         }
       }
     </style>
   </head>
   <body>
-    <div class="container" id="form-container">
-      <h1>Set up your Assistant</h1>
-      <p>Give your AI assistant a name and tone.</p>
+    <!-- Top Bar -->
+    <header class="glass-panel">
+      <div class="header-title" id="assistant-header-title">Assistant Workspace</div>
+      <div class="top-actions">
+        <a href="#" aria-label="Remote Control">Remote Control</a>
+        <a href="#" aria-label="Automations">Automations</a>
+        <a href="#" aria-label="Memory">Memory</a>
+        <a href="#" aria-label="Skills">Skills</a>
+        <a href="/agents" aria-label="Expert Center">Expert Center</a>
+      </div>
+    </header>
 
-      <input type="text" id="assistant-name" placeholder="e.g. Jarvis" />
-      <div id="name-error" class="error-msg">Please enter a name for your assistant.</div>
+    <div class="workspace">
+      <!-- Left Rail -->
+      <div class="left-rail glass-panel">
+        <div class="rail-section">
+          <div class="rail-title">Workspace</div>
+          <select style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid rgba(0,0,0,0.1); margin-bottom: 10px; background: rgba(255,255,255,0.5);" aria-label="Workspace Selector">
+            <option>Personal Workspace</option>
+          </select>
+        </div>
 
-      <select id="assistant-tone">
-        <option value="" disabled selected>Select a tone</option>
-        <option value="Professional">Professional</option>
-        <option value="Friendly">Friendly</option>
-        <option value="Concise">Concise</option>
-      </select>
-      <div id="tone-error" class="error-msg">Please select a tone.</div>
+        <div class="rail-section">
+          <div class="rail-title">Active Tasks</div>
+          <div id="active-tasks-container">
+            <div class="empty-state">No active tasks.</div>
+          </div>
+        </div>
 
-      <button id="next-btn">Next</button>
+        <div class="rail-section">
+          <div class="rail-title">Filters</div>
+          <div id="filters-container">
+             <div class="empty-state">No filters.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Center Conversation -->
+      <div class="center-conversation">
+        <div class="task-header">
+          <h2 class="task-title" aria-label="Task Title">New Task</h2>
+          <div class="task-status" aria-label="Task Status">Status: Idle</div>
+        </div>
+
+        <div class="messages" id="messages-container" aria-label="Conversation View">
+            <div class="empty-state" style="text-align: center; margin-top: 40px;">How can I help you today?</div>
+        </div>
+
+        <div class="composer">
+          <textarea class="composer-input" rows="3" placeholder="Tell the assistant what to do next..." aria-label="Composer Input"></textarea>
+        </div>
+      </div>
+
+      <!-- Right Panel -->
+      <div class="right-panel glass-panel" aria-label="Results Panel">
+        <div class="panel-tabs">
+          <div class="panel-tab active" aria-label="Tab: Artifacts">Artifacts</div>
+          <div class="panel-tab" aria-label="Tab: All Files">All Files</div>
+          <div class="panel-tab" aria-label="Tab: Changes">Changes</div>
+          <div class="panel-tab" aria-label="Tab: Preview">Preview</div>
+        </div>
+
+        <div class="result-list" id="results-container">
+            <div class="empty-state">No results to show.</div>
+        </div>
+      </div>
     </div>
+
     <script>
-      const nextBtn = document.getElementById('next-btn');
-      const nameInput = document.getElementById('assistant-name');
-      const toneSelect = document.getElementById('assistant-tone');
-      const nameError = document.getElementById('name-error');
-      const toneError = document.getElementById('tone-error');
-      const container = document.getElementById('form-container');
+      // Load assistant name from state if available
+      document.addEventListener('DOMContentLoaded', () => {
+        const headerTitle = document.getElementById('assistant-header-title');
 
-      if (nextBtn) {
-        nextBtn.addEventListener('click', () => {
-           let isValid = true;
-           const name = nameInput.value.trim();
-           const tone = toneSelect.value;
-
-           if (!name) {
-               nameError.style.display = 'block';
-               isValid = false;
-           } else {
-               nameError.style.display = 'none';
-           }
-
-           if (!tone) {
-               toneError.style.display = 'block';
-               isValid = false;
-           } else {
-               toneError.style.display = 'none';
-           }
-
-           if (isValid) {
-               localStorage.setItem('assistantName', name);
-               localStorage.setItem('assistantTone', tone);
-               window.location.href = "success.html";
-           } else {
-               container.classList.remove('animate-shake');
-               void container.offsetWidth; // trigger reflow
-               container.classList.add('animate-shake');
-           }
-        });
-      }
-
-      nameInput.addEventListener('input', () => {
-          if (nameInput.value.trim()) {
-              nameError.style.display = 'none';
+        if (window.__TAURI__ && window.__TAURI__.core) {
+          window.__TAURI__.core.invoke("get_onboarding_state").then((state) => {
+            if (state && state.assistantName) {
+              headerTitle.innerText = `${state.assistantName} Workspace`;
+            }
+          }).catch(console.error);
+        } else {
+          const storedName = localStorage.getItem('assistantName');
+          if (storedName) {
+            headerTitle.innerText = `${storedName} Workspace`;
           }
-      });
-
-      toneSelect.addEventListener('change', () => {
-          if (toneSelect.value) {
-              toneError.style.display = 'none';
-          }
+        }
       });
     </script>
   </body>

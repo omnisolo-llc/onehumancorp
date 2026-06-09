@@ -56,8 +56,8 @@ export default function ApprovalInbox({
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 font-inter py-10">
-      <div className="w-[375px] max-w-[375px] min-h-[812px] bg-gradient-to-br from-gray-50 to-gray-100 shadow-2xl overflow-hidden flex flex-col relative border-x border-gray-200">
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50/50 backdrop-blur-md font-inter py-10">
+      <div className="w-full sm:w-[375px] max-w-[375px] min-h-[812px] bg-white/60 backdrop-blur-xl shadow-2xl overflow-hidden flex flex-col relative border border-white/40 rounded-3xl glassmorphism">
         {/* Header */}
         <div className="pt-12 pb-6 px-6 bg-white/65 backdrop-blur-[30px] border-b border-white/40 sticky top-0 z-10 flex items-center gap-4">
           <button
@@ -135,7 +135,7 @@ export default function ApprovalInbox({
               return (
                 <div
                   key={req.id}
-                  className="app-card rounded-2xl p-5 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] transition-all duration-300"
+                  className="glassmorphism rounded-2xl p-5 border border-white/40 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] transition-all duration-300"
                 >
                   <div className="flex items-center gap-2 mb-3">
                     <span
@@ -161,7 +161,7 @@ export default function ApprovalInbox({
                   </p>
 
                   {req.payload?.feature_type === "ambassador_reply" && (
-                    <div className="mb-6 p-4 rounded-xl bg-blue-50 border border-blue-100 flex flex-col gap-3">
+                    <div className="mb-6 p-4 rounded-xl glassmorphism border border-blue-100 flex flex-col gap-3">
                       <div className="flex items-center gap-2 text-blue-800 font-semibold text-sm">
                         <svg
                           className="w-5 h-5"
@@ -318,7 +318,7 @@ export default function ApprovalInbox({
                   )}
 
                   {req.payload?.feature_type === "case_study" && (
-                    <div className="mb-6 p-4 rounded-xl bg-blue-50 border border-blue-100 flex flex-col gap-3">
+                    <div className="mb-6 p-4 rounded-xl glassmorphism border border-blue-100 flex flex-col gap-3">
                       <div className="flex items-center gap-2 text-blue-800 font-semibold text-sm">
                         <svg
                           className="w-5 h-5"
@@ -468,7 +468,7 @@ export default function ApprovalInbox({
                   )}
 
                   {req.payload?.feature_type === "quote_draft" && (
-                    <div className="mb-6 p-4 rounded-xl bg-blue-50 border border-blue-100 flex flex-col gap-3" data-testid="draft-quote-card">
+                    <div className="mb-6 p-4 rounded-xl glassmorphism border border-blue-100 flex flex-col gap-3" data-testid="draft-quote-card">
                       <div className="flex items-center gap-2 text-blue-800 font-semibold text-sm">
                         <svg
                           className="w-5 h-5"
@@ -652,7 +652,7 @@ export default function ApprovalInbox({
                 <p className="text-xs text-gray-500 font-medium uppercase tracking-wider mb-1">
                   Draft
                 </p>
-                <div className="bg-blue-50 p-3 rounded-xl border border-blue-100 text-sm text-gray-800 italic relative">
+                <div className="glassmorphism p-3 rounded-xl border border-blue-100 text-sm text-gray-800 italic relative">
                   {extractPayload(selectedReview.description).payload
                     ?.generated_response || "N/A"}
                 </div>

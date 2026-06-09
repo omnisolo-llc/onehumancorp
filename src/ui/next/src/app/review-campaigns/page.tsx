@@ -12,6 +12,7 @@ export default function ReviewCampaignsPage() {
   const [isSent, setIsSent] = useState(false);
   const [hasPro, setHasPro] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [autoRequest, setAutoRequest] = useState(false);
 
   useEffect(() => {
     if (typeof localStorage !== 'undefined') {
@@ -39,7 +40,7 @@ export default function ReviewCampaignsPage() {
         `Hi [Customer Name],\n\n` +
         `Thank you so much for shopping with us! We noticed you recently received your ${productName || 'order'} and we hope you are absolutely loving it.\n\n` +
         `As a small business, we rely on feedback from amazing customers like you to grow and improve. If you have a minute, we would be incredibly grateful if you could share your thoughts by leaving a quick review.\n\n` +
-        `Click here to leave a review: [Review Link]\n\n` +
+        `Click here to leave a review: https://ohc.app/leave-review\n\n` +
         `To say thanks, we'll send you a 10% discount code for your next purchase as soon as your review is published!\n\n` +
         `Warmly,\n` +
         `The ${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'Store' : 'Store'} Team\n\n⚡ Powered by OHC`
@@ -81,7 +82,22 @@ export default function ReviewCampaignsPage() {
            </p>
         </div>
 
-        <div className="flex flex-col md:flex-row gap-8">
+                  {/* Reputation Settings */}
+          <section className="w-full md:w-full p-6 shadow-md mb-8" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
+            <h3 className="text-xl font-semibold font-outfit mb-4" style={{ color: '#1D1D1F' }}>Reputation Management Settings</h3>
+            <div className="flex items-center justify-between p-4 bg-white rounded-lg border border-gray-200">
+              <div>
+                <p className="font-semibold text-gray-900">Auto-request reviews after completed orders</p>
+                <p className="text-sm text-gray-500">The OHC Ambassador Agent will automatically text customers asking for a review 2 hours after you mark a job complete.</p>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" className="sr-only peer" checked={autoRequest} onChange={(e) => { setAutoRequest(e.target.checked); /* In real app, call API to save setting */ }} />
+                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+              </label>
+            </div>
+          </section>
+
+          <div className="flex flex-col md:flex-row gap-8">
           {/* Campaign Settings */}
           <section className="w-full md:w-1/2 p-6 shadow-md" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
             <h3 className="text-xl font-semibold font-outfit mb-4" style={{ color: '#1D1D1F' }}>Campaign Configuration</h3>

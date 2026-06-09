@@ -1,30 +1,23 @@
-import { NextResponse } from 'next/server';
+import { NextResponse } from "next/server";
+import { backendHeaders } from "../../../../api/ui/backendProxy";
 
-export async function POST(request: Request) {
-  const body = await request.json();
-  const transactions = Array.isArray(body.transactions) ? body.transactions : Array.isArray(body) ? body : [body];
-  const session_id = body.session_id || undefined;
+export async function POST(req: Request) {
+  const backendUrl = process.env.BACKEND_URL || "http://127.0.0.1:18789";
 
   try {
-    const backendUrl = process.env.OHC_API_URL || 'http://127.0.0.1:18789';
+    const body = await req.json();
     const res = await fetch(`${backendUrl}/api/v1/payments/terminal/sync_offline`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-spiffe-id': request.headers.get('x-spiffe-id') || ''
-      },
-      body: JSON.stringify({ session_id, transactions })
+      method: "POST",
+      headers: backendHeaders(req, true),
+      body: JSON.stringify(body),
     });
 
     if (res.ok) {
-      const data = await res.json();
-      return NextResponse.json(data, { status: 201 });
-    } else {
-      const errorText = await res.text();
-      return NextResponse.json({ success: false, error: errorText }, { status: res.status });
+      return NextResponse.json(await res.json());
     }
-  } catch (err: any) {
-    console.error("Failed to forward offline pos transactions:", err);
-    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+
+    return NextResponse.json({ success: false, error_message: await res.text() }, { status: res.status });
+  } catch (e: any) {
+    return NextResponse.json({ success: false, error_message: "Backend connection failed" }, { status: 500 });
   }
 }
