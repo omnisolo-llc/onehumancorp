@@ -24,7 +24,7 @@ graph TD
 ```
 
 ### Key Design Decisions
-1.  **Local-First Images**: Update the local developer workflow to default to `npx @bazel/bazelisk run //deploy:server_image_load` instead of pulling from Docker Hub.
+1.  **Local-First Images**: Update the local developer workflow to default to `npx @bazel/bazelisk run //deploy:load_all_images` instead of pulling from Docker Hub.
 2.  **Compose Overrides**: Utilize `docker-compose.override.yml` to point to local image tags, preventing changes to the canonical production compose file.
 3.  **CI/CD Alignment**: Ensure the Bazel build pipeline pushes to a private authenticated registry (e.g., GCR/AR) to mitigate rate limits in CI.
 

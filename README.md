@@ -115,6 +115,10 @@ Because we use local images built from source instead of pulling from Docker Hub
 1.  Build and load the local images into your Docker daemon:
     ```bash
     npx @bazel/bazelisk run //deploy:load_all_images
+
+    # If you encounter Docker Hub rate limits for PostgreSQL/Valkey, make sure you use an authenticated pull
+    # or cached proxy. The OHC local services (server, agent) are already provided via the load script above.
+    # See docs/research/[maintenance]_docker_environment_fix.md for details.
     ```
 2.  Use Docker Compose to launch the stack with the locally built images:
     ```bash

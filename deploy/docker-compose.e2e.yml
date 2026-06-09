@@ -11,7 +11,7 @@
 services:
   # ─── Infrastructure ───────────────────────────────────────────────────────
   postgres:
-    image: pgvector/pgvector:pg15
+    image: local-pgvector:15
     command: ["postgres", "-c", "wal_level=logical"]
     security_opt:
       - seccomp:unconfined

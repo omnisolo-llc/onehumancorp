@@ -147,7 +147,7 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
-    image: pgvector/pgvector:pg15
+    image: local-pgvector:15
     pull_policy: missing
     command: ["postgres", "-c", "wal_level=logical"]
     environment:

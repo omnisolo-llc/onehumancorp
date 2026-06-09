@@ -6,3 +6,8 @@ services:
   server:
     pull_policy: never
     image: onehumancorp/server:latest
+
+  postgres:
+    pull_policy: never
+    # Using local-pgvector:15 as a fallback when pgvector/pgvector hits rate limits or fails on overlayfs.
+    image: local-pgvector:15
