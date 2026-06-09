@@ -21,4 +21,12 @@ test.describe('Pricing Page', () => {
     await backButton.click();
     await expect(page.url()).toContain('/dashboard');
   });
+
+  test('should navigate to checkout when upgrading to Starter via Stripe', async ({ page }) => {
+    await page.goto('/pricing');
+    const upgradeButton = page.locator('button', { hasText: 'Upgrade to Starter via Stripe' });
+    await expect(upgradeButton).toBeVisible();
+    await upgradeButton.click();
+    await expect(page.url()).toContain('/checkout?tier=Starter');
+  });
 });
