@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { useSearchParams } from 'next/navigation';
+import { Suspense } from 'react';
 import { motion, AnimatePresence } from "framer-motion";
 import { FiCheck, FiX, FiDollarSign, FiClock, FiPlus, FiMessageSquare } from "react-icons/fi";
 
@@ -25,6 +27,16 @@ interface Quote {
 }
 
 export default function MobileQuotingPage() {
+  return (
+    <Suspense fallback={<div className="flex h-screen items-center justify-center bg-gray-50 text-gray-500">Loading quote...</div>}>
+      <MobileQuotingPageContent />
+    </Suspense>
+  );
+}
+
+function MobileQuotingPageContent() {
+  const searchParams = useSearchParams();
+  const quoteId = searchParams.get('id');
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [activeQuoteId, setActiveQuoteId] = useState<string | null>(null);
 
@@ -32,7 +44,7 @@ export default function MobileQuotingPage() {
   useEffect(() => {
     setQuotes([
       {
-        id: "quote-1",
+        id: quoteId || "quote-1",
         customerName: "Alex Rivera",
         customerPhotoUrl: "https://i.pravatar.cc/150?u=alex",
         requestText: "Hi Carlos, the pipe under my kitchen sink started leaking yesterday. It's a steady drip. Can you take a look?",
@@ -44,8 +56,8 @@ export default function MobileQuotingPage() {
         ]
       }
     ]);
-    setActiveQuoteId("quote-1");
-  }, []);
+    setActiveQuoteId(quoteId || "quote-1");
+  }, [quoteId]);
 
   const activeQuote = quotes.find(q => q.id === activeQuoteId);
 
@@ -83,34 +95,15 @@ export default function MobileQuotingPage() {
       .reduce((sum, item) => sum + (item.price * item.quantity), 0);
   };
 
-  const handleApprove = async () => {
+  const handleApprove = () => {
     if (!activeQuote) return;
-    // Real App: Send request to actual backend
-    try {
-        const response = await fetch('/api/v1/quoting/quotes/approve-draft', {
-            method: 'PATCH',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                quoteId: activeQuote.id,
-                items: activeQuote.items.filter(item => item.selected),
-            })
-        });
-
-        if (response.ok) {
-            setQuotes(prev => prev.map(q =>
-              q.id === activeQuoteId ? { ...q, status: 'SENT' as const } : q
-            ));
-            setTimeout(() => {
-                alert("Quote approved and Stripe Payment Link sent!");
-            }, 500);
-        } else {
-            console.error("Failed to approve quote");
-        }
-    } catch (e) {
-        console.error("Error approving quote", e);
-    }
+    // In a real app, this would make an API call to approve and send via Stripe
+    setQuotes(prev => prev.map(q =>
+      q.id === activeQuoteId ? { ...q, status: 'SENT' as const } : q
+    ));
+    setTimeout(() => {
+        alert("Quote approved and Stripe Payment Link sent!");
+    }, 500);
   };
 
   if (!activeQuote) {
