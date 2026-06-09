@@ -123,6 +123,12 @@ export default function Dashboard() {
   const [offlineQueueCount, setOfflineQueueCount] = useState(0);
   const [isWalkthroughOpen, setIsWalkthroughOpen] = useState(false);
   const [userName, setUserName] = useState("Human");
+  useEffect(() => {
+    try {
+      const storedName = localStorage.getItem("user_name");
+      if (storedName) setUserName(storedName);
+    } catch {}
+  }, []);
   const [showMigration, setShowMigration] = useState(false);
   const [migrationUrl, setMigrationUrl] = useState("");
   const [migrationStatus, setMigrationStatus] = useState<"idle" | "running" | "complete">("idle");

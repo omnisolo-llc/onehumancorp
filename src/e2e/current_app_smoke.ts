@@ -6,6 +6,8 @@ export async function currentAppSmoke(page: Page, request: APIRequestContext, la
   await page.setViewportSize({ width: 375, height: 812 });
 
     await page.goto('/login');
+    await page.waitForLoadState('networkidle');
+    await page.waitForSelector('input[placeholder="Email or Username"]', { state: 'visible', timeout: 30000 });
     await page.fill('input[placeholder="Email or Username"]', 'Maya');
     await page.getByRole('button', { name: 'Log In' }).click();
 
