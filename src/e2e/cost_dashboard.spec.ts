@@ -12,6 +12,7 @@ test.describe('Cost Dashboard "My Plan" functionality', () => {
 
     // 3. Check for My Plan components
     await expect(page.locator('text=My Plan').first()).toBeVisible();
+    await expect(page.locator('section.app-card').first()).toBeVisible();
     await expect(page.locator('text=Current Plan').first()).toBeVisible();
     await expect(page.locator('text=AI Actions Used').first()).toBeVisible();
     await expect(page.locator('text=Storage Used').first()).toBeVisible();
