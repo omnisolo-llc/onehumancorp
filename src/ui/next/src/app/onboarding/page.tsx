@@ -43,6 +43,7 @@ export default function OnboardingWizard() {
     businessType, setBusinessType,
     categories, setCategories,
     websiteTemplate, setWebsiteTemplate,
+    paymentProcessor, setPaymentProcessor,
     domainChoice, setDomainChoice,
     firstProductName, setFirstProductName,
     firstProductPrice, setFirstProductPrice,
@@ -74,6 +75,7 @@ export default function OnboardingWizard() {
       businessType,
       categories,
       websiteTemplate,
+      paymentProcessor,
       domainChoice,
       firstProductName,
       firstProductPrice,
@@ -194,6 +196,7 @@ export default function OnboardingWizard() {
         if (data.wizardState.businessType) setBusinessType(data.wizardState.businessType);
         if (data.wizardState.categories) setCategories(data.wizardState.categories);
         if (data.wizardState.websiteTemplate) setWebsiteTemplate(data.wizardState.websiteTemplate);
+        if (data.wizardState.paymentProcessor) setPaymentProcessor(data.wizardState.paymentProcessor);
         if (data.wizardState.firstProductName) setFirstProductName(data.wizardState.firstProductName);
         if (data.wizardState.firstProductPrice) setFirstProductPrice(data.wizardState.firstProductPrice);
         if (data.wizardState.adminName) setAdminName(data.wizardState.adminName);
@@ -254,7 +257,7 @@ export default function OnboardingWizard() {
     return () => clearTimeout(timer);
   }, [
     step, chatStep, businessDescription, businessName, whatYouSell, location,
-    targetAudience, businessType, categories, websiteTemplate, domainChoice, firstProductName, firstProductPrice,
+    targetAudience, businessType, categories, websiteTemplate, paymentProcessor, domainChoice, firstProductName, firstProductPrice,
     adminName, adminEmail, adminPassword, aiAgents, aiAutoRespond, isLoaded
   ]);
 
@@ -359,7 +362,7 @@ export default function OnboardingWizard() {
           company_name: businessName,
           company_description: businessDescription || whatYouSell,
           selling_categories: categories,
-          payment_pref: 'online',
+          payment_pref: paymentProcessor,
           admin_email: adminEmail || 'admin@ohc.app',
           admin_name: adminName || businessName + ' Admin',
           admin_password: adminPassword || 'password123',
@@ -1062,6 +1065,27 @@ export default function OnboardingWizard() {
                         <div className="font-semibold text-sm">{template}</div>
                       </div>
                     ))}
+                  </div>
+                </div>
+
+
+                <div className="pt-2 border-t border-white/50 dark:border-white/10">
+                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2">Payment Processor</label>
+                  <div className="grid grid-cols-2 gap-3 mb-2">
+                    <div
+                      onClick={() => setPaymentProcessor('stripe')}
+                      className={`p-3 rounded-[8px] border cursor-pointer transition-all flex flex-col items-center justify-center text-center ${paymentProcessor === 'stripe' ? 'border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]' : 'border-white/50 dark:border-white/10 glassmorphism text-[#1D1D1F] dark:text-white hover:border-gray-400 dark:hover:border-gray-500'}`}
+                    >
+                      <span className="font-semibold text-sm mb-1">Stripe</span>
+                      <span className="text-[10px] opacity-70">Credit Cards & Apple Pay</span>
+                    </div>
+                    <div
+                      onClick={() => setPaymentProcessor('mercadopago')}
+                      className={`p-3 rounded-[8px] border cursor-pointer transition-all flex flex-col items-center justify-center text-center ${paymentProcessor === 'mercadopago' ? 'border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]' : 'border-white/50 dark:border-white/10 glassmorphism text-[#1D1D1F] dark:text-white hover:border-gray-400 dark:hover:border-gray-500'}`}
+                    >
+                      <span className="font-semibold text-sm mb-1">Mercado Pago</span>
+                      <span className="text-[10px] opacity-70">Pix, Boletos & Cards (LATAM)</span>
+                    </div>
                   </div>
                 </div>
 

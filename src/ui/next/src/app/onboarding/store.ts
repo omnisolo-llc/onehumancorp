@@ -13,6 +13,7 @@ interface OnboardingState {
   businessType: string;
   categories: string[];
   websiteTemplate: string;
+  paymentProcessor: string;
   domainChoice: string;
   firstProductName: string;
   firstProductPrice: string;
@@ -35,6 +36,7 @@ interface OnboardingState {
   setBusinessType: (type: string) => void;
   setCategories: (categories: string[]) => void;
   setWebsiteTemplate: (template: string) => void;
+  setPaymentProcessor: (processor: string) => void;
   setDomainChoice: (domain: string) => void;
   setFirstProductName: (name: string) => void;
   setFirstProductPrice: (price: string) => void;
@@ -62,6 +64,7 @@ export const useOnboardingStore = create<OnboardingState>()(
       businessType: 'Online Store',
       categories: [],
       websiteTemplate: 'Modern',
+  paymentProcessor: 'stripe',
   domainChoice: 'subdomain',
       firstProductName: '',
       firstProductPrice: '',
@@ -84,6 +87,7 @@ export const useOnboardingStore = create<OnboardingState>()(
       setBusinessType: (businessType) => set({ businessType }),
       setCategories: (categories) => set({ categories }),
       setWebsiteTemplate: (websiteTemplate) => set({ websiteTemplate }),
+      setPaymentProcessor: (paymentProcessor) => set({ paymentProcessor }),
   setDomainChoice: (domainChoice) => set({ domainChoice }),
       setFirstProductName: (firstProductName) => set({ firstProductName }),
       setFirstProductPrice: (firstProductPrice) => set({ firstProductPrice }),
