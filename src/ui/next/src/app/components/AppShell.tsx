@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { WithTooltip } from "../../components/TooltipRegistry";
+import { Omnibox } from "../../components/Omnibox";
 
 type StatusItem = {
   label: string;
@@ -203,6 +204,7 @@ export function AppShell({
         </header>
         <main className="app-page">{children}</main>
       </div>
+      <Omnibox />
     </div>
   );
 }
