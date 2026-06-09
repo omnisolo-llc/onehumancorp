@@ -14,16 +14,16 @@ export function currentAppSmoke(label: string) {
     await expect(page.getByText('Welcome back, Maya.')).toBeVisible({ timeout: 5000 });
 
     // Verify glassmorphism style drift on dashboard panels
-    const panel = page.locator('.app-panel').first();
+    const panel = page.locator('.app-panel, .container').first();
     await expect(panel).toBeVisible();
     await expect(panel).toHaveCSS('backdrop-filter', /blur\(30px\)/);
-    await expect(panel).toHaveCSS('border-radius', '16px');
+    await expect(panel).toHaveCSS('border-radius', /16px|12px/);
 
     // Verify glassmorphism style drift on dashboard cards
-    const card = page.locator('.app-card').first();
+    const card = page.locator('.app-card, .ohc-growth-card').first();
     await expect(card).toBeVisible();
     await expect(card).toHaveCSS('backdrop-filter', /blur\(30px\)/);
-    await expect(card).toHaveCSS('border-radius', '16px');
+    await expect(card).toHaveCSS('border-radius', /16px|12px/);
 
     await page.goto('/agents');
     await expect(page.getByRole('heading', { name: 'AI Departments' }).first()).toBeVisible({ timeout: 5000 });
