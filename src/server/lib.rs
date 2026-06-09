@@ -2773,7 +2773,7 @@ pub async fn list_ui_triage_handler(
             }
 
             match sqlx::query(
-                "SELECT t.id, t.tenant_id, t.customer_id, t.source, t.priority, t.context, t.status, t.created_at, a.action_type, a.payload AS action_payload FROM triage_items t LEFT JOIN triage_proposed_actions a ON t.id = a.triage_item_id WHERE t.tenant_id = $1 AND t.status != 'resolved' ORDER BY t.created_at DESC"
+                "SELECT t.id, t.tenant_id, t.customer_id, t.source, t.priority, t.context, t.status, t.created_at, a.action_type, a.payload AS action_payload FROM triage_items t LEFT JOIN triage_proposed_actions a ON t.id = a.triage_item_id WHERE t.tenant_id = $1 AND t.status NOT IN ('resolved', 'dismissed') ORDER BY t.created_at DESC"
             )
             .bind(&tenant_id)
             .fetch_all(&mut *tx)
@@ -2796,7 +2796,31 @@ pub async fn list_ui_triage_handler(
                 Err(e) => { tracing::error!("Failed to fetch triage items: {:?}", e); vec![] }
             }
         }
-        _ => vec![],
+        crate::db::DbStore::Sqlite(pool) => {
+            match sqlx::query(
+                "SELECT t.id, t.tenant_id, t.customer_id, t.source, t.priority, t.context, t.status, CAST(t.created_at AS TEXT) AS created_at, a.action_type, a.payload AS action_payload FROM triage_items t LEFT JOIN triage_proposed_actions a ON t.id = a.triage_item_id WHERE t.tenant_id = ? AND t.status NOT IN ('resolved', 'dismissed') ORDER BY t.created_at DESC"
+            )
+            .bind(&tenant_id)
+            .fetch_all(pool)
+            .await
+            {
+                Ok(rows) => rows.into_iter().map(|row| {
+                    serde_json::json!({
+                        "id": row.get::<String, _>("id"),
+                        "tenant_id": row.get::<String, _>("tenant_id"),
+                        "customer_id": row.try_get::<String, _>("customer_id").unwrap_or_default(),
+                        "source": row.try_get::<String, _>("source").unwrap_or_default(),
+                        "priority": row.try_get::<String, _>("priority").unwrap_or_default(),
+                        "context": row.try_get::<String, _>("context").unwrap_or_default(),
+                        "status": row.try_get::<String, _>("status").unwrap_or_default(),
+                        "created_at": row.try_get::<String, _>("created_at").unwrap_or_default(),
+                        "action_type": row.try_get::<String, _>("action_type").unwrap_or_default(),
+                        "action_payload": row.try_get::<String, _>("action_payload").unwrap_or_default(),
+                    })
+                }).collect::<Vec<_>>(),
+                Err(e) => { tracing::error!("Failed to fetch triage items: {:?}", e); vec![] }
+            }
+        }
     };
     (axum::http::StatusCode::OK, axum::Json(items)).into_response()
 }
@@ -2834,7 +2858,18 @@ pub async fn update_ui_triage_action_handler(
                 }
             }
         }
-        _ => (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": "Unsupported store"}))).into_response(),
+        crate::db::DbStore::Sqlite(pool) => {
+            let status = if payload.approved { "resolved" } else { "dismissed" };
+            match sqlx::query("UPDATE triage_items SET status = ? WHERE id = ? AND tenant_id = ?").bind(status).bind(&payload.triage_item_id).bind(&tenant_id).execute(pool).await {
+                Ok(_) => {
+                    (axum::http::StatusCode::OK, axum::Json(serde_json::json!({"status": "success"}))).into_response()
+                },
+                Err(e) => {
+                    tracing::error!("Failed to update triage item: {:?}", e);
+                    (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": e.to_string()}))).into_response()
+                }
+            }
+        }
     }
 }
 
