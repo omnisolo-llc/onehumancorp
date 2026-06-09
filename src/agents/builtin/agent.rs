@@ -7004,39 +7004,41 @@ mod tests {
     #[test]
     fn test_hierarchical_system_prompt_truncation_safe() {
         let mut cfg = AgentRunConfig::default();
-        // A single emoji is 4 bytes.
-        let emoji = "🚀"; // 4 bytes
-        // 8192 emojis = 32768 bytes
-        cfg.user_instructions = emoji.repeat(8192);
-        // Add one more emoji to exceed the limit
-        cfg.user_instructions.push_str(emoji); // 32772 bytes
+        let emoji = "🚀";
+        cfg.user_instructions = emoji.repeat(32768);
+        cfg.user_instructions.push_str(emoji);
 
-        // This should safely truncate without panicking
+        // This should safely truncate without panicking using char counts
         let prompt = crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg, &[]).build();
         assert!(prompt.contains("[User Instructions]\n"));
-        // Check that the user instructions part is exactly 32768 bytes long
         let notice = "\n... [User Instructions TRUNCATED TO 32KiB]";
+
+        let user_part = prompt.replace(notice, "");
+        let user_part = user_part.trim_start_matches("[User Instructions]\n");
+
+        // Assert that the string has 32768 logical characters
         assert_eq!(
-            prompt.len() - "[User Instructions]\n".len(),
-            32768 + notice.len()
+            user_part.chars().count(),
+            32768,
+            "Output should be exactly 32KiB logical characters"
         );
     }
 
     #[test]
     fn test_hierarchical_system_prompt_truncation_safe_boundary() {
         let mut cfg = AgentRunConfig::default();
-        // Construct a string where the 32768th byte is in the middle of a multibyte character.
-        // Let's use 1-byte chars until 32766, then a 3-byte char.
-        cfg.user_instructions = "a".repeat(32766);
-        cfg.user_instructions.push('€'); // '€' is 3 bytes (E2 82 AC). Length is now 32769 bytes.
+        // Logical chars
+        cfg.user_instructions = "a".repeat(32768);
+        cfg.user_instructions.push('€');
 
-        // Truncating at 32768 would split the '€' character.
         let prompt = crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg, &[]).build();
 
-        let user_part = prompt.trim_start_matches("[User Instructions]\n");
-        // The truncation should back up to 32766 to avoid splitting the character.
         let notice = "\n... [User Instructions TRUNCATED TO 32KiB]";
-        assert_eq!(user_part.len(), 32766 + notice.len());
+        let user_part = prompt.replace(notice, "");
+        let user_part = user_part.trim_start_matches("[User Instructions]\n");
+
+        assert_eq!(user_part.chars().count(), 32768);
+        assert!(!user_part.contains('€'));
     }
 
     #[tokio::test]
