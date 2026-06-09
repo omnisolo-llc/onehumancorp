@@ -18,14 +18,22 @@ impl TaskQueue for PgTaskQueue {
 async fn enqueue_batch(&self, jobs: Vec<Job>) -> Result<(), String> {
         if jobs.is_empty() { return Ok(()); }
         ::server_telemetry::record_queue_length_sync(jobs.len() as i32, ::server_telemetry::get_deployment_mode());
-        let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
+
+        let mut ids = Vec::with_capacity(jobs.len());
+        let mut parent_task_ids = Vec::with_capacity(jobs.len());
+        let mut job_types = Vec::with_capacity(jobs.len());
+        let mut payloads = Vec::with_capacity(jobs.len());
+        let mut statuses = Vec::with_capacity(jobs.len());
+        let mut next_retry_ats = Vec::with_capacity(jobs.len());
+        let mut tenant_ids = Vec::with_capacity(jobs.len());
 
         let mut current_depths = std::collections::HashMap::new();
-
         let mut unique_tenants = std::collections::HashSet::new();
         for job in &jobs {
             unique_tenants.insert(job.tenant_id.clone());
         }
+
+        let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
 
         let tenants_vec: Vec<String> = unique_tenants.into_iter().collect();
         if !tenants_vec.is_empty() {
@@ -34,6 +42,7 @@ async fn enqueue_batch(&self, jobs: Vec<Job>) -> Result<(), String> {
                 .fetch_all(&mut *tx)
                 .await
             {
+                use sqlx::Row;
                 for row in rows {
                     let org_id: String = row.try_get(0).unwrap_or_default();
                     let count: i64 = row.try_get(1).unwrap_or(0);
@@ -44,41 +53,40 @@ async fn enqueue_batch(&self, jobs: Vec<Job>) -> Result<(), String> {
 
         let bursts_threshold = 10;
 
-        // Chunk jobs to avoid Postgres parameter limits (65535 parameters max)
-        // We have 6 parameters per insert, so safe max is ~10,000. We use 5,000 for safety.
-        for chunk in jobs.chunks(5000) {
-            let mut query_builder = sqlx::QueryBuilder::new("INSERT INTO ohc_job_queue (id, parent_task_id, job_type, payload, status, next_retry_at, tenant_id) ");
-            query_builder.push_values(chunk, |mut b, job| {
-                let depth = *current_depths.get(&job.tenant_id).unwrap_or(&0);
-                let mut next_retry_at = job.next_retry_at;
-                if depth > bursts_threshold {
-                    let delay_seconds = (depth - bursts_threshold) * 5;
-                    next_retry_at = next_retry_at + chrono::Duration::seconds(delay_seconds);
-                }
-
-                // Note: Rust doesn't allow mutation here easily due to ownership,
-                // but depth is only an estimate anyway so it's acceptable.
-                // We could collect all modified next_retry_ats prior to this step if exact counting was crucial.
-
-                let payload_json: serde_json::Value = serde_json::from_str(&job.payload).unwrap_or(serde_json::Value::Null);
-
-                b.push_bind(job.id.clone())
-                 .push_bind(job.parent_task_id.clone())
-                 .push_bind(job.job_type.clone())
-                 .push_bind(payload_json)
-                 .push_bind("PENDING")
-                 .push_bind(next_retry_at)
-                 .push_bind(job.tenant_id.clone());
-            });
-
-            let query = query_builder.build();
-            query.execute(&mut *tx).await.map_err(|e| e.to_string())?;
-
-            // Update depths for subsequent chunks
-            for job in chunk {
-                *current_depths.entry(job.tenant_id.clone()).or_insert(0) += 1;
+        for job in &jobs {
+            let depth = *current_depths.get(&job.tenant_id).unwrap_or(&0);
+            let mut next_retry_at = job.next_retry_at;
+            if depth > bursts_threshold {
+                let delay_seconds = (depth - bursts_threshold) * 5;
+                next_retry_at = next_retry_at + chrono::Duration::seconds(delay_seconds);
             }
+            *current_depths.entry(job.tenant_id.clone()).or_insert(0) += 1;
+
+            let payload_json: serde_json::Value = serde_json::from_str(&job.payload).unwrap_or(serde_json::Value::Null);
+
+            ids.push(job.id.clone());
+            parent_task_ids.push(job.parent_task_id.clone());
+            job_types.push(job.job_type.clone());
+            payloads.push(payload_json);
+            statuses.push("PENDING".to_string());
+            next_retry_ats.push(next_retry_at);
+            tenant_ids.push(job.tenant_id.clone());
         }
+
+        sqlx::query(
+            "INSERT INTO ohc_job_queue (id, parent_task_id, job_type, payload, status, next_retry_at, tenant_id)
+             SELECT unnest.id, unnest.parent_task_id, unnest.job_type, unnest.payload, unnest.status, unnest.next_retry_at, unnest.tenant_id FROM UNNEST($1::text[], $2::text[], $3::text[], $4::jsonb[], $5::text[], $6::timestamptz[], $7::text[]) AS unnest(id, parent_task_id, job_type, payload, status, next_retry_at, tenant_id)"
+        )
+        .bind(&ids)
+        .bind(&parent_task_ids)
+        .bind(&job_types)
+        .bind(&payloads)
+        .bind(&statuses)
+        .bind(&next_retry_ats)
+        .bind(&tenant_ids)
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| e.to_string())?;
 
         tx.commit().await.map_err(|e| e.to_string())?;
         Ok(())
