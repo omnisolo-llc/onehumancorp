@@ -136,6 +136,7 @@ export default function OnboardingWizard() {
         businessName,
         whatYouSell,
         location,
+        targetAudience,
         businessType,
         categories,
         websiteTemplate,
@@ -675,6 +676,7 @@ export default function OnboardingWizard() {
                   {validationError && <p className="text-red-500 text-sm font-semibold mb-2">{validationError}</p>}
                   <div className="mt-auto pt-6">
                     <button
+
                       onClick={() => {
                         if (businessName.trim().length < 3) {
                           setValidationError('Business Name must be at least 3 characters.');
@@ -740,6 +742,7 @@ export default function OnboardingWizard() {
                   {validationError && <p className="text-red-500 text-sm font-semibold mb-2">{validationError}</p>}
                   <div className="mt-auto pt-6">
                     <button
+
                       onClick={() => {
                         if (!whatYouSell.trim()) {
                           setValidationError('Please tell us what you sell.');
@@ -806,6 +809,7 @@ export default function OnboardingWizard() {
                   {validationError && <p className="text-red-500 text-sm font-semibold mb-2">{validationError}</p>}
                   <div className="mt-auto pt-6">
                     <button
+
                       onClick={() => {
                         if (!location.trim()) {
                           setValidationError('Please tell us your location.');
@@ -891,7 +895,7 @@ export default function OnboardingWizard() {
                           </svg>
                           Analyzing...
                         </span>
-                      ) : <IconLabel icon="launch">Next</IconLabel>}
+                      ) : <IconLabel icon="launch">Generate My Business</IconLabel>}
                     </button>
                   </div>
                 </div>

@@ -31,12 +31,12 @@ type LedgerResponse = {
   entries: OHCLedgerEntry[];
 };
 
-export function UnifiedAgentFeed() {
-  const [approvals, setApprovals] = useState<ApprovalRequest[]>([]);
+export function UnifiedAgentFeed({ initialApprovals, initialActivities }: { initialApprovals?: any[], initialActivities?: any[] }) {
+  const [approvals, setApprovals] = useState<ApprovalRequest[]>(initialApprovals || []);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [activeTab, setActiveTab] = useState<"proposals" | "activity">("proposals");
-  const [activities, setActivities] = useState<OHCLedgerEntry[]>([]);
+  const [activities, setActivities] = useState<OHCLedgerEntry[]>(initialActivities || []);
   const [activityLoading, setActivityLoading] = useState(false);
 
   const tenantId = () => {

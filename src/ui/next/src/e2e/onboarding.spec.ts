@@ -6,6 +6,46 @@ test.describe('OnboardingWizard CUJ', () => {
     await page.addInitScript(() => {
       window.localStorage.clear();
     });
+
+    await page.route('/api/onboarding/intake', async route => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          business_type: "Test Business Type",
+          product_name: "Test Product",
+          product_price: "99.99",
+          location: "Test City",
+          ai_agents: ["Operations", "Marketing"]
+        })
+      });
+    });
+
+    await page.route('/api/onboarding/start', async route => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          message: "Your business has been successfully launched.",
+          tenant_id: "test-tenant-id"
+        })
+      });
+    });
+
+    let savedWizardState: Record<string, unknown> | null = null;
+    await page.route('/api/onboarding/draft', async route => {
+      if (route.request().method() === 'POST') {
+        const body = await route.request().postDataJSON();
+        savedWizardState = body.wizardState;
+        await route.fulfill({ status: 200, json: {} });
+      } else {
+        await route.fulfill({ status: 200, json: { wizardState: savedWizardState } });
+      }
+    });
+
+    await page.route('/api/onboarding/state', async route => {
+      await route.fulfill({ status: 200, json: { wizardState: null } });
+    });
   });
 
 
@@ -18,10 +58,10 @@ test.describe('OnboardingWizard CUJ', () => {
     await expect(page.getByText("What's the name of your business?")).toBeVisible();
 
     await page.getByPlaceholder(/Maya's Custom Cake/i).fill('Maya Bakery');
-    await page.getByRole('button', { name: 'Next' }).click();
+    await page.getByRole('button', { name: 'Next Step' }).click();
 
     await page.getByPlaceholder(/I bake custom vegan cakes/i).fill('I bake custom vegan cakes for weddings and parties.');
-    await page.getByRole('button', { name: 'Next' }).click();
+    await page.getByRole('button', { name: 'Next Step' }).click();
 
     await page.getByPlaceholder(/Portland, OR/i).fill('Seattle, WA');
     await page.getByRole('button', { name: 'Generate My Business' }).click();
@@ -48,10 +88,10 @@ test.describe('OnboardingWizard CUJ', () => {
     await page.getByRole('button', { name: 'Start My Business' }).click();
 
     await page.getByPlaceholder(/Maya's Custom Cake/i).fill('Carlos Fixes It');
-    await page.getByRole('button', { name: 'Next' }).click();
+    await page.getByRole('button', { name: 'Next Step' }).click();
 
     await page.getByPlaceholder(/I bake custom vegan cakes/i).fill('Plumbing and general repairs');
-    await page.getByRole('button', { name: 'Next' }).click();
+    await page.getByRole('button', { name: 'Next Step' }).click();
 
     await page.getByPlaceholder(/Portland, OR/i).fill('Austin, TX');
     await page.getByRole('button', { name: 'Generate My Business' }).click();
@@ -78,12 +118,15 @@ test.describe('OnboardingWizard CUJ', () => {
     await page.getByRole('button', { name: 'Start My Business' }).click();
 
     await page.getByPlaceholder(/Maya's Custom Cake/i).fill('Leo Guitar Lessons');
-    await page.getByRole('button', { name: 'Next' }).click();
+    await page.getByRole('button', { name: 'Next Step' }).click();
 
     await page.getByPlaceholder(/I bake custom vegan cakes/i).fill('Guitar tutoring online');
-    await page.getByRole('button', { name: 'Next' }).click();
+    await page.getByRole('button', { name: 'Next Step' }).click();
 
     await page.getByPlaceholder(/Portland, OR/i).fill('Remote');
+    await page.getByRole('button', { name: 'Next Step' }).click();
+
+    await page.getByPlaceholder(/Local families, Tech startups/i).fill('Students');
     await page.getByRole('button', { name: 'Generate My Business' }).click();
 
     await expect(page.locator('input[value="Guitar tutoring online"]')).toBeVisible();
@@ -109,12 +152,15 @@ test.describe('OnboardingWizard CUJ', () => {
     await page.getByRole('button', { name: 'Start My Business' }).click();
 
     await page.getByPlaceholder(/Maya's Custom Cake/i).fill('Fatima Halal Food');
-    await page.getByRole('button', { name: 'Next' }).click();
+    await page.getByRole('button', { name: 'Next Step' }).click();
 
     await page.getByPlaceholder(/I bake custom vegan cakes/i).fill('Halal food cart pickup orders');
-    await page.getByRole('button', { name: 'Next' }).click();
+    await page.getByRole('button', { name: 'Next Step' }).click();
 
     await page.getByPlaceholder(/Portland, OR/i).fill('New York, NY');
+    await page.getByRole('button', { name: 'Next Step' }).click();
+
+    await page.getByPlaceholder(/Local families, Tech startups/i).fill('Locals');
     await page.getByRole('button', { name: 'Generate My Business' }).click();
 
     await expect(page.locator('input[value="Halal food cart pickup orders"]')).toBeVisible();
@@ -161,12 +207,15 @@ test.describe('OnboardingWizard CUJ', () => {
     await page.getByRole('button', { name: 'Start My Business' }).click();
 
     await page.getByPlaceholder(/Maya's Custom Cake/i).fill('Test Business');
-    await page.getByRole('button', { name: 'Next' }).click();
+    await page.getByRole('button', { name: 'Next Step' }).click();
 
     await page.getByPlaceholder(/I bake custom vegan cakes/i).fill('Testing');
-    await page.getByRole('button', { name: 'Next' }).click();
+    await page.getByRole('button', { name: 'Next Step' }).click();
 
     await page.getByPlaceholder(/Portland, OR/i).fill('Local');
+    await page.getByRole('button', { name: 'Next Step' }).click();
+
+    await page.getByPlaceholder(/Local families, Tech startups/i).fill('Locals');
     await page.getByRole('button', { name: 'Generate My Business' }).click();
 
     await page.getByRole('button', { name: 'Continue' }).click();
@@ -200,7 +249,7 @@ test.describe('OnboardingWizard CUJ', () => {
     // Step 1: Empty Business Name
     await expect(page.getByText("What's the name of your business?")).toBeVisible();
     await page.getByPlaceholder(/Maya's Custom Cake/i).fill('  ');
-    await page.getByRole('button', { name: 'Next' }).click();
+    await page.getByRole('button', { name: 'Next Step' }).click();
 
     const businessNameInput = page.getByPlaceholder(/Maya's Custom Cake/i);
     await expect(page.getByText('Business Name must be at least 3 characters.')).toBeVisible();
@@ -208,12 +257,12 @@ test.describe('OnboardingWizard CUJ', () => {
 
     // Proceed to Step 2
     await businessNameInput.fill('Valid Business Name');
-    await page.getByRole('button', { name: 'Next' }).click();
+    await page.getByRole('button', { name: 'Next Step' }).click();
 
     // Step 2: Empty What you sell
     await expect(page.getByText("What do you sell?")).toBeVisible();
     await page.getByPlaceholder(/I bake custom vegan cakes/i).fill('');
-    await page.getByRole('button', { name: 'Next' }).click();
+    await page.getByRole('button', { name: 'Next Step' }).click();
 
     const whatYouSellInput = page.getByPlaceholder(/I bake custom vegan cakes/i);
     await expect(page.getByText('Please tell us what you sell.')).toBeVisible();
@@ -221,16 +270,29 @@ test.describe('OnboardingWizard CUJ', () => {
 
     // Proceed to Step 3
     await whatYouSellInput.fill('Valid products');
-    await page.getByRole('button', { name: 'Next' }).click();
+    await page.getByRole('button', { name: 'Next Step' }).click();
 
     // Step 3: Empty Location
     await expect(page.getByText("Where are you located?")).toBeVisible();
     await page.getByPlaceholder(/Portland, OR/i).fill('  ');
-    await page.getByRole('button', { name: 'Generate My Business' }).click();
+    await page.getByRole('button', { name: 'Next Step' }).click();
 
     const locationInput = page.getByPlaceholder(/Portland, OR/i);
     await expect(page.getByText('Please tell us your location.')).toBeVisible();
     await expect(locationInput).toHaveClass(/border-red-500/);
+
+    // Proceed to Step 4
+    await locationInput.fill('Valid location');
+    await page.getByRole('button', { name: 'Next Step' }).click();
+
+    // Step 4: Empty Target Audience
+    await expect(page.getByText("Who is your target audience?")).toBeVisible();
+    await page.getByPlaceholder(/Local families, Tech startups/i).fill('  ');
+    await page.getByRole('button', { name: 'Generate My Business' }).click();
+
+    const targetAudienceInput = page.getByPlaceholder(/Local families, Tech startups/i);
+    await expect(page.getByText('Please tell us your target audience.')).toBeVisible();
+    await expect(targetAudienceInput).toHaveClass(/border-red-500/);
   });
 
   test('User can use Instant Build to launch storefront quickly', async ({ page }) => {
