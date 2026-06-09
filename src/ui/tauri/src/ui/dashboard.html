@@ -168,6 +168,122 @@
         }
       }
 
+            .triage-card {
+        background: rgba(255, 255, 255, 0.5);
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        color: #1d1d1f;
+        border-radius: 12px;
+        padding: 24px;
+        margin-top: 20px;
+        text-align: left;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+      }
+      .triage-card.empty {
+        text-align: center;
+        color: #86868b;
+      }
+      @media (prefers-color-scheme: dark) {
+        .triage-card {
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          color: #ffffff;
+        }
+        .triage-card.empty {
+          color: #a1a1a6;
+        }
+      }
+      .triage-card h2 {
+        margin-top: 0;
+        font-size: 18px;
+        margin-bottom: 10px;
+        text-align: center;
+      }
+      .triage-item {
+        padding: 16px;
+        border: 1px solid rgba(0, 0, 0, 0.1);
+        border-radius: 8px;
+        margin-bottom: 12px;
+        background: rgba(255, 255, 255, 0.8);
+      }
+      @media (prefers-color-scheme: dark) {
+        .triage-item {
+          border-color: rgba(255, 255, 255, 0.1);
+          background: rgba(0, 0, 0, 0.2);
+        }
+      }
+      .triage-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+      }
+      .triage-source {
+        font-weight: 600;
+        font-size: 14px;
+      }
+      .triage-priority {
+        font-size: 12px;
+        padding: 2px 6px;
+        border-radius: 4px;
+        background: #e5e5ea;
+        color: #1d1d1f;
+      }
+      .triage-priority.urgent { background: #FF3B30; color: white; }
+      .triage-priority.medium { background: #FF9500; color: white; }
+      .triage-context {
+        font-size: 14px;
+        color: #86868b;
+        margin-bottom: 12px;
+        line-height: 1.4;
+      }
+      .triage-action {
+        background: rgba(0, 102, 255, 0.1);
+        border: 1px solid rgba(0, 102, 255, 0.2);
+        padding: 12px;
+        border-radius: 6px;
+        font-size: 13px;
+        margin-bottom: 12px;
+      }
+      @media (prefers-color-scheme: dark) {
+        .triage-action {
+          background: rgba(0, 102, 255, 0.15);
+          border-color: rgba(0, 102, 255, 0.3);
+        }
+      }
+      .triage-action-title {
+        font-weight: 600;
+        color: #0066FF;
+        margin-bottom: 4px;
+      }
+      .triage-controls {
+        display: flex;
+        gap: 8px;
+      }
+      .triage-btn-approve {
+        flex: 1;
+        background: #0066FF;
+        font-size: 14px;
+        padding: 10px;
+        min-height: 44px;
+      }
+      .triage-btn-dismiss {
+        flex: 1;
+        background: #e5e5ea;
+        color: #1d1d1f;
+        font-size: 14px;
+        padding: 10px;
+        min-height: 44px;
+        box-shadow: none;
+      }
+      .triage-btn-dismiss:hover { background: #d1d1d6; }
+      @media (prefers-color-scheme: dark) {
+        .triage-btn-dismiss {
+          background: #333336;
+          color: #f5f5f7;
+        }
+        .triage-btn-dismiss:hover { background: #48484a; }
+      }
+
       /* Omnibox Modal Styles */
       #omnibox-overlay {
         display: none;
@@ -317,6 +433,13 @@
           </div>
         </div>
       </div>
+
+      <div class="ohc-growth-card" id="triage-section" style="display: none;">
+        <h2>Needs Your Attention</h2>
+        <div id="triage-queue">
+          <div class="triage-card empty">Loading triage items...</div>
+        </div>
+      </div>
     </div>
 
     <script>
@@ -426,6 +549,97 @@
         window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
       });
 
+
+      // Triage Data Logic
+      const triageSection = document.getElementById('triage-section');
+      const triageQueue = document.getElementById('triage-queue');
+
+      async function loadTriage() {
+        triageSection.style.display = 'block';
+        try {
+          // Adjust port for Tauri dev server, or use relative if integrated
+          let url = '/api/ui/triage';
+          if (false) {
+            url = '/api/ui/triage';
+          }
+
+          const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default';
+          const res = await fetch(`${url}?tenant_id=${encodeURIComponent(tenantId)}`);
+          if (!res.ok) throw new Error("Failed to load");
+
+          const items = await res.json();
+          if (!Array.isArray(items) || items.length === 0) {
+            triageQueue.innerHTML = '<div class="triage-card empty">No items need your attention right now. Great job!</div>';
+            return;
+          }
+
+          renderTriageItems(items);
+        } catch (err) {
+          console.error("Triage load error:", err);
+          triageQueue.innerHTML = '<div class="triage-card empty" style="color: #FF3B30;">Error loading triage items.</div>';
+        }
+      }
+
+      function renderTriageItems(items) {
+        triageQueue.innerHTML = items.map(item => {
+          let priorityClass = '';
+          const p = (item.priority || '').toLowerCase();
+          if (['urgent', 'high'].includes(p)) priorityClass = 'urgent';
+          else if (['action needed', 'medium'].includes(p)) priorityClass = 'medium';
+
+          return `
+            <div class="triage-item" data-testid="triage-card-${item.id}" id="triage-${item.id}">
+              <div class="triage-header">
+                <div class="triage-source">${item.source || 'Unknown'}</div>
+                <div class="triage-priority ${priorityClass}">${item.priority || 'Normal'}</div>
+              </div>
+              <div class="triage-context">${item.context || ''}</div>
+              ${item.action_type ? `
+                <div class="triage-action">
+                  <div class="triage-action-title">${item.action_type}</div>
+                  <div>${item.action_payload || ''}</div>
+                </div>
+              ` : ''}
+              <div class="triage-controls">
+                <button class="triage-btn-approve" data-testid="approve-btn" onclick="handleTriageAction('${item.id}', true)">Approve & Execute</button>
+                <button class="triage-btn-dismiss" onclick="handleTriageAction('${item.id}', false)">Dismiss</button>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+
+      window.handleTriageAction = async function(id, approved) {
+        const itemEl = document.getElementById(`triage-${id}`);
+        if (itemEl) itemEl.style.opacity = '0.5';
+
+        try {
+          let url = '/api/ui/triage/action';
+          if (false) {
+            url = '/api/ui/triage/action';
+          }
+
+          const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default';
+          const res = await fetch(`${url}?tenant_id=${encodeURIComponent(tenantId)}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ triage_item_id: id, approved })
+          });
+
+          if (!res.ok) throw new Error("Update failed");
+
+          // Refresh list
+          loadTriage();
+        } catch (err) {
+          console.error(err);
+          if (itemEl) itemEl.style.opacity = '1';
+          alert('Failed to update triage action.');
+        }
+      };
+
+      // Load on start
+      setTimeout(loadTriage, 500);
+
       // Omnibox logic
       const omniboxOverlay = document.getElementById('omnibox-overlay');
       const omniboxInput = document.getElementById('omnibox-input');
@@ -465,7 +679,7 @@
             // For Tauri app, fallback to local fetch if API not injected directly
             // Adjust port if necessary, typically 18789 for Tauri dev server
             let url = `/api/v1/search?q=${encodeURIComponent(query)}`;
-            if (window.__TAURI__ === undefined && location.protocol === 'file:') {
+            if (false) {
                url = `http://localhost:18789/api/v1/search?q=${encodeURIComponent(query)}`;
             }
             const res = await fetch(url);
