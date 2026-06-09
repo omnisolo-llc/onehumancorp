@@ -2738,6 +2738,85 @@ pub struct TriageActionPayload {
     pub approved: bool,
 }
 
+pub async fn list_ui_pipeline_handler(
+    axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
+    axum::extract::Query(query): axum::extract::Query<UiTenantQuery>,
+) -> axum::response::Response {
+    use axum::response::IntoResponse;
+    use sqlx::Row;
+    let tenant_id = ui_tenant_id(&query);
+
+    let mut result_json = serde_json::json!({
+        "leads": [],
+        "opportunities": [],
+    });
+
+    match &db.store {
+        crate::db::DbStore::Postgres => {
+            let mut tx = match db.pool.begin().await {
+                Ok(tx) => tx,
+                Err(e) => {
+                    tracing::error!("Failed to begin transaction: {:?}", e);
+                    return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(result_json)).into_response();
+                }
+            };
+            if let Err(e) = ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await {
+                tracing::error!("Failed to set org context: {:?}", e);
+                return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(result_json)).into_response();
+            }
+
+            let leads_rows = sqlx::query("SELECT id, tenant_id, source, contact_info, context, created_at FROM leads WHERE tenant_id = $1 ORDER BY created_at DESC")
+                .bind(&tenant_id)
+                .fetch_all(&mut *tx)
+                .await;
+
+            let mut leads_vec = Vec::new();
+            if let Ok(rows) = leads_rows {
+                for row in rows {
+                    leads_vec.push(serde_json::json!({
+                        "id": row.get::<String, _>("id"),
+                        "tenant_id": row.get::<String, _>("tenant_id"),
+                        "source": row.try_get::<String, _>("source").unwrap_or_default(),
+                        "contact_info": row.try_get::<String, _>("contact_info").unwrap_or_default(),
+                        "context": row.try_get::<String, _>("context").unwrap_or_default(),
+                        "created_at": row.try_get::<chrono::DateTime<chrono::Utc>, _>("created_at").map(|dt| dt.to_rfc3339()).unwrap_or_default(),
+                    }));
+                }
+            }
+
+            let opp_rows = sqlx::query("SELECT id, tenant_id, lead_id, title, stage, estimated_value, priority, created_at, updated_at FROM opportunities WHERE tenant_id = $1 ORDER BY created_at DESC")
+                .bind(&tenant_id)
+                .fetch_all(&mut *tx)
+                .await;
+
+            let mut opps_vec = Vec::new();
+            if let Ok(rows) = opp_rows {
+                for row in rows {
+                    opps_vec.push(serde_json::json!({
+                        "id": row.get::<String, _>("id"),
+                        "tenant_id": row.get::<String, _>("tenant_id"),
+                        "lead_id": row.try_get::<String, _>("lead_id").unwrap_or_default(),
+                        "title": row.try_get::<String, _>("title").unwrap_or_default(),
+                        "stage": row.try_get::<String, _>("stage").unwrap_or_default(),
+                        "estimated_value": row.try_get::<f64, _>("estimated_value").unwrap_or_default(),
+                        "priority": row.try_get::<String, _>("priority").unwrap_or_default(),
+                        "created_at": row.try_get::<chrono::DateTime<chrono::Utc>, _>("created_at").map(|dt| dt.to_rfc3339()).unwrap_or_default(),
+                        "updated_at": row.try_get::<chrono::DateTime<chrono::Utc>, _>("updated_at").map(|dt| dt.to_rfc3339()).unwrap_or_default(),
+                    }));
+                }
+            }
+
+            result_json = serde_json::json!({
+                "leads": leads_vec,
+                "opportunities": opps_vec,
+            });
+        }
+        _ => {}
+    }
+
+    (axum::http::StatusCode::OK, axum::Json(result_json)).into_response()
+}
+
 pub async fn list_ui_triage_handler(
     axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
     axum::extract::Query(query): axum::extract::Query<UiTenantQuery>,
@@ -3922,6 +4001,7 @@ async fn create_ui_bom_item_handler(
         .route("/api/ui/inbox/messages", axum::routing::get(list_ui_inbox_handler).with_state(db.clone()))
         .route("/api/ui/triage", axum::routing::get(list_ui_triage_handler).with_state(db.clone()))
         .route("/api/ui/triage/action", axum::routing::post(update_ui_triage_action_handler).with_state(db.clone()))
+        .route("/api/ui/pipeline", axum::routing::get(list_ui_pipeline_handler).with_state(db.clone()))
         .route("/api/ui/supply", axum::routing::get(list_ui_supply_handler).with_state(db.clone()))
         .route("/api/ui/supply/vendors", axum::routing::post(create_ui_supply_vendor_handler).with_state(db.clone()))
         .route("/api/ui/supply/raw-materials", axum::routing::post(create_ui_raw_material_handler).with_state(db.clone()))

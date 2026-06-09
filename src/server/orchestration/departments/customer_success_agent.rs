@@ -183,6 +183,26 @@ impl Department for CustomerSuccessAgent {
                 let _ = self.orchestrator.update_inbox_message_draft(inbox_id, &event.tenant_id, &generated_response).await;
             }
 
+            let lower_message = message.to_lowercase();
+            let is_high_intent = lower_message.contains("quote") || lower_message.contains("price") || lower_message.contains("cost") || lower_message.contains("custom") || lower_message.contains("book") || lower_message.contains("how much") || lower_message.contains("proposal") || lower_message.contains("interested");
+
+            if is_high_intent {
+                let lead_id = uuid::Uuid::new_v4().to_string();
+                let contact_info = event.payload.get("sender_id").and_then(|v| v.as_str()).unwrap_or("Unknown");
+                let source = event.payload.get("source").and_then(|v| v.as_str()).unwrap_or("Inbox");
+                let insert_lead_query = "INSERT INTO leads (id, tenant_id, source, contact_info, context) VALUES ($1, $2, $3, $4, $5)";
+                let pool = crate::db::get_pool();
+                let _ = sqlx::query(insert_lead_query)
+                    .bind(&lead_id)
+                    .bind(&event.tenant_id)
+                    .bind(source)
+                    .bind(contact_info)
+                    .bind(message)
+                    .execute(&pool)
+                    .await;
+                tracing::info!("Created high-intent Lead: {}", lead_id);
+            }
+
             let action_payload = serde_json::json!({
                 "feature_type": "ambassador_reply",
                 "original_message": if message.is_empty() { "Do you have vegan options for birthday cakes?" } else { message },

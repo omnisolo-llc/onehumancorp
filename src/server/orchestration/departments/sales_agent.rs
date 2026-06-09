@@ -254,6 +254,16 @@ impl Department for SalesAgent {
                             deposit_amount
                         );
 
+                        if let Some(opp_id) = payload.get("opportunity_id").and_then(|v| v.as_str()) {
+                            let pool = crate::db::get_pool();
+                            let _ = sqlx::query("UPDATE opportunities SET stage = 'Proposal', updated_at = CURRENT_TIMESTAMP WHERE id = $1 AND tenant_id = $2")
+                                .bind(opp_id)
+                                .bind(&event.tenant_id)
+                                .execute(&pool)
+                                .await;
+                            tracing::info!("Updated Opportunity {} stage to Proposal", opp_id);
+                        }
+
                         // Simulate creating a Stripe checkout session for the deposit
                         let stripe_client = crate::integrations::stripe::client::StripeClient::new(
                             std::env::var("STRIPE_API_KEY").unwrap_or_else(|_| "sk_test_123".to_string()),
@@ -355,6 +365,18 @@ impl Department for SalesAgent {
                     "quote_generated_from_message",
                 );
 
+                let opp_id = uuid::Uuid::new_v4().to_string();
+                let insert_opp_query = "INSERT INTO opportunities (id, tenant_id, title, stage, estimated_value) VALUES ($1, $2, $3, 'Qualified', $4)";
+                let pool = crate::db::get_pool();
+                let _ = sqlx::query(insert_opp_query)
+                    .bind(&opp_id)
+                    .bind(&event.tenant_id)
+                    .bind(format!("Quote for {}", service_name))
+                    .bind(price)
+                    .execute(&pool)
+                    .await;
+                tracing::info!("Created new Opportunity: {} (Stage: Qualified)", opp_id);
+
                 let action_payload = serde_json::json!({
                     "inbox_message_id": event.payload.get("inbox_message_id").and_then(|v| v.as_str()).unwrap_or(""),
                     "feature_type": "quote_draft",
@@ -365,6 +387,7 @@ impl Department for SalesAgent {
                     "generated_response": drafted_message,
                     "service": service_name.clone(),
                     "price": price,
+                    "opportunity_id": opp_id,
                 });
 
                 self.orchestrator
