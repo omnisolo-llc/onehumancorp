@@ -2632,6 +2632,36 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .with_state(hub.clone());
 
     let db_for_login = db.clone();
+
+async fn connect_integration_handler(
+    axum::extract::Path(integration_id): axum::extract::Path<String>,
+    axum::Json(payload): axum::Json<serde_json::Value>,
+) -> axum::response::Response {
+    use axum::response::IntoResponse;
+    let base_url = payload.get("base_url").and_then(|v| v.as_str()).unwrap_or("");
+    let bot_token = payload.get("bot_token").and_then(|v| v.as_str()).unwrap_or("").to_string();
+    let chat_id = payload.get("chat_id").and_then(|v| v.as_str()).unwrap_or("").to_string();
+    let webhook_url = payload.get("webhook_url").and_then(|v| v.as_str()).unwrap_or("").to_string();
+    let api_token = payload.get("api_token").and_then(|v| v.as_str()).unwrap_or("").to_string();
+    let from_phone = payload.get("from_phone").and_then(|v| v.as_str()).unwrap_or("").to_string();
+
+    let registry = crate::integrations::registry::IntegrationsRegistry::new();
+    let req = ::server_ohc::orchestration::ConnectIntegrationRequest {
+        integration_id: integration_id.clone(),
+        base_url: base_url.to_string(),
+        bot_token,
+        chat_id,
+        webhook_url,
+        api_token,
+        from_phone,
+    };
+
+    match registry.connect(&integration_id, base_url, req) {
+        Ok(inst) => (axum::http::StatusCode::OK, axum::Json(serde_json::json!(inst))).into_response(),
+        Err(e) => (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({ "error": e }))).into_response(),
+    }
+}
+
 async fn generate_manychat_draft_handler() -> axum::response::Response {
     use axum::response::IntoResponse;
     (axum::http::StatusCode::SERVICE_UNAVAILABLE, axum::Json(serde_json::json!({
@@ -3803,6 +3833,7 @@ async fn create_ui_bom_item_handler(
                 }))
             }
         }))
+                .route("/api/integrations/{id}/connect", axum::routing::post(connect_integration_handler))
         .route("/api/integrations/manychat/draft", axum::routing::post(generate_manychat_draft_handler))
         .route("/api/ui/dashboard/metrics", axum::routing::get(ui_dashboard_metrics_handler).with_state(db.clone()))
         .route("/api/ui/dashboard/unified-feed", axum::routing::get(ui_dashboard_unified_feed_handler).with_state(db.clone()))
