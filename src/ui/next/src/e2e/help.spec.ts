@@ -41,7 +41,9 @@ test.describe('Help Center', () => {
         // Search for an article that matches My Store
         const searchInput = page.getByPlaceholder('Search for help articles and videos...');
 
+        const responsePromise = page.waitForResponse(response => response.url().includes("/api/help/search") && response.status() === 200);
         await searchInput.fill('My Store');
+        await responsePromise;
 
         // Wait for UI to update
         const articleLink = page.locator('a[href="/help/my-store"]');
