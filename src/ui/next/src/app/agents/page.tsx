@@ -978,23 +978,69 @@ function AutomationsPanel() {
   );
 }
 function MemoryPanel() {
+  const [items, setItems] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  const fetchMemories = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/v1/memory');
+      const data = await res.json();
+      setItems(Array.isArray(data) ? data : []);
+    } catch (e) {
+      console.error(e);
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    fetchMemories();
+  }, []);
+
+  const toggleOverride = async (id: string, currentValue: boolean) => {
+    try {
+      await fetch(`/api/v1/memory/${id}/override`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ override_value: !currentValue }),
+      });
+      fetchMemories();
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   return (
     <section className="rounded-lg border border-zinc-200 bg-white p-4">
-      <SectionHeader title="Conversation Memory" detail="Review, edit, import, remember, and forget durable business context." />
-      <div className="mb-4 flex flex-wrap gap-2">
-        <button type="button" className="rounded-md bg-teal-700 px-3 py-2 text-sm font-bold text-white">Remember this</button>
-        <button type="button" className="rounded-md border border-zinc-200 px-3 py-2 text-sm font-bold text-zinc-700">Nightly summary</button>
-        <button type="button" className="rounded-md border border-zinc-200 px-3 py-2 text-sm font-bold text-zinc-700">Edit memory</button>
-        <button type="button" className="rounded-md border border-zinc-200 px-3 py-2 text-sm font-bold text-zinc-700">Forget selected</button>
-        <button type="button" className="rounded-md border border-zinc-200 px-3 py-2 text-sm font-bold text-zinc-700">Import from ChatGPT or Claude</button>
-      </div>
-      <div className="space-y-3">
-        {memories.map((memory) => (
-          <div key={memory} className="rounded-md border border-zinc-200 bg-zinc-50 p-3 text-sm text-zinc-700">
-            {memory}
-          </div>
-        ))}
-      </div>
+      <SectionHeader title="Consolidated Memory" detail="Review and explicitly override what AI agents remember about your business." />
+
+      {loading ? (
+        <p className="text-sm text-zinc-500">Loading memories...</p>
+      ) : items.length === 0 ? (
+        <p className="text-sm text-zinc-500">No consolidated memories found.</p>
+      ) : (
+        <div className="space-y-3">
+          {items.map((memory: any) => (
+            <div key={memory.id} className="rounded-md border border-zinc-200 bg-zinc-50 p-3 text-sm text-zinc-700 flex flex-col gap-2">
+              <div className="flex justify-between items-start">
+                <div className="font-semibold text-zinc-900">{memory.source_type}</div>
+                <button
+                  type="button"
+                  onClick={() => toggleOverride(memory.id, memory.owner_override)}
+                  className={`text-xs px-2 py-1 rounded-md font-bold ${memory.owner_override ? 'bg-teal-700 text-white' : 'bg-zinc-200 text-zinc-700 hover:bg-zinc-300'}`}
+                >
+                  {memory.owner_override ? 'Owner Override: ON' : 'Owner Override: OFF'}
+                </button>
+              </div>
+              <p className="whitespace-pre-wrap">{memory.content}</p>
+              <div className="text-xs text-zinc-500 flex gap-4">
+                <span>References: {memory.reference_count}</span>
+                <span>Reliability: {memory.reliability_score}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </section>
   );
 }
