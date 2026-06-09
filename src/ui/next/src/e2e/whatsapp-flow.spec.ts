@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import crypto from 'crypto';
 
 test.describe('WhatsApp Flow CUJ', () => {
   test('Owner connects WhatsApp and approves draft reply', async ({ page, request }) => {
@@ -23,15 +24,38 @@ test.describe('WhatsApp Flow CUJ', () => {
     // 2. Trigger the Ambassador's draft reply via a real API call (no mocks)
     const tenantId = 'e2e-tenant';
     const webhookPayload = {
-      tenant_id: tenantId,
-      message: 'Hello! Id like to order a vegan cake over WhatsApp.',
-      source: 'whatsapp',
-      sender_id: '1234567890'
+      object: 'whatsapp_business_account',
+      entry: [{
+        id: 'WHATSAPP_BUSINESS_ACCOUNT_ID',
+        changes: [{
+          value: {
+            messaging_product: 'whatsapp',
+            metadata: { display_phone_number: '16505551111', phone_number_id: '12345' },
+            contacts: [{ profile: { name: 'Test User' }, wa_id: '1234567890' }],
+            messages: [{
+              from: '1234567890',
+              id: 'wamid.HBgLMTIzNDU2Nzg5MBUCABEYEFZEQkEwMjI1NjA5RjJCNTA1AA==',
+              timestamp: '1603059201',
+              text: { body: 'Hello! Id like to order a vegan cake over WhatsApp.' },
+              type: 'text'
+            }]
+          },
+          field: 'messages'
+        }]
+      }]
     };
 
+    const secret = process.env.META_APP_SECRET || 'test_secret';
+    const payloadString = JSON.stringify(webhookPayload);
+    const signature = crypto.createHmac('sha256', secret).update(payloadString).digest('hex');
+
     const apiBase = process.env.OHC_API_URL || process.env.BACKEND_URL || process.env.BASE_URL || '';
-    const response = await request.post(`${apiBase}/api/agents/webhook`, {
-      data: webhookPayload,
+    const response = await request.post(`${apiBase}/api/v1/webhooks/meta?tenant_id=${tenantId}`, {
+      data: payloadString,
+      headers: {
+        'Content-Type': 'application/json',
+        'x-hub-signature-256': `sha256=${signature}`
+      }
     });
 
     expect(response.ok()).toBeTruthy();

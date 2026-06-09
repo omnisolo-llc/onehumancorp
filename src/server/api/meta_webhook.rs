@@ -17,6 +17,7 @@ use sha2::Sha256;
 use std::sync::Arc;
 use crate::hub::Hub;
 use uuid::Uuid;
+use std::collections::HashMap;
 
 
 #[derive(Deserialize)]
@@ -52,6 +53,7 @@ pub async fn meta_webhook_get_handler(
 
 pub async fn meta_webhook_post_handler(
     State(state): State<MetaWebhookState>,
+    Query(query_params): Query<HashMap<String, String>>,
     headers: HeaderMap,
     body_bytes: axum::body::Bytes,
 ) -> impl IntoResponse {
@@ -116,7 +118,9 @@ pub async fn meta_webhook_post_handler(
                             // Try to look up the tenant ID by sender id. For now, use "system" or let the DB logic handle it
 
                                       let _identifier = message.get("recipient").and_then(|r: &serde_json::Value| r.get("id")).and_then(|i: &serde_json::Value| i.as_str()).unwrap_or("unknown");
-                                      let tenant_id = "test_tenant".to_string(); // Replace with actual DB lookup based on `identifier`
+                                      let tenant_id = query_params.get("tenant_id")
+                                            .map(|v| v.to_string())
+                                            .unwrap_or_else(|| "test_tenant".to_string());
 
                             let inbox_id = Uuid::new_v4().to_string();
                             let source = "instagram".to_string();
@@ -185,7 +189,9 @@ pub async fn meta_webhook_post_handler(
 
 
                                       let _identifier = message.get("recipient").and_then(|r: &serde_json::Value| r.get("id")).and_then(|i: &serde_json::Value| i.as_str()).unwrap_or("unknown");
-                                      let tenant_id = "test_tenant".to_string(); // Replace with actual DB lookup based on `identifier`
+                                      let tenant_id = query_params.get("tenant_id")
+                                            .map(|v| v.to_string())
+                                            .unwrap_or_else(|| "test_tenant".to_string());
 
                                       let inbox_id = Uuid::new_v4().to_string();
                                       let source = "whatsapp".to_string();

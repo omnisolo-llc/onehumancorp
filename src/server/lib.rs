@@ -2639,6 +2639,14 @@ async fn generate_manychat_draft_handler() -> axum::response::Response {
     }))).into_response()
 }
 
+async fn integration_connect_handler(axum::extract::Path(id): axum::extract::Path<String>) -> axum::response::Response {
+    use axum::response::IntoResponse;
+    (axum::http::StatusCode::OK, axum::Json(serde_json::json!({
+        "success": true,
+        "authorization_url": format!("https://www.facebook.com/v19.0/dialog/oauth?client_id=123&redirect_uri=https://ohc.test/api/integrations/{}/callback", id)
+    }))).into_response()
+}
+
 async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extract::Extension<::server_common::Claims>) -> axum::response::Response {
     use axum::response::IntoResponse;
     let pool = crate::db::get_pool();
@@ -3804,6 +3812,7 @@ async fn create_ui_bom_item_handler(
             }
         }))
         .route("/api/integrations/manychat/draft", axum::routing::post(generate_manychat_draft_handler))
+        .route("/api/integrations/{id}/connect", axum::routing::post(integration_connect_handler))
         .route("/api/ui/dashboard/metrics", axum::routing::get(ui_dashboard_metrics_handler).with_state(db.clone()))
         .route("/api/ui/dashboard/unified-feed", axum::routing::get(ui_dashboard_unified_feed_handler).with_state(db.clone()))
         .route("/api/ui/dashboard/unified-agent-feed", axum::routing::get(ui_dashboard_unified_agent_feed_handler).with_state(db.clone()))
