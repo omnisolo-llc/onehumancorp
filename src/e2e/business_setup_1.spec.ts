@@ -63,3 +63,31 @@ test.describe('Business Setup Wizard', () => {
     await expect(page.getByText("You're set up! Here's what to do next:")).toBeVisible();
   });
 });
+
+  test('validates minimum touch targets and disabled states', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 667 });
+
+    const startBtn = page.getByRole('button', { name: /Start My Business/ });
+    await expect(startBtn).toBeVisible();
+    const box1 = await startBtn.boundingBox();
+    expect(box1?.height).toBeGreaterThanOrEqual(54);
+
+    await startBtn.click();
+    await page.getByRole('button', { name: /Online Store/ }).click();
+
+    // Verify next is disabled initially
+    const nextBtn = page.locator('#step-3').getByRole('button', { name: /Next/ });
+    await expect(nextBtn).toBeDisabled();
+
+    // Fill business name
+    await page.getByPlaceholder('What is your business called?').fill('Test Company');
+    await expect(nextBtn).toBeEnabled();
+
+    // Verify touch target
+    const inputName = page.getByPlaceholder('What is your business called?');
+    const box2 = await inputName.boundingBox();
+    expect(box2?.height).toBeGreaterThanOrEqual(54);
+
+    await nextBtn.click();
+    await expect(page.getByRole('heading', { name: 'What do you sell?' })).toBeVisible();
+  });
