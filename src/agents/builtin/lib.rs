@@ -79,6 +79,7 @@ pub mod tool_executor_engine;
 pub mod ruflo_plugins;
 pub mod agentic_seek;
 pub mod pi;
+pub mod crewai;
 
 fn get_env(key: &str, default: &str) -> String {
     std::env::var(key).unwrap_or_else(|_| default.to_string())

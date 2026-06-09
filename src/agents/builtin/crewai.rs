@@ -1,5 +1,4 @@
 use crate::agent::{Agent, AgentRunConfig};
-use ohc_builtin_agent_core::types::Message;
 use std::sync::Arc;
 use serde_json::Value;
 
@@ -176,8 +175,8 @@ impl Flow {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Usage, ToolCall};
-    use crate::llm::client::LlmClient;
+    use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Usage, Message};
+    use crate::llm::LlmClient;
     use tokio::sync::Mutex;
 
     struct MockLlmClientCrew {
@@ -366,7 +365,8 @@ mod tests {
 
         let result = flow.execute().await;
         assert!(result.is_err());
-        assert!(result.unwrap_err().contains("Task T1 failed"));
-        assert!(result.unwrap_err().contains("LLM completely failed"));
+        let err_msg = result.unwrap_err();
+        assert!(err_msg.contains("Task T1 failed"));
+        assert!(err_msg.contains("LLM completely failed"));
     }
 }
