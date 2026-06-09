@@ -16,7 +16,7 @@ test.describe('Help Center', () => {
     await expect(agentsLink).toBeVisible();
   });
   test('should show setup link in nav', async ({ page }) => {
-    const setupLink = page.getByRole('link', { name: 'Setup' });
+    const setupLink = page.getByRole('link', { name: 'Setup', exact: true });
     await expect(setupLink).toBeVisible();
   });
   test('should display welcome message', async ({ page }) => {
