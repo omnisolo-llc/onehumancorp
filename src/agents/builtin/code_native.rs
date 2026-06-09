@@ -111,6 +111,13 @@ impl CodeNativeAdapter {
     }
 }
 
+#[async_trait::async_trait]
+impl crate::tools::ToolExecutor for CodeNativeAdapter {
+    async fn execute(&self, args: serde_json::Value) -> Result<String, crate::types::ToolError> {
+        self.execute_adapter(args).await
+    }
+}
+
 /// An integration utility to run multiple `CodeNativeTool`s in sequence
 /// within the same isolated environment. This facilitates integration testing.
 pub struct CodeNativePipeline {
