@@ -191,7 +191,37 @@ impl Department for CustomerSuccessAgent {
                 "inbox_message_id": inbox_id,
             });
 
+            // Create a Lead when a high-intent message is received
+            if message.to_lowercase().contains("quote") || message.to_lowercase().contains("estimate") || message.to_lowercase().contains("cost") || message.to_lowercase().contains("price") || message.to_lowercase().contains("project") || message.to_lowercase().contains("branding") {
+                let pool = crate::db::get_pool();
+                let lead_id = uuid::Uuid::new_v4().to_string();
+                let contact = original.and_then(|orig| orig.get("sender_id").and_then(|v| v.as_str())).unwrap_or("");
+                let src = original.and_then(|orig| orig.get("source").and_then(|v| v.as_str())).unwrap_or("unknown");
+                let _ = sqlx::query("INSERT INTO leads (id, tenant_id, source, contact_info, context) VALUES ($1, $2, $3, $4, $5)")
+                    .bind(&lead_id)
+                    .bind(&event.tenant_id)
+                    .bind(src)
+                    .bind(contact)
+                    .bind(message)
+                    .execute(&pool)
+                    .await;
+
+                // Also create an Opportunity so Sales can take over
+                let opp_id = uuid::Uuid::new_v4().to_string();
+                let _ = sqlx::query("INSERT INTO opportunities (id, tenant_id, lead_id, title, stage, estimated_value_cents, priority) VALUES ($1, $2, $3, $4, $5, $6, $7)")
+                    .bind(&opp_id)
+                    .bind(&event.tenant_id)
+                    .bind(&lead_id)
+                    .bind(format!("New Lead: {}", src))
+                    .bind("Qualified")
+                    .bind(0)
+                    .bind("Medium")
+                    .execute(&pool)
+                    .await;
+            }
+
             self.orchestrator.execute_action(
+
                 DepartmentType::CustomerSuccess,
                 description,
                 event.tenant_id.clone(),

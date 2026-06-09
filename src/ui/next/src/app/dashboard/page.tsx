@@ -934,6 +934,16 @@ export default function Dashboard() {
               <p className="text-sm text-gray-600 dark:text-gray-400">Offline-first mobile route management for field service workers.</p>
             </Link>
 
+
+            <Link href="/pipeline" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+              <div className="flex items-start justify-between mb-4">
+                <div className="w-12 h-12 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">📈</div>
+                <div className="text-blue-600 dark:text-blue-400 font-semibold text-sm bg-blue-50 dark:bg-blue-900/30 px-3 py-1 rounded-full">Sales</div>
+              </div>
+              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Deal Pipeline</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Manage your sales opportunities from inquiry to close.</p>
+            </Link>
+
             <Link href="/settings" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-gray-50 dark:bg-gray-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">⚙️</div>

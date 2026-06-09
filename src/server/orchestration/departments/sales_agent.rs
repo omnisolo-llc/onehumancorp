@@ -367,7 +367,17 @@ impl Department for SalesAgent {
                     "price": price,
                 });
 
+                // Update Opportunity Stage to "Proposal" if we have an open opportunity
+                let pool = crate::db::get_pool();
+                let _ = sqlx::query("UPDATE opportunities SET stage = 'Proposal', estimated_value_cents = $1, title = $2, updated_at = NOW() WHERE tenant_id = $3 AND stage = 'Qualified' AND id IN (SELECT id FROM opportunities WHERE tenant_id = $3 ORDER BY created_at DESC LIMIT 1)")
+                    .bind((price * 100.0) as i64)
+                    .bind(format!("Proposal: {}", service_name))
+                    .bind(&event.tenant_id)
+                    .execute(&pool)
+                    .await;
+
                 self.orchestrator
+
                     .execute_action(
                         DepartmentType::Sales,
                         format!("Draft quote for {}", service_name),
