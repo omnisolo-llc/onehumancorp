@@ -1964,6 +1964,7 @@ async fn get_pending_approvals(
                     crate::orchestration::departments::types::ApprovalStatus::PendingApproval => "PENDING_APPROVAL".to_string(),
                     crate::orchestration::departments::types::ApprovalStatus::Approved => "APPROVED".to_string(),
                     crate::orchestration::departments::types::ApprovalStatus::Rejected => "REJECTED".to_string(),
+                    crate::orchestration::departments::types::ApprovalStatus::Paused => "PAUSED".to_string(),
                 },
                 assigned_agent_id: "".to_string(),
                 priority: "High".to_string(),
@@ -1979,6 +1980,7 @@ async fn get_pending_approvals(
                     crate::orchestration::departments::types::ApprovalStatus::PendingApproval => "PENDING".to_string(),
                     crate::orchestration::departments::types::ApprovalStatus::Approved => "APPROVED".to_string(),
                     crate::orchestration::departments::types::ApprovalStatus::Rejected => "REJECTED".to_string(),
+                    crate::orchestration::departments::types::ApprovalStatus::Paused => "PAUSED".to_string(),
                 },
                 proposed_content,
             }
@@ -4304,7 +4306,7 @@ async fn create_ui_bom_item_handler(
 
     tokio::spawn(async move {
         let mut interval = tokio::time::interval(std::time::Duration::from_secs(1));
-        let mut prune_interval = tokio::time::interval(std::time::Duration::from_secs(60));
+        let mut prune_interval = tokio::time::interval(std::time::Duration::from_secs(300));
         loop {
             tokio::select! {
                 _ = prune_interval.tick() => {
@@ -4312,6 +4314,10 @@ async fn create_ui_bom_item_handler(
                     if let Err(e) = sip_db.prune_stale_missions(chrono::Duration::days(7)).await {
                         ::server_telemetry::record_error_signal("failed to prune stale missions");
                         tracing::error!("failed to prune stale missions: {}", e);
+                    }
+                    if let Err(e) = sip_db.cleanup_stagnant_missions(chrono::Duration::minutes(5)).await {
+                        ::server_telemetry::record_error_signal("failed to cleanup stagnant missions");
+                        tracing::error!("failed to cleanup stagnant missions: {}", e);
                     }
                 }
                 _ = interval.tick() => {

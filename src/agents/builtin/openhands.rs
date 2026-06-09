@@ -14,9 +14,17 @@ pub enum Action {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Observation {
-    CommandOutput { exit_code: i32, stdout: String, stderr: String },
-    FileWritten { path: String },
-    AgentReply { content: String },
+    CommandOutput {
+        exit_code: i32,
+        stdout: String,
+        stderr: String,
+    },
+    FileWritten {
+        path: String,
+    },
+    AgentReply {
+        content: String,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -39,7 +47,10 @@ impl EventStream {
         self.sender.subscribe()
     }
 
-    pub fn publish(&self, event: EventType) -> Result<usize, broadcast::error::SendError<EventType>> {
+    pub fn publish(
+        &self,
+        event: EventType,
+    ) -> Result<usize, broadcast::error::SendError<EventType>> {
         self.sender.send(event)
     }
 }
@@ -54,7 +65,9 @@ mod tests {
         let mut rx1 = stream.subscribe();
         let mut rx2 = stream.subscribe();
 
-        let action = EventType::Action(Action::RunCommand { command: "ls -la".to_string() });
+        let action = EventType::Action(Action::RunCommand {
+            command: "ls -la".to_string(),
+        });
         stream.publish(action.clone()).unwrap();
 
         let recv1 = rx1.recv().await.unwrap();
