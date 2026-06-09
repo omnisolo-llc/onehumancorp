@@ -608,7 +608,7 @@ export default function Dashboard() {
           <div className="app-panel">
             <div className="app-panel-header">
               <div className="app-panel-title">Action Required</div>
-              <Link href="/inventory" className="app-button">Inventory</Link>
+              <Link href="/action-feed" className="app-button">Daily Action Feed</Link>
             </div>
             <div className="app-list">
               {metrics.pending_orders > 0 && (
