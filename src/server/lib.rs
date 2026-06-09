@@ -3029,6 +3029,61 @@ async fn ui_dashboard_unified_feed_handler(
     (axum::http::StatusCode::OK, axum::Json(result)).into_response()
 }
 
+async fn ui_dashboard_morning_briefing_handler(
+    axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
+    axum::extract::Query(query): axum::extract::Query<UiTenantQuery>,
+) -> axum::response::Response {
+    use axum::response::IntoResponse;
+    use ohc_builtin_agent::proto::{RunTaskRequest, EventType};
+    use ohc_builtin_agent::proto::agent_service_server::AgentService;
+    let tenant_id = ui_tenant_id(&query);
+
+    let agent_svc = match crate::BUILTIN_AGENT_SERVICE.get() {
+        Some(svc) => svc,
+        None => return (axum::http::StatusCode::SERVICE_UNAVAILABLE, "Agent service not ready").into_response(),
+    };
+
+    let req = tonic::Request::new(RunTaskRequest {
+        task_id: uuid::Uuid::new_v4().to_string(),
+        task: format!("Provide a conversational Morning Briefing summary using the get_dashboard_metrics tool for tenant_id '{}'. Tell me how many active customers, pending orders, sales, and total campaigns sent I have. Give actionable suggestions.", tenant_id),
+        model: "gpt-4o".to_string(),
+        llm_provider: "openai".to_string(),
+        llm_endpoint: "".to_string(),
+        system_prompt: "Department: Business Advisory — 'The Advisor'\nActs as a personal business consultant. Analyzes performance and gives actionable advice. You must use the get_dashboard_metrics tool to get the actual data, DO NOT make up data.".to_string(),
+        max_tokens: 1000,
+        temperature: 0.7,
+        max_context_messages: 10,
+        injected_context_json: format!("{{\"tenant_id\": \"{}\"}}", tenant_id),
+        runtime_config: None,
+        toolset_config: None,
+        enable_tools_gating: false,
+        enable_tao_orchestration_loop: false,
+    });
+
+    match agent_svc.run_task(req).await {
+        Ok(resp) => {
+            use tokio_stream::StreamExt;
+            let mut stream = resp.into_inner();
+            let mut briefing = String::new();
+            while let Some(Ok(evt)) = stream.next().await {
+                if evt.r#type == EventType::TaskComplete as i32 {
+                    briefing = evt.content;
+                    break;
+                } else if evt.r#type == EventType::TaskError as i32 {
+                    return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({ "error": evt.error }))).into_response();
+                }
+            }
+            if briefing.is_empty() {
+                return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({ "error": "Agent failed to generate briefing" }))).into_response();
+            }
+            (axum::http::StatusCode::OK, axum::Json(serde_json::json!({ "briefing": briefing }))).into_response()
+        }
+        Err(e) => {
+            (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({ "error": e.to_string() }))).into_response()
+        }
+    }
+}
+
 async fn ui_dashboard_unified_agent_feed_handler(
     axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
     axum::extract::Query(query): axum::extract::Query<UiTenantQuery>,
@@ -3807,6 +3862,7 @@ async fn create_ui_bom_item_handler(
         .route("/api/ui/dashboard/metrics", axum::routing::get(ui_dashboard_metrics_handler).with_state(db.clone()))
         .route("/api/ui/dashboard/unified-feed", axum::routing::get(ui_dashboard_unified_feed_handler).with_state(db.clone()))
         .route("/api/ui/dashboard/unified-agent-feed", axum::routing::get(ui_dashboard_unified_agent_feed_handler).with_state(db.clone()))
+        .route("/api/ui/dashboard/morning-briefing", axum::routing::get(ui_dashboard_morning_briefing_handler).with_state(db.clone()))
         .route("/api/ui/orders", axum::routing::get(list_ui_orders_handler).with_state(db.clone()))
         .route("/api/ui/bookings", axum::routing::get(list_ui_bookings_handler).with_state(db.clone()))
         .route("/api/ui/inbox/messages", axum::routing::get(list_ui_inbox_handler).with_state(db.clone()))

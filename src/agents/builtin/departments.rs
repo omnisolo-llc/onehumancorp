@@ -114,7 +114,7 @@ pub fn get_department_config(dep: Department) -> DepartmentConfig {
                 - Compares performance to similar businesses (anonymized)\n\
                 - Recommends pricing adjustments based on market data\n\
                 - Flags unusual patterns that might indicate problems (sudden drop in orders, unusual refund requests)",
-            allowed_tools: vec!["read", "head", "tail", "write", "websearch", "finance_report"],
+            allowed_tools: vec!["read", "head", "tail", "write", "websearch", "finance_report", "get_dashboard_metrics"],
             confidence_threshold: 0.85,
         },
     }
@@ -197,6 +197,7 @@ mod tests {
         let config = get_department_config(Department::BusinessAdvisory);
         assert!(config.system_prompt.contains("Business Advisory"));
         assert!(config.allowed_tools.contains(&"finance_report"));
+        assert!(config.allowed_tools.contains(&"get_dashboard_metrics"));
         assert_eq!(config.confidence_threshold, 0.85);
     }
 }

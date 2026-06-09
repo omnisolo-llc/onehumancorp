@@ -46,6 +46,7 @@ pub mod marketplace_tool;
 pub mod expert_team_tool;
 pub mod workflow;
 pub mod checkout;
+pub mod analytics;
 
 #[async_trait::async_trait]
 impl ToolExecutor for ohc_builtin_agent_core::code_native::CodeNativeAdapter {
@@ -142,6 +143,7 @@ pub fn all_tools(
         sleep::sleep_tool(),
         marketing::qr_generate_tool(),
         finance::finance_report_tool(),
+        analytics::analytics_tool(),
         local_fs_sync::local_fs_sync_tool(working_dir.clone()),
         ollama::ollama_tool(),
         subagent::subagent_tool(runner.clone(), llm.clone()),

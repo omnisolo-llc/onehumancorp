@@ -92,6 +92,8 @@ export default function Dashboard() {
   const [ledgerBalance, setLedgerBalance] = useState<number | null>(null);
   const [ledgerCurrency, setLedgerCurrency] = useState<string>("USD");
   const [ledgerLoading, setLedgerLoading] = useState(true);
+  const [morningBriefing, setMorningBriefing] = useState<string>("");
+  const [morningBriefingLoading, setMorningBriefingLoading] = useState(true);
 
   useEffect(() => {
     async function fetchLedgerBalance() {
@@ -112,6 +114,25 @@ export default function Dashboard() {
       }
     }
     fetchLedgerBalance();
+  }, []);
+
+  useEffect(() => {
+    async function fetchMorningBriefing() {
+      try {
+        const res = await fetch(`/api/ui/dashboard/morning-briefing?tenant_id=${tenantId()}`);
+        if (res.ok) {
+          const data = await res.json();
+          setMorningBriefing(data.briefing || "No briefing available.");
+        } else {
+          setMorningBriefing("Failed to fetch morning briefing.");
+        }
+      } catch (err) {
+        setMorningBriefing("Error fetching morning briefing.");
+      } finally {
+        setMorningBriefingLoading(false);
+      }
+    }
+    fetchMorningBriefing();
   }, []);
   const [error, setError] = useState("");
   const [isOffline, setIsOffline] = useState(false);
@@ -286,7 +307,16 @@ export default function Dashboard() {
     >
       <div className="mb-6 p-6 rounded-[16px] glassmorphism border border-white/40 dark:border-white/10">
         <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Welcome back, {userName}.</h2>
-        <p className="text-gray-600 dark:text-gray-400">Your agents are working on your behalf.</p>
+        <p className="text-gray-600 dark:text-gray-400 mb-4">Your agents are working on your behalf.</p>
+
+        {morningBriefingLoading ? (
+           <div className="animate-pulse bg-white/20 h-16 rounded-[8px]"></div>
+        ) : (
+           <div className="bg-white/50 dark:bg-black/20 rounded-[12px] p-4 text-[#1D1D1F] dark:text-[#F5F5F7] whitespace-pre-wrap">
+             <strong className="text-lg mb-2 block">Morning Briefing:</strong>
+             {morningBriefing}
+           </div>
+        )}
       </div>
 
       <NeighborhoodPulseCard tenant={tenantId()} />
