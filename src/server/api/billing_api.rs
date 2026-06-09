@@ -9,6 +9,7 @@ use crate::utils::cache::HybridCache;
 
 pub static MY_PLAN_CACHE: OnceLock<HybridCache<MyPlanResponse>> = OnceLock::new();
 pub static COST_DASHBOARD_CACHE: OnceLock<HybridCache<CostDashboardResponse>> = OnceLock::new();
+pub static DEPARTMENT_TIER_USAGE_CACHE: OnceLock<HybridCache<DepartmentTierUsageResponse>> = OnceLock::new();
 
 #[derive(serde::Serialize, serde::Deserialize, Clone)]
 pub struct MyPlanResponse {
@@ -345,6 +346,11 @@ pub async fn department_tier_usage_handler(
 }
 
 pub async fn department_tier_usage_for_tenant(hub: &Arc<Hub>, tenant_id: &str) -> DepartmentTierUsageResponse {
+    let cache = DEPARTMENT_TIER_USAGE_CACHE.get_or_init(|| HybridCache::new(None));
+    if let Some(cached_resp) = cache.get(tenant_id).await {
+        return cached_resp;
+    }
+
     let tier_future = hub.tracker().get_tenant_tier(tenant_id);
     let departments_future = load_department_records(&hub.pool, tenant_id);
 
@@ -374,9 +380,11 @@ pub async fn department_tier_usage_for_tenant(hub: &Arc<Hub>, tenant_id: &str) -
         }
     }
 
-    build_department_tier_usage_response(current_plan, tier, period, departments, |agent_id| {
+    let resp = build_department_tier_usage_response(current_plan, tier, period, departments, |agent_id| {
         usage_by_key.get(agent_id).copied().unwrap_or(0)
-    })
+    });
+    cache.set(tenant_id, resp.clone(), std::time::Duration::from_secs(60)).await;
+    resp
 }
 
 async fn load_department_records(pool: &sqlx::PgPool, tenant_id: &str) -> Result<Vec<DepartmentRecord>, sqlx::Error> {
@@ -536,6 +544,27 @@ mod department_tier_usage_tests {
         // Teardown
         sqlx::query("DELETE FROM agent_departments WHERE tenant_id = $1").bind(&tenant_id).execute(&pool).await.unwrap();
         sqlx::query("DELETE FROM organizations WHERE id = $1").bind(&tenant_id).execute(&pool).await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn test_department_tier_usage_cache() {
+        let tenant_id = format!("test_tenant_cache_{}", uuid::Uuid::new_v4());
+
+        let cache = DEPARTMENT_TIER_USAGE_CACHE.get_or_init(|| HybridCache::new(None));
+
+        // Cache should be initially empty
+        assert!(cache.get(&tenant_id).await.is_none());
+
+        // Create a mock response
+        let mock_resp = empty_department_tier_usage_response();
+
+        // Set it in the cache
+        cache.set(&tenant_id, mock_resp.clone(), std::time::Duration::from_secs(60)).await;
+
+        // Verify it was cached
+        let cached = cache.get(&tenant_id).await;
+        assert!(cached.is_some());
+        assert_eq!(cached.unwrap().current_plan, mock_resp.current_plan);
     }
 
     #[test]
