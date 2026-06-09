@@ -91,6 +91,7 @@ export default function Dashboard() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [messages, setMessages] = useState<InboxMessage[]>([]);
   const [supply, setSupply] = useState<SupplyPayload>({ vendors: [], raw_materials: [], bom_items: [] });
+  const [approvals, setApprovals] = useState<any[]>([]);
   const [dashboardData, setDashboardData] = useState<any>({ pendingReviews: [] });
   const [loading, setLoading] = useState(true);
   const [ledgerBalance, setLedgerBalance] = useState<number | null>(null);
@@ -614,7 +615,7 @@ export default function Dashboard() {
               <Link href="/inventory" className="app-button">Inventory</Link>
             </div>
             <div className="app-list">
-                            {approvals.filter(a => a.payload?.feature_type === 'ambassador_reply').map(approval => (
+                            {(approvals || []).filter(a => a.payload?.feature_type === 'ambassador_reply').map(approval => (
                 <div key={approval.id} className="app-list-item flex flex-col items-start gap-3">
                   <div className="w-full">
                     <div className="app-list-title">Action Required: Approve Reply</div>
@@ -658,7 +659,7 @@ export default function Dashboard() {
                   <span className="app-badge">Inbox</span>
                 </div>
               )}
-              {!loading && metrics.pending_orders === 0 && lowStockCount === 0 && messages.length === 0 && approvals.filter(a => a.payload?.feature_type === "ambassador_reply").length === 0 && (
+              {!loading && metrics.pending_orders === 0 && lowStockCount === 0 && messages.length === 0 && (approvals || []).filter(a => a.payload?.feature_type === "ambassador_reply").length === 0 && (
                 <div className="app-empty">No database-backed actions are currently open.</div>
               )}
             </div>
