@@ -1,0 +1,7 @@
+--- lib.rs
++++ lib.rs
+@@ -10,6 +10,7 @@
+ pub mod services {
+     pub use crate::services::*;
++    pub mod agent_feed { pub use crate::services::agent_feed::*; }
+ }

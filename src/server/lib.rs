@@ -344,6 +344,7 @@ pub mod services {
     pub mod dashboard;
     pub mod wizard;
     pub mod billing;
+    pub mod agent_feed;
     pub mod growth;
     pub mod onboarding;
     pub mod sync;
@@ -4303,6 +4304,7 @@ async fn create_ui_bom_item_handler(
         })))
         .merge(meta_webhook_router)
         .merge(health_router)
+        .merge(crate::api::agent_feed_api::agent_feed_routes(db.pool.clone()))
         .fallback(api_not_found_handler);
 
     let port = std::env::var("OHC_PORT")

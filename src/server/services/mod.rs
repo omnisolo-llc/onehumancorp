@@ -23,3 +23,4 @@ pub mod collective;
 pub mod campaign;
 pub mod ledger;
 pub mod quoting;
+pub mod agent_feed;
