@@ -51,6 +51,8 @@ impl StripeClient {
 
     pub async fn create_checkout_session(&self, _price_id: &str, customer_id: &str, amount_usd: f64) -> Result<String, String> {
         let pm = PaymentRouter::optimize_payment_method(amount_usd);
+        let savings = PaymentRouter::calculate_fee_savings(amount_usd);
+        tracing::info!("💰 Miser telemetry: Payment method optimized. Saved ${} in fees", savings);
 
         // For MercadoPago and others not routed to Stripe Checkout
         match pm {
