@@ -23,9 +23,11 @@ function SetupIcon({ name }: { name: SetupIconName }) {
 
 function IconLabel({ icon, children }: { icon: SetupIconName; children: React.ReactNode }) {
   return (
-    <span className="inline-flex items-center justify-center gap-2">
-      <SetupIcon name={icon} />
-      <span>{children}</span>
+    <span className="inline-flex items-center justify-center gap-2 flex-none">
+      <span className="flex-none inline-flex items-center justify-center w-4 h-4">
+        <SetupIcon name={icon} />
+      </span>
+      <span className="whitespace-nowrap">{children}</span>
     </span>
   );
 }
@@ -640,13 +642,13 @@ export default function OnboardingWizard() {
               {chatStep === 1 && (
                 <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in">
                   <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">What's the name of your business?</h2>
-                  <div className="flex items-center justify-between mb-6">
-                    <p className="text-gray-500 dark:text-[#A1A1A6] text-sm">
+                  <div className="flex items-start sm:items-center justify-between mb-6 w-full gap-2">
+                    <p className="text-gray-500 dark:text-[#A1A1A6] text-sm pr-4">
                       Our AI will instantly generate your storefront, products, and back-office agents.
                     </p>
                     <button
                       onClick={() => handleSaveDraft()}
-                      className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-4"
+                      className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-auto flex items-center justify-center"
                     >
                       <IconLabel icon="save">Save Draft</IconLabel>
                     </button>
@@ -707,13 +709,13 @@ export default function OnboardingWizard() {
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
                   </button>
                   <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">What do you sell?</h2>
-                  <div className="flex items-center justify-between mb-6">
-                    <p className="text-gray-500 dark:text-[#A1A1A6] text-sm">
+                  <div className="flex items-start sm:items-center justify-between mb-6 w-full gap-2">
+                    <p className="text-gray-500 dark:text-[#A1A1A6] text-sm pr-4">
                       Tell us a bit about your products or services.
                     </p>
                     <button
                       onClick={() => handleSaveDraft()}
-                      className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-4"
+                      className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-auto flex items-center justify-center"
                     >
                       <IconLabel icon="save">Save Draft</IconLabel>
                     </button>
@@ -772,13 +774,13 @@ export default function OnboardingWizard() {
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
                   </button>
                   <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Where are you located?</h2>
-                  <div className="flex items-center justify-between mb-6">
-                    <p className="text-gray-500 dark:text-[#A1A1A6] text-sm">
+                  <div className="flex items-start sm:items-center justify-between mb-6 w-full gap-2">
+                    <p className="text-gray-500 dark:text-[#A1A1A6] text-sm pr-4">
                       This helps us set up your shipping and tax settings.
                     </p>
                     <button
                       onClick={() => handleSaveDraft()}
-                      className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-4"
+                      className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-auto flex items-center justify-center"
                     >
                       <IconLabel icon="save">Save Draft</IconLabel>
                     </button>
@@ -838,13 +840,13 @@ export default function OnboardingWizard() {
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
                   </button>
                   <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Who is your target audience?</h2>
-                  <div className="flex items-center justify-between mb-6">
-                    <p className="text-gray-500 dark:text-[#A1A1A6] text-sm">
+                  <div className="flex items-start sm:items-center justify-between mb-6 w-full gap-2">
+                    <p className="text-gray-500 dark:text-[#A1A1A6] text-sm pr-4">
                       This helps our AI generate the perfect storefront copy and select the best tools for your business.
                     </p>
                     <button
                       onClick={() => handleSaveDraft()}
-                      className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-4"
+                      className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-auto flex items-center justify-center"
                     >
                       <IconLabel icon="save">Save Draft</IconLabel>
                     </button>
@@ -914,13 +916,13 @@ export default function OnboardingWizard() {
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
               </button>
               <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Review Details</h2>
-              <div className="flex items-center justify-between mb-6">
-                <p className="text-gray-500 dark:text-[#A1A1A6] text-sm">
+              <div className="flex items-start sm:items-center justify-between mb-6 w-full gap-2">
+                <p className="text-gray-500 dark:text-[#A1A1A6] text-sm pr-4">
                   Here's what our AI figured out. Feel free to tweak these.
                 </p>
                 <button
                   onClick={() => handleSaveDraft()}
-                  className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-4"
+                  className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-auto flex items-center justify-center"
                 >
                       <IconLabel icon="save">Save Draft</IconLabel>
                     </button>
@@ -1046,13 +1048,13 @@ export default function OnboardingWizard() {
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
               </button>
               <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Style & Team</h2>
-              <div className="flex items-center justify-between mb-6">
-                <p className="text-gray-500 dark:text-[#A1A1A6] text-sm">
+              <div className="flex items-start sm:items-center justify-between mb-6 w-full gap-2">
+                <p className="text-gray-500 dark:text-[#A1A1A6] text-sm pr-4">
                   Pick your storefront vibe. We'll automatically assign the best AI agents to manage it.
                 </p>
                 <button
                   onClick={() => handleSaveDraft()}
-                  className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-4"
+                  className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-auto flex items-center justify-center"
                 >
                       <IconLabel icon="save">Save Draft</IconLabel>
                     </button>
