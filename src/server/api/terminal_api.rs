@@ -398,6 +398,20 @@ pub async fn commit_inventory_handler(
                 }
 
                 let _ = tx.commit().await;
+
+                let event = ::server_ohc::orchestration::TeammateMeshEvent {
+                    action: "InventoryUpdated".to_string(),
+                    agent_id: "system".to_string(),
+                    status: "".to_string(),
+                    msg_id: uuid::Uuid::new_v4().to_string(),
+                    payload: serde_json::json!({
+                        "product_id": req_data.product_id,
+                        "quantity_deducted": req_data.quantity,
+                        "tenant_id": tenant_id
+                    }).to_string().into_bytes(),
+                };
+                let _ = hub.publish_teammate_event("mesh:inventory:updated".to_string(), event);
+
                 return (axum::http::StatusCode::OK, Json(serde_json::json!({
                     "success": true,
                     "error_message": ""

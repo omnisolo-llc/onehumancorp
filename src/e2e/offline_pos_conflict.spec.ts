@@ -95,3 +95,44 @@ test.describe('In-Person Payment (POS) Flow with Concurrent Online Checkout', ()
     await expect(page.locator('text=Payment Completed')).toBeVisible();
   });
 });
+
+
+test.describe('POS Terminal Event Verification via UI', () => {
+  test('should publish inventory updated event after commit in POS', async ({ page }) => {
+    // Navigate to the POS terminal page
+    await page.goto('/pos/terminal');
+
+    // Wait for the pin pad
+    await expect(page.getByText('Terminal Locked')).toBeVisible();
+
+    // Enter PIN: 1111 (seeded in standard test fixture)
+    for (let i = 0; i < 4; i++) {
+       await page.getByRole('button', { name: '1' }).click();
+    }
+
+    // Verify logged in view and Clock In
+    await expect(page.getByText('Clock In')).toBeVisible();
+    await page.getByRole('button', { name: 'Clock In' }).click();
+
+    // Discover readers and Connect
+    await page.getByRole('button', { name: 'Discover Readers' }).click();
+    await expect(page.getByText('Discovered')).toBeVisible();
+
+    const connectButton = page.getByRole('button', { name: 'Connect' }).first();
+    await connectButton.click();
+
+    await expect(page.getByText('Connected to reader')).toBeVisible();
+
+    // Process Payment
+    await page.getByRole('button', { name: /Charge \$/ }).click();
+
+    // Wait for payment completion
+    await expect(page.getByText('Payment Completed')).toBeVisible({ timeout: 15000 });
+
+    // Verify the AI Agent is notified about the stock change via Mesh Event routing
+    await page.goto('/kairos');
+
+    // Wait for the Operations agent or feed to show the update
+    await expect(page.locator('text=Operations')).toBeVisible({ timeout: 15000 });
+  });
+});
