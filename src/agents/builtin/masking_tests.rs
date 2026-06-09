@@ -209,3 +209,72 @@ async fn test_masking_logic_depth() {
     assert_eq!(tr2.role, Role::Tool);
     assert!(tr2.tool_results[0].content.contains("Long output content"), "Expected Result 2 NOT to be masked in turn 3");
 }
+
+#[tokio::test]
+async fn test_masking_element_limit() {
+    let observation_store = Arc::new(DashMap::new());
+    let client = Arc::new(RecordingMockLlm {
+        requests: Mutex::new(vec![]),
+        responses: Mutex::new(vec![
+            ChatResponse {
+                message: Message {
+                    role: Role::Assistant,
+                    content: "Call 1".to_string(),
+                    tool_calls: vec![ToolCall { id: "c1".to_string(), name: "json_tool".to_string(), arguments: serde_json::Value::Null }],
+                    tool_results: vec![],
+                    response_id: None,
+                    previous_response_id: None,
+                },
+                usage: Usage::default(),
+                stop_reason: "tool_calls".to_string(),
+                response_id: Some("r1".to_string()),
+            },
+            ChatResponse {
+                message: Message::assistant("Final"),
+                usage: Usage::default(),
+                stop_reason: "stop".to_string(),
+                response_id: Some("r2".to_string()),
+            },
+        ]),
+    });
+
+    struct JsonTool;
+    #[async_trait::async_trait]
+    impl ohc_builtin_agent::tools::ToolExecutor for JsonTool {
+        async fn execute(&self, _args: serde_json::Value) -> Result<String, ohc_builtin_agent::types::ToolError> {
+            let large_array: Vec<usize> = (0..20).collect();
+            Ok(serde_json::to_string(&large_array).unwrap())
+        }
+    }
+
+    let mut agent = Agent::new(client.clone(), vec![Tool {
+        name: "json_tool".to_string(),
+        description: "json_tool".to_string(),
+        is_read_only: true,
+        parameters: serde_json::json!({}),
+        execute: Arc::new(JsonTool),
+    }]);
+    agent.observation_store = observation_store;
+
+    let mut cfg = AgentRunConfig::default();
+    cfg.enable_observation_masking = true;
+    cfg.observation_masking_threshold = 0; // Immediate masking
+    cfg.observation_masking_size_limit = 10;
+    cfg.observation_masking_element_limit = 5;
+
+    let _ = agent.run(&cfg, "Start", &mut |_| {}).await;
+
+    let reqs = client.requests.lock().await;
+    let turn2_msgs = &reqs[1].messages;
+    let tr1 = &turn2_msgs[2];
+    assert_eq!(tr1.role, Role::Tool);
+
+    let content = &tr1.tool_results[0].content;
+    let parsed: serde_json::Value = serde_json::from_str(content).expect("Should be valid JSON");
+    let arr = parsed.as_array().expect("Should be an array");
+    assert_eq!(arr.len(), 6); // 5 elements + 1 summary
+    let masked_element = arr.iter().find(|v| v.as_str().map_or(false, |s| s.contains("elements truncated") || s.contains("Masked string"))).map_or("", |v| v.as_str().unwrap());
+    println!("MASKED ELEMENT: {}", masked_element);
+    println!("ARRAY CONTENT: {:?}", arr);
+    assert!(masked_element.contains("elements truncated") || masked_element.contains("Masked string"));
+}

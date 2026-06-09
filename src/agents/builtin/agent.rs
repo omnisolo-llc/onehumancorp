@@ -65,6 +65,7 @@ pub enable_llmcompiler_plan_and_execute: bool,
     pub enable_observation_masking: bool,
     pub observation_masking_threshold: usize,
     pub observation_masking_size_limit: usize,
+    pub observation_masking_element_limit: usize,
     pub enable_lost_in_the_middle_prevention: bool,
     pub enable_context_compaction: bool,
     pub compaction_threshold_tokens: i32,
@@ -151,6 +152,7 @@ enable_llmcompiler_plan_and_execute: false,
             enable_observation_masking: true,
             observation_masking_threshold: 3,
             observation_masking_size_limit: 512,
+            observation_masking_element_limit: 50,
             enable_lost_in_the_middle_prevention: true,
             enable_context_compaction: true,
             compaction_threshold_tokens: 60_000,
@@ -2271,7 +2273,7 @@ impl Agent {
         // Context Management (Preventing Context Rot): Observation Masking (JetBrains' Junie)
         // Hide the raw output of old tools from the prompt, but keep the `tool_calls` themselves visible so the model remembers what it did.
         if final_cfg.enable_observation_masking {
-            crate::observation_masking::apply_observation_masking(&mut final_messages, final_cfg.observation_masking_threshold, final_cfg.observation_masking_size_limit);
+            crate::observation_masking::apply_observation_masking(&mut final_messages, final_cfg.observation_masking_threshold, final_cfg.observation_masking_size_limit, final_cfg.observation_masking_element_limit);
         }
 
             // Context Window Strategy: Prioritize reasoning traces over raw tool outputs (ACON Research)
@@ -3009,6 +3011,7 @@ impl Agent {
                     &mut messages,
                     final_cfg.observation_masking_threshold,
                     final_cfg.observation_masking_size_limit,
+                    final_cfg.observation_masking_element_limit,
                 );
             }
 

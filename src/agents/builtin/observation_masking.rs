@@ -147,8 +147,8 @@ impl JetBrainsObservationMasker {
     }
 }
 
-pub fn apply_observation_masking(messages: &mut Vec<Message>, threshold: usize, size_limit: usize) {
-    let element_limit = 50; // default for legacy caller without element_limit
+pub fn apply_observation_masking(messages: &mut Vec<Message>, threshold: usize, size_limit: usize, element_limit: usize) {
+
     let masker = JetBrainsObservationMasker::new(threshold, size_limit, element_limit);
     masker.apply_masking(messages);
 }
@@ -201,7 +201,7 @@ mod tests {
 
         // Mask messages older than 1 message from the end. Only 'call_1' is older.
         // Size limit 100 bytes.
-        apply_observation_masking(&mut messages, 1, 100);
+        apply_observation_masking(&mut messages, 1, 100, 50);
 
         // First message should be masked
         assert!(messages[0].tool_results[0].content.contains("[Observation Masked"));
@@ -248,7 +248,7 @@ mod tests {
 
         // Mask messages older than 1 message from the end. Only 'call_3' is older.
         // Size limit 100 bytes.
-        apply_observation_masking(&mut messages, 1, 100);
+        apply_observation_masking(&mut messages, 1, 100, 50);
 
         let masked_content = &messages[0].tool_results[0].content;
         assert!(masked_content.contains("\"small\":\"abc\""));
