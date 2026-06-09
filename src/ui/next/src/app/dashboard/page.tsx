@@ -541,8 +541,8 @@ export default function Dashboard() {
               {messages.some((message) => (message.status || "").toLowerCase() !== "closed") && (
                 <div className="app-list-item">
                   <div>
-                    <div className="app-list-title">Inbox messages</div>
-                    <div className="app-list-subtitle">Open customer conversations are waiting in the database.</div>
+                    <div className="app-list-title">Work Triage Items</div>
+                    <div className="app-list-subtitle">AI WorkTriage has categorized and drafted responses for open items.</div>
                   </div>
                   <span className="app-badge">Inbox</span>
                 </div>
@@ -591,8 +591,8 @@ export default function Dashboard() {
 
           <div className="app-panel">
             <div className="app-panel-header">
-              <WithTooltip id="inbox-activity-tooltip" defaultText="Keep track of recent customer messages."><div className="app-panel-title">Inbox Activity</div></WithTooltip>
-              <Link href="/inbox" className="app-button">Open Inbox</Link>
+              <WithTooltip id="inbox-activity-tooltip" defaultText="Keep track of recent customer messages."><div className="app-panel-title flex items-center gap-2"><span className="text-xl">✨</span> Work Triage Activity</div></WithTooltip>
+              <Link href="/triage" className="app-button text-indigo-600 border-indigo-200 hover:bg-indigo-50 dark:text-indigo-400 dark:border-indigo-900 dark:hover:bg-indigo-900/30">Open Triage Feed</Link>
             </div>
             <div className="app-list">
               {messages.length === 0 ? (
