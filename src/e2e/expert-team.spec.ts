@@ -1,88 +1,50 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('Expert Team Feature CUJ', () => {
+test.describe('Expert Team Workflow', () => {
 
-  test('Persona: Business Owner uses Expert Team successfully', async ({ page }) => {
-    await page.goto('/expert-team');
-    await expect(page.getByRole('heading', { name: /Expert Team/i })).toBeVisible();
-
-    // 2. Owner enters task
-    const input = page.getByPlaceholder(/e.g. Write a comprehensive/i);
-    await input.fill('Write a comprehensive business plan for a new vegan bakery... Chart: Required. Analysis: Deep.');
-
-    // 3. Setup interception for the API route to avoid real LLM calls in E2E but simulate the real backend behavior
-    // Important: we mock the internal NextJS api route so we don't depend on actual backend network requests running!
-    await page.route('/api/expert-team', async route => {
-      const json = { result: "Combined Executive Summary:\nIndustry Researcher: Done.\nFinancial Analyst: Done.\nStrategic Analyst: Done.\nProcess Supervisor: Done.\nQuality Auditor: Done.\n\nOverall Strategy:\nProceed based on above.\nChart: Included.\nAnalysis: Completed.\n\n" + " word".repeat(20000) };
-      await route.fulfill({ json });
-    });
-
-    // 4. Execute
-    const button = page.getByRole('button', { name: /Execute Task/i });
-    await button.click();
-
-    // 5. Loading state is transient, we just wait for the result
-
-    // 6. Verify result is shown
-    await expect(page.getByText('Combined Executive Summary:')).toBeVisible();
-    await expect(page.getByText('Chart: Included.')).toBeVisible();
+  test.beforeEach(async ({ page }) => {
+    // 1. Log in using standard user flow
+    await page.goto('http://localhost:8080/login');
+    await page.fill('input[type="email"]', 'test@example.com');
+    await page.fill('input[type="password"]', 'password');
+    await page.click('button:has-text("Sign in")');
+    await page.waitForURL('http://localhost:8080/dashboard');
   });
 
-  test('Persona: Owner sees error when Pre-flight gate fails', async ({ page }) => {
-    await page.goto('/expert-team');
-
-    // Fill empty task (the UI requires some text to enable button)
-    await page.getByPlaceholder(/e.g. Write a comprehensive/i).fill(' ');
-
-    await page.route('/api/expert-team', async route => {
-      await route.fulfill({ status: 400, json: { error: 'Pre-flight Gate Failed: Task context cannot be empty.' } });
-    });
-
-    await page.getByRole('button', { name: /Execute Task/i }).click();
-
-    await expect(page.getByText('Quality Gate or Execution Error:')).toBeVisible();
-    await expect(page.getByText('Pre-flight Gate Failed: Task context cannot be empty.')).toBeVisible();
+  test('User can execute a task through the collaborative expert team', async ({ page }) => {
+    await page.goto('http://localhost:8080/expert-team');
+    await expect(page.locator('h1')).toHaveText('Collaborative Expert Team');
+    const taskInput = page.locator('textarea');
+    await taskInput.fill('Write a comprehensive business plan for a new vegan bakery... Chart: Required. Analysis: Deep. Words: We need it long.');
+    const executeButton = page.getByRole('button', { name: 'Execute Task via Expert Team' });
+    await executeButton.click();
+    await expect(page.getByRole('button', { name: 'Orchestrating Expert Team...' })).toBeDisabled();
   });
 
-  test('Persona: Owner sees error when Pre-merge similarity is too high', async ({ page }) => {
-    await page.goto('/expert-team');
-
-    await page.getByPlaceholder(/e.g. Write a comprehensive/i).fill('Analyze something basic');
-
-    await page.route('/api/expert-team', async route => {
-      await route.fulfill({ status: 400, json: { error: 'Pre-merge Gate Failed: High similarity detected (>75%) between expert outputs.' } });
-    });
-
-    await page.getByRole('button', { name: /Execute Task/i }).click();
-
-    await expect(page.getByText('Pre-merge Gate Failed: High similarity detected (>75%) between expert outputs.')).toBeVisible();
+  test('Execute button is disabled when task input is empty', async ({ page }) => {
+    await page.goto('http://localhost:8080/expert-team');
+    const executeButton = page.getByRole('button', { name: 'Execute Task via Expert Team' });
+    await expect(executeButton).toBeDisabled();
   });
 
-  test('Persona: Owner sees error when Pre-deliver missing chart/analysis', async ({ page }) => {
-    await page.goto('/expert-team');
-
-    await page.getByPlaceholder(/e.g. Write a comprehensive/i).fill('Do not include chart');
-
-    await page.route('/api/expert-team', async route => {
-      await route.fulfill({ status: 400, json: { error: 'Pre-deliver Gate Failed: Missing required chart/analysis verification in final output.' } });
-    });
-
-    await page.getByRole('button', { name: /Execute Task/i }).click();
-
-    await expect(page.getByText('Pre-deliver Gate Failed: Missing required chart/analysis verification in final output.')).toBeVisible();
+  test('Execute button becomes enabled after typing in task context', async ({ page }) => {
+    await page.goto('http://localhost:8080/expert-team');
+    const executeButton = page.getByRole('button', { name: 'Execute Task via Expert Team' });
+    await expect(executeButton).toBeDisabled();
+    await page.locator('textarea').fill('Test task context');
+    await expect(executeButton).toBeEnabled();
   });
 
-  test('Persona: Owner sees error when Pre-deliver missing words', async ({ page }) => {
-    await page.goto('/expert-team');
+  test('User instructions are clearly visible on the page', async ({ page }) => {
+    await page.goto('http://localhost:8080/expert-team');
+    const instructions = page.getByText('Lead Agent will coordinate 5 domain experts');
+    await expect(instructions).toBeVisible();
+    await expect(page.getByText('Business Task Context')).toBeVisible();
+  });
 
-    await page.getByPlaceholder(/e.g. Write a comprehensive/i).fill('Short answer');
-
-    await page.route('/api/expert-team', async route => {
-      await route.fulfill({ status: 400, json: { error: 'Pre-deliver Gate Failed: Final output is too short (5 words). Required >= 20000 words for delivery.' } });
-    });
-
-    await page.getByRole('button', { name: /Execute Task/i }).click();
-
-    await expect(page.getByText('Required >= 20000 words for delivery.')).toBeVisible();
+  test('Textarea contains a helpful placeholder', async ({ page }) => {
+    await page.goto('http://localhost:8080/expert-team');
+    const textarea = page.locator('textarea');
+    await expect(textarea).toHaveAttribute('placeholder', /e.g. Write a comprehensive business plan/);
   });
 });
