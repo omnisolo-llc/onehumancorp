@@ -93,6 +93,7 @@ export default function Dashboard() {
   const [supply, setSupply] = useState<SupplyPayload>({ vendors: [], raw_materials: [], bom_items: [] });
   const [approvals, setApprovals] = useState<any[]>([]);
   const [dashboardData, setDashboardData] = useState<any>({ pendingReviews: [] });
+  const [loading, setLoading] = useState(true);
   const [ledgerBalance, setLedgerBalance] = useState<number | null>(null);
   const [ledgerCurrency, setLedgerCurrency] = useState<string>("USD");
   const [ledgerLoading, setLedgerLoading] = useState(true);
@@ -130,6 +131,7 @@ export default function Dashboard() {
   const [syncErrorCount, setSyncErrorCount] = useState(0);
   const [activeDepartments, setActiveDepartments] = useState<string[]>([]);
 
+  const handleApproveDraft = async (approvalId: string) => {
     try {
       const token = localStorage.getItem("token") || "";
       const res = await fetch(`/api/agents/approvals/${approvalId}`, {
