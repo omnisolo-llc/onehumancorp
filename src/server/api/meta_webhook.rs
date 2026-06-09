@@ -115,8 +115,13 @@ pub async fn meta_webhook_post_handler(
 
                             // Try to look up the tenant ID by sender id. For now, use "system" or let the DB logic handle it
 
-                                      let _identifier = message.get("recipient").and_then(|r: &serde_json::Value| r.get("id")).and_then(|i: &serde_json::Value| i.as_str()).unwrap_or("unknown");
-                                      let tenant_id = "test_tenant".to_string(); // Replace with actual DB lookup based on `identifier`
+                                      let identifier = message.get("recipient").and_then(|r: &serde_json::Value| r.get("id")).and_then(|i: &serde_json::Value| i.as_str()).unwrap_or("unknown");
+                                      let phone_number_id = identifier;
+                                      let tenant_id_opt: Option<String> = match &state.db.store {
+                                          crate::db::DbStore::Postgres => sqlx::query_scalar("SELECT tenant_id FROM integrations WHERE (integration_id = 'whatsapp' OR integration_id = 'meta') AND (chat_id = $1 OR bot_token = $1) LIMIT 1").bind(phone_number_id).fetch_optional(&state.db.pool).await.unwrap_or(None),
+                                          crate::db::DbStore::Sqlite(sqlite_pool) => sqlx::query_scalar("SELECT tenant_id FROM integrations WHERE (integration_id = 'whatsapp' OR integration_id = 'meta') AND (chat_id = ? OR bot_token = ?) LIMIT 1").bind(phone_number_id).bind(phone_number_id).fetch_optional(sqlite_pool).await.unwrap_or(None)
+                                      };
+                                      let tenant_id = tenant_id_opt.unwrap_or_else(|| "test_tenant".to_string());
 
                             let inbox_id = Uuid::new_v4().to_string();
                             let source = "instagram".to_string();
@@ -184,8 +189,13 @@ pub async fn meta_webhook_post_handler(
                                       tracing::info!("Received Meta WhatsApp message from {}: {}", sender_id, text);
 
 
-                                      let _identifier = message.get("recipient").and_then(|r: &serde_json::Value| r.get("id")).and_then(|i: &serde_json::Value| i.as_str()).unwrap_or("unknown");
-                                      let tenant_id = "test_tenant".to_string(); // Replace with actual DB lookup based on `identifier`
+                                      let identifier = message.get("recipient").and_then(|r: &serde_json::Value| r.get("id")).and_then(|i: &serde_json::Value| i.as_str()).unwrap_or("unknown");
+                                      let phone_number_id = identifier;
+                                      let tenant_id_opt: Option<String> = match &state.db.store {
+                                          crate::db::DbStore::Postgres => sqlx::query_scalar("SELECT tenant_id FROM integrations WHERE (integration_id = 'whatsapp' OR integration_id = 'meta') AND (chat_id = $1 OR bot_token = $1) LIMIT 1").bind(phone_number_id).fetch_optional(&state.db.pool).await.unwrap_or(None),
+                                          crate::db::DbStore::Sqlite(sqlite_pool) => sqlx::query_scalar("SELECT tenant_id FROM integrations WHERE (integration_id = 'whatsapp' OR integration_id = 'meta') AND (chat_id = ? OR bot_token = ?) LIMIT 1").bind(phone_number_id).bind(phone_number_id).fetch_optional(sqlite_pool).await.unwrap_or(None)
+                                      };
+                                      let tenant_id = tenant_id_opt.unwrap_or_else(|| "test_tenant".to_string());
 
                                       let inbox_id = Uuid::new_v4().to_string();
                                       let source = "whatsapp".to_string();
