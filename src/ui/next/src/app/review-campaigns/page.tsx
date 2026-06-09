@@ -12,6 +12,7 @@ export default function ReviewCampaignsPage() {
   const [isSent, setIsSent] = useState(false);
   const [hasPro, setHasPro] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [autoRequest, setAutoRequest] = useState(true);
 
   useEffect(() => {
     if (typeof localStorage !== 'undefined') {
