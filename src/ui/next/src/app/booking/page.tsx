@@ -2,6 +2,7 @@
 
 import React, { useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
+import { OneTapReferral } from "../components/OneTapReferral";
 
 function BookingForm() {
   const searchParams = useSearchParams();
@@ -38,10 +39,13 @@ function BookingForm() {
           </p>
           <button
             onClick={() => setSubmitted(false)}
-            className="mt-8 w-full py-3 px-4 rounded-xl font-bold text-sm bg-gray-900 text-white hover:bg-black transition-all"
+            className="mt-8 w-full py-3 px-4 rounded-xl font-bold text-sm bg-gray-900 text-white hover:bg-black transition-all mb-6"
           >
             Submit Another Request
           </button>
+
+          <OneTapReferral tenantId={tenant} source="booking_success" />
+
           <div className="mt-6 text-center" style={{ fontFamily: 'sans-serif', fontSize: '12px' }}>
             <a
               href={`/api/v1/growth/referrals/click?target=/onboarding&ref=${tenant}`}
