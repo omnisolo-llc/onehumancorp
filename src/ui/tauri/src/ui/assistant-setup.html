@@ -167,6 +167,14 @@
         if (storedTone) toneSelect.value = storedTone;
       }
 
+      if (nameInput) {
+        nameInput.addEventListener("keydown", (e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            nextBtn.click();
+          }
+        });
+      }
       if (nextBtn) {
         nextBtn.addEventListener('click', () => {
            let isValid = true;

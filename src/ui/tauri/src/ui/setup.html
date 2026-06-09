@@ -148,6 +148,14 @@
         }
       }
 
+      if (nameInput) {
+        nameInput.addEventListener("keydown", (e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            nextBtn.click();
+          }
+        });
+      }
       if (nextBtn) {
         nextBtn.addEventListener('click', () => {
            const name = nameInput.value.trim();
