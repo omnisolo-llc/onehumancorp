@@ -4106,6 +4106,7 @@ async fn create_ui_bom_item_handler(
         .nest("/api/v1/catalog", api::catalog::router(hub.clone()))
         .nest("/api/v1/shipping", api::shipping::router())
         .nest("/api/v1/payments/terminal", api::terminal_api::router(hub.clone()))
+        .nest("/api/v1/search", api::search::router(db.pool.clone()))
 
         .nest("/api/agents/approvals", api::agents::approvals::router(dept_orchestrator.clone()))
         .nest("/api/agents/settings", api::agents::settings::router(dept_orchestrator.clone()))
