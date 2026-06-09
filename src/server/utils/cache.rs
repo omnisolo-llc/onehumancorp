@@ -137,29 +137,32 @@ where
         if let Ok(mut guard) = self.get_local().write() {
             let now = std::time::Instant::now();
             if guard.len() >= self.max_local_capacity && !guard.contains_key(key) {
-                let keys_to_remove: Vec<String> = guard.iter()
-                    .filter(|(_, entry)| entry.expiry <= now)
-                    .map(|(k, _)| k.clone())
-                    .collect();
+                let mut removed_keys = Vec::new();
+                let offset = EVICTION_SEED.fetch_add(7, Ordering::Relaxed) % guard.len();
+                let mut sampled_keys = Vec::new();
+                let mut has_expired = false;
 
-                let mut removed_keys = keys_to_remove.clone();
-                for k in keys_to_remove {
-                    guard.remove(&k);
-                }
-
-                // Random Eviction (approximate LFU via sample)
-                if guard.len() >= self.max_local_capacity {
-                    // Random sample 5 keys and evict the one with lowest access count.
-                    // This avoids O(N) iteration while providing reasonable eviction quality.
-                    let offset = EVICTION_SEED.fetch_add(7, Ordering::Relaxed) % guard.len();
-                    let mut sampled_keys = Vec::new();
-                    for (k, entry) in guard.iter().skip(offset).chain(guard.iter()).take(5) {
+                // We do a small probabilistic sample instead of an O(N) iteration for eviction.
+                for (k, entry) in guard.iter().skip(offset).chain(guard.iter()).take(10) {
+                    if entry.expiry <= now {
+                        removed_keys.push(k.clone());
+                        has_expired = true;
+                    } else {
                         sampled_keys.push((k.clone(), entry.access_count.load(Ordering::Relaxed)));
                     }
+                }
 
-                    if let Some((least_accessed_key, _)) = sampled_keys.into_iter().min_by_key(|(_, count)| *count) {
-                        guard.remove(&least_accessed_key);
-                        removed_keys.push(least_accessed_key);
+                if has_expired {
+                    for k in &removed_keys {
+                        guard.remove(k);
+                    }
+                } else {
+                    if guard.len() >= self.max_local_capacity {
+                        sampled_keys.truncate(5); // Only take 5 samples for LFU to avoid excessive work
+                        if let Some((least_accessed_key, _)) = sampled_keys.into_iter().min_by_key(|(_, count)| *count) {
+                            guard.remove(&least_accessed_key);
+                            removed_keys.push(least_accessed_key);
+                        }
                     }
                 }
 
