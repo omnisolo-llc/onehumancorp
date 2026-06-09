@@ -2,6 +2,12 @@ use std::sync::Arc;
 use crate::db::{DB, DbStore};
 use chrono::Utc;
 
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::time::{Instant, Duration};
+
+static CONSECUTIVE_LLM_FAILURES: AtomicUsize = AtomicUsize::new(0);
+static CIRCUIT_OPEN_UNTIL: tokio::sync::Mutex<Option<Instant>> = tokio::sync::Mutex::const_new(None);
+
 pub struct ThrottlingManager {
     db: Arc<DB>,
 }
@@ -11,7 +17,36 @@ impl ThrottlingManager {
         Self { db }
     }
 
+    pub async fn record_llm_failure(&self) {
+        let failures = CONSECUTIVE_LLM_FAILURES.fetch_add(1, Ordering::SeqCst) + 1;
+        if failures >= 5 {
+            let mut open_until = CIRCUIT_OPEN_UNTIL.lock().await;
+            *open_until = Some(Instant::now() + Duration::from_secs(300)); // Open for 5 minutes
+            tracing::warn!("ML-Resilience: LLM API circuit breaker OPENED due to {} consecutive failures", failures);
+        }
+    }
+
+    pub async fn record_llm_success(&self) {
+        CONSECUTIVE_LLM_FAILURES.store(0, Ordering::SeqCst);
+        let mut open_until = CIRCUIT_OPEN_UNTIL.lock().await;
+        *open_until = None;
+    }
+
+    pub async fn is_circuit_open(&self) -> bool {
+        let open_until = CIRCUIT_OPEN_UNTIL.lock().await;
+        if let Some(until) = *open_until {
+            if Instant::now() < until {
+                return true;
+            }
+        }
+        false
+    }
+
     pub async fn check_and_consume_budget(&self, tenant_id: &str, points: i32) -> Result<bool, String> {
+        if self.is_circuit_open().await {
+            return Err("ML-Resilience: LLM API Circuit Breaker is OPEN. Agent is in PAUSED state.".to_string());
+        }
+
         let now = Utc::now();
         let year_month = now.format("%Y-%m").to_string();
 

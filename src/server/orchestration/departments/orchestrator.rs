@@ -190,21 +190,32 @@ impl DepartmentOrchestrator {
 
                         let mut success = false;
                         let mut last_err = String::new();
-                        for _ in 0..3 {
+                        let throttler = crate::orchestration::departments::throttling::ThrottlingManager::new(self.db.clone());
+
+                        for attempt in 1..=3 {
                             let fut = dep.read().await;
-                            let res = tokio::time::timeout(ohc_builtin_agent::agent::agent_task_timeout(), fut.handle_event(&event)).await;
+                            // Enforce strict 60s timeout as per ML-Resilience rules
+                            let timeout_duration = std::time::Duration::from_secs(60);
+                            let res = tokio::time::timeout(timeout_duration, fut.handle_event(&event)).await;
                             match res {
                                 Ok(Ok(_)) => {
                                     success = true;
+                                    throttler.record_llm_success().await;
                                     break;
                                 }
                                 Ok(Err(e)) => {
                                     last_err = e.to_string();
-                                    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+                                    if last_err.to_lowercase().contains("rate limit") || last_err.to_lowercase().contains("unavailable") {
+                                         throttler.record_llm_failure().await;
+                                    }
+                                    tracing::warn!("AI action failed on attempt {}: {}. Retrying...", attempt, last_err);
+                                    tokio::time::sleep(std::time::Duration::from_millis(1000 * attempt)).await;
                                 }
                                 Err(_) => {
-                                    last_err = format!("AI timeout: Event handling exceeded {} seconds", ohc_builtin_agent::agent::agent_task_timeout().as_secs());
-                                    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+                                    last_err = format!("AI timeout: Event handling exceeded {} seconds", timeout_duration.as_secs());
+                                    throttler.record_llm_failure().await;
+                                    tracing::warn!("AI action timed out on attempt {}. Retrying...", attempt);
+                                    tokio::time::sleep(std::time::Duration::from_millis(1000 * attempt)).await;
                                 }
                             }
                         }

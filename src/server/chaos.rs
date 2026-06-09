@@ -923,6 +923,85 @@ mod tests {
 
         assert!(result.is_err(), "Chaos resilience must enforce ML-Resilience timeout rule to prevent cascading failure");
     }
+
+    #[tokio::test]
+    async fn test_ml_resilience_circuit_breaker_trip() {
+        let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Cloud");
+        use crate::orchestration::departments::throttling::ThrottlingManager;
+        use std::sync::Arc;
+
+        let db = Arc::new(crate::db::DB {
+            pool: sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://dummy").unwrap(),
+            store: crate::db::DbStore::Sqlite(sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap()),
+        });
+        let throttler = ThrottlingManager::new(db);
+
+        // Record 5 failures to trip the circuit
+        for _ in 0..5 {
+            throttler.record_llm_failure().await;
+        }
+
+        assert!(throttler.is_circuit_open().await, "Circuit breaker should be OPEN after 5 failures");
+
+        let res = throttler.check_and_consume_budget("tenant_1", 1).await;
+        assert!(res.is_err(), "Budget check should fail when circuit is open");
+        assert!(res.unwrap_err().contains("Circuit Breaker is OPEN"), "Error message should mention circuit breaker");
+
+        // Record a success to close the circuit
+        throttler.record_llm_success().await;
+        assert!(!throttler.is_circuit_open().await, "Circuit breaker should be CLOSED after success");
+    }
+
+    #[tokio::test]
+    async fn test_sqlite_postgres_parity_shared_tasks() {
+        let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Standalone");
+        use sqlx::sqlite::SqlitePoolOptions;
+
+        let db_id = uuid::Uuid::new_v4().to_string();
+        let uri = format!("sqlite:file:{}?mode=memory&cache=shared", db_id);
+        let pool = SqlitePoolOptions::new().connect(&uri).await.unwrap();
+
+        // Use the newly added shared_tasks_decomposition table schema
+        sqlx::query(
+            "CREATE TABLE IF NOT EXISTS shared_tasks_decomposition (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                mission_id TEXT,
+                dependencies TEXT DEFAULT '[]',
+                status TEXT DEFAULT 'PENDING',
+                ultraplan_phase TEXT,
+                deliberation_log TEXT DEFAULT '[]',
+                depth INTEGER,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );"
+        ).execute(&pool).await.unwrap();
+
+        // Insert a task with complex planning columns
+        sqlx::query(
+            "INSERT INTO shared_tasks_decomposition (id, tenant_id, status, ultraplan_phase, deliberation_log, depth)
+             VALUES (?, ?, ?, ?, ?, ?)"
+        )
+        .bind("task_parity_1")
+        .bind("org_1")
+        .bind("PENDING")
+        .bind("PLANNING")
+        .bind(r#"[{"thought": "test"}]"#)
+        .bind(2)
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        let row: (String, String, Option<String>, Option<String>, Option<i32>) =
+            sqlx::query_as("SELECT id, tenant_id, ultraplan_phase, deliberation_log, depth FROM shared_tasks_decomposition WHERE id = 'task_parity_1'")
+            .fetch_one(&pool).await.unwrap();
+
+        assert_eq!(row.0, "task_parity_1");
+        assert_eq!(row.1, "org_1");
+        assert_eq!(row.2, Some("PLANNING".to_string()));
+        assert!(row.3.unwrap().contains("thought"));
+        assert_eq!(row.4, Some(2));
+    }
 }
     #[tokio::test]
     async fn test_ml_resilience_inference_timeout_with_db_lag() {
