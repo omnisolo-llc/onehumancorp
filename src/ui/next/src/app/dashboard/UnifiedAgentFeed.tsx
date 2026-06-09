@@ -53,29 +53,21 @@ export function UnifiedAgentFeed() {
         setActivityLoading(true);
         const tenant = tenantId();
 
-        const [feedRes, activityRes] = await Promise.all([
-          fetch(`/api/agents/approvals?tenant_id=${tenant}`, {
-            headers: {
-              "x-tenant-id": tenant,
-              "x-user-id": "default",
-            },
-          }),
-          fetch(`/api/agents/approvals/ledger?tenant_id=${tenant}`, {
-            headers: {
-              "x-tenant-id": tenant,
-              "x-user-id": "default",
-            },
-          })
-        ]);
+        const unifiedRes = await fetch(`/api/ui/dashboard/unified-agent-feed?tenant_id=${tenant}`, {
+          headers: {
+            "x-tenant-id": tenant,
+            "x-user-id": "default",
+          },
+        });
 
-        if (!feedRes.ok) {
+        if (!unifiedRes.ok) {
           throw new Error("Failed to load agent feed");
         }
 
-        const [feedData, activityData] = await Promise.all([
-          feedRes.json(),
-          activityRes.ok ? activityRes.json() : Promise.resolve({ pending_approvals: [] })
-        ]);
+        const unifiedData = await unifiedRes.json();
+
+        const feedData = { pending_approvals: unifiedData.pending_approvals || [] };
+        const activityData = { entries: unifiedData.entries || [] };
 
         if (mounted) {
           if (feedData.pending_approvals) {

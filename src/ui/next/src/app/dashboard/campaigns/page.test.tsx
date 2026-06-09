@@ -14,35 +14,37 @@ vi.mock('next/navigation', () => ({
 }));
 
 const responses: Record<string, unknown> = {
-  "/api/ui/dashboard/metrics": {
-    active_customers: 42,
-    pending_orders: 2,
-    total_sales: 1840,
-    total_campaigns_sent: 7,
-  },
-  "/api/ui/orders": [
-    {
-      id: "order-1001",
-      customer_name: "Alice",
-      customer_email: "alice@example.com",
-      total_amount: 68.5,
-      status: "delivered",
+  "/api/ui/dashboard/unified-feed": {
+    metrics: {
+      active_customers: 42,
+      pending_orders: 2,
+      total_sales: 1840,
+      total_campaigns_sent: 7,
     },
-  ],
-  "/api/ui/inbox/messages": [
-    {
-      id: "msg-1",
-      source: "chat",
-      content: "Can you remind me what I bought last time?",
-      status: "open",
-    },
-  ],
-  "/api/ui/supply": {
-    vendors: [],
-    raw_materials: [
-      { id: "flour", name: "Flour", current_quantity: 2, reorder_threshold: 4 },
+    orders: [
+      {
+        id: "order-1001",
+        customer_name: "Alice",
+        customer_email: "alice@example.com",
+        total_amount: 68.5,
+        status: "delivered",
+      },
     ],
-    bom_items: [],
+    inbox: [
+      {
+        id: "msg-1",
+        source: "chat",
+        content: "Can you remind me what I bought last time?",
+        status: "open",
+      },
+    ],
+    supply: {
+      vendors: [],
+      raw_materials: [
+        { id: "flour", name: "Flour", current_quantity: 2, reorder_threshold: 4 },
+      ],
+      bom_items: [],
+    },
   },
 };
 
@@ -79,10 +81,7 @@ describe("CampaignOrchestrationPage", () => {
       expect(screen.getByRole("heading", { name: "Campaign Orchestration" })).toBeInTheDocument();
     });
 
-    expect(fetchMock).toHaveBeenCalledWith("/api/ui/dashboard/metrics?tenant_id=tenant-123");
-    expect(fetchMock).toHaveBeenCalledWith("/api/ui/orders?tenant_id=tenant-123");
-    expect(fetchMock).toHaveBeenCalledWith("/api/ui/inbox/messages?tenant_id=tenant-123");
-    expect(fetchMock).toHaveBeenCalledWith("/api/ui/supply?tenant_id=tenant-123");
+    expect(fetchMock).toHaveBeenCalledWith("/api/ui/dashboard/unified-feed?tenant_id=tenant-123");
     // expect(screen.getByText("42")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Open review workflow/i })).toHaveAttribute("href", "/review-campaigns");
     expect(screen.getByRole("link", { name: /Open receipt workflow/i })).toHaveAttribute("href", "/orders/order-1001");

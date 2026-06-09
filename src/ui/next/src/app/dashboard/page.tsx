@@ -211,27 +211,26 @@ export default function Dashboard() {
 
       try {
         const userId = localStorage.getItem("user_id") || "default";
-        const [metricsRes, ordersRes, inboxRes, supplyRes, onboardingRes, approvalsRes] = await Promise.all([
-          fetch(`/api/ui/dashboard/metrics?tenant_id=${tenant}`),
-          fetch(`/api/ui/orders?tenant_id=${tenant}`),
-          fetch(`/api/ui/inbox/messages?tenant_id=${tenant}`),
-          fetch(`/api/ui/supply?tenant_id=${tenant}`),
+        const [unifiedRes, onboardingRes, approvalsRes] = await Promise.all([
+          fetch(`/api/ui/dashboard/unified-feed?tenant_id=${tenant}`),
           fetch(`/api/onboarding/state`, { headers: { 'X-Tenant-ID': tenant, 'X-User-ID': userId } }),
           fetch(`/api/agents/approvals?tenant_id=${tenant}`)
         ]);
 
-        if (!metricsRes.ok || !ordersRes.ok || !inboxRes.ok || !supplyRes.ok) {
-          throw new Error("One or more database-backed UI endpoints failed");
+        if (!unifiedRes.ok) {
+          throw new Error("Unified UI feed endpoint failed");
         }
 
-        const [metricsData, ordersData, inboxData, supplyData, onboardingData, approvalsData] = await Promise.all([
-          metricsRes.json(),
-          ordersRes.json(),
-          inboxRes.json(),
-          supplyRes.json(),
+        const [unifiedData, onboardingData, approvalsData] = await Promise.all([
+          unifiedRes.json(),
           onboardingRes.ok ? onboardingRes.json() : Promise.resolve(null),
           approvalsRes.ok ? approvalsRes.json() : Promise.resolve([]),
         ]);
+
+        const metricsData = unifiedData.metrics || {};
+        const ordersData = unifiedData.orders || [];
+        const inboxData = unifiedData.inbox || [];
+        const supplyData = unifiedData.supply || {};
 
         if (onboardingData?.wizardState?.aiAgents) {
           setActiveDepartments(onboardingData.wizardState.aiAgents);
@@ -548,7 +547,7 @@ export default function Dashboard() {
           <div className="mb-3 flex items-center justify-between gap-3">
             <div>
               <h2 className="app-panel-title">Business Analytics</h2>
-              <p className="app-list-subtitle">Loaded from `/api/ui/dashboard/metrics`.</p>
+              <p className="app-list-subtitle">Loaded from `/api/ui/dashboard/unified-feed`.</p>
             </div>
             <Link href="/business-analytics" className="app-button">Business Analytics</Link>
           </div>
