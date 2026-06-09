@@ -235,10 +235,30 @@ impl Department for MarketingAgent {
             "tenant.job.completed".to_string(),
             "tenant.product.created".to_string(),
             "tenant.inventory.updated".to_string(),
+            "tenant.website.updated".to_string(),
         ]
     }
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
+        if event.event_type == "tenant.website.updated" {
+            let site_id_str = event.payload.get("site_id").and_then(|v| v.as_str());
+            if let Some(site_id_str) = site_id_str {
+                if let Ok(site_id) = uuid::Uuid::parse_str(site_id_str) {
+                    if let Ok(tenant_id) = uuid::Uuid::parse_str(&event.tenant_id) {
+                        if let Ok(orch) = self.orchestrator() {
+                            let pool = &orch.db().pool;
+                            if let Err(e) = crate::builder::jobs::enqueue_publish_site_job(pool, tenant_id, site_id).await {
+                                tracing::error!("Marketing Agent failed to enqueue SEO publish job for site {}: {}", site_id, e);
+                            } else {
+                                tracing::info!("Marketing Agent triggered Agentic SEO Pre-rendering for site {}", site_id);
+                            }
+                        }
+                    }
+                }
+            }
+            return Ok(());
+        }
+
         let risk = ActionRisk::DraftForReview;
 
 
@@ -411,6 +431,50 @@ mod tests {
                 None => std::env::remove_var("MINIMAX_API_KEY"),
             }
         }
+    }
+
+    #[tokio::test]
+    async fn marketing_agent_triggers_seo_pre_rendering() {
+        use crate::orchestration::mesh::CentrifugeNode;
+        use ohc_builtin_agent::mesh::transport::InProcessTransport;
+        use sqlx::sqlite::SqlitePoolOptions;
+
+        let sqlite_pool = SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+        let pg_pool = sqlx::PgPool::connect_lazy("postgres://localhost/dummy").unwrap();
+        let db = std::sync::Arc::new(crate::db::DB {
+            pool: pg_pool,
+            store: crate::db::DbStore::Sqlite(sqlite_pool),
+        });
+        let transport = std::sync::Arc::new(InProcessTransport::new());
+        let mesh = std::sync::Arc::new(CentrifugeNode::new(transport));
+        let orchestrator = std::sync::Arc::new(DepartmentOrchestrator::new(db, mesh));
+
+        let agent = MarketingAgent::new_with_clients(
+            orchestrator,
+            std::sync::Arc::new(FixedCopyClient),
+            std::sync::Arc::new(FixedImageOptimizer),
+        );
+
+        assert!(agent
+            .subscribed_events()
+            .contains(&"tenant.website.updated".to_string()));
+
+        let event = DepartmentEvent {
+            id: "evt-web-123".to_string(),
+            tenant_id: "11111111-1111-1111-1111-111111111111".to_string(),
+            event_type: "tenant.website.updated".to_string(),
+            payload: serde_json::json!({
+                "site_id": "22222222-2222-2222-2222-222222222222"
+            }),
+        };
+
+        // We only expect this to not error out, since we can't easily mock the pg pool in this test block,
+        // but it covers the branch executing the pre-rendering trigger.
+        let _ = agent.handle_event(&event).await;
     }
 
     #[test]

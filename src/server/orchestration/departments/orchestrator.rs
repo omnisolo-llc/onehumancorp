@@ -171,6 +171,10 @@ impl DepartmentOrchestrator {
         }
     }
 
+    pub fn db(&self) -> Arc<crate::db::DB> {
+        self.db.clone()
+    }
+
     pub async fn dispatch_event(&self, event: DepartmentEvent) -> Result<(), String> {
         let topic = format!("department_event:{}", event.event_type);
         let payload = serde_json::to_vec(&event).map_err(|e| e.to_string())?;

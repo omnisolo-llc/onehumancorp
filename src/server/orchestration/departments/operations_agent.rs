@@ -25,10 +25,19 @@ impl Department for OperationsAgent {
             "tenant.subscription.fulfillment_batch.created".to_string(),
             "LowStockAlert".to_string(),
             "PosSyncFailure".to_string(),
+            "tenant.inventory.updated".to_string(),
         ]
     }
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
+        if event.event_type == "tenant.inventory.updated" {
+            if let Some(product_id) = event.payload.get("product_id").and_then(|v| v.as_str()) {
+                let cache = crate::builder::edge::get_edge_cache();
+                cache.invalidate_by_tag(&format!("entity:product:{}", product_id)).await;
+            }
+            return Ok(());
+        }
+
         let config = self.get_config(&event.tenant_id);
         let risk = if let Some(cfg) = config {
             if cfg.auto_approve_limits > 0.0 {
@@ -189,6 +198,33 @@ mod tests {
         let transport = Arc::new(InProcessTransport::new());
         let mesh = Arc::new(CentrifugeNode::new(transport));
         Arc::new(DepartmentOrchestrator::new(db, mesh))
+    }
+
+    #[tokio::test]
+    async fn operations_agent_invalidates_cache_on_inventory_update() {
+        let orchestrator = test_orchestrator().await;
+        let agent = OperationsAgent::new(orchestrator.clone());
+
+        assert!(agent
+            .subscribed_events()
+            .contains(&"tenant.inventory.updated".to_string()));
+
+        let cache = crate::builder::edge::get_edge_cache();
+        cache.set_with_tags("test_edge_key", "test_content".to_string(), vec!["entity:product:prod-123".to_string()], std::time::Duration::from_secs(60)).await;
+
+        let event = DepartmentEvent {
+            id: "evt-inv-123".to_string(),
+            tenant_id: "tenant-ops".to_string(),
+            event_type: "tenant.inventory.updated".to_string(),
+            payload: serde_json::json!({
+                "product_id": "prod-123",
+                "quantity": 10
+            }),
+        };
+
+        agent.handle_event(&event).await.unwrap();
+
+        assert_eq!(cache.get("test_edge_key").await, None);
     }
 
     #[tokio::test]
