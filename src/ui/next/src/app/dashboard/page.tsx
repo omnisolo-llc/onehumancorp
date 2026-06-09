@@ -211,24 +211,26 @@ export default function Dashboard() {
 
       try {
         const userId = localStorage.getItem("user_id") || "default";
-        const [metricsRes, ordersRes, inboxRes, supplyRes, onboardingRes] = await Promise.all([
+        const [metricsRes, ordersRes, inboxRes, supplyRes, onboardingRes, approvalsRes] = await Promise.all([
           fetch(`/api/ui/dashboard/metrics?tenant_id=${tenant}`),
           fetch(`/api/ui/orders?tenant_id=${tenant}`),
           fetch(`/api/ui/inbox/messages?tenant_id=${tenant}`),
           fetch(`/api/ui/supply?tenant_id=${tenant}`),
           fetch(`/api/onboarding/state`, { headers: { 'X-Tenant-ID': tenant, 'X-User-ID': userId } }),
+          fetch(`/api/agents/approvals?tenant_id=${tenant}`)
         ]);
 
         if (!metricsRes.ok || !ordersRes.ok || !inboxRes.ok || !supplyRes.ok) {
           throw new Error("One or more database-backed UI endpoints failed");
         }
 
-        const [metricsData, ordersData, inboxData, supplyData, onboardingData] = await Promise.all([
+        const [metricsData, ordersData, inboxData, supplyData, onboardingData, approvalsData] = await Promise.all([
           metricsRes.json(),
           ordersRes.json(),
           inboxRes.json(),
           supplyRes.json(),
           onboardingRes.ok ? onboardingRes.json() : Promise.resolve(null),
+          approvalsRes.ok ? approvalsRes.json() : Promise.resolve([]),
         ]);
 
         if (onboardingData?.wizardState?.aiAgents) {
@@ -245,6 +247,7 @@ export default function Dashboard() {
           raw_materials: Array.isArray(supplyData?.raw_materials) ? supplyData.raw_materials : [],
           bom_items: Array.isArray(supplyData?.bom_items) ? supplyData.bom_items : [],
         });
+        setApprovals(Array.isArray(approvalsData?.approvals) ? approvalsData.approvals : (Array.isArray(approvalsData) ? approvalsData : []));
       } catch (e: any) {
         setError(e?.message || "Failed to load dashboard data");
       } finally {
