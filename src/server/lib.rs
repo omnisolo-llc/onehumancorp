@@ -92,21 +92,35 @@ fn get_tooltips_registry() -> &'static RwLock<HashMap<String, String>> {
     m.insert("orders-tooltip".to_string(), "See what customers bought and track order fulfillment.".to_string());
     m.insert("team-activity-tooltip".to_string(), "Monitor the real-time actions and tasks being performed by your AI workforce.".to_string());
     m.insert("referral-tooltip".to_string(), "Share your unique link to earn credits when friends join OHC.".to_string());
+    m.insert("changelog-nav-tooltip".to_string(), "See what's new in the latest OneHumanCorp updates.".to_string());
+    m.insert("walkthrough-btn-tooltip".to_string(), "Start an interactive guide to learn how to use OHC.".to_string());
+    m.insert("api-docs-tooltip".to_string(), "Direct API access is only for custom integrations.".to_string());
+    m.insert("checkout-pay-now-tooltip".to_string(), "Click here to securely finish your purchase and process your payment.".to_string());
+    m.insert("checkout-subscribe-tooltip".to_string(), "Start a monthly subscription using saved wallet payment for frictionless vaulting.".to_string());
+    m.insert("checkout-tap-to-pay-tooltip".to_string(), "Tap your card or phone on the reader to pay in person.".to_string());
+    m.insert("checkout-mercadopago-tooltip".to_string(), "Pay securely using Mercado Pago.".to_string());
+    m.insert("checkout-cancel-tooltip".to_string(), "Go back to the previous screen without subscribing.".to_string());
+    m.insert("checkout-plan-upgrade-tooltip".to_string(), "Click here to securely subscribe to the plan.".to_string());
+    m.insert("change-vibe-tooltip".to_string(), "Change the theme and colors of your website.".to_string());
+    m.insert("remove-branding-tooltip".to_string(), "Upgrade to Premium to remove OHC branding.".to_string());
+    m.insert("settings-verify-tooltip".to_string(), "Verify your number to receive critical notifications.".to_string());
+    m.insert("settings-otp-tooltip".to_string(), "Click to confirm the code sent to your phone.".to_string());
+    m.insert("settings-delivery-tooltip".to_string(), "Turn this on to offer local delivery to your customers.".to_string());
+    m.insert("total-sales-tooltip".to_string(), "Total revenue generated from database orders.".to_string());
+    m.insert("recent-orders-tooltip".to_string(), "View the latest orders placed by your customers.".to_string());
+    m.insert("inbox-activity-tooltip".to_string(), "Keep track of recent customer messages.".to_string());
+    m.insert("kairos-nav-link-tooltip".to_string(), "Click here to see what your AI helpers are working on and how they plan.".to_string());
+    m.insert("help-btn-tooltip".to_string(), "Need help? Click here to access our Help Center and tutorials.".to_string());
+    m.insert("pricing-tier-tooltip".to_string(), "Select the plan that best fits your business needs.".to_string());
     m.insert("swarm-online-tooltip".to_string(), "Your AI workforce is active. They process tasks in the background.".to_string());
     m.insert("department-card-tooltip".to_string(), "Click to view and manage pending approvals for this department.".to_string());
     m.insert("nav-dashboard-tooltip".to_string(), "View your store metrics, recent orders, and overall performance.".to_string());
     m.insert("nav-agents-tooltip".to_string(), "Manage your AI workforce, check their tasks, and hire new agents.".to_string());
     m.insert("nav-setup-tooltip".to_string(), "Configure your business details, branding, and payment settings.".to_string());
     m.insert("credit-tooltip".to_string(), "Earn credits to use on premium tools when you refer a friend.".to_string());
-    m.insert("help-btn-tooltip".to_string(), "Need help? Click here to access our Help Center and tutorials.".to_string());
-    m.insert("changelog-nav-tooltip".to_string(), "See what's new in the latest OneHumanCorp updates.".to_string());
     m.insert("todays-sales-tooltip".to_string(), "Your total sales for today. Check back often to track your progress.".to_string());
     m.insert("approval-inbox-tooltip".to_string(), "Review tasks that your AI agents need permission to execute. Approve or deny them here.".to_string());
     m.insert("ask-ai-tooltip".to_string(), "Open the AI Chat to get answers instantly. The AI reads our entire Help Center for you.".to_string());
-    m.insert("api-docs-tooltip".to_string(), "Direct API access is only for custom integrations.".to_string());
-    m.insert("settings-verify-tooltip".to_string(), "Verify your number to receive critical notifications.".to_string());
-    m.insert("settings-otp-tooltip".to_string(), "Click to confirm the code sent to your phone.".to_string());
-    m.insert("settings-delivery-tooltip".to_string(), "Turn this on to offer local delivery to your customers.".to_string());
     RwLock::new(m)
     })
 }
@@ -2731,11 +2745,23 @@ pub async fn list_ui_triage_handler(
 
     let items = match &db.store {
         crate::db::DbStore::Postgres => {
+            let mut tx = match db.pool.begin().await {
+                Ok(tx) => tx,
+                Err(e) => {
+                    tracing::error!("Failed to begin transaction: {:?}", e);
+                    return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(Vec::<serde_json::Value>::new())).into_response();
+                }
+            };
+            if let Err(e) = ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await {
+                tracing::error!("Failed to set org context: {:?}", e);
+                return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(Vec::<serde_json::Value>::new())).into_response();
+            }
+
             match sqlx::query(
                 "SELECT t.id, t.tenant_id, t.customer_id, t.source, t.priority, t.context, t.status, t.created_at, a.action_type, a.payload AS action_payload FROM triage_items t LEFT JOIN triage_proposed_actions a ON t.id = a.triage_item_id WHERE t.tenant_id = $1 AND t.status != 'resolved' ORDER BY t.created_at DESC"
             )
             .bind(&tenant_id)
-            .fetch_all(&db.pool)
+            .fetch_all(&mut *tx)
             .await
             {
                 Ok(rows) => rows.into_iter().map(|row| {
@@ -2769,10 +2795,28 @@ pub async fn update_ui_triage_action_handler(
     let tenant_id = ui_tenant_id(&query);
     match &db.store {
         crate::db::DbStore::Postgres => {
+            let mut tx = match db.pool.begin().await {
+                Ok(tx) => tx,
+                Err(e) => {
+                    tracing::error!("Failed to begin transaction: {:?}", e);
+                    return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": e.to_string()}))).into_response();
+                }
+            };
+            if let Err(e) = ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await {
+                tracing::error!("Failed to set org context: {:?}", e);
+                return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": e.to_string()}))).into_response();
+            }
+
             let status = if payload.approved { "resolved" } else { "dismissed" };
-            match sqlx::query("UPDATE triage_items SET status = $1 WHERE id = $2 AND tenant_id = $3").bind(status).bind(&payload.triage_item_id).bind(&tenant_id).execute(&db.pool).await {
-                Ok(_) => (axum::http::StatusCode::OK, axum::Json(serde_json::json!({"status": "success"}))).into_response(),
-                Err(e) => { tracing::error!("Failed to update triage item: {:?}", e); (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": e.to_string()}))).into_response() }
+            match sqlx::query("UPDATE triage_items SET status = $1 WHERE id = $2 AND tenant_id = $3").bind(status).bind(&payload.triage_item_id).bind(&tenant_id).execute(&mut *tx).await {
+                Ok(_) => {
+                    let _ = tx.commit().await;
+                    (axum::http::StatusCode::OK, axum::Json(serde_json::json!({"status": "success"}))).into_response()
+                },
+                Err(e) => {
+                    tracing::error!("Failed to update triage item: {:?}", e);
+                    (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": e.to_string()}))).into_response()
+                }
             }
         }
         _ => (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": "Unsupported store"}))).into_response(),
