@@ -1,7 +1,7 @@
-/// Master Catalog B.5. Prompt Construction
-use std::fmt::Write;
 use crate::agent::AgentRunConfig;
 use crate::types::Message;
+/// Master Catalog B.5. Prompt Construction
+use std::fmt::Write;
 
 pub struct PromptBuilder;
 
@@ -25,30 +25,46 @@ impl PromptBuilder {
                 let mut reminder_text = format!(
                     "[System Reminder to combat 'Lost in the Middle' effect: Remember your core objective: {}]{}",
                     core_objective,
-                    if recent_errors.is_empty() { String::new() } else { format!(" | Recent Tool Errors: {}", recent_errors) }
+                    if recent_errors.is_empty() {
+                        String::new()
+                    } else {
+                        format!(" | Recent Tool Errors: {}", recent_errors)
+                    }
                 );
 
                 if !developer_instructions.is_empty() {
-                    reminder_text.push_str(&format!("\n\n[Developer Instructions Reminder: {}]", developer_instructions));
+                    reminder_text.push_str(&format!(
+                        "\n\n[Developer Instructions Reminder: {}]",
+                        developer_instructions
+                    ));
                 }
 
                 final_messages.push(Message::user(reminder_text));
             } else if !developer_instructions.is_empty() {
-                final_messages.push(Message::user(format!("[Developer Instructions Reminder: {}]", developer_instructions)));
+                final_messages.push(Message::user(format!(
+                    "[Developer Instructions Reminder: {}]",
+                    developer_instructions
+                )));
             }
         } else if !developer_instructions.is_empty() {
-            final_messages.push(Message::user(format!("[Developer Instructions Reminder: {}]", developer_instructions)));
+            final_messages.push(Message::user(format!(
+                "[Developer Instructions Reminder: {}]",
+                developer_instructions
+            )));
         }
     }
 
     fn extract_core_objective(user_instructions: &str) -> String {
-        let first_paragraph = user_instructions.split("\n\n").next().unwrap_or(user_instructions);
-        if first_paragraph.len() > 1000 {
-            let mut end_idx = 997;
-            while end_idx > 0 && !first_paragraph.is_char_boundary(end_idx) {
-                end_idx -= 1;
-            }
-            format!("{}...", &first_paragraph[..end_idx])
+        let first_paragraph = user_instructions
+            .split("\n\n")
+            .next()
+            .unwrap_or(user_instructions);
+
+        // Use character counting rather than byte lengths for robustness
+        let char_count = first_paragraph.chars().count();
+        if char_count > 1000 {
+            let truncated: String = first_paragraph.chars().take(997).collect();
+            format!("{}...", truncated)
         } else {
             first_paragraph.to_string()
         }
@@ -58,16 +74,15 @@ impl PromptBuilder {
         let mut error_summary = String::new();
         // Look at the last 5 messages for tool errors
         for msg in messages.iter().rev().take(5) {
-            if msg.role == crate::types::Role::User && msg.content.to_lowercase().contains("error") {
+            if msg.role == crate::types::Role::User && msg.content.to_lowercase().contains("error")
+            {
                 if !error_summary.is_empty() {
                     error_summary.push_str(", ");
                 }
-                let err_msg = if msg.content.len() > 100 {
-                    let mut end_idx = 97;
-                    while end_idx > 0 && !msg.content.is_char_boundary(end_idx) {
-                        end_idx -= 1;
-                    }
-                    format!("{}...", &msg.content[..end_idx])
+                let char_count = msg.content.chars().count();
+                let err_msg = if char_count > 100 {
+                    let truncated: String = msg.content.chars().take(97).collect();
+                    format!("{}...", truncated)
                 } else {
                     msg.content.clone()
                 };
@@ -77,7 +92,6 @@ impl PromptBuilder {
         error_summary
     }
 }
-
 
 /// 4. User Instructions (capped at 32 KiB)
 pub struct HierarchicalPromptBuilder {
@@ -112,7 +126,7 @@ impl HierarchicalPromptBuilder {
             }
 
             let mut combined_agents_md = String::new();
-            let limit = 32768;
+            let limit = 32768; // char limit
 
             // Prioritize more deeply nested files.
             // `contents` has deepest first because we started at current_dir and went up.
@@ -124,13 +138,10 @@ impl HierarchicalPromptBuilder {
                     combined_agents_md.push_str(&addition);
                 }
 
-                if combined_agents_md.len() > limit {
-                    let mut end_idx = limit;
-                    while end_idx > 0 && !combined_agents_md.is_char_boundary(end_idx) {
-                        end_idx -= 1;
-                    }
-                    combined_agents_md.truncate(end_idx);
-                    combined_agents_md.push_str("\n... [AGENTS.md TRUNCATED TO 32KiB]");
+                let current_char_count = combined_agents_md.chars().count();
+                if current_char_count > limit {
+                    let truncated: String = combined_agents_md.chars().take(limit).collect();
+                    combined_agents_md = format!("{}\n... [AGENTS.md TRUNCATED TO 32KiB]", truncated);
                     break;
                 }
             }
@@ -144,12 +155,9 @@ impl HierarchicalPromptBuilder {
             cfg.user_instructions.clone()
         };
 
-        if source_name == "User Instructions" && user_instr.len() > 32768 {
-            let mut end_idx = 32768;
-            while end_idx > 0 && !user_instr.is_char_boundary(end_idx) {
-                end_idx -= 1;
-            }
-            let truncated = &user_instr[..end_idx];
+        let user_instr_char_count = user_instr.chars().count();
+        if source_name == "User Instructions" && user_instr_char_count > 32768 {
+            let truncated: String = user_instr.chars().take(32768).collect();
             user_instr = format!("{}\n... [{} TRUNCATED TO 32KiB]", truncated, source_name);
         }
 
@@ -250,17 +258,29 @@ mod tests {
 
         std::env::set_current_dir(original_dir).unwrap();
 
-        assert!(built.contains(&grandchild_content), "Grandchild content (highest priority) should be fully present");
-        assert!(built.contains(&child_content), "Child content should be fully present");
+        assert!(
+            built.contains(&grandchild_content),
+            "Grandchild content (highest priority) should be fully present"
+        );
+        assert!(
+            built.contains(&child_content),
+            "Child content should be fully present"
+        );
 
         // Root content should be partially present and truncated.
         assert!(built.contains("AAAA"), "Should contain some of root");
-        assert!(built.contains("[AGENTS.md TRUNCATED TO 32KiB]"), "Should contain truncation warning");
+        assert!(
+            built.contains("[AGENTS.md TRUNCATED TO 32KiB]"),
+            "Should contain truncation warning"
+        );
 
         // Total size of user instructions part should be around 32,768 + length of the truncation warning message.
         // Let's just check the length of the string `built`. It includes the headers "[User Instructions]\n".
         let user_instructions_section_len = built.len() - "[User Instructions]\n".len();
-        assert!(user_instructions_section_len <= 33000, "Output should be bounded to around 32KiB + padding");
+        assert!(
+            user_instructions_section_len <= 33000,
+            "Output should be bounded to around 32KiB + padding"
+        );
     }
 
     #[test]
@@ -269,9 +289,8 @@ mod tests {
         let root_dir = dir.path().join("root");
         fs::create_dir_all(&root_dir).unwrap();
 
-        // Exactly 32,766 bytes of "A", plus a 4-byte emoji "😊"
-        // Total size = 32770 bytes. The 32768 limit falls right in the middle of the emoji.
-        let mut content = "A".repeat(32766);
+        // Let's use exactly 32,768 logical characters to reach the boundary, then push an emoji.
+        let mut content = "A".repeat(32768);
         content.push_str("😊");
         fs::write(root_dir.join("AGENTS.md"), &content).unwrap();
 
@@ -285,9 +304,15 @@ mod tests {
         std::env::set_current_dir(original_dir).unwrap();
 
         assert!(built.contains("[AGENTS.md TRUNCATED TO 32KiB]"));
-        // The emoji should be completely stripped (meaning we go back to 32766)
-        assert!(!built.contains("😊"), "Emoji should be stripped to respect char boundary");
-        assert!(built.contains(&"A".repeat(32766)), "Preceding ASCII should remain intact");
+        // The emoji should be stripped because it's past the 32768 limit
+        assert!(
+            !built.contains("😊"),
+            "Emoji should be stripped since it's character 32769"
+        );
+        assert!(
+            built.contains(&"A".repeat(32768)),
+            "Preceding characters up to limit should remain intact"
+        );
     }
 
     #[test]
@@ -313,7 +338,11 @@ mod tests {
         let last_msg = &messages[4];
         assert_eq!(last_msg.role, Role::User);
         assert!(last_msg.content.contains("[System Reminder to combat 'Lost in the Middle' effect: Remember your core objective: Build a web server.]"));
-        assert!(last_msg.content.contains("[Developer Instructions Reminder: Use Rust and be efficient.]"));
+        assert!(
+            last_msg
+                .content
+                .contains("[Developer Instructions Reminder: Use Rust and be efficient.]")
+        );
     }
 
     #[test]
@@ -325,22 +354,19 @@ mod tests {
             Message::assistant("Message 4"),
         ];
 
-        PromptBuilder::apply_lost_in_the_middle_prevention(
-            &mut messages,
-            true,
-            "",
-            "Objective",
-        );
+        PromptBuilder::apply_lost_in_the_middle_prevention(&mut messages, true, "", "Objective");
 
         let last_msg = &messages[4];
-        assert!(last_msg.content.contains("Recent Tool Errors: There was an error: file not found"));
+        assert!(
+            last_msg
+                .content
+                .contains("Recent Tool Errors: There was an error: file not found")
+        );
     }
 
     #[test]
     fn test_apply_lost_in_the_middle_prevention_short_conversation() {
-        let mut messages = vec![
-            Message::user("Message 1"),
-        ];
+        let mut messages = vec![Message::user("Message 1")];
 
         PromptBuilder::apply_lost_in_the_middle_prevention(
             &mut messages,
@@ -352,34 +378,37 @@ mod tests {
         assert_eq!(messages.len(), 2);
         let last_msg = &messages[1];
         assert_eq!(last_msg.role, Role::User);
-        assert_eq!(last_msg.content, "[Developer Instructions Reminder: Dev rules]");
+        assert_eq!(
+            last_msg.content,
+            "[Developer Instructions Reminder: Dev rules]"
+        );
     }
 
     #[test]
     fn test_extract_core_objective_char_boundary() {
-        let user_instructions = "A".repeat(995) + "😊"; // '😊' is 4 bytes. 995 + 4 = 999 bytes. Total string is < 1000 so no truncation.
+        let user_instructions = "A".repeat(995) + "😊";
         let obj = PromptBuilder::extract_core_objective(&user_instructions);
         assert_eq!(obj, user_instructions);
 
-        let long_user_instructions = "A".repeat(995) + "😊" + "BC"; // 1001 bytes.
+        let long_user_instructions = "A".repeat(995) + "😊" + "BCDEF";
         let obj2 = PromptBuilder::extract_core_objective(&long_user_instructions);
 
-        // 997 is in the middle of '😊' (bytes 995..999).
-        // `is_char_boundary` should walk back to 995.
-        let expected = "A".repeat(995) + "...";
+        // With new chars() logic, 997 logical characters are maintained.
+        // The first 995 are 'A', 996 is '😊', 997 is 'B'.
+        let expected = "A".repeat(995) + "😊" + "B...";
         assert_eq!(obj2, expected);
     }
 
     #[test]
     fn test_summarize_recent_tool_errors_char_boundary() {
-        let error_msg = "error: " .to_string() + &"A".repeat(88) + "😊"; // 7 + 88 + 4 = 99 bytes
-        let error_msg = error_msg + "BC"; // 101 bytes
+        let mut error_msg = "error: ".to_string() + &"A".repeat(88) + "😊";
+        error_msg = error_msg + "BCDEF";
         let messages = vec![Message::user(error_msg)];
 
         let summary = PromptBuilder::summarize_recent_tool_errors(&messages);
 
-        // 97 is inside the '😊' (bytes 95..99). Walk back to 95.
-        let expected = "error: ".to_string() + &"A".repeat(88) + "...";
+        // 97 logical chars: 'error: ' (7 chars) + 88 'A' + '😊' (1 char) + 'B' (1 char)
+        let expected = "error: ".to_string() + &"A".repeat(88) + "😊B...";
         assert_eq!(summary, expected);
     }
 }

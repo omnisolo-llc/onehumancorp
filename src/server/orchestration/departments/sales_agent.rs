@@ -4,7 +4,6 @@ use crate::orchestration::departments::orchestrator::{
 use crate::orchestration::departments::types::{
     ActionRisk, ApprovalRequest, DepartmentConfig, DepartmentEvent, DepartmentType,
 };
-use serde_json::Value;
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -25,7 +24,7 @@ pub trait SalesQuoteIntentPlanner: Send + Sync {
     async fn plan_quote_intent(
         &self,
         tenant_id: &str,
-        payload: &Value,
+        payload: &serde_json::Value,
     ) -> Result<Option<QuoteIntent>, String>;
 }
 
@@ -71,7 +70,7 @@ impl SalesQuoteIntentPlanner for RuntimeSalesQuoteIntentPlanner {
     async fn plan_quote_intent(
         &self,
         tenant_id: &str,
-        payload: &Value,
+        payload: &serde_json::Value,
     ) -> Result<Option<QuoteIntent>, String> {
         if let Some(intent) = extract_quote_intent(payload) {
             return Ok(Some(intent));
@@ -140,7 +139,7 @@ impl SalesAgent {
     }
 }
 
-pub fn extract_quote_intent(payload: &Value) -> Option<QuoteIntent> {
+pub fn extract_quote_intent(payload: &serde_json::Value) -> Option<QuoteIntent> {
     let original_message = payload
         .get("message")
         .and_then(|v| v.as_str())
@@ -454,9 +453,6 @@ impl BaseAgent for SalesAgent {
         AgentTriggerType::EventDriven
     }
 
-    async fn execute(&self, _payload: Value) -> Result<(), String> {
-        Ok(())
-    }
 }
 
 #[cfg(test)]
@@ -473,7 +469,7 @@ mod tests {
         async fn plan_quote_intent(
             &self,
             _tenant_id: &str,
-            _payload: &Value,
+            _payload: &serde_json::Value,
         ) -> Result<Option<QuoteIntent>, String> {
             Ok(self.intent.clone())
         }

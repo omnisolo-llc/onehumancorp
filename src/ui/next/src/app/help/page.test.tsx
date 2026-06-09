@@ -2,8 +2,9 @@ vi.mock("next/link", () => ({ default: (props: any) => <a href={props.href}>{pro
 import '@testing-library/jest-dom';
 import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import HelpCenterPage from './page';
+import { TooltipProvider } from '../../components/TooltipRegistry';
 import userEvent from '@testing-library/user-event';
 
 describe('HelpCenterPage', () => {
@@ -51,7 +52,7 @@ describe('HelpCenterPage', () => {
   });
 
   it('renders articles loaded from API', async () => {
-    render(<HelpCenterPage />);
+    render(<TooltipProvider><HelpCenterPage /></TooltipProvider>);
 
     expect(screen.getByText('Help Center')).toBeInTheDocument();
 
@@ -63,7 +64,7 @@ describe('HelpCenterPage', () => {
 
   it('filters articles based on search query', async () => {
     const user = userEvent.setup();
-    render(<HelpCenterPage />);
+    render(<TooltipProvider><HelpCenterPage /></TooltipProvider>);
 
     await waitFor(() => {
       expect(screen.getByText('Getting Started')).toBeInTheDocument();
@@ -80,7 +81,7 @@ describe('HelpCenterPage', () => {
 
   it('displays no matching articles message when search fails', async () => {
     const user = userEvent.setup();
-    render(<HelpCenterPage />);
+    render(<TooltipProvider><HelpCenterPage /></TooltipProvider>);
 
     await waitFor(() => {
       expect(screen.getByText('Getting Started')).toBeInTheDocument();
@@ -96,11 +97,47 @@ describe('HelpCenterPage', () => {
   });
 
   it('renders video tutorials loaded from API', async () => {
-    render(<HelpCenterPage />);
+    render(<TooltipProvider><HelpCenterPage /></TooltipProvider>);
 
     await waitFor(() => {
       expect(screen.getByText('How to set up your first store easily')).toBeInTheDocument();
       expect(screen.getByText('Linking your own website name')).toBeInTheDocument();
+    });
+  });
+
+  it('opens and closes the video modal', async () => {
+    const user = userEvent.setup();
+    render(<TooltipProvider><HelpCenterPage /></TooltipProvider>);
+    await waitFor(() => {
+      expect(screen.getByText('How to set up your first store easily')).toBeInTheDocument();
+    });
+    const videoCard = screen.getByText('How to set up your first store easily').closest('div.aspect-\\[9\\/16\\]');
+    if (videoCard) {
+      await user.click(videoCard);
+    }
+    await waitFor(() => {
+      expect(screen.getByLabelText('Close video')).toBeInTheDocument();
+    });
+    const closeBtn = screen.getByLabelText('Close video');
+    await user.click(closeBtn);
+    await waitFor(() => {
+      expect(screen.queryByLabelText('Close video')).not.toBeInTheDocument();
+    });
+  });
+
+  it('renders correctly when there are no matching results at all', async () => {
+    const user = userEvent.setup();
+    render(<TooltipProvider><HelpCenterPage /></TooltipProvider>);
+    await waitFor(() => {
+      expect(screen.getByText('Getting Started')).toBeInTheDocument();
+    });
+
+    const searchInput = screen.getByPlaceholderText('Search for help articles and videos...');
+    await user.type(searchInput, 'nonexistentxyz123');
+
+    await waitFor(() => {
+      expect(screen.getByText(/No results found matching/)).toBeInTheDocument();
+      expect(screen.queryByText('Video Tutorials')).not.toBeInTheDocument();
     });
   });
 });

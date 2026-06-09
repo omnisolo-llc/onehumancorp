@@ -1,4 +1,4 @@
-#![allow(dead_code)]
+
 
 use std::process::Stdio;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};

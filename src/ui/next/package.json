@@ -8,7 +8,6 @@
     "test": "vitest run",
     "test:ui": "vitest --ui"
   },
-  "TODO_turbopack": "Remove --turbo=false from dev script once Next.js turbopack issues are resolved",
   "dependencies": {
     "@stripe/terminal-js": "^0.26.0",
     "@testing-library/dom": "^10.4.1",
@@ -34,7 +33,7 @@
     "@types/react": "^18.2.0",
     "@types/swagger-ui-react": "^5.18.0",
     "@vitejs/plugin-react": "^4.7.0",
-    "@vitest/coverage-v8": "^4.1.7",
+    "@vitest/coverage-v8": "^1.6.1",
     "autoprefixer": "^10.5.0",
     "jsdom": "^29.1.1",
     "postcss": "^8.5.15",

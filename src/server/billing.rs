@@ -230,6 +230,14 @@ impl Tracker {
         }
     }
 
+    pub fn get_tenant_llm_cost_cents(&self, tenant_id: &str) -> i64 {
+        self.get_tenant_cost_cents(tenant_id)
+    }
+
+    pub fn get_tenant_storage_cost_cents(&self, _tenant_id: &str) -> i64 {
+        0 // Calculated dynamically on API layer for the dashboard
+    }
+
     pub fn get_total_cost_cents(&self) -> i64 {
         if let Some(ref auditor) = self.auditor {
             auditor.get_total_cost_cents()

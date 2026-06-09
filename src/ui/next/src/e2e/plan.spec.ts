@@ -13,11 +13,11 @@ test.describe('My Plan Page Loop', () => {
     // Check that Current Usage is present
     await expect(page.locator('h2', { hasText: 'Your Current Usage' })).toBeVisible();
 
-    // Check that AI Actions Used section is present
-    await expect(page.locator('span', { hasText: 'AI Actions Used' })).toBeVisible();
+    // Check that AI actions used this month section is present
+    await expect(page.locator('span', { hasText: 'AI actions used this month' })).toBeVisible();
 
-    // Check that Storage Used section is present
-    await expect(page.locator('span', { hasText: 'Storage Used' })).toBeVisible();
+    // Check that Storage used section is present
+    await expect(page.locator('span', { hasText: 'Storage used' })).toBeVisible();
 
     // Check that Status Snapshot includes Plan and Estimated Next Bill
     await expect(page.locator('h2', { hasText: 'Plan:' })).toBeVisible();

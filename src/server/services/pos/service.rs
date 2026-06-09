@@ -37,12 +37,26 @@ impl PosService for MyPosService {
 
         let mut req = request.into_inner();
         req.tenant_id = tenant_id.clone();
-        let client_id = req.client_id;
+        let client_id = req.client_id.clone();
 
         let mut synced_count = 0;
         let mut failed_ids = Vec::new();
 
         let pool = crate::db::get_pool();
+
+        let session_id = req.session_id.clone().unwrap_or_else(|| Uuid::new_v4().to_string());
+        let _ = sqlx::query(
+            "INSERT INTO pos_terminal_sessions (id, tenant_id, device_id, status, started_at, last_synced_at, offline_changes_count)
+             VALUES ($1, $2, $3, 'ACTIVE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, $4)
+             ON CONFLICT (tenant_id, device_id) DO UPDATE SET last_synced_at = CURRENT_TIMESTAMP, offline_changes_count = pos_terminal_sessions.offline_changes_count + $4"
+        )
+        .bind(&session_id)
+        .bind(&tenant_id)
+        .bind(&client_id)
+        .bind(req.transactions.len() as i32)
+        .execute(&pool)
+        .await;
+
         let mut futures = Vec::new();
 
         for tx in req.transactions {
@@ -158,7 +172,7 @@ impl PosService for MyPosService {
         }
 
         let req = request.into_inner();
-        let tenant_id = if req.tenant_id.is_empty() { auth_tenant } else { req.tenant_id };
+        let tenant_id = auth_tenant;
 
         let session_id = uuid::Uuid::new_v4().to_string();
         let pool = crate::db::get_pool();
@@ -212,7 +226,7 @@ impl PosService for MyPosService {
         }
 
         let req = request.into_inner();
-        let tenant_id = if req.tenant_id.is_empty() { auth_tenant } else { req.tenant_id };
+        let tenant_id = auth_tenant;
 
         let pool = crate::db::get_pool();
 
@@ -267,7 +281,7 @@ impl PosService for MyPosService {
         }
 
         let req = request.into_inner();
-        let tenant_id = if req.tenant_id.is_empty() { auth_tenant } else { req.tenant_id };
+        let tenant_id = auth_tenant;
 
         let pool = crate::db::get_pool();
 
@@ -338,6 +352,7 @@ mod tests {
                     created_at_unix: 0,
                 }
             ],
+            session_id: Some("test_session".to_string()),
         };
 
         let mut request = Request::new(req);

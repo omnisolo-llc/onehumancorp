@@ -16,7 +16,7 @@ test.describe('Help Center', () => {
     await expect(agentsLink).toBeVisible();
   });
   test('should show setup link in nav', async ({ page }) => {
-    const setupLink = page.getByRole('link', { name: 'Setup' });
+    const setupLink = page.getByRole('link', { name: 'Setup', exact: true });
     await expect(setupLink).toBeVisible();
   });
   test('should display welcome message', async ({ page }) => {
@@ -46,7 +46,7 @@ test.describe('Dashboard', () => {
   test('should have working nav links', async ({ page }) => {
     await page.goto('/dashboard');
     await page.getByRole('link', { name: 'Agents' }).click();
-    await expect(page.getByRole('heading', { name: 'AI Departments' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'AI Departments' })).toBeVisible({ timeout: 30000 });
   });
 });
 

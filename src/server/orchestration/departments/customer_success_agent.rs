@@ -1,6 +1,5 @@
 use crate::orchestration::departments::orchestrator::{BaseAgent, AgentTriggerType, DepartmentOrchestrator, Department};
 use crate::orchestration::departments::types::{DepartmentType, DepartmentEvent, DepartmentConfig, ApprovalRequest, ActionRisk};
-use serde_json::Value;
 use std::collections::HashMap;
 
 pub struct CustomerSuccessAgent {
@@ -67,12 +66,28 @@ impl Department for CustomerSuccessAgent {
             let sender_id = original.and_then(|orig| orig.get("sender_id").and_then(|v| v.as_str())).unwrap_or("").to_string();
             let text = message.to_string();
             let _hub_clone = self.hub.clone();
+            let tenant_id_for_meta = event.tenant_id.clone();
 
             tokio::spawn(async move {
                 if (source == "whatsapp" || source == "instagram") && !sender_id.is_empty() {
-                    let integrations = std::sync::Arc::new(crate::integrations::registry::IntegrationsRegistry::new());
-                    if let Err(e) = integrations.send_message("meta", &source, &sender_id, &text).await {
-                         tracing::error!("Failed to send {} message via Meta integration: {}", source, e);
+                    let pool = crate::db::get_pool();
+                    let row: Result<(String,), sqlx::Error> = sqlx::query_as("SELECT api_token FROM integration_credentials WHERE integration_id = 'meta' AND tenant_id = $1 LIMIT 1")
+                        .bind(&tenant_id_for_meta)
+                        .fetch_one(&pool)
+                        .await;
+                    match row {
+                        Ok((api_token,)) => {
+                            use crate::integrations::meta::client::{MetaClientWrapper, RealMetaClient};
+                            let client = RealMetaClient::new(api_token);
+                            if let Err(e) = client.send_message(&source, &sender_id, &text).await {
+                                tracing::error!("Failed to send {} message via Meta integration: {}", source, e);
+                            } else {
+                                tracing::info!("Successfully sent {} message via Meta integration", source);
+                            }
+                        }
+                        Err(e) => {
+                            tracing::error!("Failed to fetch Meta integration credentials from DB: {}", e);
+                        }
                     }
                 }
             });
@@ -222,9 +237,6 @@ impl BaseAgent for CustomerSuccessAgent {
         AgentTriggerType::EventDriven
     }
 
-    async fn execute(&self, _payload: Value) -> Result<(), String> {
-        Ok(())
-    }
 }
 
 #[cfg(test)]

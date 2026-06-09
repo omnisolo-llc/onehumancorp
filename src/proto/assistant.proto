@@ -2,7 +2,6 @@ syntax = "proto3";
 
 package ohc.assistant;
 
-import "src/proto/common.proto";
 import "src/proto/organization.proto";
 
 option go_package = "github.com/onehumancorp/mono/src/proto/ohc/assistant;assistantpb";
