@@ -276,6 +276,10 @@ impl CostAuditor {
         *tenant_cached_tokens.get(tenant_id).unwrap_or(&0)
     }
 
+    pub fn get_config(&self) -> CostConfig {
+        self.config.clone()
+    }
+
     pub fn get_tenant_cost(&self, tenant_id: &str) -> f64 {
         let tenant_costs = self.tenant_costs.lock().unwrap();
         *tenant_costs.get(tenant_id).unwrap_or(&0.0)

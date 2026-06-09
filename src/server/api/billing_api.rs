@@ -237,19 +237,21 @@ pub async fn cost_dashboard_handler(
     let hub_clone = hub.clone();
     let tenant_id_clone = tenant_id.clone();
 
+    let auditor_clone = auditor.clone();
+
     // Proper concurrent execution combining spawn_blocking for CPU/sync methods
     // and tokio::join! to wait on both the async I/O future and the blocking CPU task simultaneously.
     let tenant_id_clone_2 = tenant_id.clone();
     let auditor_future = tokio::task::spawn_blocking(move || {
         (
-            auditor.get_tenant_cost(&tenant_id_clone_2),
-            auditor.get_tenant_revenue(&tenant_id_clone_2),
-            auditor.get_tenant_payment_fees(&tenant_id_clone_2),
-            auditor.get_tenant_compute_cost(&tenant_id_clone_2),
-            auditor.get_tenant_network_cost(&tenant_id_clone_2),
-            auditor.get_tenant_bandwidth_savings(&tenant_id_clone_2),
-            auditor.get_tenant_tokens(&tenant_id_clone_2),
-            auditor.get_tenant_cached_tokens(&tenant_id_clone_2)
+            auditor_clone.get_tenant_cost(&tenant_id_clone_2),
+            auditor_clone.get_tenant_revenue(&tenant_id_clone_2),
+            auditor_clone.get_tenant_payment_fees(&tenant_id_clone_2),
+            auditor_clone.get_tenant_compute_cost(&tenant_id_clone_2),
+            auditor_clone.get_tenant_network_cost(&tenant_id_clone_2),
+            auditor_clone.get_tenant_bandwidth_savings(&tenant_id_clone_2),
+            auditor_clone.get_tenant_tokens(&tenant_id_clone_2),
+            auditor_clone.get_tenant_cached_tokens(&tenant_id_clone_2)
         )
     });
 
@@ -302,8 +304,7 @@ pub async fn cost_dashboard_handler(
         0.0
     };
 
-    let storage_gb = storage_bytes as f64 / (1024.0 * 1024.0 * 1024.0);
-    let storage_cost_f64 = storage_gb * 0.10; // $0.10 per GB
+    let storage_cost_f64 = ::server_pricing::calculator::calculate_storage_cost(storage_bytes, &auditor.get_config());
 
     let total_costs_f64 = llm_cost_f64 + storage_cost_f64 + payment_fees_f64 + compute_cost_f64 + network_cost_f64;
     let department_tier_usage = department_res.unwrap_or_else(|_| empty_department_tier_usage_response());

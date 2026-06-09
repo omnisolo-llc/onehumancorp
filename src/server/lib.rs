@@ -1246,14 +1246,16 @@ impl HubService for MyHubService {
 
         let hub_clone = self.hub.clone();
 
+        let auditor_clone = auditor.clone();
+
         let tenant_id_clone_2 = tenant_id.clone();
         let (costs_res, storage_bytes_res) = tokio::join!(
             tokio::task::spawn_blocking(move || {
-                let llm = auditor.get_tenant_cost(&tenant_id_clone_2);
-                let rev = auditor.get_tenant_revenue(&tenant_id_clone_2);
-                let fees = auditor.get_tenant_payment_fees(&tenant_id_clone_2);
-                let bw_savings = auditor.get_tenant_bandwidth_savings(&tenant_id_clone_2);
-                let network_cost = auditor.get_tenant_network_cost(&tenant_id_clone_2);
+                let llm = auditor_clone.get_tenant_cost(&tenant_id_clone_2);
+                let rev = auditor_clone.get_tenant_revenue(&tenant_id_clone_2);
+                let fees = auditor_clone.get_tenant_payment_fees(&tenant_id_clone_2);
+                let bw_savings = auditor_clone.get_tenant_bandwidth_savings(&tenant_id_clone_2);
+                let network_cost = auditor_clone.get_tenant_network_cost(&tenant_id_clone_2);
                 (llm, rev, fees, bw_savings, network_cost)
             }),
             async move {
@@ -1263,8 +1265,7 @@ impl HubService for MyHubService {
 
         let (llm_cost_f64, total_revenue_f64, payment_fees_f64, bandwidth_savings_f64, network_cost_f64) = costs_res.unwrap_or((0.0, 0.0, 0.0, 0.0, 0.0));
         let storage_bytes = storage_bytes_res.unwrap_or(0);
-        let storage_gb = storage_bytes as f64 / (1024.0 * 1024.0 * 1024.0);
-        let storage_cost_f64 = storage_gb * 0.10; // $0.10 per GB
+        let storage_cost_f64 = ::server_pricing::calculator::calculate_storage_cost(storage_bytes, &auditor.get_config());
 
         let total_costs_f64 = llm_cost_f64 + storage_cost_f64 + payment_fees_f64 + network_cost_f64;
 

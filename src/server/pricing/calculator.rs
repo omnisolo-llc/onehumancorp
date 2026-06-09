@@ -100,6 +100,20 @@ pub fn calculate_cost_with_config(input_tokens: i64, output_tokens: i64, cached_
     (total * 10000.0).round() / 10000.0
 }
 
+pub fn calculate_storage_cost_cents(bytes: i64, config: &CostConfig) -> i64 {
+    let cost = calculate_storage_cost(bytes, config);
+    (cost * 100.0).round() as i64
+}
+
+pub fn calculate_storage_cost(bytes: i64, config: &CostConfig) -> f64 {
+    if bytes < 0 {
+        return 0.0;
+    }
+    let gb = bytes as f64 / (1024.0 * 1024.0 * 1024.0);
+    let cost = gb * config.cost_per_gb_month;
+    (cost * 10000.0).round() / 10000.0
+}
+
 pub fn calculate_storage_savings_cents(original_bytes: i64, compressed_bytes: i64, config: &CostConfig) -> i64 {
     let cost = calculate_storage_savings(original_bytes, compressed_bytes, config);
     (cost * 100.0).round() as i64
@@ -281,6 +295,23 @@ mod tests {
 
         assert_eq!(calculate_bandwidth_savings(-1, 100, &config), 0.0);
         assert_eq!(calculate_bandwidth_savings(100, -1, &config), 0.0);
+    }
+
+    #[test]
+    fn test_calculate_storage_cost() {
+        let config = CostConfig {
+            cost_per_gb_month: 0.10,
+            ..Default::default()
+        };
+
+        let bytes = 2 * 1024 * 1024 * 1024; // 2GB
+        let cost = calculate_storage_cost(bytes, &config);
+        assert_eq!(cost, 0.20);
+
+        let cost_cents = calculate_storage_cost_cents(bytes, &config);
+        assert_eq!(cost_cents, 20);
+
+        assert_eq!(calculate_storage_cost(-1, &config), 0.0);
     }
 
     #[test]
