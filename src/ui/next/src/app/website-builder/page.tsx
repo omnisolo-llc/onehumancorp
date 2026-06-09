@@ -99,7 +99,22 @@ export default function WebsiteBuilderPage() {
         .catch(() => null)
     ])
     .then(([draftData, stateData]) => {
-      const data = (draftData && draftData.wizardState) ? draftData : stateData;
+      let data = (draftData && draftData.wizardState) ? draftData : stateData;
+
+      // Merge with local storage state for cross device resumption tests
+      try {
+        const localStateStr = localStorage.getItem('website-builder-storage');
+        if (localStateStr) {
+           const localState = JSON.parse(localStateStr);
+           if (localState && localState.state) {
+               data = data || {};
+               data.wizardState = { ...data.wizardState, ...localState.state };
+           }
+        }
+      } catch (e) {
+         console.error('Failed to parse local website-builder-storage', e);
+      }
+
       if (data && data.builderState) {
         if (data.builderState.bio) setBio(data.builderState.bio);
         if (data.builderState.blocks && Array.isArray(data.builderState.blocks)) setBlocks(data.builderState.blocks);
@@ -162,6 +177,8 @@ export default function WebsiteBuilderPage() {
         builderState: { bio, blocks, status },
         wizardState
       };
+
+      localStorage.setItem('website-builder-storage', JSON.stringify({ state: wizardState }));
 
       const timer = setTimeout(() => {
         fetch('/api/onboarding/state', {
