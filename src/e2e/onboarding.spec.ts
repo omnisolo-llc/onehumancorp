@@ -67,7 +67,7 @@ test.describe('Onboarding Wizard E2E Flow', () => {
     await expect(page.getByRole('heading', { name: "Review Details" })).toBeVisible({ timeout: 30000 });
 
     // Check Review inputs have correct classes too
-    const reviewNameInput = page.locator('input[value="My Awesome E2E Business"]');
+    const reviewNameInput = page.locator("input").filter({ hasValue: "My Awesome E2E Business" }).first();
     await expect(reviewNameInput).toHaveClass(/min-h-\[54px\]/);
 
     await page.getByRole('button', { name: 'Continue' }).click();
