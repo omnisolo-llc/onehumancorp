@@ -1,31 +1,45 @@
-use super::{Tool, ToolExecutor};
+use super::Tool;
 use ohc_builtin_agent_core::types::ToolError;
 use serde_json::json;
+use serde::Deserialize;
+use super::pydantic::{PydanticToolExecutor, PydanticAdapter};
 use std::sync::Arc;
 use super::marketplace::MarketplaceClient;
 
 /// Exposes the marketplace to the agent so it can dynamically fetch new tools/agents.
+
+#[derive(Deserialize)]
+struct MarketplaceArgs {
+    #[serde(default = "default_action")]
+    action: String,
+    #[serde(default)]
+    query: String,
+    #[serde(default)]
+    agent_id: Option<String>,
+}
+
+fn default_action() -> String { "search".to_string() }
+
 pub struct MarketplaceToolExecutor {
     pub client: Arc<MarketplaceClient>,
 }
 
 #[async_trait::async_trait]
-impl ToolExecutor for MarketplaceToolExecutor {
-    async fn execute(&self, args: serde_json::Value) -> Result<String, ToolError> {
-        let query = args.get("query").and_then(|v| v.as_str()).unwrap_or("");
-        let action = args.get("action").and_then(|v| v.as_str()).unwrap_or("search");
+impl PydanticToolExecutor<MarketplaceArgs> for MarketplaceToolExecutor {
+    async fn execute_typed(&self, args: MarketplaceArgs) -> Result<String, ToolError> {
+        let action = args.action.as_str();
 
         if action == "search" {
-            match self.client.search(query).await {
+            match self.client.search(&args.query).await {
                 Ok(agents) => Ok(serde_json::to_string_pretty(&agents).unwrap_or_default()),
                 Err(e) => Err(ToolError::Transient(e)),
             }
         } else if action == "fetch" {
-            let agent_id = args.get("agent_id").and_then(|v| v.as_str()).ok_or_else(|| {
+            let agent_id = args.agent_id.ok_or_else(|| {
                 ToolError::LlmRecoverable("Missing agent_id for fetch action".to_string())
             })?;
 
-            match self.client.fetch_agent(agent_id).await {
+            match self.client.fetch_agent(&agent_id).await {
                 Ok(agent) => Ok(format!("Successfully fetched agent definition:\n{}", serde_json::to_string_pretty(&agent).unwrap_or_default())),
                 Err(e) => Err(ToolError::Transient(e)),
             }
@@ -59,7 +73,7 @@ pub fn marketplace_tool(client: Arc<MarketplaceClient>) -> Tool {
             },
             "required": ["action"]
         }),
-        execute: Arc::new(MarketplaceToolExecutor { client }),
+        execute: Arc::new(PydanticAdapter::new(MarketplaceToolExecutor { client })),
     }
 }
 

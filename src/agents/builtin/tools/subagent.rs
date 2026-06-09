@@ -1,10 +1,21 @@
-use crate::{Tool, ToolExecutor};
+use crate::Tool;
 use ohc_builtin_agent_core::types::ToolError;
 use server_ohc::agent::service::SubAgentResponse;
-use serde_json::{json, Value};
+use serde_json::json;
+use serde::Deserialize;
+use super::pydantic::{PydanticToolExecutor, PydanticAdapter};
 use std::sync::Arc;
 
 
+
+
+#[derive(Deserialize)]
+struct SubagentArgs {
+    task: String,
+    mode: String,
+    #[serde(default)]
+    parent_context_file: Option<String>,
+}
 
 pub struct SubagentExecutor {
     pub runner: Arc<dyn crate::runner::CommandRunner>,
@@ -87,11 +98,11 @@ impl SubagentExecutor {
 }
 
 #[async_trait::async_trait]
-impl ToolExecutor for SubagentExecutor {
-    async fn execute(&self, args: Value) -> Result<String, ToolError> {
-        let raw_task = args.get("task").and_then(|v| v.as_str()).unwrap_or("");
-        let mode = args.get("mode").and_then(|v| v.as_str()).unwrap_or("fork");
-        
+impl PydanticToolExecutor<SubagentArgs> for SubagentExecutor {
+    async fn execute_typed(&self, args: SubagentArgs) -> Result<String, ToolError> {
+        let raw_task = args.task.clone();
+        let mode = args.mode.clone();
+
         if raw_task.is_empty() {
             return Err(ToolError::LlmRecoverable("Task cannot be empty".to_string()));
         }
@@ -156,7 +167,7 @@ impl ToolExecutor for SubagentExecutor {
                 Err(e) => Err(ToolError::LlmRecoverable(format!("Subagent failed: {}", e))),
             }
         } else if mode == "fork" {
-            let parent_context_file = args.get("parent_context_file").and_then(|v| v.as_str()).unwrap_or("");
+            let parent_context_file = args.parent_context_file.unwrap_or_default();
 
             let mut envs = vec![];
             if let Ok(addr) = std::env::var("OHC_AGENT_ADDRESS") {
@@ -333,7 +344,7 @@ pub fn subagent_tool(runner: Arc<dyn crate::runner::CommandRunner>, llm: Option<
             },
             "required": ["task", "mode"]
         }),
-        execute: Arc::new(SubagentExecutor { runner, llm }),
+        execute: Arc::new(PydanticAdapter::new(SubagentExecutor { runner, llm })),
     }
 }
 
@@ -350,7 +361,8 @@ mod tests {
             "mode": "fork"
         });
 
-        let result = executor.execute(args).await;
+        let adapter = PydanticAdapter::new(executor);
+        let result = crate::ToolExecutor::execute(&adapter, args).await;
         assert!(result.is_err());
         match result {
             Err(ToolError::LlmRecoverable(msg)) => {
@@ -369,7 +381,8 @@ mod tests {
             "mode": "invalid"
         });
 
-        let result = executor.execute(args).await;
+        let adapter = PydanticAdapter::new(executor);
+        let result = crate::ToolExecutor::execute(&adapter, args).await;
         assert!(result.is_err());
         match result {
             Err(ToolError::LlmRecoverable(msg)) => {
@@ -396,7 +409,8 @@ mod tests {
             "mode": "teammate"
         });
 
-        let result = executor.execute(args).await;
+        let adapter = PydanticAdapter::new(executor);
+        let result = crate::ToolExecutor::execute(&adapter, args).await;
         assert!(result.is_ok(), "Expected Ok for teammate mode");
         let msg = result.unwrap();
 
@@ -449,7 +463,8 @@ mod tests {
             "mode": "worktree"
         });
 
-        let result = executor.execute(args).await;
+        let adapter = PydanticAdapter::new(executor);
+        let result = crate::ToolExecutor::execute(&adapter, args).await;
         assert!(result.is_ok(), "Expected Ok for worktree mode");
         let msg = result.unwrap();
 
@@ -497,7 +512,8 @@ mod tests {
             "mode": "fork"
         });
 
-        let result = executor.execute(args).await;
+        let adapter = PydanticAdapter::new(executor);
+        let result = crate::ToolExecutor::execute(&adapter, args).await;
         assert!(result.is_ok(), "Expected Ok");
         let msg = result.unwrap();
         assert!(msg.contains("[Output truncated. Subagent failed to condense summary.]"), "Expected output to be truncated");

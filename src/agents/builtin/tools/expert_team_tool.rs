@@ -1,11 +1,35 @@
 use ohc_builtin_agent_core::expert_team::{ExpertTeamManager, DomainExpert, ExpertTeamLlmClient, SkillTrace};
 use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, ToolError};
 use ohc_builtin_agent_llm::LlmClient;
-use serde_json::{json, Value};
+use serde_json::json;
+use serde::Deserialize;
+use super::pydantic::{PydanticToolExecutor, PydanticAdapter};
 use std::sync::Arc;
-use crate::ToolExecutor;
+
 
 /// Bridging the Expert Team LLM trait with our standard LlmClient.
+
+#[derive(Deserialize)]
+struct ExpertTeamArgs {
+    task: String,
+    #[serde(default = "default_lead_name")]
+    lead_name: String,
+    #[serde(default = "default_expert_roles")]
+    expert_roles: Vec<String>,
+}
+
+fn default_lead_name() -> String { "Project Director".to_string() }
+
+fn default_expert_roles() -> Vec<String> {
+    vec![
+        "Industry Researcher".to_string(),
+        "Financial Analyst".to_string(),
+        "Strategic Analyst".to_string(),
+        "Process Supervisor".to_string(),
+        "Quality Auditor".to_string(),
+    ]
+}
+
 struct ExpertLlmBridge {
     client: Arc<dyn LlmClient>,
     model: String,
@@ -25,24 +49,11 @@ pub struct ExpertTeamExecutor {
 }
 
 #[async_trait::async_trait]
-impl ToolExecutor for ExpertTeamExecutor {
-    async fn execute(&self, args: Value) -> Result<String, ToolError> {
-        let task = args.get("task").and_then(|v| v.as_str()).ok_or_else(|| {
-            ToolError::LlmRecoverable("ExpertTeam: 'task' is required".to_string())
-        })?;
-
-        let lead_name = args.get("lead_name").and_then(|v| v.as_str()).unwrap_or("Project Director");
-
-        let expert_roles = match args.get("expert_roles").and_then(|v| v.as_array()) {
-            Some(arr) => arr.iter().filter_map(|v| v.as_str()).map(|s| s.to_string()).collect::<Vec<_>>(),
-            None => vec![
-                "Industry Researcher".to_string(),
-                "Financial Analyst".to_string(),
-                "Strategic Analyst".to_string(),
-                "Process Supervisor".to_string(),
-                "Quality Auditor".to_string(),
-            ],
-        };
+impl PydanticToolExecutor<ExpertTeamArgs> for ExpertTeamExecutor {
+    async fn execute_typed(&self, args: ExpertTeamArgs) -> Result<String, ToolError> {
+        let task = args.task.as_str();
+        let lead_name = args.lead_name.as_str();
+        let expert_roles = args.expert_roles;
 
         let bridge = Arc::new(ExpertLlmBridge {
             client: self.client.clone(),
@@ -94,6 +105,6 @@ pub fn expert_team_tool(client: Arc<dyn LlmClient>, model: String) -> crate::Too
             },
             "required": ["task"]
         }),
-        execute: Arc::new(ExpertTeamExecutor { client, model }),
+        execute: Arc::new(PydanticAdapter::new(ExpertTeamExecutor { client, model })),
     }
 }
