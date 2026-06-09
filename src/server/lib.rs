@@ -4007,6 +4007,9 @@ async fn create_ui_bom_item_handler(
             }),
         )
         .route("/api/v1/sync/offline", axum::routing::post({ let db = db.clone(); let mesh = mesh_transport.clone(); move |headers: axum::http::HeaderMap, payload: axum::Json<api::offline_sync::OfflineSyncRequest>| async move { api::offline_sync::offline_sync_handler(axum::extract::State((db.pool.clone(), mesh.clone())), headers, payload).await } }))
+        .route("/api/v1/field-service/roster", axum::routing::get({ let db = db.clone(); move |headers: axum::http::HeaderMap| async move { api::field_service::get_roster_handler(axum::extract::State(db.pool.clone()), headers).await } }))
+        .route("/api/v1/field-service/sync", axum::routing::post({ let db = db.clone(); move |headers: axum::http::HeaderMap, payload: axum::Json<api::field_service::SyncRequest>| async move { api::field_service::sync_handler(axum::extract::State(db.pool.clone()), headers, payload).await } }))
+        .route("/api/v1/field-service/jobs/:id/estimate-ready", axum::routing::get({ let db = db.clone(); move |headers: axum::http::HeaderMap, path: axum::extract::Path<String>| async move { api::field_service::check_draft_estimate_handler(axum::extract::State(db.pool.clone()), headers, path).await } }))
 
         .route("/api/v1/mesh/connect", axum::routing::get(api::mesh_handler::mesh_ws_handler).with_state(mesh_transport.clone()))
         .route("/api/mesh/v2/broadcast", axum::routing::post(api::mesh_handler::broadcast_handler).with_state(mesh_transport.clone()).layer(axum::middleware::from_fn(api::mesh_handler::validation_middleware)))
