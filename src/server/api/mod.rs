@@ -4,7 +4,6 @@ pub mod mesh_handler;
 pub mod autodream;
 pub mod terminal_api;
 pub mod staff_mesh;
-
 pub mod billing_webhook;
 pub mod billing_api;
 #[cfg(test)]
@@ -26,4 +25,9 @@ pub mod fulfillment;
 pub mod local_seo;
 pub mod mcp_webhook;
 pub mod booking;
+
 pub mod recovery;
+
+#[cfg(test)]
+pub mod search_test;
+pub mod search;

@@ -5755,6 +5755,12 @@ dependencies = [
  "tempfile",
  "tokio",
  "tracing",
+ "tree-sitter",
+ "tree-sitter-bash",
+ "tree-sitter-go",
+ "tree-sitter-python",
+ "tree-sitter-rust",
+ "tree-sitter-typescript",
  "urlencoding",
  "uuid",
 ]

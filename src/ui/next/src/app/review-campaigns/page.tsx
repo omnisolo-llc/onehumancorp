@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 export default function ReviewCampaignsPage() {
   const router = useRouter();
   const [productName, setProductName] = useState('');
+  const [autoRequest, setAutoRequest] = useState(false);
   const [customerSegment, setCustomerSegment] = useState('recent');
   const [generatedDraft, setGeneratedDraft] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
