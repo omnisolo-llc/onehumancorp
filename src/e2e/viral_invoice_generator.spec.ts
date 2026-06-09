@@ -21,6 +21,36 @@ test.describe('Viral Invoice Generator Loop', () => {
     await page.fill('textarea[placeholder="e.g. Website Redesign and SEO Optimization"]', 'Consulting Services for Q3');
     await page.fill('input[placeholder="e.g. 1500.00"]', '2500');
 
+    // Ensure we start without Pro
+    await page.evaluate(() => {
+        window.localStorage.setItem('has_pro', 'false');
+    });
+
+    // Verify soft paywall loop for white-label invoice
+    const removeBrandingCheckbox = page.locator('input[type="checkbox"]');
+    await removeBrandingCheckbox.click({ force: true }); // Using force because it's sr-only peer
+
+    // Verify soft paywall modal appears
+    const paywallHeading = page.getByRole('heading', { name: 'Upgrade to Pro' });
+    await expect(paywallHeading).toBeVisible();
+
+    const shareToUnlockBtn = page.getByRole('button', { name: 'Share to get 7 Days Pro' });
+    await expect(shareToUnlockBtn).toBeVisible();
+
+    // Mock window.open before clicking to prevent real popups
+    await page.evaluate(() => {
+        window.open = function() { return window; };
+    });
+
+    // Click Share to unlock (which grants Pro and sets removeBranding to true)
+    await shareToUnlockBtn.click();
+
+    // Verify modal closes
+    await expect(paywallHeading).toBeHidden();
+
+    // Verify the toggle is now checked
+    await expect(removeBrandingCheckbox).toBeChecked();
+
     // Click generate
     const generateBtn = page.getByRole('button', { name: 'Generate Shareable Invoice' });
     await expect(generateBtn).toBeVisible();
@@ -45,12 +75,8 @@ test.describe('Viral Invoice Generator Loop', () => {
     await expect(page.getByText('Consulting Services for Q3')).toBeVisible();
     await expect(page.getByText('$2500.00')).toBeVisible();
 
-    // Verify the viral loop footer
+    // Verify the viral loop footer is NOT visible because we removed branding
     const poweredByLink = page.getByRole('link', { name: /Powered by OHC/i });
-    await expect(poweredByLink).toBeVisible();
-
-    const onboardingHref = await poweredByLink.getAttribute('href');
-    expect(onboardingHref).toContain('/onboarding?ref=');
-    expect(onboardingHref).toContain('source=invoice_generator');
+    await expect(poweredByLink).toBeHidden();
   });
 });

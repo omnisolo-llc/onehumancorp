@@ -11,6 +11,7 @@ function InvoiceContent() {
     clientName: string;
     projectDetails: string;
     amount: string;
+    removeBranding?: boolean;
   } | null>(null);
   const [error, setError] = useState(false);
 
@@ -63,7 +64,7 @@ function InvoiceContent() {
     );
   }
 
-  const { tenant, clientName, projectDetails, amount } = invoiceData;
+  const { tenant, clientName, projectDetails, amount, removeBranding } = invoiceData;
   const currentDate = new Date().toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'long',
@@ -108,20 +109,22 @@ function InvoiceContent() {
         </section>
 
         {/* Viral Growth Loop Footer */}
-        <div className="text-center pb-8 animate-fade-in">
-          <Link
-            href={`/onboarding?ref=${tenant}&source=invoice_generator`}
-            target="_blank"
-            className="inline-flex flex-col items-center gap-1 group"
-          >
-            <span className="text-xs font-semibold tracking-wider uppercase text-gray-500 opacity-80 group-hover:opacity-100 transition-opacity">
-              ⚡ Powered by OHC
-            </span>
-            <span className="text-sm font-medium text-indigo-600 group-hover:text-indigo-700 transition-colors">
-              Create your own professional invoices for free
-            </span>
-          </Link>
-        </div>
+        {!removeBranding && (
+          <div className="text-center pb-8 animate-fade-in">
+            <Link
+              href={`/onboarding?ref=${tenant}&source=invoice_generator`}
+              target="_blank"
+              className="inline-flex flex-col items-center gap-1 group"
+            >
+              <span className="text-xs font-semibold tracking-wider uppercase text-gray-500 opacity-80 group-hover:opacity-100 transition-opacity">
+                ⚡ Powered by OHC
+              </span>
+              <span className="text-sm font-medium text-indigo-600 group-hover:text-indigo-700 transition-colors">
+                Create your own professional invoices for free
+              </span>
+            </Link>
+          </div>
+        )}
       </main>
 
       <style dangerouslySetInnerHTML={{__html: `

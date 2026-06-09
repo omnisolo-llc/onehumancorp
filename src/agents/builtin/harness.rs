@@ -1,4 +1,4 @@
-#![allow(dead_code)]
+
 
 use ::server_harness::sandbox::{SandboxAdapter, SandboxManager};
 use async_trait::async_trait;
