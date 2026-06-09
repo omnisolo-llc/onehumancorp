@@ -1,0 +1,11 @@
+--- deploy/tests/kind_e2e_test.sh
++++ deploy/tests/kind_e2e_test.sh
+@@ -160,7 +160,7 @@
+ export KUBECONFIG="${TEST_TMPDIR:-/tmp}/kind-kubeconfig-$$"
+ touch "${KUBECONFIG}"
+
+-kind create cluster --name "${CLUSTER_NAME}" --wait 120s
++KIND_EXPERIMENTAL_DOCKER_NETWORK=bridge kind create cluster --name "${CLUSTER_NAME}" --wait 120s
+
+ log "Waiting for cluster nodes ..."
+ kubectl wait --for=condition=Ready node --all --timeout=120s

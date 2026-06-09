@@ -27,7 +27,9 @@ _NEXT_UI_E2E_SPECS = [
     "//src/ui/next:src/e2e/supply_chain.spec.ts",
     "//src/ui/next:src/e2e/verify-ui.spec.ts",
     "//src/ui/next:src/e2e/videos.spec.ts",
+    "//src/ui/next:src/e2e/viral-social-proof.spec.ts",
     "//src/ui/next:src/e2e/viral_share_cards_intent.spec.ts",
+
     "//src/ui/next:src/e2e/website-builder-bugfix.spec.ts",
     "//src/ui/next:e2e/agents.spec.ts",
     "//src/ui/next:e2e/builder_ui.spec.ts",
@@ -78,7 +80,7 @@ define_playwright_tests(
         "//src/ui/tauri/src/ui:all_files",
     ],
     server = "//src/server:server",
-    specs = glob(["*.spec.ts"]) + _NEXT_UI_E2E_SPECS,
+    specs = glob(["*.spec.ts", "ui/*.spec.ts"]) + _NEXT_UI_E2E_SPECS,
 )
 
 sh_test(

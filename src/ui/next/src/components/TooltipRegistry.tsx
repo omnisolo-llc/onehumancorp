@@ -44,7 +44,7 @@ export function TooltipProvider({ children }: { children: ReactNode }) {
       {children}
       {activeTooltip && tooltipRect && (
         <div
-          className="fixed z-[100] bg-gray-900/80 text-white text-sm font-inter p-3 rounded-lg shadow-[0_8px_32px_rgba(0,0,0,0.12)] pointer-events-none w-64 max-w-[calc(100vw-32px)] mx-4 text-center leading-relaxed backdrop-blur-[40px] saturate-200 border border-white/40 animate-fade-in-up"
+          className="fixed z-[100] bg-white/80 text-gray-900 text-sm font-inter p-3 rounded-lg shadow-[0_8px_30px_rgb(0,0,0,0.12)] pointer-events-none w-64 max-w-[calc(100vw-32px)] mx-4 text-center leading-relaxed backdrop-blur-[20px] saturate-200 border border-white/50 animate-fade-in-up"
           style={{
             top: tooltipRect.top - 10,
             left: tooltipRect.left + tooltipRect.width / 2,
@@ -52,7 +52,7 @@ export function TooltipProvider({ children }: { children: ReactNode }) {
           }}
         >
           {tooltipText}
-          <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-solid border-t-gray-900/80 border-t-8 border-x-transparent border-x-8 border-b-0"></div>
+          <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-solid border-t-white/80 border-t-8 border-x-transparent border-x-8 border-b-0"></div>
         </div>
       )}
       <style dangerouslySetInnerHTML={{__html: `

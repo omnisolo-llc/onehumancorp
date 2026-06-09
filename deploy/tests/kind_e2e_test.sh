@@ -160,7 +160,7 @@ log "Creating Kind cluster '${CLUSTER_NAME}' ..."
 export KUBECONFIG="${TEST_TMPDIR:-/tmp}/kind-kubeconfig-$$"
 touch "${KUBECONFIG}"
 
-kind create cluster --name "${CLUSTER_NAME}" --wait 120s
+KIND_EXPERIMENTAL_DOCKER_NETWORK=bridge kind create cluster --name "${CLUSTER_NAME}" --wait 120s
 
 log "Waiting for cluster nodes ..."
 kubectl wait --for=condition=Ready node --all --timeout=120s
@@ -198,7 +198,21 @@ helm repo add prometheus-community https://prometheus-community.github.io/helm-c
 helm repo update valkey prometheus-community 2>/dev/null || true
 
 log "Building chart dependencies ..."
-helm dependency build "${CHART_DIR}" --skip-refresh
+max_attempts=5
+attempt=1
+while [ $attempt -le $max_attempts ]; do
+  if helm dependency build "${CHART_DIR}" --skip-refresh; then
+    break
+  fi
+  log "helm dependency build failed, retrying ($attempt/$max_attempts)..."
+  attempt=$((attempt+1))
+  sleep 5
+done
+
+if [ $attempt -gt $max_attempts ]; then
+  log "error: helm dependency build failed after $max_attempts attempts"
+  exit 1
+fi
 
 wait_for_backend() {
   local backend_url="$1"
