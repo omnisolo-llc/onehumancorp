@@ -834,6 +834,14 @@ impl DepartmentOrchestrator {
                     }
                 }
 
+                // If this is a social post approval, it's just marked as approved and a mesh event is triggered.
+                if let Some(payload) = &original_payload {
+                    if payload.get("feature_type").and_then(|v| v.as_str()) == Some("social_post") {
+                        tracing::info!("Social post draft approved for product: {}", payload.get("product_name").and_then(|v| v.as_str()).unwrap_or(""));
+                        // At this stage, no other database actions are required since 'APPROVED' state represents 'Scheduled'
+                    }
+                }
+
                 // If this is a Smart Pricing approval, execute the price change in the database directly.
                 if let Some(payload) = &original_payload {
                     if payload.get("context").and_then(|c| c.get("smart_pricing")).and_then(|v| v.as_bool()).unwrap_or(false) {

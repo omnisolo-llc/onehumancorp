@@ -459,8 +459,14 @@ export default function ApprovalInbox({
                           <div className="text-[10px] uppercase font-bold text-gray-400 mb-1">
                             Draft Copy
                           </div>
+                          <p className="text-xs text-gray-700 italic mb-2">
+                            <span className="font-bold">Instagram:</span> "{req.payload.instagram || req.payload.draft_copy}"
+                          </p>
+                          <p className="text-xs text-gray-700 italic mb-2">
+                            <span className="font-bold">TikTok:</span> "{req.payload.tiktok || req.payload.draft_copy}"
+                          </p>
                           <p className="text-xs text-gray-700 italic">
-                            "{req.payload.draft_copy}"
+                            <span className="font-bold">Facebook:</span> "{req.payload.facebook || req.payload.draft_copy}"
                           </p>
                         </div>
                       </div>
