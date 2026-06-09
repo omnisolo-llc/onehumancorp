@@ -164,7 +164,8 @@ impl PosSyncWorker {
             }
         }
 
-        sqlx::query("INSERT INTO ohc_universal_ledger (tenant_id, event_type, payload) VALUES ($1, 'offline_pos_sync', $2::jsonb)")
+        sqlx::query("INSERT INTO ohc_universal_ledger (id, tenant_id, department, action_type, state_change) VALUES ($1, $2, 'Operations', 'offline_pos_sync', $3::jsonb)")
+            .bind(uuid::Uuid::new_v4().to_string())
             .bind(&job.tenant_id)
             .bind(&job.payload)
             .execute(&mut *tx)
@@ -239,7 +240,7 @@ mod tests {
             .fetch_one(&pool).await.unwrap();
         assert_eq!(tx_status.0, "RESOLVED");
 
-        let ledger_count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM ohc_universal_ledger WHERE event_type = 'offline_pos_sync'")
+        let ledger_count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM ohc_universal_ledger WHERE action_type = 'offline_pos_sync'")
             .fetch_one(&pool).await.unwrap();
         assert!(ledger_count.0 > 0);
 
