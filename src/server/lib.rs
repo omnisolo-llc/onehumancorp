@@ -2761,15 +2761,48 @@ pub async fn list_ui_triage_handler(
 }
 
 pub async fn update_ui_triage_action_handler(
-    axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
+    axum::extract::State((db, orchestrator)): axum::extract::State<(std::sync::Arc<crate::db::DB>, std::sync::Arc<crate::orchestration::departments::DepartmentOrchestrator>)>,
     axum::extract::Query(query): axum::extract::Query<UiTenantQuery>,
     axum::extract::Json(payload): axum::extract::Json<TriageActionPayload>,
 ) -> axum::response::Response {
     use axum::response::IntoResponse;
+    use sqlx::Row;
     let tenant_id = ui_tenant_id(&query);
     match &db.store {
         crate::db::DbStore::Postgres => {
             let status = if payload.approved { "resolved" } else { "dismissed" };
+
+            // Check if there is an associated action
+            if payload.approved {
+                if let Ok(row) = sqlx::query("SELECT action_type, payload FROM triage_proposed_actions WHERE triage_item_id = $1 AND tenant_id = $2 LIMIT 1")
+                    .bind(&payload.triage_item_id)
+                    .bind(&tenant_id)
+                    .fetch_optional(&db.pool)
+                    .await
+                {
+                    if let Some(r) = row {
+                        let action_type: String = r.get("action_type");
+                        let action_payload_str: String = r.get("payload");
+                        let action_payload: serde_json::Value = serde_json::from_str(&action_payload_str).unwrap_or(serde_json::json!({}));
+
+                        let event_type = match action_type.as_str() {
+                            "ambassador_reply" => "agent:customer_success:approved".to_string(),
+                            "quote_draft" => "agent:sales:approved".to_string(),
+                            _ => format!("agent:{}:approved", action_type)
+                        };
+
+                        let event = crate::orchestration::departments::types::DepartmentEvent {
+                            id: uuid::Uuid::new_v4().to_string(),
+                            tenant_id: tenant_id.clone(),
+                            event_type,
+                            payload: serde_json::json!({ "original_payload": action_payload }),
+                        };
+
+                        let _ = orchestrator.dispatch_event(event).await;
+                    }
+                }
+            }
+
             match sqlx::query("UPDATE triage_items SET status = $1 WHERE id = $2 AND tenant_id = $3").bind(status).bind(&payload.triage_item_id).bind(&tenant_id).execute(&db.pool).await {
                 Ok(_) => (axum::http::StatusCode::OK, axum::Json(serde_json::json!({"status": "success"}))).into_response(),
                 Err(e) => { tracing::error!("Failed to update triage item: {:?}", e); (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": e.to_string()}))).into_response() }
@@ -3811,7 +3844,7 @@ async fn create_ui_bom_item_handler(
         .route("/api/ui/bookings", axum::routing::get(list_ui_bookings_handler).with_state(db.clone()))
         .route("/api/ui/inbox/messages", axum::routing::get(list_ui_inbox_handler).with_state(db.clone()))
         .route("/api/ui/triage", axum::routing::get(list_ui_triage_handler).with_state(db.clone()))
-        .route("/api/ui/triage/action", axum::routing::post(update_ui_triage_action_handler).with_state(db.clone()))
+        .route("/api/ui/triage/action", axum::routing::post(update_ui_triage_action_handler).with_state((db.clone(), dept_orchestrator.clone())))
         .route("/api/ui/supply", axum::routing::get(list_ui_supply_handler).with_state(db.clone()))
         .route("/api/ui/supply/vendors", axum::routing::post(create_ui_supply_vendor_handler).with_state(db.clone()))
         .route("/api/ui/supply/raw-materials", axum::routing::post(create_ui_raw_material_handler).with_state(db.clone()))
