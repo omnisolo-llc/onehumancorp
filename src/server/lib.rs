@@ -4332,3 +4332,4 @@ async fn test_api_settings_voice() {
     assert_eq!(updated.voice_receptionist_number, Some("+15551112222".to_string()));
     assert_eq!(updated.voice_receptionist_persona, Some("Professional".to_string()));
 }
+// CI force trigger
