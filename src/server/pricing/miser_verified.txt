@@ -1,2 +1,3 @@
 Miser Cost Feature verified
 Verified UI and backend implementation
+Verified Subscribe & Save functionality in UI and test execution
