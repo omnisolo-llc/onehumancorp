@@ -63,26 +63,27 @@ export default function OnboardingWizard() {
   const syncStateToBackend = async (overrideState: Partial<any> = {}) => {
     const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
     const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
+    const currentState = useOnboardingStore.getState();
 
     const wizardState = {
-      step,
-      chatStep,
-      businessDescription,
-      businessName,
-      whatYouSell,
-      location,
-      targetAudience,
-      businessType,
-      categories,
-      websiteTemplate,
-      domainChoice,
-      firstProductName,
-      firstProductPrice,
-      adminName,
-      adminEmail,
-      adminPassword,
-      aiAgents,
-      aiAutoRespond,
+      step: currentState.step,
+      chatStep: currentState.chatStep,
+      businessDescription: currentState.businessDescription,
+      businessName: currentState.businessName,
+      whatYouSell: currentState.whatYouSell,
+      location: currentState.location,
+      targetAudience: currentState.targetAudience,
+      businessType: currentState.businessType,
+      categories: currentState.categories,
+      websiteTemplate: currentState.websiteTemplate,
+      domainChoice: currentState.domainChoice,
+      firstProductName: currentState.firstProductName,
+      firstProductPrice: currentState.firstProductPrice,
+      adminName: currentState.adminName,
+      adminEmail: currentState.adminEmail,
+      adminPassword: currentState.adminPassword,
+      aiAgents: currentState.aiAgents,
+      aiAutoRespond: currentState.aiAutoRespond,
       ...overrideState
     };
 
@@ -214,8 +215,13 @@ export default function OnboardingWizard() {
   }, []);
 
   // Sync state to backend
+  const isInitialSync = useRef(true);
   useEffect(() => {
     if (!isLoaded || !initialStateLoaded.current) return;
+    if (isInitialSync.current) {
+      isInitialSync.current = false;
+      return;
+    }
 
     // Only save if we are past the initial state
     if (step === 1 && !businessName && !whatYouSell && !location && !targetAudience) return;
@@ -223,25 +229,26 @@ export default function OnboardingWizard() {
     const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
     const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
 
+    const currentState = useOnboardingStore.getState();
     const wizardState = {
-      step,
-      chatStep,
-      businessDescription,
-      businessName,
-      whatYouSell,
-      location,
-      targetAudience,
-      businessType,
-      categories,
-      websiteTemplate,
-      domainChoice,
-      firstProductName,
-      firstProductPrice,
-      adminName,
-      adminEmail,
-      adminPassword,
-      aiAgents,
-      aiAutoRespond
+      step: currentState.step,
+      chatStep: currentState.chatStep,
+      businessDescription: currentState.businessDescription,
+      businessName: currentState.businessName,
+      whatYouSell: currentState.whatYouSell,
+      location: currentState.location,
+      targetAudience: currentState.targetAudience,
+      businessType: currentState.businessType,
+      categories: currentState.categories,
+      websiteTemplate: currentState.websiteTemplate,
+      domainChoice: currentState.domainChoice,
+      firstProductName: currentState.firstProductName,
+      firstProductPrice: currentState.firstProductPrice,
+      adminName: currentState.adminName,
+      adminEmail: currentState.adminEmail,
+      adminPassword: currentState.adminPassword,
+      aiAgents: currentState.aiAgents,
+      aiAutoRespond: currentState.aiAutoRespond,
     };
 
     const timer = setTimeout(() => {
