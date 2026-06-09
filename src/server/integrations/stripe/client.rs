@@ -213,7 +213,15 @@ mod tests {
 }
 
 impl StripeClient {
-    pub async fn create_terminal_payment_intent(&self, tenant_id: &str, amount_cents: i64, currency: &str) -> Result<String, String> {
+    pub async fn create_terminal_payment_intent(
+        &self,
+        tenant_id: &str,
+        amount_cents: i64,
+        currency: &str,
+        product_id: Option<String>,
+        quantity: Option<i32>,
+        order_id: Option<String>,
+    ) -> Result<String, String> {
         let api_key = self.require_api_key()?;
         if amount_cents <= 0 {
             return Err("amount_cents must be positive".to_string());
@@ -228,6 +236,17 @@ impl StripeClient {
         form.insert("payment_method_types[]".to_string(), "card_present".to_string());
         form.insert("capture_method".to_string(), "manual".to_string());
         form.insert("metadata[tenant_id]".to_string(), tenant_id.to_string());
+        form.insert("metadata[source]".to_string(), "in_person".to_string());
+
+        if let Some(pid) = product_id {
+            form.insert("metadata[product_id]".to_string(), pid);
+        }
+        if let Some(q) = quantity {
+            form.insert("metadata[quantity]".to_string(), q.to_string());
+        }
+        if let Some(oid) = order_id {
+            form.insert("metadata[order_id]".to_string(), oid);
+        }
 
         let res = reqwest::Client::new().post(format!("{}/v1/payment_intents", Self::api_base()))
             .basic_auth(api_key, Some(""))

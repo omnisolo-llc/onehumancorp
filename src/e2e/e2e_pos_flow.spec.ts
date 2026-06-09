@@ -48,6 +48,15 @@ test.describe('In-Person Payment (POS) Flow', () => {
     await context.setOffline(true);
     await page.evaluate(() => window.dispatchEvent(new Event('offline')));
 
+    // Mock the intent creation route if applicable
+    await page.route('**/api/v1/payments/terminal/intent', route => {
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ client_secret: "pi_mock_123_secret" }),
+      });
+    });
+
     // Trigger New Order
     await page.locator('text=New Order').click();
     await expect(page.locator('text=Payment Saved Offline - 50 USD')).toBeVisible();

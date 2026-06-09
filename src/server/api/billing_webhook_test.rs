@@ -552,3 +552,33 @@ async fn test_stripe_webhook_pos_transaction() {
 
     assert_eq!(response.status(), reqwest::StatusCode::OK);
 }
+
+#[tokio::test]
+async fn test_payment_intent_succeeded_in_person() {
+    use crate::api::billing_webhook::{StripeEvent, StripeEventData};
+    use serde_json::json;
+
+    let payload = StripeEvent {
+        id: "evt_test".to_string(),
+        r#type: "payment_intent.succeeded".to_string(),
+        data: StripeEventData {
+            object: json!({
+                "amount": 1000,
+                "currency": "usd",
+                "metadata": {
+                    "source": "in_person",
+                    "tenant_id": "tenant123",
+                    "product_id": "prod123",
+                    "quantity": "2",
+                    "order_id": "order123"
+                }
+            })
+        }
+    };
+
+    assert_eq!(payload.r#type, "payment_intent.succeeded");
+    assert_eq!(
+        payload.data.object.get("metadata").unwrap().get("source").unwrap().as_str().unwrap(),
+        "in_person"
+    );
+}

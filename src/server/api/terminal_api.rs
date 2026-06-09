@@ -13,6 +13,9 @@ pub struct TerminalTokenResponse {
 pub struct PaymentIntentRequest {
     pub amount_cents: i64,
     pub currency: String,
+    pub product_id: Option<String>,
+    pub quantity: Option<i32>,
+    pub order_id: Option<String>,
 }
 
 #[derive(serde::Serialize)]
@@ -23,6 +26,7 @@ pub struct PaymentIntentResponse {
 pub fn router(hub: Arc<Hub>) -> axum::Router<Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport>> {
     axum::Router::new()
         .route("/token", axum::routing::post(get_terminal_connection_token_handler))
+        .route("/connection_token", axum::routing::post(get_terminal_connection_token_handler))
         .route("/intent", axum::routing::post(create_payment_intent_handler))
         .route("/sync_offline", axum::routing::post(sync_offline_transactions_handler))
         .route("/reserve", axum::routing::post(reserve_inventory_handler))
@@ -654,8 +658,37 @@ pub async fn create_payment_intent_handler(
     let stripe_key = std::env::var("STRIPE_API_KEY").unwrap_or_default();
 
     let client = crate::integrations::stripe::client::StripeClient::new(stripe_key);
+
+    if let Some(ref order_id) = req_data.order_id {
+        let pool = crate::db::get_pool();
+        // Assume PostgreSQL, but abstract nicely if using SQLite elsewhere
+        // The codebase actually uses a global pool via `get_pool` for generic operations.
+        // It's mostly safe to use sqlx::query on `pool`. However, `billing_webhook` uses `&webhook_state.db.store` matching
+        // to handle Sqlite vs Postgres properly. To avoid DB compatibility panics, we should execute via `hub` or specific queries.
+        // For Postgres (which is what OHC uses in production, and Bazel tests use Pg)
+        // Note: The previous DB patch used $1 and $2 binding which is Postgres-only and breaks SQLite tests if there are any. Let's fix that.
+
+        let update_res = sqlx::query("UPDATE orders SET payment_source = 'in_person' WHERE id = $1 AND tenant_id = $2")
+            .bind(order_id)
+            .bind(&tenant_id)
+            .execute(&pool)
+            .await;
+
+        if let Err(e) = update_res {
+            // Fallback for sqlite
+            let update_sqlite = sqlx::query("UPDATE orders SET payment_source = 'in_person' WHERE id = ? AND tenant_id = ?")
+                .bind(order_id)
+                .bind(&tenant_id)
+                .execute(&pool)
+                .await;
+            if let Err(sqlite_e) = update_sqlite {
+                tracing::error!("Failed to update order {} payment_source: Postgres: {}, Sqlite: {}", order_id, e, sqlite_e);
+            }
+        }
+    }
+
     match client.require_api_key() {
-        Ok(_) => match client.create_terminal_payment_intent(&tenant_id, req_data.amount_cents, &req_data.currency).await {
+        Ok(_) => match client.create_terminal_payment_intent(&tenant_id, req_data.amount_cents, &req_data.currency, req_data.product_id.clone(), req_data.quantity, req_data.order_id.clone()).await {
             Ok(client_secret) => Json(Ok(PaymentIntentResponse { client_secret })),
             Err(e) => Json(Err(e)),
         },

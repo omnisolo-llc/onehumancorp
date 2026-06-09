@@ -76,7 +76,7 @@ async fn test_create_payment_intent_authenticated() {
                 .uri("/intent")
                 .method("POST")
                 .header("Content-Type", "application/json")
-                .body(Body::from(r#"{"amount_cents": 1500, "currency": "usd"}"#))
+                .body(Body::from(r#"{"amount_cents": 1500, "currency": "usd", "product_id": "test_prod", "quantity": 2, "order_id": "test_order"}"#))
                 .unwrap(),
         )
         .await

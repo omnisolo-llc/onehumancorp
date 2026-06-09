@@ -355,8 +355,17 @@ pub async fn stripe_webhook_handler(
 ) -> impl IntoResponse {
 
     match payload.r#type.as_str() {
-        "terminal.reader.action.succeeded" | "pos_transaction" => {
+        "terminal.reader.action.succeeded" | "pos_transaction" | "payment_intent.succeeded" => {
             let obj = &payload.data.object;
+
+            let source_opt = obj.get("metadata")
+                .and_then(|m| m.get("source"))
+                .and_then(|s| s.as_str());
+
+            if payload.r#type == "payment_intent.succeeded" && source_opt != Some("in_person") {
+                // If it's a payment intent but not from POS, ignore it here
+                return StatusCode::OK.into_response();
+            }
 
             let tenant_id_opt = obj.get("metadata")
                 .and_then(|m| m.get("tenant_id"))
@@ -447,6 +456,45 @@ pub async fn stripe_webhook_handler(
                 if let Err(e) = res {
                     ::server_telemetry::record_error_signal("Failed to update order status for order : {:?}");
                     tracing::error!("Failed to update order status for order {}: {:?}", order_id, e);
+                }
+            }
+
+            if let Some(tenant_id) = tenant_id_opt {
+                let amount = obj.get("amount").and_then(|a| a.as_i64()).unwrap_or(0);
+                let currency = obj.get("currency").and_then(|c| c.as_str()).unwrap_or("usd");
+
+                let state_change = serde_json::json!({
+                    "amount": amount,
+                    "currency": currency,
+                    "source": "in_person"
+                });
+
+                let ledger_id = uuid::Uuid::new_v4().to_string();
+
+                let ledger_res = match &webhook_state.db.store {
+                    crate::db::DbStore::Sqlite(pool) => {
+                        sqlx::query("INSERT INTO ohc_universal_ledger (id, tenant_id, department, action_type, state_change) VALUES (?, ?, 'sales', 'POS_PAYMENT', ?)")
+                            .bind(&ledger_id)
+                            .bind(tenant_id)
+                            .bind(state_change.to_string())
+                            .execute(pool)
+                            .await
+                            .map(|_| ())
+                    }
+                    crate::db::DbStore::Postgres => {
+                        sqlx::query("INSERT INTO ohc_universal_ledger (id, tenant_id, department, action_type, state_change) VALUES ($1, $2, 'sales', 'POS_PAYMENT', $3::jsonb)")
+                            .bind(&ledger_id)
+                            .bind(tenant_id)
+                            .bind(state_change.to_string())
+                            .execute(&webhook_state.db.pool)
+                            .await
+                            .map(|_| ())
+                    }
+                };
+
+                if let Err(e) = ledger_res {
+                    ::server_telemetry::record_error_signal("Failed to insert into ohc_universal_ledger : {:?}");
+                    tracing::error!("Failed to insert into ohc_universal_ledger for POS_PAYMENT: {:?}", e);
                 }
             }
 
