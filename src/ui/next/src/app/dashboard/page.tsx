@@ -18,6 +18,7 @@ import AiTimeSavingsWidget from "../components/AiTimeSavingsWidget";
 
 import { SmartBlock } from "../builder/components";
 import { UnifiedAgentFeed } from "./UnifiedAgentFeed";
+import { TriageFeed } from "./TriageFeed";
 import { ReviewFeedCard } from './ReviewFeedCard';
 
 import { NeighborhoodPulseCard } from "./NeighborhoodPulseCard";
@@ -518,6 +519,7 @@ export default function Dashboard() {
              />
         ))}
 
+        <TriageFeed />
         <UnifiedAgentFeed />
 
         <section>
