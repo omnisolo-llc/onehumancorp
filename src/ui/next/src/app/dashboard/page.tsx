@@ -93,7 +93,6 @@ export default function Dashboard() {
   const [supply, setSupply] = useState<SupplyPayload>({ vendors: [], raw_materials: [], bom_items: [] });
   const [approvals, setApprovals] = useState<any[]>([]);
   const [dashboardData, setDashboardData] = useState<any>({ pendingReviews: [] });
-  const [approvals, setApprovals] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [ledgerBalance, setLedgerBalance] = useState<number | null>(null);
   const [ledgerCurrency, setLedgerCurrency] = useState<string>("USD");
@@ -131,7 +130,6 @@ export default function Dashboard() {
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncErrorCount, setSyncErrorCount] = useState(0);
   const [activeDepartments, setActiveDepartments] = useState<string[]>([]);
-  const [approvals, setApprovals] = useState<any[]>([]);
 
   const handleApproveDraft = async (approvalId: string) => {
     try {
