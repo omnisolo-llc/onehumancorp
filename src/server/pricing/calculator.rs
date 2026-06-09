@@ -40,9 +40,16 @@ pub fn get_pricing(model: &str) -> ModelPricing {
         "gpt-4.1-mini" => ModelPricing { input_cost: 0.40, output_cost: 1.60, cached_cost: 0.0 },
         "gpt-4.1-nano" => ModelPricing { input_cost: 0.10, output_cost: 0.40, cached_cost: 0.0 },
         // OpenAI — o-series reasoning models
-        "o1" => ModelPricing { input_cost: 15.00, output_cost: 60.00, cached_cost: 0.0 },
-        "o1-mini" => ModelPricing { input_cost: 3.00, output_cost: 12.00, cached_cost: 0.0 },
-        "o3-mini" => ModelPricing { input_cost: 1.10, output_cost: 4.40, cached_cost: 0.0 },
+        "o1" | "o1-preview" => ModelPricing { input_cost: 15.00, output_cost: 60.00, cached_cost: 7.50 },
+        "o1-mini" => ModelPricing { input_cost: 3.00, output_cost: 12.00, cached_cost: 1.50 },
+        "o3-mini" => ModelPricing { input_cost: 1.10, output_cost: 4.40, cached_cost: 0.55 },
+        // DeepSeek family
+        "deepseek-chat" | "deepseek-v3" => ModelPricing { input_cost: 0.14, output_cost: 0.28, cached_cost: 0.014 },
+        "deepseek-reasoner" | "deepseek-r1" => ModelPricing { input_cost: 0.55, output_cost: 2.19, cached_cost: 0.14 },
+        // Meta Llama 3/3.1/3.2/3.3 family via typical API providers
+        "llama-3.3-70b-versatile" | "llama-3.1-8b-instant" | "llama3-8b-8192" => ModelPricing { input_cost: 0.05, output_cost: 0.08, cached_cost: 0.0 },
+        "llama-3.1-70b-versatile" | "llama3-70b-8192" => ModelPricing { input_cost: 0.15, output_cost: 0.20, cached_cost: 0.0 },
+        "llama-3.1-405b-reasoning" => ModelPricing { input_cost: 2.70, output_cost: 2.70, cached_cost: 0.0 },
         // Google — Gemini 1.5 family
         "gemini-1.5-pro" => ModelPricing { input_cost: 3.50, output_cost: 10.50, cached_cost: 0.0 },
         "gemini-1.5-flash" => ModelPricing { input_cost: 0.35, output_cost: 1.05, cached_cost: 0.0 },
