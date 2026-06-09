@@ -247,6 +247,13 @@
           }
       });
 
+      toneSelect.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+              e.preventDefault();
+              nextBtn.click();
+          }
+      });
+
       toneSelect.addEventListener('change', () => {
           if (toneSelect.value) {
               toneError.style.display = 'none';
