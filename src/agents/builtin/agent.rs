@@ -1465,7 +1465,7 @@ impl Agent {
 
         // Phase 1: Planning
         let planner_instructions = format!(
-            "You are an expert planner. Create a strict JSON plan to solve the user's task using the available tools.\nYour output MUST be a valid JSON array of objects, where each object has:\n- `tool`: the exact name of the tool\n- `args`: a JSON object containing the arguments for the tool\n\nAvailable tools:\n{}\n\nReturn ONLY the JSON array. Do not include markdown formatting or any other text.",
+            "You are an expert planner. Your job is to create a parallelizable execution plan to solve the user's request.\nGenerate a strict JSON object with a `tasks` array. Each task must have a unique `task_id` (string), a `tool_name` (string), `arguments` (JSON object), and an optional list of `dependencies` (array of other task_ids that must complete before this one).\nIf an argument depends on the output of a previous task, use the syntax `${{task_id}}` in the arguments.\n\nAvailable tools:\n{}\n\nReturn ONLY the JSON object. Do not include markdown formatting or any other text.",
             serde_json::to_string_pretty(&self.tools.iter().map(|t| crate::types::ToolDefinition {
                 name: t.name.clone(),
                 description: t.description.clone(),
@@ -1504,7 +1504,7 @@ impl Agent {
 
         on_event(AgentEvent::RunStarted { iteration: 1 });
 
-        let plan: Vec<serde_json::Value> = match serde_json::from_str(plan_json_text) {
+        let plan: serde_json::Value = match serde_json::from_str(plan_json_text) {
             Ok(p) => p,
             Err(_e) => {
                 // We fallback to standard output parser if initial parse fails.
@@ -1523,54 +1523,199 @@ impl Agent {
 
                 let wrapper = std::sync::Arc::new(AgentLlmClientWrapper { llm: self.llm.clone() });
 
-                match crate::output_parser::parse_structured_output::<Vec<serde_json::Value>>(&(wrapper as std::sync::Arc<dyn crate::output_parser::LlmClientForParser>), plan_req, 3).await {
+                match crate::output_parser::parse_structured_output::<serde_json::Value>(&(wrapper as std::sync::Arc<dyn crate::output_parser::LlmClientForParser>), plan_req, 3).await {
                     Ok(p) => p,
-                    Err(e) => return Err(format!("Failed to parse planner output as JSON array after retries. Last error: {}", e).into()),
+                    Err(e) => return Err(format!("Failed to parse planner output as JSON object after retries. Last error: {}", e).into()),
                 }
             }
         };
 
-        // Phase 2: Execution
+        // Phase 2: Execution (LLMCompiler DAG Mechanism)
         let mut executed_steps = Vec::new();
+        let mut results_map: std::collections::HashMap<String, String> = std::collections::HashMap::new();
 
-        let mut read_only_calls = vec![];
-        let mut mutating_calls = vec![];
+        let tasks_array = if plan.is_array() {
+            plan.as_array().cloned().unwrap_or_default()
+        } else if let Some(t) = plan.get("tasks").and_then(|v| v.as_array()) {
+            t.clone()
+        } else {
+            vec![]
+        };
 
-        for (i, step) in plan.into_iter().enumerate() {
-            let tool_name = step.get("tool").and_then(|v| v.as_str()).unwrap_or("");
-            let args = step.get("args").unwrap_or(&serde_json::Value::Null);
+        let mut tasks_to_run = tasks_array;
+        let mut loop_counter = 0;
 
-            let dummy_tc = ToolCall {
-                id: format!("plan_step_{}", i),
-                name: tool_name.to_string(),
-                arguments: args.clone(),
-            };
-
-            let is_read_only = session_tools.iter().find(|t| t.name == dummy_tc.name).map(|t| t.is_read_only).unwrap_or(false);
-            if is_read_only {
-                read_only_calls.push((i, dummy_tc));
-            } else {
-                mutating_calls.push((i, dummy_tc));
+        loop {
+            if tasks_to_run.is_empty() {
+                break;
             }
-        }
-
-        let mut read_only_futures = Vec::new();
-        for (_, tc) in &read_only_calls {
-            let tc_clone = tc.clone();
-            let session_tools_clone = session_tools.to_vec();
-            let max_retries = cfg.max_retries;
-
-            let is_read_only = session_tools_clone.iter().find(|t| t.name == tc_clone.name).map(|t| t.is_read_only).unwrap_or(false);
-            if let Err(e) = crate::tools_gating::ToolGater::check_gating(&tc_clone, is_read_only, cfg) {
-                 return Err(Box::new(e));
+            loop_counter += 1;
+            if loop_counter > 50 {
+                return Err("Deadlock detected in DAG execution loop (exceeded 50 iterations)".into());
             }
 
-            read_only_futures.push(async move {
+            let mut ready_tasks = Vec::new();
+            let mut remaining_tasks = Vec::new();
+
+            for task in tasks_to_run {
+                let deps = task.get("dependencies").and_then(|v| v.as_array()).cloned().unwrap_or_default();
+                let mut all_deps_met = true;
+                for dep_val in deps {
+                    if let Some(dep_str) = dep_val.as_str() {
+                        if !results_map.contains_key(dep_str) {
+                            all_deps_met = false;
+                            break;
+                        }
+                    }
+                }
+
+                if all_deps_met {
+                    ready_tasks.push(task);
+                } else {
+                    remaining_tasks.push(task);
+                }
+            }
+
+            if ready_tasks.is_empty() && !remaining_tasks.is_empty() {
+                return Err("Deadlock detected: unresolved dependencies in plan".into());
+            }
+
+            fn replace_in_json(value: &mut serde_json::Value, results: &std::collections::HashMap<String, String>) {
+                match value {
+                    serde_json::Value::String(s) => {
+                        let mut new_s = s.clone();
+                        for (k, v) in results.iter() {
+                            new_s = new_s.replace(&format!("${{{}}}", k), v);
+                        }
+                        *s = new_s;
+                    }
+                    serde_json::Value::Array(arr) => {
+                        for item in arr {
+                            replace_in_json(item, results);
+                        }
+                    }
+                    serde_json::Value::Object(obj) => {
+                        for (_, val) in obj.iter_mut() {
+                            replace_in_json(val, results);
+                        }
+                    }
+                    _ => {}
+                }
+            }
+
+            let mut read_only_tasks = Vec::new();
+            let mut mutating_tasks = Vec::new();
+
+            for task in ready_tasks {
+                let tool_name = task.get("tool_name").or_else(|| task.get("tool")).and_then(|v| v.as_str()).unwrap_or("").to_string();
+                let task_id = task.get("task_id").and_then(|v| v.as_str()).unwrap_or(&format!("temp_{}", uuid::Uuid::new_v4().simple())).to_string();
+                let mut args = task.get("arguments").or_else(|| task.get("args")).cloned().unwrap_or(serde_json::Value::Null);
+
+                replace_in_json(&mut args, &results_map);
+
+                let dummy_tc = ToolCall {
+                    id: task_id.clone(),
+                    name: tool_name.clone(),
+                    arguments: args.clone(),
+                };
+
+                let is_read_only = session_tools.iter().find(|t| t.name == tool_name).map(|t| t.is_read_only).unwrap_or(false);
+                if is_read_only {
+                    read_only_tasks.push((task_id, dummy_tc));
+                } else {
+                    mutating_tasks.push((task_id, dummy_tc));
+                }
+            }
+
+            // Run read-only tools concurrently
+            let mut ro_futures = Vec::new();
+            for (task_id, tc) in &read_only_tasks {
+                let tc_clone = tc.clone();
+                let task_id_clone = task_id.clone();
+                let session_tools_clone = session_tools.to_vec();
+                let max_retries = cfg.max_retries;
+
+                let is_read_only = session_tools_clone.iter().find(|t| t.name == tc_clone.name).map(|t| t.is_read_only).unwrap_or(false);
+                if let Err(e) = crate::tools_gating::ToolGater::check_gating(&tc_clone, is_read_only, cfg) {
+                     return Err(Box::new(e));
+                }
+
+                ro_futures.push(async move {
+                    let mut retry_count = 0;
+                    let current_tc = tc_clone.clone();
+                    loop {
+                        match self.execute_tool(&current_tc, &session_tools_clone, &[], max_retries).await {
+                            Ok(res) => break Ok((task_id_clone, res)),
+                            Err(crate::types::ToolError::Unexpected(msg)) => {
+                                if retry_count < max_retries {
+                                    retry_count += 1;
+                                    let backoff = std::time::Duration::from_millis(500 * (1 << retry_count));
+                                    tokio::time::sleep(backoff).await;
+                                    continue;
+                                } else {
+                                    break Ok((task_id_clone, format!("Error executing planned step: Transient error after retries: {}", msg)));
+                                }
+                            }
+                            Err(crate::types::ToolError::LlmRecoverable(msg)) => {
+                                let self_correct_msg = format!("LLM-Recoverable Error: {}. Please analyze this error, correct your tool arguments, and try again.", msg);
+                                break Ok((task_id_clone, self_correct_msg));
+                            }
+                            Err(e) => break Err(e),
+                        }
+                    }
+                });
+            }
+
+            let ro_results = futures::future::join_all(ro_futures).await;
+            for (idx, (task_id, tc)) in read_only_tasks.into_iter().enumerate() {
+                on_event(AgentEvent::ToolCall {
+                    name: tc.name.clone(),
+                    args_json: tc.arguments.to_string(),
+                    result: "Executing planned step...".to_string(),
+                    iteration: loop_counter as i32,
+                });
+
+                let res = match &ro_results[idx] {
+                    Ok((_, r)) => r.clone(),
+                    Err(crate::types::ToolError::UserFixable(msg)) => {
+                        let err = format!("USER_FIXABLE: {}", msg);
+                        on_event(AgentEvent::UserInterventionRequired { error: err.clone() });
+                        return Err(err.into());
+                    }
+                    Err(e) => return Err(format!("Fatal tool error: {:?}", e).into()),
+                };
+
+                on_event(AgentEvent::ToolCall {
+                    name: tc.name.clone(),
+                    args_json: tc.arguments.to_string(),
+                    result: res.clone(),
+                    iteration: loop_counter as i32,
+                });
+
+                results_map.insert(task_id.clone(), res.clone());
+                executed_steps.push(format!("Task {}: Tool '{}' with args '{}' -> Result: '{}'", task_id, tc.name, tc.arguments, res));
+            }
+
+            // Run mutating tools serially
+            for (task_id, tc) in mutating_tasks {
+                on_event(AgentEvent::ToolCall {
+                    name: tc.name.clone(),
+                    args_json: tc.arguments.to_string(),
+                    result: "Executing planned step...".to_string(),
+                    iteration: loop_counter as i32,
+                });
+
+                let is_read_only = session_tools.iter().find(|t| t.name == tc.name).map(|t| t.is_read_only).unwrap_or(false);
+                if let Err(e) = crate::tools_gating::ToolGater::check_gating(&tc, is_read_only, cfg) {
+                     return Err(Box::new(e));
+                }
+
                 let mut retry_count = 0;
-                let current_tc = tc_clone.clone();
-                loop {
-                    match self.execute_tool(&current_tc, &session_tools_clone, &[], cfg.max_retries).await {
-                        Ok(res) => break Ok(res),
+                let max_retries = cfg.max_retries;
+                let current_tc = tc.clone();
+                let res = loop {
+                    match self.execute_tool(&current_tc, session_tools, &[], max_retries).await {
+                        Ok(r) => break r,
                         Err(crate::types::ToolError::Unexpected(msg)) => {
                             if retry_count < max_retries {
                                 retry_count += 1;
@@ -1578,158 +1723,34 @@ impl Agent {
                                 tokio::time::sleep(backoff).await;
                                 continue;
                             } else {
-                                break Ok(format!("Error executing planned step: Transient error after retries: {}", msg));
+                                break format!("Error executing planned step: Transient error after retries: {}", msg);
                             }
                         }
                         Err(crate::types::ToolError::LlmRecoverable(msg)) => {
-                            // Error Handling (Compounding Error Prevention): LLM-recoverable
-                            // (return the raw error as a ToolMessage directly to the model so it can self-correct)
-                            let self_correct_msg = format!("LLM-Recoverable Error: {}. Please analyze this error, correct your tool arguments, and try again.", msg);
-                            let error_result = crate::types::ToolResult {
-                                tool_call_id: current_tc.id.clone(),
-                                content: String::new(),
-                                error: self_correct_msg.clone(),
-                            };
-                            let _msg_to_push = crate::types::Message {
-                                role: crate::types::Role::Tool,
-                                content: String::new(),
-                                tool_calls: vec![],
-                                tool_results: vec![error_result],
-                                response_id: None,
-                                previous_response_id: None,
-                            };
-                            // NOTE: run_workflow context
-                            break Ok(self_correct_msg);
+                            break format!("LLM-Recoverable Error: {}. Please analyze this error, correct your tool arguments, and try again.", msg);
                         }
-                        Err(e) => {
-                            break Err(e);
+                        Err(crate::types::ToolError::UserFixable(msg)) => {
+                            let err = format!("USER_FIXABLE: {}", msg);
+                            on_event(AgentEvent::UserInterventionRequired { error: err.clone() });
+                            return Err(err.into());
                         }
+                        Err(e) => return Err(format!("Fatal tool error: {:?}", e).into()),
                     }
-                }
-            });
-        }
+                };
 
-        let results = futures::future::join_all(read_only_futures).await;
-        for (idx, (i, tc)) in read_only_calls.into_iter().enumerate() {
-            on_event(AgentEvent::ToolCall {
-                name: tc.name.clone(),
-                args_json: tc.arguments.to_string(),
-                result: "Executing planned step...".to_string(),
-                iteration: i as i32,
-            });
+                on_event(AgentEvent::ToolCall {
+                    name: tc.name.clone(),
+                    args_json: tc.arguments.to_string(),
+                    result: res.clone(),
+                    iteration: loop_counter as i32,
+                });
 
-            let res = match &results[idx] {
-                Ok(r) => r.clone(),
-                Err(crate::types::ToolError::UserFixable(msg)) => {
-                    let err = format!("USER_FIXABLE: {}", msg);
-                    on_event(AgentEvent::UserInterventionRequired { error: err.clone() });
-                    return Err(err.into());
-                }
-                Err(crate::types::ToolError::Fatal(msg)) => {
-                    return Err(format!("Fatal tool error: {}", msg).into());
-                }
-                Err(crate::types::ToolError::Unexpected(msg)) => {
-                    return Err(format!("Unexpected tool error: {}", msg).into());
-                }
-                Err(e) => {
-                    return Err(format!("Fatal tool error: {:?}", e).into());
-                }
-            };
-
-            on_event(AgentEvent::ToolCall {
-                name: tc.name.clone(),
-                args_json: tc.arguments.to_string(),
-                result: res.clone(),
-                iteration: i as i32,
-            });
-
-            executed_steps.push(format!("Step {}: Tool '{}' with args '{}' -> Result: '{}'", i, tc.name, tc.arguments, res));
-        }
-
-        // Execute mutating tools serially
-        for (i, tc) in mutating_calls {
-            on_event(AgentEvent::ToolCall {
-                name: tc.name.clone(),
-                args_json: tc.arguments.to_string(),
-                result: "Executing planned step...".to_string(),
-                iteration: i as i32,
-            });
-
-            let is_read_only = session_tools.iter().find(|t| t.name == tc.name).map(|t| t.is_read_only).unwrap_or(false);
-            if let Err(e) = crate::tools_gating::ToolGater::check_gating(&tc, is_read_only, cfg) {
-                 return Err(Box::new(e));
+                results_map.insert(task_id.clone(), res.clone());
+                executed_steps.push(format!("Task {}: Tool '{}' with args '{}' -> Result: '{}'", task_id, tc.name, tc.arguments, res));
             }
 
-            let mut retry_count = 0;
-            let max_retries = cfg.max_retries;
-            let current_tc = tc.clone();
-            let result = loop {
-                match self.execute_tool(&current_tc, session_tools, &[], cfg.max_retries).await {
-                    Ok(res) => break res,
-                    Err(crate::types::ToolError::Unexpected(msg)) => {
-                        if retry_count < max_retries {
-                            retry_count += 1;
-                            let backoff = std::time::Duration::from_millis(500 * (1 << retry_count));
-                            tokio::time::sleep(backoff).await;
-                            continue;
-                        } else {
-                            break format!("Error executing planned step: Transient error after retries: {}", msg);
-                        }
-                    }
-                    Err(crate::types::ToolError::LlmRecoverable(msg)) => {
-                        // Error Handling (Compounding Error Prevention): LLM-recoverable
-                        // (return the raw error as a ToolMessage directly to the model so it can self-correct)
-                        let self_correct_msg = format!("LLM-Recoverable Error: {}. Please analyze this error, correct your tool arguments, and try again.", msg);
-                        let error_result = crate::types::ToolResult {
-                            tool_call_id: current_tc.id.clone(),
-                            content: String::new(),
-                            error: self_correct_msg.clone(),
-                        };
-                        let _msg_to_push = crate::types::Message {
-                            role: crate::types::Role::Tool,
-                            content: String::new(),
-                            tool_calls: vec![],
-                            tool_results: vec![error_result],
-                            response_id: None,
-                            previous_response_id: None,
-                        };
-                        break self_correct_msg;
-                    }
-                    Err(crate::types::ToolError::UserFixable(msg)) => {
-                        let err = format!("USER_FIXABLE: {}", msg);
-                        on_event(AgentEvent::UserInterventionRequired { error: err.clone() });
-                        return Err(err.into());
-                    }
-                    Err(crate::types::ToolError::Fatal(msg)) => {
-                        return Err(format!("Fatal tool error: {}", msg).into());
-                    }
-                    Err(e) => {
-                        return Err(format!("Fatal tool error: {:?}", e).into());
-                    }
-                }
-            };
-
-            on_event(AgentEvent::ToolCall {
-                name: tc.name.clone(),
-                args_json: tc.arguments.to_string(),
-                result: result.clone(),
-                iteration: i as i32,
-            });
-
-            executed_steps.push(format!("Step {}: Tool '{}' with args '{}' -> Result: '{}'", i, tc.name, tc.arguments, result));
+            tasks_to_run = remaining_tasks;
         }
-
-        // Sort executed steps to restore plan order
-        executed_steps.sort_by_key(|s| {
-            if let Some(prefix) = s.strip_prefix("Step ") {
-                if let Some(colon_idx) = prefix.find(':') {
-                    if let Ok(idx) = prefix[..colon_idx].parse::<usize>() {
-                        return idx;
-                    }
-                }
-            }
-            usize::MAX
-        });
 
         // Phase 3: Replier
         let replier_instructions = "You are a helpful assistant. Formulate a final response to the user's initial task based on the execution of the planned steps. Do not attempt to use any further tools.".to_string();

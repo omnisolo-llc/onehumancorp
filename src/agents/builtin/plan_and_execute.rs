@@ -42,11 +42,12 @@ impl Planner {
         }
 
         let system_prompt = format!(
-            "You are a Planner agent. Your job is to create a parallelizable execution plan to solve the user's request. \
+            "You are a Planner agent. Your job is to create a parallelizable execution plan to solve the user's request.\n\
             Available tools:\n{}\n\
-            Generate an ExecutionPlan with a list of tasks. Each task must have a unique `task_id`, a `tool_name`, \
-            `arguments`, and an optional list of `dependencies` (other task_ids that must complete before this one). \
-            If an argument depends on the output of a previous task, use the syntax `${{task_id}}` in the arguments.",
+            Generate a JSON object with a `tasks` array. Each task must have a unique `task_id` (string), a `tool_name` (string), \
+            `arguments` (JSON object), and an optional list of `dependencies` (array of strings, other task_ids that must complete before this one). \
+            If an argument depends on the output of a previous task, use the syntax `${{task_id}}` in the arguments.\n\
+            Return ONLY the valid JSON object. Do not output markdown.",
             tool_descriptions
         );
 
