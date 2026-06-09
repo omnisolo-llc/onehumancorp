@@ -10,11 +10,14 @@ export default function HelpCenterPage() {
   const [selectedVideo, setSelectedVideo] = useState<{id: number, title: string, duration: string, video_url: string} | null>(null);
 
   useEffect(() => {
-    const url = searchQuery.trim() ? `/api/help/search?q=${encodeURIComponent(searchQuery.trim())}` : '/api/help';
-    fetch(url)
-      .then(res => res.json())
-      .then(data => setArticles(data))
-      .catch(console.error);
+    const timeoutId = setTimeout(() => {
+      const url = searchQuery.trim() ? `/api/help/search?q=${encodeURIComponent(searchQuery.trim())}` : '/api/help';
+      fetch(url)
+        .then(res => res.json())
+        .then(data => setArticles(data))
+        .catch(console.error);
+    }, 300);
+    return () => clearTimeout(timeoutId);
   }, [searchQuery]);
 
   useEffect(() => {
