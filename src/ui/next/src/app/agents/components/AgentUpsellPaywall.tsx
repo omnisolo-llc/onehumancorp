@@ -45,7 +45,7 @@ export function AgentUpsellPaywall({ onClose, onSuccess }: AgentUpsellPaywallPro
       <div className="w-full max-w-md overflow-hidden relative shadow-2xl p-6 rounded-[20px]"
            style={{
              background: "rgba(255, 255, 255, 0.95)",
-             backdropFilter: "blur(40px) saturate(200%)",
+             backdropFilter: "blur(30px) saturate(210%)",
              border: "1px solid rgba(255, 255, 255, 0.6)",
            }}>
 

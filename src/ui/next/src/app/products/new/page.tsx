@@ -268,7 +268,7 @@ function AutoCatalogContent() {
            <div className="p-5 rounded-[16px] shadow-lg flex flex-col gap-4 relative overflow-hidden"
                 style={{
                    background: 'rgba(255, 255, 255, 0.65)',
-                   backdropFilter: 'blur(20px) saturate(200%)',
+                   backdropFilter: 'blur(30px) saturate(210%)',
                    border: '1px solid rgba(255, 255, 255, 0.4)'
                 }}>
               <div className="absolute top-2 right-2 px-2 py-1 bg-gradient-to-r from-blue-500 to-purple-500 text-white text-[10px] font-bold rounded-full uppercase tracking-wider shadow-sm flex items-center gap-1">

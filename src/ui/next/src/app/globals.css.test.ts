@@ -18,6 +18,9 @@ describe('Global CSS Standards', () => {
            const content = fs.readFileSync(globalsPath, 'utf8');
            expect(content).toContain('blur(30px) saturate(210%)');
            expect(content).not.toContain('blur(20px) saturate(200%)');
+           expect(content).not.toContain('blur(20px)');
+           expect(content).not.toContain('blur(40px)');
+           expect(content).not.toContain('saturate(200%)');
        }
     } catch (e) {
        // Ignore if not found

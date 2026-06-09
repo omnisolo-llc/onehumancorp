@@ -57,7 +57,7 @@ export default function BookingWidgetBuilder() {
 
         {/* Configuration Panel */}
         <div className="w-full md:w-1/3 flex flex-col gap-6">
-            <div className="p-6 rounded-[24px]" style={{ background: 'rgba(255,255,255,0.8)', backdropFilter: 'blur(20px)', border: '1px solid rgba(255,255,255,0.5)', boxShadow: '0 4px 24px rgba(0,0,0,0.04)' }}>
+            <div className="p-6 rounded-[24px]" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', boxShadow: '0 4px 24px rgba(0,0,0,0.04)' }}>
                 <h2 className="text-lg font-bold font-outfit mb-6">Widget Settings</h2>
 
                 <div className="mb-6">
@@ -123,7 +123,7 @@ export default function BookingWidgetBuilder() {
                 </button>
             </div>
 
-            <div className="p-6 rounded-[20px]" style={{ background: 'rgba(255,255,255,0.8)', backdropFilter: 'blur(20px)', border: '1px solid rgba(255,255,255,0.5)', boxShadow: '0 4px 24px rgba(0,0,0,0.04)' }}>
+            <div className="p-6 rounded-[20px]" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', boxShadow: '0 4px 24px rgba(0,0,0,0.04)' }}>
                 <h3 className="text-md font-semibold font-outfit mb-2 flex items-center gap-2">
                     <span className="text-xl">📅</span> Why embed?
                 </h3>
@@ -136,7 +136,7 @@ export default function BookingWidgetBuilder() {
         {/* Live Preview */}
         <div className="w-full md:w-2/3 flex flex-col items-center">
             <h2 className="text-xl font-semibold font-outfit self-start mb-4" style={{ color: '#1D1D1F' }}>Live Preview</h2>
-            <div className="w-full p-8 rounded-[24px] h-full flex flex-col items-center justify-center relative overflow-hidden" style={{ background: 'linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%)', border: '1px solid rgba(255,255,255,0.5)' }}>
+            <div className="w-full p-8 rounded-[24px] h-full flex flex-col items-center justify-center relative overflow-hidden" style={{ background: 'linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%)', border: '1px solid rgba(255, 255, 255, 0.4)' }}>
 
                 <div className="relative z-10 w-[320px] h-[400px]" style={{ ...getThemeStyles(), borderRadius: '16px', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)' }}>
                     {/* Mock Widget Content for Preview */}
