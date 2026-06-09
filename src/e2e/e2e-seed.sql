@@ -16,6 +16,7 @@ ALTER TABLE IF EXISTS bookings DISABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS agents DISABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS ohc_staff_member DISABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS users DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS business_milestones DISABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS tenants DISABLE ROW LEVEL SECURITY;
 
 INSERT INTO tenants (id, name, industry, tier)
@@ -33,7 +34,14 @@ ALTER TABLE IF EXISTS ledger_accounts DISABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS ledger_transactions DISABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS ledger_entries DISABLE ROW LEVEL SECURITY;
 
+
+-- Seed Milestones
+INSERT INTO business_milestones (id, tenant_id, milestone_type, reached_at)
+VALUES ('m-1', 'e2e-tenant', '10th_order', CURRENT_TIMESTAMP)
+ON CONFLICT DO NOTHING;
+
 -- Seed Ledger Data
+
 INSERT INTO ledger_accounts (id, tenant_id, name, type, balance, currency, created_at, updated_at)
 VALUES ('acct-1', 'e2e-tenant', 'main', 'asset', 1500.00, 'USD', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
 ON CONFLICT (id) DO UPDATE
@@ -238,6 +246,7 @@ ON CONFLICT DO NOTHING;
 
 ALTER TABLE IF EXISTS tenants ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS business_milestones ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS agents ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS ohc_staff_member ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS products ENABLE ROW LEVEL SECURITY;
@@ -255,6 +264,7 @@ ALTER TABLE IF EXISTS bookings ENABLE ROW LEVEL SECURITY;
 
 ALTER TABLE IF EXISTS tenants FORCE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS users FORCE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS business_milestones FORCE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS agents FORCE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS ohc_staff_member FORCE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS products FORCE ROW LEVEL SECURITY;
@@ -337,4 +347,9 @@ INSERT INTO triage_proposed_actions (id, triage_item_id, tenant_id, action_type,
 VALUES
   ('action-test-1', 'triage-test-1', 'test-tenant', 'Draft Reply', 'Hi Maya! I can definitely help with the custom cake. It will be $50.'),
   ('action-test-2', 'triage-test-2', 'test-tenant', 'Draft Reply', 'We deliver between 9 AM and 5 PM on weekdays.')
+ON CONFLICT (id) DO NOTHING;
+
+-- Seed 10th order milestone for e2e-tenant
+INSERT INTO business_milestones (id, tenant_id, milestone_type, reached_at)
+VALUES ('ms_e2e_10th_order', 'e2e-tenant', '10th_order', NOW())
 ON CONFLICT (id) DO NOTHING;

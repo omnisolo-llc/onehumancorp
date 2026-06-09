@@ -1,6 +1,5 @@
 use crate::orchestration::departments::orchestrator::{BaseAgent, AgentTriggerType, DepartmentOrchestrator, Department};
 use crate::orchestration::departments::types::{DepartmentType, DepartmentEvent, DepartmentConfig, ApprovalRequest, ActionRisk};
-use serde_json::Value;
 
 pub struct BusinessAdvisoryAgent {
     orchestrator: std::sync::Arc<DepartmentOrchestrator>,
@@ -115,8 +114,6 @@ impl Department for BusinessAdvisoryAgent {
         None
     }
 
-    fn set_config(&mut self, _tenant_id: String, _config: DepartmentConfig) {
-    }
 
     async fn query_memory(&self, _query: &str) -> Result<Vec<String>, String> {
         Ok(vec![])
@@ -137,7 +134,7 @@ impl BaseAgent for BusinessAdvisoryAgent {
         AgentTriggerType::Scheduled
     }
 
-    async fn execute(&self, payload: Value) -> Result<(), String> {
+    async fn execute(&self, payload: serde_json::Value) -> Result<(), String> {
         // If triggered as a CRON job for inventory analysis
         if payload.get("action").and_then(|v| v.as_str()) == Some("analyze_stagnant_inventory") {
             let tenant_id = payload.get("tenant_id").and_then(|v| v.as_str()).unwrap_or("system");

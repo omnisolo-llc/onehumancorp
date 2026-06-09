@@ -44,12 +44,16 @@ test.describe('Help Center', () => {
         // Search for an article that matches My Store
         const searchInput = page.getByPlaceholder('Search for help articles and videos...');
 
-        await Promise.all([
-            page.waitForResponse(response => response.url().includes("/api/help/search") && response.status() === 200),
-            searchInput.fill('My Store')
-        ]);
+        const responsePromise = page.waitForResponse(response =>
+            response.url().includes("/api/help/search") &&
+            (response.status() === 200 || response.status() === 304)
+        );
+        await searchInput.fill('My Store');
+        await responsePromise;
 
-        // Wait for UI to update
+        // Wait for UI to update (non-matching articles should disappear)
+        await expect(page.locator('a[href="/help/getting-started-1"]')).not.toBeVisible({ timeout: 10000 });
+
         const articleLink = page.locator('a[href="/help/my-store"]');
         await expect(articleLink).toBeVisible({ timeout: 10000 });
     });

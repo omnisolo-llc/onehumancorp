@@ -1246,22 +1246,33 @@ impl HubService for MyHubService {
 
         let hub_clone = self.hub.clone();
 
-        let tenant_id_clone_2 = tenant_id.clone();
-        let (costs_res, storage_bytes_res) = tokio::join!(
-            tokio::task::spawn_blocking(move || {
-                let llm = auditor.get_tenant_cost(&tenant_id_clone_2);
-                let rev = auditor.get_tenant_revenue(&tenant_id_clone_2);
-                let fees = auditor.get_tenant_payment_fees(&tenant_id_clone_2);
-                let bw_savings = auditor.get_tenant_bandwidth_savings(&tenant_id_clone_2);
-                let network_cost = auditor.get_tenant_network_cost(&tenant_id_clone_2);
-                (llm, rev, fees, bw_savings, network_cost)
-            }),
+        let t1 = tenant_id.clone();
+        let t2 = tenant_id.clone();
+        let t3 = tenant_id.clone();
+        let t4 = tenant_id.clone();
+        let t5 = tenant_id.clone();
+        let a1 = auditor.clone();
+        let a2 = auditor.clone();
+        let a3 = auditor.clone();
+        let a4 = auditor.clone();
+        let a5 = auditor.clone();
+
+        let (llm_res, rev_res, fees_res, bw_res, net_res, storage_bytes_res) = tokio::join!(
+            tokio::task::spawn_blocking(move || a1.get_tenant_cost(&t1)),
+            tokio::task::spawn_blocking(move || a2.get_tenant_revenue(&t2)),
+            tokio::task::spawn_blocking(move || a3.get_tenant_payment_fees(&t3)),
+            tokio::task::spawn_blocking(move || a4.get_tenant_bandwidth_savings(&t4)),
+            tokio::task::spawn_blocking(move || a5.get_tenant_network_cost(&t5)),
             async move {
                 hub_clone.tracker().get_tenant_storage_used(&tenant_id_clone).await
             }
         );
 
-        let (llm_cost_f64, total_revenue_f64, payment_fees_f64, bandwidth_savings_f64, network_cost_f64) = costs_res.unwrap_or((0.0, 0.0, 0.0, 0.0, 0.0));
+        let llm_cost_f64 = llm_res.unwrap_or(0.0);
+        let total_revenue_f64 = rev_res.unwrap_or(0.0);
+        let payment_fees_f64 = fees_res.unwrap_or(0.0);
+        let bandwidth_savings_f64 = bw_res.unwrap_or(0.0);
+        let network_cost_f64 = net_res.unwrap_or(0.0);
         let storage_bytes = storage_bytes_res.unwrap_or(0);
         let storage_gb = storage_bytes as f64 / (1024.0 * 1024.0 * 1024.0);
         let storage_cost_f64 = storage_gb * 0.10; // $0.10 per GB
@@ -3077,7 +3088,7 @@ async fn load_ui_ledger_from_db(db: &crate::db::DB, tenant_id: &str) -> Result<V
     let limit_ledger = 50i64;
     match &db.store {
         crate::db::DbStore::Postgres => {
-            sqlx::query("SELECT id, tenant_id, event_type, department, payload, created_at FROM ohc_ledger WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT $2")
+            sqlx::query("SELECT id, tenant_id, event_type, department, payload, created_at FROM ohc_universal_ledger WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT $2")
                 .bind(tenant_id)
                 .bind(limit_ledger)
                 .fetch_all(&db.pool)
@@ -3091,7 +3102,7 @@ async fn load_ui_ledger_from_db(db: &crate::db::DB, tenant_id: &str) -> Result<V
                 })).collect())
         },
         crate::db::DbStore::Sqlite(pool) => {
-            sqlx::query("SELECT id, tenant_id, event_type, department, payload, created_at FROM ohc_ledger WHERE tenant_id = ? ORDER BY created_at DESC LIMIT ?")
+            sqlx::query("SELECT id, tenant_id, event_type, department, payload, created_at FROM ohc_universal_ledger WHERE tenant_id = ? ORDER BY created_at DESC LIMIT ?")
                 .bind(tenant_id)
                 .bind(limit_ledger)
                 .fetch_all(pool)
@@ -4365,6 +4376,15 @@ async fn create_ui_bom_item_handler(
             }
         });
     }
+
+    // Start Temp File Cleanup Background Task
+    tokio::spawn(async move {
+        let mut interval = tokio::time::interval(std::time::Duration::from_secs(3600));
+        loop {
+            interval.tick().await;
+            crate::utils::fs::cleanup_stale_temp_files();
+        }
+    });
 
     // Start Scheduler Background Task
     let hub_for_sched = hub.clone();
