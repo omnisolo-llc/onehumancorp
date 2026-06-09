@@ -298,6 +298,9 @@ export default function OnboardingWizard() {
       setBusinessName(intakeData.business_name || 'My Business');
       setFirstProductName(intakeData.initial_products?.[0]?.name || 'First Product');
       setFirstProductPrice(intakeData.initial_products?.[0]?.price || '10.00');
+      if (intakeData.initial_products) {
+          localStorage.setItem('onboarding_initial_products', JSON.stringify(intakeData.initial_products));
+      }
       const mappedCategories = intakeData.categories || ['physical'];
       setCategories(mappedCategories);
 
@@ -539,7 +542,8 @@ export default function OnboardingWizard() {
                             price_type: 'physical',
                             location: inferredLocation,
                             ai_agents: ['Operations', 'Marketing', 'Finance', 'Legal', 'Advisory'],
-                            auto_respond: true
+                            auto_respond: true,
+                            initial_products: data.initial_products || []
                           })
                         });
 

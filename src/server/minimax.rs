@@ -130,7 +130,7 @@ impl MinimaxClient {
                     "business_name": "Maya's Cakes",
                     "business_type": "Bakery",
                     "categories": ["food", "physical"],
-                    "initial_products": [{"name": "Custom Vegan Cake", "price": "45.00"}],
+                    "initial_products": [{"name": "Custom Vegan Cake", "price": "45.00", "variants": [{"name": "6-inch", "price_modifier": "0.00"}, {"name": "8-inch", "price_modifier": "15.00"}]}],
                     "suggested_features": ["menu", "booking", "online_store"]
                 }"#.to_string());
             } else if lower_prompt.contains("alex") || lower_prompt.contains("art shop") {
