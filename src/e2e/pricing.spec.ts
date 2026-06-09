@@ -14,11 +14,19 @@ test.describe('Pricing Page', () => {
     await expect(page.locator('h3', { hasText: 'Business' })).toBeVisible();
   });
 
-  test('should verify Back to Dashboard button functions', async ({ page }) => {
+  test('should verify Back button functions', async ({ page }) => {
     await page.goto('/pricing');
-    const backButton = page.locator('button', { hasText: 'Back to Dashboard' });
+    const backButton = page.locator('button', { hasText: 'Back' });
     await expect(backButton).toBeVisible();
     await backButton.click();
     await expect(page.url()).toContain('/dashboard');
+  });
+
+  test('should verify upgrade button routes to checkout', async ({ page }) => {
+    await page.goto('/pricing');
+    const upgradeButton = page.locator('button', { hasText: 'Upgrade to Starter via Stripe' });
+    await expect(upgradeButton).toBeVisible();
+    await upgradeButton.click();
+    await expect(page.url()).toContain('/checkout?tier=Starter');
   });
 });

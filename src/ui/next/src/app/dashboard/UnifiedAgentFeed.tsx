@@ -272,7 +272,7 @@ export function UnifiedAgentFeed() {
                   <h3 className="text-lg font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] leading-snug mt-1">
                     {approval.description}
                   </h3>
-                  {(approval.payload?.context || approval.payload?.remaining_stock !== undefined || approval.payload?.feature_type === "quote_draft") && (
+                  {(approval.payload?.context || approval.payload?.remaining_stock !== undefined || approval.payload?.feature_type === "quote_draft" || approval.payload?.feature_type === "social_post_draft") && (
                     <div className="mt-2 flex flex-col gap-1 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
                       {approval.payload?.feature_type === "quote_draft" && (
                         <div className="mb-4 p-4 rounded-xl bg-blue-50/50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/30 flex flex-col gap-3" data-testid="draft-quote-card">
@@ -304,7 +304,20 @@ export function UnifiedAgentFeed() {
                           </div>
                         </div>
                       )}
-                      {approval.payload?.feature_type === 'stockout_restock_and_price' ? (
+                      {approval.payload?.feature_type === 'social_post_draft' ? (
+                        <div className="flex flex-col gap-3">
+                          <div className="flex justify-between items-center text-sm">
+                            <span className="text-gray-500 dark:text-gray-400 font-semibold">New product detected!</span>
+                            <span className="text-pink-500 font-bold text-xs">Schedule a post?</span>
+                          </div>
+                          <div className="app-card dark:bg-gray-800 p-3 rounded-lg border border-pink-100 dark:border-pink-900/50">
+                            <div className="text-[10px] uppercase font-bold text-gray-400 mb-2 flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-pink-500"></span> Instagram / TikTok Draft</div>
+                            <div className="text-xs text-gray-700 dark:text-gray-300 italic line-clamp-3">
+                                "{approval.payload.instagram || approval.payload.tiktok || 'Check out our new product!'}"
+                            </div>
+                          </div>
+                        </div>
+                      ) : approval.payload?.feature_type === 'stockout_restock_and_price' ? (
                         <>
                           <div className="flex justify-between items-center text-sm mb-1">
                             <span className="text-gray-500 dark:text-gray-400">Current Price:</span>
@@ -421,7 +434,26 @@ export function UnifiedAgentFeed() {
                 </div>
 
                 <div className="flex flex-col gap-3 w-full mt-2">
-                  {approval.payload?.feature_type === 'stockout_restock_and_price' ? (
+                  {approval.payload?.feature_type === 'social_post_draft' ? (
+                    <div className="flex flex-col sm:flex-row gap-3 w-full">
+                      <button
+                        onClick={() => handleDecision(approval.id, true)}
+                        className="flex-1 min-h-[44px] px-4 rounded-[8px] bg-gradient-to-r from-pink-500 to-indigo-500 text-white font-medium hover:from-pink-600 hover:to-indigo-600 transition-colors shadow-md flex items-center justify-center"
+                        aria-label="Approve & Schedule"
+                        data-testid="approve-social-post"
+                      >
+                        Approve & Schedule
+                      </button>
+                      <button
+                        onClick={() => handleDecision(approval.id, false)}
+                        className="flex-1 min-h-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex items-center justify-center"
+                        aria-label="Dismiss proposal"
+                        data-testid="dismiss-social-post"
+                      >
+                        Dismiss
+                      </button>
+                    </div>
+                  ) : approval.payload?.feature_type === 'stockout_restock_and_price' ? (
                     <div className="flex flex-col sm:flex-row gap-3 w-full">
                       <button
                         onClick={() => handleDecision(approval.id, true)}
@@ -450,14 +482,14 @@ export function UnifiedAgentFeed() {
                       >
                         Approve & Send Proposal
                       </button>
-                      <button
-                        onClick={() => handleDecision(approval.id, false)}
+                      <a
+                        href={`/quoting?id=${approval.id}`}
                         className="flex-1 min-h-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex items-center justify-center"
                         aria-label="Edit Draft"
                         data-testid="edit-quote-draft"
                       >
                         Edit Draft
-                      </button>
+                      </a>
                     </div>
                   ) : approval.payload?.context?.smart_pricing === true ? (
                     <div className="flex flex-col sm:flex-row gap-3 w-full">
@@ -526,14 +558,14 @@ export function UnifiedAgentFeed() {
                         Approve & Send Proposal
                       </button>
                       <div className="flex flex-col sm:flex-row gap-3 w-full">
-                        <button
-                          onClick={() => {}}
+                        <a
+                          href={`/quoting?id=${approval.id}`}
                           className="flex-1 min-h-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex items-center justify-center"
                           aria-label="Edit Draft"
                           data-testid="edit-proposal"
                         >
                           Edit Draft
-                        </button>
+                        </a>
                         <button
                           onClick={() => handleDecision(approval.id, false)}
                           className="flex-1 min-h-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex items-center justify-center"
