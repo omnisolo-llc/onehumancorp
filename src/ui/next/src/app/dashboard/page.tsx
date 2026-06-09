@@ -128,6 +128,7 @@ export default function Dashboard() {
   const [actionMessage, setActionMessage] = useState("");
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncErrorCount, setSyncErrorCount] = useState(0);
+  const [approvals, setApprovals] = useState<any[]>([]);
   const [activeDepartments, setActiveDepartments] = useState<string[]>([]);
 
   useEffect(() => {
