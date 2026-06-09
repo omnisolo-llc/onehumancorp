@@ -158,13 +158,7 @@ async fn process_omnichannel_message(state: &MetaWebhookState, tenant_id: String
         }
     };
 
-    let draft_reply = match generate_inbox_draft_reply(&tenant_id, &source, &translation).await {
-        Ok(d) => d,
-        Err(e) => {
-            tracing::error!("Failed to generate draft reply: {}", e);
-            "Thanks for reaching out! We will review this and get back to you soon.".to_string()
-        }
-    };
+
 
     let inbox_id = Uuid::new_v4().to_string();
     let pool = &state.db.pool;
@@ -181,7 +175,7 @@ async fn process_omnichannel_message(state: &MetaWebhookState, tenant_id: String
             .bind(&translation.translated_content)
             .bind(&translation.source_language)
             .bind(&translation.target_language)
-            .bind(&draft_reply)
+            .bind("")
             .execute(pool)
             .await.map(|_| ())
         },
@@ -196,7 +190,7 @@ async fn process_omnichannel_message(state: &MetaWebhookState, tenant_id: String
             .bind(&translation.translated_content)
             .bind(&translation.source_language)
             .bind(&translation.target_language)
-            .bind(&draft_reply)
+            .bind("")
             .execute(sqlite_pool)
             .await.map(|_| ())
         }
@@ -206,21 +200,7 @@ async fn process_omnichannel_message(state: &MetaWebhookState, tenant_id: String
         tracing::error!("Failed to insert omni_inbox_messages: {}", e);
     }
 
-    let _ = state.orchestrator.execute_action(
-        DepartmentType::CustomerSuccess,
-        format!("New {} message from {} (Language: {:?})", source, tenant_id, translation.source_language),
-        tenant_id.clone(),
-        ActionRisk::DraftForReview,
-        serde_json::json!({
-            "source": source.clone(),
-            "message": translation.translated_content.clone(),
-            "original_content": translation.original_content.clone(),
-            "translated_from_language": translation.source_language.clone(),
-            "draft_reply": draft_reply.clone(),
-            "inbox_message_id": inbox_id.clone(),
-            "sender_id": sender_id.clone(),
-        }),
-    ).await;
+
 
     let event = crate::orchestration::departments::types::DepartmentEvent {
         id: Uuid::new_v4().to_string(),
@@ -231,8 +211,6 @@ async fn process_omnichannel_message(state: &MetaWebhookState, tenant_id: String
             "message": translation.translated_content,
             "original_message": translation.original_content,
             "translated_from_language": translation.source_language,
-            "generated_response": draft_reply,
-            "feature_type": "ambassador_reply",
             "sender_id": sender_id,
             "inbox_message_id": inbox_id,
         }),

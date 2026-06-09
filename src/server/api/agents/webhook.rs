@@ -188,13 +188,7 @@ async fn handle_webhook(
         }
     };
 
-    let draft_reply = match super::translation::generate_inbox_draft_reply(&payload.tenant_id, &payload.source, &translation).await {
-        Ok(d) => d,
-        Err(e) => {
-            tracing::error!("Failed to generate draft reply: {}", e);
-            "Thanks for reaching out! We will review this and get back to you soon.".to_string()
-        }
-    };
+
 
     let pool = get_pool();
     let id = Uuid::new_v4().to_string();
@@ -210,24 +204,9 @@ async fn handle_webhook(
     .bind(&translation.original_content)
     .bind(&translation.translated_content)
     .bind(&translation.source_language)
-    .bind(&draft_reply)
+    .bind("")
     .execute(&pool)
     .await;
-
-    let res = orchestrator.execute_action(
-        DepartmentType::CustomerSuccess,
-        format!("New {} message from {} (Language: {:?})", payload.source, payload.tenant_id, translation.source_language),
-        payload.tenant_id.clone(),
-        ActionRisk::DraftForReview,
-        serde_json::json!({
-            "source": payload.source.clone(),
-            "message": translation.translated_content.clone(),
-            "original_content": translation.original_content.clone(),
-            "translated_from_language": translation.source_language.clone(),
-            "draft_reply": draft_reply.clone(),
-            "inbox_message_id": id.clone(),
-        }),
-    ).await;
 
     let _ = orchestrator.dispatch_event(crate::orchestration::departments::types::DepartmentEvent {
         id: uuid::Uuid::new_v4().to_string(),
@@ -238,21 +217,10 @@ async fn handle_webhook(
             "message": translation.translated_content,
             "original_message": translation.original_content,
             "translated_from_language": translation.source_language,
-            "generated_response": draft_reply,
-            "feature_type": "ambassador_reply",
-            "inbox_message_id": id,
+            "inbox_message_id": id.clone(),
         }),
     }).await;
 
-    match res {
-        Ok(req) => (StatusCode::OK, Json(WebhookResponse { success: true, request_id: Some(req.id) })).into_response(),
-        Err(e) => {
-            if e.contains("AI Budget exhausted") {
-                return (StatusCode::TOO_MANY_REQUESTS, Json(WebhookResponse { success: false, request_id: None })).into_response();
-            } else {
-                return (StatusCode::INTERNAL_SERVER_ERROR, Json(WebhookResponse { success: false, request_id: None })).into_response();
-            }
-        }
-    }
+    (StatusCode::OK, Json(WebhookResponse { success: true, request_id: Some(id) })).into_response()
 }
 
