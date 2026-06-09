@@ -1567,7 +1567,7 @@ impl Agent {
 
             read_only_futures.push(async move {
                 let mut retry_count = 0;
-                let current_tc = tc_clone.clone();
+                let mut current_tc = tc_clone.clone();
                 loop {
                     match self.execute_tool(&current_tc, &session_tools_clone, &[], cfg.max_retries).await {
                         Ok(res) => break Ok(res),
@@ -1590,7 +1590,7 @@ impl Agent {
                                 content: String::new(),
                                 error: self_correct_msg.clone(),
                             };
-                            let _msg_to_push = crate::types::Message {
+                            let msg_to_push = crate::types::Message {
                                 role: crate::types::Role::Tool,
                                 content: String::new(),
                                 tool_calls: vec![],
@@ -1599,7 +1599,36 @@ impl Agent {
                                 previous_response_id: None,
                             };
                             // NOTE: run_workflow context
-                            break Ok(self_correct_msg);
+
+                            let mut assistant_msg = crate::types::Message::assistant("");
+                            assistant_msg.tool_calls.push(current_tc.clone());
+                            let mut tool_defs = vec![];
+                            if let Some(tool) = session_tools_clone.iter().find(|t| t.name == current_tc.name) {
+                                tool_defs.push(crate::types::ToolDefinition {
+                                    name: tool.name.clone(),
+                                    description: tool.description.clone(),
+                                    parameters: tool.parameters.clone(),
+                                });
+                            }
+                            let req = crate::types::ChatRequest {
+                                model: cfg.model.clone(),
+                                system: "You are an agent executing a plan. Your last tool call failed. Analyze the error, correct your tool arguments, and call the tool again.".to_string(),
+                                messages: vec![assistant_msg, msg_to_push],
+                                tools: tool_defs,
+                                max_tokens: cfg.max_tokens,
+                                temperature: 0.0,
+                            };
+                            match self.llm.chat(req).await {
+                                Ok(resp) => {
+                                    if let Some(new_tc) = resp.message.tool_calls.first() {
+                                        current_tc.arguments = new_tc.arguments.clone();
+                                        continue;
+                                    } else {
+                                        break Ok(format!("Self-correction failed: LLM did not return a tool call. Original error: {}", msg));
+                                    }
+                                }
+                                Err(e) => break Ok(format!("Self-correction failed due to LLM error: {}. Original error: {}", e, msg)),
+                            }
                         }
                         Err(e) => {
                             break Err(e);
@@ -1662,7 +1691,7 @@ impl Agent {
 
             let mut retry_count = 0;
             let max_retries = cfg.max_retries;
-            let current_tc = tc.clone();
+            let mut current_tc = tc.clone();
             let result = loop {
                 match self.execute_tool(&current_tc, session_tools, &[], cfg.max_retries).await {
                     Ok(res) => break res,
@@ -1685,7 +1714,7 @@ impl Agent {
                             content: String::new(),
                             error: self_correct_msg.clone(),
                         };
-                        let _msg_to_push = crate::types::Message {
+                        let msg_to_push = crate::types::Message {
                             role: crate::types::Role::Tool,
                             content: String::new(),
                             tool_calls: vec![],
@@ -1693,7 +1722,40 @@ impl Agent {
                             response_id: None,
                             previous_response_id: None,
                         };
-                        break self_correct_msg;
+
+                        // To self-correct inline, we construct a mini-chat to ask the LLM to fix the arguments
+                        let mut assistant_msg = crate::types::Message::assistant("");
+                        assistant_msg.tool_calls.push(current_tc.clone());
+
+                        let mut tool_defs = vec![];
+                        if let Some(tool) = session_tools.iter().find(|t| t.name == current_tc.name) {
+                            tool_defs.push(crate::types::ToolDefinition {
+                                name: tool.name.clone(),
+                                description: tool.description.clone(),
+                                parameters: tool.parameters.clone(),
+                            });
+                        }
+
+                        let req = crate::types::ChatRequest {
+                            model: cfg.model.clone(),
+                            system: "You are an agent executing a plan. Your last tool call failed. Analyze the error, correct your tool arguments, and call the tool again.".to_string(),
+                            messages: vec![assistant_msg, msg_to_push],
+                            tools: tool_defs,
+                            max_tokens: cfg.max_tokens,
+                            temperature: 0.0,
+                        };
+
+                        match self.llm.chat(req).await {
+                            Ok(resp) => {
+                                if let Some(new_tc) = resp.message.tool_calls.first() {
+                                    current_tc.arguments = new_tc.arguments.clone();
+                                    continue;
+                                } else {
+                                    break format!("Self-correction failed: LLM did not return a tool call. Original error: {}", msg);
+                                }
+                            }
+                            Err(e) => break format!("Self-correction failed due to LLM error: {}. Original error: {}", e, msg),
+                        }
                     }
                     Err(crate::types::ToolError::UserFixable(msg)) => {
                         let err = format!("USER_FIXABLE: {}", msg);
@@ -2760,7 +2822,7 @@ impl Agent {
                             content: String::new(),
                             error: self_correct_msg.clone(),
                         };
-                        let _msg_to_push = Message {
+                        let msg_to_push = Message {
                             role: Role::Tool,
                             content: String::new(),
                             tool_calls: vec![],
@@ -2962,7 +3024,7 @@ impl Agent {
                                 content: String::new(),
                                 error: self_correct_msg.clone(),
                             };
-                            let _msg_to_push = Message {
+                            let msg_to_push = Message {
                                 role: Role::Tool,
                                 content: String::new(),
                                 tool_calls: vec![],
