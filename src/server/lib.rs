@@ -4216,6 +4216,9 @@ async fn create_ui_bom_item_handler(
         .nest("/api/v1/catalog", api::catalog::router(hub.clone()))
         .nest("/api/v1/shipping", api::shipping::router())
         .nest("/api/v1/payments/terminal", api::terminal_api::router(hub.clone()))
+        .route("/api/v1/pos/connection_token", axum::routing::post(api::terminal_api::get_terminal_connection_token_handler).with_state(hub.clone()))
+        .route("/api/v1/pos/intent", axum::routing::post(api::terminal_api::create_payment_intent_handler).with_state(hub.clone()))
+        .route("/api/v1/pos/capture", axum::routing::post(api::terminal_api::capture_payment_intent_handler).with_state(hub.clone()))
 
         .nest("/api/agents/approvals", api::agents::approvals::router(dept_orchestrator.clone()))
         .nest("/api/agents/settings", api::agents::settings::router(dept_orchestrator.clone()))

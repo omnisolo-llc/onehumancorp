@@ -24,6 +24,7 @@ pub fn router(hub: Arc<Hub>) -> axum::Router<Arc<dyn ohc_builtin_agent::mesh::tr
     axum::Router::new()
         .route("/token", axum::routing::post(get_terminal_connection_token_handler))
         .route("/intent", axum::routing::post(create_payment_intent_handler))
+        .route("/capture", axum::routing::post(capture_payment_intent_handler))
         .route("/sync_offline", axum::routing::post(sync_offline_transactions_handler))
         .route("/reserve", axum::routing::post(reserve_inventory_handler))
         .route("/commit", axum::routing::post(commit_inventory_handler))
@@ -624,6 +625,68 @@ pub async fn sync_offline_transactions_handler(
 }
 
 
+
+#[derive(serde::Deserialize)]
+pub struct CaptureIntentRequest {
+    pub intent_id: String,
+    pub order_id: Option<String>,
+}
+
+#[derive(serde::Serialize)]
+pub struct CaptureIntentResponse {
+    pub success: bool,
+    pub error_message: Option<String>,
+}
+
+pub async fn capture_payment_intent_handler(
+    _headers: HeaderMap,
+    State(_hub): State<Arc<Hub>>,
+    auth_info: Option<axum::extract::Extension<::server_auth::orchestration::AuthInfo>>,
+    req_data: axum::extract::Json<CaptureIntentRequest>,
+) -> Json<Result<CaptureIntentResponse, String>> {
+    let tenant_id = match auth_info {
+        Some(auth) => {
+            if auth.org_id.is_empty() {
+                return Json(Err("Unauthenticated: Missing tenant ID".to_string()));
+            } else {
+                auth.org_id.clone()
+            }
+        },
+        None => return Json(Err("Unauthenticated".to_string()))
+    };
+
+    info!(tenant_id = %tenant_id, intent_id = %req_data.intent_id, "Capturing Stripe Terminal Payment Intent");
+
+    let stripe_key = std::env::var("STRIPE_API_KEY").unwrap_or_default();
+    let client = crate::integrations::stripe::client::StripeClient::new(stripe_key);
+
+    if let Err(_) = client.require_api_key() {
+        return Json(Err("Stripe API key not configured".to_string()));
+    }
+
+    match client.capture_terminal_payment_intent(&tenant_id, &req_data.intent_id).await {
+        Ok(_) => {
+            if let Some(order_id) = &req_data.order_id {
+                let pool = crate::db::get_pool();
+                let res = sqlx::query(
+                    "UPDATE orders SET status = 'Paid', source = 'in_person' WHERE id = $1 AND tenant_id = $2"
+                )
+                .bind(order_id)
+                .bind(&tenant_id)
+                .execute(&pool)
+                .await;
+
+                if let Err(e) = res {
+                    tracing::error!("Failed to update order status for order {}: {:?}", order_id, e);
+                    return Json(Err("Database error".to_string()));
+                }
+            }
+
+            Json(Ok(CaptureIntentResponse { success: true, error_message: None }))
+        }
+        Err(e) => Json(Err(e)),
+    }
+}
 
 pub async fn create_payment_intent_handler(
     _headers: HeaderMap,

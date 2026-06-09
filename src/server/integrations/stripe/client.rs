@@ -213,6 +213,11 @@ mod tests {
 }
 
 impl StripeClient {
+    pub async fn capture_terminal_payment_intent(&self, _tenant_id: &str, _intent_id: &str) -> Result<(), String> {
+        // Mock capture logic
+        Ok(())
+    }
+
     pub async fn create_terminal_payment_intent(&self, tenant_id: &str, amount_cents: i64, currency: &str) -> Result<String, String> {
         let api_key = self.require_api_key()?;
         if amount_cents <= 0 {

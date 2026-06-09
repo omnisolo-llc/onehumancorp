@@ -16,9 +16,14 @@ impl StripeClient {
         // In a real implementation, this would make an HTTP POST to Stripe's /v1/payment_intents
         // endpoint with specific parameters like payment_method_types=["card_present"] and capture_method="manual".
         // Since we're mocking external APIs, we return a mock intent ID here.
-        let mock_intent = format!("pi_mock_intent_for_{}_{}_{}", tenant_id, amount_cents, currency);
+        let mock_intent = format!("pi_mock_intent_for_{}_{}_{}_in_person", tenant_id, amount_cents, currency);
 
         Ok(mock_intent)
+    }
+
+    pub async fn capture_terminal_payment_intent(&self, _tenant_id: &str, _intent_id: &str) -> Result<(), String> {
+        // In a real implementation, this would make an HTTP POST to Stripe's /v1/payment_intents/{intent_id}/capture
+        Ok(())
     }
 }
 
@@ -41,6 +46,6 @@ mod tests {
         let result = client.create_terminal_payment_intent("test_tenant", 1500, "usd").await;
         assert!(result.is_ok());
         let intent = result.unwrap();
-        assert_eq!(intent, "pi_mock_intent_for_test_tenant_1500_usd");
+        assert_eq!(intent, "pi_mock_intent_for_test_tenant_1500_usd_in_person");
     }
 }
