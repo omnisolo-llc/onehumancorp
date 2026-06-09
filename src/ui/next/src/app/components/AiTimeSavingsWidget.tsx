@@ -6,20 +6,37 @@ export default function AiTimeSavingsWidget() {
   const [hasClaimed, setHasClaimed] = useState(false);
   const [isClaiming, setIsClaiming] = useState(false);
   const [hasPro, setHasPro] = useState(false);
+  const [savingsData, setSavingsData] = useState({
+    hours_saved: 0,
+    inquiries_handled: 0,
+    appointments_scheduled: 0,
+    carts_recovered: 0
+  });
 
   useEffect(() => {
     if (typeof localStorage !== 'undefined') {
       const proStatus = localStorage.getItem('has_pro') === 'true';
       setHasPro(proStatus);
-      // If they already have pro, we could hide the widget or change the message
-      // But for this feature, let's allow them to extend it further if they haven't claimed yet.
     }
+
+    // Fetch real time savings data
+    fetch('/api/v1/growth/time-savings')
+      .then(res => {
+        if (res.ok) return res.json();
+        throw new Error('Failed to fetch savings');
+      })
+      .then(data => {
+        if (data && typeof data.hours_saved === 'number') {
+          setSavingsData(data);
+        }
+      })
+      .catch(err => console.error("Error fetching time savings:", err));
   }, []);
 
   const handleShareAndClaim = async () => {
     setIsClaiming(true);
 
-    const message = "My AI agents on OneHumanCorp just saved me 14.5 hours this week! 🚀 #OneHumanCorp #SmallBiz #AI";
+    const message = `My AI agents on OneHumanCorp just saved me ${savingsData.hours_saved} hours this week! 🚀 #OneHumanCorp #SmallBiz #AI`;
     const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(message)}`;
 
     // Open the share window
@@ -80,10 +97,10 @@ export default function AiTimeSavingsWidget() {
               Weekly Insight
             </div>
             <h3 className="text-xl font-bold font-outfit text-gray-900 dark:text-white mb-2">
-              You saved 14.5 hours this week
+              You saved {savingsData.hours_saved} hours this week
             </h3>
             <p className="text-sm text-gray-600 dark:text-gray-300">
-              Your AI agents handled 48 customer inquiries, scheduled 12 appointments, and recovered 3 abandoned carts.
+              Your AI agents handled {savingsData.inquiries_handled} customer inquiries, scheduled {savingsData.appointments_scheduled} appointments, and recovered {savingsData.carts_recovered} abandoned carts.
             </p>
           </div>
         </div>

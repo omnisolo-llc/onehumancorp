@@ -54,7 +54,7 @@ describe('MyPlanPage', () => {
     expect(screen.getByText('Pro')).toBeDefined();
     expect(screen.getByText('$79.00')).toBeDefined();
     expect(screen.getByText('50 / 1000')).toBeDefined();
-
+    expect(screen.getByText('500 MB / 5 GB')).toBeDefined();
   });
 
   it('navigates to dashboard when clicking "Back"', async () => {

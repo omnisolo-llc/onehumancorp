@@ -174,7 +174,7 @@ async fn process_omnichannel_message(state: &MetaWebhookState, tenant_id: String
     let insert_result = match &state.db.store {
         crate::db::DbStore::Postgres => {
             sqlx::query(
-                "INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, source_language, target_language, draft_reply, status, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'unread', NOW(), NOW())"
+                "INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, source_language, target_language, draft_reply, status, sender_id, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'unread', $9, NOW(), NOW())"
             )
             .bind(&inbox_id)
             .bind(&tenant_id)
@@ -184,12 +184,13 @@ async fn process_omnichannel_message(state: &MetaWebhookState, tenant_id: String
             .bind(&translation.source_language)
             .bind(&translation.target_language)
             .bind(&draft_reply)
+            .bind(&sender_id)
             .execute(pool)
             .await.map(|_| ())
         },
         crate::db::DbStore::Sqlite(sqlite_pool) => {
             sqlx::query(
-                "INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, source_language, target_language, draft_reply, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'unread', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+                "INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, source_language, target_language, draft_reply, status, sender_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'unread', ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
             )
             .bind(&inbox_id)
             .bind(&tenant_id)
@@ -199,6 +200,7 @@ async fn process_omnichannel_message(state: &MetaWebhookState, tenant_id: String
             .bind(&translation.source_language)
             .bind(&translation.target_language)
             .bind(&draft_reply)
+            .bind(&sender_id)
             .execute(sqlite_pool)
             .await.map(|_| ())
         }
