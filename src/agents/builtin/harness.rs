@@ -416,13 +416,13 @@ pub trait HarnessBackend: Send + Sync {
 }
 
 pub struct LocalBackend {
-    validator: Arc<ASTValidator>,
+
     config: Config,
 }
 
 impl LocalBackend {
-    pub fn new(validator: Arc<ASTValidator>, config: Config) -> Self {
-        LocalBackend { validator, config }
+    pub fn new( config: Config) -> Self {
+        LocalBackend { config }
     }
 
     pub fn is_bwrap_available(&self) -> bool {
@@ -534,7 +534,7 @@ impl LocalBackend {
 #[async_trait]
 impl HarnessBackend for LocalBackend {
     async fn execute(&self, command: &str, policy: &Policy) -> Result<ResultModel, String> {
-        self.validator.validate(command)?;
+
 
         if self.is_bwrap_available() {
             let args = self.get_bwrap_args(command, policy);
@@ -715,7 +715,7 @@ pub enum BackendType {
 
 pub struct Manager {
     config: Config,
-    validator: Arc<ASTValidator>,
+
     local_backend: Arc<dyn HarnessBackend>,
     docker_backend: Arc<dyn HarnessBackend>,
     ssh_backend: Arc<dyn HarnessBackend>,
@@ -727,8 +727,8 @@ pub struct Manager {
 
 impl Manager {
     pub fn new(config: Config) -> Self {
-        let validator = Arc::new(ASTValidator::new());
-        let local_backend = Arc::new(LocalBackend::new(validator.clone(), config.clone()));
+
+        let local_backend = Arc::new(LocalBackend::new(config.clone()));
         let docker_backend = Arc::new(DockerBackend::new());
         let ssh_backend = Arc::new(SshBackend::new());
         let singularity_backend = Arc::new(SingularityBackend::new());
@@ -737,7 +737,7 @@ impl Manager {
         let vercel_sandbox_backend = Arc::new(VercelSandboxBackend::new());
         Manager {
             config,
-            validator,
+
             local_backend,
             docker_backend,
             ssh_backend,
@@ -891,8 +891,8 @@ mod tests {
 
     #[test]
     fn test_get_bwrap_args() {
-        let validator = Arc::new(ASTValidator::new());
-        let runner = LocalBackend::new(validator, Config::default());
+
+        let runner = LocalBackend::new(Config::default());
         let policy = Policy {
             allowed_paths: vec!["/home/user".to_string()],
             read_only_paths: vec!["/etc".to_string()],
@@ -914,8 +914,8 @@ mod tests {
 
     #[test]
     fn test_policy_allow_read_deny_write() {
-        let validator = Arc::new(ASTValidator::new());
-        let runner = LocalBackend::new(validator, Config::default());
+
+        let runner = LocalBackend::new(Config::default());
         let policy = Policy {
             allow_read: vec!["/opt".to_string()],
             deny_write: vec!["/tmp/protected".to_string()],
@@ -932,13 +932,13 @@ mod tests {
 
     #[test]
     fn test_get_bwrap_args_with_seccomp() {
-        let validator = Arc::new(ASTValidator::new());
+
         let config = Config {
             enable_seccomp: true,
             seccomp_bpf_path: Some("/tmp/seccomp.bpf".to_string()),
             ..Default::default()
         };
-        let runner = LocalBackend::new(validator, config);
+        let runner = LocalBackend::new(config);
         let policy = Policy::default();
 
         let args = runner.get_bwrap_args("ls", &policy);
