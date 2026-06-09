@@ -73,7 +73,8 @@ pub fn expert_team_tool(client: Arc<dyn LlmClient>, model: String) -> crate::Too
         name: "expert_team_orchestration".to_string(),
         description: "Orchestrates a 6-agent expert team (1 Lead + 5 Domain Experts) to solve complex business tasks. \
             Executes tasks in parallel and enforces strict quality gates (Pre-flight, Pre-merge, Pre-deliver). \
-            The final report is guaranteed to be thorough (>=20k words) and includes required charts/analysis.".to_string(),
+            The final report is guaranteed to be thorough (>=20k words) and includes required charts/analysis. \
+            (Tencent Workbuddy (Expert Team) Feature, based on Tencent Cloud Intelligent Agent Platform, BP-Factory reference impl)".to_string(),
         is_read_only: false,
         parameters: json!({
             "type": "object",
