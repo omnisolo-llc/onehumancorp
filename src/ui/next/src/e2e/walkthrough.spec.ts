@@ -6,12 +6,12 @@ test.describe('Interactive Walkthroughs', () => {
     await page.goto('/dashboard'); // or /storefront-builder which has bio-input
 
     // Open the help widget
-    const helpButton = page.locator('#help-widget-container button').first();
+    const helpButton = page.locator('button[aria-label="Help"]').first();
     await expect(helpButton).toBeVisible();
     await helpButton.click();
 
     // Click on the store setup walkthrough
-    const tourButton = page.locator('button', { hasText: 'Tour: Set up your store' });
+    const tourButton = page.locator('button', { hasText: 'Tour: Virtual Meeting Room & UltraPlan' });
     await expect(tourButton).toBeVisible();
     await tourButton.click();
 
@@ -20,44 +20,44 @@ test.describe('Interactive Walkthroughs', () => {
     // or just mock the route if possible. We will assume the Tour redirects or we just navigate to where bio-input is.
 
     // Instead of dashboard, let's go straight to builder since that's where the target elements are:
-    await page.goto('/builder');
+    await page.goto('/builder?test_walkthrough=true');
 
     // Re-open help widget on the right page
-    const builderHelpButton = page.locator('#help-widget-container button').first();
+    const builderHelpButton = page.locator('button[aria-label="Help"]').first();
     await expect(builderHelpButton).toBeVisible();
     await builderHelpButton.click();
 
-    const builderTourButton = page.locator('button', { hasText: 'Tour: Set up your store' });
+    const builderTourButton = page.locator('button', { hasText: 'Tour: Virtual Meeting Room & UltraPlan' });
     await expect(builderTourButton).toBeVisible();
     await builderTourButton.click();
 
     // Assert the first step is shown
     const speechBubble = page.locator('div[role="dialog"]');
     await expect(speechBubble).toBeVisible();
-    await expect(page.getByText('Enter your business description.')).toBeVisible();
+    await expect(page.getByText('Agents join the Virtual Meeting Room to debate and plan before executing tasks.')).toBeVisible();
 
     // Click Next
-    await page.getByRole('button', { name: 'Next' }).click();
+    await page.locator('button', { hasText: /^Next$/ }).click();
 
     // Assert the second step is shown
-    await expect(page.getByText('Click to generate!')).toBeVisible();
+    await expect(page.getByText('Phase 1: Brainstorming. Phase 2: Refinement. Phase 3: Consensus (UltraPlan protocol).')).toBeVisible();
 
     // Click Finish
-    await page.getByRole('button', { name: 'Finish' }).click();
+    await page.locator('button', { hasText: /^Finish$/ }).click();
 
     // Assert the bubble is gone
     await expect(speechBubble).not.toBeVisible();
   });
 
   test('user can exit the walkthrough early by clicking the skip/close button', async ({ page }) => {
-    await page.goto('/builder');
+    await page.goto('/builder?test_walkthrough=true');
 
     // Re-open help widget
-    const builderHelpButton = page.locator('#help-widget-container button').first();
+    const builderHelpButton = page.locator('button[aria-label="Help"]').first();
     await expect(builderHelpButton).toBeVisible();
     await builderHelpButton.click();
 
-    const builderTourButton = page.locator('button', { hasText: 'Tour: Set up your store' });
+    const builderTourButton = page.locator('button', { hasText: 'Tour: Virtual Meeting Room & UltraPlan' });
     await expect(builderTourButton).toBeVisible();
     await builderTourButton.click();
 

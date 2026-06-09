@@ -6,7 +6,7 @@ test.describe('In-App Video Tutorials', () => {
         await page.goto('/dashboard'); // Use the dashboard or any public page where layout applies
 
         // The help widget should be present.
-        const helpButton = page.locator('#help-widget-container button').first();
+        const helpButton = page.locator('button[aria-label="Help"]').first();
         await expect(helpButton).toBeVisible();
 
         // Click the help widget floating button to open the menu
