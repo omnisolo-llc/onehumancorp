@@ -1,6 +1,6 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
+import { currentAppSmoke } from './current_app_smoke';
 
-test('Swarm Metrics and Memory State verify', async ({ page }) => {
-  // Wait for things
-  await page.goto('http://localhost:3000/dashboard'); // dummy
+test('Swarm Metrics and Memory State verify', async ({ page, request }) => {
+  await currentAppSmoke(page, request, 'playwright_swarm_metrics');
 });
