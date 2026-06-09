@@ -1964,6 +1964,7 @@ async fn get_pending_approvals(
                     crate::orchestration::departments::types::ApprovalStatus::PendingApproval => "PENDING_APPROVAL".to_string(),
                     crate::orchestration::departments::types::ApprovalStatus::Approved => "APPROVED".to_string(),
                     crate::orchestration::departments::types::ApprovalStatus::Rejected => "REJECTED".to_string(),
+                    crate::orchestration::departments::types::ApprovalStatus::Paused => "PAUSED".to_string(),
                 },
                 assigned_agent_id: "".to_string(),
                 priority: "High".to_string(),
@@ -1979,6 +1980,7 @@ async fn get_pending_approvals(
                     crate::orchestration::departments::types::ApprovalStatus::PendingApproval => "PENDING".to_string(),
                     crate::orchestration::departments::types::ApprovalStatus::Approved => "APPROVED".to_string(),
                     crate::orchestration::departments::types::ApprovalStatus::Rejected => "REJECTED".to_string(),
+                    crate::orchestration::departments::types::ApprovalStatus::Paused => "PAUSED".to_string(),
                 },
                 proposed_content,
             }
