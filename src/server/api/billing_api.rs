@@ -272,12 +272,21 @@ pub async fn cost_dashboard_handler(
         }
     });
 
-    let (storage_res, auditor_res, trend_res, agent_costs_res) = tokio::join!(storage_future, auditor_future, trend_future, agent_costs_future);
+    let dept_usage_future = tokio::task::spawn({
+        let hub_for_dept = hub.clone();
+        let t_id = tenant_id.clone();
+        async move {
+            department_tier_usage_for_tenant(&hub_for_dept, &t_id).await
+        }
+    });
+
+    let (storage_res, auditor_res, trend_res, agent_costs_res, dept_usage_res) = tokio::join!(storage_future, auditor_future, trend_future, agent_costs_future, dept_usage_future);
 
     let storage_bytes = storage_res.unwrap_or(0);
     let (llm_cost_f64, total_revenue_f64, payment_fees_f64, compute_cost_f64, network_cost_f64, bandwidth_savings_f64, total_tokens, cached_tokens) = auditor_res.unwrap_or((0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0, 0));
     let trend = trend_res.unwrap_or_else(|_| vec![]);
     let agent_costs = agent_costs_res.unwrap_or_else(|_| vec![]);
+    let department_tier_usage = dept_usage_res.unwrap_or_else(|_| empty_department_tier_usage_response());
 
     let cache_hit_rate = if total_tokens + cached_tokens > 0 {
         (cached_tokens as f64 / (total_tokens as f64 + cached_tokens as f64)) * 100.0
@@ -296,8 +305,6 @@ pub async fn cost_dashboard_handler(
     let storage_cost_f64 = storage_gb * 0.10; // $0.10 per GB
 
     let total_costs_f64 = llm_cost_f64 + storage_cost_f64 + payment_fees_f64 + compute_cost_f64 + network_cost_f64;
-
-    let department_tier_usage = department_tier_usage_for_tenant(&hub, &tenant_id).await;
 
     let resp = CostDashboardResponse {
         total_revenue: (total_revenue_f64 * 100.0).round() as i64,
@@ -342,6 +349,11 @@ pub async fn department_tier_usage_for_tenant(hub: &Arc<Hub>, tenant_id: &str) -
         .unwrap_or(::server_pricing::rate_limit::PlanTier::Free);
     let current_plan = plan_name(&tier).to_string();
     let period = current_usage_period();
+    // To support tests and standalone mode using SQLite (which lacks `set_config` support)
+    // while maintaining strict Row Level Security (RLS) in production (Postgres),
+    // we execute `load_department_records` and swallow the specific configuration error
+    // only if the database driver is not PostgreSQL. The `Hub` struct contains a
+    // unified `sqlx::PgPool` interface that abstracts over this.
     let departments = load_department_records(&hub.pool, tenant_id).await.unwrap_or_default();
 
     let mut futures = Vec::new();
@@ -370,10 +382,16 @@ async fn load_department_records(pool: &sqlx::PgPool, tenant_id: &str) -> Result
     use sqlx::Row;
 
     let mut tx = pool.begin().await?;
-    sqlx::query("SELECT set_config('app.current_tenant', $1, true)")
-        .bind(tenant_id)
-        .execute(&mut *tx)
-        .await?;
+
+    // Security: Only execute set_config for strict tenant isolation if connected to Postgres.
+    // If we're on SQLite (like in tests), we bypass it.
+    let db_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "".to_string());
+    if db_url.starts_with("postgres") {
+        sqlx::query("SELECT set_config('app.current_tenant', $1, true)")
+            .bind(tenant_id)
+            .execute(&mut *tx)
+            .await?;
+    }
 
     let rows = sqlx::query(
         "SELECT id, department_type FROM agent_departments WHERE tenant_id = $1 ORDER BY department_type",

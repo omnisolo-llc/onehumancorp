@@ -174,18 +174,15 @@ impl MyDashboardService {
             return Ok(products);
         }
 
-        let q = if mobile_optimized {
-            "SELECT id, '' as organization_id, name, '' as description, COALESCE(price_cents, 0) as price_cents, '' as fulfillment_strategy, COALESCE(currency, 'USD') as currency, '{}' as metadata FROM products WHERE organization_id = $1 LIMIT 10"
-        } else {
-            "SELECT id, organization_id, name, description, COALESCE(price_cents, 0) as price_cents, fulfillment_strategy, COALESCE(currency, 'USD') as currency, COALESCE(metadata, '{}') as metadata FROM products WHERE organization_id = $1 LIMIT 10"
-        };
+        let q = "SELECT id, organization_id, name, description, COALESCE(price_cents, 0) as price_cents, fulfillment_strategy, COALESCE(currency, 'USD') as currency, COALESCE(metadata, '{}') as metadata FROM products WHERE organization_id = $1 LIMIT 10";
+
         use sqlx::Row;
         let mut results = Vec::new();
         match &self.db.store {
             crate::db::DbStore::Postgres => {
                 if let Ok(rows) = sqlx::query(q).bind(&org_id).fetch_all(&self.db.pool).await {
                     for r in rows {
-                        let p = ::server_ohc::organization::Product {
+                        let mut p = ::server_ohc::organization::Product {
                             id: r.try_get("id").unwrap_or_default(),
                             organization_id: r.try_get("organization_id").unwrap_or_default(),
                             name: r.try_get("name").unwrap_or_default(),
@@ -198,6 +195,10 @@ impl MyDashboardService {
                                     Err(_) => r.try_get::<String, _>("metadata").unwrap_or_else(|_| "{}".to_string())
                             },
                         };
+                        if mobile_optimized {
+                            p.description.clear();
+                            p.metadata_json = "{}".to_string();
+                        }
                         results.push(p);
                     }
                 }
@@ -205,7 +206,7 @@ impl MyDashboardService {
             crate::db::DbStore::Sqlite(pool) => {
                 if let Ok(rows) = sqlx::query(q).bind(&org_id).fetch_all(pool).await {
                     for r in rows {
-                        let p = ::server_ohc::organization::Product {
+                        let mut p = ::server_ohc::organization::Product {
                             id: r.try_get("id").unwrap_or_default(),
                             organization_id: r.try_get("organization_id").unwrap_or_default(),
                             name: r.try_get("name").unwrap_or_default(),
@@ -218,6 +219,10 @@ impl MyDashboardService {
                                     Err(_) => r.try_get::<String, _>("metadata").unwrap_or_else(|_| "{}".to_string())
                             },
                         };
+                        if mobile_optimized {
+                            p.description.clear();
+                            p.metadata_json = "{}".to_string();
+                        }
                         results.push(p);
                     }
                 }
@@ -237,11 +242,8 @@ impl MyDashboardService {
             return Ok(orders);
         }
 
-        let q = if mobile_optimized {
-            "SELECT id, '' as tenant_id, COALESCE(total_amount, 0) as total_amount, '' as status FROM orders WHERE tenant_id = $1 LIMIT 10"
-        } else {
-            "SELECT id, tenant_id, COALESCE(total_amount, 0) as total_amount, status FROM orders WHERE tenant_id = $1 LIMIT 10"
-        };
+        let q = "SELECT id, tenant_id, COALESCE(total_amount, 0) as total_amount, status FROM orders WHERE tenant_id = $1 LIMIT 10";
+
         use sqlx::Row;
         let mut results = Vec::new();
         match &self.db.store {
@@ -249,7 +251,7 @@ impl MyDashboardService {
                 if let Ok(rows) = sqlx::query(q).bind(&org_id).fetch_all(&self.db.pool).await {
                     for r in rows {
                         let amount_real: f64 = r.try_get("total_amount").unwrap_or(0.0);
-                        let o = ::server_ohc::app::Order {
+                        let mut o = ::server_ohc::app::Order {
                             id: r.try_get("id").unwrap_or_default(),
                             organization_id: r.try_get("tenant_id").unwrap_or_default(),
                             product_id: String::new(),
@@ -257,6 +259,9 @@ impl MyDashboardService {
                             status: r.try_get("status").unwrap_or_default(),
                             created_at_unix: 0,
                         };
+                        if mobile_optimized {
+                            o.status.clear();
+                        }
                         results.push(o);
                     }
                 }
@@ -265,7 +270,7 @@ impl MyDashboardService {
                 if let Ok(rows) = sqlx::query(q).bind(&org_id).fetch_all(pool).await {
                     for r in rows {
                         let amount_real: f64 = r.try_get("total_amount").unwrap_or(0.0);
-                        let o = ::server_ohc::app::Order {
+                        let mut o = ::server_ohc::app::Order {
                             id: r.try_get("id").unwrap_or_default(),
                             organization_id: r.try_get("tenant_id").unwrap_or_default(),
                             product_id: String::new(),
@@ -273,6 +278,9 @@ impl MyDashboardService {
                             status: r.try_get("status").unwrap_or_default(),
                             created_at_unix: 0,
                         };
+                        if mobile_optimized {
+                            o.status.clear();
+                        }
                         results.push(o);
                     }
                 }
@@ -292,11 +300,7 @@ impl MyDashboardService {
             return Ok(bookings);
         }
 
-        let q = if mobile_optimized {
-            "SELECT id, tenant_id, customer_id, product_id, start_time, end_time, '' as status FROM bookings WHERE tenant_id = $1 ORDER BY start_time ASC LIMIT 10"
-        } else {
-            "SELECT id, tenant_id, customer_id, product_id, start_time, end_time, status FROM bookings WHERE tenant_id = $1 ORDER BY start_time ASC LIMIT 10"
-        };
+        let q = "SELECT id, tenant_id, customer_id, product_id, start_time, end_time, status FROM bookings WHERE tenant_id = $1 ORDER BY start_time ASC LIMIT 10";
 
         use sqlx::Row;
         use chrono::{DateTime, Utc};
@@ -307,15 +311,18 @@ impl MyDashboardService {
                     for r in rows {
                         let start_time: DateTime<Utc> = r.try_get("start_time").unwrap_or_else(|_| Utc::now());
                         let end_time: Option<DateTime<Utc>> = r.try_get("end_time").ok();
-                        let b = ::server_ohc::app::Booking {
+                        let mut b = ::server_ohc::app::Booking {
                             id: r.try_get("id").unwrap_or_default(),
-                            organization_id: if mobile_optimized { String::new() } else { r.try_get("tenant_id").unwrap_or_default() },
+                            organization_id: r.try_get("tenant_id").unwrap_or_default(),
                             customer_id: r.try_get("customer_id").unwrap_or_default(),
                             product_id: r.try_get("product_id").unwrap_or_default(),
                             start_time_unix: start_time.timestamp(),
                             end_time_unix: end_time.map(|t| t.timestamp()).unwrap_or(0),
-                            status: if mobile_optimized { String::new() } else { r.try_get("status").unwrap_or_default() },
+                            status: r.try_get("status").unwrap_or_default(),
                         };
+                        if mobile_optimized {
+                            b.status.clear();
+                        }
                         results.push(b);
                     }
                 }
@@ -331,15 +338,18 @@ impl MyDashboardService {
                         let end_time_str: Option<String> = r.try_get("end_time").ok();
                         let end_time = end_time_str.and_then(|s| DateTime::parse_from_rfc3339(&s).map(|d| d.with_timezone(&Utc)).ok());
 
-                        let b = ::server_ohc::app::Booking {
+                        let mut b = ::server_ohc::app::Booking {
                             id: r.try_get("id").unwrap_or_default(),
-                            organization_id: if mobile_optimized { String::new() } else { r.try_get("tenant_id").unwrap_or_default() },
+                            organization_id: r.try_get("tenant_id").unwrap_or_default(),
                             customer_id: r.try_get("customer_id").unwrap_or_default(),
                             product_id: r.try_get("product_id").unwrap_or_default(),
                             start_time_unix: start_time.timestamp(),
                             end_time_unix: end_time.map(|t| t.timestamp()).unwrap_or(0),
-                            status: if mobile_optimized { String::new() } else { r.try_get("status").unwrap_or_default() },
+                            status: r.try_get("status").unwrap_or_default(),
                         };
+                        if mobile_optimized {
+                            b.status.clear();
+                        }
                         results.push(b);
                     }
                 }
@@ -359,17 +369,14 @@ impl MyDashboardService {
             return Ok(org);
         }
 
-        let q = if mobile_optimized {
-            "SELECT tenant_id, business_name, tier FROM tenants WHERE tenant_id = $1 LIMIT 1"
-        } else {
-            "SELECT tenant_id, business_name, tier FROM tenants WHERE tenant_id = $1 LIMIT 1"
-        };
+        let q = "SELECT tenant_id, business_name, tier FROM tenants WHERE tenant_id = $1 LIMIT 1";
+
         use sqlx::Row;
         let mut org = None;
         match &self.db.store {
             crate::db::DbStore::Postgres => {
                 if let Ok(Some(row)) = sqlx::query(q).bind(&org_id).fetch_optional(&self.db.pool).await {
-                    org = Some(::server_ohc::organization::Organization {
+                    let mut o = ::server_ohc::organization::Organization {
                         id: row.try_get("tenant_id").unwrap_or_default(),
                         name: row.try_get("business_name").unwrap_or_default(),
                         domain: "".to_string(),
@@ -378,12 +385,16 @@ impl MyDashboardService {
                         members: vec![],
                         role_profiles: vec![],
                         tier: row.try_get("tier").unwrap_or_default(),
-                    });
+                    };
+                    if mobile_optimized {
+                        o.name.clear();
+                    }
+                    org = Some(o);
                 }
             }
             crate::db::DbStore::Sqlite(pool) => {
                 if let Ok(Some(row)) = sqlx::query(q).bind(&org_id).fetch_optional(pool).await {
-                    org = Some(::server_ohc::organization::Organization {
+                    let mut o = ::server_ohc::organization::Organization {
                         id: row.try_get("tenant_id").unwrap_or_default(),
                         name: row.try_get("business_name").unwrap_or_default(),
                         domain: "".to_string(),
@@ -392,7 +403,11 @@ impl MyDashboardService {
                         members: vec![],
                         role_profiles: vec![],
                         tier: row.try_get("tier").unwrap_or_default(),
-                    });
+                    };
+                    if mobile_optimized {
+                        o.name.clear();
+                    }
+                    org = Some(o);
                 }
             }
         }

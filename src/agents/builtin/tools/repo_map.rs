@@ -29,10 +29,10 @@ impl RepoMapExecutor {
 
     fn try_tree_sitter_parse(content: &str, ext: &str) -> Option<Vec<String>> {
         let language = match ext {
-            "rs" => tree_sitter_rust::LANGUAGE.into(),
-            "py" => tree_sitter_python::LANGUAGE.into(),
-            "ts" | "tsx" => tree_sitter_typescript::LANGUAGE_TYPESCRIPT.into(),
-            "go" => tree_sitter_go::LANGUAGE.into(),
+            "rs" => return None,
+            "py" => return None,
+            "ts" | "tsx" => return None,
+            "go" => return None,
             _ => return None, // Fall back to regex for others
         };
 
