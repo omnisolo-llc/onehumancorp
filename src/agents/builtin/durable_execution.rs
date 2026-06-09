@@ -3,6 +3,10 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 use serde::{Serialize, Deserialize};
 
+/// Master Catalog B.7. State Management
+/// Durable Execution engine allowing workflows to persist and resume steps
+/// Inspired by the robust orchestration seen in advanced frameworks
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum StepStatus {
     Pending,
