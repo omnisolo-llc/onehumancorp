@@ -9,6 +9,7 @@ use super::{Tool, ToolExecutor};
 pub trait MemoryAccessor: Send + Sync {
     async fn retrieve_topic(&self, topic_name: &str) -> Result<String, String>;
     async fn search_transcripts(&self, query: &str, limit: usize) -> Result<Vec<String>, String>;
+    async fn write_topic(&self, topic_name: &str, content: &str) -> Result<(), String>;
 }
 
 struct TopicRetrieveExecutor {
@@ -94,5 +95,53 @@ pub fn transcript_search_tool(accessor: Arc<dyn MemoryAccessor>) -> Tool {
             "required": ["query"]
         }),
         execute: Arc::new(TranscriptSearchExecutor { accessor }),
+    }
+}
+
+
+struct TopicWriteExecutor {
+    accessor: Arc<dyn MemoryAccessor>,
+}
+
+#[async_trait::async_trait]
+impl ToolExecutor for TopicWriteExecutor {
+    async fn execute(&self, args: Value) -> Result<String, ToolError> {
+        let topic_name = args["topic_name"]
+            .as_str()
+            .ok_or_else(|| ToolError::LlmRecoverable("topic_write: topic_name is required".to_string()))?;
+
+        let content = args["content"]
+            .as_str()
+            .ok_or_else(|| ToolError::LlmRecoverable("topic_write: content is required".to_string()))?;
+
+        self.accessor
+            .write_topic(topic_name, content)
+            .await
+            .map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
+
+        Ok(format!("Successfully wrote topic: {}", topic_name))
+    }
+}
+
+pub fn topic_write_tool(accessor: Arc<dyn MemoryAccessor>) -> Tool {
+    Tool {
+        name: "TopicWrite".to_string(),
+        description: "Write or update a detailed memory topic file.".to_string(),
+        is_read_only: false,
+        parameters: json!({
+            "type": "object",
+            "properties": {
+                "topic_name": {
+                    "type": "string",
+                    "description": "The exact name of the topic to write or update."
+                },
+                "content": {
+                    "type": "string",
+                    "description": "The detailed content of the topic."
+                }
+            },
+            "required": ["topic_name", "content"]
+        }),
+        execute: Arc::new(TopicWriteExecutor { accessor }),
     }
 }

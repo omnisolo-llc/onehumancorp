@@ -42,7 +42,7 @@ export default function LedgerPage() {
     <div className="flex flex-col flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 h-full bg-slate-50/50">
       <PageHeader
         title="Ledger Statement"
-        subtitle="Recent financial activity"
+        description="Recent financial activity"
       />
 
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 mt-6 p-6">
