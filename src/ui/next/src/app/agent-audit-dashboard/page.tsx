@@ -98,7 +98,7 @@ export default function AgentAuditDashboard() {
         } catch (e) {}
 
         return (
-            <div key={activity.id} className="p-3 glassmorphism bg-white/50 dark:bg-black/50 rounded-lg text-sm text-gray-800 dark:text-gray-200">
+            <div key={activity.id} className="p-3 glassmorphism rounded-lg text-sm text-gray-800 dark:text-gray-200">
                 <span className="font-bold text-indigo-600 dark:text-indigo-400">[{new Date(activity.created_at).toLocaleTimeString()}]</span> {desc} ({activity.department})
             </div>
         );

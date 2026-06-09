@@ -589,3 +589,10 @@ body {
     background: rgba(255, 255, 255, 0.1);
   }
 }
+
+.dark .glassmorphism {
+    background: rgba(22, 22, 26, 0.7);
+    backdrop-filter: blur(30px) saturate(210%);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+}
