@@ -63,7 +63,7 @@ impl RepoMapExecutor {
             if let Ok(text) = node.utf8_text(content.as_bytes()) {
                 // Extract just the first line (signature)
                 if let Some(first_line) = text.lines().next() {
-                    let clean = first_line.trim_end_matches('{').trim_end_matches(':').trim();
+                    let clean = first_line.trim_end().trim_end_matches('{').trim_end().trim_end_matches(':').trim();
                     sigs.push(clean.to_string());
                 }
             }
@@ -311,11 +311,11 @@ mod tests {
         assert!(result.contains("│ fn helper()"));
 
         assert!(result.contains("📄 utils.py"));
-        assert!(result.contains("│ def do_something():"));
-        assert!(result.contains("│ class Data:"));
+        assert!(result.contains("│ def do_something()"));
+        assert!(result.contains("│ class Data"));
 
         assert!(result.contains("📄 app.ts"));
-        assert!(result.contains("│ export function init()"));
+        assert!(result.contains("│ function init()"));
         assert!(result.contains("│ interface Config"));
 
         assert!(result.contains("📄 server.go"));

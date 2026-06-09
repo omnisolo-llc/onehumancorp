@@ -422,7 +422,7 @@ export default function OnboardingWizard() {
 
   return (
     <div className="min-h-screen w-full bg-[#F5F5F7] dark:bg-[#16161a] flex items-center justify-center p-4">
-      <div id="setup-screen" className="w-full sm:max-w-md lg:max-w-lg xl:max-w-2xl mx-auto overflow-hidden flex flex-col min-h-[640px] sm:min-h-[812px] relative rounded-[16px] glassmorphism border border-white/20 shadow-2xl">
+      <div id="setup-screen" className="w-full sm:max-w-md lg:max-w-lg xl:max-w-2xl mx-auto overflow-hidden flex flex-col min-h-[640px] sm:min-h-[812px] relative glassmorphism border border-white/20 shadow-2xl">
         <div className="px-6 pt-5 text-center">
           <h1 className="text-xl font-bold text-[#1D1D1F] dark:text-[#F5F5F7]">Setup</h1>
           <p className="text-sm text-gray-500 dark:text-[#A1A1A6]">Your business, live in minutes.</p>
@@ -667,7 +667,7 @@ export default function OnboardingWizard() {
                           }
                         }}
                         placeholder="e.g. Maya's Custom Cakes"
-                        className={`w-full p-3 sm:p-4 rounded-[8px] border outline-none glassmorphism min-h-[54px] text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner ${validationError === 'Business Name must be at least 3 characters.' ? 'border-red-500' : 'border-transparent focus:border-[#0066FF]'}`}
+                        className={`w-full p-3 sm:p-4 rounded-[8px] border outline-none glassmorphism min-h-[54px] text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner ${validationError === 'Business Name must be at least 3 characters.' ? 'border-[#FF3B30]' : 'border-transparent focus:border-[#0066FF]'}`}
                       />
                     </div>
                   </div>
@@ -732,7 +732,7 @@ export default function OnboardingWizard() {
                           }
                         }}
                         placeholder="e.g. I bake custom vegan cakes for weddings and parties..."
-                        className={`w-full p-3 sm:p-4 rounded-[8px] border outline-none glassmorphism min-h-[54px] text-[#1D1D1F] dark:text-[#F5F5F7] h-32 resize-none transition-all shadow-inner ${validationError === 'Please tell us what you sell.' ? 'border-red-500' : 'border-transparent focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30'}`}
+                        className={`w-full p-3 sm:p-4 rounded-[8px] border outline-none glassmorphism min-h-[54px] text-[#1D1D1F] dark:text-[#F5F5F7] h-32 resize-none transition-all shadow-inner ${validationError === 'Please tell us what you sell.' ? 'border-[#FF3B30]' : 'border-transparent focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30'}`}
                       />
                     </div>
                   </div>
@@ -798,7 +798,7 @@ export default function OnboardingWizard() {
                           }
                         }}
                         placeholder="e.g. Portland, OR"
-                        className={`w-full p-3 sm:p-4 rounded-[8px] border outline-none glassmorphism min-h-[54px] text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner ${validationError === 'Please tell us your location.' ? 'border-red-500' : 'border-transparent focus:border-[#0066FF]'}`}
+                        className={`w-full p-3 sm:p-4 rounded-[8px] border outline-none glassmorphism min-h-[54px] text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner ${validationError === 'Please tell us your location.' ? 'border-[#FF3B30]' : 'border-transparent focus:border-[#0066FF]'}`}
                       />
                     </div>
                   </div>
@@ -932,7 +932,7 @@ export default function OnboardingWizard() {
                       setBusinessName(e.target.value);
                       setValidationErrors(prev => { const { businessName, ...rest } = prev; return rest; });
                     }}
-                    className={`w-full p-3 sm:p-4 rounded-[8px] border ${validationErrors.businessName ? 'border-red-500' : 'border-white/50 dark:border-white/10 focus:border-[#0066FF]'} outline-none glassmorphism min-h-[54px] text-[#1D1D1F] dark:text-[#F5F5F7]`}
+                    className={`w-full p-3 sm:p-4 rounded-[8px] border ${validationErrors.businessName ? 'border-[#FF3B30]' : 'border-white/50 dark:border-white/10 focus:border-[#0066FF]'} outline-none glassmorphism min-h-[54px] text-[#1D1D1F] dark:text-[#F5F5F7]`}
                   />
                   {validationErrors.businessName && <p className="text-red-500 text-xs mt-1">{validationErrors.businessName}</p>}
                 </div>
@@ -947,7 +947,7 @@ export default function OnboardingWizard() {
                       setBusinessType(e.target.value);
                       setValidationErrors(prev => { const { businessType, ...rest } = prev; return rest; });
                     }}
-                    className={`w-full p-3 sm:p-4 rounded-[8px] border ${validationErrors.businessType ? 'border-red-500' : 'border-white/50 dark:border-white/10 focus:border-[#0066FF]'} outline-none glassmorphism min-h-[54px] text-[#1D1D1F] dark:text-[#F5F5F7]`}
+                    className={`w-full p-3 sm:p-4 rounded-[8px] border ${validationErrors.businessType ? 'border-[#FF3B30]' : 'border-white/50 dark:border-white/10 focus:border-[#0066FF]'} outline-none glassmorphism min-h-[54px] text-[#1D1D1F] dark:text-[#F5F5F7]`}
                   />
                   {validationErrors.businessType && <p className="text-red-500 text-xs mt-1">{validationErrors.businessType}</p>}
                 </div>
@@ -988,7 +988,7 @@ export default function OnboardingWizard() {
                               setValidationErrors(prev => { const { firstProductPrice, ...rest } = prev; return rest; });
                            }
                         }}
-                        className={`w-full p-3 sm:p-4 rounded-[8px] border ${validationErrors.firstProductPrice ? 'border-red-500' : 'border-white/50 dark:border-white/10 focus:border-[#0066FF]'} outline-none glassmorphism min-h-[54px] text-[#1D1D1F] dark:text-[#F5F5F7]`}
+                        className={`w-full p-3 sm:p-4 rounded-[8px] border ${validationErrors.firstProductPrice ? 'border-[#FF3B30]' : 'border-white/50 dark:border-white/10 focus:border-[#0066FF]'} outline-none glassmorphism min-h-[54px] text-[#1D1D1F] dark:text-[#F5F5F7]`}
                       />
                       {validationErrors.firstProductPrice && <p className="text-red-500 text-xs mt-1">{validationErrors.firstProductPrice}</p>}
                    </div>
@@ -1108,7 +1108,7 @@ export default function OnboardingWizard() {
                           }
                         }}
                         placeholder="e.g. Maya Smith"
-                        className={`w-full p-3 sm:p-4 rounded-[8px] border ${validationErrors.adminName ? "border-red-500" : "border-white/50 dark:border-white/10 focus:border-[#0066FF]"} outline-none glassmorphism min-h-[54px] text-[#1D1D1F] dark:text-[#F5F5F7]`}
+                        className={`w-full p-3 sm:p-4 rounded-[8px] border ${validationErrors.adminName ? "border-[#FF3B30]" : "border-white/50 dark:border-white/10 focus:border-[#0066FF]"} outline-none glassmorphism min-h-[54px] text-[#1D1D1F] dark:text-[#F5F5F7]`}
                       />
                       {validationErrors.adminName && <p className="text-red-500 text-xs mt-1">{validationErrors.adminName}</p>}
                     </div>
@@ -1133,7 +1133,7 @@ export default function OnboardingWizard() {
                           }
                         }}
                         placeholder="you@example.com"
-                        className={`w-full p-3 sm:p-4 rounded-[8px] border ${validationErrors.adminEmail ? "border-red-500" : "border-white/50 dark:border-white/10 focus:border-[#0066FF]"} outline-none glassmorphism min-h-[54px] text-[#1D1D1F] dark:text-[#F5F5F7]`}
+                        className={`w-full p-3 sm:p-4 rounded-[8px] border ${validationErrors.adminEmail ? "border-[#FF3B30]" : "border-white/50 dark:border-white/10 focus:border-[#0066FF]"} outline-none glassmorphism min-h-[54px] text-[#1D1D1F] dark:text-[#F5F5F7]`}
                       />
                       {validationErrors.adminEmail && <p className="text-red-500 text-xs mt-1">{validationErrors.adminEmail}</p>}
                     </div>
@@ -1156,7 +1156,7 @@ export default function OnboardingWizard() {
                           }
                         }}
                         placeholder="••••••••"
-                        className={`w-full p-3 sm:p-4 rounded-[8px] border ${validationErrors.adminPassword ? "border-red-500" : "border-white/50 dark:border-white/10 focus:border-[#0066FF]"} outline-none glassmorphism min-h-[54px] text-[#1D1D1F] dark:text-[#F5F5F7]`}
+                        className={`w-full p-3 sm:p-4 rounded-[8px] border ${validationErrors.adminPassword ? "border-[#FF3B30]" : "border-white/50 dark:border-white/10 focus:border-[#0066FF]"} outline-none glassmorphism min-h-[54px] text-[#1D1D1F] dark:text-[#F5F5F7]`}
                       />
                       {validationErrors.adminPassword && <p className="text-red-500 text-xs mt-1">{validationErrors.adminPassword}</p>}
                     </div>
@@ -1218,7 +1218,7 @@ export default function OnboardingWizard() {
           )}
 
           {step === 4 && (
-             <div aria-live="polite" className="flex flex-col flex-1 justify-center items-center text-center animate-fade-in glassmorphism rounded-[16px] shadow-2xl p-8">
+             <div aria-live="polite" className="flex flex-col flex-1 justify-center items-center text-center animate-fade-in glassmorphism shadow-2xl p-8">
                <div className="w-24 h-24 relative mb-8">
                  <div className="absolute inset-0 border-4 border-[#0066FF]/20 rounded-full"></div>
                  <div className="absolute inset-0 border-4 border-[#0066FF] rounded-full border-t-transparent animate-spin"></div>

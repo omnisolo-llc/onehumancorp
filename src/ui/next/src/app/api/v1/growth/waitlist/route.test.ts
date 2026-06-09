@@ -2,6 +2,15 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { POST } from './route';
 
 describe('POST /api/v1/growth/waitlist', () => {
+
+    beforeAll(() => {
+        vi.spyOn(console, 'error').mockImplementation(() => {});
+    });
+
+    afterAll(() => {
+        vi.restoreAllMocks();
+    });
+
     let mockBackendUrl = 'http://mock-backend';
 
     beforeEach(() => {
@@ -78,6 +87,7 @@ describe('POST /api/v1/growth/waitlist', () => {
     });
 
     it('falls back gracefully if backend API fails', async () => {
+        const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
         // Mock failed backend response (e.g. 500 server error)
         (global.fetch as any).mockResolvedValueOnce({
             ok: false,
@@ -100,6 +110,7 @@ describe('POST /api/v1/growth/waitlist', () => {
     });
 
     it('falls back gracefully if fetch throws an exception (network error)', async () => {
+        const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
         // Mock network error
         (global.fetch as any).mockRejectedValueOnce(new TypeError('Failed to fetch'));
 

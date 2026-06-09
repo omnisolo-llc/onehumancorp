@@ -52,7 +52,7 @@ beforeEach(() => {
 });
 
 test('replaces /agents with a Workbuddy-style Expert Center catalog', async () => {
-  render(<AgentsPage />);
+  await act(async () => { render(<AgentsPage />); });
 
   expect(await screen.findByRole('heading', { name: 'Expert Center' })).toBeDefined();
   expect(screen.getByRole('button', { name: 'Browse experts' })).toBeDefined();
@@ -70,7 +70,7 @@ test('replaces /agents with a Workbuddy-style Expert Center catalog', async () =
 });
 
 test('summons an expert into the task composer and starts a hire workflow', async () => {
-  render(<AgentsPage />);
+  await act(async () => { render(<AgentsPage />); });
 
   const growthCard = await screen.findByTestId('expert-card-growth-strategist');
   fireEvent.click(within(growthCard).getByRole('button', { name: /Summon/i }));
@@ -99,7 +99,7 @@ test('summons an expert into the task composer and starts a hire workflow', asyn
 });
 
 test('shows result inspection and extension surfaces from Workbuddy', async () => {
-  render(<AgentsPage />);
+  await act(async () => { render(<AgentsPage />); });
 
   expect(await screen.findAllByText('Artifacts')).toHaveLength(2);
   expect(screen.getAllByText('All files').length).toBeGreaterThan(0);
@@ -118,12 +118,12 @@ test('shows result inspection and extension surfaces from Workbuddy', async () =
   expect(screen.getByText('Scheduled Tasks')).toBeDefined();
   expect(screen.getByText('Weekly business review')).toBeDefined();
 
-  fireEvent.click(screen.getByRole('button', { name: 'Memory' }));
+  await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Memory' })); });
   expect(screen.getByText('Consolidated Memory')).toBeDefined();
 });
 
 test('covers every Workbuddy efficient-tip feature surface', async () => {
-  render(<AgentsPage />);
+  await act(async () => { render(<AgentsPage />); });
 
   expect(await screen.findByLabelText('Context references')).toBeDefined();
   expect(screen.getByLabelText('Attachments')).toBeDefined();
@@ -160,7 +160,7 @@ test('covers every Workbuddy efficient-tip feature surface', async () => {
   expect(screen.getByText('Execution history')).toBeDefined();
   expect(screen.getByText('Push notification')).toBeDefined();
 
-  fireEvent.click(screen.getByRole('button', { name: 'Memory' }));
+  await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Memory' })); });
   expect(screen.getByText('Consolidated Memory')).toBeDefined();
 
   fireEvent.click(screen.getByRole('button', { name: 'Results' }));
@@ -181,7 +181,7 @@ test('covers every Workbuddy efficient-tip feature surface', async () => {
 });
 
 test('preserves approvals and activity feed operations', async () => {
-  render(<AgentsPage />);
+  await act(async () => { render(<AgentsPage />); });
 
   await waitFor(() => {
     expect(eventSources[0]?.url).toBe('/api/agents/events');
@@ -204,7 +204,7 @@ test('preserves approvals and activity feed operations', async () => {
 });
 
 test('sends Workbuddy context, attachment, model, and output controls in the hire payload', async () => {
-  render(<AgentsPage />);
+  await act(async () => { render(<AgentsPage />); });
 
   fireEvent.change(await screen.findByLabelText('Context references'), {
     target: { value: '@orders @inventory @launch-plan' },

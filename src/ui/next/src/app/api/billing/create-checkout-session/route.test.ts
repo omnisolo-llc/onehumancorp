@@ -2,6 +2,15 @@ import { POST } from "./route";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 describe("POST /api/billing/create-checkout-session", () => {
+
+    beforeAll(() => {
+        vi.spyOn(console, 'error').mockImplementation(() => {});
+    });
+
+    afterAll(() => {
+        vi.restoreAllMocks();
+    });
+
   beforeEach(() => {
     vi.stubGlobal("fetch", vi.fn());
     vi.stubEnv("BACKEND_URL", "http://backend.internal");

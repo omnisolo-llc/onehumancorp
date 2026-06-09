@@ -76,7 +76,7 @@ describe('WebsiteBuilderPage', () => {
   });
 
   it('renders initial setup screen', async () => {
-    render(<WebsiteBuilderPage />);
+    await act(async () => { render(<WebsiteBuilderPage />); });
     expect(screen.getByText('Your business, live in minutes.')).toBeInTheDocument();
 
     // Check local storage init fetching
@@ -85,7 +85,7 @@ describe('WebsiteBuilderPage', () => {
 
   it('can follow the standard wizard flow', async () => {
     const user = userEvent.setup({ delay: null });
-    render(<WebsiteBuilderPage />);
+    await act(async () => { render(<WebsiteBuilderPage />); });
 
     // Step 0
     fireEvent.click(screen.getByText('Start My Business'));
@@ -168,7 +168,7 @@ describe('WebsiteBuilderPage', () => {
       });
     });
 
-    render(<WebsiteBuilderPage />);
+    await act(async () => { render(<WebsiteBuilderPage />); });
 
     fireEvent.click(screen.getByText('Instant Build'));
     fireEvent.change(screen.getByPlaceholderText('e.g. I run a local bakery'), { target: { value: 'I run a local bakery' } });
@@ -192,7 +192,7 @@ describe('WebsiteBuilderPage', () => {
     ];
     useWebsiteBuilderStore.setState({ blocks: initialBlocks, status: 'draft' });
 
-    render(<WebsiteBuilderPage />);
+    await act(async () => { render(<WebsiteBuilderPage />); });
 
     await waitFor(() => {
       // 3 + 1 PoweredBy (the powered by component isn't wrapped in draggable-block anymore based on actual implementation)
@@ -237,7 +237,7 @@ describe('WebsiteBuilderPage', () => {
       return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
     });
 
-    render(<WebsiteBuilderPage />);
+    await act(async () => { render(<WebsiteBuilderPage />); });
 
     await waitFor(() => {
       expect(screen.getByText('1-Tap Launch')).toBeInTheDocument();
@@ -268,7 +268,7 @@ describe('WebsiteBuilderPage', () => {
       return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
     });
 
-    render(<WebsiteBuilderPage />);
+    await act(async () => { render(<WebsiteBuilderPage />); });
 
     await waitFor(() => {
       expect(screen.getAllByTestId('draggable-block').length).toBeGreaterThan(0);
@@ -277,7 +277,7 @@ describe('WebsiteBuilderPage', () => {
 
   it('handles sync back to server state on change', async () => {
     useWebsiteBuilderStore.setState({ status: 'idle' });
-    render(<WebsiteBuilderPage />);
+    await act(async () => { render(<WebsiteBuilderPage />); });
 
     await waitFor(() => { expect(global.fetch).toHaveBeenCalled(); });
 
