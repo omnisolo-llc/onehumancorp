@@ -70,22 +70,17 @@ impl MyDashboardService {
 
     #[tracing::instrument(skip(self))]
     async fn fetch_meetings_impl(&self, org_id: &str, mobile_optimized: bool) -> Result<Arc<Vec<::server_ohc::orchestration::MeetingRoom>>, String> {
-        let all_meetings = self.hub.get_meetings().await;
+        let org_meetings = self.hub.get_meetings_by_org(org_id).await;
+
+        if !mobile_optimized {
+            return Ok(org_meetings);
+        }
+
         let mut filtered = Vec::new();
-        for m in all_meetings.iter() {
-            if m.id.starts_with(org_id) || m.id.contains(org_id) {
-                let mut mtg = m.clone();
-                if mobile_optimized {
-                    mtg.transcript.clear();
-                }
-                filtered.push(mtg);
-            } else if m.participants.iter().any(|p| p.starts_with(org_id) || p.contains(org_id)) {
-                let mut mtg = m.clone();
-                if mobile_optimized {
-                    mtg.transcript.clear();
-                }
-                filtered.push(mtg);
-            }
+        for m in org_meetings.iter() {
+            let mut mtg = m.clone();
+            mtg.transcript.clear();
+            filtered.push(mtg);
         }
         Ok(Arc::new(filtered))
     }
@@ -127,6 +122,7 @@ impl MyDashboardService {
                 // Clear any agent name strings from the tuple if it's mobile optimized to save payload space
                 for item in snapshot.iter_mut() {
                     item.0.clear();
+                    item.5 = 0; // storage_usage_bytes
                 }
             }
             (
@@ -475,12 +471,21 @@ impl DashboardService for MyDashboardService {
         let agents = agents_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
         let _meetings = meetings_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
         let (total_cost, total_tokens, _agent_costs_data) = cost_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
-        let products = products_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
-        let orders = orders_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
+        let mut products = products_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
+        let mut orders = orders_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
         let mut bookings = bookings_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
         let org = org_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
 
         if req.mobile_optimized {
+            for p in &mut products {
+                p.organization_id = String::new();
+                p.description = String::new();
+                p.metadata_json = String::new();
+                p.fulfillment_strategy = String::new();
+            }
+            for o in &mut orders {
+                o.organization_id = String::new();
+            }
             for b in &mut bookings {
                 b.organization_id = String::new();
             }
