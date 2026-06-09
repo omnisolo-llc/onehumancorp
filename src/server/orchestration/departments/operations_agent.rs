@@ -44,7 +44,13 @@ impl Department for OperationsAgent {
             "tenant.order.created" => "Process Order & Update Inventory".to_string(),
             "LowStockAlert" => {
                 let product_id = event.payload.get("product_id").and_then(|v| v.as_str()).unwrap_or("unknown");
-                format!("Draft a restock order for product {} due to low stock", product_id)
+                let remaining_stock = event.payload.get("remaining_stock").and_then(|v| v.as_i64()).unwrap_or(-1);
+
+                if remaining_stock == 0 {
+                    format!("Product {} sold out. Would you like to draft a restock order?", product_id)
+                } else {
+                    format!("Draft a restock order for product {} due to low stock", product_id)
+                }
             },
             "PosSyncFailure" => {
                 let transaction_id = event.payload.get("transaction_id").and_then(|v| v.as_str()).unwrap_or("unknown");

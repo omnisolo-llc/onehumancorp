@@ -248,7 +248,7 @@ pub async fn reserve_inventory_handler(
                 return (axum::http::StatusCode::OK, Json(serde_json::json!({
                     "success": false,
                     "lock_id": "",
-                    "error_message": "Item is currently being checked out by another customer"
+                    "error_message": "Item just sold out"
                 }))).into_response();
             }
 
