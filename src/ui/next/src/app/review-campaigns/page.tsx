@@ -12,6 +12,7 @@ export default function ReviewCampaignsPage() {
   const [isSent, setIsSent] = useState(false);
   const [hasPro, setHasPro] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [autoRequest, setAutoRequest] = useState(false);
 
   useEffect(() => {
     if (typeof localStorage !== 'undefined') {
@@ -39,7 +40,7 @@ export default function ReviewCampaignsPage() {
         `Hi [Customer Name],\n\n` +
         `Thank you so much for shopping with us! We noticed you recently received your ${productName || 'order'} and we hope you are absolutely loving it.\n\n` +
         `As a small business, we rely on feedback from amazing customers like you to grow and improve. If you have a minute, we would be incredibly grateful if you could share your thoughts by leaving a quick review.\n\n` +
-        `Click here to leave a review: [Review Link]\n\n` +
+        `Click here to leave a review: https://ohc.app/leave-review\n\n` +
         `To say thanks, we'll send you a 10% discount code for your next purchase as soon as your review is published!\n\n` +
         `Warmly,\n` +
         `The ${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'Store' : 'Store'} Team\n\n⚡ Powered by OHC`

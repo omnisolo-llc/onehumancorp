@@ -1,5 +1,7 @@
 "use client";
 import { FloatingActionButton } from "./FAB";
+import { MorningBriefingCard } from "./MorningBriefingCard";
+
 
 
 
@@ -12,6 +14,8 @@ import { AppShell } from "../components/AppShell";
 import { InteractiveWalkthrough, WalkthroughTarget } from "../../components/Walkthrough";
 import { WithTooltip } from "../../components/TooltipRegistry";
 import GrowthReferralWidget from "../components/GrowthReferralWidget";
+import AiTimeSavingsWidget from "../components/AiTimeSavingsWidget";
+
 import { SmartBlock } from "../builder/components";
 import { UnifiedAgentFeed } from "./UnifiedAgentFeed";
 import { ReviewFeedCard } from './ReviewFeedCard';
@@ -239,7 +243,25 @@ export default function Dashboard() {
     window.addEventListener("offline", updateOfflineStatus);
     window.addEventListener("storage", updateOfflineStatus);
 
-    return () => {
+
+
+  async function handleApproveDraft(approvalId: string) {
+    try {
+      const token = localStorage.getItem("token") || "";
+      const res = await fetch(`/api/agents/approvals/${approvalId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+        body: JSON.stringify({ approved: true })
+      });
+      if (res.ok) {
+        setApprovals(prev => prev.filter(a => a.id !== approvalId));
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  return () => {
       window.removeEventListener("online", updateOfflineStatus);
       window.removeEventListener("online", handleSync);
       window.removeEventListener("offline", updateOfflineStatus);
@@ -289,8 +311,11 @@ export default function Dashboard() {
         <p className="text-gray-600 dark:text-gray-400">Your agents are working on your behalf.</p>
       </div>
 
+      <AiTimeSavingsWidget />
       <NeighborhoodPulseCard tenant={tenantId()} />
       <FloatingActionButton />
+
+      <MorningBriefingCard tenant={tenantId()} />
 
       <InteractiveWalkthrough
         steps={walkthroughSteps}
@@ -549,22 +574,7 @@ export default function Dashboard() {
               </div>
             </div>
 
-            <div className="glassmorphism p-4 rounded-[12px] border border-indigo-200/50 bg-gradient-to-br from-indigo-50/50 to-purple-50/50 flex flex-col justify-center items-center text-center relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-16 h-16 bg-white/40 rounded-bl-full"></div>
-              <h4 className="text-sm font-bold font-outfit text-[#1D1D1F] mb-1 flex items-center gap-1">
-                <span className="text-indigo-500">✨</span> Advanced AI Insights
-              </h4>
-              <p className="text-xs text-gray-600 mb-3">Unlock predictive analytics and AI-driven growth recommendations.</p>
-              <button
-                onClick={() => {
-                  setActionMessage('Opening Pro pricing for Advanced AI Insights.');
-                  router.push('/pricing');
-                }}
-                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg shadow-sm transition-colors w-full"
-              >
-                Upgrade to Pro
-              </button>
-            </div>
+
           </div>
         </section>
 
@@ -604,6 +614,23 @@ export default function Dashboard() {
               <Link href="/inventory" className="app-button">Inventory</Link>
             </div>
             <div className="app-list">
+                            {approvals.filter(a => a.payload?.feature_type === 'ambassador_reply').map(approval => (
+                <div key={approval.id} className="app-list-item flex flex-col items-start gap-3">
+                  <div className="w-full">
+                    <div className="app-list-title">Action Required: Approve Reply</div>
+                    <div className="app-list-subtitle font-semibold text-gray-900 mt-1">1 New Message from {approval.payload?.source || "Instagram DM"}</div>
+                    <div className="app-list-subtitle mt-2 bg-gray-50 p-2 rounded border border-gray-100 text-xs italic">"{approval.payload?.original_message || approval.payload?.message || "Customer message"}"</div>
+                    <div className="app-list-subtitle mt-2 p-2 rounded bg-blue-50 border border-blue-100 text-blue-900 text-sm">
+                      <span className="font-semibold text-blue-800 text-xs uppercase mb-1 block">AI Draft</span>
+                      {approval.payload?.generated_response || approval.payload?.draft_reply || "Ready to send."}
+                    </div>
+                  </div>
+                  <div className="flex gap-2 w-full mt-1">
+                    <button type="button" className="app-btn-primary flex-1 py-2" onClick={() => handleApproveDraft(approval.id)}>✨ 1-Tap Approve</button>
+                    <Link href="/inbox" className="app-button flex-1 py-2 text-center bg-gray-100">Edit</Link>
+                  </div>
+                </div>
+              ))}
               {metrics.pending_orders > 0 && (
                 <div className="app-list-item">
                   <div>
@@ -631,7 +658,7 @@ export default function Dashboard() {
                   <span className="app-badge">Inbox</span>
                 </div>
               )}
-              {!loading && metrics.pending_orders === 0 && lowStockCount === 0 && messages.length === 0 && (
+              {!loading && metrics.pending_orders === 0 && lowStockCount === 0 && messages.length === 0 && approvals.filter(a => a.payload?.feature_type === "ambassador_reply").length === 0 && (
                 <div className="app-empty">No database-backed actions are currently open.</div>
               )}
             </div>
