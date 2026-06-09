@@ -6,3 +6,6 @@ services:
   server:
     pull_policy: never
     image: onehumancorp/server:latest
+
+  postgres:
+    image: postgres:15-alpine
