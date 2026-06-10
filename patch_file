@@ -1,0 +1,18 @@
+--- src/server/services/billing/auditor.rs
++++ src/server/services/billing/auditor.rs
+@@ -43,6 +43,7 @@
+     tenant_tokens: Mutex<HashMap<String, i64>>,
+     tenant_cached_tokens: Mutex<HashMap<String, i64>>,
+     agent_storage_bytes: Mutex<HashMap<String, i64>>,
++    tenant_storage_bytes: Mutex<HashMap<String, i64>>,
+     telemetry_tx: Option<tokio::sync::mpsc::UnboundedSender<AuditEvent>>,
+     llm_cost_counter: Counter<u64>,
+     storage_savings_counter: Counter<u64>,
+@@ -80,6 +81,7 @@
+             tenant_tokens: Mutex::new(HashMap::new()),
+             tenant_cached_tokens: Mutex::new(HashMap::new()),
+             agent_storage_bytes: Mutex::new(HashMap::new()),
++            tenant_storage_bytes: Mutex::new(HashMap::new()),
+             telemetry_tx: None,
+             llm_cost_counter,
+             storage_savings_counter,

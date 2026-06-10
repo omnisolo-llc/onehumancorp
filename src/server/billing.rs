@@ -58,6 +58,7 @@ impl Tracker {
             if let Some(aid) = agent_id {
                 auditor.record_agent_storage(aid, delta_bytes);
             }
+            auditor.record_tenant_storage(tenant_id, delta_bytes);
         }
         if let Some(ref limiter) = self.rate_limiter {
             match limiter.check_storage_quota(tenant_id, delta_bytes).await {
@@ -234,8 +235,12 @@ impl Tracker {
         self.get_tenant_cost_cents(tenant_id)
     }
 
-    pub fn get_tenant_storage_cost_cents(&self, _tenant_id: &str) -> i64 {
-        0 // Calculated dynamically on API layer for the dashboard
+    pub fn get_tenant_storage_cost_cents(&self, tenant_id: &str) -> i64 {
+        if let Some(ref auditor) = self.auditor {
+            auditor.get_tenant_storage_cost_cents(tenant_id)
+        } else {
+            0
+        }
     }
 
     pub fn get_total_cost_cents(&self) -> i64 {

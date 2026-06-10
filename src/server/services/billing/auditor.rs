@@ -43,6 +43,7 @@ pub struct CostAuditor {
     tenant_tokens: Mutex<HashMap<String, i64>>,
     tenant_cached_tokens: Mutex<HashMap<String, i64>>,
     agent_storage_bytes: Mutex<HashMap<String, i64>>,
+    tenant_storage_bytes: Mutex<HashMap<String, i64>>,
     telemetry_tx: Option<tokio::sync::mpsc::UnboundedSender<AuditEvent>>,
     llm_cost_counter: Counter<u64>,
     storage_savings_counter: Counter<u64>,
@@ -79,6 +80,7 @@ impl CostAuditor {
             tenant_tokens: Mutex::new(HashMap::new()),
             tenant_cached_tokens: Mutex::new(HashMap::new()),
             agent_storage_bytes: Mutex::new(HashMap::new()),
+            tenant_storage_bytes: Mutex::new(HashMap::new()),
             telemetry_tx: None,
             llm_cost_counter,
             storage_savings_counter,
@@ -255,6 +257,12 @@ impl CostAuditor {
     }
 
 
+    pub fn record_tenant_storage(&self, tenant_id: &str, bytes: i64) {
+        let mut tenant_storage_bytes = self.tenant_storage_bytes.lock().unwrap();
+        let current = tenant_storage_bytes.entry(tenant_id.to_string()).or_insert(0);
+        *current += bytes;
+    }
+
     pub fn record_agent_storage(&self, agent_id: &str, bytes: i64) {
         let mut agent_storage_bytes = self.agent_storage_bytes.lock().unwrap();
         let current_bytes = agent_storage_bytes.entry(agent_id.to_string()).or_insert(0);
@@ -284,6 +292,14 @@ impl CostAuditor {
     pub fn get_tenant_cost_cents(&self, tenant_id: &str) -> i64 {
         let tenant_costs = self.tenant_costs.lock().unwrap();
         (*tenant_costs.get(tenant_id).unwrap_or(&0.0) * 100.0).round() as i64
+    }
+
+    pub fn get_tenant_storage_cost_cents(&self, tenant_id: &str) -> i64 {
+        let tenant_storage_bytes = self.tenant_storage_bytes.lock().unwrap();
+        let tenant_storage = *tenant_storage_bytes.get(tenant_id).unwrap_or(&0);
+        let storage_gb = tenant_storage as f64 / (1024.0 * 1024.0 * 1024.0);
+        let cost = storage_gb * 0.10;
+        (cost * 100.0).round() as i64
     }
 
     pub fn get_total_revenue(&self) -> f64 {
