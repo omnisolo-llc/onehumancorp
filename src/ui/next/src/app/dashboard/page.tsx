@@ -312,7 +312,7 @@ export default function Dashboard() {
         { label: "New Product", href: "/products/new", primary: true },
       ]}
     >
-      <div className="mb-6 p-6 rounded-[16px] glassmorphism border border-white/40 dark:border-white/10">
+      <div className="hidden md:block mb-6 p-6 rounded-[16px] glassmorphism border border-white/40 dark:border-white/10">
         <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Welcome back, {userName}.</h2>
         <p className="text-gray-600 dark:text-gray-400">Your agents are working on your behalf.</p>
       </div>
@@ -331,7 +331,7 @@ export default function Dashboard() {
         onClose={() => setIsWalkthroughOpen(false)}
       />
 
-      <div className="mb-4 flex flex-wrap gap-2">
+      <div className="hidden md:flex mb-4 flex-wrap gap-2">
         <button
           type="button"
           onClick={() => {
@@ -539,7 +539,7 @@ export default function Dashboard() {
 
         <UnifiedAgentFeed />
 
-        <section>
+        <section className="hidden md:block">
           <div className="mb-6 p-6 rounded-[16px] bg-white/65 dark:bg-[#16161a]/70 border border-white/40 dark:border-white/10">
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               <div className="flex items-center gap-4">
@@ -601,7 +601,7 @@ export default function Dashboard() {
           </div>
         </section>
 
-        <section className="app-grid two">
+        <section className="hidden md:grid app-grid two">
           <WalkthroughTarget id="operations-map-target" className="app-panel glassmorphism border border-white/40 dark:border-white/10">
             <div className="app-panel-header">
               <div>
@@ -689,7 +689,7 @@ export default function Dashboard() {
         </section>
 
 
-        <section className="app-grid two">
+        <section className="hidden md:grid app-grid two">
           <div className="app-panel glassmorphism border border-white/40 dark:border-white/10">
             <div className="app-panel-header">
               <WithTooltip id="recent-orders-tooltip" defaultText="View the latest orders placed by your customers."><div className="app-panel-title">Recent Orders</div></WithTooltip>
@@ -744,7 +744,7 @@ export default function Dashboard() {
           </div>
         </section>
 
-        <section className="mt-4">
+        <section className="hidden md:block mt-4">
           <div className="mb-3 flex items-center justify-between gap-3">
             <div>
               <h2 className="app-panel-title">Growth & Virality</h2>

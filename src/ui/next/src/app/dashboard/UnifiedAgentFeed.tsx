@@ -281,7 +281,7 @@ export function UnifiedAgentFeed() {
   }
 
   return (
-    <section className="mb-6 w-full" aria-label="Unified Agent Feed">
+    <section className="mb-6 w-full max-w-[375px] md:max-w-none mx-auto overflow-hidden bg-white/10 backdrop-blur-md rounded-[16px]" aria-label="Unified Agent Feed">
       <div className="mb-4 flex items-center border-b border-gray-200 dark:border-gray-700">
         <button
           onClick={() => setActiveTab("proposals")}
@@ -308,7 +308,7 @@ export function UnifiedAgentFeed() {
       <div className="flex flex-col gap-4">
         {activeTab === "proposals" && (
           <>
-            <div className="glassmorphism p-5 rounded-[16px] border border-white/40 dark:border-white/10 shadow-sm flex flex-col gap-4">
+            <div className="glassmorphism p-4 rounded-[16px] border border-white/40 dark:border-white/10 shadow-sm flex flex-col gap-4">
               <div className="flex flex-col gap-1">
                 <div className="flex justify-between items-start">
                   <span className="text-xs font-bold uppercase tracking-wider text-green-600 bg-green-100 dark:bg-green-900 dark:text-green-300 px-2 py-1 rounded">Action Needed</span>
@@ -320,7 +320,7 @@ export function UnifiedAgentFeed() {
               </div>
             </div>
 
-            <div className="glassmorphism p-5 rounded-[16px] border border-white/40 dark:border-white/10 shadow-sm flex flex-col gap-4">
+            <div className="glassmorphism p-4 rounded-[16px] border border-white/40 dark:border-white/10 shadow-sm flex flex-col gap-4">
               <div className="flex flex-col gap-1">
                 <div className="flex justify-between items-start">
                   <span className="text-xs font-bold uppercase tracking-wider text-[#0066FF] bg-[#0066FF]/10 dark:bg-[#3388FF]/20 dark:text-[#3388FF] px-2 py-1 rounded">Approval</span>
@@ -369,7 +369,7 @@ export function UnifiedAgentFeed() {
             {items.map((approval) => (
               <div
                 key={approval.id}
-                className="glassmorphism p-5 rounded-[16px] border border-white/40 dark:border-white/10 shadow-sm flex flex-col gap-4"
+                className="glassmorphism p-4 rounded-[16px] border border-white/40 dark:border-white/10 shadow-sm flex flex-col gap-4"
               >
                 <div className="flex flex-col gap-1">
                   <div className="flex items-center gap-2">
@@ -739,11 +739,11 @@ export function UnifiedAgentFeed() {
                 </p>
               </div>
             )}
-            <div className="flex flex-col gap-3 min-w-[320px] max-w-full">
+            <div className="flex flex-col gap-3 w-full">
             {activities.map((activity) => (
               <div
                 key={activity.id}
-                className="glassmorphism p-5 rounded-[16px] border border-white/40 dark:border-white/10 shadow-sm flex flex-col gap-3 opacity-90 min-h-[44px]"
+                className="glassmorphism p-4 rounded-[16px] border border-white/40 dark:border-white/10 shadow-sm flex flex-col gap-3 opacity-90 min-h-[44px]"
               >
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold font-outfit uppercase tracking-wider text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-1 rounded-md">
