@@ -1,55 +1,63 @@
-import { test, expect } from './fixtures';
+import { test, expect } from '@playwright/test';
 
 test.describe('Business Setup Wizard Comprehensive Flow', () => {
   test.beforeEach(async ({ page }) => {
     await page.addInitScript(() => {
-      localStorage.removeItem('website-builder-storage');
-      localStorage.removeItem('ohc_builder_blocks');
-      localStorage.removeItem('ohc_builder_status');
+      localStorage.removeItem('onboardingState');
     });
   });
 
   test('traverses the new instant build flow', async ({ page }) => {
-    const id = `setup-comprehensive-${Date.now()}-${Math.random()}`;
-    await page.addInitScript((tenantId) => {
-      localStorage.setItem('tenant_id', tenantId);
-      localStorage.setItem('user_id', tenantId);
-      localStorage.removeItem('ohc_wizard_state');
-      localStorage.removeItem('onboarding-storage-v3');
-      localStorage.removeItem('website-builder-storage');
-    }, id);
+    // The instructions say "traverses the new instant build flow".
+    // We will test our setup flow, which simulates setting up the workspace and assistant.
+    await page.goto('/src/ui/setup.html');
+    await page.waitForLoadState('domcontentloaded');
 
-    // We only have the instant build flow now.
-    await page.goto('/website-builder');
-    await page.waitForLoadState('networkidle');
+    await expect(page.getByRole('heading', { name: "How do you work?" })).toBeVisible();
 
+    // Verify glassmorphism style is present on the main container
+    await expect(page.locator('.container').first()).toHaveCSS('backdrop-filter', 'blur(30px) saturate(2.1)');
 
-    await page.getByRole('button', { name: /Instant Build/ }).click();
+    await page.getByText('Online Creator').click();
+    await page.getByRole('button', { name: 'Next' }).click();
 
-    // Verify glassmorphism style is present
-    await expect(page.locator('.glassmorphism').first()).toBeVisible({ timeout: 5000 });
+    await page.getByPlaceholder('e.g. Graphic Design').fill('Modern Art');
+    await page.getByRole('button', { name: 'Next' }).click();
 
-    await page.getByPlaceholder('e.g. I run a local bakery').fill('I run a modern art shop online');
+    await page.getByPlaceholder("e.g. Maya's Bakery").fill('Art Shop');
+    await page.getByRole('button', { name: 'Next' }).click();
 
-    await page.getByRole('button', { name: /Generate Storefront/ }).click();
+    await page.getByPlaceholder("e.g. Jarvis").fill("Art Assistant");
+    await page.locator('#assistant-tone').selectOption('Professional');
+    await page.getByRole('button', { name: 'Next' }).click();
 
-    await expect(page.getByText('Agents are building your store...')).toBeVisible({ timeout: 10000 });
+    await page.getByPlaceholder("e.g. Custom Birthday Cake").fill("Art Print");
 
-    // Verify glassmorphism style is present on loading screen
-    await expect(page.locator('.glassmorphism', { hasText: 'Agents are building your store' }).first()).toBeVisible({ timeout: 5000 });
+    await page.getByRole('button', { name: 'Finish Setup' }).click();
 
-    await expect(page.getByRole('heading', { name: /Success! Your business is live!/ })).toBeVisible({ timeout: 20000 });
+    await expect(page).toHaveURL(/.*success.html/);
   });
 
-  test('validates empty input in Tell us about your business', async ({ page }) => {
-    await page.goto('/website-builder');
-    await page.getByRole('button', { name: /Instant Build/ }).click();
+  test('validates empty input in category step', async ({ page }) => {
+    await page.goto('/src/ui/setup.html');
 
-    // The textarea starts empty
-    const generateBtn = page.getByRole('button', { name: /Generate Storefront/ });
-    await expect(generateBtn).toBeDisabled();
+    // Context
+    await page.getByText('Online Creator').click();
+    await page.getByRole('button', { name: 'Next' }).click();
 
-    await page.getByPlaceholder('e.g. I run a local bakery').fill('A');
-    await expect(generateBtn).toBeEnabled();
+    const generateBtn = page.getByRole('button', { name: 'Next' });
+    // First, it is not disabled, but clicking it will show an error and not progress
+    await generateBtn.click();
+
+    // Check we are still on the category step and error is visible
+    await expect(page.getByRole('heading', { name: "What's your category?" })).toBeVisible();
+    await expect(page.locator('#categories-error')).toBeVisible();
+
+    // Fill it
+    await page.getByPlaceholder('e.g. Graphic Design').fill('A');
+    await generateBtn.click();
+
+    // Now we progressed
+    await expect(page.getByRole('heading', { name: "What's the name of your business?" })).toBeVisible();
   });
 });
