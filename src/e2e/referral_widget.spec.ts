@@ -32,6 +32,8 @@ test.describe('Referral Widget Growth Loop', () => {
     });
 
     test('Smoke test: referral_widget', async ({ page, request }) => {
-      await currentAppSmoke(page, request, 'referral_widget');
+      await test('smoke', async ({ page, request }) => {
+  await currentAppSmoke(page, request, page, request, 'referral_widget');
+});
     });
 });

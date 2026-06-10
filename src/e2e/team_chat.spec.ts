@@ -2,7 +2,9 @@ import { test, expect } from './fixtures';
 import { currentAppSmoke } from './current_app_smoke';
 
 test('current app smoke test', async ({ page, request }) => {
-  await currentAppSmoke(page, request, 'team_chat');
+  await test('smoke', async ({ page, request }) => {
+  await currentAppSmoke(page, request, page, request, 'team_chat');
+});
 });
 
 test.describe('Team Chat E2E', () => {

@@ -1,3 +1,8 @@
 import { currentAppSmoke } from './current_app_smoke';
 
-currentAppSmoke('dashboard_mesh_ui');
+import { test } from '@playwright/test';
+test('smoke', async ({ page, request }) => {
+  await test('smoke', async ({ page, request }) => {
+  await currentAppSmoke(page, request, page, request, 'dashboard_mesh_ui');
+});
+});

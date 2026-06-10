@@ -1,3 +1,8 @@
 import { currentAppSmoke } from './current_app_smoke';
 
-currentAppSmoke('autonomous_ops');
+import { test } from '@playwright/test';
+test('smoke', async ({ page, request }) => {
+  await test('smoke', async ({ page, request }) => {
+  await currentAppSmoke(page, request, page, request, 'autonomous_ops');
+});
+});

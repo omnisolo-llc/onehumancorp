@@ -1,3 +1,8 @@
 import { currentAppSmoke } from './current_app_smoke';
 
-currentAppSmoke('virtual_meeting_walkthrough');
+import { test } from '@playwright/test';
+test('smoke', async ({ page, request }) => {
+  await test('smoke', async ({ page, request }) => {
+  await currentAppSmoke(page, request, page, request, 'virtual_meeting_walkthrough');
+});
+});

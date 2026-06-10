@@ -1,7 +1,12 @@
 import { test, expect } from './fixtures';
 import { currentAppSmoke } from './current_app_smoke';
 
-currentAppSmoke('approval_inbox');
+import { test } from '@playwright/test';
+test('smoke', async ({ page, request }) => {
+  await test('smoke', async ({ page, request }) => {
+  await currentAppSmoke(page, request, page, request, 'approval_inbox');
+});
+});
 
 test.describe('Dashboard - Ambassador Agent Approval', () => {
   test('displays Action Required card for incoming message and allows 1-tap approve', async ({ request, page, adminUser, loginAs }) => {

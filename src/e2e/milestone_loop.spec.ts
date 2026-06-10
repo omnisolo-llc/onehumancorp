@@ -1,3 +1,8 @@
 import { currentAppSmoke } from './current_app_smoke';
 
-currentAppSmoke('milestone_loop');
+import { test } from '@playwright/test';
+test('smoke', async ({ page, request }) => {
+  await test('smoke', async ({ page, request }) => {
+  await currentAppSmoke(page, request, page, request, 'milestone_loop');
+});
+});

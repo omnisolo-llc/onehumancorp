@@ -1,7 +1,9 @@
 import { test, expect } from './fixtures';
 import { currentAppSmoke } from './current_app_smoke';
 
-// currentAppSmoke('review_campaign_growth_loop');
+// test('smoke', async ({ page, request }) => {
+  await currentAppSmoke(page, request, 'review_campaign_growth_loop');
+});
 
 test.describe('Automated Review Campaign Growth Loop', () => {
   test('should generate a review draft and trigger the soft paywall', async ({ page }) => {
