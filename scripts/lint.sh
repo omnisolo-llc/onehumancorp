@@ -7,7 +7,7 @@ if [ -n "${BUILD_WORKSPACE_DIRECTORY:-}" ]; then
 fi
 
 echo "Running Clippy aspect on all Rust targets..."
-exec bazel build \
+exec bazelisk build \
   --keep_going \
   --aspects=@rules_rust//rust:defs.bzl%rust_clippy_aspect \
   --output_groups=clippy_checks \
