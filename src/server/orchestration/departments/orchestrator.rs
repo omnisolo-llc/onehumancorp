@@ -377,6 +377,23 @@ impl DepartmentOrchestrator {
                 .await;
             }
         }
+
+        // Publish SSE event
+        let payload = serde_json::json!({
+            "event_type": "approval_request",
+            "data": {
+                "id": req.id,
+                "tenant_id": req.tenant_id,
+                "department": req.department.to_string(),
+                "description": req.description,
+                "status": status_str,
+                "action_risk": req.action_risk.to_string(),
+                "payload": req.payload.clone()
+            }
+        });
+        let payload_bytes = serde_json::to_vec(&payload).unwrap_or_default();
+        let topic = format!("agent_feed:{}", req.tenant_id);
+        let _ = self.mesh.publish(&topic, payload_bytes).await;
     }
 
     pub async fn get_pending_approvals(&self, tenant_id: &str, cursor: Option<String>, limit: i64) -> Vec<ApprovalRequest> {
@@ -759,7 +776,7 @@ impl DepartmentOrchestrator {
 
                         let api_key = std::env::var("STRIPE_SECRET_KEY").unwrap_or_else(|_| "sk_test_123".to_string());
                         let stripe = crate::integrations::stripe::client::StripeClient::new(api_key);
-                        let stripe_link = stripe.create_checkout_session(&quote_id, "customer_123", price * 0.20).await.unwrap_or_default();
+                        let stripe_link = stripe.create_checkout_session(&quote_id, "customer_123", price * 0.20, false).await.unwrap_or_default();
 
                         if let DbStore::Postgres = &self.db.store {
                             if let Err(e) = sqlx::query("INSERT INTO quotes (id, tenant_id, status, total_amount, required_deposit, expires_at, checkout_url) VALUES ($1, $2, $3, $4, $5, $6, $7)")
@@ -922,6 +939,21 @@ impl DepartmentOrchestrator {
                 let topic = format!("agent:{}:approved", dep);
                 let _ = self.mesh.publish(&topic, payload_bytes).await;
 
+                // Publish SSE event
+                let sse_payload = serde_json::json!({
+                    "event_type": "approval_decision",
+                    "data": {
+                        "request_id": request_id,
+                        "tenant_id": tenant_id,
+                        "department": dep,
+                        "status": "APPROVED",
+                        "original_payload": original_payload,
+                    }
+                });
+                let sse_payload_bytes = serde_json::to_vec(&sse_payload).unwrap_or_default();
+                let sse_topic = format!("agent_feed:{}", tenant_id);
+                let _ = self.mesh.publish(&sse_topic, sse_payload_bytes).await;
+
                 // Add to ledger
                 if let crate::db::DbStore::Postgres = &self.db.store {
                     let entry_id = Uuid::new_v4().to_string();
@@ -942,6 +974,21 @@ impl DepartmentOrchestrator {
                         }
                     }
                 }
+            } else {
+                // Publish SSE event for rejection
+                let sse_payload = serde_json::json!({
+                    "event_type": "approval_decision",
+                    "data": {
+                        "request_id": request_id,
+                        "tenant_id": tenant_id,
+                        "department": dep,
+                        "status": "REJECTED",
+                        "original_payload": original_payload,
+                    }
+                });
+                let sse_payload_bytes = serde_json::to_vec(&sse_payload).unwrap_or_default();
+                let sse_topic = format!("agent_feed:{}", tenant_id);
+                let _ = self.mesh.publish(&sse_topic, sse_payload_bytes).await;
             }
         }
 

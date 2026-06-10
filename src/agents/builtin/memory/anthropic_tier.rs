@@ -7,7 +7,7 @@ use tokio::fs;
 /// 3) Raw transcripts (accessed via search only)
 #[derive(Clone, Debug)]
 pub struct Anthropic3TierMemory {
-    base_dir: PathBuf,
+    _base_dir: PathBuf,
     index_file: PathBuf,
     topics_dir: PathBuf,
     transcripts_dir: PathBuf,
@@ -25,7 +25,7 @@ impl Anthropic3TierMemory {
         fs::create_dir_all(&transcripts_dir).await?;
 
         Ok(Self {
-            base_dir,
+            _base_dir: base_dir,
             index_file,
             topics_dir,
             transcripts_dir,

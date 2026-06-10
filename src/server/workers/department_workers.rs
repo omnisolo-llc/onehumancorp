@@ -1089,8 +1089,8 @@ let db_for_products = self.db.clone();
                                             if attempts == MAX_RETRIES {
                                                 let _ = sqlx::query(
                                                     r#"
-                                                    INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
-                                                    VALUES ($1, $2, 'AI Agent Paused: Marketing', 'The AI agent responsible for drafting social posts is paused because the AI service is unavailable.', 'PENDING', 'P2', 'LOW', 'PENDING', 'System is paused. Please manually draft the social post.')
+                                                    INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, payload, created_at, updated_at)
+                                                    VALUES ($1, $2, 'marketing', 'The AI agent responsible for drafting social posts is paused because the AI service is unavailable.', 'PAUSED', 'HIGH', '{}'::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
                                                     "#
                                                 )
                                                 .bind(Uuid::new_v4().to_string())
@@ -1122,13 +1122,12 @@ let db_for_products = self.db.clone();
                                     crate::db::DbStore::Postgres => {
                                         let _ = sqlx::query(
                                             r#"
-                                            INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
-                                            VALUES ($1, $2, $3, $4, 'PENDING', 'P2', 'LOW', 'PENDING', $5)
+                                            INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, payload, created_at, updated_at)
+                                            VALUES ($1, $2, 'marketing', $3, 'DRAFT', 'HIGH', $4::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
                                             "#
                                         )
                                         .bind(&task_id)
                                         .bind(&org_id)
-                                        .bind(&title)
                                         .bind(&description)
                                         .bind(&proposed_content)
                                         .execute(&db_for_products.pool)
@@ -1137,13 +1136,12 @@ let db_for_products = self.db.clone();
                                     crate::db::DbStore::Sqlite(pool) => {
                                         let _ = sqlx::query(
                                             r#"
-                                            INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
-                                            VALUES (?, ?, ?, ?, 'PENDING', 'P2', 'LOW', 'PENDING', ?)
+                                            INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, payload, created_at, updated_at)
+                                            VALUES (?, ?, 'marketing', ?, 'DRAFT', 'HIGH', ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
                                             "#
                                         )
                                         .bind(&task_id)
                                         .bind(&org_id)
-                                        .bind(&title)
                                         .bind(&description)
                                         .bind(&proposed_content)
                                         .execute(pool)

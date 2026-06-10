@@ -59,12 +59,12 @@ impl PromptBuilder {
             .split("\n\n")
             .next()
             .unwrap_or(user_instructions);
-        if first_paragraph.len() > 1000 {
-            let mut end_idx = 997;
-            while end_idx > 0 && !first_paragraph.is_char_boundary(end_idx) {
-                end_idx -= 1;
-            }
-            format!("{}...", &first_paragraph[..end_idx])
+
+        // Use character counting rather than byte lengths for robustness
+        let char_count = first_paragraph.chars().count();
+        if char_count > 1000 {
+            let truncated: String = first_paragraph.chars().take(997).collect();
+            format!("{}...", truncated)
         } else {
             first_paragraph.to_string()
         }
@@ -79,12 +79,10 @@ impl PromptBuilder {
                 if !error_summary.is_empty() {
                     error_summary.push_str(", ");
                 }
-                let err_msg = if msg.content.len() > 100 {
-                    let mut end_idx = 97;
-                    while end_idx > 0 && !msg.content.is_char_boundary(end_idx) {
-                        end_idx -= 1;
-                    }
-                    format!("{}...", &msg.content[..end_idx])
+                let char_count = msg.content.chars().count();
+                let err_msg = if char_count > 100 {
+                    let truncated: String = msg.content.chars().take(97).collect();
+                    format!("{}...", truncated)
                 } else {
                     msg.content.clone()
                 };
@@ -128,7 +126,7 @@ impl HierarchicalPromptBuilder {
             }
 
             let mut combined_agents_md = String::new();
-            let limit = 32768;
+            let limit = 32768; // char limit
 
             // Prioritize more deeply nested files.
             // `contents` has deepest first because we started at current_dir and went up.
@@ -140,13 +138,10 @@ impl HierarchicalPromptBuilder {
                     combined_agents_md.push_str(&addition);
                 }
 
-                if combined_agents_md.len() > limit {
-                    let mut end_idx = limit;
-                    while end_idx > 0 && !combined_agents_md.is_char_boundary(end_idx) {
-                        end_idx -= 1;
-                    }
-                    combined_agents_md.truncate(end_idx);
-                    combined_agents_md.push_str("\n... [AGENTS.md TRUNCATED TO 32KiB]");
+                let current_char_count = combined_agents_md.chars().count();
+                if current_char_count > limit {
+                    let truncated: String = combined_agents_md.chars().take(limit).collect();
+                    combined_agents_md = format!("{}\n... [AGENTS.md TRUNCATED TO 32KiB]", truncated);
                     break;
                 }
             }
@@ -160,12 +155,9 @@ impl HierarchicalPromptBuilder {
             cfg.user_instructions.clone()
         };
 
-        if source_name == "User Instructions" && user_instr.len() > 32768 {
-            let mut end_idx = 32768;
-            while end_idx > 0 && !user_instr.is_char_boundary(end_idx) {
-                end_idx -= 1;
-            }
-            let truncated = &user_instr[..end_idx];
+        let user_instr_char_count = user_instr.chars().count();
+        if source_name == "User Instructions" && user_instr_char_count > 32768 {
+            let truncated: String = user_instr.chars().take(32768).collect();
             user_instr = format!("{}\n... [{} TRUNCATED TO 32KiB]", truncated, source_name);
         }
 
@@ -297,9 +289,8 @@ mod tests {
         let root_dir = dir.path().join("root");
         fs::create_dir_all(&root_dir).unwrap();
 
-        // Exactly 32,766 bytes of "A", plus a 4-byte emoji "😊"
-        // Total size = 32770 bytes. The 32768 limit falls right in the middle of the emoji.
-        let mut content = "A".repeat(32766);
+        // Let's use exactly 32,768 logical characters to reach the boundary, then push an emoji.
+        let mut content = "A".repeat(32768);
         content.push_str("😊");
         fs::write(root_dir.join("AGENTS.md"), &content).unwrap();
 
@@ -313,14 +304,14 @@ mod tests {
         std::env::set_current_dir(original_dir).unwrap();
 
         assert!(built.contains("[AGENTS.md TRUNCATED TO 32KiB]"));
-        // The emoji should be completely stripped (meaning we go back to 32766)
+        // The emoji should be stripped because it's past the 32768 limit
         assert!(
             !built.contains("😊"),
-            "Emoji should be stripped to respect char boundary"
+            "Emoji should be stripped since it's character 32769"
         );
         assert!(
-            built.contains(&"A".repeat(32766)),
-            "Preceding ASCII should remain intact"
+            built.contains(&"A".repeat(32768)),
+            "Preceding characters up to limit should remain intact"
         );
     }
 
@@ -395,29 +386,29 @@ mod tests {
 
     #[test]
     fn test_extract_core_objective_char_boundary() {
-        let user_instructions = "A".repeat(995) + "😊"; // '😊' is 4 bytes. 995 + 4 = 999 bytes. Total string is < 1000 so no truncation.
+        let user_instructions = "A".repeat(995) + "😊";
         let obj = PromptBuilder::extract_core_objective(&user_instructions);
         assert_eq!(obj, user_instructions);
 
-        let long_user_instructions = "A".repeat(995) + "😊" + "BC"; // 1001 bytes.
+        let long_user_instructions = "A".repeat(995) + "😊" + "BCDEF";
         let obj2 = PromptBuilder::extract_core_objective(&long_user_instructions);
 
-        // 997 is in the middle of '😊' (bytes 995..999).
-        // `is_char_boundary` should walk back to 995.
-        let expected = "A".repeat(995) + "...";
+        // With new chars() logic, 997 logical characters are maintained.
+        // The first 995 are 'A', 996 is '😊', 997 is 'B'.
+        let expected = "A".repeat(995) + "😊" + "B...";
         assert_eq!(obj2, expected);
     }
 
     #[test]
     fn test_summarize_recent_tool_errors_char_boundary() {
-        let error_msg = "error: ".to_string() + &"A".repeat(88) + "😊"; // 7 + 88 + 4 = 99 bytes
-        let error_msg = error_msg + "BC"; // 101 bytes
+        let mut error_msg = "error: ".to_string() + &"A".repeat(88) + "😊";
+        error_msg = error_msg + "BCDEF";
         let messages = vec![Message::user(error_msg)];
 
         let summary = PromptBuilder::summarize_recent_tool_errors(&messages);
 
-        // 97 is inside the '😊' (bytes 95..99). Walk back to 95.
-        let expected = "error: ".to_string() + &"A".repeat(88) + "...";
+        // 97 logical chars: 'error: ' (7 chars) + 88 'A' + '😊' (1 char) + 'B' (1 char)
+        let expected = "error: ".to_string() + &"A".repeat(88) + "😊B...";
         assert_eq!(summary, expected);
     }
 }

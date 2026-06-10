@@ -132,7 +132,7 @@ export default function MyPlanPage() {
                 {/* AI Actions */}
                 <div>
                     <div className="flex justify-between items-center mb-2">
-                        <span className="font-medium text-gray-700">AI Actions Used</span>
+                        <span className="font-medium text-gray-700">AI actions used this month</span>
                         <span className="text-sm font-semibold text-gray-900">
                             {planData?.ai_actions_used} / {planData?.ai_actions_limit === null ? 'Unlimited' : planData?.ai_actions_limit}
                         </span>
@@ -158,7 +158,7 @@ export default function MyPlanPage() {
                 {/* Storage */}
                 <div>
                     <div className="flex justify-between items-center mb-2">
-                        <span className="font-medium text-gray-700">Storage Used</span>
+                        <span className="font-medium text-gray-700">Storage used</span>
                         <span className="text-sm font-semibold text-gray-900">
                             {formatStorage(planData?.storage_used_bytes || 0)} / {planData?.storage_limit_bytes === null ? 'Unlimited' : formatStorage(planData?.storage_limit_bytes || 0)}
                         </span>

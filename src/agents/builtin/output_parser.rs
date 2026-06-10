@@ -58,29 +58,43 @@ impl<T: DeserializeOwned> OutputParser<T> for StructuredOutputParser<T> {
             }
 
         // Fallback mechanic: Extract from markdown json wrapper if model stubbornly outputs raw text
-        let trimmed = completion.trim();
-        if trimmed.starts_with("```json") && trimmed.ends_with("```") {
-            let json_str = trimmed
-                .trim_start_matches("```json")
-                .trim_end_matches("```")
-                .trim();
-            if let Ok(parsed) = serde_json::from_str::<T>(json_str) {
+        // Fallback mechanic: Extract from markdown json wrapper if model stubbornly outputs raw text
+        let mut text_to_parse = completion.trim();
+
+        if let Some(start) = text_to_parse.find("```json") {
+            if let Some(end) = text_to_parse[start + 7..].find("```") {
+                text_to_parse = &text_to_parse[start + 7..start + 7 + end];
+            }
+        } else if let Some(start) = text_to_parse.find("{") {
+            if let Some(end) = text_to_parse.rfind("}") {
+                if end > start {
+                    text_to_parse = &text_to_parse[start..end + 1];
+                }
+            }
+        } else if let Some(start) = text_to_parse.find("[") {
+            if let Some(end) = text_to_parse.rfind("]") {
+                 if end > start {
+                     text_to_parse = &text_to_parse[start..end + 1];
+                 }
+            }
+        }
+
+        let text_to_parse = text_to_parse.trim();
+
+        if text_to_parse.starts_with("{") || text_to_parse.starts_with("[") {
+            if let Ok(parsed) = serde_json::from_str::<T>(text_to_parse) {
                 return Ok(parsed);
             }
-            if let Ok(val) = serde_json::from_str::<serde_json::Value>(json_str)
-                && let Some(data) = val.get("data")
-                    && let Ok(parsed) = serde_json::from_value::<T>(data.clone()) {
+            if let Ok(val) = serde_json::from_str::<serde_json::Value>(text_to_parse) {
+                if let Some(data) = val.get("data") {
+                    if let Ok(parsed) = serde_json::from_value::<T>(data.clone()) {
                         return Ok(parsed);
                     }
-        } else if trimmed.starts_with("{") && trimmed.ends_with("}") {
-            if let Ok(parsed) = serde_json::from_str::<T>(trimmed) {
-                return Ok(parsed);
+                }
             }
-            if let Ok(val) = serde_json::from_str::<serde_json::Value>(trimmed)
-                && let Some(data) = val.get("data")
-                    && let Ok(parsed) = serde_json::from_value::<T>(data.clone()) {
-                        return Ok(parsed);
-                    }
+            if let Err(e) = serde_json::from_str::<serde_json::Value>(text_to_parse) {
+                return Err(crate::types::format_pydantic_error(&e, Some(text_to_parse)));
+            }
         }
 
         // Strict enforcement: Rely entirely on native tool_calls API objects.
