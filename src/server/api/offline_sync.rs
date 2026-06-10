@@ -114,7 +114,7 @@ pub async fn offline_sync_handler(
 
                         let _ = sqlx::query(
                             "INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status)
-                             VALUES ($1, $2, 'operations', 'PosSyncFailure', $3::jsonb, 'PENDING')"
+                             VALUES ($1, $2, 'operations', 'InventoryConflictEvent', $3::jsonb, 'PENDING')"
                         )
                         .bind(&ai_task_id)
                         .bind(&tenant_id_clone)

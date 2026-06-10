@@ -67,7 +67,7 @@ function CheckoutContent() {
           "Content-Type": "application/json",
           ...(typeof localStorage !== "undefined" && localStorage.getItem('token') ? { "Authorization": `Bearer ${localStorage.getItem('token')}` } : {})
         },
-        body: JSON.stringify({ tier, is_subscription: isSubscription }),
+        body: JSON.stringify({ tier, is_subscription: true }),
       });
       const data = await response.json();
       if (!response.ok || !data.checkout_url) {
@@ -101,6 +101,7 @@ function CheckoutContent() {
           tenant_id: tenant,
           amount_cents: amount_cents,
           currency: "MXN",
+          is_subscription: tier ? true : isSubscription,
         }),
       });
       const data = await response.json();
@@ -358,7 +359,13 @@ function CheckoutContent() {
               </div>
               <p className="text-indigo-800 text-xs font-medium">
                 Give a 20% discount to friends and get a 10% commission when they
-                make their first purchase! ⚡ Powered by OHC
+                make their first purchase! <a href={`/onboarding?ref=${tenant}&source=checkout_affiliate`} target="_blank" className="font-bold hover:underline" onClick={(e) => {
+                  fetch('/api/v1/growth/referrals/click', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ referrer_id: tenant, source: 'checkout_affiliate' })
+                  }).catch(err => console.error('Failed to track referral click:', err));
+                }}>⚡ Powered by OHC</a>
               </p>
             </div>
 

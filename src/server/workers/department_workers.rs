@@ -901,8 +901,8 @@ let db_for_products = self.db.clone();
                                             if attempts == MAX_RETRIES {
                                                 let _ = sqlx::query(
                                                     r#"
-                                                    INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, payload, created_at, updated_at)
-                                                    VALUES ($1, $2, 'marketing', 'The AI agent responsible for drafting social posts is paused because the AI service is unavailable.', 'PAUSED', 'HIGH', '{}'::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                                                    INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at)
+                                                    VALUES ($1, $2, 'marketing', '"{}"'::jsonb, '{}'::jsonb, 'PAUSED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
                                                     "#
                                                 )
                                                 .bind(Uuid::new_v4().to_string())
@@ -926,7 +926,7 @@ let db_for_products = self.db.clone();
                                 }
 
                                 let task_id = Uuid::new_v4().to_string();
-                                let title = format!("Draft Social Post: {}", product_name);
+                                let _title = format!("Draft Social Post: {}", product_name);
                                 let description = "The Promoter generated social media captions for your new product. Review and schedule.";
                                 let proposed_content = serde_json::to_string(&parsed).unwrap_or_default();
 
@@ -934,27 +934,48 @@ let db_for_products = self.db.clone();
                                     crate::db::DbStore::Postgres => {
                                         let _ = sqlx::query(
                                             r#"
-                                            INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, payload, created_at, updated_at)
-                                            VALUES ($1, $2, 'marketing', $3, 'DRAFT', 'HIGH', $4::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                                            INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at)
+                                            VALUES ($1, $2, 'marketing', $3::jsonb, $4::jsonb, 'PENDING_APPROVAL', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
                                             "#
                                         )
                                         .bind(&task_id)
                                         .bind(&org_id)
-                                        .bind(&description)
+                                        .bind(serde_json::to_string(&serde_json::json!({"description": description})).unwrap_or_default())
                                         .bind(&proposed_content)
                                         .execute(&db_for_products.pool)
                                         .await;
+
+                                        // Also notify SSE stream if available
+                                        if let Ok(mut client) = redis::Client::open(std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1:6379".to_string())) {
+                                            if let Ok(mut conn) = client.get_async_connection().await {
+                                                let payload_str = serde_json::json!({
+                                                    "event_type": "approval_request",
+                                                    "data": {
+                                                        "id": &task_id,
+                                                        "tenant_id": &org_id,
+                                                        "department": "marketing",
+                                                        "description": &description,
+                                                        "status": "DRAFT",
+                                                        "payload": &parsed
+                                                    }
+                                                }).to_string();
+                                                let _: redis::RedisResult<()> = redis::cmd("PUBLISH")
+                                                    .arg(format!("agent_feed:{}", org_id))
+                                                    .arg(payload_str)
+                                                    .query_async(&mut conn).await;
+                                            }
+                                        }
                                     },
                                     crate::db::DbStore::Sqlite(pool) => {
                                         let _ = sqlx::query(
                                             r#"
-                                            INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, payload, created_at, updated_at)
-                                            VALUES (?, ?, 'marketing', ?, 'DRAFT', 'HIGH', ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                                            INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at)
+                                            VALUES (?, ?, 'marketing', ?, ?, 'PENDING_APPROVAL', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
                                             "#
                                         )
                                         .bind(&task_id)
                                         .bind(&org_id)
-                                        .bind(&description)
+                                        .bind(serde_json::to_string(&serde_json::json!({"description": description})).unwrap_or_default())
                                         .bind(&proposed_content)
                                         .execute(pool)
                                         .await;
