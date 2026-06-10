@@ -170,6 +170,20 @@ impl InventorySyncService for MyInventorySyncService {
                 .await
                 .map_err(|e| Status::internal(e.to_string()))?;
 
+            // Trigger SEO Pre-rendering worker for the updated product
+            let seo_job_id = Uuid::new_v4().to_string();
+            let seo_payload = serde_json::json!({
+                "product_id": req.product_id
+            }).to_string();
+
+            sqlx::query("INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload, status) VALUES ($1, $2, 'seo_prerender', $3::jsonb, 'PENDING')")
+                .bind(seo_job_id)
+                .bind(&tenant_id)
+                .bind(&seo_payload)
+                .execute(&mut *tx)
+                .await
+                .map_err(|e| Status::internal(e.to_string()))?;
+
             if new_stock <= 5 {
                 let job_id = Uuid::new_v4().to_string();
                 let job_payload = serde_json::json!({

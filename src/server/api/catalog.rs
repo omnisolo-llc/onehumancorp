@@ -74,6 +74,97 @@ fn plan_name(tier: &::server_pricing::rate_limit::PlanTier) -> &'static str {
     }
 }
 
+#[derive(Deserialize)]
+pub struct UpdateProductRequest {
+    pub id: String,
+    pub name: String,
+    pub description: String,
+    pub price: Option<f64>,
+}
+
+async fn handle_update_product(
+    Extension(hub): Extension<Arc<Hub>>,
+    Extension(claims): Extension<::server_common::Claims>,
+    Json(payload): Json<UpdateProductRequest>,
+) -> impl IntoResponse {
+    let tenant_id = claims
+        .organization_id
+        .unwrap_or_else(|| ::server_common::auth_utils::get_default_tenant());
+
+    let mut conn = match hub.pool.acquire().await {
+        Ok(c) => c,
+        Err(e) => {
+            tracing::error!("Failed to acquire connection: {}", e);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ErrorResponse {
+                    error: "DATABASE_ERROR".to_string(),
+                    message: "Failed to connect to database".to_string(),
+                }),
+            )
+                .into_response();
+        }
+    };
+
+    if let Err(e) = ::server_common::auth_utils::set_org_context(&mut *conn, &tenant_id).await {
+        tracing::error!("Failed to set org context: {}", e);
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ErrorResponse {
+                error: "DATABASE_ERROR".to_string(),
+                message: "Failed to verify tenant".to_string(),
+            }),
+        )
+            .into_response();
+    }
+
+    let update_product = sqlx::query(
+        "UPDATE products SET title = $1, description = $2 WHERE id = $3 AND tenant_id = $4"
+    )
+    .bind(&payload.name)
+    .bind(&payload.description)
+    .bind(&payload.id)
+    .bind(&tenant_id)
+    .execute(&mut *conn)
+    .await;
+
+    if let Err(e) = update_product {
+        ::server_telemetry::record_error_signal("Failed to update product");
+        tracing::error!("Failed to update product: {}", e);
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ErrorResponse {
+                error: "DATABASE_ERROR".to_string(),
+                message: "Failed to update product".to_string(),
+            }),
+        )
+            .into_response();
+    }
+
+    // Trigger SEO Pre-rendering worker for the updated product
+    let seo_job_id = uuid::Uuid::new_v4().to_string();
+    let seo_payload = serde_json::json!({
+        "product_id": payload.id
+    }).to_string();
+
+    let insert_job = sqlx::query("INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload, status) VALUES ($1, $2, 'seo_prerender', $3::jsonb, 'PENDING')")
+        .bind(seo_job_id)
+        .bind(&tenant_id)
+        .bind(&seo_payload)
+        .execute(&mut *conn)
+        .await;
+
+    if let Err(e) = insert_job {
+        tracing::error!("Failed to enqueue SEO prerender job: {}", e);
+    }
+
+    // Invalidate cache
+    let cache = CATALOG_CACHE.get_or_init(|| HybridCache::new(None));
+    cache.invalidate(&format!("catalog_{}", tenant_id)).await;
+
+    (StatusCode::OK, Json(serde_json::json!({ "success": true }))).into_response()
+}
+
 async fn handle_create_product(
     Extension(hub): Extension<Arc<Hub>>,
     Extension(claims): Extension<::server_common::Claims>,
@@ -171,6 +262,23 @@ async fn handle_create_product(
             }),
         )
             .into_response();
+    }
+
+    // Trigger SEO Pre-rendering worker for the new product
+    let seo_job_id = uuid::Uuid::new_v4().to_string();
+    let seo_payload = serde_json::json!({
+        "product_id": product_id
+    }).to_string();
+
+    let insert_job = sqlx::query("INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload, status) VALUES ($1, $2, 'seo_prerender', $3::jsonb, 'PENDING')")
+        .bind(seo_job_id)
+        .bind(&tenant_id)
+        .bind(&seo_payload)
+        .execute(&mut *conn)
+        .await;
+
+    if let Err(e) = insert_job {
+        tracing::error!("Failed to enqueue SEO prerender job: {}", e);
     }
 
     // Invalidate cache
@@ -287,6 +395,7 @@ async fn handle_generate_offering(
 pub fn router<S: Clone + Send + Sync + 'static>(hub: Arc<Hub>) -> Router<S> {
     Router::new()
         .route("/product", post(handle_create_product))
+        .route("/product/update", post(handle_update_product))
         .route("/generate", post(handle_generate_offering))
         .layer(Extension(hub))
 }

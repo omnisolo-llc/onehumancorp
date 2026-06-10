@@ -3911,6 +3911,26 @@ async fn create_ui_bom_item_handler(
         }
     });
 
+    let seo_prerender_queue_clone = sub_agent_queue.clone();
+    let seo_prerender_db = db.clone();
+    tokio::spawn(async move {
+        let worker = crate::workers::seo_prerender_worker::SeoPrerenderWorker::new(seo_prerender_db);
+        loop {
+            if let Ok(Some(job)) = seo_prerender_queue_clone.dequeue(vec!["seo_prerender".to_string()]).await {
+                tracing::info!("Processing seo_prerender job: {}", job.id);
+                match worker.handle(job.clone()).await {
+                    Ok(Ok(_)) => {
+                        let _ = seo_prerender_queue_clone.complete(&job.id, &job.tenant_id).await;
+                    }
+                    _ => {
+                        let _ = seo_prerender_queue_clone.fail(&job.id, &job.tenant_id, "Failed to prerender SEO").await;
+                    }
+                }
+            }
+            tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+        }
+    });
+
     let dynamic_workflow_queue: std::sync::Arc<dyn crate::queue::TaskQueue> = match &db.store {
         crate::db::DbStore::Postgres => {
             std::sync::Arc::new(crate::queue::PostgresTaskQueue::new(db.pool.clone()))
