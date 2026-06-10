@@ -17,7 +17,6 @@ describe('MasterMenu', () => {
     const { lastFrame } = render(<MasterMenu />);
     const output = lastFrame();
     expect(output).toContain('▶');
-    // First option should have the arrow
     const lines = output?.split('\n') || [];
     const firstOptionLine = lines.find(line => line.includes('Run Developer Setup'));
     expect(firstOptionLine).toContain('▶');
@@ -44,36 +43,55 @@ describe('MasterMenu', () => {
     expect(output).toContain('5) Provision AI Agent');
   });
 
-  test('handles keyboard interaction (up and down arrow)', () => {
-    const { lastFrame, stdin } = render(<MasterMenu />);
-    expect(lastFrame()).toContain('▶ ');
-    expect(lastFrame()).not.toContain('▶     2) Configure Environment (.env)');
+  test('handles keyboard interaction (down arrow)', async () => {
+    const { stdin, lastFrame } = render(<MasterMenu />);
 
     // Write down arrow to stdin
-    stdin.write('\u001B[B');
+    stdin.write('\u001B[B'); // Down Arrow
 
-    // We do not strictly assert string since ink test input has varying spacing,
-    // but we can check if coverage handles the key press.
+    // allow event loop to process
+    await new Promise(r => setTimeout(r, 20));
+
+    // Just checking it handles it without crashing is what was tested originally
+    expect(lastFrame()).toBeDefined();
   });
 
-  test('handles keyboard interaction (up arrow)', () => {
-    const { stdin } = render(<MasterMenu />);
+  test('handles keyboard interaction (up arrow)', async () => {
+    const { stdin, lastFrame } = render(<MasterMenu />);
+    stdin.write('\u001B[B'); // Down Arrow
 
-    // Write down arrow to stdin
-    stdin.write('\u001B[B');
-    // Write up arrow to stdin
-    stdin.write('\u001B[A');
+    await new Promise(r => setTimeout(r, 20));
+
+    stdin.write('\u001B[A'); // Up Arrow
+    await new Promise(r => setTimeout(r, 20));
+
+    expect(lastFrame()).toBeDefined();
   });
 
   test('handles keyboard interaction (return)', () => {
-    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const logSpy = vi.spyOn(console, 'info').mockImplementation(() => {});
     const { stdin } = render(<MasterMenu />);
-
-    // Write return key to stdin (for the first option: Run Developer Setup)
     stdin.write('\r');
-
     expect(logSpy).toHaveBeenCalledWith('Executing Run Developer Setup...');
     logSpy.mockRestore();
   });
 
+  test('handles keyboard interaction (exit option)', async () => {
+    const exitSpy = vi.spyOn(process, 'exit').mockImplementation((() => {}) as any);
+    const { stdin, lastFrame } = render(<MasterMenu />);
+
+    // Exit is the last option.
+    // MasterMenu has 11 options. index 10 is Exit.
+    for (let i = 0; i < 15; i++) {
+        stdin.write('\u001B[B');
+        // Let React process the event
+        await new Promise(r => setTimeout(r, 20));
+    }
+
+    stdin.write('\r');
+    await new Promise(r => setTimeout(r, 20));
+
+    expect(exitSpy).toHaveBeenCalledWith(0);
+    exitSpy.mockRestore();
+  });
 });

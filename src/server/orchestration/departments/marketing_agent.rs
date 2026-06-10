@@ -1,6 +1,5 @@
 use crate::orchestration::departments::orchestrator::{BaseAgent, AgentTriggerType, DepartmentOrchestrator, Department};
 use crate::orchestration::departments::types::{DepartmentType, DepartmentEvent, DepartmentConfig, ApprovalRequest, ActionRisk};
-use serde_json::Value;
 use std::sync::Arc;
 
 #[async_trait::async_trait]
@@ -235,10 +234,25 @@ impl Department for MarketingAgent {
             "tenant.job.completed".to_string(),
             "tenant.product.created".to_string(),
             "tenant.inventory.updated".to_string(),
+            "tenant.website.updated".to_string(),
         ]
     }
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
+        if event.event_type == "tenant.website.updated" {
+            let site_id = event.payload.get("site_id").and_then(|v| v.as_str()).unwrap_or("unknown");
+            let payload = serde_json::json!({
+                "site_id": site_id,
+            });
+            return self.orchestrator()?.execute_action(
+                DepartmentType::Marketing,
+                "Trigger Agentic SEO Pre-rendering".to_string(),
+                event.tenant_id.clone(),
+                ActionRisk::AutoExecute,
+                payload,
+            ).await.map(|_| ());
+        }
+
         let risk = ActionRisk::DraftForReview;
 
 
@@ -272,7 +286,7 @@ impl Department for MarketingAgent {
             }
         }
 
-        if event.event_type == "tenant.product.created" || event.event_type == "tenant.inventory.updated" {
+        if event.event_type == "tenant.inventory.updated" {
             let product_name = event.payload.get("name").and_then(|v| v.as_str()).unwrap_or("New Product");
             let description = event.payload.get("description").and_then(|v| v.as_str()).unwrap_or("");
             let images = event.payload.get("images").and_then(|v| v.as_array());
@@ -315,8 +329,6 @@ impl Department for MarketingAgent {
         None
     }
 
-    fn set_config(&mut self, _tenant_id: String, _config: DepartmentConfig) {
-    }
 
     async fn query_memory(&self, _query: &str) -> Result<Vec<String>, String> {
         Ok(vec![])
@@ -337,9 +349,6 @@ impl BaseAgent for MarketingAgent {
         AgentTriggerType::EventDriven
     }
 
-    async fn execute(&self, _payload: Value) -> Result<(), String> {
-        Ok(())
-    }
 }
 
 #[cfg(test)]

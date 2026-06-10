@@ -46,6 +46,7 @@ static UI_ORDERS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<V
 static UI_BOOKINGS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<Vec<serde_json::Value>>> = std::sync::OnceLock::new();
 static UI_INBOX_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<Vec<serde_json::Value>>> = std::sync::OnceLock::new();
 static UI_DASHBOARD_METRICS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<serde_json::Value>> = std::sync::OnceLock::new();
+static UI_UNIFIED_AGENT_FEED_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<serde_json::Value>> = std::sync::OnceLock::new();
 static METRICS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<HttpMetricsResponse>> = std::sync::OnceLock::new();
 
 pub fn get_redis_client() -> Option<redis::Client> {
@@ -1245,22 +1246,33 @@ impl HubService for MyHubService {
 
         let hub_clone = self.hub.clone();
 
-        let tenant_id_clone_2 = tenant_id.clone();
-        let (costs_res, storage_bytes_res) = tokio::join!(
-            tokio::task::spawn_blocking(move || {
-                let llm = auditor.get_tenant_cost(&tenant_id_clone_2);
-                let rev = auditor.get_tenant_revenue(&tenant_id_clone_2);
-                let fees = auditor.get_tenant_payment_fees(&tenant_id_clone_2);
-                let bw_savings = auditor.get_tenant_bandwidth_savings(&tenant_id_clone_2);
-                let network_cost = auditor.get_tenant_network_cost(&tenant_id_clone_2);
-                (llm, rev, fees, bw_savings, network_cost)
-            }),
+        let t1 = tenant_id.clone();
+        let t2 = tenant_id.clone();
+        let t3 = tenant_id.clone();
+        let t4 = tenant_id.clone();
+        let t5 = tenant_id.clone();
+        let a1 = auditor.clone();
+        let a2 = auditor.clone();
+        let a3 = auditor.clone();
+        let a4 = auditor.clone();
+        let a5 = auditor.clone();
+
+        let (llm_res, rev_res, fees_res, bw_res, net_res, storage_bytes_res) = tokio::join!(
+            tokio::task::spawn_blocking(move || a1.get_tenant_cost(&t1)),
+            tokio::task::spawn_blocking(move || a2.get_tenant_revenue(&t2)),
+            tokio::task::spawn_blocking(move || a3.get_tenant_payment_fees(&t3)),
+            tokio::task::spawn_blocking(move || a4.get_tenant_bandwidth_savings(&t4)),
+            tokio::task::spawn_blocking(move || a5.get_tenant_network_cost(&t5)),
             async move {
                 hub_clone.tracker().get_tenant_storage_used(&tenant_id_clone).await
             }
         );
 
-        let (llm_cost_f64, total_revenue_f64, payment_fees_f64, bandwidth_savings_f64, network_cost_f64) = costs_res.unwrap_or((0.0, 0.0, 0.0, 0.0, 0.0));
+        let llm_cost_f64 = llm_res.unwrap_or(0.0);
+        let total_revenue_f64 = rev_res.unwrap_or(0.0);
+        let payment_fees_f64 = fees_res.unwrap_or(0.0);
+        let bandwidth_savings_f64 = bw_res.unwrap_or(0.0);
+        let network_cost_f64 = net_res.unwrap_or(0.0);
         let storage_bytes = storage_bytes_res.unwrap_or(0);
         let storage_gb = storage_bytes as f64 / (1024.0 * 1024.0 * 1024.0);
         let storage_cost_f64 = storage_gb * 0.10; // $0.10 per GB
@@ -1320,7 +1332,7 @@ impl HubService for MyHubService {
         } else if let Some(mp_client) = mercadopago_client.filter(|_| is_latam) {
             mp_client.create_checkout_preference(&req.plan_id, &tenant_id).await
         } else {
-            client.create_checkout_session(&req.plan_id, &tenant_id, amount).await
+            client.create_checkout_session(&req.plan_id, &tenant_id, amount, true).await
         }
             .map_err(|e| tonic::Status::internal(e))?;
 
@@ -3076,7 +3088,7 @@ async fn load_ui_ledger_from_db(db: &crate::db::DB, tenant_id: &str) -> Result<V
     let limit_ledger = 50i64;
     match &db.store {
         crate::db::DbStore::Postgres => {
-            sqlx::query("SELECT id, tenant_id, event_type, department, payload, created_at FROM ohc_ledger WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT $2")
+            sqlx::query("SELECT id, tenant_id, event_type, department, payload, created_at FROM ohc_universal_ledger WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT $2")
                 .bind(tenant_id)
                 .bind(limit_ledger)
                 .fetch_all(&db.pool)
@@ -3090,7 +3102,7 @@ async fn load_ui_ledger_from_db(db: &crate::db::DB, tenant_id: &str) -> Result<V
                 })).collect())
         },
         crate::db::DbStore::Sqlite(pool) => {
-            sqlx::query("SELECT id, tenant_id, event_type, department, payload, created_at FROM ohc_ledger WHERE tenant_id = ? ORDER BY created_at DESC LIMIT ?")
+            sqlx::query("SELECT id, tenant_id, event_type, department, payload, created_at FROM ohc_universal_ledger WHERE tenant_id = ? ORDER BY created_at DESC LIMIT ?")
                 .bind(tenant_id)
                 .bind(limit_ledger)
                 .fetch_all(pool)
@@ -3145,7 +3157,7 @@ async fn ui_dashboard_unified_agent_feed_handler(
     let tenant_id = ui_tenant_id(&query);
 
     let cache_key = format!("ui_unified_agent_feed:{}", tenant_id);
-    let cache = UI_INBOX_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
+    let cache = UI_UNIFIED_AGENT_FEED_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
     if let Some(cached) = cache.get(&cache_key).await {
         return (axum::http::StatusCode::OK, axum::Json(cached)).into_response();
     }
@@ -3160,8 +3172,7 @@ async fn ui_dashboard_unified_agent_feed_handler(
         "entries": ledger_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default()
     });
 
-    // Note: UI_INBOX_CACHE expects Vec<serde_json::Value>. To avoid type error, we return early and skip caching,
-    // or we could use another cache. For simplicity and correctness, we will skip caching here since this fetches fast.
+    let _ = cache.set(&cache_key, result.clone(), std::time::Duration::from_secs(10)).await;
     (axum::http::StatusCode::OK, axum::Json(result)).into_response()
 }
 
@@ -4221,6 +4232,7 @@ async fn create_ui_bom_item_handler(
         .nest("/api/agents/settings", api::agents::settings::router(dept_orchestrator.clone()))
         .nest("/api/agents/chat", api::agents::chat::router(dept_orchestrator.clone(), semantic_router.clone()))
         .nest("/api/agents/webhook", api::agents::webhook::router(dept_orchestrator.clone()))
+        .nest("/api/agent-feed", api::agent_feed::router().with_state(db.pool.clone()))
         .nest("/api/v1/booking/request", api::booking::request::router(dept_orchestrator.clone()))
         .nest("/api/agents/mission", api::agents::mission::handoff::router(std::sync::Arc::new(crate::sip::SipDB::new(db.pool.clone(), "default".to_string()))))
         .route("/api/telemetry/sync", axum::routing::post(api::telemetry::sync_telemetry_handler))
@@ -4364,6 +4376,15 @@ async fn create_ui_bom_item_handler(
             }
         });
     }
+
+    // Start Temp File Cleanup Background Task
+    tokio::spawn(async move {
+        let mut interval = tokio::time::interval(std::time::Duration::from_secs(3600));
+        loop {
+            interval.tick().await;
+            crate::utils::fs::cleanup_stale_temp_files();
+        }
+    });
 
     // Start Scheduler Background Task
     let hub_for_sched = hub.clone();

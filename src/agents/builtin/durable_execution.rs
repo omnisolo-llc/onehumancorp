@@ -11,6 +11,13 @@ pub enum StepStatus {
     Failed(String),
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum WorkflowStatus {
+    InProgress,
+    Completed,
+    Failed(String),
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WorkflowState {
     pub workflow_id: String,
@@ -68,6 +75,32 @@ impl DurableExecutionEngine {
         }
     }
 
+    pub async fn determine_workflow_status(&self, workflow_id: &str) -> Option<WorkflowStatus> {
+        let store = self.state_store.lock().await;
+        if let Some(state) = store.get(workflow_id) {
+            if state.steps.is_empty() {
+                return Some(WorkflowStatus::InProgress);
+            }
+
+            let mut all_completed = true;
+            for (_, status) in &state.steps {
+                match status {
+                    StepStatus::Failed(msg) => return Some(WorkflowStatus::Failed(msg.clone())),
+                    StepStatus::Completed(_) => continue,
+                    _ => all_completed = false,
+                }
+            }
+
+            if all_completed {
+                Some(WorkflowStatus::Completed)
+            } else {
+                Some(WorkflowStatus::InProgress)
+            }
+        } else {
+            None
+        }
+    }
+
     pub async fn get_workflow_state(&self, workflow_id: &str) -> Option<WorkflowState> {
         let store = self.state_store.lock().await;
         store.get(workflow_id).cloned()
@@ -114,5 +147,22 @@ mod tests {
         let engine = DurableExecutionEngine::new();
         let res = engine.update_step("invalid-wf", "step-1", StepStatus::Running).await;
         assert!(res.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_workflow_status() {
+        let engine = DurableExecutionEngine::new();
+        engine.start_or_resume_workflow("wf-4").await;
+
+        assert_eq!(engine.determine_workflow_status("wf-4").await, Some(WorkflowStatus::InProgress));
+
+        engine.update_step("wf-4", "step-1", StepStatus::Completed("Done".to_string())).await.unwrap();
+        assert_eq!(engine.determine_workflow_status("wf-4").await, Some(WorkflowStatus::Completed));
+
+        engine.update_step("wf-4", "step-2", StepStatus::Pending).await.unwrap();
+        assert_eq!(engine.determine_workflow_status("wf-4").await, Some(WorkflowStatus::InProgress));
+
+        engine.update_step("wf-4", "step-2", StepStatus::Failed("Err".to_string())).await.unwrap();
+        assert_eq!(engine.determine_workflow_status("wf-4").await, Some(WorkflowStatus::Failed("Err".to_string())));
     }
 }

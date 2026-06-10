@@ -331,6 +331,17 @@ impl OperationsWorker {
                                 cache.invalidate_by_tag(&format!("entity:product:{}", product_id)).await;
                                 cache.invalidate_by_tag(&format!("tenant-id:{}", tenant_id)).await;
 
+                                let pool_clone = db.pool.clone();
+                                let tenant_id_clone = uuid::Uuid::parse_str(&tenant_id).unwrap_or_default();
+                                tokio::spawn(async move {
+                                    if let Ok(sites) = crate::builder::db::list_sites(&pool_clone, tenant_id_clone).await {
+                                        for site in sites {
+                                            let cache_key = format!("edge_site_{}_{}_en-US", tenant_id_clone, site.id);
+                                            let _ = crate::builder::edge::regenerate_cache(pool_clone.clone(), tenant_id_clone, site.id, cache_key, crate::builder::edge::get_edge_cache()).await;
+                                        }
+                                    }
+                                });
+
                                 let row = sqlx::query("SELECT inventory_count, name, supplier_name, supplier_contact FROM products WHERE id = $1 AND (organization_id = $2 OR tenant_id = $2)")
                                     .bind(product_id)
                                     .bind(&tenant_id)
@@ -360,6 +371,17 @@ impl OperationsWorker {
                                 let cache = crate::builder::edge::get_edge_cache();
                                 cache.invalidate_by_tag(&format!("entity:product:{}", product_id)).await;
                                 cache.invalidate_by_tag(&format!("tenant-id:{}", tenant_id)).await;
+
+                                let pool_clone = db.pool.clone();
+                                let tenant_id_clone = uuid::Uuid::parse_str(&tenant_id).unwrap_or_default();
+                                tokio::spawn(async move {
+                                    if let Ok(sites) = crate::builder::db::list_sites(&pool_clone, tenant_id_clone).await {
+                                        for site in sites {
+                                            let cache_key = format!("edge_site_{}_{}_en-US", tenant_id_clone, site.id);
+                                            let _ = crate::builder::edge::regenerate_cache(pool_clone.clone(), tenant_id_clone, site.id, cache_key, crate::builder::edge::get_edge_cache()).await;
+                                        }
+                                    }
+                                });
 
                                 let row = sqlx::query("SELECT inventory_count, name, supplier_name, supplier_contact FROM products WHERE id = ? AND (organization_id = ? OR tenant_id = ?)")
                                     .bind(product_id)
@@ -1021,6 +1043,17 @@ let db_for_products = self.db.clone();
                                 let cache = crate::builder::edge::get_edge_cache();
                                 cache.invalidate_by_tag(&format!("entity:product:{}", pid)).await;
                                 cache.invalidate_by_tag(&format!("tenant-id:{}", org_id)).await;
+
+                                let pool_clone = db_for_products.pool.clone();
+                                let tenant_id_clone = uuid::Uuid::parse_str(&org_id).unwrap_or_default();
+                                tokio::spawn(async move {
+                                    if let Ok(sites) = crate::builder::db::list_sites(&pool_clone, tenant_id_clone).await {
+                                        for site in sites {
+                                            let cache_key = format!("edge_site_{}_{}_en-US", tenant_id_clone, site.id);
+                                            let _ = crate::builder::edge::regenerate_cache(pool_clone.clone(), tenant_id_clone, site.id, cache_key, crate::builder::edge::get_edge_cache()).await;
+                                        }
+                                    }
+                                });
                             }
                             if let Some(name) = payload_json.get("name").and_then(|p| p.as_str()) {
                                 product_name = name.to_string();
@@ -1056,8 +1089,8 @@ let db_for_products = self.db.clone();
                                             if attempts == MAX_RETRIES {
                                                 let _ = sqlx::query(
                                                     r#"
-                                                    INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
-                                                    VALUES ($1, $2, 'AI Agent Paused: Marketing', 'The AI agent responsible for drafting social posts is paused because the AI service is unavailable.', 'PENDING', 'P2', 'LOW', 'PENDING', 'System is paused. Please manually draft the social post.')
+                                                    INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, payload, created_at, updated_at)
+                                                    VALUES ($1, $2, 'marketing', 'The AI agent responsible for drafting social posts is paused because the AI service is unavailable.', 'PAUSED', 'HIGH', '{}'::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
                                                     "#
                                                 )
                                                 .bind(Uuid::new_v4().to_string())
@@ -1070,11 +1103,15 @@ let db_for_products = self.db.clone();
                                     }
                                 }
 
-                                let parsed: serde_json::Value = serde_json::from_str(&drafted_msg).unwrap_or(serde_json::json!({
+                                let mut parsed: serde_json::Value = serde_json::from_str(&drafted_msg).unwrap_or(serde_json::json!({
                                     "tiktok": "Check out our new product!",
                                     "instagram": "New arrival! Link in bio.",
                                     "facebook": "We just added a new product to our store."
                                 }));
+
+                                if let Some(obj) = parsed.as_object_mut() {
+                                    obj.insert("feature_type".to_string(), serde_json::json!("social_post_draft"));
+                                }
 
                                 let task_id = Uuid::new_v4().to_string();
                                 let title = format!("Draft Social Post: {}", product_name);
@@ -1085,13 +1122,12 @@ let db_for_products = self.db.clone();
                                     crate::db::DbStore::Postgres => {
                                         let _ = sqlx::query(
                                             r#"
-                                            INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
-                                            VALUES ($1, $2, $3, $4, 'PENDING', 'P2', 'LOW', 'PENDING', $5)
+                                            INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, payload, created_at, updated_at)
+                                            VALUES ($1, $2, 'marketing', $3, 'DRAFT', 'HIGH', $4::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
                                             "#
                                         )
                                         .bind(&task_id)
                                         .bind(&org_id)
-                                        .bind(&title)
                                         .bind(&description)
                                         .bind(&proposed_content)
                                         .execute(&db_for_products.pool)
@@ -1100,13 +1136,12 @@ let db_for_products = self.db.clone();
                                     crate::db::DbStore::Sqlite(pool) => {
                                         let _ = sqlx::query(
                                             r#"
-                                            INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
-                                            VALUES (?, ?, ?, ?, 'PENDING', 'P2', 'LOW', 'PENDING', ?)
+                                            INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, payload, created_at, updated_at)
+                                            VALUES (?, ?, 'marketing', ?, 'DRAFT', 'HIGH', ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
                                             "#
                                         )
                                         .bind(&task_id)
                                         .bind(&org_id)
-                                        .bind(&title)
                                         .bind(&description)
                                         .bind(&proposed_content)
                                         .execute(pool)

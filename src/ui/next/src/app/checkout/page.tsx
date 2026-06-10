@@ -67,7 +67,7 @@ function CheckoutContent() {
           "Content-Type": "application/json",
           ...(typeof localStorage !== "undefined" && localStorage.getItem('token') ? { "Authorization": `Bearer ${localStorage.getItem('token')}` } : {})
         },
-        body: JSON.stringify({ tier }),
+        body: JSON.stringify({ tier, is_subscription: isSubscription }),
       });
       const data = await response.json();
       if (!response.ok || !data.checkout_url) {
@@ -236,6 +236,12 @@ function CheckoutContent() {
             {deliveryError && <p className="text-xs text-red-500 mt-1">{deliveryError}</p>}
             {deliveryFee !== null && <p className="text-xs text-green-600 mt-1 font-medium">Delivery available: +${deliveryFee.toFixed(2)}</p>}
           </div>
+
+          <div className="flex items-center gap-2 mb-4">
+            <input type="checkbox" id="subscribe" checked={isSubscription} onChange={(e) => setIsSubscription(e.target.checked)} className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500" />
+            <label htmlFor="subscribe" className="text-sm font-medium text-gray-700">Subscribe & Save 10%</label>
+          </div>
+
           {deliveryFee !== null && (
              <div className="flex justify-between items-center pt-2 border-t border-gray-100">
                <span className="font-semibold text-gray-700">Total with Delivery</span>
@@ -250,7 +256,7 @@ function CheckoutContent() {
             defaultText="Tap to quickly and securely pay using Apple Pay."
           >
             <button
-              onClick={() => handlePayment()}
+              onClick={() => handlePayment(isSubscription)}
               disabled={isProcessing}
               className="w-full px-4 py-3 bg-black text-white rounded-lg font-medium hover:bg-gray-900 transition-colors shadow-sm flex items-center justify-center gap-2"
             >
@@ -266,11 +272,11 @@ function CheckoutContent() {
             defaultText="Use your mobile device as a terminal to accept contactless payments."
           >
             <button
-              onClick={() => handlePayment()}
+              onClick={() => handlePayment(isSubscription)}
               disabled={isProcessing}
               className="w-full px-4 py-3 bg-indigo-50 text-indigo-700 rounded-lg font-medium hover:bg-indigo-100 transition-colors border border-indigo-100 shadow-sm flex items-center justify-center gap-2"
             >
-              Tap to Pay (Stripe Terminal)
+              Pay with Stripe
             </button>
           </WithTooltip>
 

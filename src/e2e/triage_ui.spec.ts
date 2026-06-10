@@ -10,32 +10,87 @@ test.describe('Work Triage Agentic Inbox', () => {
     await page.click('button[type="submit"]');
 
     // Go to Triage
-    await page.goto('/triage');
+    await page.goto('/dashboard');
 
     // Wait for the triage queue to load
-    await expect(page.locator('h2').filter({ hasText: 'Needs Your Attention' })).toBeVisible();
+    await expect(page.locator('h2').filter({ hasText: 'Needs Your Attention' })).toBeVisible({ timeout: 15000 });
 
     const triageCard = page.locator('[data-testid="triage-card-triage-test-1"]');
-    const emptyState = page.locator('text=No items need your attention right now');
 
-    const hasItems = await triageCard.isVisible().catch(() => false);
+    // Auto-wait for the card to appear (data should be seeded)
+    await expect(triageCard).toBeVisible({ timeout: 10000 });
 
-    if (!hasItems) {
-      await expect(emptyState).toBeVisible();
-    } else {
-      await expect(triageCard).toBeVisible();
-      await triageCard.click();
+    // Verify detail view is populated from selected card
+    await expect(page.locator('text=Maya requested a custom cake')).toBeVisible();
+    await expect(page.locator('text=Draft Reply')).toBeVisible();
 
-      // Verify detail view
-      await expect(page.locator('text=Maya requested a custom cake')).toBeVisible();
-      await expect(page.locator('text=Draft Reply')).toBeVisible();
+    // Approve action
+    const approveBtn = page.locator('[data-testid="approve-btn"]');
+    await approveBtn.click();
 
-      // Approve action
-      const approveBtn = page.locator('[data-testid="approve-btn"]');
-      await approveBtn.click();
+    // Should show approved status and disappear from list
+    await expect(triageCard).not.toBeVisible();
+  });
 
-      // Should show approved status and disappear from list
-      await expect(page.locator('text=Approved!')).toBeVisible();
-    }
+  test('Owner sees empty state when there are no items', async ({ page }) => {
+    await page.goto('/login');
+    await page.fill('input[type="text"]', 'empty-tenant-triage-test');
+    await page.click('button[type="submit"]');
+
+    await page.goto('/dashboard');
+
+    // It should not render the needs attention section if there are no items
+    // Since it's loading initially, we wait for a known dashboard element instead
+    await expect(page.locator('text=Business Analytics')).toBeVisible({ timeout: 15000 });
+
+    // Wait a bit to ensure it finished loading, then assert not visible
+    await page.waitForTimeout(2000);
+    await expect(page.locator('h2').filter({ hasText: 'Needs Your Attention' })).not.toBeVisible();
+  });
+
+  test('Owner can dismiss a triage item', async ({ page }) => {
+    await page.goto('/login');
+    await page.fill('input[type="text"]', tenantId);
+    await page.click('button[type="submit"]');
+
+    await page.goto('/dashboard');
+
+    const triageCard = page.locator('[data-testid="triage-card-triage-test-2"]');
+
+    await expect(triageCard).toBeVisible({ timeout: 15000 });
+
+    await triageCard.click();
+    const dismissBtn = page.locator('[data-testid="dismiss-btn"]');
+    await dismissBtn.click();
+
+    await expect(triageCard).not.toBeVisible();
+  });
+
+  test('Triage feed renders items correctly', async ({ page }) => {
+    await page.goto('/login');
+    await page.fill('input[type="text"]', tenantId);
+    await page.click('button[type="submit"]');
+
+    await page.goto('/dashboard');
+
+    const triageCard = page.locator('[data-testid="triage-card-triage-test-1"]');
+    await expect(triageCard).toBeVisible({ timeout: 15000 });
+    await expect(triageCard.locator('text=Instagram DM')).toBeVisible();
+    await expect(triageCard.locator('text=Urgent')).toBeVisible();
+  });
+
+  test('Triage detail shows correct information on click', async ({ page }) => {
+    await page.goto('/login');
+    await page.fill('input[type="text"]', tenantId);
+    await page.click('button[type="submit"]');
+
+    await page.goto('/dashboard');
+
+    const triageCard = page.locator('[data-testid="triage-card-triage-test-2"]');
+    await expect(triageCard).toBeVisible({ timeout: 15000 });
+
+    await triageCard.click();
+    await expect(page.locator('text=WhatsApp')).toBeVisible();
+    await expect(page.locator('text=Question about delivery times')).toBeVisible();
   });
 });

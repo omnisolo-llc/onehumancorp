@@ -38,14 +38,29 @@ export async function GET(request: NextRequest) {
       const poll = async () => {
         if (closed) return;
         try {
-          const res = await fetch(`${backendUrl}/api/agents/approvals/activity`, {
-            headers,
-            cache: 'no-store',
-          });
-          if (!res.ok) return;
-          const data = await res.json();
-          const approvals = data.pending_approvals || data.feed || [];
-          for (const item of approvals) {
+          // Poll both activity feed and pending approvals
+          const [activityRes, approvalsRes] = await Promise.all([
+            fetch(`${backendUrl}/api/agents/approvals/activity`, {
+              headers,
+              cache: 'no-store',
+            }),
+            fetch(`${backendUrl}/api/agents/approvals`, {
+              headers,
+              cache: 'no-store',
+            })
+          ]);
+
+          if (!activityRes.ok || !approvalsRes.ok) return;
+
+          const activityData = await activityRes.json();
+          const approvalsData = await approvalsRes.json();
+
+          const combinedItems = [
+            ...(activityData.pending_approvals || activityData.feed || []),
+            ...(approvalsData.pending_approvals || approvalsData.feed || [])
+          ];
+
+          for (const item of combinedItems) {
             if (!item?.id || seen.has(item.id)) continue;
             seen.add(item.id);
             controller.enqueue(sse(item));

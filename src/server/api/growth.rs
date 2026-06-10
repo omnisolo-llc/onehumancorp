@@ -158,7 +158,59 @@ where
         .route("/discount_share/generate", post(handle_generate_discount_share))
         .route("/milestone/card", get(handle_get_milestone_card))
         .route("/trial-extension/claim", post(handle_trial_extension_claim))
+        .route("/time-savings", get(handle_time_savings))
         .layer(Extension(GrowthState { pool, hub }))
+}
+
+#[derive(Debug, Serialize)]
+pub struct TimeSavingsResponse {
+    pub hours_saved: f64,
+    pub inquiries_handled: i64,
+    pub appointments_scheduled: i64,
+    pub carts_recovered: i64,
+}
+
+async fn handle_time_savings(
+    Extension(state): Extension<GrowthState>,
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
+) -> Result<Json<TimeSavingsResponse>, StatusCode> {
+    let parsed_uuid = match uuid::Uuid::parse_str(&auth_info.org_id) {
+        Ok(u) => u,
+        Err(_) => return Err(StatusCode::BAD_REQUEST),
+    };
+
+    // Calculate aggregated time savings based on completed tasks
+    let inquiries_handled: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM tasks WHERE (tenant_id = $1 OR organization_id = $1) AND title ILIKE '%inquiry%' AND status = 'COMPLETED'")
+        .bind(parsed_uuid)
+        .fetch_optional(&state.pool)
+        .await
+        .unwrap_or(Some(0))
+        .unwrap_or(0);
+
+    let appointments_scheduled: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM tasks WHERE (tenant_id = $1 OR organization_id = $1) AND title ILIKE '%appointment%' AND status = 'COMPLETED'")
+        .bind(parsed_uuid)
+        .fetch_optional(&state.pool)
+        .await
+        .unwrap_or(Some(0))
+        .unwrap_or(0);
+
+    let carts_recovered: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM tasks WHERE (tenant_id = $1 OR organization_id = $1) AND title ILIKE '%cart%' AND status = 'COMPLETED'")
+        .bind(parsed_uuid)
+        .fetch_optional(&state.pool)
+        .await
+        .unwrap_or(Some(0))
+        .unwrap_or(0);
+
+    // Calculate total hours saved
+    let base_hours = (inquiries_handled as f64 * 0.2) + (appointments_scheduled as f64 * 0.3) + (carts_recovered as f64 * 0.43);
+    let hours_saved = (base_hours * 10.0).round() / 10.0; // round to 1 decimal place
+
+    Ok(Json(TimeSavingsResponse {
+        hours_saved,
+        inquiries_handled,
+        appointments_scheduled,
+        carts_recovered,
+    }))
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -618,7 +670,7 @@ async fn handle_storefront_embed(
 
     let branding = if !has_pro {
         format!(r#"<div class="footer">
-            <a href="ohc://join?ref={safe_tenant}" target="_blank">⚡ Powered by OHC</a>
+            <a href="/api/v1/growth/referrals/click?target=/onboarding&ref={safe_tenant}" target="_blank">⚡ Powered by OHC</a>
         </div>"#)
     } else {
         "".to_string()

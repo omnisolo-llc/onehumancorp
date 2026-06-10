@@ -39,20 +39,29 @@ export function TooltipProvider({ children }: { children: ReactNode }) {
     return () => { mounted = false; };
   }, []);
 
+  const [windowWidth, setWindowWidth] = useState(1000);
+
+  useEffect(() => {
+    setWindowWidth(window.innerWidth);
+    const handleResize = () => setWindowWidth(window.innerWidth);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   return (
     <TooltipContext.Provider value={{ activeTooltip, setActiveTooltip, tooltipRect, setTooltipRect, tooltipText, setTooltipText, getTooltip: (id: string) => tooltips[id] }}>
       {children}
       {activeTooltip && tooltipRect && (
         <div
-          className="fixed z-[100] bg-white/80 text-gray-900 text-sm font-inter p-3 rounded-lg shadow-[0_8px_30px_rgb(0,0,0,0.12)] pointer-events-none w-64 max-w-[calc(100vw-32px)] mx-4 text-center leading-relaxed backdrop-blur-[20px] saturate-200 border border-white/50 animate-fade-in-up"
+          className="fixed z-[100] bg-white/65 text-gray-900 text-sm font-inter p-3 rounded-lg shadow-[0_8px_30px_rgb(0,0,0,0.12)] pointer-events-none w-64 max-w-[calc(100vw-32px)] mx-4 text-center leading-relaxed backdrop-blur-[30px] saturate-[210%] border border-white/40 animate-fade-in-up"
           style={{
             top: tooltipRect.top - 10,
-            left: tooltipRect.left + tooltipRect.width / 2,
+            left: Math.max(128, Math.min(windowWidth - 128, tooltipRect.left + tooltipRect.width / 2)),
             transform: 'translate(-50%, -100%)'
           }}
         >
           {tooltipText}
-          <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-solid border-t-white/80 border-t-8 border-x-transparent border-x-8 border-b-0"></div>
+          <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-solid border-t-white/90 border-t-8 border-x-transparent border-x-8 border-b-0"></div>
         </div>
       )}
       <style dangerouslySetInnerHTML={{__html: `

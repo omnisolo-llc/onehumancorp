@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import PremiumUpgradeNudge from "./PremiumUpgradeNudge";
+import PremiumUpgradeNudge from "./PremiumUpgradeNudge";
 import { usePathname } from "next/navigation";
 import { WithTooltip } from "../../components/TooltipRegistry";
 import { Omnibox } from "./Omnibox";
@@ -204,6 +205,7 @@ export function AppShell({
           </div>
         </header>
         <main className="app-page">{children}
+        <PremiumUpgradeNudge />
         <PremiumUpgradeNudge />
         </main>
         <Omnibox />
