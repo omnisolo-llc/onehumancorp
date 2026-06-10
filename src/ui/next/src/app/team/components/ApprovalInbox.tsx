@@ -422,7 +422,7 @@ export default function ApprovalInbox({
                     </div>
                   )}
 
-                  {req.payload?.feature_type === "social_post" && (
+                  {req.payload?.feature_type === "social_post_draft" && (
                     <div className="mb-6 p-4 rounded-xl bg-pink-50 border border-pink-100 flex flex-col gap-3">
                       <div className="flex items-center gap-2 text-pink-800 font-semibold text-sm">
                         <svg
@@ -612,7 +612,7 @@ export default function ApprovalInbox({
                     >
                       {req.payload?.feature_type === "case_study"
                         ? "Publish to Website"
-                        : req.payload?.feature_type === "social_post"
+                        : req.payload?.feature_type === "social_post_draft"
                         ? "Schedule Post"
                         : req.payload?.feature_type === "quote_draft"
                         ? "Approve & Send"
