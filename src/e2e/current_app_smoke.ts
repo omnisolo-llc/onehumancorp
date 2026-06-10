@@ -12,6 +12,11 @@ export async function currentAppSmoke(page: Page, request: APIRequestContext, la
     await expect(page.locator('h1', { hasText: 'Dashboard' }).first()).toBeVisible({ timeout: 25000 });
     await expect(page.getByText('Welcome back, Maya.')).toBeVisible({ timeout: 5000 });
 
+    // Verify Sovereign-to-Cloud Growth Loop Widget is visible
+    await expect(page.locator("h3", { hasText: "Invite to Cloud Team" })).toBeVisible({ timeout: 5000 });
+    await expect(page.getByPlaceholder("Collaborator email address")).toBeVisible({ timeout: 5000 });
+    await expect(page.getByRole("button", { name: "Generate Cloud Link" })).toBeVisible({ timeout: 5000 });
+
     // Verify glassmorphism style drift on dashboard panels
     const panel = page.locator('.app-panel').first();
     await expect(panel).toBeVisible();
