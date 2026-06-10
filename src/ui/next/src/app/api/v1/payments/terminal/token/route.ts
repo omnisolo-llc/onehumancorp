@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { backendHeaders } from "../../../../../ui/backendProxy";
+import { backendHeaders } from "../../../../ui/backendProxy";
 
 function terminalToken(payload: any): string | undefined {
   return payload?.secret || payload?.token || payload?.Ok?.secret || payload?.Ok?.token;
