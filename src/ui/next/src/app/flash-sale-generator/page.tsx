@@ -263,7 +263,7 @@ export default function FlashSaleGeneratorPage() {
                     <textarea
                         readOnly
                         value={embedCode}
-                        className="w-full h-32 p-4 bg-gray-50 border border-gray-200 rounded-xl font-mono text-sm text-gray-800 resize-none focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-all"
+                        className="w-full h-32 p-4 bg-gray-50 border border-gray-200 rounded-xl font-mono text-sm text-gray-800 resize-none focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-[#FF3B30] transition-all"
                     />
                     <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
                          <button

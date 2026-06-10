@@ -261,7 +261,7 @@ export function UnifiedAgentFeed() {
         });
         if (refreshRes.ok) {
             const data: ApprovalsResponse = await refreshRes.json();
-            setItems(data.pending_approvals);
+            setItems(data.pending_approvals as any);
         }
         throw new Error("Failed to submit decision");
       }
@@ -274,7 +274,7 @@ export function UnifiedAgentFeed() {
 
   if (error) {
     return (
-      <div className="w-full mb-6 p-4 glassmorphism rounded-[16px] border border-red-500/50 bg-red-500/10 text-red-500 text-center">
+      <div className="w-full mb-6 p-4 glassmorphism rounded-[16px] border border-[#FF3B30]/50 bg-red-500/10 text-red-500 text-center">
         {error}
       </div>
     );

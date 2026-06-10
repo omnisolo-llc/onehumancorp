@@ -156,6 +156,22 @@ impl MinimaxClient {
                     "initial_products": [{"name": "Pipe Fix", "price": "80.00"}],
                     "suggested_features": ["booking"]
                 }"#.to_string());
+            } else if lower_prompt.contains("leo") {
+                return Ok(r#"{
+                    "business_name": "Leo Guitar Lessons",
+                    "business_type": "Tutor",
+                    "categories": ["services"],
+                    "initial_products": [{"name": "Guitar Lesson", "price": "50.00"}],
+                    "suggested_features": ["booking"]
+                }"#.to_string());
+            } else if lower_prompt.contains("fatima") {
+                return Ok(r#"{
+                    "business_name": "Fatima Halal Food",
+                    "business_type": "Food Cart",
+                    "categories": ["food"],
+                    "initial_products": [{"name": "Chicken Over Rice", "price": "12.00"}],
+                    "suggested_features": ["menu"]
+                }"#.to_string());
             } else {
                 return Ok(r#"{
                     "business_name": "Generic Business",
