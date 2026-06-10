@@ -701,9 +701,9 @@ impl DB {
                         version INTEGER DEFAULT 1
                     );
                     CREATE TABLE IF NOT EXISTS tenants (
-                        tenant_id TEXT PRIMARY KEY,
+                        id TEXT PRIMARY KEY,
                         owner_id TEXT,
-                        business_name TEXT,
+                        name TEXT,
                         tier TEXT,
                         subdomain TEXT,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

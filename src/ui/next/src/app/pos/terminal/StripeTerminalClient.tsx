@@ -207,7 +207,13 @@ export default function StripeTerminalClient({ amount, productId, tenantId }: { 
           const commitRes = await fetch('/api/v1/payments/terminal/commit', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ tenant_id: tenantId, product_id: productId, quantity: 1, lock_id: lockId })
+            body: JSON.stringify({
+              tenant_id: tenantId,
+              product_id: productId,
+              quantity: 1,
+              lock_id: lockId,
+              amount_cents: amount
+            })
           });
           const commitData = await commitRes.json();
           if (commitData.success) {
