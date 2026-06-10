@@ -317,7 +317,10 @@ export default function Dashboard() {
         <p className="text-gray-600 dark:text-gray-400">Your agents are working on your behalf.</p>
       </div>
 
-      <TriageFeed tenantId={tenantId()} />
+      <UnifiedAgentFeed />
+      <div className="hidden md:block">
+        <TriageFeed tenantId={tenantId()} />
+      </div>
       <AiTimeSavingsWidget />
       <NeighborhoodPulseCard tenant={tenantId()} />
       <FloatingActionButton />
@@ -537,7 +540,7 @@ export default function Dashboard() {
              />
         ))}
 
-        <UnifiedAgentFeed />
+        {/* UnifiedAgentFeed moved to top for mobile-first priority */}
 
         <section>
           <div className="mb-6 p-6 rounded-[16px] bg-white/65 dark:bg-[#16161a]/70 border border-white/40 dark:border-white/10">

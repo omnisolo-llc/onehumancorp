@@ -23,6 +23,7 @@ _NEXT_UI_E2E_SPECS = [
     "//src/ui/next:src/e2e/milestones.spec.ts",
     "//src/ui/next:src/e2e/onboarding.spec.ts",
     "//src/ui/next:src/e2e/review-campaign.spec.ts",
+    "//src/ui/next:src/e2e/unified_agent_feed.spec.ts",
     "//src/ui/next:src/e2e/staff-mesh.spec.ts",
     "//src/ui/next:src/e2e/store-wrapped.spec.ts",
     "//src/ui/next:src/e2e/subscription_box.spec.ts",
