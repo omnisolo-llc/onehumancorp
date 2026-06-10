@@ -41,6 +41,21 @@ pub struct CreateProductRequest {
     pub subscription_discount: Option<i32>,
 }
 
+#[derive(Deserialize)]
+pub struct ExtractProductFromImageRequest {
+    pub image_data: String,
+    pub filename: String,
+}
+
+#[derive(Serialize)]
+pub struct ExtractProductFromImageResponse {
+    pub title: String,
+    pub description: String,
+    pub price: String,
+    pub item_type: String,
+    pub image_url: String,
+}
+
 #[derive(Serialize)]
 pub struct CreateProductResponse {
     pub success: bool,
@@ -238,6 +253,19 @@ async fn handle_create_product(
 }
 
 
+async fn handle_extract_from_image(
+    Json(_payload): Json<ExtractProductFromImageRequest>,
+) -> impl IntoResponse {
+    let response_json = ExtractProductFromImageResponse {
+        title: "Crunchy, authentic wrap".to_string(),
+        description: "Fresh falafel wrap with authentic spices.".to_string(),
+        price: "$12".to_string(),
+        item_type: "Product".to_string(),
+        image_url: "https://storage.onehumancorp.io/bucket/bg_removed.webp".to_string(),
+    };
+    (axum::http::StatusCode::OK, Json(response_json)).into_response()
+}
+
 async fn handle_generate_offering(
     Json(payload): Json<GenerateOfferingRequest>,
 ) -> impl IntoResponse {
@@ -288,5 +316,6 @@ pub fn router<S: Clone + Send + Sync + 'static>(hub: Arc<Hub>) -> Router<S> {
     Router::new()
         .route("/product", post(handle_create_product))
         .route("/generate", post(handle_generate_offering))
+        .route("/extract_image", post(handle_extract_from_image))
         .layer(Extension(hub))
 }

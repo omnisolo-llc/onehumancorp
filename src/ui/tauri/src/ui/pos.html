@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Edge-Cached Glass POS</title>
+    <style>
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f3f4f6;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+        }
+        .container {
+            width: 375px;
+            height: 100vh;
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(20px) saturate(200%);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+            padding: 20px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+        }
+        .header {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            color: #1f2937;
+        }
+        .product-list {
+            flex-grow: 1;
+            overflow-y: auto;
+        }
+        .product-item {
+            background: white;
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .product-info {
+            display: flex;
+            flex-direction: column;
+        }
+        .product-name {
+            font-weight: 600;
+            color: #374151;
+        }
+        .product-price {
+            color: #6b7280;
+            margin-top: 4px;
+        }
+        .sell-btn {
+            background-color: #3b82f6;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .sell-btn:active {
+            background-color: #2563eb;
+        }
+        .status-bar {
+            text-align: center;
+            padding: 10px;
+            font-size: 14px;
+            color: #6b7280;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        Glass POS
+    </div>
+    <div class="product-list" id="product-list">
+        <!-- Generated Products Go Here -->
+    </div>
+    <div class="status-bar" id="status-bar">
+        Inventory synced.
+    </div>
+</div>
+
+<script>
+    const products = [
+        { id: '1', name: 'Summer Dress', price: 4500 },
+        { id: '2', name: 'Sunglasses', price: 2500 }
+    ];
+
+    function renderProducts() {
+        const list = document.getElementById('product-list');
+        list.innerHTML = '';
+        products.forEach(p => {
+            list.innerHTML += `
+                <div class="product-item">
+                    <div class="product-info">
+                        <span class="product-name">${p.name}</span>
+                        <span class="product-price">$${(p.price/100).toFixed(2)}</span>
+                    </div>
+                    <button class="sell-btn" onclick="handleSell('${p.id}', '${p.name}', ${p.price})">Sell (Tap)</button>
+                </div>
+            `;
+        });
+    }
+
+    async function handleSell(id, name, price) {
+        document.getElementById('status-bar').innerText = `Selling ${name}...`;
+
+        // Simulating the local SIPDB (SQLite) write
+        console.log(`Local inventory decremented for ${name}`);
+        document.getElementById('status-bar').innerText = `Local inventory updated. Syncing to cloud...`;
+
+        // Simulating the SyncService.PowerSyncPush background deltas push
+        try {
+            // Note: In real setup, it calls window.__TAURI__ or a local edge daemon
+            // For now, we mock the sync to the /api/v1/sync/offline endpoint
+            const res = await fetch('/api/v1/sync/offline', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    tenant_id: 'default',
+                    client_id: 'pos_mobile',
+                    transactions: [{
+                        id: 'tx_' + Date.now(),
+                        tenant_id: 'default',
+                        client_id: 'pos_mobile',
+                        amount_cents: price,
+                        currency: 'USD',
+                        payload: JSON.stringify({ item_id: id, item_name: name }),
+                        status: 'PENDING',
+                        created_at_unix: Math.floor(Date.now() / 1000)
+                    }]
+                })
+            });
+            document.getElementById('status-bar').innerText = `Cloud Catalog updated for ${name}!`;
+        } catch (e) {
+            console.error('Offline mode - saved locally.');
+            document.getElementById('status-bar').innerText = `Offline: Saved locally. Will sync when online.`;
+        }
+    }
+
+    renderProducts();
+</script>
+
+</body>
+</html>
