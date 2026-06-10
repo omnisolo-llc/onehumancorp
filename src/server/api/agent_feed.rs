@@ -36,6 +36,9 @@ pub fn get_agent_feed_cache() -> Arc<HybridCache<AgentFeedListResponse>> {
 #[derive(Serialize, Deserialize, Clone)]
 pub struct AgentFeedListResponse {
     pub items: Vec<AgentFeedItem>,
+    pub priority_tasks: Vec<crate::domain::repository::models::Task>,
+    pub recent_orders: Vec<crate::domain::repository::models::Order>,
+    pub ai_status: String,
 }
 
 #[derive(Deserialize)]
@@ -78,7 +81,12 @@ async fn list_feed_items(
 ) -> impl IntoResponse {
     let tenant_id = match claims.organization_id.as_deref() {
         Some(org_id) => org_id.to_string(),
-        None => return (StatusCode::UNAUTHORIZED, Json(AgentFeedListResponse { items: vec![] })).into_response(),
+        None => return (StatusCode::UNAUTHORIZED, Json(AgentFeedListResponse {
+            items: vec![],
+            priority_tasks: vec![],
+            recent_orders: vec![],
+            ai_status: "OFFLINE".to_string(),
+        })).into_response(),
     };
 
     let limit = query.limit.unwrap_or(20);
@@ -91,20 +99,44 @@ async fn list_feed_items(
         return (StatusCode::OK, Json(cached_resp)).into_response();
     }
 
-    let repo = AgentFeedRepository::new(pool);
+    let repo = AgentFeedRepository::new(pool.clone());
 
-    match repo.list(&tenant_id, limit, offset).await {
-        Ok(items) => {
-            let response = AgentFeedListResponse { items };
-            let tag = format!("agent_feed_tenant:{}", tenant_id);
-            cache.set_with_tags(&cache_key, response.clone(), vec![tag], std::time::Duration::from_secs(60)).await;
-            (StatusCode::OK, Json(response)).into_response()
-        },
-        Err(e) => {
-            tracing::error!("Failed to list agent feed items: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(AgentFeedListResponse { items: vec![] })).into_response()
-        }
-    }
+    let items_future = repo.list(&tenant_id, limit, offset);
+    let tasks_future = sqlx::query_as::<_, crate::domain::repository::models::Task>(
+        "SELECT * FROM tasks WHERE organization_id = $1 AND status = 'PRIORITY' LIMIT 5"
+    )
+    .bind(&tenant_id)
+    .fetch_all(&pool);
+
+    let orders_future = sqlx::query_as::<_, crate::domain::repository::models::Order>(
+        "SELECT * FROM orders WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 5"
+    )
+    .bind(&tenant_id)
+    .fetch_all(&pool);
+
+    let ai_status_future = sqlx::query_scalar::<_, String>(
+        "SELECT status FROM ai_agents WHERE tenant_id = $1 LIMIT 1"
+    )
+    .bind(&tenant_id)
+    .fetch_optional(&pool);
+
+    let (items_res, tasks_res, orders_res, ai_status_res) = tokio::join!(items_future, tasks_future, orders_future, ai_status_future);
+
+    let items = items_res.unwrap_or_default();
+    let priority_tasks = tasks_res.unwrap_or_default();
+    let recent_orders = orders_res.unwrap_or_default();
+    let ai_status = ai_status_res.unwrap_or_default().unwrap_or_else(|| "OFFLINE".to_string());
+
+    let response = AgentFeedListResponse {
+        items,
+        priority_tasks,
+        recent_orders,
+        ai_status,
+    };
+
+    let tag = format!("agent_feed_tenant:{}", tenant_id);
+    cache.set_with_tags(&cache_key, response.clone(), vec![tag], std::time::Duration::from_secs(60)).await;
+    (StatusCode::OK, Json(response)).into_response()
 }
 
 async fn create_feed_item(
@@ -200,6 +232,9 @@ mod tests {
 
         let response = AgentFeedListResponse {
             items: vec![],
+            priority_tasks: vec![],
+            recent_orders: vec![],
+            ai_status: "ONLINE".to_string(),
         };
 
         // Set cache with tag
