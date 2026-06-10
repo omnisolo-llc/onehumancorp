@@ -1,3 +1,4 @@
+import { ActionableEmptyStateCard } from "../../components/empty-state/ActionableEmptyStateCard";
 "use client";
 
 import { useEffect, useState } from "react";
@@ -70,8 +71,23 @@ export default function OrdersPage() {
           </div>
         </div>
         {error && <div className="app-empty">{error}</div>}
-        {!error && orders.length === 0 ? (
-          <div className="app-empty">{loading ? "Loading orders from the database..." : "No order rows found for this tenant."}</div>
+        {!error && orders.length === 0 && loading ? (
+          <div className="app-empty">Loading orders from the database...</div>
+        ) : !error && orders.length === 0 && !loading ? (
+          <ActionableEmptyStateCard
+            moduleContext="orders"
+            actions={[
+              {
+                label: "Draft a custom offer",
+                onClick: () => { window.dispatchEvent(new CustomEvent('open-assistant', { detail: { prompt: 'Help me create my first service offering' } })); },
+                primary: true
+              },
+              {
+                label: "Import existing customers",
+                onClick: () => { window.dispatchEvent(new CustomEvent('open-assistant', { detail: { prompt: 'I want to import my customer list' } })); }
+              }
+            ]}
+          />
         ) : (
           <div className="app-table-wrap">
             <table className="app-table">

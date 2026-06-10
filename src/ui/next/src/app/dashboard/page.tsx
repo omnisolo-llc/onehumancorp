@@ -1,3 +1,4 @@
+import { ActionableEmptyStateCard } from "../../components/empty-state/ActionableEmptyStateCard";
 "use client";
 import { FloatingActionButton } from "./FAB";
 import { VoiceAssistantFAB } from "./VoiceAssistantFAB";
@@ -699,8 +700,23 @@ export default function Dashboard() {
               <WithTooltip id="recent-orders-tooltip" defaultText="View the latest orders placed by your customers."><div className="app-panel-title">Recent Orders</div></WithTooltip>
               <Link href="/orders" className="app-button">View All</Link>
             </div>
-            {orders.length === 0 ? (
-              <div className="app-empty">{loading ? "Loading orders from the database..." : "No order rows found for this tenant."}</div>
+            {orders.length === 0 && loading ? (
+              <div className="app-empty">Loading orders from the database...</div>
+            ) : orders.length === 0 && !loading ? (
+              <ActionableEmptyStateCard
+                moduleContext="orders"
+                actions={[
+                  {
+                    label: "Create a test order",
+                    onClick: () => { window.dispatchEvent(new CustomEvent('open-assistant', { detail: { prompt: 'Create a test order to see how it works' } })); },
+                    primary: true
+                  },
+                  {
+                    label: "Connect payment processor",
+                    onClick: () => { window.dispatchEvent(new CustomEvent('open-assistant', { detail: { prompt: 'I want to connect my Stripe account' } })); }
+                  }
+                ]}
+              />
             ) : (
               <div className="app-table-wrap">
                 <table className="app-table">
@@ -733,8 +749,24 @@ export default function Dashboard() {
               <Link href="/inbox" className="app-button">Open Inbox</Link>
             </div>
             <div className="app-list">
-              {messages.length === 0 ? (
-                <div className="app-empty">{loading ? "Loading inbox from the database..." : "No inbox message rows found for this tenant."}</div>
+              {messages.length === 0 && loading ? (
+                <div className="app-empty">Loading inbox from the database...</div>
+              ) : messages.length === 0 && !loading ? (
+                <ActionableEmptyStateCard
+                  moduleContext="messages"
+                  message="Your inbox is quiet. Let's set up some communication channels."
+                  actions={[
+                    {
+                      label: "Connect Instagram DMs",
+                      onClick: () => { window.dispatchEvent(new CustomEvent('open-assistant', { detail: { prompt: 'Help me connect my Instagram account' } })); },
+                      primary: true
+                    },
+                    {
+                      label: "Create a web contact form",
+                      onClick: () => { window.dispatchEvent(new CustomEvent('open-assistant', { detail: { prompt: 'I need a contact form for my website' } })); }
+                    }
+                  ]}
+                />
               ) : messages.slice(0, 6).map((message) => (
                 <div key={message.id} className="app-list-item">
                   <div>

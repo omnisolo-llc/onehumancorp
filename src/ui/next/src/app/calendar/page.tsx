@@ -1,3 +1,4 @@
+import { ActionableEmptyStateCard } from "../../components/empty-state/ActionableEmptyStateCard";
 'use client';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
@@ -85,7 +86,21 @@ export default function CalendarPage() {
                   {error}
                 </div>
               ) : appointments.length === 0 ? (
-                <div className="text-sm text-gray-500 p-4 border border-gray-100 rounded-lg text-center">No upcoming appointments.</div>
+                <ActionableEmptyStateCard
+                  moduleContext="appointments"
+                  message="Your calendar is clear. Ready to start taking bookings?"
+                  actions={[
+                    {
+                      label: "Set up scheduling agent",
+                      onClick: () => { window.dispatchEvent(new CustomEvent('open-assistant', { detail: { prompt: 'Help me set up an AI scheduling agent' } })); },
+                      primary: true
+                    },
+                    {
+                      label: "Create a bookable service",
+                      onClick: () => { window.dispatchEvent(new CustomEvent('open-assistant', { detail: { prompt: 'I want to create a new bookable service' } })); }
+                    }
+                  ]}
+                />
               ) : appointments.map(apt => (
                 <div key={apt.id} className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-4 border border-gray-100 rounded-lg hover:shadow-md transition-shadow">
                   <div>

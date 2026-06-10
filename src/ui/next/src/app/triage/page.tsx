@@ -1,3 +1,4 @@
+import { ActionableEmptyStateCard } from "../../components/empty-state/ActionableEmptyStateCard";
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -118,8 +119,24 @@ export default function TriagePage() {
           </div>
           <div id="triage-list" className="app-list">
             {error && <div className="app-empty">{error}</div>}
-            {!error && items.length === 0 ? (
-              <div className="app-empty">{loading ? "Loading triage items..." : "No items need your attention right now. Great job!"}</div>
+            {!error && items.length === 0 && loading ? (
+              <div className="app-empty">Loading triage items...</div>
+            ) : !error && items.length === 0 && !loading ? (
+              <ActionableEmptyStateCard
+                moduleContext="triage items"
+                message="Your triage queue is empty. Great job! Need help managing incoming requests?"
+                actions={[
+                  {
+                    label: "Set up auto-triage agent",
+                    onClick: () => { window.dispatchEvent(new CustomEvent('open-assistant', { detail: { prompt: 'I want to set up an auto-triage agent' } })); },
+                    primary: true
+                  },
+                  {
+                    label: "Review triage settings",
+                    onClick: () => { window.dispatchEvent(new CustomEvent('open-assistant', { detail: { prompt: 'Show me my triage settings' } })); }
+                  }
+                ]}
+              />
             ) : items.map((item) => (
               <button
                 key={item.id}
