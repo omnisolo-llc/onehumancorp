@@ -230,10 +230,10 @@ pub async fn aggregate_agent_costs(pool: &PgPool, tenant_id: &str) -> Vec<AgentC
 
     raw_rows.into_iter().map(|r| AgentCostRow {
         agent_id: r.try_get::<Option<String>, _>("agent_id")
-            .unwrap_or_else(|_| None)
+            .unwrap_or(None)
             .unwrap_or_else(|| "unknown".to_string()),
         cost_cents: r.try_get::<Option<f64>, _>("total")
-            .unwrap_or_else(|_| None)
+            .unwrap_or(None)
             .unwrap_or(0.0) as i64,
     })
     .filter(|r| r.cost_cents > 0)

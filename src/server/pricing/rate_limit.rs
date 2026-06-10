@@ -16,11 +16,10 @@ impl PlanTier {
             PlanTier::Starter => "OHC_STARTER_TIER_ACTIONS",
             _ => "",
         };
-        if !env_var.is_empty() {
-            if let Some(v) = std::env::var(env_var).ok().and_then(|s| s.parse::<u32>().ok()) {
+        if !env_var.is_empty()
+            && let Some(v) = std::env::var(env_var).ok().and_then(|s| s.parse::<u32>().ok()) {
                 return Some(v);
             }
-        }
 
         match self {
             PlanTier::Free => Some(100),
@@ -44,11 +43,10 @@ impl PlanTier {
             PlanTier::Pro => "OHC_PRO_TIER_STORAGE_MB",
             PlanTier::Business => "OHC_BUSINESS_TIER_STORAGE_MB",
         };
-        if !env_var.is_empty() {
-            if let Some(v) = std::env::var(env_var).ok().and_then(|s| s.parse::<u32>().ok()) {
+        if !env_var.is_empty()
+            && let Some(v) = std::env::var(env_var).ok().and_then(|s| s.parse::<u32>().ok()) {
                 return Some(v);
             }
-        }
 
         match self {
             PlanTier::Free => Some(500),
@@ -134,24 +132,21 @@ impl RedisRateLimiter {
         let redis_key = format!("tenant:{}:tier", tenant_id);
         let mut tier: Option<String> = conn.get(&redis_key).await.map_err(|e| e.to_string())?;
 
-        if tier.is_none() {
-            if let Some(pool) = &self.db_pool {
+        if tier.is_none()
+            && let Some(pool) = &self.db_pool {
                 use sqlx::Row;
                 if let Ok(record) = sqlx::query("SELECT plan_tier FROM tenants WHERE id = $1")
                     .bind(tenant_id)
                     .fetch_one(pool)
                     .await
-                {
-                    if let Ok(t) = record.try_get::<Option<String>, _>("plan_tier") {
+                    && let Ok(t) = record.try_get::<Option<String>, _>("plan_tier") {
                         tier = t;
                         if let Some(ref t_str) = tier {
                             // Cache for 24 hours
                             let _ : () = conn.set_ex(&redis_key, t_str, 24 * 60 * 60).await.unwrap_or(());
                         }
                     }
-                }
             }
-        }
 
         match tier.as_deref() {
             Some("Starter") | Some("starter") => Ok(PlanTier::Starter),
@@ -219,8 +214,8 @@ impl RedisRateLimiter {
         let _ : () = conn.expire(&tenant_key, 60 * 60 * 24 * 60).await.unwrap_or(());
         let _ : () = conn.expire(&agent_key, 60 * 60 * 24 * 60).await.unwrap_or(());
 
-        if let Some(limit) = tier.monthly_action_limit() {
-            if tenant_used >= limit {
+        if let Some(limit) = tier.monthly_action_limit()
+            && tenant_used >= limit {
                 if let Some(store) = &self.telemetry_store {
                     store.rate_limit_exceeded_total.add(1, &[opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string())]);
                 }
@@ -238,10 +233,9 @@ impl RedisRateLimiter {
                     )),
                 });
             }
-        }
 
-        if let Some(limit) = tier.agent_action_limit() {
-            if agent_used >= limit {
+        if let Some(limit) = tier.agent_action_limit()
+            && agent_used >= limit {
                 if let Some(store) = &self.telemetry_store {
                     store.rate_limit_exceeded_total.add(1, &[opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string())]);
                 }
@@ -259,7 +253,6 @@ impl RedisRateLimiter {
                     )),
                 });
             }
-        }
 
         Ok(RateLimitStatus {
             is_allowed: true,
@@ -281,8 +274,8 @@ impl RedisRateLimiter {
         let total_products: Option<usize> = conn.get(&product_key).await.map_err(|e| e.to_string())?;
         let total_products = total_products.unwrap_or(0);
 
-        if let Some(limit) = tier.max_products() {
-            if total_products >= limit {
+        if let Some(limit) = tier.max_products()
+            && total_products >= limit {
                 if let Some(store) = &self.telemetry_store {
                     store.rate_limit_exceeded_total.add(1, &[opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string())]);
                 }
@@ -300,7 +293,6 @@ impl RedisRateLimiter {
                     )),
                 });
             }
-        }
 
         Ok(RateLimitStatus {
             is_allowed: true,
@@ -329,8 +321,8 @@ impl RedisRateLimiter {
         let total_agents: Option<usize> = conn.get(&agent_key).await.map_err(|e| e.to_string())?;
         let total_agents = total_agents.unwrap_or(0);
 
-        if let Some(limit) = tier.max_agents() {
-            if total_agents >= limit {
+        if let Some(limit) = tier.max_agents()
+            && total_agents >= limit {
                 if let Some(store) = &self.telemetry_store {
                     store.rate_limit_exceeded_total.add(1, &[opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string())]);
                 }
@@ -348,7 +340,6 @@ impl RedisRateLimiter {
                     )),
                 });
             }
-        }
 
         Ok(RateLimitStatus {
             is_allowed: true,
