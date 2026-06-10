@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { backendHeaders } from "../../../../backendProxy";
+import { backendHeaders } from '../../backendProxy';
 
 export async function POST(req: Request) {
   const backendUrl = process.env.BACKEND_URL || "http://127.0.0.1:18789";

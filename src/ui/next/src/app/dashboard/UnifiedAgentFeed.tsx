@@ -1,3 +1,10 @@
+interface ApprovalRequest {
+  id: string;
+  agent: string;
+  title: string;
+  context: string;
+  status: 'pending' | 'approved' | 'rejected';
+}
 "use client";
 
 import { useEffect, useState } from "react";
@@ -15,7 +22,7 @@ type AgentFeedItem = {
 };
 
 type ApprovalsResponse = {
-  pending_approvals: ApprovalRequest[];
+  pending_approvals: AgentFeedItem[];
   next_cursor?: string | null;
 };
 
@@ -93,12 +100,12 @@ export function UnifiedAgentFeed() {
               const payload = JSON.parse(event.data);
 
               if (payload.event_type === "approval_request") {
-                setApprovals((prev) => {
+                setItems((prev) => {
                   if (prev.find((a) => a.id === payload.data.id)) return prev;
                   return [payload.data, ...prev];
                 });
               } else if (payload.event_type === "approval_decision") {
-                setApprovals((prev) => prev.filter((a) => a.id !== payload.data.request_id));
+                setItems((prev) => prev.filter((a) => a.id !== payload.data.request_id));
                 setActivities((prev) => {
                   const newActivity = {
                     id: crypto.randomUUID(),
@@ -156,7 +163,7 @@ export function UnifiedAgentFeed() {
 
         // If it's a DRAFT or PENDING, add to proposals
         if (String(item.status || '').toUpperCase() === 'DRAFT' || String(item.status || '').toUpperCase() === 'PENDING') {
-          setApprovals((current) => [item, ...current.filter((existing) => existing.id !== item.id)]);
+          setItems((current) => [item, ...current.filter((existing) => existing.id !== item.id)]);
         } else {
           // It's an activity event (Approved, Rejected, etc.)
           setActivities((current) => {
@@ -171,7 +178,7 @@ export function UnifiedAgentFeed() {
             return [mappedActivity, ...current.filter((existing) => existing.id !== item.id)];
           });
           // Also remove from approvals if it was there
-          setApprovals((current) => current.filter((existing) => existing.id !== item.id));
+          setItems((current) => current.filter((existing) => existing.id !== item.id));
         }
       } catch (err) {
         console.error('Failed to parse agent feed event:', err);
@@ -191,7 +198,7 @@ export function UnifiedAgentFeed() {
 
         // If it's a DRAFT or PENDING, add to proposals
         if (String(item.status || '').toUpperCase() === 'DRAFT' || String(item.status || '').toUpperCase() === 'PENDING') {
-          setApprovals((current) => [item, ...current.filter((existing) => existing.id !== item.id)]);
+          setItems((current) => [item, ...current.filter((existing) => existing.id !== item.id)]);
         } else {
           // It's an activity event (Approved, Rejected, etc.)
           setActivities((current) => {
@@ -206,7 +213,7 @@ export function UnifiedAgentFeed() {
             return [mappedActivity, ...current.filter((existing) => existing.id !== item.id)];
           });
           // Also remove from approvals if it was there
-          setApprovals((current) => current.filter((existing) => existing.id !== item.id));
+          setItems((current) => current.filter((existing) => existing.id !== item.id));
         }
       } catch (err) {
         console.error('Failed to parse agent feed event:', err);
@@ -218,7 +225,7 @@ export function UnifiedAgentFeed() {
 
   const handleDecision = async (id: string, approved: boolean) => {
     // Optimistic UI update
-    setApprovals(prev => prev.filter(app => app.id !== id));
+    setItems(prev => prev.filter(app => app.id !== id));
 
     try {
       const tenant = tenantId();
@@ -239,7 +246,7 @@ export function UnifiedAgentFeed() {
         });
         if (refreshRes.ok) {
             const data: ApprovalsResponse = await refreshRes.json();
-            setApprovals(data.pending_approvals);
+            setItems(data.pending_approvals);
         }
         throw new Error("Failed to submit decision");
       }

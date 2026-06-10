@@ -10,14 +10,14 @@ test.describe('My Plan Dashboard', () => {
   test('should display current plan details', async ({ page }) => {
     await page.goto('/plan');
     await expect(page.locator('#my-plan-name')).toBeVisible();
-    await expect(page.locator('h2', { hasText: 'Plan:' })).toBeVisible();
+    await expect(page.locator('h2', { hasText: 'Current Plan' })).toBeVisible();
     await expect(page.locator('span', { hasText: 'Active' })).toBeVisible();
   });
 
   test('should display estimated next bill', async ({ page }) => {
     await page.goto('/plan');
     await expect(page.locator('#my-plan-next-bill')).toBeVisible();
-    await expect(page.locator('h2', { hasText: 'Estimated Next Bill:' })).toBeVisible();
+    await expect(page.locator('h2', { hasText: 'Estimated Next Bill' })).toBeVisible();
   });
 
   test('should display AI Actions usage', async ({ page }) => {

@@ -1,3 +1,4 @@
+use rand::Rng;
 /// Master Catalog B.6. Output Parsing
 use crate::types::{ChatRequest, ChatResponse, Message, ToolError};
 use async_trait::async_trait;
@@ -159,7 +160,7 @@ impl<'a, T: DeserializeOwned> RetryWithErrorOutputParser<'a, T> {
                     }
 
                     let base_backoff = 500 * (1 << attempt);
-                    let jitter = rand::Rng::gen_range(&mut rand::thread_rng(), 0..100);
+                    let jitter = rand::thread_rng().gen_range(0..100);
                     let backoff = std::time::Duration::from_millis((base_backoff as u64) + jitter);
                     tokio::time::sleep(backoff).await;
 
