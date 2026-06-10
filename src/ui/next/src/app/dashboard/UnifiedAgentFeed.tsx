@@ -261,9 +261,20 @@ export function UnifiedAgentFeed() {
         });
         if (refreshRes.ok) {
             const data: ApprovalsResponse = await refreshRes.json();
-            setItems(data.pending_approvals);
+            const remappedItems: AgentFeedItem[] = data.pending_approvals.map(a => ({
+                id: a.id,
+                tenant_id: a.tenant_id,
+                event_source: a.department,
+                context_payload: { description: a.description },
+                proposed_action: a.payload,
+                lifecycle_state: a.status,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+            }));
+            setItems(remappedItems);
+        } else {
+            throw new Error("Failed to submit decision");
         }
-        throw new Error("Failed to submit decision");
       }
     } catch (err: any) {
       setError(err.message || "Action failed");
