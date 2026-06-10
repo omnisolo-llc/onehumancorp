@@ -15,7 +15,7 @@ type AgentFeedItem = {
 };
 
 type ApprovalsResponse = {
-  pending_approvals: ApprovalRequest[];
+  pending_approvals: AgentFeedItem[];
   next_cursor?: string | null;
 };
 
