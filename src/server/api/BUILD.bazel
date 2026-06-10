@@ -30,6 +30,8 @@ exports_files(
         "local_seo.rs",
         "recovery.rs",
         "agent_feed.rs",
+        "voice/mod.rs",
+        "voice/command.rs",
     ],
     visibility = ["//visibility:public"],
 )
@@ -79,6 +81,8 @@ rust_library(
         "//src/server/api/onboarding:mod.rs",
         "//src/server/api/booking:mod.rs",
         "//src/server/api/booking:request.rs",
+        "voice/mod.rs",
+        "voice/command.rs",
     ],
     crate_root = "bazel_lib.rs",
     edition = "2024",

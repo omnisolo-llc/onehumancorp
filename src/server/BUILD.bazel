@@ -52,6 +52,8 @@ SERVER_RS_SRCS = [
     "//src/server/api:oauth/mod.rs",
     "//src/server/api:oauth/proxy.rs",
     "//src/server/api:mod.rs",
+    "//src/server/api:voice/mod.rs",
+    "//src/server/api:voice/command.rs",
     "//src/server/api:offline_sync.rs",
     "//src/server/api:staff_mesh.rs",
     "//src/server/api:subscription.rs",

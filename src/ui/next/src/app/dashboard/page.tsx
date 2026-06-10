@@ -15,6 +15,7 @@ import { AppShell } from "../components/AppShell";
 import { InteractiveWalkthrough, WalkthroughTarget } from "../../components/Walkthrough";
 import { WithTooltip } from "../../components/TooltipRegistry";
 import GrowthReferralWidget from "../components/GrowthReferralWidget";
+import { VoiceCommandButton } from "./VoiceCommandButton";
 import AiTimeSavingsWidget from "../components/AiTimeSavingsWidget";
 
 import { SmartBlock } from "../builder/components";
@@ -955,6 +956,7 @@ export default function Dashboard() {
           </div>
         </section>
       </main>
+      <VoiceCommandButton />
 
     </AppShell>
   );
