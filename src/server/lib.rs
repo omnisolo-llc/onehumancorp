@@ -4245,7 +4245,7 @@ async fn create_ui_bom_item_handler(
             axum::Json(serde_json::json!({"success": true}))
         }))
         .route("/api/walkthroughs", axum::routing::get(|| async {
-            let mut walkthroughs = HashMap::new();
+            let mut walkthroughs = std::collections::HashMap::new();
             walkthroughs.insert("store_setup".to_string(), serde_json::json!([
                 {"target": "generate-link-btn", "text": "Step 1: Set up your store."},
                 {"target": "share-whatsapp-btn", "text": "Step 2: Share it with your friends."}
