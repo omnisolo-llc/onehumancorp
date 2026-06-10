@@ -34,7 +34,7 @@ test.describe('Onboarding Wizard E2E Flow', () => {
     await expect(nameInput).toHaveAttribute('autoComplete', 'organization');
 
     await nameInput.fill("My Awesome E2E Business");
-    await page.getByRole('button', { name: 'Next' }).click();
+    await page.getByRole('button', { name: 'Next', exact: true }).click();
 
     // Step 2: What do you sell?
     await expect(page.getByRole('heading', { name: "What do you sell?" })).toBeVisible();
@@ -50,7 +50,7 @@ test.describe('Onboarding Wizard E2E Flow', () => {
     await saveDraftButton.click();
     await expect(page.getByText('Draft Saved!')).toBeVisible({ timeout: 5000 });
 
-    await page.getByRole('button', { name: 'Next' }).click();
+    await page.getByRole('button', { name: 'Next', exact: true }).click();
 
     // Step 3: Location
     await expect(page.getByRole('heading', { name: "Where are you located?" })).toBeVisible();
@@ -59,7 +59,7 @@ test.describe('Onboarding Wizard E2E Flow', () => {
     await expect(locationInput).toHaveClass(/min-h-\[44px\]/);
     await expect(locationInput).toHaveClass(/glassmorphism/);
     await locationInput.fill("Online");
-    await page.getByRole('button', { name: 'Next' }).click();
+    await page.getByRole('button', { name: 'Next', exact: true }).click();
 
     // Step 1: Target Audience (chatStep 4)
     await expect(page.getByRole('heading', { name: "Who is your target audience?" })).toBeVisible();
@@ -68,7 +68,7 @@ test.describe('Onboarding Wizard E2E Flow', () => {
     await expect(audienceInput).toHaveClass(/min-h-\[44px\]/);
     await expect(audienceInput).toHaveClass(/glassmorphism/);
     await audienceInput.fill("Tech enthusiasts and developers");
-    await page.getByRole('button', { name: 'Next' }).click();
+    await page.getByRole('button', { name: 'Next', exact: true }).click();
 
     // Step 4: Review Details
     await expect(page.getByRole('heading', { name: "Review Details" })).toBeVisible({ timeout: 30000 });
@@ -108,6 +108,7 @@ test.describe('Onboarding Wizard E2E Flow', () => {
     await page.getByRole('button', { name: /Launch Store/i }).click();
 
     // Step 7: Loading State
+
     await expect(page.getByRole('heading', { name: "Building Your Business..." })).toBeVisible({ timeout: 30000 });
 
     // Step 8: Success Screen
@@ -144,7 +145,7 @@ test.describe('Onboarding Wizard E2E Flow', () => {
         await startButton.click();
     }
 
-    const nextButton = page.getByRole('button', { name: 'Next' });
+    const nextButton = page.getByRole('button', { name: 'Next', exact: true });
     await expect(nextButton).toBeDisabled();
 
     const nameInput = page.getByPlaceholder("e.g. Maya's Custom Cakes");

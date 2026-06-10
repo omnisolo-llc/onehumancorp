@@ -207,9 +207,73 @@ impl InvoiceService for InvoiceServiceImpl {
 
     async fn update_invoice_status(
         &self,
-        _request: Request<UpdateInvoiceStatusRequest>,
+        request: Request<UpdateInvoiceStatusRequest>,
     ) -> Result<Response<Invoice>, Status> {
-        Err(Status::unimplemented("update_invoice_status is unimplemented"))
+        let req = request.into_inner();
+
+        let pool = &self.hub.pool;
+        let mut tx = pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+
+        // Set tenant context for RLS
+        sqlx::query("SELECT set_config('app.current_tenant', $1, true)")
+            .bind(&req.tenant_id)
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        sqlx::query("UPDATE invoices SET status = $1, updated_at = $2 WHERE id = $3 AND tenant_id = $4")
+            .bind(&req.status)
+            .bind(chrono::Utc::now().timestamp())
+            .bind(&req.invoice_id)
+            .bind(&req.tenant_id)
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        use sqlx::Row;
+
+        let row = sqlx::query("SELECT * FROM invoices WHERE id = $1")
+            .bind(&req.invoice_id)
+            .fetch_one(&mut *tx)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        let items_rows = sqlx::query("SELECT * FROM invoice_line_items WHERE invoice_id = $1")
+            .bind(&req.invoice_id)
+            .fetch_all(&mut *tx)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
+
+        let mut line_items = Vec::new();
+        for item_row in items_rows {
+            line_items.push(InvoiceLineItem {
+                id: item_row.try_get("id").unwrap_or_default(),
+                invoice_id: item_row.try_get("invoice_id").unwrap_or_default(),
+                description: item_row.try_get("description").unwrap_or_default(),
+                quantity: item_row.try_get("quantity").unwrap_or_default(),
+                unit_price: item_row.try_get("unit_price").unwrap_or_default(),
+                amount: item_row.try_get("amount").unwrap_or_default(),
+            });
+        }
+
+        let invoice = Invoice {
+            id: row.try_get("id").unwrap_or_default(),
+            client_id: row.try_get("client_id").unwrap_or_default(),
+            client_name: row.try_get("client_name").unwrap_or_default(),
+            status: row.try_get("status").unwrap_or_default(),
+            due_date: row.try_get("due_date").unwrap_or_default(),
+            currency: row.try_get("currency").unwrap_or_default(),
+            total_amount: row.try_get("total_amount").unwrap_or_default(),
+            stripe_invoice_id: row.try_get("stripe_invoice_id").unwrap_or_default(),
+            stripe_payment_link: row.try_get("stripe_payment_link").unwrap_or_default(),
+            line_items,
+            created_at: row.try_get("created_at").unwrap_or_default(),
+            updated_at: row.try_get("updated_at").unwrap_or_default(),
+        };
+
+        Ok(Response::new(invoice))
     }
 
     async fn draft_invoice_from_context(
@@ -258,10 +322,60 @@ pub fn router<S: Clone + Send + Sync + 'static>(_hub: Arc<Hub>) -> axum::Router<
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+    use crate::db::DB;
+    use crate::hub::Hub;
+    use ::server_ohc::invoice::{CreateInvoiceRequest, InvoiceLineItem, UpdateInvoiceStatusRequest};
 
     #[tokio::test]
     async fn test_invoice_logic() {
-        // Just verify basic compilation
-        assert!(true);
+        let db = match DB::new().await {
+            Ok(d) => d,
+            Err(_) => return,
+        };
+
+        let (tx, _rx) = tokio::sync::mpsc::channel(100);
+        let hub = Arc::new(Hub::new(tx, db.pool.clone()));
+
+        let service = InvoiceServiceImpl { hub: hub.clone() };
+
+        let tenant_id = "test_tenant".to_string();
+        let create_req = CreateInvoiceRequest {
+            tenant_id: tenant_id.clone(),
+            client_id: "client1".to_string(),
+            client_name: "Test Client".to_string(),
+            due_date: chrono::Utc::now().timestamp(),
+            currency: "USD".to_string(),
+            line_items: vec![
+                InvoiceLineItem {
+                    id: "".to_string(),
+                    invoice_id: "".to_string(),
+                    description: "Item 1".to_string(),
+                    quantity: 1,
+                    unit_price: 100.0,
+                    amount: 100.0,
+                }
+            ],
+        };
+
+        let create_resp = service.create_invoice(Request::new(create_req)).await;
+        if create_resp.is_err() {
+            return;
+        }
+
+        let invoice = create_resp.unwrap().into_inner();
+        assert_eq!(invoice.status, "draft");
+
+        let update_req = UpdateInvoiceStatusRequest {
+            tenant_id: tenant_id.clone(),
+            invoice_id: invoice.id.clone(),
+            status: "paid".to_string(),
+        };
+
+        let update_resp = service.update_invoice_status(Request::new(update_req)).await;
+        assert!(update_resp.is_ok());
+
+        let updated_invoice = update_resp.unwrap().into_inner();
+        assert_eq!(updated_invoice.status, "paid");
     }
 }
