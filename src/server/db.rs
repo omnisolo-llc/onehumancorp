@@ -998,6 +998,15 @@ impl DB {
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                     );
 
+                    CREATE TABLE IF NOT EXISTS customer_identities (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        customer_id TEXT NOT NULL,
+                        channel TEXT NOT NULL,
+                        channel_identity TEXT NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        UNIQUE(tenant_id, channel, channel_identity)
+                    );
                     CREATE TABLE IF NOT EXISTS interactions (
                         id TEXT PRIMARY KEY,
                         tenant_id TEXT NOT NULL,
