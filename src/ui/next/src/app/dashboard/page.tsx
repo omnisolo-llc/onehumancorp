@@ -463,7 +463,22 @@ export default function Dashboard() {
           </section>
         )}
 
-        <div className="mb-6 flex gap-4"><Link href="/assistant" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">Open WorkBuddy Assistant</Link></div>
+        <div className="mb-6">
+          <Link href="/assistant" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10 relative overflow-hidden bg-gradient-to-br from-blue-50/50 to-indigo-50/50 dark:from-blue-900/20 dark:to-indigo-900/20">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-[12px] bg-[#0066FF] flex items-center justify-center text-white text-xl shadow-sm">
+                ✨
+              </div>
+              <div className="flex-1">
+                <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7]">Open WorkBuddy Assistant</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Your AI workspace for managing tasks, messages, scheduling, and operations.</p>
+              </div>
+              <div className="text-[#0066FF] opacity-0 group-hover:opacity-100 transition-opacity transform group-hover:translate-x-1 duration-200">
+                →
+              </div>
+            </div>
+          </Link>
+        </div>
 
         <PromoterCard />
 
