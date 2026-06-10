@@ -42,6 +42,7 @@ pub struct AgentFeedListResponse {
 pub struct PaginationQuery {
     pub offset: Option<i64>,
     pub limit: Option<i64>,
+    pub mobile_optimized: Option<bool>,
 }
 
 #[derive(Deserialize)]
@@ -83,8 +84,9 @@ async fn list_feed_items(
 
     let limit = query.limit.unwrap_or(20);
     let offset = query.offset.unwrap_or(0);
+    let mobile_optimized = query.mobile_optimized.unwrap_or(false);
 
-    let cache_key = format!("agent_feed:{}:{}:{}", tenant_id, limit, offset);
+    let cache_key = format!("agent_feed:{}:{}:{}:{}", tenant_id, limit, offset, mobile_optimized);
     let cache = get_agent_feed_cache();
 
     if let Some(cached_resp) = cache.get(&cache_key).await {
@@ -94,7 +96,12 @@ async fn list_feed_items(
     let repo = AgentFeedRepository::new(pool);
 
     match repo.list(&tenant_id, limit, offset).await {
-        Ok(items) => {
+        Ok(mut items) => {
+            if mobile_optimized {
+                for item in items.iter_mut() {
+                    item.context_payload = None;
+                }
+            }
             let response = AgentFeedListResponse { items };
             let tag = format!("agent_feed_tenant:{}", tenant_id);
             cache.set_with_tags(&cache_key, response.clone(), vec![tag], std::time::Duration::from_secs(60)).await;

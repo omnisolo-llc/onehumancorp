@@ -66,7 +66,7 @@ mod tests {
         let mut has_cs_draft = false;
         for _ in 0..10 {
             tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-            let pending = orchestrator.get_pending_approvals(&tenant_id, None, 100).await;
+            let pending = orchestrator.get_pending_approvals(&tenant_id, None, 100, false).await;
             if pending.iter().any(|req| req.description.contains("Process Order & Update Inventory")) {
                 has_ops_auto = true;
             }
@@ -167,7 +167,7 @@ mod tests {
         let mut draft_request_id = String::new();
         for _ in 0..10 {
             tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-            let pending = orchestrator.get_pending_approvals(&tenant_id, None, 100).await;
+            let pending = orchestrator.get_pending_approvals(&tenant_id, None, 100, false).await;
             if let Some(req) = pending.iter().find(|req| req.description.contains("Draft email for review")) {
                 has_draft = true;
                 draft_request_id = req.id.clone();
@@ -241,7 +241,7 @@ mod tests {
         let mut has_ops_auto = false;
         for _ in 0..10 {
             tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-            let pending = orchestrator.get_pending_approvals(&tenant_id, None, 100).await;
+            let pending = orchestrator.get_pending_approvals(&tenant_id, None, 100, false).await;
             if pending.iter().any(|req| req.description.contains("Process Order & Update Inventory")) {
                 has_ops_auto = true;
                 break;
@@ -299,7 +299,7 @@ mod tests {
         let mut has_case_study_draft = false;
         for _ in 0..10 {
             tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-            let pending = orchestrator.get_pending_approvals(&tenant_id, None, 100).await;
+            let pending = orchestrator.get_pending_approvals(&tenant_id, None, 100, false).await;
             if pending.iter().any(|req| req.description.contains("Draft portfolio case study for Cedar Fence Install")) {
                 has_case_study_draft = true;
                 break;
@@ -359,7 +359,7 @@ mod tests {
         let mut has_social_post_draft = false;
         for _ in 0..10 {
             tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-            let pending = orchestrator.get_pending_approvals(&tenant_id, None, 100).await;
+            let pending = orchestrator.get_pending_approvals(&tenant_id, None, 100, false).await;
             if pending.iter().any(|req| req.description.contains("Draft Instagram post for Vegan Chocolate Cake")) {
                 has_social_post_draft = true;
                 break;
@@ -430,7 +430,7 @@ mod tests {
         let mut has_quote_draft = false;
         for _ in 0..10 {
             tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-            let pending = orchestrator.get_pending_approvals(&tenant_id, None, 100).await;
+            let pending = orchestrator.get_pending_approvals(&tenant_id, None, 100, false).await;
             if pending.iter().any(|req| req.description.contains("Draft quote for Plumbing Fix")) {
                 has_quote_draft = true;
                 break;
@@ -489,7 +489,7 @@ mod tests {
         let mut has_legal_draft = false;
         for _ in 0..10 {
             tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-            let pending = orchestrator.get_pending_approvals(&tenant_id, None, 100).await;
+            let pending = orchestrator.get_pending_approvals(&tenant_id, None, 100, false).await;
             if pending.iter().any(|req| req.description.contains("Draft compliance terms and policy update")) {
                 has_legal_draft = true;
                 break;
@@ -549,7 +549,7 @@ mod tests {
         let mut has_advisory_draft = false;
         for _ in 0..10 {
             tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-            let pending = orchestrator.get_pending_approvals(&tenant_id, None, 100).await;
+            let pending = orchestrator.get_pending_approvals(&tenant_id, None, 100, false).await;
             if pending.iter().any(|req| req.description.contains("Draft weekly business health report")) {
                 has_advisory_draft = true;
                 break;

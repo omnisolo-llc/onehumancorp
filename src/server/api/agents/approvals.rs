@@ -23,6 +23,7 @@ pub struct ApprovalsResponse {
 pub struct PaginationQuery {
     pub cursor: Option<String>,
     pub limit: Option<usize>,
+    pub mobile_optimized: Option<bool>,
 }
 
 #[derive(Deserialize)]
@@ -178,7 +179,7 @@ async fn list_approvals(
     let limit = query.limit.unwrap_or(20);
 
     // Fetch from DB using cursor pagination
-    let approvals = orchestrator.get_pending_approvals(&tenant_id, query.cursor.clone(), limit as i64).await;
+    let approvals = orchestrator.get_pending_approvals(&tenant_id, query.cursor.clone(), limit as i64, query.mobile_optimized.unwrap_or(false)).await;
 
     let next_cursor = if approvals.len() == limit {
         approvals.last().map(|a| a.id.clone())

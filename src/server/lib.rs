@@ -1961,7 +1961,7 @@ async fn get_pending_approvals(
     ) -> Result<Response<GetPendingApprovalsResponse>, Status> {
         let req = request.into_inner();
         let limit = 100;
-        let approvals = self.dept_orchestrator.get_pending_approvals(&req.organization_id, None, limit).await;
+        let approvals = self.dept_orchestrator.get_pending_approvals(&req.organization_id, None, limit, req.mobile_optimized.unwrap_or(false)).await;
 
         let mapped_tasks: Vec<::server_ohc::orchestration::SharedTask> = approvals.into_iter().map(|task| {
             let mut proposed_content = "".to_string();

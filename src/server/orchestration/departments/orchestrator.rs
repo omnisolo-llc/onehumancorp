@@ -420,7 +420,7 @@ impl DepartmentOrchestrator {
         let _ = self.mesh.publish(&topic, payload_bytes).await;
     }
 
-    pub async fn get_pending_approvals(&self, tenant_id: &str, cursor: Option<String>, limit: i64) -> Vec<ApprovalRequest> {
+    pub async fn get_pending_approvals(&self, tenant_id: &str, cursor: Option<String>, limit: i64, mobile_optimized: bool) -> Vec<ApprovalRequest> {
         let mut results = Vec::new();
 
         match &self.db.store {

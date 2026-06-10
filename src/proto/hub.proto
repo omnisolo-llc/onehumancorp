@@ -232,6 +232,7 @@ message TriggerCustomOrderResponse {
 
 message GetPendingApprovalsRequest {
   string organization_id = 1;
+  optional bool mobile_optimized = 2;
 }
 
 message GetPendingApprovalsResponse {
