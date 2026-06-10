@@ -2741,7 +2741,7 @@ mod tests {
         assert!(data.initial_products.len() >= 1);
 
         // Also test creating the variants via start_onboarding directly with the mocked data
-        let mut req = StartOnboardingRequest {
+        let req = StartOnboardingRequest {
             business_type: data.business_type,
             company_name: data.business_name,
             company_description: input.to_string(),
