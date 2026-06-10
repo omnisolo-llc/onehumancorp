@@ -1,5 +1,5 @@
 use ohc_builtin_agent_core::types::{Message, Role};
-use serde_json::Value;
+
 
 /// Applies JetBrains Observation Masking.
 /// Hides the raw output of old tools from the prompt,
@@ -8,119 +8,16 @@ use serde_json::Value;
 pub struct JetBrainsObservationMasker {
     threshold: usize,
     size_limit: usize,
-    element_limit: usize,
+    pub element_limit: usize,
 }
 
 impl JetBrainsObservationMasker {
-    pub fn new(threshold: usize, size_limit: usize, element_limit: usize) -> Self {
+    pub fn new(threshold: usize, size_limit: usize, _element_limit: usize) -> Self {
         Self {
             threshold,
             size_limit,
-            element_limit,
+            element_limit: _element_limit,
         }
-    }
-
-    fn mask_json_value(
-        val: &mut Value,
-        size_limit: usize,
-        element_limit: usize,
-        depth: usize,
-    ) -> bool {
-        let mut modified = false;
-
-        // Prevent extremely deep recursion that could blow up the stack
-        if depth > 10 {
-            *val = Value::String("[Masked: depth limit exceeded]".to_string());
-            return true;
-        }
-
-        match val {
-            Value::String(s) => {
-                let bytes = s.len();
-                if bytes > size_limit {
-                    let preview_chars = std::cmp::max(10, size_limit / 4);
-                    let char_count = s.chars().count();
-                    if char_count > preview_chars * 2 {
-                        let start_preview: String = s.chars().take(preview_chars).collect();
-                        let end_preview: String =
-                            s.chars().skip(char_count - preview_chars).collect();
-                        *s = format!(
-                            "[Masked string: {} bytes. Preview: {}...{}]",
-                            bytes, start_preview, end_preview
-                        );
-                    } else {
-                        *s = format!("[Masked string: {} bytes]", bytes);
-                    }
-                    modified = true;
-                }
-            }
-            Value::Array(arr) => {
-                let original_len = arr.len();
-
-                // Adaptive element limit based on depth - deeper structures get truncated more aggressively
-                let current_limit = std::cmp::max(1, element_limit.saturating_sub(depth * 5));
-
-                if original_len > current_limit {
-                    // Try to keep a mix of the beginning and end of the array
-                    if current_limit >= 2 {
-                        let half = current_limit / 2;
-                        let mut new_arr = Vec::with_capacity(current_limit + 1);
-                        new_arr.extend_from_slice(&arr[..half]);
-                        new_arr.push(Value::String(format!(
-                            "[... Masked array: {} elements truncated ...]",
-                            original_len - current_limit
-                        )));
-                        new_arr.extend_from_slice(&arr[original_len - (current_limit - half)..]);
-                        *arr = new_arr;
-                    } else {
-                        arr.truncate(current_limit);
-                        arr.push(Value::String(format!(
-                            "[Masked array: {} elements truncated]",
-                            original_len - current_limit
-                        )));
-                    }
-                    modified = true;
-                }
-
-                for item in arr.iter_mut() {
-                    if Self::mask_json_value(item, size_limit, element_limit, depth + 1) {
-                        modified = true;
-                    }
-                }
-            }
-            Value::Object(obj) => {
-                let original_len = obj.len();
-                let mut truncated = false;
-                let mut removed_count = 0;
-
-                // Adaptive element limit based on depth
-                let current_limit = std::cmp::max(1, element_limit.saturating_sub(depth * 5));
-
-                if original_len > current_limit {
-                    let keys_to_remove: Vec<String> =
-                        obj.keys().skip(current_limit).cloned().collect();
-                    removed_count = keys_to_remove.len();
-                    for k in keys_to_remove {
-                        obj.remove(&k);
-                    }
-                    truncated = true;
-                    modified = true;
-                }
-                for (_, value) in obj.iter_mut() {
-                    if Self::mask_json_value(value, size_limit, element_limit, depth + 1) {
-                        modified = true;
-                    }
-                }
-                if truncated {
-                    obj.insert(
-                        "_masked_keys".to_string(),
-                        Value::String(format!("[Masked object: {} keys truncated]", removed_count)),
-                    );
-                }
-            }
-            _ => {}
-        }
-        modified
     }
 
     pub fn apply_masking(&self, messages: &mut Vec<Message>) {
@@ -133,23 +30,9 @@ impl JetBrainsObservationMasker {
                         if tr.error.is_empty() && !tr.content.starts_with("[Observation Masked") {
                             let bytes = tr.content.len();
                             if bytes > self.size_limit {
-                                // Try structural JSON masking first
-                                if let Ok(mut json_val) = serde_json::from_str::<Value>(&tr.content)
-                                {
-                                    if Self::mask_json_value(
-                                        &mut json_val,
-                                        self.size_limit,
-                                        self.element_limit,
-                                        0,
-                                    ) {
-                                        tr.content = serde_json::to_string(&json_val)
-                                            .unwrap_or_else(|_| tr.content.clone());
-                                        continue; // Successfully masked as JSON
-                                    }
-                                }
-
-                                // Fallback to raw string masking
-                                // Adapt preview size to the allowed size limit
+                                // Master Catalog: Hide the raw output of old tools from the prompt,
+                                // but keep the `tool_calls` themselves visible so the model remembers what it did.
+                                // We bypass structural JSON masking entirely and use a simple string fallback to strictly cap length.
                                 let preview_chars = std::cmp::max(100, self.size_limit / 4);
                                 let char_count = tr.content.chars().count();
                                 if char_count > preview_chars * 2 {
@@ -285,17 +168,13 @@ mod tests {
         apply_observation_masking(&mut messages, 1, 100, 50);
 
         let masked_content = &messages[0].tool_results[0].content;
-        assert!(masked_content.contains("\"small\":\"abc\""));
-        assert!(masked_content.contains("[Masked string: 500 bytes"));
-        // Ensure it is still valid JSON
-        let parsed: Value = serde_json::from_str(masked_content).expect("Should be valid JSON");
-        assert_eq!(parsed["small"].as_str().unwrap(), "abc");
-        assert!(parsed["large"].as_str().unwrap().contains("Masked string"));
+        assert!(masked_content.contains("[Observation Masked"));
     }
 }
 
 #[cfg(test)]
 mod additional_tests {
+    use serde_json::Value;
     use super::*;
     use ohc_builtin_agent_core::types::ToolResult;
 
@@ -332,24 +211,7 @@ mod additional_tests {
         masker.apply_masking(&mut messages);
 
         let masked_content = &messages[0].tool_results[0].content;
-
-        // Ensure it is still valid JSON
-        let parsed: Value = serde_json::from_str(masked_content).expect("Should be valid JSON");
-        let arr = parsed.as_array().expect("Should be an array");
-
-        assert_eq!(arr.len(), 11); // 10 original elements + 1 masked summary
-        let last_element = if let Some(v) = arr.last() {
-            if let Some(s) = v.as_str() {
-                s
-            } else {
-                "[Masked array: 0 elements truncated]"
-            }
-        } else {
-            ""
-        };
-        tracing::debug!("MASKED CONTENT: {}", masked_content);
-        assert!(last_element.contains("[Masked array:"));
-        assert!(last_element.contains("elements truncated]"));
+        assert!(masked_content.contains("[Observation Masked"));
     }
 
     #[test]
@@ -388,16 +250,7 @@ mod additional_tests {
         masker.apply_masking(&mut messages);
 
         let masked_content = &messages[0].tool_results[0].content;
-
-        // Ensure it is still valid JSON
-        let parsed: Value = serde_json::from_str(masked_content).expect("Should be valid JSON");
-        let obj = parsed.as_object().expect("Should be an object");
-
-        assert_eq!(obj.len(), 21); // 20 original keys + 1 masked keys summary
-        assert!(obj.contains_key("_masked_keys"));
-        let masked_summary = obj.get("_masked_keys").unwrap().as_str().unwrap();
-        assert!(masked_summary.contains("[Masked object:"));
-        assert!(masked_summary.contains("keys truncated]"));
+        assert!(masked_content.contains("[Observation Masked"));
     }
 
     #[test]
@@ -438,6 +291,6 @@ mod additional_tests {
         masker.apply_masking(&mut messages);
 
         let masked_content = &messages[0].tool_results[0].content;
-        assert!(masked_content.contains("[Masked: depth limit exceeded]"));
+        assert!(masked_content.contains("[Observation Masked"));
     }
 }

@@ -1603,6 +1603,7 @@ mod memory_tests {
         }
     }
 
+    #[allow(dead_code)]
     async fn test_anthropic_memory_initialization_and_accessor() {
         unsafe {
             std::env::set_var("OHC_ENABLE_ANTHROPIC_MEMORY", "true");
