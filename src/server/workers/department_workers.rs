@@ -1114,7 +1114,7 @@ let db_for_products = self.db.clone();
                                 }
 
                                 let task_id = Uuid::new_v4().to_string();
-                                let title = format!("Draft Social Post: {}", product_name);
+                                let _title = format!("Draft Social Post: {}", product_name);
                                 let description = "The Promoter generated social media captions for your new product. Review and schedule.";
                                 let proposed_content = serde_json::to_string(&parsed).unwrap_or_default();
 

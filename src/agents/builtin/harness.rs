@@ -715,7 +715,6 @@ pub enum BackendType {
 
 pub struct Manager {
     config: Config,
-    validator: Arc<ASTValidator>,
     local_backend: Arc<dyn HarnessBackend>,
     docker_backend: Arc<dyn HarnessBackend>,
     ssh_backend: Arc<dyn HarnessBackend>,
@@ -737,7 +736,6 @@ impl Manager {
         let vercel_sandbox_backend = Arc::new(VercelSandboxBackend::new());
         Manager {
             config,
-            validator,
             local_backend,
             docker_backend,
             ssh_backend,
