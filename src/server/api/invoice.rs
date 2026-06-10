@@ -3,6 +3,7 @@ use std::sync::Arc;
 use ::server_ohc::invoice::*;
 use ::server_ohc::invoice::invoice_service_server::InvoiceService;
 use tonic::{Request, Response, Status};
+use sqlx::Row;
 
 use crate::hub::Hub;
 
@@ -16,6 +17,10 @@ impl InvoiceService for InvoiceServiceImpl {
         &self,
         request: Request<CreateInvoiceRequest>,
     ) -> Result<Response<Invoice>, Status> {
+        let spiffe_id_str = request.metadata().get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
+        let (tenant_id, _) = ::server_auth::parse_spiffe_id(spiffe_id_str).map_err(|_| Status::unauthenticated("invalid spiffe id"))?;
+        let org_id = if tenant_id.is_empty() { ::server_common::auth_utils::get_default_tenant() } else { tenant_id };
+
         let req = request.into_inner();
 
         let pool = &self.hub.pool;
@@ -23,7 +28,7 @@ impl InvoiceService for InvoiceServiceImpl {
 
         // Set tenant context for RLS
         sqlx::query("SELECT set_config('app.current_tenant', $1, true)")
-            .bind(&req.tenant_id)
+            .bind(&org_id)
             .execute(&mut *tx)
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
@@ -39,7 +44,7 @@ impl InvoiceService for InvoiceServiceImpl {
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"
         )
         .bind(&invoice_id)
-        .bind(&req.tenant_id)
+        .bind(&org_id)
         .bind(&req.client_id)
         .bind(&req.client_name)
         .bind(&status)
@@ -59,7 +64,7 @@ impl InvoiceService for InvoiceServiceImpl {
                  VALUES ($1, $2, $3, $4, $5, $6, $7)"
             )
             .bind(&item_id)
-            .bind(&req.tenant_id)
+            .bind(&org_id)
             .bind(&invoice_id)
             .bind(&item.description)
             .bind(item.quantity)
@@ -101,6 +106,10 @@ impl InvoiceService for InvoiceServiceImpl {
         &self,
         request: Request<GetInvoiceRequest>,
     ) -> Result<Response<Invoice>, Status> {
+        let spiffe_id_str = request.metadata().get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
+        let (tenant_id, _) = ::server_auth::parse_spiffe_id(spiffe_id_str).map_err(|_| Status::unauthenticated("invalid spiffe id"))?;
+        let org_id = if tenant_id.is_empty() { ::server_common::auth_utils::get_default_tenant() } else { tenant_id };
+
         let req = request.into_inner();
 
         let pool = &self.hub.pool;
@@ -108,12 +117,12 @@ impl InvoiceService for InvoiceServiceImpl {
 
         // Set tenant context for RLS
         sqlx::query("SELECT set_config('app.current_tenant', $1, true)")
-            .bind(&req.tenant_id)
+            .bind(&org_id)
             .execute(&mut *tx)
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
 
-        use sqlx::Row;
+
 
         let row = sqlx::query("SELECT * FROM invoices WHERE id = $1")
             .bind(&req.invoice_id)
@@ -152,8 +161,8 @@ impl InvoiceService for InvoiceServiceImpl {
             stripe_invoice_id: row.try_get("stripe_invoice_id").unwrap_or_default(),
             stripe_payment_link: row.try_get("stripe_payment_link").unwrap_or_default(),
             line_items,
-            created_at: 0,
-            updated_at: 0,
+            created_at: row.try_get::<chrono::DateTime<chrono::Utc>, _>("created_at").map(|dt| dt.timestamp()).unwrap_or(0),
+            updated_at: row.try_get::<chrono::DateTime<chrono::Utc>, _>("updated_at").map(|dt| dt.timestamp()).unwrap_or(0),
         };
 
         Ok(Response::new(invoice))
@@ -163,19 +172,23 @@ impl InvoiceService for InvoiceServiceImpl {
         &self,
         request: Request<ListInvoicesRequest>,
     ) -> Result<Response<ListInvoicesResponse>, Status> {
-        let req = request.into_inner();
+        let spiffe_id_str = request.metadata().get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
+        let (tenant_id, _) = ::server_auth::parse_spiffe_id(spiffe_id_str).map_err(|_| Status::unauthenticated("invalid spiffe id"))?;
+        let org_id = if tenant_id.is_empty() { ::server_common::auth_utils::get_default_tenant() } else { tenant_id };
+
+        let _req = request.into_inner();
 
         let pool = &self.hub.pool;
         let mut tx = pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
 
         // Set tenant context for RLS
         sqlx::query("SELECT set_config('app.current_tenant', $1, true)")
-            .bind(&req.tenant_id)
+            .bind(&org_id)
             .execute(&mut *tx)
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
 
-        use sqlx::Row;
+
 
         let rows = sqlx::query("SELECT * FROM invoices ORDER BY created_at DESC")
             .fetch_all(&mut *tx)
@@ -197,8 +210,8 @@ impl InvoiceService for InvoiceServiceImpl {
                 stripe_invoice_id: row.try_get("stripe_invoice_id").unwrap_or_default(),
                 stripe_payment_link: row.try_get("stripe_payment_link").unwrap_or_default(),
                 line_items: vec![],
-                created_at: 0,
-                updated_at: 0,
+                created_at: row.try_get::<chrono::DateTime<chrono::Utc>, _>("created_at").map(|dt| dt.timestamp()).unwrap_or(0),
+                updated_at: row.try_get::<chrono::DateTime<chrono::Utc>, _>("updated_at").map(|dt| dt.timestamp()).unwrap_or(0),
             });
         }
 
@@ -207,15 +220,96 @@ impl InvoiceService for InvoiceServiceImpl {
 
     async fn update_invoice_status(
         &self,
-        _request: Request<UpdateInvoiceStatusRequest>,
+        request: Request<UpdateInvoiceStatusRequest>,
     ) -> Result<Response<Invoice>, Status> {
-        Err(Status::unimplemented("update_invoice_status is unimplemented"))
+        let spiffe_id_str = request.metadata().get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
+        let (tenant_id, _) = ::server_auth::parse_spiffe_id(spiffe_id_str).map_err(|_| Status::unauthenticated("invalid spiffe id"))?;
+        let org_id = if tenant_id.is_empty() { ::server_common::auth_utils::get_default_tenant() } else { tenant_id };
+
+        let req = request.into_inner();
+        let pool = &self.hub.pool;
+        let mut tx = pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+
+        // Set tenant context for RLS
+        sqlx::query("SELECT set_config('app.current_tenant', $1, true)")
+            .bind(&org_id)
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        let now = chrono::Utc::now().timestamp();
+
+        let result = sqlx::query(
+            "UPDATE invoices SET status = $1, updated_at = $2 WHERE id = $3 AND tenant_id = $4 RETURNING id"
+        )
+        .bind(&req.status)
+        .bind(now)
+        .bind(&req.invoice_id)
+        .bind(&org_id)
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(|e| Status::internal(e.to_string()))?;
+
+        if result.is_none() {
+            return Err(Status::not_found("Invoice not found or does not belong to tenant"));
+        }
+
+
+
+        let row = sqlx::query("SELECT * FROM invoices WHERE id = $1 AND tenant_id = $2")
+            .bind(&req.invoice_id)
+            .bind(&org_id)
+            .fetch_one(&mut *tx)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        let items_rows = sqlx::query("SELECT * FROM invoice_line_items WHERE invoice_id = $1 AND tenant_id = $2")
+            .bind(&req.invoice_id)
+            .bind(&org_id)
+            .fetch_all(&mut *tx)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
+
+        let mut line_items = Vec::new();
+        for item_row in items_rows {
+            line_items.push(InvoiceLineItem {
+                id: item_row.try_get("id").unwrap_or_default(),
+                invoice_id: item_row.try_get("invoice_id").unwrap_or_default(),
+                description: item_row.try_get("description").unwrap_or_default(),
+                quantity: item_row.try_get("quantity").unwrap_or_default(),
+                unit_price: item_row.try_get("unit_price").unwrap_or_default(),
+                amount: item_row.try_get("amount").unwrap_or_default(),
+            });
+        }
+
+        let invoice = Invoice {
+            id: row.try_get("id").unwrap_or_default(),
+            client_id: row.try_get("client_id").unwrap_or_default(),
+            client_name: row.try_get("client_name").unwrap_or_default(),
+            status: row.try_get("status").unwrap_or_default(),
+            due_date: row.try_get("due_date").unwrap_or_default(),
+            currency: row.try_get("currency").unwrap_or_default(),
+            total_amount: row.try_get("total_amount").unwrap_or_default(),
+            stripe_invoice_id: row.try_get("stripe_invoice_id").unwrap_or_default(),
+            stripe_payment_link: row.try_get("stripe_payment_link").unwrap_or_default(),
+            line_items,
+            created_at: row.try_get::<chrono::DateTime<chrono::Utc>, _>("created_at").map(|dt| dt.timestamp()).unwrap_or(0),
+            updated_at: row.try_get::<chrono::DateTime<chrono::Utc>, _>("updated_at").map(|dt| dt.timestamp()).unwrap_or(0),
+        };
+
+        Ok(Response::new(invoice))
     }
 
     async fn draft_invoice_from_context(
         &self,
         request: Request<DraftInvoiceFromContextRequest>,
     ) -> Result<Response<DraftInvoiceFromContextResponse>, Status> {
+        let spiffe_id_str = request.metadata().get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
+        let (tenant_id, _) = ::server_auth::parse_spiffe_id(spiffe_id_str).map_err(|_| Status::unauthenticated("invalid spiffe id"))?;
+        let _org_id = if tenant_id.is_empty() { ::server_common::auth_utils::get_default_tenant() } else { tenant_id };
+
         let req = request.into_inner();
 
         // Simple mock of agent extraction
@@ -248,10 +342,6 @@ impl InvoiceService for InvoiceServiceImpl {
 }
 
 pub fn router<S: Clone + Send + Sync + 'static>(_hub: Arc<Hub>) -> axum::Router<S> {
-    use ::server_ohc::invoice::invoice_service_server::InvoiceServiceServer;
-    use tonic::transport::Server;
-    use tower::ServiceBuilder;
-
     // This is just a stub router for Axum integration if needed,
     // though typically gRPC services are mounted differently.
     // For now, we return an empty router.
@@ -260,16 +350,14 @@ pub fn router<S: Clone + Send + Sync + 'static>(_hub: Arc<Hub>) -> axum::Router<
 
 #[cfg(test)]
 mod tests {
-    use std::sync::Arc;
-    use ::server_ohc::invoice::*;
+    use super::*;
     use ::server_ohc::invoice::invoice_service_server::InvoiceService;
-    use super::InvoiceServiceImpl;
     use tonic::Request;
-    use uuid::Uuid;
+    use crate::hub::Hub;
+    use std::sync::Arc;
 
     #[tokio::test]
     async fn test_invoice_logic() {
-        // Just verify basic compilation
         assert!(true);
     }
 }

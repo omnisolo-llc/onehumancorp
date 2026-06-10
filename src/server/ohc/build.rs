@@ -11,6 +11,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "../../../src/proto/interop.proto",
         "../../../src/proto/mcp_proxy.proto",
         "../../../src/proto/organization.proto",
+        "../../../src/proto/invoice.proto",
     ];
 
     tonic_build::configure()
