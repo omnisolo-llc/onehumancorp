@@ -1,23 +1,21 @@
-load("@rules_go//go:def.bzl", "go_library", "go_test")
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 
-go_library(
+rust_library(
     name = "memory",
-    srcs = ["memory.go"],
-    importpath = "github.com/onehumancorp/mono/src/server/services/memory",
+    srcs = [
+        "src/lib.rs",
+        "src/memory.rs",
+    ],
     visibility = ["//visibility:public"],
     deps = [
-        "@com_github_redis_go_redis_v9//:go-redis",
+        "@crates//:redis",
     ],
 )
 
-go_test(
+rust_test(
     name = "memory_test",
-    srcs = ["memory_test.go"],
-    embed = [":memory"],
+    crate = ":memory",
     deps = [
-        "@com_github_alicebob_miniredis_v2//:miniredis",
-        "@com_github_redis_go_redis_v9//:go-redis",
-        "@com_github_stretchr_testify//assert",
-        "@com_github_stretchr_testify//require",
+        "@crates//:redis",
     ],
 )

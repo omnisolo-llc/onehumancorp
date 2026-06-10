@@ -72,32 +72,32 @@ go_repository(
     name = "com_github_klauspost_cpuid_v2",
     build_file_generation = "on",
     importpath = "github.com/klauspost/cpuid/v2",
-    sum = "h1:tBs3QSyvjDyFTq3uoc/9xFpCuOsJQFNPiAhYdw2skhE=",
-    version = "v2.2.10",
+    sum = "h1:0OwqZRYI2rFrjS4kvkDnqJkKHdHaRnCm68/DY4OxRzU=",
+    version = "v2.2.11",
 )
 
 go_repository(
     name = "com_github_redis_go_redis_v9",
     build_file_generation = "on",
     importpath = "github.com/redis/go-redis/v9",
-    sum = "h1:XPVaaPSnG6RhYf7p+rmSa9zZfeVAnWsH5h3lxthOm/k=",
-    version = "v9.19.0",
+    sum = "h1:pMkxYPkEbMPwRdenAzUNyFNrDgHx9U+DrBabWNfSRQs=",
+    version = "v9.18.0",
 )
 
 go_repository(
     name = "com_github_stretchr_objx",
     build_file_generation = "on",
     importpath = "github.com/stretchr/objx",
-    sum = "h1:4G4v2dO3VZwixGIRoQ5Lfboy6nUhCyYzaqnIAPPhYs4=",
-    version = "v0.1.0",
+    sum = "h1:xuMeJ0Sdp5ZMRXx/aWO6RZxdr3beISkG5/G/aIRr3pY=",
+    version = "v0.5.2",
 )
 
 go_repository(
     name = "com_github_zeebo_xxh3",
     build_file_generation = "on",
     importpath = "github.com/zeebo/xxh3",
-    sum = "h1:s7DLGDK45Dyfg7++yxI0khrfwq9661w9EN78eP/UZVs=",
-    version = "v1.1.0",
+    sum = "h1:xZmwmqxHZA8AI603jOQ0tMqmBr9lPeFwGg6d+xy9DC0=",
+    version = "v1.0.2",
 )
 
 go_repository(
@@ -110,69 +110,6 @@ go_repository(
 
 load("//:bazel/rules/go_deps.bzl", "go_deps")
 
-go_repository(
-    name = "com_github_alicebob_miniredis_v2",
-    importpath = "github.com/alicebob/miniredis/v2",
-    sum = "h1:nZAzCR+Lj+Vxk4ZXzm2NuKq2O33RXj1XxJ2e2uP9jiw=",
-    version = "v2.38.0",
-)
-
-go_repository(
-    name = "com_github_cespare_xxhash_v2",
-    importpath = "github.com/cespare/xxhash/v2",
-    sum = "h1:UL815xU9SqsFlibzuggzjXhog7bL6oX9BbNZnL2UFvs=",
-    version = "v2.3.0",
-)
-
-go_repository(
-    name = "com_github_chzyer_logex",
-    importpath = "github.com/chzyer/logex",
-    sum = "h1:Swpa1K6QvQznwJRcfTfQJmTE72DqScAa40E+fbHEXEE=",
-    version = "v1.1.10",
-)
-
-go_repository(
-    name = "com_github_chzyer_readline",
-    importpath = "github.com/chzyer/readline",
-    sum = "h1:fY5BOSpyZCqRo5OhCuC+XN+r/bBCmeuuJtjz+bCNIf8=",
-    version = "v0.0.0-20180603132655-2972be24d48e",
-)
-
-go_repository(
-    name = "com_github_chzyer_test",
-    importpath = "github.com/chzyer/test",
-    sum = "h1:q763qf9huN11kDQavWsoZXJNW3xEE4JJyHa5Q25/sd8=",
-    version = "v0.0.0-20180213035817-a1ea475d72b1",
-)
-
-go_repository(
-    name = "com_github_davecgh_go_spew",
-    importpath = "github.com/davecgh/go-spew",
-    sum = "h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=",
-    version = "v1.1.1",
-)
-
-go_repository(
-    name = "com_github_pmezard_go_difflib",
-    importpath = "github.com/pmezard/go-difflib",
-    sum = "h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=",
-    version = "v1.0.0",
-)
-
-go_repository(
-    name = "com_github_yuin_gopher_lua",
-    importpath = "github.com/yuin/gopher-lua",
-    sum = "h1:kYKnWBjvbNP4XLT3+bPEwAXJx262OhaHDWDVOPjL46M=",
-    version = "v1.1.1",
-)
-
-go_repository(
-    name = "org_golang_x_sys",
-    importpath = "golang.org/x/sys",
-    sum = "h1:CvCKL8MeisomCi6qNZ+wbb0DN9E5AATixKsvNtMoMFk=",
-    version = "v0.39.0",
-)
-
 # gazelle:repository_macro bazel/rules/go_deps.bzl%go_deps
 go_deps()
 
@@ -183,6 +120,6 @@ go_repository(
     name = "com_github_stretchr_testify",
     build_file_generation = "on",
     importpath = "github.com/stretchr/testify",
-    sum = "h1:TivCn/peBQ7UY8ooIcPgZFpTNSz0Q2U6UrFlUfqbe0Q=",
-    version = "v1.3.0",
+    sum = "h1:w7B6lhMri9wdJUVmEZPGGhZzrYTPvgJArz7wNPgYK4Q=",
+    version = "v1.8.4",
 )
