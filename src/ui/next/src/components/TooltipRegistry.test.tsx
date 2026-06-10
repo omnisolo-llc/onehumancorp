@@ -119,9 +119,9 @@ describe('WithTooltip additional tests', () => {
     let preventDefaultCalled = false;
     const event = new MouseEvent('contextmenu', { bubbles: true, cancelable: true });
     event.preventDefault = () => { preventDefaultCalled = true; };
-    act(() => {
-      act(() => { fireEvent(target, event); });
-    });
+
+    act(() => { fireEvent(target, event); });
+
     expect(preventDefaultCalled).toBe(true);
   });
 });
