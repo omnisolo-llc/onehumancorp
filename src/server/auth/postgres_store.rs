@@ -92,10 +92,7 @@ impl UserRepository for PgUserRepository {
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
 
-        if !should_bypass {
-            let tenant_id = org_id;
-            set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
-        }
+        set_org_context(&mut *tx, org_id).await.map_err(|e| e.to_string())?;
 
         let row = if should_bypass {
             sqlx::query(query).bind(id).fetch_one(&mut *tx).await.map_err(|e| e.to_string())?
@@ -135,10 +132,7 @@ impl UserRepository for PgUserRepository {
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
 
-        if !should_bypass {
-            let tenant_id = org_id;
-            set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
-        }
+        set_org_context(&mut *tx, org_id).await.map_err(|e| e.to_string())?;
 
         let row = if should_bypass {
             sqlx::query(query).bind(username).fetch_one(&mut *tx).await.map_err(|e| e.to_string())?
@@ -177,10 +171,7 @@ impl UserRepository for PgUserRepository {
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
 
-        if !should_bypass {
-            let tenant_id = org_id;
-            set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
-        }
+        set_org_context(&mut *tx, org_id).await.map_err(|e| e.to_string())?;
 
         let row = if should_bypass {
             sqlx::query(query).bind(email).fetch_one(&mut *tx).await.map_err(|e| e.to_string())?
@@ -219,10 +210,7 @@ impl UserRepository for PgUserRepository {
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
 
-        if !should_bypass {
-            let tenant_id = org_id;
-            set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
-        }
+        set_org_context(&mut *tx, org_id).await.map_err(|e| e.to_string())?;
 
         let row = if should_bypass {
             sqlx::query(query).bind(sub).fetch_one(&mut *tx).await.map_err(|e| e.to_string())?
@@ -258,10 +246,7 @@ impl UserRepository for PgUserRepository {
         };
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
-        if !should_bypass {
-            let tenant_id = org_id;
-            set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
-        }
+        set_org_context(&mut *tx, org_id).await.map_err(|e| e.to_string())?;
 
         let rows = if should_bypass {
             sqlx::query(query).fetch_all(&mut *tx).await.map_err(|e| e.to_string())?
@@ -311,10 +296,7 @@ impl UserRepository for PgUserRepository {
         };
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
-        if !should_bypass {
-            let tenant_id = org_id;
-            set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
-        }
+        set_org_context(&mut *tx, org_id).await.map_err(|e| e.to_string())?;
 
         let res = if should_bypass {
             sqlx::query(query)
@@ -365,10 +347,7 @@ impl UserRepository for PgUserRepository {
         };
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
-        if !should_bypass {
-            let tenant_id = org_id;
-            set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
-        }
+        set_org_context(&mut *tx, org_id).await.map_err(|e| e.to_string())?;
 
         let res = if should_bypass {
             sqlx::query(query).bind(id).fetch_optional(&mut *tx).await.map_err(|e| e.to_string())?
@@ -418,12 +397,29 @@ impl UserRepository for PgUserRepository {
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
         set_org_context(&mut *tx, org_id).await.map_err(|e| e.to_string())?;
 
-        let row = sqlx::query("SELECT COUNT(*) FROM revoked_tokens WHERE jti = $1 AND expires_at >= CURRENT_TIMESTAMP AND tenant_id = $2")
-            .bind(jti)
-            .bind(org_id)
-            .fetch_one(&mut *tx)
-            .await
-            .map_err(|e| e.to_string())?;
+        let is_multitenant = ::server_config::get().multitenant;
+        let should_bypass = (!is_multitenant) && org_id.eq_ignore_ascii_case("system");
+
+        let query = if should_bypass {
+            "SELECT COUNT(*) FROM revoked_tokens WHERE jti = $1 AND expires_at >= CURRENT_TIMESTAMP"
+        } else {
+            "SELECT COUNT(*) FROM revoked_tokens WHERE jti = $1 AND expires_at >= CURRENT_TIMESTAMP AND tenant_id = $2"
+        };
+
+        let row = if should_bypass {
+            sqlx::query(query)
+                .bind(jti)
+                .fetch_one(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?
+        } else {
+            sqlx::query(query)
+                .bind(jti)
+                .bind(org_id)
+                .fetch_one(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?
+        };
 
         let count: i64 = row.get(0);
         tx.rollback().await.map_err(|e| e.to_string())?;

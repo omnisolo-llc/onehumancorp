@@ -324,12 +324,29 @@ impl UserRepository for SqliteUserRepository {
 
     async fn is_revoked(&self, jti: &str, org_id: &str) -> Result<bool, String> {
         validate_org_id!(org_id);
-        let row = sqlx::query("SELECT COUNT(*) FROM revoked_tokens WHERE jti = $1 AND expires_at >= CURRENT_TIMESTAMP AND tenant_id = $2")
-            .bind(jti)
-            .bind(org_id)
-            .fetch_one(&self.pool)
-            .await
-            .map_err(|e: sqlx::Error| e.to_string())?;
+        let is_multitenant = ::server_config::get().multitenant;
+        let should_bypass = (!is_multitenant) && org_id.eq_ignore_ascii_case("system");
+
+        let query = if should_bypass {
+            "SELECT COUNT(*) FROM revoked_tokens WHERE jti = $1 AND expires_at >= CURRENT_TIMESTAMP"
+        } else {
+            "SELECT COUNT(*) FROM revoked_tokens WHERE jti = $1 AND expires_at >= CURRENT_TIMESTAMP AND tenant_id = $2"
+        };
+
+        let row = if should_bypass {
+            sqlx::query(query)
+                .bind(jti)
+                .fetch_one(&self.pool)
+                .await
+                .map_err(|e: sqlx::Error| e.to_string())?
+        } else {
+            sqlx::query(query)
+                .bind(jti)
+                .bind(org_id)
+                .fetch_one(&self.pool)
+                .await
+                .map_err(|e: sqlx::Error| e.to_string())?
+        };
 
         let count: i32 = row.get(0);
         Ok(count > 0)
