@@ -561,11 +561,11 @@ jobs:
 
       - name: Pull Docker Compose images
         run: |
-          docker pull pgvector/pgvector:pg16
+          docker pull pgvector/pgvector:pg15
           docker pull valkey/valkey:8-alpine
           mkdir -p /tmp/ohc-docker-compose-images
           docker save \
-            pgvector/pgvector:pg16 \
+            pgvector/pgvector:pg15 \
             valkey/valkey:8-alpine \
             -o /tmp/ohc-docker-compose-images/images.tar
 
