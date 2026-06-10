@@ -1,0 +1,18 @@
+
+import { test, expect } from '@playwright/test';
+
+test.describe('Agentic Invoicing System E2E', () => {
+  test('should verify invoice generator page renders properly', async ({ page }) => {
+    // Navigate to the invoice generator page
+    await page.goto('http://127.0.0.1:3000/invoice-generator');
+
+    // Verify header
+    await expect(page.locator('h1')).toHaveText('Invoice Generator');
+
+    // Verify form elements exist
+    await expect(page.locator('input[placeholder="e.g. Acme Corp"]')).toBeVisible();
+    await expect(page.locator('textarea[placeholder="e.g. Website Redesign and SEO Optimization"]')).toBeVisible();
+    await expect(page.locator('input[placeholder="e.g. 1500.00"]')).toBeVisible();
+    await expect(page.locator('button:has-text("Generate Shareable Invoice")')).toBeVisible();
+  });
+});
