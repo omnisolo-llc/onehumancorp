@@ -174,6 +174,46 @@ pub struct Booking {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct QuoteItem {
+    pub id: String,
+    pub tenant_id: String,
+    pub quote_id: String,
+    pub description: Option<String>,
+    pub price: Option<i64>,
+    pub quantity: Option<i32>,
+    pub is_optional: Option<bool>,
+    pub selected: Option<bool>,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct Quote {
+    pub id: String,
+    pub tenant_id: String,
+    pub customer_id: String,
+    pub status: Option<String>,
+    pub total_amount: Option<i64>,
+    pub required_deposit: Option<i64>,
+    pub expires_at_unix: Option<i64>,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct Invoice {
+    pub id: String,
+    pub tenant_id: String,
+    pub booking_id: String,
+    #[sqlx(rename = "type")]
+    pub r#type: String,
+    pub amount: Option<i64>,
+    pub status: Option<String>,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct AIAgent {
     pub id: String,
     pub tenant_id: String,

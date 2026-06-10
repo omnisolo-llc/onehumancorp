@@ -742,6 +742,69 @@ impl DB {
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1
                     );
+                    CREATE TABLE IF NOT EXISTS quotes (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT,
+                        customer_id TEXT,
+                        status TEXT,
+                        total_amount BIGINT,
+                        required_deposit BIGINT,
+                        expires_at_unix BIGINT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        _sync_status TEXT DEFAULT 'pending',
+                        version INTEGER DEFAULT 1
+                    );
+                    CREATE TABLE IF NOT EXISTS quote_items (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT,
+                        quote_id TEXT,
+                        description TEXT,
+                        price BIGINT,
+                        quantity INTEGER,
+                        is_optional BOOLEAN,
+                        selected BOOLEAN,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        _sync_status TEXT DEFAULT 'pending',
+                        version INTEGER DEFAULT 1
+                    );
+                    CREATE TABLE IF NOT EXISTS invoices (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT,
+                        booking_id TEXT,
+                        type TEXT,
+                        amount BIGINT,
+                        status TEXT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        _sync_status TEXT DEFAULT 'pending',
+                        version INTEGER DEFAULT 1
+                    );
+                    CREATE TABLE IF NOT EXISTS services (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT,
+                        title TEXT,
+                        description TEXT,
+                        price_cents BIGINT,
+                        duration_minutes INTEGER,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        _sync_status TEXT DEFAULT 'pending',
+                        version INTEGER DEFAULT 1
+                    );
+                    CREATE TABLE IF NOT EXISTS availability_blocks (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT,
+                        service_id TEXT,
+                        start_time TIMESTAMP,
+                        end_time TIMESTAMP,
+                        is_available BOOLEAN,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        _sync_status TEXT DEFAULT 'pending',
+                        version INTEGER DEFAULT 1
+                    );
                     CREATE TABLE IF NOT EXISTS orders (
                         id TEXT PRIMARY KEY,
                         tenant_id TEXT,
@@ -769,7 +832,6 @@ impl DB {
                         id TEXT PRIMARY KEY,
                         tenant_id TEXT,
                         customer_id TEXT,
-                        quote_id TEXT,
                         service_id TEXT,
                         start_time TEXT,
                         end_time TEXT,
