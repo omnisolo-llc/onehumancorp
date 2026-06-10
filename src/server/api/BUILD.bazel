@@ -1,3 +1,4 @@
+exports_files(["chaos.rs"])
 load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 
 exports_files(
@@ -22,6 +23,7 @@ exports_files(
         "offline_sync.rs",
         "staff_mesh.rs",
         "telemetry.rs",
+        "chaos.rs",
         "catalog.rs",
         "fulfillment.rs",
         "shipping.rs",
@@ -57,6 +59,7 @@ rust_library(
         "offline_sync.rs",
         "staff_mesh.rs",
         "telemetry.rs",
+        "chaos.rs",
         "catalog.rs",
         "fulfillment.rs",
         "shipping.rs",
