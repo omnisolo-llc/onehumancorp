@@ -1131,18 +1131,18 @@ function WorkflowsPanel({ workflows, setWorkflows }: { workflows: WorkflowRecord
   };
 
   return (
-    <section className="rounded-lg border border-zinc-200 bg-white p-4">
+    <section className="rounded-[16px] border border-[rgba(255,255,255,0.4)] bg-[rgba(255,255,255,0.65)] backdrop-blur-[30px] saturate-[210%] p-4">
       <SectionHeader title="Workflows" detail="Active expert and expert-team runs." />
 
       <div className="mb-8">
         <AgentWorkflowBuilder onSave={handleSaveWorkflow} />
       </div>
       {workflows.length === 0 ? (
-        <p className="rounded-md border border-dashed border-zinc-300 p-4 text-sm text-zinc-600">No workflows yet.</p>
+        <p className="rounded-[8px] border border-dashed border-zinc-300 p-4 text-sm text-zinc-600">No workflows yet.</p>
       ) : (
         <div className="space-y-3">
           {workflows.map((workflow) => (
-            <div key={workflow.id} className="rounded-lg border border-zinc-200 bg-zinc-50 p-4">
+            <div key={workflow.id} className="rounded-[16px] border border-[rgba(255,255,255,0.4)] bg-[rgba(255,255,255,0.65)] backdrop-blur-[30px] saturate-[210%] p-4">
               <div className="flex items-center justify-between">
                 <h3 className="font-bold text-zinc-950">{workflow.name}</h3>
                 <StatusPill>{workflow.status}</StatusPill>
