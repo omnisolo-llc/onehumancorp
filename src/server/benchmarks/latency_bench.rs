@@ -672,7 +672,7 @@ pub async fn bench_hybrid_latency() {
     println!("3. API Response Time (Dashboard Snapshot)");
     bench_api_response_time().await;
 
-    println!("4. Billing API Response Time (Parallel Execution Optimization verified)");
+    println!("4. Billing API Response Time (Parallel Execution Optimization verified, Hybrid Cache)");
     bench_billing_api_response_time().await;
 
     println!("--- Hybrid Latency Benchmark Complete ---");
