@@ -3,6 +3,7 @@ load("//bazel/rules:proto_rust_library.bzl", "proto_rust_library")
 
 
 exports_files([
+    "context_bundle.proto",
     "agent.proto",
     "agent_service.proto",
     "app.proto",
@@ -281,5 +282,19 @@ proto_rust_library(
     name = "ledger",
     proto = ":ledger_proto",
     use_grpc = True,
+    visibility = ["//visibility:public"],
+)
+
+# ── Context Bundle ─────────────────────────────────────────────────────────────
+
+proto_library(
+    name = "context_bundle_proto",
+    srcs = ["context_bundle.proto"],
+    visibility = ["//visibility:public"],
+)
+
+proto_rust_library(
+    name = "context_bundle",
+    proto = ":context_bundle_proto",
     visibility = ["//visibility:public"],
 )

@@ -50,7 +50,7 @@ async fn test_task_decomposition_service() {
                     from_state TEXT NOT NULL,
                     to_state TEXT NOT NULL,
                     agent_id TEXT,
-                    transitioned_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                    transitioned_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), handoff_payload JSONB
                 );
                 "#
             )
@@ -378,7 +378,7 @@ async fn test_task_decomposition_service_fail_task() {
                     from_state TEXT NOT NULL,
                     to_state TEXT NOT NULL,
                     agent_id TEXT,
-                    transitioned_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                    transitioned_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), handoff_payload JSONB
                 );
                 "#
             ).execute(&db.pool).await.unwrap();

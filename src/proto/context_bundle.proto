@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package ohc.context;
+
+option go_package = "github.com/onehumancorp/mono/src/proto/context_bundle;context_bundlepb";
+
+message ContextBundle {
+  string task_id = 1;
+  string tenant_id = 2;
+  string entity_id = 3;
+  string summary = 4;
+  string context = 5;
+}

@@ -892,6 +892,7 @@ impl DB {
                         reason TEXT,
                         occurred_at TEXT DEFAULT CURRENT_TIMESTAMP,
                         task_id TEXT,
+                        handoff_payload TEXT,
                         transitioned_at TEXT,
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1

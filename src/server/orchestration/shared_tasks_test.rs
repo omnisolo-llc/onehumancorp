@@ -514,3 +514,76 @@ async fn test_shared_task_orchestrator_concurrent_claim() {
     let assigned_tasks = list.iter().filter(|t| t.status == "ASSIGNED").count();
     assert_eq!(assigned_tasks, 50);
 }
+
+
+#[tokio::test]
+async fn test_handoff_protocol_context_bundle() {
+    use crate::db::{DB, DbStore};
+    use crate::orchestration::tasks::TaskDecompositionService;
+    use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+    use std::str::FromStr;
+    use std::sync::Arc;
+    use uuid::Uuid;
+
+    let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:")
+        .unwrap()
+        .create_if_missing(true);
+
+    let pool = SqlitePoolOptions::new()
+        .max_connections(1)
+        .connect_with(conn_opts)
+        .await
+        .unwrap();
+
+    let _ = sqlx::query(
+        "CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, ultraplan_phase TEXT, deliberation_log TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)"
+    ).execute(&pool).await.unwrap();
+
+    let _ = sqlx::query(
+        "CREATE TABLE IF NOT EXISTS state_machine_transitions (
+            id TEXT PRIMARY KEY,
+            task_id TEXT,
+            from_state TEXT,
+            to_state TEXT,
+            agent_id TEXT,
+            transitioned_at TEXT,
+            handoff_payload TEXT
+        )"
+    ).execute(&pool).await.unwrap();
+
+    let db = Arc::new(DB {
+        store: DbStore::Sqlite(pool.clone()),
+        pool: sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://dummy").unwrap(),
+    });
+
+    let transport = Arc::new(ohc_builtin_agent::mesh::transport::InProcessTransport::new());
+    let mesh = Arc::new(crate::orchestration::mesh::CentrifugeNode::new(transport));
+    let svc = TaskDecompositionService::new(db, mesh);
+
+    let task_id = Uuid::new_v4().to_string();
+    let initial_payload = r#"{"original": "data"}"#;
+
+    sqlx::query("INSERT INTO shared_tasks_decomposition (id, title, status, dependencies, payload, created_at, organization_id, mission_id, parent_plan_id, priority) VALUES (?, 'Test Task', 'PENDING', '[]', ?, datetime('now'), 'org', 'mission', 'plan', 'P2')")
+        .bind(&task_id)
+        .bind(initial_payload)
+        .execute(&pool)
+        .await
+        .unwrap();
+
+    let handoff_data = r#"{"tenant_id": "t1", "entity_id": "e1", "context": "Important context"}"#;
+    let transition_id = Uuid::new_v4().to_string();
+
+    sqlx::query("INSERT INTO state_machine_transitions (id, task_id, from_state, to_state, handoff_payload, transitioned_at) VALUES (?, ?, 'PENDING', 'ROUTED', ?, datetime('now'))")
+        .bind(&transition_id)
+        .bind(&task_id)
+        .bind(handoff_data)
+        .execute(&pool)
+        .await
+        .unwrap();
+
+    let task = svc.get_task(&task_id).await.unwrap();
+
+    let payload_val: serde_json::Value = serde_json::from_str(&task.payload).unwrap();
+    assert_eq!(payload_val["original"], "data");
+    assert_eq!(payload_val["handoff_context"]["context"], "Important context");
+}
