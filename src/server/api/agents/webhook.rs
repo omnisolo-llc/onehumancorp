@@ -170,11 +170,37 @@ async fn handle_webhook(
         }
     }
 
+    let target_language = if let Some(lang) = payload.target_language.clone() {
+        lang
+    } else {
+        let pool = crate::db::get_pool();
+        match sqlx::query("SELECT target_languages FROM ohc_translation_preferences WHERE tenant_id = $1 LIMIT 1")
+            .bind(&payload.tenant_id)
+            .fetch_optional(&pool)
+            .await
+        {
+            Ok(Some(row)) => {
+                use sqlx::Row;
+                let langs_val: serde_json::Value = row.get("target_languages");
+                if let Ok(langs) = serde_json::from_value::<Vec<String>>(langs_val) {
+                    if let Some(first_lang) = langs.first() {
+                        first_lang.clone()
+                    } else {
+                        "English".to_string()
+                    }
+                } else {
+                    "English".to_string()
+                }
+            }
+            _ => "English".to_string(),
+        }
+    };
+
     let translation = match translate_inbox_message_with_llm(
         &payload.tenant_id,
         &payload.source,
         &payload.message,
-        payload.target_language.as_deref().unwrap_or("English"),
+        &target_language,
     ).await {
         Ok(t) => t,
         Err(e) => {
@@ -182,7 +208,7 @@ async fn handle_webhook(
             InboxTranslation {
                 translated_content: payload.message.clone(),
                 source_language: Some("Unknown".to_string()),
-                target_language: payload.target_language.unwrap_or_else(|| "English".to_string()),
+                target_language,
                 original_content: payload.message.clone(),
             }
         }

@@ -145,9 +145,30 @@ pub async fn meta_webhook_post_handler(
 }
 
 async fn process_omnichannel_message(state: &MetaWebhookState, tenant_id: String, source: String, sender_id: String, text: String) {
-    let target_language = "English";
+    let pool = &state.db.pool;
 
-    let translation = match translate_inbox_message_with_llm(&tenant_id, &source, &text, target_language).await {
+    let target_language = match sqlx::query("SELECT target_languages FROM ohc_translation_preferences WHERE tenant_id = $1 LIMIT 1")
+        .bind(&tenant_id)
+        .fetch_optional(pool)
+        .await
+    {
+        Ok(Some(row)) => {
+            use sqlx::Row;
+            let langs_val: serde_json::Value = row.get("target_languages");
+            if let Ok(langs) = serde_json::from_value::<Vec<String>>(langs_val) {
+                if let Some(first_lang) = langs.first() {
+                    first_lang.clone()
+                } else {
+                    "English".to_string()
+                }
+            } else {
+                "English".to_string()
+            }
+        }
+        _ => "English".to_string(),
+    };
+
+    let translation = match translate_inbox_message_with_llm(&tenant_id, &source, &text, &target_language).await {
         Ok(t) => t,
         Err(e) => {
             tracing::error!("Translation failed: {}", e);
@@ -169,7 +190,6 @@ async fn process_omnichannel_message(state: &MetaWebhookState, tenant_id: String
     };
 
     let inbox_id = Uuid::new_v4().to_string();
-    let pool = &state.db.pool;
 
     let insert_result = match &state.db.store {
         crate::db::DbStore::Postgres => {

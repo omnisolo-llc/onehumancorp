@@ -64,13 +64,34 @@ impl Department for CustomerSuccessAgent {
 
             let source = original.and_then(|orig| orig.get("source").and_then(|v| v.as_str())).unwrap_or("").to_string();
             let sender_id = original.and_then(|orig| orig.get("sender_id").and_then(|v| v.as_str())).unwrap_or("").to_string();
-            let text = message.to_string();
+            let inbox_id = original.and_then(|orig| orig.get("inbox_message_id").and_then(|v| v.as_str())).unwrap_or("").to_string();
+            let mut text = message.to_string();
             let _hub_clone = self.hub.clone();
             let tenant_id_for_meta = event.tenant_id.clone();
 
             tokio::spawn(async move {
                 if (source == "whatsapp" || source == "instagram") && !sender_id.is_empty() {
                     let pool = crate::db::get_pool();
+
+                    // Look up target language for reverse translation
+                    if !inbox_id.is_empty() {
+                        if let Ok(Some(row)) = sqlx::query("SELECT translated_from_language FROM inbox_messages WHERE id = $1")
+                            .bind(&inbox_id)
+                            .fetch_optional(&pool)
+                            .await
+                        {
+                            use sqlx::Row;
+                            let target_lang: Option<String> = row.try_get("translated_from_language").unwrap_or(None);
+                            if let Some(lang) = target_lang {
+                                if !lang.is_empty() && lang != "Unknown" && lang != "English" {
+                                    if let Ok(translation) = crate::api::agents::translation::translate_inbox_message_with_llm(&tenant_id_for_meta, &source, &text, &lang).await {
+                                        text = translation.translated_content;
+                                    }
+                                }
+                            }
+                        }
+                    }
+
                     let row: Result<(String,), sqlx::Error> = sqlx::query_as("SELECT api_token FROM integration_credentials WHERE integration_id = 'meta' AND tenant_id = $1 LIMIT 1")
                         .bind(&tenant_id_for_meta)
                         .fetch_one(&pool)

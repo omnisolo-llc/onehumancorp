@@ -307,9 +307,112 @@ async fn handle_generate_offering(
     (axum::http::StatusCode::OK, Json(response_json)).into_response()
 }
 
+async fn handle_update_product(
+    Extension(hub): Extension<Arc<Hub>>,
+    Extension(claims): Extension<::server_common::Claims>,
+    axum::extract::Path(product_id): axum::extract::Path<String>,
+    Json(payload): Json<CreateProductRequest>,
+) -> impl IntoResponse {
+    let tenant_id = claims
+        .organization_id
+        .unwrap_or_else(|| ::server_common::auth_utils::get_default_tenant());
+
+    let mut conn = match hub.pool.acquire().await {
+        Ok(c) => c,
+        Err(e) => {
+            ::server_telemetry::record_error_signal("Failed to acquire DB connection");
+            tracing::error!("Failed to acquire DB connection: {}", e);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ErrorResponse {
+                    error: "DATABASE_ERROR".to_string(),
+                    message: "Failed to connect to database".to_string(),
+                }),
+            )
+                .into_response();
+        }
+    };
+
+    let update_product = sqlx::query(
+        "UPDATE products SET title = $1, description = $2, type = $3, updated_at = CURRENT_TIMESTAMP WHERE id = $4 AND tenant_id = $5"
+    )
+    .bind(&payload.name)
+    .bind(&payload.description)
+    .bind(&payload.item_type)
+    .bind(&product_id)
+    .bind(&tenant_id)
+    .execute(&mut *conn)
+    .await;
+
+    if let Err(e) = update_product {
+        ::server_telemetry::record_error_signal("Failed to update product");
+        tracing::error!("Failed to update product: {}", e);
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ErrorResponse {
+                error: "DATABASE_ERROR".to_string(),
+                message: "Failed to update product".to_string(),
+            }),
+        )
+            .into_response();
+    }
+
+    // Queue translation job
+    let job_id = uuid::Uuid::new_v4().to_string();
+    let job_payload = serde_json::json!({
+        "product_id": product_id,
+        "name": payload.name,
+        "description": payload.description
+    });
+    let insert_job = sqlx::query(
+        "INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload) VALUES ($1, $2, $3, $4)"
+    )
+    .bind(&job_id)
+    .bind(&tenant_id)
+    .bind("translate_product")
+    .bind(job_payload)
+    .execute(&mut *conn)
+    .await;
+
+    if let Err(e) = insert_job {
+        ::server_telemetry::record_error_signal("Failed to insert translation job");
+        tracing::error!("Failed to insert translation job: {}", e);
+    }
+
+    // Invalidate cache
+    let cache = CATALOG_CACHE.get_or_init(|| HybridCache::new(None));
+    cache.invalidate(&tenant_id).await;
+
+    let event_payload = serde_json::json!({
+        "product_id": product_id,
+        "name": payload.name,
+        "organization_id": tenant_id,
+    });
+
+    let event = ::server_ohc::orchestration::TeammateMeshEvent {
+        agent_id: "system".to_string(),
+        action: "ProductUpdated".to_string(),
+        status: "success".to_string(),
+        payload: serde_json::to_vec(&event_payload).unwrap_or_default(),
+        msg_id: uuid::Uuid::new_v4().to_string(),
+    };
+
+    let _ = hub.publish_teammate_event("products_inbox".to_string(), event);
+
+    (
+        StatusCode::OK,
+        Json(CreateProductResponse {
+            success: true,
+            message: Some(format!("Updated {}", payload.name)),
+        }),
+    )
+        .into_response()
+}
+
 pub fn router<S: Clone + Send + Sync + 'static>(hub: Arc<Hub>) -> Router<S> {
     Router::new()
         .route("/product", post(handle_create_product))
+        .route("/product/{id}", axum::routing::put(handle_update_product))
         .route("/generate", post(handle_generate_offering))
         .layer(Extension(hub))
 }
