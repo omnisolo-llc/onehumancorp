@@ -28,4 +28,4 @@ pub mod mcp_webhook;
 pub mod booking;
 pub mod recovery;
 pub mod agent_feed;
-pub mod voice_command;
+pub mod audio_command;
