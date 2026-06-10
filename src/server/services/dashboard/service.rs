@@ -340,7 +340,7 @@ impl MyDashboardService {
     #[tracing::instrument(skip(self))]
     async fn fetch_bookings_impl(&self, org_id: &str, mobile_optimized: bool) -> Result<Vec<::server_ohc::app::Booking>, String> {
         let q = if mobile_optimized {
-            "SELECT id, tenant_id, customer_id, product_id, start_time, end_time, '' as status FROM bookings WHERE tenant_id = $1 ORDER BY start_time ASC LIMIT 10"
+            "SELECT id, customer_id, product_id, start_time, end_time FROM bookings WHERE tenant_id = $1 ORDER BY start_time ASC LIMIT 10"
         } else {
             "SELECT id, tenant_id, customer_id, product_id, start_time, end_time, status FROM bookings WHERE tenant_id = $1 ORDER BY start_time ASC LIMIT 10"
         };
