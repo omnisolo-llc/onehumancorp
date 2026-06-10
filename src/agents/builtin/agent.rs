@@ -1466,6 +1466,16 @@ impl Agent {
                             return Err(format!("Unexpected tool error: Transient error: {}", msg));
                         }
                         Err(crate::types::ToolError::UserFixable(msg)) => {
+                            if let Some(ref cb) = cfg_arc_node.human_input_callback.0 {
+                                if let Some(human_input) = cb(&msg).await {
+                                    tool_results[idx] = crate::types::ToolResult {
+                                        tool_call_id: id,
+                                        content: String::new(),
+                                        error: format!("USER_FIXABLE: {}. Human provided fix: {}", msg, human_input),
+                                    };
+                                    continue;
+                                }
+                            }
                             return Err(format!("USER_FIXABLE:{}", msg));
                         }
                         Err(crate::types::ToolError::Fatal(msg)) => {
@@ -1563,8 +1573,18 @@ impl Agent {
                                 return Err(format!("Unexpected tool error: {}", msg));
                             }
                             Err(crate::types::ToolError::UserFixable(msg)) => {
-                                return Err(format!("USER_FIXABLE:{}", msg));
+                            if let Some(ref cb) = cfg_arc_node.human_input_callback.0 {
+                                if let Some(human_input) = cb(&msg).await {
+                                    tool_results[idx] = crate::types::ToolResult {
+                                        tool_call_id: id,
+                                        content: String::new(),
+                                        error: format!("USER_FIXABLE: {}. Human provided fix: {}", msg, human_input),
+                                    };
+                                    continue;
+                                }
                             }
+                            return Err(format!("USER_FIXABLE:{}", msg));
+                        }
                             Err(crate::types::ToolError::Fatal(msg)) => {
                                 return Err(format!("Fatal tool error: {}", msg));
                             }
