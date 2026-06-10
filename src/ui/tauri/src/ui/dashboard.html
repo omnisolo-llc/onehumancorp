@@ -375,15 +375,22 @@
       }
       .triage-item {
         padding: 16px;
-        border: 1px solid rgba(0, 0, 0, 0.1);
-        border-radius: 8px;
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        border-radius: 16px;
         margin-bottom: 12px;
-        background: rgba(255, 255, 255, 0.8);
+        background: rgba(255, 255, 255, 0.5);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
       }
       @media (prefers-color-scheme: dark) {
         .triage-item {
           border-color: rgba(255, 255, 255, 0.1);
           background: rgba(0, 0, 0, 0.2);
+        }
+      }
+      @media (max-width: 375px) {
+        .triage-controls {
+          flex-direction: column;
         }
       }
       .triage-header {
