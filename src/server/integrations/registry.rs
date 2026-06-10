@@ -217,7 +217,8 @@ impl IntegrationsRegistry {
         if integration_id == "meta" {
             let mut clients = self.meta_clients.write().unwrap();
             clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::meta::provider::MetaProvider::new(
-                creds.api_token.clone()
+                creds.api_token.clone(),
+                creds.from_phone.clone(),
             )));
         }
         if integration_id == "calendly" {

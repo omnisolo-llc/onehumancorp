@@ -8,13 +8,15 @@ pub trait MetaClientWrapper: Send + Sync {
 
 pub struct RealMetaClient {
     access_token: String,
+    phone_number_id: String,
     http_client: Client,
 }
 
 impl RealMetaClient {
-    pub fn new(access_token: String) -> Self {
+    pub fn new(access_token: String, phone_number_id: String) -> Self {
         Self {
             access_token,
+            phone_number_id,
             http_client: Client::new(),
         }
     }
@@ -24,7 +26,13 @@ impl RealMetaClient {
 impl MetaClientWrapper for RealMetaClient {
     async fn send_message(&self, platform: &str, to: &str, body: &str) -> Result<(), String> {
         let url = match platform {
-            "whatsapp" => "https://graph.facebook.com/v19.0/me/messages".to_string(),
+            "whatsapp" => {
+                if self.phone_number_id.is_empty() {
+                    "https://graph.facebook.com/v19.0/me/messages".to_string()
+                } else {
+                    format!("https://graph.facebook.com/v19.0/{}/messages", self.phone_number_id)
+                }
+            },
             _ => "https://graph.facebook.com/v19.0/me/messages".to_string(), // Simplified URL mapping
         };
 
@@ -63,8 +71,9 @@ mod tests {
 
     #[test]
     fn test_real_client_creation() {
-        let client = RealMetaClient::new("token".to_string());
+        let client = RealMetaClient::new("token".to_string(), "phone".to_string());
         assert_eq!(client.access_token, "token");
+        assert_eq!(client.phone_number_id, "phone");
     }
 
     // Because send_message issues a real network request using reqwest,

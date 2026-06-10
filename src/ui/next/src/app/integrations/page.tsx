@@ -89,13 +89,25 @@ export default function Integrations() {
     router.push('/inbox');
   };
 
-  const saveWhatsAppIntegration = () => {
-    setIntegrations(prev => prev.map(integration =>
-      integration.id === 'whatsapp' ? { ...integration, status: "connected" } : integration
-    ));
-    setShowWhatsAppModal(false);
-    setStatusMessage("WhatsApp Cloud API connected.");
-    router.push('/inbox');
+  const saveWhatsAppIntegration = async () => {
+    try {
+      const res = await fetch('/api/integrations/meta/connect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      if (!res.ok) {
+        setStatusMessage("Failed to connect WhatsApp Cloud API.");
+        return;
+      }
+      setIntegrations(prev => prev.map(integration =>
+        integration.id === 'whatsapp' ? { ...integration, status: "connected" } : integration
+      ));
+      setShowWhatsAppModal(false);
+      setStatusMessage("WhatsApp Cloud API connected.");
+      router.push('/inbox');
+    } catch {
+      setStatusMessage("Failed to connect WhatsApp Cloud API.");
+    }
   };
 
   return (

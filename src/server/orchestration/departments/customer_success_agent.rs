@@ -83,14 +83,14 @@ impl Department for CustomerSuccessAgent {
             tokio::spawn(async move {
                 if (source == "whatsapp" || source == "instagram") && !sender_id.is_empty() {
                     let pool = crate::db::get_pool();
-                    let row: Result<(String,), sqlx::Error> = sqlx::query_as("SELECT api_token FROM integration_credentials WHERE integration_id = 'meta' AND tenant_id = $1 LIMIT 1")
+                    let row: Result<(String, String), sqlx::Error> = sqlx::query_as("SELECT api_token, from_phone FROM integration_credentials WHERE integration_id = 'meta' AND tenant_id = $1 LIMIT 1")
                         .bind(&tenant_id_for_meta)
                         .fetch_one(&pool)
                         .await;
                     match row {
-                        Ok((api_token,)) => {
+                        Ok((api_token, from_phone)) => {
                             use crate::integrations::meta::client::{MetaClientWrapper, RealMetaClient};
-                            let client = RealMetaClient::new(api_token);
+                            let client = RealMetaClient::new(api_token, from_phone);
                             if let Err(e) = client.send_message(&source, &sender_id, &text).await {
                                 tracing::error!("Failed to send {} message via Meta integration: {}", source, e);
                             } else {

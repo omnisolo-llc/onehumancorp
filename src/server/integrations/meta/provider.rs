@@ -8,8 +8,8 @@ pub struct MetaProvider {
 }
 
 impl MetaProvider {
-    pub fn new(access_token: String) -> Self {
-        let client = RealMetaClient::new(access_token);
+    pub fn new(access_token: String, phone_number_id: String) -> Self {
+        let client = RealMetaClient::new(access_token, phone_number_id);
 
         Self {
             client: Arc::new(client),
@@ -66,7 +66,7 @@ mod tests {
 
     #[test]
     fn test_meta_provider_new() {
-        let provider = MetaProvider::new("test_token".to_string());
+        let provider = MetaProvider::new("test_token".to_string(), "phone".to_string());
         assert_eq!(provider.metadata.id, "meta");
         assert_eq!(provider.metadata.category, "social");
     }
@@ -81,7 +81,7 @@ mod tests {
 
     #[test]
     fn test_meta_provider_to_integration_provider() {
-        let provider = MetaProvider::new("test_token".to_string());
+        let provider = MetaProvider::new("test_token".to_string(), "phone".to_string());
         let integration = provider.to_integration_provider();
         assert_eq!(integration.metadata.id, "meta");
     }
