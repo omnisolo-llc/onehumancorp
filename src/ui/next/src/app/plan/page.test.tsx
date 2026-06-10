@@ -27,7 +27,7 @@ describe('MyPlanPage', () => {
   it('renders loading state initially', () => {
     mockFetch.mockImplementation(() => new Promise(() => {})); // pending promise
     render(<MyPlanPage />);
-    expect(screen.getByText('Loading...')).toBeDefined();
+    expect(screen.getByText('Loading your plan...')).toBeDefined();
   });
 
   it('renders plan data after fetching', async () => {
@@ -48,7 +48,7 @@ describe('MyPlanPage', () => {
     render(<MyPlanPage />);
 
     await waitFor(() => {
-      expect(screen.queryByText('Loading...')).toBeNull();
+      expect(screen.queryByText('Loading your plan...')).toBeNull();
     });
 
     expect(screen.getByText('Pro')).toBeDefined();
@@ -64,7 +64,7 @@ describe('MyPlanPage', () => {
     });
 
     render(<MyPlanPage />);
-    await waitFor(() => expect(screen.queryByText('Loading...')).toBeNull());
+    await waitFor(() => expect(screen.queryByText('Loading your plan...')).toBeNull());
 
     fireEvent.click(screen.getByText('Back'));
     expect(mockPush).toHaveBeenCalledWith('/dashboard');
@@ -77,7 +77,7 @@ describe('MyPlanPage', () => {
     });
 
     render(<MyPlanPage />);
-    await waitFor(() => expect(screen.queryByText('Loading...')).toBeNull());
+    await waitFor(() => expect(screen.queryByText('Loading your plan...')).toBeNull());
 
     const upgradeButtons = screen.getAllByText(/Upgrade Plan/i);
     fireEvent.click(upgradeButtons[0]);
@@ -112,7 +112,7 @@ describe('MyPlanPage', () => {
     });
 
     render(<MyPlanPage />);
-    await waitFor(() => expect(screen.queryByText('Loading...')).toBeNull());
+    await waitFor(() => expect(screen.queryByText('Loading your plan...')).toBeNull());
 
     fireEvent.click(screen.getByText('View Cost Details'));
     expect(mockPush).toHaveBeenCalledWith('/cost-dashboard');
@@ -126,7 +126,7 @@ describe('MyPlanPage', () => {
 
     render(<MyPlanPage />);
 
-    await waitFor(() => expect(screen.queryByText('Loading...')).toBeNull());
+    await waitFor(() => expect(screen.queryByText('Loading your plan...')).toBeNull());
 
     const button = screen.getByText('Download Invoice');
     fireEvent.click(button);

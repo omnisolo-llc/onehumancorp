@@ -48,7 +48,7 @@ impl<T: DeserializeOwned> OutputParser<T> for StructuredOutputParser<T> {
                 if let Some(data) = call.arguments.get("data") {
                     return match serde_json::from_value::<T>(data.clone()) {
                         Ok(parsed) => Ok(parsed),
-                        Err(e) => Err(crate::types::format_pydantic_error(&e, None)),
+                        Err(e) => Err(crate::types::format_pydantic_error(&e, None, None)),
                     };
                 } else {
                     return Err(
@@ -93,7 +93,7 @@ impl<T: DeserializeOwned> OutputParser<T> for StructuredOutputParser<T> {
                 }
             }
             if let Err(e) = serde_json::from_str::<serde_json::Value>(text_to_parse) {
-                return Err(crate::types::format_pydantic_error(&e, Some(text_to_parse)));
+                return Err(crate::types::format_pydantic_error(&e, Some(text_to_parse), None));
             }
         }
 
