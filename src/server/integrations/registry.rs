@@ -634,6 +634,37 @@ impl IntegrationsRegistry {
         }
         Err("integration not found or not supported".to_string())
     }
+
+    pub async fn validate_address(&self, integration_id: &str, address: &serde_json::Value) -> Result<crate::integrations::shippo::client::AddressValidationResponse, String> {
+        let client = {
+            if integration_id == "shippo" {
+                let clients = self.shippo_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            } else {
+                None
+            }
+        };
+        if let Some(c) = client {
+            return c.validate_address(address).await;
+        }
+        Err("integration not found or not supported".to_string())
+    }
+
+    pub async fn provision_shippo_account(&self, integration_id: &str, email: &str, company_name: &str, first_name: &str, last_name: &str) -> Result<crate::integrations::shippo::client::SubAccountResponse, String> {
+        let client = {
+            if integration_id == "shippo" {
+                let clients = self.shippo_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            } else {
+                None
+            }
+        };
+        if let Some(c) = client {
+            return c.provision_sub_account(email, company_name, first_name, last_name).await;
+        }
+        Err("integration not found or not supported".to_string())
+    }
+
     pub async fn fetch_rates(&self, integration_id: &str, weight: f64, dimensions: &str) -> Result<Vec<crate::integrations::shippo::client::ShippoRate>, String> {
         let client = {
             if integration_id == "shippo" {

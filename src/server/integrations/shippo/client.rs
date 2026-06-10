@@ -20,6 +20,21 @@ pub struct PurchaseLabelResponse {
     pub carrier: String,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AddressValidationResponse {
+    pub is_valid: bool,
+    pub messages: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SubAccountResponse {
+    pub object_id: String,
+    pub company_name: String,
+    pub email: String,
+    pub is_active: bool,
+}
+
+
 pub struct ShippoClient {
     pub api_key: String,
     http_client: reqwest::Client,
@@ -57,6 +72,91 @@ impl ShippoClient {
             .map_err(|_| format!("{var_name} is required to request live Shippo rates"))?;
         serde_json::from_str(&raw)
             .map_err(|e| format!("{var_name} must be valid Shippo address JSON: {e}"))
+    }
+
+
+    pub async fn validate_address(&self, address: &serde_json::Value) -> Result<AddressValidationResponse, String> {
+        self.validate_credentials()?;
+
+        let mut payload = address.clone();
+        if let Some(obj) = payload.as_object_mut() {
+            obj.insert("validate".to_string(), json!(true));
+        }
+
+        let resp = self.http_client
+            .post(format!("{}/addresses", Self::api_base()))
+            .header("Authorization", format!("ShippoToken {}", self.api_key.trim()))
+            .header("Content-Type", "application/json")
+            .header("SHIPPO-API-VERSION", "2018-02-08")
+            .json(&payload)
+            .send()
+            .await
+            .map_err(|e| format!("Shippo address validation request failed: {e}"))?;
+
+        let status = resp.status();
+        let body: serde_json::Value = resp.json().await
+            .map_err(|e| format!("Shippo address validation response was not JSON: {e}"))?;
+
+        if !status.is_success() {
+            return Err(format!("Shippo address validation API error {status}: {body}"));
+        }
+
+        let validation_results = body.get("validation_results").and_then(|v| v.as_object());
+        let is_valid = validation_results
+            .and_then(|v| v.get("is_valid"))
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false);
+
+        let mut messages = Vec::new();
+        if let Some(results) = validation_results {
+            if let Some(msgs) = results.get("messages").and_then(|v| v.as_array()) {
+                for msg in msgs {
+                    if let Some(text) = msg.get("text").and_then(|v| v.as_str()) {
+                        messages.push(text.to_string());
+                    }
+                }
+            }
+        }
+
+        Ok(AddressValidationResponse { is_valid, messages })
+    }
+
+    pub async fn provision_sub_account(&self, email: &str, company_name: &str, first_name: &str, last_name: &str) -> Result<SubAccountResponse, String> {
+        self.validate_credentials()?;
+
+        let resp = self.http_client
+            .post(format!("{}/shippo-accounts", Self::api_base()))
+            .header("Authorization", format!("ShippoToken {}", self.api_key.trim()))
+            .header("Content-Type", "application/json")
+            .header("SHIPPO-API-VERSION", "2018-02-08")
+            .json(&json!({
+                "email": email,
+                "first_name": first_name,
+                "last_name": last_name,
+                "company_name": company_name,
+            }))
+            .send()
+            .await
+            .map_err(|e| format!("Shippo sub-account request failed: {e}"))?;
+
+        let status = resp.status();
+        let body: serde_json::Value = resp.json().await
+            .map_err(|e| format!("Shippo sub-account response was not JSON: {e}"))?;
+
+        if !status.is_success() {
+            return Err(format!("Shippo sub-account API error {status}: {body}"));
+        }
+
+        let object_id = body.get("object_id")
+            .and_then(|v| v.as_str())
+            .ok_or_else(|| "Shippo sub-account response missing object_id".to_string())?;
+
+        Ok(SubAccountResponse {
+            object_id: object_id.to_string(),
+            company_name: company_name.to_string(),
+            email: email.to_string(),
+            is_active: true,
+        })
     }
 
     pub async fn fetch_rates(&self, weight: f64, dimensions: &str) -> Result<Vec<ShippoRate>, String> {

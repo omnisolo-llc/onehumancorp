@@ -33,6 +33,15 @@ impl ShippoProvider {
         }
     }
 
+
+    pub async fn validate_address(&self, address: &serde_json::Value) -> Result<super::client::AddressValidationResponse, String> {
+        self._client.validate_address(address).await
+    }
+
+    pub async fn provision_sub_account(&self, email: &str, company_name: &str, first_name: &str, last_name: &str) -> Result<super::client::SubAccountResponse, String> {
+        self._client.provision_sub_account(email, company_name, first_name, last_name).await
+    }
+
     pub async fn fetch_rates(&self, weight: f64, dimensions: &str) -> Result<Vec<ShippoRate>, String> {
         self._client.fetch_rates(weight, dimensions).await
     }

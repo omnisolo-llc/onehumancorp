@@ -51,6 +51,26 @@ async fn purchase_label(
 ) -> impl IntoResponse {
     let registry = crate::integrations::registry::IntegrationsRegistry::new();
 
+
+    let address_to = match std::env::var("SHIPPO_ADDRESS_TO_JSON") {
+        Ok(raw) => serde_json::from_str(&raw).unwrap_or(serde_json::json!({})),
+        Err(_) => serde_json::json!({}),
+    };
+
+    let validation_result = registry.validate_address("shippo", &address_to).await;
+    if let Ok(validation) = validation_result {
+        if !validation.is_valid {
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(serde_json::json!({
+                    "error": "Address validation failed",
+                    "messages": validation.messages,
+                })),
+            )
+                .into_response();
+        }
+    }
+
     match registry.purchase_label("shippo", &payload.rateId).await {
         Ok(response) => (StatusCode::OK, Json(response)).into_response(),
         Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": e }))).into_response(),

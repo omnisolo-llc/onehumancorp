@@ -23,8 +23,12 @@ export default function OrderDetailsPage() {
   const [sendingReceipt, setSendingReceipt] = useState(false);
   const [receiptSent, setReceiptSent] = useState(false);
 
+
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
   const fetchRates = async () => {
     setLoadingRates(true);
+    setErrorMsg(null);
     try {
       const res = await fetch('/api/v1/shipping/rates', {
         method: 'POST',
@@ -32,11 +36,16 @@ export default function OrderDetailsPage() {
         body: JSON.stringify({ orderId, weight, dimensions })
       });
       const data = await res.json();
-      if (data.rates) {
-        setRates(data.rates);
+      if (res.ok && data.rates) {
+        // Take top 3 cheapest rates
+        const sortedRates = data.rates.sort((a: any, b: any) => parseFloat(a.amount) - parseFloat(b.amount)).slice(0, 3);
+        setRates(sortedRates);
+      } else {
+        setErrorMsg(data.error || 'Failed to fetch rates');
       }
     } catch (e) {
       console.error(e);
+      setErrorMsg('Network error fetching rates');
     } finally {
       setLoadingRates(false);
     }
@@ -45,6 +54,7 @@ export default function OrderDetailsPage() {
   const buyLabel = async () => {
     if (!selectedRate) return;
     setPurchasing(true);
+    setErrorMsg(null);
     try {
       const res = await fetch('/api/v1/shipping/label', {
         method: 'POST',
@@ -52,14 +62,21 @@ export default function OrderDetailsPage() {
         body: JSON.stringify({ orderId, rateId: selectedRate })
       });
       const data = await res.json();
-      if (data.success) {
-        setLabelUrl(data.labelUrl);
-        setTrackingNumber(data.trackingNumber);
+      if (res.ok && data.success) {
+        setLabelUrl(data.labelUrl || data.label_url);
+        setTrackingNumber(data.trackingNumber || data.tracking_number);
         setCarrier(data.carrier);
         setStatus('shipped');
+      } else {
+        let msg = data.error || 'Failed to purchase label';
+        if (data.messages && data.messages.length > 0) {
+            msg += ": " + data.messages.join(", ");
+        }
+        setErrorMsg(msg);
       }
     } catch (e) {
       console.error(e);
+      setErrorMsg('Network error purchasing label');
     } finally {
       setPurchasing(false);
     }
@@ -199,6 +216,7 @@ export default function OrderDetailsPage() {
                   </div>
                 </div>
 
+
                 <button
                   onClick={fetchRates}
                   disabled={loadingRates}
@@ -211,6 +229,12 @@ export default function OrderDetailsPage() {
                   )}
                   {loadingRates ? 'Fetching discounted rates...' : 'Get Shipping Rates'}
                 </button>
+
+                {errorMsg && (
+                    <div className="mt-2 text-sm text-red-600 bg-red-50 p-3 rounded-lg border border-red-100">
+                        {errorMsg}
+                    </div>
+                )}
 
                 {rates.length > 0 && (
                   <div className="mt-4 space-y-3 animate-fade-in">

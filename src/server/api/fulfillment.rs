@@ -154,6 +154,7 @@ where
         .route("/rates", post(fetch_rates))
         .route("/label", post(purchase_label))
         .route("/webhook/doordash", post(doordash_webhook))
+        .route("/webhook/shippo", post(shippo_webhook))
         .with_state(state)
 }
 
@@ -219,6 +220,26 @@ async fn purchase_label(
         }
     };
     let client = crate::integrations::shippo::provider::ShippoProvider::new(api_key);
+
+    let address_to = match std::env::var("SHIPPO_ADDRESS_TO_JSON") {
+        Ok(raw) => serde_json::from_str(&raw).unwrap_or(serde_json::json!({})),
+        Err(_) => serde_json::json!({}),
+    };
+
+    let validation_result = client.validate_address(&address_to).await;
+    if let Ok(validation) = validation_result {
+        if !validation.is_valid {
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(serde_json::json!({
+                    "error": "Address validation failed",
+                    "messages": validation.messages,
+                })),
+            )
+                .into_response();
+        }
+    }
+
     let label = match client.purchase_label(&payload.rate_id).await {
         Ok(label) => label,
         Err(err) => {
@@ -330,6 +351,58 @@ async fn execute_action(
         (StatusCode::NOT_FOUND, Json(serde_json::json!({"error": "Order not found or unauthorized"}))).into_response()
     }
 }
+
+
+async fn shippo_webhook(
+    State(state): State<Arc<AppState>>,
+    claims: Option<Extension<Claims>>,
+    headers: HeaderMap,
+    Json(payload): Json<Value>,
+) -> impl IntoResponse {
+    let event_type = find_string_by_key(&payload, &["event"]);
+
+    // Typically Shippo tracking updates come as `track_updated`
+    if event_type.as_deref() == Some("track_updated") {
+        let tracking_number = find_nested_object_string(&payload, &["data"], &["tracking_number"])
+            .or_else(|| find_string_by_key(&payload, &["tracking_number"]));
+        let tracking_status = find_nested_object_string(&payload, &["data", "tracking_status"], &["status"])
+            .or_else(|| find_nested_object_string(&payload, &["data"], &["tracking_status"]))
+            .or_else(|| find_string_by_key(&payload, &["status"]));
+
+        if let (Some(tracking_number), Some(status)) = (tracking_number, tracking_status) {
+            let tenant_id = match claims
+                .and_then(|Extension(claims)| claims.organization_id)
+                .or_else(|| {
+                    headers
+                        .get("x-tenant-id")
+                        .and_then(|value| value.to_str().ok())
+                        .map(|value| value.to_string())
+                })
+                .or_else(|| find_string_by_key(&payload, &["organization_id", "tenant_id"]))
+            {
+                Some(id) if !id.trim().is_empty() => id,
+                _ => return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({"error": "unauthorized"}))).into_response(),
+            };
+
+            let mut orders = state.orders.write().unwrap();
+            for order in orders.iter_mut() {
+                if order.organization_id == tenant_id
+                    && order.provider_delivery_id.as_deref() == Some(tracking_number.as_str())
+                {
+                    if status == "DELIVERED" {
+                        order.status = "Delivered".to_string();
+                    } else if status == "TRANSIT" {
+                        order.status = "Shipped".to_string(); // Or another transit state if needed
+                    }
+                    tracing::info!("Customer automatically notified with tracking info by The Ambassador AI: order {} is now {}", order.id, order.status);
+                }
+            }
+        }
+    }
+
+    (StatusCode::OK, Json(serde_json::json!({"success": true}))).into_response()
+}
+
 
 async fn doordash_webhook(
     State(state): State<Arc<AppState>>,
