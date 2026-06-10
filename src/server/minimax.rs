@@ -106,6 +106,35 @@ impl MinimaxClient {
         }
     }
 
+    /// Extends `reason` by enforcing ML-Resilience rules for JSON responses.
+    /// It will execute the prompt and attempt to parse the response as JSON.
+    /// If parsing fails, it captures the malformed output and retries by explicitly
+    /// instructing the LLM to fix the JSON format (up to 3 times).
+    pub async fn reason_json<T: serde::de::DeserializeOwned>(&self, prompt: &str) -> Result<T, String> {
+        let mut current_prompt = prompt.to_string();
+        let mut last_err = String::new();
+
+        for attempt in 0..3 {
+            let response_text = self.reason(&current_prompt).await?;
+
+            match serde_json::from_str::<T>(&response_text) {
+                Ok(parsed) => return Ok(parsed),
+                Err(e) => {
+                    last_err = e.to_string();
+                    tracing::warn!("ML-Resilience JSON Parse Retry {}/3: Failed to parse LLM response. Error: {}. Response snippet: {:.100}", attempt + 1, last_err, response_text);
+
+                    // Formulate correction prompt for the LLM
+                    current_prompt = format!(
+                        "Your previous response was malformed JSON.\nError: {}\nResponse: {}\nPlease correct this and return ONLY valid JSON without any markdown formatting or extra text.",
+                        last_err, response_text
+                    );
+                }
+            }
+        }
+
+        Err(format!("ML-Resilience: Failed to get valid JSON after 3 retries. Last error: {}", last_err))
+    }
+
     pub async fn reason(&self, prompt: &str) -> Result<String, String> {
         let prompt_clone = prompt.to_string();
         let deduplicator = self.deduplicator.clone();
@@ -518,3 +547,30 @@ impl LocalLLMClient {
     }
 }
 
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde::Deserialize;
+
+    // Since MinimaxClient actually calls the mock logic when `api_key` is "fake-key",
+    // we can test the `reason_json` method's integration.
+    #[tokio::test]
+    async fn test_reason_json_success() {
+        let client = MinimaxClient::new("fake-key".to_string());
+        // fake-key normally returns:
+        // {"business_name": "Generic Business", "business_type": "Retail", "categories": ["physical"], "initial_products": [{"name": "Item 1", "price": "10.00"}], "suggested_features": ["online_store"]}
+
+        #[derive(Debug, Deserialize, PartialEq)]
+        struct FakeKeyResponse {
+            business_name: String,
+            business_type: String,
+        }
+
+        let res: Result<FakeKeyResponse, String> = client.reason_json("test prompt").await;
+        assert!(res.is_ok(), "ML-Resilience reason_json failed: {:?}", res.err());
+        let res = res.unwrap();
+        assert_eq!(res.business_name, "Generic Business");
+        assert_eq!(res.business_type, "Retail");
+    }
+}

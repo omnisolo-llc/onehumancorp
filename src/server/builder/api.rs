@@ -1261,14 +1261,8 @@ Only return the JSON. No markdown formatting, no explanations."#,
         payload.description
     );
 
-    let business_context: BusinessContext = match minimax.reason(&advisor_prompt).await {
-        Ok(advisor_response) => {
-            let cleaned_advisor = clean_model_json(&advisor_response);
-            serde_json::from_str(cleaned_advisor).unwrap_or_else(|e| {
-                tracing::warn!("Failed to parse JSON from Advisor AI, using heuristic context: {}", e);
-                infer_business_context(&payload.description, active_brand_dna)
-            })
-        },
+    let business_context: BusinessContext = match minimax.reason_json(&advisor_prompt).await {
+        Ok(advisor_response) => advisor_response,
         Err(e) => {
             tracing::warn!("Advisor AI unavailable, using heuristic context: {}", e);
             infer_business_context(&payload.description, active_brand_dna)
