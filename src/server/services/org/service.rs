@@ -121,7 +121,7 @@ impl OrgService for MyOrgService {
                 let org_id_for_meetings = org_id_bg.clone();
                 let (agents_res, all_meetings_res, summary_res, quota_res) = tokio::join!(
                     tokio::task::spawn_blocking(move || hub_for_agents.get_agents_by_org(&org_id_for_agents)),
-                    tokio::spawn({ let h = hub_bg.clone(); async move { h.get_meetings_by_org(&org_id_for_meetings).await } }),
+                    tokio::spawn({ let h = hub_bg.clone(); async move { h.get_meetings_by_org(&org_id_for_meetings, false).await } }),
                     tokio::task::spawn_blocking(move || hub_for_summary.tracker().summary(&org_id_for_summary)),
                     tokio::spawn({ let h = hub_bg.clone(); async move { h.tracker().check_agent_quota(&org_id_clone).await } })
                 );
@@ -204,7 +204,7 @@ impl OrgService for MyOrgService {
         let org_id_for_meetings = org_id.clone();
         let (agents_res, all_meetings_res, summary_res, quota_res) = tokio::join!(
             tokio::task::spawn_blocking(move || hub_for_agents.get_agents_by_org(&org_id_for_agents)),
-            tokio::spawn({ let h = self.hub.clone(); async move { h.get_meetings_by_org(&org_id_for_meetings).await } }),
+            tokio::spawn({ let h = self.hub.clone(); async move { h.get_meetings_by_org(&org_id_for_meetings, false).await } }),
             tokio::task::spawn_blocking(move || hub_for_summary.tracker().summary(&org_id_for_summary)),
             tokio::spawn({ let h = self.hub.clone(); let o = org_id_clone.clone(); async move { h.tracker().check_agent_quota(&o).await } })
         );
