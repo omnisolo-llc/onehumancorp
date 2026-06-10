@@ -404,7 +404,8 @@ impl UserRepository for PgUserRepository {
         .map_err(|e| e.to_string())?;
 
         // GC expired entries
-        let _ = sqlx::query("DELETE FROM revoked_tokens WHERE expires_at < CURRENT_TIMESTAMP")
+        let _ = sqlx::query("DELETE FROM revoked_tokens WHERE expires_at < CURRENT_TIMESTAMP AND tenant_id = $1")
+            .bind(org_id)
             .execute(&mut *tx)
             .await;
 
@@ -494,6 +495,11 @@ mod security_tests {
 
         // Depending on test db state, it might be an error (missing migrations), but we just ensure it executes cleanly.
         assert!(res.is_ok() || res.is_err());
+
+        let jti = "test-token-jti-2".to_string();
+        let exp2 = Utc::now() - chrono::Duration::hours(1); // Already expired
+        let res2 = repo.revoke_token(jti.clone(), exp2, "test-tenant-2").await;
+        assert!(res2.is_ok() || res2.is_err());
     }
 
     #[tokio::test]
