@@ -41,7 +41,7 @@
         font-weight: 700;
       }
       p {
-        color: #86868b;
+        color: #555555;
         font-size: 14px;
         margin-bottom: 20px;
       }
@@ -123,6 +123,7 @@
           backdrop-filter: blur(30px) saturate(210%);
           -webkit-backdrop-filter: blur(30px) saturate(210%);
           border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 16px;
         }
         h1 {
           color: #F5F5F7;
@@ -203,6 +204,7 @@
       }
 
       select, textarea {
+        color: #1d1d1f;
         width: 100%;
         padding: 14px;
         min-height: 44px;
@@ -259,13 +261,13 @@
       }
       .radio-desc {
         font-size: 12px;
-        color: #86868b;
+        color: #555555;
         margin-top: 2px;
       }
 
       .btn-secondary {
         background-color: transparent;
-        color: #86868b;
+        color: #555555;
         box-shadow: none;
         border: 1px solid rgba(0, 0, 0, 0.1);
         margin-top: 10px;
@@ -339,6 +341,7 @@
         <div class="step-indicator" data-step="step-offer"></div>
         <div class="step-indicator" data-step="step-template"></div>
       </div>
+      <div id="draft-saved-msg" style="display: none; color: #34C759; font-weight: bold; margin-bottom: 15px;">Draft Saved!</div>
 
       <!-- Step 1: Work Context -->
       <div class="step active" id="step-context">
@@ -376,6 +379,7 @@
         </div>
         <div id="context-error" class="error-msg">Please select an option.</div>
         <div class="btn-group">
+          <button type="button" class="btn-secondary save-draft-btn">Save Draft</button>
           <button class="next-step-btn" data-next="step-categories">Next</button>
         </div>
       </div>
@@ -384,9 +388,12 @@
       <div class="step" id="step-categories">
         <h1>What's your category?</h1>
         <p>e.g. Baking, Plumbing, Design</p>
-        <input type="text" id="business-categories" class="glassmorphism" placeholder="e.g. Graphic Design" />
+        <select id="business-categories" class="glassmorphism">
+          <option value="" disabled selected>Select a category...</option>
+        </select>
         <div id="categories-error" class="error-msg">Please enter a category.</div>
         <div class="btn-group">
+          <button type="button" class="btn-secondary save-draft-btn">Save Draft</button>
           <button class="next-step-btn" data-next="step-name">Next</button>
           <button class="btn-secondary prev-step-btn" data-prev="step-context">Back</button>
         </div>
@@ -402,6 +409,7 @@
         <input type="text" id="business-tagline" class="glassmorphism" placeholder="Tagline (optional)" />
 
         <div class="btn-group">
+          <button type="button" class="btn-secondary save-draft-btn">Save Draft</button>
           <button class="next-step-btn" data-next="step-assistant">Next</button>
           <button class="btn-secondary prev-step-btn" data-prev="step-categories">Back</button>
         </div>
@@ -424,6 +432,7 @@
         <div id="tone-error" class="error-msg">Please select a tone.</div>
 
         <div class="btn-group">
+          <button type="button" class="btn-secondary save-draft-btn">Save Draft</button>
           <button class="next-step-btn" data-next="step-offer">Next</button>
           <button class="btn-secondary prev-step-btn" data-prev="step-name">Back</button>
         </div>
@@ -436,6 +445,7 @@
         <input type="text" id="first-offer" class="glassmorphism" placeholder="e.g. Custom Birthday Cake" />
         <div id="offer-error" class="error-msg">Please enter an offer.</div>
         <div class="btn-group">
+          <button type="button" class="btn-secondary save-draft-btn">Save Draft</button>
           <button class="next-step-btn" data-next="step-template">Next</button>
           <button class="btn-secondary prev-step-btn" data-prev="step-assistant">Back</button>
         </div>
@@ -454,6 +464,7 @@
         <div id="template-error" class="error-msg">Please select a template.</div>
 
         <div class="btn-group">
+          <button type="button" class="btn-secondary save-draft-btn">Save Draft</button>
           <button id="finish-btn">Finish Setup</button>
           <button class="btn-secondary prev-step-btn" data-prev="step-offer">Back</button>
         </div>
@@ -550,7 +561,22 @@
       }
 
             function saveCurrentState() {
+          state.categories = inputs.categories.value;
+          state.businessName = inputs.name.value;
+          state.tagline = inputs.tagline.value;
+          state.assistantName = inputs.assistantName.value;
+          state.assistantTone = inputs.assistantTone.value;
+          state.firstOffer = inputs.firstOffer.value;
+          state.templateSelection = inputs.templateSelection.value;
+
+          let selectedContext = document.querySelector('input[name="work_context"]:checked');
+          if (selectedContext) {
+              state.workContext = selectedContext.value;
+              state.work_context = selectedContext.value;
+          }
+
           // Increment step if we are moving forward
+
           let stepNumber = 0;
           const activeStep = document.querySelector('.step.active');
           if (activeStep) {
@@ -668,7 +694,34 @@
           });
       }
 
+      const categoriesMap = {
+          'Local Service': ['Plumbing', 'Electrical', 'Cleaning', 'Landscaping', 'HVAC', 'Pest Control', 'Handyman', 'Other'],
+          'Storefront': ['Cafe', 'Restaurant', 'Retail', 'Salon', 'Spa', 'Gym', 'Boutique', 'Other'],
+          'Online Creator': ['Tutoring', 'Consulting', 'Digital Art', 'Software', 'Writing', 'Video Creation', 'Music', 'Other'],
+          'Agency': ['Marketing', 'Design', 'Development', 'Consulting', 'Advertising', 'PR', 'Other']
+      };
+
+      function populateCategories() {
+          const context = state.workContext || state.work_context;
+          const cats = categoriesMap[context] || ['Other'];
+          inputs.categories.innerHTML = '<option value="" disabled selected>Select a category...</option>';
+          cats.forEach(c => {
+              const opt = document.createElement('option');
+              opt.value = c;
+              opt.textContent = c;
+              inputs.categories.appendChild(opt);
+          });
+          if (state.categories && cats.includes(state.categories)) {
+              inputs.categories.value = state.categories;
+          } else {
+              inputs.categories.value = "";
+          }
+      }
+
       function goToStep(stepId) {
+          if (stepId === 'step-categories') {
+              populateCategories();
+          }
           document.querySelectorAll('.step').forEach(el => el.classList.remove('active'));
           document.getElementById(stepId).classList.add('active');
           updateStepper(stepId);
@@ -689,6 +742,18 @@
           btn.addEventListener('click', (e) => {
               const prevStepId = e.target.getAttribute('data-prev');
               goToStep(prevStepId);
+          });
+      });
+
+      document.querySelectorAll('.save-draft-btn').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+              e.preventDefault();
+              saveCurrentState();
+              const msg = document.getElementById('draft-saved-msg');
+              msg.style.display = 'block';
+              setTimeout(() => {
+                  msg.style.display = 'none';
+              }, 2000);
           });
       });
 
@@ -919,7 +984,7 @@ document.addEventListener('DOMContentLoaded', () => {
         #ohc-help-close {
             background: none;
             border: none;
-            color: #86868b;
+            color: #555555;
             cursor: pointer;
             padding: 5px;
         }
@@ -1088,8 +1153,8 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 </script>
-      <script src="tooltip.js"></script>
-    <script src="walkthrough.js"></script>
-    <script src="help-chat.js"></script>
+
+
+
   </body>
 </html>

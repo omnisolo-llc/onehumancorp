@@ -103,6 +103,52 @@ mod tests {
     }
 
     #[test]
+    fn test_stage_1_trust_with_no_allowed_tools() {
+        let mut cfg = AgentRunConfig::default();
+        cfg.project_trusted = true;
+        cfg.allowed_tools = None;
+
+        let tc = create_tool_call("1", "any_tool");
+
+        // Allowed tools is None -> OK
+        let res = ToolGater::check_gating(&tc, true, &cfg);
+        assert!(res.is_ok());
+    }
+
+    #[test]
+    fn test_guardrails_check_tool_failure_confirmation() {
+        use crate::guardrails::{GuardrailRegistry, ToolGuardrail};
+        use std::sync::Arc;
+
+        struct MockConfirmationGuardrail;
+        impl ToolGuardrail for MockConfirmationGuardrail {
+            fn check_tool(&self, tc: &ToolCall) -> Result<(), String> {
+                if tc.name == "forbidden_tool" {
+                    return Err("Stage 3 (Confirmation) requires explicit user confirmation".to_string());
+                }
+                Ok(())
+            }
+        }
+
+        let mut registry = GuardrailRegistry::new();
+        registry
+            .tool_guardrails
+            .push(Arc::new(MockConfirmationGuardrail));
+
+        let mut cfg = AgentRunConfig::default();
+        cfg.guardrails = Some(registry);
+        cfg.project_trusted = true;
+
+        let tc = create_tool_call("1", "forbidden_tool");
+        let res = ToolGater::check_gating(&tc, false, &cfg);
+        assert!(matches!(res, Err(ToolError::UserFixable(_))));
+        if let Err(ToolError::UserFixable(msg)) = res {
+            assert!(msg.contains("Tool Guardrail tripped"));
+            assert!(msg.contains("requires explicit user confirmation"));
+        }
+    }
+
+    #[test]
     fn test_stage_2_permission() {
         let mut cfg = AgentRunConfig::default();
         cfg.project_trusted = true;

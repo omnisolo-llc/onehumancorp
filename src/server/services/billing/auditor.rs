@@ -281,6 +281,11 @@ impl CostAuditor {
         *tenant_costs.get(tenant_id).unwrap_or(&0.0)
     }
 
+
+    pub fn get_cost_per_gb_month(&self) -> f64 {
+        self.config.cost_per_gb_month
+    }
+
     pub fn get_tenant_cost_cents(&self, tenant_id: &str) -> i64 {
         let tenant_costs = self.tenant_costs.lock().unwrap();
         (*tenant_costs.get(tenant_id).unwrap_or(&0.0) * 100.0).round() as i64

@@ -42,6 +42,7 @@ pub struct AgentFeedListResponse {
 pub struct PaginationQuery {
     pub offset: Option<i64>,
     pub limit: Option<i64>,
+    pub mobile_optimized: Option<bool>,
 }
 
 #[derive(Deserialize)]
@@ -84,17 +85,46 @@ async fn list_feed_items(
     let limit = query.limit.unwrap_or(20);
     let offset = query.offset.unwrap_or(0);
 
-    let cache_key = format!("agent_feed:{}:{}:{}", tenant_id, limit, offset);
+    let mobile_optimized = query.mobile_optimized.unwrap_or(false);
+    let cache_key = format!("agent_feed:{}:{}:{}:{}", tenant_id, limit, offset, mobile_optimized);
     let cache = get_agent_feed_cache();
 
-    if let Some(cached_resp) = cache.get(&cache_key).await {
+    if let Some((cached_resp, is_stale)) = cache.get_with_swr(&cache_key).await {
+        if !is_stale {
+            return (StatusCode::OK, Json(cached_resp)).into_response();
+        }
+
+        let pool_bg = pool.clone();
+        let tenant_id_bg = tenant_id.clone();
+        let cache_bg = cache.clone();
+        let cache_key_bg = cache_key.clone();
+
+        tokio::spawn(async move {
+            let repo = AgentFeedRepository::new(pool_bg);
+            if let Ok(mut items) = repo.list(&tenant_id_bg, limit, offset).await {
+                if mobile_optimized {
+                    for item in items.iter_mut() {
+                        item.context_payload = None;
+                    }
+                }
+                let response = AgentFeedListResponse { items };
+                let tag = format!("agent_feed_tenant:{}", tenant_id_bg);
+                cache_bg.set_with_tags(&cache_key_bg, response, vec![tag], std::time::Duration::from_secs(60)).await;
+            }
+        });
+
         return (StatusCode::OK, Json(cached_resp)).into_response();
     }
 
     let repo = AgentFeedRepository::new(pool);
 
     match repo.list(&tenant_id, limit, offset).await {
-        Ok(items) => {
+        Ok(mut items) => {
+            if mobile_optimized {
+                for item in items.iter_mut() {
+                    item.context_payload = None;
+                }
+            }
             let response = AgentFeedListResponse { items };
             let tag = format!("agent_feed_tenant:{}", tenant_id);
             cache.set_with_tags(&cache_key, response.clone(), vec![tag], std::time::Duration::from_secs(60)).await;

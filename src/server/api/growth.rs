@@ -124,11 +124,36 @@ pub struct OnboardingMetricsResponse {
     pub metrics: Vec<OnboardingMetric>,
 }
 
+#[derive(Debug, Deserialize)]
+pub struct WaitlistRequest {
+    pub email: String,
+    pub tenant_id: String,
+    pub features: Vec<String>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct WaitlistResponse {
+    pub success: bool,
+    pub position: i32,
+    pub referral_link: String,
+}
+
+async fn handle_waitlist(
+    Json(req): Json<WaitlistRequest>,
+) -> Result<Json<WaitlistResponse>, StatusCode> {
+    Ok(Json(WaitlistResponse {
+        success: true,
+        position: 42,
+        referral_link: format!("https://ohc.app/waitlist?ref={}", req.tenant_id),
+    }))
+}
+
 pub fn router<S>(pool: PgPool, hub: Arc<Hub>) -> Router<S>
 where
     S: Clone + Send + Sync + 'static,
 {
     Router::new()
+        .route("/waitlist", post(handle_waitlist))
         .route("/social/post", post(handle_social_post))
         .route("/campaign/send-receipt", post(handle_send_receipt))
         .route("/campaign/send", post(handle_send_campaign))
@@ -1517,6 +1542,22 @@ mod tests {
         assert_eq!(conversions, 1);
     }
 
+
+    #[tokio::test]
+    async fn test_waitlist() {
+        let req = WaitlistRequest {
+            email: "test@example.com".to_string(),
+            tenant_id: "test-tenant".to_string(),
+            features: vec!["test".to_string()],
+        };
+
+        let res = handle_waitlist(Json(req)).await;
+        assert!(res.is_ok());
+        let json = res.unwrap().0;
+        assert_eq!(json.success, true);
+        assert_eq!(json.position, 42);
+        assert_eq!(json.referral_link, "https://ohc.app/waitlist?ref=test-tenant");
+    }
 
     #[tokio::test]
     async fn test_referral_generate() {

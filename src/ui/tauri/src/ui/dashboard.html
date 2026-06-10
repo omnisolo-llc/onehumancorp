@@ -621,7 +621,7 @@
       <div class="ohc-growth-card" style="margin-bottom: 20px;">
         <div style="display: flex; justify-content: space-between; align-items: center;">
           <div>
-            <h2 style="margin-bottom: 4px;">Advanced AI Automations <span style="font-size: 12px; background: #E5E5EA; padding: 2px 6px; border-radius: 4px; color: #1D1D1F; vertical-align: middle; margin-left: 8px;">PRO</span></h2>
+            <h2 style="margin-bottom: 4px;">Advanced AI Automations</h2>
             <p style="margin-top: 0; margin-bottom: 0;">Multi-agent workflows and predictive routing.</p>
           </div>
           <button id="enable-advanced-automations-btn" style="background-color: #1d1d1f; color: white; border: none; padding: 10px 16px; border-radius: 8px; cursor: pointer;">Enable</button>
@@ -689,8 +689,17 @@
       </div>
     </div>
 
+    <footer style="margin-top: 40px; text-align: center; padding: 20px; font-size: 14px; font-weight: 600;">
+      <a href="#" id="dashboard-footer-viral-link" style="color: #6b7280; text-decoration: none;">⚡ Powered by OHC</a>
+    </footer>
+
     <script>
       document.addEventListener('DOMContentLoaded', async () => {
+        const tenantIdForFooter = localStorage.getItem("tenant_id") || localStorage.getItem("tenant") || "default-team";
+        const footerLink = document.getElementById("dashboard-footer-viral-link");
+        if (footerLink) {
+          footerLink.href = `/onboarding?ref=${tenantIdForFooter}&source=footer_widget`;
+        }
         const tenant = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default-team';
         try {
           const res = await fetch(`/api/v1/growth/milestones/check?tenant=${tenant}`);
@@ -822,7 +831,7 @@
         } catch (error) {
           console.error("Error fetching time savings data:", error);
           aiSavingsTitle.innerText = "You saved 0 hours this week";
-          aiSavingsDesc.innerText = "Failed to load time savings data.";
+          aiSavingsDesc.innerText = "No tasks processed this week.";
         }
 
         if (shareSavingsBtn) {
@@ -1196,7 +1205,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
 
-      <script src="walkthrough.js"></script>
-    <script src="help-chat.js"></script>
+
+
   </body>
 </html>
