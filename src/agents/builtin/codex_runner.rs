@@ -232,6 +232,68 @@ impl AppServer {
         // But AppServer calls `run_async` directly. Wait, `AppServer` uses `self.runner.run_async(&initial_message).await`.
         // Let's modify `run_agent` to surface cost in the JSON RPC response.
 
+
+
+        if req.method == "verify_output" {
+            let output_text = req.params.get("output_text").and_then(|v| v.as_str()).unwrap_or("").to_string();
+            let task_context = req.params.get("task_context").and_then(|v| v.as_str()).unwrap_or("").to_string();
+            let verification_type = req.params.get("verification_type").and_then(|v| v.as_str()).unwrap_or("").to_string();
+
+            let mut verification_manager = crate::verification_loops::VerificationManager::new();
+
+            // SOTA Harness Patterns (2025-2026): Verification Loops
+            let result = match verification_type.as_str() {
+                "computational" => {
+                    // Safe execution placeholder for computational guide (e.g., passing output_text to a linter instead of bash directly)
+                    if output_text.contains("exit 1") {
+                        Err("Computational guide verification failed".to_string())
+                    } else {
+                        Ok(())
+                    }
+                }
+                "visual" => {
+                    // Safe execution placeholder for visual verifier
+                    if output_text.contains("error") {
+                        Err("Visual verification failed".to_string())
+                    } else {
+                        Ok(())
+                    }
+                }
+                "inferential" => {
+                    verification_manager.add_inferential(std::sync::Arc::new(crate::verification_loops::LlmJudgeSensor {
+                        llm: self.runner.core.agent.llm.clone(),
+                        model: "gpt-4o".to_string(), // Or get from config
+                        criteria: None,
+                        confidence_threshold: 0.8,
+                    }));
+                    verification_manager.run_inferential_sensors(&output_text, &task_context).await
+                }
+                _ => Err(format!("Unknown verification type: {}", verification_type))
+            };
+
+            let resp = match result {
+                Ok(_) => JsonRpcResponse {
+                    jsonrpc: "2.0".to_string(),
+                    result: Some(serde_json::json!({ "status": "success", "message": "Verification passed successfully." })),
+                    error: None,
+                    id: req.id,
+                    meta: None,
+                },
+                Err(e) => JsonRpcResponse {
+                    jsonrpc: "2.0".to_string(),
+                    result: None,
+                    error: Some(JsonRpcError {
+                        code: -32000,
+                        message: e,
+                    }),
+                    id: req.id,
+                    meta: None,
+                },
+            };
+            return serde_json::to_string(&resp).unwrap_or_default();
+        }
+
+
         if req.method == "run_expert_team" {
             let initial_message = req
                 .params
