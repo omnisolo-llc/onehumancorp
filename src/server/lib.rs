@@ -45,6 +45,7 @@ pub static AI_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<Stri
 static UI_ORDERS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<Vec<serde_json::Value>>> = std::sync::OnceLock::new();
 static UI_BOOKINGS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<Vec<serde_json::Value>>> = std::sync::OnceLock::new();
 static UI_INBOX_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<Vec<serde_json::Value>>> = std::sync::OnceLock::new();
+static UI_SUPPLY_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<serde_json::Value>> = std::sync::OnceLock::new();
 static UI_DASHBOARD_METRICS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<serde_json::Value>> = std::sync::OnceLock::new();
 static UI_UNIFIED_AGENT_FEED_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<serde_json::Value>> = std::sync::OnceLock::new();
 static METRICS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<HttpMetricsResponse>> = std::sync::OnceLock::new();
@@ -2720,6 +2721,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
 struct UiTenantQuery {
     tenant_id: Option<String>,
     tenant: Option<String>,
+    mobile_optimized: Option<bool>,
 }
 
 fn ui_tenant_id(query: &UiTenantQuery) -> String {
@@ -3189,13 +3191,23 @@ async fn list_ui_orders_handler(
             .bind(&tenant_id)
             .fetch_all(&db.pool)
             .await {
-                Ok(rows) => Ok(rows.into_iter().map(|row| serde_json::json!({
-                    "id": row.get::<String, _>("id"),
-                    "customer_name": row.get::<String, _>("customer_name"),
-                    "total_amount": row.get::<f64, _>("total_amount"),
-                    "status": row.get::<String, _>("status"),
-                    "created_at": row.get::<String, _>("created_at"),
-                })).collect::<Vec<_>>()),
+                Ok(rows) => Ok(rows.into_iter().map(|row| {
+                    if query.mobile_optimized.unwrap_or(false) {
+                        serde_json::json!({
+                            "id": row.get::<String, _>("id"),
+                            "total_amount": row.get::<f64, _>("total_amount"),
+                            "status": row.get::<String, _>("status"),
+                        })
+                    } else {
+                        serde_json::json!({
+                            "id": row.get::<String, _>("id"),
+                            "customer_name": row.get::<String, _>("customer_name"),
+                            "total_amount": row.get::<f64, _>("total_amount"),
+                            "status": row.get::<String, _>("status"),
+                            "created_at": row.get::<String, _>("created_at"),
+                        })
+                    }
+                }).collect::<Vec<_>>()),
                 Err(e) => Err(e),
             }
         }
@@ -3208,13 +3220,23 @@ async fn list_ui_orders_handler(
             .bind(&tenant_id)
             .fetch_all(pool)
             .await {
-                Ok(rows) => Ok(rows.into_iter().map(|row| serde_json::json!({
-                    "id": row.get::<String, _>("id"),
-                    "customer_name": row.get::<String, _>("customer_name"),
-                    "total_amount": row.get::<f64, _>("total_amount"),
-                    "status": row.get::<String, _>("status"),
-                    "created_at": row.get::<String, _>("created_at"),
-                })).collect::<Vec<_>>()),
+                Ok(rows) => Ok(rows.into_iter().map(|row| {
+                    if query.mobile_optimized.unwrap_or(false) {
+                        serde_json::json!({
+                            "id": row.get::<String, _>("id"),
+                            "total_amount": row.get::<f64, _>("total_amount"),
+                            "status": row.get::<String, _>("status"),
+                        })
+                    } else {
+                        serde_json::json!({
+                            "id": row.get::<String, _>("id"),
+                            "customer_name": row.get::<String, _>("customer_name"),
+                            "total_amount": row.get::<f64, _>("total_amount"),
+                            "status": row.get::<String, _>("status"),
+                            "created_at": row.get::<String, _>("created_at"),
+                        })
+                    }
+                }).collect::<Vec<_>>()),
                 Err(e) => Err(e),
             }
         }
@@ -3222,7 +3244,7 @@ async fn list_ui_orders_handler(
 
     match orders {
         Ok(orders) => {
-            cache.set(&cache_key, orders.clone(), std::time::Duration::from_secs(5)).await;
+            cache.set(&cache_key, orders.clone(), std::time::Duration::from_secs(60)).await;
             (axum::http::StatusCode::OK, axum::Json(orders)).into_response()
         },
         Err(e) => {
@@ -3258,15 +3280,26 @@ async fn list_ui_bookings_handler(
             .bind(&tenant_id)
             .fetch_all(&db.pool)
             .await {
-                Ok(rows) => Ok(rows.into_iter().map(|row| serde_json::json!({
-                    "id": row.get::<String, _>("id"),
-                    "customer_name": row.get::<String, _>("customer_name"),
-                    "product_id": row.get::<String, _>("product_id"),
-                    "product_title": row.get::<String, _>("product_title"),
-                    "start_time": row.try_get::<chrono::DateTime<chrono::Utc>, _>("start_time").map(|d| d.to_rfc3339()).unwrap_or_default(),
-                    "end_time": row.try_get::<chrono::DateTime<chrono::Utc>, _>("end_time").map(|d| d.to_rfc3339()).unwrap_or_default(),
-                    "status": row.get::<String, _>("status"),
-                })).collect::<Vec<_>>()),
+                Ok(rows) => Ok(rows.into_iter().map(|row| {
+                    if query.mobile_optimized.unwrap_or(false) {
+                        serde_json::json!({
+                            "id": row.get::<String, _>("id"),
+                            "product_title": row.get::<String, _>("product_title"),
+                            "start_time": row.try_get::<chrono::DateTime<chrono::Utc>, _>("start_time").map(|d| d.to_rfc3339()).unwrap_or_default(),
+                            "status": row.get::<String, _>("status"),
+                        })
+                    } else {
+                        serde_json::json!({
+                            "id": row.get::<String, _>("id"),
+                            "customer_name": row.get::<String, _>("customer_name"),
+                            "product_id": row.get::<String, _>("product_id"),
+                            "product_title": row.get::<String, _>("product_title"),
+                            "start_time": row.try_get::<chrono::DateTime<chrono::Utc>, _>("start_time").map(|d| d.to_rfc3339()).unwrap_or_default(),
+                            "end_time": row.try_get::<chrono::DateTime<chrono::Utc>, _>("end_time").map(|d| d.to_rfc3339()).unwrap_or_default(),
+                            "status": row.get::<String, _>("status"),
+                        })
+                    }
+                }).collect::<Vec<_>>()),
                 Err(e) => Err(e),
             }
         }
@@ -3280,15 +3313,26 @@ async fn list_ui_bookings_handler(
             .bind(&tenant_id)
             .fetch_all(pool)
             .await {
-                Ok(rows) => Ok(rows.into_iter().map(|row| serde_json::json!({
-                    "id": row.get::<String, _>("id"),
-                    "customer_name": row.get::<String, _>("customer_name"),
-                    "product_id": row.get::<String, _>("product_id"),
-                    "product_title": row.get::<String, _>("product_title"),
-                    "start_time": row.get::<String, _>("start_time"),
-                    "end_time": row.get::<String, _>("end_time"),
-                    "status": row.get::<String, _>("status"),
-                })).collect::<Vec<_>>()),
+                Ok(rows) => Ok(rows.into_iter().map(|row| {
+                    if query.mobile_optimized.unwrap_or(false) {
+                        serde_json::json!({
+                            "id": row.get::<String, _>("id"),
+                            "product_title": row.get::<String, _>("product_title"),
+                            "start_time": row.get::<String, _>("start_time"),
+                            "status": row.get::<String, _>("status"),
+                        })
+                    } else {
+                        serde_json::json!({
+                            "id": row.get::<String, _>("id"),
+                            "customer_name": row.get::<String, _>("customer_name"),
+                            "product_id": row.get::<String, _>("product_id"),
+                            "product_title": row.get::<String, _>("product_title"),
+                            "start_time": row.get::<String, _>("start_time"),
+                            "end_time": row.get::<String, _>("end_time"),
+                            "status": row.get::<String, _>("status"),
+                        })
+                    }
+                }).collect::<Vec<_>>()),
                 Err(e) => Err(e),
             }
         }
@@ -3296,7 +3340,7 @@ async fn list_ui_bookings_handler(
 
     match bookings {
         Ok(v) => {
-            cache.set(&cache_key, v.clone(), std::time::Duration::from_secs(5)).await;
+            cache.set(&cache_key, v.clone(), std::time::Duration::from_secs(60)).await;
             (axum::http::StatusCode::OK, axum::Json(v)).into_response()
         }
         Err(e) => {
@@ -3339,16 +3383,28 @@ async fn list_ui_inbox_handler(
                 .bind(&tenant_id)
                 .fetch_all(&db.pool)
                 .await {
-                    Ok(rows) => Ok(rows.into_iter().map(|row| serde_json::json!({
-                        "id": row.get::<String, _>("id"),
-                        "source": row.get::<String, _>("source"),
-                        "content": row.get::<String, _>("content"),
-                        "original_message": row.get::<String, _>("original_content"),
-                        "translated_from_language": row.get::<String, _>("translated_from_language"),
-                        "generated_response": row.get::<String, _>("draft_reply"),
-                        "status": row.get::<String, _>("status"),
-                        "created_at": row.get::<String, _>("created_at"),
-                    })).collect::<Vec<_>>()),
+                    Ok(rows) => Ok(rows.into_iter().map(|row| {
+                        if query.mobile_optimized.unwrap_or(false) {
+                            serde_json::json!({
+                                "id": row.get::<String, _>("id"),
+                                "source": row.get::<String, _>("source"),
+                                "content": row.get::<String, _>("content"),
+                                "status": row.get::<String, _>("status"),
+                                "created_at": row.get::<String, _>("created_at"),
+                            })
+                        } else {
+                            serde_json::json!({
+                                "id": row.get::<String, _>("id"),
+                                "source": row.get::<String, _>("source"),
+                                "content": row.get::<String, _>("content"),
+                                "original_message": row.get::<String, _>("original_content"),
+                                "translated_from_language": row.get::<String, _>("translated_from_language"),
+                                "generated_response": row.get::<String, _>("draft_reply"),
+                                "status": row.get::<String, _>("status"),
+                                "created_at": row.get::<String, _>("created_at"),
+                            })
+                        }
+                    }).collect::<Vec<_>>()),
                     Err(e) => Err(e),
                 }
         }
@@ -3370,16 +3426,28 @@ async fn list_ui_inbox_handler(
                 .bind(&tenant_id)
                 .fetch_all(pool)
                 .await {
-                    Ok(rows) => Ok(rows.into_iter().map(|row| serde_json::json!({
-                        "id": row.get::<String, _>("id"),
-                        "source": row.get::<String, _>("source"),
-                        "content": row.get::<String, _>("content"),
-                        "original_message": row.get::<String, _>("original_content"),
-                        "translated_from_language": row.get::<String, _>("translated_from_language"),
-                        "generated_response": row.get::<String, _>("draft_reply"),
-                        "status": row.get::<String, _>("status"),
-                        "created_at": row.get::<String, _>("created_at"),
-                    })).collect::<Vec<_>>()),
+                    Ok(rows) => Ok(rows.into_iter().map(|row| {
+                        if query.mobile_optimized.unwrap_or(false) {
+                            serde_json::json!({
+                                "id": row.get::<String, _>("id"),
+                                "source": row.get::<String, _>("source"),
+                                "content": row.get::<String, _>("content"),
+                                "status": row.get::<String, _>("status"),
+                                "created_at": row.get::<String, _>("created_at"),
+                            })
+                        } else {
+                            serde_json::json!({
+                                "id": row.get::<String, _>("id"),
+                                "source": row.get::<String, _>("source"),
+                                "content": row.get::<String, _>("content"),
+                                "original_message": row.get::<String, _>("original_content"),
+                                "translated_from_language": row.get::<String, _>("translated_from_language"),
+                                "generated_response": row.get::<String, _>("draft_reply"),
+                                "status": row.get::<String, _>("status"),
+                                "created_at": row.get::<String, _>("created_at"),
+                            })
+                        }
+                    }).collect::<Vec<_>>()),
                     Err(e) => Err(e),
                 }
         }
@@ -3387,7 +3455,7 @@ async fn list_ui_inbox_handler(
 
     match messages {
         Ok(messages) => {
-            cache.set(&cache_key, messages.clone(), std::time::Duration::from_secs(5)).await;
+            cache.set(&cache_key, messages.clone(), std::time::Duration::from_secs(60)).await;
             (axum::http::StatusCode::OK, axum::Json(messages)).into_response()
         },
         Err(e) => {
