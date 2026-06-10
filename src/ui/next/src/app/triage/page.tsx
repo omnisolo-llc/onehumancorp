@@ -97,96 +97,119 @@ export default function TriagePage() {
     <AppShell
       title="Work Triage"
       subtitle="AI-prioritized inbox and action center."
-      statusItems={[
-        { label: "Active", value: String(activeCount), tone: activeCount > 0 ? "warn" : "good" },
-        { label: "Urgent", value: String(urgentCount), tone: urgentCount > 0 ? "bad" : "neutral" },
-      ]}
     >
-      {actionStatus && <div className="mb-4 app-badge good" role="status">{actionStatus}</div>}
+      {actionStatus && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 mb-4 app-badge good shadow-lg" role="status">
+          {actionStatus}
+        </div>
+      )}
 
-      <div className="mb-6 p-6 rounded-[16px] glassmorphism border border-white/40 dark:border-white/10">
-        <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Needs Your Attention</h2>
-        <p className="text-gray-600 dark:text-gray-400">Review AI-prepared actions and reply drafts across all channels.</p>
+      <div className="mb-6 p-6 rounded-[16px] glassmorphism border border-white/40 dark:border-white/10 shadow-sm">
+        <h2 className="text-xl sm:text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2 tracking-tight">
+          Morning Briefing: {urgentCount} urgent messages, {activeCount} active items
+        </h2>
+        <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400">
+          Review AI-prepared actions and reply drafts across all channels.
+        </p>
       </div>
 
-      <div className="app-grid two">
-        <section className="app-panel">
-          <div className="app-panel-header">
-            <div>
-              <div className="app-panel-title">Triage Queue</div>
-            </div>
+      <div className="max-w-3xl mx-auto flex flex-col gap-4 relative">
+        {error && <div className="app-empty glassmorphism">{error}</div>}
+        {!error && items.length === 0 ? (
+          <div className="app-empty glassmorphism py-12">
+            {loading ? "Loading triage items..." : "No items need your attention right now. Great job!"}
           </div>
-          <div id="triage-list" className="app-list">
-            {error && <div className="app-empty">{error}</div>}
-            {!error && items.length === 0 ? (
-              <div className="app-empty">{loading ? "Loading triage items..." : "No items need your attention right now. Great job!"}</div>
-            ) : items.map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                data-testid={`triage-card-${item.id}`}
-                onClick={() => setSelectedId(item.id)}
-                className="app-list-item w-full text-left"
-                style={{ background: selected?.id === item.id ? "#f8fafc" : "transparent" }}
-              >
-                <div className="min-w-0">
-                  <div className="app-list-title">{item.source || "Unknown Source"}</div>
-                  <div className="app-list-subtitle truncate">{item.context || "No context provided"}</div>
+        ) : (
+          items.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              data-testid={`triage-card-${item.id}`}
+              onClick={() => setSelectedId(item.id)}
+              className="w-full text-left p-4 rounded-2xl glassmorphism border border-white/40 dark:border-white/10 transition-all hover:bg-white/40 dark:hover:bg-white/5 active:scale-[0.98] min-h-[44px] shadow-sm flex flex-col sm:flex-row sm:items-center gap-3"
+            >
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1">
+                  <div className="font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] truncate">{item.source || "Unknown Source"}</div>
+                  <span className={`app-badge ${badgeTone(item.priority)} text-xs shrink-0`}>
+                    {item.priority || "Normal"}
+                  </span>
                 </div>
-                <span className={`app-badge ${badgeTone(item.priority)}`}>{item.priority || "Normal"}</span>
-              </button>
-            ))}
-          </div>
-        </section>
-
-        <section className="app-panel">
-          <div className="app-panel-header">
-            <div className="app-panel-title">Triage Detail</div>
-          </div>
-          {!selected ? (
-            <div className="app-empty">Select a triage item to review it.</div>
-          ) : (
-            <div className="app-panel-body">
-              <div className="mb-4">
-                <div className="app-metric-label">Source</div>
-                <div className="mt-1 text-sm font-semibold text-gray-900">{selected.source || "Unknown source"}</div>
+                <div className="text-sm text-gray-600 dark:text-gray-400 truncate">
+                  {item.context || "No context provided"}
+                </div>
               </div>
-              <div className="mb-4">
-                <div className="app-metric-label">Context</div>
-                <div className="mt-2 rounded-md border border-gray-200 bg-gray-50 p-3 text-sm leading-6 text-gray-800">
+              <div className="text-blue-600 dark:text-blue-400 text-sm font-medium shrink-0 flex items-center">
+                Review <span className="ml-1 text-lg">›</span>
+              </div>
+            </button>
+          ))
+        )}
+
+        {/* Half-sheet Modal */}
+        {selected && (
+          <div
+            className="fixed inset-0 z-40 bg-black/20 dark:bg-black/40 backdrop-blur-sm transition-opacity flex items-end sm:items-center justify-center p-0 sm:p-4"
+            onClick={() => setSelectedId(null)}
+          >
+            <div
+              className="w-full max-w-lg bg-white/80 dark:bg-[#16161a]/80 backdrop-blur-[30px] saturate-[210%] border border-white/40 dark:border-white/10 rounded-t-3xl sm:rounded-3xl p-6 sm:p-8 shadow-2xl transition-transform transform-gpu overflow-y-auto max-h-[85vh]"
+              onClick={(e) => e.stopPropagation()}
+              data-testid="triage-modal"
+            >
+              <div className="flex justify-between items-start mb-6">
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7]">
+                      {selected.source || "Unknown source"}
+                    </h3>
+                    <span className={`app-badge ${badgeTone(selected.priority)} text-xs`}>
+                      {selected.priority || "Normal"}
+                    </span>
+                  </div>
+                  <div className="text-sm text-gray-500">
+                    {new Date(selected.created_at || Date.now()).toLocaleString()}
+                  </div>
+                </div>
+                <button
+                  onClick={() => setSelectedId(null)}
+                  className="w-8 h-8 flex items-center justify-center rounded-full bg-black/5 hover:bg-black/10 dark:bg-white/10 dark:hover:bg-white/20 transition-colors"
+                  aria-label="Close modal"
+                >
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M1 1L13 13M1 13L13 1" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                  </svg>
+                </button>
+              </div>
+
+              <div className="mb-6">
+                <div className="text-xs font-bold tracking-wider text-gray-500 uppercase mb-2">Context</div>
+                <div className="rounded-xl border border-black/5 dark:border-white/5 bg-black/5 dark:bg-white/5 p-4 text-sm leading-relaxed text-[#1D1D1F] dark:text-[#F5F5F7]">
                   {selected.context || "No context"}
                 </div>
               </div>
+
               {selected.action_type && (
-                <div className="mb-6">
-                  <div className="app-metric-label">Proposed Action: {selected.action_type}</div>
-                  <div className="mt-2 rounded-md border border-blue-200 bg-blue-50 p-4 text-sm leading-6 text-blue-900 font-medium">
+                <div className="mb-8">
+                  <div className="text-xs font-bold tracking-wider text-blue-600 dark:text-blue-400 uppercase mb-2">
+                    Proposed Action: {selected.action_type}
+                  </div>
+                  <div className="rounded-xl border border-blue-200 dark:border-blue-900 bg-blue-50/50 dark:bg-blue-900/20 p-4 text-sm leading-relaxed text-blue-900 dark:text-blue-100 font-medium">
                     {selected.action_payload || "No specific payload"}
                   </div>
                 </div>
               )}
 
-              <div className="grid grid-cols-2 gap-3 mb-6">
-                <div className="app-card">
-                  <div className="app-metric-label">Priority</div>
-                  <div className="mt-2"><span className={`app-badge ${badgeTone(selected.priority)}`}>{selected.priority || "Normal"}</span></div>
-                </div>
-                <div className="app-card">
-                  <div className="app-metric-label">Created</div>
-                  <div className="mt-2 text-sm font-semibold text-gray-900">{new Date(selected.created_at || Date.now()).toLocaleString()}</div>
-                </div>
-              </div>
-
-              <div className="flex flex-col sm:flex-row gap-3">
+              <div className="flex flex-col gap-3">
                 <button
-                  className="app-btn-primary flex-1 min-h-[44px]"
+                  className="w-full min-h-[44px] rounded-xl bg-[#0066FF] hover:bg-[#005CE6] text-white font-semibold flex items-center justify-center gap-2 transition-colors shadow-sm"
                   data-testid="approve-btn"
                   onClick={() => handleDecision(selected.id, true)}
                 >
-                  ✨ Approve &amp; Execute
+                  ✨ Approve &amp; Send
                 </button>
                 <button
-                  className="px-4 py-2 rounded-md border border-gray-300 text-gray-700 bg-white hover:bg-gray-50 flex-1 min-h-[44px] font-medium transition-colors"
+                  className="w-full min-h-[44px] rounded-xl border border-black/10 dark:border-white/10 bg-white/50 hover:bg-white/80 dark:bg-transparent dark:hover:bg-white/5 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium transition-colors"
                   data-testid="dismiss-btn"
                   onClick={() => handleDecision(selected.id, false)}
                 >
@@ -194,8 +217,8 @@ export default function TriagePage() {
                 </button>
               </div>
             </div>
-          )}
-        </section>
+          </div>
+        )}
       </div>
     </AppShell>
   );
