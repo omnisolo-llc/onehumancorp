@@ -385,14 +385,16 @@ export default function OnboardingWizard() {
         throw new Error(result.error || result.message || 'Failed to start onboarding');
       }
 
+      // UX: enforce a minimum loading screen display of 500ms so the user sees progress
+      await new Promise(resolve => setTimeout(resolve, 500));
+
       setStartResult(result);
       localStorage.setItem('has_onboarded', 'true');
       if (result.organization_id) {
         localStorage.setItem('tenant_id', result.organization_id);
         localStorage.setItem('tenant', result.organization_id);
       }
-      setStep(5);
-      syncStateToBackend({ step: 5 }); // Go to "You're Live" screen
+      setTimeout(() => { setStep(5); syncStateToBackend({ step: 5 }); }, 100); // Go to "You're Live" screen
       fetch('/api/onboarding/launch', { method: 'POST', headers: { 'X-Tenant-ID': tenantId, 'X-User-ID': userId } }).catch(console.error);
 
     } catch (err: any) {
@@ -1188,7 +1190,7 @@ export default function OnboardingWizard() {
           )}
 
           {step === 4 && (
-             <div aria-live="polite" className="flex flex-col flex-1 justify-center items-center text-center animate-fade-in glassmorphism rounded-[16px] shadow-2xl p-8">
+             <div aria-live="polite" className="flex flex-col flex-1 justify-center items-center text-center animate-fade-in glassmorphism shadow-2xl p-8">
                <div className="w-24 h-24 relative mb-8">
                  <div className="absolute inset-0 border-4 border-[#0066FF]/20 rounded-full"></div>
                  <div className="absolute inset-0 border-4 border-[#0066FF] rounded-full border-t-transparent animate-spin"></div>
