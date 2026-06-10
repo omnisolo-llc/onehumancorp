@@ -56,7 +56,7 @@ test.describe('Onboarding Wizard CUJ', () => {
     const locInput = page.getByPlaceholder(/Portland, OR/i);
     await locInput.fill('NY');
 
-    const generateBtn = page.getByRole('button', { name: /Generate My Business/i });
+    const generateBtn = page.getByRole('button', { name: /Generate Storefront/i });
     await generateBtn.click();
 
     // 5. Verify it transitions to Step 2: Review Details
@@ -104,7 +104,7 @@ test.describe('Onboarding Wizard CUJ', () => {
     await page.getByRole('button', { name: /Next/i }).click();
 
     // Keep location empty
-    const generateBtn = page.getByRole('button', { name: /Generate My Business/i });
+    const generateBtn = page.getByRole('button', { name: /Generate Storefront/i });
     await expect(generateBtn).toBeDisabled();
   });
 
@@ -131,7 +131,7 @@ test.describe('Onboarding Wizard CUJ', () => {
     await page.getByPlaceholder(/I bake custom vegan cakes/i).fill('Cakes');
     await page.getByRole('button', { name: /Next/i }).click();
     await page.getByPlaceholder(/Portland, OR/i).fill('NY');
-    await page.getByRole('button', { name: /Generate My Business/i }).click();
+    await page.getByRole('button', { name: /Generate Storefront/i }).click();
 
     await expect(page.getByText('Review Details')).toBeVisible({ timeout: 15000 });
     await page.getByRole('button', { name: /Continue/i }).click();

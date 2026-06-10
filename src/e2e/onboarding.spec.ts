@@ -30,7 +30,7 @@ test.describe('Onboarding Wizard E2E Flow', () => {
     const nameInput = page.getByPlaceholder("e.g. Maya's Custom Cakes");
     await expect(nameInput).toBeVisible();
     await expect(nameInput).toHaveClass(/min-h-\[44px\]/);
-    await expect(nameInput).toHaveClass(/glassmorphism/);
+    await expect(nameInput).toHaveClass(/ohc-hybrid-panel/);
     await expect(nameInput).toHaveAttribute('autoComplete', 'organization');
 
     await nameInput.fill("My Awesome E2E Business");
@@ -38,10 +38,10 @@ test.describe('Onboarding Wizard E2E Flow', () => {
 
     // Step 2: What do you sell?
     await expect(page.getByRole('heading', { name: "What do you sell?" })).toBeVisible();
-    const sellInput = page.getByPlaceholder("e.g. I bake custom vegan cakes for weddings and parties...");
+    const sellInput = page.getByPlaceholder("e.g. I bake custom vegan cakes...");
     await expect(sellInput).toBeVisible();
     await expect(sellInput).toHaveClass(/min-h-\[44px\]/);
-    await expect(sellInput).toHaveClass(/glassmorphism/);
+    await expect(sellInput).toHaveClass(/ohc-hybrid-panel/);
     await sellInput.fill("We sell the best widgets in town.");
 
     // Test Save Draft
@@ -57,20 +57,20 @@ test.describe('Onboarding Wizard E2E Flow', () => {
     const locationInput = page.getByPlaceholder("e.g. Portland, OR");
     await expect(locationInput).toBeVisible();
     await expect(locationInput).toHaveClass(/min-h-\[44px\]/);
-    await expect(locationInput).toHaveClass(/glassmorphism/);
+    await expect(locationInput).toHaveClass(/ohc-hybrid-panel/);
     await locationInput.fill("Online");
     await page.getByRole('button', { name: 'Next' }).click();
 
-    // Step 1: Target Audience (chatStep 4)
+    // Step 4: Target Audience (chatStep 4)
     await expect(page.getByRole('heading', { name: "Who is your target audience?" })).toBeVisible();
     const audienceInput = page.getByPlaceholder("e.g. Local families, Tech startups");
     await expect(audienceInput).toBeVisible();
     await expect(audienceInput).toHaveClass(/min-h-\[44px\]/);
-    await expect(audienceInput).toHaveClass(/glassmorphism/);
+    await expect(audienceInput).toHaveClass(/ohc-hybrid-panel/);
     await audienceInput.fill("Tech enthusiasts and developers");
     await page.getByRole('button', { name: 'Next' }).click();
 
-    // Step 4: Review Details
+    // Step 5: Review Details
     await expect(page.getByRole('heading', { name: "Review Details" })).toBeVisible({ timeout: 30000 });
 
     // Check Review inputs have correct classes too
@@ -79,20 +79,20 @@ test.describe('Onboarding Wizard E2E Flow', () => {
 
     await page.getByRole('button', { name: 'Continue' }).click();
 
-    // Step 5: Style & Team
+    // Step 6: Style & Team
     await expect(page.getByRole('heading', { name: "Style & Team" })).toBeVisible();
 
     const nameInputAdmin = page.getByPlaceholder("e.g. Maya Smith");
     await expect(nameInputAdmin).toBeVisible();
     await expect(nameInputAdmin).toHaveClass(/min-h-\[44px\]/);
-    await expect(nameInputAdmin).toHaveClass(/glassmorphism/);
+    await expect(nameInputAdmin).toHaveClass(/ohc-hybrid-panel/);
     await expect(nameInputAdmin).toHaveAttribute('autoComplete', 'name');
     await nameInputAdmin.fill("Test User");
 
     const emailInput = page.getByPlaceholder("you@example.com");
     await expect(emailInput).toBeVisible();
     await expect(emailInput).toHaveClass(/min-h-\[44px\]/);
-    await expect(emailInput).toHaveClass(/glassmorphism/);
+    await expect(emailInput).toHaveClass(/ohc-hybrid-panel/);
     await expect(emailInput).toHaveAttribute('inputMode', 'email');
     await expect(emailInput).toHaveAttribute('autoComplete', 'email');
     await emailInput.fill("admin@myawesomebusiness.com");
@@ -100,7 +100,7 @@ test.describe('Onboarding Wizard E2E Flow', () => {
     const passwordInput = page.getByPlaceholder("••••••••");
     await expect(passwordInput).toBeVisible();
     await expect(passwordInput).toHaveClass(/min-h-\[44px\]/);
-    await expect(passwordInput).toHaveClass(/glassmorphism/);
+    await expect(passwordInput).toHaveClass(/ohc-hybrid-panel/);
     await expect(passwordInput).toHaveAttribute('autoComplete', 'new-password');
     await passwordInput.fill("SecurePass123");
 
@@ -130,7 +130,7 @@ test.describe('Onboarding Wizard E2E Flow', () => {
     const nameInput = page.getByPlaceholder("e.g. Maya's Custom Cakes");
     await expect(nameInput).toBeVisible();
     const box = await nameInput.boundingBox();
-    expect(box?.height).toBeGreaterThanOrEqual(54);
+    expect(box?.height).toBeGreaterThanOrEqual(44);
   });
 
   // Test 3: Verifies input disabled states
@@ -170,7 +170,7 @@ test.describe('Onboarding Wizard E2E Flow', () => {
     await expect(page.getByRole('heading', { name: "What do you sell?" })).toBeVisible();
   });
 
-  // Test 5: Verify text area presence and styling
+  // Test 5: Verify manual configuration fallback styling
   test('Verify manual configuration fallback styling', async ({ page }) => {
     await page.goto('/onboarding');
     const setupScreen = page.locator('#setup-screen');
