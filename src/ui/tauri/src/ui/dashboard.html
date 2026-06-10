@@ -689,8 +689,17 @@
       </div>
     </div>
 
+    <footer style="margin-top: 40px; text-align: center; padding: 20px; font-size: 14px; font-weight: 600;">
+      <a href="#" id="dashboard-footer-viral-link" style="color: #6b7280; text-decoration: none;">⚡ Powered by OHC</a>
+    </footer>
+
     <script>
       document.addEventListener('DOMContentLoaded', async () => {
+        const tenantIdForFooter = localStorage.getItem("tenant_id") || localStorage.getItem("tenant") || "default-team";
+        const footerLink = document.getElementById("dashboard-footer-viral-link");
+        if (footerLink) {
+          footerLink.href = `/onboarding?ref=${tenantIdForFooter}&source=footer_widget`;
+        }
         const tenant = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default-team';
         try {
           const res = await fetch(`/api/v1/growth/milestones/check?tenant=${tenant}`);
