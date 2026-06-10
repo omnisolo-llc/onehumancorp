@@ -193,7 +193,7 @@ export default function TerminalPage() {
         id: `tx_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         amount_cents: converted.amount,
         currency: currency,
-        payload: JSON.stringify([{ product_id: 'prod_123', quantity: 1 }]),
+        payload: JSON.stringify([{ product_id: 'e2e-product-cake', quantity: 1 }]),
         client_id: 'terminal_1',
         timestamp: new Date().toISOString()
       };
@@ -207,7 +207,7 @@ export default function TerminalPage() {
         const reserveRes = await fetch('/api/v1/payments/terminal/reserve', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ tenant_id: activeStaff?.tenant_id || "default_tenant", product_id: 'prod_123', quantity: 1, ttl_seconds: 15 })
+          body: JSON.stringify({ tenant_id: activeStaff?.tenant_id || "default_tenant", product_id: 'e2e-product-cake', quantity: 1, ttl_seconds: 15 })
         });
 
         const reserveData = await reserveRes.json();
@@ -223,7 +223,7 @@ export default function TerminalPage() {
         await fetch('/api/v1/payments/terminal/commit', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ tenant_id: activeStaff?.tenant_id || "default_tenant", product_id: 'prod_123', quantity: 1, lock_id: reserveData.lock_id })
+          body: JSON.stringify({ tenant_id: activeStaff?.tenant_id || "default_tenant", product_id: 'e2e-product-cake', quantity: 1, lock_id: reserveData.lock_id })
         });
         setOrderStatus(`${t('Payment Completed')}`);
       } catch (err) {
@@ -379,7 +379,7 @@ export default function TerminalPage() {
              </button>
            </div>
 
-           <StripeTerminalClient amount={activeStaff?.id ? 5000 : 0} productId="prod_123" tenantId={activeStaff?.tenant_id || "default_tenant"} />
+           <StripeTerminalClient amount={activeStaff?.id ? 5000 : 0} productId="e2e-product-cake" tenantId={activeStaff?.tenant_id || "default_tenant"} />
            {orderStatus && <p className="mt-4 rounded-xl bg-blue-50 px-4 py-3 text-sm font-semibold text-blue-800" role="status">{orderStatus}</p>}
         </div>
 

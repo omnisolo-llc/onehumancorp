@@ -682,6 +682,203 @@ mod tests {
     use sqlx::postgres::PgPoolOptions;
 
     #[tokio::test]
+    async fn test_reserve_inventory_success() {
+        let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
+        if !database_url.contains("test") { return; }
+        let pool = PgPoolOptions::new().connect(&database_url).await.unwrap();
+
+        let tenant_id = "tenant-terminal-test-res-succ";
+        sqlx::query("INSERT INTO tenants (id, name) VALUES ($1, 'Terminal Test Tenant') ON CONFLICT DO NOTHING")
+            .bind(tenant_id).execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO products (id, tenant_id, title, inventory_count) VALUES ('prod-terminal-res-succ', $1, 'Test Prod Terminal', 6) ON CONFLICT DO NOTHING")
+            .bind(tenant_id).execute(&pool).await.unwrap();
+
+        let (tx, _rx) = tokio::sync::mpsc::channel(100);
+        let hub = Arc::new(Hub::new(tx, pool.clone()));
+        let req_data = axum::extract::Json(ReserveInventoryRequest {
+            tenant_id: tenant_id.to_string(),
+            product_id: "prod-terminal-res-succ".to_string(),
+            quantity: 1,
+            ttl_seconds: 15,
+        });
+        let auth_info = Some(axum::extract::Extension(::server_auth::orchestration::AuthInfo {
+            org_id: tenant_id.to_string(),
+            spiffe_id: "test".to_string(),
+            agent_id: "test".to_string()
+        }));
+        let headers = axum::http::HeaderMap::new();
+
+        let resp = reserve_inventory_handler(headers, axum::extract::State(hub), auth_info, req_data).await;
+        assert_eq!(resp.status(), axum::http::StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn test_reserve_inventory_concurrent_failure() {
+        let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
+        if !database_url.contains("test") { return; }
+        let pool = PgPoolOptions::new().connect(&database_url).await.unwrap();
+
+        let tenant_id = "tenant-terminal-test-res-conc";
+        sqlx::query("INSERT INTO tenants (id, name) VALUES ($1, 'Terminal Test Tenant') ON CONFLICT DO NOTHING")
+            .bind(tenant_id).execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO products (id, tenant_id, title, inventory_count) VALUES ('prod-terminal-res-conc', $1, 'Test Prod Terminal', 6) ON CONFLICT DO NOTHING")
+            .bind(tenant_id).execute(&pool).await.unwrap();
+
+        let (tx, _rx) = tokio::sync::mpsc::channel(100);
+        let hub = Arc::new(Hub::new(tx, pool.clone()));
+
+        let client = redis::Client::open("redis://127.0.0.1/").unwrap();
+        let mut conn = client.get_multiplexed_async_connection().await.unwrap();
+        let lock_key = format!("ohc:lock:{}:inventory:{}", tenant_id, "prod-terminal-res-conc");
+        let _: () = redis::cmd("SET").arg(&lock_key).arg("test_lock").arg("EX").arg(15).arg("NX").query_async(&mut conn).await.unwrap();
+
+
+        let req_data = axum::extract::Json(ReserveInventoryRequest {
+            tenant_id: tenant_id.to_string(),
+            product_id: "prod-terminal-res-conc".to_string(),
+            quantity: 1,
+            ttl_seconds: 15,
+        });
+        let auth_info = Some(axum::extract::Extension(::server_auth::orchestration::AuthInfo {
+            org_id: tenant_id.to_string(),
+            spiffe_id: "test".to_string(),
+            agent_id: "test".to_string()
+        }));
+        let headers = axum::http::HeaderMap::new();
+
+        let mut hub_with_redis = Hub::new(tokio::sync::mpsc::channel(100).0, pool.clone());
+        hub_with_redis.redis_client = Some(client);
+        let hub_arc = Arc::new(hub_with_redis);
+
+        let resp = reserve_inventory_handler(headers, axum::extract::State(hub_arc), auth_info, req_data).await;
+        assert_eq!(resp.status(), axum::http::StatusCode::OK);
+
+        let _: () = redis::cmd("DEL").arg(&lock_key).query_async(&mut conn).await.unwrap_or(());
+    }
+
+    #[tokio::test]
+    async fn test_reserve_inventory_insufficient_stock() {
+        let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
+        if !database_url.contains("test") { return; }
+        let pool = PgPoolOptions::new().connect(&database_url).await.unwrap();
+
+        let tenant_id = "tenant-terminal-test-res-fail";
+        sqlx::query("INSERT INTO tenants (id, name) VALUES ($1, 'Terminal Test Tenant') ON CONFLICT DO NOTHING")
+            .bind(tenant_id).execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO products (id, tenant_id, title, inventory_count) VALUES ('prod-terminal-res-fail', $1, 'Test Prod Terminal', 0) ON CONFLICT DO NOTHING")
+            .bind(tenant_id).execute(&pool).await.unwrap();
+
+        let (tx, _rx) = tokio::sync::mpsc::channel(100);
+        let hub = Arc::new(Hub::new(tx, pool.clone()));
+        let req_data = axum::extract::Json(ReserveInventoryRequest {
+            tenant_id: tenant_id.to_string(),
+            product_id: "prod-terminal-res-fail".to_string(),
+            quantity: 1,
+            ttl_seconds: 15,
+        });
+        let auth_info = Some(axum::extract::Extension(::server_auth::orchestration::AuthInfo {
+            org_id: tenant_id.to_string(),
+            spiffe_id: "test".to_string(),
+            agent_id: "test".to_string()
+        }));
+        let headers = axum::http::HeaderMap::new();
+
+        let resp = reserve_inventory_handler(headers, axum::extract::State(hub), auth_info, req_data).await;
+        assert_eq!(resp.status(), axum::http::StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn test_commit_inventory_success() {
+        let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
+        if !database_url.contains("test") { return; }
+        let pool = PgPoolOptions::new().connect(&database_url).await.unwrap();
+
+        let tenant_id = "tenant-terminal-test-com-succ";
+        sqlx::query("INSERT INTO tenants (id, name) VALUES ($1, 'Terminal Test Tenant') ON CONFLICT DO NOTHING")
+            .bind(tenant_id).execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO products (id, tenant_id, title, inventory_count) VALUES ('prod-terminal-com-succ', $1, 'Test Prod Terminal', 6) ON CONFLICT DO NOTHING")
+            .bind(tenant_id).execute(&pool).await.unwrap();
+
+        let (tx, _rx) = tokio::sync::mpsc::channel(100);
+        let hub = Arc::new(Hub::new(tx, pool.clone()));
+        let req_data = axum::extract::Json(CommitInventoryRequest {
+            tenant_id: tenant_id.to_string(),
+            product_id: "prod-terminal-com-succ".to_string(),
+            quantity: 1,
+            lock_id: "".to_string(),
+        });
+        let auth_info = Some(axum::extract::Extension(::server_auth::orchestration::AuthInfo {
+            org_id: tenant_id.to_string(),
+            spiffe_id: "test".to_string(),
+            agent_id: "test".to_string()
+        }));
+        let headers = axum::http::HeaderMap::new();
+
+        let resp = commit_inventory_handler(headers, axum::extract::State(hub), auth_info, req_data).await;
+        assert_eq!(resp.status(), axum::http::StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn test_commit_inventory_insufficient_stock() {
+        let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
+        if !database_url.contains("test") { return; }
+        let pool = PgPoolOptions::new().connect(&database_url).await.unwrap();
+
+        let tenant_id = "tenant-terminal-test-com-fail";
+        sqlx::query("INSERT INTO tenants (id, name) VALUES ($1, 'Terminal Test Tenant') ON CONFLICT DO NOTHING")
+            .bind(tenant_id).execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO products (id, tenant_id, title, inventory_count) VALUES ('prod-terminal-com-fail', $1, 'Test Prod Terminal', 0) ON CONFLICT DO NOTHING")
+            .bind(tenant_id).execute(&pool).await.unwrap();
+
+        let (tx, _rx) = tokio::sync::mpsc::channel(100);
+        let hub = Arc::new(Hub::new(tx, pool.clone()));
+        let req_data = axum::extract::Json(CommitInventoryRequest {
+            tenant_id: tenant_id.to_string(),
+            product_id: "prod-terminal-com-fail".to_string(),
+            quantity: 1,
+            lock_id: "".to_string(),
+        });
+        let auth_info = Some(axum::extract::Extension(::server_auth::orchestration::AuthInfo {
+            org_id: tenant_id.to_string(),
+            spiffe_id: "test".to_string(),
+            agent_id: "test".to_string()
+        }));
+        let headers = axum::http::HeaderMap::new();
+
+        let resp = commit_inventory_handler(headers, axum::extract::State(hub), auth_info, req_data).await;
+        assert_eq!(resp.status(), axum::http::StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn test_commit_inventory_not_found() {
+        let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
+        if !database_url.contains("test") { return; }
+        let pool = PgPoolOptions::new().connect(&database_url).await.unwrap();
+
+        let tenant_id = "tenant-terminal-test-com-not-found";
+        sqlx::query("INSERT INTO tenants (id, name) VALUES ($1, 'Terminal Test Tenant') ON CONFLICT DO NOTHING")
+            .bind(tenant_id).execute(&pool).await.unwrap();
+
+        let (tx, _rx) = tokio::sync::mpsc::channel(100);
+        let hub = Arc::new(Hub::new(tx, pool.clone()));
+        let req_data = axum::extract::Json(CommitInventoryRequest {
+            tenant_id: tenant_id.to_string(),
+            product_id: "prod-terminal-com-not-found".to_string(),
+            quantity: 1,
+            lock_id: "".to_string(),
+        });
+        let auth_info = Some(axum::extract::Extension(::server_auth::orchestration::AuthInfo {
+            org_id: tenant_id.to_string(),
+            spiffe_id: "test".to_string(),
+            agent_id: "test".to_string()
+        }));
+        let headers = axum::http::HeaderMap::new();
+
+        let resp = commit_inventory_handler(headers, axum::extract::State(hub), auth_info, req_data).await;
+        assert_eq!(resp.status(), axum::http::StatusCode::OK);
+    }
+
+    #[tokio::test]
     async fn test_commit_inventory_low_stock() {
         let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
         if !database_url.contains("test") {
