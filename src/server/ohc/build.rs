@@ -11,7 +11,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "../../../src/proto/interop.proto",
         "../../../src/proto/mcp_proxy.proto",
         "../../../src/proto/organization.proto",
+        "../../../src/proto/invoice.proto",
     ];
+
+    println!("cargo::rustc-check-cfg=cfg(ohc_bazel)");
 
     tonic_build::configure()
         .build_client(true)

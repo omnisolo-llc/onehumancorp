@@ -248,10 +248,6 @@ impl InvoiceService for InvoiceServiceImpl {
 }
 
 pub fn router<S: Clone + Send + Sync + 'static>(_hub: Arc<Hub>) -> axum::Router<S> {
-    use ::server_ohc::invoice::invoice_service_server::InvoiceServiceServer;
-    use tonic::transport::Server;
-    use tower::ServiceBuilder;
-
     // This is just a stub router for Axum integration if needed,
     // though typically gRPC services are mounted differently.
     // For now, we return an empty router.
@@ -260,13 +256,6 @@ pub fn router<S: Clone + Send + Sync + 'static>(_hub: Arc<Hub>) -> axum::Router<
 
 #[cfg(test)]
 mod tests {
-    use std::sync::Arc;
-    use ::server_ohc::invoice::*;
-    use ::server_ohc::invoice::invoice_service_server::InvoiceService;
-    use super::InvoiceServiceImpl;
-    use tonic::Request;
-    use uuid::Uuid;
-
     #[tokio::test]
     async fn test_invoice_logic() {
         // Just verify basic compilation
