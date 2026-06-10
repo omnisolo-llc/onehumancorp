@@ -189,6 +189,61 @@ mod tests {
     }
 
     #[test]
+    fn test_approval_on_mutate_read_only() {
+        let tc = create_tool_call("read_file");
+        let result = HumanInLoopManager::evaluate_escalation_tier(
+            &tc,
+            true, // is_read_only
+            false,
+            &HumanInLoopSpectrum::ApprovalOnMutate,
+            1.0,
+            0.5,
+            &PermissionArchitecture::Permissive,
+            &[],
+            &[],
+        );
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_manually_approved_tool_calls_bypass_escalation() {
+        let tc = create_tool_call("delete_database");
+        let mut manually_approved_calls = Vec::new();
+        manually_approved_calls.push("test_id".to_string());
+
+        let result = HumanInLoopManager::evaluate_escalation_tier(
+            &tc,
+            false,
+            true,
+            &HumanInLoopSpectrum::Autonomous,
+            1.0,
+            0.5,
+            &PermissionArchitecture::Permissive,
+            &[],
+            &manually_approved_calls,
+        );
+
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_supervisory_mode_autonomous_fallback() {
+        let tc = create_tool_call("read_file");
+        let result = HumanInLoopManager::evaluate_escalation_tier(
+            &tc,
+            false, // is_read_only = false
+            false, // is_high_risk = false
+            &HumanInLoopSpectrum::Supervisory,
+            0.9, // high confidence
+            0.5, // low threshold
+            &PermissionArchitecture::Permissive, // NOT Restrictive -> fallback to Autonomous OK
+            &[],
+            &[],
+        );
+        assert!(result.is_ok());
+    }
+
+    #[test]
     fn test_collaborative_edit() {
         let tc = create_tool_call("read_file");
         let result = HumanInLoopManager::evaluate_escalation_tier(
