@@ -1,5 +1,5 @@
 pub mod anthropic_hooks;
-/// Master Catalog B.9. Guardrails  Safety
+/// 9. Guardrails & Safety
 pub mod openai_hooks;
 
 use ohc_builtin_agent_core::types::ToolCall;

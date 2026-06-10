@@ -1,6 +1,6 @@
 use crate::agent::AgentRunConfig;
 use crate::types::Message;
-/// Master Catalog B.5. Prompt Construction
+/// 5. Prompt Construction
 use std::fmt::Write;
 
 pub struct PromptBuilder;

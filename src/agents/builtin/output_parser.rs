@@ -1,4 +1,4 @@
-/// Master Catalog B.6. Output Parsing
+/// 6. Output Parsing
 use crate::types::{ChatRequest, ChatResponse, Message, ToolError};
 use async_trait::async_trait;
 use serde::de::DeserializeOwned;
@@ -221,7 +221,7 @@ impl<'a, T: DeserializeOwned> RetryWithErrorOutputParser<'a, T> {
     }
 }
 
-/// Implements the Output Parsing mechanic from the Master Catalog:
+/// Implements the Output Parsing mechanic
 /// "Fallback mechanic: Legacy RetryWithErrorOutputParser (feed the original prompt,
 /// the failed completion, and the parsing error back to the model)."
 

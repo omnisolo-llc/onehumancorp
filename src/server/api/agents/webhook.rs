@@ -11,7 +11,7 @@ use crate::orchestration::departments::orchestrator::DepartmentOrchestrator;
 use crate::orchestration::departments::types::{DepartmentType, ActionRisk};
 use uuid::Uuid;
 use crate::db::get_pool;
-use super::translation::{translate_inbox_message_with_llm, InboxTranslation};
+
 use crate::minimax::{LocalLLMClient, MinimaxClient};
 
 #[derive(Deserialize)]

@@ -4,7 +4,7 @@ use serde_json::Value;
 use std::sync::Arc;
 use super::ToolExecutor;
 
-/// SOTA Harness Pattern: Pydantic-first tool schema validation.
+/// SOTA Harness Patterns (2025-2026): 6. Pydantic-first tool schema -> validation errors fed back to LLM for self-correction
 /// If validation fails, it generates a precise ToolError::LlmRecoverable containing the serde validation error
 /// so the LLM can self-correct its arguments.
 

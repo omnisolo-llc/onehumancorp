@@ -1,4 +1,4 @@
-// SOTA Harness Pattern: Pydantic-first tool schema validation.
+// SOTA Harness Patterns (2025-2026): 6. Pydantic-first tool schema -> validation errors fed back to LLM for self-correction
 use ohc_builtin_agent_core::types::ToolError;
 use serde_json::{json, Value};
 use std::sync::Arc;

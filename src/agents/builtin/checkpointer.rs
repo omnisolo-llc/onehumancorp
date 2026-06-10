@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
-/// Master Catalog B.7. State Management
+/// 7. State Management
 use serde::{Deserialize, Serialize};
 use sqlx::Row;
 use std::path::PathBuf;
@@ -64,7 +64,7 @@ impl PgCheckpointer {
     }
 }
 
-/// GitCheckpointer implements the Master Catalog "State Management: Git Commit Checkpointing" mechanic
+/// GitCheckpointer implements the 7. State Management: Git Commit Checkpointing
 /// inspired by Claude Code. It handles true time-travel debugging and progress file management
 /// by executing native `git` commands on a local repository scratchpad.
 ///

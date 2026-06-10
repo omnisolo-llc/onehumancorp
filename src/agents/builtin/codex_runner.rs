@@ -241,7 +241,7 @@ impl AppServer {
 
             let mut verification_manager = crate::verification_loops::VerificationManager::new();
 
-            // SOTA Harness Patterns (2025-2026): Verification Loops
+            // 10. Verification Loops
             let result = match verification_type.as_str() {
                 "computational" => {
                     // Safe execution placeholder for computational guide (e.g., passing output_text to a linter instead of bash directly)

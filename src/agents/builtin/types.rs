@@ -127,7 +127,7 @@ pub struct ToolDefinition {
     pub parameters: serde_json::Value,
 }
 
-/// Error Handling (Compounding Error Prevention): LangGraph Mechanic (4-types): 1) Transient, 2) LLM-recoverable, 3) User-fixable, 4) Unexpected
+/// 8. Error Handling (Compounding Error Prevention): LangGraph Mechanic (4-types): 1) Transient, 2) LLM-recoverable, 3) User-fixable, 4) Unexpected
 /// 4-tier Error enum for Tool Execution (LangGraph mechanics).
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum ToolError {

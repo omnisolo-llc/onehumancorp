@@ -1,6 +1,6 @@
 use ohc_builtin_agent_core::types::{ToolCall, ToolError};
 use ohc_builtin_agent_tools::Tool;
-/// Master Catalog B.8. Error Handling (Compounding Error Prevention)
+/// 8. Error Handling (Compounding Error Prevention)
 use tokio::time::{Duration, sleep};
 use tracing::{error, info, warn};
 

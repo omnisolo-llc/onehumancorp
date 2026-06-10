@@ -1,4 +1,4 @@
-/// Master Catalog B.1. The Orchestration Loop
+/// 1. The Orchestration Loop
 use crate::actor_model::Actor;
 use ohc_builtin_agent_core::types::ToolError;
 use opentelemetry::{KeyValue, global};
@@ -318,7 +318,7 @@ pub(crate) async fn load_cascading_agents_md(start_dir: &std::path::Path) -> Str
 }
 
 /// A dedicated builder for the Hierarchical Priority Stack mechanic.
-/// This fulfills the Master Catalog specification:
+/// This fulfills the specifications:
 
 /// The ReAct agent loop — mirrors Go builtin.BuiltinAgent.Run.
 pub struct Agent {
@@ -502,7 +502,7 @@ impl Agent {
             }
 
             // Component: Tools (Read-only concurrent, mutating serial)
-            // Master Catalog B.2. Tools: Read-only operations run concurrently; mutating operations run serially
+            // 2. Tools: Read-only operations run concurrently; mutating operations run serially
             let mut read_only_calls = vec![];
             let mut mutating_calls = vec![];
 
@@ -540,7 +540,7 @@ impl Agent {
             let mut read_only_futures = Vec::new();
             if !read_only_calls.is_empty() {
                 tracing::debug!(
-                    "Master Catalog B.2: Executing {} read-only tool calls concurrently.",
+                    "2. Tools: Executing {} read-only tool calls concurrently.",
                     read_only_calls.len()
                 );
             }
@@ -622,7 +622,7 @@ impl Agent {
 
             if !mutating_calls.is_empty() {
                 tracing::debug!(
-                    "Master Catalog B.2: Executing {} mutating tool calls serially.",
+                    "2. Tools: Executing {} mutating tool calls serially.",
                     mutating_calls.len()
                 );
             }
@@ -710,7 +710,7 @@ impl Agent {
         Ok(resp.message.content)
     }
 
-    /// Master Catalog B.1. The Orchestration Loop
+    /// 1. The Orchestration Loop
     /// Mechanically, it is a `while` loop executing the TAO (Thought-Action-Observation) cycle:
     /// Assemble prompt -> Call LLM API -> Parse output -> Execute tool calls -> Format results back -> Repeat.
     /// Termination conditions are layered:
@@ -787,7 +787,7 @@ impl Agent {
                 turn_input_tokens = total_tokens;
             }
 
-            // Master Catalog B.4: Context Management (Preventing Context Rot): Compaction
+            // 4. Context Management (Preventing Context Rot): Compaction
             if cfg.enable_context_compaction && turn_input_tokens > cfg.compaction_threshold_tokens {
                 if messages.len() > 5 {
                     let mut compact_messages = Vec::new();
@@ -1399,7 +1399,7 @@ impl Agent {
                     error: "".to_string(),
                 }; tool_calls.len()];
 
-                // Master Catalog B.2. Tools: Read-only operations run concurrently; mutating operations run serially.
+                // 2. Tools: Read-only operations run concurrently; mutating operations run serially.
                 let mut read_only_futures = Vec::new();
                 for tc in read_only_calls {
                     let name = tc.name.clone();
@@ -2322,7 +2322,7 @@ impl Agent {
         rx
     }
 
-    /// Master Catalog B.6. Output Parsing via Native Tool Calls
+    /// 6. Output Parsing via Native Tool Calls
     /// Uses a schema-constrained response by forcing a specific tool call.
     pub async fn run_structured<T: serde::de::DeserializeOwned + Send + Sync + 'static, F>(
         &self,
@@ -3356,7 +3356,7 @@ impl Agent {
             let mut read_only_futures = Vec::new();
             if !read_only_calls.is_empty() {
                 tracing::debug!(
-                    "Master Catalog B.2: Executing {} read-only tool calls concurrently.",
+                    "2. Tools: Executing {} read-only tool calls concurrently.",
                     read_only_calls.len()
                 );
             }
@@ -3642,10 +3642,10 @@ impl Agent {
             }
 
             // Execute mutating calls sequentially to prevent race conditions
-            // Master Catalog B.2. Tools: mutating operations run serially
+            // 2. Tools: mutating operations run serially
             if !mutating_calls.is_empty() {
                 tracing::debug!(
-                    "Master Catalog B.2: Executing {} mutating tool calls serially.",
+                    "2. Tools: Executing {} mutating tool calls serially.",
                     mutating_calls.len()
                 );
             }
@@ -4045,7 +4045,7 @@ impl Agent {
                 }
             }
 
-            // Master Catalog B.4: Context Management (Preventing Context Rot): Compaction
+            // 4. Context Management (Preventing Context Rot): Compaction
             // Preserve architectural decisions and unresolved bugs, but discard redundant/raw tool outputs. When approaching token limits, summarize history.
             // Use the input_tokens from the last request to determine the current context window size.
 
@@ -4142,7 +4142,7 @@ impl Agent {
 
     // Anthropic Mechanic: 3-Stage Tool Gating
 
-    // SOTA Harness Patterns (2025-2026): Pydantic-first tool schema -> validation errors fed back to LLM for self-correction
+    // SOTA Harness Patterns (2025-2026): 6. Pydantic-first tool schema -> validation errors fed back to LLM for self-correction
     fn validate_schema(args: &serde_json::Value, schema: &serde_json::Value) -> Result<(), String> {
         let mut errors = Vec::new();
         Self::validate_schema_recursive(args, schema, "", &mut errors);
