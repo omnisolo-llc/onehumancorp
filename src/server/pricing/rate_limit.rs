@@ -174,6 +174,26 @@ impl RedisRateLimiter {
         Ok(used.unwrap_or(0))
     }
 
+    pub async fn get_multiple_agent_actions_used(&self, tenant_id: &str, agent_ids: &[String]) -> Result<Vec<u32>, String> {
+        if agent_ids.is_empty() {
+            return Ok(Vec::new());
+        }
+        let mut conn = self.get_connection().await?;
+        let now = chrono::Utc::now();
+        let month_key = now.format("%Y-%m").to_string();
+        let mut keys = Vec::new();
+        for agent_id in agent_ids {
+            let agent_key = format!("tenant:{}:agent:{}:actions_used:{}", tenant_id, agent_id, month_key);
+            keys.push(agent_key);
+        }
+
+        let used_list: Vec<Option<u32>> = redis::cmd("MGET")
+            .arg(&keys)
+            .query_async(&mut conn).await
+            .map_err(|e| e.to_string())?;
+        Ok(used_list.into_iter().map(|u| u.unwrap_or(0)).collect())
+    }
+
     pub async fn get_tenant_storage_used(&self, tenant_id: &str) -> Result<i64, String> {
         let mut conn = self.get_connection().await?;
         let storage_key = format!("tenant:{}:storage_used_bytes", tenant_id);

@@ -198,6 +198,14 @@ impl Tracker {
         }
     }
 
+    pub async fn get_multiple_agent_actions_used(&self, tenant_id: &str, agent_ids: &[String]) -> Result<Vec<u32>, String> {
+        if let Some(ref limiter) = self.rate_limiter {
+            limiter.get_multiple_agent_actions_used(tenant_id, agent_ids).await
+        } else {
+            Ok(vec![0; agent_ids.len()])
+        }
+    }
+
     pub async fn get_tenant_storage_used(&self, tenant_id: &str) -> Result<i64, String> {
         if let Some(ref limiter) = self.rate_limiter {
             limiter.get_tenant_storage_used(tenant_id).await
