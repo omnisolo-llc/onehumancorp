@@ -3,6 +3,7 @@
 import React, { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { PoweredByOHC } from '../../components/PoweredByOHC';
 
 function InvoiceContent() {
   const searchParams = useSearchParams();
@@ -108,15 +109,13 @@ function InvoiceContent() {
         </section>
 
         {/* Viral Growth Loop Footer */}
-        <div className="text-center pb-8 animate-fade-in">
+        <div className="text-center pb-8 animate-fade-in flex flex-col items-center">
+          <PoweredByOHC tenantId={tenant} />
           <Link
             href={`/onboarding?ref=${tenant}&source=invoice_generator`}
             target="_blank"
-            className="inline-flex flex-col items-center gap-1 group"
+            className="inline-flex flex-col items-center gap-1 group mt-2"
           >
-            <span className="text-xs font-semibold tracking-wider uppercase text-gray-500 opacity-80 group-hover:opacity-100 transition-opacity">
-              ⚡ Powered by OHC
-            </span>
             <span className="text-sm font-medium text-indigo-600 group-hover:text-indigo-700 transition-colors">
               Create your own professional invoices for free
             </span>
