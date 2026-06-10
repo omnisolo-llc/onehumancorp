@@ -7,6 +7,7 @@ pub mod staff_mesh;
 
 pub mod billing_webhook;
 pub mod billing_api;
+#[cfg(test)]
 pub mod billing_webhook_test;
 pub mod health;
 pub mod agents;
