@@ -2353,6 +2353,12 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let cs_worker = crate::workers::department_workers::CustomerSuccessWorker::new(db.clone());
     cs_worker.start();
 
+    // Start Auto Responder Task Queue Worker
+    let auto_responder_queue = std::sync::Arc::new(crate::orchestration::queue::ohc_job_queue::OHCJobQueue::new(db.pool.clone()));
+    let auto_responder_handler = std::sync::Arc::new(crate::workers::auto_responder::AutoResponderWorker::new(db.clone()));
+    let _auto_responder_pool = crate::orchestration::queue::worker_pool::WorkerPool::new(auto_responder_queue, 2, vec!["auto_reply".to_string()], auto_responder_handler);
+
+
 
     // Start Booking Reengagement Worker
     let booking_reengagement_worker = crate::workers::booking_reengagement::BookingReengagementWorker::new(db.clone());
@@ -2678,6 +2684,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let meta_webhook_router = axum::Router::new()
         .route("/api/v1/webhooks/meta", axum::routing::get(api::meta_webhook::meta_webhook_get_handler))
         .route("/api/v1/webhooks/meta", axum::routing::post(api::meta_webhook::meta_webhook_post_handler))
+        .route("/api/v1/webhooks/twilio", axum::routing::post(api::twilio_webhook::twilio_webhook_post_handler))
         .with_state(meta_webhook_state);
 
     let health_router = axum::Router::new()
