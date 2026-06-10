@@ -2362,6 +2362,8 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         crate::cart_recovery::start_cart_recovery_background_workers(Arc::new(db.pool.clone()));
     }
 
+
+
     // Start Token Forecast Engine
     let forecaster = Arc::new(crate::telemetry::forecaster::Forecaster::new(db.pool.clone()));
     forecaster.start();
