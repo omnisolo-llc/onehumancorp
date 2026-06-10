@@ -261,7 +261,7 @@ pub async fn reserve_inventory_handler(
             let pool = crate::db::get_pool();
             if let Ok(mut tx) = pool.begin().await {
                 if let Ok(_) = crate::common::auth_utils::set_org_context(&mut *tx, &tenant_id).await {
-                    let current_stock: Option<i32> = sqlx::query_scalar("SELECT inventory_count FROM products WHERE id = $1 AND tenant_id = $2 FOR UPDATE")
+                    let current_stock: Option<i32> = sqlx::query_scalar("SELECT inventory_count FROM products WHERE id = $1 AND tenant_id = $2")
                         .bind(&req_data.product_id)
                         .bind(&tenant_id)
                         .fetch_optional(&mut *tx)
@@ -296,7 +296,7 @@ pub async fn reserve_inventory_handler(
         let pool = crate::db::get_pool();
         if let Ok(mut tx) = pool.begin().await {
             if let Ok(_) = crate::common::auth_utils::set_org_context(&mut *tx, &tenant_id).await {
-                let current_stock: Option<i32> = sqlx::query_scalar("SELECT inventory_count FROM products WHERE id = $1 AND tenant_id = $2 FOR UPDATE")
+                let current_stock: Option<i32> = sqlx::query_scalar("SELECT inventory_count FROM products WHERE id = $1 AND tenant_id = $2")
                     .bind(&req_data.product_id)
                     .bind(&tenant_id)
                     .fetch_optional(&mut *tx)
@@ -363,23 +363,15 @@ pub async fn commit_inventory_handler(
     let pool = crate::db::get_pool();
     if let Ok(mut tx) = pool.begin().await {
         if let Ok(_) = crate::common::auth_utils::set_org_context(&mut *tx, &tenant_id).await {
-            let current_stock = sqlx::query("SELECT inventory_count FROM products WHERE id = $1 AND tenant_id = $2 FOR UPDATE")
-                .bind(&req_data.product_id).bind(&tenant_id).fetch_optional(&mut *tx).await.unwrap_or(None);
+            let update_result: Option<i32> = sqlx::query_scalar("UPDATE products SET inventory_count = inventory_count - $1 WHERE id = $2 AND tenant_id = $3 AND inventory_count >= $1 RETURNING inventory_count")
+                .bind(req_data.quantity)
+                .bind(&req_data.product_id)
+                .bind(&tenant_id)
+                .fetch_optional(&mut *tx)
+                .await
+                .unwrap_or(None);
 
-            if let Some(row) = current_stock {
-                let stock: i32 = sqlx::Row::get(&row, "inventory_count");
-                if stock < req_data.quantity {
-                    let _ = tx.rollback().await;
-                    return (axum::http::StatusCode::OK, Json(serde_json::json!({
-                        "success": false,
-                        "error_message": format!("Insufficient inventory. Available: {}", stock)
-                    }))).into_response();
-                }
-
-                let new_stock = stock - req_data.quantity;
-                let _ = sqlx::query("UPDATE products SET inventory_count = $1 WHERE id = $2 AND tenant_id = $3")
-                    .bind(new_stock).bind(&req_data.product_id).bind(&tenant_id).execute(&mut *tx).await;
-
+            if let Some(new_stock) = update_result {
                 // Record the order
                 let order_id = uuid::Uuid::new_v4().to_string();
                 let total_amount = (req_data.amount_cents.unwrap_or(0) as f64) / 100.0;
@@ -412,6 +404,24 @@ pub async fn commit_inventory_handler(
                     timestamp: chrono::Utc::now().timestamp(),
                 });
 
+                let inv_event_payload = serde_json::json!({
+                    "product_id": req_data.product_id,
+                    "quantity_deducted": req_data.quantity,
+                    "remaining_stock": new_stock,
+                });
+                let inv_event = crate::orchestration::departments::types::DepartmentEvent {
+                    id: uuid::Uuid::new_v4().to_string(),
+                    tenant_id: tenant_id.clone(),
+                    event_type: "InventoryUpdated".to_string(),
+                    payload: inv_event_payload,
+                };
+                let _ = hub.publish_mesh_event(::server_ohc::orchestration::MeshEvent {
+                    event_id: uuid::Uuid::new_v4().to_string(),
+                    topic: "operations".to_string(),
+                    payload: serde_json::to_vec(&inv_event).unwrap_or_default(),
+                    timestamp: chrono::Utc::now().timestamp(),
+                });
+
                 if new_stock <= 5 {
                     let job_id = uuid::Uuid::new_v4().to_string();
                     let job_payload = serde_json::json!({
@@ -439,6 +449,27 @@ pub async fn commit_inventory_handler(
                     "success": true,
                     "error_message": ""
                 }))).into_response();
+            } else {
+                let current_stock: Option<i32> = sqlx::query_scalar("SELECT inventory_count FROM products WHERE id = $1 AND tenant_id = $2")
+                    .bind(&req_data.product_id)
+                    .bind(&tenant_id)
+                    .fetch_optional(&mut *tx)
+                    .await
+                    .unwrap_or(None);
+
+                let _ = tx.rollback().await;
+
+                if let Some(stock) = current_stock {
+                    return (axum::http::StatusCode::OK, Json(serde_json::json!({
+                        "success": false,
+                        "error_message": format!("Insufficient inventory. Available: {}", stock)
+                    }))).into_response();
+                } else {
+                    return (axum::http::StatusCode::OK, Json(serde_json::json!({
+                        "success": false,
+                        "error_message": "Product not found"
+                    }))).into_response();
+                }
             }
         }
         let _ = tx.rollback().await;
