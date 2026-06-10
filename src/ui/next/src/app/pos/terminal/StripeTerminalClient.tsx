@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { loadStripeTerminal } from '@stripe/terminal-js';
-import { SyncManager } from '../../../lib/sync/SyncManager';
+import { OfflineStore } from '../../../lib/sync/OfflineStore';
 
 export default function StripeTerminalClient({ amount, productId, tenantId }: { amount: number, productId: string, tenantId: string }) {
   const [terminal, setTerminal] = useState<any>(null);
@@ -146,20 +146,7 @@ export default function StripeTerminalClient({ amount, productId, tenantId }: { 
              payload: JSON.stringify([{ product_id: productId, quantity: 1 }]),
              timestamp: new Date().toISOString()
           };
-          // Also sync with OfflineStore directly to match page.tsx expectations
-          const existingTxs = JSON.parse(localStorage.getItem('ohc_offline_pos_tx') || '[]');
-          existingTxs.push(tx);
-          localStorage.setItem('ohc_offline_pos_tx', JSON.stringify(existingTxs));
-
-          SyncManager.getInstance().enqueue({
-             type: 'tap_to_pay',
-             id: transactionId,
-             product_id: productId,
-             amount: amount,
-             quantity: 1,
-             idempotency_key: `idemp_${transactionId}`,
-             currency: 'usd'
-          });
+          OfflineStore.addPosTransaction(tx);
           setStatus('Payment saved offline. Will sync when network is restored.');
           setReserving(false);
        }, 1500);

@@ -40,9 +40,21 @@ export default function TerminalPage() {
   const [syncCount, setSyncCount] = useState(0);
   const [orderStatus, setOrderStatus] = useState('');
   const [reserving, setReserving] = useState(false);
+  const [inventory, setInventory] = useState<any[]>([]);
+  const [selectedProduct, setSelectedProduct] = useState<any>(null);
 
   useEffect(() => {
     if (navigator.onLine) {
+      fetch('/api/pos/inventory')
+        .then(res => res.json())
+        .then(data => {
+          setInventory(data);
+          OfflineStore.setInventory(data);
+        })
+        .catch(() => {
+          setInventory(OfflineStore.getInventory());
+        });
+
       fetch('/api/staff')
         .then(res => res.json())
         .then(data => {
@@ -81,6 +93,7 @@ export default function TerminalPage() {
         const events = OfflineStore.getEvents();
         const posTransactions = OfflineStore.getPosTransactions();
 
+        setInventory(OfflineStore.getInventory());
         if (events.length > 0 || posTransactions.length > 0) {
           setSyncCount(events.length + posTransactions.length);
           setSyncing(true);
@@ -178,8 +191,10 @@ export default function TerminalPage() {
     setClockedIn(type === 'CLOCK_IN');
   };
 
-  const handleNewOrder = async () => {
-    const basePrice = 5000; // $50.00
+  const handleNewOrder = async (product?: any) => {
+    const p = product || selectedProduct || { id: 'prod_123', price_cents: 5000, name: 'Custom Amount' };
+    setSelectedProduct(p);
+    const basePrice = p.price_cents || p.price || 5000;
     const converted = convert(basePrice, 'USD', currency);
     if (converted.isOffline) {
       setOfflineConversion(true);
@@ -193,7 +208,7 @@ export default function TerminalPage() {
         id: `tx_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         amount_cents: converted.amount,
         currency: currency,
-        payload: JSON.stringify([{ product_id: 'prod_123', quantity: 1 }]),
+        payload: JSON.stringify([{ product_id: p.id, quantity: 1 }]),
         client_id: 'terminal_1',
         timestamp: new Date().toISOString()
       };
@@ -207,7 +222,7 @@ export default function TerminalPage() {
         const reserveRes = await fetch('/api/v1/payments/terminal/reserve', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ tenant_id: activeStaff?.tenant_id || "default_tenant", product_id: 'prod_123', quantity: 1, ttl_seconds: 15 })
+          body: JSON.stringify({ tenant_id: activeStaff?.tenant_id || "default_tenant", product_id: p.id, quantity: 1, ttl_seconds: 15 })
         });
 
         const reserveData = await reserveRes.json();
@@ -223,7 +238,7 @@ export default function TerminalPage() {
         await fetch('/api/v1/payments/terminal/commit', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ tenant_id: activeStaff?.tenant_id || "default_tenant", product_id: 'prod_123', quantity: 1, lock_id: reserveData.lock_id })
+          body: JSON.stringify({ tenant_id: activeStaff?.tenant_id || "default_tenant", product_id: p.id, quantity: 1, lock_id: reserveData.lock_id })
         });
         setOrderStatus(`${t('Payment Completed')}`);
       } catch (err) {
@@ -258,109 +273,7 @@ export default function TerminalPage() {
 
            <div className="grid grid-cols-3 gap-4 sm:gap-6 w-full max-w-[280px]">
              {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => (
-               <button
-                 key={num}
-                 onClick={() => handlePinEntry(num.toString())}
-                 className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-gray-800 text-3xl font-light hover:bg-gray-700 active:bg-gray-600 transition-colors flex items-center justify-center mx-auto min-h-[44px] min-w-[44px]"
-               >
-                 {num}
-               </button>
-             ))}
-             <div className="col-start-2">
-               <button
-                 onClick={() => handlePinEntry('0')}
-                 className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-gray-800 text-3xl font-light hover:bg-gray-700 active:bg-gray-600 transition-colors flex items-center justify-center mx-auto min-h-[44px] min-w-[44px]"
-               >
-                 0
-               </button>
-             </div>
-             <div className="col-start-3 flex items-center justify-center">
-               <button
-                 onClick={handleClear}
-                 disabled={!pin}
-                 className="text-gray-400 hover:text-white disabled:opacity-40 disabled:hover:text-gray-400 min-h-[44px] min-w-[44px]"
-               >
-                 {t('Clear')}
-               </button>
-             </div>
-           </div>
 
-           {syncing && <div className="absolute bottom-4 left-4 text-xs text-blue-400">{t('Syncing...')}</div>}
-        </div>
-      </div>
-    );
-  }
-
-  return (
-     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 font-inter md:py-10 w-full overflow-hidden">
-      <div className="w-full max-w-[375px] min-h-[100dvh] md:h-[812px] md:min-h-0 bg-white md:shadow-2xl overflow-hidden flex flex-col relative border-x border-gray-200">
-
-        {/* Header */}
-        <div className="pt-12 pb-6 px-6 bg-white/65 backdrop-blur-[30px] border-b border-gray-200 sticky top-0 z-10 flex justify-between items-center">
-          <div>
-            <h1 className="text-2xl font-bold font-outfit text-gray-900 tracking-tight">{activeStaff.name}</h1>
-            <p className="text-blue-600 font-medium text-sm mt-1">{t(activeStaff.role)}</p>
-            {isOffline ? (
-              <span className="inline-block mt-1 text-yellow-800 font-bold text-xs bg-yellow-100 px-2 py-1 rounded border border-yellow-200 shadow-sm">{t('Offline Mode')}</span>
-            ) : (
-              <span className="inline-block mt-1 text-green-800 font-bold text-xs bg-green-100 px-2 py-1 rounded border border-green-200 shadow-sm">{t('Online')}</span>
-            )}
-          </div>
-          <div className="flex items-center gap-3">
-            <LocalizationToggle />
-            <button onClick={handleLock} className="text-sm font-semibold text-gray-500 hover:text-gray-900">
-              {t('Lock')}
-            </button>
-          </div>
-        </div>
-
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto px-4 py-6 bg-gray-50">
-
-           <div className="app-card rounded-2xl p-6 shadow-sm border border-gray-100 mb-6 text-center">
-             <div className={`w-16 h-16 mx-auto rounded-full flex items-center justify-center mb-4 ${clockedIn ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'}`}>
-                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-             </div>
-             <h2 className="text-xl font-bold font-outfit text-gray-900 mb-1">
-               {clockedIn ? t('Clocked In') : t('Not Clocked In')}
-             </h2>
-             <p className="text-sm text-gray-500 mb-6">
-                {clockedIn ? t('Your time is being tracked locally.') : t('Clock in to start your shift.')}
-             </p>
-
-             {clockedIn ? (
-               <button
-                 onClick={() => handleClockAction('CLOCK_OUT')}
-                 className="w-full py-4 rounded-xl bg-red-50 text-red-600 font-bold hover:bg-red-100 transition-colors"
-               >
-                 {t('Clock Out')}
-               </button>
-             ) : (
-               <button
-                 onClick={() => handleClockAction('CLOCK_IN')}
-                 className="w-full py-4 rounded-xl bg-blue-600 text-white font-bold shadow-md shadow-blue-500/20 hover:bg-blue-700 transition-colors"
-               >
-                 {t('Clock In')}
-               </button>
-             )}
-           </div>
-
-           {/* Role-based UI rendering */}
-           <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4 px-2 mt-8">{t('Quick Actions')}</h3>
-
-           <div className="grid grid-cols-2 gap-4">
-             <button
-                onClick={handleNewOrder}
-                disabled={reserving}
-                className={`bg-white p-4 rounded-2xl shadow-sm border border-gray-100 text-left ${reserving ? 'opacity-50' : 'active:scale-[0.98]'}`}
-             >
-               <div className="text-blue-500 mb-2">
-                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
-               </div>
-               <span className="font-medium text-gray-900">{t('New Order')}</span>
-             </button>
 
              {activeStaff.role === 'Manager' && (
                <button className="app-card p-4 rounded-2xl shadow-sm border border-gray-100 text-left active:scale-[0.98]">
@@ -379,7 +292,7 @@ export default function TerminalPage() {
              </button>
            </div>
 
-           <StripeTerminalClient amount={activeStaff?.id ? 5000 : 0} productId="prod_123" tenantId={activeStaff?.tenant_id || "default_tenant"} />
+           {selectedProduct && <StripeTerminalClient amount={selectedProduct.price_cents || selectedProduct.price || 5000} productId={selectedProduct.id} tenantId={activeStaff?.tenant_id || "default_tenant"} />}
            {orderStatus && <p className="mt-4 rounded-xl bg-blue-50 px-4 py-3 text-sm font-semibold text-blue-800" role="status">{orderStatus}</p>}
         </div>
 
