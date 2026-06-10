@@ -121,15 +121,56 @@ function CheckoutContent() {
 
   const handlePayment = async (isSub = false) => {
     setIsProcessing(true);
-    setCheckoutStatus("Simulating local POS / Tap to Pay processing...");
+    setCheckoutStatus("Reserving inventory...");
     setIsSubscription(isSub);
-    // Simulate API delay for tap to pay
-    setTimeout(() => {
-      setReferralLink("https://ohc.inc/ref/" + Math.random().toString(36).substring(7));
-      setShowSuccessModal(true);
+
+    // Attempt to reserve inventory
+    try {
+      const reserveRes = await fetch("/api/v1/payments/terminal/reserve", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-tenant-id": tenant },
+        body: JSON.stringify({
+          tenant_id: tenant,
+          product_id: "prod_123", // Default product for checkout
+          quantity: 1,
+          ttl_seconds: 15,
+        }),
+      });
+      const reserveData = await reserveRes.json();
+
+      if (!reserveData.success) {
+        setCheckoutStatus("Sorry, this item was just purchased in-store.");
+        setIsProcessing(false);
+        return;
+      }
+
+      const lockId = reserveData.lock_id;
+      setCheckoutStatus("Simulating local POS / Tap to Pay processing...");
+
+      // Simulate API delay for tap to pay
+      setTimeout(async () => {
+        // Commit inventory after payment success
+        await fetch("/api/v1/payments/terminal/commit", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "x-tenant-id": tenant },
+          body: JSON.stringify({
+            tenant_id: tenant,
+            product_id: "prod_123",
+            quantity: 1,
+            lock_id: lockId,
+          }),
+        });
+
+        setReferralLink("https://ohc.inc/ref/" + Math.random().toString(36).substring(7));
+        setShowSuccessModal(true);
+        setIsProcessing(false);
+        setCheckoutStatus("");
+      }, 1500);
+
+    } catch (e: any) {
+      setCheckoutStatus("Failed to process payment: " + e.message);
       setIsProcessing(false);
-      setCheckoutStatus("");
-    }, 1500);
+    }
   };
 
   return (
