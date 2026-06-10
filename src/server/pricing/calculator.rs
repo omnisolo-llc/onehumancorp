@@ -83,9 +83,10 @@ pub fn calculate_cost_cents(model: &str, input_tokens: i64, output_tokens: i64, 
 
 pub fn calculate_cost(model: &str, input_tokens: i64, output_tokens: i64, cached_input_tokens: i64) -> f64 {
     let pricing = get_pricing(model);
+    let uncached_input_tokens = std::cmp::max(0, input_tokens - cached_input_tokens);
 
     // Per 1M tokens
-    let input_cost = (input_tokens as f64 / 1_000_000.0) * pricing.input_cost;
+    let input_cost = (uncached_input_tokens as f64 / 1_000_000.0) * pricing.input_cost;
     let output_cost = (output_tokens as f64 / 1_000_000.0) * pricing.output_cost;
     let cached_cost = (cached_input_tokens as f64 / 1_000_000.0) * pricing.cached_cost;
 
@@ -99,7 +100,8 @@ pub fn calculate_cost_with_config_cents(input_tokens: i64, output_tokens: i64, c
 }
 
 pub fn calculate_cost_with_config(input_tokens: i64, output_tokens: i64, cached_input_tokens: i64, local_embedding_tokens: i64, config: &CostConfig) -> f64 {
-    let input_cost = input_tokens as f64 * config.cost_per_input_token;
+    let uncached_input_tokens = std::cmp::max(0, input_tokens - cached_input_tokens);
+    let input_cost = uncached_input_tokens as f64 * config.cost_per_input_token;
     let output_cost = output_tokens as f64 * config.cost_per_output_token;
     let cached_cost = cached_input_tokens as f64 * config.cost_per_cached_input_token;
     let embedding_cost = local_embedding_tokens as f64 * config.cost_per_local_embedding;
@@ -210,13 +212,20 @@ mod tests {
         let cost = calculate_cost("claude-3-opus", 1000000, 1000000, 0);
         assert_eq!(cost, 15.00 + 75.00);
 
-        // Test with cached tokens
+        // Test with cached tokens: 100% cached
         let cost = calculate_cost("claude-3.5-sonnet", 1000000, 0, 1000000);
-        assert_eq!(cost, 3.00 + 0.30);
+        assert_eq!(cost, 0.30);
 
-        // Test with unknown model (fallback)
+        // Test with cached tokens: partially cached
+        let cost = calculate_cost("claude-3.5-sonnet", 1000000, 1000000, 500000);
+        let expected_input_cost = 0.5 * 3.00; // 500k uncached
+        let expected_cached_cost = 0.5 * 0.30; // 500k cached
+        let expected_output_cost = 15.00;
+        assert_eq!(cost, expected_input_cost + expected_cached_cost + expected_output_cost);
+
+        // Test with unknown model (fallback) where cached is equal to input
         let cost = calculate_cost("unknown-model", 1000000, 1000000, 1000000);
-        assert_eq!(cost, 3.00 + 15.00 + 1.50);
+        assert_eq!(cost, 15.00 + 1.50);
 
         // Test with zero cost models
         let cost = calculate_cost("ollama-llama3", 1000000, 1000000, 1000000);
@@ -264,11 +273,17 @@ mod tests {
             ..Default::default()
         };
 
+        // Out of 1000 input tokens, 200 are cached, so 800 are uncached.
+        // Uncached cost = 800 * 0.001 = 0.8
+        // Output cost = 500 * 0.002 = 1.0
+        // Cached cost = 200 * 0.0005 = 0.1
+        // Embedding cost = 100 * 0.0001 = 0.01
+        // Total = 1.91. After 10% discount -> 1.91 * 0.9 = 1.719
         let cost = calculate_cost_with_config(1000, 500, 200, 100, &config);
-        assert_eq!(cost, 1.899);
+        assert_eq!(cost, 1.719);
 
         let cost_cents = calculate_cost_with_config_cents(1000, 500, 200, 100, &config);
-        assert_eq!(cost_cents, 190);
+        assert_eq!(cost_cents, 172);
     }
 
     #[test]
