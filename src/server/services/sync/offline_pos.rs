@@ -51,7 +51,7 @@ impl CRDTOfflineSynchronizer {
                 Ok(Some(_)) => {
                     // Record successful pos offline transaction
                     let res = sqlx::query(
-                        "INSERT INTO pos_offline_transactions (id, tenant_id, transaction_id, status, amount_cents, currency, payload)
+                        "INSERT INTO pos_offline_transactions (id, tenant_id, client_id, status, amount_cents, currency, payload)
                          VALUES ($1, $2, $3, 'RESOLVED', $4, $5, $6::jsonb)
                          ON CONFLICT DO NOTHING"
                     )
@@ -87,7 +87,7 @@ impl CRDTOfflineSynchronizer {
 
             // Record failure in pos_offline_transactions
             let _ = sqlx::query(
-                "INSERT INTO pos_offline_transactions (id, tenant_id, transaction_id, status, amount_cents, currency, payload)
+                "INSERT INTO pos_offline_transactions (id, tenant_id, client_id, status, amount_cents, currency, payload)
                  VALUES ($1, $2, $3, 'FAILED', $4, $5, $6::jsonb)
                  ON CONFLICT DO NOTHING"
             )
