@@ -732,7 +732,94 @@ pub async fn bench_billing_api_response_time() {
 }
 
 pub async fn bench_advisory_insights_latency() {
-    bench_get_analytics().await;
+    println!("Benchmarking Advisory Insights Handler Response Time...");
+
+    let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
+    let iterations = 50;
+
+    let db = if database_url.starts_with("sqlite") {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .acquire_timeout(std::time::Duration::from_secs(1))
+            .connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
+
+        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS tenants (id TEXT, name TEXT, industry TEXT, plan_tier TEXT)").execute(&pool).await;
+        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS orders (id TEXT, tenant_id TEXT, total_amount REAL, status TEXT)").execute(&pool).await;
+        let _ = sqlx::query("INSERT INTO tenants (id, name, industry, plan_tier) VALUES ('benchmark_tenant', 'Benchmark Biz', 'Tech', 'pro')").execute(&pool).await;
+        for i in 0..5 {
+            let _ = sqlx::query("INSERT INTO orders (id, tenant_id, total_amount, status) VALUES ($1, 'benchmark_tenant', 10.0, 'pending')").bind(format!("order_{}", i)).execute(&pool).await;
+        }
+
+        let pg_pool = sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://dummy:dummy@localhost/dummy").unwrap();
+        crate::db::DB { pool: pg_pool, store: crate::db::DbStore::Sqlite(pool) }
+    } else {
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
+
+        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS tenants (id TEXT, name TEXT, industry TEXT, plan_tier TEXT)").execute(&pool).await;
+        let _ = sqlx::query("CREATE TABLE IF NOT EXISTS orders (id TEXT, tenant_id TEXT, total_amount REAL, status TEXT)").execute(&pool).await;
+        let _ = sqlx::query("INSERT INTO tenants (id, name, industry, plan_tier) VALUES ('benchmark_tenant', 'Benchmark Biz', 'Tech', 'pro') ON CONFLICT DO NOTHING").execute(&pool).await;
+        for i in 0..5 {
+            let _ = sqlx::query("INSERT INTO orders (id, tenant_id, total_amount, status) VALUES ($1, 'benchmark_tenant', 10.0, 'pending')").bind(format!("order_bench_{}", i)).execute(&pool).await;
+        }
+
+        crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres }
+    };
+
+    let db_arc = std::sync::Arc::new(db);
+    let store_arc = std::sync::Arc::new(crate::auth::Store::new());
+
+    // Generate a valid token
+    let claims = ::server_common::Claims {
+        sub: "test_user".to_string(),
+        exp: (chrono::Utc::now() + chrono::Duration::hours(1)).timestamp(),
+        iat: chrono::Utc::now().timestamp(),
+        organization_id: Some("benchmark_tenant".to_string()),
+        username: "test".to_string(),
+        email: "test@test.com".to_string(),
+        roles: vec![],
+        session_id: None,
+        jti: "test_jti".to_string(),
+    };
+
+    let token = jsonwebtoken::encode(
+        &jsonwebtoken::Header::default(),
+        &claims,
+        &jsonwebtoken::EncodingKey::from_secret(&std::env::var("JWT_SECRET").unwrap_or_else(|_| "dummy_secret_for_test".to_string()).into_bytes()),
+    ).unwrap();
+
+    // Setup mock API response in cache outside the timing loop
+    use sha2::{Digest, Sha256};
+    let mut hasher = Sha256::new();
+    hasher.update(b"Benchmark Biz:Tech:5");
+    let stats_hash = format!("{:x}", hasher.finalize());
+    let insight_cache_key = format!("advisory:insight:{}:{}", "benchmark_tenant", stats_hash);
+    let insight_cache = crate::ADVISORY_INSIGHT_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(None));
+    insight_cache.set(&insight_cache_key, "dummy insight".to_string(), std::time::Duration::from_secs(3600)).await;
+
+    let mut fetch_times = Vec::new();
+    for _ in 0..iterations {
+        let mut headers = axum::http::HeaderMap::new();
+        headers.insert(
+            axum::http::header::AUTHORIZATION,
+            axum::http::HeaderValue::from_str(&format!("Bearer {}", token)).unwrap(),
+        );
+
+        let db_arc_clone = db_arc.clone();
+        let store_arc_clone = store_arc.clone();
+
+        let start = std::time::Instant::now();
+        let _res = crate::advisory_insights_handler(db_arc_clone, store_arc_clone, headers.clone()).await;
+
+        fetch_times.push(start.elapsed().as_micros());
+    }
+
+    fetch_times.sort();
+    if !fetch_times.is_empty() {
+        let p50 = fetch_times[iterations / 2];
+        let p95 = fetch_times[((iterations as f32 * 0.95) as usize).min(iterations.saturating_sub(1))];
+        let p99 = fetch_times[((iterations as f32 * 0.99) as usize).min(iterations.saturating_sub(1))];
+        println!("Advisory Insights Fetch: p50: {} us, p95: {} us, p99: {} us", p50, p95, p99);
+    }
 }
 
     #[tokio::test]
