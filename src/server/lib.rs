@@ -2655,6 +2655,12 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         db: db.clone(),
     };
 
+    let reverse_tunnel_server = crate::agents::mcp::proxy::server::ReverseTunnelServer::new(std::sync::Arc::new(db.pool.clone()));
+
+    let relay_webhook_router = axum::Router::new()
+        .route("/api/v1/relay/webhook/:agent_id", axum::routing::post(api::mcp_webhook::handle_relay_webhook))
+        .with_state(reverse_tunnel_server.clone());
+
     let webhook_router = axum::Router::new()
         .route("/api/v1/webhooks/stripe", axum::routing::post(api::billing_webhook::stripe_webhook_handler))
         .route("/api/v1/webhooks/mercadopago", axum::routing::post(api::billing_webhook::mercadopago_webhook_handler))
@@ -4460,6 +4466,7 @@ async fn create_ui_bom_item_handler(
             }))
         }))
         .merge(webhook_router)
+        .merge(relay_webhook_router)
         .merge(ohc_builtin_agent::visual_workflow_client::create_router(std::sync::Arc::new(ohc_builtin_agent::visual_workflow_client::VisualWorkflowState {
             default_agent: std::sync::Arc::new(ohc_builtin_agent::agent::Agent::new(std::sync::Arc::new(ohc_builtin_agent::llm::openai::OpenAIClient::new("dummy".to_string())), vec![])),
             tools: vec![],
@@ -4605,6 +4612,7 @@ async fn create_ui_bom_item_handler(
 
     Server::builder()
         .add_service(HubServiceServer::with_interceptor(hub_service, spiffe_interceptor))
+        .add_service(::server_ohc::mcp_proxy::mcp_reverse_tunnel_service_server::McpReverseTunnelServiceServer::with_interceptor(reverse_tunnel_server.clone(), spiffe_interceptor))
         .add_service(::server_ohc::collective::collective_service_server::CollectiveServiceServer::with_interceptor(collective_service, spiffe_interceptor))
         .add_service(::server_ohc::orchestration::auth_service_server::AuthServiceServer::new(::server_auth::AuthServiceServerImpl::new(store)))
         .add_service(GrowthServiceServer::with_interceptor(growth_service, spiffe_interceptor))

@@ -297,6 +297,30 @@ fn upstream_path_for(class: WebhookTunnelClass, service: &str) -> Option<&'stati
     }
 }
 
+use crate::agents::mcp::proxy::server::ReverseTunnelServer;
+use axum::extract::Path;
+use axum::body::Bytes;
+
+pub async fn handle_relay_webhook(
+    State(server): State<ReverseTunnelServer>,
+    Path(agent_id): Path<String>,
+    body: Bytes,
+) -> impl IntoResponse {
+    match server.forward_webhook(&agent_id, body.to_vec()).await {
+        Ok(_) => (StatusCode::OK, Json(McpWebhookResponse {
+            success: true,
+            message: "Webhook forwarded successfully".to_string(),
+        })),
+        Err(e) => {
+            tracing::error!("Failed to forward webhook to agent {}: {}", agent_id, e);
+            (StatusCode::NOT_FOUND, Json(McpWebhookResponse {
+                success: false,
+                message: "Agent not connected or error forwarding".to_string(),
+            }))
+        }
+    }
+}
+
 pub async fn handle_mcp_webhook(
     State(hub): State<Arc<Hub>>,
     headers: HeaderMap,
