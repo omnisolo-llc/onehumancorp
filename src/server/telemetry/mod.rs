@@ -1312,8 +1312,8 @@ pub async fn record_storage_rw_cost(
     operation: &str,
     size_bytes: i64,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let cost_cents = (size_bytes as f64 * 0.00000001) as f32;
-    buffer_metric(
+    let cost_cents = (size_bytes as f64 * 0.00000001).round() as i64;
+    buffer_metric_i64(
         pool,
         "ohc_storage_rw_cost",
         "counter",
@@ -1321,6 +1321,7 @@ pub async fn record_storage_rw_cost(
         serde_json::json!({
             "organization_id": organization_id,
             "operation": operation,
+            "cost_cents": cost_cents,
         }),
     )
     .await
@@ -1331,13 +1332,15 @@ pub async fn record_email_send_cost(
     organization_id: &str,
     count: i64,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    buffer_metric(
+    let cost_cents = count * 1; // Assuming 1 cent per email
+    buffer_metric_i64(
         pool,
         "ohc_email_send_cost",
         "counter",
-        count as f32,
+        cost_cents,
         serde_json::json!({
             "organization_id": organization_id,
+            "cost_cents": cost_cents,
         }),
     )
     .await
