@@ -21,6 +21,10 @@ vi.mock('../components/PoweredByOHC', () => ({
   PoweredByOHC: () => <div data-testid="powered-by-ohc" />,
 }));
 
+vi.mock('../components/OneTapReferral', () => ({
+  OneTapReferral: () => <div data-testid="one-tap-referral" />,
+}));
+
 describe('CheckoutPage', () => {
   afterEach(() => {
     mockUseSearchParams.mockImplementation(() => new URLSearchParams(''));
@@ -99,6 +103,7 @@ beforeEach(() => {
 
     await waitFor(() => {
       expect(screen.getByText('Payment Successful!')).toBeDefined();
+      expect(screen.getByTestId('one-tap-referral')).toBeDefined();
       expect(screen.getByText(/Your order is confirmed/)).toBeDefined();
     }, { timeout: 2000 });
   });
