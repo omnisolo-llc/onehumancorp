@@ -1321,7 +1321,7 @@ impl Agent {
 
                         if let Some(tool) = tt_clone.iter().find(|t| t.name == name) {
                             if let Err(e) = Agent::validate_schema(&args, &tool.parameters) {
-                                return (id, Err(crate::types::ToolError::LlmRecoverable(crate::types::format_pydantic_error_string(&e, Some(&args.to_string())))));
+                                return (id, Err(crate::types::ToolError::LlmRecoverable(crate::types::format_pydantic_error_string(&e, Some(&args.to_string()), None))));
                             }
                             let max_retries = std::cmp::min(cfg_max_retries, 2); // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
                             let res = crate::tool_executor_engine::ToolExecutionEngine::execute_tool_with_langgraph_mechanics(
@@ -1427,7 +1427,7 @@ impl Agent {
                             tool_results[idx] = crate::types::ToolResult {
                                 tool_call_id: id,
                                 content: "".to_string(),
-                                error: crate::types::format_pydantic_error_string(&e, Some(&args.to_string()))
+                                error: crate::types::format_pydantic_error_string(&e, Some(&args.to_string()), None)
                             };
                             continue;
                         }
