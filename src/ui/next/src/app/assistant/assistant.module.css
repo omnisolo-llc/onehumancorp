@@ -303,7 +303,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 7px;
+  border-radius: 8px;
   border: 1px solid transparent;
   text-decoration: none;
   cursor: pointer;
@@ -436,7 +436,7 @@
   width: 100%;
   min-width: 0;
   border: 1px solid #cbd5e1;
-  border-radius: 7px;
+  border-radius: 8px;
   background: #fff;
   color: #172033;
   font-size: 13px;
