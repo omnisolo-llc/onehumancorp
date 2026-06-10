@@ -13,7 +13,7 @@ test.describe('Billing Services & Plan Limits E2E', () => {
 
     // Wait for the specific usage component to render
     await expect(page.locator('text=Your Current Usage')).toBeVisible({ timeout: 15000 });
-    await expect(page.locator('text=AI Actions Used')).toBeVisible();
-    await expect(page.locator('text=Storage Used')).toBeVisible();
+    await expect(page.locator('text=AI actions used this month')).toBeVisible();
+    await expect(page.locator('text=Storage used')).toBeVisible();
   });
 });
