@@ -118,6 +118,40 @@ impl PromptCache {
         let now = Instant::now();
         self.cache.retain(|_, entry| now.duration_since(entry.created_at) <= entry.ttl);
     }
+
+    /// Intelligently truncates a context string to fit within a given token limit.
+    /// This is a fast heuristic using 4 chars per token. Safely handles UTF-8 string slicing.
+    pub fn truncate_context(context: &str, max_tokens: usize) -> String {
+        let max_chars = max_tokens * 4;
+
+        let mut char_count = 0;
+        let mut byte_index = context.len();
+
+        for (i, _) in context.char_indices() {
+            if char_count == max_chars {
+                byte_index = i;
+                break;
+            }
+            char_count += 1;
+        }
+
+        if char_count < max_chars && byte_index == context.len() {
+            return context.to_string();
+        }
+
+        let mut truncated = String::from(&context[..byte_index]);
+
+        // Try to truncate at a word boundary to keep it "intelligent"
+        if let Some(last_space) = truncated.rfind(char::is_whitespace) {
+            // Keep at least some content if the last space is too early
+            if last_space > byte_index / 2 {
+                truncated.truncate(last_space);
+            }
+        }
+
+        truncated.push_str("...");
+        truncated
+    }
 }
 
 #[cfg(test)]
@@ -215,5 +249,26 @@ mod tests {
 
         thread::sleep(Duration::from_millis(20));
         assert!(cache.get("What is the capital of France?").is_none());
+    }
+
+    #[test]
+    fn test_truncate_context() {
+        let text = "This is a very long string that we need to truncate to save some tokens and money.";
+
+        // No truncation needed
+        let res = PromptCache::truncate_context(text, 100);
+        assert_eq!(res, text);
+
+        // Truncate based on 4 chars per token
+        // "This" = 4 chars (1 token). 10 tokens = 40 chars
+        // text[..40] -> "This is a very long string that we need "
+        // Last space at index 39
+        let res2 = PromptCache::truncate_context(text, 10);
+        assert!(res2.len() <= 43); // 39 chars + "..."
+        assert!(res2.ends_with("..."));
+
+        // Extreme truncation
+        let res3 = PromptCache::truncate_context(text, 1);
+        assert_eq!(res3, "This...");
     }
 }
