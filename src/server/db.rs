@@ -31,7 +31,7 @@ pub fn get_pool() -> PgPool {
                     Ok(true)
                 })
             })
-            .acquire_timeout(std::time::Duration::from_millis(500))
+            .max_connections(100).acquire_timeout(std::time::Duration::from_millis(15000))
             .connect_lazy(&database_url)
             .expect("Failed to connect to DB pool lazily")
     }).clone()
