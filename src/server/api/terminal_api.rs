@@ -667,7 +667,40 @@ pub async fn create_payment_intent_handler(
             req_data.quantity,
             req_data.order_id.as_deref(),
         ).await {
-            Ok(client_secret) => Json(Ok(PaymentIntentResponse { client_secret })),
+            Ok(client_secret) => {
+                if let (Some(product_id), Some(quantity)) = (&req_data.product_id, req_data.quantity) {
+                    let pool = crate::db::get_pool();
+                    if let Ok(mut tx) = pool.begin().await {
+                        let current_stock = sqlx::query("SELECT inventory_count FROM products WHERE id = $1 AND tenant_id = $2 FOR UPDATE")
+                            .bind(product_id).bind(&tenant_id).fetch_optional(&mut *tx).await.unwrap_or(None);
+
+                        if let Some(row) = current_stock {
+                            let stock: i32 = sqlx::Row::get(&row, "inventory_count");
+                            if stock >= quantity {
+                                let new_stock = stock - quantity;
+                                if let Ok(_) = sqlx::query("UPDATE products SET inventory_count = $1 WHERE id = $2 AND tenant_id = $3")
+                                    .bind(new_stock).bind(product_id).bind(&tenant_id).execute(&mut *tx).await
+                                {
+                                    let _ = tx.commit().await;
+                                } else {
+                                    let _ = tx.rollback().await;
+                                    return Json(Err("Failed to update inventory".to_string()));
+                                }
+                            } else {
+                                let _ = tx.rollback().await;
+                                return Json(Err("Insufficient inventory".to_string()));
+                            }
+                        } else {
+                            let _ = tx.rollback().await;
+                            return Json(Err("Product not found".to_string()));
+                        }
+                    } else {
+                        return Json(Err("Database error".to_string()));
+                    }
+                }
+
+                Json(Ok(PaymentIntentResponse { client_secret }))
+            },
             Err(e) => Json(Err(e)),
         },
         Err(e) => Json(Err(e)),

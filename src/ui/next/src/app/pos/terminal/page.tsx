@@ -354,7 +354,7 @@ export default function TerminalPage() {
              <button
                 onClick={handleNewOrder}
                 disabled={reserving}
-                className={`bg-white p-4 rounded-2xl shadow-sm border border-gray-100 text-left ${reserving ? 'opacity-50' : 'active:scale-[0.98]'}`}
+                className={`bg-white/60 backdrop-blur-xl saturate-[210%] p-4 rounded-[20px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white/60 text-left transition-all ${reserving ? 'opacity-50' : 'hover:bg-white/80 active:scale-[0.98]'}`}
              >
                <div className="text-blue-500 mb-2">
                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
@@ -363,7 +363,7 @@ export default function TerminalPage() {
              </button>
 
              {activeStaff.role === 'Manager' && (
-               <button className="app-card p-4 rounded-2xl shadow-sm border border-gray-100 text-left active:scale-[0.98]">
+               <button className="bg-white/60 backdrop-blur-xl saturate-[210%] p-4 rounded-[20px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white/60 text-left transition-all hover:bg-white/80 active:scale-[0.98]">
                  <div className="text-purple-500 mb-2">
                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
                  </div>
@@ -371,7 +371,7 @@ export default function TerminalPage() {
                </button>
              )}
 
-             <button className="app-card p-4 rounded-2xl shadow-sm border border-gray-100 text-left active:scale-[0.98]">
+             <button className="bg-white/60 backdrop-blur-xl saturate-[210%] p-4 rounded-[20px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white/60 text-left transition-all hover:bg-white/80 active:scale-[0.98]">
                <div className="text-orange-500 mb-2">
                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                </div>
@@ -379,7 +379,53 @@ export default function TerminalPage() {
              </button>
            </div>
 
-           <StripeTerminalClient amount={activeStaff?.id ? 5000 : 0} productId="prod_123" tenantId={activeStaff?.tenant_id || "default_tenant"} />
+           {/* Mode Toggle */}
+           <div className="flex bg-gray-200/50 p-1 rounded-[14px] mb-6 mt-8 shadow-inner">
+             <button
+               onClick={() => setViewMode('numpad')}
+               className={`flex-1 py-2.5 rounded-[10px] text-sm font-bold transition-all ${viewMode === 'numpad' ? 'bg-white shadow-[0_2px_8px_rgba(0,0,0,0.08)] text-gray-900' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200/50'}`}
+             >
+               Quick Charge
+             </button>
+             <button
+               onClick={() => setViewMode('catalog')}
+               className={`flex-1 py-2.5 rounded-[10px] text-sm font-bold transition-all ${viewMode === 'catalog' ? 'bg-white shadow-[0_2px_8px_rgba(0,0,0,0.08)] text-gray-900' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200/50'}`}
+             >
+               Catalog
+             </button>
+           </div>
+
+           {viewMode === 'numpad' && (
+             <div className="mb-8">
+               <div className="bg-white/60 backdrop-blur-xl saturate-[210%] rounded-[24px] p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white/60 mb-4 text-center">
+                 <span className="text-gray-400 text-xl font-semibold align-top mt-1.5 mr-0.5 inline-block">$</span>
+                 <span className="text-[56px] font-bold font-outfit text-gray-900 tracking-tighter leading-none">
+                   {(amount / 100).toFixed(2)}
+                 </span>
+               </div>
+
+               <div className="grid grid-cols-3 gap-3">
+                 {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => (
+                   <button key={num} onClick={() => { setAmount(prev => Math.min(prev * 10 + num, 99999900)); setProductId(null); }} className="bg-white/80 backdrop-blur-md border border-white/60 rounded-[20px] min-h-[64px] text-2xl font-semibold text-gray-800 shadow-[0_2px_8px_rgb(0,0,0,0.04)] hover:bg-white active:scale-[0.96] transition-all">
+                     {num}
+                   </button>
+                 ))}
+                 <button onClick={() => { setAmount(0); setProductId(null); }} className="bg-red-50/80 backdrop-blur-md border border-red-100/60 rounded-[20px] min-h-[64px] text-red-500 font-bold shadow-[0_2px_8px_rgb(0,0,0,0.04)] hover:bg-red-100 active:scale-[0.96] transition-all flex items-center justify-center">
+                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                 </button>
+                 <button onClick={() => { setAmount(prev => Math.min(prev * 10, 99999900)); setProductId(null); }} className="bg-white/80 backdrop-blur-md border border-white/60 rounded-[20px] min-h-[64px] text-2xl font-semibold text-gray-800 shadow-[0_2px_8px_rgb(0,0,0,0.04)] hover:bg-white active:scale-[0.96] transition-all">0</button>
+                 <button onClick={() => { setAmount(prev => Math.min(prev * 100, 99999900)); setProductId(null); }} className="bg-white/80 backdrop-blur-md border border-white/60 rounded-[20px] min-h-[64px] text-xl font-bold text-gray-800 shadow-[0_2px_8px_rgb(0,0,0,0.04)] hover:bg-white active:scale-[0.96] transition-all">00</button>
+               </div>
+             </div>
+           )}
+
+           {viewMode === 'catalog' && (
+             <div className="grid grid-cols-1 gap-3 mb-8">
+               {catalogItems.map(item => (<button key={item.id} onClick={() => { setAmount(item.price_cents); setProductId(item.id); }} className={`flex justify-between items-center p-4 rounded-[18px] border transition-all active:scale-[0.98] ${amount === item.price_cents && productId === item.id ? 'border-[#0066FF]/40 bg-[#0066FF]/10 shadow-[0_4px_12px_rgba(0,102,255,0.15)] ring-2 ring-[#0066FF]/20 ring-offset-1' : 'border-white/60 bg-white/60 backdrop-blur-xl shadow-[0_4px_16px_rgba(0,0,0,0.04)] hover:bg-white/90 hover:border-gray-200 hover:shadow-md'}`}><span className="font-semibold text-gray-900">{item.name}</span><span className="font-bold font-outfit text-lg tracking-tight text-[#0066FF]">${(item.price_cents / 100).toFixed(2)}</span></button>))}
+             </div>
+           )}
+
+           <StripeTerminalClient amount={amount} productId={productId || undefined} tenantId={activeStaff?.tenant_id || "default_tenant"} />
            {orderStatus && <p className="mt-4 rounded-xl bg-blue-50 px-4 py-3 text-sm font-semibold text-blue-800" role="status">{orderStatus}</p>}
         </div>
 
