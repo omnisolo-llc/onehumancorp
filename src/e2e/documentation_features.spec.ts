@@ -93,9 +93,22 @@ test.describe('Changelog UX', () => {
   test('should ensure changelog renders beautiful design without placeholder text', async ({ page }) => {
     await page.goto('/changelog');
 
-    await expect(page.getByRole('heading', { name: 'Version 1.0 (Latest)' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Version 1.1 (Latest)' })).toBeVisible();
     // Check that we removed the test line
     await expect(page.locator('text=This is a plain paragraph test line.')).not.toBeVisible();
+  });
+});
+
+test.describe('API Documentation', () => {
+  test('should navigate to API Documentation and load Swagger UI', async ({ page }) => {
+    await page.goto('/api-docs');
+
+    // Check for advanced warning badge
+    await expect(page.getByText('Advanced:')).toBeVisible();
+
+    // Check for swagger-ui wrapper
+    const swaggerUI = page.locator('.swagger-ui');
+    await expect(swaggerUI).toBeVisible({ timeout: 15000 });
   });
 });
 
