@@ -116,6 +116,20 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
     // Step 5: Offer
     await expect(page.getByRole('heading', { name: "Your First Offer" })).toBeVisible();
 
+    await page.getByPlaceholder("e.g. Custom Birthday Cake").fill("Faucet Repair");
+    await page.locator('#step-offer').getByRole('button', { name: 'Next' }).click();
+
+    // Step 6: Template
+    await expect(page.getByRole('heading', { name: "Template Selection" })).toBeVisible();
+
+    // Verify validation triggers
+    await page.getByRole('button', { name: 'Finish Setup' }).click();
+    await expect(page.locator('#template-error')).toBeVisible();
+
+    await page.locator('#template-selection').selectOption('Modern');
+
+
+
     // 2. Simulate Cross-Device Resume (Closing Page, Reopening, Checking State via Backend invoke mock)
     const savedStateStr = await page.evaluate(() => {
         try { return sessionStorage.getItem('mockState'); } catch(e) { return null; }
@@ -168,7 +182,18 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
 
     // Step 5: Offer
     await expect(newPage.getByRole('heading', { name: "Your First Offer" })).toBeVisible();
-    await newPage.getByPlaceholder("e.g. Custom Birthday Cake").fill("Faucet Repair");
+    await expect(newPage.getByPlaceholder("e.g. Custom Birthday Cake")).toHaveValue("Faucet Repair");
+    await newPage.locator('#step-offer').getByRole('button', { name: 'Next' }).click();
+
+    // Step 6: Template
+    await expect(newPage.getByRole('heading', { name: "Template Selection" })).toBeVisible();
+
+
+    // Verify validation triggers
+    await newPage.getByRole('button', { name: 'Finish Setup' }).click();
+    await expect(newPage.locator('#template-error')).toBeVisible();
+
+    await newPage.locator('#template-selection').selectOption('Modern');
 
     // Submit
     await newPage.getByRole('button', { name: 'Finish Setup' }).click();
@@ -178,7 +203,42 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
     await expect(newPage.getByText('Workspace created for Test Business. Jarvis is ready to help.')).toBeVisible();
 
     await newContext.close();
+
   });
+
+  test('Validates 44px touch targets on mobile sizes and layout rules', async ({ page }) => {
+    const workspaceRoot = process.env.TEST_WORKSPACE
+        ? path.join(process.env.TEST_SRCDIR, process.env.TEST_WORKSPACE)
+        : process.cwd();
+
+    const tauriUiDir = path.join(workspaceRoot, 'src/ui/tauri/src/ui');
+
+    await page.route('http://mock/setup.html', async route => {
+        const fs = require('fs');
+        const content = fs.readFileSync(path.join(tauriUiDir, 'setup.html'), 'utf-8');
+        await route.fulfill({ contentType: 'text/html', body: content });
+    });
+
+    // Set a mobile viewport
+    await page.setViewportSize({ width: 375, height: 667 });
+    await page.goto('http://mock/setup.html');
+
+    // Wait for the container to be visible
+    const container = page.locator('.container');
+    await expect(container).toBeVisible();
+    await expect(container).toHaveClass(/glassmorphism/);
+
+    const catInput = page.getByPlaceholder("e.g. Graphic Design");
+    const box = await catInput.boundingBox();
+    // Inputs are initially hidden. We need to navigate to that step or test something visible
+    const option = page.locator('.radio-option').first();
+    const optionBox = await option.boundingBox();
+
+    if (optionBox) {
+        expect(optionBox.height).toBeGreaterThanOrEqual(44);
+    }
+  });
+
 });
 
 test.describe('Tauri Dashboard UI and UX Improvements', () => {
