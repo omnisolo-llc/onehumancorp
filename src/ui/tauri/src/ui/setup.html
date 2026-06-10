@@ -542,7 +542,10 @@
       function populateForm() {
           if (state.businessName) inputs.name.value = state.businessName;
           if (state.tagline) inputs.tagline.value = state.tagline;
-          if (state.categories) inputs.categories.value = state.categories;
+          if (state.categories) {
+              populateCategories();
+              inputs.categories.value = state.categories;
+          }
           if (state.assistantName) inputs.assistantName.value = state.assistantName;
           if (state.assistantTone) inputs.assistantTone.value = state.assistantTone;
           if (state.firstOffer) inputs.firstOffer.value = state.firstOffer;
