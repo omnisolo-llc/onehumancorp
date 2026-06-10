@@ -1,10 +1,10 @@
-use crate::output_parser::{LlmClientForParser, parse_structured_output};
+use crate::output_parser::{parse_structured_output, LlmClientForParser};
 use crate::tools::Tool;
 use ohc_builtin_agent_core::types::{ChatRequest, Message, ToolError};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
-use tokio::sync::RwLock;
+use tokio::sync::{watch, Mutex, RwLock};
 
 /// SOTA Harness Patterns: 2. ReAct vs Plan-and-Execute (LLMCompiler pattern)
 /// This module provides a mechanism to explicitly separate planning from execution.
@@ -78,151 +78,170 @@ impl PlanAndExecuteOrchestrator {
         }
     }
 
+    fn verify_dag(plan: &ExecutionPlan) -> Result<(), String> {
+        let mut task_map = HashMap::new();
+        for task in &plan.tasks {
+            task_map.insert(task.task_id.clone(), task.clone());
+        }
+
+        // Check for missing dependencies
+        for task in &plan.tasks {
+            for dep in &task.dependencies {
+                if !task_map.contains_key(dep) {
+                    return Err(format!(
+                        "Task {} depends on missing task {}",
+                        task.task_id, dep
+                    ));
+                }
+            }
+        }
+
+        // Cycle detection using DFS
+        let mut visited = HashSet::new();
+        let mut rec_stack = HashSet::new();
+
+        for task in &plan.tasks {
+            if Self::is_cyclic(&task.task_id, &task_map, &mut visited, &mut rec_stack) {
+                return Err("Cycle detected in execution plan".to_string());
+            }
+        }
+
+        Ok(())
+    }
+
+    fn is_cyclic(
+        task_id: &str,
+        task_map: &HashMap<String, TaskNode>,
+        visited: &mut HashSet<String>,
+        rec_stack: &mut HashSet<String>,
+    ) -> bool {
+        if !visited.contains(task_id) {
+            visited.insert(task_id.to_string());
+            rec_stack.insert(task_id.to_string());
+
+            if let Some(task) = task_map.get(task_id) {
+                for dep in &task.dependencies {
+                    if !visited.contains(dep) && Self::is_cyclic(dep, task_map, visited, rec_stack)
+                    {
+                        return true;
+                    } else if rec_stack.contains(dep) {
+                        return true;
+                    }
+                }
+            }
+        }
+        rec_stack.remove(task_id);
+        false
+    }
+
     pub async fn execute_plan(
         &self,
         plan: ExecutionPlan,
     ) -> Result<HashMap<String, String>, String> {
+        Self::verify_dag(&plan)?;
+
         let results: Arc<RwLock<HashMap<String, String>>> = Arc::new(RwLock::new(HashMap::new()));
+        let mut completion_txs = HashMap::new();
+        let mut completion_rxs = HashMap::new();
 
-        let mut tasks_to_run = plan.tasks.clone();
+        for task in &plan.tasks {
+            let (tx, rx) = watch::channel(false);
+            completion_txs.insert(task.task_id.clone(), tx);
+            completion_rxs.insert(task.task_id.clone(), rx);
+        }
 
-        // Very basic DAG resolution loop
-        // In a production system we'd use Future graphs or something more sophisticated
-        loop {
-            if tasks_to_run.is_empty() {
-                break;
-            }
+        let mutating_tool_lock = Arc::new(Mutex::new(()));
+        let mut join_handles = Vec::new();
 
-            let results_read = results.read().await;
-
-            // Find all tasks whose dependencies are met
-            let mut ready_tasks = Vec::new();
-            let mut remaining_tasks = Vec::new();
-
-            for task in tasks_to_run {
-                let mut all_deps_met = true;
-                for dep in &task.dependencies {
-                    if !results_read.contains_key(dep) {
-                        all_deps_met = false;
-                        break;
+        fn replace_in_json(
+            value: &mut serde_json::Value,
+            results: &std::collections::HashMap<String, String>,
+        ) {
+            match value {
+                serde_json::Value::String(s) => {
+                    let mut new_s = s.clone();
+                    for (k, v) in results.iter() {
+                        new_s = new_s.replace(&format!("${{{}}}", k), v);
+                    }
+                    *s = new_s;
+                }
+                serde_json::Value::Array(arr) => {
+                    for item in arr {
+                        replace_in_json(item, results);
                     }
                 }
+                serde_json::Value::Object(obj) => {
+                    for (_, val) in obj.iter_mut() {
+                        replace_in_json(val, results);
+                    }
+                }
+                _ => {}
+            }
+        }
 
-                if all_deps_met {
-                    ready_tasks.push(task);
-                } else {
-                    remaining_tasks.push(task);
+        for task in plan.tasks {
+            let tools_clone = self.tools.clone();
+            let results_clone = results.clone();
+            let mut dep_rxs = Vec::new();
+            for dep in &task.dependencies {
+                if let Some(rx) = completion_rxs.get(dep) {
+                    dep_rxs.push(rx.clone());
                 }
             }
+            let tx = completion_txs.remove(&task.task_id).unwrap();
+            let mut_lock = mutating_tool_lock.clone();
 
-            drop(results_read); // Release the read lock
-
-            if ready_tasks.is_empty() && !remaining_tasks.is_empty() {
-                return Err("Deadlock detected: unresolved dependencies in plan".to_string());
-            }
-
-            fn replace_in_json(
-                value: &mut serde_json::Value,
-                results: &std::collections::HashMap<String, String>,
-            ) {
-                match value {
-                    serde_json::Value::String(s) => {
-                        let mut new_s = s.clone();
-                        for (k, v) in results.iter() {
-                            new_s = new_s.replace(&format!("${{{}}}", k), v);
-                        }
-                        *s = new_s;
-                    }
-                    serde_json::Value::Array(arr) => {
-                        for item in arr {
-                            replace_in_json(item, results);
-                        }
-                    }
-                    serde_json::Value::Object(obj) => {
-                        for (_, val) in obj.iter_mut() {
-                            replace_in_json(val, results);
-                        }
-                    }
-                    _ => {}
+            let handle = tokio::spawn(async move {
+                // Wait for all dependencies
+                for mut rx in dep_rxs {
+                    let _ = rx.wait_for(|&completed| completed).await;
                 }
-            }
 
-            // Split ready tasks into read_only and mutating
-            let mut read_only_tasks = Vec::new();
-            let mut mutating_tasks = Vec::new();
-
-            for task in ready_tasks {
-                let tool = self
-                    .tools
+                let tool = tools_clone
                     .get(&task.tool_name)
                     .ok_or_else(|| format!("Tool not found: {}", task.tool_name))?;
-                if tool.is_read_only {
-                    read_only_tasks.push(task);
-                } else {
-                    mutating_tasks.push(task);
-                }
-            }
 
-            // Run read-only tasks concurrently
-            let mut ro_handles = Vec::new();
-            for task in read_only_tasks {
-                let tools_clone = self.tools.clone();
-                let results_clone = results.clone();
-
-                let handle = tokio::spawn(async move {
-                    let tool = tools_clone
-                        .get(&task.tool_name)
-                        .ok_or_else(|| format!("Tool not found: {}", task.tool_name))?;
-
-                    let mut resolved_args = task.arguments.clone();
-
-                    let r = results_clone.read().await;
-                    replace_in_json(&mut resolved_args, &r);
-                    drop(r);
-
-                    let res = crate::tool_executor_engine::ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &ohc_builtin_agent_core::types::ToolCall{id: task.task_id.clone(), name: task.tool_name.clone(), arguments: resolved_args}, 2).await;
-
-                    match res {
-                        Ok(r) => Ok::<_, String>((task.task_id, r)),
-                        Err(ohc_builtin_agent_core::types::ToolError::LlmRecoverable(msg)) => {
-                            Ok::<_, String>((
-                                task.task_id,
-                                format!(
-                                    "LLM-Recoverable Error: {}. Please analyze this error, correct your tool arguments, and try again.",
-                                    msg
-                                ),
-                            ))
-                        }
-                        Err(e) => Err(format!("Tool execution failed: {}", e)),
-                    }
-                });
-                ro_handles.push(handle);
-            }
-
-            for handle in ro_handles {
-                let (task_id, output) = handle.await.map_err(|e| e.to_string())??;
-                results.write().await.insert(task_id, output);
-            }
-
-            // Run mutating tasks serially
-            for task in mutating_tasks {
-                let tool = self
-                    .tools
-                    .get(&task.tool_name)
-                    .ok_or_else(|| format!("Tool not found: {}", task.tool_name))?;
                 let mut resolved_args = task.arguments.clone();
-
-                let r = results.read().await;
+                let r = results_clone.read().await;
                 replace_in_json(&mut resolved_args, &r);
                 drop(r);
 
-                let res = crate::tool_executor_engine::ToolExecutionEngine::execute_tool_with_langgraph_mechanics(tool, &ohc_builtin_agent_core::types::ToolCall{id: task.task_id.clone(), name: task.tool_name.clone(), arguments: resolved_args}, 2)
-                    .await
-                    .map_err(|e| format!("Tool execution failed: {}", e))?;
-                results.write().await.insert(task.task_id.clone(), res);
-            }
+                // Serialize mutating tools
+                let _guard = if !tool.is_read_only {
+                    Some(mut_lock.lock().await)
+                } else {
+                    None
+                };
 
-            tasks_to_run = remaining_tasks;
+                let res = crate::tool_executor_engine::ToolExecutionEngine::execute_tool_with_langgraph_mechanics(
+                    &tool,
+                    &ohc_builtin_agent_core::types::ToolCall{id: task.task_id.clone(), name: task.tool_name.clone(), arguments: resolved_args},
+                    2
+                ).await;
+
+                let output = match res {
+                    Ok(r) => r,
+                    Err(ohc_builtin_agent_core::types::ToolError::LlmRecoverable(msg)) => {
+                        format!(
+                            "LLM-Recoverable Error: {}. Please analyze this error, correct your tool arguments, and try again.",
+                            msg
+                        )
+                    }
+                    Err(e) => return Err(format!("Tool execution failed: {}", e)),
+                };
+
+                results_clone
+                    .write()
+                    .await
+                    .insert(task.task_id.clone(), output);
+                let _ = tx.send(true);
+                Ok(())
+            });
+            join_handles.push(handle);
+        }
+
+        for handle in join_handles {
+            handle.await.map_err(|e| e.to_string())??;
         }
 
         let final_res = results.read().await.clone();
@@ -454,6 +473,51 @@ mod tests {
             elapsed < 280,
             "Execution was too slow, expected < 280ms (concurrent RO), got {}ms",
             elapsed
+        );
+    }
+
+    #[tokio::test]
+    async fn test_dag_cycle_detection() {
+        let orchestrator = PlanAndExecuteOrchestrator::new(vec![]);
+        let plan = ExecutionPlan {
+            tasks: vec![
+                TaskNode {
+                    task_id: "task_1".to_string(),
+                    tool_name: "tool_a".to_string(),
+                    arguments: serde_json::json!({}),
+                    dependencies: vec!["task_2".to_string()],
+                },
+                TaskNode {
+                    task_id: "task_2".to_string(),
+                    tool_name: "tool_b".to_string(),
+                    arguments: serde_json::json!({}),
+                    dependencies: vec!["task_1".to_string()],
+                },
+            ],
+        };
+
+        let result = orchestrator.execute_plan(plan).await;
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), "Cycle detected in execution plan");
+    }
+
+    #[tokio::test]
+    async fn test_dag_missing_dependency() {
+        let orchestrator = PlanAndExecuteOrchestrator::new(vec![]);
+        let plan = ExecutionPlan {
+            tasks: vec![TaskNode {
+                task_id: "task_1".to_string(),
+                tool_name: "tool_a".to_string(),
+                arguments: serde_json::json!({}),
+                dependencies: vec!["non_existent_task".to_string()],
+            }],
+        };
+
+        let result = orchestrator.execute_plan(plan).await;
+        assert!(result.is_err());
+        assert_eq!(
+            result.unwrap_err(),
+            "Task task_1 depends on missing task non_existent_task"
         );
     }
 }
