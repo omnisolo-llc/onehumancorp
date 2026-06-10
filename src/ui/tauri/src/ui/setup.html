@@ -1090,6 +1090,22 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
       <script src="tooltip.js"></script>
     <script src="walkthrough.js"></script>
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get("tour") === "setup") {
+          setTimeout(() => {
+            if (window.startWalkthrough) {
+              window.startWalkthrough([
+                { targetId: "business-categories", title: "Business Description", content: "Enter your business description." },
+                { targetId: "business-name", title: "Name", content: "Enter your business name." },
+                { targetId: "finish-btn", title: "Generate", content: "Click to generate!" }
+              ]);
+            }
+          }, 500);
+        }
+      });
+    </script>
     <script src="help-chat.js"></script>
   </body>
 </html>

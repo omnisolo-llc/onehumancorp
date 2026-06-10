@@ -833,7 +833,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Videos
         if (filteredVideos.length > 0) {
-            html += `<div class="section-title">Video Tutorials</div><div class="videos-grid">`;
+            html += `<div class="section-title">Interactive Tours</div><div class="videos-grid"><div class="video-card" onclick="window.location.href='setup.html?tour=setup'"><div class="video-info" style="padding:15px"><p class="video-title">Set up your store</p><p class="video-duration">Interactive Guide</p></div></div><div class="video-card" onclick="window.location.href='dashboard.html?tour=payment'"><div class="video-info" style="padding:15px"><p class="video-title">Accept your first payment</p><p class="video-duration">Interactive Guide</p></div></div><div class="video-card" onclick="window.location.href='dashboard.html?tour=ai'"><div class="video-info" style="padding:15px"><p class="video-title">Activate your AI Support Agent</p><p class="video-duration">Interactive Guide</p></div></div></div><div class="section-title">Video Tutorials</div><div class="videos-grid">`;
             filteredVideos.forEach(v => {
                 html += `
                   <div class="video-card" onclick="openVideo('${v.video_url}', '${v.title.replace(/'/g, "\\'")}', '${v.duration}')">
