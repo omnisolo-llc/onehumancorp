@@ -305,7 +305,7 @@ mod ledger_tests {
         .await
         .unwrap();
 
-        let pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+        let pg_pool = sqlx::postgres::PgPoolOptions::new()
             .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
             .unwrap();
 

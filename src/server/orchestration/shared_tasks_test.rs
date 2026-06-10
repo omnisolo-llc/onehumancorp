@@ -15,8 +15,8 @@ async fn test_shared_task_orchestrator() {
         return;
     }
 
-    let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
-        .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+    let pool = sqlx::postgres::PgPoolOptions::new()
+
         .acquire_timeout(std::time::Duration::from_millis(50))
         .connect_lazy(&db_url)
         .unwrap();
@@ -106,7 +106,7 @@ async fn test_shared_task_orchestrator_sqlite() {
     .await
     .unwrap();
 
-    let dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+    let dummy_pg_pool = sqlx::postgres::PgPoolOptions::new()
         .connect_lazy("postgres://postgres:postgres@localhost:5432/postgres")
         .unwrap();
 
@@ -349,8 +349,8 @@ async fn test_shared_task_orchestrator_dependencies() {
         return;
     }
 
-    let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
-        .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+    let pool = sqlx::postgres::PgPoolOptions::new()
+
         .acquire_timeout(std::time::Duration::from_millis(50))
         .connect_lazy(&db_url)
         .unwrap();
