@@ -423,7 +423,9 @@ impl Worker {
                                         let mut retry_job = job.clone();
                                         retry_job.retry_count += 1;
                                         retry_job.status = "QUEUED".to_string();
-                                        retry_job.next_retry_at = chrono::Utc::now() + chrono::Duration::seconds(5);
+                                        // Exponential backoff: 5, 10, 20, 40 seconds...
+                                        let delay_secs = 2i64.pow(job.retry_count as u32) * 5;
+                                        retry_job.next_retry_at = chrono::Utc::now() + chrono::Duration::seconds(delay_secs);
                                         let _ = self.queue.requeue(retry_job).await;
                                     } else {
                                         let _ = self.queue.fail(&job.id, &job.tenant_id, &e).await;
@@ -663,21 +665,19 @@ impl QueueManager {
 
 
     pub async fn requeue(&self, job_id: &str, tenant_id: &str, payload: serde_json::Value) -> Result<(), sqlx::Error> {
+        let attempts = payload.get("attempts").and_then(|v| v.as_i64()).unwrap_or(0);
+        // Exponential backoff: 5, 10, 20, 40 seconds...
+        let delay_secs = 2i64.pow(attempts as u32) * 5;
+        let scheduled_at = Utc::now() + chrono::Duration::seconds(delay_secs);
         let payload_str = serde_json::to_string(&payload).unwrap_or_default();
-        // Since SubAgentJob's polling uses `status = 'QUEUED'`, and some implementations might not filter by scheduled_at,
-        // we can still add a simple delay by using tokio::time::sleep here or rely on the caller to backoff,
-        // or actually update the scheduled_at column if the poll query respects it.
-        // Wait, QueueManager::poll does: `SELECT id FROM sub_agent_queue WHERE status = 'QUEUED' ORDER BY created_at ASC`
-        // It does NOT use `scheduled_at`!
-        // To implement a true backoff, we need to add `AND (scheduled_at IS NULL OR scheduled_at <= CURRENT_TIMESTAMP)`.
 
-        // Update the row.
         let mut tx = self.pool.begin().await?;
         set_org_context(&mut *tx, tenant_id).await?;
-        sqlx::query("UPDATE sub_agent_queue SET status = 'QUEUED', payload = $3, updated_at = CURRENT_TIMESTAMP, scheduled_at = CURRENT_TIMESTAMP + INTERVAL '5 seconds' WHERE id = $1 AND tenant_id = $2")
+        sqlx::query("UPDATE sub_agent_queue SET status = 'QUEUED', payload = $3, updated_at = CURRENT_TIMESTAMP, scheduled_at = $4 WHERE id = $1 AND tenant_id = $2")
             .bind(job_id)
             .bind(tenant_id)
             .bind(payload_str)
+            .bind(scheduled_at)
             .execute(&mut *tx)
             .await?;
         tx.commit().await?;

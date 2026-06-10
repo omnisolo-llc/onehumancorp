@@ -12,6 +12,7 @@ type Message = {
   draft_reply?: string;
   status?: string;
   created_at?: string;
+  handled_by_ai?: boolean;
 };
 
 function tenantId() {
@@ -140,7 +141,10 @@ export default function InboxPage() {
                 style={{ background: selected?.id === message.id ? "#f8fafc" : "transparent" }}
               >
                 <div className="min-w-0">
-                  <div className="app-list-title">{message.source || "Unknown source"}</div>
+                  <div className="flex items-center gap-2">
+                    <div className="app-list-title">{message.source || "Unknown source"}</div>
+                    {message.handled_by_ai && <span className="app-badge good !text-[10px] !py-0 !px-1">✨ AI Handled</span>}
+                  </div>
                   <div className="app-list-subtitle truncate">{message.content || "Empty message"}</div>
                 </div>
                 <span className={`app-badge ${badgeTone(message.status)}`}>{message.status || "Open"}</span>

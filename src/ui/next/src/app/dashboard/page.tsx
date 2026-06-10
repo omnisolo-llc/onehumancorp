@@ -33,6 +33,7 @@ type DashboardMetrics = {
   pending_orders: number;
   total_sales: number;
   total_campaigns_sent?: number;
+  auto_replied_count?: number;
 };
 
 type Order = {
@@ -287,7 +288,7 @@ export default function Dashboard() {
   const statusItems = [
     { label: "API", value: error ? "Degraded" : "Online", tone: error ? "bad" as const : "good" as const },
     { label: "Orders", value: String(metrics.pending_orders || 0), tone: metrics.pending_orders > 0 ? "warn" as const : "good" as const },
-    { label: "Stock", value: String(lowStockCount), tone: lowStockCount > 0 ? "warn" as const : "good" as const },
+    { label: "Auto-Replied", value: String(metrics.auto_replied_count || 0), tone: "good" as const },
     { label: "Growth", value: "Active", tone: "good" as const },
   ];
 
@@ -595,9 +596,9 @@ export default function Dashboard() {
                 <div className="app-metric-note">Open fulfillment workload</div>
               </div>
               <div className="app-card">
-                <div className="app-metric-label">Low Stock</div>
-                <div className="app-metric-value">{lowStockCount}</div>
-                <div className="app-metric-note">Materials below threshold</div>
+                <div className="app-metric-label">Auto-Replied</div>
+                <div className="app-metric-value">{metrics.auto_replied_count || 0}</div>
+                <div className="app-metric-note">Queries handled by AI</div>
               </div>
             </div>
 

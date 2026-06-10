@@ -2353,6 +2353,9 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let cs_worker = crate::workers::department_workers::CustomerSuccessWorker::new(db.clone());
     cs_worker.start();
 
+    // Start Auto-Responder Worker
+    let auto_responder = crate::workers::auto_responder_worker::AutoResponderWorker::new(db.clone());
+    auto_responder.start();
 
     // Start Booking Reengagement Worker
     let booking_reengagement_worker = crate::workers::booking_reengagement::BookingReengagementWorker::new(db.clone());
@@ -2881,32 +2884,35 @@ pub(crate) struct UiDashboardMetrics {
     pending_orders: i64,
     total_sales: f64,
     total_campaigns_sent: i64,
+    auto_replied_count: i64,
 }
 
 pub(crate) async fn load_ui_dashboard_metrics(
     db: &crate::db::DB,
     tenant_id: &str,
 ) -> Result<UiDashboardMetrics, sqlx::Error> {
-    let (active_customers, pending_orders, total_sales, total_campaigns_sent) = match &db.store {
+    let (active_customers, pending_orders, total_sales, total_campaigns_sent, auto_replied_count) = match &db.store {
         crate::db::DbStore::Postgres => {
-            sqlx::query_as::<_, (i64, i64, f64, i64)>(
+            sqlx::query_as::<_, (i64, i64, f64, i64, i64)>(
                 "SELECT \
                     (SELECT COUNT(*) FROM customers WHERE tenant_id = $1) AS active_customers, \
                     (SELECT COUNT(*) FROM orders WHERE tenant_id = $1 AND status = 'pending') AS pending_orders, \
                     (SELECT COALESCE(SUM(total_amount), 0.0)::DOUBLE PRECISION FROM orders WHERE tenant_id = $1) AS total_sales, \
-                    (SELECT COUNT(*) FROM agent_actions WHERE tenant_id = $1 AND action_type = 'growth.campaign_sent') AS total_campaigns_sent"
+                    (SELECT COUNT(*) FROM agent_actions WHERE tenant_id = $1 AND action_type = 'growth.campaign_sent') AS total_campaigns_sent, \
+                    (SELECT COUNT(*) FROM inbox_messages WHERE tenant_id = $1 AND handled_by_ai = TRUE) AS auto_replied_count"
             )
             .bind(tenant_id)
             .fetch_one(&db.pool)
             .await?
         }
         crate::db::DbStore::Sqlite(pool) => {
-            sqlx::query_as::<_, (i64, i64, f64, i64)>(
+            sqlx::query_as::<_, (i64, i64, f64, i64, i64)>(
                 "SELECT \
                     (SELECT COUNT(*) FROM customers WHERE tenant_id = ?) AS active_customers, \
                     (SELECT COUNT(*) FROM orders WHERE tenant_id = ? AND status = 'pending') AS pending_orders, \
                     (SELECT COALESCE(SUM(total_amount), 0.0) FROM orders WHERE tenant_id = ?) AS total_sales, \
-                    (SELECT COUNT(*) FROM agent_actions WHERE tenant_id = ? AND action_type = 'growth.campaign_sent') AS total_campaigns_sent"
+                    (SELECT COUNT(*) FROM agent_actions WHERE tenant_id = ? AND action_type = 'growth.campaign_sent') AS total_campaigns_sent, \
+                    (SELECT COUNT(*) FROM inbox_messages WHERE tenant_id = ? AND handled_by_ai = 1) AS auto_replied_count"
             )
             .bind(tenant_id)
             .bind(tenant_id)
@@ -2922,6 +2928,7 @@ pub(crate) async fn load_ui_dashboard_metrics(
         pending_orders,
         total_sales,
         total_campaigns_sent,
+        auto_replied_count,
     })
 }
 
@@ -3022,7 +3029,7 @@ async fn load_ui_inbox_from_db(db: &crate::db::DB, tenant_id: &str) -> Result<Ve
     use sqlx::Row;
     match &db.store {
         crate::db::DbStore::Postgres => {
-            sqlx::query("SELECT id, COALESCE(source, '') AS source, COALESCE(content, '') AS content, COALESCE(original_content, content, '') AS original_content, COALESCE(translated_from_language, '') AS translated_from_language, COALESCE(draft_reply, '') AS draft_reply, COALESCE(status, '') AS status, COALESCE(created_at::text, '') AS created_at FROM inbox_messages WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 50")
+            sqlx::query("SELECT id, COALESCE(source, '') AS source, COALESCE(content, '') AS content, COALESCE(original_content, content, '') AS original_content, COALESCE(translated_from_language, '') AS translated_from_language, COALESCE(draft_reply, '') AS draft_reply, COALESCE(status, '') AS status, COALESCE(created_at::text, '') AS created_at, COALESCE(handled_by_ai, FALSE) AS handled_by_ai FROM inbox_messages WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 50")
                 .bind(tenant_id)
                 .fetch_all(&db.pool)
                 .await.map(|rows| rows.into_iter().map(|row| serde_json::json!({
@@ -3033,11 +3040,12 @@ async fn load_ui_inbox_from_db(db: &crate::db::DB, tenant_id: &str) -> Result<Ve
                     "translated_from_language": row.get::<String, _>("translated_from_language"),
                     "generated_response": row.get::<String, _>("draft_reply"),
                     "status": row.get::<String, _>("status"),
-                    "created_at": row.get::<String, _>("created_at")
+                    "created_at": row.get::<String, _>("created_at"),
+                    "handled_by_ai": row.get::<bool, _>("handled_by_ai"),
                 })).collect())
         },
         crate::db::DbStore::Sqlite(pool) => {
-            sqlx::query("SELECT id, COALESCE(source, '') AS source, COALESCE(content, '') AS content, COALESCE(original_content, content, '') AS original_content, COALESCE(translated_from_language, '') AS translated_from_language, COALESCE(draft_reply, '') AS draft_reply, COALESCE(status, '') AS status, COALESCE(CAST(created_at AS TEXT), '') AS created_at FROM inbox_messages WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 50")
+            sqlx::query("SELECT id, COALESCE(source, '') AS source, COALESCE(content, '') AS content, COALESCE(original_content, content, '') AS original_content, COALESCE(translated_from_language, '') AS translated_from_language, COALESCE(draft_reply, '') AS draft_reply, COALESCE(status, '') AS status, COALESCE(CAST(created_at AS TEXT), '') AS created_at, COALESCE(handled_by_ai, 0) AS handled_by_ai FROM inbox_messages WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 50")
                 .bind(tenant_id)
                 .fetch_all(pool)
                 .await.map(|rows| rows.into_iter().map(|row| serde_json::json!({
@@ -3048,7 +3056,8 @@ async fn load_ui_inbox_from_db(db: &crate::db::DB, tenant_id: &str) -> Result<Ve
                     "translated_from_language": row.get::<String, _>("translated_from_language"),
                     "generated_response": row.get::<String, _>("draft_reply"),
                     "status": row.get::<String, _>("status"),
-                    "created_at": row.get::<String, _>("created_at")
+                    "created_at": row.get::<String, _>("created_at"),
+                    "handled_by_ai": row.get::<i32, _>("handled_by_ai") != 0,
                 })).collect())
         }
     }
@@ -3557,7 +3566,8 @@ async fn list_ui_inbox_handler(
                         COALESCE(translated_from_language, '') AS translated_from_language,
                         COALESCE(draft_reply, '') AS draft_reply,
                         COALESCE(status, '') AS status,
-                        COALESCE(created_at::text, '') AS created_at
+                        COALESCE(created_at::text, '') AS created_at,
+                        COALESCE(handled_by_ai, FALSE) AS handled_by_ai
                  FROM inbox_messages
                  WHERE tenant_id = $1
                  ORDER BY created_at DESC
@@ -3574,6 +3584,7 @@ async fn list_ui_inbox_handler(
                                 "content": row.get::<String, _>("content"),
                                 "status": row.get::<String, _>("status"),
                                 "created_at": row.get::<String, _>("created_at"),
+                                "handled_by_ai": row.get::<bool, _>("handled_by_ai"),
                             })
                         } else {
                             serde_json::json!({
@@ -3585,6 +3596,7 @@ async fn list_ui_inbox_handler(
                                 "generated_response": row.get::<String, _>("draft_reply"),
                                 "status": row.get::<String, _>("status"),
                                 "created_at": row.get::<String, _>("created_at"),
+                                "handled_by_ai": row.get::<bool, _>("handled_by_ai"),
                             })
                         }
                     }).collect::<Vec<_>>()),
@@ -3600,7 +3612,8 @@ async fn list_ui_inbox_handler(
                         COALESCE(translated_from_language, '') AS translated_from_language,
                         COALESCE(draft_reply, '') AS draft_reply,
                         COALESCE(status, '') AS status,
-                        COALESCE(CAST(created_at AS TEXT), '') AS created_at
+                        COALESCE(CAST(created_at AS TEXT), '') AS created_at,
+                        COALESCE(handled_by_ai, 0) AS handled_by_ai
                  FROM inbox_messages
                  WHERE tenant_id = ?
                  ORDER BY created_at DESC
@@ -3617,6 +3630,7 @@ async fn list_ui_inbox_handler(
                                 "content": row.get::<String, _>("content"),
                                 "status": row.get::<String, _>("status"),
                                 "created_at": row.get::<String, _>("created_at"),
+                                "handled_by_ai": row.get::<i32, _>("handled_by_ai") != 0,
                             })
                         } else {
                             serde_json::json!({
@@ -3628,6 +3642,7 @@ async fn list_ui_inbox_handler(
                                 "generated_response": row.get::<String, _>("draft_reply"),
                                 "status": row.get::<String, _>("status"),
                                 "created_at": row.get::<String, _>("created_at"),
+                                "handled_by_ai": row.get::<i32, _>("handled_by_ai") != 0,
                             })
                         }
                     }).collect::<Vec<_>>()),
