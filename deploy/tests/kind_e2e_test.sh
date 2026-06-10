@@ -400,7 +400,11 @@ while (( pg_attempts < pg_max_attempts )); do
     log "PostgreSQL is ready!"
     break
   fi
+<<<<<<< HEAD
   pg_attempts=$((pg_attempts + 1))
+=======
+  pg_attempts=$((pg_attempts+1))
+>>>>>>> b1777c87 (🤖 Implementer: Harness Upgrade - Verification Loops (Self-Consistency) + Fix E2E test)
   sleep 2
 done
 if (( pg_attempts == pg_max_attempts )); then
