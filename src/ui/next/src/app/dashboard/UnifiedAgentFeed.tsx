@@ -42,7 +42,7 @@ type ApprovalRequest = {
   payload: any;
 };
 
-export function UnifiedAgentFeed() {
+export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
   const [items, setItems] = useState<AgentFeedItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -75,21 +75,25 @@ export function UnifiedAgentFeed() {
         setActivityLoading(true);
         const tenant = tenantId();
 
-        const unifiedRes = await fetch(`/api/agent-feed?tenant_id=${tenant}`, {
-          headers: {
-            "x-tenant-id": tenant,
-            "x-user-id": "default",
-          },
-        });
+        let unifiedData = initialData;
 
-        if (!unifiedRes.ok) {
-          throw new Error("Failed to load agent feed");
+        if (!unifiedData) {
+          const unifiedRes = await fetch(`/api/agent-feed?tenant_id=${tenant}`, {
+            headers: {
+              "x-tenant-id": tenant,
+              "x-user-id": "default",
+            },
+          });
+
+          if (!unifiedRes.ok) {
+            throw new Error("Failed to load agent feed");
+          }
+
+          unifiedData = await unifiedRes.json();
         }
 
-        const unifiedData = await unifiedRes.json();
-
         if (mounted) {
-          if (unifiedData.items) {
+          if (unifiedData?.items) {
             setItems(unifiedData.items.filter((i: any) => i.lifecycle_state !== "APPROVED" && i.lifecycle_state !== "DISMISSED"));
 
             // Map items for activity feed as well
@@ -166,7 +170,7 @@ export function UnifiedAgentFeed() {
       mounted = false;
       cleanup.then((fn: any) => fn && typeof fn === 'function' && fn());
     };
-  }, []);
+  }, [initialData]);
 
   useEffect(() => {
     if (typeof EventSource === 'undefined') return;
@@ -256,12 +260,14 @@ export function UnifiedAgentFeed() {
 
       if (!res.ok) {
         // If it fails, we might want to fetch again to restore state
-        const refreshRes = await fetch(`/api/agents/approvals?tenant_id=${tenant}`, {
+        const refreshRes = await fetch(`/api/agent-feed?tenant_id=${tenant}`, {
             headers: { "x-tenant-id": tenant, "x-user-id": "default" }
         });
         if (refreshRes.ok) {
-            const data: ApprovalsResponse = await refreshRes.json();
-            setItems(data.pending_approvals);
+            const data: any = await refreshRes.json();
+            if (data.items) {
+               setItems(data.items.filter((i: any) => i.lifecycle_state !== "APPROVED" && i.lifecycle_state !== "DISMISSED"));
+            }
         }
         throw new Error("Failed to submit decision");
       }
