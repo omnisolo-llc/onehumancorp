@@ -44,7 +44,14 @@ export default function MyPlanPage() {
   }, []);
 
   if (loading) {
-      return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+    return (
+      <div className="flex flex-col min-h-screen font-inter items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-purple-50 text-gray-900 w-full">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
+          <span className="text-gray-600 font-medium font-outfit">Loading your plan...</span>
+        </div>
+      </div>
+    );
   }
 
 
