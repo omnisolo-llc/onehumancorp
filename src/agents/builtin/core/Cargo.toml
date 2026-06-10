@@ -12,6 +12,10 @@ chrono = { workspace = true }
 futures = { workspace = true }
 hmac = "0.12"
 once_cell = "1"
+<<<<<<< HEAD
+rand = "0.8"
+=======
+>>>>>>> 359e384d (feat(memory): Implement AgentMemoryService for tenant-isolated episodic memory)
 regex = "1"
 serde = { workspace = true }
 serde_json = { workspace = true }

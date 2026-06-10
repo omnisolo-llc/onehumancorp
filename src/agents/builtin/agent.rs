@@ -753,8 +753,24 @@ impl Agent {
         let mut total_session_cost = 0.0;
         let mut budget_tracker = crate::budget::BudgetTracker::default();
 
+<<<<<<< HEAD
+        let mut system_prompt =
+            crate::prompt_construction::HierarchicalPromptBuilder::new(cfg, session_tools).build();
+
+        if let Some(store) = &self.memory_store {
+            if let Ok(index_content) = store.get_lightweight_index().await {
+                if !index_content.trim().is_empty() {
+                    system_prompt.push_str("\n\n[Lightweight Memory Index]\n");
+                    system_prompt.push_str("Agent must treat memory as a 'hint' and verify against actual state before acting.\n");
+                    system_prompt.push_str(&index_content);
+                }
+            }
+        }
+
+=======
         let system_prompt =
             crate::prompt_construction::HierarchicalPromptBuilder::new(cfg, session_tools).build();
+>>>>>>> 359e384d (feat(memory): Implement AgentMemoryService for tenant-isolated episodic memory)
         let tool_defs: Vec<crate::types::ToolDefinition> = session_tools
             .iter()
             .map(|t| crate::types::ToolDefinition {
@@ -771,6 +787,94 @@ impl Agent {
                 message_count: messages.len(),
             });
 
+<<<<<<< HEAD
+            let mut turn_input_tokens = 0;
+            if messages.len() > 1 {
+                turn_input_tokens = total_tokens;
+            }
+
+            // Master Catalog B.4: Context Management (Preventing Context Rot): Compaction
+            if cfg.enable_context_compaction && turn_input_tokens > cfg.compaction_threshold_tokens {
+                if messages.len() > 5 {
+                    let mut compact_messages = Vec::new();
+                    compact_messages.push(messages[0].clone());
+
+                    let middle_start = 1;
+                    let middle_end = messages.len() - 3;
+
+                    if middle_end > middle_start {
+                        let mut middle_text = String::new();
+                        for m in &messages[middle_start..middle_end] {
+                            middle_text.push_str(&format!("[Role: {}]\n", m.role));
+                            if !m.content.is_empty() {
+                                middle_text.push_str(&m.content);
+                                middle_text.push('\n');
+                            }
+                            if !m.tool_calls.is_empty() {
+                                middle_text.push_str("Tool Calls:\n");
+                                for tc in &m.tool_calls {
+                                    middle_text.push_str(&format!("  {} ({})\n", tc.name, tc.arguments.to_string()));
+                                }
+                            }
+                            if !m.tool_results.is_empty() {
+                                middle_text.push_str("Tool Results:\n");
+                                for tr in &m.tool_results {
+                                    let status = if tr.error.is_empty() {
+                                        "Success (raw output discarded during compaction)"
+                                    } else {
+                                        &tr.error
+                                    };
+                                    middle_text.push_str(&format!("  tool_call_id: {} -> {}\n", tr.tool_call_id, status));
+                                }
+                            }
+                            middle_text.push_str("---\n");
+                        }
+
+                        let summary_req = crate::types::ChatRequest {
+                            model: cfg.model.clone(),
+                            system: "You are an expert context compactor for an AI agent. Summarize the following middle portion of an agent conversation. Preserve architectural decisions and unresolved bugs, but discard redundant/raw tool outputs. Be concise.".to_string(),
+                            messages: vec![crate::types::Message::user(format!("Compact this conversation:\n{}", middle_text))],
+                            tools: vec![],
+                            max_tokens: 2000,
+                            temperature: 0.0,
+                        };
+
+                        match self.llm.chat(summary_req).await {
+                            Ok(summary_resp) => {
+                                let summary = summary_resp.message.content;
+                                compact_messages.push(crate::types::Message::user(format!("[Context Compacted by Harness]:\n{}", summary)));
+                                compact_messages.extend_from_slice(&messages[middle_end..]);
+                                messages = compact_messages;
+                            }
+                            Err(e) => {
+                                let err = format!("Context compaction failed: {}", e);
+                                on_event(AgentEvent::TaskError { error: err.clone() });
+                            }
+                        }
+                    }
+                }
+            }
+
+            let mut final_messages = messages.clone();
+
+            if cfg.enable_observation_masking {
+                crate::observation_masking::apply_observation_masking(&mut final_messages, cfg.observation_masking_threshold, cfg.observation_masking_size_limit);
+            }
+
+            if cfg.enable_acon_context_strategy {
+                let acon_cfg = cfg.acon_config.clone().unwrap_or_default();
+                crate::acon_context::apply_acon_strategy(&mut final_messages, &acon_cfg);
+            }
+
+            crate::prompt_construction::PromptBuilder::apply_lost_in_the_middle_prevention(
+                &mut final_messages,
+                cfg.enable_lost_in_the_middle_prevention,
+                &cfg.developer_instructions,
+                &cfg.user_instructions,
+            );
+
+=======
+>>>>>>> 359e384d (feat(memory): Implement AgentMemoryService for tenant-isolated episodic memory)
             // 1. Assemble prompt
 
             let mut dynamic_system_prompt = system_prompt.clone();
@@ -787,7 +891,11 @@ impl Agent {
             let req = crate::types::ChatRequest {
                 model: cfg.model.clone(),
                 system: system_prompt.clone(),
+<<<<<<< HEAD
+                messages: final_messages,
+=======
                 messages: messages.clone(),
+>>>>>>> 359e384d (feat(memory): Implement AgentMemoryService for tenant-isolated episodic memory)
                 tools: tool_defs.clone(),
                 max_tokens: cfg.max_tokens,
                 temperature: cfg.temperature,

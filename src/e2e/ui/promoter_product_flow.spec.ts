@@ -1,6 +1,10 @@
 import { test, expect } from '@playwright/test';
 
+<<<<<<< HEAD
+test('End-to-End Promoter Product Creation Flow', async ({ page }) => {
+=======
 test.skip('End-to-End Promoter Product Creation Flow', async ({ page }) => {
+>>>>>>> 359e384d (feat(memory): Implement AgentMemoryService for tenant-isolated episodic memory)
   // 1. Navigate to Add Product page directly
   await page.goto('/products/new');
   await expect(page.locator('h1').filter({ hasText: 'Add Product' })).toBeVisible();

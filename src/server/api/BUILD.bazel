@@ -25,11 +25,18 @@ exports_files(
         "catalog.rs",
         "fulfillment.rs",
         "shipping.rs",
+<<<<<<< HEAD
+        "local_seo.rs",
+        "recovery.rs",
+        "agent_feed.rs",
+        "audio_command.rs",
+=======
 
 
         "local_seo.rs",
         "recovery.rs",
         "agent_feed.rs",
+>>>>>>> 359e384d (feat(memory): Implement AgentMemoryService for tenant-isolated episodic memory)
     ],
     visibility = ["//visibility:public"],
 )
@@ -61,11 +68,18 @@ rust_library(
         "catalog.rs",
         "fulfillment.rs",
         "shipping.rs",
+<<<<<<< HEAD
+        "local_seo.rs",
+        "recovery.rs",
+        "agent_feed.rs",
+        "audio_command.rs",
+=======
 
 
         "local_seo.rs",
         "recovery.rs",
         "agent_feed.rs",
+>>>>>>> 359e384d (feat(memory): Implement AgentMemoryService for tenant-isolated episodic memory)
         "//src/server/api/agents:approvals.rs",
         "//src/server/api/agents:client_intake.rs",
         "//src/server/api/agents:hire.rs",

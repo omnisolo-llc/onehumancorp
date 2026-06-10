@@ -5,6 +5,10 @@ import { WalkthroughProvider, HelpWidget } from '../components/help';
 import { TooltipProvider } from '../components/TooltipRegistry';
 
 import { HelpChat } from "../components/HelpChat";
+<<<<<<< HEAD
+import { VoiceAssistant } from "../components/VoiceAssistant";
+=======
+>>>>>>> 359e384d (feat(memory): Implement AgentMemoryService for tenant-isolated episodic memory)
 import { RateLimitWarningProvider } from '../components/RateLimitWarning';
 
 export const metadata: Metadata = {
@@ -30,6 +34,10 @@ export default function RootLayout({
               {children}
               <WalkthroughTarget id="help-widget-container"><HelpWidget /></WalkthroughTarget>
               <HelpChat />
+<<<<<<< HEAD
+              <VoiceAssistant />
+=======
+>>>>>>> 359e384d (feat(memory): Implement AgentMemoryService for tenant-isolated episodic memory)
             </WalkthroughProvider>
                   </TooltipProvider>
         </RateLimitWarningProvider>

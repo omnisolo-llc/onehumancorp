@@ -28,3 +28,7 @@ pub mod mcp_webhook;
 pub mod booking;
 pub mod recovery;
 pub mod agent_feed;
+<<<<<<< HEAD
+pub mod audio_command;
+=======
+>>>>>>> 359e384d (feat(memory): Implement AgentMemoryService for tenant-isolated episodic memory)

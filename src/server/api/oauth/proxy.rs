@@ -30,7 +30,11 @@ pub async fn handle_oauth_callback(
 
             // Strictly validate tunnel_id to prevent Open Redirect/SSRF
             // It should only contain alphanumeric characters and hyphens.
+<<<<<<< HEAD
+            if tunnel_id.is_empty() || !tunnel_id.chars().all(|c| c.is_ascii_alphanumeric() || c == '-') || tunnel_id.starts_with('-') || tunnel_id.ends_with('-') {
+=======
             if !tunnel_id.chars().all(|c| c.is_ascii_alphanumeric() || c == '-') {
+>>>>>>> 359e384d (feat(memory): Implement AgentMemoryService for tenant-isolated episodic memory)
                 return (
                     axum::http::StatusCode::BAD_REQUEST,
                     "Invalid tunnel_id format.",
@@ -121,4 +125,43 @@ mod tests {
         let response = handle_oauth_callback(Query(query)).await.into_response();
         assert_eq!(response.status(), axum::http::StatusCode::BAD_REQUEST);
     }
+<<<<<<< HEAD
+
+    #[tokio::test]
+    async fn test_invalid_tunnel_id_empty() {
+        let query = OAuthCallbackQuery {
+            code: "test_code".to_string(),
+            state: "standalone__actualState123".to_string(),
+            extra: HashMap::new(),
+        };
+
+        let response = handle_oauth_callback(Query(query)).await.into_response();
+        assert_eq!(response.status(), axum::http::StatusCode::BAD_REQUEST);
+    }
+
+    #[tokio::test]
+    async fn test_invalid_tunnel_id_hyphen_start() {
+        let query = OAuthCallbackQuery {
+            code: "test_code".to_string(),
+            state: "standalone_-invalid_actualState123".to_string(),
+            extra: HashMap::new(),
+        };
+
+        let response = handle_oauth_callback(Query(query)).await.into_response();
+        assert_eq!(response.status(), axum::http::StatusCode::BAD_REQUEST);
+    }
+
+    #[tokio::test]
+    async fn test_invalid_tunnel_id_hyphen_end() {
+        let query = OAuthCallbackQuery {
+            code: "test_code".to_string(),
+            state: "standalone_invalid-_actualState123".to_string(),
+            extra: HashMap::new(),
+        };
+
+        let response = handle_oauth_callback(Query(query)).await.into_response();
+        assert_eq!(response.status(), axum::http::StatusCode::BAD_REQUEST);
+    }
+=======
+>>>>>>> 359e384d (feat(memory): Implement AgentMemoryService for tenant-isolated episodic memory)
 }

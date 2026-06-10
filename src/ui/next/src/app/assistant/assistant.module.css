@@ -303,7 +303,11 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+<<<<<<< HEAD
+  border-radius: 8px;
+=======
   border-radius: 7px;
+>>>>>>> 359e384d (feat(memory): Implement AgentMemoryService for tenant-isolated episodic memory)
   border: 1px solid transparent;
   text-decoration: none;
   cursor: pointer;
@@ -436,7 +440,11 @@
   width: 100%;
   min-width: 0;
   border: 1px solid #cbd5e1;
+<<<<<<< HEAD
+  border-radius: 8px;
+=======
   border-radius: 7px;
+>>>>>>> 359e384d (feat(memory): Implement AgentMemoryService for tenant-isolated episodic memory)
   background: #fff;
   color: #172033;
   font-size: 13px;

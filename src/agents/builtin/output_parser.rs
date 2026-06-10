@@ -159,7 +159,12 @@ impl<'a, T: DeserializeOwned> RetryWithErrorOutputParser<'a, T> {
                     }
 
                     let base_backoff = 500 * (1 << attempt);
+<<<<<<< HEAD
+                    use rand::Rng;
+                    let jitter = rand::thread_rng().gen_range(0..100);
+=======
                     let jitter = rand::Rng::gen_range(&mut rand::thread_rng(), 0..100);
+>>>>>>> 359e384d (feat(memory): Implement AgentMemoryService for tenant-isolated episodic memory)
                     let backoff = std::time::Duration::from_millis((base_backoff as u64) + jitter);
                     tokio::time::sleep(backoff).await;
 
@@ -173,7 +178,11 @@ impl<'a, T: DeserializeOwned> RetryWithErrorOutputParser<'a, T> {
                 Ok(parsed) => return Ok(parsed),
                 Err(parse_error_msg) => {
                     if attempt >= max_retries {
+<<<<<<< HEAD
+                        return Err(ToolError::Fatal(format!(
+=======
                         return Err(ToolError::LlmRecoverable(format!(
+>>>>>>> 359e384d (feat(memory): Implement AgentMemoryService for tenant-isolated episodic memory)
                             "Output parsing failed after {} retries. Last error: {}",
                             max_retries, parse_error_msg
                         )));
@@ -485,7 +494,11 @@ mod tests {
         let result: Result<TestOutput, _> =
             parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 2).await;
         assert!(result.is_err());
+<<<<<<< HEAD
+        if let Err(ToolError::Fatal(msg)) = result {
+=======
         if let Err(ToolError::LlmRecoverable(msg)) = result {
+>>>>>>> 359e384d (feat(memory): Implement AgentMemoryService for tenant-isolated episodic memory)
             assert!(
                 msg.contains("Failed to parse arguments")
                     || msg.contains("Output parsing failed after"),
@@ -493,7 +506,11 @@ mod tests {
                 msg
             );
         } else {
+<<<<<<< HEAD
+            panic!("Expected Fatal error, got {:?}", result);
+=======
             panic!("Expected LlmRecoverable error, got {:?}", result);
+>>>>>>> 359e384d (feat(memory): Implement AgentMemoryService for tenant-isolated episodic memory)
         }
     }
 
@@ -554,10 +571,17 @@ mod tests {
             parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 2).await;
         assert!(result.is_err());
         match result {
+<<<<<<< HEAD
+            Err(ToolError::Fatal(msg)) => {
+                assert!(msg.contains("Output parsing failed after 2 retries"));
+            }
+            _ => panic!("Expected Fatal error for exhaustion"),
+=======
             Err(ToolError::LlmRecoverable(msg)) => {
                 assert!(msg.contains("Output parsing failed after 2 retries"));
             }
             _ => panic!("Expected LlmRecoverable error for exhaustion"),
+>>>>>>> 359e384d (feat(memory): Implement AgentMemoryService for tenant-isolated episodic memory)
         }
     }
 }

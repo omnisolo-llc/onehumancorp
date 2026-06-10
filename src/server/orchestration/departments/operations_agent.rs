@@ -23,7 +23,11 @@ impl Department for OperationsAgent {
             "tenant.order.created".to_string(),
             "tenant.subscription.fulfillment_batch.created".to_string(),
             "LowStockAlert".to_string(),
+<<<<<<< HEAD
+            "InventoryConflictEvent".to_string(),
+=======
             "PosSyncFailure".to_string(),
+>>>>>>> 359e384d (feat(memory): Implement AgentMemoryService for tenant-isolated episodic memory)
             "tenant.inventory.updated".to_string(),
         ]
     }
@@ -55,9 +59,19 @@ impl Department for OperationsAgent {
                 let product_id = event.payload.get("product_id").and_then(|v| v.as_str()).unwrap_or("unknown");
                 format!("Draft a restock order for product {} due to low stock", product_id)
             },
+<<<<<<< HEAD
+            "InventoryConflictEvent" => {
+                let transaction_id = event.payload.get("transaction_id").and_then(|v| v.as_str()).unwrap_or("unknown");
+                let product_id = event.payload.get("product_id").and_then(|v| v.as_str()).unwrap_or("unknown");
+                let expected = event.payload.get("expected_stock").and_then(|v| v.as_i64()).unwrap_or(0);
+                let actual = event.payload.get("actual_stock").and_then(|v| v.as_i64()).unwrap_or(0);
+                let deficit = expected - actual;
+                format!("We oversold the item {} by {}. Should I cancel the online order or draft a rush supply order for transaction {}?", product_id, deficit, transaction_id)
+=======
             "PosSyncFailure" => {
                 let transaction_id = event.payload.get("transaction_id").and_then(|v| v.as_str()).unwrap_or("unknown");
                 format!("Review POS offline sync discrepancy for transaction {}", transaction_id)
+>>>>>>> 359e384d (feat(memory): Implement AgentMemoryService for tenant-isolated episodic memory)
             },
             "tenant.subscription.fulfillment_batch.created" => {
                 let batch_id = event

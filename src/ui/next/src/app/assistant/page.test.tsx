@@ -329,15 +329,24 @@ test('filters the Agent task rail by search text and status', async () => {
   expect(within(taskRail).getByText('Wait for Slack confirmation')).toBeDefined();
 });
 
+<<<<<<< HEAD
+test('shows an empty state before API data arrives', () => {
+=======
 test('shows a populated fallback task rail before API data arrives', () => {
+>>>>>>> 359e384d (feat(memory): Implement AgentMemoryService for tenant-isolated episodic memory)
   global.fetch = vi.fn(() => new Promise(() => undefined)) as any;
 
   render(<AssistantPage />);
 
   const taskRail = screen.getByLabelText('Task rail');
+<<<<<<< HEAD
+  expect(screen.getByText('0 tasks')).toBeDefined();
+  expect(within(taskRail).getByText('No matching tasks.')).toBeDefined();
+=======
   expect(screen.getByText('1 task')).toBeDefined();
   expect(within(taskRail).getByText('Create a personal briefing')).toBeDefined();
   expect(within(taskRail).getByText('Ready to plan')).toBeDefined();
+>>>>>>> 359e384d (feat(memory): Implement AgentMemoryService for tenant-isolated episodic memory)
 });
 
 test('uses the current expanded Agent parity summary before API data arrives', () => {

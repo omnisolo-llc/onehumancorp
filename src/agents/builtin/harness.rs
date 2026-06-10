@@ -310,6 +310,10 @@ impl IsolationStrategy for ProcessIsolationStrategy {
 use std::sync::Mutex;
 use tree_sitter::{Node, Parser};
 
+<<<<<<< HEAD
+#[allow(dead_code)]
+=======
+>>>>>>> 359e384d (feat(memory): Implement AgentMemoryService for tenant-isolated episodic memory)
 pub struct ASTValidator {
     parser: Mutex<Parser>,
     blocked_commands: Vec<String>,
@@ -715,6 +719,10 @@ pub enum BackendType {
 
 pub struct Manager {
     config: Config,
+<<<<<<< HEAD
+    #[allow(dead_code)]
+=======
+>>>>>>> 359e384d (feat(memory): Implement AgentMemoryService for tenant-isolated episodic memory)
     validator: Arc<ASTValidator>,
     local_backend: Arc<dyn HarnessBackend>,
     docker_backend: Arc<dyn HarnessBackend>,

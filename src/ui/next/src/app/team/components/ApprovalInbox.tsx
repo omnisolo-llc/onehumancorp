@@ -422,7 +422,11 @@ export default function ApprovalInbox({
                     </div>
                   )}
 
+<<<<<<< HEAD
+                  {req.payload?.feature_type === "social_post_draft" && (
+=======
                   {req.payload?.feature_type === "social_post" && (
+>>>>>>> 359e384d (feat(memory): Implement AgentMemoryService for tenant-isolated episodic memory)
                     <div className="mb-6 p-4 rounded-xl bg-pink-50 border border-pink-100 flex flex-col gap-3">
                       <div className="flex items-center gap-2 text-pink-800 font-semibold text-sm">
                         <svg
@@ -612,7 +616,11 @@ export default function ApprovalInbox({
                     >
                       {req.payload?.feature_type === "case_study"
                         ? "Publish to Website"
+<<<<<<< HEAD
+                        : req.payload?.feature_type === "social_post_draft"
+=======
                         : req.payload?.feature_type === "social_post"
+>>>>>>> 359e384d (feat(memory): Implement AgentMemoryService for tenant-isolated episodic memory)
                         ? "Schedule Post"
                         : req.payload?.feature_type === "quote_draft"
                         ? "Approve & Send"

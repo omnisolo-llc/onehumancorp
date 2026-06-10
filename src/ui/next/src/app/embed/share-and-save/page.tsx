@@ -1,9 +1,16 @@
 "use client";
 
+<<<<<<< HEAD
+import React, { useEffect, useState, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
+
+function ShareAndSaveContent() {
+=======
 import React, { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 
 export default function ShareAndSaveEmbedPage() {
+>>>>>>> 359e384d (feat(memory): Implement AgentMemoryService for tenant-isolated episodic memory)
     const searchParams = useSearchParams();
     const tenant = searchParams.get('tenant') || 'my-store';
     const theme = searchParams.get('theme') || 'light';
@@ -62,3 +69,14 @@ export default function ShareAndSaveEmbedPage() {
         </div>
     );
 }
+<<<<<<< HEAD
+
+export default function ShareAndSaveEmbedPage() {
+    return (
+        <Suspense fallback={<div>Loading...</div>}>
+            <ShareAndSaveContent />
+        </Suspense>
+    );
+}
+=======
+>>>>>>> 359e384d (feat(memory): Implement AgentMemoryService for tenant-isolated episodic memory)

@@ -116,6 +116,23 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
     // Step 5: Offer
     await expect(page.getByRole('heading', { name: "Your First Offer" })).toBeVisible();
 
+<<<<<<< HEAD
+    await page.getByPlaceholder("e.g. Custom Birthday Cake").fill("Faucet Repair");
+    await page.locator('#step-offer').getByRole('button', { name: 'Next' }).click();
+
+    // Step 6: Template
+    await expect(page.getByRole('heading', { name: "Template Selection" })).toBeVisible();
+
+    // Verify validation triggers
+    await page.getByRole('button', { name: 'Finish Setup' }).click();
+    await expect(page.locator('#template-error')).toBeVisible();
+
+    await page.locator('#template-selection').selectOption('Modern');
+
+
+
+=======
+>>>>>>> 359e384d (feat(memory): Implement AgentMemoryService for tenant-isolated episodic memory)
     // 2. Simulate Cross-Device Resume (Closing Page, Reopening, Checking State via Backend invoke mock)
     const savedStateStr = await page.evaluate(() => {
         try { return sessionStorage.getItem('mockState'); } catch(e) { return null; }
@@ -168,7 +185,22 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
 
     // Step 5: Offer
     await expect(newPage.getByRole('heading', { name: "Your First Offer" })).toBeVisible();
+<<<<<<< HEAD
+    await expect(newPage.getByPlaceholder("e.g. Custom Birthday Cake")).toHaveValue("Faucet Repair");
+    await newPage.locator('#step-offer').getByRole('button', { name: 'Next' }).click();
+
+    // Step 6: Template
+    await expect(newPage.getByRole('heading', { name: "Template Selection" })).toBeVisible();
+
+
+    // Verify validation triggers
+    await newPage.getByRole('button', { name: 'Finish Setup' }).click();
+    await expect(newPage.locator('#template-error')).toBeVisible();
+
+    await newPage.locator('#template-selection').selectOption('Modern');
+=======
     await newPage.getByPlaceholder("e.g. Custom Birthday Cake").fill("Faucet Repair");
+>>>>>>> 359e384d (feat(memory): Implement AgentMemoryService for tenant-isolated episodic memory)
 
     // Submit
     await newPage.getByRole('button', { name: 'Finish Setup' }).click();

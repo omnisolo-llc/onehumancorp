@@ -154,9 +154,15 @@ impl Store {
                     panic!("JWT_SECRET must be set in Cloud/Multitenant Mode to ensure secure access token management.");
                 }
 
+<<<<<<< HEAD
+                let secret_path = ::server_config::get_safe_user_dir().join(".ohc_jwt_secret");
+                if secret_path.exists() {
+                    if let Ok(bytes) = std::fs::read(&secret_path) {
+=======
                 let secret_path = std::path::Path::new(".ohc_jwt_secret");
                 if secret_path.exists() {
                     if let Ok(bytes) = std::fs::read(secret_path) {
+>>>>>>> 359e384d (feat(memory): Implement AgentMemoryService for tenant-isolated episodic memory)
                         if bytes.len() >= 32 {
                             return bytes;
                         }
@@ -164,9 +170,15 @@ impl Store {
                 }
 
                 let sqlite_key_opt = std::env::var("OHC_SQLITE_KEY").ok().or_else(|| {
+<<<<<<< HEAD
+                    let secret_path = ::server_config::get_safe_user_dir().join(".ohc_sqlite_key");
+                    if secret_path.exists() {
+                        if let Ok(bytes) = std::fs::read_to_string(&secret_path) {
+=======
                     let secret_path = std::path::Path::new(".ohc_sqlite_key");
                     if secret_path.exists() {
                         if let Ok(bytes) = std::fs::read_to_string(secret_path) {
+>>>>>>> 359e384d (feat(memory): Implement AgentMemoryService for tenant-isolated episodic memory)
                             if !bytes.trim().is_empty() {
                                 return Some(bytes.trim().to_string());
                             }
@@ -196,14 +208,22 @@ impl Store {
                         .write(true)
                         .create(true)
                         .mode(0o600)
+<<<<<<< HEAD
+                        .open(&secret_path)
+=======
                         .open(secret_path)
+>>>>>>> 359e384d (feat(memory): Implement AgentMemoryService for tenant-isolated episodic memory)
                     {
                         let _ = file.write_all(&new_secret);
                     }
                 }
                 #[cfg(not(unix))]
                 {
+<<<<<<< HEAD
+                    let _ = std::fs::write(&secret_path, &new_secret);
+=======
                     let _ = std::fs::write(secret_path, &new_secret);
+>>>>>>> 359e384d (feat(memory): Implement AgentMemoryService for tenant-isolated episodic memory)
                 }
 
                 new_secret
@@ -892,6 +912,17 @@ mod store_tests {
     use super::*;
 
     #[test]
+<<<<<<< HEAD
+    fn test_secret_paths_are_safe() {
+        let store = Store::new();
+        // Since we can't easily assert on the inner paths without modifying visibility,
+        // we assert that we don't panic upon creation.
+        assert!(!store.secret.is_empty());
+    }
+
+    #[test]
+=======
+>>>>>>> 359e384d (feat(memory): Implement AgentMemoryService for tenant-isolated episodic memory)
     fn test_store_validate_org_id_multitenant() {
         // Create an empty store just to access the validate_org_id method
         let store = Store::new();

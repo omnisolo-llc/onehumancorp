@@ -5708,6 +5708,10 @@ dependencies = [
  "futures",
  "hmac",
  "once_cell",
+<<<<<<< HEAD
+ "rand 0.8.6",
+=======
+>>>>>>> 359e384d (feat(memory): Implement AgentMemoryService for tenant-isolated episodic memory)
  "regex",
  "serde",
  "serde_json",

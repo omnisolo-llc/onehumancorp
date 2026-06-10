@@ -121,7 +121,11 @@ impl MinimaxClient {
         let optimized_prompt = if prompt.starts_with('{') {
             minify_json_prompt(prompt)
         } else {
+<<<<<<< HEAD
+            PromptCache::truncate_context(prompt, 2000)
+=======
             truncate_by_word_count(prompt, 2000)
+>>>>>>> 359e384d (feat(memory): Implement AgentMemoryService for tenant-isolated episodic memory)
         };
 
         // 1. Check Cache
@@ -236,7 +240,11 @@ impl MinimaxClient {
         let optimized_prompt = if prompt.starts_with('{') {
             minify_json_prompt(prompt)
         } else {
+<<<<<<< HEAD
+            PromptCache::truncate_context(prompt, 2000)
+=======
             truncate_by_word_count(prompt, 2000)
+>>>>>>> 359e384d (feat(memory): Implement AgentMemoryService for tenant-isolated episodic memory)
         };
 
         let (tx, rx) = tokio::sync::mpsc::channel(100);
@@ -439,7 +447,11 @@ impl LocalLLMClient {
         let optimized_prompt = if prompt.starts_with('{') {
             minify_json_prompt(prompt)
         } else {
+<<<<<<< HEAD
+            PromptCache::truncate_context(prompt, 2000)
+=======
             truncate_by_word_count(prompt, 2000)
+>>>>>>> 359e384d (feat(memory): Implement AgentMemoryService for tenant-isolated episodic memory)
         };
 
         if let (Some(cached), _cost_cents) = self.cache.get_with_cost_cents(&optimized_prompt) {

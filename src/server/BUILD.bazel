@@ -49,6 +49,10 @@ SERVER_RS_SRCS = [
     "//src/server/api:local_seo.rs",
     "//src/server/api:recovery.rs",
     "//src/server/api:agent_feed.rs",
+<<<<<<< HEAD
+    "//src/server/api:audio_command.rs",
+=======
+>>>>>>> 359e384d (feat(memory): Implement AgentMemoryService for tenant-isolated episodic memory)
     "//src/server/api:oauth/mod.rs",
     "//src/server/api:oauth/proxy.rs",
     "//src/server/api:mod.rs",

@@ -3,6 +3,20 @@ import { test, expect } from './fixtures';
 test.describe('Cost Dashboard & Plan Limits UI', () => {
   test('should display the cost dashboard and check expected sections', async ({ page }) => {
     // Navigate to the Cost Dashboard directly
+<<<<<<< HEAD
+    await page.goto('/cost-dashboard.html');
+
+    // Wait for the main heading to be visible
+    await expect(page.getByRole('heading', { name: 'Cost Transparency' })).toBeVisible({ timeout: 15000 });
+
+    // Verify key sections are present
+    await expect(page.getByText('Total Costs')).toBeVisible();
+    await expect(page.getByText('LLM Usage')).toBeVisible();
+    await expect(page.locator('span', { hasText: 'Storage' }).first()).toBeVisible();
+
+    // Check if the plan navigation button is present
+    await expect(page.getByRole('link', { name: 'Back to My Plan' })).toBeVisible();
+=======
     await page.goto('/cost-dashboard');
 
     // Wait for the main heading to be visible
@@ -15,14 +29,22 @@ test.describe('Cost Dashboard & Plan Limits UI', () => {
 
     // Check if the plan navigation button is present
     await expect(page.getByRole('button', { name: 'Back to My Plan' })).toBeVisible();
+>>>>>>> 359e384d (feat(memory): Implement AgentMemoryService for tenant-isolated episodic memory)
   });
 
   test('should display my plan limits and route to pricing', async ({ page }) => {
     // Go to My Plan page
+<<<<<<< HEAD
+    await page.goto('/cost-dashboard.html');
+
+    // Wait for the main heading to be visible
+    await expect(page.getByRole('heading', { name: 'My Plan' }).first()).toBeVisible({ timeout: 15000 });
+=======
     await page.goto('/plan');
 
     // Wait for the main heading to be visible
     await expect(page.getByRole('heading', { name: 'My Plan' })).toBeVisible({ timeout: 15000 });
+>>>>>>> 359e384d (feat(memory): Implement AgentMemoryService for tenant-isolated episodic memory)
 
     // Verify data placeholders or limits are populated (Even if it says Free or Loading, these labels should exist)
     await expect(page.getByText('Estimated Next Bill')).toBeVisible();

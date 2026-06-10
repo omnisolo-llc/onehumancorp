@@ -249,10 +249,17 @@ mod tests {
 
     #[tokio::test]
     async fn test_validate_url_and_get_ip_valid() {
+<<<<<<< HEAD
+        let res = validate_url_and_get_ip("https://example.com").await;
+        assert!(res.is_ok());
+        let (host, ip) = res.unwrap();
+        assert_eq!(host, "example.com");
+=======
         let res = validate_url_and_get_ip("https://google.com").await;
         assert!(res.is_ok());
         let (host, ip) = res.unwrap();
         assert_eq!(host, "google.com");
+>>>>>>> 359e384d (feat(memory): Implement AgentMemoryService for tenant-isolated episodic memory)
         assert!(!is_blocked_ip(ip));
     }
 

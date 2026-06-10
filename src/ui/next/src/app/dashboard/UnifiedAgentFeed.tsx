@@ -32,6 +32,19 @@ type LedgerResponse = {
   entries: OHCLedgerEntry[];
 };
 
+<<<<<<< HEAD
+type ApprovalRequest = {
+  id: string;
+  tenant_id: string;
+  department: string;
+  description: string;
+  status: string;
+  action_risk: string;
+  payload: any;
+};
+
+=======
+>>>>>>> 359e384d (feat(memory): Implement AgentMemoryService for tenant-isolated episodic memory)
 export function UnifiedAgentFeed() {
   const [items, setItems] = useState<AgentFeedItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -105,12 +118,20 @@ export function UnifiedAgentFeed() {
               const payload = JSON.parse(event.data);
 
               if (payload.event_type === "approval_request") {
+<<<<<<< HEAD
+                setItems((prev) => {
+=======
                 setApprovals((prev) => {
+>>>>>>> 359e384d (feat(memory): Implement AgentMemoryService for tenant-isolated episodic memory)
                   if (prev.find((a) => a.id === payload.data.id)) return prev;
                   return [payload.data, ...prev];
                 });
               } else if (payload.event_type === "approval_decision") {
+<<<<<<< HEAD
+                setItems((prev) => prev.filter((a) => a.id !== payload.data.request_id));
+=======
                 setApprovals((prev) => prev.filter((a) => a.id !== payload.data.request_id));
+>>>>>>> 359e384d (feat(memory): Implement AgentMemoryService for tenant-isolated episodic memory)
                 setActivities((prev) => {
                   const newActivity = {
                     id: crypto.randomUUID(),
@@ -168,7 +189,11 @@ export function UnifiedAgentFeed() {
 
         // If it's a DRAFT or PENDING, add to proposals
         if (String(item.status || '').toUpperCase() === 'DRAFT' || String(item.status || '').toUpperCase() === 'PENDING') {
+<<<<<<< HEAD
+          setItems((current) => [item, ...current.filter((existing) => existing.id !== item.id)]);
+=======
           setApprovals((current) => [item, ...current.filter((existing) => existing.id !== item.id)]);
+>>>>>>> 359e384d (feat(memory): Implement AgentMemoryService for tenant-isolated episodic memory)
         } else {
           // It's an activity event (Approved, Rejected, etc.)
           setActivities((current) => {
@@ -183,7 +208,11 @@ export function UnifiedAgentFeed() {
             return [mappedActivity, ...current.filter((existing) => existing.id !== item.id)];
           });
           // Also remove from approvals if it was there
+<<<<<<< HEAD
+          setItems((current) => current.filter((existing) => existing.id !== item.id));
+=======
           setApprovals((current) => current.filter((existing) => existing.id !== item.id));
+>>>>>>> 359e384d (feat(memory): Implement AgentMemoryService for tenant-isolated episodic memory)
         }
       } catch (err) {
         console.error('Failed to parse agent feed event:', err);
@@ -203,7 +232,11 @@ export function UnifiedAgentFeed() {
 
         // If it's a DRAFT or PENDING, add to proposals
         if (String(item.status || '').toUpperCase() === 'DRAFT' || String(item.status || '').toUpperCase() === 'PENDING') {
+<<<<<<< HEAD
+          setItems((current) => [item, ...current.filter((existing) => existing.id !== item.id)]);
+=======
           setApprovals((current) => [item, ...current.filter((existing) => existing.id !== item.id)]);
+>>>>>>> 359e384d (feat(memory): Implement AgentMemoryService for tenant-isolated episodic memory)
         } else {
           // It's an activity event (Approved, Rejected, etc.)
           setActivities((current) => {
@@ -218,7 +251,11 @@ export function UnifiedAgentFeed() {
             return [mappedActivity, ...current.filter((existing) => existing.id !== item.id)];
           });
           // Also remove from approvals if it was there
+<<<<<<< HEAD
+          setItems((current) => current.filter((existing) => existing.id !== item.id));
+=======
           setApprovals((current) => current.filter((existing) => existing.id !== item.id));
+>>>>>>> 359e384d (feat(memory): Implement AgentMemoryService for tenant-isolated episodic memory)
         }
       } catch (err) {
         console.error('Failed to parse agent feed event:', err);
@@ -230,7 +267,11 @@ export function UnifiedAgentFeed() {
 
   const handleDecision = async (id: string, approved: boolean) => {
     // Optimistic UI update
+<<<<<<< HEAD
+    setItems(prev => prev.filter(app => app.id !== id));
+=======
     setApprovals(prev => prev.filter(app => app.id !== id));
+>>>>>>> 359e384d (feat(memory): Implement AgentMemoryService for tenant-isolated episodic memory)
 
     try {
       const tenant = tenantId();
@@ -251,7 +292,11 @@ export function UnifiedAgentFeed() {
         });
         if (refreshRes.ok) {
             const data: ApprovalsResponse = await refreshRes.json();
+<<<<<<< HEAD
+            setItems(data.pending_approvals);
+=======
             setApprovals(data.pending_approvals);
+>>>>>>> 359e384d (feat(memory): Implement AgentMemoryService for tenant-isolated episodic memory)
         }
         throw new Error("Failed to submit decision");
       }
