@@ -852,13 +852,32 @@
       });
 
       document.querySelectorAll('.save-draft-btn').forEach(btn => {
-          btn.addEventListener('click', (e) => {
+          btn.addEventListener('click', async (e) => {
               e.preventDefault();
+              const originalText = btn.innerText;
+              btn.innerText = "Saving...";
+              btn.disabled = true;
+
+              // Add a small delay to allow browser to render "Saving..."
+              await new Promise(r => setTimeout(r, 100));
+
               saveCurrentState();
+
+              btn.innerText = "Saved!";
+              btn.style.backgroundColor = "#34C759";
+              btn.style.color = "white";
+              btn.style.borderColor = "#34C759";
+
               const msg = document.getElementById('draft-saved-msg');
-              msg.style.display = 'block';
+              if (msg) msg.style.display = 'block';
+
               setTimeout(() => {
-                  msg.style.display = 'none';
+                  btn.innerText = originalText;
+                  btn.disabled = false;
+                  btn.style.backgroundColor = "";
+                  btn.style.color = "";
+                  btn.style.borderColor = "";
+                  if (msg) msg.style.display = 'none';
               }, 2000);
           });
       });
