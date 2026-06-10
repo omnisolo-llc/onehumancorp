@@ -2362,6 +2362,8 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         crate::cart_recovery::start_cart_recovery_background_workers(Arc::new(db.pool.clone()));
     }
 
+
+
     // Start Token Forecast Engine
     let forecaster = Arc::new(crate::telemetry::forecaster::Forecaster::new(db.pool.clone()));
     forecaster.start();
@@ -2881,33 +2883,37 @@ pub(crate) struct UiDashboardMetrics {
     pending_orders: i64,
     total_sales: f64,
     total_campaigns_sent: i64,
+    auto_replied: i64,
 }
 
 pub(crate) async fn load_ui_dashboard_metrics(
     db: &crate::db::DB,
     tenant_id: &str,
 ) -> Result<UiDashboardMetrics, sqlx::Error> {
-    let (active_customers, pending_orders, total_sales, total_campaigns_sent) = match &db.store {
+    let (active_customers, pending_orders, total_sales, total_campaigns_sent, auto_replied) = match &db.store {
         crate::db::DbStore::Postgres => {
-            sqlx::query_as::<_, (i64, i64, f64, i64)>(
+            sqlx::query_as::<_, (i64, i64, f64, i64, i64)>(
                 "SELECT \
                     (SELECT COUNT(*) FROM customers WHERE tenant_id = $1) AS active_customers, \
                     (SELECT COUNT(*) FROM orders WHERE tenant_id = $1 AND status = 'pending') AS pending_orders, \
                     (SELECT COALESCE(SUM(total_amount), 0.0)::DOUBLE PRECISION FROM orders WHERE tenant_id = $1) AS total_sales, \
-                    (SELECT COUNT(*) FROM agent_actions WHERE tenant_id = $1 AND action_type = 'growth.campaign_sent') AS total_campaigns_sent"
+                    (SELECT COUNT(*) FROM agent_actions WHERE tenant_id = $1 AND action_type = 'growth.campaign_sent') AS total_campaigns_sent, \
+                    (SELECT COUNT(*) FROM inbox_messages WHERE tenant_id = $1 AND status = 'auto_replied') AS auto_replied"
             )
             .bind(tenant_id)
             .fetch_one(&db.pool)
             .await?
         }
         crate::db::DbStore::Sqlite(pool) => {
-            sqlx::query_as::<_, (i64, i64, f64, i64)>(
+            sqlx::query_as::<_, (i64, i64, f64, i64, i64)>(
                 "SELECT \
                     (SELECT COUNT(*) FROM customers WHERE tenant_id = ?) AS active_customers, \
                     (SELECT COUNT(*) FROM orders WHERE tenant_id = ? AND status = 'pending') AS pending_orders, \
                     (SELECT COALESCE(SUM(total_amount), 0.0) FROM orders WHERE tenant_id = ?) AS total_sales, \
-                    (SELECT COUNT(*) FROM agent_actions WHERE tenant_id = ? AND action_type = 'growth.campaign_sent') AS total_campaigns_sent"
+                    (SELECT COUNT(*) FROM agent_actions WHERE tenant_id = ? AND action_type = 'growth.campaign_sent') AS total_campaigns_sent, \
+                    (SELECT COUNT(*) FROM inbox_messages WHERE tenant_id = ? AND status = 'auto_replied') AS auto_replied"
             )
+            .bind(tenant_id)
             .bind(tenant_id)
             .bind(tenant_id)
             .bind(tenant_id)
@@ -2922,6 +2928,7 @@ pub(crate) async fn load_ui_dashboard_metrics(
         pending_orders,
         total_sales,
         total_campaigns_sent,
+        auto_replied,
     })
 }
 
@@ -2970,6 +2977,7 @@ async fn ui_dashboard_analytics_briefing_handler(
         pending_orders: 0,
         total_sales: 0.0,
         total_campaigns_sent: 0,
+        auto_replied: 0,
     });
 
     let inbox_messages = load_ui_inbox_from_db(&db, &tenant_id).await.unwrap_or_default();
@@ -3007,7 +3015,7 @@ async fn ui_dashboard_analytics_chat_handler(
             format!("Your latest messages are from: {}.", senders.join(", "))
         }
     } else if text.contains("order") || text.contains("booking") || text.contains("revenue") || text.contains("sale") {
-        let metrics = load_ui_dashboard_metrics(&db, &tenant_id).await.unwrap_or(UiDashboardMetrics { active_customers: 0, pending_orders: 0, total_sales: 0.0, total_campaigns_sent: 0 });
+        let metrics = load_ui_dashboard_metrics(&db, &tenant_id).await.unwrap_or(UiDashboardMetrics { active_customers: 0, pending_orders: 0, total_sales: 0.0, total_campaigns_sent: 0, auto_replied: 0 });
         format!("You currently have {} pending orders, with a total expected revenue of ${:.2}.", metrics.pending_orders, metrics.total_sales)
     } else {
         "I am your Decision Assistant. I can help you check orders, messages, and revenue.".to_string()
@@ -4549,6 +4557,7 @@ async fn create_ui_bom_item_handler(
         .nest("/api/v1/booking/request", api::booking::request::router(dept_orchestrator.clone()))
         .nest("/api/agents/mission", api::agents::mission::handoff::router(std::sync::Arc::new(crate::sip::SipDB::new(db.pool.clone(), "default".to_string()))))
         .route("/api/telemetry/sync", axum::routing::post(api::telemetry::sync_telemetry_handler))
+        .route("/api/v1/chaos/report", axum::routing::get(api::chaos::get_chaos_report_handler).with_state(db.pool.clone()))
         .route_layer(axum::middleware::from_fn_with_state(
             rate_limiter,
             ::server_utils::tier_middleware::tier_middleware,
