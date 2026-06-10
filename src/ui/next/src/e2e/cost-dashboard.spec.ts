@@ -32,7 +32,7 @@ test.describe('Cost Dashboard Loop', () => {
     await expect(page.locator('span', { hasText: 'Compute Usage' })).toBeVisible();
 
     // Check navigation works
-    await page.locator('button', { hasText: 'Back to My Plan' }).click();
-    await expect(page).toHaveURL('/plan');
+    await page.locator('button', { hasText: 'Back to Dashboard' }).click();
+    await expect(page).toHaveURL('/dashboard');
   });
 });

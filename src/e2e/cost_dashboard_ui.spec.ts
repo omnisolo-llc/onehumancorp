@@ -14,7 +14,7 @@ test.describe('Cost Dashboard & Plan Limits UI', () => {
     await expect(page.locator('span', { hasText: 'Storage' }).first()).toBeVisible();
 
     // Check if the plan navigation button is present
-    await expect(page.getByRole('link', { name: 'Back to My Plan' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Back to Dashboard' })).toBeVisible();
   });
 
   test('should display my plan limits and route to pricing', async ({ page }) => {

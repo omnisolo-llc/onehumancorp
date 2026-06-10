@@ -465,8 +465,8 @@ export default function Dashboard() {
           </section>
         )}
 
-        <div className="mb-6">
-          <Link href="/assistant" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10 relative overflow-hidden bg-gradient-to-br from-blue-50/50 to-indigo-50/50 dark:from-blue-900/20 dark:to-indigo-900/20">
+        <div className="mb-6 flex flex-col md:flex-row gap-4">
+          <Link href="/assistant" className="flex-1 block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10 relative overflow-hidden bg-gradient-to-br from-blue-50/50 to-indigo-50/50 dark:from-blue-900/20 dark:to-indigo-900/20">
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 rounded-[12px] bg-[#0066FF] flex items-center justify-center text-white text-xl shadow-sm">
                 ✨
@@ -478,6 +478,16 @@ export default function Dashboard() {
               <div className="text-[#0066FF] opacity-0 group-hover:opacity-100 transition-opacity transform group-hover:translate-x-1 duration-200">
                 →
               </div>
+            </div>
+          </Link>
+
+          <Link href="/cost-dashboard" className="md:w-1/3 block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10 relative overflow-hidden bg-white dark:bg-[#16161A]">
+            <div className="flex flex-col gap-2 h-full justify-center">
+              <div className="w-10 h-10 rounded-[10px] bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-700 dark:text-gray-300 text-lg shadow-sm">
+                📊
+              </div>
+              <h3 className="text-lg font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7]">My Plan</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">View usage and billing.</p>
             </div>
           </Link>
         </div>
