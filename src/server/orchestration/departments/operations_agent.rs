@@ -23,7 +23,7 @@ impl Department for OperationsAgent {
             "tenant.order.created".to_string(),
             "tenant.subscription.fulfillment_batch.created".to_string(),
             "LowStockAlert".to_string(),
-            "PosSyncFailure".to_string(),
+            "InventoryConflictEvent".to_string(),
             "tenant.inventory.updated".to_string(),
         ]
     }
@@ -55,8 +55,32 @@ impl Department for OperationsAgent {
                 let product_id = event.payload.get("product_id").and_then(|v| v.as_str()).unwrap_or("unknown");
                 format!("Draft a restock order for product {} due to low stock", product_id)
             },
-            "PosSyncFailure" => {
+            "InventoryConflictEvent" => {
                 let transaction_id = event.payload.get("transaction_id").and_then(|v| v.as_str()).unwrap_or("unknown");
+                let product_id = event.payload.get("product_id").and_then(|v| v.as_str()).unwrap_or("unknown");
+
+                // Insert directly into agent_feed_items as required by the prompt
+                let repo = crate::domain::repository::agent_feed_repo::AgentFeedRepository::new(self.orchestrator.db.pool.clone());
+                let proposed_action = serde_json::json!({
+                    "buttons": [
+                        { "label": "Cancel Online Order", "action": "cancel_order" },
+                        { "label": "Draft Rush Supply Order", "action": "rush_restock" }
+                    ]
+                });
+
+                let item = crate::domain::repository::agent_feed_repo::AgentFeedItem {
+                    id: uuid::Uuid::new_v4().to_string(),
+                    tenant_id: event.tenant_id.clone(),
+                    event_source: "InventoryConflictEvent".to_string(),
+                    context_payload: Some(sqlx::types::Json(event.payload.clone())),
+                    proposed_action: Some(sqlx::types::Json(proposed_action)),
+                    lifecycle_state: "ACTION_REQUIRED".to_string(),
+                    created_at: Some(chrono::Utc::now()),
+                    updated_at: Some(chrono::Utc::now()),
+                };
+
+                let _ = repo.create(item).await;
+
                 format!("Review POS offline sync discrepancy for transaction {}", transaction_id)
             },
             "tenant.subscription.fulfillment_batch.created" => {
