@@ -1,0 +1,30 @@
+load("@rules_rust//rust:defs.bzl", "rust_library")
+
+exports_files([
+    "mod.rs",
+    "service.rs",
+], visibility = ["//visibility:public"])
+
+rust_library(
+    name = "finance",
+    srcs = [
+        "mod.rs",
+        "service.rs",
+    ],
+    deps = [
+        "//src/proto:finance",
+        "//src/server/db",
+        "//src/server/common",
+        "//src/server/auth",
+        "@crates//:sqlx",
+        "@crates//:tonic",
+        "@crates//:uuid",
+        "@crates//:tracing",
+        "@crates//:serde_json",
+        "@crates//:tokio",
+        "@crates//:futures",
+        "@crates//:base64",
+        "@crates//:chrono",
+    ],
+    visibility = ["//visibility:public"],
+)

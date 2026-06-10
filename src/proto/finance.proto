@@ -1,0 +1,89 @@
+syntax = "proto3";
+
+package ohc.finance;
+
+option go_package = "github.com/onehumancorp/mono/src/proto/ohc/finance;financepb";
+
+message InvoiceLineItem {
+  string id = 1;
+  string description = 2;
+  int32 quantity = 3;
+  int64 unit_price_cents = 4;
+}
+
+message Invoice {
+  string id = 1;
+  string tenant_id = 2;
+  string client_id = 3;
+  string status = 4;
+  string currency = 5;
+  int64 total_amount_cents = 6;
+  string due_date = 7;
+  string stripe_payment_link = 8;
+  repeated InvoiceLineItem line_items = 9;
+}
+
+message Expense {
+  string id = 1;
+  string tenant_id = 2;
+  int64 amount_cents = 3;
+  string currency = 4;
+  string merchant = 5;
+  string category = 6;
+  string expense_date = 7;
+  string receipt_image_url = 8;
+  string project_id = 9;
+  string status = 10;
+}
+
+message CreateInvoiceRequest {
+  string client_id = 1;
+  string currency = 2;
+  string due_date = 3;
+  repeated InvoiceLineItem line_items = 4;
+}
+
+message CreateInvoiceResponse {
+  Invoice invoice = 1;
+  bool success = 2;
+  string error_message = 3;
+}
+
+message GetInvoiceRequest {
+  string invoice_id = 1;
+}
+
+message GetInvoiceResponse {
+  Invoice invoice = 1;
+  bool success = 2;
+  string error_message = 3;
+}
+
+message UploadReceiptRequest {
+  bytes image_data = 1;
+  string mime_type = 2;
+}
+
+message UploadReceiptResponse {
+  Expense expense = 1;
+  bool success = 2;
+  string error_message = 3;
+}
+
+message ProcessExpenseRequest {
+  string expense_id = 1;
+  bool approved = 2;
+  string project_id = 3;
+}
+
+message ProcessExpenseResponse {
+  bool success = 1;
+  string error_message = 2;
+}
+
+service FinanceService {
+  rpc CreateInvoice(CreateInvoiceRequest) returns (CreateInvoiceResponse);
+  rpc GetInvoice(GetInvoiceRequest) returns (GetInvoiceResponse);
+  rpc UploadReceipt(UploadReceiptRequest) returns (UploadReceiptResponse);
+  rpc ProcessExpense(ProcessExpenseRequest) returns (ProcessExpenseResponse);
+}
