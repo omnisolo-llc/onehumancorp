@@ -162,4 +162,11 @@ mod tests {
         let compressed_text = ::server_pricing::compression::reduce_tokens(raw_text);
         assert!(compressed_text.len() < raw_text.len());
     }
+
+    #[tokio::test]
+    async fn test_ai_agent_timeout_enforcement() {
+        // Agent timeout rule: must have 60-second timeout.
+        let timeout_ms = ohc_builtin_agent::agent::agent_task_timeout().as_millis();
+        assert_eq!(timeout_ms, 60000, "Agent jobs must have a 60-second timeout");
+    }
 }
