@@ -1,0 +1,8 @@
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+
+exports_files([
+    "mod.rs",
+    "identity_resolution.rs",
+    "webhook_ingress.rs",
+    "event_mesh_publisher.rs",
+], visibility = ["//visibility:public"])
