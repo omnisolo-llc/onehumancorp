@@ -10,7 +10,8 @@ export default function AiTimeSavingsWidget() {
     hours_saved: 0,
     inquiries_handled: 0,
     appointments_scheduled: 0,
-    carts_recovered: 0
+    carts_recovered: 0,
+    auto_replied: 0
   });
 
   useEffect(() => {
@@ -100,7 +101,7 @@ export default function AiTimeSavingsWidget() {
               You saved {savingsData.hours_saved} hours this week
             </h3>
             <p className="text-sm text-gray-600 dark:text-gray-300">
-              Your AI agents handled {savingsData.inquiries_handled} customer inquiries, scheduled {savingsData.appointments_scheduled} appointments, and recovered {savingsData.carts_recovered} abandoned carts.
+              Your AI agents handled {savingsData.inquiries_handled} customer inquiries (Auto-Replied: {savingsData.auto_replied || 0}), scheduled {savingsData.appointments_scheduled} appointments, and recovered {savingsData.carts_recovered} abandoned carts.
             </p>
           </div>
         </div>
