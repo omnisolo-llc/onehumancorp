@@ -159,7 +159,8 @@ impl<'a, T: DeserializeOwned> RetryWithErrorOutputParser<'a, T> {
                     }
 
                     let base_backoff = 500 * (1 << attempt);
-                    let jitter = rand::Rng::gen_range(&mut rand::thread_rng(), 0..100);
+                    use rand::Rng;
+                    let jitter = rand::thread_rng().gen_range(0..100);
                     let backoff = std::time::Duration::from_millis((base_backoff as u64) + jitter);
                     tokio::time::sleep(backoff).await;
 
@@ -173,7 +174,7 @@ impl<'a, T: DeserializeOwned> RetryWithErrorOutputParser<'a, T> {
                 Ok(parsed) => return Ok(parsed),
                 Err(parse_error_msg) => {
                     if attempt >= max_retries {
-                        return Err(ToolError::LlmRecoverable(format!(
+                        return Err(ToolError::Fatal(format!(
                             "Output parsing failed after {} retries. Last error: {}",
                             max_retries, parse_error_msg
                         )));
@@ -485,7 +486,7 @@ mod tests {
         let result: Result<TestOutput, _> =
             parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 2).await;
         assert!(result.is_err());
-        if let Err(ToolError::LlmRecoverable(msg)) = result {
+        if let Err(ToolError::Fatal(msg)) = result {
             assert!(
                 msg.contains("Failed to parse arguments")
                     || msg.contains("Output parsing failed after"),
@@ -493,7 +494,7 @@ mod tests {
                 msg
             );
         } else {
-            panic!("Expected LlmRecoverable error, got {:?}", result);
+            panic!("Expected Fatal error, got {:?}", result);
         }
     }
 
@@ -554,10 +555,10 @@ mod tests {
             parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 2).await;
         assert!(result.is_err());
         match result {
-            Err(ToolError::LlmRecoverable(msg)) => {
+            Err(ToolError::Fatal(msg)) => {
                 assert!(msg.contains("Output parsing failed after 2 retries"));
             }
-            _ => panic!("Expected LlmRecoverable error for exhaustion"),
+            _ => panic!("Expected Fatal error for exhaustion"),
         }
     }
 }

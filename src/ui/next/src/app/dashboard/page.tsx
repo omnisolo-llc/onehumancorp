@@ -1,5 +1,6 @@
 "use client";
 import { FloatingActionButton } from "./FAB";
+import { VoiceAssistantFAB } from "./VoiceAssistantFAB";
 import { MorningBriefingCard } from "./MorningBriefingCard";
 
 
@@ -320,6 +321,7 @@ export default function Dashboard() {
       <AiTimeSavingsWidget />
       <NeighborhoodPulseCard tenant={tenantId()} />
       <FloatingActionButton />
+      <VoiceAssistantFAB />
 
       <MorningBriefingCard tenant={tenantId()} />
 
