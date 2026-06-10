@@ -99,7 +99,7 @@ export default function TerminalPage() {
             if (posTransactions.length > 0) {
               const sessionId = localStorage.getItem("ohc_active_terminal_session_id");
               syncTasks.push(
-                fetch("/api/pos/transactions/sync", {
+                fetch("/api/v1/payments/terminal/sync_offline", {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({ session_id: sessionId, transactions: posTransactions })
