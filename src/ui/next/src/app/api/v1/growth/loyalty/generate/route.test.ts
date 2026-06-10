@@ -2,6 +2,30 @@ import { POST } from './route';
 import { describe, it, expect } from 'vitest';
 
 describe('POST /api/v1/growth/loyalty/generate', () => {
+
+  it('generates email message successfully', async () => {
+    const request = new Request('http://localhost:3000/api/v1/growth/loyalty/generate', {
+      method: 'POST',
+      body: JSON.stringify({
+        give_amount: '10',
+        get_amount: '20',
+        reward_type: 'percentage',
+        store_name: 'Test Store'
+      })
+    });
+
+    const response = await POST(request);
+    const json = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(json.message).toContain('10%');
+    expect(json.message).toContain('20%');
+    expect(json.message).toContain('Test Store');
+    expect(json.message).toContain('⚡ Powered by OHC');
+  });
+
+
+
   it('generates the embed code successfully', async () => {
     const request = new Request('http://localhost:3000/api/v1/growth/loyalty/generate', {
       method: 'POST',
