@@ -30,6 +30,7 @@ exports_files(
         "pos.rs",
         "agent_feed.rs",
         "audio_command.rs",
+        "invoice.rs",
     ],
     visibility = ["//visibility:public"],
 )
@@ -66,6 +67,7 @@ rust_library(
         "pos.rs",
         "agent_feed.rs",
         "audio_command.rs",
+        "invoice.rs",
         "//src/server/api/agents:approvals.rs",
         "//src/server/api/agents:client_intake.rs",
         "//src/server/api/agents:hire.rs",

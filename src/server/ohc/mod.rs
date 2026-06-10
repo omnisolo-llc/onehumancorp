@@ -35,6 +35,9 @@ pub mod ohc {
     pub mod collective {
         tonic::include_proto!("ohc.collective");
     }
+    pub mod invoice {
+        tonic::include_proto!("ohc.invoice");
+    }
 }
 
 #[cfg(ohc_bazel)]
@@ -74,6 +77,9 @@ pub mod ohc {
     pub mod collective {
         pub use collective_proto::ohc::collective::*;
     }
+    pub mod invoice {
+        pub use invoice_proto::ohc::invoice::*;
+    }
 }
 
 pub mod interop {
@@ -108,4 +114,7 @@ pub mod campaign {
 }
 pub mod collective {
     pub use crate::ohc::collective::*;
+}
+pub mod invoice {
+    pub use crate::ohc::invoice::*;
 }
