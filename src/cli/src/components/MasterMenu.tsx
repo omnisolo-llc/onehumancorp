@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Box, Text, useInput } from 'ink';
 
+import { AgentProtocol } from './AgentProtocol';
+
 const options = [
   "Run Developer Setup",
   "Configure Environment (.env)",
@@ -12,13 +14,19 @@ const options = [
   "Seed Database with Mock Data",
   "Check Swarm Status",
   "Verify Setup",
+  "View Agent Protocol Tasks",
   "Exit"
 ];
 
 export const MasterMenu: React.FC = () => {
+  const [viewProtocol, setViewProtocol] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(0);
 
   useInput((input, key) => {
+    if (viewProtocol && key.escape) {
+      setViewProtocol(false);
+      return;
+    }
     if (key.upArrow) {
       setSelectedIndex(prev => Math.max(0, prev - 1));
     }
@@ -26,13 +34,24 @@ export const MasterMenu: React.FC = () => {
       setSelectedIndex(prev => Math.min(options.length - 1, prev + 1));
     }
     if (key.return) {
-      if (options[selectedIndex] === "Exit") {
+      if (options[selectedIndex] === "View Agent Protocol Tasks") {
+        setViewProtocol(true);
+      } else if (options[selectedIndex] === "Exit") {
         process.exit(0);
       } else {
         console.info(`Executing ${options[selectedIndex]}...`);
       }
     }
   });
+
+  if (viewProtocol) {
+    return (
+      <Box flexDirection="column">
+        <AgentProtocol />
+        <Text color="gray">Press Esc to go back</Text>
+      </Box>
+    );
+  }
 
   return (
     <Box flexDirection="column" borderStyle="round" borderColor="gray" padding={1}>
