@@ -5,9 +5,10 @@ use axum::{
     Json,
 };
 use std::sync::Arc;
+use std::str::FromStr;
 use serde::{Deserialize, Serialize};
 use crate::orchestration::departments::orchestrator::DepartmentOrchestrator;
-use crate::orchestration::departments::types::ActionRisk;
+use crate::orchestration::departments::types::{DepartmentType, ActionRisk};
 use crate::orchestration::router::{SemanticRouter, SemanticRoutingRequest};
 use ::server_common::Claims;
 
@@ -69,17 +70,17 @@ pub async fn handle_voice_command(
         Ok(raw_json) => {
             if let Ok(val) = serde_json::from_str::<serde_json::Value>(&raw_json) {
                 let d_str = val.get("department").and_then(|v| v.as_str()).unwrap_or("Operations");
-                let d = crate::orchestration::departments::types::DepartmentType::from_str(d_str)
-                    .unwrap_or(crate::orchestration::departments::types::DepartmentType::Operations);
+                let d = DepartmentType::from_str(d_str)
+                    .unwrap_or(DepartmentType::Operations);
                 let desc = val.get("description").and_then(|v| v.as_str()).unwrap_or(&format!("Voice initiated: {}", transcription)).to_string();
                 let p = val.get("payload").cloned().unwrap_or(serde_json::json!({}));
                 (d, desc, p)
             } else {
                 // Fallback if JSON parsing fails
-                (crate::orchestration::departments::types::DepartmentType::Operations, format!("Voice initiated: {}", transcription), serde_json::json!({ "raw_transcription": transcription }))
+                (DepartmentType::Operations, format!("Voice initiated: {}", transcription), serde_json::json!({ "raw_transcription": transcription }))
             }
         }
-        Err(_) => (crate::orchestration::departments::types::DepartmentType::Operations, format!("Voice initiated: {}", transcription), serde_json::json!({ "raw_transcription": transcription }))
+        Err(_) => (DepartmentType::Operations, format!("Voice initiated: {}", transcription), serde_json::json!({ "raw_transcription": transcription }))
     };
 
     // 3. Register as a Proposed Action Card in the Agent Feed

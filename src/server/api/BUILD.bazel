@@ -30,6 +30,7 @@ exports_files(
         "local_seo.rs",
         "recovery.rs",
         "agent_feed.rs",
+        "voice_command.rs",
     ],
     visibility = ["//visibility:public"],
 )
@@ -66,6 +67,7 @@ rust_library(
         "local_seo.rs",
         "recovery.rs",
         "agent_feed.rs",
+        "voice_command.rs",
         "//src/server/api/agents:approvals.rs",
         "//src/server/api/agents:client_intake.rs",
         "//src/server/api/agents:hire.rs",
