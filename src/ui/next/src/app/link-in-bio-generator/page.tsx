@@ -209,7 +209,7 @@ export default function LinkInBioGeneratorPage() {
                      </div>
 
                      <div className="mt-auto pt-10 pb-6 w-full flex justify-center">
-                         <a href={`/onboarding?ref=${tenant}`} className="text-xs font-semibold tracking-wide uppercase opacity-70 hover:opacity-100 transition-opacity">
+                         <a href={`https://ohc.store/join?ref=${tenant}`} className="text-xs font-semibold tracking-wide uppercase opacity-70 hover:opacity-100 transition-opacity">
                              ⚡ Powered by OHC
                          </a>
                      </div>

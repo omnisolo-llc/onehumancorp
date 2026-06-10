@@ -201,6 +201,11 @@
                 <span style="color: #86868b;">Payment Fees</span>
                 <span id="payment-fees" style="font-weight: 500;">$0.00</span>
             </div>
+
+            <div style="margin-top: 24px; font-weight: 600; margin-bottom: 12px;">Agent & Feature Costs</div>
+            <ul id="cost-dashboard-agent-costs" style="list-style: none; padding: 0; margin: 0;">
+                <li style="color: #86868b; font-size: 14px;">No agent cost data available.</li>
+            </ul>
           </div>
         </div>
       </div>
@@ -267,6 +272,30 @@
                 document.getElementById('storage-cost').innerText = formatCents(costData.storage_cost || 0);
                 document.getElementById('network-cost').innerText = formatCents(costData.network_cost || 0);
                 document.getElementById('payment-fees').innerText = formatCents(costData.payment_fees || 0);
+
+                if (costData.agent_costs && costData.agent_costs.length > 0) {
+                    const agentList = document.getElementById('cost-dashboard-agent-costs');
+                    agentList.innerHTML = ''; // Clear default message
+                    costData.agent_costs.forEach(agent => {
+                        const li = document.createElement('li');
+                        li.style.display = 'flex';
+                        li.style.justifyContent = 'space-between';
+                        li.style.marginBottom = '8px';
+
+                        const nameSpan = document.createElement('span');
+                        nameSpan.style.color = '#86868b';
+                        nameSpan.style.textTransform = 'capitalize';
+                        nameSpan.innerText = agent.agent_id.replace(/_/g, ' ');
+
+                        const costSpan = document.createElement('span');
+                        costSpan.style.fontWeight = '500';
+                        costSpan.innerText = formatCents(agent.cost_cents);
+
+                        li.appendChild(nameSpan);
+                        li.appendChild(costSpan);
+                        agentList.appendChild(li);
+                    });
+                }
             }
 
         } catch (e) {
