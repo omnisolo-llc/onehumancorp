@@ -1,0 +1,9 @@
+filegroup(
+    name = "srcs",
+    srcs = [
+        "identity.rs",
+        "mod.rs",
+        "webhook.rs",
+    ],
+    visibility = ["//visibility:public"],
+)
