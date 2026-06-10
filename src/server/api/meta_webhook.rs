@@ -171,9 +171,10 @@ async fn process_omnichannel_message(state: &MetaWebhookState, tenant_id: String
     let inbox_id = Uuid::new_v4().to_string();
     let pool = &state.db.pool;
 
+    let draft_id = Uuid::new_v4().to_string();
     let insert_result = match &state.db.store {
         crate::db::DbStore::Postgres => {
-            sqlx::query(
+            let res = sqlx::query(
                 "INSERT INTO inbox_messages (id, tenant_id, source, original_content, content, translated_from_language, draft_reply, status, sender_id, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, 'unread', $8, NOW())"
             )
             .bind(&inbox_id)
@@ -185,10 +186,15 @@ async fn process_omnichannel_message(state: &MetaWebhookState, tenant_id: String
             .bind(&draft_reply)
             .bind(&sender_id)
             .execute(pool)
-            .await.map(|_| ())
+            .await.map(|_| ());
+            if res.is_ok() {
+                let _ = sqlx::query("INSERT INTO draft_replies (id, tenant_id, message_id, content, status, created_at, updated_at) VALUES ($1, $2, $3, $4, 'pending', NOW(), NOW())")
+                    .bind(&draft_id).bind(&tenant_id).bind(&inbox_id).bind(&draft_reply).execute(pool).await;
+            }
+            res
         },
         crate::db::DbStore::Sqlite(sqlite_pool) => {
-            sqlx::query(
+            let res = sqlx::query(
                 "INSERT INTO inbox_messages (id, tenant_id, source, original_content, content, translated_from_language, draft_reply, status, sender_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, 'unread', ?, CURRENT_TIMESTAMP)"
             )
             .bind(&inbox_id)
@@ -200,7 +206,12 @@ async fn process_omnichannel_message(state: &MetaWebhookState, tenant_id: String
             .bind(&draft_reply)
             .bind(&sender_id)
             .execute(sqlite_pool)
-            .await.map(|_| ())
+            .await.map(|_| ());
+            if res.is_ok() {
+                let _ = sqlx::query("INSERT INTO draft_replies (id, tenant_id, message_id, content, status, created_at, updated_at) VALUES (?, ?, ?, ?, 'pending', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
+                    .bind(&draft_id).bind(&tenant_id).bind(&inbox_id).bind(&draft_reply).execute(sqlite_pool).await;
+            }
+            res
         }
     };
 

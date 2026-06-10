@@ -2703,12 +2703,14 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
     }
 
     match sqlx::query(
-        "SELECT id, tenant_id, source, content,
-                COALESCE(original_content, content) AS original_content,
-                COALESCE(translated_from_language, '') AS translated_from_language,
-                draft_reply, status, created_at
-         FROM inbox_messages
-         ORDER BY created_at DESC"
+        "SELECT m.id, m.tenant_id, m.source, m.content,
+                COALESCE(m.original_content, m.content) AS original_content,
+                COALESCE(m.translated_from_language, '') AS translated_from_language,
+                COALESCE(dr.content, m.draft_reply) AS draft_reply, m.status, m.created_at,
+                m.conversation_id
+         FROM inbox_messages m
+         LEFT JOIN draft_replies dr ON m.id = dr.message_id
+         ORDER BY m.created_at DESC"
     )
         .fetch_all(&mut *tx)
         .await
@@ -2721,6 +2723,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
                 let created_at_str = created_at.map(|d| d.format("%Y-%m-%d %H:%M:%S").to_string()).unwrap_or_default();
                 serde_json::json!({
                     "id": row.get::<String, _>("id"),
+                    "conversation_id": row.get::<Option<String>, _>("conversation_id").unwrap_or_default(),
                     "tenant_id": row.get::<String, _>("tenant_id"),
                     "source": row.get::<String, _>("source"),
                     "content": row.get::<String, _>("content"),
@@ -3011,11 +3014,12 @@ async fn load_ui_inbox_from_db(db: &crate::db::DB, tenant_id: &str) -> Result<Ve
     use sqlx::Row;
     match &db.store {
         crate::db::DbStore::Postgres => {
-            sqlx::query("SELECT id, COALESCE(source, '') AS source, COALESCE(content, '') AS content, COALESCE(original_content, content, '') AS original_content, COALESCE(translated_from_language, '') AS translated_from_language, COALESCE(draft_reply, '') AS draft_reply, COALESCE(status, '') AS status, COALESCE(created_at::text, '') AS created_at FROM inbox_messages WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 50")
+            sqlx::query("SELECT m.id, COALESCE(m.source, \'\') AS source, COALESCE(m.content, \'\') AS content, COALESCE(m.original_content, m.content, \'\') AS original_content, COALESCE(m.translated_from_language, \'\') AS translated_from_language, COALESCE(dr.content, m.draft_reply, \'\') AS draft_reply, COALESCE(m.status, \'\') AS status, COALESCE(m.created_at::text, \'\') AS created_at, m.conversation_id FROM inbox_messages m LEFT JOIN draft_replies dr ON m.id = dr.message_id WHERE m.tenant_id = $1 ORDER BY m.created_at DESC LIMIT 50")
                 .bind(tenant_id)
                 .fetch_all(&db.pool)
                 .await.map(|rows| rows.into_iter().map(|row| serde_json::json!({
                     "id": row.get::<String, _>("id"),
+                    "conversation_id": row.get::<Option<String>, _>("conversation_id").unwrap_or_default(),
                     "source": row.get::<String, _>("source"),
                     "content": row.get::<String, _>("content"),
                     "original_message": row.get::<String, _>("original_content"),
@@ -3026,11 +3030,12 @@ async fn load_ui_inbox_from_db(db: &crate::db::DB, tenant_id: &str) -> Result<Ve
                 })).collect())
         },
         crate::db::DbStore::Sqlite(pool) => {
-            sqlx::query("SELECT id, COALESCE(source, '') AS source, COALESCE(content, '') AS content, COALESCE(original_content, content, '') AS original_content, COALESCE(translated_from_language, '') AS translated_from_language, COALESCE(draft_reply, '') AS draft_reply, COALESCE(status, '') AS status, COALESCE(CAST(created_at AS TEXT), '') AS created_at FROM inbox_messages WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 50")
+            sqlx::query("SELECT m.id, COALESCE(m.source, \'\') AS source, COALESCE(m.content, \'\') AS content, COALESCE(m.original_content, m.content, \'\') AS original_content, COALESCE(m.translated_from_language, \'\') AS translated_from_language, COALESCE(dr.content, m.draft_reply, \'\') AS draft_reply, COALESCE(m.status, \'\') AS status, COALESCE(CAST(m.created_at AS TEXT), \'\') AS created_at, m.conversation_id FROM inbox_messages m LEFT JOIN draft_replies dr ON m.id = dr.message_id WHERE m.tenant_id = ? ORDER BY m.created_at DESC LIMIT 50")
                 .bind(tenant_id)
                 .fetch_all(pool)
                 .await.map(|rows| rows.into_iter().map(|row| serde_json::json!({
                     "id": row.get::<String, _>("id"),
+                    "conversation_id": row.get::<Option<String>, _>("conversation_id").unwrap_or_default(),
                     "source": row.get::<String, _>("source"),
                     "content": row.get::<String, _>("content"),
                     "original_message": row.get::<String, _>("original_content"),

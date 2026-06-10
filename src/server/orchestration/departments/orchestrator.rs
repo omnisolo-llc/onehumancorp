@@ -1056,14 +1056,19 @@ impl DepartmentOrchestrator {
     }
 
     pub async fn update_inbox_message_draft(&self, message_id: &str, tenant_id: &str, draft_reply: &str) -> Result<(), String> {
+        let draft_id = uuid::Uuid::new_v4().to_string();
         match &self.db.store {
             DbStore::Postgres => {
                 sqlx::query("UPDATE inbox_messages SET draft_reply = $1 WHERE id = $2 AND tenant_id = $3")
                     .bind(draft_reply).bind(message_id).bind(tenant_id).execute(&self.db.pool).await.map_err(|e| e.to_string())?;
+                sqlx::query("INSERT INTO draft_replies (id, tenant_id, message_id, content, status, created_at, updated_at) VALUES ($1, $2, $3, $4, 'pending', NOW(), NOW()) ON CONFLICT (message_id) DO UPDATE SET content = EXCLUDED.content, updated_at = NOW()")
+                    .bind(&draft_id).bind(tenant_id).bind(message_id).bind(draft_reply).execute(&self.db.pool).await.map_err(|e| e.to_string())?;
             }
             DbStore::Sqlite(pool) => {
                 sqlx::query("UPDATE inbox_messages SET draft_reply = ? WHERE id = ? AND tenant_id = ?")
                     .bind(draft_reply).bind(message_id).bind(tenant_id).execute(pool).await.map_err(|e| e.to_string())?;
+                sqlx::query("INSERT INTO draft_replies (id, tenant_id, message_id, content, status, created_at, updated_at) VALUES (?, ?, ?, ?, 'pending', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) ON CONFLICT(message_id) DO UPDATE SET content=excluded.content, updated_at=CURRENT_TIMESTAMP")
+                    .bind(&draft_id).bind(tenant_id).bind(message_id).bind(draft_reply).execute(pool).await.map_err(|e| e.to_string())?;
             }
         }
         Ok(())

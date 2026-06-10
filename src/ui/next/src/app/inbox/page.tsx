@@ -5,6 +5,7 @@ import { AppShell } from "../components/AppShell";
 
 type Message = {
   id: string;
+  conversation_id?: string;
   source?: string;
   content?: string;
   original_content?: string;

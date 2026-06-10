@@ -198,6 +198,7 @@ async fn handle_webhook(
 
     let pool = get_pool();
     let id = Uuid::new_v4().to_string();
+    let draft_id = Uuid::new_v4().to_string();
     let _ = sqlx::query(
         r#"
         INSERT INTO inbox_messages (id, tenant_id, source, original_content, content, translated_from_language, draft_reply, status, created_at)
@@ -210,6 +211,16 @@ async fn handle_webhook(
     .bind(&translation.original_content)
     .bind(&translation.translated_content)
     .bind(&translation.source_language)
+    .bind(&draft_reply)
+    .execute(&pool)
+    .await;
+
+    let _ = sqlx::query(
+        "INSERT INTO draft_replies (id, tenant_id, message_id, content, status, created_at, updated_at) VALUES ($1, $2, $3, $4, 'pending', NOW(), NOW())"
+    )
+    .bind(&draft_id)
+    .bind(&payload.tenant_id)
+    .bind(&id)
     .bind(&draft_reply)
     .execute(&pool)
     .await;

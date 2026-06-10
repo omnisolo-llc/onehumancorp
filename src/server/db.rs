@@ -987,6 +987,9 @@ impl DB {
                     CREATE TABLE IF NOT EXISTS inbox_messages (
                         id TEXT PRIMARY KEY,
                         tenant_id TEXT,
+                        conversation_id TEXT,
+                        direction TEXT DEFAULT 'inbound',
+                        channel TEXT,
                         source TEXT,
                         content TEXT,
                         original_content TEXT,
@@ -994,6 +997,25 @@ impl DB {
                         draft_reply TEXT,
                         status TEXT,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS conversations (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        customer_id TEXT,
+                        status TEXT NOT NULL DEFAULT 'open',
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS draft_replies (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        message_id TEXT NOT NULL UNIQUE,
+                        content TEXT NOT NULL,
+                        status TEXT NOT NULL DEFAULT 'pending',
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                     );
 
                     CREATE TABLE IF NOT EXISTS interactions (
