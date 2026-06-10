@@ -30,6 +30,43 @@ impl TaskDecompositionService {
         }
     }
 
+
+    pub async fn get_handoff_payload(&self, task_id: &str) -> Result<Option<String>, String> {
+        let payload: Option<String> = match &self.db.store {
+            crate::db::DbStore::Postgres => {
+                use sqlx::Row;
+                let row_opt = sqlx::query("SELECT handoff_payload FROM state_machine_transitions WHERE task_id = $1 AND handoff_payload IS NOT NULL ORDER BY transitioned_at DESC LIMIT 1")
+                    .bind(task_id)
+                    .fetch_optional(&self.db.pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+                match row_opt {
+                    Some(row) => {
+                        let val: Option<serde_json::Value> = row.try_get("handoff_payload").unwrap_or(None);
+                        val.map(|v| v.to_string())
+                    },
+                    None => None,
+                }
+            }
+            crate::db::DbStore::Sqlite(pool) => {
+                use sqlx::Row;
+                // DO NOT ACQUIRE THE LOCK HERE
+                // Just use the pool. It's safe for read-only.
+                let row_opt = sqlx::query("SELECT handoff_payload FROM state_machine_transitions WHERE task_id = ? AND handoff_payload IS NOT NULL ORDER BY transitioned_at DESC LIMIT 1")
+                    .bind(task_id)
+                    .fetch_optional(pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+                match row_opt {
+                    Some(row) => row.try_get("handoff_payload").unwrap_or(None),
+                    None => None,
+                }
+            }
+        };
+
+        Ok(payload)
+    }
+
     pub async fn check_circular_dependency(
         &self,
         task_id: &str,
@@ -494,10 +531,21 @@ impl TaskDecompositionService {
                     assigned_agent_id: row.get("assigned_agent_id"),
                     status: row.get("status"),
                     priority: row.get("priority"),
+
                     payload: {
                         let val: serde_json::Value = row.get("payload");
-                        serde_json::to_string(&val).unwrap_or_else(|_| "{}".to_string())
+                        let mut obj = val.as_object().cloned().unwrap_or_default();
+
+                        let task_id: String = row.get("id");
+                        if let Ok(Some(handoff)) = self.get_handoff_payload(&task_id).await {
+                            if let Ok(handoff_val) = serde_json::from_str::<serde_json::Value>(&handoff) {
+                                obj.insert("handoff_context".to_string(), handoff_val);
+                            }
+                        }
+
+                        serde_json::to_string(&obj).unwrap_or_else(|_| "{}".to_string())
                     },
+
                     locked_until: {
                         let locked: Option<chrono::DateTime<chrono::Utc>> =
                             row.try_get("locked_until").unwrap_or(None);
@@ -569,7 +617,21 @@ impl TaskDecompositionService {
                     assigned_agent_id: row.get("assigned_agent_id"),
                     status: row.get("status"),
                     priority: row.get("priority"),
-                    payload: row.get("payload"),
+
+                    payload: {
+                        let task_id: String = row.get("id");
+                        let payload_str: String = row.get("payload");
+                        let mut obj = serde_json::from_str::<serde_json::Map<String, serde_json::Value>>(&payload_str).unwrap_or_default();
+
+                        if let Ok(Some(handoff)) = self.get_handoff_payload(&task_id).await {
+                            if let Ok(handoff_val) = serde_json::from_str::<serde_json::Value>(&handoff) {
+                                obj.insert("handoff_context".to_string(), handoff_val);
+                            }
+                        }
+
+                        serde_json::to_string(&obj).unwrap_or_else(|_| "{}".to_string())
+                    },
+
                     locked_until: {
                         let locked: Option<chrono::DateTime<chrono::Utc>> =
                             row.try_get("locked_until").unwrap_or(None);
@@ -901,7 +963,7 @@ mod tests {
             "CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, ultraplan_phase TEXT, deliberation_log TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)"
         ).execute(&pool).await.unwrap();
         sqlx::query(
-            "CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)"
+            "CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT, handoff_payload TEXT)"
         ).execute(&pool).await.unwrap();
 
         let db = Arc::new(crate::db::DB {
@@ -1057,7 +1119,7 @@ mod tests {
             "CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, ultraplan_phase TEXT, deliberation_log TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)"
         ).execute(&pool).await.unwrap();
         sqlx::query(
-            "CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)"
+            "CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT, handoff_payload TEXT)"
         ).execute(&pool).await.unwrap();
 
         let db = Arc::new(crate::db::DB {
@@ -1564,7 +1626,7 @@ mod chaos_tests {
             "CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, ultraplan_phase TEXT, deliberation_log TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)"
         ).execute(&pool).await.unwrap();
         sqlx::query(
-            "CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)"
+            "CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT, handoff_payload TEXT)"
         ).execute(&pool).await.unwrap();
 
         let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new()
@@ -1656,7 +1718,7 @@ mod chaos_tests {
             "CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, ultraplan_phase TEXT, deliberation_log TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)"
         ).execute(&pool).await.unwrap();
         sqlx::query(
-            "CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)"
+            "CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT, handoff_payload TEXT)"
         ).execute(&pool).await.unwrap();
 
         let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new()
