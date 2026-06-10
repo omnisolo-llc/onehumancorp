@@ -1,7 +1,7 @@
-use crate::{Tool, ToolExecutor};
+use crate::Tool;
 use ohc_builtin_agent_core::types::ToolError;
 use server_ohc::agent::service::SubAgentResponse;
-use serde_json::{json, Value};
+use serde_json::json;
 use serde::Deserialize;
 use super::pydantic::{PydanticToolExecutor, PydanticAdapter};
 use std::sync::Arc;
