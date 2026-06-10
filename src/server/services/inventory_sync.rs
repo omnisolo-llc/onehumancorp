@@ -37,33 +37,19 @@ impl InventorySyncService for MyInventorySyncService {
         let mut req = request.into_inner();
         req.tenant_id = tenant_id.clone();
 
-        let lock_id = Uuid::new_v4().to_string();
-        let lock_key = format!("ohc:lock:{}:inventory:{}", req.tenant_id, req.product_id);
+        let lock_manager = crate::orchestration::locks::InventoryLockManager::new(self.redis_client.clone());
+        let ttl = if req.ttl_seconds > 0 { req.ttl_seconds } else { 15 };
 
-        if let Some(client) = &self.redis_client {
-            let mut conn = client.get_multiplexed_async_connection().await
-                .map_err(|e| Status::internal(format!("Redis conn failed: {}", e)))?;
-
-            let ttl = if req.ttl_seconds > 0 { req.ttl_seconds } else { 15 };
-
-            let acquired: bool = redis::cmd("SET")
-                .arg(&lock_key)
-                .arg(&lock_id)
-                .arg("EX")
-                .arg(ttl)
-                .arg("NX")
-                .query_async(&mut conn)
-                .await
-                .unwrap_or(false);
-
-            if !acquired {
+        let lock_id = match lock_manager.acquire(&tenant_id, &req.product_id, ttl, None).await {
+            Ok(id) => id,
+            Err(e) => {
                 return Ok(Response::new(ReserveInventoryResponse {
                     success: false,
                     lock_id: "".to_string(),
-                    error_message: "Item is currently being checked out by another customer".to_string(),
+                    error_message: e,
                 }));
             }
-        }
+        };
 
         Ok(Response::new(ReserveInventoryResponse {
             success: true,

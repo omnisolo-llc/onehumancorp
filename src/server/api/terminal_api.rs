@@ -237,90 +237,51 @@ pub async fn reserve_inventory_handler(
         None => return (axum::http::StatusCode::UNAUTHORIZED, Json(serde_json::json!({ "error": "unauthenticated" }))).into_response()
     };
 
-    let lock_id = uuid::Uuid::new_v4().to_string();
-    let lock_key = format!("ohc:lock:{}:inventory:{}", tenant_id, req_data.product_id);
+    let lock_manager = crate::orchestration::locks::InventoryLockManager::new(hub.redis_client.clone());
+    let ttl = if req_data.ttl_seconds > 0 { req_data.ttl_seconds } else { 15 };
 
-    if let Some(client) = &hub.redis_client {
-        if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
-            let ttl = if req_data.ttl_seconds > 0 { req_data.ttl_seconds } else { 15 };
-            let acquired: bool = redis::cmd("SET")
-                .arg(&lock_key).arg(&lock_id).arg("EX").arg(ttl).arg("NX")
-                .query_async(&mut conn).await.unwrap_or(false);
-
-            if !acquired {
-                return (axum::http::StatusCode::OK, Json(serde_json::json!({
-                    "success": false,
-                    "lock_id": "",
-                    "error_message": "Item is currently being checked out by another customer"
-                }))).into_response();
-            }
-
-            // Verify capacity AFTER acquiring the lock within a transaction
-            let pool = crate::db::get_pool();
-            if let Ok(mut tx) = pool.begin().await {
-                if let Ok(_) = crate::common::auth_utils::set_org_context(&mut *tx, &tenant_id).await {
-                    let current_stock: Option<i32> = sqlx::query_scalar("SELECT inventory_count FROM products WHERE id = $1 AND tenant_id = $2 FOR UPDATE")
-                        .bind(&req_data.product_id)
-                        .bind(&tenant_id)
-                        .fetch_optional(&mut *tx)
-                        .await
-                        .unwrap_or(None);
-
-                    if let Some(stock) = current_stock {
-                        if stock < req_data.quantity {
-                            let _ = tx.rollback().await;
-                            let _: () = redis::cmd("DEL").arg(&lock_key).query_async(&mut conn).await.unwrap_or(());
-                            return (axum::http::StatusCode::OK, Json(serde_json::json!({
-                                "success": false,
-                                "lock_id": "",
-                                "error_message": format!("Insufficient inventory. Available: {}", stock)
-                            }))).into_response();
-                        }
-                    } else {
-                        let _ = tx.rollback().await;
-                        let _: () = redis::cmd("DEL").arg(&lock_key).query_async(&mut conn).await.unwrap_or(());
-                        return (axum::http::StatusCode::OK, Json(serde_json::json!({
-                            "success": false,
-                            "lock_id": "",
-                            "error_message": "Product not found"
-                        }))).into_response();
-                    }
-                }
-                let _ = tx.commit().await;
-            }
+    let lock_id = match lock_manager.acquire(&tenant_id, &req_data.product_id, ttl, None).await {
+        Ok(id) => id,
+        Err(e) => {
+            return (axum::http::StatusCode::OK, Json(serde_json::json!({
+                "success": false,
+                "lock_id": "",
+                "error_message": e
+            }))).into_response();
         }
-    } else {
-        // Fallback if no redis
-        let pool = crate::db::get_pool();
-        if let Ok(mut tx) = pool.begin().await {
-            if let Ok(_) = crate::common::auth_utils::set_org_context(&mut *tx, &tenant_id).await {
-                let current_stock: Option<i32> = sqlx::query_scalar("SELECT inventory_count FROM products WHERE id = $1 AND tenant_id = $2 FOR UPDATE")
-                    .bind(&req_data.product_id)
-                    .bind(&tenant_id)
-                    .fetch_optional(&mut *tx)
-                    .await
-                    .unwrap_or(None);
+    };
 
-                if let Some(stock) = current_stock {
-                    if stock < req_data.quantity {
-                        let _ = tx.rollback().await;
-                        return (axum::http::StatusCode::OK, Json(serde_json::json!({
-                            "success": false,
-                            "lock_id": "",
-                            "error_message": format!("Insufficient inventory. Available: {}", stock)
-                        }))).into_response();
-                    }
-                } else {
+    let pool = crate::db::get_pool();
+    if let Ok(mut tx) = pool.begin().await {
+        if let Ok(_) = crate::common::auth_utils::set_org_context(&mut *tx, &tenant_id).await {
+            let current_stock: Option<i32> = sqlx::query_scalar("SELECT inventory_count FROM products WHERE id = $1 AND tenant_id = $2 FOR UPDATE")
+                .bind(&req_data.product_id)
+                .bind(&tenant_id)
+                .fetch_optional(&mut *tx)
+                .await
+                .unwrap_or(None);
+
+            if let Some(stock) = current_stock {
+                if stock < req_data.quantity {
                     let _ = tx.rollback().await;
+                    let _ = lock_manager.verify_and_release(&tenant_id, &req_data.product_id, &lock_id).await;
                     return (axum::http::StatusCode::OK, Json(serde_json::json!({
                         "success": false,
                         "lock_id": "",
-                        "error_message": "Product not found"
+                        "error_message": format!("Insufficient inventory. Available: {}", stock)
                     }))).into_response();
                 }
+            } else {
+                let _ = tx.rollback().await;
+                let _ = lock_manager.verify_and_release(&tenant_id, &req_data.product_id, &lock_id).await;
+                return (axum::http::StatusCode::OK, Json(serde_json::json!({
+                    "success": false,
+                    "lock_id": "",
+                    "error_message": "Product not found"
+                }))).into_response();
             }
-            let _ = tx.commit().await;
         }
+        let _ = tx.commit().await;
     }
 
     (axum::http::StatusCode::OK, Json(serde_json::json!({
@@ -341,21 +302,13 @@ pub async fn commit_inventory_handler(
         None => return (axum::http::StatusCode::UNAUTHORIZED, Json(serde_json::json!({ "error": "unauthenticated" }))).into_response()
     };
 
-    let lock_key = format!("ohc:lock:{}:inventory:{}", tenant_id, req_data.product_id);
+    let lock_manager = crate::orchestration::locks::InventoryLockManager::new(hub.redis_client.clone());
 
-    if let Some(client) = &hub.redis_client {
-        if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
-            let current_lock_id: Option<String> = redis::cmd("GET").arg(&lock_key).query_async(&mut conn).await.unwrap_or(None);
-            if let Some(cid) = current_lock_id {
-                if cid != req_data.lock_id && !req_data.lock_id.is_empty() {
-                    return (axum::http::StatusCode::OK, Json(serde_json::json!({
-                        "success": false,
-                        "error_message": "Lock ID mismatch. Reservation may have expired."
-                    }))).into_response();
-                }
-            }
-            let _: () = redis::cmd("DEL").arg(&lock_key).query_async(&mut conn).await.unwrap_or(());
-        }
+    if let Err(e) = lock_manager.verify_and_release(&tenant_id, &req_data.product_id, &req_data.lock_id).await {
+        return (axum::http::StatusCode::OK, Json(serde_json::json!({
+            "success": false,
+            "error_message": e
+        }))).into_response();
     }
 
     let pool = crate::db::get_pool();

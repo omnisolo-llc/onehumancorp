@@ -180,6 +180,8 @@ export default function StripeTerminalClient({ amount, productId, tenantId }: { 
       if (!reserveData.success) {
         setStatus('Reservation failed: ' + (reserveData.error_message || 'Item is currently being purchased elsewhere'));
         setReserving(false);
+        // Show appropriate visual error feedback as requested in the issue
+        alert('Item reserved by another customer: ' + (reserveData.error_message || 'Please try another item.'));
         return;
       }
       lockId = reserveData.lock_id;

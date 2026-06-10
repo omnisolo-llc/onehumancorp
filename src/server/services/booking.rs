@@ -1075,26 +1075,13 @@ impl BookingEngineService for NativeBookingService {
         let inventory_capacity =
             Self::product_inventory_capacity(&req.tenant_id, &req.product_id).await?;
 
-        // If capacity is 1, check if there's an active POS transaction locking this item.
-        if inventory_capacity <= 1 {
-            let pos_lock_key = format!("ohc:lock:{}:inventory:{}", req.tenant_id, req.product_id);
-            if let Some(client) = &self.redis_client {
-                if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
-                    let acquired: bool = redis::cmd("SET")
-                        .arg(&pos_lock_key)
-                        .arg(&session_id)
-                        .arg("EX")
-                        .arg(300) // 5 minutes lock for online checkout
-                        .arg("NX")
-                        .query_async(&mut conn)
-                        .await
-                        .unwrap_or(false);
-                    if !acquired {
-                        return Err(Status::resource_exhausted("Item is currently being checked out by another customer"));
-                    }
-                }
-            }
-        }
+        // Verify POS Redlock unconditionally so POS checkouts always block online checkouts
+        let lock_manager = crate::orchestration::locks::InventoryLockManager::new(self.redis_client.clone());
+        let _pos_lock_id = match lock_manager.acquire(&req.tenant_id, &req.product_id, 300, Some(session_id.clone())).await {
+            Ok(id) => id,
+            Err(_) => return Err(Status::resource_exhausted("Item is currently being checked out by another customer")),
+        };
+
         let soft_locks = self.soft_lock_store();
         let inventory_lock = soft_locks
             .acquire_inventory_lock(
@@ -1105,14 +1092,18 @@ impl BookingEngineService for NativeBookingService {
                 INVENTORY_LOCK_TTL,
             )
             .await
-            .map_err(Status::internal)?
-            .ok_or_else(|| Status::resource_exhausted("Product inventory is currently fully held"))?;
+            .map_err(Status::internal)?;
+
+        if inventory_lock.is_none() {
+            // Rollback POS lock if online soft lock fails
+            let _ = lock_manager.verify_and_release(&req.tenant_id, &req.product_id, &session_id).await;
+            return Err(Status::resource_exhausted("Product inventory is currently fully held"));
+        }
 
         let inventory_lock_id = if inventory_capacity <= 1 {
-            // For single-capacity items, the true lock is the Redis lock we acquired
             format!("ohc:lock:{}:inventory:{}", req.tenant_id, req.product_id)
         } else {
-            inventory_lock.key
+            inventory_lock.unwrap().key
         };
 
         let checkout_url = format!("https://checkout.stripe.com/pay/cs_test_{}", session_id.replace("-", ""));

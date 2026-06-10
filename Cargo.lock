@@ -5705,6 +5705,7 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "chrono",
+ "fastrand",
  "futures",
  "hmac",
  "once_cell",
