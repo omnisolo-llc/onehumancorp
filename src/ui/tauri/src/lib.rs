@@ -418,11 +418,22 @@ async fn get_help_article(id: String) -> Result<serde_json::Value, String> {
 
 #[tauri::command]
 async fn get_help_videos() -> Result<serde_json::Value, String> {
-    // For now, mock the videos as the endpoint is partially mocked anyway
-    Ok(serde_json::json!([
-        { "id": 1, "title": "How to set up your first store easily", "duration": "1:20", "video_url": "https://www.w3schools.com/html/mov_bbb.mp4" },
-        { "id": 2, "title": "Accept your first payment", "duration": "1:15", "video_url": "https://www.w3schools.com/html/mov_bbb.mp4" }
-    ]))
+    let backend_url = std::env::var("BACKEND_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string());
+    let url = format!("{}/api/videos", backend_url);
+
+    let request = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(5))
+        .build()
+        .map_err(|err| err.to_string())?
+        .get(&url);
+
+    let response = request.send().await.map_err(|err| err.to_string())?;
+    if response.status().is_success() {
+        let json: serde_json::Value = response.json().await.map_err(|err| err.to_string())?;
+        Ok(json)
+    } else {
+        Err(format!("Backend returned {}", response.status()))
+    }
 }
 
 
