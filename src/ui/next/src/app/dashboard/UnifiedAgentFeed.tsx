@@ -46,6 +46,17 @@ export function UnifiedAgentFeed() {
   };
 
   useEffect(() => {
+    const handleVoiceCommandProcessed = (event: CustomEvent) => {
+      // Wait a moment for backend DB write consistency, then reload the feed completely.
+      setTimeout(() => {
+        window.location.reload();
+      }, 500);
+    };
+    window.addEventListener('voice-command-processed', handleVoiceCommandProcessed as EventListener);
+    return () => window.removeEventListener('voice-command-processed', handleVoiceCommandProcessed as EventListener);
+  }, []);
+
+  useEffect(() => {
     let mounted = true;
 
     async function fetchAll() {
