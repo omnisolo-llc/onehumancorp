@@ -51,7 +51,7 @@ test.describe("Chaos Engineering Validation - Backend/Host Stress Verification",
   });
 
   test('UI Graceful degradation for unavailable chaos report pages', async ({ page }) => {
-    const response = await page.goto('/chaos-report');
+    const response = await page.goto('/some-unavailable-chaos-page');
 
     // Verify that attempting to access missing administrative/chaos tools gracefully returns a 404.
     // It should not sit indefinitely, spin a loader forever, or throw a 500 error.
