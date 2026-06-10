@@ -2461,6 +2461,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let finance_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::finance_agent::FinanceAgent::new(dept_orchestrator.clone())));
     let legal_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::legal_agent::LegalAgent::new(dept_orchestrator.clone())));
     let advisory_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::business_advisory_agent::BusinessAdvisoryAgent::new(dept_orchestrator.clone())));
+    let translation_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::translation_agent::TranslationAgent::new(dept_orchestrator.clone())));
 
     tokio::join!(
         dept_orchestrator.register_department(ops_agent),
@@ -2469,7 +2470,8 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         dept_orchestrator.register_department(sales_agent),
         dept_orchestrator.register_department(finance_agent),
         dept_orchestrator.register_department(legal_agent),
-        dept_orchestrator.register_department(advisory_agent)
+        dept_orchestrator.register_department(advisory_agent),
+        dept_orchestrator.register_department(translation_agent)
     );
 
     let bus = std::sync::Arc::new(crate::msgbus::MemoryBus::new());
@@ -2478,14 +2480,19 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let orch_clone = dept_orchestrator.clone();
     tokio::spawn(async move {
         while let Ok(event) = products_rx.recv().await {
-            if event.action == "ProductCreated" {
+            if event.action == "ProductCreated" || event.action == "ProductUpdated" {
                 if let Ok(payload_str) = String::from_utf8(event.payload.clone()) {
                     if let Ok(payload_json) = serde_json::from_str::<serde_json::Value>(&payload_str) {
                         let tenant_id = payload_json.get("organization_id").and_then(|v| v.as_str()).unwrap_or("system").to_string();
+                        let event_type = if event.action == "ProductCreated" {
+                            "tenant.product.created".to_string()
+                        } else {
+                            "tenant.product.updated".to_string()
+                        };
                         let dept_event = crate::orchestration::departments::types::DepartmentEvent {
                             id: uuid::Uuid::new_v4().to_string(),
                             tenant_id,
-                            event_type: "tenant.product.created".to_string(),
+                            event_type,
                             payload: payload_json,
                         };
                         let _ = orch_clone.dispatch_event(dept_event).await;
@@ -4127,6 +4134,32 @@ async fn create_ui_bom_item_handler(
                                     .execute(pool)
                                     .await
                                     .map_err(|e| e.to_string())?;
+
+                                    sqlx::query(
+                                        "INSERT OR IGNORE INTO triage_items (id, tenant_id, customer_id, source, priority, context, status) VALUES (?, ?, ?, ?, ?, ?, ?)"
+                                    )
+                                    .bind("triage-test-1")
+                                    .bind(tenant_id)
+                                    .bind("cust_demo1")
+                                    .bind("Instagram")
+                                    .bind("High")
+                                    .bind("Maya requested a custom cake")
+                                    .bind("pending")
+                                    .execute(pool)
+                                    .await
+                                    .map_err(|e| e.to_string())?;
+
+                                    sqlx::query(
+                                        "INSERT OR IGNORE INTO triage_proposed_actions (id, triage_item_id, tenant_id, action_type, payload) VALUES (?, ?, ?, ?, ?)"
+                                    )
+                                    .bind("action-test-1")
+                                    .bind("triage-test-1")
+                                    .bind(tenant_id)
+                                    .bind("Draft Reply")
+                                    .bind("Send deposit link to Maya")
+                                    .execute(pool)
+                                    .await
+                                    .map_err(|e| e.to_string())?;
                                 }
                                 crate::db::DbStore::Postgres => {
                                     sqlx::query(
@@ -4188,6 +4221,32 @@ async fn create_ui_bom_item_handler(
                                     .bind("cust_demo1")
                                     .bind(158.50)
                                     .bind("completed")
+                                    .execute(&db.pool)
+                                    .await
+                                    .map_err(|e| e.to_string())?;
+
+                                    sqlx::query(
+                                        "INSERT INTO triage_items (id, tenant_id, customer_id, source, priority, context, status) VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT (id) DO NOTHING"
+                                    )
+                                    .bind("triage-test-1")
+                                    .bind(tenant_id)
+                                    .bind("cust_demo1")
+                                    .bind("Instagram")
+                                    .bind("High")
+                                    .bind("Maya requested a custom cake")
+                                    .bind("pending")
+                                    .execute(&db.pool)
+                                    .await
+                                    .map_err(|e| e.to_string())?;
+
+                                    sqlx::query(
+                                        "INSERT INTO triage_proposed_actions (id, triage_item_id, tenant_id, action_type, payload) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (id) DO NOTHING"
+                                    )
+                                    .bind("action-test-1")
+                                    .bind("triage-test-1")
+                                    .bind(tenant_id)
+                                    .bind("Draft Reply")
+                                    .bind("Send deposit link to Maya")
                                     .execute(&db.pool)
                                     .await
                                     .map_err(|e| e.to_string())?;

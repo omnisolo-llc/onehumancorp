@@ -33,7 +33,6 @@ impl Department for CustomerSuccessAgent {
         vec![
             "tenant.order.fulfillment_ready".to_string(),
             "tenant.message.received".to_string(),
-            "tenant.omnichannel.message.received".to_string(),
             "agent:customer_success:approved".to_string(),
         ]
     }
@@ -64,7 +63,20 @@ impl Department for CustomerSuccessAgent {
 
             let source = original.and_then(|orig| orig.get("source").and_then(|v| v.as_str())).unwrap_or("").to_string();
             let sender_id = original.and_then(|orig| orig.get("sender_id").and_then(|v| v.as_str())).unwrap_or("").to_string();
-            let text = message.to_string();
+
+            let target_language = original.and_then(|orig| orig.get("translated_from_language").and_then(|v| v.as_str())).unwrap_or("").to_string();
+            let text = if !target_language.is_empty() && target_language.to_lowercase() != "en" && target_language.to_lowercase() != "english" && target_language.to_lowercase() != "unknown" {
+                match crate::api::agents::translation::translate_inbox_message_with_llm(&event.tenant_id, &source, message, &target_language).await {
+                    Ok(t) => t.translated_content,
+                    Err(e) => {
+                        tracing::error!("Failed to translate outgoing message back to {}: {}", target_language, e);
+                        message.to_string()
+                    }
+                }
+            } else {
+                message.to_string()
+            };
+
             let _hub_clone = self.hub.clone();
             let tenant_id_for_meta = event.tenant_id.clone();
 
@@ -123,7 +135,7 @@ impl Department for CustomerSuccessAgent {
             return Ok(());
         }
 
-        if event.event_type == "tenant.message.received" || event.event_type == "tenant.omnichannel.message.received" {
+        if event.event_type == "tenant.message.received" {
             let message = event.payload.get("message").and_then(|v| v.as_str()).unwrap_or("");
 
             let query_embedding = match std::env::var("OHC_INBOX_DRAFT_LLM_PROVIDER")

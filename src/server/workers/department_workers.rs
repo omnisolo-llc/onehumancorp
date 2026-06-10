@@ -25,7 +25,6 @@ impl OperationsWorker {
     }
 
     pub fn start(&self) {
-        self.start_localization_worker();
         let db = self.db.clone();
         let interval_duration = self.poll_interval;
         tokio::spawn(async move {
@@ -47,193 +46,6 @@ impl OperationsWorker {
         });
     }
 
-    fn start_localization_worker(&self) {
-        let db = self.db.clone();
-
-        tokio::spawn(async move {
-            let mut interval = tokio::time::interval(Duration::from_secs(5));
-            loop {
-                interval.tick().await;
-
-                let mut tx = match db.pool.begin().await {
-                    Ok(t) => t,
-                    Err(_) => continue,
-                };
-
-                let job = sqlx::query(
-                    "SELECT id, tenant_id, payload FROM ohc_job_queue
-                     WHERE job_type = 'translate_product' AND status = 'PENDING' AND next_retry_at <= NOW()
-                     FOR UPDATE SKIP LOCKED LIMIT 1"
-                )
-                .fetch_optional(&mut *tx)
-                .await;
-
-                let job_row = match job {
-                    Ok(Some(r)) => r,
-                    _ => {
-                        let _ = tx.commit().await;
-                        continue;
-                    }
-                };
-
-                let job_id: String = job_row.get("id");
-                let tenant_id: String = job_row.get("tenant_id");
-                let payload: serde_json::Value = job_row.get("payload");
-
-                let product_id = payload.get("product_id").and_then(|v| v.as_str()).unwrap_or("");
-                let name = payload.get("name").and_then(|v| v.as_str()).unwrap_or("");
-                let description = payload.get("description").and_then(|v| v.as_str()).unwrap_or("");
-
-                // Set org context to read translation preferences
-                let _ = ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await;
-
-                let prefs_row = sqlx::query(
-                    "SELECT target_languages FROM ohc_translation_preferences WHERE tenant_id = $1"
-                )
-                .bind(&tenant_id)
-                .fetch_optional(&mut *tx)
-                .await
-                .unwrap_or(None);
-
-                let target_languages: Vec<String> = match prefs_row {
-                    Some(r) => {
-                        let langs_val: serde_json::Value = r.get("target_languages");
-                        serde_json::from_value(langs_val).unwrap_or_default()
-                    }
-                    None => vec![],
-                };
-
-                if target_languages.is_empty() {
-                    let _ = sqlx::query("UPDATE ohc_job_queue SET status = 'COMPLETED', updated_at = NOW() WHERE id = $1")
-                        .bind(&job_id)
-                        .execute(&mut *tx).await;
-                    let _ = tx.commit().await;
-                    continue;
-                }
-
-                // Call LLM for each language
-                let mut all_success = true;
-                for lang in target_languages {
-                    let prompt = format!("Translate the following product name and description into language code '{}'.\nName: {}\nDescription: {}\nReturn JSON format: {{\"name\": \"translated name\", \"description\": \"translated description\"}}", lang, name, description);
-
-                    let api_key = std::env::var("GEMINI_API_KEY")
-                        .or_else(|_| std::env::var("MINIMAX_API_KEY"))
-                        .unwrap_or_else(|_| "test-key".to_string());
-                    let minimax = crate::minimax::MinimaxClient::new(api_key);
-
-                    let mut attempts = 0;
-                    let mut translated_name = String::new();
-                    let mut translated_desc = String::new();
-
-                    while attempts < MAX_RETRIES {
-                        match timeout(AI_AGENT_TIMEOUT, minimax.reason(&prompt)).await {
-                            Ok(Ok(res)) => {
-                                // Strip backticks if any
-                                let clean_res = res.trim_matches('`').trim_start_matches("json\n").trim_end();
-                                if let Ok(translated_json) = serde_json::from_str::<serde_json::Value>(clean_res) {
-                                    translated_name = translated_json.get("name").and_then(|v| v.as_str()).unwrap_or("").to_string();
-                                    translated_desc = translated_json.get("description").and_then(|v| v.as_str()).unwrap_or("").to_string();
-                                    break;
-                                }
-                                // Fall through to retry on bad JSON
-                            }
-                            _ => {}
-                        }
-
-                        // Error handling branch for both timeout and bad JSON
-                        attempts += 1;
-                        if attempts == MAX_RETRIES {
-                            all_success = false;
-                            let _ = sqlx::query(
-                                r#"
-                                INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
-                                VALUES ($1, $2, 'AI Agent Paused: Localization', 'The AI agent responsible for localization is paused because the AI service is unavailable.', 'PENDING', 'P1', 'LOW', 'PENDING', 'System is paused. Please manually translate product details.')
-                                "#
-                            )
-                            .bind(Uuid::new_v4().to_string())
-                            .bind(&tenant_id)
-                            .execute(&db.pool)
-                            .await;
-                        }
-                        tokio::time::sleep(Duration::from_secs(2u64.pow(attempts))).await;
-                    }
-
-                    if translated_name.is_empty() {
-                        // For testing if LLM fails
-                        let name_key = format!("product:{}:name", product_id);
-                        let desc_key = format!("product:{}:description", product_id);
-
-                        let translated_name_mock = format!("[{}] {}", lang, name);
-                        let translated_desc_mock = format!("[{}] {}", lang, description);
-
-                        let res1 = sqlx::query(
-                            "INSERT INTO ohc_i18n_strings (id, tenant_id, locale, key, value) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (tenant_id, locale, key) DO UPDATE SET value = EXCLUDED.value"
-                        )
-                        .bind(Uuid::new_v4().to_string())
-                        .bind(&tenant_id)
-                        .bind(&lang)
-                        .bind(&name_key)
-                        .bind(&translated_name_mock)
-                        .execute(&mut *tx).await;
-
-                        let res2 = sqlx::query(
-                            "INSERT INTO ohc_i18n_strings (id, tenant_id, locale, key, value) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (tenant_id, locale, key) DO UPDATE SET value = EXCLUDED.value"
-                        )
-                        .bind(Uuid::new_v4().to_string())
-                        .bind(&tenant_id)
-                        .bind(&lang)
-                        .bind(&desc_key)
-                        .bind(&translated_desc_mock)
-                        .execute(&mut *tx).await;
-
-                        if res1.is_err() || res2.is_err() {
-                            all_success = false;
-                        }
-                        continue;
-                    }
-
-                    let name_key = format!("product:{}:name", product_id);
-                    let desc_key = format!("product:{}:description", product_id);
-
-                    let res1 = sqlx::query(
-                        "INSERT INTO ohc_i18n_strings (id, tenant_id, locale, key, value) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (tenant_id, locale, key) DO UPDATE SET value = EXCLUDED.value"
-                    )
-                    .bind(Uuid::new_v4().to_string())
-                    .bind(&tenant_id)
-                    .bind(&lang)
-                    .bind(&name_key)
-                    .bind(&translated_name)
-                    .execute(&mut *tx).await;
-
-                    let res2 = sqlx::query(
-                        "INSERT INTO ohc_i18n_strings (id, tenant_id, locale, key, value) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (tenant_id, locale, key) DO UPDATE SET value = EXCLUDED.value"
-                    )
-                    .bind(Uuid::new_v4().to_string())
-                    .bind(&tenant_id)
-                    .bind(&lang)
-                    .bind(&desc_key)
-                    .bind(&translated_desc)
-                    .execute(&mut *tx).await;
-
-                    if res1.is_err() || res2.is_err() {
-                        all_success = false;
-                    }
-                }
-
-                if all_success {
-                    let _ = sqlx::query("UPDATE ohc_job_queue SET status = 'COMPLETED', updated_at = NOW() WHERE id = $1")
-                        .bind(&job_id)
-                        .execute(&mut *tx).await;
-                } else {
-                    let _ = sqlx::query("UPDATE ohc_job_queue SET status = 'FAILED', updated_at = NOW() WHERE id = $1")
-                        .bind(&job_id)
-                        .execute(&mut *tx).await;
-                }
-
-                let _ = tx.commit().await;
-            }
-        });
-    }
 
     pub async fn poll(db: &Arc<DB>) -> Result<bool, String> {
         let poll_op = async {
@@ -1114,7 +926,7 @@ let db_for_products = self.db.clone();
                                 }
 
                                 let task_id = Uuid::new_v4().to_string();
-                                let title = format!("Draft Social Post: {}", product_name);
+                                let _title = format!("Draft Social Post: {}", product_name);
                                 let description = "The Promoter generated social media captions for your new product. Review and schedule.";
                                 let proposed_content = serde_json::to_string(&parsed).unwrap_or_default();
 
