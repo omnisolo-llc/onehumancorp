@@ -111,7 +111,9 @@ describe('HelpCenterPage', () => {
     await waitFor(() => {
       expect(screen.getByText('How to set up your first store easily')).toBeInTheDocument();
     });
-    const videoCard = screen.getByText('How to set up your first store easily').closest('div.aspect-\\[9\\/16\\]');
+    // The video card container has changed in VideoTutorialList
+    const videoTitle = screen.getByText('How to set up your first store easily');
+    const videoCard = videoTitle.closest('.app-card');
     if (videoCard) {
       await user.click(videoCard);
     }
