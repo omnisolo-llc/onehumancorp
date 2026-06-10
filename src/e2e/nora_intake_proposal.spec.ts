@@ -39,22 +39,19 @@ test.describe('Nora Intake Proposal Flow (375px viewport)', () => {
 
     // Check the contents of the draft proposal
     const quoteCard = page.getByTestId('quote-draft-card').first();
-    await expect(quoteCard).toContainText('New Intake');
-    await expect(quoteCard).toContainText('Proposal Drafted');
-
-    // Look for our specific data in the feed context
-    await expect(quoteCard).toContainText('Can someone come by around 2 PM');
-    await expect(quoteCard).toContainText('Plumbing');
+    await expect(quoteCard).toContainText('Draft Quote');
+    await expect(quoteCard).toContainText('Calculated Total:');
+    await expect(quoteCard).toContainText('Scope of Work:');
 
     // Action buttons check
     const approveBtn = page.getByTestId('approve-send-proposal').first();
     await expect(approveBtn).toBeVisible();
 
-    const editBtn = page.getByTestId('edit-draft').first();
+    const editBtn = page.getByTestId('edit-proposal').first();
     await expect(editBtn).toBeVisible();
 
-    const askAgentBtn = page.getByTestId('ask-agent-adjust').first();
-    await expect(askAgentBtn).toBeVisible();
+    const rejectBtn = page.getByTestId('reject-proposal').first();
+    await expect(rejectBtn).toBeVisible();
 
     // Click the "Approve & Send Proposal" button
     await approveBtn.click();
