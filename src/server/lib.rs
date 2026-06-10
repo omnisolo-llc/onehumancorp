@@ -1151,7 +1151,6 @@ impl HubService for MyHubService {
                 "details": req.details
             }),
         };
-        let _ = self.dept_orchestrator.dispatch_event(ops_event).await;
 
         // Manually enqueue an approval request for Customer Success (for the test scenario)
         let cs_approval = crate::orchestration::departments::types::ApprovalRequest {
@@ -1167,7 +1166,11 @@ impl HubService for MyHubService {
                 "details": req.details
             })),
         };
-        self.dept_orchestrator.add_approval_request(cs_approval).await;
+
+        let (_, _) = tokio::join!(
+            self.dept_orchestrator.dispatch_event(ops_event),
+            self.dept_orchestrator.add_approval_request(cs_approval)
+        );
 
         Ok(Response::new(TriggerCustomOrderResponse {
             success: true,
@@ -2972,15 +2975,19 @@ async fn ui_dashboard_analytics_briefing_handler(
     use axum::response::IntoResponse;
     let tenant_id = ui_tenant_id(&query);
 
-    let metrics = load_ui_dashboard_metrics(&db, &tenant_id).await.unwrap_or(UiDashboardMetrics {
+    let (metrics_res, inbox_res) = tokio::join!(
+        load_ui_dashboard_metrics(&db, &tenant_id),
+        load_ui_inbox_from_db(&db, &tenant_id)
+    );
+
+    let metrics = metrics_res.unwrap_or(UiDashboardMetrics {
         active_customers: 0,
         pending_orders: 0,
         total_sales: 0.0,
         total_campaigns_sent: 0,
         auto_replied: 0,
     });
-
-    let inbox_messages = load_ui_inbox_from_db(&db, &tenant_id).await.unwrap_or_default();
+    let inbox_messages = inbox_res.unwrap_or_default();
     let unanswered_dms = inbox_messages.iter().filter(|m| m.get("status").and_then(|s| s.as_str()).unwrap_or("") != "closed").count();
 
     let total_sales_formatted = format!("${:.2}", metrics.total_sales);
