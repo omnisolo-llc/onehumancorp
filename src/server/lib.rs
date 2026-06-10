@@ -2658,7 +2658,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let reverse_tunnel_server = crate::agents::mcp::proxy::server::ReverseTunnelServer::new(std::sync::Arc::new(db.pool.clone()));
 
     let relay_webhook_router = axum::Router::new()
-        .route("/api/v1/relay/webhook/:agent_id", axum::routing::post(api::mcp_webhook::handle_relay_webhook))
+        .route("/api/v1/relay/webhook/{agent_id}", axum::routing::post(api::mcp_webhook::handle_relay_webhook))
         .with_state(reverse_tunnel_server.clone());
 
     let webhook_router = axum::Router::new()
