@@ -239,3 +239,29 @@ pub async fn aggregate_agent_costs(pool: &PgPool, tenant_id: &str) -> Vec<AgentC
     .filter(|r| r.cost_cents > 0)
     .collect()
 }
+
+#[test]
+fn test_process_missing_metric() {
+    let today = chrono::Utc::now().date_naive();
+    let rows = vec![
+        TelemetryRow {
+            date: Some(today),
+            metric_name: "unknown_future_metric".to_string(),
+            total: Some(500.0),
+        },
+        TelemetryRow {
+            date: Some(today),
+            metric_name: "ohc_mission_cost_cents".to_string(),
+            total: Some(200.0),
+        },
+    ];
+    let res = process_telemetry_rows(rows);
+    let today_str = today.format("%Y-%m-%d").to_string();
+    let today_data = res.iter().find(|r| r.date == today_str).unwrap();
+
+    assert_eq!(today_data.llm_cost, 200);
+    assert_eq!(today_data.storage_cost, 0);
+    assert_eq!(today_data.network_cost, 0);
+    assert_eq!(today_data.compute_cost, 0);
+    assert_eq!(today_data.total_cost, 200);
+}

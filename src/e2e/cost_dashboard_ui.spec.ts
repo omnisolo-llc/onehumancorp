@@ -1,7 +1,8 @@
 import { test, expect } from './fixtures';
 
 test.describe('Cost Dashboard & Plan Limits UI', () => {
-  test('should display the cost dashboard and check expected sections', async ({ page }) => {
+  test('should display the cost dashboard and check expected sections', async ({ page, adminUser, loginAs }) => {
+    await loginAs(page, adminUser);
     // Navigate to the Cost Dashboard directly
     await page.goto('/cost-dashboard');
 
@@ -17,7 +18,8 @@ test.describe('Cost Dashboard & Plan Limits UI', () => {
     await expect(page.getByRole('button', { name: 'Back to My Plan' })).toBeVisible();
   });
 
-  test('should display my plan limits and route to pricing', async ({ page }) => {
+  test('should display my plan limits and route to pricing', async ({ page, adminUser, loginAs }) => {
+    await loginAs(page, adminUser);
     // Go to My Plan page
     await page.goto('/plan');
 
@@ -39,7 +41,8 @@ test.describe('Cost Dashboard & Plan Limits UI', () => {
     await expect(page.getByRole('heading', { name: 'Pricing Plans' })).toBeVisible({ timeout: 15000 });
   });
 
-  test('should verify checkout routing works from pricing', async ({ page }) => {
+  test('should verify checkout routing works from pricing', async ({ page, adminUser, loginAs }) => {
+    await loginAs(page, adminUser);
     await page.goto('/pricing');
     await expect(page.getByRole('heading', { name: 'Pricing Plans' })).toBeVisible({ timeout: 15000 });
 

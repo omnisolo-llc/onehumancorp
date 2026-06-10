@@ -3,7 +3,17 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 
-export default function ShareAndSaveEmbedPage() {
+import { Suspense } from 'react';
+
+export default function ShareAndSaveEmbedPageWrapper() {
+  return (
+    <Suspense fallback={<div className="p-4 text-center text-sm text-gray-500">Loading widget...</div>}>
+      <ShareAndSaveEmbedPage />
+    </Suspense>
+  );
+}
+
+function ShareAndSaveEmbedPage() {
     const searchParams = useSearchParams();
     const tenant = searchParams.get('tenant') || 'my-store';
     const theme = searchParams.get('theme') || 'light';

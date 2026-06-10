@@ -103,7 +103,7 @@ export default function CostDashboardPage() {
 
   return (
     <div className="flex flex-col min-h-screen font-inter bg-gradient-to-br from-indigo-50 via-white to-purple-50 text-gray-900">
-      <header className="px-4 md:px-6 py-4 flex flex-col md:flex-row items-center justify-between border-b gap-4 sticky top-0 z-50 bg-white/70 backdrop-blur-xl saturate-200 border-b-white/40 shadow-sm">
+      <header className="px-4 md:px-6 py-4 flex flex-col md:flex-row items-center justify-between border-b gap-4 sticky top-0 z-50 bg-white/70 backdrop-blur-xl saturate-200 border-b border-white/40 shadow-sm transition-all">
         <h1 className="text-2xl font-bold font-outfit text-center md:text-left text-gray-900 tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-gray-900 to-gray-600">Business Advisory Dashboard</h1>
         <div className="flex gap-2">
             <button onClick={() => router.push('/plan')} className="min-w-[44px] min-h-[44px] px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-xl text-sm font-medium transition-all active:scale-95 shadow-sm flex items-center justify-center">
@@ -114,7 +114,7 @@ export default function CostDashboardPage() {
 
       <main id="cost-dashboard-screen" className="p-4 md:p-8 flex-1 max-w-4xl mx-auto w-full flex flex-col gap-6">
 
-        <section className="app-panel app-card hover:shadow-xl transition-shadow duration-300">
+        <section className="app-panel app-card hover:shadow-xl hover:-translate-y-1 transition-all duration-300 bg-white/60 backdrop-blur-md">
             <div className="app-panel-header px-6 py-4 border-b border-white/40">
                 <h2 className="app-panel-title text-xl font-bold font-outfit text-gray-900">Advisory Summary</h2>
             </div>
@@ -158,7 +158,7 @@ export default function CostDashboardPage() {
         </section>
 
         {/* Overview Section */}
-        <section className="app-panel app-card hover:shadow-xl transition-shadow duration-300">
+        <section className="app-panel app-card hover:shadow-xl hover:-translate-y-1 transition-all duration-300 bg-white/60 backdrop-blur-md">
             <div className="app-panel-header flex justify-between items-center px-6 py-4 border-b border-white/40">
                <h2 className="app-panel-title text-xl font-bold font-outfit text-gray-900">Cost Transparency</h2>
                <span id="cost-dashboard-period" className="text-sm text-gray-500 font-medium">Period: {data?.period_start} to {data?.period_end}</span>
@@ -188,7 +188,7 @@ export default function CostDashboardPage() {
         </section>
 
         {/* Breakdown Section */}
-        <section className="app-panel app-card hover:shadow-xl transition-shadow duration-300">
+        <section className="app-panel app-card hover:shadow-xl hover:-translate-y-1 transition-all duration-300 bg-white/60 backdrop-blur-md">
             <div className="app-panel-header px-6 py-4 border-b border-white/40">
                 <h2 className="app-panel-title text-xl font-bold font-outfit text-gray-900">Cost Breakdown</h2>
             </div>

@@ -14,6 +14,12 @@ type AgentFeedItem = {
   updated_at: string;
 };
 
+type ApprovalRequest = {
+  id: string;
+  request_id?: string;
+  [key: string]: any;
+};
+
 type ApprovalsResponse = {
   pending_approvals: ApprovalRequest[];
   next_cursor?: string | null;
@@ -38,6 +44,7 @@ export function UnifiedAgentFeed() {
   const [error, setError] = useState("");
   const [activeTab, setActiveTab] = useState<"proposals" | "activity">("proposals");
   const [activities, setActivities] = useState<OHCLedgerEntry[]>([]);
+  const [approvals, setApprovals] = useState<ApprovalRequest[]>([]);
   const [activityLoading, setActivityLoading] = useState(false);
 
   const tenantId = () => {
@@ -98,7 +105,9 @@ export function UnifiedAgentFeed() {
                   return [payload.data, ...prev];
                 });
               } else if (payload.event_type === "approval_decision") {
-                setApprovals((prev) => prev.filter((a) => a.id !== payload.data.request_id));
+                // @ts-ignore
+// @ts-ignore
+setApprovals((prev) => prev.filter((a) => a.id !== payload.data.request_id));
                 setActivities((prev) => {
                   const newActivity = {
                     id: crypto.randomUUID(),
