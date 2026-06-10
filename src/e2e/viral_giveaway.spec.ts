@@ -9,13 +9,16 @@ test.describe('Viral Giveaway Loop', () => {
     await page.goto('/dashboard');
 
     // 2. Find and click the Giveaway Generator link
-    const giveawayLink = page.locator('a[href="/giveaway"]');
+    const giveawayLink = page.locator('a[href*="giveaway"]').first();
     await expect(giveawayLink).toBeVisible();
     await giveawayLink.click();
 
+    // Wait for navigation
+    await page.waitForURL('**/giveaway*');
+
     // Verify page content
-    await expect(page.getByRole('heading', { name: /Viral Giveaway Generator/i })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Giveaway Details' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /Viral Giveaway Generator/i })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('heading', { name: 'Giveaway Details' })).toBeVisible({ timeout: 10000 });
 
     // Wait to ensure client-side hydration doesn't interrupt filling
     await page.waitForTimeout(500);

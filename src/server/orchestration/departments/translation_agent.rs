@@ -2,7 +2,6 @@ use crate::orchestration::departments::orchestrator::{BaseAgent, AgentTriggerTyp
 use crate::orchestration::departments::types::{DepartmentType, DepartmentEvent, DepartmentConfig, ApprovalRequest, ActionRisk};
 use std::collections::HashMap;
 use std::sync::Arc;
-use crate::db::DbStore;
 
 pub struct TranslationAgent {
     orchestrator: Arc<DepartmentOrchestrator>,
