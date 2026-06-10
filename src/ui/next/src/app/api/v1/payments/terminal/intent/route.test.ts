@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { POST } from "./route";
 
-describe("POST /api/terminal/create_payment_intent", () => {
+describe("POST /api/v1/payments/terminal/intent", () => {
   beforeEach(() => {
     vi.stubEnv("BACKEND_URL", "http://backend.internal");
     global.fetch = vi.fn();
@@ -20,7 +20,7 @@ describe("POST /api/terminal/create_payment_intent", () => {
     });
 
     const body = { amount: 4500, currency: "usd" };
-    const req = new Request("http://localhost/api/terminal/create_payment_intent", {
+    const req = new Request("http://localhost/api/v1/payments/terminal/intent", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),

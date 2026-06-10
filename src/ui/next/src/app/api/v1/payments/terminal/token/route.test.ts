@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { POST } from "./route";
 
-describe("POST /api/terminal/connection_token", () => {
+describe("POST /api/v1/payments/terminal/token", () => {
   beforeEach(() => {
     vi.stubEnv("BACKEND_URL", "http://backend.internal");
     global.fetch = vi.fn();
@@ -19,7 +19,7 @@ describe("POST /api/terminal/connection_token", () => {
       json: async () => ({ token: "tss_live_secret" }),
     });
 
-    const req = new Request("http://localhost/api/terminal/connection_token", {
+    const req = new Request("http://localhost/api/v1/payments/terminal/token", {
       method: "POST",
       headers: { authorization: "Bearer token" },
     });

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { backendHeaders } from "../../ui/backendProxy";
+import { backendHeaders } from "../../../../ui/backendProxy";
 
 function clientSecret(payload: any): string | undefined {
   return payload?.client_secret || payload?.intent_id || payload?.Ok?.client_secret || payload?.Ok?.intent_id;
