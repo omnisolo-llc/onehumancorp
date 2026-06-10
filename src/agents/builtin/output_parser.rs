@@ -159,11 +159,7 @@ impl<'a, T: DeserializeOwned> RetryWithErrorOutputParser<'a, T> {
                     }
 
                     let base_backoff = 500 * (1 << attempt);
-                    let jitter = std::time::SystemTime::now()
-                        .duration_since(std::time::UNIX_EPOCH)
-                        .unwrap_or_default()
-                        .subsec_millis() as u64
-                        % 100;
+                    let jitter = rand::Rng::gen_range(&mut rand::thread_rng(), 0..100);
                     let backoff = std::time::Duration::from_millis((base_backoff as u64) + jitter);
                     tokio::time::sleep(backoff).await;
 

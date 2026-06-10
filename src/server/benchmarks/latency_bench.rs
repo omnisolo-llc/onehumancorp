@@ -20,7 +20,7 @@ pub async fn bench_queue_latency() {
     let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
 
     if database_url.starts_with("postgres") {
-        let pool_res = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+        let pool_res = sqlx::postgres::PgPoolOptions::new()
             .connect(&database_url).await;
 
         if let Ok(pg_pool) = pool_res {
@@ -242,7 +242,7 @@ pub async fn bench_agent_snapshot() {
         crate::db::DB { pool: pg_pool, store: crate::db::DbStore::Sqlite(pool) }
     } else {
         let pool = sqlx::postgres::PgPoolOptions::new()
-            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+
             .connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
         crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres }
     };
@@ -328,7 +328,7 @@ pub async fn bench_dashboard_snapshot() {
         crate::db::DB { pool: pg_pool, store: crate::db::DbStore::Sqlite(pool) }
     } else {
         let pool = sqlx::postgres::PgPoolOptions::new()
-            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+
             .connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
         crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres }
     };
@@ -502,7 +502,7 @@ pub async fn bench_get_analytics() {
         crate::db::DB { pool: pg_pool, store: crate::db::DbStore::Sqlite(pool) }
     } else {
         let pool = sqlx::postgres::PgPoolOptions::new()
-            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+
             .connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
         crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres }
     };
@@ -611,7 +611,7 @@ mod tests {
 
         let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
         if database_url.starts_with("postgres") {
-            if let Ok(pg_pool) = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).connect(&database_url).await {
+            if let Ok(pg_pool) = sqlx::postgres::PgPoolOptions::new().connect(&database_url).await {
                 let pg_queue = Arc::new(PostgresTaskQueue::new(pg_pool));
                 bench_queue("Postgres_Stress", pg_queue).await;
             }
@@ -672,7 +672,7 @@ pub async fn bench_hybrid_latency() {
     println!("3. API Response Time (Dashboard Snapshot)");
     bench_api_response_time().await;
 
-    println!("4. Billing API Response Time (Parallel Execution Optimization verified)");
+    println!("4. Billing API Response Time (Parallel Execution Optimization verified, Hybrid Cache)");
     bench_billing_api_response_time().await;
 
     println!("--- Hybrid Latency Benchmark Complete ---");
@@ -698,7 +698,7 @@ pub async fn bench_billing_api_response_time() {
         crate::db::DB { pool: pg_pool, store: crate::db::DbStore::Sqlite(pool) }
     } else {
         let pool = sqlx::postgres::PgPoolOptions::new()
-            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+
             .connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
         crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres }
     };
