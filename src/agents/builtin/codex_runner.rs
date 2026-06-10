@@ -180,10 +180,37 @@ impl AppServer {
             }
         };
 
-        if req.method == "ap_create_task" {
+        if req.method == "ap_list_tasks" {
+            let server = crate::agent_protocol::AgentProtocolServer::new(self.runner.clone());
+            let result = server.list_tasks().await;
+            let resp = JsonRpcResponse {
+                jsonrpc: "2.0".to_string(),
+                id: req.id,
+                result: serde_json::from_str(&result).ok(),
+                error: None,
+                meta: None,
+            };
+            return serde_json::to_string(&resp).unwrap_or_default();
+        } else if req.method == "ap_create_task" {
             let server = crate::agent_protocol::AgentProtocolServer::new(self.runner.clone());
             let req_json = serde_json::to_string(&req.params).unwrap_or_default();
             let result = server.create_task(&req_json).await;
+            let resp = JsonRpcResponse {
+                jsonrpc: "2.0".to_string(),
+                id: req.id,
+                result: serde_json::from_str(&result).ok(),
+                error: None,
+                meta: None,
+            };
+            return serde_json::to_string(&resp).unwrap_or_default();
+        } else if req.method == "ap_list_steps" {
+            let server = crate::agent_protocol::AgentProtocolServer::new(self.runner.clone());
+            let task_id = req
+                .params
+                .get("task_id")
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
+            let result = server.list_steps(task_id).await;
             let resp = JsonRpcResponse {
                 jsonrpc: "2.0".to_string(),
                 id: req.id,
