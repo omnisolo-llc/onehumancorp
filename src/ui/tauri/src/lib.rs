@@ -69,45 +69,51 @@ fn onboarding_state_path() -> std::path::PathBuf {
 
 #[tauri::command]
 async fn get_onboarding_state(_app_handle: tauri::AppHandle) -> Result<OnboardingState, String> {
-    // Determine tenant/user dynamically from args or state (here we default or check env for test)
     let tenant_id = std::env::var("OHC_DEFAULT_TENANT_ID").unwrap_or_else(|_| "default".to_string());
     let user_id = std::env::var("OHC_DEFAULT_USER_ID").unwrap_or_else(|_| "default".to_string());
 
-    // Attempt to fetch from backend
     let backend_url = std::env::var("BACKEND_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string());
     let url = format!("{}/api/onboarding/state", backend_url);
 
-    let request = reqwest::Client::builder()
+    let client = reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(3))
         .build()
-        .map_err(|err| err.to_string())?
-        .get(&url)
-        .header("X-Tenant-ID", tenant_id)
-        .header("X-User-ID", user_id);
+        .map_err(|err| err.to_string())?;
 
-    if let Ok(response) = request.send().await {
+    // Priority: Backend API
+    if let Ok(response) = client.get(&url)
+        .header("X-Tenant-ID", &tenant_id)
+        .header("X-User-ID", &user_id)
+        .send().await {
         if response.status().is_success() {
             if let Ok(state) = response.json::<OnboardingState>().await {
-                // Return successfully from backend
                 return Ok(state);
             }
         }
     }
 
-    // Fallback to local file
-    let path = onboarding_state_path();
-    if !path.exists() {
-        return Ok(OnboardingState {
-            business_name: None,
-            template_selection: None,
-            assistant_name: None,
-            assistant_tone: None,
-        });
+    // Local file fallback ONLY if standalone
+    let is_standalone = std::env::var("OHC_STANDALONE_MODE").map(|v| v == "true").unwrap_or(false);
+    if is_standalone {
+        let path = onboarding_state_path();
+        if path.exists() {
+            let content = std::fs::read_to_string(path).map_err(|err| err.to_string())?;
+            if let Ok(state) = serde_json::from_str::<OnboardingState>(&content) {
+                return Ok(state);
+            }
+        }
     }
 
-    let content = std::fs::read_to_string(path).map_err(|err| err.to_string())?;
-    let state = serde_json::from_str::<OnboardingState>(&content).map_err(|err| err.to_string())?;
-    Ok(state)
+    Ok(OnboardingState {
+        business_name: None,
+        template_selection: None,
+        assistant_name: None,
+        assistant_tone: None,
+        work_context: None,
+        categories: None,
+        tagline: None,
+        first_offer: None,
+    })
 }
 
 #[tauri::command]
@@ -115,24 +121,23 @@ async fn save_onboarding_state(state: OnboardingState, _app_handle: tauri::AppHa
     let tenant_id = std::env::var("OHC_DEFAULT_TENANT_ID").unwrap_or_else(|_| "default".to_string());
     let user_id = std::env::var("OHC_DEFAULT_USER_ID").unwrap_or_else(|_| "default".to_string());
 
-    // Attempt to save to backend
     let backend_url = std::env::var("BACKEND_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string());
     let url = format!("{}/api/onboarding/state", backend_url);
 
-    let request = reqwest::Client::builder()
+    let client = reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(3))
         .build()
-        .map_err(|err| err.to_string())?
-        .post(&url)
-        .header("X-Tenant-ID", tenant_id)
-        .header("X-User-ID", user_id)
+        .map_err(|err| err.to_string())?;
+
+    // Primary: Backend save
+    let _ = client.post(&url)
+        .header("X-Tenant-ID", &tenant_id)
+        .header("X-User-ID", &user_id)
         .header("Content-Type", "application/json")
-        .json(&state);
+        .json(&state)
+        .send().await;
 
-    // Fire and forget, or wait for success
-    let _ = request.send().await;
-
-    // Fallback/mirror to local file
+    // Local mirror for standalone persistence
     let path = onboarding_state_path();
     if let Some(parent) = path.parent() {
         #[cfg(unix)]

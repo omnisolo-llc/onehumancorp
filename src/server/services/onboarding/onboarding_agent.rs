@@ -50,13 +50,25 @@ impl OnboardingAgent {
         let minimax = self.minimax.as_ref().ok_or("MiniMax API key not configured")?;
 
         let prompt = format!(
-            "You are the OHC Onboarding Expert. Extract structured business information from the following user description.
-            If the input is an Instagram/social link, infer the business details from the context of a small business.
-            Return ONLY a valid JSON object with fields: business_name, business_type, categories (array), initial_products (array of objects with 'name' and 'price' as string, 'description' as string, and 'variants' as an optional array of objects with 'name' and 'price_modifier' as strings), location (string), target_audience (string).
-            Ensure there are at least 3 relevant initial products inferred from the business description.
+            "You are the OHC Onboarding Expert. Extract structured business information from the user description.
+            We serve various OHC personas like:
+            - Maya (Home Baker): Needs cake customizer, deposits, and delivery.
+            - Carlos (Field Service): Needs service bookings, estimates, and route notes.
+            - Priya (Boutique): Needs inventory, variants, and tap-to-pay.
+            - Leo (Creator/Tutor): Needs packages, scheduling, and student follow-ups.
+            - Fatima (Food Cart): Needs simple order list, pickup timing, and offline flows.
+            - Nora (Agency): Needs project intake, proposals, and task assignment.
 
-            Valid categories are: physical, digital, services, food, subscriptions.
-            Business type should be a friendly name like 'Home Bakery', 'Freelance Handyman', 'Boutique', etc.
+            If the input matches or is similar to these personas, use them for inspiration.
+            If the input is an Instagram/social link, infer details from the profile.
+
+            Return ONLY a valid JSON object with fields:
+            - business_name (string)
+            - business_type (string, e.g., 'Home Bakery', 'Handyman')
+            - categories (array of: physical, digital, services, food, subscriptions)
+            - initial_products (array of at least 3 objects with 'name', 'price' string, 'description' string, and optional 'variants' array of objects with 'name' and 'price_modifier' string)
+            - location (string)
+            - target_audience (string)
 
             Description: \"{}\"
 
@@ -72,11 +84,7 @@ impl OnboardingAgent {
                     {{\"name\": \"6-inch\", \"price_modifier\": \"0.00\"}},
                     {{\"name\": \"8-inch\", \"price_modifier\": \"15.00\"}}
                 ]}},
-                {{\"name\": \"Dozen Cupcakes\", \"price\": \"24.00\", \"description\": \"A dozen assorted vegan cupcakes\", \"variants\": [
-                    {{\"name\": \"Vanilla\", \"price_modifier\": \"0.00\"}},
-                    {{\"name\": \"Chocolate\", \"price_modifier\": \"2.00\"}}
-                ]}},
-                {{\"name\": \"Custom Sugar Cookies\", \"price\": \"30.00\", \"description\": \"Beautifully decorated custom cookies\", \"variants\": []}}
+                {{\"name\": \"Dozen Cupcakes\", \"price\": \"24.00\", \"description\": \"A dozen assorted vegan cupcakes\", \"variants\": []}}
               ]
             }}",
             input
@@ -489,6 +497,21 @@ impl OnboardingAgent {
 
     async fn generate_initial_products(&self, org_id: &str, business_type: &str) -> Result<(), String> {
         let products = match business_type {
+            "Home Baker" | "Bakery" => vec![
+                ("Custom Celebration Cake", "Beautifully decorated for your special day", 4500, "booking"),
+                ("Dozen Assorted Cupcakes", "A variety of our best flavors", 2400, "physical"),
+                ("Seasonal Pie", "Baked fresh with local ingredients", 1800, "physical"),
+            ],
+            "Handyman" | "Field Service" => vec![
+                ("Standard Repair Visit", "Basic maintenance and small repairs", 7500, "booking"),
+                ("Plumbing Consultation", "Inspection and quote for plumbing work", 4500, "booking"),
+                ("Emergency Call-Out", "Priority service for urgent issues", 12000, "booking"),
+            ],
+            "Boutique" | "Retail" => vec![
+                ("Signature Dress", "Our most popular seasonal piece", 8900, "physical"),
+                ("Curated Accessory Set", "Perfectly paired jewelry and scarf", 3500, "physical"),
+                ("Private Styling Session", "1-on-1 fashion advice with our team", 5000, "booking"),
+            ],
             "Online Store" => vec![
                 ("Standard Product", "A great product for your store", 1999, "physical"),
                 ("Premium Product", "A premium offering", 4999, "physical"),
@@ -511,7 +534,7 @@ impl OnboardingAgent {
                 ("Yoga Studio Assessment", "Initial evaluation and report", 7500, "booking"),
                 ("Yoga Studio Starter Kit", "Everything you need in one bundle", 12000, "physical"),
             ],
-            "Bakery" => vec![
+            "Bakery_Old" => vec![
                 ("Premium Bakery Package", "Comprehensive service for your needs", 19999, "booking"),
                 ("Basic Bakery Service", "Essential services to get you started", 9999, "booking"),
                 ("Bakery Consultation", "Expert advice and planning", 4999, "booking"),
@@ -1505,7 +1528,7 @@ impl OnboardingAgent {
                 ("Shopify Store Assessment", "Initial evaluation and report", 7500, "booking"),
                 ("Shopify Store Starter Kit", "Everything you need in one bundle", 12000, "physical"),
             ],
-            "Boutique" => vec![
+            "Boutique_Old" => vec![
                 ("Premium Boutique Package", "Comprehensive service for your needs", 19999, "booking"),
                 ("Basic Boutique Service", "Essential services to get you started", 9999, "booking"),
                 ("Boutique Consultation", "Expert advice and planning", 4999, "booking"),
@@ -2991,5 +3014,34 @@ mod tests {
         // Fetch third time - cache invalidated, should hit DB and return step 4
         let res3 = agent.get_onboarding_state(tenant_id, user_id).await.unwrap();
         assert_eq!(res3.get("step").and_then(|v| v.as_i64()), Some(4), "Should return updated step 4 after invalidation");
+    }
+
+    #[tokio::test]
+    async fn test_generate_initial_products_personas() {
+        use sqlx::Row;
+        let db = match setup_test_db().await {
+            Some(db) => db,
+            None => return,
+        };
+        let (tx, _) = tokio::sync::mpsc::channel(10);
+        let hub = std::sync::Arc::new(crate::hub::Hub::new(tx, db.pool.clone()));
+        let agent = OnboardingAgent::new(db.clone(), hub);
+
+        let org_id = "test-org-products";
+
+        // Test Bakery
+        agent.generate_initial_products(org_id, "Home Baker").await.unwrap();
+        let products = sqlx::query("SELECT name FROM products WHERE organization_id = $1")
+            .bind(org_id)
+            .fetch_all(&db.pool).await.unwrap();
+        assert!(products.iter().any(|p| p.get::<String, _>("name") == "Custom Celebration Cake"));
+
+        // Test Handyman
+        let org_id2 = "test-org-handyman";
+        agent.generate_initial_products(org_id2, "Handyman").await.unwrap();
+        let products2 = sqlx::query("SELECT name FROM products WHERE organization_id = $1")
+            .bind(org_id2)
+            .fetch_all(&db.pool).await.unwrap();
+        assert!(products2.iter().any(|p| p.get::<String, _>("name") == "Standard Repair Visit"));
     }
 }
