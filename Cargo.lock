@@ -5708,6 +5708,7 @@ dependencies = [
  "futures",
  "hmac",
  "once_cell",
+ "rand 0.8.6",
  "regex",
  "serde",
  "serde_json",
