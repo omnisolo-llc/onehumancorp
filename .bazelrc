@@ -181,4 +181,3 @@ build:wasm32 --platforms=//bazel/platforms:wasm32
 build:windows --config=windows_x86_64
 # Workaround to fix bazel analysis failure on Windows CI
 build:windows --build_tag_filters=-requires_x11,-requires_wayland,-e2e
-build --repository_cache=~/.cache/bazel-repo-cache
