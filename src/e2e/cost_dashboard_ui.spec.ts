@@ -12,6 +12,7 @@ test.describe('Cost Dashboard & Plan Limits UI', () => {
     await expect(page.getByText('Total Costs')).toBeVisible();
     await expect(page.getByText('LLM Usage')).toBeVisible();
     await expect(page.locator('span', { hasText: 'Storage' }).first()).toBeVisible();
+    await expect(page.getByText('Bandwidth Savings')).toBeVisible();
 
     // Check if the plan navigation button is present
     await expect(page.getByRole('button', { name: 'Back to My Plan' })).toBeVisible();
