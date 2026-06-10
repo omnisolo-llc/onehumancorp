@@ -180,7 +180,7 @@ impl PlanAndExecuteOrchestrator {
                     replace_in_json(&mut resolved_args, &r);
                     drop(r);
 
-                    let res = crate::tool_executor_engine::ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &ohc_builtin_agent_core::types::ToolCall{id: task.task_id.clone(), name: task.tool_name.clone(), arguments: resolved_args}, 2).await;
+                    let res = crate::tool_executor_engine::ToolExecutionEngine::execute_tool_with_langgraph_mechanics(tool, &ohc_builtin_agent_core::types::ToolCall{id: task.task_id.clone(), name: task.tool_name.clone(), arguments: resolved_args}, 2).await;
 
                     match res {
                         Ok(r) => Ok::<_, String>((task.task_id, r)),

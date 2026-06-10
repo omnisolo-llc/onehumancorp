@@ -106,9 +106,9 @@ impl HierarchicalPromptBuilder {
         let mut tool_defs = String::new();
         if !tools.is_empty() {
             for tool in tools {
-                let _ = write!(tool_defs, "Tool: {}\n", tool.name);
-                let _ = write!(tool_defs, "Description: {}\n", tool.description);
-                let _ = write!(tool_defs, "Parameters: {}\n", tool.parameters);
+                let _ = writeln!(tool_defs, "Tool: {}", tool.name);
+                let _ = writeln!(tool_defs, "Description: {}", tool.description);
+                let _ = writeln!(tool_defs, "Parameters: {}", tool.parameters);
             }
             tool_defs.pop(); // Remove trailing newline
         }

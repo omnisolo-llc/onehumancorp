@@ -802,7 +802,7 @@ impl VectorRepository {
                     for record in all_records {
                         grouped_records
                             .entry(record.tenant_id.clone())
-                            .or_insert_with(Vec::new)
+                            .or_default()
                             .push(record);
                     }
 

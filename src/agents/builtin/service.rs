@@ -434,21 +434,19 @@ impl AgentServiceImpl {
             }
             _ => {
                 // Auto-detect from env vars
-                if let Ok(key) = std::env::var("ANTHROPIC_API_KEY") {
-                    if !key.is_empty() {
+                if let Ok(key) = std::env::var("ANTHROPIC_API_KEY")
+                    && !key.is_empty() {
                         return Arc::new(AnthropicClient::new(key));
                     }
-                }
-                if let Ok(key) = std::env::var("OPENAI_API_KEY") {
-                    if !key.is_empty() {
+                if let Ok(key) = std::env::var("OPENAI_API_KEY")
+                    && !key.is_empty() {
                         let model = self.resolve_model_for_request("openai", req_model);
                         let mut config = OpenAIClientConfig::openai(key);
                         config.default_model = Some(model);
                         return Arc::new(OpenAIClient::from_config(config));
                     }
-                }
-                if let Ok(key) = std::env::var("MINIMAX_API_KEY") {
-                    if !key.is_empty() {
+                if let Ok(key) = std::env::var("MINIMAX_API_KEY")
+                    && !key.is_empty() {
                         return Arc::new(OpenAIClient::minimax(
                             key,
                             Self::first_non_empty_env(&[
@@ -457,7 +455,6 @@ impl AgentServiceImpl {
                             ]),
                         ));
                     }
-                }
                 // Fallback: Ollama
                 Arc::new(OllamaClient::new(
                     std::env::var("OHC_LOCAL_LLM_ENDPOINT").unwrap_or_default(),
@@ -758,12 +755,11 @@ impl AgentServiceImpl {
         // Add create_skill tool
         tools.push(crate::tools::create_skill::create_skill_tool());
 
-        if !department.is_empty() {
-            if let Ok(dep) = Department::from_str(department) {
+        if !department.is_empty()
+            && let Ok(dep) = Department::from_str(department) {
                 let dep_cfg = get_department_config(dep);
                 tools.retain(|t| dep_cfg.allowed_tools.contains(&t.name.as_str()));
             }
-        }
 
         if let Some(toolset) = toolset {
             if !toolset.builtin_tools.is_empty() {
@@ -1027,17 +1023,15 @@ impl AgentService for AgentServiceImpl {
                     }
                     Ok(Err(e)) => {
                         let err_str = e.to_string().to_lowercase();
-                        if err_str.contains("timeout")
+                        if (err_str.contains("timeout")
                             || err_str.contains("rate limit")
-                            || err_str.contains("unavailable")
-                        {
-                            if attempt < max_attempts {
+                            || err_str.contains("unavailable"))
+                            && attempt < max_attempts {
                                 last_result = Err(e);
                                 tokio::time::sleep(std::time::Duration::from_secs(1 << attempt))
                                     .await;
                                 continue;
                             }
-                        }
                         last_result = Err(e);
                         break;
                     }
