@@ -38,6 +38,7 @@ rust_library(
         "@crates//:sha2",
         "@crates//:sqlx",
         "@crates//:tokio",
+        "@crates//:rand",
         "@crates//:tracing",
         "@crates//:uuid",
     ],
@@ -340,6 +341,7 @@ rust_test(
         "@crates//:tracing",
         "@crates//:serde_json",
         "@crates//:serde",
+        "@crates//:rand",
     ],
     proc_macro_deps = [
         "@crates//:async-trait",
