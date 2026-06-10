@@ -4,6 +4,7 @@ import React, { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { WithTooltip } from "../../components/TooltipRegistry";
 import { PoweredByOHC } from "../components/PoweredByOHC";
+import { UnlockOfferWidget } from "../components/UnlockOfferWidget";
 
 function CheckoutContent() {
   const router = useRouter();
@@ -235,6 +236,10 @@ function CheckoutContent() {
             </div>
         ) : (
           <>
+        <UnlockOfferWidget tenantId={tenant} onUnlock={(code) => {
+          // If they unlock, we could apply the discount here in the state.
+          // For now, it just shows the code.
+        }} />
         <div
           className="p-6 shadow-sm flex flex-col gap-4 mb-4"
           style={{
@@ -354,7 +359,6 @@ function CheckoutContent() {
               Cancel
             </button>
           </WithTooltip>
-          <PoweredByOHC tenantId={tenant} />
         </div>
         </>
         )}
