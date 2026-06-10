@@ -14,6 +14,8 @@ type AgentFeedItem = {
   updated_at: string;
 };
 
+type ApprovalRequest = any;
+
 type ApprovalsResponse = {
   pending_approvals: ApprovalRequest[];
   next_cursor?: string | null;
@@ -38,6 +40,7 @@ export function UnifiedAgentFeed() {
   const [error, setError] = useState("");
   const [activeTab, setActiveTab] = useState<"proposals" | "activity">("proposals");
   const [activities, setActivities] = useState<OHCLedgerEntry[]>([]);
+  const [approvals, setApprovals] = useState<ApprovalRequest[]>([]);
   const [activityLoading, setActivityLoading] = useState(false);
 
   const tenantId = () => {

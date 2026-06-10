@@ -1,16 +1,70 @@
 "use client";
 
 // Pricing Page Implementation
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { WithTooltip } from '../../components/TooltipRegistry';
 import { PoweredByOHC } from '../components/PoweredByOHC';
 
 export default function PricingPage() {
   const router = useRouter();
+  const [currentPlan, setCurrentPlan] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchPlan = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const res = await fetch('/api/billing/my-plan', {
+          headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setCurrentPlan(data.current_plan);
+        }
+      } catch (e) {
+        console.error('Failed to fetch plan:', e);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchPlan();
+  }, []);
 
   const handleUpgrade = (tier: string) => {
     router.push('/checkout?tier=' + tier);
+  };
+
+  const getButtonText = (tier: string, rank: number) => {
+    const planRanks: { [key: string]: number } = {
+      'Free': 0,
+      'Starter': 1,
+      'Pro': 2,
+      'Business': 3
+    };
+
+    if (isLoading) return 'Loading...';
+
+    const currentRank = planRanks[currentPlan || 'Free'] ?? 0;
+
+    if (rank === currentRank) {
+      return 'Current Plan';
+    } else if (rank < currentRank) {
+      return `Downgrade to ${tier}`;
+    } else {
+      return `Upgrade to ${tier} via Stripe`;
+    }
+  };
+
+  const isCurrentPlan = (rank: number) => {
+    const planRanks: { [key: string]: number } = {
+      'Free': 0,
+      'Starter': 1,
+      'Pro': 2,
+      'Business': 3
+    };
+    const currentRank = planRanks[currentPlan || 'Free'] ?? 0;
+    return rank === currentRank;
   };
 
   return (
@@ -42,8 +96,12 @@ export default function PricingPage() {
                 <li className="flex items-center gap-2"><span>✓</span> 10 Products Limit</li>
               </ul>
             </div>
-            <button className="w-full min-h-[44px] px-4 py-2 bg-gray-200 text-gray-800 rounded-xl font-medium flex items-center justify-center cursor-not-allowed" disabled>
-              Current Plan
+            <button
+              onClick={() => handleUpgrade('Free')}
+              className={`w-full min-h-[44px] px-4 py-2 rounded-xl font-medium flex items-center justify-center ${isCurrentPlan(0) || isLoading ? 'bg-gray-200 text-gray-800 cursor-not-allowed' : 'bg-gray-900 text-white hover:bg-black transition-colors shadow-sm'}`}
+              disabled={isCurrentPlan(0) || isLoading}
+            >
+              {getButtonText('Free', 0)}
             </button>
           </div>
 
@@ -61,8 +119,12 @@ export default function PricingPage() {
                 <li className="flex items-center gap-2"><span>✓</span> 100 Products Limit</li>
               </ul>
             </div>
-            <button onClick={() => handleUpgrade('Starter')} className="w-full min-h-[44px] px-4 py-2 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 transition-colors shadow-sm flex items-center justify-center">
-              Upgrade to Starter via Stripe
+            <button
+              onClick={() => handleUpgrade('Starter')}
+              className={`w-full min-h-[44px] px-4 py-2 rounded-xl font-medium flex items-center justify-center transition-colors shadow-sm ${isCurrentPlan(1) || isLoading ? 'bg-gray-200 text-gray-800 cursor-not-allowed' : 'bg-indigo-600 text-white hover:bg-indigo-700'}`}
+              disabled={isCurrentPlan(1) || isLoading}
+            >
+              {getButtonText('Starter', 1)}
             </button>
           </div>
 
@@ -78,8 +140,12 @@ export default function PricingPage() {
                 <li className="flex items-center gap-2"><span>✓</span> Unlimited Products</li>
               </ul>
             </div>
-            <button onClick={() => handleUpgrade('Pro')} className="w-full min-h-[44px] px-4 py-2 bg-gray-900 text-white rounded-xl font-medium hover:bg-black transition-colors shadow-sm flex items-center justify-center">
-              Upgrade to Pro via Stripe
+            <button
+              onClick={() => handleUpgrade('Pro')}
+              className={`w-full min-h-[44px] px-4 py-2 rounded-xl font-medium flex items-center justify-center transition-colors shadow-sm ${isCurrentPlan(2) || isLoading ? 'bg-gray-200 text-gray-800 cursor-not-allowed' : 'bg-gray-900 text-white hover:bg-black'}`}
+              disabled={isCurrentPlan(2) || isLoading}
+            >
+              {getButtonText('Pro', 2)}
             </button>
           </div>
 
@@ -95,8 +161,12 @@ export default function PricingPage() {
                 <li className="flex items-center gap-2"><span>✓</span> Unlimited Products</li>
               </ul>
             </div>
-            <button onClick={() => handleUpgrade('Business')} className="w-full min-h-[44px] px-4 py-2 bg-gray-900 text-white rounded-xl font-medium hover:bg-black transition-colors shadow-sm flex items-center justify-center">
-              Upgrade to Business via Stripe
+            <button
+              onClick={() => handleUpgrade('Business')}
+              className={`w-full min-h-[44px] px-4 py-2 rounded-xl font-medium flex items-center justify-center transition-colors shadow-sm ${isCurrentPlan(3) || isLoading ? 'bg-gray-200 text-gray-800 cursor-not-allowed' : 'bg-gray-900 text-white hover:bg-black'}`}
+              disabled={isCurrentPlan(3) || isLoading}
+            >
+              {getButtonText('Business', 3)}
             </button>
           </div>
         </div>

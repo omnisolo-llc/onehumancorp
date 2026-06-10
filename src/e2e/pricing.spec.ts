@@ -29,4 +29,18 @@ test.describe('Pricing Page', () => {
     await upgradeButton.click();
     await expect(page.url()).toContain('/checkout?tier=Starter');
   });
+
+  test('should verify the current plan is indicated correctly based on user state', async ({ page }) => {
+    await page.goto('/pricing');
+
+    // Seeded user Defaults to Free tier
+    const currentPlanButton = page.locator('button', { hasText: 'Current Plan' });
+    await expect(currentPlanButton).toBeVisible();
+    await expect(currentPlanButton).toBeDisabled();
+
+    // Make sure other buttons still say Upgrade
+    const starterButton = page.locator('button', { hasText: 'Upgrade to Starter via Stripe' });
+    await expect(starterButton).toBeVisible();
+    await expect(starterButton).not.toBeDisabled();
+  });
 });
