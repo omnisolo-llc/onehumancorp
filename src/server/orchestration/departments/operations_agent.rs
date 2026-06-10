@@ -49,6 +49,8 @@ impl Department for OperationsAgent {
             ActionRisk::DraftForReview
         };
 
+        let mut payload_to_use = event.payload.clone();
+
         let action_description = match event.event_type.as_str() {
             "tenant.order.created" => "Process Order & Update Inventory".to_string(),
             "LowStockAlert" => {
@@ -61,6 +63,15 @@ impl Department for OperationsAgent {
                 let expected = event.payload.get("expected_stock").and_then(|v| v.as_i64()).unwrap_or(0);
                 let actual = event.payload.get("actual_stock").and_then(|v| v.as_i64()).unwrap_or(0);
                 let deficit = expected - actual;
+
+                if let Some(obj) = payload_to_use.as_object_mut() {
+                    obj.insert("feature_type".to_string(), serde_json::json!("inventory_conflict_resolution"));
+                    if !obj.contains_key("message") {
+                        obj.insert("message".to_string(), serde_json::json!(format!("Heads up! A pop-up sale overlapped with an online order for {}. Operations has drafted an email to the online customer.", product_id)));
+                    }
+                    obj.insert("deficit".to_string(), serde_json::json!(deficit));
+                }
+
                 format!("We oversold the item {} by {}. Should I cancel the online order or draft a rush supply order for transaction {}?", product_id, deficit, transaction_id)
             },
             "tenant.subscription.fulfillment_batch.created" => {
@@ -87,7 +98,7 @@ impl Department for OperationsAgent {
             action_description,
             event.tenant_id.clone(),
             risk,
-            event.payload.clone(),
+            payload_to_use,
         ).await?;
 
         if event.event_type == "tenant.subscription.fulfillment_batch.created" {

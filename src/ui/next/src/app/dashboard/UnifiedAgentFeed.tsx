@@ -391,7 +391,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                   <h3 className="text-lg font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] leading-snug mt-1">
                     {(approval.context_payload?.description || approval.proposed_action?.message || approval.proposed_action?.action_type || approval.event_source)}
                   </h3>
-                  {((approval.proposed_action || approval.context_payload)?.context || (approval.proposed_action || approval.context_payload)?.remaining_stock !== undefined || (approval.proposed_action || approval.context_payload)?.feature_type === "quote_draft" || (approval.proposed_action || approval.context_payload)?.feature_type === "social_post_draft") && (
+                  {((approval.proposed_action || approval.context_payload)?.context || (approval.proposed_action || approval.context_payload)?.remaining_stock !== undefined || (approval.proposed_action || approval.context_payload)?.feature_type === "quote_draft" || (approval.proposed_action || approval.context_payload)?.feature_type === "inventory_conflict_resolution" || (approval.proposed_action || approval.context_payload)?.feature_type === "social_post_draft") && (
                     <div className="mt-2 flex flex-col gap-1 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
                       {(approval.proposed_action || approval.context_payload)?.feature_type === "quote_draft" && (
                         <div className="mb-4 p-4 rounded-xl glassmorphism border border-white/40 dark:border-white/10 flex flex-col gap-3" data-testid="quote-draft-card">
@@ -423,7 +423,18 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                           </div>
                         </div>
                       )}
-                      {(approval.proposed_action || approval.context_payload)?.feature_type === 'social_post_draft' ? (
+                      {(approval.proposed_action || approval.context_payload)?.feature_type === 'inventory_conflict_resolution' ? (
+                            <div className="flex flex-col gap-2">
+                                <div className="flex justify-between items-center text-sm">
+                                  <span className="text-gray-500 dark:text-gray-400">Conflict:</span>
+                                  <span className="font-semibold text-red-600 dark:text-red-400">Oversold {(approval.proposed_action || approval.context_payload).product_id} by {(approval.proposed_action || approval.context_payload).deficit}</span>
+                                </div>
+                                <div className="flex justify-between items-center text-sm">
+                                  <span className="text-gray-500 dark:text-gray-400">Resolution:</span>
+                                  <span className="font-semibold text-gray-900 dark:text-gray-100 whitespace-pre-wrap">{(approval.proposed_action || approval.context_payload).message}</span>
+                                </div>
+                            </div>
+                      ) : (approval.proposed_action || approval.context_payload)?.feature_type === 'social_post_draft' ? (
                         <div className="flex flex-col gap-3">
                           <div className="flex justify-between items-center text-sm">
                             <span className="text-gray-500 dark:text-gray-400 font-semibold">New product detected!</span>
@@ -553,7 +564,26 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                 </div>
 
                 <div className="flex flex-col gap-3 w-full mt-2">
-                  {(approval.proposed_action || approval.context_payload)?.feature_type === 'social_post_draft' ? (
+                  {(approval.proposed_action || approval.context_payload)?.feature_type === 'inventory_conflict_resolution' ? (
+                    <div className="flex flex-col sm:flex-row gap-3 w-full">
+                      <button
+                        onClick={() => handleDecision(approval.id, true)}
+                        className="flex-1 min-h-[44px] px-4 rounded-[8px] bg-red-600 text-white font-medium hover:bg-red-700 transition-all duration-200 shadow-md flex items-center justify-center"
+                        aria-label="Approve Resolution"
+                        data-testid="approve-resolution"
+                      >
+                        Approve Resolution
+                      </button>
+                      <button
+                        onClick={() => handleDecision(approval.id, false)}
+                        className="flex-1 min-h-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
+                        aria-label="Edit/Dismiss"
+                        data-testid="dismiss-resolution"
+                      >
+                        Edit/Dismiss
+                      </button>
+                    </div>
+                  ) : (approval.proposed_action || approval.context_payload)?.feature_type === 'social_post_draft' ? (
                     <div className="flex flex-col sm:flex-row gap-3 w-full">
                       <button
                         onClick={() => handleDecision(approval.id, true)}

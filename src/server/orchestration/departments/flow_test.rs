@@ -558,4 +558,79 @@ mod tests {
 
         assert!(has_advisory_draft, "BusinessAdvisoryAgent should create a weekly health approval draft.");
     }
+
+    #[tokio::test]
+    async fn test_operations_inventory_conflict_generates_approval() {
+        if std::env::var("OHC_DATABASE_URL").is_err() {
+            return;
+        }
+
+        let db = Arc::new(crate::db::DB::new().await.unwrap());
+        let transport = Arc::new(InProcessTransport::new());
+        let mesh = Arc::new(CentrifugeNode::new(transport));
+
+        let orchestrator = Arc::new(DepartmentOrchestrator::new(db.clone(), mesh));
+        let ops_agent = Arc::new(tokio::sync::RwLock::new(OperationsAgent::new(orchestrator.clone())));
+        orchestrator.register_department(ops_agent).await;
+
+        let tenant_id = "test-tenant-ops-conflict".to_string();
+
+        match &db.store {
+            crate::db::DbStore::Postgres => {
+                let _ = sqlx::query("INSERT INTO tenants (id, name, tier) VALUES ($1, 'Test', 'starter') ON CONFLICT (id) DO UPDATE SET tier = 'starter'")
+                    .bind(&tenant_id)
+                    .execute(&db.pool)
+                    .await;
+            }
+            crate::db::DbStore::Sqlite(pool) => {
+                let _ = sqlx::query("INSERT INTO tenants (tenant_id, business_name, tier) VALUES (?, 'Test', 'starter') ON CONFLICT (tenant_id) DO UPDATE SET tier = 'starter'")
+                    .bind(&tenant_id)
+                    .execute(pool)
+                    .await;
+            }
+        }
+
+        let event = crate::orchestration::departments::types::DepartmentEvent {
+            id: uuid::Uuid::new_v4().to_string(),
+            tenant_id: tenant_id.clone(),
+            event_type: "InventoryConflictEvent".to_string(),
+            payload: serde_json::json!({
+                "transaction_id": "txn_999",
+                "product_id": "prod_123",
+                "expected_stock": 2,
+                "actual_stock": 1,
+            }),
+        };
+
+        let res = orchestrator.dispatch_event(event).await;
+        assert!(res.is_ok());
+
+        let mut has_ops_conflict_draft = false;
+        let mut found_feature_type = false;
+        let mut found_deficit = false;
+        for _ in 0..10 {
+            tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+            let pending = orchestrator.get_pending_approvals(&tenant_id, None, 100).await;
+            for req in pending {
+                if req.description.contains("We oversold the item prod_123 by 1") {
+                    has_ops_conflict_draft = true;
+                    if let Some(payload) = &req.payload {
+                        if payload.get("feature_type").and_then(|v| v.as_str()) == Some("inventory_conflict_resolution") {
+                            found_feature_type = true;
+                        }
+                        if payload.get("deficit").and_then(|v| v.as_i64()) == Some(1) {
+                            found_deficit = true;
+                        }
+                    }
+                }
+            }
+            if has_ops_conflict_draft {
+                break;
+            }
+        }
+
+        assert!(has_ops_conflict_draft, "OperationsAgent should create an approval draft for an inventory conflict.");
+        assert!(found_feature_type, "The payload should include feature_type = inventory_conflict_resolution");
+        assert!(found_deficit, "The payload should include the calculated deficit");
+    }
 }
