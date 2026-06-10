@@ -23,7 +23,7 @@ pub struct Quote {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct Invoice {
+pub struct BookingInvoice {
     pub id: Uuid,
     pub tenant_id: Uuid,
     pub invoice_type: String, // 'Deposit' or 'Final'
