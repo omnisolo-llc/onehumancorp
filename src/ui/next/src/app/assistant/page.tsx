@@ -188,9 +188,9 @@ function PanelButton({
 }
 
 export default function AssistantPage() {
-  const [tasks, setTasks] = useState<AssistantTask[]>(fallbackTasks);
+  const [tasks, setTasks] = useState<AssistantTask[]>([]);
   const [capabilities, setCapabilities] = useState<AssistantCapabilities>(defaultCapabilities);
-  const [activeTaskId, setActiveTaskId] = useState(fallbackTasks[0].id);
+  const [activeTaskId, setActiveTaskId] = useState('');
   const [resultTab, setResultTab] = useState<ResultTab>('Artifacts');
   const [panel, setPanel] = useState<Panel>('remote');
   const [taskSearch, setTaskSearch] = useState('');
@@ -228,8 +228,8 @@ export default function AssistantPage() {
       } catch (loadError: any) {
         if (!mounted) return;
         setError(loadError.message || 'Assistant tasks unavailable');
-        setTasks(fallbackTasks);
-        setActiveTaskId(fallbackTasks[0].id);
+
+        setActiveTaskId('');
       }
     }
 
@@ -268,7 +268,7 @@ export default function AssistantPage() {
   }, []);
 
   const activeTask = useMemo(
-    () => tasks.find((task) => task.id === activeTaskId) || tasks[0] || fallbackTasks[0],
+    () => tasks.find((task) => task.id === activeTaskId) || tasks[0] ,
     [activeTaskId, tasks],
   );
 
@@ -357,7 +357,11 @@ export default function AssistantPage() {
   }
 
   async function runResultAction(action: string) {
-    const artifact = activeTask.artifacts[0];
+    if (!activeTask) {
+      setActionNotice('No active task to perform action on');
+      return;
+    }
+    const artifact = activeTask.artifacts?.[0];
     if (action.startsWith('Share') && artifact) {
       const target = action.replace('Share to ', '').replace('Share Link', 'Share Link');
       await runApiAction('/api/assistant/share', 'POST', {
@@ -395,13 +399,13 @@ export default function AssistantPage() {
         sizeBytes: 2048,
         previewText: 'Remote image upload',
       }, 'Remote upload added');
-    } else if (action === 'summon_expert') {
+    } else if (action === 'summon_expert' && activeTask) {
       await runApiAction('/api/assistant/experts', 'PATCH', {
         action: 'summon',
         id: 'expert-research-strategist',
         taskId: activeTask.id,
       }, 'Expert summoned');
-    } else if (action === 'summarize') {
+    } else if (action === 'summarize' && activeTask) {
       await runApiAction('/api/assistant/commands', 'POST', {
         command: '/summarize',
         taskId: activeTask.id,
@@ -416,8 +420,8 @@ export default function AssistantPage() {
       await runApiAction('/api/assistant/workspaces', 'PATCH', {
         action: 'collapse_all',
       }, 'Workspaces collapsed');
-    } else if (action === 'copy_share_link') {
-      const artifact = activeTask.artifacts[0];
+    } else if (action === 'copy_share_link' && activeTask) {
+      const artifact = activeTask.artifacts?.[0];
       if (!artifact) throw new Error('No artifact available to share');
       const data = await runApiAction('/api/assistant/share', 'POST', {
         taskId: activeTask.id,
@@ -430,16 +434,16 @@ export default function AssistantPage() {
           id: data.share.id,
         }, 'Share link copied');
       }
-    } else if (action === 'download_shared_file') {
-      const artifact = activeTask.artifacts[0];
+    } else if (action === 'download_shared_file' && activeTask) {
+      const artifact = activeTask.artifacts?.[0];
       if (!artifact) throw new Error('No artifact available to download');
       await runApiAction('/api/assistant/share', 'POST', {
         taskId: activeTask.id,
         artifactId: artifact.id,
         target: 'Download',
       }, 'Download prepared');
-    } else if (action === 'cancel_sharing') {
-      const artifact = activeTask.artifacts[0];
+    } else if (action === 'cancel_sharing' && activeTask) {
+      const artifact = activeTask.artifacts?.[0];
       if (!artifact) throw new Error('No artifact available to revoke');
       const data = await runApiAction('/api/assistant/share', 'POST', {
         taskId: activeTask.id,
@@ -452,7 +456,7 @@ export default function AssistantPage() {
           id: data.share.id,
         }, 'Sharing canceled');
       }
-    } else if (action === 'unarchive_task') {
+    } else if (action === 'unarchive_task' && activeTask) {
       await runApiAction(`/api/assistant/tasks/${activeTask.id}`, 'PATCH', {
         action: activeTask.status === 'archived' ? 'unarchive' : 'archive',
       }, activeTask.status === 'archived' ? 'Task unarchived' : 'Task archived');
@@ -503,7 +507,7 @@ export default function AssistantPage() {
         platform: 'Slack',
         credentials: { appId: 'A123', botToken: 'xoxb-token' },
       }, 'Slack Claw connected');
-    } else if (action === 'create_approval') {
+    } else if (action === 'create_approval' && activeTask) {
       await runApiAction('/api/assistant/approvals', 'POST', {
         taskId: activeTask.id,
         action: 'external_send',
@@ -644,7 +648,7 @@ export default function AssistantPage() {
                 key={task.id}
                 type="button"
                 onClick={() => setActiveTaskId(task.id)}
-                className={cx(styles.taskCard, activeTask.id === task.id && styles.taskCardActive)}
+                className={cx(styles.taskCard, activeTask?.id === task.id && styles.taskCardActive)}
               >
                 <div className={styles.metaRow}>
                   <span className={styles.overline}>{task.workspace}</span>
@@ -658,6 +662,7 @@ export default function AssistantPage() {
         </aside>
 
         <section className={styles.centerColumn}>
+          {activeTask ? (
           <section className={styles.panel}>
             <div className={styles.conversationHeader}>
               <div>
@@ -710,6 +715,11 @@ export default function AssistantPage() {
               ))}
             </div>
           </section>
+          ) : (
+            <section className={styles.panel}>
+              <p className={styles.emptyText}>No active task. Start a new task below.</p>
+            </section>
+          )}
 
           <section className={styles.panel}>
             <h2 className={styles.sectionTitle}>Task Composer</h2>
@@ -854,7 +864,7 @@ export default function AssistantPage() {
               </button>
             ))}
           </div>
-          <ResultContent task={activeTask} tab={resultTab} />
+          {activeTask ? <ResultContent task={activeTask} tab={resultTab} /> : <div className={styles.resultList}><p className={styles.emptyText}>No active task.</p></div>}
           <div className={styles.resultList}>
             <div className={styles.resultItem}>
               <div className={styles.resultTitle}>Preview Auto Refresh</div>
@@ -891,8 +901,8 @@ function ResultContent({ task, tab }: { task: AssistantTask; tab: ResultTab }) {
   if (tab === 'Artifacts') {
     return (
       <div className={styles.resultList}>
-        {task.artifacts.length === 0 && <p className={styles.emptyText}>No artifacts yet.</p>}
-        {task.artifacts.map((artifact) => (
+        {(!task.artifacts || task.artifacts.length === 0) && <p className={styles.emptyText}>No artifacts yet.</p>}
+        {(task.artifacts || []).map((artifact) => (
           <div key={artifact.id} className={styles.resultItem}>
             <div className={styles.resultTitle}>{artifact.filename}</div>
             <div className={styles.overline}>{artifact.type}</div>
@@ -905,10 +915,10 @@ function ResultContent({ task, tab }: { task: AssistantTask; tab: ResultTab }) {
   if (tab === 'All Files') {
     return (
       <div className={styles.resultList}>
-        {task.changes.map((change) => (
+        {(task.changes || []).map((change) => (
           <div key={change.id} className={styles.resultItem}>{change.path}</div>
         ))}
-        {task.artifacts.map((artifact) => (
+        {(task.artifacts || []).map((artifact) => (
           <div key={artifact.id} className={styles.resultItem}>{artifact.filename}</div>
         ))}
       </div>
@@ -918,8 +928,8 @@ function ResultContent({ task, tab }: { task: AssistantTask; tab: ResultTab }) {
   if (tab === 'Changes') {
     return (
       <div className={styles.resultList}>
-        {task.changes.length === 0 && <p className={styles.emptyText}>No file changes yet.</p>}
-        {task.changes.map((change) => (
+        {(!task.changes || task.changes.length === 0) && <p className={styles.emptyText}>No file changes yet.</p>}
+        {(task.changes || []).map((change) => (
           <div key={change.id} className={styles.resultItem}>
             <div className={styles.resultTitle}>{change.summary}</div>
             <div className={cx(styles.statusBadge, styles.warningButton)}>{change.approvalStatus}</div>
@@ -931,8 +941,8 @@ function ResultContent({ task, tab }: { task: AssistantTask; tab: ResultTab }) {
 
   return (
     <div className={styles.resultList}>
-      {task.artifacts.length === 0 && <p className={styles.emptyText}>Preview appears after the first artifact.</p>}
-      {task.artifacts.map((artifact) => (
+      {(!task.artifacts || task.artifacts.length === 0) && <p className={styles.emptyText}>Preview appears after the first artifact.</p>}
+      {(task.artifacts || []).map((artifact) => (
         <div key={artifact.id} className={styles.resultItem}>
           {artifact.preview}
         </div>
