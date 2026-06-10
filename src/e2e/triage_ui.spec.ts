@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 test.describe('Work Triage Agentic Inbox', () => {
   const tenantId = 'test-tenant';
 
-  test('Owner reviews and approves a triage item', async ({ page }) => {
+  test('Owner reviews and approves a triage item via conversational modal', async ({ page }) => {
     // Log in with tenant
     await page.goto('/login');
     await page.fill('input[type="text"]', tenantId);
@@ -20,16 +20,25 @@ test.describe('Work Triage Agentic Inbox', () => {
     // Auto-wait for the card to appear (data should be seeded)
     await expect(triageCard).toBeVisible({ timeout: 10000 });
 
-    // Verify detail view is populated from selected card
-    await expect(page.locator('text=Maya requested a custom cake')).toBeVisible();
-    await expect(page.locator('text=Draft Reply')).toBeVisible();
+    // Verify draft view is populated
+    await expect(triageCard.locator('text=Draft Reply')).toBeVisible();
+
+    // Click Review Draft Reply
+    const reviewDraftBtn = triageCard.locator('[data-testid="review-draft-btn"]');
+    await reviewDraftBtn.click();
+
+    // Modal should appear
+    const modal = page.locator('.triage-modal-sheet');
+    await expect(modal).toBeVisible();
+    await expect(modal.locator('text=In response to: Maya requested a custom cake for Friday')).toBeVisible();
 
     // Approve action
-    const approveBtn = page.locator('[data-testid="approve-btn"]');
+    const approveBtn = modal.locator('[data-testid="approve-send-btn"]');
     await approveBtn.click();
 
     // Should show approved status and disappear from list
     await expect(triageCard).not.toBeVisible();
+    await expect(modal).not.toBeVisible();
   });
 
   test('Owner sees empty state when there are no items', async ({ page }) => {
@@ -59,8 +68,7 @@ test.describe('Work Triage Agentic Inbox', () => {
 
     await expect(triageCard).toBeVisible({ timeout: 15000 });
 
-    await triageCard.click();
-    const dismissBtn = page.locator('[data-testid="dismiss-btn"]');
+    const dismissBtn = triageCard.locator('[data-testid="dismiss-btn"]');
     await dismissBtn.click();
 
     await expect(triageCard).not.toBeVisible();
@@ -79,7 +87,7 @@ test.describe('Work Triage Agentic Inbox', () => {
     await expect(triageCard.locator('text=Urgent')).toBeVisible();
   });
 
-  test('Triage detail shows correct information on click', async ({ page }) => {
+  test('Triage modal allows text adjustment', async ({ page }) => {
     await page.goto('/login');
     await page.fill('input[type="text"]', tenantId);
     await page.click('button[type="submit"]');
@@ -89,8 +97,19 @@ test.describe('Work Triage Agentic Inbox', () => {
     const triageCard = page.locator('[data-testid="triage-card-triage-test-2"]');
     await expect(triageCard).toBeVisible({ timeout: 15000 });
 
-    await triageCard.click();
-    await expect(page.locator('text=WhatsApp')).toBeVisible();
-    await expect(page.locator('text=Question about delivery times')).toBeVisible();
+    const reviewDraftBtn = triageCard.locator('[data-testid="review-draft-btn"]');
+    await reviewDraftBtn.click();
+
+    const modal = page.locator('.triage-modal-sheet');
+    await expect(modal).toBeVisible();
+
+    const textarea = modal.locator('textarea');
+    await expect(textarea).toBeVisible();
+    await textarea.fill('Adjusted response message');
+    await expect(textarea).toHaveValue('Adjusted response message');
+
+    const cancelBtn = modal.locator('text=Cancel');
+    await cancelBtn.click();
+    await expect(modal).not.toBeVisible();
   });
 });

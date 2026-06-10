@@ -284,6 +284,122 @@
         .btn-secondary:hover { background-color: #3a3a3c; }
         .app-badge.neutral { background-color: #333; color: #ddd; }
       }
+
+      /* Half-Sheet Modal Styles */
+      .triage-modal-overlay {
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0,0,0,0.4);
+        z-index: 10000;
+        display: none;
+        align-items: flex-end;
+        justify-content: center;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+      }
+      .triage-modal-overlay.visible {
+        display: flex;
+        opacity: 1;
+      }
+      .triage-modal-sheet {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(20px) saturate(200%);
+        -webkit-backdrop-filter: blur(20px) saturate(200%);
+        width: 100%;
+        max-width: 600px;
+        border-radius: 20px 20px 0 0;
+        padding: 24px;
+        box-shadow: 0 -10px 40px rgba(0,0,0,0.1);
+        transform: translateY(100%);
+        transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+      .triage-modal-overlay.visible .triage-modal-sheet {
+        transform: translateY(0);
+      }
+      @media (prefers-color-scheme: dark) {
+        .triage-modal-sheet {
+          background: rgba(22, 22, 26, 0.95);
+          color: #f5f5f7;
+          border-top: 1px solid rgba(255,255,255,0.1);
+        }
+      }
+      .triage-modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-weight: 600;
+        font-size: 18px;
+        color: #1d1d1f;
+      }
+      @media (prefers-color-scheme: dark) {
+        .triage-modal-header { color: #f5f5f7; }
+      }
+      .triage-modal-close {
+        background: none;
+        border: none;
+        font-size: 24px;
+        cursor: pointer;
+        color: #86868b;
+      }
+      .triage-modal-draft {
+        width: 100%;
+        height: 120px;
+        border-radius: 12px;
+        border: 1px solid rgba(0,0,0,0.1);
+        padding: 12px;
+        font-family: inherit;
+        font-size: 15px;
+        resize: none;
+        background: rgba(255,255,255,0.8);
+      }
+      .triage-modal-draft:focus {
+        outline: none;
+        border-color: #0066FF;
+        box-shadow: 0 0 0 2px rgba(0,102,255,0.2);
+      }
+      @media (prefers-color-scheme: dark) {
+        .triage-modal-draft {
+          background: rgba(0,0,0,0.3);
+          border-color: rgba(255,255,255,0.1);
+          color: white;
+        }
+      }
+      .triage-modal-actions {
+        display: flex;
+        gap: 12px;
+        margin-top: 8px;
+      }
+      .triage-btn-send {
+        flex: 2;
+        background: #0066FF;
+        color: white;
+        border: none;
+        border-radius: 12px;
+        padding: 14px;
+        font-weight: 600;
+        font-size: 16px;
+        cursor: pointer;
+      }
+      .triage-btn-cancel {
+        flex: 1;
+        background: #e5e5ea;
+        color: #1d1d1f;
+        border: none;
+        border-radius: 12px;
+        padding: 14px;
+        font-weight: 600;
+        font-size: 16px;
+        cursor: pointer;
+      }
+      @media (prefers-color-scheme: dark) {
+        .triage-btn-cancel {
+          background: #333336;
+          color: #f5f5f7;
+        }
+      }
     </style>
   </head>
   <body>
@@ -316,6 +432,23 @@
             <div class="app-empty">Select a triage item to review it.</div>
           </div>
         </section>
+      </div>
+    </div>
+
+
+    <!-- Triage Half-Sheet Modal -->
+    <div id="triage-modal-overlay" class="triage-modal-overlay">
+      <div class="triage-modal-sheet">
+        <div class="triage-modal-header">
+          <span id="triage-modal-title">Review Draft Reply</span>
+          <button class="triage-modal-close" onclick="closeTriageModal()">&times;</button>
+        </div>
+        <div style="font-size: 14px; color: #86868b; margin-top: -8px;" id="triage-modal-context"></div>
+        <textarea id="triage-modal-draft" class="triage-modal-draft"></textarea>
+        <div class="triage-modal-actions">
+          <button class="triage-btn-cancel" onclick="closeTriageModal()">Cancel</button>
+          <button class="triage-btn-send" id="triage-modal-send-btn" data-testid="approve-send-btn">✨ Approve & Send</button>
+        </div>
       </div>
     </div>
 
@@ -364,12 +497,36 @@
         }, 3000);
       }
 
-      async function handleDecision(id, approved) {
+
+      function openTriageModal(id) {
+        const item = items.find(i => i.id === id);
+        if (!item) return;
+        document.getElementById('triage-modal-context').textContent = `In response to: ${item.context || ''}`;
+        document.getElementById('triage-modal-draft').value = item.action_payload || '';
+        document.getElementById('triage-modal-send-btn').onclick = function() {
+          handleDecision(id, true, document.getElementById('triage-modal-draft').value);
+          closeTriageModal();
+        };
+        const overlay = document.getElementById('triage-modal-overlay');
+        overlay.style.display = 'flex';
+        // trigger reflow
+        void overlay.offsetWidth;
+        overlay.classList.add('visible');
+      }
+
+      function closeTriageModal() {
+        const overlay = document.getElementById('triage-modal-overlay');
+        overlay.classList.remove('visible');
+        setTimeout(() => { overlay.style.display = 'none'; }, 300);
+      }
+
+
+      async function handleDecision(id, approved, updatedPayload) {
         try {
           const res = await fetch(`/api/ui/triage/action?tenant_id=${encodeURIComponent(tenantId())}`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ triage_item_id: id, approved })
+            body: JSON.stringify({ triage_item_id: id, approved, action_payload: updatedPayload })
           });
 
           if (!res.ok) throw new Error("Failed to update action");
@@ -475,13 +632,10 @@
             </div>
 
             <div class="btn-group">
-              <button
-                class="btn-primary"
-                data-testid="approve-btn"
-                onclick="handleDecision('${selected.id}', true)"
-              >
-                ✨ Approve & Execute
-              </button>
+              ${selected.action_type === 'Draft Reply' || selected.action_type === 'Draft Quote' ?
+                `<button class="btn-primary" style="background: rgba(0, 102, 255, 0.1); color: #0066FF;" data-testid="review-draft-btn" onclick="openTriageModal('${selected.id}')">Review Draft Reply</button>` :
+                `<button class="btn-primary" data-testid="approve-btn" onclick="handleDecision('${selected.id}', true)">✨ Approve & Execute</button>`
+              }
               <button
                 class="btn-secondary"
                 data-testid="dismiss-btn"
