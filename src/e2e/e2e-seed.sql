@@ -238,10 +238,22 @@ VALUES
   ('e2e-agent-marketing', 'e2e-tenant', 'e2e-message-vegan-options', 'customer', 'e2e-agent-marketing', 'customer_question', 'Do you have vegan options for birthday cakes?', 'e2e-room-ops')
 ON CONFLICT DO NOTHING;
 
-INSERT INTO inbox_messages (id, tenant_id, source, content, draft_reply, status)
+INSERT INTO conversations (id, tenant_id, status)
 VALUES
-  ('e2e-inbox-msg-1', 'e2e-tenant', 'Instagram DM', 'Do you have vegan options for birthday cakes?', 'Hi there! Yes, we do offer vegan birthday cakes. They start at $45. Would you like to see our menu?', 'pending'),
-  ('e2e-inbox-msg-2', 'e2e-tenant', 'WhatsApp', 'Can I schedule a consultation for my wedding?', 'Hi! Absolutely. I have availability this Thursday at 2pm or Friday at 10am. Which works best for you?', 'pending')
+  ('e2e-conv-1', 'e2e-tenant', 'pending'),
+  ('e2e-conv-2', 'e2e-tenant', 'pending')
+ON CONFLICT DO NOTHING;
+
+INSERT INTO messages (id, tenant_id, conversation_id, channel, direction, content)
+VALUES
+  ('e2e-inbox-msg-1', 'e2e-tenant', 'e2e-conv-1', 'Instagram DM', 'inbound', 'Do you have vegan options for birthday cakes?'),
+  ('e2e-inbox-msg-2', 'e2e-tenant', 'e2e-conv-2', 'WhatsApp', 'inbound', 'Can I schedule a consultation for my wedding?')
+ON CONFLICT DO NOTHING;
+
+INSERT INTO draft_replies (id, tenant_id, message_id, content, status)
+VALUES
+  ('e2e-draft-1', 'e2e-tenant', 'e2e-inbox-msg-1', 'Hi there! Yes, we do offer vegan birthday cakes. They start at $45. Would you like to see our menu?', 'pending'),
+  ('e2e-draft-2', 'e2e-tenant', 'e2e-inbox-msg-2', 'Hi! Absolutely. I have availability this Thursday at 2pm or Friday at 10am. Which works best for you?', 'pending')
 ON CONFLICT DO NOTHING;
 
 ALTER TABLE IF EXISTS tenants ENABLE ROW LEVEL SECURITY;

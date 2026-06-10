@@ -168,44 +168,88 @@ async fn process_omnichannel_message(state: &MetaWebhookState, tenant_id: String
         }
     };
 
+    let conversation_id = Uuid::new_v4().to_string();
     let inbox_id = Uuid::new_v4().to_string();
+    let draft_id = Uuid::new_v4().to_string();
     let pool = &state.db.pool;
 
     let insert_result = match &state.db.store {
         crate::db::DbStore::Postgres => {
-            sqlx::query(
-                "INSERT INTO inbox_messages (id, tenant_id, source, original_content, content, translated_from_language, draft_reply, status, sender_id, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, 'unread', $8, NOW())"
+            let mut tx = pool.begin().await.unwrap();
+            let _ = sqlx::query(
+                "INSERT INTO conversations (id, tenant_id, status, created_at) VALUES ($1, $2, 'unread', NOW())"
+            )
+            .bind(&conversation_id)
+            .bind(&tenant_id)
+            .execute(&mut *tx)
+            .await;
+
+            let _ = sqlx::query(
+                "INSERT INTO messages (id, tenant_id, conversation_id, channel, direction, content, original_content, translated_from_language, sender_id, created_at) VALUES ($1, $2, $3, $4, 'inbound', $5, $6, $7, $8, NOW())"
             )
             .bind(&inbox_id)
             .bind(&tenant_id)
+            .bind(&conversation_id)
             .bind(&source)
-            .bind(&translation.original_content)
             .bind(&translation.translated_content)
+            .bind(&translation.original_content)
             .bind(&translation.source_language)
-            .bind(&draft_reply)
             .bind(&sender_id)
-            .execute(pool)
-            .await.map(|_| ())
+            .execute(&mut *tx)
+            .await;
+
+            let res = sqlx::query(
+                "INSERT INTO draft_replies (id, tenant_id, message_id, content, status, created_at) VALUES ($1, $2, $3, $4, 'pending', NOW())"
+            )
+            .bind(&draft_id)
+            .bind(&tenant_id)
+            .bind(&inbox_id)
+            .bind(&draft_reply)
+            .execute(&mut *tx)
+            .await.map(|_| ());
+            let _ = tx.commit().await;
+            res
         },
         crate::db::DbStore::Sqlite(sqlite_pool) => {
-            sqlx::query(
-                "INSERT INTO inbox_messages (id, tenant_id, source, original_content, content, translated_from_language, draft_reply, status, sender_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, 'unread', ?, CURRENT_TIMESTAMP)"
+            let mut tx = sqlite_pool.begin().await.unwrap();
+            let _ = sqlx::query(
+                "INSERT INTO conversations (id, tenant_id, status, created_at) VALUES (?, ?, 'unread', CURRENT_TIMESTAMP)"
+            )
+            .bind(&conversation_id)
+            .bind(&tenant_id)
+            .execute(&mut *tx)
+            .await;
+
+            let _ = sqlx::query(
+                "INSERT INTO messages (id, tenant_id, conversation_id, channel, direction, content, original_content, translated_from_language, sender_id, created_at) VALUES (?, ?, ?, ?, 'inbound', ?, ?, ?, ?, CURRENT_TIMESTAMP)"
             )
             .bind(&inbox_id)
             .bind(&tenant_id)
+            .bind(&conversation_id)
             .bind(&source)
-            .bind(&translation.original_content)
             .bind(&translation.translated_content)
+            .bind(&translation.original_content)
             .bind(&translation.source_language)
-            .bind(&draft_reply)
             .bind(&sender_id)
-            .execute(sqlite_pool)
-            .await.map(|_| ())
+            .execute(&mut *tx)
+            .await;
+
+            let res = sqlx::query(
+                "INSERT INTO draft_replies (id, tenant_id, message_id, content, status, created_at) VALUES (?, ?, ?, ?, 'pending', CURRENT_TIMESTAMP)"
+            )
+            .bind(&draft_id)
+            .bind(&tenant_id)
+            .bind(&inbox_id)
+            .bind(&draft_reply)
+            .execute(&mut *tx)
+            .await.map(|_| ());
+            let _ = tx.commit().await;
+            res
         }
     };
 
     if let Err(e) = insert_result {
-        tracing::error!("Failed to insert inbox_messages: {}", e);
+        tracing::error!("Failed to insert conversations/messages/draft_replies: {}", e);
     }
 
     let _ = state.orchestrator.execute_action(

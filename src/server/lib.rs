@@ -2689,12 +2689,14 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
     }
 
     match sqlx::query(
-        "SELECT id, tenant_id, source, content,
-                COALESCE(original_content, content) AS original_content,
-                COALESCE(translated_from_language, '') AS translated_from_language,
-                draft_reply, status, created_at
-         FROM inbox_messages
-         ORDER BY created_at DESC"
+        "SELECT m.id, m.tenant_id, m.channel AS source, m.content,
+                COALESCE(m.original_content, m.content) AS original_content,
+                COALESCE(m.translated_from_language, '') AS translated_from_language,
+                COALESCE(d.content, '') AS draft_reply, c.status, m.created_at
+         FROM messages m
+         JOIN conversations c ON m.conversation_id = c.id
+         LEFT JOIN draft_replies d ON d.message_id = m.id
+         ORDER BY m.created_at DESC"
     )
         .fetch_all(&mut *tx)
         .await
@@ -3334,17 +3336,19 @@ async fn list_ui_inbox_handler(
     let messages = match &db.store {
         crate::db::DbStore::Postgres => {
             match sqlx::query(
-                "SELECT id,
-                        COALESCE(source, '') AS source,
-                        COALESCE(content, '') AS content,
-                        COALESCE(original_content, content, '') AS original_content,
-                        COALESCE(translated_from_language, '') AS translated_from_language,
-                        COALESCE(draft_reply, '') AS draft_reply,
-                        COALESCE(status, '') AS status,
-                        COALESCE(created_at::text, '') AS created_at
-                 FROM inbox_messages
-                 WHERE tenant_id = $1
-                 ORDER BY created_at DESC
+                "SELECT m.id,
+                        COALESCE(m.channel, '') AS source,
+                        COALESCE(m.content, '') AS content,
+                        COALESCE(m.original_content, m.content, '') AS original_content,
+                        COALESCE(m.translated_from_language, '') AS translated_from_language,
+                        COALESCE(d.content, '') AS draft_reply,
+                        COALESCE(c.status, '') AS status,
+                        COALESCE(m.created_at::text, '') AS created_at
+                 FROM messages m
+                 JOIN conversations c ON m.conversation_id = c.id
+                 LEFT JOIN draft_replies d ON d.message_id = m.id
+                 WHERE m.tenant_id = $1
+                 ORDER BY m.created_at DESC
                  LIMIT 50"
             )
                 .bind(&tenant_id)
@@ -3365,17 +3369,19 @@ async fn list_ui_inbox_handler(
         }
         crate::db::DbStore::Sqlite(pool) => {
             match sqlx::query(
-                "SELECT id,
-                        COALESCE(source, '') AS source,
-                        COALESCE(content, '') AS content,
-                        COALESCE(original_content, content, '') AS original_content,
-                        COALESCE(translated_from_language, '') AS translated_from_language,
-                        COALESCE(draft_reply, '') AS draft_reply,
-                        COALESCE(status, '') AS status,
-                        COALESCE(CAST(created_at AS TEXT), '') AS created_at
-                 FROM inbox_messages
-                 WHERE tenant_id = ?
-                 ORDER BY created_at DESC
+                "SELECT m.id,
+                        COALESCE(m.channel, '') AS source,
+                        COALESCE(m.content, '') AS content,
+                        COALESCE(m.original_content, m.content, '') AS original_content,
+                        COALESCE(m.translated_from_language, '') AS translated_from_language,
+                        COALESCE(d.content, '') AS draft_reply,
+                        COALESCE(c.status, '') AS status,
+                        COALESCE(m.created_at, '') AS created_at
+                 FROM messages m
+                 JOIN conversations c ON m.conversation_id = c.id
+                 LEFT JOIN draft_replies d ON d.message_id = m.id
+                 WHERE m.tenant_id = ?
+                 ORDER BY m.created_at DESC
                  LIMIT 50"
             )
                 .bind(&tenant_id)

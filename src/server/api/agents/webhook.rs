@@ -197,19 +197,46 @@ async fn handle_webhook(
     };
 
     let pool = get_pool();
-    let id = Uuid::new_v4().to_string();
+    let conversation_id = Uuid::new_v4().to_string();
+    let message_id = Uuid::new_v4().to_string();
+    let draft_id = Uuid::new_v4().to_string();
+
     let _ = sqlx::query(
         r#"
-        INSERT INTO inbox_messages (id, tenant_id, source, original_content, content, translated_from_language, draft_reply, status, created_at)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, 'unread', NOW())
+        INSERT INTO conversations (id, tenant_id, status, created_at)
+        VALUES ($1, $2, 'unread', NOW())
         "#
     )
-    .bind(&id)
+    .bind(&conversation_id)
     .bind(&payload.tenant_id)
+    .execute(&pool)
+    .await;
+
+    let _ = sqlx::query(
+        r#"
+        INSERT INTO messages (id, tenant_id, conversation_id, channel, direction, content, original_content, translated_from_language, created_at)
+        VALUES ($1, $2, $3, $4, 'inbound', $5, $6, $7, NOW())
+        "#
+    )
+    .bind(&message_id)
+    .bind(&payload.tenant_id)
+    .bind(&conversation_id)
     .bind(&payload.source)
-    .bind(&translation.original_content)
     .bind(&translation.translated_content)
+    .bind(&translation.original_content)
     .bind(&translation.source_language)
+    .execute(&pool)
+    .await;
+
+    let _ = sqlx::query(
+        r#"
+        INSERT INTO draft_replies (id, tenant_id, message_id, content, status, created_at)
+        VALUES ($1, $2, $3, $4, 'pending', NOW())
+        "#
+    )
+    .bind(&draft_id)
+    .bind(&payload.tenant_id)
+    .bind(&message_id)
     .bind(&draft_reply)
     .execute(&pool)
     .await;
@@ -225,7 +252,7 @@ async fn handle_webhook(
             "original_content": translation.original_content.clone(),
             "translated_from_language": translation.source_language.clone(),
             "draft_reply": draft_reply.clone(),
-            "inbox_message_id": id.clone(),
+            "inbox_message_id": message_id.clone(),
         }),
     ).await;
 
@@ -240,7 +267,7 @@ async fn handle_webhook(
             "translated_from_language": translation.source_language,
             "generated_response": draft_reply,
             "feature_type": "ambassador_reply",
-            "inbox_message_id": id,
+            "inbox_message_id": message_id,
         }),
     }).await;
 

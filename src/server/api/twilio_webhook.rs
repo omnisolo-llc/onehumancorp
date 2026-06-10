@@ -43,37 +43,71 @@ pub async fn twilio_webhook_post_handler(
         tracing::info!("Received Twilio message from {}: {}", sender_id, text);
 
         let tenant_id = "test_tenant".to_string(); // Replace with actual DB lookup based on `_to_number` in the future
+        let conversation_id = Uuid::new_v4().to_string();
         let inbox_id = Uuid::new_v4().to_string();
+        let draft_id = Uuid::new_v4().to_string();
         let source = "whatsapp".to_string();
 
         let pool = &state.db.pool;
         let insert_result = match &state.db.store {
             crate::db::DbStore::Postgres => {
-                sqlx::query(
-                    "INSERT INTO inbox_messages (id, tenant_id, source, content, draft_reply, status) VALUES ($1, $2, $3, $4, '', 'pending')"
-                )
-                .bind(&inbox_id)
-                .bind(&tenant_id)
-                .bind(&source)
-                .bind(&text)
-                .execute(pool)
-                .await.map(|_| ())
+                let mut tx = pool.begin().await.unwrap();
+                let _ = sqlx::query("INSERT INTO conversations (id, tenant_id, status) VALUES ($1, $2, 'pending')")
+                    .bind(&conversation_id)
+                    .bind(&tenant_id)
+                    .execute(&mut *tx)
+                    .await;
+
+                let _ = sqlx::query("INSERT INTO messages (id, tenant_id, conversation_id, channel, direction, content) VALUES ($1, $2, $3, $4, 'inbound', $5)")
+                    .bind(&inbox_id)
+                    .bind(&tenant_id)
+                    .bind(&conversation_id)
+                    .bind(&source)
+                    .bind(&text)
+                    .execute(&mut *tx)
+                    .await;
+
+                let res = sqlx::query("INSERT INTO draft_replies (id, tenant_id, message_id, content, status) VALUES ($1, $2, $3, '', 'pending')")
+                    .bind(&draft_id)
+                    .bind(&tenant_id)
+                    .bind(&inbox_id)
+                    .execute(&mut *tx)
+                    .await.map(|_| ());
+
+                let _ = tx.commit().await;
+                res
             },
             crate::db::DbStore::Sqlite(sqlite_pool) => {
-                sqlx::query(
-                    "INSERT INTO inbox_messages (id, tenant_id, source, content, draft_reply, status) VALUES (?, ?, ?, ?, '', 'pending')"
-                )
-                .bind(&inbox_id)
-                .bind(&tenant_id)
-                .bind(&source)
-                .bind(&text)
-                .execute(sqlite_pool)
-                .await.map(|_| ())
+                let mut tx = sqlite_pool.begin().await.unwrap();
+                let _ = sqlx::query("INSERT INTO conversations (id, tenant_id, status) VALUES (?, ?, 'pending')")
+                    .bind(&conversation_id)
+                    .bind(&tenant_id)
+                    .execute(&mut *tx)
+                    .await;
+
+                let _ = sqlx::query("INSERT INTO messages (id, tenant_id, conversation_id, channel, direction, content) VALUES (?, ?, ?, ?, 'inbound', ?)")
+                    .bind(&inbox_id)
+                    .bind(&tenant_id)
+                    .bind(&conversation_id)
+                    .bind(&source)
+                    .bind(&text)
+                    .execute(&mut *tx)
+                    .await;
+
+                let res = sqlx::query("INSERT INTO draft_replies (id, tenant_id, message_id, content, status) VALUES (?, ?, ?, '', 'pending')")
+                    .bind(&draft_id)
+                    .bind(&tenant_id)
+                    .bind(&inbox_id)
+                    .execute(&mut *tx)
+                    .await.map(|_| ());
+
+                let _ = tx.commit().await;
+                res
             }
         };
 
         if let Err(e) = insert_result {
-            tracing::error!("Failed to insert inbox message: {}", e);
+            tracing::error!("Failed to insert conversation/message: {}", e);
         }
 
         let event = crate::orchestration::departments::types::DepartmentEvent {
