@@ -261,7 +261,19 @@ export function UnifiedAgentFeed() {
         });
         if (refreshRes.ok) {
             const data: ApprovalsResponse = await refreshRes.json();
-            setItems(data.pending_approvals);
+            // Map the ApprovalRequest shape to the AgentFeedItem shape expected by the UI.
+            const mappedApprovals: AgentFeedItem[] = data.pending_approvals.map(req => ({
+              id: req.id,
+              tenant_id: req.tenant_id,
+              event_source: "APPROVAL_REQUEST",
+              context_payload: { department: req.department, description: req.description },
+              proposed_action: req.payload,
+              lifecycle_state: req.status,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            }));
+            setItems(mappedApprovals);
+            return;
         }
         throw new Error("Failed to submit decision");
       }
