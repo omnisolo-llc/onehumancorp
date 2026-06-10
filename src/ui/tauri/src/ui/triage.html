@@ -338,11 +338,11 @@
       async function loadItems() {
         const listEl = document.getElementById("triage-list");
         try {
-          const res = await fetch(`/api/ui/triage?tenant_id=${encodeURIComponent(tenantId())}`);
+          const res = await fetch(`/api/agent-feed?tenant_id=${encodeURIComponent(tenantId())}`);
           if (!res.ok) throw new Error("Failed to load triage items from the database");
 
           const data = await res.json();
-          items = Array.isArray(data) ? data : [];
+          items = (data && Array.isArray(data.items)) ? data.items : [];
 
           if (!selectedId && items.length > 0) {
             selectedId = items[0].id;
@@ -366,10 +366,10 @@
 
       async function handleDecision(id, approved) {
         try {
-          const res = await fetch(`/api/ui/triage/action?tenant_id=${encodeURIComponent(tenantId())}`, {
-            method: "POST",
+          const res = await fetch(`/api/agent-feed/${id}/state?tenant_id=${encodeURIComponent(tenantId())}`, {
+            method: "PUT",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ triage_item_id: id, approved })
+            body: JSON.stringify({ state: approved ? "RESOLVED" : "DISMISSED" })
           });
 
           if (!res.ok) throw new Error("Failed to update action");
@@ -391,7 +391,7 @@
       function renderUI() {
         // Badges
         const activeCount = items.length;
-        const urgentCount = items.filter(item => ["urgent", "high"].includes((item.priority || "").toLowerCase())).length;
+        const urgentCount = items.filter(item => ["urgent", "high"].includes(((item.context_payload && item.context_payload.priority) || "").toLowerCase())).length;
 
         document.getElementById("active-count-badge").textContent = `Active: ${activeCount}`;
         document.getElementById("active-count-badge").className = `app-badge ${activeCount > 0 ? 'warn' : 'good'}`;
@@ -417,10 +417,10 @@
               onclick="selectItem('${item.id}')"
             >
               <div style="min-width: 0;">
-                <div class="app-list-title">${item.source || "Unknown Source"}</div>
-                <div class="app-list-subtitle">${item.context || "No context provided"}</div>
+                <div class="app-list-title">${item.event_source || "Unknown Source"}</div>
+                <div class="app-list-subtitle">${(item.context_payload && item.context_payload.text) || "No context provided"}</div>
               </div>
-              <span class="app-badge ${badgeTone(item.priority)}">${item.priority || "Normal"}</span>
+              <span class="app-badge ${badgeTone((item.context_payload && item.context_payload.priority))}">${(item.context_payload && item.context_payload.priority) || "Normal"}</span>
             </button>
           `).join('');
         }
@@ -437,12 +437,12 @@
             : new Date().toLocaleString();
 
           let actionHtml = '';
-          if (selected.action_type) {
+          if (selected.proposed_action && selected.proposed_action.action_type) {
             actionHtml = `
               <div class="detail-group">
-                <div class="app-metric-label">Proposed Action: ${selected.action_type}</div>
+                <div class="app-metric-label">Proposed Action: ${selected.proposed_action.action_type}</div>
                 <div class="detail-value proposed-action">
-                  ${selected.action_payload || "No specific payload"}
+                  ${selected.proposed_action.payload || "No specific payload"}
                 </div>
               </div>
             `;
@@ -451,13 +451,13 @@
           detailEl.innerHTML = `
             <div class="detail-group">
               <div class="app-metric-label">Source</div>
-              <div class="detail-value" style="font-weight: 600; background: transparent; border: none; padding: 4px 0;">${selected.source || "Unknown source"}</div>
+              <div class="detail-value" style="font-weight: 600; background: transparent; border: none; padding: 4px 0;">${selected.event_source || "Unknown source"}</div>
             </div>
 
             <div class="detail-group">
               <div class="app-metric-label">Context</div>
               <div class="detail-value">
-                ${selected.context || "No context"}
+                ${(selected.context_payload && selected.context_payload.text) || "No context"}
               </div>
             </div>
 
@@ -466,7 +466,7 @@
             <div style="display: flex; gap: 16px; margin-bottom: 16px;">
               <div>
                 <div class="app-metric-label">Priority</div>
-                <div style="margin-top: 8px;"><span class="app-badge ${badgeTone(selected.priority)}">${selected.priority || "Normal"}</span></div>
+                <div style="margin-top: 8px;"><span class="app-badge ${badgeTone(selected.context_payload && selected.context_payload.priority)}">${(selected.context_payload && selected.context_payload.priority) || "Normal"}</span></div>
               </div>
               <div>
                 <div class="app-metric-label">Created</div>

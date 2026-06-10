@@ -337,17 +337,12 @@ ALTER TABLE IF EXISTS depletion_logs FORCE ROW LEVEL SECURITY;
 COMMIT;
 
 -- Triage seed data
-INSERT INTO triage_items (id, tenant_id, source, priority, context, status)
+INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state)
 VALUES
-  ('triage-test-1', 'test-tenant', 'Instagram DM', 'Urgent', 'Maya requested a custom cake for Friday', 'pending'),
-  ('triage-test-2', 'test-tenant', 'WhatsApp', 'Medium', 'Question about delivery times', 'pending')
+  ('triage-test-1', 'test-tenant', 'Instagram DM', '{"text": "Maya requested a custom cake for Friday", "priority": "Urgent"}'::jsonb, '{"action_type": "Draft Reply", "payload": "Hi Maya! I can definitely help with the custom cake. It will be $50."}'::jsonb, 'PENDING_APPROVAL'),
+  ('triage-test-2', 'test-tenant', 'WhatsApp', '{"text": "Question about delivery times", "priority": "Medium"}'::jsonb, '{"action_type": "Draft Reply", "payload": "We deliver between 9 AM and 5 PM on weekdays."}'::jsonb, 'PENDING_APPROVAL')
 ON CONFLICT (id) DO NOTHING;
 
-INSERT INTO triage_proposed_actions (id, triage_item_id, tenant_id, action_type, payload)
-VALUES
-  ('action-test-1', 'triage-test-1', 'test-tenant', 'Draft Reply', 'Hi Maya! I can definitely help with the custom cake. It will be $50.'),
-  ('action-test-2', 'triage-test-2', 'test-tenant', 'Draft Reply', 'We deliver between 9 AM and 5 PM on weekdays.')
-ON CONFLICT (id) DO NOTHING;
 
 -- Seed 10th order milestone for e2e-tenant
 INSERT INTO business_milestones (id, tenant_id, milestone_type, reached_at)

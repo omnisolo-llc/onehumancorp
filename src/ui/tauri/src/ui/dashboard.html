@@ -709,7 +709,7 @@
 
             try {
               const response = await fetch('/api/v1/growth/trial-extension/claim', {
-                method: 'POST',
+                method: 'PUT',
                 headers: {
                   'Content-Type': 'application/json',
                 }
@@ -876,16 +876,17 @@
         triageSection.style.display = 'block';
         try {
           // Adjust port for Tauri dev server, or use relative if integrated
-          let url = '/api/ui/triage';
+          let url = '/api/agent-feed';
           if (false) {
-            url = '/api/ui/triage';
+            url = '/api/agent-feed';
           }
 
           const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default';
           const res = await fetch(`${url}?tenant_id=${encodeURIComponent(tenantId)}`);
           if (!res.ok) throw new Error("Failed to load");
 
-          const items = await res.json();
+          const data = await res.json();
+          const items = data.items || [];
           if (!Array.isArray(items) || items.length === 0) {
             triageQueue.innerHTML = '<div class="triage-card empty">No items need your attention right now. Great job!</div>';
             return;
@@ -901,21 +902,21 @@
       function renderTriageItems(items) {
         triageQueue.innerHTML = items.map(item => {
           let priorityClass = '';
-          const p = (item.priority || '').toLowerCase();
+          const p = ((item.context_payload && item.context_payload.priority) || '').toLowerCase();
           if (['urgent', 'high'].includes(p)) priorityClass = 'urgent';
           else if (['action needed', 'medium'].includes(p)) priorityClass = 'medium';
 
           return `
             <div class="triage-item" data-testid="triage-card-${item.id}" id="triage-${item.id}">
               <div class="triage-header">
-                <div class="triage-source">${item.source || 'Unknown'}</div>
-                <div class="triage-priority ${priorityClass}">${item.priority || 'Normal'}</div>
+                <div class="triage-source">${item.event_source || 'Unknown'}</div>
+                <div class="triage-priority ${priorityClass}">${(item.context_payload && item.context_payload.priority) || 'Normal'}</div>
               </div>
-              <div class="triage-context">${item.context || ''}</div>
-              ${item.action_type ? `
+              <div class="triage-context">${(item.context_payload && item.context_payload.text) || ''}</div>
+              ${(item.proposed_action && item.proposed_action.action_type) ? `
                 <div class="triage-action">
-                  <div class="triage-action-title">${item.action_type}</div>
-                  <div>${item.action_payload || ''}</div>
+                  <div class="triage-action-title">${item.proposed_action && item.proposed_action.action_type}</div>
+                  <div>${(item.proposed_action && item.proposed_action.payload) || ''}</div>
                 </div>
               ` : ''}
               <div class="triage-controls">
@@ -932,16 +933,16 @@
         if (itemEl) itemEl.style.opacity = '0.5';
 
         try {
-          let url = '/api/ui/triage/action';
+          let url = `/api/agent-feed/${id}/state`;
           if (false) {
-            url = '/api/ui/triage/action';
+            url = `/api/agent-feed/${id}/state`;
           }
 
           const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default';
           const res = await fetch(`${url}?tenant_id=${encodeURIComponent(tenantId)}`, {
-            method: 'POST',
+            method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ triage_item_id: id, approved })
+            body: JSON.stringify({ state: approved ? 'RESOLVED' : 'DISMISSED' })
           });
 
           if (!res.ok) throw new Error("Update failed");
