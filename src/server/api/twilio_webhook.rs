@@ -42,11 +42,38 @@ pub async fn twilio_webhook_post_handler(
     if !text.is_empty() {
         tracing::info!("Received Twilio message from {}: {}", sender_id, text);
 
-        let tenant_id = "test_tenant".to_string(); // Replace with actual DB lookup based on `_to_number` in the future
+        let pool = &state.db.pool;
+
+        // Find the correct tenant by mapping the `To` number
+        let tenant_id = match &state.db.store {
+            crate::db::DbStore::Postgres => {
+                match sqlx::query_scalar::<_, String>(
+                    "SELECT tenant_id FROM settings WHERE sms_critical_phone = $1 OR voice_receptionist_number = $1 LIMIT 1"
+                )
+                .bind(&_to_number)
+                .fetch_optional(pool)
+                .await {
+                    Ok(Some(id)) => id,
+                    _ => "test_tenant".to_string(), // Fallback if no specific tenant is found
+                }
+            },
+            crate::db::DbStore::Sqlite(sqlite_pool) => {
+                match sqlx::query_scalar::<_, String>(
+                    "SELECT tenant_id FROM settings WHERE sms_critical_phone = ? OR voice_receptionist_number = ? LIMIT 1"
+                )
+                .bind(&_to_number)
+                .bind(&_to_number)
+                .fetch_optional(sqlite_pool)
+                .await {
+                    Ok(Some(id)) => id,
+                    _ => "test_tenant".to_string(),
+                }
+            }
+        };
+
         let inbox_id = Uuid::new_v4().to_string();
         let source = "whatsapp".to_string();
 
-        let pool = &state.db.pool;
         let insert_result = match &state.db.store {
             crate::db::DbStore::Postgres => {
                 sqlx::query(

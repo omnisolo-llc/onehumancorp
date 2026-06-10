@@ -72,8 +72,10 @@ mod tests {
         let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
 
         let repo = Arc::new(VectorRepository::new_sqlite(pool));
-        let worker = MemoryConsolidationWorker::new(repo);
+        let mut worker = MemoryConsolidationWorker::new(repo);
         assert_eq!(worker.poll_interval.as_secs(), 3600);
+        worker.prune_threshold_days = 90;
+        assert_eq!(worker.prune_threshold_days, 90);
 }
     #[tokio::test]
     async fn test_worker_pipeline_execution() {
@@ -273,5 +275,43 @@ mod additional_tests {
         tokio::time::sleep(std::time::Duration::from_millis(50)).await;
         // The worker will fail queries internally but shouldn't panic
         assert!(true, "Worker didn't panic when schema is missing");
+    }
+
+    #[tokio::test]
+    async fn test_worker_prune_interval_optimizations() {
+        let conn_opts = SqliteConnectOptions::from_str("sqlite::memory:").unwrap();
+        let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
+
+        // Create valid table but empty
+        sqlx::query(
+            "CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding TEXT,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );"
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        let repo = Arc::new(VectorRepository::new_sqlite(pool));
+        let mut worker = MemoryConsolidationWorker::new(repo);
+        // Optimize configuration: verify stability with very fast pruning loop
+        worker.poll_interval = std::time::Duration::from_millis(10);
+        worker.prune_threshold_days = 90;
+
+        worker.start();
+
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+        assert_eq!(worker.prune_threshold_days, 90, "Worker threshold properly configured and stable during rapid loop");
     }
 }

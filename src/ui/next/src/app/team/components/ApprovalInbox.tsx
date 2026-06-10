@@ -56,8 +56,8 @@ export default function ApprovalInbox({
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 font-inter py-10">
-      <div className="w-[375px] max-w-[375px] min-h-[812px] bg-gradient-to-br from-gray-50 to-gray-100 shadow-2xl overflow-hidden flex flex-col relative border-x border-gray-200">
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50/50 backdrop-blur-md font-inter py-10">
+      <div className="w-full sm:w-[375px] max-w-[375px] min-h-[812px] bg-white/60 backdrop-blur-xl shadow-2xl overflow-hidden flex flex-col relative border border-white/40 rounded-3xl glassmorphism">
         {/* Header */}
         <div className="pt-12 pb-6 px-6 bg-white/65 backdrop-blur-[30px] border-b border-white/40 sticky top-0 z-10 flex items-center gap-4">
           <button
@@ -135,7 +135,7 @@ export default function ApprovalInbox({
               return (
                 <div
                   key={req.id}
-                  className="app-card rounded-2xl p-5 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] transition-all duration-300"
+                  className="glassmorphism rounded-2xl p-5 border border-white/40 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] transition-all duration-300"
                 >
                   <div className="flex items-center gap-2 mb-3">
                     <span
@@ -161,7 +161,7 @@ export default function ApprovalInbox({
                   </p>
 
                   {req.payload?.feature_type === "ambassador_reply" && (
-                    <div className="mb-6 p-4 rounded-xl bg-blue-50 border border-blue-100 flex flex-col gap-3">
+                    <div className="mb-6 p-4 rounded-xl glassmorphism border border-blue-100 flex flex-col gap-3">
                       <div className="flex items-center gap-2 text-blue-800 font-semibold text-sm">
                         <svg
                           className="w-5 h-5"
@@ -197,7 +197,7 @@ export default function ApprovalInbox({
                             d="M5 13l4 4L19 7"
                           />
                         </svg>
-                        AI Draft
+                        Draft Reply
                       </div>
                       <div className="bg-blue-600 p-3 rounded-lg text-xs text-white shadow-inner">
                         {req.payload.generated_response}
@@ -318,7 +318,7 @@ export default function ApprovalInbox({
                   )}
 
                   {req.payload?.feature_type === "case_study" && (
-                    <div className="mb-6 p-4 rounded-xl bg-blue-50 border border-blue-100 flex flex-col gap-3">
+                    <div className="mb-6 p-4 rounded-xl glassmorphism border border-blue-100 flex flex-col gap-3">
                       <div className="flex items-center gap-2 text-blue-800 font-semibold text-sm">
                         <svg
                           className="w-5 h-5"
@@ -422,7 +422,7 @@ export default function ApprovalInbox({
                     </div>
                   )}
 
-                  {req.payload?.feature_type === "social_post" && (
+                  {req.payload?.feature_type === "social_post_draft" && (
                     <div className="mb-6 p-4 rounded-xl bg-pink-50 border border-pink-100 flex flex-col gap-3">
                       <div className="flex items-center gap-2 text-pink-800 font-semibold text-sm">
                         <svg
@@ -468,8 +468,8 @@ export default function ApprovalInbox({
                   )}
 
                   {req.payload?.feature_type === "quote_draft" && (
-                    <div className="mb-6 p-4 rounded-xl bg-blue-50 border border-blue-100 flex flex-col gap-3" data-testid="draft-quote-card">
-                      <div className="flex items-center gap-2 text-blue-800 font-semibold text-sm">
+                    <div className="mb-6 p-4 rounded-xl glassmorphism border border-white/40 flex flex-col gap-3" data-testid="quote-draft-card">
+                      <div className="flex items-center gap-2 text-[#0066FF] font-semibold text-sm">
                         <svg
                           className="w-5 h-5"
                           fill="none"
@@ -485,12 +485,12 @@ export default function ApprovalInbox({
                         </svg>
                         Draft Quote: {req.payload.service || 'Plumbing Fix'} for Customer
                       </div>
-                      <div className="text-xs text-blue-700 font-medium">
+                      <div className="text-xs text-[#0066FF] font-medium">
                         {req.payload.customer_inquiry}
                       </div>
 
-                      <div className="app-card p-3 rounded-lg border border-blue-100 relative mt-2">
-                        <div className="text-[10px] uppercase font-bold text-gray-400 mb-2">
+                      <div className="glassmorphism p-3 rounded-lg border border-white/40 relative mt-2">
+                        <div className="text-[10px] uppercase font-bold text-gray-500 mb-2">
                           AI Proposed Quote
                         </div>
                         <div className="space-y-2">
@@ -608,11 +608,11 @@ export default function ApprovalInbox({
                     </button>
                     <button
                       onClick={() => onApprove(req.id)}
-                      className="flex-1 py-3 px-4 rounded-xl font-bold text-sm bg-blue-600 text-white hover:bg-blue-700 shadow-md shadow-blue-500/20 active:scale-[0.98] transition-all min-h-[44px] min-w-[44px]"
+                      className="flex-1 py-3 px-4 rounded-xl font-bold text-sm bg-[#0066FF] text-white hover:bg-[#0052CC] shadow-md shadow-[#0066FF]/20 active:scale-[0.98] transition-all min-h-[44px] min-w-[44px]"
                     >
                       {req.payload?.feature_type === "case_study"
                         ? "Publish to Website"
-                        : req.payload?.feature_type === "social_post"
+                        : req.payload?.feature_type === "social_post_draft"
                         ? "Schedule Post"
                         : req.payload?.feature_type === "quote_draft"
                         ? "Approve & Send"
@@ -652,7 +652,7 @@ export default function ApprovalInbox({
                 <p className="text-xs text-gray-500 font-medium uppercase tracking-wider mb-1">
                   Draft
                 </p>
-                <div className="bg-blue-50 p-3 rounded-xl border border-blue-100 text-sm text-gray-800 italic relative">
+                <div className="glassmorphism p-3 rounded-xl border border-blue-100 text-sm text-gray-800 italic relative">
                   {extractPayload(selectedReview.description).payload
                     ?.generated_response || "N/A"}
                 </div>

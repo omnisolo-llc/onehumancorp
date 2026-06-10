@@ -1,6 +1,7 @@
 'use client';
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { AgentWorkflowBuilder } from './components/AgentWorkflowBuilder';
 import {
   automations,
   connectors,
@@ -384,7 +385,7 @@ export default function AgentsPage() {
           {panel === 'remote' && <RemotePanel />}
           {panel === 'data' && <DataPanel />}
           {panel === 'operations' && <OperationsPanel />}
-          {panel === 'workflows' && <WorkflowsPanel workflows={workflows} />}
+          {panel === 'workflows' && <WorkflowsPanel workflows={workflows} setWorkflows={setWorkflows} />}
           {panel === 'feed' && <FeedPanel feed={feed} />}
           {panel === 'approvals' && <ApprovalsPanel approvals={approvals} decideApproval={decideApproval} />}
         </section>
@@ -978,23 +979,69 @@ function AutomationsPanel() {
   );
 }
 function MemoryPanel() {
+  const [items, setItems] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  const fetchMemories = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/v1/memory');
+      const data = await res.json();
+      setItems(Array.isArray(data) ? data : []);
+    } catch (e) {
+      console.error(e);
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    fetchMemories();
+  }, []);
+
+  const toggleOverride = async (id: string, currentValue: boolean) => {
+    try {
+      await fetch(`/api/v1/memory/${id}/override`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ override_value: !currentValue }),
+      });
+      fetchMemories();
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   return (
     <section className="rounded-lg border border-zinc-200 bg-white p-4">
-      <SectionHeader title="Conversation Memory" detail="Review, edit, import, remember, and forget durable business context." />
-      <div className="mb-4 flex flex-wrap gap-2">
-        <button type="button" className="rounded-md bg-teal-700 px-3 py-2 text-sm font-bold text-white">Remember this</button>
-        <button type="button" className="rounded-md border border-zinc-200 px-3 py-2 text-sm font-bold text-zinc-700">Nightly summary</button>
-        <button type="button" className="rounded-md border border-zinc-200 px-3 py-2 text-sm font-bold text-zinc-700">Edit memory</button>
-        <button type="button" className="rounded-md border border-zinc-200 px-3 py-2 text-sm font-bold text-zinc-700">Forget selected</button>
-        <button type="button" className="rounded-md border border-zinc-200 px-3 py-2 text-sm font-bold text-zinc-700">Import from ChatGPT or Claude</button>
-      </div>
-      <div className="space-y-3">
-        {memories.map((memory) => (
-          <div key={memory} className="rounded-md border border-zinc-200 bg-zinc-50 p-3 text-sm text-zinc-700">
-            {memory}
-          </div>
-        ))}
-      </div>
+      <SectionHeader title="Consolidated Memory" detail="Review and explicitly override what AI agents remember about your business." />
+
+      {loading ? (
+        <p className="text-sm text-zinc-500">Loading memories...</p>
+      ) : items.length === 0 ? (
+        <p className="text-sm text-zinc-500">No consolidated memories found.</p>
+      ) : (
+        <div className="space-y-3">
+          {items.map((memory: any) => (
+            <div key={memory.id} className="rounded-md border border-zinc-200 bg-zinc-50 p-3 text-sm text-zinc-700 flex flex-col gap-2">
+              <div className="flex justify-between items-start">
+                <div className="font-semibold text-zinc-900">{memory.source_type}</div>
+                <button
+                  type="button"
+                  onClick={() => toggleOverride(memory.id, memory.owner_override)}
+                  className={`text-xs px-2 py-1 rounded-md font-bold ${memory.owner_override ? 'bg-teal-700 text-white' : 'bg-zinc-200 text-zinc-700 hover:bg-zinc-300'}`}
+                >
+                  {memory.owner_override ? 'Owner Override: ON' : 'Owner Override: OFF'}
+                </button>
+              </div>
+              <p className="whitespace-pre-wrap">{memory.content}</p>
+              <div className="text-xs text-zinc-500 flex gap-4">
+                <span>References: {memory.reference_count}</span>
+                <span>Reliability: {memory.reliability_score}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </section>
   );
 }
@@ -1069,16 +1116,33 @@ function OperationsPanel() {
     </section>
   );
 }
-function WorkflowsPanel({ workflows }: { workflows: WorkflowRecord[] }) {
+function WorkflowsPanel({ workflows, setWorkflows }: { workflows: WorkflowRecord[], setWorkflows: React.Dispatch<React.SetStateAction<WorkflowRecord[]>> }) {
+  const handleSaveWorkflow = async (name: string, task: string) => {
+    const res = await fetch('/api/agents/workflows', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, task }),
+    });
+    if (!res.ok) {
+      throw new Error('Failed to create workflow');
+    }
+    const data = await res.json();
+    setWorkflows(current => [data.workflow, ...current]);
+  };
+
   return (
-    <section className="rounded-lg border border-zinc-200 bg-white p-4">
+    <section className="rounded-[16px] border border-[rgba(255,255,255,0.4)] bg-[rgba(255,255,255,0.65)] backdrop-blur-[30px] saturate-[210%] p-4">
       <SectionHeader title="Workflows" detail="Active expert and expert-team runs." />
+
+      <div className="mb-8">
+        <AgentWorkflowBuilder onSave={handleSaveWorkflow} />
+      </div>
       {workflows.length === 0 ? (
-        <p className="rounded-md border border-dashed border-zinc-300 p-4 text-sm text-zinc-600">No workflows yet.</p>
+        <p className="rounded-[8px] border border-dashed border-zinc-300 p-4 text-sm text-zinc-600">No workflows yet.</p>
       ) : (
         <div className="space-y-3">
           {workflows.map((workflow) => (
-            <div key={workflow.id} className="rounded-lg border border-zinc-200 bg-zinc-50 p-4">
+            <div key={workflow.id} className="rounded-[16px] border border-[rgba(255,255,255,0.4)] bg-[rgba(255,255,255,0.65)] backdrop-blur-[30px] saturate-[210%] p-4">
               <div className="flex items-center justify-between">
                 <h3 className="font-bold text-zinc-950">{workflow.name}</h3>
                 <StatusPill>{workflow.status}</StatusPill>

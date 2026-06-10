@@ -4,7 +4,6 @@ use crate::orchestration::departments::orchestrator::{
 use crate::orchestration::departments::types::{
     ActionRisk, ApprovalRequest, DepartmentConfig, DepartmentEvent, DepartmentType,
 };
-use serde_json::Value;
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -25,7 +24,7 @@ pub trait SalesQuoteIntentPlanner: Send + Sync {
     async fn plan_quote_intent(
         &self,
         tenant_id: &str,
-        payload: &Value,
+        payload: &serde_json::Value,
     ) -> Result<Option<QuoteIntent>, String>;
 }
 
@@ -71,7 +70,7 @@ impl SalesQuoteIntentPlanner for RuntimeSalesQuoteIntentPlanner {
     async fn plan_quote_intent(
         &self,
         tenant_id: &str,
-        payload: &Value,
+        payload: &serde_json::Value,
     ) -> Result<Option<QuoteIntent>, String> {
         if let Some(intent) = extract_quote_intent(payload) {
             return Ok(Some(intent));
@@ -140,7 +139,7 @@ impl SalesAgent {
     }
 }
 
-pub fn extract_quote_intent(payload: &Value) -> Option<QuoteIntent> {
+pub fn extract_quote_intent(payload: &serde_json::Value) -> Option<QuoteIntent> {
     let original_message = payload
         .get("message")
         .and_then(|v| v.as_str())
@@ -259,7 +258,7 @@ impl Department for SalesAgent {
                             std::env::var("STRIPE_API_KEY").unwrap_or_else(|_| "sk_test_123".to_string()),
                         );
 
-                        match stripe_client.create_checkout_session("price_dummy", "cus_dummy", deposit_amount).await {
+                        match stripe_client.create_checkout_session("price_dummy", "cus_dummy", deposit_amount, false).await {
                             Ok(url) => {
                                 tracing::info!("Generated deposit link: {}", url);
                                 // Optional: Update timeline or send a message
@@ -356,6 +355,7 @@ impl Department for SalesAgent {
                 );
 
                 let action_payload = serde_json::json!({
+                    "inbox_message_id": event.payload.get("inbox_message_id").and_then(|v| v.as_str()).unwrap_or(""),
                     "feature_type": "quote_draft",
                     "customer_inquiry": intent.original_message,
                     "suggested_price": price,
@@ -453,9 +453,6 @@ impl BaseAgent for SalesAgent {
         AgentTriggerType::EventDriven
     }
 
-    async fn execute(&self, _payload: Value) -> Result<(), String> {
-        Ok(())
-    }
 }
 
 #[cfg(test)]
@@ -472,7 +469,7 @@ mod tests {
         async fn plan_quote_intent(
             &self,
             _tenant_id: &str,
-            _payload: &Value,
+            _payload: &serde_json::Value,
         ) -> Result<Option<QuoteIntent>, String> {
             Ok(self.intent.clone())
         }

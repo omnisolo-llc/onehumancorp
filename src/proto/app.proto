@@ -198,6 +198,8 @@ service BookingEngineService {
   rpc ReserveTimeSlot(ReserveTimeSlotRequest) returns (ReserveTimeSlotResponse);
   rpc CreateConversationalCheckout(CreateConversationalCheckoutRequest) returns (ConversationalCheckoutSession);
   rpc SyncCalendar(SyncCalendarRequest) returns (SyncCalendarResponse);
+  rpc CreateQuote(CreateQuoteRequest) returns (QuoteResponse);
+  rpc FetchQuote(FetchQuoteRequest) returns (QuoteResponse);
 }
 
 message CheckAvailabilityRequest {
@@ -248,6 +250,31 @@ message ConversationalCheckoutSession {
   int64 expires_at_unix = 8;
 }
 
+message ReserveInventoryRequest {
+  string tenant_id = 1;
+  string product_id = 2;
+  int32 quantity = 3;
+  int32 ttl_seconds = 4;
+}
+
+message ReserveInventoryResponse {
+  bool success = 1;
+  string lock_id = 2;
+  string error_message = 3;
+}
+
+message CommitInventoryRequest {
+  string tenant_id = 1;
+  string product_id = 2;
+  int32 quantity = 3;
+  string lock_id = 4;
+}
+
+message CommitInventoryResponse {
+  bool success = 1;
+  string error_message = 2;
+}
+
 // POS Engine messages
 message PosOfflineTransaction {
   string id = 1;
@@ -264,6 +291,7 @@ message SyncOfflineTransactionsRequest {
   string tenant_id = 1;
   string client_id = 2;
   repeated PosOfflineTransaction transactions = 3;
+  optional string session_id = 4;
 }
 
 message SyncOfflineTransactionsResponse {
@@ -311,10 +339,42 @@ service PosService {
   rpc EndTerminalSession(EndTerminalSessionRequest) returns (EndTerminalSessionResponse);
 }
 
+service InventorySyncService {
+  rpc ReserveInventory(ReserveInventoryRequest) returns (ReserveInventoryResponse);
+  rpc CommitInventory(CommitInventoryRequest) returns (CommitInventoryResponse);
+}
+
 message SyncCalendarRequest {
   string tenant_id = 1;
 }
 
 message SyncCalendarResponse {
   string status = 1;
+}
+
+message QuoteLineItem {
+  string description = 1;
+  int64 unit_price_cents = 2;
+  int32 quantity = 3;
+  bool is_optional = 4;
+}
+
+message CreateQuoteRequest {
+  string tenant_id = 1;
+  string customer_id = 2;
+  repeated QuoteLineItem line_items = 3;
+  int64 required_deposit = 4;
+}
+
+message FetchQuoteRequest {
+  string quote_id = 1;
+}
+
+message QuoteResponse {
+  string quote_id = 1;
+  string tenant_id = 2;
+  string status = 3;
+  int64 total_amount_cents = 4;
+  int64 required_deposit = 5;
+  repeated QuoteLineItem line_items = 6;
 }

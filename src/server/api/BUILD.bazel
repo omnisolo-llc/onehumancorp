@@ -1,3 +1,4 @@
+exports_files(["chaos.rs"])
 load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 
 exports_files(
@@ -22,12 +23,16 @@ exports_files(
         "offline_sync.rs",
         "staff_mesh.rs",
         "telemetry.rs",
+        "chaos.rs",
         "catalog.rs",
         "fulfillment.rs",
         "shipping.rs",
-
-
         "local_seo.rs",
+        "recovery.rs",
+        "pos.rs",
+        "agent_feed.rs",
+        "audio_command.rs",
+        "invoice.rs",
     ],
     visibility = ["//visibility:public"],
 )
@@ -56,15 +61,20 @@ rust_library(
         "offline_sync.rs",
         "staff_mesh.rs",
         "telemetry.rs",
+        "chaos.rs",
         "catalog.rs",
         "fulfillment.rs",
         "shipping.rs",
-
-
         "local_seo.rs",
+        "recovery.rs",
+        "pos.rs",
+        "agent_feed.rs",
+        "audio_command.rs",
+        "invoice.rs",
         "//src/server/api/agents:approvals.rs",
-        "//src/server/api/agents:chat.rs",
+        "//src/server/api/agents:client_intake.rs",
         "//src/server/api/agents:hire.rs",
+        "//src/server/api/agents:chat.rs",
         "//src/server/api/agents:mission/handoff.rs",
         "//src/server/api/agents:mission/mod.rs",
         "//src/server/api/agents:mod.rs",

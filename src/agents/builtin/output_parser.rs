@@ -48,7 +48,7 @@ impl<T: DeserializeOwned> OutputParser<T> for StructuredOutputParser<T> {
                 if let Some(data) = call.arguments.get("data") {
                     return match serde_json::from_value::<T>(data.clone()) {
                         Ok(parsed) => Ok(parsed),
-                        Err(e) => Err(crate::types::format_pydantic_error(&e, None)),
+                        Err(e) => Err(crate::types::format_pydantic_error(&e, None, None)),
                     };
                 } else {
                     return Err(
@@ -58,29 +58,43 @@ impl<T: DeserializeOwned> OutputParser<T> for StructuredOutputParser<T> {
             }
 
         // Fallback mechanic: Extract from markdown json wrapper if model stubbornly outputs raw text
-        let trimmed = completion.trim();
-        if trimmed.starts_with("```json") && trimmed.ends_with("```") {
-            let json_str = trimmed
-                .trim_start_matches("```json")
-                .trim_end_matches("```")
-                .trim();
-            if let Ok(parsed) = serde_json::from_str::<T>(json_str) {
+        // Fallback mechanic: Extract from markdown json wrapper if model stubbornly outputs raw text
+        let mut text_to_parse = completion.trim();
+
+        if let Some(start) = text_to_parse.find("```json") {
+            if let Some(end) = text_to_parse[start + 7..].find("```") {
+                text_to_parse = &text_to_parse[start + 7..start + 7 + end];
+            }
+        } else if let Some(start) = text_to_parse.find("{") {
+            if let Some(end) = text_to_parse.rfind("}") {
+                if end > start {
+                    text_to_parse = &text_to_parse[start..end + 1];
+                }
+            }
+        } else if let Some(start) = text_to_parse.find("[") {
+            if let Some(end) = text_to_parse.rfind("]") {
+                 if end > start {
+                     text_to_parse = &text_to_parse[start..end + 1];
+                 }
+            }
+        }
+
+        let text_to_parse = text_to_parse.trim();
+
+        if text_to_parse.starts_with("{") || text_to_parse.starts_with("[") {
+            if let Ok(parsed) = serde_json::from_str::<T>(text_to_parse) {
                 return Ok(parsed);
             }
-            if let Ok(val) = serde_json::from_str::<serde_json::Value>(json_str)
-                && let Some(data) = val.get("data")
-                    && let Ok(parsed) = serde_json::from_value::<T>(data.clone()) {
+            if let Ok(val) = serde_json::from_str::<serde_json::Value>(text_to_parse) {
+                if let Some(data) = val.get("data") {
+                    if let Ok(parsed) = serde_json::from_value::<T>(data.clone()) {
                         return Ok(parsed);
                     }
-        } else if trimmed.starts_with("{") && trimmed.ends_with("}") {
-            if let Ok(parsed) = serde_json::from_str::<T>(trimmed) {
-                return Ok(parsed);
+                }
             }
-            if let Ok(val) = serde_json::from_str::<serde_json::Value>(trimmed)
-                && let Some(data) = val.get("data")
-                    && let Ok(parsed) = serde_json::from_value::<T>(data.clone()) {
-                        return Ok(parsed);
-                    }
+            if let Err(e) = serde_json::from_str::<serde_json::Value>(text_to_parse) {
+                return Err(crate::types::format_pydantic_error(&e, Some(text_to_parse), None));
+            }
         }
 
         // Strict enforcement: Rely entirely on native tool_calls API objects.
@@ -145,11 +159,8 @@ impl<'a, T: DeserializeOwned> RetryWithErrorOutputParser<'a, T> {
                     }
 
                     let base_backoff = 500 * (1 << attempt);
-                    let jitter = std::time::SystemTime::now()
-                        .duration_since(std::time::UNIX_EPOCH)
-                        .unwrap_or_default()
-                        .subsec_millis() as u64
-                        % 100;
+                    use rand::Rng;
+                    let jitter = rand::thread_rng().gen_range(0..100);
                     let backoff = std::time::Duration::from_millis((base_backoff as u64) + jitter);
                     tokio::time::sleep(backoff).await;
 
@@ -172,10 +183,11 @@ impl<'a, T: DeserializeOwned> RetryWithErrorOutputParser<'a, T> {
                     // Feed the original prompt, the failed completion, and the parsing error back to the model as an LLM-recoverable ToolMessage
                     if !msg.tool_calls.is_empty() {
                         current_req.messages.push(msg.clone());
-                        let detailed_error = format!(
-                            "Parsing error: {}. Please correct your tool arguments to match the required schema.",
-                            parse_error_msg
-                        );
+                        let detailed_error = if parse_error_msg.contains("Validation Error") {
+                            parse_error_msg.clone()
+                        } else {
+                            format!("Validation Error (Pydantic-first tool schema): Failed to parse arguments.\nReason: Semantic validation failed: {}\nPlease strictly follow the tool's JSON schema and try again.", parse_error_msg)
+                        };
                         let tool_results = msg
                             .tool_calls
                             .iter()

@@ -46,6 +46,138 @@ fn load_ai_provider() -> Result<AiProviderView, String> {
     Ok(to_provider_view(read_ai_provider_config()?))
 }
 
+#[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct OnboardingState {
+    business_name: Option<String>,
+    template_selection: Option<String>,
+    assistant_name: Option<String>,
+    assistant_tone: Option<String>,
+    work_context: Option<String>,
+    categories: Option<String>,
+    tagline: Option<String>,
+    first_offer: Option<String>,
+}
+
+fn onboarding_state_path() -> std::path::PathBuf {
+    std::env::var("OHC_ONBOARDING_STATE_PATH")
+        .ok()
+        .filter(|value| !value.trim().is_empty())
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(|| std::path::PathBuf::from(".ohc/onboarding.json"))
+}
+
+#[tauri::command]
+async fn get_onboarding_state(_app_handle: tauri::AppHandle) -> Result<OnboardingState, String> {
+    let tenant_id = std::env::var("OHC_DEFAULT_TENANT_ID").unwrap_or_else(|_| "default".to_string());
+    let user_id = std::env::var("OHC_DEFAULT_USER_ID").unwrap_or_else(|_| "default".to_string());
+
+    let backend_url = std::env::var("BACKEND_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string());
+    let url = format!("{}/api/onboarding/state", backend_url);
+
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(3))
+        .build()
+        .map_err(|err| err.to_string())?;
+
+    // Priority: Backend API
+    if let Ok(response) = client.get(&url)
+        .header("X-Tenant-ID", &tenant_id)
+        .header("X-User-ID", &user_id)
+        .send().await {
+        if response.status().is_success() {
+            if let Ok(state) = response.json::<OnboardingState>().await {
+                return Ok(state);
+            }
+        }
+    }
+
+    // Local file fallback ONLY if standalone
+    let is_standalone = std::env::var("OHC_STANDALONE_MODE").map(|v| v == "true").unwrap_or(false);
+    if is_standalone {
+        let path = onboarding_state_path();
+        if path.exists() {
+            let content = std::fs::read_to_string(path).map_err(|err| err.to_string())?;
+            if let Ok(state) = serde_json::from_str::<OnboardingState>(&content) {
+                return Ok(state);
+            }
+        }
+    }
+
+    Ok(OnboardingState {
+        business_name: None,
+        template_selection: None,
+        assistant_name: None,
+        assistant_tone: None,
+        work_context: None,
+        categories: None,
+        tagline: None,
+        first_offer: None,
+    })
+}
+
+#[tauri::command]
+async fn save_onboarding_state(state: OnboardingState, _app_handle: tauri::AppHandle) -> Result<(), String> {
+    let tenant_id = std::env::var("OHC_DEFAULT_TENANT_ID").unwrap_or_else(|_| "default".to_string());
+    let user_id = std::env::var("OHC_DEFAULT_USER_ID").unwrap_or_else(|_| "default".to_string());
+
+    let backend_url = std::env::var("BACKEND_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string());
+    let url = format!("{}/api/onboarding/state", backend_url);
+
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(3))
+        .build()
+        .map_err(|err| err.to_string())?;
+
+    // Primary: Backend save
+    let _ = client.post(&url)
+        .header("X-Tenant-ID", &tenant_id)
+        .header("X-User-ID", &user_id)
+        .header("Content-Type", "application/json")
+        .json(&state)
+        .send().await;
+
+    // Local mirror for standalone persistence
+    let path = onboarding_state_path();
+    if let Some(parent) = path.parent() {
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::DirBuilderExt;
+            std::fs::DirBuilder::new()
+                .recursive(true)
+                .mode(0o700)
+                .create(parent)
+                .unwrap_or_default();
+        }
+        #[cfg(not(unix))]
+        {
+            std::fs::create_dir_all(parent).unwrap_or_default();
+        }
+    }
+
+    if let Ok(json) = serde_json::to_string_pretty(&state) {
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::OpenOptionsExt;
+            use std::io::Write;
+            if let Ok(mut file) = std::fs::OpenOptions::new()
+                .write(true)
+                .create(true)
+                .truncate(true)
+                .mode(0o600)
+                .open(path) {
+                let _ = file.write_all(format!("{json}\n").as_bytes());
+            }
+        }
+        #[cfg(not(unix))]
+        {
+            let _ = std::fs::write(path, format!("{json}\n"));
+        }
+    }
+
+    Ok(())
+}
+
 #[tauri::command]
 fn save_ai_provider(config: AiProviderConfig) -> Result<AiProviderView, String> {
     let mut current = read_ai_provider_config()?;
@@ -249,6 +381,76 @@ fn endpoint_url(base_url: &str, endpoint: &str) -> String {
     format!("{}/{}", base_url.trim_end_matches('/'), endpoint)
 }
 
+#[tauri::command]
+async fn get_help_articles() -> Result<serde_json::Value, String> {
+    let backend_url = std::env::var("BACKEND_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string());
+    let url = format!("{}/api/help", backend_url);
+
+    let request = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(5))
+        .build()
+        .map_err(|err| err.to_string())?
+        .get(&url);
+
+    let response = request.send().await.map_err(|err| err.to_string())?;
+    if response.status().is_success() {
+        let json: serde_json::Value = response.json().await.map_err(|err| err.to_string())?;
+        Ok(json)
+    } else {
+        Err(format!("Backend returned {}", response.status()))
+    }
+}
+
+#[tauri::command]
+async fn get_help_article(id: String) -> Result<serde_json::Value, String> {
+    let backend_url = std::env::var("BACKEND_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string());
+    let url = format!("{}/api/help/{}", backend_url, id);
+
+    let request = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(5))
+        .build()
+        .map_err(|err| err.to_string())?
+        .get(&url);
+
+    let response = request.send().await.map_err(|err| err.to_string())?;
+    if response.status().is_success() {
+        let json: serde_json::Value = response.json().await.map_err(|err| err.to_string())?;
+        Ok(json)
+    } else {
+        Err(format!("Backend returned {}", response.status()))
+    }
+}
+
+#[tauri::command]
+async fn get_help_videos() -> Result<serde_json::Value, String> {
+    // For now, mock the videos as the endpoint is partially mocked anyway
+    Ok(serde_json::json!([
+        { "id": 1, "title": "How to set up your first store easily", "duration": "1:20", "video_url": "https://www.w3schools.com/html/mov_bbb.mp4" },
+        { "id": 2, "title": "Accept your first payment", "duration": "1:15", "video_url": "https://www.w3schools.com/html/mov_bbb.mp4" }
+    ]))
+}
+
+
+#[tauri::command]
+async fn get_changelog() -> Result<serde_json::Value, String> {
+    let backend_url = std::env::var("BACKEND_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string());
+    let url = format!("{}/api/changelog", backend_url);
+
+    let request = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(5))
+        .build()
+        .map_err(|err| err.to_string())?
+        .get(&url);
+
+    let response = request.send().await.map_err(|err| err.to_string())?;
+    if response.status().is_success() {
+        let json: serde_json::Value = response.json().await.map_err(|err| err.to_string())?;
+        Ok(json)
+    } else {
+        Err(format!("Backend returned {}", response.status()))
+    }
+}
+
 #[cfg(ohc_bazel_tauri_context)]
 macro_rules! tauri_build_context {
     () => {
@@ -276,6 +478,12 @@ pub fn run() {
             load_ai_provider,
             save_ai_provider,
             test_ai_provider,
+            get_onboarding_state,
+            save_onboarding_state,
+            get_help_articles,
+            get_help_article,
+            get_help_videos,
+            get_changelog,
         ])
         .setup(|app| {
             let window = app.get_webview_window("main").unwrap();

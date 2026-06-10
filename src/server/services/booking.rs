@@ -23,7 +23,7 @@ pub struct Quote {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct Invoice {
+pub struct BookingInvoice {
     pub id: Uuid,
     pub tenant_id: Uuid,
     pub invoice_type: String, // 'Deposit' or 'Final'
@@ -822,6 +822,23 @@ impl BookingEngineService for NativeBookingService {
             if let (Some(s), Some(e)) = (st, et) { Some((s, e)) } else { None }
         }).collect();
 
+        // Incorporate availability_ledger into blocked slots
+        let ledger_rows = sqlx::query(
+            "SELECT start_time, end_time FROM availability_ledger WHERE tenant_id = $1 AND product_id = $2 AND start_time::date = $3::date AND status IN ('BLOCKED', 'BOOKED')"
+        )
+        .bind(&tenant_id)
+        .bind(&product_id)
+        .bind(&date_str)
+        .fetch_all(&mut *tx)
+        .await
+        .map_err(|e| Status::internal(e.to_string()))?;
+
+        let mut blocked_slots: Vec<(DateTime<Utc>, DateTime<Utc>)> = ledger_rows.into_iter().filter_map(|row| {
+            let st: Option<DateTime<Utc>> = row.get("start_time");
+            let et: Option<DateTime<Utc>> = row.get("end_time");
+            if let (Some(s), Some(e)) = (st, et) { Some((s, e)) } else { None }
+        }).collect();
+
         // Fetch exceptions / business hours from availability_schedules (if any)
         let schedule_rows = sqlx::query(
             "SELECT business_hours, exceptions FROM availability_schedules WHERE tenant_id = $1"
@@ -831,7 +848,6 @@ impl BookingEngineService for NativeBookingService {
         .await
         .map_err(|e| Status::internal(e.to_string()))?;
 
-        let mut blocked_slots = Vec::new();
         for row in schedule_rows {
              let exceptions_json: serde_json::Value = row.try_get("exceptions").unwrap_or(serde_json::json!([]));
              if let Some(arr) = exceptions_json.as_array() {
@@ -994,6 +1010,26 @@ impl BookingEngineService for NativeBookingService {
             return Err(Status::internal(e.to_string()));
         }
 
+        // Add to availability_ledger
+        let ledger_id = uuid::Uuid::new_v4().to_string();
+        if let Err(e) = sqlx::query(
+            "INSERT INTO availability_ledger (id, tenant_id, product_id, start_time, end_time, status, booking_id) \
+             VALUES ($1, $2, $3, $4, $5, 'BOOKED', $6)"
+        )
+        .bind(&ledger_id)
+        .bind(&tenant_id)
+        .bind(&product_id)
+        .bind(start_time)
+        .bind(end_time)
+        .bind(&booking_id)
+        .execute(&mut *tx)
+        .await
+        {
+            let _ = tx.rollback().await;
+            let _ = soft_locks.release(&capacity_lock).await;
+            return Err(Status::internal(e.to_string()));
+        }
+
         if let Err(e) = tx.commit().await {
             let _ = soft_locks.release(&capacity_lock).await;
             return Err(Status::internal(e.to_string()));
@@ -1044,9 +1080,17 @@ impl BookingEngineService for NativeBookingService {
             let pos_lock_key = format!("ohc:lock:{}:inventory:{}", req.tenant_id, req.product_id);
             if let Some(client) = &self.redis_client {
                 if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
-                    let is_locked: bool = redis::cmd("EXISTS").arg(&pos_lock_key).query_async(&mut conn).await.unwrap_or(false);
-                    if is_locked {
-                        return Err(Status::resource_exhausted("Product inventory is currently being checked out in-store"));
+                    let acquired: bool = redis::cmd("SET")
+                        .arg(&pos_lock_key)
+                        .arg(&session_id)
+                        .arg("EX")
+                        .arg(300) // 5 minutes lock for online checkout
+                        .arg("NX")
+                        .query_async(&mut conn)
+                        .await
+                        .unwrap_or(false);
+                    if !acquired {
+                        return Err(Status::resource_exhausted("Item is currently being checked out by another customer"));
                     }
                 }
             }
@@ -1064,7 +1108,12 @@ impl BookingEngineService for NativeBookingService {
             .map_err(Status::internal)?
             .ok_or_else(|| Status::resource_exhausted("Product inventory is currently fully held"))?;
 
-        let inventory_lock_id = inventory_lock.key;
+        let inventory_lock_id = if inventory_capacity <= 1 {
+            // For single-capacity items, the true lock is the Redis lock we acquired
+            format!("ohc:lock:{}:inventory:{}", req.tenant_id, req.product_id)
+        } else {
+            inventory_lock.key
+        };
 
         let checkout_url = format!("https://checkout.stripe.com/pay/cs_test_{}", session_id.replace("-", ""));
 
@@ -1080,6 +1129,140 @@ impl BookingEngineService for NativeBookingService {
         }))
     }
 
+    async fn create_quote(
+        &self,
+        request: Request<::server_ohc::app::CreateQuoteRequest>,
+    ) -> Result<Response<::server_ohc::app::QuoteResponse>, Status> {
+        let auth_info = request.extensions().get::<::server_auth::orchestration::AuthInfo>().cloned();
+        let tenant_id = match auth_info {
+            Some(info) => info.org_id,
+            None => {
+                let spiffe_id_str = request.metadata().get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
+                ::server_auth::parse_spiffe_id(spiffe_id_str).map_err(|_| Status::unauthenticated("invalid spiffe id"))?.0
+            }
+        };
+
+        if tenant_id.is_empty() {
+            return Err(Status::unauthenticated("missing tenant identity in session"));
+        }
+
+        let req = request.into_inner();
+        let quote_id = uuid::Uuid::new_v4().to_string();
+        let mut total_amount_cents = 0;
+
+        let pool = crate::db::get_pool();
+        let mut tx = pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+
+        crate::common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| Status::internal(e.to_string()))?;
+
+        sqlx::query(
+            "INSERT INTO quotes (id, tenant_id, customer_id, status, required_deposit) VALUES ($1, $2, $3, $4, $5)"
+        )
+        .bind(&quote_id)
+        .bind(&tenant_id)
+        .bind(uuid::Uuid::parse_str(&req.customer_id).unwrap_or_else(|_| uuid::Uuid::new_v4()))
+        .bind("DRAFT")
+        .bind(req.required_deposit)
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| Status::internal(e.to_string()))?;
+
+        for item in &req.line_items {
+            total_amount_cents += item.unit_price_cents * item.quantity as i64;
+            sqlx::query(
+                "INSERT INTO quote_line_items (id, quote_id, description, unit_price_cents, quantity, is_optional) VALUES ($1, $2, $3, $4, $5, $6)"
+            )
+            .bind(uuid::Uuid::new_v4())
+            .bind(uuid::Uuid::parse_str(&quote_id).unwrap())
+            .bind(&item.description)
+            .bind(item.unit_price_cents)
+            .bind(item.quantity)
+            .bind(item.is_optional)
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+        }
+
+        sqlx::query("UPDATE quotes SET total_amount = $1 WHERE id = $2 AND tenant_id = $3")
+            .bind(total_amount_cents)
+            .bind(&quote_id)
+            .bind(&tenant_id)
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
+
+        Ok(Response::new(::server_ohc::app::QuoteResponse {
+            quote_id,
+            tenant_id,
+            status: "DRAFT".to_string(),
+            total_amount_cents,
+            required_deposit: req.required_deposit,
+            line_items: req.line_items,
+        }))
+    }
+
+    async fn fetch_quote(
+        &self,
+        request: Request<::server_ohc::app::FetchQuoteRequest>,
+    ) -> Result<Response<::server_ohc::app::QuoteResponse>, Status> {
+        let auth_info = request.extensions().get::<::server_auth::orchestration::AuthInfo>().cloned();
+        let tenant_id = match auth_info {
+            Some(info) => info.org_id,
+            None => {
+                let spiffe_id_str = request.metadata().get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
+                ::server_auth::parse_spiffe_id(spiffe_id_str).map_err(|_| Status::unauthenticated("invalid spiffe id"))?.0
+            }
+        };
+
+        if tenant_id.is_empty() {
+            return Err(Status::unauthenticated("missing tenant identity in session"));
+        }
+
+        let req = request.into_inner();
+
+        let pool = crate::db::get_pool();
+        let mut tx = pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+        crate::common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| Status::internal(e.to_string()))?;
+
+        use sqlx::Row;
+        let quote_row = sqlx::query("SELECT * FROM quotes WHERE id = $1 AND tenant_id = $2")
+            .bind(&req.quote_id)
+            .bind(&tenant_id)
+            .fetch_optional(&mut *tx)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        if let Some(row) = quote_row {
+            let mut line_items = vec![];
+            let items_rows = sqlx::query("SELECT * FROM quote_line_items WHERE quote_id = $1")
+                .bind(uuid::Uuid::parse_str(&req.quote_id).unwrap_or_default())
+                .fetch_all(&mut *tx)
+                .await
+                .map_err(|e| Status::internal(e.to_string()))?;
+
+            for r in items_rows {
+                line_items.push(::server_ohc::app::QuoteLineItem {
+                    description: r.try_get("description").unwrap_or_default(),
+                    unit_price_cents: r.try_get("unit_price_cents").unwrap_or_default(),
+                    quantity: r.try_get("quantity").unwrap_or_default(),
+                    is_optional: r.try_get("is_optional").unwrap_or_default(),
+                });
+            }
+
+            Ok(Response::new(::server_ohc::app::QuoteResponse {
+                quote_id: req.quote_id,
+                tenant_id,
+                status: row.try_get("status").unwrap_or_default(),
+                total_amount_cents: row.try_get("total_amount").unwrap_or_default(),
+                required_deposit: row.try_get("required_deposit").unwrap_or_default(),
+                line_items,
+            }))
+        } else {
+            Err(Status::not_found("Quote not found"))
+        }
+    }
     async fn sync_calendar(
         &self,
         _request: Request<SyncCalendarRequest>,

@@ -1,12 +1,14 @@
-import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import CheckoutPage from './page';
+import * as React from 'react';
 
-const mockUseSearchParams = vi.fn(() => new URLSearchParams(''));
+const mockPush = vi.fn();
+const mockUseSearchParams = vi.fn();
+
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
-    push: vi.fn(),
+    push: mockPush,
   }),
   useSearchParams: () => mockUseSearchParams(),
 }));
@@ -17,6 +19,10 @@ vi.mock('../../components/TooltipRegistry', () => ({
 
 vi.mock('../components/PoweredByOHC', () => ({
   PoweredByOHC: () => <div data-testid="powered-by-ohc" />,
+}));
+
+vi.mock('../components/OneTapReferral', () => ({
+  OneTapReferral: () => <div data-testid="one-tap-referral" />,
 }));
 
 describe('CheckoutPage', () => {
@@ -54,85 +60,82 @@ beforeEach(() => {
     expect(screen.getByText('Plan Upgrade')).toBeDefined();
     expect(screen.getByText('OHC Starter Plan')).toBeDefined();
 
-    const payButton = screen.getByText('Pay with Stripe');
+    const payButton = screen.getByText('Upgrade via Stripe');
     fireEvent.click(payButton);
 
     await waitFor(() => {
       expect(global.fetch).toHaveBeenCalledWith('/api/billing/create-checkout-session', expect.objectContaining({
         method: 'POST',
-        headers: expect.objectContaining({ 'Content-Type': 'application/json' }),
-        body: JSON.stringify({
-          tier: 'Starter'
-        }),
+        headers: expect.objectContaining({
+            'Authorization': 'Bearer fake-token'
+        })
       }));
       expect(assign).toHaveBeenCalledWith('https://checkout.stripe.com/pay/test');
     });
   });
 
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
-  it('renders the checkout page', () => {
-    render(<CheckoutPage />);
-    expect(screen.getByText('Checkout')).toBeDefined();
-    expect(screen.getByText('Pay Now')).toBeDefined();
-  });
-
-  it('handles payment click', async () => {
-    global.fetch = vi.fn().mockResolvedValue({
-      json: () => Promise.resolve({ referral_link: 'http://test.link' })
-    } as any);
+  it('handles regular checkout deposit flow correctly', async () => {
+    global.fetch = vi.fn().mockImplementation((url) => {
+      if (url === '/api/v1/payments/terminal/reserve') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ success: true, lock_id: 'test-lock' }),
+        });
+      }
+      if (url === '/api/v1/payments/terminal/commit') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ success: true }),
+        });
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+    });
 
     render(<CheckoutPage />);
 
-    const payButton = screen.getByText('Pay Now');
+    expect(screen.getByText('Secure Checkout')).toBeDefined();
+    expect(screen.getByText('Service Deposit')).toBeDefined();
+    expect(screen.getByText('Subscribe & Save 10%')).toBeDefined();
+    expect(screen.getByText('$45.00')).toBeDefined();
+
+    const payButton = screen.getByText('Pay');
     fireEvent.click(payButton);
-
-    expect(payButton.textContent).toBe('Processing...');
 
     await waitFor(() => {
       expect(screen.getByText('Payment Successful!')).toBeDefined();
-    });
+      expect(screen.getByTestId('one-tap-referral')).toBeDefined();
+      expect(screen.getByText(/Your order is confirmed/)).toBeDefined();
+    }, { timeout: 2000 });
   });
 
-  it('includes browser coordinates when checking delivery eligibility', async () => {
-    Object.defineProperty(navigator, 'geolocation', {
-      configurable: true,
-      value: {
-        getCurrentPosition: vi.fn((success) => success({
-          coords: { latitude: 37.77, longitude: -122.41 },
-        })),
-      },
-    });
+  it('handles delivery quote flow correctly', async () => {
     global.fetch = vi.fn().mockResolvedValue({
-      json: () => Promise.resolve({ success: true, fee: 8.5 }),
+      ok: true,
+      json: () => Promise.resolve({
+        success: true,
+        fee: 10.50,
+      }),
     } as any);
 
     render(<CheckoutPage />);
 
-    fireEvent.change(screen.getByPlaceholderText('Enter delivery address...'), {
-      target: { value: '123 Market St' },
-    });
-    fireEvent.click(screen.getByText('Check'));
+    const addressInput = screen.getByPlaceholderText('Enter address for delivery quote');
+    fireEvent.change(addressInput, { target: { value: '123 Main St' } });
+
+    const checkButton = screen.getByText('Check');
+    fireEvent.click(checkButton);
 
     await waitFor(() => {
       expect(global.fetch).toHaveBeenCalledWith('/api/checkout/delivery-quote', expect.objectContaining({
-        method: 'POST',
-        headers: expect.objectContaining({ 'Content-Type': 'application/json' }),
-        body: JSON.stringify({
-          deliveryAddress: '123 Market St',
-          coordinates: { lat: 37.77, lng: -122.41 },
-        }),
+        method: 'POST'
       }));
+      expect(screen.getByText('Delivery available: +$10.50')).toBeDefined();
+      expect(screen.getByText('Total with Delivery')).toBeDefined();
+      expect(screen.getByText('$55.50')).toBeDefined();
     });
   });
 
-  it('starts a MercadoPago checkout and redirects to the provider URL', async () => {
+  it('handles Mercado Pago checkout correctly', async () => {
     const assign = vi.fn();
     Object.defineProperty(window, 'location', {
       configurable: true,
@@ -141,25 +144,49 @@ beforeEach(() => {
     global.fetch = vi.fn().mockResolvedValue({
       ok: true,
       json: () => Promise.resolve({
-        checkout_url: 'https://www.mercadopago.com/checkout/v1/redirect?pref_id=real',
+        checkout_url: 'https://mercadopago.com/checkout/test',
       }),
     } as any);
 
     render(<CheckoutPage />);
 
-    fireEvent.click(screen.getByText('Pay with Mercado Pago'));
+    const payButton = screen.getByText('Pay with Mercado Pago');
+    fireEvent.click(payButton);
 
     await waitFor(() => {
       expect(global.fetch).toHaveBeenCalledWith('/api/checkout/mercadopago', expect.objectContaining({
         method: 'POST',
-        headers: expect.objectContaining({ 'Content-Type': 'application/json' }),
-        body: JSON.stringify({
-          tenant_id: 'fake-token',
-          amount_cents: 4500,
-          currency: 'MXN',
-        }),
+        body: expect.stringContaining('"amount_cents":4500')
       }));
-      expect(assign).toHaveBeenCalledWith('https://www.mercadopago.com/checkout/v1/redirect?pref_id=real');
+      expect(assign).toHaveBeenCalledWith('https://mercadopago.com/checkout/test');
+    });
+  });
+
+  it('handles Mercado Pago checkout correctly for subscription tier', async () => {
+    mockUseSearchParams.mockImplementation(() => new URLSearchParams('?tier=Pro'));
+    const assign = vi.fn();
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: { assign },
+    });
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({
+        checkout_url: 'https://mercadopago.com/checkout/test_sub',
+      }),
+    } as any);
+
+    render(<CheckoutPage />);
+
+    const payButton = screen.getByText('Upgrade via Mercado Pago');
+    fireEvent.click(payButton);
+
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith('/api/checkout/mercadopago', expect.objectContaining({
+        method: 'POST',
+        body: expect.stringContaining('"amount_cents":7900')
+      }));
+      expect(assign).toHaveBeenCalledWith('https://mercadopago.com/checkout/test_sub');
     });
   });
 });

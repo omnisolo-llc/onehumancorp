@@ -1,9 +1,8 @@
-/// Master Catalog B.8. Error Handling (Compounding Error Prevention)
-
-use tokio::time::{sleep, Duration};
 use ohc_builtin_agent_core::types::{ToolCall, ToolError};
 use ohc_builtin_agent_tools::Tool;
-use tracing::{info, warn, error};
+/// Master Catalog B.8. Error Handling (Compounding Error Prevention)
+use tokio::time::{Duration, sleep};
+use tracing::{error, info, warn};
 
 pub struct ToolExecutionEngine;
 
@@ -29,15 +28,25 @@ impl ToolExecutionEngine {
                     if retry_count < max_retries {
                         retry_count += 1;
                         let base_backoff = 500 * (1 << retry_count);
-                        let jitter = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap_or_default().subsec_millis() as u64 % 100;
+                        use rand::Rng;
+                        let jitter = rand::thread_rng().gen_range(0..100);
                         let backoff = Duration::from_millis((base_backoff as u64) + jitter);
-                        warn!("Transient error executing '{}', retrying {}/{} after {}ms...", tool.name, retry_count, max_retries, backoff.as_millis());
+                        warn!(
+                            "Transient error executing '{}', retrying {}/{} after {}ms...",
+                            tool.name,
+                            retry_count,
+                            max_retries,
+                            backoff.as_millis()
+                        );
                         sleep(backoff).await;
                         continue;
                     } else {
                         error!("Transient error retries exhausted: {}", msg);
                         // After retries are exhausted, it becomes an Unexpected/Fatal error to the loop
-                        return Err(ToolError::Unexpected(format!("Transient error after retries: {}", msg)));
+                        return Err(ToolError::Unexpected(format!(
+                            "Transient error after retries: {}",
+                            msg
+                        )));
                     }
                 }
                 Err(ToolError::LlmRecoverable(msg)) => {

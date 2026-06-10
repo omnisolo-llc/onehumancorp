@@ -1,7 +1,5 @@
-import { test, expect } from './fixtures';
-import { currentAppSmoke } from './current_app_smoke';
-
-currentAppSmoke('dashboard_ux');
+import { test, expect } from '@playwright/test';
+import { currentAppSmoke } from '../../../../e2e/current_app_smoke';
 
 test.describe('Dashboard UX', () => {
   test('should display Growth & Virality section with Share Cards link', async ({ page }) => {
@@ -44,10 +42,14 @@ test.describe('Dashboard UX', () => {
   test('should verify all links in Growth & Virality section are present', async ({ page }) => {
     await page.goto('/dashboard');
 
-    await expect(page.locator('a[href="/referrals"]')).toBeVisible();
+    await expect(page.locator('a[href="/referrals"]').first()).toBeVisible();
     await expect(page.locator('a[href="/milestones"]')).toBeVisible();
     await expect(page.locator('a[href="/milestones"] h3')).toHaveText('Milestones');
-    await expect(page.locator('span.sr-only:has-text("Milestones 🏆")')).not.toBeVisible();
+    await expect(page.locator('a[href="/milestones"] div.text-2xl', { hasText: '🏆' })).toHaveAttribute('aria-hidden', 'true');
     await expect(page.locator('a[href="/share-cards"]')).toBeVisible();
   });
+});
+
+test('current app smoke test', async ({ page, request }) => {
+  await currentAppSmoke(page, request, 'dashboard_ux');
 });

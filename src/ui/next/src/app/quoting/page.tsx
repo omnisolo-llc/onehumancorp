@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { useSearchParams } from 'next/navigation';
+import { Suspense } from 'react';
 import { motion, AnimatePresence } from "framer-motion";
 import { FiCheck, FiX, FiDollarSign, FiClock, FiPlus, FiMessageSquare } from "react-icons/fi";
 
@@ -25,27 +27,43 @@ interface Quote {
 }
 
 export default function MobileQuotingPage() {
+  return (
+    <Suspense fallback={<div className="flex h-screen items-center justify-center bg-gray-50 text-gray-500">Loading quote...</div>}>
+      <MobileQuotingPageContent />
+    </Suspense>
+  );
+}
+
+function MobileQuotingPageContent() {
+  const searchParams = useSearchParams();
+  const quoteId = searchParams.get('id');
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [activeQuoteId, setActiveQuoteId] = useState<string | null>(null);
 
-  // Mock loading initial data
+  // Fetch initial data
   useEffect(() => {
-    setQuotes([
-      {
-        id: "quote-1",
-        customerName: "Alex Rivera",
-        customerPhotoUrl: "https://i.pravatar.cc/150?u=alex",
-        requestText: "Hi Carlos, the pipe under my kitchen sink started leaking yesterday. It's a steady drip. Can you take a look?",
-        status: "DRAFT",
-        items: [
-          { id: "item-1", description: "Callout Fee & Diagnostics", price: 75.00, quantity: 1, isOptional: false, selected: true },
-          { id: "item-2", description: "Standard P-Trap Replacement", price: 120.00, quantity: 1, isOptional: false, selected: true },
-          { id: "item-3", description: "Emergency Weekend Surcharge", price: 50.00, quantity: 1, isOptional: true, selected: false }
-        ]
+    async function loadQuotes() {
+      try {
+        const res = await fetch(`/api/quotes${quoteId ? `/${quoteId}` : ''}`);
+        if (res.ok) {
+          const data = await res.json();
+          // API might return single quote or array
+          const fetchedQuotes = Array.isArray(data) ? data : [data];
+          if (fetchedQuotes.length > 0) {
+            setQuotes(fetchedQuotes);
+            setActiveQuoteId(quoteId || fetchedQuotes[0].id);
+            return;
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load quotes", err);
       }
-    ]);
-    setActiveQuoteId("quote-1");
-  }, []);
+      // Fallback empty state
+      setQuotes([]);
+      setActiveQuoteId(null);
+    }
+    loadQuotes();
+  }, [quoteId]);
 
   const activeQuote = quotes.find(q => q.id === activeQuoteId);
 
@@ -83,15 +101,23 @@ export default function MobileQuotingPage() {
       .reduce((sum, item) => sum + (item.price * item.quantity), 0);
   };
 
-  const handleApprove = () => {
+  const handleApprove = async () => {
     if (!activeQuote) return;
-    // In a real app, this would make an API call to approve and send via Stripe
-    setQuotes(prev => prev.map(q =>
-      q.id === activeQuoteId ? { ...q, status: 'SENT' as const } : q
-    ));
-    setTimeout(() => {
-        alert("Quote approved and Stripe Payment Link sent!");
-    }, 500);
+    try {
+      const res = await fetch(`/api/quotes/${activeQuoteId}/approve`, {
+        method: 'PATCH'
+      });
+      if (res.ok) {
+        setQuotes(prev => prev.map(q =>
+          q.id === activeQuoteId ? { ...q, status: 'SENT' as const } : q
+        ));
+        setTimeout(() => {
+            alert("Quote approved and Stripe Payment Link sent!");
+        }, 500);
+      }
+    } catch(err) {
+      console.error(err);
+    }
   };
 
   if (!activeQuote) {
@@ -103,9 +129,9 @@ export default function MobileQuotingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 font-sans pb-24">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 font-sans pb-24">
       {/* Top Navigation */}
-      <header className="sticky top-0 z-10 bg-white/80 backdrop-blur-xl border-b border-gray-200 px-4 py-4 shadow-sm">
+      <header className="sticky top-0 z-10 glassmorphism border-b border-white/40 dark:border-white/10 px-4 py-4 shadow-sm">
         <div className="flex items-center justify-between">
           <Link href="/dashboard" className="text-gray-500 hover:text-gray-900 transition-colors">
             <FiX className="text-2xl" />
@@ -118,7 +144,7 @@ export default function MobileQuotingPage() {
       <main className="px-4 py-6 max-w-md mx-auto space-y-6">
 
         {/* Customer Context Card */}
-        <section className="app-card rounded-2xl p-5 shadow-sm border border-gray-100">
+        <section className="glassmorphism rounded-2xl p-5 shadow-sm border border-white/40 dark:border-white/10">
           <div className="flex items-start space-x-4">
             {activeQuote.customerPhotoUrl ? (
               <img src={activeQuote.customerPhotoUrl} alt={activeQuote.customerName} className="w-12 h-12 rounded-full object-cover shadow-sm" />
@@ -135,7 +161,7 @@ export default function MobileQuotingPage() {
         </section>
 
         {/* AI Suggestions Badge */}
-        <div className="flex items-center space-x-2 text-sm text-purple-700 bg-purple-50 px-3 py-2 rounded-lg font-medium">
+        <div className="flex items-center space-x-2 text-sm text-[#0066FF] bg-blue-50 dark:bg-blue-900/30 px-3 py-2 rounded-lg font-medium border border-blue-100 dark:border-blue-800">
           <FiMessageSquare />
           <span>AI drafted this based on "Leaky Pipe" heuristics</span>
         </div>
@@ -151,14 +177,14 @@ export default function MobileQuotingPage() {
                   key={item.id}
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className={`bg-white rounded-xl p-4 border transition-all ${item.selected ? 'border-gray-200 shadow-sm' : 'border-gray-100 opacity-60'}`}
+                  className={`glassmorphism rounded-xl p-4 border transition-all ${item.selected ? 'border-white/40 shadow-sm' : 'border-transparent opacity-60'}`}
                 >
                   <div className="flex justify-between items-start mb-2">
                     <div className="flex items-center space-x-3">
                       {item.isOptional && (
                         <button
                           onClick={() => toggleOptionalItem(item.id)}
-                          className={`w-6 h-6 rounded-full flex items-center justify-center border transition-colors ${item.selected ? 'bg-blue-600 border-blue-600 text-white' : 'border-gray-300 text-transparent'}`}
+                          className={`w-6 h-6 rounded-full flex items-center justify-center border transition-colors ${item.selected ? 'bg-[#0066FF] border-[#0066FF] text-white' : 'border-gray-300 text-transparent'}`}
                         >
                           <FiCheck className="text-sm" />
                         </button>
@@ -188,14 +214,14 @@ export default function MobileQuotingPage() {
             </AnimatePresence>
           </div>
 
-          <button className="w-full py-3 flex items-center justify-center space-x-2 text-blue-600 font-medium bg-blue-50 rounded-xl hover:bg-blue-100 transition-colors">
+          <button className="w-full py-3 flex items-center justify-center space-x-2 text-[#0066FF] font-medium bg-blue-50 dark:bg-blue-900/30 rounded-xl hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors">
             <FiPlus />
             <span>Add custom item</span>
           </button>
         </section>
 
         {/* Deposit Required Section */}
-        <section className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+        <section className="glassmorphism rounded-xl p-4 border border-white/40 dark:border-white/10">
            <div className="flex justify-between items-center mb-1">
              <span className="text-gray-600 font-medium">Total Estimate</span>
              <span className="text-xl font-bold text-gray-900">${calculateTotal(activeQuote).toFixed(2)}</span>
@@ -209,9 +235,9 @@ export default function MobileQuotingPage() {
       </main>
 
       {/* Floating Action Bar */}
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/90 backdrop-blur-xl border-t border-gray-200 shadow-lg pb-safe">
+      <div className="fixed bottom-0 left-0 right-0 p-4 glassmorphism border-t border-white/40 dark:border-white/10 shadow-lg pb-safe">
         <div className="max-w-md mx-auto flex space-x-3">
-          <button className="flex-1 py-3.5 px-4 bg-gray-100 text-gray-700 font-semibold rounded-xl hover:bg-gray-200 transition-colors">
+          <button className="flex-1 py-3.5 px-4 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-semibold rounded-xl hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
             Edit Later
           </button>
           <button
@@ -219,8 +245,8 @@ export default function MobileQuotingPage() {
             disabled={activeQuote.status === 'SENT'}
             className={`flex-[2] py-3.5 px-4 font-semibold rounded-xl transition-all shadow-sm flex justify-center items-center space-x-2 ${
                 activeQuote.status === 'SENT'
-                ? 'bg-green-500 text-white'
-                : 'bg-blue-600 hover:bg-blue-700 text-white hover:shadow-md'
+                ? 'bg-[#34C759] text-white'
+                : 'bg-[#0066FF] hover:bg-[#0052CC] text-white hover:shadow-md'
             }`}
           >
             {activeQuote.status === 'SENT' ? (

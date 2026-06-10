@@ -1,13 +1,12 @@
-#![allow(dead_code)]
 
+
+use crate::provider::{
+    BuiltinProvider, ClaudeProvider, Credentials, GeminiProvider, IronClawProvider,
+    MiniMaxiProvider, OpenClawProvider, OpenCodeProvider, Provider, ProviderType, ScoutProvider,
+};
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::RwLock;
-use crate::provider::{
-    Provider, ProviderType, Credentials, ClaudeProvider, GeminiProvider,
-    OpenCodeProvider, OpenClawProvider, IronClawProvider, MiniMaxiProvider,
-    BuiltinProvider, ScoutProvider
-};
 
 pub struct Registry {
     providers: RwLock<HashMap<ProviderType, Arc<dyn Provider>>>,
@@ -46,7 +45,7 @@ impl Registry {
     pub fn all(&self) -> Vec<Arc<dyn Provider>> {
         let providers = self.providers.read().unwrap();
         let mut out: Vec<Arc<dyn Provider>> = Vec::new();
-        
+
         // Stable ordering similar to Go implementation
         let ordered = vec![
             ProviderType::Claude,
@@ -77,17 +76,22 @@ impl Registry {
     }
 
     pub fn authenticate(&self, t: ProviderType, creds: Credentials) -> Result<(), String> {
-        let p = self.get(t.clone()).ok_or_else(|| format!("unknown provider type: {:?}", t))?;
+        let p = self
+            .get(t.clone())
+            .ok_or_else(|| format!("unknown provider type: {:?}", t))?;
         p.authenticate(creds)
     }
 
     pub fn infos(&self) -> Vec<ProviderInfo> {
-        self.all().iter().map(|p| ProviderInfo {
-            r#type: p.provider_type(),
-            description: p.description(),
-            recommended_roles: p.supported_roles(),
-            is_authenticated: p.is_authenticated(),
-        }).collect()
+        self.all()
+            .iter()
+            .map(|p| ProviderInfo {
+                r#type: p.provider_type(),
+                description: p.description(),
+                recommended_roles: p.supported_roles(),
+                is_authenticated: p.is_authenticated(),
+            })
+            .collect()
     }
 }
 
@@ -124,7 +128,9 @@ mod tests {
 
         for t in test_cases {
             let provider = registry.get(t.clone()).expect("provider should exist");
-            provider.authenticate(creds.clone()).expect("auth should succeed");
+            provider
+                .authenticate(creds.clone())
+                .expect("auth should succeed");
             assert_eq!(provider.get_credentials().api_key, "test-key");
             assert!(provider.is_authenticated());
         }
@@ -133,9 +139,11 @@ mod tests {
     #[test]
     fn test_builtin_provider_always_authenticated() {
         let registry = Registry::default_registry();
-        let provider = registry.get(ProviderType::Builtin).expect("provider should exist");
+        let provider = registry
+            .get(ProviderType::Builtin)
+            .expect("provider should exist");
         assert!(provider.is_authenticated());
-        
+
         let creds = Credentials {
             api_key: "some-key".to_string(),
             oauth_token: "".to_string(),
@@ -149,7 +157,9 @@ mod tests {
     #[test]
     fn test_hello_world_agent_example() {
         let registry = Registry::default_registry();
-        let provider = registry.get(ProviderType::Builtin).expect("Built-in provider not found");
+        let provider = registry
+            .get(ProviderType::Builtin)
+            .expect("Built-in provider not found");
         tracing::info!("Successfully loaded provider: {}", provider.provider_type());
         tracing::info!("Description: {}", provider.description());
         tracing::info!("Is Authenticated: {}", provider.is_authenticated());

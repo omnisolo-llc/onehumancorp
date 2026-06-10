@@ -4,7 +4,7 @@ use std::sync::OnceLock;
 use std::time::{Duration, Instant};
 use ::server_pricing::prompt_caching::PromptCache;
 use ::server_pricing::deduplication::{RequestDeduplicator, DeduplicationResult};
-use ::server_pricing::compression::{minify_json_prompt, truncate_by_word_count};
+use ::server_pricing::compression::{minify_json_prompt};
 use tokio_stream::Stream;
 use std::pin::Pin;
 
@@ -39,6 +39,8 @@ impl CircuitBreaker {
         true
     }
 
+
+
     fn record_success(&self) {
         let mut failures = self.failures.lock().unwrap();
         *failures = 0;
@@ -50,7 +52,6 @@ impl CircuitBreaker {
         let mut last_failure = self.last_failure.lock().unwrap();
         *last_failure = Some(Instant::now());
     }
-
 }
 
 static GLOBAL_CIRCUIT_BREAKER: OnceLock<CircuitBreaker> = OnceLock::new();
@@ -117,23 +118,29 @@ impl MinimaxClient {
     }
 
     async fn internal_reason(&self, prompt: &str) -> Result<String, String> {
+        let optimized_prompt = if prompt.starts_with('{') {
+            minify_json_prompt(prompt)
+        } else {
+            PromptCache::truncate_context(prompt, 2000)
+        };
+
         // 1. Check Cache
-        if let (Some(cached), _) = self.cache.get_with_cost_cents(prompt) {
+        if let (Some(cached), _cost_cents) = self.cache.get_with_cost_cents(&optimized_prompt) {
             tracing::info!("Prompt cache hit (saved ~{} tokens)", cached.token_count);
             return Ok(cached.text);
         }
 
         if self.api_key == "fake-key" {
-            let lower_prompt = prompt.to_lowercase();
+            let lower_prompt = optimized_prompt.to_lowercase();
             if lower_prompt.contains("maya") {
                 return Ok(r#"{
                     "business_name": "Maya's Cakes",
                     "business_type": "Bakery",
                     "categories": ["food", "physical"],
-                    "initial_products": [{"name": "Custom Vegan Cake", "price": "45.00"}],
+                    "initial_products": [{"name": "Custom Vegan Cake", "price": "45.00", "variants": [{"name": "6-inch", "price_modifier": "0.00"}, {"name": "8-inch", "price_modifier": "15.00"}]}],
                     "suggested_features": ["menu", "booking", "online_store"]
                 }"#.to_string());
-            } else if lower_prompt.contains("alex") {
+            } else if lower_prompt.contains("alex") || lower_prompt.contains("art shop") {
                 return Ok(r#"{
                     "business_name": "Alex Art",
                     "business_type": "Retail",
@@ -165,33 +172,21 @@ impl MinimaxClient {
             return Err("circuit breaker open".to_string());
         }
 
-        // 2. Optimize Prompt
-        let optimized_prompt = if prompt.starts_with('{') {
-            minify_json_prompt(prompt)
-        } else {
-            truncate_by_word_count(prompt, 2000) // Safety truncation
-        };
-
         let client = reqwest::Client::new();
 
         let request_body = MinimaxRequest {
-            model: "MiniMax-M2.7".to_string(),
+            model: std::env::var("MINIMAX_MODEL").unwrap_or_else(|_| "MiniMax-M3".to_string()),
             messages: vec![MinimaxMessage {
                 role: "user".to_string(),
-                content: optimized_prompt,
+                content: optimized_prompt.clone(),
             }],
             stream: Some(false),
         };
 
         let mut last_err = String::new();
-        for _ in 0..5 {
-            let response = client
-                .post(&self.url)
-                .header("Content-Type", "application/json")
-                .header("Authorization", format!("Bearer {}", self.api_key))
-                .json(&request_body)
-                .send()
-                .await;
+        for _ in 0..3 {
+            let response_future = client.post(&self.url).header("Content-Type", "application/json").header("Authorization", format!("Bearer {}", self.api_key)).json(&request_body).send();
+            let response = tokio::time::timeout(Duration::from_secs(60), response_future).await.map_err(|e| e.to_string()).and_then(|r| r.map_err(|e| e.to_string()));
 
             match response {
                 Ok(resp) => {
@@ -201,7 +196,7 @@ impl MinimaxClient {
                         if let Some(choice) = result.choices.first() {
                             let content = choice.message.content.clone();
                             // 3. Update Cache
-                            self.cache.set(prompt, &content, prompt.len() / 4); // rough token estimate
+                            self.cache.set(&optimized_prompt, &content, optimized_prompt.len() / 4); // rough token estimate
                             return Ok(content);
                         } else {
                             last_err = "empty response from minimax".to_string();
@@ -232,18 +227,22 @@ impl MinimaxClient {
             }
         }
 
-        Err(format!("failed after 5 retries: {}", last_err))
+        Err(format!("failed after 3 retries: {}", last_err))
     }
 
     pub async fn reason_stream(&self, prompt: &str) -> Pin<Box<dyn Stream<Item = Result<String, String>> + Send>> {
         let api_key = self.api_key.clone();
         let url = self.url.clone();
-        let optimized_prompt = truncate_by_word_count(prompt, 2000);
+        let optimized_prompt = if prompt.starts_with('{') {
+            minify_json_prompt(prompt)
+        } else {
+            PromptCache::truncate_context(prompt, 2000)
+        };
 
         let (tx, rx) = tokio::sync::mpsc::channel(100);
 
         // 1. Check Cache
-        if let (Some(cached), _) = self.cache.get_with_cost_cents(prompt) {
+        if let (Some(cached), _cost_cents) = self.cache.get_with_cost_cents(&optimized_prompt) {
             tracing::info!("Prompt cache hit in stream (saved ~{} tokens)", cached.token_count);
             let cached_text = cached.text.clone();
             tokio::spawn(async move {
@@ -343,14 +342,9 @@ impl MinimaxClient {
         });
 
         let mut last_err = String::new();
-        for _ in 0..5 {
-            let response = client
-                .post("https://api.minimax.chat/v1/embeddings")
-                .header("Content-Type", "application/json")
-                .header("Authorization", format!("Bearer {}", self.api_key))
-                .json(&request_body)
-                .send()
-                .await;
+        for _ in 0..3 {
+            let response_future = client.post("https://api.minimax.chat/v1/embeddings").header("Content-Type", "application/json").header("Authorization", format!("Bearer {}", self.api_key)).json(&request_body).send();
+            let response = tokio::time::timeout(Duration::from_secs(60), response_future).await.map_err(|e| e.to_string()).and_then(|r| r.map_err(|e| e.to_string()));
 
             match response {
                 Ok(resp) => {
@@ -400,7 +394,7 @@ impl MinimaxClient {
             }
         }
 
-        Err(format!("failed after 5 retries: {}", last_err))
+        Err(format!("failed after 3 retries: {}", last_err))
     }
 
 }
@@ -437,7 +431,18 @@ impl LocalLLMClient {
     }
 
     async fn internal_reason(&self, prompt: &str) -> Result<String, String> {
-        if let (Some(cached), _) = self.cache.get_with_cost_cents(prompt) {
+        let cb = get_circuit_breaker();
+        if !cb.allow() {
+            return Err("circuit breaker open".to_string());
+        }
+
+        let optimized_prompt = if prompt.starts_with('{') {
+            minify_json_prompt(prompt)
+        } else {
+            PromptCache::truncate_context(prompt, 2000)
+        };
+
+        if let (Some(cached), _cost_cents) = self.cache.get_with_cost_cents(&optimized_prompt) {
             tracing::info!("Prompt cache hit (saved ~{} tokens)", cached.token_count);
             return Ok(cached.text);
         }
@@ -445,24 +450,48 @@ impl LocalLLMClient {
         let client = reqwest::Client::new();
         let req_body = serde_json::json!({
             "model": self.model,
-            "prompt": prompt,
+            "prompt": optimized_prompt,
             "stream": false,
         });
 
-        let resp = client.post(&self.endpoint)
-            .json(&req_body)
-            .send()
-            .await
-            .map_err(|e| e.to_string())?;
+        let mut last_err = String::new();
+        for _ in 0..3 {
+            let response_future = client.post(&self.endpoint).json(&req_body).send();
+            let response = tokio::time::timeout(Duration::from_secs(60), response_future).await.map_err(|e| e.to_string()).and_then(|r| r.map_err(|e| e.to_string()));
 
-        if !resp.status().is_success() {
-            return Err(format!("local LLM error (status {})", resp.status()));
+            match response {
+                Ok(resp) => {
+                    if resp.status().is_success() {
+                        let result_res: Result<serde_json::Value, _> = resp.json().await.map_err(|e| e.to_string());
+                        if let Ok(result) = result_res {
+                            if let Some(response) = result["response"].as_str() {
+                                cb.record_success();
+                                self.cache.set(&optimized_prompt, response, optimized_prompt.len() / 4);
+                                return Ok(response.to_string());
+                            } else {
+                                last_err = "missing response field".to_string();
+                            }
+                        } else {
+                            last_err = "invalid JSON response".to_string();
+                        }
+                    } else {
+                        if resp.status().as_u16() >= 500 {
+                            last_err = format!("API overloaded (status {})", resp.status());
+                            tokio::time::sleep(Duration::from_secs(2)).await;
+                            continue;
+                        }
+                        last_err = format!("local LLM error (status {})", resp.status());
+                    }
+                }
+                Err(e) => {
+                    last_err = e;
+                }
+            }
+            cb.record_failure();
+            tokio::time::sleep(Duration::from_secs(1)).await;
         }
 
-        let result: serde_json::Value = resp.json().await.map_err(|e| e.to_string())?;
-        let response = result["response"].as_str().ok_or("missing response field")?;
-        self.cache.set(prompt, response, prompt.len() / 4);
-        Ok(response.to_string())
+        Err(format!("failed after 3 retries: {}", last_err))
     }
 
     pub async fn generate_embedding(&self, text: &str) -> Result<Vec<f32>, String> {

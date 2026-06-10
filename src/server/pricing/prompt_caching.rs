@@ -13,13 +13,19 @@ pub struct CachedResponse {
 pub struct PromptCache {
     cache: Arc<DashMap<String, CachedResponse>>,
     default_ttl: Duration,
+    max_capacity: usize,
 }
 
 impl PromptCache {
     pub fn new(default_ttl: Duration) -> Self {
+        Self::with_capacity(default_ttl, 1000)
+    }
+
+    pub fn with_capacity(default_ttl: Duration, max_capacity: usize) -> Self {
         PromptCache {
             cache: Arc::new(DashMap::new()),
             default_ttl,
+            max_capacity,
         }
     }
 
@@ -27,6 +33,10 @@ impl PromptCache {
         let entry = self.cache.get(prompt);
         if let Some(entry_ref) = entry {
             if entry_ref.created_at.elapsed() <= entry_ref.ttl {
+                // Update access time for LRU-like eviction
+                // DashMap doesn't easily support mutable iteration without locking.
+                // We'll update created_at as an access time surrogate if we needed strict LRU,
+                // but since it has TTL, we just return it. True LRU eviction will sort by created_at.
                 return Some(entry_ref.clone());
             }
             drop(entry_ref);
@@ -41,19 +51,17 @@ impl PromptCache {
         let res = self.get(prompt);
         let cost = if let Some(ref r) = res {
             tracing::info!("💰 Miser cost optimization: Prompt cache hit saved {} tokens", r.token_count);
-            // Use heuristic token efficiency logic directly to accurately estimate savings.
-            let model = std::env::var("OHC_LLM_MODEL").unwrap_or_else(|_| "gpt-4o".to_string());
-            let ratio = super::calculator::calculate_heuristic_token_efficiency(r.token_count as i64, 0, &model);
-            // Fallback back to standard cache estimation if ratio is 0
-            if ratio == 0.0 {
-                let fallback_ratio = std::env::var("MISER_TOKEN_RATIO")
-                    .unwrap_or_else(|_| "0.0001".to_string())
-                    .parse::<f64>()
-                    .unwrap_or(0.0001);
-                (r.token_count as f64 * fallback_ratio * 100.0).round() as i64
-            } else {
-                (ratio * 100.0).round() as i64
-            }
+
+            // Fast-path: Avoid taking OS environment locks on every cache hit
+            static MODEL: std::sync::OnceLock<String> = std::sync::OnceLock::new();
+
+            let model = MODEL.get_or_init(|| {
+                std::env::var("OHC_LLM_MODEL").unwrap_or_else(|_| "gpt-4o".to_string())
+            });
+
+            let pricing = super::calculator::get_pricing(model);
+            let cost_dollars = (r.token_count as f64 / 1_000_000.0) * pricing.input_cost;
+            (cost_dollars * 100.0).round() as i64
         } else {
             0
         };
@@ -65,6 +73,9 @@ impl PromptCache {
     }
 
     pub fn set_with_ttl(&self, prompt: &str, response: &str, token_count: usize, ttl: Duration) {
+        if self.cache.len() >= self.max_capacity {
+            self.evict_oldest();
+        }
         self.cache.insert(prompt.to_string(), CachedResponse {
             text: response.to_string(),
             created_at: Instant::now(),
@@ -73,9 +84,73 @@ impl PromptCache {
         });
     }
 
+    fn evict_oldest(&self) {
+        // Clear expired first to see if that frees enough space
+        self.clear_expired();
+
+        let len = self.cache.len();
+        if len < self.max_capacity {
+            return;
+        }
+
+        // We need to evict entries to get back down to 90% of max capacity
+        let target_len = (self.max_capacity as f64 * 0.9) as usize;
+        let to_remove = len.saturating_sub(target_len);
+
+        if to_remove == 0 {
+            return;
+        }
+
+        // Sort by created_at to remove the oldest items.
+        // DashMap iter() locks the shards, so we collect keys first to minimize lock time.
+        let mut entries: Vec<(String, Instant)> = self.cache.iter()
+            .map(|kv| (kv.key().clone(), kv.value().created_at))
+            .collect();
+
+        entries.sort_unstable_by_key(|(_, time)| *time);
+
+        for (key, _) in entries.into_iter().take(to_remove) {
+            self.cache.remove(&key);
+        }
+    }
+
     pub fn clear_expired(&self) {
         let now = Instant::now();
         self.cache.retain(|_, entry| now.duration_since(entry.created_at) <= entry.ttl);
+    }
+
+    /// Intelligently truncates a context string to fit within a given token limit.
+    /// This is a fast heuristic using 4 chars per token. Safely handles UTF-8 string slicing.
+    pub fn truncate_context(context: &str, max_tokens: usize) -> String {
+        let max_chars = max_tokens * 4;
+
+        let mut char_count = 0;
+        let mut byte_index = context.len();
+
+        for (i, _) in context.char_indices() {
+            if char_count == max_chars {
+                byte_index = i;
+                break;
+            }
+            char_count += 1;
+        }
+
+        if char_count < max_chars && byte_index == context.len() {
+            return context.to_string();
+        }
+
+        let mut truncated = String::from(&context[..byte_index]);
+
+        // Try to truncate at a word boundary to keep it "intelligent"
+        if let Some(last_space) = truncated.rfind(char::is_whitespace) {
+            // Keep at least some content if the last space is too early
+            if last_space > byte_index / 2 {
+                truncated.truncate(last_space);
+            }
+        }
+
+        truncated.push_str("...");
+        truncated
     }
 }
 
@@ -138,6 +213,32 @@ mod tests {
     }
 
     #[test]
+    fn test_prompt_cache_capacity_eviction() {
+        let cache = PromptCache::with_capacity(Duration::from_secs(10), 3);
+
+        // Insert 3 items
+        cache.set("key1", "val1", 1);
+        thread::sleep(Duration::from_millis(10));
+        cache.set("key2", "val2", 1);
+        thread::sleep(Duration::from_millis(10));
+        cache.set("key3", "val3", 1);
+
+        assert_eq!(cache.cache.len(), 3);
+
+        // Insert 4th item, triggering eviction
+        // target capacity is 90% of 3 = 2.
+        // currently 3 items, len = 3. target_len = 2. to_remove = 3 - 2 = 1.
+        thread::sleep(Duration::from_millis(10));
+        cache.set("key4", "val4", 1);
+
+        assert_eq!(cache.cache.len(), 3); // 3 items inserted, 1 removed (oldest) + 1 newly inserted
+        assert!(cache.get("key1").is_none()); // key1 was oldest, should be gone
+        assert!(cache.get("key2").is_some());
+        assert!(cache.get("key3").is_some());
+        assert!(cache.get("key4").is_some());
+    }
+
+    #[test]
     fn test_prompt_cache_set_with_ttl() {
         let cache = PromptCache::new(Duration::from_secs(10));
         cache.set_with_ttl("What is the capital of France?", "Paris", 1, Duration::from_millis(10));
@@ -148,5 +249,26 @@ mod tests {
 
         thread::sleep(Duration::from_millis(20));
         assert!(cache.get("What is the capital of France?").is_none());
+    }
+
+    #[test]
+    fn test_truncate_context() {
+        let text = "This is a very long string that we need to truncate to save some tokens and money.";
+
+        // No truncation needed
+        let res = PromptCache::truncate_context(text, 100);
+        assert_eq!(res, text);
+
+        // Truncate based on 4 chars per token
+        // "This" = 4 chars (1 token). 10 tokens = 40 chars
+        // text[..40] -> "This is a very long string that we need "
+        // Last space at index 39
+        let res2 = PromptCache::truncate_context(text, 10);
+        assert!(res2.len() <= 43); // 39 chars + "..."
+        assert!(res2.ends_with("..."));
+
+        // Extreme truncation
+        let res3 = PromptCache::truncate_context(text, 1);
+        assert_eq!(res3, "This...");
     }
 }

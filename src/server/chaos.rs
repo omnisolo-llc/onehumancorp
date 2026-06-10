@@ -16,9 +16,9 @@ mod tests {
     #[tokio::test]
     async fn test_sipdb_chaos_parity() {
     let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Standalone");
-        let pool = PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+        let pool = PgPoolOptions::new()
             .acquire_timeout(Duration::from_millis(50))
-            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+
             .connect_lazy("postgres://localhost/dummy")
             .unwrap();
 
@@ -1041,7 +1041,7 @@ mod tests {
         let consecutive_failures = Arc::new(AtomicUsize::new(0));
         let cf_clone = consecutive_failures.clone();
 
-        let mut api_call = move || -> Result<(), String> {
+        let api_call = move || -> Result<(), String> {
             let current = cf_clone.fetch_add(1, Ordering::SeqCst) + 1;
             if current <= 3 {
                 Err("API Rate Limit Exceeded".to_string())

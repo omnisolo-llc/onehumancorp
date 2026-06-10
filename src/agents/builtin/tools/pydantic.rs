@@ -14,6 +14,7 @@ pub trait PydanticToolExecutor<T: DeserializeOwned + Send + Sync>: Send + Sync {
 }
 
 pub struct PydanticAdapter<T, E> {
+    custom_instruction: Option<String>,
     executor: Arc<E>,
     _marker: std::marker::PhantomData<T>,
 }
@@ -23,12 +24,18 @@ impl<T: DeserializeOwned + Send + Sync, E: PydanticToolExecutor<T>> PydanticAdap
         Self {
             executor: Arc::new(executor),
             _marker: std::marker::PhantomData,
+            custom_instruction: None,
         }
+    }
+    pub fn with_custom_instruction(mut self, instruction: impl Into<String>) -> Self {
+        self.custom_instruction = Some(instruction.into());
+        self
     }
     pub fn new_arc(executor: Arc<E>) -> Self {
         Self {
             executor,
             _marker: std::marker::PhantomData,
+            custom_instruction: None,
         }
     }
 }
@@ -47,7 +54,7 @@ impl<T: DeserializeOwned + Send + Sync, E: PydanticToolExecutor<T>> ToolExecutor
                 };
 
                 return Err(ToolError::LlmRecoverable(
-                    ohc_builtin_agent_core::types::format_pydantic_error(&e, Some(args_str.as_str()))
+                    ohc_builtin_agent_core::types::format_pydantic_error(&e, Some(args_str.as_str()), self.custom_instruction.as_deref())
                 ));
             }
         };
@@ -110,6 +117,66 @@ mod tests {
             assert!(msg.contains("missing field `bar`"));
         } else {
             panic!("Expected LlmRecoverable error about missing field");
+        }
+    }
+
+    #[tokio::test]
+    async fn test_pydantic_adapter_failure_long_snippet() {
+        let adapter = PydanticAdapter::new(MyExecutor);
+        let long_string = "a".repeat(200);
+        let result = adapter.execute(serde_json::json!({ "foo": long_string, "bar": "not a number" })).await;
+        assert!(result.is_err());
+
+        if let Err(ToolError::LlmRecoverable(msg)) = result {
+            assert!(msg.contains("Validation Error (Pydantic-first tool schema)"));
+            assert!(msg.contains("Semantic validation failed"));
+            assert!(msg.contains("...")); // Verifies the snippet truncation logic
+            assert!(msg.len() < 500); // Ensures the error message didn't blow up
+        } else {
+            panic!("Expected LlmRecoverable error with truncated snippet");
+        }
+    }
+
+    #[tokio::test]
+    async fn test_pydantic_adapter_new_arc() {
+        let adapter = PydanticAdapter::new_arc(Arc::new(MyExecutor));
+        let result = adapter.execute(serde_json::json!({ "foo": "arc_test", "bar": 456 })).await.unwrap();
+        assert_eq!(result, "arc_test-456");
+    }
+}
+
+#[cfg(test)]
+mod tests_custom {
+    use super::*;
+    use serde::Deserialize;
+
+    #[derive(Deserialize)]
+    struct MyArgs {
+        foo: String,
+        bar: u32,
+    }
+
+    struct MyExecutor;
+
+    #[async_trait::async_trait]
+    impl PydanticToolExecutor<MyArgs> for MyExecutor {
+        async fn execute_typed(&self, args: MyArgs) -> Result<String, ToolError> {
+            Ok(format!("{}-{}", args.foo, args.bar))
+        }
+    }
+
+    #[tokio::test]
+    async fn test_pydantic_adapter_with_custom_instruction() {
+        let adapter = PydanticAdapter::new(MyExecutor).with_custom_instruction("Please provide an integer for bar");
+        let result = adapter.execute(serde_json::json!({ "foo": "test", "bar": "not a number" })).await;
+        assert!(result.is_err());
+
+        if let Err(ToolError::LlmRecoverable(msg)) = result {
+            assert!(msg.contains("Validation Error (Pydantic-first tool schema)"));
+            assert!(msg.contains("Please provide an integer for bar"));
+            assert!(!msg.contains("Please strictly follow the tool's JSON schema and try again."));
+        } else {
+            panic!("Expected LlmRecoverable error with custom instruction");
         }
     }
 }

@@ -36,18 +36,32 @@ pub struct DepartmentConfig {
 pub fn get_department_config(dep: Department) -> DepartmentConfig {
     match dep {
         Department::Operations => DepartmentConfig {
-            system_prompt: "Department: Operations — 'The Manager'\n\
+            system_prompt: ::server_pricing::compression::reduce_tokens("Department: Operations — 'The Manager'\n\
                 Handles the day-to-day execution of orders, bookings, inventory, and deliveries.\n\
                 - Processes orders from placement to fulfillment\n\
                 - Manages booking calendars and sends reminders\n\
                 - Tracks inventory and alerts when stock is low or sold out\n\
                 - Coordinates pickups and delivery schedules\n\
-                - Handles refund requests and returns",
-            allowed_tools: vec!["read", "write", "glob", "head", "tail", "task_create", "task_update", "task_list", "task_get", "booking_get_services", "booking_upsert_service", "booking_list_appointments", "booking_create_appointment"],
+                - Handles refund requests and returns").leak(),
+            allowed_tools: vec![
+                "read",
+                "write",
+                "glob",
+                "head",
+                "tail",
+                "task_create",
+                "task_update",
+                "task_list",
+                "task_get",
+                "booking_get_services",
+                "booking_upsert_service",
+                "booking_list_appointments",
+                "booking_create_appointment",
+            ],
             confidence_threshold: 0.85,
         },
         Department::Marketing => DepartmentConfig {
-            system_prompt: "Department: Marketing & Advertising — 'The Promoter'\n\
+            system_prompt: ::server_pricing::compression::reduce_tokens("Department: Marketing & Advertising — 'The Promoter'\n\
                 Gets the business noticed. Handles everything from website design to social media to getting found on Google.\n\
                 - Designs and publishes the business website (drag-and-drop, AI-assisted)\n\
                 - Optimizes the website so customers find it on Google (SEO)\n\
@@ -55,66 +69,95 @@ pub fn get_department_config(dep: Department) -> DepartmentConfig {
                 - Generates promotional content: flyers, banners, email campaigns\n\
                 - Analyzes what marketing is working and what isn't\n\
                 - Creates QR codes, link-in-bio pages, and shareable storefront links\n\
-                - Proactively injects 'Powered by OHC' referral loops across widgets and forms to drive acquisition",
-            allowed_tools: vec!["write", "websearch", "webfetch", "qr_generate", "generative_visibility"],
+                - Proactively injects 'Powered by OHC' referral loops across widgets and forms to drive acquisition").leak(),
+            allowed_tools: vec![
+                "write",
+                "websearch",
+                "webfetch",
+                "qr_generate",
+                "generative_visibility",
+            ],
             confidence_threshold: 0.70,
         },
         Department::Sales => DepartmentConfig {
-            system_prompt: "Department: Sales & Acquisition — 'The Salesperson'\n\
+            system_prompt: ::server_pricing::compression::reduce_tokens("Department: Sales & Acquisition — 'The Salesperson'\n\
                 Turns interest into revenue. Helps the business owner find and win customers.\n\
                 - Generates and sends quotes and proposals\n\
                 - Follows up with interested prospects who haven't booked\n\
                 - Manages lead pipeline and customer inquiry responses\n\
                 - Suggests upsell and cross-sell opportunities\n\
                 - Manages referral program and tracks referrals\n\
-                - Autonomously generates Conversational Checkout Links for DMs",
-            allowed_tools: vec!["read", "head", "tail", "write", "sendmessage", "conversational_checkout"],
+                - Autonomously generates Conversational Checkout Links for DMs").leak(),
+            allowed_tools: vec![
+                "read",
+                "head",
+                "tail",
+                "write",
+                "sendmessage",
+                "conversational_checkout",
+            ],
             confidence_threshold: 0.80,
         },
         Department::CustomerSuccess => DepartmentConfig {
-            system_prompt: "Department: Customer Success — 'The Ambassador'\n\
+            system_prompt: ::server_pricing::compression::reduce_tokens("Department: Customer Success — 'The Ambassador'\n\
                 Keeps customers happy and coming back. Handles all post-sale relationship management.\n\
                 - Responds to customer messages (chat, email, Instagram DM, WhatsApp) with AI-generated drafts\n\
                 - Sends order confirmations, shipping updates, and delivery notifications\n\
                 - Requests reviews and testimonials after successful orders\n\
                 - Re-engages customers who haven't purchased in a while\n\
-                - Manages customer profiles, tags, and notes",
-            allowed_tools: vec!["read", "head", "tail", "sendmessage", "task_list", "booking_get_services", "booking_list_appointments", "booking_create_appointment"],
+                - Manages customer profiles, tags, and notes").leak(),
+            allowed_tools: vec![
+                "read",
+                "head",
+                "tail",
+                "sendmessage",
+                "task_list",
+                "booking_get_services",
+                "booking_list_appointments",
+                "booking_create_appointment",
+            ],
             confidence_threshold: 0.90,
         },
         Department::Finance => DepartmentConfig {
-            system_prompt: "Department: Finance & Payments — 'The Accountant'\n\
+            system_prompt: ::server_pricing::compression::reduce_tokens("Department: Finance & Payments — 'The Accountant'\n\
                 Makes sure money flows correctly. Handles pricing, payments, and financial visibility.\n\
                 - Processes online payments via card, Apple Pay, Google Pay, and bank transfer\n\
                 - Manages deposits, partial payments, and payment plans\n\
                 - Tracks revenue, costs, and profit margins per product/service\n\
                 - Generates plain-language financial reports (weekly revenue, monthly trends)\n\
                 - Manages subscription billing and recurring payments\n\
-                - Provides tax-ready financial summaries (income statements, expense tracking)",
+                - Provides tax-ready financial summaries (income statements, expense tracking)").leak(),
             allowed_tools: vec!["read", "head", "tail", "write", "bash", "finance_report"],
             confidence_threshold: 0.95,
         },
         Department::Legal => DepartmentConfig {
-            system_prompt: "Department: Legal & Compliance — 'The Protector'\n\
+            system_prompt: ::server_pricing::compression::reduce_tokens("Department: Legal & Compliance — 'The Protector'\n\
                 Keeps the business safe and compliant. Handles contracts, policies, and regulatory requirements.\n\
                 - Generates terms of service, privacy policies, and refund policies for the website\n\
                 - Creates standard contracts for bookings, custom orders, and service agreements\n\
                 - Manages cookie consent banners and GDPR compliance for EU customers\n\
                 - Tracks business licenses and permits expiration\n\
-                - Provides hazard and liability disclaimers for food, health, and service businesses",
+                - Provides hazard and liability disclaimers for food, health, and service businesses").leak(),
             allowed_tools: vec!["read", "head", "tail", "write", "grep"],
             confidence_threshold: 0.98,
         },
         Department::BusinessAdvisory => DepartmentConfig {
-            system_prompt: "Department: Business Advisory — 'The Advisor'\n\
+            system_prompt: ::server_pricing::compression::reduce_tokens("Department: Business Advisory — 'The Advisor'\n\
                 Acts as a personal business consultant. Analyzes performance and gives actionable advice.\n\
                 - Provides weekly plain-language business health reports ('Your top seller was lemonade. Tuesday was your busiest day.')\n\
                 - Suggests next actions based on business stage (add products, run a promotion, collect reviews)\n\
                 - Identifies seasonal trends and opportunities (back-to-school, holidays, local events)\n\
                 - Compares performance to similar businesses (anonymized)\n\
                 - Recommends pricing adjustments based on market data\n\
-                - Flags unusual patterns that might indicate problems (sudden drop in orders, unusual refund requests)",
-            allowed_tools: vec!["read", "head", "tail", "write", "websearch", "finance_report"],
+                - Flags unusual patterns that might indicate problems (sudden drop in orders, unusual refund requests)").leak(),
+            allowed_tools: vec![
+                "read",
+                "head",
+                "tail",
+                "write",
+                "websearch",
+                "finance_report",
+            ],
             confidence_threshold: 0.85,
         },
     }
@@ -126,16 +169,46 @@ mod tests {
 
     #[test]
     fn test_department_from_str() {
-        assert!(matches!(Department::from_str("operations"), Ok(Department::Operations)));
-        assert!(matches!(Department::from_str("Operations"), Ok(Department::Operations)));
-        assert!(matches!(Department::from_str("marketing"), Ok(Department::Marketing)));
-        assert!(matches!(Department::from_str("sales"), Ok(Department::Sales)));
-        assert!(matches!(Department::from_str("customersuccess"), Ok(Department::CustomerSuccess)));
-        assert!(matches!(Department::from_str("customer_success"), Ok(Department::CustomerSuccess)));
-        assert!(matches!(Department::from_str("finance"), Ok(Department::Finance)));
-        assert!(matches!(Department::from_str("legal"), Ok(Department::Legal)));
-        assert!(matches!(Department::from_str("businessadvisory"), Ok(Department::BusinessAdvisory)));
-        assert!(matches!(Department::from_str("business_advisory"), Ok(Department::BusinessAdvisory)));
+        assert!(matches!(
+            Department::from_str("operations"),
+            Ok(Department::Operations)
+        ));
+        assert!(matches!(
+            Department::from_str("Operations"),
+            Ok(Department::Operations)
+        ));
+        assert!(matches!(
+            Department::from_str("marketing"),
+            Ok(Department::Marketing)
+        ));
+        assert!(matches!(
+            Department::from_str("sales"),
+            Ok(Department::Sales)
+        ));
+        assert!(matches!(
+            Department::from_str("customersuccess"),
+            Ok(Department::CustomerSuccess)
+        ));
+        assert!(matches!(
+            Department::from_str("customer_success"),
+            Ok(Department::CustomerSuccess)
+        ));
+        assert!(matches!(
+            Department::from_str("finance"),
+            Ok(Department::Finance)
+        ));
+        assert!(matches!(
+            Department::from_str("legal"),
+            Ok(Department::Legal)
+        ));
+        assert!(matches!(
+            Department::from_str("businessadvisory"),
+            Ok(Department::BusinessAdvisory)
+        ));
+        assert!(matches!(
+            Department::from_str("business_advisory"),
+            Ok(Department::BusinessAdvisory)
+        ));
 
         let err = Department::from_str("invalid_dept");
         assert!(err.is_err());

@@ -230,6 +230,16 @@ impl Tracker {
         }
     }
 
+    pub fn get_tenant_llm_cost_cents(&self, tenant_id: &str) -> i64 {
+        self.get_tenant_cost_cents(tenant_id)
+    }
+
+    pub fn get_storage_cost_cents(&self, bytes: i64) -> i64 {
+        let cost_per_gb = if let Some(ref auditor) = self.auditor { auditor.get_cost_per_gb_month() } else { 0.10 };
+        let gb = bytes as f64 / (1024.0 * 1024.0 * 1024.0);
+        (gb * cost_per_gb * 100.0).round() as i64
+    }
+
     pub fn get_total_cost_cents(&self) -> i64 {
         if let Some(ref auditor) = self.auditor {
             auditor.get_total_cost_cents()

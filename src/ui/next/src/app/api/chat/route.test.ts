@@ -35,9 +35,14 @@ describe('chat API', () => {
   });
 
   it('returns successful reply for valid message', async () => {
-    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    // If backend is running, it returns 200 with a valid reply.
+    // If not, it falls through to the catch block.
+    // We mock fetch so that the test is deterministic.
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ reply: "I can help with that." })
+    });
 
-    // In vitest environment without backend, it falls through to the catch block
     const response = await POST(new Request('http://localhost/api/chat', {
       method: 'POST',
       body: JSON.stringify({ message: 'How do I add a product?' }),
@@ -46,8 +51,6 @@ describe('chat API', () => {
     expect(response.status).toBe(200);
     const data = await response.json();
     expect(data).toHaveProperty('reply');
-    expect(data.reply).toContain("I'm having trouble connecting to my brain right now");
-
-    expect(consoleSpy).toHaveBeenCalled();
+    expect(data.reply).toContain("I can help with that.");
   });
 });

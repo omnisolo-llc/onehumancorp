@@ -1,9 +1,9 @@
-#![allow(dead_code)]
+
 
 use async_trait::async_trait;
+use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::RwLock;
-use std::collections::HashMap;
 #[async_trait]
 pub trait Transport: Send + Sync {
     async fn send(&self, message: &[u8]) -> Result<(), String>;
@@ -62,7 +62,12 @@ pub trait Provider: Send + Sync {
     fn authenticate(&self, creds: Credentials) -> Result<(), String>;
     fn get_credentials(&self) -> Credentials;
     fn is_authenticated(&self) -> bool;
-    async fn run_in_isolation(&self, command: &str, worktree: &str, transport: Option<Arc<dyn Transport>>) -> Result<(), String>;
+    async fn run_in_isolation(
+        &self,
+        command: &str,
+        worktree: &str,
+        transport: Option<Arc<dyn Transport>>,
+    ) -> Result<(), String>;
 }
 
 pub struct BaseProvider {
@@ -94,7 +99,10 @@ pub struct RedisIsolationTransport {
 impl RedisIsolationTransport {
     pub async fn new(redis_url: &str, topic: &str) -> Result<Self, String> {
         let client = redis::Client::open(redis_url).map_err(|e| e.to_string())?;
-        let conn = client.get_multiplexed_tokio_connection().await.map_err(|e| e.to_string())?;
+        let conn = client
+            .get_multiplexed_tokio_connection()
+            .await
+            .map_err(|e| e.to_string())?;
         Ok(Self {
             conn,
             topic: topic.to_string(),
@@ -107,12 +115,20 @@ impl Transport for RedisIsolationTransport {
     async fn send(&self, message: &[u8]) -> Result<(), String> {
         use redis::AsyncCommands;
         let mut conn = self.conn.clone();
-        let _: () = conn.publish(&self.topic, message).await.map_err(|e| e.to_string())?;
+        let _: () = conn
+            .publish(&self.topic, message)
+            .await
+            .map_err(|e| e.to_string())?;
         Ok(())
     }
 }
 
-async fn execute_in_isolation(command: &str, agent_type: &str, worktree: &str, transport: Option<Arc<dyn Transport>>) -> Result<(), String> {
+async fn execute_in_isolation(
+    command: &str,
+    agent_type: &str,
+    worktree: &str,
+    transport: Option<Arc<dyn Transport>>,
+) -> Result<(), String> {
     use crate::harness::IsolationStrategy;
 
     let strategy = crate::harness::AssistantClassIsolationStrategy::new();
@@ -127,9 +143,10 @@ async fn execute_in_isolation(command: &str, agent_type: &str, worktree: &str, t
         }
     }
 
-    strategy.run_in_isolation(&command, agent_type, worktree, actual_transport).await
+    strategy
+        .run_in_isolation(&command, agent_type, worktree, actual_transport)
+        .await
 }
-
 
 // Implementations
 
@@ -139,14 +156,21 @@ pub struct ClaudeProvider {
 
 impl ClaudeProvider {
     pub fn new() -> Self {
-        ClaudeProvider { base: BaseProvider::new() }
+        ClaudeProvider {
+            base: BaseProvider::new(),
+        }
     }
 }
 
 #[async_trait]
 impl Provider for ClaudeProvider {
-    fn provider_type(&self) -> ProviderType { ProviderType::Claude }
-    fn description(&self) -> String { "Anthropic Claude Code — advanced coding and reasoning agent backed by Claude Sonnet/Opus".to_string() }
+    fn provider_type(&self) -> ProviderType {
+        ProviderType::Claude
+    }
+    fn description(&self) -> String {
+        "Anthropic Claude Code — advanced coding and reasoning agent backed by Claude Sonnet/Opus"
+            .to_string()
+    }
     fn supported_roles(&self) -> Vec<String> {
         vec![
             "SOFTWARE_ENGINEER".to_string(),
@@ -162,10 +186,25 @@ impl Provider for ClaudeProvider {
         self.base.store(creds);
         Ok(())
     }
-    fn get_credentials(&self) -> Credentials { self.base.load() }
-    fn is_authenticated(&self) -> bool { !self.base.load().is_empty() }
-    async fn run_in_isolation(&self, command: &str, worktree: &str, transport: Option<Arc<dyn Transport>>) -> Result<(), String> {
-        execute_in_isolation(command, &self.provider_type().to_string(), worktree, transport).await
+    fn get_credentials(&self) -> Credentials {
+        self.base.load()
+    }
+    fn is_authenticated(&self) -> bool {
+        !self.base.load().is_empty()
+    }
+    async fn run_in_isolation(
+        &self,
+        command: &str,
+        worktree: &str,
+        transport: Option<Arc<dyn Transport>>,
+    ) -> Result<(), String> {
+        execute_in_isolation(
+            command,
+            &self.provider_type().to_string(),
+            worktree,
+            transport,
+        )
+        .await
     }
 }
 
@@ -175,14 +214,20 @@ pub struct GeminiProvider {
 
 impl GeminiProvider {
     pub fn new() -> Self {
-        GeminiProvider { base: BaseProvider::new() }
+        GeminiProvider {
+            base: BaseProvider::new(),
+        }
     }
 }
 
 #[async_trait]
 impl Provider for GeminiProvider {
-    fn provider_type(&self) -> ProviderType { ProviderType::Gemini }
-    fn description(&self) -> String { "Google Gemini CLI — multimodal assistant agent backed by Gemini Pro/Ultra".to_string() }
+    fn provider_type(&self) -> ProviderType {
+        ProviderType::Gemini
+    }
+    fn description(&self) -> String {
+        "Google Gemini CLI — multimodal assistant agent backed by Gemini Pro/Ultra".to_string()
+    }
     fn supported_roles(&self) -> Vec<String> {
         vec![
             "PRODUCT_MANAGER".to_string(),
@@ -193,15 +238,33 @@ impl Provider for GeminiProvider {
     }
     fn authenticate(&self, creds: Credentials) -> Result<(), String> {
         if creds.api_key.is_empty() && creds.oauth_token.is_empty() {
-            return Err("gemini provider requires an API key (GEMINI_API_KEY) or an OAuth token".to_string());
+            return Err(
+                "gemini provider requires an API key (GEMINI_API_KEY) or an OAuth token"
+                    .to_string(),
+            );
         }
         self.base.store(creds);
         Ok(())
     }
-    fn get_credentials(&self) -> Credentials { self.base.load() }
-    fn is_authenticated(&self) -> bool { !self.base.load().is_empty() }
-    async fn run_in_isolation(&self, command: &str, worktree: &str, transport: Option<Arc<dyn Transport>>) -> Result<(), String> {
-        execute_in_isolation(command, &self.provider_type().to_string(), worktree, transport).await
+    fn get_credentials(&self) -> Credentials {
+        self.base.load()
+    }
+    fn is_authenticated(&self) -> bool {
+        !self.base.load().is_empty()
+    }
+    async fn run_in_isolation(
+        &self,
+        command: &str,
+        worktree: &str,
+        transport: Option<Arc<dyn Transport>>,
+    ) -> Result<(), String> {
+        execute_in_isolation(
+            command,
+            &self.provider_type().to_string(),
+            worktree,
+            transport,
+        )
+        .await
     }
 }
 
@@ -211,14 +274,20 @@ pub struct OpenCodeProvider {
 
 impl OpenCodeProvider {
     pub fn new() -> Self {
-        OpenCodeProvider { base: BaseProvider::new() }
+        OpenCodeProvider {
+            base: BaseProvider::new(),
+        }
     }
 }
 
 #[async_trait]
 impl Provider for OpenCodeProvider {
-    fn provider_type(&self) -> ProviderType { ProviderType::OpenCode }
-    fn description(&self) -> String { "OpenCode — open-source software-engineering agent with full terminal and file-system access".to_string() }
+    fn provider_type(&self) -> ProviderType {
+        ProviderType::OpenCode
+    }
+    fn description(&self) -> String {
+        "OpenCode — open-source software-engineering agent with full terminal and file-system access".to_string()
+    }
     fn supported_roles(&self) -> Vec<String> {
         vec![
             "SOFTWARE_ENGINEER".to_string(),
@@ -233,10 +302,25 @@ impl Provider for OpenCodeProvider {
         self.base.store(creds);
         Ok(())
     }
-    fn get_credentials(&self) -> Credentials { self.base.load() }
-    fn is_authenticated(&self) -> bool { !self.base.load().is_empty() }
-    async fn run_in_isolation(&self, command: &str, worktree: &str, transport: Option<Arc<dyn Transport>>) -> Result<(), String> {
-        execute_in_isolation(command, &self.provider_type().to_string(), worktree, transport).await
+    fn get_credentials(&self) -> Credentials {
+        self.base.load()
+    }
+    fn is_authenticated(&self) -> bool {
+        !self.base.load().is_empty()
+    }
+    async fn run_in_isolation(
+        &self,
+        command: &str,
+        worktree: &str,
+        transport: Option<Arc<dyn Transport>>,
+    ) -> Result<(), String> {
+        execute_in_isolation(
+            command,
+            &self.provider_type().to_string(),
+            worktree,
+            transport,
+        )
+        .await
     }
 }
 
@@ -246,14 +330,21 @@ pub struct OpenClawProvider {
 
 impl OpenClawProvider {
     pub fn new() -> Self {
-        OpenClawProvider { base: BaseProvider::new() }
+        OpenClawProvider {
+            base: BaseProvider::new(),
+        }
     }
 }
 
 #[async_trait]
 impl Provider for OpenClawProvider {
-    fn provider_type(&self) -> ProviderType { ProviderType::OpenClaw }
-    fn description(&self) -> String { "OpenClaw — general-purpose assistant agent optimised for content strategy and growth tasks".to_string() }
+    fn provider_type(&self) -> ProviderType {
+        ProviderType::OpenClaw
+    }
+    fn description(&self) -> String {
+        "OpenClaw — general-purpose assistant agent optimised for content strategy and growth tasks"
+            .to_string()
+    }
     fn supported_roles(&self) -> Vec<String> {
         vec![
             "GROWTH_AGENT".to_string(),
@@ -269,10 +360,25 @@ impl Provider for OpenClawProvider {
         self.base.store(creds);
         Ok(())
     }
-    fn get_credentials(&self) -> Credentials { self.base.load() }
-    fn is_authenticated(&self) -> bool { !self.base.load().is_empty() }
-    async fn run_in_isolation(&self, command: &str, worktree: &str, transport: Option<Arc<dyn Transport>>) -> Result<(), String> {
-        execute_in_isolation(command, &self.provider_type().to_string(), worktree, transport).await
+    fn get_credentials(&self) -> Credentials {
+        self.base.load()
+    }
+    fn is_authenticated(&self) -> bool {
+        !self.base.load().is_empty()
+    }
+    async fn run_in_isolation(
+        &self,
+        command: &str,
+        worktree: &str,
+        transport: Option<Arc<dyn Transport>>,
+    ) -> Result<(), String> {
+        execute_in_isolation(
+            command,
+            &self.provider_type().to_string(),
+            worktree,
+            transport,
+        )
+        .await
     }
 }
 
@@ -282,14 +388,21 @@ pub struct IronClawProvider {
 
 impl IronClawProvider {
     pub fn new() -> Self {
-        IronClawProvider { base: BaseProvider::new() }
+        IronClawProvider {
+            base: BaseProvider::new(),
+        }
     }
 }
 
 #[async_trait]
 impl Provider for IronClawProvider {
-    fn provider_type(&self) -> ProviderType { ProviderType::IronClaw }
-    fn description(&self) -> String { "IronClaw — security and audit-focused agent with deep static-analysis capabilities".to_string() }
+    fn provider_type(&self) -> ProviderType {
+        ProviderType::IronClaw
+    }
+    fn description(&self) -> String {
+        "IronClaw — security and audit-focused agent with deep static-analysis capabilities"
+            .to_string()
+    }
     fn supported_roles(&self) -> Vec<String> {
         vec![
             "SECURITY_ENGINEER".to_string(),
@@ -304,10 +417,25 @@ impl Provider for IronClawProvider {
         self.base.store(creds);
         Ok(())
     }
-    fn get_credentials(&self) -> Credentials { self.base.load() }
-    fn is_authenticated(&self) -> bool { !self.base.load().is_empty() }
-    async fn run_in_isolation(&self, command: &str, worktree: &str, transport: Option<Arc<dyn Transport>>) -> Result<(), String> {
-        execute_in_isolation(command, &self.provider_type().to_string(), worktree, transport).await
+    fn get_credentials(&self) -> Credentials {
+        self.base.load()
+    }
+    fn is_authenticated(&self) -> bool {
+        !self.base.load().is_empty()
+    }
+    async fn run_in_isolation(
+        &self,
+        command: &str,
+        worktree: &str,
+        transport: Option<Arc<dyn Transport>>,
+    ) -> Result<(), String> {
+        execute_in_isolation(
+            command,
+            &self.provider_type().to_string(),
+            worktree,
+            transport,
+        )
+        .await
     }
 }
 
@@ -317,21 +445,41 @@ pub struct MiniMaxiProvider {
 
 impl MiniMaxiProvider {
     pub fn new() -> Self {
-        MiniMaxiProvider { base: BaseProvider::new() }
+        MiniMaxiProvider {
+            base: BaseProvider::new(),
+        }
     }
 }
 
 #[async_trait]
 impl Provider for MiniMaxiProvider {
-    fn provider_type(&self) -> ProviderType { ProviderType::MiniMaxi }
-    fn description(&self) -> String { "MiniMaxi — cloud AI API with Anthropic-compatible endpoint (api.minimaxi.chat/v1). Can be used for any role (SWE, legal, sales, etc.).".to_string() }
+    fn provider_type(&self) -> ProviderType {
+        ProviderType::MiniMaxi
+    }
+    fn description(&self) -> String {
+        "MiniMaxi — cloud AI API with Anthropic-compatible endpoint (api.minimaxi.chat/v1). Can be used for any role (SWE, legal, sales, etc.).".to_string()
+    }
     fn supported_roles(&self) -> Vec<String> {
         vec![
-            "CEO".to_string(), "PRODUCT_MANAGER".to_string(), "SOFTWARE_ENGINEER".to_string(), "ENGINEERING_DIRECTOR".to_string(),
-            "QA_TESTER".to_string(), "SECURITY_ENGINEER".to_string(), "DESIGNER".to_string(), "MARKETING_MANAGER".to_string(),
-            "GROWTH_AGENT".to_string(), "CONTENT_STRATEGIST".to_string(), "SEO_SPECIALIST".to_string(), "PAID_MEDIA_MANAGER".to_string(),
-            "ANALYTICS_ENGINEER".to_string(), "CFO".to_string(), "BOOKKEEPER".to_string(), "TAX_SPECIALIST".to_string(),
-            "AUDIT_MANAGER".to_string(), "PAYROLL_MANAGER".to_string(), "AI_NEWS_COLLECTOR".to_string(),
+            "CEO".to_string(),
+            "PRODUCT_MANAGER".to_string(),
+            "SOFTWARE_ENGINEER".to_string(),
+            "ENGINEERING_DIRECTOR".to_string(),
+            "QA_TESTER".to_string(),
+            "SECURITY_ENGINEER".to_string(),
+            "DESIGNER".to_string(),
+            "MARKETING_MANAGER".to_string(),
+            "GROWTH_AGENT".to_string(),
+            "CONTENT_STRATEGIST".to_string(),
+            "SEO_SPECIALIST".to_string(),
+            "PAID_MEDIA_MANAGER".to_string(),
+            "ANALYTICS_ENGINEER".to_string(),
+            "CFO".to_string(),
+            "BOOKKEEPER".to_string(),
+            "TAX_SPECIALIST".to_string(),
+            "AUDIT_MANAGER".to_string(),
+            "PAYROLL_MANAGER".to_string(),
+            "AI_NEWS_COLLECTOR".to_string(),
         ]
     }
     fn authenticate(&self, creds: Credentials) -> Result<(), String> {
@@ -341,10 +489,25 @@ impl Provider for MiniMaxiProvider {
         self.base.store(creds);
         Ok(())
     }
-    fn get_credentials(&self) -> Credentials { self.base.load() }
-    fn is_authenticated(&self) -> bool { !self.base.load().is_empty() }
-    async fn run_in_isolation(&self, command: &str, worktree: &str, transport: Option<Arc<dyn Transport>>) -> Result<(), String> {
-        execute_in_isolation(command, &self.provider_type().to_string(), worktree, transport).await
+    fn get_credentials(&self) -> Credentials {
+        self.base.load()
+    }
+    fn is_authenticated(&self) -> bool {
+        !self.base.load().is_empty()
+    }
+    async fn run_in_isolation(
+        &self,
+        command: &str,
+        worktree: &str,
+        transport: Option<Arc<dyn Transport>>,
+    ) -> Result<(), String> {
+        execute_in_isolation(
+            command,
+            &self.provider_type().to_string(),
+            worktree,
+            transport,
+        )
+        .await
     }
 }
 
@@ -358,21 +521,50 @@ impl BuiltinProvider {
 
 #[async_trait]
 impl Provider for BuiltinProvider {
-    fn provider_type(&self) -> ProviderType { ProviderType::Builtin }
-    fn description(&self) -> String { "Built-in local agent — full agentic loop with tool execution; no external credentials required. Uses Anthropic/OpenAI/Ollama as configured.".to_string() }
+    fn provider_type(&self) -> ProviderType {
+        ProviderType::Builtin
+    }
+    fn description(&self) -> String {
+        "Built-in local agent — full agentic loop with tool execution; no external credentials required. Uses Anthropic/OpenAI/Ollama as configured.".to_string()
+    }
     fn supported_roles(&self) -> Vec<String> {
         vec![
-            "CEO".to_string(), "PRODUCT_MANAGER".to_string(), "SOFTWARE_ENGINEER".to_string(), "ENGINEERING_DIRECTOR".to_string(),
-            "QA_TESTER".to_string(), "SECURITY_ENGINEER".to_string(), "DESIGNER".to_string(), "MARKETING_MANAGER".to_string(),
-            "GROWTH_AGENT".to_string(), "CONTENT_STRATEGIST".to_string(), "SEO_SPECIALIST".to_string(), "PAID_MEDIA_MANAGER".to_string(),
-            "ANALYTICS_ENGINEER".to_string(), "CFO".to_string(), "BOOKKEEPER".to_string(), "TAX_SPECIALIST".to_string(),
-            "AUDIT_MANAGER".to_string(), "PAYROLL_MANAGER".to_string(), "AI_NEWS_COLLECTOR".to_string(),
+            "CEO".to_string(),
+            "PRODUCT_MANAGER".to_string(),
+            "SOFTWARE_ENGINEER".to_string(),
+            "ENGINEERING_DIRECTOR".to_string(),
+            "QA_TESTER".to_string(),
+            "SECURITY_ENGINEER".to_string(),
+            "DESIGNER".to_string(),
+            "MARKETING_MANAGER".to_string(),
+            "GROWTH_AGENT".to_string(),
+            "CONTENT_STRATEGIST".to_string(),
+            "SEO_SPECIALIST".to_string(),
+            "PAID_MEDIA_MANAGER".to_string(),
+            "ANALYTICS_ENGINEER".to_string(),
+            "CFO".to_string(),
+            "BOOKKEEPER".to_string(),
+            "TAX_SPECIALIST".to_string(),
+            "AUDIT_MANAGER".to_string(),
+            "PAYROLL_MANAGER".to_string(),
+            "AI_NEWS_COLLECTOR".to_string(),
         ]
     }
-    fn authenticate(&self, _creds: Credentials) -> Result<(), String> { Ok(()) }
-    fn get_credentials(&self) -> Credentials { Credentials::default() }
-    fn is_authenticated(&self) -> bool { true }
-    async fn run_in_isolation(&self, command: &str, worktree: &str, transport: Option<Arc<dyn Transport>>) -> Result<(), String> {
+    fn authenticate(&self, _creds: Credentials) -> Result<(), String> {
+        Ok(())
+    }
+    fn get_credentials(&self) -> Credentials {
+        Credentials::default()
+    }
+    fn is_authenticated(&self) -> bool {
+        true
+    }
+    async fn run_in_isolation(
+        &self,
+        command: &str,
+        worktree: &str,
+        transport: Option<Arc<dyn Transport>>,
+    ) -> Result<(), String> {
         // Advanced GRPC Dispatch Support
         let address = std::env::var("OHC_AGENT_ADDRESS").unwrap_or_default();
         if !address.is_empty() {
@@ -380,7 +572,13 @@ impl Provider for BuiltinProvider {
             // This is handled by orchestrator at runtime via OHC_AGENT_ADDRESS
             // It overrides local builtin tools loop with a remote node.
         }
-        execute_in_isolation(command, &self.provider_type().to_string(), worktree, transport).await
+        execute_in_isolation(
+            command,
+            &self.provider_type().to_string(),
+            worktree,
+            transport,
+        )
+        .await
     }
 }
 
@@ -390,14 +588,20 @@ pub struct ScoutProvider {
 
 impl ScoutProvider {
     pub fn new() -> Self {
-        ScoutProvider { base: BaseProvider::new() }
+        ScoutProvider {
+            base: BaseProvider::new(),
+        }
     }
 }
 
 #[async_trait]
 impl Provider for ScoutProvider {
-    fn provider_type(&self) -> ProviderType { ProviderType::Scout }
-    fn description(&self) -> String { "Scout — agent dedicated to finding external resources and integrating them into OHC capabilities".to_string() }
+    fn provider_type(&self) -> ProviderType {
+        ProviderType::Scout
+    }
+    fn description(&self) -> String {
+        "Scout — agent dedicated to finding external resources and integrating them into OHC capabilities".to_string()
+    }
     fn supported_roles(&self) -> Vec<String> {
         vec!["RESOURCE_SCOUT".to_string(), "TOOL_INTEGRATOR".to_string()]
     }
@@ -405,9 +609,24 @@ impl Provider for ScoutProvider {
         self.base.store(creds);
         Ok(())
     }
-    fn get_credentials(&self) -> Credentials { self.base.load() }
-    fn is_authenticated(&self) -> bool { !self.base.load().is_empty() }
-    async fn run_in_isolation(&self, command: &str, worktree: &str, transport: Option<Arc<dyn Transport>>) -> Result<(), String> {
-        execute_in_isolation(command, &self.provider_type().to_string(), worktree, transport).await
+    fn get_credentials(&self) -> Credentials {
+        self.base.load()
+    }
+    fn is_authenticated(&self) -> bool {
+        !self.base.load().is_empty()
+    }
+    async fn run_in_isolation(
+        &self,
+        command: &str,
+        worktree: &str,
+        transport: Option<Arc<dyn Transport>>,
+    ) -> Result<(), String> {
+        execute_in_isolation(
+            command,
+            &self.provider_type().to_string(),
+            worktree,
+            transport,
+        )
+        .await
     }
 }

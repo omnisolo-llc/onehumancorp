@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 export default function ChaosReportPage() {
   const [data, setData] = useState<any>(null);
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     // Check system preference for dark mode
@@ -11,11 +12,15 @@ export default function ChaosReportPage() {
       setIsDarkMode(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
     }
 
-    // Mock chaos metrics
-    setData({
-      latencyHistograms: [10, 20, 50, 100, 300, 500, 1000],
-      errorRate: [0.01, 0.02, 0.05, 0.04, 0.01],
-    });
+    fetch('/api/v1/chaos/report')
+      .then(res => {
+        if (!res.ok) throw new Error('Failed to fetch chaos report');
+        return res.json();
+      })
+      .then(d => setData(d))
+      .catch(e => {
+        setError(e.message);
+      });
   }, []);
 
   const glassStyle = isDarkMode ? {
@@ -62,7 +67,10 @@ export default function ChaosReportPage() {
           <div className="h-64 flex items-end gap-3 p-4 rounded-xl relative" style={{ background: isDarkMode ? 'rgba(0,0,0,0.3)' : 'rgba(0,0,0,0.03)' }}>
             <div className="absolute left-0 bottom-0 w-full h-full border-b border-l border-current opacity-10 m-4"></div>
 
-            {data?.latencyHistograms.map((val: number, i: number) => (
+            {error && <div className="absolute inset-0 flex items-center justify-center text-red-500 font-bold">{error}</div>}
+            {!data && !error && <div className="absolute inset-0 flex items-center justify-center">Loading...</div>}
+
+            {data?.latencyHistograms?.map((val: number, i: number) => (
               <div key={i} className="flex-1 flex flex-col items-center justify-end group">
                 <div
                   className={`w-full rounded-t-md transition-all duration-500 ${isDarkMode ? 'bg-blue-500/80' : 'bg-blue-500/60'} group-hover:bg-blue-400 relative`}
@@ -98,9 +106,12 @@ export default function ChaosReportPage() {
           <div className="h-64 relative p-4 rounded-xl flex items-end" style={{ background: isDarkMode ? 'rgba(0,0,0,0.3)' : 'rgba(0,0,0,0.03)' }}>
             <div className="absolute left-0 bottom-0 w-full h-full border-b border-l border-current opacity-10 m-4"></div>
 
+            {error && <div className="absolute inset-0 flex items-center justify-center text-red-500 font-bold z-20">{error}</div>}
+            {!data && !error && <div className="absolute inset-0 flex items-center justify-center z-20">Loading...</div>}
+
             <svg className="w-full h-full absolute inset-0 p-4" preserveAspectRatio="none" viewBox="0 0 100 100">
               <path
-                d={data ? `M 0 100 ${data.errorRate.map((val: number, i: number) => `L ${i * 25} ${100 - val * 1000}`).join(' ')}` : ''}
+                d={data ? `M 0 100 ${data.errorRate?.map((val: number, i: number) => `L ${i * 25} ${100 - val * 1000}`).join(' ')}` : ''}
                 fill="none"
                 stroke={isDarkMode ? '#ef4444' : '#dc2626'}
                 strokeWidth="2"
@@ -109,14 +120,14 @@ export default function ChaosReportPage() {
                 className="drop-shadow-sm"
               />
               <path
-                d={data ? `M 0 100 ${data.errorRate.map((val: number, i: number) => `L ${i * 25} ${100 - val * 1000}`).join(' ')} L 100 100 Z` : ''}
+                d={data ? `M 0 100 ${data.errorRate?.map((val: number, i: number) => `L ${i * 25} ${100 - val * 1000}`).join(' ')} L 100 100 Z` : ''}
                 fill={isDarkMode ? 'rgba(239, 68, 68, 0.1)' : 'rgba(220, 38, 38, 0.05)'}
               />
             </svg>
 
             {/* Markers */}
             <div className="absolute inset-0 p-4 w-full h-full">
-              {data?.errorRate.map((val: number, i: number) => (
+              {data?.errorRate?.map((val: number, i: number) => (
                 <div
                   key={i}
                   className={`absolute w-3 h-3 rounded-full -ml-1.5 -mb-1.5 cursor-pointer z-10 transition-transform hover:scale-150 ${isDarkMode ? 'bg-red-400 ring-2 ring-gray-900' : 'bg-red-500 ring-2 ring-white'}`}

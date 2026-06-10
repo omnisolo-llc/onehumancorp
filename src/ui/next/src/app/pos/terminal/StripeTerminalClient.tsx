@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from 'react';
 import { loadStripeTerminal } from '@stripe/terminal-js';
-import { SyncManager } from '../../../lib/sync/SyncManager';
 
 export default function StripeTerminalClient({ amount, productId, tenantId }: { amount: number, productId: string, tenantId: string }) {
   const [terminal, setTerminal] = useState<any>(null);
@@ -22,7 +21,7 @@ export default function StripeTerminalClient({ amount, productId, tenantId }: { 
 
       const term = StripeTerminal.create({
         onFetchConnectionToken: async () => {
-          const res = await fetch('/api/terminal/connection_token', { method: 'POST' });
+          const res = await fetch('/api/v1/payments/terminal/token', { method: 'POST' });
           const data = await res.json();
           return data.secret;
         },
@@ -30,7 +29,7 @@ export default function StripeTerminalClient({ amount, productId, tenantId }: { 
           setStatus('Reader disconnected unexpectedly.');
           setConnectedReader(null);
           if (sessionId && navigator.onLine) {
-            await fetch('/api/terminal/session/update', {
+            await fetch('/api/v1/payments/terminal/session/update', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ session_id: sessionId, status: 'OFFLINE' })
@@ -46,7 +45,7 @@ export default function StripeTerminalClient({ amount, productId, tenantId }: { 
     return () => {
       // End session on unmount
       if (sessionId && navigator.onLine) {
-        fetch('/api/terminal/session/end', {
+        fetch('/api/v1/payments/terminal/session/end', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Keep-Alive': 'timeout=5, max=100' },
           body: JSON.stringify({ session_id: sessionId }),
@@ -59,7 +58,7 @@ export default function StripeTerminalClient({ amount, productId, tenantId }: { 
   useEffect(() => {
     const handleOnline = async () => {
       if (sessionId && connectedReader) {
-        await fetch('/api/terminal/session/update', {
+        await fetch('/api/v1/payments/terminal/session/update', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ session_id: sessionId, status: 'ACTIVE' })
@@ -106,7 +105,7 @@ export default function StripeTerminalClient({ amount, productId, tenantId }: { 
 
       // Start a session
       try {
-        const res = await fetch('/api/terminal/session/start', {
+        const res = await fetch('/api/v1/payments/terminal/session/start', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ device_id: result.reader.id })
@@ -151,15 +150,6 @@ export default function StripeTerminalClient({ amount, productId, tenantId }: { 
           existingTxs.push(tx);
           localStorage.setItem('ohc_offline_pos_tx', JSON.stringify(existingTxs));
 
-          SyncManager.getInstance().enqueue({
-             type: 'tap_to_pay',
-             id: transactionId,
-             product_id: productId,
-             amount: amount,
-             quantity: 1,
-             idempotency_key: `idemp_${transactionId}`,
-             currency: 'usd'
-          });
           setStatus('Payment saved offline. Will sync when network is restored.');
           setReserving(false);
        }, 1500);
@@ -191,7 +181,7 @@ export default function StripeTerminalClient({ amount, productId, tenantId }: { 
 
     setStatus('Creating payment intent...');
     try {
-      const res = await fetch('/api/terminal/create_payment_intent', {
+      const res = await fetch('/api/v1/payments/terminal/intent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ amount, currency: 'usd' })
@@ -217,7 +207,13 @@ export default function StripeTerminalClient({ amount, productId, tenantId }: { 
           const commitRes = await fetch('/api/v1/payments/terminal/commit', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ tenant_id: tenantId, product_id: productId, quantity: 1, lock_id: lockId })
+            body: JSON.stringify({
+              tenant_id: tenantId,
+              product_id: productId,
+              quantity: 1,
+              lock_id: lockId,
+              amount_cents: amount
+            })
           });
           const commitData = await commitRes.json();
           if (commitData.success) {
@@ -243,14 +239,14 @@ export default function StripeTerminalClient({ amount, productId, tenantId }: { 
 
       {!connectedReader && (
         <div className="mb-4">
-          <button onClick={discoverReaders} className="w-full bg-[#0066FF] text-white px-4 py-3 rounded-xl font-bold hover:bg-blue-700 transition-colors shadow-md shadow-blue-500/20 active:scale-[0.98]">
+          <button onClick={discoverReaders} className="w-full bg-[#0066FF] text-white px-4 py-3 min-h-[44px] rounded-xl font-bold hover:bg-blue-700 transition-colors shadow-md shadow-blue-500/20 active:scale-[0.98]">
             Discover Readers
           </button>
           <ul className="mt-4 space-y-2">
             {discoveredReaders.map(reader => (
               <li key={reader.id} className="flex justify-between items-center p-3 border border-gray-100 rounded-xl bg-white shadow-sm">
                 <span className="font-medium text-gray-800 text-sm">{reader.label || reader.id}</span>
-                <button onClick={() => connectReader(reader)} className="bg-[#34C759] text-white px-4 py-1.5 rounded-lg text-sm font-bold shadow-sm shadow-green-500/20 hover:bg-green-600 transition-colors active:scale-[0.98]">
+                <button onClick={() => connectReader(reader)} className="bg-[#34C759] text-white px-4 py-1.5 min-h-[44px] min-w-[44px] rounded-lg text-sm font-bold shadow-sm shadow-green-500/20 hover:bg-green-600 transition-colors active:scale-[0.98]">
                   Connect
                 </button>
               </li>
@@ -261,7 +257,7 @@ export default function StripeTerminalClient({ amount, productId, tenantId }: { 
 
       {connectedReader && (
         <div>
-          <button onClick={processPayment} disabled={reserving} className={`w-full bg-[#0066FF] text-white px-4 py-4 rounded-xl font-bold shadow-md shadow-blue-500/20 transition-all ${reserving ? 'opacity-50' : 'hover:bg-blue-700 active:scale-[0.98]'}`}>
+          <button onClick={processPayment} disabled={reserving} className={`w-full bg-[#0066FF] text-white px-4 py-4 min-h-[44px] rounded-xl font-bold shadow-md shadow-blue-500/20 transition-all ${reserving ? 'opacity-50' : 'hover:bg-blue-700 active:scale-[0.98]'}`}>
             {reserving ? 'Processing...' : `Charge $${(amount / 100).toFixed(2)}`}
           </button>
         </div>

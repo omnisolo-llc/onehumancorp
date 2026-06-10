@@ -22,7 +22,7 @@ export async function POST(request: Request) {
     const safeFeatures = Array.isArray(features) ? features.map(escapeHtml) : [];
 
     // Call the Rust core backend API to submit the waitlist entry
-    const backendRes = await fetch(`${backendUrl}/v1/growth/waitlist`, {
+    const backendRes = await fetch(`${backendUrl}/api/v1/growth/waitlist`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -35,7 +35,7 @@ export async function POST(request: Request) {
     });
 
     if (!backendRes.ok) {
-      console.error(`Backend API error: ${backendRes.status} ${backendRes.statusText}`);
+      console.warn(`Backend API warn: ${backendRes.status} ${backendRes.statusText}`);
       // Fallback for demo purposes if backend is not available
       return NextResponse.json({
         success: true,
@@ -48,7 +48,7 @@ export async function POST(request: Request) {
     return NextResponse.json(data);
 
   } catch (error) {
-    console.error("Error submitting waitlist:", error);
+    console.warn("Warn submitting waitlist:", error);
     // Fallback for demo purposes if network error
     return NextResponse.json(
         {

@@ -61,6 +61,26 @@ pub struct ErrorResponse {
     pub error: String,
 }
 
+#[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
+pub struct Pagination {
+    pub total_items: usize,
+    pub total_pages: usize,
+    pub current_page: usize,
+    pub page_size: usize,
+}
+
+#[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
+pub struct TaskListResponse {
+    pub tasks: Vec<Task>,
+    pub pagination: Pagination,
+}
+
+#[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
+pub struct StepListResponse {
+    pub steps: Vec<Step>,
+    pub pagination: Pagination,
+}
+
 pub struct AgentProtocolServer {
     pub runner: Arc<Runner>,
 }
@@ -77,7 +97,8 @@ impl AgentProtocolServer {
             Err(_) => {
                 return serde_json::to_string(&ErrorResponse {
                     error: "Invalid request".to_string(),
-                }).unwrap_or_else(|_| r#"{"error": "Serialization failed"}"#.to_string());
+                })
+                .unwrap_or_else(|_| r#"{"error": "Serialization failed"}"#.to_string());
             }
         };
 
@@ -91,11 +112,24 @@ impl AgentProtocolServer {
             artifacts: vec![],
         };
 
-        serde_json::to_string(&resp).unwrap_or_else(|_| r#"{"error": "Serialization failed"}"#.to_string())
+        serde_json::to_string(&resp)
+            .unwrap_or_else(|_| r#"{"error": "Serialization failed"}"#.to_string())
     }
 
-
-    /// GET /ap/v1/agent/tasks/{task_id}
+    /// GET /ap/v1/agent/tasks
+    pub async fn list_tasks(&self) -> String {
+        let resp = TaskListResponse {
+            tasks: vec![],
+            pagination: Pagination {
+                total_items: 0,
+                total_pages: 1,
+                current_page: 1,
+                page_size: 10,
+            },
+        };
+        serde_json::to_string(&resp)
+            .unwrap_or_else(|_| r#"{"error": "Serialization failed"}"#.to_string())
+    }
 
     /// GET /ap/v1/agent/tasks/{task_id}
     pub async fn get_task(&self, task_id: &str) -> String {
@@ -115,7 +149,23 @@ impl AgentProtocolServer {
             additional_input: None,
             artifacts: vec![],
         };
-        serde_json::to_string(&resp).unwrap_or_else(|_| r#"{"error": "Serialization failed"}"#.to_string())
+        serde_json::to_string(&resp)
+            .unwrap_or_else(|_| r#"{"error": "Serialization failed"}"#.to_string())
+    }
+
+    /// GET /ap/v1/agent/tasks/{task_id}/steps
+    pub async fn list_steps(&self, _task_id: &str) -> String {
+        let resp = StepListResponse {
+            steps: vec![],
+            pagination: Pagination {
+                total_items: 0,
+                total_pages: 1,
+                current_page: 1,
+                page_size: 10,
+            },
+        };
+        serde_json::to_string(&resp)
+            .unwrap_or_else(|_| r#"{"error": "Serialization failed"}"#.to_string())
     }
 
     /// POST /ap/v1/agent/tasks/{task_id}/steps
@@ -125,7 +175,8 @@ impl AgentProtocolServer {
             Err(_) => {
                 return serde_json::to_string(&ErrorResponse {
                     error: "Invalid request".to_string(),
-                }).unwrap_or_else(|_| r#"{"error": "Serialization failed"}"#.to_string());
+                })
+                .unwrap_or_else(|_| r#"{"error": "Serialization failed"}"#.to_string());
             }
         };
 
@@ -144,7 +195,8 @@ impl AgentProtocolServer {
                     is_last: true,
                     artifacts: vec![],
                 };
-                serde_json::to_string(&resp).unwrap_or_else(|_| r#"{"error": "Serialization failed"}"#.to_string())
+                serde_json::to_string(&resp)
+                    .unwrap_or_else(|_| r#"{"error": "Serialization failed"}"#.to_string())
             }
             Err(e) => {
                 let resp = Step {
@@ -157,7 +209,8 @@ impl AgentProtocolServer {
                     is_last: true,
                     artifacts: vec![],
                 };
-                serde_json::to_string(&resp).unwrap_or_else(|_| r#"{"error": "Serialization failed"}"#.to_string())
+                serde_json::to_string(&resp)
+                    .unwrap_or_else(|_| r#"{"error": "Serialization failed"}"#.to_string())
             }
         }
     }
@@ -166,7 +219,7 @@ impl AgentProtocolServer {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::agent::{Agent};
+    use crate::agent::Agent;
     use crate::llm::LlmClient;
     use crate::types::{ChatRequest, ChatResponse, Message, Usage};
 
@@ -174,7 +227,10 @@ mod tests {
 
     #[async_trait::async_trait]
     impl LlmClient for MockLlmClient {
-        async fn chat(&self, _req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+        async fn chat(
+            &self,
+            _req: ChatRequest,
+        ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
             Ok(ChatResponse {
                 message: Message::assistant("agent protocol success"),
                 usage: Usage::default(),
@@ -209,6 +265,31 @@ mod tests {
         assert!(step_resp.is_last);
     }
 
+    #[tokio::test]
+    async fn test_agent_protocol_list_tasks() {
+        let client = Arc::new(MockLlmClient);
+        let agent = Arc::new(Agent::new(client, vec![]));
+        let runner = Arc::new(Runner::new(agent));
+        let server = AgentProtocolServer::new(runner);
+
+        let resp_json = server.list_tasks().await;
+        let resp: TaskListResponse = serde_json::from_str(&resp_json).unwrap();
+        assert_eq!(resp.tasks.len(), 0);
+        assert_eq!(resp.pagination.total_pages, 1);
+    }
+
+    #[tokio::test]
+    async fn test_agent_protocol_list_steps() {
+        let client = Arc::new(MockLlmClient);
+        let agent = Arc::new(Agent::new(client, vec![]));
+        let runner = Arc::new(Runner::new(agent));
+        let server = AgentProtocolServer::new(runner);
+
+        let resp_json = server.list_steps("task-123").await;
+        let resp: StepListResponse = serde_json::from_str(&resp_json).unwrap();
+        assert_eq!(resp.steps.len(), 0);
+        assert_eq!(resp.pagination.total_pages, 1);
+    }
 
     #[tokio::test]
     async fn test_agent_protocol_get_task() {
@@ -255,7 +336,10 @@ mod tests {
 
     #[async_trait::async_trait]
     impl LlmClient for FailingMockLlmClient {
-        async fn chat(&self, _req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+        async fn chat(
+            &self,
+            _req: ChatRequest,
+        ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
             Err("LLM execution failed".into())
         }
     }

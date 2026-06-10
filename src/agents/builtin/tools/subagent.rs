@@ -1,10 +1,21 @@
-use crate::{Tool, ToolExecutor};
+use crate::Tool;
 use ohc_builtin_agent_core::types::ToolError;
 use server_ohc::agent::service::SubAgentResponse;
-use serde_json::{json, Value};
+use serde_json::json;
+use serde::Deserialize;
+use super::pydantic::{PydanticToolExecutor, PydanticAdapter};
 use std::sync::Arc;
 
 
+
+
+#[derive(Deserialize)]
+struct SubagentArgs {
+    task: String,
+    mode: String,
+    #[serde(default)]
+    parent_context_file: Option<String>,
+}
 
 pub struct SubagentExecutor {
     pub runner: Arc<dyn crate::runner::CommandRunner>,
@@ -87,21 +98,22 @@ impl SubagentExecutor {
 }
 
 #[async_trait::async_trait]
-impl ToolExecutor for SubagentExecutor {
-    async fn execute(&self, args: Value) -> Result<String, ToolError> {
-        let raw_task = args.get("task").and_then(|v| v.as_str()).unwrap_or("");
-        let mode = args.get("mode").and_then(|v| v.as_str()).unwrap_or("fork");
+impl PydanticToolExecutor<SubagentArgs> for SubagentExecutor {
+    async fn execute_typed(&self, args: SubagentArgs) -> Result<String, ToolError> {
+        let raw_task = args.task.clone();
+        let mode = args.mode.clone();
         
         if raw_task.is_empty() {
             return Err(ToolError::LlmRecoverable("Task cannot be empty".to_string()));
         }
 
-        // Subagent Orchestration: Claude Code Execution Models: 1) Fork (byte-identical copy of parent context), 2) Teammate (separate terminal pane communicating via file-based mailboxes), 3) Worktree (spawns its own git worktree with an isolated branch). Rule: Subagents return 1k-2k token condensed summaries, never their full context loop.
         let task = format!("{}\n\nCRITICAL INSTRUCTION: You are a subagent. When you finish your work, you MUST return a 1k-2k token condensed summary of your findings and actions. NEVER return your full context loop or raw unsummarized output.", raw_task);
 
+        // Subagent Orchestration: Claude Code Execution Models: 1) Fork (byte-identical copy of parent context), 2) Teammate (separate terminal pane communicating via file-based mailboxes), 3) Worktree (spawns its own git worktree with an isolated branch). Rule: Subagents return 1k-2k token condensed summaries, never their full context loop.
         tracing::info!("Spawning subagent in mode '{}' for task: {}", mode, raw_task);
 
         if mode == "worktree" {
+
             let task_id = uuid::Uuid::new_v4().to_string();
             let branch_name = format!("subagent-{}", task_id);
             let worktree_path = format!(".agent-worktrees/{}", task_id);
@@ -156,7 +168,7 @@ impl ToolExecutor for SubagentExecutor {
                 Err(e) => Err(ToolError::LlmRecoverable(format!("Subagent failed: {}", e))),
             }
         } else if mode == "fork" {
-            let parent_context_file = args.get("parent_context_file").and_then(|v| v.as_str()).unwrap_or("");
+            let parent_context_file = args.parent_context_file.clone().unwrap_or_default();
 
             let mut envs = vec![];
             if let Ok(addr) = std::env::var("OHC_AGENT_ADDRESS") {
@@ -333,7 +345,7 @@ pub fn subagent_tool(runner: Arc<dyn crate::runner::CommandRunner>, llm: Option<
             },
             "required": ["task", "mode"]
         }),
-        execute: Arc::new(SubagentExecutor { runner, llm }),
+        execute: Arc::new(PydanticAdapter::new(SubagentExecutor { runner, llm })),
     }
 }
 
@@ -350,7 +362,7 @@ mod tests {
             "mode": "fork"
         });
 
-        let result = executor.execute(args).await;
+        let result = executor.execute_typed(serde_json::from_value(args).unwrap()).await;
         assert!(result.is_err());
         match result {
             Err(ToolError::LlmRecoverable(msg)) => {
@@ -369,7 +381,7 @@ mod tests {
             "mode": "invalid"
         });
 
-        let result = executor.execute(args).await;
+        let result = executor.execute_typed(serde_json::from_value(args).unwrap()).await;
         assert!(result.is_err());
         match result {
             Err(ToolError::LlmRecoverable(msg)) => {
@@ -396,7 +408,7 @@ mod tests {
             "mode": "teammate"
         });
 
-        let result = executor.execute(args).await;
+        let result = executor.execute_typed(serde_json::from_value(args).unwrap()).await;
         assert!(result.is_ok(), "Expected Ok for teammate mode");
         let msg = result.unwrap();
 
@@ -449,7 +461,7 @@ mod tests {
             "mode": "worktree"
         });
 
-        let result = executor.execute(args).await;
+        let result = executor.execute_typed(serde_json::from_value(args).unwrap()).await;
         assert!(result.is_ok(), "Expected Ok for worktree mode");
         let msg = result.unwrap();
 
@@ -497,7 +509,7 @@ mod tests {
             "mode": "fork"
         });
 
-        let result = executor.execute(args).await;
+        let result = executor.execute_typed(serde_json::from_value(args).unwrap()).await;
         assert!(result.is_ok(), "Expected Ok");
         let msg = result.unwrap();
         assert!(msg.contains("[Output truncated. Subagent failed to condense summary.]"), "Expected output to be truncated");

@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 
 export async function POST(request: Request) {
   try {
-    const { tenantId, storeName, discountOffer, isPro } = await request.json();
+    const { customer_name, cart_value, tenantId, storeName, discountOffer, isPro } = await request.json();
 
     // Use environment variable for backend URL, default to a sensible local value for testing
     const backendUrl = process.env.OHC_CORE_URL || 'http://localhost:8080';
@@ -17,6 +17,8 @@ export async function POST(request: Request) {
              .replace(/'/g, "&#039;");
     };
 
+    const safeCustomerName = escapeHtml(customer_name) || 'there';
+    const safeCartValue = escapeHtml(cart_value) || '';
     const safeTenantId = escapeHtml(tenantId) || 'demo';
     const safeStoreName = escapeHtml(storeName) || 'Our Store';
     const safeDiscountOffer = escapeHtml(discountOffer) || '10';
@@ -29,6 +31,8 @@ export async function POST(request: Request) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
+        customer_name: safeCustomerName,
+        cart_value: safeCartValue,
         tenant_id: safeTenantId,
         store_name: safeStoreName,
         discount_offer: safeDiscountOffer,
@@ -37,11 +41,12 @@ export async function POST(request: Request) {
     });
 
     if (!backendRes.ok) {
-      console.error(`Backend API error: ${backendRes.status} ${backendRes.statusText}`);
+      console.warn(`Backend API warn: ${backendRes.status} ${backendRes.statusText}`);
       // Fallback for demo purposes if backend is not available
       const branding = isPro ? '' : '\n\n⚡ Powered by OHC';
       return NextResponse.json({
-        draft: `Subject: We saved your cart!\n\nHi there,\n\nWe noticed you left some great items in your cart at ${safeStoreName}. We know life gets busy, so we've saved them for you.\n\nReady to complete your purchase? Click here to return to your cart and use code COMEBACK${safeDiscountOffer} for ${safeDiscountOffer}% off your entire order!\n\nBest,\nThe ${safeStoreName} Team${branding}`
+        message: `Subject: We saved your cart!\n\nHi ${safeCustomerName},\n\nWe noticed you left some great items in your cart${safeCartValue ? ` worth ${safeCartValue}` : ''} at ${safeStoreName}. We know life gets busy, so we've saved them for you.\n\nReady to complete your purchase? Click here to return to your cart and use code COMEBACK${safeDiscountOffer} for ${safeDiscountOffer}% off your entire order!\n\nBest,\nThe ${safeStoreName} Team${branding}`,
+        draft: `Subject: We saved your cart!\n\nHi ${safeCustomerName},\n\nWe noticed you left some great items in your cart${safeCartValue ? ` worth ${safeCartValue}` : ''} at ${safeStoreName}. We know life gets busy, so we've saved them for you.\n\nReady to complete your purchase? Click here to return to your cart and use code COMEBACK${safeDiscountOffer} for ${safeDiscountOffer}% off your entire order!\n\nBest,\nThe ${safeStoreName} Team${branding}`
       });
     }
 
@@ -49,10 +54,11 @@ export async function POST(request: Request) {
     return NextResponse.json(data);
 
   } catch (error) {
-    console.error("Error generating cart recovery draft:", error);
+    console.warn("Warn generating cart recovery draft:", error);
     // Fallback for demo purposes if network error
     return NextResponse.json(
         {
+          message: `Subject: We saved your cart!\n\nHi there,\n\nWe noticed you left some great items in your cart. We know life gets busy, so we've saved them for you.\n\nReady to complete your purchase? Click here to return to your cart and use code COMEBACK10 for 10% off your entire order!\n\nBest,\nThe Team\n\n⚡ Powered by OHC`,
           draft: `Subject: We saved your cart!\n\nHi there,\n\nWe noticed you left some great items in your cart. We know life gets busy, so we've saved them for you.\n\nReady to complete your purchase? Click here to return to your cart and use code COMEBACK10 for 10% off your entire order!\n\nBest,\nThe Team\n\n⚡ Powered by OHC`
         },
         { status: 200 } // Returning 200 with fallback so UI doesn't break during tests without backend

@@ -16,6 +16,7 @@ ALTER TABLE IF EXISTS bookings DISABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS agents DISABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS ohc_staff_member DISABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS users DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS business_milestones DISABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS tenants DISABLE ROW LEVEL SECURITY;
 
 INSERT INTO tenants (id, name, industry, tier)
@@ -27,6 +28,65 @@ SET name = EXCLUDED.name,
     industry = EXCLUDED.industry,
     tier = EXCLUDED.tier,
     updated_at = CURRENT_TIMESTAMP;
+
+-- Ensure RLS allows us to insert ledger data
+ALTER TABLE IF EXISTS ledger_accounts DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS ledger_transactions DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS ledger_entries DISABLE ROW LEVEL SECURITY;
+
+
+-- Seed Milestones
+INSERT INTO business_milestones (id, tenant_id, milestone_type, reached_at)
+VALUES ('m-1', 'e2e-tenant', '10th_order', CURRENT_TIMESTAMP)
+ON CONFLICT DO NOTHING;
+
+-- Seed Ledger Data
+
+INSERT INTO ledger_accounts (id, tenant_id, name, type, balance, currency, created_at, updated_at)
+VALUES ('acct-1', 'e2e-tenant', 'main', 'asset', 1500.00, 'USD', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+ON CONFLICT (id) DO UPDATE
+SET balance = EXCLUDED.balance,
+    updated_at = EXCLUDED.updated_at;
+
+INSERT INTO ledger_transactions (id, tenant_id, description, status, metadata, created_at, updated_at)
+VALUES ('txn-1', 'e2e-tenant', 'Initial deposit', 'completed', '{}', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+ON CONFLICT (id) DO UPDATE
+SET status = EXCLUDED.status,
+    updated_at = EXCLUDED.updated_at;
+
+INSERT INTO ledger_entries (id, tenant_id, transaction_id, account_id, amount, currency, direction, type, created_at)
+VALUES ('entry-1', 'e2e-tenant', 'txn-1', 'acct-1', 1500.00, 'USD', 'credit', 'payment', CURRENT_TIMESTAMP)
+ON CONFLICT (id) DO NOTHING;
+
+ALTER TABLE IF EXISTS ledger_accounts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS ledger_transactions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS ledger_entries ENABLE ROW LEVEL SECURITY;
+
+-- Ensure RLS allows us to insert ledger data
+ALTER TABLE IF EXISTS ledger_accounts DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS ledger_transactions DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS ledger_entries DISABLE ROW LEVEL SECURITY;
+
+-- Seed Ledger Data
+INSERT INTO ledger_accounts (id, tenant_id, name, type, balance, currency, created_at, updated_at)
+VALUES ('acct-1', 'e2e-tenant', 'main', 'asset', 1500.00, 'USD', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+ON CONFLICT (id) DO UPDATE
+SET balance = EXCLUDED.balance,
+    updated_at = EXCLUDED.updated_at;
+
+INSERT INTO ledger_transactions (id, tenant_id, description, status, metadata, created_at, updated_at)
+VALUES ('txn-1', 'e2e-tenant', 'Initial deposit', 'completed', '{}', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+ON CONFLICT (id) DO UPDATE
+SET status = EXCLUDED.status,
+    updated_at = EXCLUDED.updated_at;
+
+INSERT INTO ledger_entries (id, tenant_id, transaction_id, account_id, amount, currency, direction, type, created_at)
+VALUES ('entry-1', 'e2e-tenant', 'txn-1', 'acct-1', 1500.00, 'USD', 'credit', 'payment', CURRENT_TIMESTAMP)
+ON CONFLICT (id) DO NOTHING;
+
+ALTER TABLE IF EXISTS ledger_accounts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS ledger_transactions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS ledger_entries ENABLE ROW LEVEL SECURITY;
 
 INSERT INTO users (id, username, email, password_hash, roles, active, tenant_id, created_at, updated_at)
 VALUES
@@ -83,17 +143,34 @@ SET name = EXCLUDED.name,
     updated_at = CURRENT_TIMESTAMP;
 
 
+
+INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at)
+VALUES
+('e2e-feed-social', 'e2e-tenant', 'marketing', '{"feature_type": "social_post_draft", "tiktok": "Check out our new product!", "instagram": "New arrival! Link in bio.", "facebook": "We just added a new product to our store."}'::jsonb, '{}'::jsonb, 'PENDING_APPROVAL', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+ON CONFLICT (id) DO UPDATE
+SET lifecycle_state = EXCLUDED.lifecycle_state,
+    updated_at = CURRENT_TIMESTAMP;
+
 INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, payload, created_at, updated_at)
 VALUES
 ('e2e-approval-1', 'e2e-tenant', 'customer_success', 'Draft email for review', 'DRAFT', 'HIGH', '{"feature_type": "ambassador_reply", "original_message": "Do you have vegan options for birthday cakes?", "generated_response": "Yes, we have several vegan options for birthday cakes. We would love to help you plan your special day!"}'::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
 ,
-('e2e-approval-social', 'e2e-tenant', 'marketing', 'Generated 7-day social media plan for Vegan Celebration Cake', 'DRAFT', 'LOW', '{"feature_type": "social_calendar"}'::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+('e2e-approval-social', 'e2e-tenant', 'marketing', 'Generated 7-day social media plan for Vegan Celebration Cake', 'DRAFT', 'LOW', '{"feature_type": "social_post_draft"}'::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
 ('e2e-approval-cart', 'e2e-tenant', 'sales', 'Abandoned cart recovery: 10% discount for Sarah', 'DRAFT', 'HIGH', '{"feature_type": "abandoned_cart", "context": {"abandoned_carts_count": 3, "potential_revenue": 120.00}}'::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
 ('e2e-approval-review', 'e2e-tenant', 'customer_success', '3 customers haven''t reviewed their orders. Request reviews?', 'DRAFT', 'HIGH', '{"feature_type": "automated_review_request", "target": "recent_unreviewed_orders", "count": 3}'::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-('e2e-approval-pricing', 'e2e-tenant', 'business_advisory', 'Smart Price Suggestion: Vegan Celebration Cake', 'PENDING', 'HIGH', '{"context": {"smart_pricing": true, "product_id": "e2e-product-cake", "product_name": "Vegan Celebration Cake", "old_price": 39.99, "new_price": 45.00, "discount_amount": -5.01, "sales_projection": "+$150", "stagnant_days": 10, "margin_percent": 45}}'::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+('e2e-approval-pricing', 'e2e-tenant', 'business_advisory', 'Smart Price Suggestion: Vegan Celebration Cake', 'DRAFT', 'HIGH', '{"context": {"smart_pricing": true, "product_id": "e2e-product-cake", "product_name": "Vegan Celebration Cake", "old_price": 39.99, "new_price": 45.00, "discount_amount": -5.01, "sales_projection": "+$150", "stagnant_days": 10, "margin_percent": 45}}'::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+,('e2e-approval-quote-draft', 'e2e-tenant', 'sales', 'Draft Quote Ready: Fix leaking sink for John Doe', 'DRAFT', 'HIGH', '{"feature_type": "quote_draft", "customer_inquiry": "How much to fix a leaking sink? Here is a picture", "suggested_price": 150.0, "scope": "Fix leaking sink including labor and standard materials.", "suggested_time": "Tomorrow at 2 PM", "generated_response": "Based on our past projects, I can offer Fix leaking sink starting at 50.00. Should I send over the formal agreement?", "service": "Fix leaking sink", "price": 150.0}'::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+('app-mock-ab12-34f7-e43e-7264a9c4021d', 'e2e-tenant', 'Operations', 'Mark requested to reschedule his 4 PM lesson to 5 PM today. You have a conflict. Suggest tomorrow at 4 PM?', 'DRAFT', 'HIGH', '{"context":{"description": "Mark requested to reschedule his 4 PM lesson to 5 PM today. You have a conflict. Suggest tomorrow at 4 PM?"}}'::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+('app-mock-cd34-34f7-e43e-7264a9c4021d', 'e2e-tenant', 'Operations', 'Agent tentatively booked a roof repair estimate for Sarah on Tuesday 2 PM. Pending $50 deposit. No action needed.', 'DRAFT', 'HIGH', '{"context":{"description": "Agent tentatively booked a roof repair estimate for Sarah on Tuesday 2 PM. Pending $50 deposit. No action needed."}}'::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
 ON CONFLICT (id) DO UPDATE
 SET status = EXCLUDED.status,
     updated_at = CURRENT_TIMESTAMP;
+
+INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at)
+VALUES
+  ('app-mock-ab12-34f7-e43e-7264a9c4021d', 'e2e-tenant', 'Operations', '{"description": "Mark requested to reschedule his 4 PM lesson to 5 PM today. You have a conflict. Suggest tomorrow at 4 PM?"}', '{"context":{"description": "Mark requested to reschedule his 4 PM lesson to 5 PM today. You have a conflict. Suggest tomorrow at 4 PM?"}}', 'PENDING_APPROVAL', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+  ('app-mock-cd34-34f7-e43e-7264a9c4021d', 'e2e-tenant', 'Operations', '{"description": "Agent tentatively booked a roof repair estimate for Sarah on Tuesday 2 PM. Pending $50 deposit. No action needed."}', '{"context":{"description": "Agent tentatively booked a roof repair estimate for Sarah on Tuesday 2 PM. Pending $50 deposit. No action needed."}}', 'PENDING_APPROVAL', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO agents (id, tenant_id, name, role, status, provider_type, region)
 VALUES
@@ -185,6 +262,7 @@ ON CONFLICT DO NOTHING;
 
 ALTER TABLE IF EXISTS tenants ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS business_milestones ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS agents ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS ohc_staff_member ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS products ENABLE ROW LEVEL SECURITY;
@@ -202,6 +280,7 @@ ALTER TABLE IF EXISTS bookings ENABLE ROW LEVEL SECURITY;
 
 ALTER TABLE IF EXISTS tenants FORCE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS users FORCE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS business_milestones FORCE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS agents FORCE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS ohc_staff_member FORCE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS products FORCE ROW LEVEL SECURITY;
@@ -216,6 +295,12 @@ ALTER TABLE IF EXISTS customer360 FORCE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS loyalty_ledger FORCE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS ohc_fx_rates FORCE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS bookings FORCE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS ledger_accounts FORCE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS ledger_transactions FORCE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS ledger_entries FORCE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS ledger_accounts FORCE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS ledger_transactions FORCE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS ledger_entries FORCE ROW LEVEL SECURITY;
 
 ALTER TABLE IF EXISTS agent_actions ENABLE ROW LEVEL SECURITY;
 
@@ -266,3 +351,47 @@ ALTER TABLE IF EXISTS customer_timeline FORCE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS depletion_logs FORCE ROW LEVEL SECURITY;
 
 COMMIT;
+
+-- Triage seed data
+INSERT INTO triage_items (id, tenant_id, source, priority, context, status)
+VALUES
+  ('triage-test-1', 'e2e-tenant', 'Instagram DM', 'Urgent', 'Maya requested a custom cake for Friday', 'pending'),
+  ('triage-test-2', 'e2e-tenant', 'WhatsApp', 'Medium', 'Question about delivery times', 'pending')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO triage_proposed_actions (id, triage_item_id, tenant_id, action_type, payload)
+VALUES
+  ('action-test-1', 'triage-test-1', 'e2e-tenant', 'Draft Reply', 'Hi Maya! I can definitely help with the custom cake. It will be $50.'),
+  ('action-test-2', 'triage-test-2', 'e2e-tenant', 'Draft Reply', 'We deliver between 9 AM and 5 PM on weekdays.')
+ON CONFLICT (id) DO NOTHING;
+
+-- Seed 10th order milestone for e2e-tenant
+INSERT INTO business_milestones (id, tenant_id, milestone_type, reached_at)
+VALUES ('ms_e2e_10th_order', 'e2e-tenant', '10th_order', NOW())
+ON CONFLICT (id) DO NOTHING;
+-- Seed real data for Chaos Report
+INSERT INTO telemetry_buffer (tenant_id, metric_name, metric_type, value, labels_json, timestamp, sync_status) VALUES
+('test_org', 'api_latency', 'histogram', 12.0, '{}', CURRENT_TIMESTAMP, 'PENDING');
+INSERT INTO telemetry_buffer (tenant_id, metric_name, metric_type, value, labels_json, timestamp, sync_status) VALUES
+('test_org', 'api_latency', 'histogram', 22.5, '{}', CURRENT_TIMESTAMP, 'PENDING');
+INSERT INTO telemetry_buffer (tenant_id, metric_name, metric_type, value, labels_json, timestamp, sync_status) VALUES
+('test_org', 'api_latency', 'histogram', 35.0, '{}', CURRENT_TIMESTAMP, 'PENDING');
+INSERT INTO telemetry_buffer (tenant_id, metric_name, metric_type, value, labels_json, timestamp, sync_status) VALUES
+('test_org', 'api_latency', 'histogram', 65.0, '{}', CURRENT_TIMESTAMP, 'PENDING');
+INSERT INTO telemetry_buffer (tenant_id, metric_name, metric_type, value, labels_json, timestamp, sync_status) VALUES
+('test_org', 'api_latency', 'histogram', 150.0, '{}', CURRENT_TIMESTAMP, 'PENDING');
+INSERT INTO telemetry_buffer (tenant_id, metric_name, metric_type, value, labels_json, timestamp, sync_status) VALUES
+('test_org', 'api_latency', 'histogram', 400.0, '{}', CURRENT_TIMESTAMP, 'PENDING');
+INSERT INTO telemetry_buffer (tenant_id, metric_name, metric_type, value, labels_json, timestamp, sync_status) VALUES
+('test_org', 'api_latency', 'histogram', 850.0, '{}', CURRENT_TIMESTAMP, 'PENDING');
+
+INSERT INTO telemetry_buffer (tenant_id, metric_name, metric_type, value, labels_json, timestamp, sync_status) VALUES
+('test_org', 'error_rate', 'gauge', 0.012, '{}', CURRENT_TIMESTAMP, 'PENDING');
+INSERT INTO telemetry_buffer (tenant_id, metric_name, metric_type, value, labels_json, timestamp, sync_status) VALUES
+('test_org', 'error_rate', 'gauge', 0.021, '{}', CURRENT_TIMESTAMP, 'PENDING');
+INSERT INTO telemetry_buffer (tenant_id, metric_name, metric_type, value, labels_json, timestamp, sync_status) VALUES
+('test_org', 'error_rate', 'gauge', 0.038, '{}', CURRENT_TIMESTAMP, 'PENDING');
+INSERT INTO telemetry_buffer (tenant_id, metric_name, metric_type, value, labels_json, timestamp, sync_status) VALUES
+('test_org', 'error_rate', 'gauge', 0.025, '{}', CURRENT_TIMESTAMP, 'PENDING');
+INSERT INTO telemetry_buffer (tenant_id, metric_name, metric_type, value, labels_json, timestamp, sync_status) VALUES
+('test_org', 'error_rate', 'gauge', 0.008, '{}', CURRENT_TIMESTAMP, 'PENDING');

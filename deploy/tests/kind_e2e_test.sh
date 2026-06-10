@@ -208,7 +208,7 @@ wait_for_backend() {
     if curl -sf "${backend_url}/healthz" >/dev/null 2>&1; then
       return 0
     fi
-    (( attempt++ ))
+    attempt=$((attempt + 1))
     sleep 2
   done
   echo "error: backend did not become healthy after ${max_attempts} attempts" >&2
@@ -400,7 +400,7 @@ while (( pg_attempts < pg_max_attempts )); do
     log "PostgreSQL is ready!"
     break
   fi
-  (( ++pg_attempts ))
+  pg_attempts=$((pg_attempts + 1))
   sleep 2
 done
 if (( pg_attempts == pg_max_attempts )); then

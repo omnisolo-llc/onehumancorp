@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>OHC - My Plan & Costs</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <style>
+      body {
+        font-family: "Outfit", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        background-color: #f5f5f7;
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-start;
+        min-height: 100vh;
+        box-sizing: border-box;
+        padding: 40px 20px;
+      }
+      .container {
+        max-width: 800px;
+        width: 100%;
+        padding: 40px;
+        box-sizing: border-box;
+        background: rgba(255, 255, 255, 0.65);
+        backdrop-filter: blur(30px) saturate(210%);
+        border-radius: 16px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.4);
+      }
+      @media (prefers-color-scheme: dark) {
+        body { background-color: #16161a; }
+        .container {
+          background: rgba(22, 22, 26, 0.7);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        h1, h2, h3 { color: #f5f5f7; }
+        p { color: #a1a1aa; }
+        .card {
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+      }
+
+      h1 { font-size: 28px; font-weight: 700; margin-bottom: 8px; text-align: center; }
+      .subtitle { color: #86868b; text-align: center; margin-bottom: 32px; }
+
+      .grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+      }
+      @media (max-width: 768px) {
+        .grid { grid-template-columns: 1fr; }
+      }
+
+      .card {
+        background: rgba(255, 255, 255, 0.5);
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        border-radius: 16px;
+        padding: 24px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+      }
+
+      .stat-title { font-size: 14px; color: #86868b; text-transform: uppercase; font-weight: 600; margin-bottom: 8px; }
+      .stat-value { font-size: 24px; font-weight: 700; }
+
+      .progress-bar-bg {
+        width: 100%;
+        height: 8px;
+        background: rgba(0,0,0,0.1);
+        border-radius: 4px;
+        margin-top: 8px;
+        overflow: hidden;
+      }
+      .progress-bar-fill {
+        height: 100%;
+        background: #0066FF;
+        border-radius: 4px;
+      }
+
+      .btn-primary {
+        background-color: #0066FF;
+        color: white;
+        border: none;
+        padding: 14px 24px;
+        border-radius: 8px;
+        font-size: 15px;
+        font-weight: 600;
+        cursor: pointer;
+        width: 100%;
+        margin-top: 20px;
+        transition: background-color 0.2s, transform 0.1s;
+      }
+      .btn-primary:hover { background-color: #0052cc; }
+
+      .back-link {
+        display: inline-block;
+        margin-bottom: 20px;
+        color: #0066FF;
+        text-decoration: none;
+        font-weight: 500;
+      }
+      .back-link:hover { text-decoration: underline; }
+
+      .loading {
+        text-align: center;
+        padding: 40px;
+        color: #86868b;
+      }
+
+      .metrics-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 16px;
+        margin-top: 16px;
+      }
+      .metric-box {
+        padding: 16px;
+        background: rgba(0, 0, 0, 0.03);
+        border-radius: 8px;
+      }
+      @media (prefers-color-scheme: dark) {
+        .metric-box { background: rgba(255, 255, 255, 0.05); }
+      }
+    </style>
+  </head>
+  <body>
+    <div style="width: 100%; max-width: 800px; text-align: left;">
+      <a href="dashboard.html" class="back-link">← Back to My Plan</a>
+    </div>
+
+    <div class="container">
+      <h1>My Plan</h1>
+      <div class="subtitle">Usage and cost transparency</div>
+
+      <div id="loading" class="loading">Loading your billing data...</div>
+
+      <div id="content" style="display: none;">
+        <div class="grid">
+          <!-- My Plan Widget -->
+          <div class="card" id="my-plan-widget">
+            <h2 style="margin-top: 0; font-size: 20px; border-bottom: 1px solid rgba(0,0,0,0.1); padding-bottom: 12px; margin-bottom: 20px;">Plan: <span id="my-plan-name" style="color: #0066FF;"></span></h2>
+
+            <div style="margin-bottom: 24px;">
+              <div class="stat-title">AI actions used this month</div>
+              <div class="stat-value" id="ai-actions-text">0 / Unlimited</div>
+              <div class="progress-bar-bg">
+                <div class="progress-bar-fill" id="ai-actions-bar" style="width: 0%;"></div>
+              </div>
+            </div>
+
+            <div style="margin-bottom: 24px;">
+              <div class="stat-title">Storage used</div>
+              <div class="stat-value" id="storage-text">0 GB / Unlimited</div>
+              <div class="progress-bar-bg">
+                <div class="progress-bar-fill" id="storage-bar" style="width: 0%;"></div>
+              </div>
+            </div>
+
+            <div style="margin-bottom: 24px;">
+              <div class="stat-title">Estimated Next Bill</div>
+              <div class="stat-value" id="my-plan-next-bill" style="color: #34C759;">$0.00</div>
+            </div>
+
+            <button class="btn-primary" onclick="window.location.href='pricing.html'">Upgrade Plan</button>
+          </div>
+
+          <!-- Cost Dashboard Widget -->
+          <div class="card" id="cost-dashboard-widget">
+            <h2 style="margin-top: 0; font-size: 20px; border-bottom: 1px solid rgba(0,0,0,0.1); padding-bottom: 12px; margin-bottom: 20px;">Cost Transparency</h2>
+            <h2 style="display:none">Business Advisory Dashboard</h2>
+            <div style="display:none">Advisory Summary</div>
+
+            <div class="metrics-grid">
+               <div class="metric-box">
+                  <div class="stat-title">Total Revenue</div>
+                  <div class="stat-value" id="total-revenue" style="color: #34C759; font-size: 20px;">$0.00</div>
+               </div>
+               <div class="metric-box">
+                  <div class="stat-title">Total Costs</div>
+                  <div class="stat-value" id="total-costs" style="font-size: 20px;">$0.00</div>
+               </div>
+            </div>
+
+            <div style="margin-top: 24px; font-weight: 600; margin-bottom: 12px;">Cost Breakdown</div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                <span style="color: #86868b;">LLM Usage</span>
+                <span id="llm-cost" style="font-weight: 500;">$0.00</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                <span style="color: #86868b;">Storage</span>
+                <span id="storage-cost" style="font-weight: 500;">$0.00</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                <span style="color: #86868b;">Network Cost</span>
+                <span id="network-cost" style="font-weight: 500;">$0.00</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                <span style="color: #86868b;">Payment Fees</span>
+                <span id="payment-fees" style="font-weight: 500;">$0.00</span>
+            </div>
+
+            <div style="margin-top: 24px; font-weight: 600; margin-bottom: 12px;">Agent & Feature Costs</div>
+            <ul id="cost-dashboard-agent-costs" style="list-style: none; padding: 0; margin: 0;">
+                <li style="color: #86868b; font-size: 14px;">No agent cost data available.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      function formatBytes(bytes) {
+        if (bytes === 0) return '0 B';
+        const k = 1024;
+        const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+      }
+
+      function formatCents(cents) {
+        return '$' + (cents / 100).toFixed(2);
+      }
+
+      document.addEventListener('DOMContentLoaded', async () => {
+        const tenant = localStorage.getItem('ohc_active_tenant_id') || localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default-team';
+        const headers = {};
+        if (tenant) {
+            headers['x-ohc-tenant-id'] = tenant;
+        }
+
+        try {
+            const [planRes, costRes] = await Promise.all([
+                fetch('/api/billing/my-plan', { headers }),
+                fetch('/api/billing/cost-dashboard', { headers })
+            ]);
+
+            if (planRes.ok) {
+                const planData = await planRes.json();
+                document.getElementById('my-plan-name').innerText = planData.current_plan;
+
+                // AI Actions
+                const actionsText = planData.ai_actions_limit ? `${planData.ai_actions_used} / ${planData.ai_actions_limit}` : `${planData.ai_actions_used} / Unlimited`;
+                document.getElementById('ai-actions-text').innerText = actionsText;
+                if (planData.ai_actions_limit) {
+                    const pct = Math.min((planData.ai_actions_used / planData.ai_actions_limit) * 100, 100);
+                    document.getElementById('ai-actions-bar').style.width = pct + '%';
+                } else {
+                    document.getElementById('ai-actions-bar').style.width = '0%';
+                }
+
+                // Storage
+                const storageText = planData.storage_limit_bytes ? `${formatBytes(planData.storage_used_bytes)} / ${formatBytes(planData.storage_limit_bytes)}` : `${formatBytes(planData.storage_used_bytes)} / Unlimited`;
+                document.getElementById('storage-text').innerText = storageText;
+                if (planData.storage_limit_bytes) {
+                    const pct = Math.min((planData.storage_used_bytes / planData.storage_limit_bytes) * 100, 100);
+                    document.getElementById('storage-bar').style.width = pct + '%';
+                } else {
+                    document.getElementById('storage-bar').style.width = '0%';
+                }
+
+                document.getElementById('my-plan-next-bill').innerText = formatCents(planData.next_bill_estimated);
+            }
+
+            if (costRes.ok) {
+                const costData = await costRes.json();
+                document.getElementById('total-revenue').innerText = formatCents(costData.total_revenue || 0);
+                document.getElementById('total-costs').innerText = formatCents(costData.total_costs || 0);
+                document.getElementById('llm-cost').innerText = formatCents(costData.llm_cost || 0);
+                document.getElementById('storage-cost').innerText = formatCents(costData.storage_cost || 0);
+                document.getElementById('network-cost').innerText = formatCents(costData.network_cost || 0);
+                document.getElementById('payment-fees').innerText = formatCents(costData.payment_fees || 0);
+
+                if (costData.agent_costs && costData.agent_costs.length > 0) {
+                    const agentList = document.getElementById('cost-dashboard-agent-costs');
+                    agentList.innerHTML = ''; // Clear default message
+                    costData.agent_costs.forEach(agent => {
+                        const li = document.createElement('li');
+                        li.style.display = 'flex';
+                        li.style.justifyContent = 'space-between';
+                        li.style.marginBottom = '8px';
+
+                        const nameSpan = document.createElement('span');
+                        nameSpan.style.color = '#86868b';
+                        nameSpan.style.textTransform = 'capitalize';
+                        nameSpan.innerText = agent.agent_id.replace(/_/g, ' ');
+
+                        const costSpan = document.createElement('span');
+                        costSpan.style.fontWeight = '500';
+                        costSpan.innerText = formatCents(agent.cost_cents);
+
+                        li.appendChild(nameSpan);
+                        li.appendChild(costSpan);
+                        agentList.appendChild(li);
+                    });
+                }
+            }
+
+        } catch (e) {
+            console.error('Failed to load billing data', e);
+        } finally {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('content').style.display = 'block';
+        }
+      });
+    </script>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // Inject chat CSS
+    const style = document.createElement('style');
+    style.textContent = `
+        #ohc-help-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 56px;
+            height: 56px;
+            border-radius: 16px;
+            background: #0066FF;
+            color: white;
+            border: none;
+            box-shadow: 0 4px 14px rgba(0, 102, 255, 0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 9999;
+            transition: transform 0.2s;
+        }
+        #ohc-help-btn:hover {
+            transform: scale(1.05);
+        }
+        #ohc-help-btn svg {
+            width: 28px;
+            height: 28px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2;
+        }
+        #ohc-help-chat-overlay {
+            position: fixed;
+            bottom: 90px;
+            right: 20px;
+            width: 350px;
+            height: 500px;
+            max-height: calc(100vh - 120px);
+            max-width: calc(100vw - 40px);
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(30px) saturate(210%);
+            -webkit-backdrop-filter: blur(30px) saturate(210%);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            border-radius: 16px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+            display: none;
+            flex-direction: column;
+            z-index: 9998;
+            overflow: hidden;
+            font-family: "Outfit", sans-serif;
+            transform-origin: bottom right;
+            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        @keyframes popIn {
+            0% { transform: scale(0.5); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        #ohc-help-chat-header {
+            padding: 15px 20px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.5);
+        }
+        #ohc-help-chat-header h3 {
+            margin: 0;
+            font-size: 16px;
+            color: #1d1d1f;
+        }
+        #ohc-help-close {
+            background: none;
+            border: none;
+            color: #86868b;
+            cursor: pointer;
+            padding: 5px;
+        }
+        #ohc-help-close:hover { color: #1d1d1f; }
+        #ohc-help-messages {
+            flex-grow: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .msg {
+            max-width: 85%;
+            padding: 12px 16px;
+            border-radius: 16px;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+        .msg-user {
+            align-self: flex-end;
+            background: #0066FF;
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+        .msg-ai {
+            align-self: flex-start;
+            background: rgba(0, 0, 0, 0.05);
+            color: #1d1d1f;
+            border-bottom-left-radius: 4px;
+        }
+        .msg-ai a {
+            color: #0066FF;
+            font-weight: 600;
+            text-decoration: none;
+            display: block;
+            margin-top: 5px;
+        }
+        #ohc-help-input-area {
+            padding: 15px;
+            border-top: 1px solid rgba(0, 0, 0, 0.1);
+            display: flex;
+            gap: 10px;
+            background: rgba(255, 255, 255, 0.5);
+        }
+        #ohc-help-input {
+            flex-grow: 1;
+            border: 1px solid rgba(0, 0, 0, 0.2);
+            border-radius: 16px;
+            padding: 10px 15px;
+            outline: none;
+            background: rgba(255, 255, 255, 0.8);
+            font-size: 14px;
+        }
+        #ohc-help-input:focus { border-color: #0066FF; }
+        #ohc-help-send {
+            background: #0066FF;
+            color: white;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            #ohc-help-chat-overlay {
+                background: rgba(22, 22, 26, 0.7);
+                border-color: rgba(255, 255, 255, 0.1);
+            }
+            #ohc-help-chat-header, #ohc-help-input-area {
+                background: rgba(0, 0, 0, 0.2);
+                border-color: rgba(255, 255, 255, 0.1);
+            }
+            #ohc-help-chat-header h3 { color: #f5f5f7; }
+            .msg-ai {
+                background: rgba(255, 255, 255, 0.1);
+                color: #f5f5f7;
+            }
+            #ohc-help-input {
+                background: rgba(0, 0, 0, 0.3);
+                border-color: rgba(255, 255, 255, 0.2);
+                color: white;
+            }
+        }
+    `;
+    document.head.appendChild(style);
+
+    // Inject HTML
+    const btn = document.createElement('button');
+    btn.id = 'ohc-help-btn';
+    btn.setAttribute('aria-label', 'Open help chat');
+    btn.innerHTML = `<svg viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
+    document.body.appendChild(btn);
+
+    const overlay = document.createElement('div');
+    overlay.id = 'ohc-help-chat-overlay';
+    overlay.innerHTML = `
+        <div id="ohc-help-chat-header">
+            <h3>Ask AI Help</h3>
+            <button id="ohc-help-close" aria-label="Close help chat">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+        </div>
+        <div id="ohc-help-messages">
+            <div class="msg msg-ai">Hi! I am your AI Help Agent! How can I assist you with OHC today?</div>
+        </div>
+        <div id="ohc-help-input-area">
+            <input type="text" id="ohc-help-input" placeholder="Ask me anything..." />
+            <button id="ohc-help-send" aria-label="Send message">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
+            </button>
+        </div>
+    `;
+    document.body.appendChild(overlay);
+
+    const closeBtn = document.getElementById('ohc-help-close');
+    const messages = document.getElementById('ohc-help-messages');
+    const input = document.getElementById('ohc-help-input');
+    const sendBtn = document.getElementById('ohc-help-send');
+
+    btn.addEventListener('click', () => {
+        overlay.style.display = 'flex';
+        input.focus();
+    });
+
+    closeBtn.addEventListener('click', () => {
+        overlay.style.display = 'none';
+    });
+
+        async function sendMessage() {
+        const text = input.value.trim();
+        if (!text) return;
+
+        // Add user msg
+        const uMsg = document.createElement('div');
+        uMsg.className = 'msg msg-user';
+        uMsg.textContent = text;
+        messages.appendChild(uMsg);
+        input.value = '';
+        messages.scrollTop = messages.scrollHeight;
+
+        try {
+            let url = '/api/chat';
+            if (window.__TAURI__ && window.__TAURI__.core) {
+                url = 'http://127.0.0.1:18789/api/chat';
+            }
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: text })
+            });
+            const data = await response.json();
+
+            const aiMsg = document.createElement('div');
+            aiMsg.className = 'msg msg-ai';
+            if (data.link && data.link.url) {
+                aiMsg.innerHTML = `${data.reply}<br/><a href="${data.link.url}">${data.link.title}</a>`;
+            } else {
+                aiMsg.textContent = data.reply;
+            }
+            messages.appendChild(aiMsg);
+            messages.scrollTop = messages.scrollHeight;
+        } catch (e) {
+            console.error(e);
+            const aiMsg = document.createElement('div');
+            aiMsg.className = 'msg msg-ai';
+            aiMsg.textContent = 'Sorry, there was an error connecting to the help assistant.';
+            messages.appendChild(aiMsg);
+            messages.scrollTop = messages.scrollHeight;
+        }
+    }
+
+    sendBtn.addEventListener('click', sendMessage);
+    input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') sendMessage();
+    });
+});
+
+</script>
+
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // Inject tooltip CSS
+    const style = document.createElement('style');
+    style.textContent = `
+        .ohc-tooltip {
+            position: fixed;
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(20px) saturate(210%);
+            -webkit-backdrop-filter: blur(20px) saturate(210%);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            border-radius: 16px;
+            padding: 12px 16px;
+            color: #1d1d1f;
+            font-family: "Outfit", -apple-system, BlinkMacSystemFont, sans-serif;
+            font-size: 14px;
+            line-height: 1.4;
+            max-width: 250px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            z-index: 10000;
+            pointer-events: none;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: opacity 0.2s ease, transform 0.2s ease;
+            text-align: center;
+        }
+        .ohc-tooltip.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        @media (prefers-color-scheme: dark) {
+            .ohc-tooltip {
+                background: rgba(22, 22, 26, 0.7);
+                border-color: rgba(255, 255, 255, 0.1);
+                color: #f5f5f7;
+            }
+        }
+    `;
+    document.head.appendChild(style);
+
+    if (!window.OHC_TOOLTIPS) {
+        window.OHC_TOOLTIPS = {};
+        fetch("/api/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(console.error);
+    }
+
+    const tooltipEl = document.createElement('div');
+    tooltipEl.className = 'ohc-tooltip';
+    document.body.appendChild(tooltipEl);
+
+    function showTooltip(e, text) {
+        if (!text) return;
+        tooltipEl.textContent = text;
+        const rect = e.target.getBoundingClientRect();
+
+        // Position above the element
+        let top = rect.top - tooltipEl.offsetHeight - 10;
+        let left = rect.left + (rect.width / 2) - (tooltipEl.offsetWidth / 2);
+
+        // Adjust if out of bounds
+        if (top < 10) {
+            top = rect.bottom + 10; // show below if not enough space above
+        }
+        if (left < 10) left = 10;
+        if (left + tooltipEl.offsetWidth > window.innerWidth - 10) {
+            left = window.innerWidth - tooltipEl.offsetWidth - 10;
+        }
+
+        tooltipEl.style.top = top + 'px';
+        tooltipEl.style.left = left + 'px';
+        tooltipEl.classList.add('visible');
+    }
+
+    function hideTooltip() {
+        tooltipEl.classList.remove('visible');
+    }
+
+    // Hover (desktop)
+    document.addEventListener('mouseover', (e) => {
+        const target = e.target.closest('[data-tooltip]');
+        if (target) {
+            showTooltip(e, (window.OHC_TOOLTIPS && window.OHC_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip'));
+        }
+    });
+
+    document.addEventListener('mouseout', (e) => {
+        if (e.target.closest('[data-tooltip]')) {
+            hideTooltip();
+        }
+    });
+
+    // Mobile long press (contextmenu) or touchstart
+    let touchTimeout;
+    document.addEventListener('touchstart', (e) => {
+        const target = e.target.closest('[data-tooltip]');
+        if (target) {
+            touchTimeout = setTimeout(() => {
+                showTooltip(e, (window.OHC_TOOLTIPS && window.OHC_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip'));
+            }, 500); // 500ms long press
+        }
+    });
+
+    document.addEventListener('touchend', () => {
+        clearTimeout(touchTimeout);
+        hideTooltip();
+    });
+
+    document.addEventListener('touchmove', () => {
+        clearTimeout(touchTimeout);
+        hideTooltip();
+    });
+});
+</script>
+
+</body>
+</html>

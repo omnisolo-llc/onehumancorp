@@ -47,12 +47,14 @@ pub mod expert_team_tool;
 pub mod workflow;
 pub mod checkout;
 
+
 #[async_trait::async_trait]
 impl ToolExecutor for ohc_builtin_agent_core::code_native::CodeNativeAdapter {
     async fn execute(&self, args: Value) -> Result<String, ToolError> {
         self.execute_adapter(args).await
     }
 }
+
 
 /// A tool definition and executor — mirrors Go builtin.Tool.
 pub struct Tool {
@@ -101,7 +103,7 @@ pub type SharedMailbox = Arc<RwLock<sendmessage::Mailbox>>;
 /// Build the default set of all tools.
 pub fn all_tools(
     llm: Option<std::sync::Arc<dyn ohc_builtin_agent_core::expert_team::ExpertTeamLlmClient>>,
-    native_env: Option<Arc<RwLock<ohc_builtin_agent_core::code_native::RichExecutionEnvironment>>>,
+    native_env: Option<Arc<tokio::sync::RwLock<ohc_builtin_agent_core::code_native::RichExecutionEnvironment>>>,
     todos: SharedTodos,
     task_store: SharedTaskStore,
     mailbox: SharedMailbox,
@@ -128,6 +130,7 @@ pub fn all_tools(
         booking::booking_upsert_service_tool(booking_store.clone()),
         booking::booking_list_appointments_tool(booking_store.clone()),
         booking::booking_create_appointment_tool(booking_store.clone()),
+        booking::booking_negotiate_time_tool(booking_store.clone()),
         sendmessage::sendmessage_tool(mailbox.clone()),
         todowrite::todowrite_tool(todos.clone()),
         todowrite::todoread_tool(todos.clone()),
@@ -163,7 +166,8 @@ pub fn all_tools(
 
     if let Some(accessor) = memory_accessor {
         tools.push(anthropic_memory::topic_retrieve_tool(accessor.clone()));
-        tools.push(anthropic_memory::transcript_search_tool(accessor));
+        tools.push(anthropic_memory::transcript_search_tool(accessor.clone()));
+        tools.push(anthropic_memory::topic_write_tool(accessor));
     }
 
     tools

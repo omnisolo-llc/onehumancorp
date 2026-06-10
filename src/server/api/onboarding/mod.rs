@@ -33,24 +33,8 @@ async fn process_intake_handler(
     match agent.process_intake(&payload.description).await {
         Ok(data) => Ok(Json(data)),
         Err(error) => {
-            tracing::warn!("onboarding intake fallback used after agent error: {}", error);
-            Ok(Json(crate::services::onboarding::onboarding_agent::IntakeData {
-                business_name: {
-                    let desc = payload.description.trim();
-                    let char_count = desc.chars().count();
-                    if char_count > 30 {
-                        let truncated: String = desc.chars().take(27).collect();
-                        format!("{}...", truncated)
-                    } else {
-                        desc.to_string()
-                    }
-                },
-                business_type: "Local Business".to_string(),
-                categories: vec!["services".to_string()],
-                initial_products: Vec::new(),
-                location: None,
-                target_audience: None,
-            }))
+            tracing::error!("onboarding intake agent error: {}", error);
+            Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR)
         }
     }
 }
@@ -120,9 +104,20 @@ async fn get_state(
 ) -> Result<Json<serde_json::Value>, axum::http::StatusCode> {
     let tenant_id = auth_info.org_id.clone();
     let user_id = auth_info.agent_id.clone();
-    match agent.get_onboarding_state(&tenant_id, &user_id).await {
+
+    // Support X- headers if auth_info is empty (for setup phase)
+    let (tid, uid) = if tenant_id.is_empty() {
+        ("default".to_string(), "default".to_string())
+    } else {
+        (tenant_id, user_id)
+    };
+
+    match agent.get_onboarding_state(&tid, &uid).await {
         Ok(state) => Ok(Json(state)),
-        Err(_) => Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR),
+        Err(e) => {
+            tracing::error!("Failed to get onboarding state: {}", e);
+            Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR)
+        },
     }
 }
 
@@ -134,14 +129,23 @@ async fn save_state(
     let tenant_id = auth_info.org_id.clone();
     let user_id = auth_info.agent_id.clone();
 
+    let (tid, uid) = if tenant_id.is_empty() {
+        ("default".to_string(), "default".to_string())
+    } else {
+        (tenant_id, user_id)
+    };
+
     let step = payload.get("wizardState")
         .and_then(|w| w.get("step"))
         .or_else(|| payload.get("step"))
         .and_then(|s| s.as_i64())
         .unwrap_or(0) as i32;
 
-    match agent.save_onboarding_state(&tenant_id, &user_id, step, &payload).await {
+    match agent.save_onboarding_state(&tid, &uid, step, &payload).await {
         Ok(_) => Ok(axum::http::StatusCode::NO_CONTENT),
-        Err(_) => Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR),
+        Err(e) => {
+            tracing::error!("Failed to save onboarding state: {}", e);
+            Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR)
+        },
     }
 }

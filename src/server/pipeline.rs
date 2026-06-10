@@ -69,7 +69,7 @@ impl Orchestrator {
         
         let swe_agent_id = "swe-1".to_string();
         
-        let mut pipelines = self.pipelines.write().unwrap();
+        let mut pipelines = self.pipelines.write().expect("RwLock write lock should not be poisoned");
         pipelines.insert(event.branch.clone(), Pipeline {
             id: format!("pipeline-{}", event.branch),
             branch: event.branch.clone(),
@@ -80,7 +80,7 @@ impl Orchestrator {
         drop(pipelines);
         
         let task_msg = Message {
-            id: format!("msg-{}", Utc::now().timestamp_nanos_opt().unwrap()),
+            id: format!("msg-{}", Utc::now().timestamp_nanos_opt().unwrap_or(0)),
             from_agent: "system-hub".to_string(),
             to_agent: swe_agent_id,
             r#type: "task".to_string(),
@@ -95,7 +95,7 @@ impl Orchestrator {
     }
 
     pub fn get_pipeline_state(&self, branch: &str) -> Result<PipelineState, String> {
-        let pipelines = self.pipelines.read().unwrap();
+        let pipelines = self.pipelines.read().expect("RwLock read lock should not be poisoned");
         pipelines.get(branch).map(|p| p.state.clone()).ok_or_else(|| "pipeline not found".to_string())
     }
 

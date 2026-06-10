@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useTranslation, useCurrency } from '../../../lib/localizationStore';
 import { LocalizationToggle } from '../../../components/LocalizationToggle';
 import StripeTerminalClient from './StripeTerminalClient';
+import Link from 'next/link';
 
 // Offline storage helper for staff data
 const OfflineStore = {
@@ -28,6 +29,15 @@ const OfflineStore = {
   clearPosTransactions: () => localStorage.setItem('ohc_offline_pos_tx', '[]')
 };
 
+interface Product {
+  id: string;
+  name: string;
+  description: string;
+  price_cents: number;
+  currency: string;
+  stock: number;
+}
+
 export default function TerminalPage() {
   const { t } = useTranslation();
   const { currency, convert } = useCurrency();
@@ -40,8 +50,12 @@ export default function TerminalPage() {
   const [syncCount, setSyncCount] = useState(0);
   const [orderStatus, setOrderStatus] = useState('');
   const [reserving, setReserving] = useState(false);
+  const [inventory, setInventory] = useState<Product[]>([]);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [isOffline, setIsOffline] = useState(false);
 
   useEffect(() => {
+    const tenant = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default';
     if (navigator.onLine) {
       fetch('/api/staff')
         .then(res => res.json())
@@ -53,9 +67,17 @@ export default function TerminalPage() {
           }
         })
         .catch(console.error);
+
+      fetch(`/api/pos/inventory?tenant_id=${tenant}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data && data.inventory) {
+            setInventory(data.inventory);
+          }
+        })
+        .catch(console.error);
     }
   }, []);
-  const [isOffline, setIsOffline] = useState(false);
 
   // Network listener
   useEffect(() => {
@@ -85,34 +107,39 @@ export default function TerminalPage() {
           setSyncCount(events.length + posTransactions.length);
           setSyncing(true);
           try {
+            const syncTasks = [];
             if (events.length > 0) {
-              const res = await fetch('/api/staff/timecard', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(events)
-              });
-              if (res.ok) {
-                OfflineStore.clearEvents();
-              }
+              syncTasks.push(
+                fetch("/api/staff/timecard", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify(events)
+                }).then(res => { if (res.ok) OfflineStore.clearEvents(); })
+              );
             }
 
             if (posTransactions.length > 0) {
-              const sessionId = localStorage.getItem('ohc_active_terminal_session_id');
-              const res = await fetch('/api/pos/transactions/sync', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ session_id: sessionId, transactions: posTransactions })
-              });
-              if (res.ok) {
-                const data = await res.json();
-                if (data.failed_transaction_ids && data.failed_transaction_ids.length > 0) {
-                  const failedTxs = posTransactions.filter((tx: any) => data.failed_transaction_ids.includes(tx.client_id || tx.id));
-                  OfflineStore.setPosTransactions(failedTxs);
-                } else {
-                  OfflineStore.clearPosTransactions();
-                }
-              }
+              const sessionId = localStorage.getItem("ohc_active_terminal_session_id");
+              syncTasks.push(
+                fetch("/api/v1/payments/terminal/sync_offline", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ session_id: sessionId, transactions: posTransactions })
+                }).then(async (res) => {
+                  if (res.ok) {
+                    const data = await res.json();
+                    if (data.failed_transaction_ids && data.failed_transaction_ids.length > 0) {
+                      const failedTxs = posTransactions.filter((tx: any) => data.failed_transaction_ids.includes(tx.client_id || tx.id));
+                      OfflineStore.setPosTransactions(failedTxs);
+                    } else {
+                      OfflineStore.clearPosTransactions();
+                    }
+                  }
+                })
+              );
             }
+            await Promise.all(syncTasks);
+
           } catch (e) {
             console.error("Sync failed", e);
           } finally {
@@ -163,7 +190,7 @@ export default function TerminalPage() {
 
     const event = {
       staff_id: activeStaff.id,
-      tenant_id: 'default_tenant',
+      tenant_id: activeStaff.tenant_id || 'default_tenant',
       event_type: type,
       timestamp: new Date().toISOString(),
       sync_status: 'PENDING'
@@ -173,7 +200,7 @@ export default function TerminalPage() {
     setClockedIn(type === 'CLOCK_IN');
   };
 
-  const handleNewOrder = async () => {
+  const handleQuickCharge = async () => {
     const basePrice = 5000; // $50.00
     const converted = convert(basePrice, 'USD', currency);
     if (converted.isOffline) {
@@ -188,7 +215,7 @@ export default function TerminalPage() {
         id: `tx_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         amount_cents: converted.amount,
         currency: currency,
-        payload: JSON.stringify([{ product_id: 'prod_123', quantity: 1 }]),
+        payload: JSON.stringify([{ product_id: 'custom_charge', quantity: 1 }]),
         client_id: 'terminal_1',
         timestamp: new Date().toISOString()
       };
@@ -199,10 +226,10 @@ export default function TerminalPage() {
       setOrderStatus(t('Processing/Reserving...'));
 
       try {
-        const reserveRes = await fetch('/api/pos/terminal/reserve', {
+        const reserveRes = await fetch('/api/v1/payments/terminal/reserve', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ tenant_id: activeStaff?.tenant_id || "default_tenant", product_id: 'prod_123', quantity: 1, ttl_seconds: 15 })
+          body: JSON.stringify({ tenant_id: activeStaff?.tenant_id || "default_tenant", product_id: 'custom_charge', quantity: 1, ttl_seconds: 15 })
         });
 
         const reserveData = await reserveRes.json();
@@ -215,10 +242,16 @@ export default function TerminalPage() {
 
         setOrderStatus(`${t('New Order Total')}: ${converted.amount / 100} ${currency}`);
 
-        await fetch('/api/pos/terminal/commit', {
+        await fetch('/api/v1/payments/terminal/commit', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ tenant_id: activeStaff?.tenant_id || "default_tenant", product_id: 'prod_123', quantity: 1, lock_id: reserveData.lock_id })
+          body: JSON.stringify({
+             tenant_id: activeStaff?.tenant_id || "default_tenant",
+             product_id: 'custom_charge',
+             quantity: 1,
+             lock_id: reserveData.lock_id,
+             amount_cents: converted.amount
+          })
         });
         setOrderStatus(`${t('Payment Completed')}`);
       } catch (err) {
@@ -229,10 +262,21 @@ export default function TerminalPage() {
     }
   };
 
+  const handleSelectProduct = (product: Product) => {
+    setSelectedProduct(product);
+    setOrderStatus('');
+  };
+
   if (!activeStaff) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-900 font-inter">
-        <div className="w-[375px] h-[812px] bg-black text-white p-8 flex flex-col items-center relative overflow-hidden">
+      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-900 font-inter w-full overflow-hidden">
+        <div className="w-full max-w-[375px] min-h-[100dvh] md:h-[812px] md:min-h-0 bg-black text-white p-8 flex flex-col items-center relative overflow-x-hidden md:shadow-2xl">
+           <div className="absolute top-8 left-8">
+              <Link href="/dashboard" className="text-gray-400 hover:text-white flex items-center gap-1 text-sm">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+                {t('Dashboard')}
+              </Link>
+           </div>
            <div className="absolute top-8 right-8 flex items-center gap-4">
               {isOffline && <span className="text-red-500 font-bold text-xs bg-red-100/10 px-2 py-1 rounded">{t('Offline Mode')}</span>}
               <LocalizationToggle />
@@ -251,12 +295,12 @@ export default function TerminalPage() {
 
            {error && <p className="text-red-500 mb-4 animate-bounce">{error}</p>}
 
-           <div className="grid grid-cols-3 gap-6 w-full max-w-[280px]">
+           <div className="grid grid-cols-3 gap-4 sm:gap-6 w-full max-w-[280px]">
              {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => (
                <button
                  key={num}
                  onClick={() => handlePinEntry(num.toString())}
-                 className="w-20 h-20 rounded-full bg-gray-800 text-3xl font-light hover:bg-gray-700 active:bg-gray-600 transition-colors flex items-center justify-center"
+                 className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-gray-800 text-3xl font-light hover:bg-gray-700 active:bg-gray-600 transition-colors flex items-center justify-center mx-auto min-h-[44px] min-w-[44px]"
                >
                  {num}
                </button>
@@ -264,7 +308,7 @@ export default function TerminalPage() {
              <div className="col-start-2">
                <button
                  onClick={() => handlePinEntry('0')}
-                 className="w-20 h-20 rounded-full bg-gray-800 text-3xl font-light hover:bg-gray-700 active:bg-gray-600 transition-colors flex items-center justify-center"
+                 className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-gray-800 text-3xl font-light hover:bg-gray-700 active:bg-gray-600 transition-colors flex items-center justify-center mx-auto min-h-[44px] min-w-[44px]"
                >
                  0
                </button>
@@ -273,7 +317,7 @@ export default function TerminalPage() {
                <button
                  onClick={handleClear}
                  disabled={!pin}
-                 className="text-gray-400 hover:text-white disabled:opacity-40 disabled:hover:text-gray-400"
+                 className="text-gray-400 hover:text-white disabled:opacity-40 disabled:hover:text-gray-400 min-h-[44px] min-w-[44px]"
                >
                  {t('Clear')}
                </button>
@@ -287,8 +331,8 @@ export default function TerminalPage() {
   }
 
   return (
-     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 font-inter py-10">
-      <div className="w-[375px] h-[812px] bg-white shadow-2xl overflow-hidden flex flex-col relative border-x border-gray-200">
+     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 font-inter md:py-10 w-full overflow-hidden">
+      <div className="w-full max-w-[375px] min-h-[100dvh] md:h-[812px] md:min-h-0 bg-white md:shadow-2xl overflow-hidden flex flex-col relative border-x border-gray-200">
 
         {/* Header */}
         <div className="pt-12 pb-6 px-6 bg-white/65 backdrop-blur-[30px] border-b border-gray-200 sticky top-0 z-10 flex justify-between items-center">
@@ -342,40 +386,61 @@ export default function TerminalPage() {
              )}
            </div>
 
-           {/* Role-based UI rendering */}
+           {/* Quick Actions */}
            <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4 px-2 mt-8">{t('Quick Actions')}</h3>
-
-           <div className="grid grid-cols-2 gap-4">
+           <div className="grid grid-cols-2 gap-4 mb-8">
              <button
-                onClick={handleNewOrder}
+                onClick={handleQuickCharge}
                 disabled={reserving}
                 className={`bg-white p-4 rounded-2xl shadow-sm border border-gray-100 text-left ${reserving ? 'opacity-50' : 'active:scale-[0.98]'}`}
              >
                <div className="text-blue-500 mb-2">
-                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                </div>
-               <span className="font-medium text-gray-900">{t('New Order')}</span>
+               <span className="font-medium text-gray-900">{t('Quick Charge $50')}</span>
              </button>
-
-             {activeStaff.role === 'Manager' && (
-               <button className="app-card p-4 rounded-2xl shadow-sm border border-gray-100 text-left active:scale-[0.98]">
-                 <div className="text-purple-500 mb-2">
-                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
-                 </div>
-                 <span className="font-medium text-gray-900">{t('Reports')}</span>
-               </button>
-             )}
 
              <button className="app-card p-4 rounded-2xl shadow-sm border border-gray-100 text-left active:scale-[0.98]">
                <div className="text-orange-500 mb-2">
-                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 15v-1a4 4 0 00-4-4H8m0 0l3 3m-3-3l3-3m9 14V5a2 2 0 00-2-2H6a2 2 0 00-2 2v16l4-2 4 2 4-2 4 2z" /></svg>
                </div>
                <span className="font-medium text-gray-900">{t('Refunds')}</span>
              </button>
            </div>
 
-           <StripeTerminalClient amount={activeStaff?.id ? 5000 : 0} productId="prod_123" tenantId={activeStaff?.tenant_id || "default_tenant"} />
-           {orderStatus && <p className="mt-4 rounded-xl bg-blue-50 px-4 py-3 text-sm font-semibold text-blue-800" role="status">{orderStatus}</p>}
+           {/* Catalog Selection */}
+           <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4 px-2 mt-8">{t('Product Catalog')}</h3>
+           <div className="grid grid-cols-1 gap-3 mb-8">
+              {inventory.length === 0 ? (
+                <p className="text-center text-gray-500 py-4 italic">{t('No products found in catalog')}</p>
+              ) : inventory.map(product => (
+                <button
+                  key={product.id}
+                  onClick={() => handleSelectProduct(product)}
+                  className={`bg-white p-4 rounded-2xl shadow-sm border text-left transition-all ${selectedProduct?.id === product.id ? 'border-blue-500 ring-2 ring-blue-500/20' : 'border-gray-100'} active:scale-[0.98] min-h-[64px]`}
+                >
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <div className="font-bold text-gray-900">{product.name}</div>
+                      <div className="text-xs text-gray-500 line-clamp-1">{product.description}</div>
+                    </div>
+                    <div className="text-blue-600 font-bold">
+                      ${(product.price_cents / 100).toFixed(2)}
+                    </div>
+                  </div>
+                </button>
+              ))}
+           </div>
+
+           {selectedProduct && (
+             <StripeTerminalClient
+                amount={selectedProduct.price_cents}
+                productId={selectedProduct.id}
+                tenantId={activeStaff?.tenant_id || "default_tenant"}
+             />
+           )}
+
+           {orderStatus && <p className="mt-4 rounded-xl bg-blue-50 px-4 py-3 text-sm font-semibold text-blue-800 animate-in fade-in slide-in-from-top-2" role="status">{orderStatus}</p>}
         </div>
 
         {syncing && (

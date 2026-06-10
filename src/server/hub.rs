@@ -729,7 +729,7 @@ impl Hub {
         let local_to_cloud_sync_queue = sync_queue_res.unwrap_or(0);
         let sync_error_count = sync_errors_res.unwrap_or(0);
 
-        let mode = if std::env::var("OHC_STANDALONE_MODE").unwrap_or_default() == "true" {
+        let mode = if std::env::var("OHC_STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true" {
             "standalone"
         } else {
             "cloud"
@@ -837,7 +837,7 @@ mod tests {
             return;
         }
         let db_url = std::env::var("OHC_DATABASE_URL").unwrap();
-        let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+        let pool = sqlx::postgres::PgPoolOptions::new()
             .acquire_timeout(std::time::Duration::from_millis(50))
             .connect_lazy(&db_url)
             .unwrap();
@@ -867,7 +867,7 @@ mod tests {
             return;
         }
         let db_url = std::env::var("OHC_DATABASE_URL").unwrap();
-        let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+        let pool = sqlx::postgres::PgPoolOptions::new()
             .acquire_timeout(std::time::Duration::from_millis(50))
             .connect_lazy(&db_url)
             .unwrap();
@@ -933,7 +933,7 @@ mod tests {
         }
 
         let db_url = std::env::var("OHC_DATABASE_URL").unwrap();
-        let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+        let pool = sqlx::postgres::PgPoolOptions::new()
             .acquire_timeout(std::time::Duration::from_millis(50))
             .connect_lazy(&db_url)
             .unwrap();
@@ -957,7 +957,7 @@ mod tests {
         }
 
         let db_url = std::env::var("OHC_DATABASE_URL").unwrap();
-        let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+        let pool = sqlx::postgres::PgPoolOptions::new()
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; Ok(true) }) })
             .acquire_timeout(std::time::Duration::from_millis(50))
             .connect_lazy(&db_url)
@@ -994,7 +994,7 @@ mod tests {
 
         let db_url = std::env::var("OHC_DATABASE_URL").unwrap();
         let pool = sqlx::postgres::PgPoolOptions::new()
-            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+
             .acquire_timeout(std::time::Duration::from_millis(50))
             .connect_lazy(&db_url)
             .unwrap();
@@ -1079,7 +1079,7 @@ mod tests {
 
         let db_url = std::env::var("OHC_DATABASE_URL").unwrap();
         // Since test db is likely unmigrated/empty, we connect lazily
-        let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+        let pool = sqlx::postgres::PgPoolOptions::new()
             .acquire_timeout(std::time::Duration::from_millis(50))
             .connect_lazy(&db_url)
             .unwrap();

@@ -1077,17 +1077,37 @@ pub async fn buffer_metric_i64(
     let redacted_labels = redact_interface_pii(labels);
     let labels_json = serde_json::to_string(&redacted_labels)?;
 
-    query(
-        "INSERT INTO telemetry_buffer (metric_name, metric_type, value, labels_json, timestamp, sync_status)
-         VALUES ($1, $2, $3, $4, $5, 'pending')"
-    )
-    .bind(metric_name)
-    .bind(metric_type)
-    .bind(value as f64)
-    .bind(labels_json)
-    .bind(Utc::now())
-    .execute(pool)
-    .await?;
+    let tenant_id = redacted_labels.get("tenant_id")
+        .or_else(|| redacted_labels.get("organization_id"))
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string());
+
+    if let Some(tenant_id) = tenant_id {
+        query(
+            "INSERT INTO telemetry_buffer (metric_name, metric_type, value, labels_json, timestamp, sync_status, tenant_id)
+             VALUES ($1, $2, $3, $4, $5, 'pending', $6)"
+        )
+        .bind(metric_name)
+        .bind(metric_type)
+        .bind(value as f64)
+        .bind(labels_json)
+        .bind(Utc::now())
+        .bind(tenant_id)
+        .execute(pool)
+        .await?;
+    } else {
+        query(
+            "INSERT INTO telemetry_buffer (metric_name, metric_type, value, labels_json, timestamp, sync_status)
+             VALUES ($1, $2, $3, $4, $5, 'pending')"
+        )
+        .bind(metric_name)
+        .bind(metric_type)
+        .bind(value as f64)
+        .bind(labels_json)
+        .bind(Utc::now())
+        .execute(pool)
+        .await?;
+    }
 
     Ok(())
 }
@@ -1109,17 +1129,37 @@ pub async fn buffer_metric(
     let redacted_labels = redact_interface_pii(labels);
     let labels_json = serde_json::to_string(&redacted_labels)?;
 
-    query(
-        "INSERT INTO telemetry_buffer (metric_name, metric_type, value, labels_json, timestamp, sync_status)
-         VALUES ($1, $2, $3, $4, $5, 'pending')"
-    )
-    .bind(metric_name)
-    .bind(metric_type)
-    .bind(value)
-    .bind(labels_json)
-    .bind(Utc::now())
-    .execute(pool)
-    .await?;
+    let tenant_id = redacted_labels.get("tenant_id")
+        .or_else(|| redacted_labels.get("organization_id"))
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string());
+
+    if let Some(tenant_id) = tenant_id {
+        query(
+            "INSERT INTO telemetry_buffer (metric_name, metric_type, value, labels_json, timestamp, sync_status, tenant_id)
+             VALUES ($1, $2, $3, $4, $5, 'pending', $6)"
+        )
+        .bind(metric_name)
+        .bind(metric_type)
+        .bind(value)
+        .bind(labels_json)
+        .bind(Utc::now())
+        .bind(tenant_id)
+        .execute(pool)
+        .await?;
+    } else {
+        query(
+            "INSERT INTO telemetry_buffer (metric_name, metric_type, value, labels_json, timestamp, sync_status)
+             VALUES ($1, $2, $3, $4, $5, 'pending')"
+        )
+        .bind(metric_name)
+        .bind(metric_type)
+        .bind(value)
+        .bind(labels_json)
+        .bind(Utc::now())
+        .execute(pool)
+        .await?;
+    }
 
     Ok(())
 }
@@ -1272,8 +1312,8 @@ pub async fn record_storage_rw_cost(
     operation: &str,
     size_bytes: i64,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let cost_cents = (size_bytes as f64 * 0.00000001) as f32;
-    buffer_metric(
+    let cost_cents = (size_bytes as f64 * 0.00000001).round() as i64;
+    buffer_metric_i64(
         pool,
         "ohc_storage_rw_cost",
         "counter",
@@ -1281,6 +1321,7 @@ pub async fn record_storage_rw_cost(
         serde_json::json!({
             "organization_id": organization_id,
             "operation": operation,
+            "cost_cents": cost_cents,
         }),
     )
     .await
@@ -1291,13 +1332,15 @@ pub async fn record_email_send_cost(
     organization_id: &str,
     count: i64,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    buffer_metric(
+    let cost_cents = count * 1; // Assuming 1 cent per email
+    buffer_metric_i64(
         pool,
         "ohc_email_send_cost",
         "counter",
-        count as f32,
+        cost_cents,
         serde_json::json!({
             "organization_id": organization_id,
+            "cost_cents": cost_cents,
         }),
     )
     .await

@@ -1,0 +1,32 @@
+import { NextResponse } from 'next/server';
+
+export async function POST(req: Request) {
+  try {
+    const backendUrl = process.env.BACKEND_URL || 'http://localhost:3000';
+    const body = await req.json();
+
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+
+    const authHeader = req.headers.get('Authorization');
+    if (authHeader) {
+      headers['Authorization'] = authHeader;
+    }
+
+    const res = await fetch(`${backendUrl}/api/billing/create-checkout-session`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(body),
+    });
+
+    const data = await res.json();
+    return NextResponse.json(data, { status: res.status });
+  } catch (error) {
+    console.warn('Warn proxying to backend:', error);
+    return NextResponse.json(
+      { message: 'Internal Server Error' },
+      { status: 500 }
+    );
+  }
+}

@@ -10,7 +10,7 @@ import { InteractiveWalkthrough, Step } from './Walkthrough';
 // --- Walkthrough System ---
 
 type HelpArticle = { title: string; desc: string; link?: string };
-type HelpVideo = { id: number; title: string; duration: string };
+type HelpVideo = { id: number; title: string; duration: string; video_url?: string; };
 type HelpTab = "center" | "chat" | "videos" | "whatsnew";
 type ChatMessage = { id: string; role: "bot" | "user"; text: string; linkUrl?: string; linkTitle?: string };
 
@@ -122,7 +122,7 @@ export function WalkthroughProvider({ children }: { children: ReactNode }) {
       {children}
       {steps.length > 0 && (
         <InteractiveWalkthrough
-          steps={steps.map(s => ({ targetId: s.targetId, title: "Quick Guide", content: s.content, position: "top" }))}
+          steps={steps.map(s => ({ targetId: s.targetId, title: "Activate your AI Support Agent", content: s.content, position: "top" }))}
           isOpen={steps.length > 0}
           onClose={endWalkthrough}
           onComplete={endWalkthrough}
@@ -149,6 +149,15 @@ export function HelpWidget() {
   ]);
   const [chatInput, setChatInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+
+  useEffect(() => {
+    const handleOpenHelpChat = () => {
+      setOpen(true);
+      setTab("chat");
+    };
+    window.addEventListener('open-help-chat', handleOpenHelpChat);
+    return () => window.removeEventListener('open-help-chat', handleOpenHelpChat);
+  }, []);
   const nextMessageId = useRef(1);
 
   const [helpArticles, setHelpArticles] = useState<HelpArticle[]>([]);
@@ -264,7 +273,7 @@ export function HelpWidget() {
                   <button onClick={() => { setOpen(false); startWalkthrough([{ targetId: "checkout-pay-now-tooltip", title: "Connect Stripe", content: "Click here to connect Stripe and start accepting payments." }])}} className="w-full text-left bg-blue-50/80 backdrop-blur-[20px] saturate-200 p-4 rounded-2xl shadow-sm border border-blue-100 hover:bg-blue-100/90 hover:shadow-md transition-all min-h-[44px]">
                     <span className="font-bold font-outfit text-blue-800 text-base block">Tour: Accept your first payment</span>
                   </button>
-                  <button onClick={() => { setOpen(false); startWalkthrough([{ targetId: "generate-btn-tooltip", title: "Activate AI", content: "Activate your AI agent." }])}} className="w-full text-left bg-blue-50/80 backdrop-blur-[20px] saturate-200 p-4 rounded-2xl shadow-sm border border-blue-100 hover:bg-blue-100/90 hover:shadow-md transition-all min-h-[44px]">
+                  <button onClick={() => { setOpen(false); startWalkthrough([{ targetId: "help-widget-container", title: "Activate your AI Support Agent", content: "Activate your AI agent." }])}} className="w-full text-left bg-blue-50/80 backdrop-blur-[20px] saturate-200 p-4 rounded-2xl shadow-sm border border-blue-100 hover:bg-blue-100/90 hover:shadow-md transition-all min-h-[44px]">
                     <span className="font-bold font-outfit text-blue-800 text-base block">Tour: Activate your AI Support Agent</span>
                   </button>
                   <button onClick={() => { setOpen(false); startWalkthrough([{ targetId: "help-widget-container", title: "Virtual Meeting Room", content: "Agents join the Virtual Meeting Room to debate and plan before executing tasks." }, { targetId: "help-widget-container", title: "UltraPlan Protocol", content: "Phase 1: Brainstorming. Phase 2: Refinement. Phase 3: Consensus (UltraPlan protocol)." }])}} className="w-full text-left bg-blue-50/80 backdrop-blur-[20px] saturate-200 p-4 rounded-2xl shadow-sm border border-blue-100 hover:bg-blue-100/90 hover:shadow-md transition-all min-h-[44px]">

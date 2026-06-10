@@ -5,13 +5,13 @@ use tonic::{Request, Response, Status};
 use uuid::Uuid;
 
 pub struct MyInventorySyncService {
-    db: Arc<crate::db::DB>,
+    _db: Arc<crate::db::DB>,
     redis_client: Option<redis::Client>,
 }
 
 impl MyInventorySyncService {
     pub fn new(db: Arc<crate::db::DB>, redis_client: Option<redis::Client>) -> Self {
-        Self { db, redis_client }
+        Self { _db: db, redis_client }
     }
 }
 
@@ -127,33 +127,29 @@ impl InventorySyncService for MyInventorySyncService {
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
 
-        let current_stock = sqlx::query("SELECT inventory_count FROM products WHERE id = $1 AND tenant_id = $2 FOR UPDATE")
+        let update_result: Option<i32> = sqlx::query_scalar("UPDATE products SET inventory_count = inventory_count - $1 WHERE id = $2 AND tenant_id = $3 AND inventory_count >= $1 RETURNING inventory_count")
+            .bind(req.quantity)
             .bind(&req.product_id)
             .bind(&tenant_id)
             .fetch_optional(&mut *tx)
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
 
-        if let Some(row) = current_stock {
-            let stock: i32 = sqlx::Row::get(&row, "inventory_count");
+        if let Some(new_stock) = update_result {
 
-            if stock < req.quantity {
-                let _ = tx.rollback().await;
-                return Ok(Response::new(CommitInventoryResponse {
-                    success: false,
-                    error_message: format!("Insufficient inventory. Available: {}", stock),
-                }));
-            }
+            let event_id = Uuid::new_v4().to_string();
+            let event_payload = serde_json::json!({
+                "product_id": req.product_id,
+                "quantity_deducted": req.quantity,
+                "remaining_stock": new_stock
+            }).to_string();
 
-            let new_stock = stock - req.quantity;
-
-            sqlx::query("UPDATE products SET inventory_count = $1 WHERE id = $2 AND tenant_id = $3")
-                .bind(new_stock)
-                .bind(&req.product_id)
+            let _ = sqlx::query("INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status) VALUES ($1, $2, 'operations', 'InventoryUpdated', $3::jsonb, 'PENDING')")
+                .bind(event_id)
                 .bind(&tenant_id)
+                .bind(&event_payload)
                 .execute(&mut *tx)
-                .await
-                .map_err(|e| Status::internal(e.to_string()))?;
+                .await;
 
             let payload_str = serde_json::json!({
                 "product_id": req.product_id,
@@ -186,13 +182,43 @@ impl InventorySyncService for MyInventorySyncService {
                     .execute(&mut *tx)
                     .await
                     .map_err(|e| Status::internal(e.to_string()))?;
+
+                let action_request_id = Uuid::new_v4().to_string();
+                let action_payload = serde_json::json!({
+                    "product_id": req.product_id,
+                    "remaining_stock": new_stock,
+                    "suggested_action": "Restock Item"
+                }).to_string();
+                sqlx::query("INSERT INTO agent_action_requests (id, tenant_id, action_type, status, confidence_score, product_id, payload, created_at, updated_at) VALUES ($1, $2, 'Reorder', 'Pending', 0.95, $3, $4::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
+                    .bind(&action_request_id)
+                    .bind(&tenant_id)
+                    .bind(&req.product_id)
+                    .bind(&action_payload)
+                    .execute(&mut *tx)
+                    .await
+                    .map_err(|e| Status::internal(e.to_string()))?;
             }
         } else {
+            let current_stock: Option<i32> = sqlx::query_scalar("SELECT inventory_count FROM products WHERE id = $1 AND tenant_id = $2")
+                .bind(&req.product_id)
+                .bind(&tenant_id)
+                .fetch_optional(&mut *tx)
+                .await
+                .map_err(|e| Status::internal(e.to_string()))?;
+
             let _ = tx.rollback().await;
-            return Ok(Response::new(CommitInventoryResponse {
-                success: false,
-                error_message: "Product not found".to_string(),
-            }));
+
+            if let Some(stock) = current_stock {
+                return Ok(Response::new(CommitInventoryResponse {
+                    success: false,
+                    error_message: format!("Insufficient inventory. Available: {}", stock),
+                }));
+            } else {
+                return Ok(Response::new(CommitInventoryResponse {
+                    success: false,
+                    error_message: "Product not found".to_string(),
+                }));
+            }
         }
 
         tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;

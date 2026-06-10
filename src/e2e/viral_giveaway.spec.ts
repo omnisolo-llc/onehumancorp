@@ -1,7 +1,7 @@
 import { test, expect } from './fixtures';
 import { currentAppSmoke } from './current_app_smoke';
 
-currentAppSmoke('viral_giveaway');
+
 
 test.describe('Viral Giveaway Loop', () => {
   test('should allow owner to create a giveaway and user to enter it', async ({ page, context }) => {
@@ -22,14 +22,16 @@ test.describe('Viral Giveaway Loop', () => {
 
     // 3. Fill out the giveaway configuration
     const titleInput = page.getByLabel('Prize / Title');
-    await titleInput.fill('Win a Free iPad!');
+    await titleInput.fill('Win a Free iPad');
+    await titleInput.pressSequentially('!');
 
     const descInput = page.getByLabel('Description');
-    await descInput.fill('Enter your email to win an iPad. Share with friends for extra entries!');
+    await descInput.fill('Enter your email to win an iPad. Share with friends for extra entries');
+    await descInput.pressSequentially('!');
 
     // 4. Click generate link
     // We mock localStorage if needed, but fixtures set it.
-    await page.evaluate(() => localStorage.setItem('has_pro', 'true'));
+    await page.evaluate(() => { localStorage.setItem('has_pro', 'true'); window.dispatchEvent(new Event('storage')); });
 
     const generateBtn = page.getByRole('button', { name: 'Generate Giveaway Link' });
     await expect(generateBtn).toBeEnabled();

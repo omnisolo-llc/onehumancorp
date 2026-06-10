@@ -39,6 +39,14 @@ vi.mock('next/navigation', () => ({
 }));
 
 test('renders dashboard with actionable feed', async () => {
+  global.fetch = vi.fn(() => Promise.resolve({
+    ok: true,
+    json: () => Promise.resolve({})
+  })) as any;
+  global.fetch = vi.fn(() => Promise.resolve({
+    ok: true,
+    json: () => Promise.resolve({})
+  })) as any;
   const { act } = await import('@testing-library/react');
   await act(async () => {
     render(<TooltipProvider><Dashboard /></TooltipProvider>);
@@ -54,4 +62,5 @@ test('renders dashboard with actionable feed', async () => {
   expect(screen.getByText("Inbox Activity")).toBeDefined();
   expect(screen.getByRole("link", { name: /Campaign Orchestration/i })).toHaveAttribute("href", "/dashboard/campaigns");
   expect(screen.getByText("Pro Plan ROI Calculator")).toBeDefined();
+  expect(screen.getByText("Open WorkBuddy Assistant")).toBeDefined();
 });

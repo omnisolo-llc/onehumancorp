@@ -1,0 +1,50 @@
+--- src/ui/next/src/app/agent-audit-dashboard/page.test.tsx
++++ src/ui/next/src/app/agent-audit-dashboard/page.test.tsx
+@@ -1,26 +1,40 @@
+ import React from 'react';
+ import { render, screen } from '@testing-library/react';
+ import '@testing-library/jest-dom';
+ import AgentAuditDashboard from './page';
++import { vi } from 'vitest';
+
+ describe('Agent Audit Dashboard', () => {
+-  it('renders Agent Audit Dashboard heading', () => {
++  beforeEach(() => {
++    global.fetch = vi.fn(() =>
++      Promise.resolve({
++        ok: true,
++        json: () => Promise.resolve({ entries: [] }),
++      })
++    ) as any;
++  });
++
++  afterEach(() => {
++    vi.restoreAllMocks();
++  });
++
++  it('renders Agent Audit Dashboard heading', async () => {
+     render(<AgentAuditDashboard />);
+-    expect(screen.getByRole('heading', { name: 'Agent Audit Dashboard' })).toBeInTheDocument();
++    expect(await screen.findByRole('heading', { name: 'Agent Audit Dashboard' })).toBeInTheDocument();
+   });
+
+-  it('renders Cost Tracker', () => {
++  it('renders Cost Tracker', async () => {
+     render(<AgentAuditDashboard />);
+-    expect(screen.getByText('Cost Tracker')).toBeInTheDocument();
++    expect(await screen.findByText('Cost Tracker')).toBeInTheDocument();
+   });
+
+-  it('renders Operations', () => {
++  it('renders Operations', async () => {
+     render(<AgentAuditDashboard />);
+-    expect(screen.getByText('Operations')).toBeInTheDocument();
++    expect(await screen.findByText('Operations')).toBeInTheDocument();
+   });
+
+-  it('renders Marketing & Advertising', () => {
++  it('renders Marketing & Advertising', async () => {
+     render(<AgentAuditDashboard />);
+-    expect(screen.getByText('Marketing & Advertising')).toBeInTheDocument();
++    expect(await screen.findByText('Marketing & Advertising')).toBeInTheDocument();
+   });

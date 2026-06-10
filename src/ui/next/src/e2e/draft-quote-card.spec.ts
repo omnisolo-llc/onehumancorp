@@ -14,10 +14,10 @@ test.describe('Draft Quote Action Card CUJ', () => {
     await page.goto('/team');
 
     // Switch to Sales department
-    await page.getByText('Sales').click();
+    await page.getByText('The Salesperson').click();
 
     // 3. Verify the Draft Quote Suggestion card is visible
-    await expect(page.getByTestId('draft-quote-card').first()).toBeVisible();
+    await expect(page.getByTestId('quote-draft-card').first()).toBeVisible();
 
     // 4. Verify card contents
     await expect(page.getByText('Draft Quote: Plumbing Fix for Customer')).toBeVisible();
@@ -29,6 +29,6 @@ test.describe('Draft Quote Action Card CUJ', () => {
     await approveBtn.click();
 
     // 6. Optimistic UI update should remove the card from the feed
-    await expect(page.getByTestId('draft-quote-card')).toHaveCount(0);
+    await expect(page.getByTestId('quote-draft-card')).toHaveCount(0);
   });
 });

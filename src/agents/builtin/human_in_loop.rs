@@ -1,4 +1,6 @@
-use ohc_builtin_agent_core::types::{ToolCall, ToolError, HumanInLoopSpectrum, PermissionArchitecture};
+use ohc_builtin_agent_core::types::{
+    HumanInLoopSpectrum, PermissionArchitecture, ToolCall, ToolError,
+};
 
 /// HumanInLoopManager implements the SOTA Harness Patterns (2025-2026): 5. Human-in-loop as spectrum -> not binary autonomy vs control.
 pub struct HumanInLoopManager;
@@ -17,7 +19,8 @@ impl HumanInLoopManager {
         approved_tool_calls: &[String],
         manually_approved_tool_calls: &[String],
     ) -> Result<(), ToolError> {
-        let is_approved = approved_tool_calls.contains(&tc.id) || manually_approved_tool_calls.contains(&tc.id);
+        let is_approved =
+            approved_tool_calls.contains(&tc.id) || manually_approved_tool_calls.contains(&tc.id);
 
         if is_approved {
             return Ok(());
@@ -70,8 +73,10 @@ impl HumanInLoopManager {
                     )))
                 } else {
                     // Fall back to autonomous if confidence is sufficient, but also check the base permission architecture
-                    if permission_architecture == &PermissionArchitecture::Restrictive && !is_read_only {
-                         Err(ToolError::UserFixable(format!(
+                    if permission_architecture == &PermissionArchitecture::Restrictive
+                        && !is_read_only
+                    {
+                        Err(ToolError::UserFixable(format!(
                             "Mutating tool '{}' requires human approval due to restrictive base architecture.",
                             tc.name
                         )))
@@ -181,6 +186,61 @@ mod tests {
             &[],
         );
         assert!(matches!(result, Err(ToolError::UserFixable(_))));
+    }
+
+    #[test]
+    fn test_approval_on_mutate_read_only() {
+        let tc = create_tool_call("read_file");
+        let result = HumanInLoopManager::evaluate_escalation_tier(
+            &tc,
+            true, // is_read_only
+            false,
+            &HumanInLoopSpectrum::ApprovalOnMutate,
+            1.0,
+            0.5,
+            &PermissionArchitecture::Permissive,
+            &[],
+            &[],
+        );
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_manually_approved_tool_calls_bypass_escalation() {
+        let tc = create_tool_call("delete_database");
+        let mut manually_approved_calls = Vec::new();
+        manually_approved_calls.push("test_id".to_string());
+
+        let result = HumanInLoopManager::evaluate_escalation_tier(
+            &tc,
+            false,
+            true,
+            &HumanInLoopSpectrum::Autonomous,
+            1.0,
+            0.5,
+            &PermissionArchitecture::Permissive,
+            &[],
+            &manually_approved_calls,
+        );
+
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_supervisory_mode_autonomous_fallback() {
+        let tc = create_tool_call("read_file");
+        let result = HumanInLoopManager::evaluate_escalation_tier(
+            &tc,
+            false, // is_read_only = false
+            false, // is_high_risk = false
+            &HumanInLoopSpectrum::Supervisory,
+            0.9, // high confidence
+            0.5, // low threshold
+            &PermissionArchitecture::Permissive, // NOT Restrictive -> fallback to Autonomous OK
+            &[],
+            &[],
+        );
+        assert!(result.is_ok());
     }
 
     #[test]

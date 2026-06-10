@@ -18,15 +18,15 @@ export default function ApiDocsPage() {
         setSpec(data);
         setLoading(false);
       })
-      .catch(err => {
+      .catch((err) => {
         console.error("Failed to load api-docs spec", err);
         setLoading(false);
       });
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#F5F5F7]/80 p-8 backdrop-blur-[20px] saturate-200 font-inter">
-      <div className="bg-yellow-50/80 backdrop-blur-[20px] saturate-200 border-l-4 border-yellow-400 p-4 mb-8 rounded-r-xl shadow-sm font-inter">
+    <div className="min-h-screen bg-[#F5F5F7]/80 p-8 backdrop-blur-[30px] saturate-[210%] font-inter">
+      <div className="bg-yellow-50/80 backdrop-blur-[30px] saturate-[210%] border-l-4 border-yellow-400 p-4 mb-8 rounded-r-xl shadow-sm font-inter">
         <div className="text-yellow-700 text-sm">
           <WithTooltip id="api-docs-tooltip" defaultText="Direct API access is only for custom integrations.">
             <span className="font-outfit cursor-help font-bold">Advanced:</span>
@@ -39,7 +39,7 @@ export default function ApiDocsPage() {
         </div>
       )}
       {mounted && !loading && spec && (
-        <div className="app-card backdrop-blur-[20px] saturate-200 p-6 rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.05)] border border-white/40">
+        <div className="glassmorphism p-6 shadow-[0_8px_32px_rgba(0,0,0,0.05)]">
           <SwaggerUI spec={spec} />
         </div>
       )}

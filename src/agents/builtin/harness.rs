@@ -1,10 +1,10 @@
-#![allow(dead_code)]
 
+
+use ::server_harness::sandbox::{SandboxAdapter, SandboxManager};
 use async_trait::async_trait;
-use serde::{Serialize, Deserialize};
-use std::sync::Arc;
+use serde::{Deserialize, Serialize};
 use sqlx::Row;
-use ::server_harness::sandbox::{SandboxManager, SandboxAdapter};
+use std::sync::Arc;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct Policy {
@@ -36,11 +36,16 @@ pub struct Config {
 
 #[async_trait]
 pub trait IsolationStrategy: Send + Sync {
-    async fn run_in_isolation(&self, command: &str, agent_type: &str, worktree: &str, transport: Option<Arc<dyn crate::provider::Transport>>) -> Result<(), String>;
+    async fn run_in_isolation(
+        &self,
+        command: &str,
+        agent_type: &str,
+        worktree: &str,
+        transport: Option<Arc<dyn crate::provider::Transport>>,
+    ) -> Result<(), String>;
 }
 
-pub struct ProcessIsolationStrategy {
-}
+pub struct ProcessIsolationStrategy {}
 
 pub struct AssistantClassIsolationStrategy {}
 
@@ -52,8 +57,18 @@ impl AssistantClassIsolationStrategy {
 
 #[async_trait]
 impl IsolationStrategy for AssistantClassIsolationStrategy {
-    async fn run_in_isolation(&self, command: &str, agent_type: &str, worktree: &str, transport: Option<Arc<dyn crate::provider::Transport>>) -> Result<(), String> {
-        let isolation_sandbox_id = format!("sandbox-{}-{}", agent_type, chrono::Utc::now().timestamp_nanos_opt().unwrap_or(0));
+    async fn run_in_isolation(
+        &self,
+        command: &str,
+        agent_type: &str,
+        worktree: &str,
+        transport: Option<Arc<dyn crate::provider::Transport>>,
+    ) -> Result<(), String> {
+        let isolation_sandbox_id = format!(
+            "sandbox-{}-{}",
+            agent_type,
+            chrono::Utc::now().timestamp_nanos_opt().unwrap_or(0)
+        );
         let task_id = "unknown_task";
 
         ::server_telemetry::record_bubblewrap_spawn(agent_type, task_id);
@@ -133,9 +148,10 @@ impl IsolationStrategy for AssistantClassIsolationStrategy {
             }
         });
 
-        let status = child.wait().await.map_err(|e| {
-            format!("Failed to wait on child: {}", e)
-        })?;
+        let status = child
+            .wait()
+            .await
+            .map_err(|e| format!("Failed to wait on child: {}", e))?;
 
         let _ = stdout_handle.await;
         let _ = stderr_handle.await;
@@ -146,7 +162,11 @@ impl IsolationStrategy for AssistantClassIsolationStrategy {
         ::server_telemetry::record_bubblewrap_execution_latency(agent_type, task_id, latency);
 
         if exit_code == 13 || exit_code == 126 {
-            ::server_telemetry::record_bubblewrap_violation(agent_type, task_id, "permission_denied");
+            ::server_telemetry::record_bubblewrap_violation(
+                agent_type,
+                task_id,
+                "permission_denied",
+            );
         }
 
         let end_msg = serde_json::json!({
@@ -169,14 +189,24 @@ impl IsolationStrategy for AssistantClassIsolationStrategy {
 
 impl ProcessIsolationStrategy {
     pub fn new() -> Self {
-        ProcessIsolationStrategy { }
+        ProcessIsolationStrategy {}
     }
 }
 
 #[async_trait]
 impl IsolationStrategy for ProcessIsolationStrategy {
-    async fn run_in_isolation(&self, command: &str, agent_type: &str, worktree: &str, transport: Option<Arc<dyn crate::provider::Transport>>) -> Result<(), String> {
-        let isolation_sandbox_id = format!("sandbox-{}-{}", agent_type, chrono::Utc::now().timestamp_nanos_opt().unwrap_or(0));
+    async fn run_in_isolation(
+        &self,
+        command: &str,
+        agent_type: &str,
+        worktree: &str,
+        transport: Option<Arc<dyn crate::provider::Transport>>,
+    ) -> Result<(), String> {
+        let isolation_sandbox_id = format!(
+            "sandbox-{}-{}",
+            agent_type,
+            chrono::Utc::now().timestamp_nanos_opt().unwrap_or(0)
+        );
 
         let status_msg = serde_json::json!({
             "agent":    agent_type,
@@ -252,7 +282,10 @@ impl IsolationStrategy for ProcessIsolationStrategy {
             }
         });
 
-        let status = child.wait().await.map_err(|e| format!("Failed to wait on child: {}", e))?;
+        let status = child
+            .wait()
+            .await
+            .map_err(|e| format!("Failed to wait on child: {}", e))?;
         let _ = stdout_handle.await;
         let _ = stderr_handle.await;
 
@@ -277,6 +310,7 @@ impl IsolationStrategy for ProcessIsolationStrategy {
 use std::sync::Mutex;
 use tree_sitter::{Node, Parser};
 
+#[allow(dead_code)]
 pub struct ASTValidator {
     parser: Mutex<Parser>,
     blocked_commands: Vec<String>,
@@ -305,7 +339,9 @@ impl ASTValidator {
         }
 
         let mut parser = self.parser.lock().unwrap();
-        let tree = parser.parse(command, None).ok_or("Failed to parse command")?;
+        let tree = parser
+            .parse(command, None)
+            .ok_or("Failed to parse command")?;
         let root_node = tree.root_node();
         self.walk_node_for_security(root_node, command)
     }
@@ -332,13 +368,21 @@ impl ASTValidator {
                     }
                     if kind == "string" || kind == "raw_string" || kind == "word" {
                         let text = &source[child.start_byte()..child.end_byte()];
-                        if text.contains("$(") || text.contains("`") || text.contains("${") || text.contains("$[") {
+                        if text.contains("$(")
+                            || text.contains("`")
+                            || text.contains("${")
+                            || text.contains("$[")
+                        {
                             has_expansion = true;
                         }
                     }
                 }
 
-                if name.contains("$(") || name.contains("`") || name.contains("${") || name.contains("$[") {
+                if name.contains("$(")
+                    || name.contains("`")
+                    || name.contains("${")
+                    || name.contains("$[")
+                {
                     has_expansion = true;
                 }
 
@@ -383,21 +427,24 @@ impl LocalBackend {
     }
 
     pub fn is_bwrap_available(&self) -> bool {
-        static BWRAP_AVAILABLE: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
-        static BWRAP_CHECKED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+        static BWRAP_AVAILABLE: std::sync::atomic::AtomicBool =
+            std::sync::atomic::AtomicBool::new(false);
+        static BWRAP_CHECKED: std::sync::atomic::AtomicBool =
+            std::sync::atomic::AtomicBool::new(false);
 
         if !BWRAP_CHECKED.load(std::sync::atomic::Ordering::Relaxed) {
-            let is_available = if std::env::var("TEST_WORKSPACE").is_ok() || std::env::var("BAZEL_TEST").is_ok() {
-                false
-            } else {
-                std::process::Command::new("bwrap")
-                    .arg("--version")
-                    .stdout(std::process::Stdio::null())
-                    .stderr(std::process::Stdio::null())
-                    .status()
-                    .map(|s| s.success())
-                    .unwrap_or(false)
-            };
+            let is_available =
+                if std::env::var("TEST_WORKSPACE").is_ok() || std::env::var("BAZEL_TEST").is_ok() {
+                    false
+                } else {
+                    std::process::Command::new("bwrap")
+                        .arg("--version")
+                        .stdout(std::process::Stdio::null())
+                        .stderr(std::process::Stdio::null())
+                        .status()
+                        .map(|s| s.success())
+                        .unwrap_or(false)
+                };
             BWRAP_AVAILABLE.store(is_available, std::sync::atomic::Ordering::Relaxed);
             BWRAP_CHECKED.store(true, std::sync::atomic::Ordering::Relaxed);
         }
@@ -410,9 +457,12 @@ impl LocalBackend {
             "--unshare-uts".to_string(),
             "--unshare-ipc".to_string(),
             "--unshare-cgroup".to_string(),
-            "--proc".to_string(), "/proc".to_string(),
-            "--dev".to_string(), "/dev".to_string(),
-            "--tmpfs".to_string(), "/tmp".to_string(),
+            "--proc".to_string(),
+            "/proc".to_string(),
+            "--dev".to_string(),
+            "/dev".to_string(),
+            "--tmpfs".to_string(),
+            "/tmp".to_string(),
         ];
 
         if !policy.allow_network {
@@ -480,7 +530,6 @@ impl LocalBackend {
 
         args
     }
-
 }
 
 #[async_trait]
@@ -501,11 +550,19 @@ impl HarnessBackend for LocalBackend {
                 .map_err(|e| format!("failed to execute bwrap: {}", e))?;
 
             let latency = start_time.elapsed().as_secs_f64() * 1000.0;
-            ::server_telemetry::record_bubblewrap_execution_latency("local_agent", "local_task", latency);
+            ::server_telemetry::record_bubblewrap_execution_latency(
+                "local_agent",
+                "local_task",
+                latency,
+            );
 
             let exit_code = output.status.code().unwrap_or(-1);
             if exit_code != 0 {
-                ::server_telemetry::record_bubblewrap_violation("local_agent", "local_task", &format!("exit code: {}", exit_code));
+                ::server_telemetry::record_bubblewrap_violation(
+                    "local_agent",
+                    "local_task",
+                    &format!("exit code: {}", exit_code),
+                );
             }
 
             Ok(ResultModel {
@@ -659,6 +716,7 @@ pub enum BackendType {
 
 pub struct Manager {
     config: Config,
+    #[allow(dead_code)]
     validator: Arc<ASTValidator>,
     local_backend: Arc<dyn HarnessBackend>,
     docker_backend: Arc<dyn HarnessBackend>,
@@ -692,7 +750,12 @@ impl Manager {
         }
     }
 
-    pub async fn execute_with_policy(&self, command: &str, policy: Option<&Policy>, backend_type: BackendType) -> Result<ResultModel, String> {
+    pub async fn execute_with_policy(
+        &self,
+        command: &str,
+        policy: Option<&Policy>,
+        backend_type: BackendType,
+    ) -> Result<ResultModel, String> {
         let policy = policy.unwrap_or(&self.config.default_policy);
         match backend_type {
             BackendType::Local => self.local_backend.execute(command, policy).await,
@@ -701,7 +764,9 @@ impl Manager {
             BackendType::Singularity => self.singularity_backend.execute(command, policy).await,
             BackendType::Modal => self.modal_backend.execute(command, policy).await,
             BackendType::Daytona => self.daytona_backend.execute(command, policy).await,
-            BackendType::VercelSandbox => self.vercel_sandbox_backend.execute(command, policy).await,
+            BackendType::VercelSandbox => {
+                self.vercel_sandbox_backend.execute(command, policy).await
+            }
         }
     }
 }
@@ -785,25 +850,33 @@ mod tests {
     #[test]
     fn test_ast_validator() {
         let validator = ASTValidator::new();
-        
+
         assert!(validator.validate("ls -l").is_ok());
         assert!(validator.validate("echo hello").is_ok());
         assert!(validator.validate("cat file.txt | grep foo").is_ok());
-        
+
         let err = validator.validate("sudo rm -rf /").unwrap_err();
         assert_eq!(err, "sudo is not allowed");
-        
+
         let err = validator.validate("su root").unwrap_err();
         assert_eq!(err, "su is not allowed");
 
         let err = validator.validate("zmodload zsh/clone").unwrap_err();
         assert_eq!(err, "zmodload is not allowed");
 
-        let err = validator.validate("$(echo \"su\"$(echo \"do\")) ls").unwrap_err();
-        assert_eq!(err, "dynamic command names (subshells/expansions) are not allowed for security reasons");
+        let err = validator
+            .validate("$(echo \"su\"$(echo \"do\")) ls")
+            .unwrap_err();
+        assert_eq!(
+            err,
+            "dynamic command names (subshells/expansions) are not allowed for security reasons"
+        );
 
         let err = validator.validate("`echo sudo` ls").unwrap_err();
-        assert_eq!(err, "dynamic command names (subshells/expansions) are not allowed for security reasons");
+        assert_eq!(
+            err,
+            "dynamic command names (subshells/expansions) are not allowed for security reasons"
+        );
 
         let err = validator.validate("$(sudo ls)").unwrap_err();
         assert!(err.contains("not allowed"));
@@ -831,9 +904,9 @@ mod tests {
             allow_read: vec![],
             deny_write: vec![],
         };
-        
+
         let args = runner.get_bwrap_args("ls", &policy);
-        
+
         assert!(args.contains(&"--unshare-net".to_string()));
         assert!(args.contains(&"/home/user".to_string()));
         assert!(args.contains(&"/etc".to_string()));
@@ -882,33 +955,69 @@ mod tests {
         let manager = Manager::new(config);
         let command = "echo routing_test";
 
-        let local_res = manager.execute_with_policy(command, None, BackendType::Local).await.unwrap();
+        let local_res = manager
+            .execute_with_policy(command, None, BackendType::Local)
+            .await
+            .unwrap();
         // Since bwrap is not guaranteed to be available in tests, it might be a simulated output.
         // We will just check it executes without error.
         assert!(local_res.exit_code == 0 || local_res.exit_code == -1);
 
-        let docker_res = manager.execute_with_policy(command, None, BackendType::Docker).await.unwrap();
-        assert_eq!(docker_res.stdout, format!("Mock Docker Execution: {}", command));
+        let docker_res = manager
+            .execute_with_policy(command, None, BackendType::Docker)
+            .await
+            .unwrap();
+        assert_eq!(
+            docker_res.stdout,
+            format!("Mock Docker Execution: {}", command)
+        );
         assert_eq!(docker_res.exit_code, 0);
 
-        let ssh_res = manager.execute_with_policy(command, None, BackendType::Ssh).await.unwrap();
+        let ssh_res = manager
+            .execute_with_policy(command, None, BackendType::Ssh)
+            .await
+            .unwrap();
         assert_eq!(ssh_res.stdout, format!("Mock SSH Execution: {}", command));
         assert_eq!(ssh_res.exit_code, 0);
 
-        let sing_res = manager.execute_with_policy(command, None, BackendType::Singularity).await.unwrap();
-        assert_eq!(sing_res.stdout, format!("Mock Singularity Execution: {}", command));
+        let sing_res = manager
+            .execute_with_policy(command, None, BackendType::Singularity)
+            .await
+            .unwrap();
+        assert_eq!(
+            sing_res.stdout,
+            format!("Mock Singularity Execution: {}", command)
+        );
         assert_eq!(sing_res.exit_code, 0);
 
-        let modal_res = manager.execute_with_policy(command, None, BackendType::Modal).await.unwrap();
-        assert_eq!(modal_res.stdout, format!("Mock Modal Execution: {}", command));
+        let modal_res = manager
+            .execute_with_policy(command, None, BackendType::Modal)
+            .await
+            .unwrap();
+        assert_eq!(
+            modal_res.stdout,
+            format!("Mock Modal Execution: {}", command)
+        );
         assert_eq!(modal_res.exit_code, 0);
 
-        let daytona_res = manager.execute_with_policy(command, None, BackendType::Daytona).await.unwrap();
-        assert_eq!(daytona_res.stdout, format!("Mock Daytona Execution: {}", command));
+        let daytona_res = manager
+            .execute_with_policy(command, None, BackendType::Daytona)
+            .await
+            .unwrap();
+        assert_eq!(
+            daytona_res.stdout,
+            format!("Mock Daytona Execution: {}", command)
+        );
         assert_eq!(daytona_res.exit_code, 0);
 
-        let vercel_res = manager.execute_with_policy(command, None, BackendType::VercelSandbox).await.unwrap();
-        assert_eq!(vercel_res.stdout, format!("Mock VercelSandbox Execution: {}", command));
+        let vercel_res = manager
+            .execute_with_policy(command, None, BackendType::VercelSandbox)
+            .await
+            .unwrap();
+        assert_eq!(
+            vercel_res.stdout,
+            format!("Mock VercelSandbox Execution: {}", command)
+        );
         assert_eq!(vercel_res.exit_code, 0);
     }
 }

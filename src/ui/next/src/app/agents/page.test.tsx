@@ -34,6 +34,9 @@ beforeEach(() => {
     if (url.includes('/api/agents/approvals')) {
       return Promise.resolve({ ok: true, json: async () => ({ pending_approvals: [], next_cursor: null }) });
     }
+    if (url.includes('/api/v1/memory')) {
+      return Promise.resolve({ ok: true, json: async () => ([]) });
+    }
     if (url.includes('/api/agents/hire')) {
       return Promise.resolve({
         ok: true,
@@ -118,9 +121,10 @@ test('shows result inspection and extension surfaces from Workbuddy', async () =
   expect(screen.getByText('Scheduled Tasks')).toBeDefined();
   expect(screen.getByText('Weekly business review')).toBeDefined();
 
-  fireEvent.click(screen.getByRole('button', { name: 'Memory' }));
-  expect(screen.getByText('Conversation Memory')).toBeDefined();
-  expect(screen.getByText('Import from ChatGPT or Claude')).toBeDefined();
+  await act(async () => {
+    fireEvent.click(screen.getByRole('button', { name: 'Memory' }));
+  });
+  await waitFor(() => expect(screen.getByText('Consolidated Memory')).toBeDefined());
 });
 
 test('covers every Workbuddy efficient-tip feature surface', async () => {
@@ -161,10 +165,10 @@ test('covers every Workbuddy efficient-tip feature surface', async () => {
   expect(screen.getByText('Execution history')).toBeDefined();
   expect(screen.getByText('Push notification')).toBeDefined();
 
-  fireEvent.click(screen.getByRole('button', { name: 'Memory' }));
-  expect(screen.getByText('Nightly summary')).toBeDefined();
-  expect(screen.getByText('Edit memory')).toBeDefined();
-  expect(screen.getByText('Forget selected')).toBeDefined();
+  await act(async () => {
+    fireEvent.click(screen.getByRole('button', { name: 'Memory' }));
+  });
+  await waitFor(() => expect(screen.getByText('Consolidated Memory')).toBeDefined());
 
   fireEvent.click(screen.getByRole('button', { name: 'Results' }));
   expect(screen.getAllByText('Share result').length).toBeGreaterThan(0);

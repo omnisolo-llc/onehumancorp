@@ -221,7 +221,16 @@ pub struct ChangelogSection {
 pub fn get_changelog_data() -> Vec<ChangelogSection> {
     vec![
         ChangelogSection {
-            version: "Version 1.0 (Latest)".to_string(),
+            version: "Version 1.1 (Latest)".to_string(),
+            screenshot_url: None,
+            content_lines: vec![
+                "### 🌟 New Features".to_string(),
+                "- **Help Center:** Fully searchable help center with video tutorials and articles.".to_string(),
+                "- **Contextual Tooltips:** Added plain language tooltips across the app to guide you.".to_string(),
+            ]
+        },
+        ChangelogSection {
+            version: "Version 1.0".to_string(),
             screenshot_url: Some("/dashboard_with_charts.png".to_string()),
             content_lines: vec![
                 "### 🌟 New Features".to_string(),
@@ -295,6 +304,167 @@ pub async fn get_api_docs_spec() -> Json<serde_json::Value> {
                                     "schema": {
                                         "type": "object",
                                         "additionalProperties": { "type": "string" }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "/api/v1/catalog/product": {
+                "post": {
+                    "summary": "Create a Product",
+                    "description": "Creates a new product or service in the catalog.",
+                    "tags": ["Catalog"],
+                    "requestBody": {
+                        "required": true,
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "name": { "type": "string", "example": "Vegan Birthday Cake" },
+                                        "price": { "type": "string", "example": "45.00" },
+                                        "duration": { "type": "integer", "example": 60 },
+                                        "description": { "type": "string", "example": "Delicious plant-based cake." },
+                                        "item_type": { "type": "string", "example": "physical" },
+                                        "is_subscription": { "type": "boolean", "example": false },
+                                        "subscription_interval": { "type": "string", "example": "month" },
+                                        "subscription_discount": { "type": "integer", "example": 10 }
+                                    },
+                                    "required": ["name", "price", "description", "item_type"]
+                                }
+                            }
+                        }
+                    },
+                    "responses": {
+                        "200": {
+                            "description": "Success",
+                            "content": {
+                                "application/json": {
+                                    "schema": {
+                                        "type": "object",
+                                        "properties": {
+                                            "success": { "type": "boolean" },
+                                            "message": { "type": "string" }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "/api/v1/builder/generate": {
+                "post": {
+                    "summary": "Generate a Storefront",
+                    "description": "Generates a new storefront draft using AI.",
+                    "tags": ["Builder"],
+                    "requestBody": {
+                        "required": true,
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "description": { "type": "string", "example": "A boutique pet bakery" }
+                                    },
+                                    "required": ["description"]
+                                }
+                            }
+                        }
+                    },
+                    "responses": {
+                        "200": {
+                            "description": "Success",
+                            "content": {
+                                "application/json": {
+                                    "schema": {
+                                        "type": "object",
+                                        "properties": {
+                                            "domain": { "type": "string", "nullable": true },
+                                            "theme": { "type": "string" },
+                                            "pages": { "type": "array", "items": { "type": "object" } },
+                                            "sample_products": { "type": "array", "items": { "type": "object" } }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "/api/v1/builder/publish_draft": {
+                "post": {
+                    "summary": "Publish Storefront Draft",
+                    "description": "Publishes a storefront draft.",
+                    "tags": ["Builder"],
+                    "requestBody": {
+                        "required": true,
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "domain": { "type": "string", "nullable": true },
+                                        "draft": { "type": "object" }
+                                    },
+                                    "required": ["draft"]
+                                }
+                            }
+                        }
+                    },
+                    "responses": {
+                        "200": {
+                            "description": "Success",
+                            "content": {
+                                "application/json": {
+                                    "schema": {
+                                        "type": "object",
+                                        "properties": {
+                                            "id": { "type": "string" },
+                                            "domain": { "type": "string", "nullable": true }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "/api/v1/catalog/generate-offering": {
+                "post": {
+                    "summary": "Generate an Offering",
+                    "description": "Generates a product offering using AI based on a prompt.",
+                    "tags": ["Catalog"],
+                    "requestBody": {
+                        "required": true,
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "prompt": { "type": "string", "example": "A weekly coffee bean subscription" }
+                                    },
+                                    "required": ["prompt"]
+                                }
+                            }
+                        }
+                    },
+                    "responses": {
+                        "200": {
+                            "description": "Success",
+                            "content": {
+                                "application/json": {
+                                    "schema": {
+                                        "type": "object",
+                                        "properties": {
+                                            "title": { "type": "string" },
+                                            "description": { "type": "string" },
+                                            "price": { "type": "string" },
+                                            "item_type": { "type": "string" },
+                                            "is_subscription": { "type": "boolean" }
+                                        }
                                     }
                                 }
                             }

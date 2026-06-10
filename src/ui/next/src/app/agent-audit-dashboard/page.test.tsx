@@ -1,45 +1,56 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, act } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import AgentAuditDashboard from './page';
-import { vi } from 'vitest';
 
 describe('Agent Audit Dashboard', () => {
+  let fetchMock: any;
+
   beforeEach(() => {
-    global.fetch = vi.fn(() =>
+    fetchMock = vi.spyOn(global, 'fetch').mockImplementation(() =>
       Promise.resolve({
         ok: true,
         json: () => Promise.resolve({ entries: [] }),
-      })
-    ) as any;
+      } as Response)
+    );
   });
 
   afterEach(() => {
-    vi.restoreAllMocks();
+    fetchMock.mockRestore();
   });
 
   it('renders Agent Audit Dashboard heading', async () => {
-    render(<AgentAuditDashboard />);
-    expect(await screen.findByRole('heading', { name: 'Agent Audit Dashboard' })).toBeInTheDocument();
+    await act(async () => {
+      render(<AgentAuditDashboard />);
+    });
+    expect(screen.getByRole('heading', { name: 'Agent Audit Dashboard' })).toBeInTheDocument();
   });
 
   it('renders Cost Tracker', async () => {
-    render(<AgentAuditDashboard />);
-    expect(await screen.findByText('Cost Tracker')).toBeInTheDocument();
+    await act(async () => {
+      render(<AgentAuditDashboard />);
+    });
+    expect(screen.getByText('Cost Tracker')).toBeInTheDocument();
   });
 
   it('renders Operations', async () => {
-    render(<AgentAuditDashboard />);
-    expect(await screen.findByText('Operations')).toBeInTheDocument();
+    await act(async () => {
+      render(<AgentAuditDashboard />);
+    });
+    expect(screen.getByText('Operations')).toBeInTheDocument();
   });
 
   it('renders Marketing & Advertising', async () => {
-    render(<AgentAuditDashboard />);
-    expect(await screen.findByText('Marketing & Advertising')).toBeInTheDocument();
+    await act(async () => {
+      render(<AgentAuditDashboard />);
+    });
+    expect(screen.getByText('Marketing & Advertising')).toBeInTheDocument();
   });
 
-  it('renders Violation Feed', () => {
-    render(<AgentAuditDashboard />);
-    expect(screen.getByText('Cross-Agent Feed')).toBeInTheDocument();
+  it('renders Violation Feed', async () => {
+    await act(async () => {
+      render(<AgentAuditDashboard />);
+    });
+    expect(screen.getByRole('heading', { name: 'Cross-Agent Feed' })).toBeInTheDocument();
   });
 });

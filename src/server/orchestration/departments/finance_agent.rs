@@ -1,6 +1,5 @@
 use crate::orchestration::departments::orchestrator::{BaseAgent, AgentTriggerType, DepartmentOrchestrator, Department};
 use crate::orchestration::departments::types::{DepartmentType, DepartmentEvent, DepartmentConfig, ApprovalRequest, ActionRisk};
-use serde_json::Value;
 
 pub struct FinanceAgent {
     orchestrator: std::sync::Arc<DepartmentOrchestrator>,
@@ -47,8 +46,6 @@ impl Department for FinanceAgent {
         None
     }
 
-    fn set_config(&mut self, _tenant_id: String, _config: DepartmentConfig) {
-    }
 
     async fn query_memory(&self, _query: &str) -> Result<Vec<String>, String> {
         Ok(vec![])
@@ -69,8 +66,4 @@ impl BaseAgent for FinanceAgent {
         AgentTriggerType::Scheduled
     }
 
-    async fn execute(&self, _payload: Value) -> Result<(), String> {
-        // Run scheduled worker to aggregate weekly sales data.
-        Ok(())
-    }
 }

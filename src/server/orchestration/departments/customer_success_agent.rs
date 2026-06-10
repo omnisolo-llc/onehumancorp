@@ -1,6 +1,5 @@
 use crate::orchestration::departments::orchestrator::{BaseAgent, AgentTriggerType, DepartmentOrchestrator, Department};
 use crate::orchestration::departments::types::{DepartmentType, DepartmentEvent, DepartmentConfig, ApprovalRequest, ActionRisk};
-use serde_json::Value;
 use std::collections::HashMap;
 
 pub struct CustomerSuccessAgent {
@@ -34,7 +33,6 @@ impl Department for CustomerSuccessAgent {
         vec![
             "tenant.order.fulfillment_ready".to_string(),
             "tenant.message.received".to_string(),
-            "tenant.omnichannel.message.received".to_string(),
             "agent:customer_success:approved".to_string(),
         ]
     }
@@ -65,14 +63,43 @@ impl Department for CustomerSuccessAgent {
 
             let source = original.and_then(|orig| orig.get("source").and_then(|v| v.as_str())).unwrap_or("").to_string();
             let sender_id = original.and_then(|orig| orig.get("sender_id").and_then(|v| v.as_str())).unwrap_or("").to_string();
-            let text = message.to_string();
+
+            let target_language = original.and_then(|orig| orig.get("translated_from_language").and_then(|v| v.as_str())).unwrap_or("").to_string();
+            let text = if !target_language.is_empty() && target_language.to_lowercase() != "en" && target_language.to_lowercase() != "english" && target_language.to_lowercase() != "unknown" {
+                match crate::api::agents::translation::translate_inbox_message_with_llm(&event.tenant_id, &source, message, &target_language).await {
+                    Ok(t) => t.translated_content,
+                    Err(e) => {
+                        tracing::error!("Failed to translate outgoing message back to {}: {}", target_language, e);
+                        message.to_string()
+                    }
+                }
+            } else {
+                message.to_string()
+            };
+
             let _hub_clone = self.hub.clone();
+            let tenant_id_for_meta = event.tenant_id.clone();
 
             tokio::spawn(async move {
-                if source == "whatsapp" && !sender_id.is_empty() {
-                    let integrations = std::sync::Arc::new(crate::integrations::registry::IntegrationsRegistry::new());
-                    if let Err(e) = integrations.send_message("whatsapp", "whatsapp", &sender_id, &text).await {
-                         tracing::error!("Failed to send whatsapp message via Meta integration: {}", e);
+                if (source == "whatsapp" || source == "instagram") && !sender_id.is_empty() {
+                    let pool = crate::db::get_pool();
+                    let row: Result<(String,), sqlx::Error> = sqlx::query_as("SELECT api_token FROM integration_credentials WHERE integration_id = 'meta' AND tenant_id = $1 LIMIT 1")
+                        .bind(&tenant_id_for_meta)
+                        .fetch_one(&pool)
+                        .await;
+                    match row {
+                        Ok((api_token,)) => {
+                            use crate::integrations::meta::client::{MetaClientWrapper, RealMetaClient};
+                            let client = RealMetaClient::new(api_token);
+                            if let Err(e) = client.send_message(&source, &sender_id, &text).await {
+                                tracing::error!("Failed to send {} message via Meta integration: {}", source, e);
+                            } else {
+                                tracing::info!("Successfully sent {} message via Meta integration", source);
+                            }
+                        }
+                        Err(e) => {
+                            tracing::error!("Failed to fetch Meta integration credentials from DB: {}", e);
+                        }
                     }
                 }
             });
@@ -108,8 +135,11 @@ impl Department for CustomerSuccessAgent {
             return Ok(());
         }
 
-        if event.event_type == "tenant.message.received" || event.event_type == "tenant.omnichannel.message.received" {
-            let message = event.payload.get("message").and_then(|v| v.as_str()).unwrap_or("");
+        if event.event_type == "tenant.message.received" {
+            let message = event.payload.get("original_message")
+                .or_else(|| event.payload.get("message"))
+                .and_then(|v| v.as_str()).unwrap_or("");
+            let source = event.payload.get("source").and_then(|v| v.as_str()).unwrap_or("");
 
             let query_embedding = match std::env::var("OHC_INBOX_DRAFT_LLM_PROVIDER")
                 .or_else(|_| std::env::var("OHC_LLM_PROVIDER"))
@@ -165,23 +195,41 @@ impl Department for CustomerSuccessAgent {
             let inbox_id = event.payload.get("inbox_message_id").and_then(|v| v.as_str()).unwrap_or("");
             if !inbox_id.is_empty() {
                 let _ = self.orchestrator.update_inbox_message_draft(inbox_id, &event.tenant_id, &generated_response).await;
+                if risk == ActionRisk::AutoExecute {
+                    let _ = self.orchestrator.update_inbox_message_status(inbox_id, &event.tenant_id, "auto_replied").await;
+                }
             }
 
             let action_payload = serde_json::json!({
                 "feature_type": "ambassador_reply",
-                "original_message": if message.is_empty() { "Do you have vegan options for birthday cakes?" } else { message },
+                "original_message": message,
                 "generated_response": generated_response,
                 "context_used": context_summary,
                 "inbox_message_id": inbox_id,
+                "source": source,
+                "original_content": message,
             });
 
-            self.orchestrator.execute_action(
+            let approval_req = self.orchestrator.execute_action(
                 DepartmentType::CustomerSuccess,
                 description,
                 event.tenant_id.clone(),
-                risk,
-                action_payload,
-            ).await.map(|_| ())?;
+                risk.clone(),
+                action_payload.clone(),
+            ).await.map_err(|e| e.to_string())?;
+
+            if risk == ActionRisk::AutoExecute {
+                let approved_event = DepartmentEvent {
+                    id: uuid::Uuid::new_v4().to_string(),
+                    tenant_id: event.tenant_id.clone(),
+                    event_type: "agent:customer_success:approved".to_string(),
+                    payload: serde_json::json!({
+                        "original_payload": action_payload,
+                        "approval_id": approval_req.id
+                    }),
+                };
+                let _ = self.orchestrator.dispatch_event(approved_event).await;
+            }
 
             return Ok(());
         }
@@ -222,9 +270,6 @@ impl BaseAgent for CustomerSuccessAgent {
         AgentTriggerType::EventDriven
     }
 
-    async fn execute(&self, _payload: Value) -> Result<(), String> {
-        Ok(())
-    }
 }
 
 #[cfg(test)]
