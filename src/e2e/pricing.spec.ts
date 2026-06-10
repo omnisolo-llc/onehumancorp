@@ -29,4 +29,20 @@ test.describe('Pricing Page', () => {
     await upgradeButton.click();
     await expect(page.url()).toContain('/checkout?tier=Starter');
   });
+
+  test('should verify upgrade to Pro button routes to checkout', async ({ page }) => {
+    await page.goto('/pricing');
+    const upgradeButton = page.locator('button', { hasText: 'Upgrade to Pro via Stripe' });
+    await expect(upgradeButton).toBeVisible();
+    await upgradeButton.click();
+    await expect(page.url()).toContain('/checkout?tier=Pro');
+  });
+
+  test('should verify upgrade to Business button routes to checkout', async ({ page }) => {
+    await page.goto('/pricing');
+    const upgradeButton = page.locator('button', { hasText: 'Upgrade to Business via Stripe' });
+    await expect(upgradeButton).toBeVisible();
+    await upgradeButton.click();
+    await expect(page.url()).toContain('/checkout?tier=Business');
+  });
 });

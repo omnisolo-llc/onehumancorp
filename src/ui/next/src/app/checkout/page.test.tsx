@@ -71,6 +71,22 @@ beforeEach(() => {
   });
 
   it('handles regular checkout deposit flow correctly', async () => {
+    global.fetch = vi.fn().mockImplementation((url) => {
+      if (url === '/api/v1/payments/terminal/reserve') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ success: true, lock_id: 'test-lock' }),
+        });
+      }
+      if (url === '/api/v1/payments/terminal/commit') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ success: true }),
+        });
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+    });
+
     render(<CheckoutPage />);
 
     expect(screen.getByText('Secure Checkout')).toBeDefined();
