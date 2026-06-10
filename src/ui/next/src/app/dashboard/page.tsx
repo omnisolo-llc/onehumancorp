@@ -213,21 +213,25 @@ export default function Dashboard() {
 
       try {
         const userId = localStorage.getItem("user_id") || "default";
-        const [unifiedRes, onboardingRes, approvalsRes] = await Promise.all([
+        const [unifiedRes, onboardingRes, approvalsRes, agentFeedRes] = await Promise.all([
           fetch(`/api/ui/dashboard/unified-feed?tenant_id=${tenant}`),
           fetch(`/api/onboarding/state`, { headers: { 'X-Tenant-ID': tenant, 'X-User-ID': userId } }),
-          fetch(`/api/agents/approvals?tenant_id=${tenant}`)
+          fetch(`/api/agents/approvals?tenant_id=${tenant}`),
+          fetch(`/api/agent-feed?tenant_id=${tenant}`, { headers: { 'X-Tenant-ID': tenant, 'X-User-ID': userId } })
         ]);
 
         if (!unifiedRes.ok) {
           throw new Error("Unified UI feed endpoint failed");
         }
 
-        const [unifiedData, onboardingData, approvalsData] = await Promise.all([
+        const [unifiedData, onboardingData, approvalsData, agentFeedData] = await Promise.all([
           unifiedRes.json(),
           onboardingRes.ok ? onboardingRes.json() : Promise.resolve(null),
           approvalsRes.ok ? approvalsRes.json() : Promise.resolve([]),
+          agentFeedRes.ok ? agentFeedRes.json() : Promise.resolve({ items: [] }),
         ]);
+
+        setDashboardData((prev: any) => ({ ...prev, initialAgentFeed: agentFeedData }));
 
         const metricsData = unifiedData.metrics || {};
         const ordersData = unifiedData.orders || [];
@@ -537,7 +541,7 @@ export default function Dashboard() {
              />
         ))}
 
-        <UnifiedAgentFeed />
+        <UnifiedAgentFeed initialData={dashboardData?.initialAgentFeed} />
 
         <section>
           <div className="mb-6 p-6 rounded-[16px] bg-white/65 dark:bg-[#16161a]/70 border border-white/40 dark:border-white/10">
