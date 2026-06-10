@@ -24,6 +24,9 @@ test.describe('OnboardingWizard CUJ', () => {
     await page.getByRole('button', { name: 'Next' }).click();
 
     await page.getByPlaceholder(/Portland, OR/i).fill('Seattle, WA');
+    await page.getByRole('button', { name: 'Next' }).click();
+
+    await page.getByPlaceholder(/Local families, Tech startups/i).fill('Everyone');
     await page.getByRole('button', { name: 'Generate My Business' }).click();
 
     await expect(page.locator('input[value="I bake custom vegan cakes f..."]')).toBeVisible();
@@ -54,6 +57,9 @@ test.describe('OnboardingWizard CUJ', () => {
     await page.getByRole('button', { name: 'Next' }).click();
 
     await page.getByPlaceholder(/Portland, OR/i).fill('Austin, TX');
+    await page.getByRole('button', { name: 'Next' }).click();
+
+    await page.getByPlaceholder(/Local families, Tech startups/i).fill('Homeowners');
     await page.getByRole('button', { name: 'Generate My Business' }).click();
 
     await expect(page.locator('input[value="Plumbing and general repairs"]')).toBeVisible();
@@ -84,6 +90,9 @@ test.describe('OnboardingWizard CUJ', () => {
     await page.getByRole('button', { name: 'Next' }).click();
 
     await page.getByPlaceholder(/Portland, OR/i).fill('Remote');
+    await page.getByRole('button', { name: 'Next' }).click();
+
+    await page.getByPlaceholder(/Local families, Tech startups/i).fill('Students');
     await page.getByRole('button', { name: 'Generate My Business' }).click();
 
     await expect(page.locator('input[value="Guitar tutoring online"]')).toBeVisible();
@@ -115,6 +124,9 @@ test.describe('OnboardingWizard CUJ', () => {
     await page.getByRole('button', { name: 'Next' }).click();
 
     await page.getByPlaceholder(/Portland, OR/i).fill('New York, NY');
+    await page.getByRole('button', { name: 'Next' }).click();
+
+    await page.getByPlaceholder(/Local families, Tech startups/i).fill('Professionals');
     await page.getByRole('button', { name: 'Generate My Business' }).click();
 
     await expect(page.locator('input[value="Halal food cart pickup orders"]')).toBeVisible();
@@ -167,6 +179,9 @@ test.describe('OnboardingWizard CUJ', () => {
     await page.getByRole('button', { name: 'Next' }).click();
 
     await page.getByPlaceholder(/Portland, OR/i).fill('Local');
+    await page.getByRole('button', { name: 'Next' }).click();
+
+    await page.getByPlaceholder(/Local families, Tech startups/i).fill('Anyone');
     await page.getByRole('button', { name: 'Generate My Business' }).click();
 
     await page.getByRole('button', { name: 'Continue' }).click();
@@ -226,11 +241,24 @@ test.describe('OnboardingWizard CUJ', () => {
     // Step 3: Empty Location
     await expect(page.getByText("Where are you located?")).toBeVisible();
     await page.getByPlaceholder(/Portland, OR/i).fill('  ');
-    await page.getByRole('button', { name: 'Generate My Business' }).click();
+    await page.getByRole('button', { name: 'Next' }).click();
 
     const locationInput = page.getByPlaceholder(/Portland, OR/i);
     await expect(page.getByText('Please tell us your location.')).toBeVisible();
     await expect(locationInput).toHaveClass(/border-red-500/);
+
+    // Proceed to Step 4
+    await locationInput.fill('Valid Location');
+    await page.getByRole('button', { name: 'Next' }).click();
+
+    // Step 4: Empty Target Audience
+    await expect(page.getByText("Who is your target audience?")).toBeVisible();
+    await page.getByPlaceholder(/Local families, Tech startups/i).fill('  ');
+    await page.getByRole('button', { name: 'Generate My Business' }).click();
+
+    const audienceInput = page.getByPlaceholder(/Local families, Tech startups/i);
+    await expect(page.getByText('Please tell us your target audience.')).toBeVisible();
+    await expect(audienceInput).toHaveClass(/border-red-500/);
   });
 
   test('User can use Instant Build to launch storefront quickly', async ({ page }) => {
@@ -279,6 +307,9 @@ test.describe('OnboardingWizard CUJ', () => {
     await page.getByPlaceholder(/I bake custom vegan cakes/i).fill('Testing');
     await page.getByRole('button', { name: 'Next' }).click();
     await page.getByPlaceholder(/Portland, OR/i).fill('Local');
+    await page.getByRole('button', { name: 'Next' }).click();
+
+    await page.getByPlaceholder(/Local families, Tech startups/i).fill('Testing');
 
     // Mock the backend responding with a 500 error
     await context.route('/api/onboarding/intake', route => route.fulfill({ status: 500, json: { error: 'Internal Server Error' } }));
@@ -297,6 +328,9 @@ test.describe('OnboardingWizard CUJ', () => {
     await page.getByPlaceholder(/I bake custom vegan cakes/i).fill('Testing');
     await page.getByRole('button', { name: 'Next' }).click();
     await page.getByPlaceholder(/Portland, OR/i).fill('Local');
+    await page.getByRole('button', { name: 'Next' }).click();
+
+    await page.getByPlaceholder(/Local families, Tech startups/i).fill('Testing');
 
     // Normal intake response
     await context.route('/api/onboarding/intake', route => route.fulfill({ status: 200, json: { business_name: 'Test Business', business_type: 'Test', initial_products: [], categories: [] } }));

@@ -399,7 +399,7 @@ export default function OnboardingWizard() {
 
     } catch (err: any) {
       console.error(err);
-      setError(err.message || 'An error occurred during onboarding');
+      setError(err.message || 'Failed to start onboarding');
       setStep(3); syncStateToBackend({ step: 3 }); // Go back to last input screen on error
     } finally {
       setIsLoading(false);
@@ -570,7 +570,11 @@ export default function OnboardingWizard() {
                       }
                     } catch (err: any) {
                       console.error(err);
-                      setError(err.message || 'Failed to launch. Please try again.');
+                      if (err.message === 'Failed to fetch') {
+                          setError('Failed to launch. Please try again.');
+                      } else {
+                          setError(err.message || 'Failed to launch. Please try again.');
+                      }
                     } finally {
                       setIsLoading(false);
                     }
