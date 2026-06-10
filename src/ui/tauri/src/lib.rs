@@ -50,6 +50,7 @@ fn load_ai_provider() -> Result<AiProviderView, String> {
 #[serde(rename_all = "camelCase")]
 struct OnboardingState {
     business_name: Option<String>,
+    template_selection: Option<String>,
     assistant_name: Option<String>,
     assistant_tone: Option<String>,
     work_context: Option<String>,
@@ -98,6 +99,7 @@ async fn get_onboarding_state(_app_handle: tauri::AppHandle) -> Result<Onboardin
     if !path.exists() {
         return Ok(OnboardingState {
             business_name: None,
+            template_selection: None,
             assistant_name: None,
             assistant_tone: None,
         });
