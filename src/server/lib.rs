@@ -365,7 +365,7 @@ pub mod services {
     pub mod subscription;
     pub mod pos;
     pub mod collective;
-
+    pub mod inventory_sync;
 }
 
 use tonic::{transport::Server, Request, Response, Status};
@@ -4449,6 +4449,7 @@ async fn create_ui_bom_item_handler(
     let dashboard_service = crate::services::dashboard::service::MyDashboardService::new(db.clone(), hub.clone());
     let billing_service = crate::services::billing::service::MyBillingService::new(hub.get_cost_auditor());
     let collective_service = crate::services::collective::service::MyCollectiveService::new(db.pool.clone());
+    let inventory_sync_service = crate::services::inventory_sync::MyInventorySyncService::new(db.clone(), hub.redis_client.clone());
 
     Server::builder()
         .add_service(HubServiceServer::with_interceptor(hub_service, spiffe_interceptor))
@@ -4460,6 +4461,7 @@ async fn create_ui_bom_item_handler(
         .add_service(BillingServiceServer::with_interceptor(billing_service, spiffe_interceptor))
         .add_service(::server_ohc::app::booking_engine_service_server::BookingEngineServiceServer::with_interceptor(crate::services::booking::NativeBookingService { redis_client: hub.redis_client.clone() }, spiffe_interceptor))
         .add_service(::server_ohc::app::pos_service_server::PosServiceServer::with_interceptor(crate::services::pos::service::MyPosService::new(db.clone()), spiffe_interceptor))
+        .add_service(::server_ohc::app::inventory_sync_service_server::InventorySyncServiceServer::with_interceptor(inventory_sync_service, spiffe_interceptor))
         .serve(addr)
         .await?;
 
