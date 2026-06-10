@@ -47,12 +47,11 @@ impl RequestDeduplicator {
         Fut: std::future::Future<Output = Result<DeduplicationResult, String>>,
     {
         // 1. Throttle prune via a mutex (do not block execution, use try_lock to lazily prune)
-        if let Ok(mut last) = self.last_prune.try_lock() {
-            if last.elapsed() > Duration::from_secs(1) {
+        if let Ok(mut last) = self.last_prune.try_lock()
+            && last.elapsed() > Duration::from_secs(1) {
                 *last = Instant::now();
                 self.in_flight.retain(|_, v| v.created_at.elapsed() <= self.ttl);
             }
-        }
 
         let key = self.hash_request(request);
 

@@ -27,6 +27,13 @@
         border: 1px solid rgba(255, 255, 255, 0.4);
         box-sizing: border-box;
       }
+      .glassmorphism {
+        background: rgba(255, 255, 255, 0.65);
+        backdrop-filter: blur(30px) saturate(210%);
+        -webkit-backdrop-filter: blur(30px) saturate(210%);
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        border-radius: 16px;
+      }
       h1 {
         margin-top: 0;
         color: #1d1d1f;
@@ -51,6 +58,9 @@
         backdrop-filter: blur(10px) saturate(200%);
         -webkit-backdrop-filter: blur(10px) saturate(200%);
         transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+      }
+      input.glassmorphism {
+        border-radius: 8px;
       }
       input:focus {
         outline: none;
@@ -107,6 +117,12 @@
           -webkit-backdrop-filter: blur(30px) saturate(210%);
           border: 1px solid rgba(255, 255, 255, 0.1);
           border-radius: 16px;
+        }
+        .glassmorphism {
+          background: rgba(22, 22, 26, 0.7);
+          backdrop-filter: blur(30px) saturate(210%);
+          -webkit-backdrop-filter: blur(30px) saturate(210%);
+          border: 1px solid rgba(255, 255, 255, 0.1);
         }
         h1 {
           color: #F5F5F7;
@@ -297,10 +313,22 @@
           color: #F5F5F7;
         }
       }
-    </style>
+
+      @media (max-width: 768px) {
+        .container {
+          padding: 20px;
+          border-radius: 16px;
+          width: 100%;
+          border: none;
+        }
+        input, select, textarea, button, .radio-option {
+          min-height: 44px !important;
+        }
+      }
+        </style>
   </head>
   <body>
-        <div class="container" id="form-container">
+        <div class="container glassmorphism" id="form-container">
 
 
       <div class="stepper" id="stepper-indicator">
@@ -309,6 +337,7 @@
         <div class="step-indicator" data-step="step-name"></div>
         <div class="step-indicator" data-step="step-assistant"></div>
         <div class="step-indicator" data-step="step-offer"></div>
+        <div class="step-indicator" data-step="step-template"></div>
       </div>
 
       <!-- Step 1: Work Context -->
@@ -355,7 +384,7 @@
       <div class="step" id="step-categories">
         <h1>What's your category?</h1>
         <p>e.g. Baking, Plumbing, Design</p>
-        <input type="text" id="business-categories" placeholder="e.g. Graphic Design" />
+        <input type="text" id="business-categories" class="glassmorphism" placeholder="e.g. Graphic Design" />
         <div id="categories-error" class="error-msg">Please enter a category.</div>
         <div class="btn-group">
           <button class="next-step-btn" data-next="step-name">Next</button>
@@ -367,10 +396,10 @@
       <div class="step" id="step-name">
         <h1>What's the name of your business?</h1>
         <p>We'll use this to set up your workspace.</p>
-        <input type="text" id="business-name" placeholder="e.g. Maya's Bakery" />
+        <input type="text" id="business-name" class="glassmorphism" placeholder="e.g. Maya's Bakery" />
         <div id="name-error" class="error-msg">Business Name must be at least 3 characters.</div>
 
-        <input type="text" id="business-tagline" placeholder="Tagline (optional)" />
+        <input type="text" id="business-tagline" class="glassmorphism" placeholder="Tagline (optional)" />
 
         <div class="btn-group">
           <button class="next-step-btn" data-next="step-assistant">Next</button>
@@ -383,7 +412,7 @@
         <h1>Set up your Assistant</h1>
         <p>Give your AI assistant a name and tone.</p>
 
-        <input type="text" id="assistant-name" placeholder="e.g. Jarvis" />
+        <input type="text" id="assistant-name" class="glassmorphism" placeholder="e.g. Jarvis" />
         <div id="assistant-name-error" class="error-msg">Please enter a name for your assistant.</div>
 
         <select id="assistant-tone">
@@ -404,11 +433,29 @@
       <div class="step" id="step-offer">
         <h1>Your First Offer</h1>
         <p>What is the main thing you sell?</p>
-        <input type="text" id="first-offer" placeholder="e.g. Custom Birthday Cake" />
+        <input type="text" id="first-offer" class="glassmorphism" placeholder="e.g. Custom Birthday Cake" />
         <div id="offer-error" class="error-msg">Please enter an offer.</div>
         <div class="btn-group">
-          <button id="finish-btn">Finish Setup</button>
+          <button class="next-step-btn" data-next="step-template">Next</button>
           <button class="btn-secondary prev-step-btn" data-prev="step-assistant">Back</button>
+        </div>
+      </div>
+
+      <!-- Step 6: Template -->
+      <div class="step" id="step-template">
+        <h1>Template Selection</h1>
+        <p>Choose a look for your workspace</p>
+        <select id="template-selection">
+          <option value="" disabled selected>Select a template...</option>
+          <option value="Modern">Modern</option>
+          <option value="Classic">Classic</option>
+          <option value="Playful">Playful</option>
+        </select>
+        <div id="template-error" class="error-msg">Please select a template.</div>
+
+        <div class="btn-group">
+          <button id="finish-btn">Finish Setup</button>
+          <button class="btn-secondary prev-step-btn" data-prev="step-offer">Back</button>
         </div>
       </div>
 
@@ -424,7 +471,8 @@
           tagline: document.getElementById('business-tagline'),
           assistantName: document.getElementById('assistant-name'),
           assistantTone: document.getElementById('assistant-tone'),
-          firstOffer: document.getElementById('first-offer')
+          firstOffer: document.getElementById('first-offer'),
+          templateSelection: document.getElementById('template-selection')
       };
 
       const errors = {
@@ -433,7 +481,8 @@
           name: document.getElementById('name-error'),
           assistantName: document.getElementById('assistant-name-error'),
           assistantTone: document.getElementById('tone-error'),
-          firstOffer: document.getElementById('offer-error')
+          firstOffer: document.getElementById('offer-error'),
+          templateSelection: document.getElementById('template-error')
       };
 
       let state = {
@@ -486,6 +535,7 @@
           if (state.assistantName) inputs.assistantName.value = state.assistantName;
           if (state.assistantTone) inputs.assistantTone.value = state.assistantTone;
           if (state.firstOffer) inputs.firstOffer.value = state.firstOffer;
+          if (state.templateSelection) inputs.templateSelection.value = state.templateSelection;
 
           const contextVal = state.workContext || state.work_context;
           if (contextVal) {
@@ -500,6 +550,20 @@
       }
 
             function saveCurrentState() {
+          // Increment step if we are moving forward
+          let stepNumber = 0;
+          const activeStep = document.querySelector('.step.active');
+          if (activeStep) {
+              if (activeStep.id === 'step-context') stepNumber = 0;
+              if (activeStep.id === 'step-categories') stepNumber = 1;
+              if (activeStep.id === 'step-name') stepNumber = 2;
+              if (activeStep.id === 'step-assistant') stepNumber = 3;
+              if (activeStep.id === 'step-offer') stepNumber = 4;
+          }
+          state.step = stepNumber;
+          state.workContext = state.work_context || state.workContext;
+          state.work_context = state.workContext;
+
           if (window.__TAURI__ && window.__TAURI__.core) {
               window.__TAURI__.core.invoke("save_onboarding_state", { state }).catch(console.error);
           } else {
@@ -566,6 +630,15 @@
                   state.firstOffer = inputs.firstOffer.value.trim();
               }
           }
+          else if (stepId === 'step-template') {
+              if (inputs.templateSelection.value === '') {
+                  errors.templateSelection.style.display = 'block';
+                  isValid = false;
+              } else {
+                  errors.templateSelection.style.display = 'none';
+                  state.templateSelection = inputs.templateSelection.value;
+              }
+          }
 
           if (!isValid) {
               container.classList.remove('animate-shake');
@@ -578,7 +651,7 @@
 
 
       function updateStepper(stepId) {
-          const steps = ['step-context', 'step-categories', 'step-name', 'step-assistant', 'step-offer'];
+          const steps = ['step-context', 'step-categories', 'step-name', 'step-assistant', 'step-offer', 'step-template'];
           const currentIndex = steps.indexOf(stepId);
 
           document.querySelectorAll('.step-indicator').forEach((indicator, index) => {
@@ -621,7 +694,7 @@
 
       if (finishBtn) {
         finishBtn.addEventListener('click', () => {
-           if (validateStep('step-offer')) {
+           if (validateStep('step-template')) {
                if (window.__TAURI__ && window.__TAURI__.core) {
                  finishBtn.disabled = true;
                  finishBtn.innerText = "Saving...";
@@ -1015,5 +1088,8 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 </script>
+      <script src="tooltip.js"></script>
+    <script src="walkthrough.js"></script>
+    <script src="help-chat.js"></script>
   </body>
 </html>

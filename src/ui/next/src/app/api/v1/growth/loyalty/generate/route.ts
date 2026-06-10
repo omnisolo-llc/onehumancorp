@@ -2,7 +2,17 @@ import { NextResponse } from 'next/server';
 
 export async function POST(request: Request) {
   try {
-    const { programName, rewardValue, requiredPoints, theme, hasPro } = await request.json();
+    const data = await request.json();
+    const { programName, rewardValue, requiredPoints, theme, hasPro, give_amount, get_amount, reward_type, store_name } = data;
+
+    if (give_amount !== undefined && get_amount !== undefined) {
+      const giveStr = reward_type === 'percentage' ? give_amount + '%' : '$' + give_amount;
+      const getStr = reward_type === 'percentage' ? get_amount + '%' : '$' + get_amount;
+
+      const message = `Subject: Get ${giveStr} OFF your next order! 🎁\n\nHi there,\n\nWe love having you as a customer at ${store_name || 'our store'}. To show our appreciation, we'd like to invite you to our new referral program!\n\nGive a friend ${giveStr} off their first order, and you'll get ${getStr} off your next order when they purchase.\n\nShare your unique link today:\nhttps://${store_name || 'store'}.ohc.app/refer?ref=12345\n\nBest,\nThe ${store_name || 'Store'} Team\n\n⚡ Powered by OHC`;
+
+      return NextResponse.json({ message });
+    }
 
     // In a real implementation, this would validate the user's Pro status and tenant
     const scriptTag = `<script src="https://ohc.app/widgets/loyalty-program.js" async></script>`;
