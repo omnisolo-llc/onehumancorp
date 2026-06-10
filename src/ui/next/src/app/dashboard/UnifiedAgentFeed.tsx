@@ -94,12 +94,12 @@ export function UnifiedAgentFeed() {
               const payload = JSON.parse(event.data);
 
               if (payload.event_type === "approval_request") {
-                setApprovals((prev) => {
+                setItems((prev) => {
                   if (prev.find((a) => a.id === payload.data.id)) return prev;
                   return [payload.data, ...prev];
                 });
               } else if (payload.event_type === "approval_decision") {
-                setApprovals((prev) => prev.filter((a) => a.id !== payload.data.request_id));
+                setItems((prev) => prev.filter((a) => a.id !== payload.data.request_id));
                 setActivities((prev) => {
                   const newActivity = {
                     id: crypto.randomUUID(),
@@ -156,23 +156,23 @@ export function UnifiedAgentFeed() {
         if (!item?.id || !item?.description) return;
 
         // If it's a DRAFT or PENDING, add to proposals
-        if (String(item.status || '').toUpperCase() === 'DRAFT' || String(item.status || '').toUpperCase() === 'PENDING') {
-          setApprovals((current) => [item, ...current.filter((existing) => existing.id !== item.id)]);
+        if (String(item.lifecycle_state || '').toUpperCase() === 'PENDING_APPROVAL' || String(item.lifecycle_state || '').toUpperCase() === 'DRAFT' || String(item.lifecycle_state || '').toUpperCase() === 'PENDING') {
+          setItems((current) => [item, ...current.filter((existing) => existing.id !== item.id)]);
         } else {
           // It's an activity event (Approved, Rejected, etc.)
           setActivities((current) => {
             const mappedActivity = {
               id: item.id,
               tenant_id: item.tenant_id || "default",
-              event_type: item.status,
-              department: item.department,
-              payload: typeof item.payload === 'object' ? JSON.stringify({ original_payload: item.payload }) : item.payload,
+              event_type: item.lifecycle_state,
+              department: item.event_source,
+              payload: typeof item.proposed_action === 'object' ? JSON.stringify({ original_payload: item.proposed_action }) : item.proposed_action,
               created_at: new Date().toISOString()
             };
             return [mappedActivity, ...current.filter((existing) => existing.id !== item.id)];
           });
           // Also remove from approvals if it was there
-          setApprovals((current) => current.filter((existing) => existing.id !== item.id));
+          setItems((current) => current.filter((existing) => existing.id !== item.id));
         }
       } catch (err) {
         console.error('Failed to parse agent feed event:', err);
@@ -191,23 +191,23 @@ export function UnifiedAgentFeed() {
         if (!item?.id || !item?.description) return;
 
         // If it's a DRAFT or PENDING, add to proposals
-        if (String(item.status || '').toUpperCase() === 'DRAFT' || String(item.status || '').toUpperCase() === 'PENDING') {
-          setApprovals((current) => [item, ...current.filter((existing) => existing.id !== item.id)]);
+        if (String(item.lifecycle_state || '').toUpperCase() === 'PENDING_APPROVAL' || String(item.lifecycle_state || '').toUpperCase() === 'DRAFT' || String(item.lifecycle_state || '').toUpperCase() === 'PENDING') {
+          setItems((current) => [item, ...current.filter((existing) => existing.id !== item.id)]);
         } else {
           // It's an activity event (Approved, Rejected, etc.)
           setActivities((current) => {
             const mappedActivity = {
               id: item.id,
               tenant_id: item.tenant_id || "default",
-              event_type: item.status,
-              department: item.department,
-              payload: typeof item.payload === 'object' ? JSON.stringify({ original_payload: item.payload }) : item.payload,
+              event_type: item.lifecycle_state,
+              department: item.event_source,
+              payload: typeof item.proposed_action === 'object' ? JSON.stringify({ original_payload: item.proposed_action }) : item.proposed_action,
               created_at: new Date().toISOString()
             };
             return [mappedActivity, ...current.filter((existing) => existing.id !== item.id)];
           });
           // Also remove from approvals if it was there
-          setApprovals((current) => current.filter((existing) => existing.id !== item.id));
+          setItems((current) => current.filter((existing) => existing.id !== item.id));
         }
       } catch (err) {
         console.error('Failed to parse agent feed event:', err);
@@ -219,28 +219,28 @@ export function UnifiedAgentFeed() {
 
   const handleDecision = async (id: string, approved: boolean) => {
     // Optimistic UI update
-    setApprovals(prev => prev.filter(app => app.id !== id));
+    setItems(prev => prev.filter(app => app.id !== id));
 
     try {
       const tenant = tenantId();
-      const res = await fetch(`/api/agents/approvals/${id}`, {
-        method: "POST",
+      const res = await fetch(`/api/agent-feed/${id}/state`, {
+        method: "PUT",
         headers: {
           "Content-Type": "application/json",
           "x-tenant-id": tenant,
           "x-user-id": "default",
         },
-        body: JSON.stringify({ approved }),
+        body: JSON.stringify({ state: approved ? "APPROVED" : "DISMISSED" }),
       });
 
       if (!res.ok) {
         // If it fails, we might want to fetch again to restore state
-        const refreshRes = await fetch(`/api/agents/approvals?tenant_id=${tenant}`, {
-            headers: { "x-tenant-id": tenant, "x-user-id": "default" }
+        const refreshRes = await fetch(`/api/agent-feed?tenant_id=${tenant}`, {
+          headers: { "x-tenant-id": tenant, "x-user-id": "default" }
         });
         if (refreshRes.ok) {
-            const data: ApprovalsResponse = await refreshRes.json();
-            setApprovals(data.pending_approvals);
+            const data = await refreshRes.json();
+            setItems(data.items.filter((i: any) => i.lifecycle_state !== "APPROVED" && i.lifecycle_state !== "DISMISSED"));
         }
         throw new Error("Failed to submit decision");
       }

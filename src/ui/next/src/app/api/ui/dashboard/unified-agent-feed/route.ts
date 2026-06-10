@@ -1,5 +1,5 @@
 import { proxyBackendGet } from "../../backendProxy";
 
 export async function GET(req: Request) {
-  return proxyBackendGet(req, "/api/ui/dashboard/unified-agent-feed");
+  return proxyBackendGet(req, "/api/agent-feed");
 }
