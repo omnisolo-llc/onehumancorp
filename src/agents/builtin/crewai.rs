@@ -1,9 +1,10 @@
+/// CrewAI: Role-based + Flow deterministic backbone
 use crate::agent::{Agent, AgentRunConfig};
 use ohc_builtin_agent_core::types::Message;
 use std::sync::Arc;
 use serde_json::Value;
 
-/// Defines a specific role an agent can take in the CrewAI architecture.
+/// Defines a specific role an agent can take in the CrewAI architecture (Role-based architecture).
 #[derive(Debug, Clone)]
 pub struct Role {
     pub name: String,

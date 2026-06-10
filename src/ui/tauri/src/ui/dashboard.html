@@ -605,6 +605,14 @@
       </div>
       <div id="dynamic-milestones-container"></div>
 
+      <div class="ohc-growth-card" style="margin-bottom: 20px;">
+        <h2>Agent Public Profile</h2>
+        <p>Generate a shareable public card for your AI agent to build trust and acquire new customers.</p>
+        <button onclick="window.location.href='agent-card.html'" style="background-color: #0066FF; color: white; border: none; padding: 10px 16px; border-radius: 8px; cursor: pointer;">
+          Create Agent Card
+        </button>
+      </div>
+
       <div class="ohc-growth-card">
         <h2>Grow Your Team</h2>
         <p>Bridge your local sovereignty with cloud-native collaboration. Invite a team member to view agents in a secure cloud tenant.</p>
@@ -618,6 +626,13 @@
             <button class="btn-secondary" id="share-whatsapp-btn">Share on WhatsApp</button>
           </div>
         </div>
+      </div>
+
+
+      <div class="ohc-growth-card">
+        <h2>Viral Campaigns</h2>
+        <p>Acquire new users and grow your audience through viral sharing.</p>
+        <a href="/giveaway" style="display: inline-block; background-color: #0066FF; color: white; padding: 12px 24px; border-radius: 8px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s;">Viral Giveaway Generator</a>
       </div>
 
       <div class="ohc-growth-card" id="triage-section" style="display: none;">
@@ -770,15 +785,16 @@
 
               copyBtn.addEventListener('click', async () => {
                 const link = await getInviteLink();
-                const tempInput = document.createElement('input');
-                tempInput.value = link;
+                const textToCopy = `I just hit a huge business milestone (${reachedMilestone.title}) using OHC! Launch your own store today: ${link}\n\n⚡ Powered by OHC`;
+                const tempInput = document.createElement('textarea');
+                tempInput.value = textToCopy;
                 document.body.appendChild(tempInput);
                 tempInput.select();
                 document.execCommand('copy');
                 document.body.removeChild(tempInput);
 
                 const originalText = copyBtn.innerHTML;
-                copyBtn.innerHTML = '<svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Copied Link!';
+                copyBtn.innerHTML = '<svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Copied Text!';
                 setTimeout(() => {
                   copyBtn.innerHTML = originalText;
                 }, 2000);
@@ -786,7 +802,7 @@
 
               xBtn.addEventListener('click', async () => {
                 const link = await getInviteLink();
-                const text = `I just hit a huge business milestone (${reachedMilestone.title}) using OHC! Launch your own store today: ${link}`;
+                const text = `I just hit a huge business milestone (${reachedMilestone.title}) using OHC! Launch your own store today: ${link}\n\n⚡ Powered by OHC`;
                 window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, '_blank');
               });
             }
@@ -826,12 +842,30 @@
       });
 
       copyBtn.addEventListener('click', () => {
-        referralLink.select();
-        document.execCommand('copy');
-        copyBtn.innerText = "Copied!";
-        setTimeout(() => {
-          copyBtn.innerText = "Copy";
-        }, 2000);
+        const link = referralLink.value;
+        const text = `Join my team on OHC! Here is your invite link:\n\n${link}\n\n⚡ Powered by OHC`;
+
+        navigator.clipboard.writeText(text).then(() => {
+          copyBtn.innerText = "Copied!";
+          setTimeout(() => {
+            copyBtn.innerText = "Copy";
+          }, 2000);
+        }).catch(err => {
+          console.error('Failed to copy: ', err);
+          // Fallback to older execCommand method if clipboard API fails
+          // For legacy compatibility, write text to a temporary element to copy it
+          const tempInput = document.createElement("textarea");
+          tempInput.value = text;
+          document.body.appendChild(tempInput);
+          tempInput.select();
+          document.execCommand("copy");
+          document.body.removeChild(tempInput);
+
+          copyBtn.innerText = "Copied!";
+          setTimeout(() => {
+            copyBtn.innerText = "Copy";
+          }, 2000);
+        });
       });
 
       const shareWhatsAppBtn = document.getElementById('share-whatsapp-btn');
