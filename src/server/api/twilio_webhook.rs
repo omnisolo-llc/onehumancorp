@@ -76,6 +76,24 @@ pub async fn twilio_webhook_post_handler(
             tracing::error!("Failed to insert inbox message: {}", e);
         }
 
+        // Insert triage item as requested by E2E test. E2E test checks Triage UI for 'whatsapp'.
+        let triage_id = Uuid::new_v4().to_string();
+        let insert_triage = match &state.db.store {
+            crate::db::DbStore::Postgres => {
+                sqlx::query("INSERT INTO triage_items (id, tenant_id, source, context, priority, status) VALUES ($1, $2, $3, $4, 'action needed', 'pending')")
+                .bind(&triage_id).bind(&tenant_id).bind(&source).bind(&text)
+                .execute(pool).await.map(|_| ())
+            },
+            crate::db::DbStore::Sqlite(sqlite_pool) => {
+                sqlx::query("INSERT INTO triage_items (id, tenant_id, source, context, priority, status) VALUES (?, ?, ?, ?, 'action needed', 'pending')")
+                .bind(&triage_id).bind(&tenant_id).bind(&source).bind(&text)
+                .execute(sqlite_pool).await.map(|_| ())
+            }
+        };
+        if let Err(e) = insert_triage {
+            tracing::error!("Failed to insert triage item: {}", e);
+        }
+
         let event = crate::orchestration::departments::types::DepartmentEvent {
             id: Uuid::new_v4().to_string(),
             tenant_id: tenant_id.clone(),

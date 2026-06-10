@@ -2656,6 +2656,15 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .route("/api/v1/webhooks/meta", axum::routing::post(api::meta_webhook::meta_webhook_post_handler))
         .with_state(meta_webhook_state);
 
+    let twilio_webhook_state = api::twilio_webhook::TwilioWebhookState {
+        hub: hub.clone(),
+        db: db.clone(),
+        orchestrator: dept_orchestrator.clone(),
+    };
+    let twilio_webhook_router = axum::Router::new()
+        .route("/api/v1/webhooks/twilio", axum::routing::post(api::twilio_webhook::twilio_webhook_post_handler))
+        .with_state(twilio_webhook_state);
+
     let health_router = axum::Router::new()
         .route("/api/v1/health", axum::routing::get(api::health::health_handler))
         .with_state(hub.clone());
@@ -2748,6 +2757,7 @@ fn ui_tenant_id(query: &UiTenantQuery) -> String {
 pub struct TriageActionPayload {
     pub triage_item_id: String,
     pub approved: bool,
+    pub source: Option<String>,
 }
 
 pub async fn list_ui_triage_handler(
@@ -2826,6 +2836,11 @@ pub async fn update_ui_triage_action_handler(
             match sqlx::query("UPDATE triage_items SET status = $1 WHERE id = $2 AND tenant_id = $3").bind(status).bind(&payload.triage_item_id).bind(&tenant_id).execute(&mut *tx).await {
                 Ok(_) => {
                     let _ = tx.commit().await;
+                    if payload.approved && payload.source.as_deref() == Some("whatsapp") {
+                        tracing::info!("Triage action approved for whatsapp source. Simulating reply.");
+                        // Here we would typically dispatch an event or call twilio API
+                        // let _ = twilio_client.send_message(...).await;
+                    }
                     (axum::http::StatusCode::OK, axum::Json(serde_json::json!({"status": "success"}))).into_response()
                 },
                 Err(e) => {
@@ -4315,6 +4330,7 @@ async fn create_ui_bom_item_handler(
             default_config: ohc_builtin_agent::agent::AgentRunConfig::default(),
         })))
         .merge(meta_webhook_router)
+        .merge(twilio_webhook_router)
         .merge(health_router)
         .fallback(api_not_found_handler);
 
