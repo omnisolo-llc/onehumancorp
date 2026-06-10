@@ -12,11 +12,11 @@ test.describe("Unified Agent Feed Mobile UX", () => {
     await request.post("/api/e2e/setup", {
       data: {
         query: `
-          INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, payload, created_at, updated_at)
+          INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at)
           VALUES
-            ('e2e-feed-test-1', 'e2e-tenant', 'operations', '3 new orders to fulfill', 'DRAFT', 'LOW', '{"feature_type": "fulfillment_batch", "message": "Batch process 3 orders?"}'::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-            ('e2e-feed-test-2', 'e2e-tenant', 'marketing', 'Draft promo email?', 'DRAFT', 'LOW', '{"context": {"weekly_health_report": true}, "message": "Send promo?"}'::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-          ON CONFLICT (id) DO UPDATE SET status = 'DRAFT', updated_at = CURRENT_TIMESTAMP;
+            ('e2e-feed-test-1', 'e2e-tenant', 'operations', '{"description": "3 new orders to fulfill"}'::jsonb, '{"feature_type": "fulfillment_batch", "message": "Batch process 3 orders?"}'::jsonb, 'PENDING_APPROVAL', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+            ('e2e-feed-test-2', 'e2e-tenant', 'marketing', '{"description": "Draft promo email?"}'::jsonb, '{"context": {"weekly_health_report": true}, "message": "Send promo?"}'::jsonb, 'PENDING_APPROVAL', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+          ON CONFLICT (id) DO UPDATE SET lifecycle_state = 'PENDING_APPROVAL', updated_at = CURRENT_TIMESTAMP;
         `,
       },
     });
