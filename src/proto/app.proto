@@ -198,8 +198,6 @@ service BookingEngineService {
   rpc ReserveTimeSlot(ReserveTimeSlotRequest) returns (ReserveTimeSlotResponse);
   rpc CreateConversationalCheckout(CreateConversationalCheckoutRequest) returns (ConversationalCheckoutSession);
   rpc SyncCalendar(SyncCalendarRequest) returns (SyncCalendarResponse);
-  rpc CreateQuote(CreateQuoteRequest) returns (QuoteResponse);
-  rpc FetchQuote(FetchQuoteRequest) returns (QuoteResponse);
 }
 
 message CheckAvailabilityRequest {
@@ -350,31 +348,4 @@ message SyncCalendarRequest {
 
 message SyncCalendarResponse {
   string status = 1;
-}
-
-message QuoteLineItem {
-  string description = 1;
-  int64 unit_price_cents = 2;
-  int32 quantity = 3;
-  bool is_optional = 4;
-}
-
-message CreateQuoteRequest {
-  string tenant_id = 1;
-  string customer_id = 2;
-  repeated QuoteLineItem line_items = 3;
-  int64 required_deposit = 4;
-}
-
-message FetchQuoteRequest {
-  string quote_id = 1;
-}
-
-message QuoteResponse {
-  string quote_id = 1;
-  string tenant_id = 2;
-  string status = 3;
-  int64 total_amount_cents = 4;
-  int64 required_deposit = 5;
-  repeated QuoteLineItem line_items = 6;
 }

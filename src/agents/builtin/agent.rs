@@ -113,7 +113,6 @@ pub struct AgentRunConfig {
     pub enable_observation_masking: bool,
     pub observation_masking_threshold: usize,
     pub observation_masking_size_limit: usize,
-    pub observation_masking_element_limit: usize,
     pub enable_lost_in_the_middle_prevention: bool,
     pub enable_context_compaction: bool,
     pub compaction_threshold_tokens: i32,
@@ -203,7 +202,6 @@ impl Default for AgentRunConfig {
             enable_observation_masking: true,
             observation_masking_threshold: 3,
             observation_masking_size_limit: 512,
-            observation_masking_element_limit: 50,
             enable_lost_in_the_middle_prevention: true,
             enable_context_compaction: true,
             compaction_threshold_tokens: 60_000,
@@ -854,7 +852,7 @@ impl Agent {
             let mut final_messages = messages.clone();
 
             if cfg.enable_observation_masking {
-                crate::observation_masking::apply_observation_masking(&mut final_messages, cfg.observation_masking_threshold, cfg.observation_masking_size_limit, cfg.observation_masking_element_limit);
+                crate::observation_masking::apply_observation_masking(&mut final_messages, cfg.observation_masking_threshold, cfg.observation_masking_size_limit);
             }
 
             if cfg.enable_acon_context_strategy {
@@ -2948,7 +2946,6 @@ impl Agent {
                     &mut final_messages,
                     final_cfg.observation_masking_threshold,
                     final_cfg.observation_masking_size_limit,
-                    final_cfg.observation_masking_element_limit,
                 );
             }
 
@@ -3950,7 +3947,6 @@ impl Agent {
                     &mut messages,
                     final_cfg.observation_masking_threshold,
                     final_cfg.observation_masking_size_limit,
-                    final_cfg.observation_masking_element_limit,
                 );
             }
 

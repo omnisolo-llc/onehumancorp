@@ -22,7 +22,7 @@ export async function POST(request: Request) {
     const safeFeatures = Array.isArray(features) ? features.map(escapeHtml) : [];
 
     // Call the Rust core backend API to submit the waitlist entry
-    const backendRes = await fetch(`${backendUrl}/api/v1/growth/waitlist`, {
+    const backendRes = await fetch(`${backendUrl}/v1/growth/waitlist`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

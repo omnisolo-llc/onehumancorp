@@ -1,6 +1,8 @@
 import { test, expect } from './fixtures';
 import { currentAppSmoke } from './current_app_smoke';
 
+currentAppSmoke('autonomous_booking');
+
 test.describe('Autonomous Booking & Scheduling Engine', () => {
   test('should display Action Needed and Approval booking cards on the dashboard for Operations Agent', async ({ page }) => {
     // We are testing the CUJ where the owner checks the Unified Agent Feed for

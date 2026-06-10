@@ -23,7 +23,7 @@ pub struct Quote {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct BookingInvoice {
+pub struct Invoice {
     pub id: Uuid,
     pub tenant_id: Uuid,
     pub invoice_type: String, // 'Deposit' or 'Final'
@@ -1129,140 +1129,6 @@ impl BookingEngineService for NativeBookingService {
         }))
     }
 
-    async fn create_quote(
-        &self,
-        request: Request<::server_ohc::app::CreateQuoteRequest>,
-    ) -> Result<Response<::server_ohc::app::QuoteResponse>, Status> {
-        let auth_info = request.extensions().get::<::server_auth::orchestration::AuthInfo>().cloned();
-        let tenant_id = match auth_info {
-            Some(info) => info.org_id,
-            None => {
-                let spiffe_id_str = request.metadata().get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
-                ::server_auth::parse_spiffe_id(spiffe_id_str).map_err(|_| Status::unauthenticated("invalid spiffe id"))?.0
-            }
-        };
-
-        if tenant_id.is_empty() {
-            return Err(Status::unauthenticated("missing tenant identity in session"));
-        }
-
-        let req = request.into_inner();
-        let quote_id = uuid::Uuid::new_v4().to_string();
-        let mut total_amount_cents = 0;
-
-        let pool = crate::db::get_pool();
-        let mut tx = pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
-
-        crate::common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| Status::internal(e.to_string()))?;
-
-        sqlx::query(
-            "INSERT INTO quotes (id, tenant_id, customer_id, status, required_deposit) VALUES ($1, $2, $3, $4, $5)"
-        )
-        .bind(&quote_id)
-        .bind(&tenant_id)
-        .bind(uuid::Uuid::parse_str(&req.customer_id).unwrap_or_else(|_| uuid::Uuid::new_v4()))
-        .bind("DRAFT")
-        .bind(req.required_deposit)
-        .execute(&mut *tx)
-        .await
-        .map_err(|e| Status::internal(e.to_string()))?;
-
-        for item in &req.line_items {
-            total_amount_cents += item.unit_price_cents * item.quantity as i64;
-            sqlx::query(
-                "INSERT INTO quote_line_items (id, quote_id, description, unit_price_cents, quantity, is_optional) VALUES ($1, $2, $3, $4, $5, $6)"
-            )
-            .bind(uuid::Uuid::new_v4())
-            .bind(uuid::Uuid::parse_str(&quote_id).unwrap())
-            .bind(&item.description)
-            .bind(item.unit_price_cents)
-            .bind(item.quantity)
-            .bind(item.is_optional)
-            .execute(&mut *tx)
-            .await
-            .map_err(|e| Status::internal(e.to_string()))?;
-        }
-
-        sqlx::query("UPDATE quotes SET total_amount = $1 WHERE id = $2 AND tenant_id = $3")
-            .bind(total_amount_cents)
-            .bind(&quote_id)
-            .bind(&tenant_id)
-            .execute(&mut *tx)
-            .await
-            .map_err(|e| Status::internal(e.to_string()))?;
-
-        tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
-
-        Ok(Response::new(::server_ohc::app::QuoteResponse {
-            quote_id,
-            tenant_id,
-            status: "DRAFT".to_string(),
-            total_amount_cents,
-            required_deposit: req.required_deposit,
-            line_items: req.line_items,
-        }))
-    }
-
-    async fn fetch_quote(
-        &self,
-        request: Request<::server_ohc::app::FetchQuoteRequest>,
-    ) -> Result<Response<::server_ohc::app::QuoteResponse>, Status> {
-        let auth_info = request.extensions().get::<::server_auth::orchestration::AuthInfo>().cloned();
-        let tenant_id = match auth_info {
-            Some(info) => info.org_id,
-            None => {
-                let spiffe_id_str = request.metadata().get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
-                ::server_auth::parse_spiffe_id(spiffe_id_str).map_err(|_| Status::unauthenticated("invalid spiffe id"))?.0
-            }
-        };
-
-        if tenant_id.is_empty() {
-            return Err(Status::unauthenticated("missing tenant identity in session"));
-        }
-
-        let req = request.into_inner();
-
-        let pool = crate::db::get_pool();
-        let mut tx = pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
-        crate::common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| Status::internal(e.to_string()))?;
-
-        use sqlx::Row;
-        let quote_row = sqlx::query("SELECT * FROM quotes WHERE id = $1 AND tenant_id = $2")
-            .bind(&req.quote_id)
-            .bind(&tenant_id)
-            .fetch_optional(&mut *tx)
-            .await
-            .map_err(|e| Status::internal(e.to_string()))?;
-
-        if let Some(row) = quote_row {
-            let mut line_items = vec![];
-            let items_rows = sqlx::query("SELECT * FROM quote_line_items WHERE quote_id = $1")
-                .bind(uuid::Uuid::parse_str(&req.quote_id).unwrap_or_default())
-                .fetch_all(&mut *tx)
-                .await
-                .map_err(|e| Status::internal(e.to_string()))?;
-
-            for r in items_rows {
-                line_items.push(::server_ohc::app::QuoteLineItem {
-                    description: r.try_get("description").unwrap_or_default(),
-                    unit_price_cents: r.try_get("unit_price_cents").unwrap_or_default(),
-                    quantity: r.try_get("quantity").unwrap_or_default(),
-                    is_optional: r.try_get("is_optional").unwrap_or_default(),
-                });
-            }
-
-            Ok(Response::new(::server_ohc::app::QuoteResponse {
-                quote_id: req.quote_id,
-                tenant_id,
-                status: row.try_get("status").unwrap_or_default(),
-                total_amount_cents: row.try_get("total_amount").unwrap_or_default(),
-                required_deposit: row.try_get("required_deposit").unwrap_or_default(),
-                line_items,
-            }))
-        } else {
-            Err(Status::not_found("Quote not found"))
-        }
-    }
     async fn sync_calendar(
         &self,
         _request: Request<SyncCalendarRequest>,

@@ -18,9 +18,6 @@ export function FloatingActionButton() {
           <Link href="/services/new" className="px-4 py-2 bg-white text-gray-900 rounded-full shadow-lg font-semibold border border-gray-200 hover:bg-gray-50 whitespace-nowrap">
             📅 New Service
           </Link>
-          <Link href="/pos/terminal" className="px-4 py-2 bg-[#0066FF] text-white rounded-full shadow-lg font-bold border border-blue-400 hover:bg-blue-700 whitespace-nowrap">
-            📱 Quick Charge (POS)
-          </Link>
         </div>
       )}
 

@@ -24,7 +24,7 @@ test.describe('Help Chat Flow', () => {
 
     // Submit
     const sendButton = page.getByRole('button', { name: 'Send message' });
-    await sendButton.click({ force: true });
+    await sendButton.click();
 
     // Wait for the backend mocked response to appear
     await expect(page.locator('text=I have routed your request to the')).toBeVisible();
@@ -54,7 +54,7 @@ test.describe('Help Center Complete UI Flow', () => {
 
     // Close the modal
     const closeBtn = page.getByRole('button', { name: 'Close video' });
-    await closeBtn.click({ force: true });
+    await closeBtn.click();
 
     // Modal should be gone
     await expect(videoModal).not.toBeVisible();
@@ -73,7 +73,7 @@ test.describe('Tooltip functionality', () => {
     await tooltipTrigger.hover();
 
     // Check if the tooltip wrapper gets rendered
-    await expect(page.getByText('Direct API access is only for custom integrations.').first()).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText('Direct API access is only for custom integrations.')).toBeVisible();
   });
 
   test('should display tooltip on dashboard hover', async ({ page }) => {
@@ -85,7 +85,7 @@ test.describe('Tooltip functionality', () => {
 
     await dashboardTooltipTrigger.hover();
 
-    await expect(page.getByText('View your daily sales and overall business health.').first()).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText('View your daily sales and overall business health.')).toBeVisible();
   });
 });
 

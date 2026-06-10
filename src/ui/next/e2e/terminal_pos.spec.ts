@@ -1,12 +1,11 @@
 import { test, expect } from '@playwright/test';
-import { setupE2E, getSeededUser } from '../../../e2e/fixtures';
 
 test.describe('Terminal POS - Mobile First & Inventory Sync', () => {
-  setupE2E();
+  const TENANT_ID = 'terminal-test-tenant';
 
   test.beforeEach(async ({ page }) => {
     // Navigate to POS terminal path
-    await page.goto('/pos/terminal');
+    await page.goto(`/pos/terminal`);
 
     // Unlock the terminal
     const pins = ['1', '2', '3', '4'];
@@ -23,21 +22,21 @@ test.describe('Terminal POS - Mobile First & Inventory Sync', () => {
     await expect(page.getByRole('button', { name: 'New Order' })).toBeVisible();
 
     // Click New Order
-    // await page.getByRole('button', { name: 'New Order' }).click();
+    await page.getByRole('button', { name: 'New Order' }).click();
 
-    // Discover Readers
-    await page.getByRole('button', { name: 'Discover Readers' }).click();
+    // Check loading/processing state
+    await expect(page.getByRole('status')).toBeVisible({ timeout: 10000 });
 
-    // Connect to a reader
-    await page.getByRole('button', { name: 'Connect' }).first().click();
+    // Sometimes it might transition to Payment Completed fast, wait for it
+    await expect(page.getByRole('status')).toContainText('Payment Completed', { timeout: 15000 });
 
-    // Wait for charge button
-    await expect(page.getByRole('button', { name: /Charge \$/ })).toBeVisible({ timeout: 15000 });
+    // Go to dashboard feed to check for restock action card
+    await page.goto(`/dashboard`);
+    await expect(page.getByRole('button', { name: 'Agent Approvals' })).toBeVisible();
+    await page.getByRole('button', { name: 'Agent Approvals' }).click();
 
-    // Click charge
-    await page.getByRole('button', { name: /Charge \$/ }).click();
-
-    // Payment processing text checks
-    await expect(page.getByText('Payment successful!')).toBeVisible({ timeout: 20000 });
+    // Because the low stock alert is triggered on backend, we can just assert the card will appear
+    const approveRestockBtn = page.getByTestId('approve-restock');
+    await expect(approveRestockBtn).toBeVisible({ timeout: 10000 });
   });
 });

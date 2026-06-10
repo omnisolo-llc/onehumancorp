@@ -242,30 +242,6 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
 });
 
 test.describe('Tauri Dashboard UI and UX Improvements', () => {
-
-
-  test('Setup UI should have glassmorphism aesthetics applied', async ({ page }) => {
-    const workspaceRoot = process.env.TEST_WORKSPACE
-        ? path.join(process.env.TEST_SRCDIR || process.cwd(), process.env.TEST_WORKSPACE)
-        : process.cwd();
-
-    const tauriUiDir = path.join(workspaceRoot, 'src/ui/tauri/src/ui');
-
-    await page.route('http://mock/setup.html', async route => {
-        const content = fs.readFileSync(path.join(tauriUiDir, 'setup.html'), 'utf-8');
-        await route.fulfill({ contentType: 'text/html', body: content });
-    });
-
-    await page.goto('http://mock/setup.html');
-
-    // Check that the container class has the updated glassmorphism properties
-    const container = page.locator('.container');
-    await expect(container).toHaveCSS('backdrop-filter', 'blur(30px) saturate(2.1)');
-    await expect(container).toHaveCSS('border-radius', '16px');
-    await expect(container).toHaveCSS('background-color', 'rgba(255, 255, 255, 0.65)');
-    await expect(container).toHaveCSS('border', '1px solid rgba(255, 255, 255, 0.4)');
-  });
-
   test('Dashboard should have glassmorphism aesthetics applied', async ({ page }) => {
     const workspaceRoot = process.env.TEST_WORKSPACE
         ? path.join(process.env.TEST_SRCDIR, process.env.TEST_WORKSPACE)

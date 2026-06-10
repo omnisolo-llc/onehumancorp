@@ -42,7 +42,7 @@ type ApprovalRequest = {
   payload: any;
 };
 
-export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
+export function UnifiedAgentFeed() {
   const [items, setItems] = useState<AgentFeedItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -75,25 +75,21 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
         setActivityLoading(true);
         const tenant = tenantId();
 
-        let unifiedData = initialData;
+        const unifiedRes = await fetch(`/api/agent-feed?tenant_id=${tenant}`, {
+          headers: {
+            "x-tenant-id": tenant,
+            "x-user-id": "default",
+          },
+        });
 
-        if (!unifiedData) {
-          const unifiedRes = await fetch(`/api/agent-feed?tenant_id=${tenant}`, {
-            headers: {
-              "x-tenant-id": tenant,
-              "x-user-id": "default",
-            },
-          });
-
-          if (!unifiedRes.ok) {
-            throw new Error("Failed to load agent feed");
-          }
-
-          unifiedData = await unifiedRes.json();
+        if (!unifiedRes.ok) {
+          throw new Error("Failed to load agent feed");
         }
 
+        const unifiedData = await unifiedRes.json();
+
         if (mounted) {
-          if (unifiedData?.items) {
+          if (unifiedData.items) {
             setItems(unifiedData.items.filter((i: any) => i.lifecycle_state !== "APPROVED" && i.lifecycle_state !== "DISMISSED"));
 
             // Map items for activity feed as well
@@ -170,7 +166,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
       mounted = false;
       cleanup.then((fn: any) => fn && typeof fn === 'function' && fn());
     };
-  }, [initialData]);
+  }, []);
 
   useEffect(() => {
     if (typeof EventSource === 'undefined') return;
@@ -260,14 +256,12 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
 
       if (!res.ok) {
         // If it fails, we might want to fetch again to restore state
-        const refreshRes = await fetch(`/api/agent-feed?tenant_id=${tenant}`, {
+        const refreshRes = await fetch(`/api/agents/approvals?tenant_id=${tenant}`, {
             headers: { "x-tenant-id": tenant, "x-user-id": "default" }
         });
         if (refreshRes.ok) {
-            const data: any = await refreshRes.json();
-            if (data.items) {
-               setItems(data.items.filter((i: any) => i.lifecycle_state !== "APPROVED" && i.lifecycle_state !== "DISMISSED"));
-            }
+            const data: ApprovalsResponse = await refreshRes.json();
+            setItems(data.pending_approvals);
         }
         throw new Error("Failed to submit decision");
       }
@@ -389,7 +383,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                     )}
                   </div>
                   <h3 className="text-lg font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] leading-snug mt-1">
-                    {(approval.context_payload?.description || approval.proposed_action?.message || approval.proposed_action?.action_type || approval.event_source)}
+                    {(approval.proposed_action?.message || approval.proposed_action?.action_type || approval.event_source)}
                   </h3>
                   {((approval.proposed_action || approval.context_payload)?.context || (approval.proposed_action || approval.context_payload)?.remaining_stock !== undefined || (approval.proposed_action || approval.context_payload)?.feature_type === "quote_draft" || (approval.proposed_action || approval.context_payload)?.feature_type === "social_post_draft") && (
                     <div className="mt-2 flex flex-col gap-1 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
@@ -720,7 +714,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                           aria-label="Reject proposal"
                           data-testid="reject-proposal"
                         >
-                          Deny
+                          Decline
                         </button>
                       </div>
                     </>

@@ -224,8 +224,6 @@ pub struct CommitInventoryRequest {
     pub product_id: String,
     pub quantity: i32,
     pub lock_id: String,
-    pub customer_id: Option<String>,
-    pub amount_cents: Option<i64>,
 }
 
 pub async fn reserve_inventory_handler(
@@ -379,38 +377,6 @@ pub async fn commit_inventory_handler(
                 let new_stock = stock - req_data.quantity;
                 let _ = sqlx::query("UPDATE products SET inventory_count = $1 WHERE id = $2 AND tenant_id = $3")
                     .bind(new_stock).bind(&req_data.product_id).bind(&tenant_id).execute(&mut *tx).await;
-
-                // Record the order
-                let order_id = uuid::Uuid::new_v4().to_string();
-                let total_amount = (req_data.amount_cents.unwrap_or(0) as f64) / 100.0;
-                let _ = sqlx::query("INSERT INTO orders (id, tenant_id, customer_id, total_amount, status) VALUES ($1, $2, $3, $4, 'completed')")
-                    .bind(&order_id).bind(&tenant_id).bind(&req_data.customer_id).bind(total_amount).execute(&mut *tx).await;
-
-                let item_id = uuid::Uuid::new_v4().to_string();
-                let _ = sqlx::query("INSERT INTO order_items (id, tenant_id, order_id, product_id, quantity, price) VALUES ($1, $2, $3, $4, $5, $6)")
-                    .bind(&item_id).bind(&tenant_id).bind(&order_id).bind(&req_data.product_id).bind(req_data.quantity).bind(total_amount).execute(&mut *tx).await;
-
-                // Trigger agentic post-sale workflow
-                let event_payload = serde_json::json!({
-                    "order_id": order_id,
-                    "tenant_id": tenant_id,
-                    "customer_id": req_data.customer_id,
-                    "amount": total_amount,
-                    "source": "in_person_pos",
-                });
-
-                let event = crate::orchestration::departments::types::DepartmentEvent {
-                    id: uuid::Uuid::new_v4().to_string(),
-                    tenant_id: tenant_id.clone(),
-                    event_type: "POS_SALE_COMPLETED".to_string(),
-                    payload: event_payload,
-                };
-                let _ = hub.publish_mesh_event(::server_ohc::orchestration::MeshEvent {
-                    event_id: uuid::Uuid::new_v4().to_string(),
-                    topic: "pos_sales".to_string(),
-                    payload: serde_json::to_vec(&event).unwrap_or_default(),
-                    timestamp: chrono::Utc::now().timestamp(),
-                });
 
                 if new_stock <= 5 {
                     let job_id = uuid::Uuid::new_v4().to_string();
@@ -737,8 +703,6 @@ mod tests {
             product_id: "prod-terminal-test-2".to_string(),
             quantity: 2,
             lock_id: "".to_string(),
-            customer_id: None,
-            amount_cents: None,
         });
         let auth_info = Some(axum::extract::Extension(::server_auth::orchestration::AuthInfo {
             org_id: tenant_id.to_string(),
@@ -753,52 +717,5 @@ mod tests {
             .bind(tenant_id)
             .fetch_one(&pool).await.unwrap();
         assert!(action_request_count.0 > 0);
-    }
-
-    #[tokio::test]
-    async fn test_commit_inventory_records_order() {
-        let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
-        if !database_url.contains("test") {
-            return;
-        }
-
-        let pool = PgPoolOptions::new().connect(&database_url).await.unwrap();
-
-        let tenant_id = "tenant-pos-test-order";
-        sqlx::query("INSERT INTO tenants (id, name) VALUES ($1, 'POS Test Tenant') ON CONFLICT DO NOTHING")
-            .bind(tenant_id).execute(&pool).await.unwrap();
-        sqlx::query("INSERT INTO products (id, tenant_id, title, inventory_count) VALUES ('prod-pos-test', $1, 'POS Test Prod', 10) ON CONFLICT DO NOTHING")
-            .bind(tenant_id).execute(&pool).await.unwrap();
-
-        let (tx, _rx) = tokio::sync::mpsc::channel(100);
-        let hub = Arc::new(Hub::new(tx, pool.clone()));
-        let req_data = axum::extract::Json(CommitInventoryRequest {
-            tenant_id: tenant_id.to_string(),
-            product_id: "prod-pos-test".to_string(),
-            quantity: 1,
-            lock_id: "".to_string(),
-            customer_id: None,
-            amount_cents: Some(1999),
-        });
-        let auth_info = Some(axum::extract::Extension(::server_auth::orchestration::AuthInfo {
-            org_id: tenant_id.to_string(),
-            spiffe_id: "test".to_string(),
-            agent_id: "test".to_string()
-        }));
-        let headers = axum::http::HeaderMap::new();
-
-        commit_inventory_handler(headers, axum::extract::State(hub), auth_info, req_data).await;
-
-        // Verify order count
-        let order_count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM orders WHERE tenant_id = $1")
-            .bind(tenant_id)
-            .fetch_one(&pool).await.unwrap();
-        assert!(order_count.0 > 0);
-
-        // Verify order items count
-        let items_count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM order_items WHERE tenant_id = $1 AND product_id = 'prod-pos-test'")
-            .bind(tenant_id)
-            .fetch_one(&pool).await.unwrap();
-        assert!(items_count.0 > 0);
     }
 }
