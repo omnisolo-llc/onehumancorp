@@ -105,23 +105,23 @@ export default function WebsiteBuilderPage() {
         if (data.builderState.blocks && Array.isArray(data.builderState.blocks)) setBlocks(data.builderState.blocks);
         if (data.builderState.status) setStatus(data.builderState.status);
       }
-      if (data && data.wizardState) {
+      if (data && data.wizardState && Object.keys(data.wizardState).length > 0) {
         if (data.wizardState.step !== undefined) setWizardStep(data.wizardState.step);
         if (data.wizardState.wizardStep !== undefined) setWizardStep(data.wizardState.wizardStep);
-        if (data.wizardState.businessName) setBusinessName(data.wizardState.businessName);
-        if (data.wizardState.businessType) setBusinessType(data.wizardState.businessType);
+        if (data.wizardState.businessName !== undefined) setBusinessName(data.wizardState.businessName);
+        if (data.wizardState.businessType !== undefined) setBusinessType(data.wizardState.businessType);
         if (data.wizardState.hasPhysicalProducts !== undefined) setHasPhysicalProducts(data.wizardState.hasPhysicalProducts);
         if (data.wizardState.hasDigitalProducts !== undefined) setHasDigitalProducts(data.wizardState.hasDigitalProducts);
-        if (data.wizardState.productName) setProductName(data.wizardState.productName);
-        if (data.wizardState.productPrice) setProductPrice(data.wizardState.productPrice);
-        if (data.wizardState.paymentMethod) setPaymentMethod(data.wizardState.paymentMethod);
-        if (data.wizardState.userName) setUserName(data.wizardState.userName);
-        if (data.wizardState.userEmail) setUserEmail(data.wizardState.userEmail);
-        if (data.wizardState.userPassword) setUserPassword(data.wizardState.userPassword);
-        if (data.wizardState.template) setTemplate(data.wizardState.template);
-        if (data.wizardState.bio) setBio(data.wizardState.bio);
-        if (data.wizardState.domainChoice) setDomainChoice(data.wizardState.domainChoice);
-        if (data.wizardState.aiAgents) setAiAgents(data.wizardState.aiAgents);
+        if (data.wizardState.productName !== undefined) setProductName(data.wizardState.productName);
+        if (data.wizardState.productPrice !== undefined) setProductPrice(data.wizardState.productPrice);
+        if (data.wizardState.paymentMethod !== undefined) setPaymentMethod(data.wizardState.paymentMethod);
+        if (data.wizardState.userName !== undefined) setUserName(data.wizardState.userName);
+        if (data.wizardState.userEmail !== undefined) setUserEmail(data.wizardState.userEmail);
+        if (data.wizardState.userPassword !== undefined) setUserPassword(data.wizardState.userPassword);
+        if (data.wizardState.template !== undefined) setTemplate(data.wizardState.template);
+        if (data.wizardState.bio !== undefined) setBio(data.wizardState.bio);
+        if (data.wizardState.domainChoice !== undefined) setDomainChoice(data.wizardState.domainChoice);
+        if (data.wizardState.aiAgents !== undefined) setAiAgents(data.wizardState.aiAgents);
         if (data.wizardState.aiAutoRespond !== undefined) setAiAutoRespond(data.wizardState.aiAutoRespond);
       }
     })
@@ -335,7 +335,7 @@ export default function WebsiteBuilderPage() {
 
                     <button
                       className="w-full min-h-[54px] glassmorphism text-[#0071E3] border border-[#0071E3] p-4 font-bold rounded-[8px] shadow-sm hover:bg-blue-50 transition-all"
-                      onClick={() => setWizardStep('instant-build')}
+                      onClick={() => { setBio(''); setWizardStep('instant-build'); }}
                     >
                       Instant Build
                     </button>

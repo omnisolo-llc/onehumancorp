@@ -11,8 +11,29 @@ use chrono::Utc;
 use ::server_common::Claims;
 use crate::domain::repository::agent_feed_repo::{AgentFeedRepository, AgentFeedItem};
 use sqlx::PgPool;
+use crate::utils::cache::HybridCache;
+use std::sync::{Arc, OnceLock};
 
-#[derive(Serialize)]
+pub static AGENT_FEED_CACHE: OnceLock<Arc<HybridCache<AgentFeedListResponse>>> = OnceLock::new();
+
+pub fn get_agent_feed_cache() -> Arc<HybridCache<AgentFeedListResponse>> {
+    AGENT_FEED_CACHE.get_or_init(|| {
+        let redis_client = if let Ok(url) = std::env::var("REDIS_URL") {
+            match redis::Client::open(url.clone()) {
+                Ok(client) => Some(client),
+                Err(e) => {
+                    tracing::warn!("Failed to initialize Redis client for AGENT_FEED_CACHE: {}. Falling back to in-memory cache.", e);
+                    None
+                }
+            }
+        } else {
+            None
+        };
+        Arc::new(HybridCache::new(redis_client))
+    }).clone()
+}
+
+#[derive(Serialize, Deserialize, Clone)]
 pub struct AgentFeedListResponse {
     pub items: Vec<AgentFeedItem>,
 }
@@ -63,10 +84,22 @@ async fn list_feed_items(
     let limit = query.limit.unwrap_or(20);
     let offset = query.offset.unwrap_or(0);
 
+    let cache_key = format!("agent_feed:{}:{}:{}", tenant_id, limit, offset);
+    let cache = get_agent_feed_cache();
+
+    if let Some(cached_resp) = cache.get(&cache_key).await {
+        return (StatusCode::OK, Json(cached_resp)).into_response();
+    }
+
     let repo = AgentFeedRepository::new(pool);
 
     match repo.list(&tenant_id, limit, offset).await {
-        Ok(items) => (StatusCode::OK, Json(AgentFeedListResponse { items })).into_response(),
+        Ok(items) => {
+            let response = AgentFeedListResponse { items };
+            let tag = format!("agent_feed_tenant:{}", tenant_id);
+            cache.set_with_tags(&cache_key, response.clone(), vec![tag], std::time::Duration::from_secs(60)).await;
+            (StatusCode::OK, Json(response)).into_response()
+        },
         Err(e) => {
             tracing::error!("Failed to list agent feed items: {}", e);
             (StatusCode::INTERNAL_SERVER_ERROR, Json(AgentFeedListResponse { items: vec![] })).into_response()
@@ -88,7 +121,7 @@ async fn create_feed_item(
 
     let item = AgentFeedItem {
         id: Uuid::new_v4().to_string(),
-        tenant_id,
+        tenant_id: tenant_id.clone(),
         event_source: payload.event_source,
         context_payload: payload.context_payload.map(sqlx::types::Json),
         proposed_action: payload.proposed_action.map(sqlx::types::Json),
@@ -98,7 +131,12 @@ async fn create_feed_item(
     };
 
     match repo.create(item.clone()).await {
-        Ok(_) => (StatusCode::CREATED, Json(item)).into_response(),
+        Ok(_) => {
+            let cache = get_agent_feed_cache();
+            let tag = format!("agent_feed_tenant:{}", tenant_id);
+            cache.invalidate_by_tag(&tag).await;
+            (StatusCode::CREATED, Json(item)).into_response()
+        },
         Err(e) => {
             tracing::error!("Failed to create agent feed item: {}", e);
             StatusCode::INTERNAL_SERVER_ERROR.into_response()
@@ -120,7 +158,12 @@ async fn update_feed_item_state(
     let repo = AgentFeedRepository::new(pool);
 
     match repo.update_state(&tenant_id, &id, &payload.state).await {
-        Ok(updated_item) => (StatusCode::OK, Json(updated_item)).into_response(),
+        Ok(updated_item) => {
+            let cache = get_agent_feed_cache();
+            let tag = format!("agent_feed_tenant:{}", tenant_id);
+            cache.invalidate_by_tag(&tag).await;
+            (StatusCode::OK, Json(updated_item)).into_response()
+        },
         Err(e) => {
             tracing::error!("Failed to update agent feed item state: {}", e);
             StatusCode::INTERNAL_SERVER_ERROR.into_response()
@@ -131,17 +174,53 @@ async fn update_feed_item_state(
 #[cfg(test)]
 mod tests {
     use axum::{
-        body::Body,
-        http::{Request, StatusCode},
+
+
     };
-    use tower::ServiceExt;
     use crate::api::agent_feed;
-    use std::sync::Arc;
     use sqlx::PgPool;
+    use super::{get_agent_feed_cache, AgentFeedListResponse};
+    use crate::domain::repository::agent_feed_repo::AgentFeedItem;
 
     #[tokio::test]
     async fn test_agent_feed_router_compiles() {
         // Just verify that the router can be instantiated
         let _router = agent_feed::router::<PgPool>();
+    }
+
+    #[tokio::test]
+    async fn test_agent_feed_cache_operations() {
+        let cache = get_agent_feed_cache();
+        let cache_key = "agent_feed:test_tenant:20:0";
+
+        // Ensure it's empty initially
+        cache.invalidate(cache_key).await;
+        let result = cache.get(cache_key).await;
+        assert!(result.is_none());
+
+        let response = AgentFeedListResponse {
+            items: vec![],
+        };
+
+        // Set cache with tag
+        cache.set_with_tags(
+            cache_key,
+            response.clone(),
+            vec!["agent_feed_tenant:test_tenant".to_string()],
+            std::time::Duration::from_secs(60),
+        ).await;
+
+        // Verify cache hit
+        let hit = cache.get(cache_key).await;
+        assert!(hit.is_some());
+
+        // Invalidate by tag
+        cache.invalidate_by_tag("agent_feed_tenant:test_tenant").await;
+
+        // Verify cache miss after invalidation
+        // NOTE: there might be a short delay needed for tags to be invalidated in HybridCache depending on implementation,
+        // but HybridCache tag invalidation is usually synchronous for local cache.
+        let miss = cache.get(cache_key).await;
+        assert!(miss.is_none());
     }
 }

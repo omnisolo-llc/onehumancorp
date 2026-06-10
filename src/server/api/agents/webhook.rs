@@ -170,34 +170,9 @@ async fn handle_webhook(
         }
     }
 
-    let translation = match translate_inbox_message_with_llm(
-        &payload.tenant_id,
-        &payload.source,
-        &payload.message,
-        payload.target_language.as_deref().unwrap_or("English"),
-    ).await {
-        Ok(t) => t,
-        Err(e) => {
-            tracing::error!("Translation failed: {}", e);
-            InboxTranslation {
-                translated_content: payload.message.clone(),
-                source_language: Some("Unknown".to_string()),
-                target_language: payload.target_language.unwrap_or_else(|| "English".to_string()),
-                original_content: payload.message.clone(),
-            }
-        }
-    };
-
-    let draft_reply = match super::translation::generate_inbox_draft_reply(&payload.tenant_id, &payload.source, &translation).await {
-        Ok(d) => d,
-        Err(e) => {
-            tracing::error!("Failed to generate draft reply: {}", e);
-            "Thanks for reaching out! We will review this and get back to you soon.".to_string()
-        }
-    };
-
     let pool = get_pool();
     let id = Uuid::new_v4().to_string();
+    // Insert the raw message initially; the TranslationAgent will update it with translated content and a draft reply.
     let _ = sqlx::query(
         r#"
         INSERT INTO inbox_messages (id, tenant_id, source, original_content, content, translated_from_language, draft_reply, status, created_at)
@@ -207,50 +182,34 @@ async fn handle_webhook(
     .bind(&id)
     .bind(&payload.tenant_id)
     .bind(&payload.source)
-    .bind(&translation.original_content)
-    .bind(&translation.translated_content)
-    .bind(&translation.source_language)
-    .bind(&draft_reply)
+    .bind(&payload.message)
+    .bind(&payload.message) // content starts as original until translated
+    .bind(None::<String>) // translated_from_language starts empty
+    .bind(None::<String>) // draft_reply starts empty
     .execute(&pool)
     .await;
 
-    let res = orchestrator.execute_action(
-        DepartmentType::CustomerSuccess,
-        format!("New {} message from {} (Language: {:?})", payload.source, payload.tenant_id, translation.source_language),
-        payload.tenant_id.clone(),
-        ActionRisk::DraftForReview,
-        serde_json::json!({
-            "source": payload.source.clone(),
-            "message": translation.translated_content.clone(),
-            "original_content": translation.original_content.clone(),
-            "translated_from_language": translation.source_language.clone(),
-            "draft_reply": draft_reply.clone(),
-            "inbox_message_id": id.clone(),
-        }),
-    ).await;
+    let target_language = payload.target_language.unwrap_or_else(|| "English".to_string());
 
-    let _ = orchestrator.dispatch_event(crate::orchestration::departments::types::DepartmentEvent {
+    let event = crate::orchestration::departments::types::DepartmentEvent {
         id: uuid::Uuid::new_v4().to_string(),
         tenant_id: payload.tenant_id.clone(),
         event_type: "tenant.omnichannel.message.received".to_string(),
         payload: serde_json::json!({
             "source": payload.source,
-            "message": translation.translated_content,
-            "original_message": translation.original_content,
-            "translated_from_language": translation.source_language,
-            "generated_response": draft_reply,
-            "feature_type": "ambassador_reply",
+            "original_message": payload.message,
+            "target_language": target_language,
             "inbox_message_id": id,
         }),
-    }).await;
+    };
 
-    match res {
-        Ok(req) => (StatusCode::OK, Json(WebhookResponse { success: true, request_id: Some(req.id) })).into_response(),
+    match orchestrator.dispatch_event(event).await {
+        Ok(_) => (StatusCode::OK, Json(WebhookResponse { success: true, request_id: Some(id) })).into_response(),
         Err(e) => {
             if e.contains("AI Budget exhausted") {
-                return (StatusCode::TOO_MANY_REQUESTS, Json(WebhookResponse { success: false, request_id: None })).into_response();
+                (StatusCode::TOO_MANY_REQUESTS, Json(WebhookResponse { success: false, request_id: None })).into_response()
             } else {
-                return (StatusCode::INTERNAL_SERVER_ERROR, Json(WebhookResponse { success: false, request_id: None })).into_response();
+                (StatusCode::INTERNAL_SERVER_ERROR, Json(WebhookResponse { success: false, request_id: None })).into_response()
             }
         }
     }

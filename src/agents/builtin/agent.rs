@@ -746,6 +746,8 @@ impl Agent {
         on_event(AgentEvent::RunStarted { iteration: 0 });
 
         let mut messages = vec![crate::types::Message::user(initial_message)];
+        let session_id = cfg.thread_id.clone().unwrap_or_else(|| cfg.agent_id.clone());
+        let jit_retriever = self.memory_store.as_ref().map(|store| crate::jit_retrieval::JitContextRetriever::new(store.clone(), session_id));
         let mut turn_count = 0;
         let mut total_tokens = 0;
         let mut total_session_cost = 0.0;
@@ -770,6 +772,18 @@ impl Agent {
             });
 
             // 1. Assemble prompt
+
+            let mut dynamic_system_prompt = system_prompt.clone();
+            // JIT Retrieval: Only fetch and inject on the first turn of the loop to avoid duplicate I/O and context bloat.
+            if turn_count == 0 {
+                if let Some(retriever) = &jit_retriever {
+                    if let Some(jit_context) = retriever.retrieve_context(&messages).await {
+                        // Ephemeral injection into the system prompt. Does not mutate the persistent `messages` array.
+                        dynamic_system_prompt.push_str("\n\n");
+                        dynamic_system_prompt.push_str(&jit_context);
+                    }
+                }
+            }
             let req = crate::types::ChatRequest {
                 model: cfg.model.clone(),
                 system: system_prompt.clone(),

@@ -25,7 +25,7 @@ test.describe('Offline Field Operations', () => {
 
     // Verify UI updates locally
     await expect(page.locator('text=Saved Notes:')).toBeVisible();
-    await expect(page.locator('text="Found a leak under the sink, requires immediate pipe replacement quote."')).toBeVisible();
+    await expect(page.locator('text=\"Found a leak under the sink, requires immediate pipe replacement quote.\"')).toBeVisible();
     await expect(page.locator('text=Sales Agent will draft an estimate based on these notes once online.')).toBeVisible();
 
     // Simulate going back online

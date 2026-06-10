@@ -346,6 +346,83 @@ pub async fn get_api_docs_spec() -> Json<serde_json::Value> {
                     }
                 }
             },
+            "/api/v1/builder/generate": {
+                "post": {
+                    "summary": "Generate a Storefront",
+                    "description": "Generates a new storefront draft using AI.",
+                    "tags": ["Builder"],
+                    "requestBody": {
+                        "required": true,
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "description": { "type": "string", "example": "A boutique pet bakery" }
+                                    },
+                                    "required": ["description"]
+                                }
+                            }
+                        }
+                    },
+                    "responses": {
+                        "200": {
+                            "description": "Success",
+                            "content": {
+                                "application/json": {
+                                    "schema": {
+                                        "type": "object",
+                                        "properties": {
+                                            "domain": { "type": "string", "nullable": true },
+                                            "theme": { "type": "string" },
+                                            "pages": { "type": "array", "items": { "type": "object" } },
+                                            "sample_products": { "type": "array", "items": { "type": "object" } }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "/api/v1/builder/publish_draft": {
+                "post": {
+                    "summary": "Publish Storefront Draft",
+                    "description": "Publishes a storefront draft.",
+                    "tags": ["Builder"],
+                    "requestBody": {
+                        "required": true,
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "domain": { "type": "string", "nullable": true },
+                                        "draft": { "type": "object" }
+                                    },
+                                    "required": ["draft"]
+                                }
+                            }
+                        }
+                    },
+                    "responses": {
+                        "200": {
+                            "description": "Success",
+                            "content": {
+                                "application/json": {
+                                    "schema": {
+                                        "type": "object",
+                                        "properties": {
+                                            "id": { "type": "string" },
+                                            "domain": { "type": "string", "nullable": true }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
             "/api/v1/catalog/generate-offering": {
                 "post": {
                     "summary": "Generate an Offering",

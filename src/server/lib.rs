@@ -45,8 +45,10 @@ pub static AI_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<Stri
 static UI_ORDERS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<Vec<serde_json::Value>>> = std::sync::OnceLock::new();
 static UI_BOOKINGS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<Vec<serde_json::Value>>> = std::sync::OnceLock::new();
 static UI_INBOX_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<Vec<serde_json::Value>>> = std::sync::OnceLock::new();
+static UI_SUPPLY_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<serde_json::Value>> = std::sync::OnceLock::new();
 static UI_DASHBOARD_METRICS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<serde_json::Value>> = std::sync::OnceLock::new();
 static UI_UNIFIED_AGENT_FEED_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<serde_json::Value>> = std::sync::OnceLock::new();
+static UI_TRIAGE_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<Vec<serde_json::Value>>> = std::sync::OnceLock::new();
 static METRICS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<HttpMetricsResponse>> = std::sync::OnceLock::new();
 
 pub fn get_redis_client() -> Option<redis::Client> {
@@ -54,6 +56,19 @@ pub fn get_redis_client() -> Option<redis::Client> {
         None
     } else {
         std::env::var("REDIS_URL").ok().and_then(|url| redis::Client::open(url).ok())
+    }
+}
+
+#[cfg(test)]
+mod triage_cache_tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_ui_triage_cache_initialization() {
+        // Just checking that the OnceLock can be initialized correctly.
+        let cache = UI_TRIAGE_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
+        // Note: we can't do full integration test easily without db setup, but we verify get/set compiles and runs
+        let _ = cache.get("test_key").await;
     }
 }
 
@@ -365,7 +380,7 @@ pub mod services {
     pub mod subscription;
     pub mod pos;
     pub mod collective;
-
+    pub mod inventory_sync;
 }
 
 use tonic::{transport::Server, Request, Response, Status};
@@ -2446,6 +2461,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let finance_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::finance_agent::FinanceAgent::new(dept_orchestrator.clone())));
     let legal_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::legal_agent::LegalAgent::new(dept_orchestrator.clone())));
     let advisory_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::business_advisory_agent::BusinessAdvisoryAgent::new(dept_orchestrator.clone())));
+    let translation_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::translation_agent::TranslationAgent::new(dept_orchestrator.clone())));
 
     tokio::join!(
         dept_orchestrator.register_department(ops_agent),
@@ -2454,7 +2470,8 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         dept_orchestrator.register_department(sales_agent),
         dept_orchestrator.register_department(finance_agent),
         dept_orchestrator.register_department(legal_agent),
-        dept_orchestrator.register_department(advisory_agent)
+        dept_orchestrator.register_department(advisory_agent),
+        dept_orchestrator.register_department(translation_agent)
     );
 
     let bus = std::sync::Arc::new(crate::msgbus::MemoryBus::new());
@@ -2463,14 +2480,19 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let orch_clone = dept_orchestrator.clone();
     tokio::spawn(async move {
         while let Ok(event) = products_rx.recv().await {
-            if event.action == "ProductCreated" {
+            if event.action == "ProductCreated" || event.action == "ProductUpdated" {
                 if let Ok(payload_str) = String::from_utf8(event.payload.clone()) {
                     if let Ok(payload_json) = serde_json::from_str::<serde_json::Value>(&payload_str) {
                         let tenant_id = payload_json.get("organization_id").and_then(|v| v.as_str()).unwrap_or("system").to_string();
+                        let event_type = if event.action == "ProductCreated" {
+                            "tenant.product.created".to_string()
+                        } else {
+                            "tenant.product.updated".to_string()
+                        };
                         let dept_event = crate::orchestration::departments::types::DepartmentEvent {
                             id: uuid::Uuid::new_v4().to_string(),
                             tenant_id,
-                            event_type: "tenant.product.created".to_string(),
+                            event_type,
                             payload: payload_json,
                         };
                         let _ = orch_clone.dispatch_event(dept_event).await;
@@ -2731,6 +2753,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
 struct UiTenantQuery {
     tenant_id: Option<String>,
     tenant: Option<String>,
+    mobile_optimized: Option<bool>,
 }
 
 fn ui_tenant_id(query: &UiTenantQuery) -> String {
@@ -2757,6 +2780,12 @@ pub async fn list_ui_triage_handler(
     use axum::response::IntoResponse;
     use sqlx::Row;
     let tenant_id = ui_tenant_id(&query);
+
+    let cache_key = format!("ui_triage:{}", tenant_id);
+    let cache = UI_TRIAGE_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
+    if let Some(cached) = cache.get(&cache_key).await {
+        return (axum::http::StatusCode::OK, axum::Json(cached)).into_response();
+    }
 
     let items = match &db.store {
         crate::db::DbStore::Postgres => {
@@ -2798,6 +2827,8 @@ pub async fn list_ui_triage_handler(
         }
         _ => vec![],
     };
+
+    let _ = cache.set(&cache_key, items.clone(), std::time::Duration::from_secs(10)).await;
     (axum::http::StatusCode::OK, axum::Json(items)).into_response()
 }
 
@@ -2826,6 +2857,9 @@ pub async fn update_ui_triage_action_handler(
             match sqlx::query("UPDATE triage_items SET status = $1 WHERE id = $2 AND tenant_id = $3").bind(status).bind(&payload.triage_item_id).bind(&tenant_id).execute(&mut *tx).await {
                 Ok(_) => {
                     let _ = tx.commit().await;
+                    let cache = UI_TRIAGE_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
+                    let cache_key = format!("ui_triage:{}", tenant_id);
+                    cache.invalidate(&cache_key).await;
                     (axum::http::StatusCode::OK, axum::Json(serde_json::json!({"status": "success"}))).into_response()
                 },
                 Err(e) => {
@@ -3200,13 +3234,23 @@ async fn list_ui_orders_handler(
             .bind(&tenant_id)
             .fetch_all(&db.pool)
             .await {
-                Ok(rows) => Ok(rows.into_iter().map(|row| serde_json::json!({
-                    "id": row.get::<String, _>("id"),
-                    "customer_name": row.get::<String, _>("customer_name"),
-                    "total_amount": row.get::<f64, _>("total_amount"),
-                    "status": row.get::<String, _>("status"),
-                    "created_at": row.get::<String, _>("created_at"),
-                })).collect::<Vec<_>>()),
+                Ok(rows) => Ok(rows.into_iter().map(|row| {
+                    if query.mobile_optimized.unwrap_or(false) {
+                        serde_json::json!({
+                            "id": row.get::<String, _>("id"),
+                            "total_amount": row.get::<f64, _>("total_amount"),
+                            "status": row.get::<String, _>("status"),
+                        })
+                    } else {
+                        serde_json::json!({
+                            "id": row.get::<String, _>("id"),
+                            "customer_name": row.get::<String, _>("customer_name"),
+                            "total_amount": row.get::<f64, _>("total_amount"),
+                            "status": row.get::<String, _>("status"),
+                            "created_at": row.get::<String, _>("created_at"),
+                        })
+                    }
+                }).collect::<Vec<_>>()),
                 Err(e) => Err(e),
             }
         }
@@ -3219,13 +3263,23 @@ async fn list_ui_orders_handler(
             .bind(&tenant_id)
             .fetch_all(pool)
             .await {
-                Ok(rows) => Ok(rows.into_iter().map(|row| serde_json::json!({
-                    "id": row.get::<String, _>("id"),
-                    "customer_name": row.get::<String, _>("customer_name"),
-                    "total_amount": row.get::<f64, _>("total_amount"),
-                    "status": row.get::<String, _>("status"),
-                    "created_at": row.get::<String, _>("created_at"),
-                })).collect::<Vec<_>>()),
+                Ok(rows) => Ok(rows.into_iter().map(|row| {
+                    if query.mobile_optimized.unwrap_or(false) {
+                        serde_json::json!({
+                            "id": row.get::<String, _>("id"),
+                            "total_amount": row.get::<f64, _>("total_amount"),
+                            "status": row.get::<String, _>("status"),
+                        })
+                    } else {
+                        serde_json::json!({
+                            "id": row.get::<String, _>("id"),
+                            "customer_name": row.get::<String, _>("customer_name"),
+                            "total_amount": row.get::<f64, _>("total_amount"),
+                            "status": row.get::<String, _>("status"),
+                            "created_at": row.get::<String, _>("created_at"),
+                        })
+                    }
+                }).collect::<Vec<_>>()),
                 Err(e) => Err(e),
             }
         }
@@ -3233,7 +3287,7 @@ async fn list_ui_orders_handler(
 
     match orders {
         Ok(orders) => {
-            cache.set(&cache_key, orders.clone(), std::time::Duration::from_secs(5)).await;
+            cache.set(&cache_key, orders.clone(), std::time::Duration::from_secs(60)).await;
             (axum::http::StatusCode::OK, axum::Json(orders)).into_response()
         },
         Err(e) => {
@@ -3269,15 +3323,26 @@ async fn list_ui_bookings_handler(
             .bind(&tenant_id)
             .fetch_all(&db.pool)
             .await {
-                Ok(rows) => Ok(rows.into_iter().map(|row| serde_json::json!({
-                    "id": row.get::<String, _>("id"),
-                    "customer_name": row.get::<String, _>("customer_name"),
-                    "product_id": row.get::<String, _>("product_id"),
-                    "product_title": row.get::<String, _>("product_title"),
-                    "start_time": row.try_get::<chrono::DateTime<chrono::Utc>, _>("start_time").map(|d| d.to_rfc3339()).unwrap_or_default(),
-                    "end_time": row.try_get::<chrono::DateTime<chrono::Utc>, _>("end_time").map(|d| d.to_rfc3339()).unwrap_or_default(),
-                    "status": row.get::<String, _>("status"),
-                })).collect::<Vec<_>>()),
+                Ok(rows) => Ok(rows.into_iter().map(|row| {
+                    if query.mobile_optimized.unwrap_or(false) {
+                        serde_json::json!({
+                            "id": row.get::<String, _>("id"),
+                            "product_title": row.get::<String, _>("product_title"),
+                            "start_time": row.try_get::<chrono::DateTime<chrono::Utc>, _>("start_time").map(|d| d.to_rfc3339()).unwrap_or_default(),
+                            "status": row.get::<String, _>("status"),
+                        })
+                    } else {
+                        serde_json::json!({
+                            "id": row.get::<String, _>("id"),
+                            "customer_name": row.get::<String, _>("customer_name"),
+                            "product_id": row.get::<String, _>("product_id"),
+                            "product_title": row.get::<String, _>("product_title"),
+                            "start_time": row.try_get::<chrono::DateTime<chrono::Utc>, _>("start_time").map(|d| d.to_rfc3339()).unwrap_or_default(),
+                            "end_time": row.try_get::<chrono::DateTime<chrono::Utc>, _>("end_time").map(|d| d.to_rfc3339()).unwrap_or_default(),
+                            "status": row.get::<String, _>("status"),
+                        })
+                    }
+                }).collect::<Vec<_>>()),
                 Err(e) => Err(e),
             }
         }
@@ -3291,15 +3356,26 @@ async fn list_ui_bookings_handler(
             .bind(&tenant_id)
             .fetch_all(pool)
             .await {
-                Ok(rows) => Ok(rows.into_iter().map(|row| serde_json::json!({
-                    "id": row.get::<String, _>("id"),
-                    "customer_name": row.get::<String, _>("customer_name"),
-                    "product_id": row.get::<String, _>("product_id"),
-                    "product_title": row.get::<String, _>("product_title"),
-                    "start_time": row.get::<String, _>("start_time"),
-                    "end_time": row.get::<String, _>("end_time"),
-                    "status": row.get::<String, _>("status"),
-                })).collect::<Vec<_>>()),
+                Ok(rows) => Ok(rows.into_iter().map(|row| {
+                    if query.mobile_optimized.unwrap_or(false) {
+                        serde_json::json!({
+                            "id": row.get::<String, _>("id"),
+                            "product_title": row.get::<String, _>("product_title"),
+                            "start_time": row.get::<String, _>("start_time"),
+                            "status": row.get::<String, _>("status"),
+                        })
+                    } else {
+                        serde_json::json!({
+                            "id": row.get::<String, _>("id"),
+                            "customer_name": row.get::<String, _>("customer_name"),
+                            "product_id": row.get::<String, _>("product_id"),
+                            "product_title": row.get::<String, _>("product_title"),
+                            "start_time": row.get::<String, _>("start_time"),
+                            "end_time": row.get::<String, _>("end_time"),
+                            "status": row.get::<String, _>("status"),
+                        })
+                    }
+                }).collect::<Vec<_>>()),
                 Err(e) => Err(e),
             }
         }
@@ -3307,7 +3383,7 @@ async fn list_ui_bookings_handler(
 
     match bookings {
         Ok(v) => {
-            cache.set(&cache_key, v.clone(), std::time::Duration::from_secs(5)).await;
+            cache.set(&cache_key, v.clone(), std::time::Duration::from_secs(60)).await;
             (axum::http::StatusCode::OK, axum::Json(v)).into_response()
         }
         Err(e) => {
@@ -3350,16 +3426,28 @@ async fn list_ui_inbox_handler(
                 .bind(&tenant_id)
                 .fetch_all(&db.pool)
                 .await {
-                    Ok(rows) => Ok(rows.into_iter().map(|row| serde_json::json!({
-                        "id": row.get::<String, _>("id"),
-                        "source": row.get::<String, _>("source"),
-                        "content": row.get::<String, _>("content"),
-                        "original_message": row.get::<String, _>("original_content"),
-                        "translated_from_language": row.get::<String, _>("translated_from_language"),
-                        "generated_response": row.get::<String, _>("draft_reply"),
-                        "status": row.get::<String, _>("status"),
-                        "created_at": row.get::<String, _>("created_at"),
-                    })).collect::<Vec<_>>()),
+                    Ok(rows) => Ok(rows.into_iter().map(|row| {
+                        if query.mobile_optimized.unwrap_or(false) {
+                            serde_json::json!({
+                                "id": row.get::<String, _>("id"),
+                                "source": row.get::<String, _>("source"),
+                                "content": row.get::<String, _>("content"),
+                                "status": row.get::<String, _>("status"),
+                                "created_at": row.get::<String, _>("created_at"),
+                            })
+                        } else {
+                            serde_json::json!({
+                                "id": row.get::<String, _>("id"),
+                                "source": row.get::<String, _>("source"),
+                                "content": row.get::<String, _>("content"),
+                                "original_message": row.get::<String, _>("original_content"),
+                                "translated_from_language": row.get::<String, _>("translated_from_language"),
+                                "generated_response": row.get::<String, _>("draft_reply"),
+                                "status": row.get::<String, _>("status"),
+                                "created_at": row.get::<String, _>("created_at"),
+                            })
+                        }
+                    }).collect::<Vec<_>>()),
                     Err(e) => Err(e),
                 }
         }
@@ -3381,16 +3469,28 @@ async fn list_ui_inbox_handler(
                 .bind(&tenant_id)
                 .fetch_all(pool)
                 .await {
-                    Ok(rows) => Ok(rows.into_iter().map(|row| serde_json::json!({
-                        "id": row.get::<String, _>("id"),
-                        "source": row.get::<String, _>("source"),
-                        "content": row.get::<String, _>("content"),
-                        "original_message": row.get::<String, _>("original_content"),
-                        "translated_from_language": row.get::<String, _>("translated_from_language"),
-                        "generated_response": row.get::<String, _>("draft_reply"),
-                        "status": row.get::<String, _>("status"),
-                        "created_at": row.get::<String, _>("created_at"),
-                    })).collect::<Vec<_>>()),
+                    Ok(rows) => Ok(rows.into_iter().map(|row| {
+                        if query.mobile_optimized.unwrap_or(false) {
+                            serde_json::json!({
+                                "id": row.get::<String, _>("id"),
+                                "source": row.get::<String, _>("source"),
+                                "content": row.get::<String, _>("content"),
+                                "status": row.get::<String, _>("status"),
+                                "created_at": row.get::<String, _>("created_at"),
+                            })
+                        } else {
+                            serde_json::json!({
+                                "id": row.get::<String, _>("id"),
+                                "source": row.get::<String, _>("source"),
+                                "content": row.get::<String, _>("content"),
+                                "original_message": row.get::<String, _>("original_content"),
+                                "translated_from_language": row.get::<String, _>("translated_from_language"),
+                                "generated_response": row.get::<String, _>("draft_reply"),
+                                "status": row.get::<String, _>("status"),
+                                "created_at": row.get::<String, _>("created_at"),
+                            })
+                        }
+                    }).collect::<Vec<_>>()),
                     Err(e) => Err(e),
                 }
         }
@@ -3398,7 +3498,7 @@ async fn list_ui_inbox_handler(
 
     match messages {
         Ok(messages) => {
-            cache.set(&cache_key, messages.clone(), std::time::Duration::from_secs(5)).await;
+            cache.set(&cache_key, messages.clone(), std::time::Duration::from_secs(60)).await;
             (axum::http::StatusCode::OK, axum::Json(messages)).into_response()
         },
         Err(e) => {
@@ -4034,6 +4134,32 @@ async fn create_ui_bom_item_handler(
                                     .execute(pool)
                                     .await
                                     .map_err(|e| e.to_string())?;
+
+                                    sqlx::query(
+                                        "INSERT OR IGNORE INTO triage_items (id, tenant_id, customer_id, source, priority, context, status) VALUES (?, ?, ?, ?, ?, ?, ?)"
+                                    )
+                                    .bind("triage-test-1")
+                                    .bind(tenant_id)
+                                    .bind("cust_demo1")
+                                    .bind("Instagram")
+                                    .bind("High")
+                                    .bind("Maya requested a custom cake")
+                                    .bind("pending")
+                                    .execute(pool)
+                                    .await
+                                    .map_err(|e| e.to_string())?;
+
+                                    sqlx::query(
+                                        "INSERT OR IGNORE INTO triage_proposed_actions (id, triage_item_id, tenant_id, action_type, payload) VALUES (?, ?, ?, ?, ?)"
+                                    )
+                                    .bind("action-test-1")
+                                    .bind("triage-test-1")
+                                    .bind(tenant_id)
+                                    .bind("Draft Reply")
+                                    .bind("Send deposit link to Maya")
+                                    .execute(pool)
+                                    .await
+                                    .map_err(|e| e.to_string())?;
                                 }
                                 crate::db::DbStore::Postgres => {
                                     sqlx::query(
@@ -4095,6 +4221,32 @@ async fn create_ui_bom_item_handler(
                                     .bind("cust_demo1")
                                     .bind(158.50)
                                     .bind("completed")
+                                    .execute(&db.pool)
+                                    .await
+                                    .map_err(|e| e.to_string())?;
+
+                                    sqlx::query(
+                                        "INSERT INTO triage_items (id, tenant_id, customer_id, source, priority, context, status) VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT (id) DO NOTHING"
+                                    )
+                                    .bind("triage-test-1")
+                                    .bind(tenant_id)
+                                    .bind("cust_demo1")
+                                    .bind("Instagram")
+                                    .bind("High")
+                                    .bind("Maya requested a custom cake")
+                                    .bind("pending")
+                                    .execute(&db.pool)
+                                    .await
+                                    .map_err(|e| e.to_string())?;
+
+                                    sqlx::query(
+                                        "INSERT INTO triage_proposed_actions (id, triage_item_id, tenant_id, action_type, payload) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (id) DO NOTHING"
+                                    )
+                                    .bind("action-test-1")
+                                    .bind("triage-test-1")
+                                    .bind(tenant_id)
+                                    .bind("Draft Reply")
+                                    .bind("Send deposit link to Maya")
                                     .execute(&db.pool)
                                     .await
                                     .map_err(|e| e.to_string())?;
@@ -4449,6 +4601,7 @@ async fn create_ui_bom_item_handler(
     let dashboard_service = crate::services::dashboard::service::MyDashboardService::new(db.clone(), hub.clone());
     let billing_service = crate::services::billing::service::MyBillingService::new(hub.get_cost_auditor());
     let collective_service = crate::services::collective::service::MyCollectiveService::new(db.pool.clone());
+    let inventory_sync_service = crate::services::inventory_sync::MyInventorySyncService::new(db.clone(), hub.redis_client.clone());
 
     Server::builder()
         .add_service(HubServiceServer::with_interceptor(hub_service, spiffe_interceptor))
@@ -4460,6 +4613,7 @@ async fn create_ui_bom_item_handler(
         .add_service(BillingServiceServer::with_interceptor(billing_service, spiffe_interceptor))
         .add_service(::server_ohc::app::booking_engine_service_server::BookingEngineServiceServer::with_interceptor(crate::services::booking::NativeBookingService { redis_client: hub.redis_client.clone() }, spiffe_interceptor))
         .add_service(::server_ohc::app::pos_service_server::PosServiceServer::with_interceptor(crate::services::pos::service::MyPosService::new(db.clone()), spiffe_interceptor))
+        .add_service(::server_ohc::app::inventory_sync_service_server::InventorySyncServiceServer::with_interceptor(inventory_sync_service, spiffe_interceptor))
         .serve(addr)
         .await?;
 

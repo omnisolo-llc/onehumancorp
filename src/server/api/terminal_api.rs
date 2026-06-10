@@ -454,6 +454,7 @@ pub async fn get_terminal_connection_token_handler(
 
 #[derive(serde::Deserialize)]
 pub struct PosOfflineTransaction {
+    pub id: Option<String>,
     pub client_id: Option<String>,
     pub amount_cents: i64,
     pub currency: String,
@@ -530,7 +531,7 @@ pub async fn sync_offline_transactions_handler(
         let pool_clone = pool.clone();
         let tenant_id_clone = tenant_id.clone();
         let client_id_clone = tx.client_id.clone().unwrap_or_default();
-        let tx_id = uuid::Uuid::new_v4().to_string();
+        let tx_id = tx.id.clone().unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
 
         let amount_cents = tx.amount_cents;
         let currency = tx.currency.clone();
