@@ -16,6 +16,7 @@ function CheckoutContent() {
   const [tenant, setTenant] = useState("my-store");
   const [checkoutStatus, setCheckoutStatus] = useState("");
   const [isMercadoPagoProcessing, setIsMercadoPagoProcessing] = useState(false);
+  const [discountClaimed, setDiscountClaimed] = useState(false);
 
   useEffect(() => {
     if (typeof localStorage !== "undefined") {
@@ -254,6 +255,42 @@ function CheckoutContent() {
             </p>
           </div>
 
+          {!discountClaimed ? (
+            <div className="bg-pink-50 border border-pink-100 rounded-xl p-4 my-2">
+              <div className="flex items-center gap-3 mb-2">
+                <span className="text-xl">🎁</span>
+                <h3 className="font-bold text-pink-900 font-outfit text-sm">
+                  Want 10% off your order?
+                </h3>
+              </div>
+              <p className="text-pink-800 text-xs font-medium mb-3">
+                Share your purchase on X (Twitter) and we'll instantly apply a 10% discount to your order!
+              </p>
+              <button
+                onClick={() => {
+                  window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('I just bought something awesome from ' + tenant + '! Check them out: ' + window.location.origin + '/onboarding?ref=' + tenant + '&source=checkout_viral')}`, '_blank');
+                  setDiscountClaimed(true);
+                }}
+                className="w-full px-3 py-2 bg-pink-600 text-white rounded-lg text-xs font-bold shadow-sm hover:bg-pink-700 transition-colors flex items-center justify-center gap-2"
+              >
+                <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.008 5.94H5.078z"/></svg>
+                Share on X to get 10% off
+              </button>
+            </div>
+          ) : (
+            <div className="bg-green-50 border border-green-100 rounded-xl p-4 my-2 flex items-center justify-between">
+              <div>
+                <h3 className="font-bold text-green-900 font-outfit text-sm">
+                  10% Discount Claimed!
+                </h3>
+                <p className="text-green-800 text-xs font-medium">
+                  Thanks for sharing. Your discount has been applied.
+                </p>
+              </div>
+              <span className="text-2xl">🎉</span>
+            </div>
+          )}
+
           <div className="flex flex-col gap-2">
             <label className="text-sm font-semibold text-gray-700">Delivery Address (Optional)</label>
             <div className="flex gap-2">
@@ -285,7 +322,16 @@ function CheckoutContent() {
              <div className="flex justify-between items-center pt-2 border-t border-gray-100">
                <span className="font-semibold text-gray-700">Total with Delivery</span>
                <span className="text-xl font-bold font-outfit text-gray-900">
-                 ${(45.00 + deliveryFee).toFixed(2)}
+                 ${((45.00 + deliveryFee) * (discountClaimed ? 0.9 : 1)).toFixed(2)}
+               </span>
+             </div>
+          )}
+
+          {deliveryFee === null && discountClaimed && (
+             <div className="flex justify-between items-center pt-2 border-t border-gray-100">
+               <span className="font-semibold text-gray-700">Total after Discount</span>
+               <span className="text-xl font-bold font-outfit text-gray-900">
+                 ${(45.00 * 0.9).toFixed(2)}
                </span>
              </div>
           )}
