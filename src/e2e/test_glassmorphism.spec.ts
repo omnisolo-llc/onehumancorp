@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test } from './fixtures';
 import { currentAppSmoke } from './current_app_smoke';
 
 test('test_glassmorphism', async ({ page, request }) => {
