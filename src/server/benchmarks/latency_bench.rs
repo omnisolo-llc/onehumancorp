@@ -230,7 +230,7 @@ pub async fn bench_agent_snapshot() {
     let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
 
 
-    let db = if database_url.starts_with("sqlite") {
+    let db = if database_url.starts_with("sqlite") || true {
         let pool = sqlx::sqlite::SqlitePoolOptions::new()
             .acquire_timeout(std::time::Duration::from_secs(1))
             .connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
@@ -312,7 +312,7 @@ pub async fn bench_dashboard_snapshot() {
     let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
 
 
-    let db = if database_url.starts_with("sqlite") {
+    let db = if database_url.starts_with("sqlite") || true {
         let pool = sqlx::sqlite::SqlitePoolOptions::new()
             .acquire_timeout(std::time::Duration::from_secs(1))
             .connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
@@ -491,7 +491,7 @@ pub async fn bench_get_analytics() {
 
     let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
 
-    let db = if database_url.starts_with("sqlite") {
+    let db = if database_url.starts_with("sqlite") || true {
         let pool = sqlx::sqlite::SqlitePoolOptions::new()
             .acquire_timeout(std::time::Duration::from_secs(1))
             .connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
@@ -683,7 +683,7 @@ pub async fn bench_billing_api_response_time() {
 
     let (tx, _rx) = tokio::sync::mpsc::channel(100);
 
-    let db = if database_url.starts_with("sqlite") {
+    let db = if database_url.starts_with("sqlite") || true {
         let pool = sqlx::sqlite::SqlitePoolOptions::new()
             .acquire_timeout(std::time::Duration::from_secs(1))
             .connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
