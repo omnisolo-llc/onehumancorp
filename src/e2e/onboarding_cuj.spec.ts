@@ -3,6 +3,18 @@ import { test, expect } from '@playwright/test';
 test.describe('Onboarding Wizard CUJ', () => {
   test.beforeEach(async ({ page }) => {
     await page.addInitScript(() => window.localStorage.clear());
+    await page.route('/api/onboarding/intake', async route => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          business_type: 'Bakery',
+          business_name: 'Maya Bakery',
+          categories: ['food'],
+          initial_products: [{ name: 'Cake', price: '20' }]
+        }),
+      });
+    });
     await page.route('/api/onboarding/state', async route => {
       if (route.request().method() === 'GET') {
         await route.fulfill({
@@ -56,9 +68,14 @@ test.describe('Onboarding Wizard CUJ', () => {
     const locInput = page.getByPlaceholder(/Portland, OR/i);
     await locInput.fill('NY');
 
-    const generateBtn = page.getByRole('button', { name: /Generate My Business/i });
+    const generateBtn = page.getByRole('button', { name: /Next/i });
     await generateBtn.click();
 
+    const audienceInput = page.getByPlaceholder(/e.g. Local families, Tech startups/i);
+    await audienceInput.fill('Tech enthusiasts and developers');
+    await page.getByRole('button', { name: /Next/i }).click();
+
+    // Depending on backend speed we may need to wait for the analysis overlay to disappear
     // 5. Verify it transitions to Step 2: Review Details
     // Depending on backend speed we may need to increase timeout or just await visibility
     await expect(page.getByText('Review Details')).toBeVisible({ timeout: 15000 });
@@ -75,7 +92,7 @@ test.describe('Onboarding Wizard CUJ', () => {
 
     // 8. Verify it transitions to Live Screen
     await expect(page.getByText("You're Live!")).toBeVisible({ timeout: 15000 });
-    await expect(page.getByRole('link', { name: /Go to Dashboard/i })).toBeVisible();
+    await expect(page.getByRole('link', { name: /Open Assistant/i })).toBeVisible();
   });
 
   // Test 2: Ensure validation fails on small name
@@ -104,7 +121,7 @@ test.describe('Onboarding Wizard CUJ', () => {
     await page.getByRole('button', { name: /Next/i }).click();
 
     // Keep location empty
-    const generateBtn = page.getByRole('button', { name: /Generate My Business/i });
+    const generateBtn = page.getByRole('button', { name: /Next/i });
     await expect(generateBtn).toBeDisabled();
   });
 
@@ -131,7 +148,10 @@ test.describe('Onboarding Wizard CUJ', () => {
     await page.getByPlaceholder(/I bake custom vegan cakes/i).fill('Cakes');
     await page.getByRole('button', { name: /Next/i }).click();
     await page.getByPlaceholder(/Portland, OR/i).fill('NY');
-    await page.getByRole('button', { name: /Generate My Business/i }).click();
+    await page.getByRole('button', { name: /Next/i }).click();
+    const audienceInput = page.getByPlaceholder(/e.g. Local families, Tech startups/i);
+    await audienceInput.fill('Tech enthusiasts and developers');
+    await page.getByRole('button', { name: /Next/i }).click();
 
     await expect(page.getByText('Review Details')).toBeVisible({ timeout: 15000 });
     await page.getByRole('button', { name: /Continue/i }).click();
