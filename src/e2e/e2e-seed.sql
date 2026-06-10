@@ -146,7 +146,9 @@ SET name = EXCLUDED.name,
 
 INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at)
 VALUES
-('e2e-feed-social', 'e2e-tenant', 'marketing', '{"feature_type": "social_post_draft", "tiktok": "Check out our new product!", "instagram": "New arrival! Link in bio.", "facebook": "We just added a new product to our store."}'::jsonb, '{}'::jsonb, 'PENDING_APPROVAL', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+('e2e-feed-social', 'e2e-tenant', 'marketing', '{"feature_type": "social_post_draft", "tiktok": "Check out our new product!", "instagram": "New arrival! Link in bio.", "facebook": "We just added a new product to our store."}'::jsonb, '{}'::jsonb, 'PENDING_APPROVAL', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+  ('app-mock-ab12-34f7-e43e-7264a9c4021d', 'e2e-tenant', 'Operations', '{"description": "Mark requested to reschedule his 4 PM lesson to 5 PM today. You have a conflict. Suggest tomorrow at 4 PM?"}', '{"context":{"description": "Mark requested to reschedule his 4 PM lesson to 5 PM today. You have a conflict. Suggest tomorrow at 4 PM?"}}', 'PENDING_APPROVAL', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+  ('app-mock-cd34-34f7-e43e-7264a9c4021d', 'e2e-tenant', 'Operations', '{"description": "Agent tentatively booked a roof repair estimate for Sarah on Tuesday 2 PM. Pending $50 deposit. No action needed."}', '{"context":{"description": "Agent tentatively booked a roof repair estimate for Sarah on Tuesday 2 PM. Pending $50 deposit. No action needed."}}', 'PENDING_APPROVAL', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
 ON CONFLICT (id) DO UPDATE
 SET lifecycle_state = EXCLUDED.lifecycle_state,
     updated_at = CURRENT_TIMESTAMP;
@@ -166,11 +168,7 @@ ON CONFLICT (id) DO UPDATE
 SET status = EXCLUDED.status,
     updated_at = CURRENT_TIMESTAMP;
 
-INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at)
-VALUES
-  ('app-mock-ab12-34f7-e43e-7264a9c4021d', 'e2e-tenant', 'Operations', '{"description": "Mark requested to reschedule his 4 PM lesson to 5 PM today. You have a conflict. Suggest tomorrow at 4 PM?"}', '{"context":{"description": "Mark requested to reschedule his 4 PM lesson to 5 PM today. You have a conflict. Suggest tomorrow at 4 PM?"}}', 'PENDING_APPROVAL', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-  ('app-mock-cd34-34f7-e43e-7264a9c4021d', 'e2e-tenant', 'Operations', '{"description": "Agent tentatively booked a roof repair estimate for Sarah on Tuesday 2 PM. Pending $50 deposit. No action needed."}', '{"context":{"description": "Agent tentatively booked a roof repair estimate for Sarah on Tuesday 2 PM. Pending $50 deposit. No action needed."}}', 'PENDING_APPROVAL', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-ON CONFLICT (id) DO NOTHING;
+
 
 INSERT INTO agents (id, tenant_id, name, role, status, provider_type, region)
 VALUES

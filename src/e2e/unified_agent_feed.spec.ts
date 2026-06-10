@@ -34,6 +34,10 @@ test.describe("Unified Agent Feed Mobile UX", () => {
     await expect(opsCard).toBeVisible();
     await expect(marketingCard).toBeVisible();
 
+    const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
+    const clientWidth = await page.evaluate(() => document.documentElement.clientWidth);
+    expect(scrollWidth).toBeLessThanOrEqual(clientWidth);
+
     // 5. Verify touch targets on the default Approve button (has min-h-[44px] class)
     // We can't strictly test min-height CSS but we can click them to verify interaction
     const approveButton = page.locator('button[data-testid="approve-proposal"]').first();

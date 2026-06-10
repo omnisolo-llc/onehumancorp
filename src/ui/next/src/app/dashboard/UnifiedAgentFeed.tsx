@@ -314,50 +314,29 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
       <div className="flex flex-col gap-4">
         {activeTab === "proposals" && (
           <>
-            <div className="glassmorphism p-5 rounded-[16px] border border-white/40 dark:border-white/10 shadow-sm flex flex-col gap-4">
-              <div className="flex flex-col gap-1">
-                <div className="flex justify-between items-start">
-                  <span className="text-xs font-bold uppercase tracking-wider text-green-600 bg-green-100 dark:bg-green-900 dark:text-green-300 px-2 py-1 rounded">Action Needed</span>
-                  <span className="text-xs text-gray-500 font-inter">Just now</span>
-                </div>
-                <h3 className="text-[17px] font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] font-outfit mt-2 leading-tight">
-                  Agent tentatively booked a roof repair estimate for Sarah on Tuesday 2 PM. Pending $50 deposit. No action needed.
-                </h3>
-              </div>
-            </div>
 
-            <div className="glassmorphism p-5 rounded-[16px] border border-white/40 dark:border-white/10 shadow-sm flex flex-col gap-4">
-              <div className="flex flex-col gap-1">
-                <div className="flex justify-between items-start">
-                  <span className="text-xs font-bold uppercase tracking-wider text-[#0066FF] bg-[#0066FF]/10 dark:bg-[#3388FF]/20 dark:text-[#3388FF] px-2 py-1 rounded">Approval</span>
-                  <span className="text-xs text-gray-500 font-inter">5 min ago</span>
-                </div>
-                <h3 className="text-[17px] font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] font-outfit mt-2 leading-tight">
-                  Mark requested to reschedule his 4 PM lesson to 5 PM today. You have a conflict. Suggest tomorrow at 4 PM?
-                </h3>
-              </div>
-              <div className="flex gap-2 w-full mt-2">
-                <button
-                  className="flex-1 min-h-[44px] rounded-lg font-bold text-sm bg-green-500 hover:bg-green-600 text-white shadow-sm transition-transform active:scale-[0.98]"
-                >
-                  Approve
-                </button>
-                <button
-                  className="flex-1 min-h-[44px] rounded-lg font-bold text-sm bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 text-[#1D1D1F] dark:text-[#F5F5F7] transition-transform active:scale-[0.98]"
-                >
-                  Edit
-                </button>
-                <button
-                  className="flex-1 min-h-[44px] rounded-lg font-bold text-sm bg-red-100 hover:bg-red-200 text-red-600 dark:bg-red-900/30 dark:hover:bg-red-900/50 dark:text-red-400 transition-transform active:scale-[0.98]"
-                >
-                  Deny
-                </button>
-              </div>
-            </div>
+
+
 
             {loading && (
-              <div className="w-full p-4 glassmorphism rounded-[16px] text-center text-gray-500">
-                Loading Agent Proposals...
+              <div className="w-full flex flex-col gap-4">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="glassmorphism p-5 rounded-[16px] border border-white/40 dark:border-white/10 shadow-sm flex flex-col gap-4 animate-pulse">
+                    <div className="flex items-center gap-2">
+                      <div className="h-6 w-24 bg-gray-200 dark:bg-gray-700 rounded-md"></div>
+                      <div className="h-6 w-24 bg-gray-200 dark:bg-gray-700 rounded-md"></div>
+                    </div>
+                    <div className="h-5 w-3/4 bg-gray-200 dark:bg-gray-700 rounded mt-1"></div>
+                    <div className="mt-2 flex flex-col gap-2 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+                       <div className="h-4 w-full bg-gray-200 dark:bg-gray-700 rounded"></div>
+                       <div className="h-4 w-5/6 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                    </div>
+                    <div className="flex gap-3 w-full mt-2">
+                       <div className="flex-1 h-[44px] bg-gray-200 dark:bg-gray-700 rounded-[8px]"></div>
+                       <div className="flex-1 h-[44px] bg-gray-200 dark:bg-gray-700 rounded-[8px]"></div>
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
             {!loading && items.length === 0 && (
@@ -734,8 +713,17 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
         {activeTab === "activity" && (
           <>
             {activityLoading && (
-              <div className="w-full p-4 glassmorphism rounded-[16px] text-center text-gray-500">
-                Loading Activity Feed...
+              <div className="w-full flex flex-col gap-3 min-w-[320px] max-w-full">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="glassmorphism p-5 rounded-[16px] border border-white/40 dark:border-white/10 shadow-sm flex flex-col gap-3 opacity-90 min-h-[44px] animate-pulse">
+                    <div className="flex items-center justify-between">
+                      <div className="h-6 w-20 bg-gray-200 dark:bg-gray-700 rounded-md"></div>
+                      <div className="h-6 w-20 bg-gray-200 dark:bg-gray-700 rounded-md"></div>
+                    </div>
+                    <div className="h-5 w-2/3 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                    <div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                  </div>
+                ))}
               </div>
             )}
             {!activityLoading && activities.length === 0 && (
