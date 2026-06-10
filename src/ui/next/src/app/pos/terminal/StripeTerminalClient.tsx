@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from 'react';
 import { loadStripeTerminal } from '@stripe/terminal-js';
-import { SyncManager } from '../../../lib/sync/SyncManager';
 
 export default function StripeTerminalClient({ amount, productId, tenantId }: { amount: number, productId: string, tenantId: string }) {
   const [terminal, setTerminal] = useState<any>(null);

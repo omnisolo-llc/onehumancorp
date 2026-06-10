@@ -81,7 +81,9 @@ export class SyncManager {
              payment_method: 'terminal',
              payment_intent_id: m.idempotency_key,
              currency: m.currency || 'usd',
-             mutation_type: 'tap_to_pay'
+             mutation_type: 'tap_to_pay',
+             idempotency_key: m.idempotency_key,
+             device_id: m.device_id
           };
         } else if (m.type === 'draft_quote') {
           return {
