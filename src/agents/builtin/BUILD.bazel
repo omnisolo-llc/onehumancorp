@@ -80,6 +80,7 @@ rust_library(
         "output_parser.rs",
         "human_in_loop.rs",
         "plane.rs",
+        "jit_retrieval.rs",
         "plugins.rs",
         "prompt_construction.rs",
         "progressive_skills.rs",
