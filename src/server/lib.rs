@@ -4534,6 +4534,7 @@ async fn create_ui_bom_item_handler(
         .nest("/api/v1/catalog", api::catalog::router(hub.clone()))
         .nest("/api/v1/shipping", api::shipping::router())
         .nest("/api/v1/payments/terminal", api::terminal_api::router(hub.clone()))
+        .nest("/api/pos", api::pos::pos_routes(hub.clone()))
         .route("/api/v1/voice/command", axum::routing::post(api::audio_command::handle_voice_command).with_state(api::audio_command::VoiceCommandState {
             orchestrator: dept_orchestrator.clone(),
             semantic_router: semantic_router.clone(),
@@ -4544,6 +4545,7 @@ async fn create_ui_bom_item_handler(
         .nest("/api/agents/chat", api::agents::chat::router(dept_orchestrator.clone(), semantic_router.clone()))
         .nest("/api/agents/webhook", api::agents::webhook::router(dept_orchestrator.clone()))
         .nest("/api/agent-feed", api::agent_feed::router().with_state(db.pool.clone()))
+        .nest("/api/v1/invoices", api::invoice::router(hub.clone()))
         .nest("/api/v1/booking/request", api::booking::request::router(dept_orchestrator.clone()))
         .nest("/api/agents/mission", api::agents::mission::handoff::router(std::sync::Arc::new(crate::sip::SipDB::new(db.pool.clone(), "default".to_string()))))
         .route("/api/telemetry/sync", axum::routing::post(api::telemetry::sync_telemetry_handler))

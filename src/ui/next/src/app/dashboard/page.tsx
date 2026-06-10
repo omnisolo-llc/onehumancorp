@@ -213,21 +213,25 @@ export default function Dashboard() {
 
       try {
         const userId = localStorage.getItem("user_id") || "default";
-        const [unifiedRes, onboardingRes, approvalsRes] = await Promise.all([
+        const [unifiedRes, onboardingRes, approvalsRes, agentFeedRes] = await Promise.all([
           fetch(`/api/ui/dashboard/unified-feed?tenant_id=${tenant}`),
           fetch(`/api/onboarding/state`, { headers: { 'X-Tenant-ID': tenant, 'X-User-ID': userId } }),
-          fetch(`/api/agents/approvals?tenant_id=${tenant}`)
+          fetch(`/api/agents/approvals?tenant_id=${tenant}`),
+          fetch(`/api/agent-feed?tenant_id=${tenant}`, { headers: { 'X-Tenant-ID': tenant, 'X-User-ID': userId } })
         ]);
 
         if (!unifiedRes.ok) {
           throw new Error("Unified UI feed endpoint failed");
         }
 
-        const [unifiedData, onboardingData, approvalsData] = await Promise.all([
+        const [unifiedData, onboardingData, approvalsData, agentFeedData] = await Promise.all([
           unifiedRes.json(),
           onboardingRes.ok ? onboardingRes.json() : Promise.resolve(null),
           approvalsRes.ok ? approvalsRes.json() : Promise.resolve([]),
+          agentFeedRes.ok ? agentFeedRes.json() : Promise.resolve({ items: [] }),
         ]);
+
+        setDashboardData((prev: any) => ({ ...prev, initialAgentFeed: agentFeedData }));
 
         const metricsData = unifiedData.metrics || {};
         const ordersData = unifiedData.orders || [];
@@ -782,6 +786,15 @@ export default function Dashboard() {
               <p className="text-sm text-gray-600 dark:text-gray-400">Invite other business owners to OHC and earn premium credits.</p>
             </Link>
 
+            <Link href="/finance" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+              <div className="flex items-start justify-between mb-4">
+                <div className="w-12 h-12 rounded-full bg-green-50 dark:bg-green-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">💰</div>
+                <div className="text-green-600 dark:text-green-400 font-semibold text-sm bg-green-50 dark:bg-green-900/30 px-3 py-1 rounded-full">Finance</div>
+              </div>
+              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Finance & Invoicing</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Manage cash flow, invoices, and automated payment follow-ups.</p>
+            </Link>
+
             <Link href="/invoice-generator" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-cyan-50 dark:bg-cyan-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🧾</div>
@@ -835,6 +848,15 @@ export default function Dashboard() {
               </div>
               <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Storefront Widget</h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">Embed a mini storefront on your blog or website to boost sales.</p>
+            </Link>
+
+            <Link href="/embed-builder" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+              <div className="flex items-start justify-between mb-4">
+                <div className="w-12 h-12 rounded-full bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🔌</div>
+                <div className="text-emerald-600 dark:text-emerald-400 font-semibold text-sm bg-emerald-50 dark:bg-emerald-900/30 px-3 py-1 rounded-full">Widget</div>
+              </div>
+              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Interactive Embed</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Build custom intake, booking, or quote widgets for your site.</p>
             </Link>
 
             <Link href="/subscriptions" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
