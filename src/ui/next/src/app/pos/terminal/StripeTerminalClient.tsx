@@ -10,6 +10,9 @@ export default function StripeTerminalClient({ amount, productId, tenantId }: { 
   const [connectedReader, setConnectedReader] = useState<any>(null);
   const [reserving, setReserving] = useState<boolean>(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [paymentComplete, setPaymentComplete] = useState<boolean>(false);
+  const [customerEmail, setCustomerEmail] = useState<string>('');
+  const [receiptSent, setReceiptSent] = useState<boolean>(false);
 
   useEffect(() => {
     async function initTerminal() {
@@ -212,6 +215,7 @@ export default function StripeTerminalClient({ amount, productId, tenantId }: { 
           const commitData = await commitRes.json();
           if (commitData.success) {
             setStatus('Payment successful!');
+            setPaymentComplete(true);
           } else {
             setStatus('Payment successful, but inventory commit failed: ' + commitData.error_message);
           }
@@ -226,10 +230,38 @@ export default function StripeTerminalClient({ amount, productId, tenantId }: { 
     }
   };
 
+  const handleSendReceipt = async () => {
+    if (!customerEmail) return;
+    setStatus('Sending receipt...');
+    try {
+      const res = await fetch('/api/v1/payments/terminal/receipt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: customerEmail, transaction_id: "pos_sale" })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setReceiptSent(true);
+        setStatus('Receipt sent and customer profile updated.');
+      } else {
+        setStatus('Failed to send receipt: ' + data.error_message);
+      }
+    } catch (e: any) {
+      setStatus('Failed to send receipt: ' + e.message);
+    }
+  };
+
+  const resetPayment = () => {
+    setPaymentComplete(false);
+    setReceiptSent(false);
+    setCustomerEmail('');
+    setStatus('Connected to reader: ' + connectedReader?.label);
+  };
+
   return (
-    <div className="p-6 border border-white/40 rounded-2xl shadow-lg bg-white/65 backdrop-blur-[30px] saturate-[210%] mt-6 relative">
-      <h2 className="text-lg font-bold font-outfit text-gray-900 mb-2">Tap to Pay via Terminal</h2>
-      <p className="text-sm text-gray-600 mb-6 font-medium">Status: {status}</p>
+    <div className="p-6 border border-white/40 dark:border-white/10 rounded-2xl shadow-lg bg-white/65 dark:bg-[#16161A]/70 backdrop-blur-[30px] saturate-[210%] mt-6 relative transition-all">
+      <h2 className="text-lg font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Tap to Pay via Terminal</h2>
+      <p className="text-sm text-[#1D1D1F]/60 dark:text-[#F5F5F7]/60 mb-6 font-medium">Status: {status}</p>
 
       {!connectedReader && (
         <div className="mb-4">
@@ -238,8 +270,8 @@ export default function StripeTerminalClient({ amount, productId, tenantId }: { 
           </button>
           <ul className="mt-4 space-y-2">
             {discoveredReaders.map(reader => (
-              <li key={reader.id} className="flex justify-between items-center p-3 border border-gray-100 rounded-xl bg-white shadow-sm">
-                <span className="font-medium text-gray-800 text-sm">{reader.label || reader.id}</span>
+              <li key={reader.id} className="flex justify-between items-center p-3 border border-[#1D1D1F]/10 dark:border-white/10 rounded-xl bg-white/50 dark:bg-black/20 shadow-sm backdrop-blur-md">
+                <span className="font-medium text-[#1D1D1F] dark:text-[#F5F5F7] text-sm">{reader.label || reader.id}</span>
                 <button onClick={() => connectReader(reader)} className="bg-[#34C759] text-white px-4 py-1.5 rounded-lg text-sm font-bold shadow-sm shadow-green-500/20 hover:bg-green-600 transition-colors active:scale-[0.98]">
                   Connect
                 </button>
@@ -249,11 +281,56 @@ export default function StripeTerminalClient({ amount, productId, tenantId }: { 
         </div>
       )}
 
-      {connectedReader && (
+      {connectedReader && !paymentComplete && (
         <div>
           <button onClick={processPayment} disabled={reserving} className={`w-full bg-[#0066FF] text-white px-4 py-4 rounded-xl font-bold shadow-md shadow-blue-500/20 transition-all ${reserving ? 'opacity-50' : 'hover:bg-blue-700 active:scale-[0.98]'}`}>
             {reserving ? 'Processing...' : `Charge $${(amount / 100).toFixed(2)}`}
           </button>
+        </div>
+      )}
+
+      {paymentComplete && (
+        <div className="mt-4 pt-4 border-t border-[#1D1D1F]/10 dark:border-white/10 animate-in fade-in slide-in-from-bottom-2 duration-300">
+           <div className="flex items-center justify-center w-12 h-12 rounded-full bg-[#34C759]/10 text-[#34C759] mx-auto mb-3">
+             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
+           </div>
+           <h3 className="text-center font-bold text-[#1D1D1F] dark:text-[#F5F5F7] mb-4">Payment Successful</h3>
+
+           {!receiptSent ? (
+             <div className="space-y-3">
+               <label className="block text-xs font-semibold text-[#1D1D1F]/60 dark:text-[#F5F5F7]/60 uppercase tracking-wider">Send Digital Receipt</label>
+               <input
+                 type="email"
+                 placeholder="customer@email.com"
+                 value={customerEmail}
+                 onChange={(e) => setCustomerEmail(e.target.value)}
+                 className="w-full bg-white/50 dark:bg-black/20 border border-[#1D1D1F]/10 dark:border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#0066FF] text-[#1D1D1F] dark:text-[#F5F5F7]"
+               />
+               <button
+                 onClick={handleSendReceipt}
+                 disabled={!customerEmail}
+                 className="w-full bg-[#1D1D1F] dark:bg-[#F5F5F7] text-white dark:text-black px-4 py-3 rounded-xl font-bold shadow-sm transition-all disabled:opacity-50 active:scale-[0.98]"
+               >
+                 Send Receipt & Add to CRM
+               </button>
+               <button
+                 onClick={resetPayment}
+                 className="w-full bg-transparent text-[#1D1D1F]/60 dark:text-[#F5F5F7]/60 px-4 py-2 rounded-xl font-medium text-sm transition-all hover:text-[#1D1D1F] dark:hover:text-[#F5F5F7]"
+               >
+                 No Receipt (New Sale)
+               </button>
+             </div>
+           ) : (
+             <div className="text-center space-y-4">
+               <p className="text-sm text-[#1D1D1F]/60 dark:text-[#F5F5F7]/60">Receipt sent to {customerEmail}. Agent updated customer profile.</p>
+               <button
+                 onClick={resetPayment}
+                 className="w-full bg-[#1D1D1F] dark:bg-[#F5F5F7] text-white dark:text-black px-4 py-3 rounded-xl font-bold shadow-sm transition-all active:scale-[0.98]"
+               >
+                 Start New Sale
+               </button>
+             </div>
+           )}
         </div>
       )}
     </div>

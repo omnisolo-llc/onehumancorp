@@ -1,36 +1,34 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../fixtures';
 
-test.describe('POS Checkout - Centralized Inventory', () => {
-  test('Prevents double booking with Redis lock', async ({ page }) => {
-    // We mock the /api/v1/payments/terminal/reserve to simulate Redis lock failure
-    await page.route('/api/v1/payments/terminal/reserve', async route => {
-      const json = { success: false, error_message: 'Insufficient inventory. Available: 0' };
-      await route.fulfill({ json });
-    });
+test.describe('Tap to Pay / POS Checkout UI Flow', () => {
+  test('Processes POS sale via Tap to Pay and sends digital receipt', async ({ adminPage }) => {
+    // Using adminPage from fixtures to be pre-authenticated as the owner
+    // Start from the POS terminal path
+    await adminPage.goto('/pos/terminal');
 
-    await page.goto('/pos/terminal');
-    // Ensure 375px mobile responsiveness
-    await page.setViewportSize({ width: 375, height: 667 });
+    // 1. Unlock the terminal (assuming default test PIN is 1234)
+    await adminPage.click('button:has-text("1")');
+    await adminPage.click('button:has-text("2")');
+    await adminPage.click('button:has-text("3")');
+    await adminPage.click('button:has-text("4")');
 
-    const discoverBtn = page.locator('text=Discover Readers');
-    if (await discoverBtn.isVisible()) {
-        await discoverBtn.click();
-    }
+    // Wait for unlock
+    await expect(adminPage.locator('text=Clocked In').or(adminPage.locator('text=Not Clocked In'))).toBeVisible();
 
-    // Simulate clicking charge
-    // Expect error message
-  });
+    // 2. Connect to Reader
+    await expect(adminPage.locator('text=Discover Readers')).toBeVisible();
+    await adminPage.click('text=Discover Readers');
 
-  test('Shows out of stock message when lock fails', async ({ page }) => {
-    await page.route('/api/v1/payments/terminal/reserve', async route => {
-      const json = { success: false, error_message: 'Item is currently being purchased elsewhere' };
-      await route.fulfill({ json });
-    });
+    await expect(adminPage.locator('text=Connect').first()).toBeVisible();
+    await adminPage.click('text=Connect');
 
-    await page.goto('/pos/terminal');
-    await page.setViewportSize({ width: 375, height: 667 });
+    // 3. Initiate tap to pay
+    await expect(adminPage.locator('text=Charge $50.00')).toBeVisible();
+    await adminPage.click('text=Charge $50.00');
 
-    // Assuming the user discovers and connects to a reader, and clicks 'Charge'
-    // We'd look for: await expect(page.locator('text=Reservation failed: Item is currently being purchased elsewhere')).toBeVisible();
+    // 4. Digital receipt & Agent
+    await adminPage.fill('input[placeholder="customer@email.com"]', 'pos-customer@test.com');
+    await adminPage.click('text=Send Receipt & Add to CRM');
+
   });
 });

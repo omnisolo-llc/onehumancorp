@@ -33,7 +33,68 @@ pub fn router(hub: Arc<Hub>) -> axum::Router<Arc<dyn ohc_builtin_agent::mesh::tr
         .route("/session/start", axum::routing::post(start_terminal_session_handler))
         .route("/session/update", axum::routing::post(update_terminal_session_status_handler))
         .route("/session/end", axum::routing::post(end_terminal_session_handler))
+        .route("/receipt", axum::routing::post(send_receipt_handler))
         .with_state(hub)
+}
+
+#[derive(serde::Deserialize)]
+pub struct SendReceiptRequest {
+    pub email: String,
+    pub transaction_id: Option<String>,
+}
+
+#[derive(serde::Serialize)]
+pub struct SendReceiptResponse {
+    pub success: bool,
+    pub error_message: String,
+}
+
+pub async fn send_receipt_handler(
+    _headers: HeaderMap,
+    State(_hub): State<Arc<Hub>>,
+    auth_info: Option<axum::extract::Extension<::server_auth::orchestration::AuthInfo>>,
+    req_data: axum::extract::Json<SendReceiptRequest>,
+) -> Json<SendReceiptResponse> {
+    let tenant_id = match auth_info {
+        Some(auth) => {
+            if auth.org_id.is_empty() {
+                return Json(SendReceiptResponse { success: false, error_message: "Unauthenticated: Missing tenant ID".to_string() });
+            } else {
+                auth.org_id.clone()
+            }
+        },
+        None => return Json(SendReceiptResponse { success: false, error_message: "Unauthenticated".to_string() })
+    };
+
+    info!(tenant_id = %tenant_id, email = %req_data.email, "Triggering receipt flow and CRM update via Agent");
+
+    // Insert job to process receipt
+    let pool = crate::db::get_pool();
+    let job_id = uuid::Uuid::new_v4().to_string();
+    let job_payload = serde_json::json!({
+        "email": req_data.email,
+        "transaction_id": req_data.transaction_id,
+        "action_type": "DigitalReceiptAndCrm",
+        "source": "terminal"
+    }).to_string();
+
+    let job_res = sqlx::query(
+        "INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload)
+         VALUES ($1, $2, 'agent_action', $3::jsonb)"
+    )
+    .bind(&job_id)
+    .bind(&tenant_id)
+    .bind(&job_payload)
+    .execute(&pool)
+    .await;
+
+    match job_res {
+        Ok(_) => Json(SendReceiptResponse { success: true, error_message: "".to_string() }),
+        Err(e) => {
+            tracing::error!("Failed to enqueue receipt job: {}", e);
+            Json(SendReceiptResponse { success: false, error_message: "Failed to enqueue receipt job".to_string() })
+        }
+    }
 }
 
 #[derive(serde::Deserialize)]
