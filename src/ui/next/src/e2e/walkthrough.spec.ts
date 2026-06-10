@@ -8,12 +8,12 @@ test.describe('Interactive Walkthroughs', () => {
     // Open the help widget
     const helpButton = page.locator('#help-widget-container button').first();
     await expect(helpButton).toBeVisible();
-    await helpButton.click({ force: true });
+    await helpButton.click();
 
     // Click on the store setup walkthrough
     const tourButton = page.locator('button', { hasText: 'Tour: Set up your store' });
     await expect(tourButton).toBeVisible();
-    await tourButton.click({ force: true });
+    await tourButton.click();
 
     // In a real flow, you might be redirected or the elements are present.
     // Since /dashboard does not have bio-input, let's navigate directly to storefront builder if it redirects,
@@ -25,11 +25,11 @@ test.describe('Interactive Walkthroughs', () => {
     // Re-open help widget on the right page
     const builderHelpButton = page.locator('#help-widget-container button').first();
     await expect(builderHelpButton).toBeVisible();
-    await builderHelpButton.click({ force: true });
+    await builderHelpButton.click();
 
     const builderTourButton = page.locator('button', { hasText: 'Tour: Set up your store' });
     await expect(builderTourButton).toBeVisible();
-    await builderTourButton.click({ force: true });
+    await builderTourButton.click();
 
     // Assert the first step is shown
     const speechBubble = page.locator('div[role="dialog"]');
@@ -55,11 +55,11 @@ test.describe('Interactive Walkthroughs', () => {
     // Re-open help widget
     const builderHelpButton = page.locator('#help-widget-container button').first();
     await expect(builderHelpButton).toBeVisible();
-    await builderHelpButton.click({ force: true });
+    await builderHelpButton.click();
 
     const builderTourButton = page.locator('button', { hasText: 'Tour: Set up your store' });
     await expect(builderTourButton).toBeVisible();
-    await builderTourButton.click({ force: true });
+    await builderTourButton.click();
 
     // Assert the first step is shown
     const speechBubble = page.locator('div[role="dialog"]');
