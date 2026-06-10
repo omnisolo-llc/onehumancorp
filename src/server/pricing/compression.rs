@@ -65,11 +65,10 @@ pub fn truncate_by_word_count(data: &str, max_words: usize) -> String {
 }
 
 pub fn minify_json_prompt(data: &str) -> String {
-    if let Ok(val) = serde_json::from_str::<serde_json::Value>(data) {
-        if let Ok(minified) = serde_json::to_string(&val) {
+    if let Ok(val) = serde_json::from_str::<serde_json::Value>(data)
+        && let Ok(minified) = serde_json::to_string(&val) {
             return minified;
         }
-    }
     data.to_string()
 }
 
@@ -102,11 +101,10 @@ pub fn is_image_extension(ext: &str) -> bool {
 
 pub fn get_optimized_key(key: &str) -> String {
     let path = std::path::Path::new(key);
-    if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
-        if is_image_extension(ext) && ext.to_lowercase() != "webp" {
+    if let Some(ext) = path.extension().and_then(|e| e.to_str())
+        && is_image_extension(ext) && ext.to_lowercase() != "webp" {
             return path.with_extension("webp").to_string_lossy().to_string();
         }
-    }
     key.to_string()
 }
 
