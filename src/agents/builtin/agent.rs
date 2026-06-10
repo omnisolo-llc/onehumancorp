@@ -2838,7 +2838,7 @@ impl Agent {
                     .map(|m| m.role == Role::Tool)
                     .unwrap_or(false)
             {
-                messages.push(Message::system("Periodic Nudge: You have completed several complex steps. Consider using a `CreateSkill` tool to curate your recent trajectory into a reusable skill."));
+                messages.push(Message::system_with_chain("Periodic Nudge: You have completed several complex steps. Consider using a `CreateSkill` tool to curate your recent trajectory into a reusable skill.", last_response_id.clone()));
             }
 
             let mut final_messages = messages.clone();
@@ -2951,7 +2951,7 @@ impl Agent {
                         on_event(AgentEvent::TaskError {
                             error: err_msg.clone(),
                         });
-                        messages.push(Message::user("Your previous response was malformed or invalid JSON. Please ensure your tool calls are properly formatted."));
+                        messages.push(Message::user_with_chain("Your previous response was malformed or invalid JSON. Please ensure your tool calls are properly formatted.", last_response_id.clone()));
                         continue;
                     } else {
                         on_event(AgentEvent::TaskError { error: err.clone() });
@@ -3070,7 +3070,7 @@ impl Agent {
                     if !resp.message.content.is_empty() {
                         messages.push(resp.message.clone());
                     }
-                    messages.push(Message::user(&decision.nudge_message));
+                    messages.push(Message::user_with_chain(&decision.nudge_message, last_response_id.clone()));
                     continue;
                 }
             }
@@ -3151,24 +3151,24 @@ impl Agent {
                     .run_computational_guides(&last_assistant_content, &current_context)
                     .await
                 {
-                    messages.push(Message::user(e));
+                    messages.push(Message::user_with_chain(e, last_response_id.clone()));
                     continue;
                 }
                 if let Err(e) = verification_manager
                     .run_visual_verifiers(&last_assistant_content)
                     .await
                 {
-                    messages.push(Message::user(e));
+                    messages.push(Message::user_with_chain(e, last_response_id.clone()));
                     continue;
                 }
                 if let Err(e) = verification_manager
                     .run_inferential_sensors(&last_assistant_content, initial_message)
                     .await
                 {
-                    messages.push(Message::user(format!(
+                    messages.push(Message::user_with_chain(format!(
                         "[Verification Loop REJECTED the output]\n{}\n\nPlease use your tools to correct the issues identified above and provide a revised final answer.",
                         e
-                    )));
+                    ), last_response_id.clone()));
                     continue;
                 }
                 // OpenAI Mechanic: Output Guardrails
@@ -3459,10 +3459,10 @@ impl Agent {
 
                                     if let Some(msgs) = restored_msgs {
                                         messages = msgs;
-                                        messages.push(Message::system(format!(
+                                        messages.push(Message::system_with_chain(format!(
                                             "TIME-TRAVEL REWIND: Tool '{}' failed consecutively beyond max_retries limit. I have rewound your state to checkpoint '{}'. Please try a different approach to solve the task.",
                                             tc.name, prev_id
-                                        )));
+                                        ), last_response_id.clone()));
                                         on_event(AgentEvent::RewindOccurred {
                                             iteration,
                                             checkpoint_id: prev_id,
@@ -4014,10 +4014,10 @@ impl Agent {
                         match self.llm.chat(summary_req).await {
                             Ok(summary_resp) => {
                                 let summary = summary_resp.message.content;
-                                compact_messages.push(Message::user(format!(
+                                compact_messages.push(Message::user_with_chain(format!(
                                     "[Context Compacted by Harness]:\n{}",
                                     summary
-                                )));
+                                ), last_response_id.clone()));
                                 // Append the remaining recent messages
                                 compact_messages.extend_from_slice(&messages[middle_end..]);
                                 messages = compact_messages;

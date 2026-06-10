@@ -49,6 +49,17 @@ impl Message {
         }
     }
 
+    pub fn user_with_chain(content: impl Into<String>, prev_id: Option<String>) -> Self {
+        Self {
+            role: Role::User,
+            content: content.into(),
+            tool_calls: vec![],
+            tool_results: vec![],
+            response_id: None,
+            previous_response_id: prev_id,
+        }
+    }
+
     pub fn assistant(content: impl Into<String>) -> Self {
         Self {
             role: Role::Assistant,
@@ -68,6 +79,17 @@ impl Message {
             tool_results: vec![],
             response_id: None,
             previous_response_id: None,
+        }
+    }
+
+    pub fn system_with_chain(content: impl Into<String>, prev_id: Option<String>) -> Self {
+        Self {
+            role: Role::System,
+            content: content.into(),
+            tool_calls: vec![],
+            tool_results: vec![],
+            response_id: None,
+            previous_response_id: prev_id,
         }
     }
 }
