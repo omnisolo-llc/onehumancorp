@@ -422,9 +422,9 @@
             >
               <div style="min-width: 0;">
                 <div class="app-list-title">${item.source || "Unknown Source"}</div>
-                <div class="app-list-subtitle">${item.context || "No context provided"}</div>
+                <div class="app-list-subtitle">${item.context || item.original_message || "No context provided"}</div>
               </div>
-              <span class="app-badge ${badgeTone(item.priority)}">${item.priority || "Normal"}</span>
+              ${item.status === 'auto_replied' ? `<span class="app-badge good">AI Handled</span>` : `<span class="app-badge ${badgeTone(item.priority)}">${item.priority || "Normal"}</span>`}
             </button>
           `).join('');
         }
@@ -441,7 +441,16 @@
             : new Date().toLocaleString();
 
           let actionHtml = '';
-          if (selected.action_type) {
+          if (selected.status === 'auto_replied') {
+            actionHtml = `
+              <div class="detail-group">
+                <div class="app-metric-label">AI Handled Reply</div>
+                <div class="detail-value proposed-action">
+                  ${selected.generated_response || selected.draft_reply || "No reply generated."}
+                </div>
+              </div>
+            `;
+          } else if (selected.action_type) {
             actionHtml = `
               <div class="detail-group">
                 <div class="app-metric-label">Proposed Action: ${selected.action_type}</div>
@@ -450,6 +459,28 @@
                 </div>
               </div>
             `;
+          }
+
+          let buttonsHtml = '';
+          if (selected.status !== 'auto_replied') {
+             buttonsHtml = `
+              <div class="btn-group">
+                <button
+                  class="btn-primary"
+                  data-testid="approve-btn"
+                  onclick="handleDecision('${selected.id}', true)"
+                >
+                  ✨ Approve & Execute
+                </button>
+                <button
+                  class="btn-secondary"
+                  data-testid="dismiss-btn"
+                  onclick="handleDecision('${selected.id}', false)"
+                >
+                  Dismiss
+                </button>
+              </div>
+             `;
           }
 
           detailEl.innerHTML = `
@@ -461,7 +492,7 @@
             <div class="detail-group">
               <div class="app-metric-label">Context</div>
               <div class="detail-value">
-                ${selected.context || "No context"}
+                ${selected.context || selected.original_message || "No context"}
               </div>
             </div>
 
@@ -469,8 +500,8 @@
 
             <div style="display: flex; gap: 16px; margin-bottom: 16px;">
               <div>
-                <div class="app-metric-label">Priority</div>
-                <div style="margin-top: 8px;"><span class="app-badge ${badgeTone(selected.priority)}">${selected.priority || "Normal"}</span></div>
+                <div class="app-metric-label">Status</div>
+                <div style="margin-top: 8px;">${selected.status === 'auto_replied' ? `<span class="app-badge good">AI Handled</span>` : `<span class="app-badge ${badgeTone(selected.priority)}">${selected.priority || "Normal"}</span>`}</div>
               </div>
               <div>
                 <div class="app-metric-label">Created</div>
@@ -478,22 +509,7 @@
               </div>
             </div>
 
-            <div class="btn-group">
-              <button
-                class="btn-primary"
-                data-testid="approve-btn"
-                onclick="handleDecision('${selected.id}', true)"
-              >
-                ✨ Approve & Execute
-              </button>
-              <button
-                class="btn-secondary"
-                data-testid="dismiss-btn"
-                onclick="handleDecision('${selected.id}', false)"
-              >
-                Dismiss
-              </button>
-            </div>
+            ${buttonsHtml}
           `;
         }
       }
