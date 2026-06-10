@@ -605,6 +605,39 @@
       </div>
       <div id="dynamic-milestones-container"></div>
 
+      <!-- Viral Soft Paywall Loop -->
+      <div class="ohc-growth-card" style="margin-bottom: 20px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <h2 style="margin-bottom: 4px;">Advanced AI Automations <span style="font-size: 12px; background: #E5E5EA; padding: 2px 6px; border-radius: 4px; color: #1D1D1F; vertical-align: middle; margin-left: 8px;">PRO</span></h2>
+            <p style="margin-top: 0; margin-bottom: 0;">Multi-agent workflows and predictive routing.</p>
+          </div>
+          <button id="enable-advanced-automations-btn" style="background-color: #1d1d1f; color: white; border: none; padding: 10px 16px; border-radius: 8px; cursor: pointer;">Enable</button>
+        </div>
+        <p id="advanced-automations-status" style="display: none; color: #34C759; font-weight: 600; margin-top: 12px;">✅ Enabled</p>
+      </div>
+
+      <!-- Soft Paywall Modal -->
+      <div id="soft-paywall-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.4); z-index: 10000; align-items: center; justify-content: center; backdrop-filter: blur(5px);">
+        <div style="background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.6); border-radius: 20px; padding: 32px; max-width: 400px; width: 90%; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15); text-align: center;">
+          <div style="font-size: 40px; margin-bottom: 16px;">🚀</div>
+          <h2 style="margin-bottom: 12px; font-size: 24px; color: #1D1D1F;">Unlock Advanced Features</h2>
+          <p style="color: #86868b; margin-bottom: 24px;">Advanced AI Automations are available on the Pro plan. Upgrade now or share OHC to unlock 7 Days of Pro for free!</p>
+          <div style="display: flex; flex-direction: column; gap: 12px;">
+            <button id="soft-paywall-share-btn" style="background-color: #1DA1F2; color: white; border: none; padding: 12px; border-radius: 10px; font-weight: 600; cursor: pointer; transition: opacity 0.2s;">
+              Share on X to Unlock
+            </button>
+            <button onclick="window.location.href='setup.html#billing'" style="background-color: #0066FF; color: white; border: none; padding: 12px; border-radius: 10px; font-weight: 600; cursor: pointer;">
+              Upgrade to Pro
+            </button>
+            <button id="soft-paywall-close-btn" style="background: none; border: none; color: #86868b; font-weight: 500; cursor: pointer; padding: 8px;">
+              Maybe Later
+            </button>
+          </div>
+          <p id="soft-paywall-status" style="display: none; color: #1D1D1F; margin-top: 16px; font-weight: 500;">Verifying...</p>
+        </div>
+      </div>
+
       <div class="ohc-growth-card" style="margin-bottom: 20px;">
         <h2>Agent Public Profile</h2>
         <p>Generate a shareable public card for your AI agent to build trust and acquire new customers.</p>
@@ -679,6 +712,80 @@
         const aiSavingsDesc = document.getElementById('ai-savings-desc');
 
         let currentHoursSaved = 0;
+
+        // Soft Paywall Logic
+        const enableAutomationsBtn = document.getElementById('enable-advanced-automations-btn');
+        const softPaywallModal = document.getElementById('soft-paywall-modal');
+        const softPaywallCloseBtn = document.getElementById('soft-paywall-close-btn');
+        const softPaywallShareBtn = document.getElementById('soft-paywall-share-btn');
+        const softPaywallStatus = document.getElementById('soft-paywall-status');
+        const advancedAutomationsStatus = document.getElementById('advanced-automations-status');
+
+        if (enableAutomationsBtn) {
+          enableAutomationsBtn.addEventListener('click', async () => {
+            // Usually we'd check if they are already on Pro via an API.
+            // For now, we'll assume they aren't to trigger the viral loop,
+            // or check localStorage.
+            const isPro = localStorage.getItem('has_pro') === 'true';
+            if (isPro) {
+              enableAutomationsBtn.style.display = 'none';
+              advancedAutomationsStatus.style.display = 'block';
+            } else {
+              softPaywallModal.style.display = 'flex';
+            }
+          });
+        }
+
+        if (softPaywallCloseBtn) {
+          softPaywallCloseBtn.addEventListener('click', () => {
+            softPaywallModal.style.display = 'none';
+          });
+        }
+
+        if (softPaywallShareBtn) {
+          softPaywallShareBtn.addEventListener('click', async () => {
+            const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'DEFAULT';
+            const message = `I just discovered Advanced AI Automations on OneHumanCorp! This is going to revolutionize how I work. 🚀 #OneHumanCorp #SmallBiz https://ohc.app/invite/${tenantId}`;
+            const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(message)}`;
+
+            // Open share dialog
+            window.open(shareUrl, '_blank');
+
+            softPaywallShareBtn.style.display = 'none';
+            softPaywallStatus.style.display = 'block';
+            softPaywallStatus.innerText = 'Verifying Share...';
+
+            try {
+              const response = await fetch('/api/v1/growth/trial-extension/claim', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                }
+              });
+
+              if (response.ok) {
+                softPaywallStatus.innerText = 'Unlocked!';
+                softPaywallStatus.style.color = '#34C759';
+                localStorage.setItem('has_pro', 'true');
+                setTimeout(() => {
+                  softPaywallModal.style.display = 'none';
+                  enableAutomationsBtn.style.display = 'none';
+                  advancedAutomationsStatus.style.display = 'block';
+                }, 1500);
+              } else {
+                softPaywallStatus.innerText = 'Failed to unlock features. Please try again.';
+                softPaywallStatus.style.color = '#FF3B30';
+                softPaywallShareBtn.style.display = 'block';
+              }
+            } catch (error) {
+              console.error('Error claiming trial extension:', error);
+              softPaywallStatus.innerText = 'Error claiming trial extension.';
+              softPaywallStatus.style.color = '#FF3B30';
+              softPaywallShareBtn.style.display = 'block';
+            }
+          });
+        }
+
 
         // Fetch dynamic time savings data
         try {
