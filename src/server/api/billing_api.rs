@@ -334,7 +334,7 @@ pub async fn department_tier_usage_handler(
     Json(department_tier_usage_for_tenant(&hub, &tenant_id).await)
 }
 
-pub async fn department_tier_usage_for_tenant(hub: &Arc<Hub>, tenant_id: &str) -> DepartmentTierUsageResponse {
+async fn department_tier_usage_for_tenant(hub: &Arc<Hub>, tenant_id: &str) -> DepartmentTierUsageResponse {
     let tier = hub
         .tracker()
         .get_tenant_tier(tenant_id)
@@ -344,21 +344,16 @@ pub async fn department_tier_usage_for_tenant(hub: &Arc<Hub>, tenant_id: &str) -
     let period = current_usage_period();
     let departments = load_department_records(&hub.pool, tenant_id).await.unwrap_or_default();
 
-    let mut futures = Vec::new();
+    let mut usage_by_key = HashMap::new();
     for department in &departments {
         for key in department_usage_keys(department) {
-            let tracker = hub.tracker();
-            let tenant_id = tenant_id.to_string();
-            futures.push(async move {
-                let used = tracker.get_agent_actions_used(&tenant_id, &key).await.unwrap_or(0);
-                (key, used)
-            });
+            let used = hub
+                .tracker()
+                .get_agent_actions_used(tenant_id, &key)
+                .await
+                .unwrap_or(0);
+            usage_by_key.insert(key, used);
         }
-    }
-
-    let mut usage_by_key = HashMap::new();
-    for (key, used) in futures::future::join_all(futures).await {
-        usage_by_key.insert(key, used);
     }
 
     build_department_tier_usage_response(current_plan, tier, period, departments, |agent_id| {

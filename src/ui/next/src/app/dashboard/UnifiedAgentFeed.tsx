@@ -221,7 +221,7 @@ export function UnifiedAgentFeed() {
                           <div className="text-xs text-blue-700 dark:text-blue-400 font-medium">
                             {approval.payload.customer_inquiry}
                           </div>
-                          <div className="app-card dark:bg-gray-800 p-3 rounded-lg border border-blue-100 dark:border-blue-900/50 relative mt-2">
+                          <div className="bg-white dark:bg-gray-800 p-3 rounded-lg border border-blue-100 dark:border-blue-900/50 relative mt-2">
                             <div className="text-[10px] uppercase font-bold text-gray-400 mb-2">AI Proposed Quote</div>
                             <div className="space-y-2">
                               <div className="flex justify-between">

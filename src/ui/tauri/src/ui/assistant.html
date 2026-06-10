@@ -147,24 +147,6 @@
       const toneError = document.getElementById('tone-error');
       const container = document.getElementById('form-container');
 
-      // Load existing state
-      if (window.__TAURI__ && window.__TAURI__.core) {
-        window.__TAURI__.core.invoke("get_onboarding_state").then((state) => {
-          if (state && state.assistantName) {
-            nameInput.value = state.assistantName;
-          }
-          if (state && state.assistantTone) {
-            toneSelect.value = state.assistantTone;
-          }
-        }).catch(console.error);
-      } else {
-        const storedName = localStorage.getItem('assistantName');
-        if (storedName) nameInput.value = storedName;
-
-        const storedTone = localStorage.getItem('assistantTone');
-        if (storedTone) toneSelect.value = storedTone;
-      }
-
       if (nextBtn) {
         nextBtn.addEventListener('click', () => {
            let isValid = true;
@@ -186,25 +168,9 @@
            }
 
            if (isValid) {
-               if (window.__TAURI__ && window.__TAURI__.core) {
-                 nextBtn.disabled = true;
-                 nextBtn.innerText = "Saving...";
-                 window.__TAURI__.core.invoke("get_onboarding_state").then((state) => {
-                   state.assistantName = name;
-                   state.assistantTone = tone;
-                   return window.__TAURI__.core.invoke("save_onboarding_state", { state });
-                 }).then(() => {
-                   window.location.href = "success.html";
-                 }).catch((err) => {
-                   console.error(err);
-                   nextBtn.disabled = false;
-                   nextBtn.innerText = "Next";
-                 });
-               } else {
-                 localStorage.setItem('assistantName', name);
-                 localStorage.setItem('assistantTone', tone);
-                 window.location.href = "success.html";
-               }
+               localStorage.setItem('assistantName', name);
+               localStorage.setItem('assistantTone', tone);
+               window.location.href = "success.html";
            } else {
                container.classList.remove('animate-shake');
                void container.offsetWidth; // trigger reflow

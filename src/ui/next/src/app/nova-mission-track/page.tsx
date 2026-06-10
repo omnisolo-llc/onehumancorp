@@ -33,7 +33,7 @@ export default function MissionTrackPage() {
     <div className="min-h-screen bg-gray-50 flex justify-center font-inter">
       <div className="w-full max-w-[375px] bg-[#F5F5F7] min-h-screen shadow-xl relative flex flex-col">
         {/* Header */}
-        <header className="px-5 pt-10 pb-4 bg-white/70 sticky top-0 z-20 border-b border-gray-200">
+        <header className="px-5 pt-10 pb-4 bg-white/70 backdrop-blur-[30px] saturate-[210%] sticky top-0 z-20 border-b border-gray-200">
           <div className="flex justify-between items-center mb-4">
             <Link href="/dashboard" aria-label="Back to Dashboard" className="text-gray-500 hover:text-gray-900 transition-colors flex items-center justify-center min-w-[44px] min-h-[44px]">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
@@ -65,7 +65,7 @@ export default function MissionTrackPage() {
         {/* Mission List */}
         <main className="flex-1 p-5 overflow-y-auto pb-24 space-y-4">
           {filteredMissions.map(mission => (
-            <div key={mission.id} className="app-card border border-white/60 shadow-sm p-4 rounded-2xl hover:shadow-md transition-all active:scale-[0.98] cursor-pointer">
+            <div key={mission.id} className="bg-white/80 backdrop-blur-[30px] saturate-[210%] border border-white/60 shadow-sm p-4 rounded-2xl hover:shadow-md transition-all active:scale-[0.98] cursor-pointer">
               <div className="flex justify-between items-start mb-3">
                 <span className={`text-[10px] font-bold px-2 py-1 rounded-md uppercase tracking-wider ${
                   mission.status === 'completed' ? 'bg-green-100 text-green-800' :

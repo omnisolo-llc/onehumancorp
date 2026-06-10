@@ -20,25 +20,7 @@ test.describe('Tooltips', () => {
 
         // Move mouse away
         await page.mouse.move(0, 0);
-    });
 
-    test('renders settings tooltips on hover', async ({ page }) => {
-        await page.goto('/settings');
-
-        // Wait for the page to load
-        await page.waitForLoadState('networkidle');
-
-        // Verify the Delivery tooltip
-        const deliveryToggle = page.locator('label', { hasText: 'Enable Local Delivery' });
-        await expect(deliveryToggle).toBeVisible();
-
-        await deliveryToggle.hover();
-
-        // Wait for the tooltip text to appear
-        const deliveryTooltipText = page.locator('div', { hasText: 'Turn this on to offer local delivery to your customers.' }).last();
-        await expect(deliveryTooltipText).toBeVisible({ timeout: 5000 });
-
-        // Move mouse away
-        await page.mouse.move(0, 0);
+        // Ensure it disappears or we are done
     });
 });

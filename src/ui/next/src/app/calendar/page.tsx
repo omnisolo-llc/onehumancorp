@@ -72,7 +72,7 @@ export default function CalendarPage() {
 
         {/* Appointments Column */}
         <div className="md:col-span-2 space-y-6">
-          <section className="app-card rounded-[16px] shadow-sm p-6" style={{ border: '1px solid rgba(0,0,0,0.05)' }}>
+          <section className="bg-white rounded-[16px] shadow-sm p-6" style={{ border: '1px solid rgba(0,0,0,0.05)' }}>
             <h2 className="text-xl font-semibold font-outfit mb-4 text-gray-900">Upcoming Appointments</h2>
             <div className="space-y-4">
               {isLoading ? (
@@ -113,7 +113,7 @@ export default function CalendarPage() {
 
         {/* AI Operations Activity Feed */}
         <div className="md:col-span-1 space-y-6">
-          <section className="app-card rounded-[16px] shadow-sm p-6" style={{ border: '1px solid rgba(0,0,0,0.05)' }}>
+          <section className="bg-white rounded-[16px] shadow-sm p-6" style={{ border: '1px solid rgba(0,0,0,0.05)' }}>
             <div className="flex items-center gap-2 mb-4">
               <span className="text-xl">🤖</span>
               <h2 className="text-xl font-semibold font-outfit text-gray-900">Operations Agent</h2>

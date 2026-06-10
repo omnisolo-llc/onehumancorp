@@ -132,42 +132,13 @@
       const nameError = document.getElementById('name-error');
       const container = document.getElementById('form-container');
 
-      // Load existing state
-      if (window.__TAURI__ && window.__TAURI__.core) {
-        window.__TAURI__.core.invoke("get_onboarding_state").then((state) => {
-          if (state && state.businessName) {
-            nameInput.value = state.businessName;
-          }
-        }).catch(console.error);
-      } else {
-        const stored = localStorage.getItem('businessName');
-        if (stored) {
-          nameInput.value = stored;
-        }
-      }
-
       if (nextBtn) {
         nextBtn.addEventListener('click', () => {
            const name = nameInput.value.trim();
            if (name) {
                nameError.style.display = 'none';
-               if (window.__TAURI__ && window.__TAURI__.core) {
-                 nextBtn.disabled = true;
-                 nextBtn.innerText = "Saving...";
-                 window.__TAURI__.core.invoke("get_onboarding_state").then((state) => {
-                   state.businessName = name;
-                   return window.__TAURI__.core.invoke("save_onboarding_state", { state });
-                 }).then(() => {
-                   window.location.href = "assistant.html";
-                 }).catch((err) => {
-                   console.error(err);
-                   nextBtn.disabled = false;
-                   nextBtn.innerText = "Next";
-                 });
-               } else {
-                 localStorage.setItem('businessName', name);
-                 window.location.href = "assistant.html";
-               }
+               localStorage.setItem('businessName', name);
+               window.location.href = "assistant.html";
            } else {
                nameError.style.display = 'block';
                container.classList.remove('animate-shake');

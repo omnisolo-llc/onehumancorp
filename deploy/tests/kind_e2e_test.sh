@@ -38,16 +38,6 @@ require_tool() {
   fi
 }
 
-ensure_image_loaded_in_kind() {
-  local image="$1"
-  log "Ensuring image ${image} is loaded into Kind cluster ..."
-  if ! docker image inspect "${image}" >/dev/null 2>&1; then
-    log "Image ${image} not found locally. Pulling ..."
-    docker pull "${image}"
-  fi
-  kind load docker-image "${image}" --name "${CLUSTER_NAME}"
-}
-
 cleanup() {
   if [[ -n "${PF_PID:-}" ]]; then
     kill "${PF_PID}" 2>/dev/null || true
@@ -136,7 +126,6 @@ CLOUD_HELM_SMOKE_ARGS=(
   "${COMMON_HELM_SMOKE_ARGS[@]}"
   --set multiTenant.enabled=true
   --set valkey.enabled=true
-  --set valkey.image.tag=8-alpine
   --set-string backend.env.DATABASE_URL=postgres://ohc:ohc@postgres:5432/ohc
   --set-string backend.env.OHC_STANDALONE_MODE=false
   --set-string backend.env.JWT_SECRET=kind-e2e-cloud-jwt-secret-at-least-32-bytes
@@ -221,9 +210,6 @@ stop_port_forward() {
     wait "${PF_PID}" 2>/dev/null || true
     PF_PID=""
   fi
-  # Also kill any kubectl port-forward processes matching our ports
-  pkill -f "port-forward.*18080:8080" || true
-  pkill -f "port-forward.*18081:8080" || true
 }
 
 install_ohc_release() {
@@ -240,13 +226,13 @@ install_ohc_release() {
   kubectl rollout status \
     --namespace "${NAMESPACE}" \
     "deployment/${release_name}-backend" \
-    --timeout=180s
+    --timeout=90s
 
   kubectl wait pod \
     --namespace "${NAMESPACE}" \
     -l "app=${release_name}-backend" \
     --for=condition=Ready \
-    --timeout=180s
+    --timeout=120s
 }
 
 run_rest_smoke_tests() {
@@ -255,17 +241,11 @@ run_rest_smoke_tests() {
   local local_port="$3"
   local backend_url="http://127.0.0.1:${local_port}"
 
-  log "Port-forwarding ${mode_name} backend service in a loop ..."
-  stop_port_forward
-  (
-    while true; do
-      kubectl port-forward \
-        --namespace "${NAMESPACE}" \
-        "svc/${release_name}-backend" \
-        "${local_port}:8080" >/dev/null 2>&1 || true
-      sleep 1
-    done
-  ) &
+  log "Port-forwarding ${mode_name} backend service ..."
+  kubectl port-forward \
+    --namespace "${NAMESPACE}" \
+    "svc/${release_name}-backend" \
+    "${local_port}:8080" &
   PF_PID=$!
 
   sleep 3
@@ -370,9 +350,7 @@ helm lint "${CHART_DIR}" "${STANDALONE_HELM_SMOKE_ARGS[@]}"
 helm template "${STANDALONE_RELEASE_NAME}" "${CHART_DIR}" "${STANDALONE_HELM_SMOKE_ARGS[@]}" > /dev/null
 
 log "Loading images into Kind cluster ..."
-  kind load docker-image onehumancorp/server:e2e --name "${CLUSTER_NAME}"
-  ensure_image_loaded_in_kind pgvector/pgvector:pg15
-  ensure_image_loaded_in_kind valkey/valkey:8-alpine
+kind load docker-image onehumancorp/server:e2e --name "${CLUSTER_NAME}"
 
 # ── Create namespace ───────────────────────────────────────────────────────────
 kubectl create namespace "${NAMESPACE}" --dry-run=client -o yaml | kubectl apply -f -
@@ -391,22 +369,6 @@ kubectl wait pod/postgres \
   --namespace "${NAMESPACE}" \
   --for=condition=Ready \
   --timeout=120s
-
-log "Waiting for PostgreSQL server to be ready for connections ..."
-pg_attempts=0
-pg_max_attempts=30
-while (( pg_attempts < pg_max_attempts )); do
-  if kubectl exec --namespace "${NAMESPACE}" postgres -- pg_isready -U ohc -d ohc >/dev/null 2>&1; then
-    log "PostgreSQL is ready!"
-    break
-  fi
-  (( pg_attempts++ ))
-  sleep 2
-done
-if (( pg_attempts == pg_max_attempts )); then
-  echo "error: PostgreSQL did not become ready for connections" >&2
-  exit 1
-fi
 
 # ── Cloud/web mode ─────────────────────────────────────────────────────────────
 install_ohc_release "${CLOUD_RELEASE_NAME}" "cloud/web mode" "${CLOUD_HELM_SMOKE_ARGS[@]}"

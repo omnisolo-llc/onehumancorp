@@ -46,81 +46,6 @@ fn load_ai_provider() -> Result<AiProviderView, String> {
     Ok(to_provider_view(read_ai_provider_config()?))
 }
 
-#[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
-#[serde(rename_all = "camelCase")]
-struct OnboardingState {
-    business_name: Option<String>,
-    assistant_name: Option<String>,
-    assistant_tone: Option<String>,
-}
-
-fn onboarding_state_path() -> std::path::PathBuf {
-    std::env::var("OHC_ONBOARDING_STATE_PATH")
-        .ok()
-        .filter(|value| !value.trim().is_empty())
-        .map(std::path::PathBuf::from)
-        .unwrap_or_else(|| std::path::PathBuf::from(".ohc/onboarding.json"))
-}
-
-#[tauri::command]
-fn get_onboarding_state() -> Result<OnboardingState, String> {
-    let path = onboarding_state_path();
-    if !path.exists() {
-        return Ok(OnboardingState {
-            business_name: None,
-            assistant_name: None,
-            assistant_tone: None,
-        });
-    }
-
-    let content = std::fs::read_to_string(path).map_err(|err| err.to_string())?;
-    let state = serde_json::from_str::<OnboardingState>(&content).map_err(|err| err.to_string())?;
-    Ok(state)
-}
-
-#[tauri::command]
-fn save_onboarding_state(state: OnboardingState) -> Result<(), String> {
-    let path = onboarding_state_path();
-    if let Some(parent) = path.parent() {
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::DirBuilderExt;
-            std::fs::DirBuilder::new()
-                .recursive(true)
-                .mode(0o700)
-                .create(parent)
-                .map_err(|err| err.to_string())?;
-        }
-        #[cfg(not(unix))]
-        {
-            std::fs::create_dir_all(parent).map_err(|err| err.to_string())?;
-        }
-    }
-
-    let json = serde_json::to_string_pretty(&state).map_err(|err| err.to_string())?;
-
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::OpenOptionsExt;
-        use std::io::Write;
-        let mut file = std::fs::OpenOptions::new()
-            .write(true)
-            .create(true)
-            .truncate(true)
-            .mode(0o600)
-            .open(path)
-            .map_err(|err| err.to_string())?;
-        file.write_all(format!("{json}\n").as_bytes())
-            .map_err(|err| err.to_string())?;
-    }
-    #[cfg(not(unix))]
-    {
-        std::fs::write(path, format!("{json}\n")).map_err(|err| err.to_string())?;
-    }
-
-    Ok(())
-}
-
 #[tauri::command]
 fn save_ai_provider(config: AiProviderConfig) -> Result<AiProviderView, String> {
     let mut current = read_ai_provider_config()?;
@@ -351,8 +276,6 @@ pub fn run() {
             load_ai_provider,
             save_ai_provider,
             test_ai_provider,
-            get_onboarding_state,
-            save_onboarding_state,
         ])
         .setup(|app| {
             let window = app.get_webview_window("main").unwrap();
