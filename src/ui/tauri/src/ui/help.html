@@ -765,6 +765,21 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }
 
+      function playVideo(url, title) {
+        const modal = document.getElementById("video-modal");
+        const player = document.getElementById("video-player");
+        document.getElementById("video-title").innerText = title;
+        player.src = url;
+        modal.style.display = "flex";
+        player.play().catch(console.error);
+      }
+      function closeVideo() {
+        const modal = document.getElementById("video-modal");
+        const player = document.getElementById("video-player");
+        player.pause();
+        player.src = "";
+        modal.style.display = "none";
+      }
       function renderContent(query) {
         const lowerQuery = query.toLowerCase().trim();
 
