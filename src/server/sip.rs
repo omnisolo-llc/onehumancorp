@@ -119,7 +119,7 @@ impl SipDB {
         let mut tx = self.pool.begin().await?;
         ::server_common::auth_utils::set_system_context(&mut *tx).await?;
 
-        sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE (status = 'STUCK' OR status = 'IN_PROGRESS' OR status = 'RUNNING') AND updated_at < $1 AND tenant_id = $2")
+        sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE (status = 'PENDING' OR status = 'BURSTING' OR status = 'STUCK' OR status = 'IN_PROGRESS' OR status = 'RUNNING') AND updated_at < $1 AND tenant_id = $2")
             .bind(threshold_time)
             .bind(&self.org_id)
             .execute(&mut *tx)
@@ -761,6 +761,28 @@ mod tests {
                 .await
                 .unwrap();
 
+            let old_pending_time = chrono::Utc::now() - chrono::Duration::minutes(10);
+            sqlx::query("INSERT INTO agent_missions (id, status, payload, tenant_id, updated_at) VALUES ($1, $2, $3, $4, $5) ON CONFLICT DO NOTHING")
+                .bind("stagnant_pending_mission")
+                .bind("PENDING")
+                .bind("{}")
+                .bind("test_org")
+                .bind(old_pending_time.naive_utc())
+                .execute(&mut *tx)
+                .await
+                .unwrap();
+
+            let old_bursting_time = chrono::Utc::now() - chrono::Duration::minutes(10);
+            sqlx::query("INSERT INTO agent_missions (id, status, payload, tenant_id, updated_at) VALUES ($1, $2, $3, $4, $5) ON CONFLICT DO NOTHING")
+                .bind("stagnant_bursting_mission")
+                .bind("BURSTING")
+                .bind("{}")
+                .bind("test_org")
+                .bind(old_bursting_time.naive_utc())
+                .execute(&mut *tx)
+                .await
+                .unwrap();
+
             tx.commit().await.unwrap();
 
             let sip_db = SipDB::new(pool.clone(), "test_org".to_string());
@@ -885,6 +907,20 @@ mod tests {
             let status_stagnant: String = row_stagnant.get("status");
             assert_eq!(status_stagnant, "FAILED");
 
+            let row_pending = sqlx::query("SELECT status FROM agent_missions WHERE id = 'stagnant_pending_mission'")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+            let status_pending: String = row_pending.get("status");
+            assert_eq!(status_pending, "FAILED");
+
+            let row_bursting = sqlx::query("SELECT status FROM agent_missions WHERE id = 'stagnant_bursting_mission'")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+            let status_bursting: String = row_bursting.get("status");
+            assert_eq!(status_bursting, "FAILED");
+
             // Verify recent mission is still IN_PROGRESS
             let row_recent = sqlx::query("SELECT status FROM agent_missions WHERE id = 'recent_in_progress_mission'")
                 .fetch_one(&pool)
@@ -895,7 +931,7 @@ mod tests {
 
             // Clean up
             let mut tx_clean = pool.begin().await.unwrap();
-            sqlx::query("DELETE FROM agent_missions WHERE id IN ('stagnant_in_progress_mission', 'recent_in_progress_mission')")
+            sqlx::query("DELETE FROM agent_missions WHERE id IN ('stagnant_in_progress_mission', 'recent_in_progress_mission', 'stagnant_pending_mission', 'stagnant_bursting_mission')")
                 .execute(&mut *tx_clean)
                 .await
                 .unwrap();
