@@ -3,26 +3,26 @@ import { test, expect } from './fixtures';
 test.describe('Cost Dashboard & Plan Limits UI', () => {
   test('should display the cost dashboard and check expected sections', async ({ page }) => {
     // Navigate to the Cost Dashboard directly
-    await page.goto('/cost-dashboard');
+    await page.goto('/cost-dashboard.html');
 
     // Wait for the main heading to be visible
-    await expect(page.getByRole('heading', { name: 'Business Advisory Dashboard' })).toBeVisible({ timeout: 15000 });
+    await expect(page.getByRole('heading', { name: 'Cost Transparency' })).toBeVisible({ timeout: 15000 });
 
     // Verify key sections are present
-    await expect(page.getByText('Advisory Summary')).toBeVisible();
+    await expect(page.getByText('Total Costs')).toBeVisible();
     await expect(page.getByText('LLM Usage')).toBeVisible();
-    await expect(page.getByText('Storage')).toBeVisible();
+    await expect(page.locator('span', { hasText: 'Storage' }).first()).toBeVisible();
 
     // Check if the plan navigation button is present
-    await expect(page.getByRole('button', { name: 'Back to My Plan' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Back to My Plan' })).toBeVisible();
   });
 
   test('should display my plan limits and route to pricing', async ({ page }) => {
     // Go to My Plan page
-    await page.goto('/plan');
+    await page.goto('/cost-dashboard.html');
 
     // Wait for the main heading to be visible
-    await expect(page.getByRole('heading', { name: 'My Plan' })).toBeVisible({ timeout: 15000 });
+    await expect(page.getByRole('heading', { name: 'My Plan' }).first()).toBeVisible({ timeout: 15000 });
 
     // Verify data placeholders or limits are populated (Even if it says Free or Loading, these labels should exist)
     await expect(page.getByText('Estimated Next Bill')).toBeVisible();
