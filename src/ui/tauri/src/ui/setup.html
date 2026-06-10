@@ -27,6 +27,13 @@
         border: 1px solid rgba(255, 255, 255, 0.4);
         box-sizing: border-box;
       }
+      .glassmorphism {
+        background: rgba(255, 255, 255, 0.65);
+        backdrop-filter: blur(30px) saturate(210%);
+        -webkit-backdrop-filter: blur(30px) saturate(210%);
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        border-radius: 16px;
+      }
       h1 {
         margin-top: 0;
         color: #1d1d1f;
@@ -48,6 +55,9 @@
         box-sizing: border-box;
         font-size: 16px;
         background: rgba(255, 255, 255, 0.5);
+      }
+      input.glassmorphism {
+        border-radius: 8px;
       }
       input:focus {
         outline: none;
@@ -97,6 +107,12 @@
           background-color: #16161a;
         }
         .container {
+          background: rgba(22, 22, 26, 0.7);
+          backdrop-filter: blur(30px) saturate(210%);
+          -webkit-backdrop-filter: blur(30px) saturate(210%);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .glassmorphism {
           background: rgba(22, 22, 26, 0.7);
           backdrop-filter: blur(30px) saturate(210%);
           -webkit-backdrop-filter: blur(30px) saturate(210%);
@@ -236,10 +252,22 @@
           color: #F5F5F7;
         }
       }
-    </style>
+
+      @media (max-width: 768px) {
+        .container {
+          padding: 20px;
+          border-radius: 16px;
+          width: 100%;
+          border: none;
+        }
+        input, select, textarea, button, .radio-option {
+          min-height: 44px !important;
+        }
+      }
+        </style>
   </head>
   <body>
-        <div class="container" id="form-container">
+        <div class="container glassmorphism" id="form-container">
 
       <!-- Step 1: Work Context -->
       <div class="step active" id="step-context">
@@ -285,7 +313,7 @@
       <div class="step" id="step-categories">
         <h1>What's your category?</h1>
         <p>e.g. Baking, Plumbing, Design</p>
-        <input type="text" id="business-categories" placeholder="e.g. Graphic Design" />
+        <input type="text" id="business-categories" class="glassmorphism" placeholder="e.g. Graphic Design" />
         <div id="categories-error" class="error-msg">Please enter a category.</div>
         <div class="btn-group">
           <button class="next-step-btn" data-next="step-name">Next</button>
@@ -297,10 +325,10 @@
       <div class="step" id="step-name">
         <h1>What's the name of your business?</h1>
         <p>We'll use this to set up your workspace.</p>
-        <input type="text" id="business-name" placeholder="e.g. Maya's Bakery" />
+        <input type="text" id="business-name" class="glassmorphism" placeholder="e.g. Maya's Bakery" />
         <div id="name-error" class="error-msg">Business Name must be at least 3 characters.</div>
 
-        <input type="text" id="business-tagline" placeholder="Tagline (optional)" />
+        <input type="text" id="business-tagline" class="glassmorphism" placeholder="Tagline (optional)" />
 
         <div class="btn-group">
           <button class="next-step-btn" data-next="step-assistant">Next</button>
@@ -313,7 +341,7 @@
         <h1>Set up your Assistant</h1>
         <p>Give your AI assistant a name and tone.</p>
 
-        <input type="text" id="assistant-name" placeholder="e.g. Jarvis" />
+        <input type="text" id="assistant-name" class="glassmorphism" placeholder="e.g. Jarvis" />
         <div id="assistant-name-error" class="error-msg">Please enter a name for your assistant.</div>
 
         <select id="assistant-tone">
@@ -334,7 +362,7 @@
       <div class="step" id="step-offer">
         <h1>Your First Offer</h1>
         <p>What is the main thing you sell?</p>
-        <input type="text" id="first-offer" placeholder="e.g. Custom Birthday Cake" />
+        <input type="text" id="first-offer" class="glassmorphism" placeholder="e.g. Custom Birthday Cake" />
         <div id="offer-error" class="error-msg">Please enter an offer.</div>
         <div class="btn-group">
           <button id="finish-btn">Finish Setup</button>
@@ -436,6 +464,20 @@
       }
 
             function saveCurrentState() {
+          // Increment step if we are moving forward
+          let stepNumber = 0;
+          const activeStep = document.querySelector('.step.active');
+          if (activeStep) {
+              if (activeStep.id === 'step-context') stepNumber = 0;
+              if (activeStep.id === 'step-categories') stepNumber = 1;
+              if (activeStep.id === 'step-name') stepNumber = 2;
+              if (activeStep.id === 'step-assistant') stepNumber = 3;
+              if (activeStep.id === 'step-offer') stepNumber = 4;
+          }
+          state.step = stepNumber;
+          state.workContext = state.work_context || state.workContext;
+          state.work_context = state.workContext;
+
           if (window.__TAURI__ && window.__TAURI__.core) {
               window.__TAURI__.core.invoke("save_onboarding_state", { state }).catch(console.error);
           } else {
