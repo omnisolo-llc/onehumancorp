@@ -5,6 +5,7 @@ import { AppShell } from "../components/AppShell";
 
 type Message = {
   id: string;
+  thread_id?: string;
   source?: string;
   content?: string;
   original_content?: string;
@@ -40,7 +41,7 @@ export default function InboxPage() {
       setLoading(true);
       setError("");
       try {
-        const res = await fetch(`/api/ui/inbox/messages?tenant_id=${encodeURIComponent(tenantId())}`);
+        const res = await fetch(`/api/ui/inbox/threads?tenant_id=${encodeURIComponent(tenantId())}`);
         if (!res.ok) throw new Error("Failed to load inbox messages from the database");
         const data = await res.json();
         const rows = Array.isArray(data) ? data : [];
@@ -63,37 +64,17 @@ export default function InboxPage() {
 
   const openCount = messages.filter((message) => !["closed", "resolved"].includes((message.status || "").toLowerCase())).length;
 
-  async function handleApproveAndSend(inboxMessageId: string) {
+    async function handleApproveAndSend(inboxMessageId: string) {
     try {
+      setActionStatus("Approving...");
       const token = localStorage.getItem("token") || "";
-      const res = await fetch(`/api/agents/approvals?limit=50`, {
-        headers: { "Authorization": `Bearer ${token}` }
-      });
-      if (!res.ok) throw new Error("Failed to fetch approvals");
-      const data = await res.json();
-      const pendingApprovals = data.pending_approvals || [];
-
-      const approval = pendingApprovals.find((a: any) => {
-        try {
-          const payload = typeof a.payload === 'string' ? JSON.parse(a.payload) : a.payload;
-          return payload && payload.inbox_message_id === inboxMessageId;
-        } catch (e) {
-          return false;
-        }
-      });
-
-      if (!approval) {
-        setActionStatus("Could not find a pending approval for this message.");
-        return;
-      }
-
-      const approveRes = await fetch(`/api/agents/approvals/${approval.id}`, {
+      const res = await fetch(`/api/ui/inbox/action?tenant_id=${encodeURIComponent(tenantId())}`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
-        body: JSON.stringify({ approved: true })
+        body: JSON.stringify({ message_id: inboxMessageId })
       });
 
-      if (approveRes.ok) {
+      if (res.ok) {
         setMessages((prev) => prev.map((m) => m.id === inboxMessageId ? { ...m, status: "sent" } : m));
         setActionStatus("Draft approved and sent.");
       } else {
@@ -121,7 +102,7 @@ export default function InboxPage() {
           <div className="app-panel-header">
             <div>
               <div className="app-panel-title">Message Queue</div>
-              <div className="app-list-subtitle">Loaded from `/api/ui/inbox/messages`.</div>
+              <div className="app-list-subtitle">Loaded from `/api/ui/inbox/threads`.</div>
             </div>
           </div>
           <div id="messages-list" className="app-list">

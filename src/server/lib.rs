@@ -2773,6 +2773,54 @@ pub struct TriageActionPayload {
     pub approved: bool,
 }
 
+
+#[derive(serde::Deserialize)]
+pub struct InboxActionPayload {
+    pub message_id: String,
+}
+
+pub async fn ui_inbox_action_handler(
+    axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
+    axum::extract::Query(query): axum::extract::Query<UiTenantQuery>,
+    axum::extract::Json(payload): axum::extract::Json<InboxActionPayload>,
+) -> axum::response::Response {
+    use axum::response::IntoResponse;
+    let tenant_id = ui_tenant_id(&query);
+    match &db.store {
+        crate::db::DbStore::Postgres => {
+            let mut tx = match db.pool.begin().await {
+                Ok(tx) => tx,
+                Err(e) => return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": e.to_string()}))).into_response()
+            };
+            if let Err(e) = ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await {
+                return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": e.to_string()}))).into_response()
+            }
+
+            match sqlx::query("UPDATE communication_messages SET status = 'sent' WHERE id = $1 AND tenant_id = $2").bind(&payload.message_id).bind(&tenant_id).execute(&mut *tx).await {
+                Ok(_) => {
+                    let _ = tx.commit().await;
+                    (axum::http::StatusCode::OK, axum::Json(serde_json::json!({"status": "success"}))).into_response()
+                },
+                Err(e) => {
+                    tracing::error!("Failed to update communication_messages item: {:?}", e);
+                    (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": e.to_string()}))).into_response()
+                }
+            }
+        }
+        crate::db::DbStore::Sqlite(pool) => {
+            match sqlx::query("UPDATE communication_messages SET status = 'sent' WHERE id = ? AND tenant_id = ?").bind(&payload.message_id).bind(&tenant_id).execute(pool).await {
+                Ok(_) => {
+                    (axum::http::StatusCode::OK, axum::Json(serde_json::json!({"status": "success"}))).into_response()
+                },
+                Err(e) => {
+                    tracing::error!("Failed to update communication_messages item: {:?}", e);
+                    (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": e.to_string()}))).into_response()
+                }
+            }
+        }
+    }
+}
+
 pub async fn list_ui_triage_handler(
     axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
     axum::extract::Query(query): axum::extract::Query<UiTenantQuery>,
@@ -3388,6 +3436,80 @@ async fn list_ui_bookings_handler(
         }
         Err(e) => {
             tracing::error!("Failed to fetch ui bookings: {}", e);
+            (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": e.to_string()}))).into_response()
+        }
+    }
+}
+
+pub async fn list_ui_communication_threads_handler(
+    axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
+    axum::extract::Query(query): axum::extract::Query<UiTenantQuery>,
+) -> axum::response::Response {
+    use axum::response::IntoResponse;
+    use sqlx::Row;
+    let tenant_id = ui_tenant_id(&query);
+
+    let messages = match &db.store {
+        crate::db::DbStore::Postgres => {
+            match sqlx::query(
+                "SELECT t.id as thread_id, t.channel as source, m.id as id, m.content as content, m.draft_reply as draft_reply, m.status as status, m.created_at::text as created_at \
+                 FROM communication_threads t \
+                 JOIN communication_messages m ON t.id = m.thread_id \
+                 WHERE t.tenant_id = $1 \
+                 ORDER BY m.created_at DESC \
+                 LIMIT 50"
+            )
+                .bind(&tenant_id)
+                .fetch_all(&db.pool)
+                .await {
+                    Ok(rows) => Ok(rows.into_iter().map(|row| {
+                        serde_json::json!({
+                            "id": row.get::<String, _>("id"),
+                            "thread_id": row.get::<String, _>("thread_id"),
+                            "source": row.get::<String, _>("source"),
+                            "content": row.get::<String, _>("content"),
+                            "draft_reply": row.try_get::<String, _>("draft_reply").unwrap_or_default(),
+                            "status": row.get::<String, _>("status"),
+                            "created_at": row.get::<String, _>("created_at"),
+                        })
+                    }).collect::<Vec<_>>()),
+                    Err(e) => Err(e),
+                }
+        }
+        crate::db::DbStore::Sqlite(pool) => {
+            match sqlx::query(
+                "SELECT t.id as thread_id, t.channel as source, m.id as id, m.content as content, m.draft_reply as draft_reply, m.status as status, CAST(m.created_at AS TEXT) as created_at \
+                 FROM communication_threads t \
+                 JOIN communication_messages m ON t.id = m.thread_id \
+                 WHERE t.tenant_id = ? \
+                 ORDER BY m.created_at DESC \
+                 LIMIT 50"
+            )
+                .bind(&tenant_id)
+                .fetch_all(pool)
+                .await {
+                    Ok(rows) => Ok(rows.into_iter().map(|row| {
+                        serde_json::json!({
+                            "id": row.get::<String, _>("id"),
+                            "thread_id": row.get::<String, _>("thread_id"),
+                            "source": row.get::<String, _>("source"),
+                            "content": row.get::<String, _>("content"),
+                            "draft_reply": row.try_get::<String, _>("draft_reply").unwrap_or_default(),
+                            "status": row.get::<String, _>("status"),
+                            "created_at": row.get::<String, _>("created_at"),
+                        })
+                    }).collect::<Vec<_>>()),
+                    Err(e) => Err(e),
+                }
+        }
+    };
+
+    match messages {
+        Ok(messages) => {
+            (axum::http::StatusCode::OK, axum::Json(messages)).into_response()
+        }
+        Err(e) => {
+            tracing::error!("Failed to fetch communication threads: {:?}", e);
             (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": e.to_string()}))).into_response()
         }
     }
@@ -4031,6 +4153,8 @@ async fn create_ui_bom_item_handler(
         .route("/api/ui/orders", axum::routing::get(list_ui_orders_handler).with_state(db.clone()))
         .route("/api/ui/bookings", axum::routing::get(list_ui_bookings_handler).with_state(db.clone()))
         .route("/api/ui/inbox/messages", axum::routing::get(list_ui_inbox_handler).with_state(db.clone()))
+        .route("/api/ui/inbox/threads", axum::routing::get(list_ui_communication_threads_handler).with_state(db.clone()))
+        .route("/api/ui/inbox/action", axum::routing::post(ui_inbox_action_handler).with_state(db.clone()))
         .route("/api/ui/triage", axum::routing::get(list_ui_triage_handler).with_state(db.clone()))
         .route("/api/ui/triage/action", axum::routing::post(update_ui_triage_action_handler).with_state(db.clone()))
         .route("/api/ui/supply", axum::routing::get(list_ui_supply_handler).with_state(db.clone()))
@@ -4415,6 +4539,7 @@ async fn create_ui_bom_item_handler(
             default_config: ohc_builtin_agent::agent::AgentRunConfig::default(),
         })))
         .merge(meta_webhook_router)
+        .nest("/api/v1/webhooks/universal", api::universal_inbox_webhook::router(dept_orchestrator.clone()))
         .merge(health_router)
         .fallback(api_not_found_handler);
 

@@ -2,7 +2,7 @@ use crate::orchestration::departments::orchestrator::{BaseAgent, AgentTriggerTyp
 use crate::orchestration::departments::types::{DepartmentType, DepartmentEvent, DepartmentConfig, ApprovalRequest, ActionRisk};
 use std::collections::HashMap;
 use std::sync::Arc;
-use crate::db::DbStore;
+
 
 pub struct TranslationAgent {
     orchestrator: Arc<DepartmentOrchestrator>,
@@ -72,7 +72,7 @@ impl Department for TranslationAgent {
             let pool = crate::db::get_pool();
             let _ = sqlx::query(
                 r#"
-                UPDATE inbox_messages
+                UPDATE communication_messages
                 SET content = $1, translated_from_language = $2, draft_reply = $3
                 WHERE id = $4 AND tenant_id = $5
                 "#
