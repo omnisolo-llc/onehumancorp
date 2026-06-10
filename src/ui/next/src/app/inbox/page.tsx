@@ -107,7 +107,7 @@ export default function InboxPage() {
 
   return (
     <AppShell
-      title="Inbox"
+      title="Unified Inbox"
       subtitle="Database-backed customer conversations and generated drafts."
       statusItems={[
         { label: "Messages", value: String(messages.length), tone: messages.length > 0 ? "good" : "neutral" },
@@ -116,6 +116,7 @@ export default function InboxPage() {
       actions={[{ label: "Audit", href: "/agent-audit-dashboard" }]}
     >
       {actionStatus && <div className="mb-4 app-badge good" role="status">{actionStatus}</div>}
+      <div className="w-full max-w-[375px] mx-auto md:max-w-none">
       <div className="app-grid two">
         <section className="app-panel">
           <div className="app-panel-header">
@@ -206,6 +207,7 @@ export default function InboxPage() {
           )}
         </section>
       </div>
+          </div>
     </AppShell>
   );
 }

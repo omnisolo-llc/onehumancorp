@@ -7,10 +7,10 @@ use crate::agent::{Agent, AgentEvent, AgentRunConfig};
 use crate::auth::AuthMode;
 use chrono::{DateTime, Utc};
 use ohc_builtin_agent_llm::{
-    LlmClient,
     anthropic::AnthropicClient,
     ollama::OllamaClient,
     openai::{OpenAIClient, OpenAIClientConfig},
+    LlmClient,
 };
 
 #[derive(Debug, Clone)]
@@ -40,15 +40,15 @@ pub fn inject_memories_into_prompt(memories: &[MemoryEntry], system_prompt: &str
 }
 
 use crate::consolidation_worker::ConsolidationWorker;
-use crate::departments::{Department, get_department_config};
+use crate::departments::{get_department_config, Department};
 use crate::memory_store::{EmbeddingRecord, VectorRepository};
 use crate::proto::agent_service::{
-    EventType, PingRequest, PingResponse, RunTaskEvent, RunTaskRequest, SkillConfig,
-    SubAgentRequest, SubAgentResponse, ToolsetConfig, agent_service_server::AgentService,
+    agent_service_server::AgentService, EventType, PingRequest, PingResponse, RunTaskEvent,
+    RunTaskRequest, SkillConfig, SubAgentRequest, SubAgentResponse, ToolsetConfig,
 };
 use crate::tools::{
-    SharedMailbox, SharedTaskStore, SharedTodos, Tool, sendmessage::Mailbox, task::TaskStore,
-    todowrite::TodoItem,
+    sendmessage::Mailbox, task::TaskStore, todowrite::TodoItem, SharedMailbox, SharedTaskStore,
+    SharedTodos, Tool,
 };
 use serde_json::Value;
 use std::path::PathBuf;
@@ -79,6 +79,7 @@ pub struct AgentServiceImpl {
     auth: AuthMode,
     memory: Option<Arc<VectorRepository>>,
     pub anthropic_memory: Option<Arc<crate::memory_store::Anthropic3TierMemoryStore>>,
+    pub redis_memory: Option<Arc<crate::memory_store::RedisMemoryStore>>,
     /// Optional LLM client override for testing.
     llm_override: Option<Arc<dyn LlmClient>>,
     pub worker_handle: Option<tokio::task::JoinHandle<()>>,
@@ -165,6 +166,7 @@ impl AgentServiceImpl {
             memory: None,
             llm_override: None,
             anthropic_memory: None,
+            redis_memory: None,
             worker_handle: None,
         }
     }
@@ -177,6 +179,18 @@ impl AgentServiceImpl {
                 self.anthropic_memory = Some(Arc::new(store));
             } else {
                 tracing::warn!("Failed to initialize Anthropic3TierMemoryStore");
+            }
+        }
+
+        if std::env::var("OHC_ENABLE_REDIS_MEMORY").unwrap_or_default() == "true" {
+            let db_url = std::env::var("OHC_REDIS_MEMORY_URL")
+                .unwrap_or_else(|_| "redis://127.0.0.1:6379".to_string());
+            let namespace = std::env::var("OHC_REDIS_MEMORY_NAMESPACE")
+                .unwrap_or_else(|_| "ohc_agent".to_string());
+            if let Ok(store) = crate::memory_store::RedisMemoryStore::new(&db_url, &namespace) {
+                self.redis_memory = Some(Arc::new(store));
+            } else {
+                tracing::warn!("Failed to initialize RedisMemoryStore");
             }
         }
 
@@ -521,7 +535,9 @@ impl AgentServiceImpl {
         }
 
         let long_term_memory: Option<std::sync::Arc<dyn crate::memory_store::LongTermMemory>> =
-            if sqlite_memory.is_some() {
+            if let Some(redis_store) = self.redis_memory.clone() {
+                Some(redis_store as std::sync::Arc<dyn crate::memory_store::LongTermMemory>)
+            } else if sqlite_memory.is_some() {
                 sqlite_memory
             } else if std::env::var("OHC_USE_JSON_MEMORY_STORE").unwrap_or_default() == "true" {
                 let base_dir = std::env::var("OHC_JSON_MEMORY_STORE_DIR")
@@ -632,6 +648,7 @@ impl AgentServiceImpl {
             enable_observation_masking: true,
             observation_masking_threshold: 3,
             observation_masking_size_limit: 512,
+            observation_masking_element_limit: 50,
             enable_lost_in_the_middle_prevention: true,
             project_trusted: true,
             allowed_tools: None,
@@ -1114,6 +1131,7 @@ impl AgentService for AgentServiceImpl {
                 enable_observation_masking: true,
                 observation_masking_threshold: 3,
                 observation_masking_size_limit: 512,
+                observation_masking_element_limit: 50,
                 enable_lost_in_the_middle_prevention: true,
             project_trusted: true,
             allowed_tools: None,
@@ -1186,7 +1204,7 @@ impl AgentService for AgentServiceImpl {
 
         // Remote dispatch: forward to sub-agent gRPC server.
         use crate::proto::agent_service::{
-            RunTaskRequest, agent_service_client::AgentServiceClient,
+            agent_service_client::AgentServiceClient, RunTaskRequest,
         };
 
         let channel =
@@ -1563,6 +1581,28 @@ mod memory_tests {
     use super::*;
 
     #[tokio::test]
+    async fn test_redis_memory_initialization() {
+        unsafe {
+            std::env::set_var("OHC_ENABLE_REDIS_MEMORY", "true");
+            std::env::set_var("OHC_REDIS_MEMORY_URL", "redis://127.0.0.1:6379");
+            std::env::set_var("OHC_REDIS_MEMORY_NAMESPACE", "test_namespace");
+        }
+
+        let mut service = AgentServiceImpl::new("test", AgentConfig::default(), AuthMode::Disabled);
+        service.init_memory().await;
+
+        assert!(
+            service.redis_memory.is_some(),
+            "Redis Memory should be initialized"
+        );
+
+        unsafe {
+            std::env::remove_var("OHC_ENABLE_REDIS_MEMORY");
+            std::env::remove_var("OHC_REDIS_MEMORY_URL");
+            std::env::remove_var("OHC_REDIS_MEMORY_NAMESPACE");
+        }
+    }
+
     async fn test_anthropic_memory_initialization_and_accessor() {
         unsafe {
             std::env::set_var("OHC_ENABLE_ANTHROPIC_MEMORY", "true");

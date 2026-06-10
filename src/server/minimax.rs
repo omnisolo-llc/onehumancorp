@@ -4,7 +4,7 @@ use std::sync::OnceLock;
 use std::time::{Duration, Instant};
 use ::server_pricing::prompt_caching::PromptCache;
 use ::server_pricing::deduplication::{RequestDeduplicator, DeduplicationResult};
-use ::server_pricing::compression::{minify_json_prompt, truncate_by_word_count};
+use ::server_pricing::compression::{minify_json_prompt};
 use tokio_stream::Stream;
 use std::pin::Pin;
 
