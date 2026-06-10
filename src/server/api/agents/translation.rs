@@ -119,12 +119,16 @@ pub async fn generate_inbox_draft_reply(
     tenant_id: &str,
     source: &str,
     translation: &InboxTranslation,
+    customer_context: Option<&str>,
 ) -> Result<String, String> {
-    let prompt = format!(
+    let mut prompt = format!(
         "Write one concise, warm customer-service reply in {} for an omnichannel SMB inbox. Do not invent policies, availability, prices, or order state. Tenant: {tenant_id}. Source: {source}. Customer message: {}",
         translation.target_language,
         translation.translated_content
     );
+    if let Some(ctx) = customer_context {
+        prompt.push_str(&format!("\n\nCustomer Context:\n{}", ctx));
+    }
     let compressed_prompt = crate::pricing::compression::reduce_tokens(&prompt);
 
     match std::env::var("OHC_INBOX_DRAFT_LLM_PROVIDER")

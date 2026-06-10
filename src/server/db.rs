@@ -744,6 +744,16 @@ impl DB {
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1
                     );
+                    CREATE TABLE IF NOT EXISTS customer_identities (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT,
+                        customer_id TEXT,
+                        channel TEXT,
+                        identifier TEXT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        UNIQUE(tenant_id, channel, identifier)
+                    );
                     CREATE TABLE IF NOT EXISTS orders (
                         id TEXT PRIMARY KEY,
                         tenant_id TEXT,

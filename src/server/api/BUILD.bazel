@@ -31,6 +31,9 @@ exports_files(
         "agent_feed.rs",
         "audio_command.rs",
         "invoice.rs",
+        "crm/mod.rs",
+        "crm/identity.rs",
+        "crm/identity_test.rs",
     ],
     visibility = ["//visibility:public"],
 )
@@ -81,6 +84,8 @@ rust_library(
         "//src/server/api/onboarding:mod.rs",
         "//src/server/api/booking:mod.rs",
         "//src/server/api/booking:request.rs",
+        "crm/mod.rs",
+        "crm/identity.rs",
     ],
     crate_root = "bazel_lib.rs",
     edition = "2024",
