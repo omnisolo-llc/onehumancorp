@@ -3,6 +3,7 @@ pub mod offline_sync;
 pub mod mesh_handler;
 pub mod autodream;
 pub mod terminal_api;
+pub mod pos;
 pub mod staff_mesh;
 
 pub mod billing_webhook;
