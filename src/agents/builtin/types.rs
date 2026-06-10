@@ -188,7 +188,7 @@ pub enum PermissionArchitecture {
 }
 
 /// Centralized Pydantic-first tool schema error formatter.
-pub fn format_pydantic_error(e: &serde_json::Error, args_str: Option<&str>) -> String {
+pub fn format_pydantic_error(e: &serde_json::Error, args_str: Option<&str>, custom_instruction: Option<&str>) -> String {
     let detail = if e.is_data() {
         format!("Semantic validation failed: {}", e)
     } else if e.is_syntax() {
@@ -203,13 +203,17 @@ pub fn format_pydantic_error(e: &serde_json::Error, args_str: Option<&str>) -> S
     if let Some(snippet) = args_str {
         msg.push_str(&format!("\nProvided arguments snippet: {}", snippet));
     }
-    msg.push_str("\nPlease strictly follow the tool's JSON schema and try again.");
+    if let Some(instruction) = custom_instruction {
+        msg.push_str(&format!("\n{}", instruction));
+    } else {
+        msg.push_str("\nPlease strictly follow the tool's JSON schema and try again.");
+    }
     msg
 }
 
 /// A version of format_pydantic_error that takes a string message instead of a serde_json::Error.
 /// Used when validation fails via manual checks rather than serde deserialization.
-pub fn format_pydantic_error_string(error_msg: &str, args_str: Option<&str>) -> String {
+pub fn format_pydantic_error_string(error_msg: &str, args_str: Option<&str>, custom_instruction: Option<&str>) -> String {
     let mut msg = format!(
         "Validation Error (Pydantic-first tool schema): Failed to parse arguments.\nReason: Semantic validation failed: {}",
         error_msg
@@ -217,7 +221,11 @@ pub fn format_pydantic_error_string(error_msg: &str, args_str: Option<&str>) -> 
     if let Some(snippet) = args_str {
         msg.push_str(&format!("\nProvided arguments snippet: {}", snippet));
     }
-    msg.push_str("\nPlease strictly follow the tool's JSON schema and try again.");
+    if let Some(instruction) = custom_instruction {
+        msg.push_str(&format!("\n{}", instruction));
+    } else {
+        msg.push_str("\nPlease strictly follow the tool's JSON schema and try again.");
+    }
     msg
 }
 
@@ -236,20 +244,20 @@ mod tests {
 
         // Test syntax error
         let err_syntax = serde_json::from_str::<Dummy>("{ bad json }").unwrap_err();
-        let msg_syntax = format_pydantic_error(&err_syntax, Some("{ bad json }"));
+        let msg_syntax = format_pydantic_error(&err_syntax, Some("{ bad json }"), None);
         assert!(msg_syntax.contains("Validation Error (Pydantic-first tool schema)"));
         assert!(msg_syntax.contains("JSON syntax error"));
         assert!(msg_syntax.contains("Provided arguments snippet: { bad json }"));
 
         // Test EOF error
         let err_eof = serde_json::from_str::<Dummy>("{\"_field\": 12").unwrap_err();
-        let msg_eof = format_pydantic_error(&err_eof, None);
+        let msg_eof = format_pydantic_error(&err_eof, None, None);
         assert!(msg_eof.contains("Incomplete JSON structure (unexpected EOF)"));
         assert!(!msg_eof.contains("Provided arguments snippet"));
 
         // Test semantic/data error
         let err_semantic = serde_json::from_str::<Dummy>("{\"_field\": \"string instead of int\"}").unwrap_err();
-        let msg_semantic = format_pydantic_error(&err_semantic, Some("{\"_field\": \"string instead of int\"}"));
+        let msg_semantic = format_pydantic_error(&err_semantic, Some("{\"_field\": \"string instead of int\"}"), None);
         assert!(msg_semantic.contains("Semantic validation failed"));
     }
 
@@ -310,5 +318,27 @@ mod tests {
             PermissionArchitecture::default(),
             PermissionArchitecture::Permissive
         );
+    }
+}
+
+#[cfg(test)]
+mod tests_custom {
+    use super::*;
+
+    #[test]
+    fn test_format_pydantic_error_custom_instruction() {
+        use serde::Deserialize;
+
+        #[derive(Deserialize, Debug)]
+        struct Dummy {
+            _field: u32,
+        }
+
+        let err_semantic = serde_json::from_str::<Dummy>("{\"_field\": \"string instead of int\"}").unwrap_err();
+        let msg_semantic = format_pydantic_error(&err_semantic, Some("{\"_field\": \"string instead of int\"}"), Some("Please provide an integer value for _field."));
+
+        assert!(msg_semantic.contains("Semantic validation failed"));
+        assert!(msg_semantic.contains("Please provide an integer value for _field."));
+        assert!(!msg_semantic.contains("Please strictly follow the tool's JSON schema and try again."));
     }
 }
