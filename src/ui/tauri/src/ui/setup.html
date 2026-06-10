@@ -667,6 +667,13 @@
                   }
               });
           }
+
+          if (state.step !== undefined && state.step > 0) {
+              const steps = ['step-context', 'step-categories', 'step-name', 'step-assistant', 'step-offer', 'step-template'];
+              if (state.step < steps.length) {
+                  goToStep(steps[state.step]);
+              }
+          }
       }
 
             function saveCurrentState() {
@@ -693,6 +700,7 @@
               if (activeStep.id === 'step-name') stepNumber = 2;
               if (activeStep.id === 'step-assistant') stepNumber = 3;
               if (activeStep.id === 'step-offer') stepNumber = 4;
+              if (activeStep.id === 'step-template') stepNumber = 5;
           }
           state.step = stepNumber;
 
