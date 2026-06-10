@@ -239,14 +239,14 @@ export default function StripeTerminalClient({ amount, productId, tenantId }: { 
 
       {!connectedReader && (
         <div className="mb-4">
-          <button onClick={discoverReaders} className="w-full bg-[#0066FF] text-white px-4 py-3 rounded-xl font-bold hover:bg-blue-700 transition-colors shadow-md shadow-blue-500/20 active:scale-[0.98]">
+          <button onClick={discoverReaders} className="w-full bg-[#0066FF] text-white px-4 py-3 min-h-[44px] rounded-xl font-bold hover:bg-blue-700 transition-colors shadow-md shadow-blue-500/20 active:scale-[0.98]">
             Discover Readers
           </button>
           <ul className="mt-4 space-y-2">
             {discoveredReaders.map(reader => (
               <li key={reader.id} className="flex justify-between items-center p-3 border border-gray-100 rounded-xl bg-white shadow-sm">
                 <span className="font-medium text-gray-800 text-sm">{reader.label || reader.id}</span>
-                <button onClick={() => connectReader(reader)} className="bg-[#34C759] text-white px-4 py-1.5 rounded-lg text-sm font-bold shadow-sm shadow-green-500/20 hover:bg-green-600 transition-colors active:scale-[0.98]">
+                <button onClick={() => connectReader(reader)} className="bg-[#34C759] text-white px-4 py-1.5 min-h-[44px] min-w-[44px] rounded-lg text-sm font-bold shadow-sm shadow-green-500/20 hover:bg-green-600 transition-colors active:scale-[0.98]">
                   Connect
                 </button>
               </li>
@@ -257,7 +257,7 @@ export default function StripeTerminalClient({ amount, productId, tenantId }: { 
 
       {connectedReader && (
         <div>
-          <button onClick={processPayment} disabled={reserving} className={`w-full bg-[#0066FF] text-white px-4 py-4 rounded-xl font-bold shadow-md shadow-blue-500/20 transition-all ${reserving ? 'opacity-50' : 'hover:bg-blue-700 active:scale-[0.98]'}`}>
+          <button onClick={processPayment} disabled={reserving} className={`w-full bg-[#0066FF] text-white px-4 py-4 min-h-[44px] rounded-xl font-bold shadow-md shadow-blue-500/20 transition-all ${reserving ? 'opacity-50' : 'hover:bg-blue-700 active:scale-[0.98]'}`}>
             {reserving ? 'Processing...' : `Charge $${(amount / 100).toFixed(2)}`}
           </button>
         </div>
