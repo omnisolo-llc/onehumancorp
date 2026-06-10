@@ -24,7 +24,14 @@ function badgeTone(status?: string) {
   if (["closed", "sent", "resolved"].includes(normalized)) return "good";
   if (["open", "pending", ""].includes(normalized)) return "warn";
   if (["failed", "blocked"].includes(normalized)) return "bad";
+  if (["ai_handled"].includes(normalized)) return "magic"; // We can style 'magic' as a translucent badge
   return "";
+}
+
+function displayStatus(status?: string) {
+  const normalized = (status || "").toLowerCase();
+  if (normalized === "ai_handled") return "✨ AI Handled";
+  return status || "Open";
 }
 
 export default function InboxPage() {
@@ -61,7 +68,8 @@ export default function InboxPage() {
     [messages, selectedId],
   );
 
-  const openCount = messages.filter((message) => !["closed", "resolved"].includes((message.status || "").toLowerCase())).length;
+  const openCount = messages.filter((message) => !["closed", "resolved", "ai_handled"].includes((message.status || "").toLowerCase())).length;
+  const autoRepliedCount = messages.filter((message) => ["ai_handled"].includes((message.status || "").toLowerCase())).length;
 
   async function handleApproveAndSend(inboxMessageId: string) {
     try {
@@ -111,6 +119,7 @@ export default function InboxPage() {
       subtitle="Database-backed customer conversations and generated drafts."
       statusItems={[
         { label: "Messages", value: String(messages.length), tone: messages.length > 0 ? "good" : "neutral" },
+        { label: "Auto-Replied", value: String(autoRepliedCount), tone: autoRepliedCount > 0 ? "good" : "neutral" },
         { label: "Open", value: String(openCount), tone: openCount > 0 ? "warn" : "good" },
       ]}
       actions={[{ label: "Audit", href: "/agent-audit-dashboard" }]}
@@ -143,7 +152,7 @@ export default function InboxPage() {
                   <div className="app-list-title">{message.source || "Unknown source"}</div>
                   <div className="app-list-subtitle truncate">{message.content || "Empty message"}</div>
                 </div>
-                <span className={`app-badge ${badgeTone(message.status)}`}>{message.status || "Open"}</span>
+                <span className={`app-badge ${badgeTone(message.status)}`}>{displayStatus(message.status)}</span>
               </button>
             ))}
           </div>
@@ -187,7 +196,7 @@ export default function InboxPage() {
               <div className="grid grid-cols-2 gap-3">
                 <div className="app-card">
                   <div className="app-metric-label">Status</div>
-                  <div className="mt-2"><span className={`app-badge ${badgeTone(selected.status)}`}>{selected.status || "Open"}</span></div>
+                  <div className="mt-2"><span className={`app-badge ${badgeTone(selected.status)}`}>{displayStatus(selected.status)}</span></div>
                 </div>
                 <div className="app-card">
                   <div className="app-metric-label">Created</div>

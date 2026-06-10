@@ -593,3 +593,16 @@ body {
     border-radius: 16px;
   }
 }
+.app-badge.magic {
+  background-color: rgba(0, 102, 255, 0.1);
+  color: #0066FF;
+  border: 1px solid rgba(0, 102, 255, 0.2);
+  backdrop-filter: blur(8px);
+}
+@media (prefers-color-scheme: dark) {
+  .app-badge.magic {
+    background-color: rgba(0, 113, 227, 0.15);
+    color: #5E9BFF;
+    border-color: rgba(0, 113, 227, 0.3);
+  }
+}
