@@ -67,7 +67,7 @@ function CheckoutContent() {
           "Content-Type": "application/json",
           ...(typeof localStorage !== "undefined" && localStorage.getItem('token') ? { "Authorization": `Bearer ${localStorage.getItem('token')}` } : {})
         },
-        body: JSON.stringify({ tier, is_subscription: isSubscription }),
+        body: JSON.stringify({ tier, is_subscription: true }),
       });
       const data = await response.json();
       if (!response.ok || !data.checkout_url) {
@@ -101,6 +101,7 @@ function CheckoutContent() {
           tenant_id: tenant,
           amount_cents: amount_cents,
           currency: "MXN",
+          is_subscription: tier ? true : isSubscription,
         }),
       });
       const data = await response.json();
