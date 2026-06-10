@@ -809,6 +809,9 @@ export default function AssistantPage() {
                   {['@ files', 'Screenshot', 'Guarded', 'Parallel tasks'].map((item) => (
                     <span key={item} className={styles.formatChip}>{item}</span>
                   ))}
+                  <button type="button" className={styles.smallButton} aria-label="Clipboard screenshot paste" title="Paste screenshot from clipboard">
+                    📋 Paste Image
+                  </button>
                   {outputFormat === 'Code App' && (
                     <>
                       <button type="button" className={styles.smallButton}>
