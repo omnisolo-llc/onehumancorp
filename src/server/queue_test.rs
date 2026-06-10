@@ -4,15 +4,26 @@ mod tests {
     use sqlx::postgres::PgPoolOptions;
     use sqlx::Executor;
 
+    fn get_workspace_dir() -> std::path::PathBuf {
+        if let Ok(workspace_dir) = std::env::var("BUILD_WORKSPACE_DIRECTORY") {
+            return std::path::PathBuf::from(workspace_dir);
+        }
+        if let Ok(test_srcdir) = std::env::var("TEST_SRCDIR") {
+            let mut path = std::path::PathBuf::from(test_srcdir);
+            if let Ok(test_workspace) = std::env::var("TEST_WORKSPACE") {
+                path.push(test_workspace);
+                return path;
+            }
+        }
+        std::env::current_dir().unwrap()
+    }
+
     #[test]
     fn test_sub_agent_queue_schema_migration_exists() {
-        let mut migration_path = std::path::PathBuf::from("src/server/migrations/104_sub_agent_queue.sql");
-        if let Ok(workspace_dir) = std::env::var("BUILD_WORKSPACE_DIRECTORY") {
-            migration_path = std::path::PathBuf::from(workspace_dir).join(&migration_path);
-        }
+        let migration_path = get_workspace_dir().join("src/server/migrations/104_sub_agent_queue.sql");
 
         let migration = std::fs::read_to_string(&migration_path)
-            .expect("sub_agent_queue migration should exist for Postgres deployments");
+            .expect(&format!("sub_agent_queue migration should exist for Postgres deployments at {:?}", migration_path));
 
         for required in [
             "CREATE TABLE IF NOT EXISTS sub_agent_queue",
@@ -35,13 +46,10 @@ mod tests {
 
     #[test]
     fn test_ui_dashboard_campaign_metric_uses_agent_actions() {
-        let mut lib_path = std::path::PathBuf::from("src/server/lib.rs");
-        if let Ok(workspace_dir) = std::env::var("BUILD_WORKSPACE_DIRECTORY") {
-            lib_path = std::path::PathBuf::from(workspace_dir).join(&lib_path);
-        }
+        let lib_path = get_workspace_dir().join("src/server/lib.rs");
 
-        let lib = std::fs::read_to_string(lib_path)
-            .expect("server lib should be readable for dashboard metric invariant");
+        let lib = std::fs::read_to_string(&lib_path)
+            .expect(&format!("server lib should be readable for dashboard metric invariant at {:?}", lib_path));
 
         assert!(lib.contains("SELECT COUNT(*) FROM agent_actions"));
         assert!(lib.contains("action_type = 'growth.campaign_sent'"));
@@ -50,13 +58,10 @@ mod tests {
 
     #[test]
     fn test_legacy_json_dependencies_are_backfilled_to_edge_table() {
-        let mut migration_path = std::path::PathBuf::from("src/server/migrations/100_backfill_shared_task_dependencies.sql");
-        if let Ok(workspace_dir) = std::env::var("BUILD_WORKSPACE_DIRECTORY") {
-            migration_path = std::path::PathBuf::from(workspace_dir).join(&migration_path);
-        }
+        let migration_path = get_workspace_dir().join("src/server/migrations/100_backfill_shared_task_dependencies.sql");
 
         let migration = std::fs::read_to_string(&migration_path)
-            .expect("shared task dependency backfill migration should exist");
+            .expect(&format!("shared task dependency backfill migration should exist at {:?}", migration_path));
 
         for required in [
             "INSERT INTO shared_task_dependencies",
