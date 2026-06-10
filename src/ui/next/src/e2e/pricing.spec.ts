@@ -9,10 +9,10 @@ test.describe('Pricing Page Loop', () => {
     await expect(page.locator('h1', { hasText: 'Pricing Plans' })).toBeVisible({ timeout: 10000 });
 
     // Check that all tiers are displayed
-    await expect(page.locator('h3', { hasText: 'Free' })).toBeVisible();
-    await expect(page.locator('h3', { hasText: 'Starter' })).toBeVisible();
-    await expect(page.locator('h3', { hasText: 'Pro' })).toBeVisible();
-    await expect(page.locator('h3', { hasText: 'Business' })).toBeVisible();
+    await expect(page.locator('h3', { hasText: 'Free' }).first()).toBeVisible();
+    await expect(page.locator('h3', { hasText: 'Starter' }).first()).toBeVisible();
+    await expect(page.locator('h3', { hasText: 'Pro' }).first()).toBeVisible();
+    await expect(page.locator('h3', { hasText: 'Business' }).first()).toBeVisible();
 
     // Check that Upgrade buttons are present
     await expect(page.locator('button', { hasText: 'Upgrade to Starter via Stripe' })).toBeVisible();
@@ -20,7 +20,7 @@ test.describe('Pricing Page Loop', () => {
     await expect(page.locator('button', { hasText: 'Upgrade to Business via Stripe' })).toBeVisible();
 
     // Check navigation works
-    await page.locator('button', { hasText: 'Back' }).click();
-    await expect(page).toHaveURL('/dashboard');
+    await page.locator('button', { hasText: 'Back' }).first().click();
+    await expect(page).toHaveURL(/\/dashboard$/);
   });
 });
