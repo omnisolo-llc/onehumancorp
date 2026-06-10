@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>OHC Pricing</title>
+    <style>
+      body {
+        font-family: "Outfit", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        background-color: #f5f5f7;
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 40px 20px;
+        box-sizing: border-box;
+        min-height: 100vh;
+      }
+
+      .header-container {
+        text-align: center;
+        margin-bottom: 40px;
+      }
+
+      h1 {
+        color: #1d1d1f;
+        font-size: 32px;
+        font-weight: 700;
+        margin-bottom: 10px;
+      }
+
+      .subtitle {
+        color: #86868b;
+        font-size: 16px;
+      }
+
+      .back-link {
+        display: inline-block;
+        margin-bottom: 20px;
+        color: #0066FF;
+        text-decoration: none;
+        font-weight: 500;
+        align-self: flex-start;
+        width: 100%;
+        max-width: 1000px;
+      }
+      .back-link:hover { text-decoration: underline; }
+
+      .pricing-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 24px;
+        width: 100%;
+        max-width: 1200px;
+      }
+
+      .pricing-card {
+        background: rgba(255, 255, 255, 0.65);
+        backdrop-filter: blur(30px) saturate(210%);
+        -webkit-backdrop-filter: blur(30px) saturate(210%);
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        border-radius: 16px;
+        padding: 32px 24px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        display: flex;
+        flex-direction: column;
+        transition: transform 0.2s, box-shadow 0.2s;
+      }
+
+      .pricing-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
+      }
+
+      .pricing-card.current {
+        border: 2px solid #0066FF;
+        background: rgba(255, 255, 255, 0.8);
+      }
+
+      .tier-name {
+        font-size: 20px;
+        font-weight: 700;
+        color: #1d1d1f;
+        margin-bottom: 8px;
+      }
+
+      .tier-price {
+        font-size: 36px;
+        font-weight: 700;
+        color: #1d1d1f;
+        margin-bottom: 24px;
+      }
+
+      .tier-price span {
+        font-size: 16px;
+        font-weight: 400;
+        color: #86868b;
+      }
+
+      .tier-features {
+        list-style: none;
+        padding: 0;
+        margin: 0 0 32px 0;
+        flex-grow: 1;
+      }
+
+      .tier-features li {
+        color: #555;
+        font-size: 14px;
+        margin-bottom: 12px;
+        display: flex;
+        align-items: center;
+      }
+
+      .tier-features li::before {
+        content: "✓";
+        color: #34C759;
+        font-weight: bold;
+        margin-right: 10px;
+      }
+
+      .btn {
+        width: 100%;
+        padding: 14px;
+        border-radius: 8px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: opacity 0.2s;
+        border: none;
+        text-align: center;
+      }
+
+      .btn-primary {
+        background-color: #0066FF;
+        color: white;
+      }
+
+      .btn-primary:hover {
+        background-color: #0052cc;
+      }
+
+      .btn-secondary {
+        background-color: transparent;
+        color: #1d1d1f;
+        border: 1px solid #1d1d1f;
+      }
+
+      .btn-secondary:hover {
+        background-color: rgba(0, 0, 0, 0.05);
+      }
+
+      .btn-disabled {
+        background-color: #e5e5ea;
+        color: #86868b;
+        cursor: not-allowed;
+      }
+
+      .cancel-container {
+        margin-top: 40px;
+        text-align: center;
+        width: 100%;
+      }
+
+      .cancel-link {
+        color: #FF3B30;
+        text-decoration: none;
+        font-size: 14px;
+        cursor: pointer;
+      }
+
+      .cancel-link:hover {
+        text-decoration: underline;
+      }
+
+      .loading {
+        text-align: center;
+        padding: 40px;
+        color: #86868b;
+        font-size: 16px;
+      }
+
+      .error-msg {
+        color: #FF3B30;
+        text-align: center;
+        margin-top: 20px;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        body { background-color: #000; }
+        .pricing-card {
+          background: rgba(22, 22, 26, 0.7);
+          border-color: rgba(255, 255, 255, 0.1);
+        }
+        .pricing-card.current {
+          background: rgba(30, 30, 35, 0.8);
+          border-color: #0a84ff;
+        }
+        h1, .tier-name, .tier-price { color: #f5f5f7; }
+        .tier-features li { color: #ccc; }
+        .btn-secondary {
+          color: #f5f5f7;
+          border-color: #f5f5f7;
+        }
+        .btn-secondary:hover { background-color: rgba(255, 255, 255, 0.1); }
+      }
+    </style>
+  </head>
+  <body>
+    <div style="width: 100%; max-width: 1200px;">
+      <a href="dashboard.html" class="back-link">← Back to Dashboard</a>
+    </div>
+
+    <div class="header-container">
+      <h1>Pricing Plans</h1>
+      <div class="subtitle">Choose the plan that fits your business</div>
+    </div>
+
+    <div id="loading" class="loading">Loading plans...</div>
+    <div id="error" class="error-msg" style="display: none;"></div>
+
+    <div class="pricing-grid" id="pricing-grid" style="display: none;">
+
+      <!-- Free Tier -->
+      <div class="pricing-card" id="card-free">
+        <h3 class="tier-name">Free</h3>
+        <div class="tier-price">$0<span>/mo</span></div>
+        <ul class="tier-features">
+          <li>Basic work triage</li>
+          <li>Limited AI actions</li>
+          <li>Basic scheduling</li>
+          <li>Standard support</li>
+        </ul>
+        <button class="btn btn-secondary" id="btn-free">Current Plan</button>
+      </div>
+
+      <!-- Starter Tier -->
+      <div class="pricing-card" id="card-starter">
+        <h3 class="tier-name">Starter</h3>
+        <div class="tier-price">$29<span>/mo</span></div>
+        <ul class="tier-features">
+          <li>Automated work triage</li>
+          <li>Increased AI actions</li>
+          <li>Customer follow-ups</li>
+          <li>Priority email support</li>
+        </ul>
+        <button class="btn btn-primary" onclick="upgradePlan('starter')">Upgrade to Starter via Stripe</button>
+      </div>
+
+      <!-- Pro Tier -->
+      <div class="pricing-card" id="card-pro">
+        <h3 class="tier-name">Pro</h3>
+        <div class="tier-price">$79<span>/mo</span></div>
+        <ul class="tier-features">
+          <li>Advanced AI workflows</li>
+          <li>Unlimited AI actions</li>
+          <li>Advanced POS features</li>
+          <li>24/7 phone support</li>
+        </ul>
+        <button class="btn btn-primary" onclick="upgradePlan('pro')">Upgrade to Pro via Stripe</button>
+      </div>
+
+      <!-- Business Tier -->
+      <div class="pricing-card" id="card-business">
+        <h3 class="tier-name">Business</h3>
+        <div class="tier-price">$299<span>/mo</span></div>
+        <ul class="tier-features">
+          <li>Custom AI models</li>
+          <li>Dedicated account manager</li>
+          <li>API access</li>
+          <li>White-glove onboarding</li>
+        </ul>
+        <button class="btn btn-primary" onclick="upgradePlan('business')">Upgrade to Business via Stripe</button>
+      </div>
+
+    </div>
+
+    <div class="cancel-container" id="cancel-container" style="display: none;">
+      <a class="cancel-link" id="cancel-subscription-link" onclick="cancelSubscription()">Cancel current subscription</a>
+    </div>
+
+    <script>
+      let currentPlan = 'Free';
+
+      document.addEventListener('DOMContentLoaded', async () => {
+        const tenant = localStorage.getItem('ohc_active_tenant_id') || localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default-team';
+        const headers = {};
+        if (tenant) {
+            headers['x-ohc-tenant-id'] = tenant;
+        }
+
+        try {
+            const res = await fetch('/api/billing/my-plan', { headers });
+            if (res.ok) {
+                const data = await res.json();
+                currentPlan = data.current_plan || 'Free';
+
+                // Update UI based on current plan
+                updateUI(currentPlan);
+
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('pricing-grid').style.display = 'grid';
+
+                if (currentPlan !== 'Free') {
+                  document.getElementById('cancel-container').style.display = 'block';
+                }
+            } else {
+                showError("Could not load current plan.");
+            }
+        } catch (e) {
+            console.error(e);
+            showError("Network error loading plan.");
+        }
+      });
+
+      function updateUI(planName) {
+        const tiers = ['Free', 'Starter', 'Pro', 'Business'];
+
+        tiers.forEach(tier => {
+          const cardId = 'card-' + tier.toLowerCase();
+          const card = document.getElementById(cardId);
+          if (card) {
+            if (tier === planName) {
+              card.classList.add('current');
+              const btn = card.querySelector('button');
+              btn.className = 'btn btn-secondary btn-disabled';
+              btn.innerText = 'Current Plan';
+              btn.onclick = null;
+            } else {
+              card.classList.remove('current');
+            }
+          }
+        });
+      }
+
+      async function upgradePlan(tier) {
+        const tenant = localStorage.getItem('ohc_active_tenant_id') || localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default-team';
+        const headers = {
+          'Content-Type': 'application/json'
+        };
+        if (tenant) {
+            headers['x-ohc-tenant-id'] = tenant;
+        }
+
+        try {
+          // Disable buttons while processing
+          const buttons = document.querySelectorAll('.pricing-card button');
+          buttons.forEach(b => b.disabled = true);
+
+          const res = await fetch('/api/billing/create-checkout-session', {
+            method: 'POST',
+            headers: headers,
+            body: JSON.stringify({
+              tier: tier,
+              is_subscription: true
+            })
+          });
+
+          if (res.ok) {
+            const data = await res.json();
+            if (data.checkout_url) {
+              window.location.href = data.checkout_url;
+            } else {
+              showError("Invalid checkout response.");
+            }
+          } else {
+             showError("Failed to start checkout session.");
+             buttons.forEach(b => b.disabled = false);
+          }
+        } catch(e) {
+          console.error(e);
+          showError("Network error starting checkout.");
+          const buttons = document.querySelectorAll('.pricing-card button');
+          buttons.forEach(b => b.disabled = false);
+        }
+      }
+
+      async function cancelSubscription() {
+        if (!confirm("Are you sure you want to cancel your subscription? You will lose access to premium features at the end of your billing cycle.")) {
+          return;
+        }
+
+        const tenant = localStorage.getItem('ohc_active_tenant_id') || localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default-team';
+        const headers = {};
+        if (tenant) {
+            headers['x-ohc-tenant-id'] = tenant;
+        }
+
+        try {
+          const res = await fetch('/api/billing/cancel-subscription', {
+            method: 'POST',
+            headers: headers
+          });
+
+          if (res.ok) {
+            alert("Your subscription has been canceled successfully.");
+            window.location.reload();
+          } else {
+            showError("Failed to cancel subscription.");
+          }
+        } catch(e) {
+          console.error(e);
+          showError("Network error cancelling subscription.");
+        }
+      }
+
+      function showError(msg) {
+        const errDiv = document.getElementById('error');
+        errDiv.innerText = msg;
+        errDiv.style.display = 'block';
+        document.getElementById('loading').style.display = 'none';
+      }
+    </script>
+  </body>
+</html>
