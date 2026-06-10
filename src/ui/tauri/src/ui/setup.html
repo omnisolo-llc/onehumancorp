@@ -22,7 +22,7 @@
         border-radius: 16px;
         box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
         text-align: center;
-        max-width: 450px;
+        max-width: 480px;
         width: 100%;
         border: 1px solid rgba(255, 255, 255, 0.4);
         box-sizing: border-box;
@@ -282,6 +282,48 @@
         gap: 10px;
       }
 
+      .persona-row {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 20px;
+        overflow-x: auto;
+        padding-bottom: 10px;
+        -webkit-overflow-scrolling: touch;
+      }
+      .persona-chip {
+        flex: 0 0 auto;
+        padding: 8px 16px;
+        border-radius: 20px;
+        background: rgba(0, 102, 255, 0.1);
+        color: #0066FF;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        border: 1px solid transparent;
+        transition: all 0.2s;
+      }
+      .persona-chip:hover {
+        background: rgba(0, 102, 255, 0.2);
+      }
+      .persona-chip.selected {
+        background: #0066FF;
+        color: white;
+      }
+
+      .chat-bubble {
+        background: rgba(255, 255, 255, 0.8);
+        border: 1px solid rgba(0, 0, 0, 0.05);
+        padding: 12px 16px;
+        border-radius: 18px;
+        border-bottom-left-radius: 4px;
+        font-size: 14px;
+        line-height: 1.4;
+        text-align: left;
+        margin-bottom: 20px;
+        color: #1d1d1f;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+      }
+
       @media (prefers-color-scheme: dark) {
         select, textarea {
           background: rgba(255, 255, 255, 0.1);
@@ -313,6 +355,11 @@
         .btn-secondary:hover {
           background-color: rgba(255, 255, 255, 0.1);
           color: #F5F5F7;
+        }
+        .chat-bubble {
+          background: rgba(255, 255, 255, 0.1);
+          color: #F5F5F7;
+          border-color: rgba(255, 255, 255, 0.1);
         }
       }
 
@@ -346,7 +393,15 @@
       <!-- Step 1: Work Context -->
       <div class="step active" id="step-context">
         <h1>How do you work?</h1>
-        <p>This helps OHC configure your tools.</p>
+        <p>Choose a quick-start or select how you work.</p>
+
+        <div class="persona-row">
+            <div class="persona-chip" onclick="applyPersona('Baker')">I'm a Baker</div>
+            <div class="persona-chip" onclick="applyPersona('Handyman')">I'm a Handyman</div>
+            <div class="persona-chip" onclick="applyPersona('Boutique')">I'm a Boutique Owner</div>
+            <div class="persona-chip" onclick="applyPersona('Tutor')">I'm a Tutor</div>
+        </div>
+
         <div class="radio-group" id="context-group">
           <label class="radio-option">
             <input type="radio" name="work_context" value="Local Service" />
@@ -420,6 +475,10 @@
         <h1>Set up your Assistant</h1>
         <p>Give your AI assistant a name and tone.</p>
 
+        <div class="chat-bubble" id="assistant-intro">
+            "Hi! I'll be your partner in growing this business. What should I call myself, and how should we talk?"
+        </div>
+
         <input type="text" id="assistant-name" class="glassmorphism" placeholder="e.g. Jarvis" />
         <div id="assistant-name-error" class="error-msg">Please enter a name for your assistant.</div>
 
@@ -473,6 +532,50 @@
     </div>
     <script>
       const container = document.getElementById('form-container');
+
+      function applyPersona(persona) {
+          document.querySelectorAll('.persona-chip').forEach(el => el.classList.remove('selected'));
+          event.target.classList.add('selected');
+
+          if (persona === 'Baker') {
+              state.work_context = 'Storefront';
+              state.categories = 'Bakery';
+              state.businessName = "Maya's Bakery";
+              state.assistantName = "Cookie";
+              state.assistantTone = "Friendly";
+              state.first_offer = "Custom Birthday Cake";
+          } else if (persona === 'Handyman') {
+              state.work_context = 'Local Service';
+              state.categories = 'Handyman';
+              state.businessName = "Carlos Repairs";
+              state.assistantName = "Tools";
+              state.assistantTone = "Concise";
+              state.first_offer = "Standard Repair Visit";
+          } else if (persona === 'Boutique') {
+              state.work_context = 'Storefront';
+              state.categories = 'Boutique';
+              state.businessName = "Priya's Boutique";
+              state.assistantName = "Style";
+              state.assistantTone = "Professional";
+              state.first_offer = "Signature Dress";
+          } else if (persona === 'Tutor') {
+              state.work_context = 'Online Creator';
+              state.categories = 'Tutoring';
+              state.businessName = "Leo's Music";
+              state.assistantName = "Melody";
+              state.assistantTone = "Friendly";
+              state.first_offer = "1-Hour Guitar Lesson";
+          }
+          populateForm();
+          saveCurrentState();
+
+          // Flash feedback
+          const chip = event.target;
+          const originalText = chip.innerText;
+          chip.innerText = "Applied!";
+          setTimeout(() => { chip.innerText = originalText; }, 1000);
+      }
+
       const finishBtn = document.getElementById('finish-btn');
 
       const inputs = {
@@ -500,10 +603,11 @@
           businessName: '',
           assistantName: '',
           assistantTone: '',
-          workContext: '',
+          work_context: '',
           categories: '',
           tagline: '',
-          firstOffer: ''
+          first_offer: '',
+          templateSelection: ''
       };
 
       // Handle radio buttons selection visual state
@@ -542,13 +646,18 @@
       function populateForm() {
           if (state.businessName) inputs.name.value = state.businessName;
           if (state.tagline) inputs.tagline.value = state.tagline;
+
+          if (state.work_context) {
+              populateCategories();
+          }
           if (state.categories) inputs.categories.value = state.categories;
+
           if (state.assistantName) inputs.assistantName.value = state.assistantName;
           if (state.assistantTone) inputs.assistantTone.value = state.assistantTone;
-          if (state.firstOffer) inputs.firstOffer.value = state.firstOffer;
+          if (state.first_offer) inputs.firstOffer.value = state.first_offer;
           if (state.templateSelection) inputs.templateSelection.value = state.templateSelection;
 
-          const contextVal = state.workContext || state.work_context;
+          const contextVal = state.work_context;
           if (contextVal) {
               inputs.context.forEach(r => {
                   if (r.value === contextVal) {
@@ -558,6 +667,13 @@
                   }
               });
           }
+
+          if (state.step !== undefined && state.step > 0) {
+              const steps = ['step-context', 'step-categories', 'step-name', 'step-assistant', 'step-offer', 'step-template'];
+              if (state.step < steps.length) {
+                  goToStep(steps[state.step]);
+              }
+          }
       }
 
             function saveCurrentState() {
@@ -566,12 +682,11 @@
           state.tagline = inputs.tagline.value;
           state.assistantName = inputs.assistantName.value;
           state.assistantTone = inputs.assistantTone.value;
-          state.firstOffer = inputs.firstOffer.value;
+          state.first_offer = inputs.firstOffer.value;
           state.templateSelection = inputs.templateSelection.value;
 
           let selectedContext = document.querySelector('input[name="work_context"]:checked');
           if (selectedContext) {
-              state.workContext = selectedContext.value;
               state.work_context = selectedContext.value;
           }
 
@@ -585,10 +700,9 @@
               if (activeStep.id === 'step-name') stepNumber = 2;
               if (activeStep.id === 'step-assistant') stepNumber = 3;
               if (activeStep.id === 'step-offer') stepNumber = 4;
+              if (activeStep.id === 'step-template') stepNumber = 5;
           }
           state.step = stepNumber;
-          state.workContext = state.work_context || state.workContext;
-          state.work_context = state.workContext;
 
           if (window.__TAURI__ && window.__TAURI__.core) {
               window.__TAURI__.core.invoke("save_onboarding_state", { state }).catch(console.error);
@@ -606,7 +720,7 @@
                   errors.context.style.display = 'block';
                   isValid = false;
               } else {
-                  state.workContext = selected.value; state.work_context = selected.value;
+                  state.work_context = selected.value;
               }
           }
           else if (stepId === 'step-categories') {
@@ -653,7 +767,7 @@
                   isValid = false;
               } else {
                   errors.firstOffer.style.display = 'none';
-                  state.firstOffer = inputs.firstOffer.value.trim();
+                  state.first_offer = inputs.firstOffer.value.trim();
               }
           }
           else if (stepId === 'step-template') {
@@ -696,13 +810,13 @@
 
       const categoriesMap = {
           'Local Service': ['Plumbing', 'Electrical', 'Cleaning', 'Landscaping', 'HVAC', 'Pest Control', 'Handyman', 'Other'],
-          'Storefront': ['Cafe', 'Restaurant', 'Retail', 'Salon', 'Spa', 'Gym', 'Boutique', 'Other'],
+          'Storefront': ['Bakery', 'Cafe', 'Restaurant', 'Retail', 'Salon', 'Spa', 'Gym', 'Boutique', 'Other'],
           'Online Creator': ['Tutoring', 'Consulting', 'Digital Art', 'Software', 'Writing', 'Video Creation', 'Music', 'Other'],
           'Agency': ['Marketing', 'Design', 'Development', 'Consulting', 'Advertising', 'PR', 'Other']
       };
 
       function populateCategories() {
-          const context = state.workContext || state.work_context;
+          const context = state.work_context;
           const cats = categoriesMap[context] || ['Other'];
           inputs.categories.innerHTML = '<option value="" disabled selected>Select a category...</option>';
           cats.forEach(c => {
@@ -746,13 +860,32 @@
       });
 
       document.querySelectorAll('.save-draft-btn').forEach(btn => {
-          btn.addEventListener('click', (e) => {
+          btn.addEventListener('click', async (e) => {
               e.preventDefault();
+              const originalText = btn.innerText;
+              btn.innerText = "Saving...";
+              btn.disabled = true;
+
+              // Add a small delay to allow browser to render "Saving..."
+              await new Promise(r => setTimeout(r, 100));
+
               saveCurrentState();
+
+              btn.innerText = "Saved!";
+              btn.style.backgroundColor = "#34C759";
+              btn.style.color = "white";
+              btn.style.borderColor = "#34C759";
+
               const msg = document.getElementById('draft-saved-msg');
-              msg.style.display = 'block';
+              if (msg) msg.style.display = 'block';
+
               setTimeout(() => {
-                  msg.style.display = 'none';
+                  btn.innerText = originalText;
+                  btn.disabled = false;
+                  btn.style.backgroundColor = "";
+                  btn.style.color = "";
+                  btn.style.borderColor = "";
+                  if (msg) msg.style.display = 'none';
               }, 2000);
           });
       });
