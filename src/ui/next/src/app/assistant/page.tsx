@@ -1011,6 +1011,11 @@ function FeaturePanel({
             </div>
           ))}
         </div>
+        <div className={styles.actionRow}>
+          <button type="button" onClick={() => onAction('create_one_time_task')} className={styles.smallButton}>
+            Schedule One-time Task
+          </button>
+        </div>
       </section>
     );
   }
@@ -1420,6 +1425,9 @@ function FeaturePanel({
           </button>
           <button type="button" onClick={() => onAction('upload_logs')} className={styles.smallButton}>
             Upload Logs
+          </button>
+          <button type="button" onClick={() => onAction('upload_screenshot')} className={styles.smallButton}>
+            Attach Screenshot
           </button>
         </div>
       </section>

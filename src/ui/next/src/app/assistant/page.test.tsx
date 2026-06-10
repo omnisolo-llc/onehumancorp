@@ -653,3 +653,45 @@ test('backs parity controls with assistant API actions', async () => {
   expect(global.fetch).toHaveBeenCalledWith('/api/assistant/settings', expect.objectContaining({ method: 'PATCH' }));
   expect(global.fetch).toHaveBeenCalledWith('/api/assistant/support', expect.objectContaining({ method: 'POST' }));
 });
+
+test('renders WorkBuddy docs-gap closure features in panels', async () => {
+  render(<AssistantPage />);
+  await screen.findByRole('heading', { name: 'Agent Assistant' });
+
+  fireEvent.click(screen.getByRole('button', { name: 'Connectors' }));
+  expect(screen.getByText('GitHub')).toBeDefined();
+  expect(screen.getByText('GitLab')).toBeDefined();
+  expect(screen.getByText('Jira')).toBeDefined();
+  expect(screen.getByText('Confluence')).toBeDefined();
+  expect(screen.getByText('Google Drive')).toBeDefined();
+  expect(screen.getByText('Gmail')).toBeDefined();
+  expect(screen.getByText('Notion')).toBeDefined();
+  expect(screen.getByText('Slack')).toBeDefined();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Models & Runtime' }));
+  expect(screen.getByText('Model Capability Flags')).toBeDefined();
+  expect(screen.getByText('Custom Protocol')).toBeDefined();
+
+  fireEvent.click(screen.getByRole('button', { name: 'System & Safety' }));
+  expect(screen.getByText('Compact Mode')).toBeDefined();
+  expect(screen.getByText('Auto-install Low-risk Skills')).toBeDefined();
+  expect(screen.getByText('Prevent Sleep')).toBeDefined();
+  expect(screen.getByText('Account Profile')).toBeDefined();
+  expect(screen.getByText('Version Information')).toBeDefined();
+  expect(screen.getByText('Screenshot Attachment')).toBeDefined();
+  expect(screen.getByRole('button', { name: 'Attach Screenshot' })).toBeDefined();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Data Management' }));
+  expect(screen.getByText('Copy Share Link')).toBeDefined();
+  expect(screen.getByText('Download Shared File')).toBeDefined();
+  expect(screen.getByText('Cancel Sharing')).toBeDefined();
+  expect(screen.getByText('Unarchive Task')).toBeDefined();
+  expect(screen.getByRole('button', { name: 'Copy Current Link' })).toBeDefined();
+  expect(screen.getByRole('button', { name: 'Prepare Download' })).toBeDefined();
+  expect(screen.getByRole('button', { name: 'Revoke Share' })).toBeDefined();
+  expect(screen.getByRole('button', { name: 'Restore Task' })).toBeDefined();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Automations' }));
+  expect(screen.getByText('One-time task')).toBeDefined();
+  expect(screen.getByRole('button', { name: 'Schedule One-time Task' })).toBeDefined();
+});
