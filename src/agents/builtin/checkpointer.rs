@@ -281,10 +281,10 @@ impl CheckpointSaver for GitCheckpointer {
         let tag_name = format!("checkpoint-{}", checkpoint_id);
 
         // Pre-clean to remove any untracked files that might block the reset
-        // Use -fd to preserve ignored files (like target/ or .env) while still cleaning untracked ones.
+        // Use -fdx to clean untracked and ignored files to ensure spotless working tree.
         let _pre_clean = Command::new("git")
             .arg("clean")
-            .arg("-fd")
+            .arg("-fdx")
             .current_dir(&self.repo_path)
             .output()
             .await;
@@ -317,10 +317,10 @@ impl CheckpointSaver for GitCheckpointer {
             }
         }
 
-        // Robust Restore Edge Cases: Clean remaining untracked files without deleting ignored dependencies.
+        // Robust Restore Edge Cases: Clean remaining untracked and ignored files to ensure spotless working tree.
         let clean_output = Command::new("git")
             .arg("clean")
-            .arg("-fd")
+            .arg("-fdx")
             .current_dir(&self.repo_path)
             .output()
             .await

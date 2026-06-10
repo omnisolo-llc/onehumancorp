@@ -176,6 +176,18 @@ pub enum HumanInLoopSpectrum {
     Supervisory,
 }
 
+impl std::fmt::Display for HumanInLoopSpectrum {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            HumanInLoopSpectrum::Autonomous => write!(f, "Autonomous"),
+            HumanInLoopSpectrum::ApprovalOnMutate => write!(f, "ApprovalOnMutate"),
+            HumanInLoopSpectrum::ApprovalOnAll => write!(f, "ApprovalOnAll"),
+            HumanInLoopSpectrum::CollaborativeEdit => write!(f, "CollaborativeEdit"),
+            HumanInLoopSpectrum::Supervisory => write!(f, "Supervisory"),
+        }
+    }
+}
+
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq, Eq)]
 #[derive(Default)]
 /// 5. Permission Architecture: Permissive (auto-approve) vs Restrictive (require approval)
@@ -185,6 +197,15 @@ pub enum PermissionArchitecture {
     Permissive,
     /// Restrictive (require approval): All mutating tools require explicit approval.
     Restrictive,
+}
+
+impl std::fmt::Display for PermissionArchitecture {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            PermissionArchitecture::Permissive => write!(f, "Permissive"),
+            PermissionArchitecture::Restrictive => write!(f, "Restrictive"),
+        }
+    }
 }
 
 /// Centralized Pydantic-first tool schema error formatter.

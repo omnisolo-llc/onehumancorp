@@ -534,7 +534,7 @@ impl OnboardingAgent {
                 ("Yoga Studio Assessment", "Initial evaluation and report", 7500, "booking"),
                 ("Yoga Studio Starter Kit", "Everything you need in one bundle", 12000, "physical"),
             ],
-            "Bakery" => vec![
+            "Bakery_Old" => vec![
                 ("Premium Bakery Package", "Comprehensive service for your needs", 19999, "booking"),
                 ("Basic Bakery Service", "Essential services to get you started", 9999, "booking"),
                 ("Bakery Consultation", "Expert advice and planning", 4999, "booking"),
@@ -1528,7 +1528,7 @@ impl OnboardingAgent {
                 ("Shopify Store Assessment", "Initial evaluation and report", 7500, "booking"),
                 ("Shopify Store Starter Kit", "Everything you need in one bundle", 12000, "physical"),
             ],
-            "Boutique" => vec![
+            "Boutique_Old" => vec![
                 ("Premium Boutique Package", "Comprehensive service for your needs", 19999, "booking"),
                 ("Basic Boutique Service", "Essential services to get you started", 9999, "booking"),
                 ("Boutique Consultation", "Expert advice and planning", 4999, "booking"),
@@ -3018,6 +3018,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_generate_initial_products_personas() {
+        use sqlx::Row;
         let db = match setup_test_db().await {
             Some(db) => db,
             None => return,

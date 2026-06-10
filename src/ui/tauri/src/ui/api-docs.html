@@ -141,33 +141,24 @@
         <p class="subtitle">Integrate your custom checkout or external tools directly with OHC.</p>
       </div>
 
-      <div class="docs-card">
-        <div class="endpoint">
-          <div class="endpoint-header">
-            <span class="endpoint-method method-get">GET</span>
-            <span class="endpoint-path">/api/v1/catalog/items</span>
-            <span class="endpoint-summary">List Catalog Items</span>
-          </div>
-        </div>
-
-        <div class="endpoint">
-          <div class="endpoint-header">
-            <span class="endpoint-method method-post">POST</span>
-            <span class="endpoint-path">/api/v1/catalog/items</span>
-            <span class="endpoint-summary">Create a new Catalog Item</span>
-          </div>
-        </div>
-
-        <div class="endpoint">
-          <div class="endpoint-header">
-            <span class="endpoint-method method-post">POST</span>
-            <span class="endpoint-path">/api/agents/task</span>
-            <span class="endpoint-summary">Dispatch a task</span>
-          </div>
-        </div>
-      </div>
+      <div id="swagger-ui" class="docs-card" style="padding: 0;"></div>
     </div>
 
+    <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css" />
+    <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        if (window.SwaggerUIBundle) {
+          const swaggerUI = window.SwaggerUIBundle({
+            url: "/api/api-docs-spec",
+            dom_id: "#swagger-ui",
+            deepLinking: true,
+            presets: [window.SwaggerUIBundle.presets.apis, window.SwaggerUIBundle.SwaggerUIStandalonePreset],
+            layout: "BaseLayout",
+          });
+        }
+      });
+    </script>
     <script>
 document.addEventListener('DOMContentLoaded', () => {
     // Inject tooltip CSS
@@ -496,7 +487,7 @@ document.addEventListener('DOMContentLoaded', () => {
         overlay.style.display = 'none';
     });
 
-    async function sendMessage() {
+        async function sendMessage() {
         const text = input.value.trim();
         if (!text) return;
 
@@ -508,20 +499,35 @@ document.addEventListener('DOMContentLoaded', () => {
         input.value = '';
         messages.scrollTop = messages.scrollHeight;
 
-        // Fake AI response based on tests and common queries
-        setTimeout(() => {
+        try {
+            let url = '/api/chat';
+            if (window.__TAURI__ && window.__TAURI__.core) {
+                url = 'http://127.0.0.1:18789/api/chat';
+            }
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: text })
+            });
+            const data = await response.json();
+
             const aiMsg = document.createElement('div');
             aiMsg.className = 'msg msg-ai';
-
-            if (text.toLowerCase().includes('credit card') || text.toLowerCase().includes('pay')) {
-                aiMsg.innerHTML = `You can accept credit cards by connecting your bank account in the Payments section.<br/><a href="help_article.html?id=payments">Read the full article →</a>`;
+            if (data.link && data.link.url) {
+                aiMsg.innerHTML = `${data.reply}<br/><a href="${data.link.url}">${data.link.title}</a>`;
             } else {
-                aiMsg.innerHTML = `I can help you with that! Check out our Help Center for a detailed guide.<br/><a href="help.html">Read the full article →</a>`;
+                aiMsg.textContent = data.reply;
             }
-
             messages.appendChild(aiMsg);
             messages.scrollTop = messages.scrollHeight;
-        }, 800);
+        } catch (e) {
+            console.error(e);
+            const aiMsg = document.createElement('div');
+            aiMsg.className = 'msg msg-ai';
+            aiMsg.textContent = 'Sorry, there was an error connecting to the help assistant.';
+            messages.appendChild(aiMsg);
+            messages.scrollTop = messages.scrollHeight;
+        }
     }
 
     sendBtn.addEventListener('click', sendMessage);

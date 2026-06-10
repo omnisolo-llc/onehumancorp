@@ -673,7 +673,7 @@ document.addEventListener('DOMContentLoaded', () => {
         overlay.style.display = 'none';
     });
 
-    async function sendMessage() {
+        async function sendMessage() {
         const text = input.value.trim();
         if (!text) return;
 
@@ -685,20 +685,35 @@ document.addEventListener('DOMContentLoaded', () => {
         input.value = '';
         messages.scrollTop = messages.scrollHeight;
 
-        // Fake AI response based on tests and common queries
-        setTimeout(() => {
+        try {
+            let url = '/api/chat';
+            if (window.__TAURI__ && window.__TAURI__.core) {
+                url = 'http://127.0.0.1:18789/api/chat';
+            }
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: text })
+            });
+            const data = await response.json();
+
             const aiMsg = document.createElement('div');
             aiMsg.className = 'msg msg-ai';
-
-            if (text.toLowerCase().includes('credit card') || text.toLowerCase().includes('pay')) {
-                aiMsg.innerHTML = `You can accept credit cards by connecting your bank account in the Payments section.<br/><a href="help_article.html?id=payments">Read the full article →</a>`;
+            if (data.link && data.link.url) {
+                aiMsg.innerHTML = `${data.reply}<br/><a href="${data.link.url}">${data.link.title}</a>`;
             } else {
-                aiMsg.innerHTML = `I can help you with that! Check out our Help Center for a detailed guide.<br/><a href="help.html">Read the full article →</a>`;
+                aiMsg.textContent = data.reply;
             }
-
             messages.appendChild(aiMsg);
             messages.scrollTop = messages.scrollHeight;
-        }, 800);
+        } catch (e) {
+            console.error(e);
+            const aiMsg = document.createElement('div');
+            aiMsg.className = 'msg msg-ai';
+            aiMsg.textContent = 'Sorry, there was an error connecting to the help assistant.';
+            messages.appendChild(aiMsg);
+            messages.scrollTop = messages.scrollHeight;
+        }
     }
 
     sendBtn.addEventListener('click', sendMessage);
@@ -742,20 +757,7 @@ document.addEventListener('DOMContentLoaded', () => {
              allArticles = articlesRes || [];
              allVideos = videosRes || [];
 
-             // Mock data if API fails in isolated test
-             if (allArticles.length === 0) {
-                 allArticles = [
-                     { category: "Getting Started", title: "Getting Started", desc: "Learn how to easily set up your store and accept your first payment.", link: "/help/getting-started-1" },
-                     { category: "My Store", title: "My Store", desc: "Add products, track what's in stock, and change how your store looks.", link: "/help/my-store" },
-                     { category: "Payments", title: "Getting Paid", desc: "Set up how you get paid, view deposits, and handle simple taxes.", link: "/help/payments" }
-                 ];
-             }
-             if (allVideos.length === 0) {
-                 allVideos = [
-                     { id: 1, title: "How to set up your first store easily", duration: "1:20", video_url: "https://www.w3schools.com/html/mov_bbb.mp4" },
-                     { id: 2, title: "Accept your first payment", duration: "1:15", video_url: "https://www.w3schools.com/html/mov_bbb.mp4" }
-                 ];
-             }
+
           }
         } catch (e) {
           console.error("Failed to load help data", e);
@@ -849,6 +851,18 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             html += `</div>`;
         }
+
+        html += `
+          <section style="margin-top: 48px; padding-top: 32px; border-top: 1px solid rgba(0,0,0,0.1);">
+            <div style="background: rgba(254, 243, 199, 0.5); border-radius: 16px; padding: 24px; border: 1px solid rgba(253, 230, 138, 0.5); display: flex; flex-direction: column; gap: 16px; align-items: flex-start;">
+              <div style="display: flex; flex-direction: column; gap: 4px;">
+                <h3 style="font-size: 18px; font-weight: bold; color: #78350f; margin: 0;">Advanced Users</h3>
+                <p style="font-size: 14px; color: rgba(146, 64, 14, 0.8); margin: 0;">For users who want to use OHC's APIs directly (e.g., connect a custom checkout).</p>
+              </div>
+              <a href="api-docs.html" style="background: #fef3c7; color: #78350f; padding: 10px 24px; border-radius: 12px; font-weight: 600; text-decoration: none; border: 1px solid rgba(252, 211, 77, 0.5); font-size: 14px;">API Documentation</a>
+            </div>
+          </section>
+        `;
 
         resultsContainer.innerHTML = html;
       }
