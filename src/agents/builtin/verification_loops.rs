@@ -387,8 +387,199 @@ impl InferentialSensor for SelfConsistencyLlmJudgeSensor {
     }
 }
 
+struct ParserAdapter { llm: Arc<dyn crate::llm::LlmClient> }
+
+#[async_trait::async_trait]
+impl crate::output_parser::LlmClientForParser for ParserAdapter {
+    async fn chat(&self, req: crate::types::ChatRequest) -> Result<crate::types::ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+        self.llm.chat(req).await
+    }
+}
+
+pub struct SelfConsistencyLlmJudgeSensor {
+    pub llm: Arc<dyn LlmClient>,
+    pub model: String,
+    pub criteria: Option<String>,
+    pub confidence_threshold: f32,
+    pub num_evaluations: usize,
+}
+
+#[async_trait::async_trait]
+impl InferentialSensor for SelfConsistencyLlmJudgeSensor {
+    async fn verify_inferential(&self, output: &str, task: &str) -> Result<(), String> {
+        let mut futures = Vec::new();
+
+        for _ in 0..self.num_evaluations {
+            let llm = self.llm.clone();
+            let model = self.model.clone();
+            let criteria = self.criteria.clone();
+            let output = output.to_string();
+            let task = task.to_string();
+
+            futures.push(tokio::spawn(async move {
+                let req = ChatRequest {
+                    model,
+                    system: "You are an expert AI evaluator and judge. Provide your evaluation structured as JSON using the 'structured_output' tool.".to_string(),
+                    messages: vec![Message::user(format!(
+                        "Task: {}\nOutput to evaluate:\n{}\n\n{}",
+                        task,
+                        output,
+                        criteria.as_deref().unwrap_or("")
+                    ))],
+                    tools: vec![],
+                    max_tokens: 1024,
+                    temperature: 0.7,
+                };
+
+                let parser_client: Arc<dyn LlmClientForParser> = Arc::new(ParserAdapter { llm });
+                parse_structured_output::<JudgeEvaluation>(&parser_client, req, 3).await
+            }));
+        }
+
+        let results = futures::future::join_all(futures).await;
+
+        let mut approve_votes = 0;
+        let mut reject_votes = 0;
+        let mut reasons = Vec::new();
+        let mut all_missing = Vec::new();
+        let mut all_fixes = Vec::new();
+        let mut valid_evals = 0;
+
+        for res in results {
+            if let Ok(Ok(eval)) = res {
+                valid_evals += 1;
+                reasons.push(format!("{}: {}", eval.status, eval.reason));
+
+                let is_approve = eval.status.to_uppercase() == "APPROVE" && eval.confidence >= self.confidence_threshold;
+                if is_approve {
+                    approve_votes += 1;
+                } else {
+                    reject_votes += 1;
+                    all_missing.extend(eval.missing_elements);
+                    all_fixes.extend(eval.suggested_fixes);
+                }
+            }
+        }
+
+        if valid_evals == 0 {
+            return Err("Self-Consistency LLM Judge Sensor Error: All evaluations failed.".to_string());
+        }
+
+        if approve_votes > reject_votes {
+            tracing::info!("Self-Consistency LLM Judge APPROVED the output ({} vs {}).", approve_votes, reject_votes);
+            Ok(())
+        } else {
+            all_missing.sort();
+            all_missing.dedup();
+            all_fixes.sort();
+            all_fixes.dedup();
+
+            let mut err_msg = format!(
+                "Self-Consistency LLM Judge REJECTED the output ({} vs {}).\nReasons: \n - {}",
+                reject_votes, approve_votes, reasons.join("\n - ")
+            );
+
+            if !all_missing.is_empty() {
+                err_msg.push_str(&format!("\nMissing Elements: {}", all_missing.join(", ")));
+            }
+            if !all_fixes.is_empty() {
+                err_msg.push_str(&format!("\nSuggested Fixes:\n- {}", all_fixes.join("\n- ")));
+            }
+            Err(err_msg)
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
+
+    #[tokio::test]
+    async fn test_self_consistency_llm_judge_sensor_approve() {
+        let pass_llm = Arc::new(MockLlmClient {
+            response_text: r#"{"status": "APPROVE", "reason": "Looks good", "confidence": 0.9, "missing_elements": [], "suggested_fixes": []}"#.to_string()
+        });
+        let judge = SelfConsistencyLlmJudgeSensor {
+            llm: pass_llm,
+            model: "test-model".to_string(),
+            criteria: None,
+            confidence_threshold: 0.5,
+            num_evaluations: 3
+        };
+        let res = judge.verify_inferential("output", "task").await;
+        assert!(res.is_ok());
+    }
+
+    struct SequencedMockLlmClient {
+        responses: tokio::sync::Mutex<Vec<String>>,
+    }
+    #[async_trait::async_trait]
+    impl LlmClient for SequencedMockLlmClient {
+        async fn chat(&self, _req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+            let mut resps = self.responses.lock().await;
+            let response_text = if !resps.is_empty() { resps.remove(0) } else { "{}".to_string() };
+            let tool_call = ohc_builtin_agent_core::types::ToolCall {
+                id: "call_1".to_string(),
+                name: "structured_output".to_string(),
+                arguments: serde_json::json!({
+                    "data": serde_json::from_str::<serde_json::Value>(&response_text).unwrap_or(serde_json::json!({}))
+                }),
+            };
+            let msg = Message {
+                role: ohc_builtin_agent_core::types::Role::Assistant,
+                content: "".to_string(),
+                tool_calls: vec![tool_call],
+                tool_results: vec![],
+                response_id: None,
+                previous_response_id: None,
+            };
+            Ok(ChatResponse { response_id: Some("test".to_string()), stop_reason: "".to_string(), message: msg, usage: Usage::default() })
+        }
+    }
+
+    #[tokio::test]
+    async fn test_self_consistency_llm_judge_sensor_majority_approve() {
+        let responses = vec![
+            r#"{"status": "APPROVE", "reason": "OK1", "confidence": 0.9, "missing_elements": [], "suggested_fixes": []}"#.to_string(),
+            r#"{"status": "REJECT", "reason": "Bad", "confidence": 0.9, "missing_elements": ["elementX"], "suggested_fixes": []}"#.to_string(),
+            r#"{"status": "APPROVE", "reason": "OK2", "confidence": 0.9, "missing_elements": [], "suggested_fixes": []}"#.to_string(),
+        ];
+        let llm = Arc::new(SequencedMockLlmClient { responses: tokio::sync::Mutex::new(responses) });
+        let judge = SelfConsistencyLlmJudgeSensor {
+            llm: llm,
+            model: "test-model".to_string(),
+            criteria: None,
+            confidence_threshold: 0.5,
+            num_evaluations: 3
+        };
+        let res = judge.verify_inferential("output", "task").await;
+        assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_self_consistency_llm_judge_sensor_majority_reject() {
+        let responses = vec![
+            r#"{"status": "REJECT", "reason": "Bad1", "confidence": 0.9, "missing_elements": ["elementA"], "suggested_fixes": ["fix1"]}"#.to_string(),
+            r#"{"status": "REJECT", "reason": "Bad2", "confidence": 0.9, "missing_elements": ["elementB"], "suggested_fixes": ["fix2"]}"#.to_string(),
+            r#"{"status": "APPROVE", "reason": "OK1", "confidence": 0.9, "missing_elements": [], "suggested_fixes": []}"#.to_string(),
+        ];
+        let llm = Arc::new(SequencedMockLlmClient { responses: tokio::sync::Mutex::new(responses) });
+        let judge = SelfConsistencyLlmJudgeSensor {
+            llm: llm,
+            model: "test-model".to_string(),
+            criteria: None,
+            confidence_threshold: 0.5,
+            num_evaluations: 3
+        };
+        let res = judge.verify_inferential("output", "task").await;
+        assert!(res.is_err());
+        let err = res.unwrap_err();
+        assert!(err.contains("REJECTED the output"));
+        assert!(err.contains("elementA"));
+        assert!(err.contains("elementB"));
+        assert!(err.contains("fix1"));
+        assert!(err.contains("fix2"));
+    }
+
 
     #[tokio::test]
     async fn test_self_consistency_llm_judge_sensor_approve() {
