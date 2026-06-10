@@ -18,7 +18,6 @@ import GrowthReferralWidget from "../components/GrowthReferralWidget";
 import AiTimeSavingsWidget from "../components/AiTimeSavingsWidget";
 
 import { SmartBlock } from "../builder/components";
-import { UnifiedAgentFeed } from "./UnifiedAgentFeed";
 import { ReviewFeedCard } from './ReviewFeedCard';
 
 import { NeighborhoodPulseCard } from "./NeighborhoodPulseCard";
@@ -520,7 +519,6 @@ export default function Dashboard() {
              />
         ))}
 
-        <UnifiedAgentFeed />
 
         <section>
           <div className="mb-6 p-6 rounded-[16px] bg-white/65 dark:bg-[#16161a]/70 border border-white/40 dark:border-white/10">

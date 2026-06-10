@@ -20,12 +20,12 @@ test.describe('Work Triage Agentic Inbox', () => {
     // Auto-wait for the card to appear (data should be seeded)
     await expect(triageCard).toBeVisible({ timeout: 10000 });
 
-    // Verify detail view is populated from selected card
-    await expect(page.locator('text=Maya requested a custom cake')).toBeVisible();
-    await expect(page.locator('text=Draft Reply')).toBeVisible();
+    // Verify detail view is populated directly on the card
+    await expect(triageCard.locator('text=Maya requested a custom cake')).toBeVisible();
+    await expect(triageCard.locator('text=Draft Reply')).toBeVisible();
 
-    // Approve action
-    const approveBtn = page.locator('[data-testid="approve-btn"]');
+    // Approve action directly on the card
+    const approveBtn = triageCard.locator('[data-testid="approve-btn"]');
     await approveBtn.click();
 
     // Should show approved status and disappear from list
@@ -59,8 +59,8 @@ test.describe('Work Triage Agentic Inbox', () => {
 
     await expect(triageCard).toBeVisible({ timeout: 15000 });
 
-    await triageCard.click();
-    const dismissBtn = page.locator('[data-testid="dismiss-btn"]');
+    // Dismiss action directly on the card
+    const dismissBtn = triageCard.locator('[data-testid="dismiss-btn"]');
     await dismissBtn.click();
 
     await expect(triageCard).not.toBeVisible();
@@ -79,7 +79,7 @@ test.describe('Work Triage Agentic Inbox', () => {
     await expect(triageCard.locator('text=Urgent')).toBeVisible();
   });
 
-  test('Triage detail shows correct information on click', async ({ page }) => {
+  test('Triage detail shows correct information', async ({ page }) => {
     await page.goto('/login');
     await page.fill('input[type="text"]', tenantId);
     await page.click('button[type="submit"]');
@@ -89,8 +89,8 @@ test.describe('Work Triage Agentic Inbox', () => {
     const triageCard = page.locator('[data-testid="triage-card-triage-test-2"]');
     await expect(triageCard).toBeVisible({ timeout: 15000 });
 
-    await triageCard.click();
-    await expect(page.locator('text=WhatsApp')).toBeVisible();
-    await expect(page.locator('text=Question about delivery times')).toBeVisible();
+    // Info is now directly on the card without clicking
+    await expect(triageCard.locator('text=WhatsApp')).toBeVisible();
+    await expect(triageCard.locator('text=Question about delivery times')).toBeVisible();
   });
 });
