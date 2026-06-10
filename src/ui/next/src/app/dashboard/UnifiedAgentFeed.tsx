@@ -261,7 +261,7 @@ export function UnifiedAgentFeed() {
         });
         if (refreshRes.ok) {
             const data: ApprovalsResponse = await refreshRes.json();
-            setItems(data.pending_approvals);
+            setItems(data.pending_approvals as unknown as AgentFeedItem[]);
         }
         throw new Error("Failed to submit decision");
       }
