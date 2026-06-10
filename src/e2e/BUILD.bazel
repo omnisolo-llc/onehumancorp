@@ -36,6 +36,7 @@ _NEXT_UI_E2E_SPECS = [
     "//src/ui/next:e2e/agents.spec.ts",
     "//src/ui/next:e2e/builder_ui.spec.ts",
     "//src/ui/next:e2e/checkout.spec.ts",
+    "//src/ui/next:e2e/terminal_pos.spec.ts",
     "//src/ui/next:e2e/conversational_checkout.spec.ts",
     "//src/ui/next:e2e/dashboard-feed.spec.ts",
     "//src/ui/next:src/e2e/documentation_cuj.spec.ts",

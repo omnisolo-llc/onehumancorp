@@ -57,7 +57,7 @@ impl CRDTOfflineSynchronizer {
                     )
                     .bind(Uuid::new_v4().to_string())
                     .bind(tenant_id)
-                    .bind(&mutation.transaction_id)
+                    .bind(&mutation.transaction_id.clone())
                     .bind(mutation.amount.unwrap_or(0))
                     .bind(mutation.currency.as_deref().unwrap_or("USD"))
                     .bind(serde_json::to_value(mutation).unwrap())
@@ -81,7 +81,7 @@ impl CRDTOfflineSynchronizer {
 
             // If we reach here, it's a failure
             failed_count += 1;
-            failed_transactions.push(mutation.transaction_id.clone());
+            failed_transactions.push(mutation.transaction_id.clone().clone());
 
             let _ = tx.rollback().await;
 
@@ -93,7 +93,7 @@ impl CRDTOfflineSynchronizer {
             )
             .bind(Uuid::new_v4().to_string())
             .bind(tenant_id)
-            .bind(&mutation.transaction_id)
+            .bind(&mutation.transaction_id.clone())
             .bind(mutation.amount.unwrap_or(0))
             .bind(mutation.currency.as_deref().unwrap_or("USD"))
             .bind(serde_json::to_value(mutation).unwrap())
@@ -104,7 +104,7 @@ impl CRDTOfflineSynchronizer {
             let agent_payload = serde_json::json!({
                 "workflow": "ohc_business_swarm",
                 "task": "Handle offline POS sync failure",
-                "context": format!("Transaction {} failed to sync offline due to inventory discrepancy or decline.", mutation.transaction_id),
+                "context": format!("Transaction {} failed to sync offline due to inventory discrepancy or decline.", mutation.transaction_id.clone()),
                 "action": "OperationsAgent: generate a plain-language alert for the business owner and draft a follow-up message to the customer regarding the declined offline transaction."
             }).to_string();
 
