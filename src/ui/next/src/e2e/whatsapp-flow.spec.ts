@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import * as crypto from 'crypto';
 
 test.describe('WhatsApp Flow CUJ', () => {
   test('Owner connects WhatsApp and approves draft reply', async ({ page, request }) => {
@@ -23,15 +24,39 @@ test.describe('WhatsApp Flow CUJ', () => {
     // 2. Trigger the Ambassador's draft reply via a real API call (no mocks)
     const tenantId = 'e2e-tenant';
     const webhookPayload = {
-      tenant_id: tenantId,
-      message: 'Hello! Id like to order a vegan cake over WhatsApp.',
-      source: 'whatsapp',
-      sender_id: '1234567890'
+      entry: [
+        {
+          changes: [
+            {
+              value: {
+                metadata: {
+                  display_phone_number: tenantId
+                },
+                messages: [
+                  {
+                    from: "1234567890",
+                    text: { body: 'Hello! Id like to order a vegan cake over WhatsApp.' }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      ]
     };
 
+    const payloadStr = JSON.stringify(webhookPayload);
+    const secret = process.env.META_APP_SECRET || 'test_secret';
+    const hmac = crypto.createHmac('sha256', secret);
+    const signature = `sha256=${hmac.update(payloadStr).digest('hex')}`;
+
     const apiBase = process.env.OHC_API_URL || process.env.BACKEND_URL || process.env.BASE_URL || '';
-    const response = await request.post(`${apiBase}/api/agents/webhook`, {
-      data: webhookPayload,
+    const response = await request.post(`${apiBase}/api/v1/webhooks/meta`, {
+      data: payloadStr,
+      headers: {
+        'Content-Type': 'application/json',
+        'x-hub-signature-256': signature,
+      }
     });
 
     expect(response.ok()).toBeTruthy();

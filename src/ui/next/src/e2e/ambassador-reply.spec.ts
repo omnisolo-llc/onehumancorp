@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import * as crypto from 'crypto';
 
 test.describe('Ambassador Auto-Responder CUJ', () => {
   test('Owner connects Meta Graph API and approves Ambassador drafted reply', async ({ page, request }) => {
@@ -26,14 +27,31 @@ test.describe('Ambassador Auto-Responder CUJ', () => {
     // The CustomerSuccess agent listens for tenant.message.received, which is triggered via the webhook endpoint
     const tenantId = 'e2e-tenant';
     const webhookPayload = {
-      tenant_id: tenantId,
-      message: 'Do you have vegan chocolate cake available for Saturday?',
-      source: 'instagram'
+      entry: [
+        {
+          messaging: [
+            {
+              sender: { id: "test_sender" },
+              recipient: { id: tenantId },
+              message: { text: 'Do you have vegan chocolate cake available for Saturday?' }
+            }
+          ]
+        }
+      ]
     };
 
+    const payloadStr = JSON.stringify(webhookPayload);
+    const secret = process.env.META_APP_SECRET || 'test_secret';
+    const hmac = crypto.createHmac('sha256', secret);
+    const signature = `sha256=${hmac.update(payloadStr).digest('hex')}`;
+
     const apiBase = process.env.OHC_API_URL || process.env.BACKEND_URL || process.env.BASE_URL || '';
-    const response = await request.post(`${apiBase}/api/agents/webhook`, {
-      data: webhookPayload,
+    const response = await request.post(`${apiBase}/api/v1/webhooks/meta`, {
+      data: payloadStr,
+      headers: {
+        'Content-Type': 'application/json',
+        'x-hub-signature-256': signature,
+      }
     });
 
     expect(response.ok()).toBeTruthy();
