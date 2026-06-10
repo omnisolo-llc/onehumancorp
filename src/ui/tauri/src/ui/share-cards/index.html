@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Social Share Cards</title>
+    <style>
+        body {
+            font-family: "Outfit", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f5f5f7;
+            margin: 0;
+            padding: 40px;
+            box-sizing: border-box;
+            color: #1d1d1f;
+        }
+
+        h1 {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 24px;
+        }
+
+        .layout-container {
+            display: flex;
+            gap: 40px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        @media (max-width: 768px) {
+            .layout-container {
+                flex-direction: column;
+            }
+        }
+
+        .settings-panel {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.65);
+            backdrop-filter: blur(30px) saturate(210%);
+            padding: 24px;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+        }
+
+        .preview-panel {
+            flex: 2;
+            display: flex;
+            flex-direction: column;
+        }
+
+        h2 {
+            font-size: 20px;
+            font-weight: 600;
+            margin-top: 0;
+            margin-bottom: 16px;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        label {
+            display: block;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #333;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            font-size: 14px;
+            box-sizing: border-box;
+            font-family: inherit;
+        }
+
+        .theme-toggle {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 24px;
+        }
+
+        .theme-btn {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ccc;
+            background: #fff;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .theme-btn[aria-pressed="true"] {
+            background: #e0e0e0;
+            border-color: #999;
+        }
+
+        .pro-badge {
+            background: #e0e7ff;
+            color: #3730a3;
+            font-size: 12px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            margin-left: 8px;
+            font-weight: 600;
+        }
+
+        .share-actions {
+            margin-top: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            text-decoration: none;
+            box-sizing: border-box;
+        }
+
+        .btn-copy {
+            background: #e5e5ea;
+            color: #1d1d1f;
+        }
+
+        .btn-x {
+            background: #000;
+            color: #fff;
+        }
+
+        .btn-wa {
+            background: #25D366;
+            color: #fff;
+        }
+
+        .btn-fb {
+            background: #1877F2;
+            color: #fff;
+        }
+
+        .preview-card {
+            background: #fff; /* light theme default */
+            color: #1d1d1f;
+            border-radius: 24px;
+            padding: 48px;
+            text-align: center;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            position: relative;
+            overflow: hidden;
+            aspect-ratio: 1.91 / 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            transition: all 0.3s ease;
+        }
+
+        .preview-card[data-theme="dark"] {
+            background: #1d1d1f;
+            color: #fff;
+        }
+
+        .preview-card h1 {
+            font-size: 48px;
+            margin: 16px 0;
+            z-index: 10;
+        }
+
+        .preview-card p {
+            font-size: 20px;
+            opacity: 0.9;
+            z-index: 10;
+            margin: 0;
+        }
+
+        .preview-footer {
+            position: absolute;
+            bottom: 24px;
+            left: 24px;
+            right: 24px;
+            display: flex;
+            justify-content: space-between;
+            font-size: 14px;
+            opacity: 0.8;
+            font-weight: 600;
+            z-index: 10;
+        }
+
+        .soft-paywall-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .soft-paywall-content {
+            background: #fff;
+            padding: 40px;
+            border-radius: 16px;
+            text-align: center;
+            max-width: 400px;
+            width: 100%;
+            position: relative;
+        }
+
+        .soft-paywall-content h2 {
+            font-size: 24px;
+            margin-bottom: 16px;
+        }
+
+        .soft-paywall-content p {
+            color: #666;
+            margin-bottom: 24px;
+            line-height: 1.5;
+        }
+
+        .btn-upgrade {
+            background: #4f46e5;
+            color: #fff;
+            padding: 16px;
+            font-size: 16px;
+        }
+
+        .close-btn {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #999;
+        }
+
+        .toggle-container {
+            display: flex;
+            align-items: center;
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid rgba(0,0,0,0.1);
+        }
+
+        .toggle-container input[type="checkbox"] {
+            margin-right: 8px;
+        }
+
+        .icon {
+            font-size: 40px;
+            margin-bottom: 16px;
+            z-index: 10;
+        }
+
+    </style>
+</head>
+<body>
+
+    <h1>Social Share Cards</h1>
+
+    <div class="layout-container">
+        <div class="settings-panel">
+            <h2>Card Settings</h2>
+
+            <div class="form-group">
+                <label for="storeName">Store name</label>
+                <input type="text" id="storeName" placeholder="Enter store name">
+            </div>
+
+            <div class="form-group">
+                <label for="tagline">Tagline</label>
+                <input type="text" id="tagline" placeholder="Enter tagline">
+            </div>
+
+            <div class="form-group">
+                <label>Theme</label>
+                <div class="theme-toggle">
+                    <button class="theme-btn" id="lightThemeBtn" aria-pressed="true">Light theme</button>
+                    <button class="theme-btn" id="darkThemeBtn" aria-pressed="false">Dark theme</button>
+                </div>
+            </div>
+
+            <div class="toggle-container">
+                <input type="checkbox" id="removeBranding">
+                <label for="removeBranding" style="margin-bottom: 0;">Remove "Powered by OHC" Badge</label>
+                <span class="pro-badge">Pro</span>
+            </div>
+
+            <div class="share-actions">
+                <button class="btn btn-copy" id="copyBtn">Copy Link</button>
+                <a href="https://twitter.com/intent/tweet" class="btn btn-x" id="shareX" target="_blank">Share on X</a>
+                <a href="https://wa.me/" class="btn btn-wa" id="shareWA" target="_blank">Share to WhatsApp</a>
+                <a href="https://facebook.com/sharer/sharer.php" class="btn btn-fb" id="shareFB" target="_blank">Share on Facebook</a>
+            </div>
+        </div>
+
+        <div class="preview-panel">
+            <h2>Live Preview</h2>
+            <div class="preview-card" id="previewCard" data-theme="light">
+                <div class="icon">🛍️</div>
+                <h1 id="previewStoreName">Store Name</h1>
+                <p id="previewTagline">Your tagline goes here...</p>
+                <div class="preview-footer">
+                    <span id="previewBranding">⚡ Powered by OHC</span>
+                    <span id="previewLink">ohc.app/store</span>
+                </div>
+            </div>
+            <p style="text-align: center; color: #86868b; margin-top: 16px; font-size: 14px;">
+                This is how your card will appear when shared on social platforms like Twitter, Facebook, and LinkedIn.
+            </p>
+        </div>
+    </div>
+
+    <div class="soft-paywall-modal" id="paywallModal">
+        <div class="soft-paywall-content">
+            <button class="close-btn" id="closePaywall">×</button>
+            <div style="font-size: 40px; margin-bottom: 16px;">✨</div>
+            <h2>Upgrade to Pro</h2>
+            <p>Make the Social Share Cards 100% yours. Upgrade to Pro to remove the "Powered by OHC" watermark.</p>
+            <button class="btn btn-upgrade" id="upgradeBtn">Upgrade to Pro</button>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const storeNameInput = document.getElementById('storeName');
+            const taglineInput = document.getElementById('tagline');
+            const previewStoreName = document.getElementById('previewStoreName');
+            const previewTagline = document.getElementById('previewTagline');
+
+            const lightThemeBtn = document.getElementById('lightThemeBtn');
+            const darkThemeBtn = document.getElementById('darkThemeBtn');
+            const previewCard = document.getElementById('previewCard');
+
+            const removeBrandingCheckbox = document.getElementById('removeBranding');
+            const previewBranding = document.getElementById('previewBranding');
+            const paywallModal = document.getElementById('paywallModal');
+            const closePaywallBtn = document.getElementById('closePaywall');
+            const upgradeBtn = document.getElementById('upgradeBtn');
+
+            const copyBtn = document.getElementById('copyBtn');
+            const shareX = document.getElementById('shareX');
+            const shareWA = document.getElementById('shareWA');
+            const shareFB = document.getElementById('shareFB');
+
+            let currentTenant = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'my-store';
+            let shareLink = `https://ohc.app/${currentTenant}`;
+
+            function updatePreview() {
+                const name = storeNameInput.value || 'Store Name';
+                const tag = taglineInput.value || 'Your tagline goes here...';
+
+                previewStoreName.textContent = name;
+                previewTagline.textContent = tag;
+                document.getElementById('previewLink').textContent = `${currentTenant}.ohc.app`;
+
+                const shareText = `Check out my storefront: ${name} - ${tag} ${shareLink}`;
+
+                shareX.href = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`;
+                shareWA.href = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
+                shareFB.href = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareLink)}&quote=${encodeURIComponent(shareText)}`;
+            }
+
+            storeNameInput.addEventListener('input', updatePreview);
+            taglineInput.addEventListener('input', updatePreview);
+
+            lightThemeBtn.addEventListener('click', () => {
+                lightThemeBtn.setAttribute('aria-pressed', 'true');
+                darkThemeBtn.setAttribute('aria-pressed', 'false');
+                previewCard.setAttribute('data-theme', 'light');
+            });
+
+            darkThemeBtn.addEventListener('click', () => {
+                darkThemeBtn.setAttribute('aria-pressed', 'true');
+                lightThemeBtn.setAttribute('aria-pressed', 'false');
+                previewCard.setAttribute('data-theme', 'dark');
+            });
+
+            removeBrandingCheckbox.addEventListener('change', (e) => {
+                // In a real app we'd check `hasPro` here
+                const hasPro = localStorage.getItem('has_pro') === 'true';
+
+                if (e.target.checked && !hasPro) {
+                    e.target.checked = false; // revert
+                    paywallModal.style.display = 'flex';
+                } else if (e.target.checked && hasPro) {
+                    previewBranding.textContent = '';
+                } else {
+                    previewBranding.textContent = '⚡ Powered by OHC';
+                }
+            });
+
+            closePaywallBtn.addEventListener('click', () => {
+                paywallModal.style.display = 'none';
+            });
+
+            upgradeBtn.addEventListener('click', () => {
+                paywallModal.style.display = 'none';
+                window.location.href = '/pricing.html';
+            });
+
+            copyBtn.addEventListener('click', () => {
+                const name = storeNameInput.value || 'Store Name';
+                const tag = taglineInput.value || 'Your tagline goes here...';
+                const shareText = `Check out my storefront: ${name} - ${tag} ${shareLink}`;
+
+                navigator.clipboard.writeText(shareText);
+                copyBtn.textContent = 'Copied Link!';
+                setTimeout(() => {
+                    copyBtn.textContent = 'Copy Link';
+                }, 2000);
+            });
+
+            // Initial setup
+            updatePreview();
+        });
+    </script>
+</body>
+</html>

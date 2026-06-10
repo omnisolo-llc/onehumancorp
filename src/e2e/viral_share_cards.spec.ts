@@ -14,16 +14,16 @@ test.describe('Viral Share Cards Growth Loop', () => {
     }
 
     // Click the Generate Share Cards button
-    const generateBtn = page.locator('a[href="/share-cards"]');
+    const generateBtn = page.locator('a[href="share-cards/index.html"]');
     if (await generateBtn.isVisible()) {
         await generateBtn.click();
     } else {
         // Fallback for isolated component testing to keep tests robust
-        await page.goto('/share-cards');
+        await page.goto('/share-cards/index.html');
     }
 
-    // Wait for navigation to /share-cards
-    await page.waitForURL('**/share-cards');
+    // Wait for navigation to /share-cards/index.html
+    await page.waitForURL('**/share-cards/index.html');
 
     // 1. Verify the main heading
     await expect(page.locator('h1', { hasText: 'Social Share Cards' }).first()).toBeVisible();
@@ -51,11 +51,11 @@ test.describe('Viral Share Cards Growth Loop', () => {
     await expect(cardFooter).toBeVisible();
 
     // 7. Test Theme toggle buttons
-    const darkThemeBtn = page.getByLabel('Dark theme');
+    const darkThemeBtn = page.getByText('Dark theme');
     await darkThemeBtn.click();
     await expect(darkThemeBtn).toHaveAttribute('aria-pressed', 'true');
 
-    const lightThemeBtn = page.getByLabel('Light theme');
+    const lightThemeBtn = page.getByText('Light theme');
     await lightThemeBtn.click();
     await expect(lightThemeBtn).toHaveAttribute('aria-pressed', 'true');
 
@@ -72,5 +72,47 @@ test.describe('Viral Share Cards Growth Loop', () => {
 
     // Close the soft paywall modal
     await page.locator('button:has-text("×")').click();
+  });
+
+  test('verify default share links logic', async ({ page }) => {
+     await page.goto('/share-cards/index.html');
+     const storeNameInput = page.getByLabel('Store name');
+     await storeNameInput.fill('TestStore');
+     const taglineInput = page.getByLabel('Tagline');
+     await taglineInput.fill('Best Test Store');
+
+     const xLink = page.locator('a', { hasText: 'Share on X' });
+     await expect(xLink).toBeVisible();
+     await expect(xLink).toHaveAttribute('href', /twitter.com\/intent\/tweet/);
+
+     const fbLink = page.locator('a', { hasText: 'Share on Facebook' });
+     await expect(fbLink).toBeVisible();
+     await expect(fbLink).toHaveAttribute('href', /facebook.com\/sharer\/sharer.php/);
+
+     const waLink = page.locator('a', { hasText: 'Share to WhatsApp' });
+     await expect(waLink).toBeVisible();
+     await expect(waLink).toHaveAttribute('href', /wa.me/);
+  });
+
+  test('verify preview link works', async ({ page }) => {
+     await page.goto('/share-cards/index.html');
+     // The preview footer shows default text
+     await expect(page.locator('#previewLink')).toBeVisible();
+  });
+
+  test('verify theming UI class application', async ({ page }) => {
+     await page.goto('/share-cards/index.html');
+     const darkThemeBtn = page.getByText('Dark theme');
+     await darkThemeBtn.click();
+     const previewCard = page.locator('.preview-card');
+     await expect(previewCard).toHaveAttribute('data-theme', 'dark');
+  });
+
+  test('verify copy link changes text temporarily', async ({ page, context }) => {
+     await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+     await page.goto('/share-cards/index.html');
+     const copyLinkBtn = page.locator('button', { hasText: 'Copy Link' });
+     await copyLinkBtn.click();
+     await expect(page.locator('button', { hasText: 'Copied Link!' })).toBeVisible();
   });
 });

@@ -4,7 +4,7 @@ test.describe('Social Share Cards Direct Intents - Owner Journey', () => {
     test('owner navigates from dashboard to share cards, configures, and verifies social share buttons', async ({ page }) => {
         // Assume test runner handles login and initial navigation if necessary.
         // We will directly test the page route for unit verification in UI
-        await page.goto('/share-cards');
+        await page.goto('/share-cards/index.html');
 
         // Verify the copy link button is present
         const copyButton = page.locator('button', { hasText: 'Copy Link' });
