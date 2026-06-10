@@ -30,5 +30,8 @@ test.describe('Assistant Workstation (Jarvis-Parity)', () => {
     await expect(page.getByRole('tab', { name: 'All Files' })).toBeVisible();
     await expect(page.getByRole('tab', { name: 'Changes' })).toBeVisible();
     await expect(page.getByRole('tab', { name: 'Preview' })).toBeVisible();
+
+    // Check for the Clipboard screenshot paste feature
+    await expect(page.getByRole('button', { name: 'Clipboard screenshot paste' })).toBeVisible({ timeout: 15000 });
   });
 });
