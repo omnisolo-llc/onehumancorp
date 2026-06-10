@@ -36,7 +36,7 @@
       }
       h1 {
         margin-top: 0;
-        color: #1d1d1f;
+        color: #F5F5F7;
         font-size: 24px;
         font-weight: 700;
       }
@@ -108,9 +108,16 @@
       }
 
       @media (prefers-color-scheme: dark) {
+
         body {
           background-color: #16161a;
-        }
+
+
+        h1, h2, h3, h4, p, label, .radio-label, .radio-desc, .btn-secondary { color: #F5F5F7; }
+        .btn-secondary { border-color: rgba(255, 255, 255, 0.2); }
+        .btn-secondary:hover { background-color: rgba(255, 255, 255, 0.1); color: #FFFFFF; }
+
+}
         .container {
           background: rgba(22, 22, 26, 0.7);
           backdrop-filter: blur(30px) saturate(210%);
@@ -204,7 +211,7 @@
       }
 
       select, textarea {
-        color: #1d1d1f;
+        color: #F5F5F7;
         width: 100%;
         padding: 14px;
         min-height: 44px;
@@ -257,7 +264,7 @@
       }
       .radio-label {
         font-weight: 500;
-        color: #1d1d1f;
+        color: #F5F5F7;
       }
       .radio-desc {
         font-size: 12px;
@@ -274,7 +281,7 @@
       }
       .btn-secondary:hover {
         background-color: rgba(0, 0, 0, 0.05);
-        color: #1d1d1f;
+        color: #F5F5F7;
       }
       .btn-group {
         display: flex;
@@ -803,7 +810,7 @@ document.addEventListener('DOMContentLoaded', () => {
             border: 1px solid rgba(255, 255, 255, 0.6);
             border-radius: 16px;
             padding: 12px 16px;
-            color: #1d1d1f;
+            color: #F5F5F7;
             font-family: "Outfit", -apple-system, BlinkMacSystemFont, sans-serif;
             font-size: 14px;
             line-height: 1.4;
@@ -979,7 +986,7 @@ document.addEventListener('DOMContentLoaded', () => {
         #ohc-help-chat-header h3 {
             margin: 0;
             font-size: 16px;
-            color: #1d1d1f;
+            color: #F5F5F7;
         }
         #ohc-help-close {
             background: none;
@@ -988,7 +995,7 @@ document.addEventListener('DOMContentLoaded', () => {
             cursor: pointer;
             padding: 5px;
         }
-        #ohc-help-close:hover { color: #1d1d1f; }
+        #ohc-help-close:hover { color: #F5F5F7; }
         #ohc-help-messages {
             flex-grow: 1;
             padding: 20px;
@@ -1013,7 +1020,7 @@ document.addEventListener('DOMContentLoaded', () => {
         .msg-ai {
             align-self: flex-start;
             background: rgba(0, 0, 0, 0.05);
-            color: #1d1d1f;
+            color: #F5F5F7;
             border-bottom-left-radius: 4px;
         }
         .msg-ai a {
