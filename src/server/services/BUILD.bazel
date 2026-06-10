@@ -27,6 +27,8 @@ rust_library(
         "//src/server/services/agent:department/service.rs",
         "//src/server/services/agent:mod.rs",
         "//src/server/services/agent:service.rs",
+        "//src/server/services/agent_memory:mod.rs",
+        "//src/server/services/agent_memory:service.rs",
         "//src/server/services/autodream:mod.rs",
         "//src/server/services/autodream:service.rs",
         "//src/server/services/b2b:mod.rs",
