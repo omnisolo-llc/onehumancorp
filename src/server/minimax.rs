@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::sync::Mutex;
 use std::sync::OnceLock;
+use opentelemetry::{global, metrics::Counter};
 use std::time::{Duration, Instant};
 use ::server_pricing::prompt_caching::PromptCache;
 use ::server_pricing::deduplication::{RequestDeduplicator, DeduplicationResult};
@@ -64,6 +65,7 @@ pub struct MinimaxClient {
     url: String,
     cache: PromptCache,
     deduplicator: std::sync::Arc<RequestDeduplicator>,
+    savings_counter: Counter<u64>,
 }
 
 #[derive(Debug, Serialize)]
@@ -97,11 +99,17 @@ struct MessageContent {
 
 impl MinimaxClient {
     pub fn new(api_key: String) -> Self {
+        let meter = global::meter("ohc_cost_meter");
+        let savings_counter = meter
+            .u64_counter("ohc_prompt_cache_savings_cents")
+            .with_description("Total cost savings from prompt caching in cents")
+            .build();
         MinimaxClient {
             api_key,
             url: "https://api.minimax.chat/v1/chat/completions".to_string(),
             cache: PromptCache::new(Duration::from_secs(300)),
-            deduplicator: std::sync::Arc::new(RequestDeduplicator::new(Duration::from_secs(5))), // 5 minute TTL
+            deduplicator: std::sync::Arc::new(RequestDeduplicator::new(Duration::from_secs(5))),
+            savings_counter,
         }
     }
 
@@ -124,8 +132,11 @@ impl MinimaxClient {
         };
 
         // 1. Check Cache
-        if let (Some(cached), _cost_cents) = self.cache.get_with_cost_cents(&optimized_prompt) {
+        if let (Some(cached), cost_cents) = self.cache.get_with_cost_cents(&optimized_prompt) {
             tracing::info!("Prompt cache hit (saved ~{} tokens)", cached.token_count);
+            if cost_cents > 0 {
+                self.savings_counter.add(cost_cents as u64, &[]);
+            }
             return Ok(cached.text);
         }
 
@@ -414,6 +425,7 @@ pub struct LocalLLMClient {
     model: String,
     cache: PromptCache,
     deduplicator: std::sync::Arc<RequestDeduplicator>,
+    savings_counter: Counter<u64>,
 }
 
 impl LocalLLMClient {
@@ -425,7 +437,13 @@ impl LocalLLMClient {
         let model = std::env::var("OHC_LOCAL_MODEL_NAME")
             .unwrap_or_else(|_| "llama3".to_string());
             
-        LocalLLMClient { endpoint, embed_endpoint, model, cache: PromptCache::new(Duration::from_secs(300)), deduplicator: std::sync::Arc::new(RequestDeduplicator::new(Duration::from_secs(5))) }
+        let meter = global::meter("ohc_cost_meter");
+        let savings_counter = meter
+            .u64_counter("ohc_prompt_cache_savings_cents")
+            .with_description("Total cost savings from prompt caching in cents")
+            .build();
+
+        LocalLLMClient { endpoint, embed_endpoint, model, cache: PromptCache::new(Duration::from_secs(300)), deduplicator: std::sync::Arc::new(RequestDeduplicator::new(Duration::from_secs(5))), savings_counter }
     }
 
     pub async fn reason(&self, prompt: &str) -> Result<String, String> {
@@ -446,8 +464,11 @@ impl LocalLLMClient {
             truncate_by_word_count(prompt, 2000)
         };
 
-        if let (Some(cached), _cost_cents) = self.cache.get_with_cost_cents(&optimized_prompt) {
+        if let (Some(cached), cost_cents) = self.cache.get_with_cost_cents(&optimized_prompt) {
             tracing::info!("Prompt cache hit (saved ~{} tokens)", cached.token_count);
+            if cost_cents > 0 {
+                self.savings_counter.add(cost_cents as u64, &[]);
+            }
             return Ok(cached.text);
         }
 
