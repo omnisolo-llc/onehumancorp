@@ -108,30 +108,34 @@ export function UnifiedAgentFeed() {
         if (mounted) {
           // Listen to SSE updates
           if (typeof EventSource === "undefined") return;
-          const eventSource = new EventSource(`/api/agents/approvals/stream?tenant_id=${tenant}`);
+          const eventSource = new EventSource(`/api/agent-feed/stream?tenant_id=${tenant}`);
 
           eventSource.onmessage = (event) => {
             try {
               const payload = JSON.parse(event.data);
 
-              if (payload.event_type === "approval_request") {
+              if (payload.event_type === "feed_item_created") {
                 setItems((prev) => {
                   if (prev.find((a) => a.id === payload.data.id)) return prev;
                   return [payload.data, ...prev];
                 });
-              } else if (payload.event_type === "approval_decision") {
-                setItems((prev) => prev.filter((a) => a.id !== payload.data.request_id));
-                setActivities((prev) => {
-                  const newActivity = {
-                    id: crypto.randomUUID(),
-                    tenant_id: tenant,
-                    event_type: payload.data.status || 'APPROVED',
-                    department: payload.data.department || 'general',
-                    payload: payload.data,
-                    created_at: new Date().toISOString(),
-                  };
-                  return [newActivity, ...prev];
-                });
+              } else if (payload.event_type === "feed_item_updated") {
+                if (payload.data.lifecycle_state === "APPROVED" || payload.data.lifecycle_state === "DISMISSED") {
+                  setItems((prev) => prev.filter((a) => a.id !== payload.data.id));
+                  setActivities((prev) => {
+                    const newActivity = {
+                      id: payload.data.id,
+                      tenant_id: tenant,
+                      event_type: payload.data.lifecycle_state,
+                      department: payload.data.event_source || 'general',
+                      payload: payload.data,
+                      created_at: payload.data.updated_at || new Date().toISOString(),
+                    };
+                    return [newActivity, ...prev];
+                  });
+                } else {
+                  setItems((prev) => prev.map(a => a.id === payload.data.id ? payload.data : a));
+                }
               }
             } catch (e) {
               console.error("Error parsing SSE event", e);
@@ -168,75 +172,6 @@ export function UnifiedAgentFeed() {
     };
   }, []);
 
-  useEffect(() => {
-    if (typeof EventSource === 'undefined') return;
-    const events = new EventSource('/api/agents/events');
-    events.onmessage = (event) => {
-      try {
-        const item = JSON.parse(event.data);
-        if (!item?.id || !item?.description) return;
-
-        // If it's a DRAFT or PENDING, add to proposals
-        if (String(item.status || '').toUpperCase() === 'DRAFT' || String(item.status || '').toUpperCase() === 'PENDING') {
-          setItems((current) => [item, ...current.filter((existing) => existing.id !== item.id)]);
-        } else {
-          // It's an activity event (Approved, Rejected, etc.)
-          setActivities((current) => {
-            const mappedActivity = {
-              id: item.id,
-              tenant_id: item.tenant_id || "default",
-              event_type: item.status,
-              department: item.department,
-              payload: typeof item.payload === 'object' ? JSON.stringify({ original_payload: item.payload }) : item.payload,
-              created_at: new Date().toISOString()
-            };
-            return [mappedActivity, ...current.filter((existing) => existing.id !== item.id)];
-          });
-          // Also remove from approvals if it was there
-          setItems((current) => current.filter((existing) => existing.id !== item.id));
-        }
-      } catch (err) {
-        console.error('Failed to parse agent feed event:', err);
-      }
-    };
-    events.onerror = () => events.close();
-    return () => events.close();
-  }, []);
-
-  useEffect(() => {
-    if (typeof EventSource === 'undefined') return;
-    const events = new EventSource('/api/agents/events');
-    events.onmessage = (event) => {
-      try {
-        const item = JSON.parse(event.data);
-        if (!item?.id || !item?.description) return;
-
-        // If it's a DRAFT or PENDING, add to proposals
-        if (String(item.status || '').toUpperCase() === 'DRAFT' || String(item.status || '').toUpperCase() === 'PENDING') {
-          setItems((current) => [item, ...current.filter((existing) => existing.id !== item.id)]);
-        } else {
-          // It's an activity event (Approved, Rejected, etc.)
-          setActivities((current) => {
-            const mappedActivity = {
-              id: item.id,
-              tenant_id: item.tenant_id || "default",
-              event_type: item.status,
-              department: item.department,
-              payload: typeof item.payload === 'object' ? JSON.stringify({ original_payload: item.payload }) : item.payload,
-              created_at: new Date().toISOString()
-            };
-            return [mappedActivity, ...current.filter((existing) => existing.id !== item.id)];
-          });
-          // Also remove from approvals if it was there
-          setItems((current) => current.filter((existing) => existing.id !== item.id));
-        }
-      } catch (err) {
-        console.error('Failed to parse agent feed event:', err);
-      }
-    };
-    events.onerror = () => events.close();
-    return () => events.close();
-  }, []);
 
   const handleDecision = async (id: string, approved: boolean) => {
     // Optimistic UI update
@@ -244,24 +179,27 @@ export function UnifiedAgentFeed() {
 
     try {
       const tenant = tenantId();
-      const res = await fetch(`/api/agents/approvals/${id}`, {
-        method: "POST",
+      const state = approved ? "APPROVED" : "DISMISSED";
+      const res = await fetch(`/api/agent-feed/${id}/state?tenant_id=${tenant}`, {
+        method: "PUT",
         headers: {
           "Content-Type": "application/json",
           "x-tenant-id": tenant,
           "x-user-id": "default",
         },
-        body: JSON.stringify({ approved }),
+        body: JSON.stringify({ state }),
       });
 
       if (!res.ok) {
         // If it fails, we might want to fetch again to restore state
-        const refreshRes = await fetch(`/api/agents/approvals?tenant_id=${tenant}`, {
+        const refreshRes = await fetch(`/api/agent-feed?tenant_id=${tenant}`, {
             headers: { "x-tenant-id": tenant, "x-user-id": "default" }
         });
         if (refreshRes.ok) {
-            const data: ApprovalsResponse = await refreshRes.json();
-            setItems(data.pending_approvals);
+            const data = await refreshRes.json();
+            if (data && data.items) {
+               setItems(data.items.filter((i: any) => i.lifecycle_state !== "APPROVED" && i.lifecycle_state !== "DISMISSED"));
+            }
         }
         throw new Error("Failed to submit decision");
       }

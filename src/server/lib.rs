@@ -3087,33 +3087,35 @@ async fn load_ui_agent_approvals_from_db(db: &crate::db::DB, tenant_id: &str) ->
     let limit = 20i64;
     match &db.store {
         crate::db::DbStore::Postgres => {
-            sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = $1 AND status = 'DRAFT' ORDER BY id ASC LIMIT $2")
+            sqlx::query("SELECT id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at FROM agent_feed_items WHERE tenant_id = $1 AND lifecycle_state = 'PENDING_APPROVAL' ORDER BY created_at DESC LIMIT $2")
                 .bind(tenant_id)
                 .bind(limit)
                 .fetch_all(&db.pool)
                 .await.map(|rows| rows.into_iter().map(|row| serde_json::json!({
                     "id": row.get::<String, _>("id"),
                     "tenant_id": row.get::<String, _>("tenant_id"),
-                    "department": row.get::<String, _>("department"),
-                    "description": row.get::<String, _>("description"),
-                    "status": row.get::<String, _>("status"),
-                    "action_risk": row.get::<String, _>("action_risk"),
-                    "payload": row.get::<Option<serde_json::Value>, _>("payload")
+                    "event_source": row.get::<String, _>("event_source"),
+                    "context_payload": row.get::<Option<sqlx::types::Json<serde_json::Value>>, _>("context_payload"),
+                    "proposed_action": row.get::<Option<sqlx::types::Json<serde_json::Value>>, _>("proposed_action"),
+                    "lifecycle_state": row.get::<String, _>("lifecycle_state"),
+                    "created_at": row.get::<Option<chrono::DateTime<chrono::Utc>>, _>("created_at"),
+                    "updated_at": row.get::<Option<chrono::DateTime<chrono::Utc>>, _>("updated_at"),
                 })).collect())
         },
         crate::db::DbStore::Sqlite(pool) => {
-            sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = ? AND status = 'DRAFT' ORDER BY id ASC LIMIT ?")
+            sqlx::query("SELECT id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at FROM agent_feed_items WHERE tenant_id = ? AND lifecycle_state = 'PENDING_APPROVAL' ORDER BY created_at DESC LIMIT ?")
                 .bind(tenant_id)
                 .bind(limit)
                 .fetch_all(pool)
                 .await.map(|rows| rows.into_iter().map(|row| serde_json::json!({
                     "id": row.get::<String, _>("id"),
                     "tenant_id": row.get::<String, _>("tenant_id"),
-                    "department": row.get::<String, _>("department"),
-                    "description": row.get::<String, _>("description"),
-                    "status": row.get::<String, _>("status"),
-                    "action_risk": row.get::<String, _>("action_risk"),
-                    "payload": row.get::<Option<String>, _>("payload").and_then(|s| serde_json::from_str::<serde_json::Value>(&s).ok())
+                    "event_source": row.get::<String, _>("event_source"),
+                    "context_payload": row.get::<Option<String>, _>("context_payload").and_then(|s| serde_json::from_str::<serde_json::Value>(&s).ok()),
+                    "proposed_action": row.get::<Option<String>, _>("proposed_action").and_then(|s| serde_json::from_str::<serde_json::Value>(&s).ok()),
+                    "lifecycle_state": row.get::<String, _>("lifecycle_state"),
+                    "created_at": row.get::<Option<String>, _>("created_at"),
+                    "updated_at": row.get::<Option<String>, _>("updated_at"),
                 })).collect())
         }
     }
