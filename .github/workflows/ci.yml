@@ -366,6 +366,17 @@ jobs:
             test --test_output=errors
             test --test_summary=detailed
 
+      - name: Disable Docker containerd snapshotter to fix whiteout errors
+        run: |
+          if [ -f /etc/docker/daemon.json ]; then
+            sudo jq '.features."containerd-snapshotter" = false' /etc/docker/daemon.json > /tmp/daemon.json
+            sudo mv /tmp/daemon.json /etc/docker/daemon.json
+            sudo systemctl restart docker
+          else
+            echo '{"features": {"containerd-snapshotter": false}}' | sudo tee /etc/docker/daemon.json
+            sudo systemctl restart docker
+          fi
+
       - name: Pull E2E Docker images
         run: |
           docker pull pgvector/pgvector:pg16
@@ -485,6 +496,17 @@ jobs:
           key: ${{ runner.os }}-${{ runner.arch }}-kind-images-v1
           restore-keys: |
             ${{ runner.os }}-${{ runner.arch }}-kind-images-
+
+      - name: Disable Docker containerd snapshotter to fix whiteout errors
+        run: |
+          if [ -f /etc/docker/daemon.json ]; then
+            sudo jq '.features."containerd-snapshotter" = false' /etc/docker/daemon.json > /tmp/daemon.json
+            sudo mv /tmp/daemon.json /etc/docker/daemon.json
+            sudo systemctl restart docker
+          else
+            echo '{"features": {"containerd-snapshotter": false}}' | sudo tee /etc/docker/daemon.json
+            sudo systemctl restart docker
+          fi
 
       - name: Load and pull Docker images for Kind
         run: |
