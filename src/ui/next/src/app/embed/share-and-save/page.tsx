@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 
-export default function ShareAndSaveEmbedPage() {
+function ShareAndSaveContent() {
     const searchParams = useSearchParams();
     const tenant = searchParams.get('tenant') || 'my-store';
     const theme = searchParams.get('theme') || 'light';
@@ -61,4 +61,12 @@ export default function ShareAndSaveEmbedPage() {
             )}
         </div>
     );
+}
+
+export default function ShareAndSaveEmbedPageWrapper() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <ShareAndSaveContent />
+    </Suspense>
+  );
 }

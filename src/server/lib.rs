@@ -3957,6 +3957,24 @@ async fn create_ui_bom_item_handler(
                 axum::response::Json(serde_json::json!({ "success": true, "number": mock_number }))
             }
         }))
+        .route("/api/v1/voice/command", axum::routing::post(api::voice_command::voice_command_handler).layer(axum::middleware::from_fn(
+            |req: axum::extract::Request, next: axum::middleware::Next| async move {
+                use axum::response::IntoResponse;
+                let store = std::sync::Arc::new(crate::auth::Store::new());
+                let auth_header = req.headers().get("authorization").and_then(|h| h.to_str().ok());
+                let token = match auth_header {
+                    Some(h) if h.to_lowercase().starts_with("bearer ") => &h[7..],
+                    _ => return (axum::http::StatusCode::UNAUTHORIZED, "Unauthorized").into_response(),
+                };
+                let claims = match store.validate_token(token).await {
+                    Ok(c) => c,
+                    Err(_) => return (axum::http::StatusCode::UNAUTHORIZED, "Unauthorized").into_response(),
+                };
+                let mut req = req;
+                req.extensions_mut().insert(claims);
+                next.run(req).await
+            }
+        )))
         .route("/api/voice/incoming", axum::routing::post({
             let settings_store = settings_store.clone();
             let voice_engine = Arc::new(crate::voice::VoiceAIEdgeEngine::new());
