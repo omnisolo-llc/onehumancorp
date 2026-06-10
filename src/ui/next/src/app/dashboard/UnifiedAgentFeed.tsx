@@ -103,6 +103,7 @@ export function UnifiedAgentFeed() {
 
         if (mounted) {
           // Listen to SSE updates
+          if (typeof window === "undefined" || typeof EventSource === "undefined") return;
           const eventSource = new EventSource(`/api/agents/approvals/stream?tenant_id=${tenant}`);
 
           eventSource.onmessage = (event) => {
@@ -165,41 +166,7 @@ export function UnifiedAgentFeed() {
 
   useEffect(() => {
     if (typeof EventSource === 'undefined') return;
-    const events = new EventSource('/api/agents/events');
-    events.onmessage = (event) => {
-      try {
-        const item = JSON.parse(event.data);
-        if (!item?.id || !item?.description) return;
-
-        // If it's a DRAFT or PENDING, add to proposals
-        if (String(item.status || '').toUpperCase() === 'DRAFT' || String(item.status || '').toUpperCase() === 'PENDING') {
-          setApprovals((current) => [item, ...current.filter((existing) => existing.id !== item.id)]);
-        } else {
-          // It's an activity event (Approved, Rejected, etc.)
-          setActivities((current) => {
-            const mappedActivity = {
-              id: item.id,
-              tenant_id: item.tenant_id || "default",
-              event_type: item.status,
-              department: item.department,
-              payload: typeof item.payload === 'object' ? JSON.stringify({ original_payload: item.payload }) : item.payload,
-              created_at: new Date().toISOString()
-            };
-            return [mappedActivity, ...current.filter((existing) => existing.id !== item.id)];
-          });
-          // Also remove from approvals if it was there
-          setApprovals((current) => current.filter((existing) => existing.id !== item.id));
-        }
-      } catch (err) {
-        console.error('Failed to parse agent feed event:', err);
-      }
-    };
-    events.onerror = () => events.close();
-    return () => events.close();
-  }, []);
-
-  useEffect(() => {
-    if (typeof EventSource === 'undefined') return;
+    if (typeof window === "undefined" || typeof EventSource === "undefined") return;
     const events = new EventSource('/api/agents/events');
     events.onmessage = (event) => {
       try {
