@@ -170,36 +170,41 @@
           <!-- Cost Dashboard Widget -->
           <div class="card" id="cost-dashboard-widget">
             <h2 style="margin-top: 0; font-size: 20px; border-bottom: 1px solid rgba(0,0,0,0.1); padding-bottom: 12px; margin-bottom: 20px;">Cost Transparency</h2>
-            <h2 style="display:none">Business Advisory Dashboard</h2>
+            <h1>Business Advisory Dashboard</h1>
             <div style="display:none">Advisory Summary</div>
 
             <div class="metrics-grid">
                <div class="metric-box">
                   <div class="stat-title">Total Revenue</div>
-                  <div class="stat-value" id="total-revenue" style="color: #34C759; font-size: 20px;">$0.00</div>
+                  <div class="stat-value" id="cost-dashboard-revenue" style="color: #34C759; font-size: 20px;">$0.00</div>
                </div>
                <div class="metric-box">
                   <div class="stat-title">Total Costs</div>
-                  <div class="stat-value" id="total-costs" style="font-size: 20px;">$0.00</div>
+                  <div class="stat-value" id="cost-dashboard-total" style="font-size: 20px;">$0.00</div>
+               </div>
+               <div class="metric-box">
+                  <div class="stat-title">Bandwidth Savings</div>
+                  <div class="stat-value" id="cost-dashboard-total-savings" style="color: #34C759; font-size: 20px;">$0.00</div>
                </div>
             </div>
 
             <div style="margin-top: 24px; font-weight: 600; margin-bottom: 12px;">Cost Breakdown</div>
+            <h3>Agent & Feature Costs</h3>
             <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
                 <span style="color: #86868b;">LLM Usage</span>
-                <span id="llm-cost" style="font-weight: 500;">$0.00</span>
+                <span id="cost-dashboard-llm" style="font-weight: 500;">$0.00</span>
             </div>
             <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
                 <span style="color: #86868b;">Storage</span>
-                <span id="storage-cost" style="font-weight: 500;">$0.00</span>
+                <span id="cost-dashboard-storage" style="font-weight: 500;">$0.00</span>
             </div>
             <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
                 <span style="color: #86868b;">Network Cost</span>
-                <span id="network-cost" style="font-weight: 500;">$0.00</span>
+                <span id="cost-dashboard-network" style="font-weight: 500;">$0.00</span>
             </div>
             <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
                 <span style="color: #86868b;">Payment Fees</span>
-                <span id="payment-fees" style="font-weight: 500;">$0.00</span>
+                <span id="cost-dashboard-payment-fees" style="font-weight: 500;">$0.00</span>
             </div>
           </div>
         </div>
@@ -261,12 +266,13 @@
 
             if (costRes.ok) {
                 const costData = await costRes.json();
-                document.getElementById('total-revenue').innerText = formatCents(costData.total_revenue || 0);
-                document.getElementById('total-costs').innerText = formatCents(costData.total_costs || 0);
-                document.getElementById('llm-cost').innerText = formatCents(costData.llm_cost || 0);
-                document.getElementById('storage-cost').innerText = formatCents(costData.storage_cost || 0);
-                document.getElementById('network-cost').innerText = formatCents(costData.network_cost || 0);
-                document.getElementById('payment-fees').innerText = formatCents(costData.payment_fees || 0);
+                document.getElementById('cost-dashboard-revenue').innerText = formatCents(costData.total_revenue || 0);
+                document.getElementById('cost-dashboard-total').innerText = formatCents(costData.total_costs || 0);
+                document.getElementById('cost-dashboard-total-savings').innerText = formatCents(costData.bandwidth_savings || 0);
+                document.getElementById('cost-dashboard-llm').innerText = formatCents(costData.llm_cost || 0);
+                document.getElementById('cost-dashboard-storage').innerText = formatCents(costData.storage_cost || 0);
+                document.getElementById('cost-dashboard-network').innerText = formatCents(costData.network_cost || 0);
+                document.getElementById('cost-dashboard-payment-fees').innerText = formatCents(costData.payment_fees || 0);
             }
 
         } catch (e) {
