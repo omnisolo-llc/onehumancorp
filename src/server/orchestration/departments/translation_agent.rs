@@ -61,50 +61,36 @@ impl Department for TranslationAgent {
                 }
             };
 
-            let draft_reply = match crate::api::agents::translation::generate_inbox_draft_reply(&event.tenant_id, source, &translation).await {
-                Ok(d) => d,
-                Err(e) => {
-                    tracing::error!("Failed to generate draft reply: {}", e);
-                    "Thanks for reaching out! We will review this and get back to you soon.".to_string()
-                }
-            };
-
             let pool = crate::db::get_pool();
             let _ = sqlx::query(
                 r#"
                 UPDATE inbox_messages
-                SET content = $1, translated_from_language = $2, draft_reply = $3
-                WHERE id = $4 AND tenant_id = $5
+                SET content = $1, translated_from_language = $2
+                WHERE id = $3 AND tenant_id = $4
                 "#
             )
             .bind(&translation.translated_content)
             .bind(&translation.source_language)
-            .bind(&draft_reply)
             .bind(inbox_id)
             .bind(&event.tenant_id)
             .execute(&pool)
             .await;
 
-            let res = self.orchestrator.execute_action(
-                DepartmentType::CustomerSuccess,
-                format!("New {} message from {} (Language: {:?})", source, event.tenant_id, translation.source_language),
-                event.tenant_id.clone(),
-                ActionRisk::DraftForReview,
-                serde_json::json!({
+            let new_event = DepartmentEvent {
+                id: uuid::Uuid::new_v4().to_string(),
+                tenant_id: event.tenant_id.clone(),
+                event_type: "tenant.message.received".to_string(),
+                payload: serde_json::json!({
                     "source": source,
-                    "message": translation.translated_content.clone(),
-                    "original_content": translation.original_content.clone(),
-                    "translated_from_language": translation.source_language.clone(),
-                    "draft_reply": draft_reply.clone(),
+                    "original_message": translation.original_content,
+                    "message": translation.translated_content,
+                    "translated_from_language": translation.source_language,
                     "inbox_message_id": inbox_id,
                 }),
-            ).await;
+            };
+            self.orchestrator.dispatch_event(new_event).await.map(|_| ())?;
 
-            // Optional: generate the approved event if the system decides to auto-reply in some logic
-            return match res {
-                Ok(_) => Ok(()),
-                Err(e) => Err(e),
-            }
+            return Ok(());
         }
 
         if event.event_type == "tenant.product.created" || event.event_type == "tenant.product.updated" {
