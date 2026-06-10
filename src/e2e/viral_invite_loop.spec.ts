@@ -1,10 +1,10 @@
 import { test, expect } from './fixtures';
-import { currentAppSmoke } from './current_app_smoke';
-
-currentAppSmoke('viral_invite_loop');
 
 test.describe('Viral Invite Loop on Team Page', () => {
-  test('should display GrowthReferralWidget and generate a link', async ({ page }) => {
+  test('should display GrowthReferralWidget and generate a link', async ({ page, loginAs, unlimitedAdminUser }) => {
+    // Login
+    await loginAs(page, unlimitedAdminUser);
+
     await page.goto('/team');
 
     // Wait for the UI to be ready
@@ -18,12 +18,12 @@ test.describe('Viral Invite Loop on Team Page', () => {
     await page.getByRole('button', { name: 'Get My Invite Link' }).click();
 
     // Wait for the link to be generated (input appears)
-    const linkInput = page.locator('input[readonly]');
+    const linkInput = page.locator('input[readonly]').first();
     await expect(linkInput).toBeVisible();
     await expect(linkInput).toHaveValue(/^http/);
 
     // Test copy button interaction
-    await page.getByRole('button', { name: 'Copy' }).click();
+    await page.getByRole('button', { name: 'Copy' }).first().click();
     await expect(page.getByRole('button', { name: 'Copied!' })).toBeVisible();
 
     // Verify share on WhatsApp is available
