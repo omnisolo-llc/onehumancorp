@@ -335,7 +335,7 @@ export default function WebsiteBuilderPage() {
 
                     <button
                       className="w-full min-h-[54px] glassmorphism text-[#0071E3] border border-[#0071E3] p-4 font-bold rounded-[8px] shadow-sm hover:bg-blue-50 transition-all"
-                      onClick={() => setWizardStep('instant-build')}
+                      onClick={() => { setBio(''); setWizardStep('instant-build'); }}
                     >
                       Instant Build
                     </button>

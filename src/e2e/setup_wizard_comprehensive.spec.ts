@@ -52,4 +52,52 @@ test.describe('Business Setup Wizard Comprehensive Flow', () => {
     await page.getByPlaceholder('e.g. I run a local bakery').fill('A');
     await expect(generateBtn).toBeEnabled();
   });
+
+  test('clears previous bio input when re-entering Instant Build', async ({ page }) => {
+    await page.goto('/website-builder');
+
+    // Enter instant build, fill bio, then go back
+    await page.getByRole('button', { name: /Instant Build/ }).click();
+    await page.getByPlaceholder('e.g. I run a local bakery').fill('Some initial input');
+
+    // Go back to step 0
+    await page.getByRole('button', { name: /Back/ }).click();
+
+    // Re-enter Instant Build
+    await page.getByRole('button', { name: /Instant Build/ }).click();
+
+    // Bio should be cleared and button disabled
+    const generateBtn = page.getByRole('button', { name: /Generate Storefront/ });
+    await expect(generateBtn).toBeDisabled();
+    await expect(page.getByPlaceholder('e.g. I run a local bakery')).toHaveValue('');
+  });
+
+  test('verifies Start My Business navigation is distinct from Instant Build', async ({ page }) => {
+    await page.goto('/website-builder');
+    await page.getByRole('button', { name: /Start My Business/ }).click();
+    await expect(page.getByRole('heading', { name: 'What kind of business are you building?' })).toBeVisible();
+    await expect(page.getByRole('button', { name: /Online Store/ })).toBeVisible();
+    await expect(page.getByRole('button', { name: /Restaurant/ })).toBeVisible();
+  });
+
+  test('Instant Build gracefully handles whitespace-only bio input', async ({ page }) => {
+    await page.goto('/website-builder');
+    await page.getByRole('button', { name: /Instant Build/ }).click();
+
+    const generateBtn = page.getByRole('button', { name: /Generate Storefront/ });
+    await expect(generateBtn).toBeDisabled();
+
+    await page.getByPlaceholder('e.g. I run a local bakery').fill('   \n  ');
+    await expect(generateBtn).toBeDisabled();
+
+    await page.getByPlaceholder('e.g. I run a local bakery').fill(' Valid input ');
+    await expect(generateBtn).toBeEnabled();
+  });
+
+  test('Powered by OHC link is visible on step 0', async ({ page }) => {
+    await page.goto('/website-builder');
+    const poweredLink = page.getByRole('link', { name: /Powered by OHC/i });
+    await expect(poweredLink).toBeVisible();
+    await expect(poweredLink).toHaveAttribute('href', '/onboarding?ref=website-builder');
+  });
 });
