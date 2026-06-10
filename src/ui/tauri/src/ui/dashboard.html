@@ -890,7 +890,7 @@
                     return "https://cloud.ohc.network/invite/fallback";
                   }
                 } else {
-                  return "https://cloud.ohc.network/invite/test-" + Date.now();
+                  return "https://cloud.ohc.network/invite/fallback";
                 }
               }
 
@@ -945,8 +945,7 @@
             linkContainer.style.display = 'block';
           });
         } else {
-          // Playwright mock environment fallback if Tauri API isn't injected
-          referralLink.value = "https://cloud.ohc.network/invite/test-" + Date.now();
+          referralLink.value = "https://cloud.ohc.network/invite/fallback";
           generateBtn.style.display = 'none';
           linkContainer.style.display = 'block';
         }

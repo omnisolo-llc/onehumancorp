@@ -501,17 +501,13 @@ document.addEventListener('DOMContentLoaded', () => {
              if (res.ok) data = await res.json();
           }
 
-          if (!data || data.length === 0) {
-             // Mock fallback for Playwright
-             data = [{
-                version: "Version 1.0 (Latest)",
-                contentLines: [
-                   "### 🌟 New Features",
-                   "- **Interactive AI Store Builder:** You can now generate a complete storefront from just a short description of your business. AI will handle the layout and copy for you.",
-                   "- **Smart Tooltips:** We added helpful text bubbles to all major buttons to help you learn the system faster.",
-                   "- **Help Center Upgrade:** Find answers instantly with our new searchable Help Center."
-                ]
-             }];
+          if (!data) {
+             data = [];
+          }
+
+          if (data.length === 0) {
+              document.getElementById('changelog-container').innerHTML = `<div style="text-align: center; color: #86868b; padding: 40px;">No changelog available.</div>`;
+              return;
           }
 
           let html = '';

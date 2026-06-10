@@ -512,22 +512,7 @@ document.addEventListener('DOMContentLoaded', () => {
           }
         } catch (e) {
           console.error("Failed to load article", e);
-
-          // Mock data fallback for Playwright
-          if (articleId === 'getting-started-1') {
-              container.innerHTML = `
-                <h1 class="article-title">Getting Started with Your Store</h1>
-                <div class="article-content">
-                  <p>Welcome to OneHumanCorp! Let's get your business online in under 10 minutes.</p>
-                  <h2>Step 1: Tell us about your business</h2>
-                  <p>Add your store name and a short bio so customers know who you are.</p>
-                  <h2>Step 2: Add your first product</h2>
-                  <p>Upload a photo, set a price, and describe what you're selling.</p>
-                </div>
-              `;
-          } else {
-              container.innerHTML = `<div class="error"><h2>Oops!</h2><p>${e.message || 'Failed to load article.'}</p></div>`;
-          }
+          container.innerHTML = `<div class="error"><h2>Oops!</h2><p>${e.message || 'Failed to load article.'}</p></div>`;
         }
       }
 
