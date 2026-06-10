@@ -273,7 +273,7 @@ describe('OnboardingWizard', () => {
     (global.fetch as any).mockImplementation((url: string) => {
       if (url === '/api/onboarding/launch') { return Promise.resolve({ ok: true, json: async () => ({}) }); }
       if (url === '/api/onboarding/intake' || url === '/api/onboarding/start') {
-        return Promise.resolve({ ok: false, json: async () => ({ error: "Failed to process business details" }) });
+        return Promise.resolve({ ok: false, status: 500, clone: () => ({ json: async () => ({ error: "Failed to process business details" }) }), json: async () => ({ error: "Failed to process business details" }) });
       }
       return Promise.resolve({ ok: true, json: async () => ({ wizardState: {} }) });
     });
