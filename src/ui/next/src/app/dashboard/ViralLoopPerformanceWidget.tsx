@@ -34,7 +34,7 @@ export function ViralLoopPerformanceWidget() {
   }, []);
 
   return (
-    <section className="app-panel mb-6">
+    <section className="app-panel mb-6 glassmorphism border border-white/40 dark:border-white/10">
       <div className="app-panel-header">
         <div>
           <h2 className="app-panel-title">Viral Loop Performance</h2>

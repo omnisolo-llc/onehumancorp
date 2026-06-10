@@ -28,7 +28,7 @@ export default function AffiliateMarketingWidget() {
   const commissionDollars = (stats.total_commission_cents / 100).toFixed(2);
 
   return (
-    <div className="app-card rounded-2xl p-6 shadow-sm border border-indigo-100 bg-gradient-to-br from-white to-indigo-50/30 font-inter">
+    <div className="app-card glassmorphism rounded-2xl p-6 shadow-sm border border-indigo-100 bg-gradient-to-br from-white to-indigo-50/30 font-inter">
       <div className="flex items-center justify-between mb-4">
         <h3 className="font-bold text-gray-900 font-outfit text-lg flex items-center gap-2">
           <span className="text-xl">💰</span> Viral Growth

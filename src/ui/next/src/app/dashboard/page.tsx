@@ -587,24 +587,24 @@ export default function Dashboard() {
 
           <div className="grid grid-cols-1 md:grid-cols-[1fr_300px] gap-6">
             <div className="app-grid metrics !grid-cols-2 lg:!grid-cols-4">
-              <WalkthroughTarget id="sales-card-target" className="app-card">
+              <WalkthroughTarget id="sales-card-target" className="app-card glassmorphism">
                 <WithTooltip id="total-sales-tooltip" defaultText="Total revenue generated from database orders.">
                   <div className="app-metric-label">Total Sales</div>
                 </WithTooltip>
                 <div className="app-metric-value">{money(metrics.total_sales)}</div>
                 <div className="app-metric-note">{loading ? "Loading database rows" : "All recorded orders"}</div>
               </WalkthroughTarget>
-              <div className="app-card">
+              <div className="app-card glassmorphism">
                 <div className="app-metric-label">Customers</div>
                 <div className="app-metric-value">{metrics.active_customers}</div>
                 <div className="app-metric-note">Database customer records</div>
               </div>
-              <div className="app-card">
+              <div className="app-card glassmorphism">
                 <div className="app-metric-label">Pending Orders</div>
                 <div className="app-metric-value">{metrics.pending_orders}</div>
                 <div className="app-metric-note">Open fulfillment workload</div>
               </div>
-              <div className="app-card">
+              <div className="app-card glassmorphism">
                 <div className="app-metric-label">Low Stock</div>
                 <div className="app-metric-value">{lowStockCount}</div>
                 <div className="app-metric-note">Materials below threshold</div>
@@ -626,17 +626,17 @@ export default function Dashboard() {
             </div>
             <div className="app-panel-body">
               <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-                <div className="app-card">
+                <div className="app-card glassmorphism">
                   <div className="app-metric-label">Orders</div>
                   <div className="app-metric-value">{orders.length}</div>
                   <div className="app-metric-note">Rows returned</div>
                 </div>
-                <div className="app-card">
+                <div className="app-card glassmorphism">
                   <div className="app-metric-label">Inbox</div>
                   <div className="app-metric-value">{messages.length}</div>
                   <div className="app-metric-note">Messages returned</div>
                 </div>
-                <div className="app-card">
+                <div className="app-card glassmorphism">
                   <div className="app-metric-label">Vendors</div>
                   <div className="app-metric-value">{supply.vendors.length}</div>
                   <div className="app-metric-note">Supply partners</div>
