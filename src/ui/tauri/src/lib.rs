@@ -57,6 +57,7 @@ struct OnboardingState {
     categories: Option<String>,
     tagline: Option<String>,
     first_offer: Option<String>,
+    step: Option<i32>,
 }
 
 fn onboarding_state_path() -> std::path::PathBuf {
@@ -102,6 +103,11 @@ async fn get_onboarding_state(_app_handle: tauri::AppHandle) -> Result<Onboardin
             template_selection: None,
             assistant_name: None,
             assistant_tone: None,
+            work_context: None,
+            categories: None,
+            tagline: None,
+            first_offer: None,
+            step: None,
         });
     }
 

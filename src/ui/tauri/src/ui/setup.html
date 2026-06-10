@@ -521,6 +521,7 @@
           if (backendState) {
             state = { ...state, ...backendState };
             populateForm();
+            resumeStep();
           }
         }).catch(console.error);
       } else {
@@ -528,6 +529,23 @@
         if (stored) {
           state = { ...state, ...JSON.parse(stored) };
           populateForm();
+          resumeStep();
+        }
+      }
+
+      function resumeStep() {
+        if (state.step !== undefined) {
+          const stepMap = {
+            0: 'step-context',
+            1: 'step-categories',
+            2: 'step-name',
+            3: 'step-assistant',
+            4: 'step-offer',
+            5: 'step-template'
+          };
+          if (stepMap[state.step]) {
+            goToStep(stepMap[state.step]);
+          }
         }
       }
 
