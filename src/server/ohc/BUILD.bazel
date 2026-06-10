@@ -18,6 +18,7 @@ rust_library(
         "//src/proto:interop_prost",
         "//src/proto:mcp_proxy_tonic",
         "//src/proto:organization_prost",
+        "//src/proto:invoice_tonic",
         "@crates//:tonic",
     ],
 )

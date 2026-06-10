@@ -50,6 +50,7 @@ SERVER_RS_SRCS = [
     "//src/server/api:recovery.rs",
     "//src/server/api:agent_feed.rs",
     "//src/server/api:audio_command.rs",
+    "//src/server/api:invoice.rs",
     "//src/server/api:oauth/mod.rs",
     "//src/server/api:oauth/proxy.rs",
     "//src/server/api:mod.rs",
