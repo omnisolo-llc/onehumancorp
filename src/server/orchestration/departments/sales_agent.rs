@@ -85,7 +85,8 @@ impl SalesQuoteIntentPlanner for RuntimeSalesQuoteIntentPlanner {
             return Ok(None);
         }
 
-        let payload_json = serde_json::to_string(payload).map_err(|e| e.to_string())?;
+        let payload_redacted = ::server_telemetry::redact_interface_pii(payload.clone());
+        let payload_json = serde_json::to_string(&payload_redacted).map_err(|e| e.to_string())?;
         let prompt = format!(
             "You are the OneHumanCorp sales intent planner. Decide whether an inbound tenant message is asking for a service quote. Return strict JSON only with keys intent, service_name, confidence, and original_message. intent must be quote or no_quote. confidence is 0.0 to 1.0. service_name must be the concrete service the customer wants only when intent is quote. Do not use keyword rules; infer the customer's request from context. Tenant: {tenant_id}. Payload: {payload_json}"
         );

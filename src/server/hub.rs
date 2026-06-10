@@ -850,7 +850,13 @@ mod tests {
             "email": "test@example.com",
             "nested": {
                 "auth_token": "token123"
-            }
+            },
+            "array_of_evil": [
+                { "name": "John Doe", "email": "john@doe.com" },
+                { "address": "456 Elm St", "phone": "555-987-6543" }
+            ],
+            "safe_field": "This should not be redacted",
+            "another_safe": 123
         });
 
         let sanitized = hub.sanitize_hub_event(raw);
@@ -859,6 +865,12 @@ mod tests {
         assert_eq!(payload["password"], "[REDACTED]");
         assert_eq!(payload["email"], "[REDACTED]");
         assert_eq!(payload["nested"]["auth_token"], "[REDACTED]");
+        assert_eq!(payload["array_of_evil"][0]["name"], "[REDACTED]");
+        assert_eq!(payload["array_of_evil"][0]["email"], "[REDACTED]");
+        assert_eq!(payload["array_of_evil"][1]["address"], "[REDACTED]");
+        assert_eq!(payload["array_of_evil"][1]["phone"], "[REDACTED]");
+        assert_eq!(payload["safe_field"], "This should not be redacted");
+        assert_eq!(payload["another_safe"], 123);
     }
 
     #[tokio::test]
