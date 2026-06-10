@@ -60,8 +60,19 @@ export class SyncManager {
     this.syncInProgress = true;
 
     try {
-      // Map mutations to the format expected by the backend
-      const mutations = queue.map(m => {
+      // Separate POS transactions from general offline sync
+      const posTransactions = queue.filter(m => m.type === 'tap_to_pay').map(m => {
+        return {
+          id: m.id,
+          client_id: 'terminal_client', // Default fallback
+          amount_cents: Math.round(m.amount),
+          currency: m.currency || 'usd',
+          payload: JSON.stringify([{ product_id: m.product_id, quantity: m.quantity || 1 }]),
+          timestamp: new Date().toISOString()
+        };
+      });
+
+      const generalMutations = queue.filter(m => m.type !== 'tap_to_pay').map(m => {
         if (m.type === 'inventory_toggle') {
            return {
               transaction_id: m.id,
@@ -72,16 +83,6 @@ export class SyncManager {
               payment_intent_id: null,
               currency: null
            };
-        } else if (m.type === 'tap_to_pay') {
-          return {
-             transaction_id: m.id,
-             product_id: m.product_id || 'offline_payment',
-             quantity_deducted: m.quantity || 1,
-             amount: Math.round(m.amount),
-             payment_method: 'terminal',
-             payment_intent_id: m.idempotency_key,
-             currency: m.currency || 'usd'
-          };
         } else if (m.type === 'draft_quote') {
           return {
              transaction_id: m.id,
@@ -98,25 +99,51 @@ export class SyncManager {
         return m;
       });
 
-      // Get Spiffe ID safely
       const tenantId = localStorage.getItem("tenant_id") || localStorage.getItem("tenant") || "default";
       const spiffeId = `spiffe://ohc/org/${tenantId}/agent/ui`;
 
-      const response = await fetch('/api/v1/sync/offline', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-spiffe-id': spiffeId
-        },
-        body: JSON.stringify({ mutations })
-      });
+      let allOk = true;
 
-      if (response.ok) {
+      // Sync POS transactions
+      if (posTransactions.length > 0) {
+        const sessionId = localStorage.getItem('ohc_active_terminal_session_id');
+        const resPos = await fetch('/api/v1/payments/terminal/sync_offline', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-spiffe-id': spiffeId
+          },
+          body: JSON.stringify({
+            session_id: sessionId || undefined,
+            transactions: posTransactions
+          })
+        });
+        if (!resPos.ok) {
+          allOk = false;
+          throw new Error(`POS Sync failed with status ${resPos.status}`);
+        }
+      }
+
+      // Sync general mutations
+      if (generalMutations.length > 0) {
+        const resGen = await fetch('/api/v1/sync/offline', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-spiffe-id': spiffeId
+          },
+          body: JSON.stringify({ mutations: generalMutations })
+        });
+        if (!resGen.ok) {
+          allOk = false;
+          throw new Error(`General Sync failed with status ${resGen.status}`);
+        }
+      }
+
+      if (allOk) {
         localStorage.setItem(this.queueKey, '[]');
         this.notifyListeners();
         this.retryDelayMs = 1000; // Reset delay on success
-      } else {
-        throw new Error(`Sync failed with status ${response.status}`);
       }
     } catch (e) {
       console.error('Failed to sync offline queue:', e);
