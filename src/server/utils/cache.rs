@@ -227,10 +227,16 @@ where
             let tag_key = format!("tag:{}", tag);
             let redis_keys: Result<Vec<String>, _> = conn.smembers(&tag_key).await;
             if let Ok(keys) = redis_keys {
-                for key in keys {
-                    let _: Result<(), _> = conn.del(&key).await;
+                if !keys.is_empty() {
+                    let mut pipe = redis::pipe();
+                    for key in keys {
+                        pipe.del(&key);
+                    }
+                    pipe.del(&tag_key);
+                    let _: Result<(), _> = pipe.query_async(&mut conn).await;
+                } else {
+                    let _: Result<(), _> = conn.del(&tag_key).await;
                 }
-                let _: Result<(), _> = conn.del(&tag_key).await;
             }
         }
     }
