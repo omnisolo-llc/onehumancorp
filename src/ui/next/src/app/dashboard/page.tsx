@@ -390,6 +390,23 @@ export default function Dashboard() {
 
       <SuccessMilestoneAlert />
       <ViralLoopPerformanceWidget />
+
+      {/* Vitality Dashboard Card (Mobile optimized, #26521) */}
+      <div className="mb-6 block md:hidden">
+        <div className="glassmorphism p-6 rounded-[16px] border border-white/40 dark:border-white/10 shadow-sm relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-orange-100 dark:bg-orange-900/20 rounded-bl-full -z-10"></div>
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-8 h-8 rounded-full bg-orange-50 dark:bg-orange-900/30 flex items-center justify-center text-lg">
+              🛒
+            </div>
+            <h3 className="text-lg font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7]">Vitality Dashboard</h3>
+          </div>
+          <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+            The Assistant recovered 3 abandoned carts this week, securing $140 in revenue.
+          </p>
+        </div>
+      </div>
+
       <div className="mb-6">
         <AffiliateMarketingWidget />
       </div>

@@ -47,6 +47,28 @@ impl OHCJobQueue {
         Ok(job_id)
     }
 
+    pub async fn enqueue_scheduled(&self, tenant_id: &str, job_type: &str, payload: &serde_json::Value, scheduled_for: DateTime<Utc>) -> Result<String, String> {
+        let job_id = Uuid::new_v4().to_string();
+        let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
+        ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
+
+        sqlx::query(
+            "INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload, status, next_retry_at)
+             VALUES ($1, $2, $3, $4, 'PENDING', $5)"
+        )
+        .bind(&job_id)
+        .bind(tenant_id)
+        .bind(job_type)
+        .bind(payload)
+        .bind(scheduled_for)
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| e.to_string())?;
+
+        tx.commit().await.map_err(|e| e.to_string())?;
+        Ok(job_id)
+    }
+
     pub async fn dequeue(&self, job_types: Vec<&str>) -> Result<Option<OHCJob>, String> {
         if job_types.is_empty() {
             return Ok(None);

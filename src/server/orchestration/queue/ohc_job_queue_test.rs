@@ -49,6 +49,48 @@ async fn test_ohc_job_queue_e2e() {
 }
 
 #[tokio::test]
+async fn test_ohc_job_queue_scheduled_enqueue() {
+    if std::env::var("OHC_DATABASE_URL").is_err() {
+        return;
+    }
+
+    let database_url = std::env::var("OHC_DATABASE_URL").unwrap();
+    let pool = PgPoolOptions::new()
+        .max_connections(5)
+        .connect(&database_url)
+        .await
+        .unwrap();
+
+    let queue = OHCJobQueue::new(Arc::new(pool.clone()));
+
+    sqlx::query("DELETE FROM ohc_job_queue").execute(&pool).await.unwrap();
+
+    let tenant_id = "tenant_test_scheduled";
+    let job_type = "scheduled_job_type";
+    let payload = serde_json::json!({"scheduled": true});
+
+    // Schedule 1 hour in the future
+    let future_time = chrono::Utc::now() + chrono::Duration::hours(1);
+    let job_id = queue.enqueue_scheduled(tenant_id, job_type, &payload, future_time).await.unwrap();
+
+    // 1. Dequeue immediately should return None since next_retry_at is in the future
+    let job_opt = queue.dequeue(vec![job_type]).await.unwrap();
+    assert!(job_opt.is_none(), "Job should not be available yet");
+
+    // 2. Simulate time passing by updating next_retry_at to past
+    sqlx::query("UPDATE ohc_job_queue SET next_retry_at = CURRENT_TIMESTAMP - INTERVAL '1 hour' WHERE id = $1")
+        .bind(&job_id)
+        .execute(&pool)
+        .await
+        .unwrap();
+
+    // 3. Dequeue again, should now be available
+    let job = queue.dequeue(vec![job_type]).await.unwrap().expect("Job should be available after time passes");
+    assert_eq!(job.id, job_id);
+    assert_eq!(job.status, "PROCESSING");
+}
+
+#[tokio::test]
 async fn test_ohc_job_queue_fail_backoff() {
     if std::env::var("OHC_DATABASE_URL").is_err() {
         return;
