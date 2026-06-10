@@ -309,6 +309,7 @@
         <div class="step-indicator" data-step="step-name"></div>
         <div class="step-indicator" data-step="step-assistant"></div>
         <div class="step-indicator" data-step="step-offer"></div>
+        <div class="step-indicator" data-step="step-template"></div>
       </div>
 
       <!-- Step 1: Work Context -->
@@ -407,8 +408,26 @@
         <input type="text" id="first-offer" placeholder="e.g. Custom Birthday Cake" />
         <div id="offer-error" class="error-msg">Please enter an offer.</div>
         <div class="btn-group">
-          <button id="finish-btn">Finish Setup</button>
+          <button class="next-step-btn" data-next="step-template">Next</button>
           <button class="btn-secondary prev-step-btn" data-prev="step-assistant">Back</button>
+        </div>
+      </div>
+
+      <!-- Step 6: Template -->
+      <div class="step" id="step-template">
+        <h1>Template Selection</h1>
+        <p>Choose a look for your workspace</p>
+        <select id="template-selection">
+          <option value="" disabled selected>Select a template...</option>
+          <option value="Modern">Modern</option>
+          <option value="Classic">Classic</option>
+          <option value="Playful">Playful</option>
+        </select>
+        <div id="template-error" class="error-msg">Please select a template.</div>
+
+        <div class="btn-group">
+          <button id="finish-btn">Finish Setup</button>
+          <button class="btn-secondary prev-step-btn" data-prev="step-offer">Back</button>
         </div>
       </div>
 
@@ -424,7 +443,8 @@
           tagline: document.getElementById('business-tagline'),
           assistantName: document.getElementById('assistant-name'),
           assistantTone: document.getElementById('assistant-tone'),
-          firstOffer: document.getElementById('first-offer')
+          firstOffer: document.getElementById('first-offer'),
+          templateSelection: document.getElementById('template-selection')
       };
 
       const errors = {
@@ -433,7 +453,8 @@
           name: document.getElementById('name-error'),
           assistantName: document.getElementById('assistant-name-error'),
           assistantTone: document.getElementById('tone-error'),
-          firstOffer: document.getElementById('offer-error')
+          firstOffer: document.getElementById('offer-error'),
+          templateSelection: document.getElementById('template-error')
       };
 
       let state = {
@@ -486,6 +507,7 @@
           if (state.assistantName) inputs.assistantName.value = state.assistantName;
           if (state.assistantTone) inputs.assistantTone.value = state.assistantTone;
           if (state.firstOffer) inputs.firstOffer.value = state.firstOffer;
+          if (state.templateSelection) inputs.templateSelection.value = state.templateSelection;
 
           const contextVal = state.workContext || state.work_context;
           if (contextVal) {
@@ -566,6 +588,15 @@
                   state.firstOffer = inputs.firstOffer.value.trim();
               }
           }
+          else if (stepId === 'step-template') {
+              if (inputs.templateSelection.value === '') {
+                  errors.templateSelection.style.display = 'block';
+                  isValid = false;
+              } else {
+                  errors.templateSelection.style.display = 'none';
+                  state.templateSelection = inputs.templateSelection.value;
+              }
+          }
 
           if (!isValid) {
               container.classList.remove('animate-shake');
@@ -578,7 +609,7 @@
 
 
       function updateStepper(stepId) {
-          const steps = ['step-context', 'step-categories', 'step-name', 'step-assistant', 'step-offer'];
+          const steps = ['step-context', 'step-categories', 'step-name', 'step-assistant', 'step-offer', 'step-template'];
           const currentIndex = steps.indexOf(stepId);
 
           document.querySelectorAll('.step-indicator').forEach((indicator, index) => {
@@ -621,7 +652,7 @@
 
       if (finishBtn) {
         finishBtn.addEventListener('click', () => {
-           if (validateStep('step-offer')) {
+           if (validateStep('step-template')) {
                if (window.__TAURI__ && window.__TAURI__.core) {
                  finishBtn.disabled = true;
                  finishBtn.innerText = "Saving...";
