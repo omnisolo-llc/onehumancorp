@@ -1,3 +1,4 @@
+/// SOTA Harness Patterns (2025-2026): 2. Code-native execution -> preserving execution state and rich data structures
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::Mutex;
@@ -105,6 +106,26 @@ impl DurableExecutionEngine {
         let store = self.state_store.lock().await;
         store.get(workflow_id).cloned()
     }
+
+    // New code-native capabilities to store arbitrary structured data across boundaries
+    pub async fn set_context_var(&self, workflow_id: &str, key: &str, value: &str) -> Result<(), String> {
+        let mut store = self.state_store.lock().await;
+        if let Some(state) = store.get_mut(workflow_id) {
+            state.context.insert(key.to_string(), value.to_string());
+            Ok(())
+        } else {
+            Err(format!("Workflow {} not found", workflow_id))
+        }
+    }
+
+    pub async fn get_context_var(&self, workflow_id: &str, key: &str) -> Option<String> {
+        let store = self.state_store.lock().await;
+        if let Some(state) = store.get(workflow_id) {
+            state.context.get(key).cloned()
+        } else {
+            None
+        }
+    }
 }
 
 #[cfg(test)]
@@ -164,5 +185,20 @@ mod tests {
 
         engine.update_step("wf-4", "step-2", StepStatus::Failed("Err".to_string())).await.unwrap();
         assert_eq!(engine.determine_workflow_status("wf-4").await, Some(WorkflowStatus::Failed("Err".to_string())));
+    }
+
+    #[tokio::test]
+    async fn test_workflow_context_vars() {
+        let engine = DurableExecutionEngine::new();
+        engine.start_or_resume_workflow("wf-5").await;
+
+        let res = engine.set_context_var("wf-5", "key1", "val1").await;
+        assert!(res.is_ok());
+
+        let val = engine.get_context_var("wf-5", "key1").await;
+        assert_eq!(val, Some("val1".to_string()));
+
+        let missing = engine.get_context_var("wf-5", "missing").await;
+        assert_eq!(missing, None);
     }
 }
