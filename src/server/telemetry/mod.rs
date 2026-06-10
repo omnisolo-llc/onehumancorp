@@ -38,6 +38,8 @@ pub fn categorize_error_signal(err_msg: &str) -> &'static str {
     let lower = err_msg.to_lowercase();
     if lower.contains("panic") || lower.contains("segfault") || lower.contains("unreachable") || lower.contains("fatal") || lower.contains("bug") {
         "bug"
+    } else if lower.contains("unauthorized") || lower.contains("security") || lower.contains("auth") || lower.contains("forbidden") || lower.contains("cve") || lower.contains("vulnerabilit") || lower.contains("injection") || lower.contains("malware") || lower.contains("permission") || lower.contains("denied") {
+        "security"
     } else if lower.contains("unimplemented") || lower.contains("not supported") || lower.contains("missing feature") {
         "feature"
     } else if lower.contains("deprecated") || lower.contains("legacy") || lower.contains("refactor") {
@@ -46,8 +48,6 @@ pub fn categorize_error_signal(err_msg: &str) -> &'static str {
         "cleanup"
     } else if lower.contains("doc") || lower.contains("comment") || lower.contains("readme") {
         "docs"
-    } else if lower.contains("cve") || lower.contains("vulnerabilit") || lower.contains("injection") || lower.contains("auth") || lower.contains("security") || lower.contains("malware") || lower.contains("permission") || lower.contains("denied") {
-        "security"
     } else {
         "bug"
     }

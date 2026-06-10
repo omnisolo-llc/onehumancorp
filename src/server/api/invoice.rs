@@ -207,9 +207,65 @@ impl InvoiceService for InvoiceServiceImpl {
 
     async fn update_invoice_status(
         &self,
-        _request: Request<UpdateInvoiceStatusRequest>,
+        request: Request<UpdateInvoiceStatusRequest>,
     ) -> Result<Response<Invoice>, Status> {
-        Err(Status::unimplemented("update_invoice_status is unimplemented"))
+        let req = request.into_inner();
+
+        let pool = &self.hub.pool;
+        let mut tx = pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+
+        // Set tenant context for RLS
+        sqlx::query("SELECT set_config('app.current_tenant', $1, true)")
+            .bind(&req.tenant_id)
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        use sqlx::Row;
+
+        let row = sqlx::query("UPDATE invoices SET status = $1 WHERE id = $2 RETURNING *")
+            .bind(&req.status)
+            .bind(&req.invoice_id)
+            .fetch_one(&mut *tx)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        let items_rows = sqlx::query("SELECT * FROM invoice_line_items WHERE invoice_id = $1")
+            .bind(&req.invoice_id)
+            .fetch_all(&mut *tx)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
+
+        let mut line_items = Vec::new();
+        for item_row in items_rows {
+            line_items.push(InvoiceLineItem {
+                id: item_row.try_get("id").unwrap_or_default(),
+                invoice_id: item_row.try_get("invoice_id").unwrap_or_default(),
+                description: item_row.try_get("description").unwrap_or_default(),
+                quantity: item_row.try_get("quantity").unwrap_or_default(),
+                unit_price: item_row.try_get("unit_price").unwrap_or_default(),
+                amount: item_row.try_get("amount").unwrap_or_default(),
+            });
+        }
+
+        let invoice = Invoice {
+            id: row.try_get("id").unwrap_or_default(),
+            client_id: row.try_get("client_id").unwrap_or_default(),
+            client_name: row.try_get("client_name").unwrap_or_default(),
+            status: row.try_get("status").unwrap_or_default(),
+            due_date: row.try_get("due_date").unwrap_or_default(),
+            currency: row.try_get("currency").unwrap_or_default(),
+            total_amount: row.try_get("total_amount").unwrap_or_default(),
+            stripe_invoice_id: row.try_get("stripe_invoice_id").unwrap_or_default(),
+            stripe_payment_link: row.try_get("stripe_payment_link").unwrap_or_default(),
+            line_items,
+            created_at: 0,
+            updated_at: 0,
+        };
+
+        Ok(Response::new(invoice))
     }
 
     async fn draft_invoice_from_context(
