@@ -173,14 +173,10 @@ async fn update_feed_item_state(
 
 #[cfg(test)]
 mod tests {
-    use axum::{
-
-
-    };
     use crate::api::agent_feed;
     use sqlx::PgPool;
     use super::{get_agent_feed_cache, AgentFeedListResponse};
-    use crate::domain::repository::agent_feed_repo::AgentFeedItem;
+
 
     #[tokio::test]
     async fn test_agent_feed_router_compiles() {

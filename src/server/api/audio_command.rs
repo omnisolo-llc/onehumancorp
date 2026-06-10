@@ -9,7 +9,7 @@ use std::str::FromStr;
 use serde::{Deserialize, Serialize};
 use crate::orchestration::departments::orchestrator::DepartmentOrchestrator;
 use crate::orchestration::departments::types::{DepartmentType, ActionRisk};
-use crate::orchestration::router::{SemanticRouter, SemanticRoutingRequest};
+use crate::orchestration::router::SemanticRouter;
 use ::server_common::Claims;
 
 #[derive(Deserialize)]

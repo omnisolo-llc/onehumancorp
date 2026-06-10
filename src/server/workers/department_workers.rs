@@ -946,7 +946,7 @@ let db_for_products = self.db.clone();
                                         .await;
 
                                         // Also notify SSE stream if available
-                                        if let Ok(mut client) = redis::Client::open(std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1:6379".to_string())) {
+                                        if let Ok(client) = redis::Client::open(std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1:6379".to_string())) {
                                             if let Ok(mut conn) = client.get_async_connection().await {
                                                 let payload_str = serde_json::json!({
                                                     "event_type": "approval_request",
