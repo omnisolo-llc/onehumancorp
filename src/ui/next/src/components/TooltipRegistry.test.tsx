@@ -111,3 +111,17 @@ describe('useTooltip Hook sync', () => {
     console.error = originalError;
   });
 });
+
+describe('WithTooltip additional tests', () => {
+  it('prevents default on context menu', () => {
+    render(<TooltipProvider><WithTooltip id="test">Test</WithTooltip></TooltipProvider>);
+    const target = screen.getByText('Test');
+    let preventDefaultCalled = false;
+    const event = new MouseEvent('contextmenu', { bubbles: true, cancelable: true });
+    event.preventDefault = () => { preventDefaultCalled = true; };
+    act(() => {
+      act(() => { fireEvent(target, event); });
+    });
+    expect(preventDefaultCalled).toBe(true);
+  });
+});

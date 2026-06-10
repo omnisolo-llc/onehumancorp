@@ -3,6 +3,7 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { InteractiveWalkthrough } from './Walkthrough';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { WalkthroughTarget } from './Walkthrough';
 
 describe('Walkthrough Component', () => {
   let mockGetElementById: any;
@@ -123,5 +124,49 @@ describe('Walkthrough Component', () => {
     }
 
     expect(handleClose).toHaveBeenCalled();
+  });
+
+  it('renders different positions correctly', async () => {
+    const handleClose = vi.fn();
+
+    render(
+      <InteractiveWalkthrough
+        steps={[
+          { targetId: 'test-target', title: 'Top Step', content: 'content', position: 'top' },
+          { targetId: 'test-target', title: 'Right Step', content: 'content', position: 'right' },
+          { targetId: 'test-target', title: 'Left Step', content: 'content', position: 'left' }
+        ]}
+        isOpen={true}
+        onClose={handleClose}
+      />
+    );
+
+    await waitFor(() => expect(screen.getByText('Top Step')).toBeInTheDocument());
+    act(() => { fireEvent.click(screen.getByText('Next')); });
+    await waitFor(() => expect(screen.getByText('Right Step')).toBeInTheDocument());
+    act(() => { fireEvent.click(screen.getByText('Next')); });
+    await waitFor(() => expect(screen.getByText('Left Step')).toBeInTheDocument());
+  });
+
+  it('handles missing target gracefully', () => {
+    const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    render(
+      <InteractiveWalkthrough
+        steps={[{ targetId: 'missing-target', title: 'Missing', content: 'content' }]}
+        isOpen={true}
+        onClose={() => {}}
+      />
+    );
+    expect(screen.queryByText('Missing')).toBeNull();
+    consoleSpy.mockRestore();
+  });
+});
+
+
+describe('WalkthroughTarget', () => {
+  it('renders correctly', () => {
+    const { container } = render(<WalkthroughTarget id="test" className="foo"><div>Child</div></WalkthroughTarget>);
+    expect(container.firstChild).toHaveClass('relative');
+    expect(container.firstChild).toHaveClass('foo');
   });
 });

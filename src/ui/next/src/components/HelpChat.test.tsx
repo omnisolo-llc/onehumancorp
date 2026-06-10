@@ -127,4 +127,103 @@ describe('HelpChat', () => {
     expect(screen.queryByText('Ask AI Help')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Open help chat' })).toBeVisible();
   });
+
+
+  it('handles invalid API response', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ invalid: 'data' }),
+    });
+    const user = userEvent.setup();
+    render(<HelpChat />);
+    await user.click(screen.getByRole('button', { name: 'Open help chat' }));
+    await user.type(screen.getByPlaceholderText('Ask me anything...'), 'Test');
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+    await waitFor(() => {
+      expect(screen.getByText("Sorry, I'm having trouble connecting right now.")).toBeVisible();
+    });
+  });
+
+  it('does not render if E2E mode is on and not forceChat', () => {
+    process.env.NEXT_PUBLIC_E2E = 'true';
+    Object.defineProperty(window, 'location', {
+      value: { search: '' },
+      writable: true
+    });
+    render(<HelpChat />);
+    expect(screen.getByRole('button', { name: 'Open help chat' })).toBeVisible();
+  });
+
+  it('handles safe links correctly', async () => {
+    const mockReply = { reply: 'Click here.', link: { url: 'https://example.com', title: 'Example' } };
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(mockReply),
+    });
+    const user = userEvent.setup();
+    render(<HelpChat />);
+    await user.click(screen.getByRole('button', { name: 'Open help chat' }));
+    await user.type(screen.getByPlaceholderText('Ask me anything...'), 'Test link');
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+    await waitFor(() => {
+      expect(screen.getByText('Example').closest('a')).toHaveAttribute('href', 'https://example.com');
+    });
+  });
+
+  it('rejects unsafe link and renders text', async () => {
+    const mockReply = { reply: 'Unsafe text', link: { url: 'javascript:alert(1)', title: 'XSS' } };
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(mockReply),
+    });
+    const user = userEvent.setup();
+    render(<HelpChat />);
+    await user.click(screen.getByRole('button', { name: 'Open help chat' }));
+    await user.type(screen.getByPlaceholderText('Ask me anything...'), 'Test safe link');
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+    await waitFor(() => {
+      expect(screen.getByText("Unsafe text")).toBeVisible();
+    });
+  });
+
+  it('scrolls to bottom', async () => {
+    const mockReply = { reply: 'Click here.', link: 'notanobject' };
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(mockReply),
+    });
+    window.HTMLElement.prototype.scrollIntoView = vi.fn();
+    const user = userEvent.setup();
+    render(<HelpChat />);
+    await user.click(screen.getByRole('button', { name: 'Open help chat' }));
+    await user.type(screen.getByPlaceholderText('Ask me anything...'), 'Test safe link');
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+    await waitFor(() => {
+      expect(screen.getByText("Click here.")).toBeVisible();
+    });
+    expect(window.HTMLElement.prototype.scrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth' });
+  });
+
+  it('does not scroll if not present', async () => {
+    window.HTMLElement.prototype.scrollIntoView = undefined as any;
+    const user = userEvent.setup();
+    render(<HelpChat />);
+    await user.click(screen.getByRole('button', { name: 'Open help chat' }));
+    await waitFor(() => {
+      expect(screen.getByText("Hi! I'm your AI Help Agent. Need help setting up your store or understanding payments?")).toBeVisible();
+    });
+  });
+
+  it('throws error Invalid chat response on empty data', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(null),
+    });
+    const user = userEvent.setup();
+    render(<HelpChat />);
+    await user.click(screen.getByRole('button', { name: 'Open help chat' }));
+    await user.type(screen.getByPlaceholderText('Ask me anything...'), 'Test string');
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+    await waitFor(() => expect(screen.getByText("Sorry, I'm having trouble connecting right now.")).toBeVisible());
+  });
 });
