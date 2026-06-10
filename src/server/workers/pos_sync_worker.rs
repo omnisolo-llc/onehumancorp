@@ -92,8 +92,8 @@ impl PosSyncWorker {
                     }).to_string();
 
                     let _ = sqlx::query(
-                        "INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status)
-                         VALUES ($1, $2, 'operations', 'InventoryConflictEvent', $3::jsonb, 'PENDING')"
+                        "INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload, status)
+                         VALUES ($1, $2, 'POS_INVENTORY_CONFLICT_RESOLUTION', $3::jsonb, 'PENDING')"
                     )
                     .bind(&ai_task_id)
                     .bind(&job.tenant_id)
@@ -196,8 +196,8 @@ impl PosSyncWorker {
                                 }).to_string();
 
                                 let _ = sqlx::query(
-                                    "INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status)
-                                     VALUES ($1, $2, 'operations', 'InventoryConflictEvent', $3::jsonb, 'PENDING')"
+                                    "INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload, status)
+                                     VALUES ($1, $2, 'POS_INVENTORY_CONFLICT_RESOLUTION', $3::jsonb, 'PENDING')"
                                 )
                                 .bind(&ai_task_id)
                                 .bind(&job.tenant_id)
@@ -306,6 +306,10 @@ mod tests {
             .fetch_one(&pool).await.unwrap();
         assert!(ledger_count.0 > 0);
 
+
+        let conflict_jobs: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM ohc_job_queue WHERE job_type = 'POS_INVENTORY_CONFLICT_RESOLUTION'")
+            .fetch_one(&pool).await.unwrap();
+        assert_eq!(conflict_jobs.0, 0); // No conflict for this test
         // Verify agent_action_requests created for low stock (10 - 2 = 8, not low. Wait, I should deduct 6 instead)
     }
 
