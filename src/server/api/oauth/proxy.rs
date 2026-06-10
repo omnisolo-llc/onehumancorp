@@ -30,7 +30,7 @@ pub async fn handle_oauth_callback(
 
             // Strictly validate tunnel_id to prevent Open Redirect/SSRF
             // It should only contain alphanumeric characters and hyphens.
-            if !tunnel_id.chars().all(|c| c.is_ascii_alphanumeric() || c == '-') {
+            if tunnel_id.is_empty() || !tunnel_id.chars().all(|c| c.is_ascii_alphanumeric() || c == '-') || tunnel_id.starts_with('-') || tunnel_id.ends_with('-') {
                 return (
                     axum::http::StatusCode::BAD_REQUEST,
                     "Invalid tunnel_id format.",
@@ -115,6 +115,42 @@ mod tests {
         let query = OAuthCallbackQuery {
             code: "test_code".to_string(),
             state: "standalone_my tunnel id_actualState123".to_string(),
+            extra: HashMap::new(),
+        };
+
+        let response = handle_oauth_callback(Query(query)).await.into_response();
+        assert_eq!(response.status(), axum::http::StatusCode::BAD_REQUEST);
+    }
+
+    #[tokio::test]
+    async fn test_invalid_tunnel_id_empty() {
+        let query = OAuthCallbackQuery {
+            code: "test_code".to_string(),
+            state: "standalone__actualState123".to_string(),
+            extra: HashMap::new(),
+        };
+
+        let response = handle_oauth_callback(Query(query)).await.into_response();
+        assert_eq!(response.status(), axum::http::StatusCode::BAD_REQUEST);
+    }
+
+    #[tokio::test]
+    async fn test_invalid_tunnel_id_hyphen_start() {
+        let query = OAuthCallbackQuery {
+            code: "test_code".to_string(),
+            state: "standalone_-invalid_actualState123".to_string(),
+            extra: HashMap::new(),
+        };
+
+        let response = handle_oauth_callback(Query(query)).await.into_response();
+        assert_eq!(response.status(), axum::http::StatusCode::BAD_REQUEST);
+    }
+
+    #[tokio::test]
+    async fn test_invalid_tunnel_id_hyphen_end() {
+        let query = OAuthCallbackQuery {
+            code: "test_code".to_string(),
+            state: "standalone_invalid-_actualState123".to_string(),
             extra: HashMap::new(),
         };
 

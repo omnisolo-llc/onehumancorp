@@ -249,10 +249,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_validate_url_and_get_ip_valid() {
-        let res = validate_url_and_get_ip("https://google.com").await;
+        let res = validate_url_and_get_ip("https://example.com").await;
         assert!(res.is_ok());
         let (host, ip) = res.unwrap();
-        assert_eq!(host, "google.com");
+        assert_eq!(host, "example.com");
         assert!(!is_blocked_ip(ip));
     }
 
