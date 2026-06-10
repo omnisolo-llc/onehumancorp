@@ -19,6 +19,9 @@ test.describe('Miser Cost Features E2E', () => {
     await expect(page.locator('text=Total Costs')).toBeVisible();
     await expect(page.locator('text=Projected Monthly Cost')).toBeVisible();
 
+    // Verify Budget Health Alert is rendered
+    await expect(page.locator('#budget-health-alert')).toBeVisible();
+
     // Verify navigation back to My Plan works
     const myPlanButton = page.locator('button', { hasText: 'Back to My Plan' });
     await expect(myPlanButton).toBeVisible();
