@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import AppShell from '../../components/layout/AppShell';
+import { AppShell } from '../components/AppShell';
 
 export default function FinancePage() {
     const [invoices, setInvoices] = useState<any[]>([]);
@@ -33,7 +33,7 @@ export default function FinancePage() {
     };
 
     return (
-        <AppShell>
+        <AppShell title="Finance">
             <main className="p-4 md:p-8 flex-1 w-full max-w-6xl mx-auto space-y-6 md:space-y-12 pb-24">
                 <header className="mb-4">
                     <h1 className="text-3xl font-bold font-outfit text-gray-900 dark:text-white">Finance & Invoicing</h1>
