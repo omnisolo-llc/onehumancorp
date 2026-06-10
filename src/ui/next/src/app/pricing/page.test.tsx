@@ -44,4 +44,9 @@ describe('PricingPage', () => {
     render(<PricingPage />);
     expect(screen.getByTestId('powered-by-ohc')).toBeDefined();
   });
+
+  it('renders the FAQ section with Stripe Billing integration info', () => {
+    render(<PricingPage />);
+    expect(screen.getByText(/Stripe Billing for self-serve plan upgrades, downgrades, and cancellation/)).toBeDefined();
+  });
 });
