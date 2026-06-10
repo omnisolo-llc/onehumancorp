@@ -28,11 +28,7 @@ impl ToolExecutionEngine {
                     if retry_count < max_retries {
                         retry_count += 1;
                         let base_backoff = 500 * (1 << retry_count);
-                        let jitter = std::time::SystemTime::now()
-                            .duration_since(std::time::UNIX_EPOCH)
-                            .unwrap_or_default()
-                            .subsec_millis() as u64
-                            % 100;
+                        let jitter = rand::Rng::gen_range(&mut rand::thread_rng(), 0..100);
                         let backoff = Duration::from_millis((base_backoff as u64) + jitter);
                         warn!(
                             "Transient error executing '{}', retrying {}/{} after {}ms...",
