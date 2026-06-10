@@ -261,7 +261,21 @@ export function UnifiedAgentFeed() {
         });
         if (refreshRes.ok) {
             const data: ApprovalsResponse = await refreshRes.json();
-            setItems(data.pending_approvals);
+            setItems(data.pending_approvals.map((req: ApprovalRequest) => ({
+                id: req.id,
+                tenant_id: req.tenant_id,
+                agent_id: req.department,
+                event_source: "APPROVAL",
+                event_type: "DECISION_NEEDED",
+                title: req.description,
+                summary: req.description,
+                context_payload: req.payload,
+                proposed_action: "",
+                lifecycle_state: "PENDING",
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+                agent_name: req.department,
+            })));
         }
         throw new Error("Failed to submit decision");
       }
