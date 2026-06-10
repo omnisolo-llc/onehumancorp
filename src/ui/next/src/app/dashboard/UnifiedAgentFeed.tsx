@@ -389,7 +389,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                     )}
                   </div>
                   <h3 className="text-lg font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] leading-snug mt-1">
-                    {(approval.proposed_action?.message || approval.proposed_action?.action_type || approval.event_source)}
+                    {(approval.context_payload?.description || approval.proposed_action?.message || approval.proposed_action?.action_type || approval.event_source)}
                   </h3>
                   {((approval.proposed_action || approval.context_payload)?.context || (approval.proposed_action || approval.context_payload)?.remaining_stock !== undefined || (approval.proposed_action || approval.context_payload)?.feature_type === "quote_draft" || (approval.proposed_action || approval.context_payload)?.feature_type === "social_post_draft") && (
                     <div className="mt-2 flex flex-col gap-1 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
@@ -720,7 +720,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                           aria-label="Reject proposal"
                           data-testid="reject-proposal"
                         >
-                          Decline
+                          Deny
                         </button>
                       </div>
                     </>
