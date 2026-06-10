@@ -19,6 +19,7 @@ async fn enqueue_batch(&self, jobs: Vec<Job>) -> Result<(), String> {
         if jobs.is_empty() { return Ok(()); }
         ::server_telemetry::record_queue_length_sync(jobs.len() as i32, ::server_telemetry::get_deployment_mode());
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
+        sqlx::query("SET LOCAL ROLE ohc_bypassrls").execute(&mut *tx).await.map_err(|e| e.to_string())?;
 
         let mut current_depths = std::collections::HashMap::new();
 
@@ -95,9 +96,12 @@ async fn enqueue_batch(&self, jobs: Vec<Job>) -> Result<(), String> {
         ::server_telemetry::record_queue_length_sync(1, ::server_telemetry::get_deployment_mode());
         let payload_json: serde_json::Value = serde_json::from_str(&job.payload).unwrap_or(serde_json::Value::Null);
 
+        let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
+        sqlx::query("SET LOCAL ROLE ohc_bypassrls").execute(&mut *tx).await.map_err(|e| e.to_string())?;
+
         let count_row: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM ohc_job_queue WHERE tenant_id = $1 AND status = 'PENDING'")
             .bind(&job.tenant_id)
-            .fetch_one(&*self.pool)
+            .fetch_one(&mut *tx)
             .await
             .unwrap_or((0,));
 
@@ -118,10 +122,11 @@ async fn enqueue_batch(&self, jobs: Vec<Job>) -> Result<(), String> {
         .bind(payload_json)
         .bind(next_retry_at)
         .bind(&job.tenant_id)
-        .execute(&*self.pool)
+        .execute(&mut *tx)
         .await
         .map_err(|e| e.to_string())?;
 
+        tx.commit().await.map_err(|e| e.to_string())?;
         Ok(())
     }
 
@@ -131,6 +136,7 @@ async fn enqueue_batch(&self, jobs: Vec<Job>) -> Result<(), String> {
         }
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
+        sqlx::query("SET LOCAL ROLE ohc_bypassrls").execute(&mut *tx).await.map_err(|e| e.to_string())?;
 
         let role_placeholders = roles.iter().enumerate().map(|(i, _)| format!("${}", i + 1)).collect::<Vec<_>>().join(",");
         let query_str = format!(
@@ -190,9 +196,12 @@ async fn enqueue_batch(&self, jobs: Vec<Job>) -> Result<(), String> {
     }
 
     async fn complete(&self, job_id: &str) -> Result<(), String> {
+        let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
+        sqlx::query("SET LOCAL ROLE ohc_bypassrls").execute(&mut *tx).await.map_err(|e| e.to_string())?;
+
         let row = sqlx::query("UPDATE ohc_job_queue SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = $1 RETURNING updated_at, next_retry_at")
             .bind(job_id)
-            .fetch_optional(&*self.pool)
+            .fetch_optional(&mut *tx)
             .await
             .map_err(|e| e.to_string())?;
 
@@ -204,11 +213,14 @@ async fn enqueue_batch(&self, jobs: Vec<Job>) -> Result<(), String> {
             let latency = (updated - next_retry_at).num_milliseconds() as f64 / 1000.0;
             ::server_telemetry::record_task_processing_latency(::server_telemetry::get_deployment_mode(), latency);
         }
+
+        tx.commit().await.map_err(|e| e.to_string())?;
         Ok(())
     }
 
     async fn fail(&self, job_id: &str, _reason: &str) -> Result<(), String> {
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
+        sqlx::query("SET LOCAL ROLE ohc_bypassrls").execute(&mut *tx).await.map_err(|e| e.to_string())?;
 
         let row = sqlx::query("SELECT retry_count, max_retries, tenant_id, payload FROM ohc_job_queue WHERE id = $1 FOR UPDATE")
             .bind(job_id)
