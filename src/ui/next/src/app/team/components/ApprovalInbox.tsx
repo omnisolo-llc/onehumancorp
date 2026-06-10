@@ -468,8 +468,8 @@ export default function ApprovalInbox({
                   )}
 
                   {req.payload?.feature_type === "quote_draft" && (
-                    <div className="mb-6 p-4 rounded-xl glassmorphism border border-blue-100 flex flex-col gap-3" data-testid="draft-quote-card">
-                      <div className="flex items-center gap-2 text-blue-800 font-semibold text-sm">
+                    <div className="mb-6 p-4 rounded-xl glassmorphism border border-white/40 flex flex-col gap-3" data-testid="quote-draft-card">
+                      <div className="flex items-center gap-2 text-[#0066FF] font-semibold text-sm">
                         <svg
                           className="w-5 h-5"
                           fill="none"
@@ -485,12 +485,12 @@ export default function ApprovalInbox({
                         </svg>
                         Draft Quote: {req.payload.service || 'Plumbing Fix'} for Customer
                       </div>
-                      <div className="text-xs text-blue-700 font-medium">
+                      <div className="text-xs text-[#0066FF] font-medium">
                         {req.payload.customer_inquiry}
                       </div>
 
-                      <div className="app-card p-3 rounded-lg border border-blue-100 relative mt-2">
-                        <div className="text-[10px] uppercase font-bold text-gray-400 mb-2">
+                      <div className="glassmorphism p-3 rounded-lg border border-white/40 relative mt-2">
+                        <div className="text-[10px] uppercase font-bold text-gray-500 mb-2">
                           AI Proposed Quote
                         </div>
                         <div className="space-y-2">
@@ -608,7 +608,7 @@ export default function ApprovalInbox({
                     </button>
                     <button
                       onClick={() => onApprove(req.id)}
-                      className="flex-1 py-3 px-4 rounded-xl font-bold text-sm bg-blue-600 text-white hover:bg-blue-700 shadow-md shadow-blue-500/20 active:scale-[0.98] transition-all min-h-[44px] min-w-[44px]"
+                      className="flex-1 py-3 px-4 rounded-xl font-bold text-sm bg-[#0066FF] text-white hover:bg-[#0052CC] shadow-md shadow-[#0066FF]/20 active:scale-[0.98] transition-all min-h-[44px] min-w-[44px]"
                     >
                       {req.payload?.feature_type === "case_study"
                         ? "Publish to Website"
