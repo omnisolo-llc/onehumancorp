@@ -16,9 +16,9 @@ mod tests {
     #[tokio::test]
     async fn test_sipdb_chaos_parity() {
     let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Standalone");
-        let pool = PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+        let pool = PgPoolOptions::new()
             .acquire_timeout(Duration::from_millis(50))
-            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+
             .connect_lazy("postgres://localhost/dummy")
             .unwrap();
 

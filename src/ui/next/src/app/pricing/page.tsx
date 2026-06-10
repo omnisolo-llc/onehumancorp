@@ -110,7 +110,7 @@ export default function PricingPage() {
             <div className="space-y-4">
               <div>
                   <h3 className="font-semibold text-gray-800">How do I upgrade, downgrade, or cancel?</h3>
-                  <p className="text-gray-600 text-sm mt-1 leading-relaxed">Self-serve billing! You can upgrade, downgrade, or cancel anytime straight from the My Plan page.</p>
+                  <p className="text-gray-600 text-sm mt-1 leading-relaxed">Stripe Billing for self-serve plan upgrades, downgrades, and cancellation. You can upgrade, downgrade, or cancel anytime straight from the My Plan page.</p>
               </div>
               <div>
                   <h3 className="font-semibold text-gray-800">What is the storage limit?</h3>
