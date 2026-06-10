@@ -2,7 +2,7 @@ import { expect, test } from "./fixtures";
 
 test.describe("Unified Agent Feed Mobile UX", () => {
   // Use a strictly 375px wide viewport as specified by the issue
-  test.use({ viewport: { width: 375, height: 667 } });
+  test.use({ viewport: { width: 375, height: 812 } });
 
   test("Renders and actions can be tapped on 375px mobile screen", async ({
     page,
@@ -25,7 +25,14 @@ test.describe("Unified Agent Feed Mobile UX", () => {
     await page.goto("/dashboard");
 
     // 3. Ensure the unified feed tab is visible
-    await expect(page.locator("text=Activity Feed").first()).toBeVisible({ timeout: 15000 });
+    const feedSection = page.locator(
+      'section[aria-label="Unified Agent Feed"]',
+    );
+    await expect(feedSection).toBeVisible({ timeout: 15000 });
+
+    // Ensure the feed is properly constrained to 375px or less visually (mobile constraints)
+    const boundingBox = await feedSection.boundingBox();
+    expect(boundingBox?.width).toBeLessThanOrEqual(375);
 
     // 4. Verify the seeded cards are rendered
     const opsCard = page.locator("text=3 new orders to fulfill").first();
@@ -35,19 +42,41 @@ test.describe("Unified Agent Feed Mobile UX", () => {
     await expect(marketingCard).toBeVisible();
 
     // 5. Verify touch targets on the default Approve button (has min-h-[44px] class)
-    // We can't strictly test min-height CSS but we can click them to verify interaction
-    const approveButton = page.locator('button[data-testid="approve-proposal"]').first();
+    // We verify the actual rendered bounds have a minimum 44x44 size
+    const approveButton = page
+      .locator('button[data-testid="approve-proposal"]')
+      .first();
     await expect(approveButton).toBeVisible();
+
+    const approveButtonBox = await approveButton.boundingBox();
+    if (approveButtonBox) {
+      expect(approveButtonBox.width).toBeGreaterThanOrEqual(44);
+      expect(approveButtonBox.height).toBeGreaterThanOrEqual(44);
+    }
+
     await approveButton.click();
 
     // The item should optimisticly disappear
-    await expect(page.locator("text=3 new orders to fulfill").first()).not.toBeVisible();
+    await expect(
+      page.locator("text=3 new orders to fulfill").first(),
+    ).not.toBeVisible();
 
     // Test a specific payload button (e.g., from weekly_health_report which shows "Yes, draft it!")
-    const draftButton = page.locator('button[data-testid="approve-draft"]').first();
+    const draftButton = page
+      .locator('button[data-testid="approve-draft"]')
+      .first();
     await expect(draftButton).toBeVisible();
+
+    const draftButtonBox = await draftButton.boundingBox();
+    if (draftButtonBox) {
+      expect(draftButtonBox.width).toBeGreaterThanOrEqual(44);
+      expect(draftButtonBox.height).toBeGreaterThanOrEqual(44);
+    }
+
     await draftButton.click();
 
-    await expect(page.locator("text=Draft promo email?").first()).not.toBeVisible();
+    await expect(
+      page.locator("text=Draft promo email?").first(),
+    ).not.toBeVisible();
   });
 });
