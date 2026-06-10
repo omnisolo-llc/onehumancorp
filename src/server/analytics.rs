@@ -22,6 +22,11 @@ impl Tracker {
     }
 
     pub fn track_event(&self, name: &str, props: HashMap<String, String>) {
+        let is_telemetry_enabled = ::server_config::get().telemetry_enabled;
+        if !is_telemetry_enabled {
+            return;
+        }
+
         // Redact PII from props before logging to ensure compliance in multi-tenant environments
         let sanitized_props = self.sanitize_props(props);
 

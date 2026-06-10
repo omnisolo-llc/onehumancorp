@@ -27,12 +27,14 @@ import { PromoterCard } from "./PromoterCard";
 import { ViralLoopPerformanceWidget } from "./ViralLoopPerformanceWidget";
 import { SuccessMilestoneAlert } from "./SuccessMilestoneAlert";
 import AffiliateMarketingWidget from "./AffiliateMarketingWidget";
+import { CartRecoveryWidget } from "./CartRecoveryWidget";
 
 type DashboardMetrics = {
   active_customers: number;
   pending_orders: number;
   total_sales: number;
   total_campaigns_sent?: number;
+  auto_replied?: number;
 };
 
 type Order = {
@@ -68,6 +70,7 @@ const emptyMetrics: DashboardMetrics = {
   pending_orders: 0,
   total_sales: 0,
   total_campaigns_sent: 0,
+  auto_replied: 0,
 };
 
 function tenantId() {
@@ -81,10 +84,16 @@ function money(value: number | undefined) {
 
 function statusTone(status?: string) {
   const normalized = (status || "").toLowerCase();
-  if (["paid", "completed", "shipped", "delivered"].includes(normalized)) return "good";
+  if (["paid", "completed", "shipped", "delivered", "auto_replied"].includes(normalized)) return "good";
   if (["pending", "unfulfilled", "open"].includes(normalized)) return "warn";
   if (["failed", "cancelled", "canceled"].includes(normalized)) return "bad";
   return "neutral";
+}
+
+function formatStatus(status?: string) {
+  const normalized = (status || "").toLowerCase();
+  if (normalized === "auto_replied") return "✨ AI Handled";
+  return status || "Open";
 }
 
 export default function Dashboard() {
@@ -383,6 +392,7 @@ export default function Dashboard() {
       <SuccessMilestoneAlert />
       <ViralLoopPerformanceWidget />
       <div className="mb-6">
+        <div className="mb-4"><CartRecoveryWidget /></div>
         <AffiliateMarketingWidget />
       </div>
 
@@ -741,7 +751,7 @@ export default function Dashboard() {
                     <div className="app-list-title">{message.source || "Unknown source"}</div>
                     <div className="app-list-subtitle">{message.content || "Empty message"}</div>
                   </div>
-                  <span className={`app-badge ${statusTone(message.status)}`}>{message.status || "Open"}</span>
+                  <span className={`app-badge ${statusTone(message.status)}`}>{formatStatus(message.status)}</span>
                 </div>
               ))}
             </div>
