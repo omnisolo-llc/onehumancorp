@@ -77,8 +77,6 @@ rust_library(
         "//src/server/api/onboarding:mod.rs",
         "//src/server/api/booking:mod.rs",
         "//src/server/api/booking:request.rs",
-        "//src/server/api/quoting:mod.rs",
-        "//src/server/api/quoting:request.rs",
     ],
     crate_root = "bazel_lib.rs",
     edition = "2024",

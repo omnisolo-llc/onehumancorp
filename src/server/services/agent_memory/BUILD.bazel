@@ -1,0 +1,36 @@
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+
+exports_files(
+    [
+        "mod.rs",
+        "service.rs",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+
+rust_library(
+    name = "server_services_agent_memory",
+    srcs = [
+        "mod.rs",
+        "service.rs",
+    ],
+    crate_root = "mod.rs",
+    edition = "2024",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/agents/builtin:core",
+        "//src/agents/builtin:ohc_builtin_agent_lib",
+        "@crates//:chrono",
+        "@crates//:redis",
+        "@crates//:serde",
+        "@crates//:serde_json",
+        "@crates//:tokio",
+    ],
+)
+
+rust_test(
+    name = "server_services_agent_memory_unit_test",
+    crate = ":server_services_agent_memory",
+    edition = "2024",
+)
