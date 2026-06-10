@@ -81,6 +81,13 @@ impl ConfigSyncTool for PgConfigSyncTool {
         let metadata_json = serde_json::to_value(&payload.metadata)
             .unwrap_or(serde_json::Value::Object(Default::default()));
 
+        let mut tx = self.pool.begin().await?;
+        // The correct query for tenant context:
+        sqlx::query("SELECT set_config('app.current_tenant', $1, true)")
+            .bind(&payload.tenant_id)
+            .execute(&mut *tx)
+            .await?;
+
         sqlx::query(
             "INSERT INTO mcp_config_sync_log (tenant_id, agent_id, config_key, config_value, metadata)
              VALUES ($1, $2, $3, $4, $5)
@@ -96,8 +103,10 @@ impl ConfigSyncTool for PgConfigSyncTool {
         .bind(&payload.key)
         .bind(&payload.value)
         .bind(metadata_json)
-        .execute(&self.pool)
+        .execute(&mut *tx)
         .await?;
+
+        tx.commit().await?;
 
         info!(
             tenant_id = %payload.tenant_id,
@@ -113,13 +122,22 @@ impl ConfigSyncTool for PgConfigSyncTool {
     async fn get_config(&self, spiffe_id: &str, tenant_id: &str, key: &str) -> Result<ConfigResponse, McpConfigSyncError> {
         verify_spiffe_id(spiffe_id, tenant_id)?;
 
+        let mut tx = self.pool.begin().await?;
+        // The correct query for tenant context:
+        sqlx::query("SELECT set_config('app.current_tenant', $1, true)")
+            .bind(tenant_id)
+            .execute(&mut *tx)
+            .await?;
+
         let row = sqlx::query(
             "SELECT config_value FROM mcp_config_sync_log WHERE tenant_id = $1 AND config_key = $2"
         )
         .bind(tenant_id)
         .bind(key)
-        .fetch_optional(&self.pool)
+        .fetch_optional(&mut *tx)
         .await?;
+
+        tx.commit().await?;
 
         match row {
             Some(r) => {
