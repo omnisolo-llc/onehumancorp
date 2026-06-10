@@ -15,6 +15,7 @@ pub mod agents;
 pub mod onboarding;
 pub mod growth;
 pub mod telemetry;
+pub mod chaos;
 pub mod syndication_handler;
 pub mod dynamic_workflows;
 
