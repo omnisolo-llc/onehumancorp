@@ -106,19 +106,19 @@ export default function MyPlanPage() {
         <section className="p-6 md:p-8 app-card hover:shadow-xl transition-shadow duration-300 w-full">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="flex flex-col">
-                    <h2 id="my-plan-name" className="text-sm font-medium text-gray-500 mb-1">Current Plan</h2>
+                    <h2 id="my-plan-name" className="text-sm font-medium text-gray-500 mb-1">Plan:</h2>
                     <div className="flex items-center gap-3">
                         <p className="text-3xl font-bold font-outfit text-gray-900">{planData?.current_plan}</p>
                         <span className="inline-block px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-lg">Active</span>
                     </div>
                 </div>
                 <div className="flex flex-col">
-                    <h2 id="my-plan-next-bill" className="text-sm font-medium text-gray-500 mb-1">Estimated Next Bill</h2>
+                    <h2 id="my-plan-next-bill" className="text-sm font-medium text-gray-500 mb-1">Estimated Next Bill:</h2>
                     <p className="text-3xl font-bold font-outfit text-gray-900">${((planData?.next_bill_estimated || 0) / 100).toFixed(2)}</p>
                 </div>
                 <div className="flex flex-col justify-center mt-2 md:mt-0">
                     <button onClick={() => router.push('/pricing')} className="w-full min-h-[44px] py-3 bg-indigo-600 text-white font-medium rounded-xl hover:bg-indigo-700 transition-colors shadow-sm flex items-center justify-center">
-                        Upgrade Plan
+                        View Upgrade Plans
                     </button>
                 </div>
             </div>
