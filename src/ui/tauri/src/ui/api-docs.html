@@ -141,33 +141,24 @@
         <p class="subtitle">Integrate your custom checkout or external tools directly with OHC.</p>
       </div>
 
-      <div class="docs-card">
-        <div class="endpoint">
-          <div class="endpoint-header">
-            <span class="endpoint-method method-get">GET</span>
-            <span class="endpoint-path">/api/v1/catalog/items</span>
-            <span class="endpoint-summary">List Catalog Items</span>
-          </div>
-        </div>
-
-        <div class="endpoint">
-          <div class="endpoint-header">
-            <span class="endpoint-method method-post">POST</span>
-            <span class="endpoint-path">/api/v1/catalog/items</span>
-            <span class="endpoint-summary">Create a new Catalog Item</span>
-          </div>
-        </div>
-
-        <div class="endpoint">
-          <div class="endpoint-header">
-            <span class="endpoint-method method-post">POST</span>
-            <span class="endpoint-path">/api/agents/task</span>
-            <span class="endpoint-summary">Dispatch a task</span>
-          </div>
-        </div>
-      </div>
+      <div id="swagger-ui" class="docs-card" style="padding: 0;"></div>
     </div>
 
+    <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css" />
+    <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        if (window.SwaggerUIBundle) {
+          const swaggerUI = window.SwaggerUIBundle({
+            url: "/api/api-docs-spec",
+            dom_id: "#swagger-ui",
+            deepLinking: true,
+            presets: [window.SwaggerUIBundle.presets.apis, window.SwaggerUIBundle.SwaggerUIStandalonePreset],
+            layout: "BaseLayout",
+          });
+        }
+      });
+    </script>
     <script>
 document.addEventListener('DOMContentLoaded', () => {
     // Inject tooltip CSS
