@@ -63,6 +63,76 @@ impl InventorySyncService for MyInventorySyncService {
                     error_message: "Item is currently being checked out by another customer".to_string(),
                 }));
             }
+
+            // Verify capacity AFTER acquiring the lock within a transaction
+            let pool = crate::db::get_pool();
+            let mut tx = pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+            ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id)
+                .await
+                .map_err(|e| Status::internal(e.to_string()))?;
+
+            let current_stock: Option<i32> = sqlx::query_scalar("SELECT inventory_count FROM products WHERE id = $1 AND tenant_id = $2 FOR UPDATE")
+                .bind(&req.product_id)
+                .bind(&tenant_id)
+                .fetch_optional(&mut *tx)
+                .await
+                .map_err(|e| Status::internal(e.to_string()))?;
+
+            if let Some(stock) = current_stock {
+                if stock < req.quantity {
+                    let _ = tx.rollback().await;
+                    let _: () = redis::cmd("DEL").arg(&lock_key).query_async(&mut conn).await.unwrap_or(());
+                    return Ok(Response::new(ReserveInventoryResponse {
+                        success: false,
+                        lock_id: "".to_string(),
+                        error_message: format!("Insufficient inventory. Available: {}", stock),
+                    }));
+                }
+            } else {
+                let _ = tx.rollback().await;
+                let _: () = redis::cmd("DEL").arg(&lock_key).query_async(&mut conn).await.unwrap_or(());
+                return Ok(Response::new(ReserveInventoryResponse {
+                    success: false,
+                    lock_id: "".to_string(),
+                    error_message: "Product not found".to_string(),
+                }));
+            }
+
+            tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
+        } else {
+            // Fallback if no redis
+            let pool = crate::db::get_pool();
+            let mut tx = pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+            ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id)
+                .await
+                .map_err(|e| Status::internal(e.to_string()))?;
+
+            let current_stock: Option<i32> = sqlx::query_scalar("SELECT inventory_count FROM products WHERE id = $1 AND tenant_id = $2 FOR UPDATE")
+                .bind(&req.product_id)
+                .bind(&tenant_id)
+                .fetch_optional(&mut *tx)
+                .await
+                .map_err(|e| Status::internal(e.to_string()))?;
+
+            if let Some(stock) = current_stock {
+                if stock < req.quantity {
+                    let _ = tx.rollback().await;
+                    return Ok(Response::new(ReserveInventoryResponse {
+                        success: false,
+                        lock_id: "".to_string(),
+                        error_message: format!("Insufficient inventory. Available: {}", stock),
+                    }));
+                }
+            } else {
+                let _ = tx.rollback().await;
+                return Ok(Response::new(ReserveInventoryResponse {
+                    success: false,
+                    lock_id: "".to_string(),
+                    error_message: "Product not found".to_string(),
+                }));
+            }
+
+            tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
         }
 
         Ok(Response::new(ReserveInventoryResponse {

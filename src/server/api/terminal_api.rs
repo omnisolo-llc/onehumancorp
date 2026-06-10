@@ -681,6 +681,161 @@ mod tests {
         // tests go here
     use sqlx::postgres::PgPoolOptions;
 
+    use crate::api::terminal_api::{reserve_inventory_handler, ReserveInventoryRequest};
+
+    #[tokio::test]
+    async fn test_reserve_inventory_success_and_denial() {
+        let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
+        if !database_url.contains("test") {
+            return;
+        }
+
+        let pool = PgPoolOptions::new().connect(&database_url).await.unwrap();
+        let redis_client = redis::Client::open("redis://127.0.0.1/").ok();
+
+        let tenant_id = "tenant-reserve-test-1";
+        let product_id = "prod-reserve-test-1";
+
+        sqlx::query("INSERT INTO tenants (id, name) VALUES ($1, 'Reserve Test Tenant') ON CONFLICT DO NOTHING")
+            .bind(tenant_id).execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO products (id, tenant_id, title, inventory_count) VALUES ($1, $2, 'Test Prod Reserve', 1) ON CONFLICT DO NOTHING")
+            .bind(product_id).bind(tenant_id).execute(&pool).await.unwrap();
+
+        let (tx, _rx) = tokio::sync::mpsc::channel(100);
+        let mut hub_inner = Hub::new(tx, pool.clone());
+        hub_inner.redis_client = redis_client.clone();
+        let hub = Arc::new(hub_inner);
+
+        let auth_info = Some(axum::extract::Extension(::server_auth::orchestration::AuthInfo {
+            org_id: tenant_id.to_string(),
+            spiffe_id: "test".to_string(),
+            agent_id: "test".to_string(),
+
+        }));
+        let headers = axum::http::HeaderMap::new();
+
+        // User A acquires lock
+        let req_data_a = axum::extract::Json(ReserveInventoryRequest {
+            tenant_id: tenant_id.to_string(),
+            product_id: product_id.to_string(),
+            quantity: 1,
+            ttl_seconds: 60,
+        });
+
+        let resp_a = reserve_inventory_handler(headers.clone(), axum::extract::State(hub.clone()), auth_info.clone(), req_data_a).await;
+        let body_bytes_a = axum::body::to_bytes(resp_a.into_body(), usize::MAX).await.unwrap();
+        let resp_json_a: serde_json::Value = serde_json::from_slice(&body_bytes_a).unwrap();
+
+        assert_eq!(resp_json_a["success"], true);
+        let lock_id_a = resp_json_a["lock_id"].as_str().unwrap().to_string();
+        assert!(!lock_id_a.is_empty());
+
+        // User B tries to acquire lock and fails
+        let req_data_b = axum::extract::Json(ReserveInventoryRequest {
+            tenant_id: tenant_id.to_string(),
+            product_id: product_id.to_string(),
+            quantity: 1,
+            ttl_seconds: 60,
+        });
+
+        let resp_b = reserve_inventory_handler(headers.clone(), axum::extract::State(hub.clone()), auth_info.clone(), req_data_b).await;
+        let body_bytes_b = axum::body::to_bytes(resp_b.into_body(), usize::MAX).await.unwrap();
+        let resp_json_b: serde_json::Value = serde_json::from_slice(&body_bytes_b).unwrap();
+
+        assert_eq!(resp_json_b["success"], false);
+        assert_eq!(resp_json_b["error_message"], "Item is currently being checked out by another customer");
+
+        // Clean up
+        if let Some(client) = &hub.redis_client {
+            let mut conn = client.get_connection().unwrap();
+            let key = format!("ohc:lock:{}:inventory:{}", tenant_id, product_id);
+            let _: () = redis::cmd("DEL").arg(&key).query(&mut conn).unwrap();
+        }
+    }
+
+    #[tokio::test]
+    async fn test_reserve_and_commit_flow() {
+        let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
+        if !database_url.contains("test") {
+            return;
+        }
+
+        let pool = PgPoolOptions::new().connect(&database_url).await.unwrap();
+        let redis_client = redis::Client::open("redis://127.0.0.1/").ok();
+
+        let tenant_id = "tenant-reserve-test-2";
+        let product_id = "prod-reserve-test-2";
+
+        sqlx::query("INSERT INTO tenants (id, name) VALUES ($1, 'Reserve Test Tenant 2') ON CONFLICT DO NOTHING")
+            .bind(tenant_id).execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO products (id, tenant_id, title, inventory_count) VALUES ($1, $2, 'Test Prod Reserve 2', 1) ON CONFLICT ON CONSTRAINT products_pkey DO UPDATE SET inventory_count = 1")
+            .bind(product_id).bind(tenant_id).execute(&pool).await.unwrap();
+
+        let (tx, _rx) = tokio::sync::mpsc::channel(100);
+        let mut hub_inner = Hub::new(tx, pool.clone());
+        hub_inner.redis_client = redis_client.clone();
+        let hub = Arc::new(hub_inner);
+
+        let auth_info = Some(axum::extract::Extension(::server_auth::orchestration::AuthInfo {
+            org_id: tenant_id.to_string(),
+            spiffe_id: "test".to_string(),
+            agent_id: "test".to_string(),
+
+        }));
+        let headers = axum::http::HeaderMap::new();
+
+        // User A acquires lock
+        let req_data_a = axum::extract::Json(ReserveInventoryRequest {
+            tenant_id: tenant_id.to_string(),
+            product_id: product_id.to_string(),
+            quantity: 1,
+            ttl_seconds: 60,
+        });
+
+        let resp_a = reserve_inventory_handler(headers.clone(), axum::extract::State(hub.clone()), auth_info.clone(), req_data_a).await;
+        let body_bytes_a = axum::body::to_bytes(resp_a.into_body(), usize::MAX).await.unwrap();
+        let resp_json_a: serde_json::Value = serde_json::from_slice(&body_bytes_a).unwrap();
+
+        assert_eq!(resp_json_a["success"], true);
+        let lock_id_a = resp_json_a["lock_id"].as_str().unwrap().to_string();
+
+        // User A commits inventory
+        let req_data_commit = axum::extract::Json(CommitInventoryRequest {
+            tenant_id: tenant_id.to_string(),
+            product_id: product_id.to_string(),
+            quantity: 1,
+            lock_id: lock_id_a,
+        });
+
+        let resp_commit = commit_inventory_handler(headers.clone(), axum::extract::State(hub.clone()), auth_info.clone(), req_data_commit).await;
+        let body_bytes_commit = axum::body::to_bytes(resp_commit.into_body(), usize::MAX).await.unwrap();
+        let resp_json_commit: serde_json::Value = serde_json::from_slice(&body_bytes_commit).unwrap();
+
+        assert_eq!(resp_json_commit["success"], true);
+
+        // User B tries to reserve, should fail due to stock = 0
+        let req_data_b = axum::extract::Json(ReserveInventoryRequest {
+            tenant_id: tenant_id.to_string(),
+            product_id: product_id.to_string(),
+            quantity: 1,
+            ttl_seconds: 60,
+        });
+
+        let resp_b = reserve_inventory_handler(headers.clone(), axum::extract::State(hub.clone()), auth_info.clone(), req_data_b).await;
+        let body_bytes_b = axum::body::to_bytes(resp_b.into_body(), usize::MAX).await.unwrap();
+        let resp_json_b: serde_json::Value = serde_json::from_slice(&body_bytes_b).unwrap();
+
+        assert_eq!(resp_json_b["success"], false);
+        assert_eq!(resp_json_b["error_message"], "Insufficient inventory. Available: 0");
+
+        // Clean up
+        if let Some(client) = &hub.redis_client {
+            let mut conn = client.get_connection().unwrap();
+            let key = format!("ohc:lock:{}:inventory:{}", tenant_id, product_id);
+            let _: () = redis::cmd("DEL").arg(&key).query(&mut conn).unwrap_or(());
+        }
+    }
+
     #[tokio::test]
     async fn test_commit_inventory_low_stock() {
         let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
