@@ -29,6 +29,15 @@ export default function ChangelogPage() {
   return (
     <div className="min-h-screen bg-[#F5F5F7]/80 py-12 px-4 sm:px-6 lg:px-8 font-inter backdrop-blur-[30px] saturate-[210%]">
       <div className="max-w-3xl mx-auto">
+        <div className="mb-6">
+          <Link href="/help" className="text-blue-600 hover:text-blue-800 flex items-center gap-2 font-medium">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            Back to Help Center
+          </Link>
+        </div>
+
         <h1 className="text-3xl font-bold text-gray-900 mb-8 font-outfit text-center tracking-tight">
           Release Notes & Changelog
         </h1>
@@ -45,7 +54,7 @@ export default function ChangelogPage() {
             sections.map((section, idx) => (
               <div
                 key={idx}
-                className="glassmorphism p-6 shadow-[0_8px_32px_rgba(0,0,0,0.05)] transition-all"
+                className="glassmorphism p-6 shadow-[0_8px_32px_rgba(0,0,0,0.05)] rounded-2xl bg-white/70 transition-all"
               >
                 <h2 className="text-xl font-bold text-blue-600 mb-4 font-outfit">
                   {section.version}

@@ -60,7 +60,7 @@ impl AgentMemoryPipeline {
                         }
                     };
 
-                    let emb_str = format!("[{}]", embedding.iter().map(|f| f.to_string()).collect::<Vec<_>>().join(","));
+                    let _emb_str = format!("[{}]", embedding.iter().map(|f| f.to_string()).collect::<Vec<_>>().join(","));
                     let mem_id = Uuid::new_v4();
 
                     sqlx::query("INSERT INTO consolidated_memory (id, tenant_id, agent_id, source_type, content, embedding) VALUES ($1, $2, $3, $4, $5, NULL)")

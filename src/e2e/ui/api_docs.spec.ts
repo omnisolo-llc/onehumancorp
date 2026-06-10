@@ -1,17 +1,32 @@
 import { test, expect } from '@playwright/test';
+import { adminPage } from '../fixtures';
 
-test.describe('API Documentation', () => {
-  test('should render Swagger UI', async ({ page }) => {
-    // Navigate to the API Docs page
-    await page.goto('/api-docs');
+test.describe('API Docs Page', () => {
+  test('navigates to API docs from Help Center', async ({ page }) => {
+    await adminPage({ page }, async ({ page }) => {
+      // 1. Visit Help Center
+      await page.goto('/help');
+      await expect(page.locator('h1', { hasText: 'Help Center' })).toBeVisible();
 
-    // Wait for the Swagger UI container to become visible
-    // Swagger UI typically renders a div with class "swagger-ui"
-    const swaggerUIContainer = page.locator('.swagger-ui').first();
-    await expect(swaggerUIContainer).toBeVisible({ timeout: 15000 });
+      // 2. Find and click API Documentation link
+      const apiDocsLink = page.locator('a[href="/api-docs"]', { hasText: 'API Documentation' });
+      await expect(apiDocsLink).toBeVisible();
+      await apiDocsLink.click();
 
-    // Check for the title inside Swagger UI
-    const apiTitle = page.getByText('OHC Advanced API Reference');
-    await expect(apiTitle).toBeVisible();
+      // 3. Verify we are on API Docs page
+      await expect(page).toHaveURL(/\/api-docs/);
+      await expect(page.locator('span', { hasText: 'Advanced:' })).toBeVisible();
+
+      // Wait for swagger UI to render
+      await expect(page.locator('.swagger-ui')).toBeVisible();
+
+      // 4. Verify "Back to Help Center" link works
+      const backLink = page.locator('a[href="/help"]', { hasText: 'Back to Help Center' });
+      await expect(backLink).toBeVisible();
+      await backLink.click();
+
+      // 5. Verify back on Help Center
+      await expect(page).toHaveURL(/\/help/);
+    });
   });
 });
