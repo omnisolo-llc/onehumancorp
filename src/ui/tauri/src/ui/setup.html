@@ -34,6 +34,9 @@
         border: 1px solid rgba(255, 255, 255, 0.4);
         border-radius: 16px;
       }
+      input.glassmorphism, select.glassmorphism, textarea.glassmorphism {
+        border-radius: 8px;
+      }
       h1 {
         margin-top: 0;
         color: #1d1d1f;
@@ -58,9 +61,6 @@
         backdrop-filter: blur(10px) saturate(200%);
         -webkit-backdrop-filter: blur(10px) saturate(200%);
         transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
-      }
-      input.glassmorphism {
-        border-radius: 8px;
       }
       input:focus {
         outline: none;
@@ -524,11 +524,32 @@
           }
         }).catch(console.error);
       } else {
-        const stored = localStorage.getItem('onboardingState');
-        if (stored) {
-          state = { ...state, ...JSON.parse(stored) };
-          populateForm();
-        }
+        fetch('/api/onboarding/state').then(res => res.json()).then(backendState => {
+          if (backendState && Object.keys(backendState).length > 0) {
+            state = { ...state, ...backendState };
+            populateForm();
+            // Restore step visually if stored
+            if (typeof state.step === 'number') {
+                const stepIds = ['step-context', 'step-categories', 'step-name', 'step-assistant', 'step-offer', 'step-template'];
+                if (state.step > 0 && state.step < stepIds.length) {
+                    goToStep(stepIds[state.step]);
+                }
+            }
+          } else {
+            const stored = localStorage.getItem('onboardingState');
+            if (stored) {
+              state = { ...state, ...JSON.parse(stored) };
+              populateForm();
+            }
+          }
+        }).catch(err => {
+            console.error(err);
+            const stored = localStorage.getItem('onboardingState');
+            if (stored) {
+              state = { ...state, ...JSON.parse(stored) };
+              populateForm();
+            }
+        });
       }
 
             // Clear name error on typing if valid
@@ -593,7 +614,14 @@
           if (window.__TAURI__ && window.__TAURI__.core) {
               window.__TAURI__.core.invoke("save_onboarding_state", { state }).catch(console.error);
           } else {
-              localStorage.setItem('onboardingState', JSON.stringify(state));
+              fetch('/api/onboarding/state', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(state)
+              }).catch(err => console.error('Failed to save to backend:', err))
+              .finally(() => {
+                  localStorage.setItem('onboardingState', JSON.stringify(state));
+              });
           }
       }
 
@@ -648,11 +676,14 @@
               }
           }
           else if (stepId === 'step-offer') {
-              if (inputs.firstOffer.value.trim() === '') {
+              if (inputs.firstOffer.value.trim().length < 3) {
+                  errors.firstOffer.textContent = "Please enter an offer (at least 3 characters).";
                   errors.firstOffer.style.display = 'block';
+                  inputs.firstOffer.style.borderColor = '#FF3B30';
                   isValid = false;
               } else {
                   errors.firstOffer.style.display = 'none';
+                  inputs.firstOffer.style.borderColor = 'rgba(255, 255, 255, 0.5)';
                   state.firstOffer = inputs.firstOffer.value.trim();
               }
           }
@@ -771,8 +802,17 @@
                    finishBtn.innerText = "Finish Setup";
                  });
                } else {
-                 localStorage.setItem('onboardingState', JSON.stringify(state));
-                 window.location.href = "success.html";
+                 finishBtn.disabled = true;
+                 finishBtn.innerText = "Saving...";
+                 fetch('/api/onboarding/state', {
+                     method: 'POST',
+                     headers: { 'Content-Type': 'application/json' },
+                     body: JSON.stringify(state)
+                 }).catch(console.error)
+                 .finally(() => {
+                     localStorage.setItem('onboardingState', JSON.stringify(state));
+                     window.location.href = "success.html";
+                 });
                }
            }
         });
