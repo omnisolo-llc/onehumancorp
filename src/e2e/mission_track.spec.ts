@@ -1,3 +1,4 @@
+import { test } from './fixtures';
 import { currentAppSmoke } from './current_app_smoke';
 
-currentAppSmoke('mission_track');
+test('mission_track smoke', async ({ page, request }) => { await currentAppSmoke(page, request, 'mission_track'); });

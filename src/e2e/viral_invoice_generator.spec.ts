@@ -1,7 +1,7 @@
 import { test, expect } from './fixtures';
 import { currentAppSmoke } from './current_app_smoke';
 
-currentAppSmoke('viral_invoice_generator');
+test('viral_invoice_generator smoke', async ({ page, request }) => { await currentAppSmoke(page, request, 'viral_invoice_generator'); });
 
 test.describe('Viral Invoice Generator Loop', () => {
   test('should allow creating an invoice and viewing the viral loop', async ({ page }) => {

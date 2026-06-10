@@ -2,7 +2,7 @@ import { test, expect } from './fixtures';
 import { currentAppSmoke } from './current_app_smoke';
 
 // Start base smoke validation as a baseline
-currentAppSmoke('chaos_resilience_baseline');
+test('chaos_resilience_baseline smoke', async ({ page, request }) => { await currentAppSmoke(page, request, 'chaos_resilience_baseline'); });
 
 test.describe("Chaos Engineering Validation - Backend/Host Stress Verification", () => {
   // Rather than front-end side-effects or network mocks, we interact with real

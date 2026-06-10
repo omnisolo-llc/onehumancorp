@@ -1,7 +1,7 @@
 import { test, expect } from './fixtures';
 import { currentAppSmoke } from './current_app_smoke';
 
-currentAppSmoke('viral_giveaway');
+test('viral_giveaway smoke', async ({ page, request }) => { await currentAppSmoke(page, request, 'viral_giveaway'); });
 
 test.describe('Viral Giveaway Loop', () => {
   test('should allow owner to create a giveaway and user to enter it', async ({ page, context }) => {

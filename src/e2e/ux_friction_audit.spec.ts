@@ -1,3 +1,4 @@
+import { test } from './fixtures';
 import { currentAppSmoke } from './current_app_smoke';
 
-currentAppSmoke('ux_friction_audit');
+test('ux_friction_audit smoke', async ({ page, request }) => { await currentAppSmoke(page, request, 'ux_friction_audit'); });

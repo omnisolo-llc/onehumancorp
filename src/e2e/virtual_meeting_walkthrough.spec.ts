@@ -1,3 +1,4 @@
+import { test } from './fixtures';
 import { currentAppSmoke } from './current_app_smoke';
 
-currentAppSmoke('virtual_meeting_walkthrough');
+test('virtual_meeting_walkthrough smoke', async ({ page, request }) => { await currentAppSmoke(page, request, 'virtual_meeting_walkthrough'); });

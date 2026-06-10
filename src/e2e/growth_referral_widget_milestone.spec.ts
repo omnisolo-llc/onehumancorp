@@ -1,7 +1,7 @@
 import { test, expect } from './fixtures';
 import { currentAppSmoke } from './current_app_smoke';
 
-currentAppSmoke('growth_referral_widget_milestone');
+test('growth_referral_widget_milestone smoke', async ({ page, request }) => { await currentAppSmoke(page, request, 'growth_referral_widget_milestone'); });
 
 test.describe('Growth Referral Widget Milestone UI', () => {
   test('should display 10th order milestone alert and card on Team Page', async ({ page, loginAs, unlimitedAdminUser }) => {

@@ -1,3 +1,4 @@
+import { test } from './fixtures';
 import { currentAppSmoke } from './current_app_smoke';
 
-currentAppSmoke('echo_navigation');
+test('echo_navigation smoke', async ({ page, request }) => { await currentAppSmoke(page, request, 'echo_navigation'); });

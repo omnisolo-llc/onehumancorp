@@ -1,3 +1,4 @@
+import { test } from './fixtures';
 import { currentAppSmoke } from './current_app_smoke';
 
-currentAppSmoke('twilio_omnichannel');
+test('twilio_omnichannel smoke', async ({ page, request }) => { await currentAppSmoke(page, request, 'twilio_omnichannel'); });

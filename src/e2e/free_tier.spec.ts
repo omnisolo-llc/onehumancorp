@@ -1,3 +1,4 @@
+import { test } from './fixtures';
 import { currentAppSmoke } from './current_app_smoke';
 
-currentAppSmoke('free_tier');
+test('free_tier smoke', async ({ page, request }) => { await currentAppSmoke(page, request, 'free_tier'); });
