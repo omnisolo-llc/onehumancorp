@@ -1,0 +1,11 @@
+--- deploy/tests/kind_e2e_test.sh
++++ deploy/tests/kind_e2e_test.sh
+@@ -395,7 +395,7 @@
+ pg_attempts=0
+ pg_max_attempts=30
+ while (( pg_attempts < pg_max_attempts )); do
+-  if kubectl exec --namespace "${NAMESPACE}" postgres -- pg_isready -U ohc -d ohc >/dev/null 2>&1; then
++  if kubectl exec --namespace "${NAMESPACE}" postgres -- pg_isready -U ohc >/dev/null 2>&1; then
+     log "PostgreSQL is ready!"
+     break
+   fi
