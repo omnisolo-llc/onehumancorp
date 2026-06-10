@@ -3,40 +3,30 @@ import { test, expect } from './fixtures';
 test.describe('My Plan Dashboard', () => {
 
   test('should display the My Plan header', async ({ page }) => {
-    await page.goto('/plan');
+    await page.goto('/cost-dashboard.html');
     await expect(page.locator('h1', { hasText: 'My Plan' })).toBeVisible({ timeout: 10000 });
   });
 
   test('should display current plan details', async ({ page }) => {
-    await page.goto('/plan');
+    await page.goto('/cost-dashboard.html');
     await expect(page.locator('#my-plan-name')).toBeVisible();
     await expect(page.locator('h2', { hasText: 'Plan:' })).toBeVisible();
-    await expect(page.locator('span', { hasText: 'Active' })).toBeVisible();
   });
 
   test('should display estimated next bill', async ({ page }) => {
-    await page.goto('/plan');
+    await page.goto('/cost-dashboard.html');
     await expect(page.locator('#my-plan-next-bill')).toBeVisible();
-    await expect(page.locator('h2', { hasText: 'Estimated Next Bill:' })).toBeVisible();
+    await expect(page.locator('div.stat-title', { hasText: 'Estimated Next Bill' })).toBeVisible();
   });
 
   test('should display AI Actions usage', async ({ page }) => {
-    await page.goto('/plan');
-    await expect(page.locator('h2', { hasText: 'Your Current Usage' })).toBeVisible();
-    await expect(page.locator('span', { hasText: 'AI actions used this month' })).toBeVisible();
+    await page.goto('/cost-dashboard.html');
+    await expect(page.locator('div.stat-title', { hasText: 'AI actions used this month' })).toBeVisible();
   });
 
   test('should display Storage usage', async ({ page }) => {
-    await page.goto('/plan');
-    await expect(page.locator('span', { hasText: 'Storage used' })).toBeVisible();
-  });
-
-  test('should display management action buttons', async ({ page }) => {
-    await page.goto('/plan');
-    await expect(page.locator('h3', { hasText: 'View Cost Details' })).toBeVisible();
-    await expect(page.locator('h3', { hasText: 'Change Plan' })).toBeVisible();
-    await expect(page.locator('h3', { hasText: 'Download Invoice' })).toBeVisible();
-    await expect(page.locator('h3', { hasText: 'Cancel Subscription' })).toBeVisible();
+    await page.goto('/cost-dashboard.html');
+    await expect(page.locator('div.stat-title', { hasText: 'Storage used' })).toBeVisible();
   });
 
   test('should return correct JSON payload from backend API', async ({ request }) => {

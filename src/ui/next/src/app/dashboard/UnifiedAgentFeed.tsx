@@ -32,6 +32,16 @@ type LedgerResponse = {
   entries: OHCLedgerEntry[];
 };
 
+type ApprovalRequest = {
+  id: string;
+  tenant_id: string;
+  department: string;
+  description: string;
+  status: string;
+  action_risk: string;
+  payload: any;
+};
+
 export function UnifiedAgentFeed() {
   const [items, setItems] = useState<AgentFeedItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -44,6 +54,17 @@ export function UnifiedAgentFeed() {
     if (typeof window === "undefined") return "default";
     return localStorage.getItem("tenant_id") || localStorage.getItem("tenant") || "default";
   };
+
+  useEffect(() => {
+    const handleVoiceCommandProcessed = (event: CustomEvent) => {
+      // Wait a moment for backend DB write consistency, then reload the feed completely.
+      setTimeout(() => {
+        window.location.reload();
+      }, 500);
+    };
+    window.addEventListener('voice-command-processed', handleVoiceCommandProcessed as EventListener);
+    return () => window.removeEventListener('voice-command-processed', handleVoiceCommandProcessed as EventListener);
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -86,6 +107,7 @@ export function UnifiedAgentFeed() {
 
         if (mounted) {
           // Listen to SSE updates
+          if (typeof EventSource === "undefined") return;
           const eventSource = new EventSource(`/api/agents/approvals/stream?tenant_id=${tenant}`);
 
           eventSource.onmessage = (event) => {
@@ -93,12 +115,12 @@ export function UnifiedAgentFeed() {
               const payload = JSON.parse(event.data);
 
               if (payload.event_type === "approval_request") {
-                setApprovals((prev) => {
+                setItems((prev) => {
                   if (prev.find((a) => a.id === payload.data.id)) return prev;
                   return [payload.data, ...prev];
                 });
               } else if (payload.event_type === "approval_decision") {
-                setApprovals((prev) => prev.filter((a) => a.id !== payload.data.request_id));
+                setItems((prev) => prev.filter((a) => a.id !== payload.data.request_id));
                 setActivities((prev) => {
                   const newActivity = {
                     id: crypto.randomUUID(),
@@ -156,7 +178,7 @@ export function UnifiedAgentFeed() {
 
         // If it's a DRAFT or PENDING, add to proposals
         if (String(item.status || '').toUpperCase() === 'DRAFT' || String(item.status || '').toUpperCase() === 'PENDING') {
-          setApprovals((current) => [item, ...current.filter((existing) => existing.id !== item.id)]);
+          setItems((current) => [item, ...current.filter((existing) => existing.id !== item.id)]);
         } else {
           // It's an activity event (Approved, Rejected, etc.)
           setActivities((current) => {
@@ -171,7 +193,7 @@ export function UnifiedAgentFeed() {
             return [mappedActivity, ...current.filter((existing) => existing.id !== item.id)];
           });
           // Also remove from approvals if it was there
-          setApprovals((current) => current.filter((existing) => existing.id !== item.id));
+          setItems((current) => current.filter((existing) => existing.id !== item.id));
         }
       } catch (err) {
         console.error('Failed to parse agent feed event:', err);
@@ -191,7 +213,7 @@ export function UnifiedAgentFeed() {
 
         // If it's a DRAFT or PENDING, add to proposals
         if (String(item.status || '').toUpperCase() === 'DRAFT' || String(item.status || '').toUpperCase() === 'PENDING') {
-          setApprovals((current) => [item, ...current.filter((existing) => existing.id !== item.id)]);
+          setItems((current) => [item, ...current.filter((existing) => existing.id !== item.id)]);
         } else {
           // It's an activity event (Approved, Rejected, etc.)
           setActivities((current) => {
@@ -206,7 +228,7 @@ export function UnifiedAgentFeed() {
             return [mappedActivity, ...current.filter((existing) => existing.id !== item.id)];
           });
           // Also remove from approvals if it was there
-          setApprovals((current) => current.filter((existing) => existing.id !== item.id));
+          setItems((current) => current.filter((existing) => existing.id !== item.id));
         }
       } catch (err) {
         console.error('Failed to parse agent feed event:', err);
@@ -218,7 +240,7 @@ export function UnifiedAgentFeed() {
 
   const handleDecision = async (id: string, approved: boolean) => {
     // Optimistic UI update
-    setApprovals(prev => prev.filter(app => app.id !== id));
+    setItems(prev => prev.filter(app => app.id !== id));
 
     try {
       const tenant = tenantId();
@@ -239,7 +261,7 @@ export function UnifiedAgentFeed() {
         });
         if (refreshRes.ok) {
             const data: ApprovalsResponse = await refreshRes.json();
-            setApprovals(data.pending_approvals);
+            setItems(data.pending_approvals);
         }
         throw new Error("Failed to submit decision");
       }
