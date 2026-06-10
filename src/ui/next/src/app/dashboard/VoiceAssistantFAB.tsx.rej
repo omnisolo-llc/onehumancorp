@@ -1,0 +1,11 @@
+--- VoiceAssistantFAB.tsx
++++ VoiceAssistantFAB.tsx
+@@ -48,7 +48,7 @@
+       const formData = new FormData();
+       formData.append('audio', audioBlob, 'command.webm');
+       // In a real app we'd get the tenant from context.
+-      formData.append('tenant_id', 'default');
++      formData.append('tenant_id', localStorage.getItem('tenant_id') || 'default');
+
+       const response = await fetch('/api/v1/voice/command', {
+         method: 'POST',
