@@ -267,7 +267,7 @@ test.describe('Tauri Dashboard UI and UX Improvements', () => {
       };
     });
 
-    await page.goto('/dashboard.html');
+    await page.goto('/dashboard');
 
     // Check that the container class has the updated glassmorphism properties
     const container = page.locator('.container');

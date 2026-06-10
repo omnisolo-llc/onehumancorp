@@ -3,7 +3,7 @@ import { test, expect } from './fixtures';
 test.describe('Viral Success Milestone Share Card Loop', () => {
   test('should display the milestone card on the dashboard when a milestone is reached', async ({ page }) => {
     // Navigate to the Tauri dashboard
-    await page.goto('/dashboard.html');
+    await page.goto('/dashboard');
 
     // Wait for milestone container to be visible
     const milestoneCard = page.getByTestId('success-milestone-alert');
