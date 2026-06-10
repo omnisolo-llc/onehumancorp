@@ -192,6 +192,11 @@ pub fn calculate_heuristic_token_efficiency(original_tokens: i64, truncated_toke
     (estimated_savings * 10000.0).round() / 10000.0
 }
 
+pub fn calculate_projected_monthly_cost_cents(current_cost: f64, days_elapsed: u32, total_days: u32) -> i64 {
+    let projected = calculate_projected_monthly_cost(current_cost, days_elapsed, total_days);
+    (projected * 100.0).round() as i64
+}
+
 pub fn calculate_projected_monthly_cost(current_cost: f64, days_elapsed: u32, total_days: u32) -> f64 {
     if days_elapsed == 0 {
         return 0.0;
