@@ -766,6 +766,58 @@ impl DepartmentOrchestrator {
 
             if approved {
                 if let Some(payload) = &original_payload {
+                    if payload.get("feature_type").and_then(|v| v.as_str()) == Some("ambassador_reply") {
+                        if let Some(source) = payload.get("source").and_then(|v| v.as_str()) {
+                            if source == "whatsapp" || source == "sms" {
+                                if let (Some(sender), Some(draft)) = (
+                                    payload.get("real_sender_phone").and_then(|v| v.as_str()),
+                                    payload.get("draft_reply").and_then(|v| v.as_str())
+                                ) {
+                                    let sid = std::env::var("TWILIO_ACCOUNT_SID").unwrap_or_default();
+                                    let token = std::env::var("TWILIO_AUTH_TOKEN").unwrap_or_default();
+                                    if !sid.is_empty() && !token.is_empty() {
+                                        let provider = ::server_integrations_twilio::provider::TwilioProvider::new(sid, token);
+                                        let from = std::env::var("TWILIO_FROM_NUMBER").unwrap_or_default();
+                                        // Include whatsapp: prefix if source is whatsapp
+                                        let to_number = if source == "whatsapp" && !sender.starts_with("whatsapp:") {
+                                            format!("whatsapp:{}", sender)
+                                        } else {
+                                            sender.to_string()
+                                        };
+                                        let from_number = if source == "whatsapp" && !from.starts_with("whatsapp:") {
+                                            format!("whatsapp:{}", from)
+                                        } else {
+                                            from
+                                        };
+                                        let _ = provider.send_sms(&to_number, &from_number, draft).await;
+
+                                        // Update inbox_messages status to "replied"
+                                        if let Some(inbox_id) = payload.get("inbox_message_id").and_then(|v| v.as_str()) {
+                                            match &self.db.store {
+                                                DbStore::Postgres => {
+                                                    let _ = sqlx::query("UPDATE inbox_messages SET status = $1 WHERE id = $2 AND tenant_id = $3")
+                                                        .bind("replied")
+                                                        .bind(inbox_id)
+                                                        .bind(tenant_id)
+                                                        .execute(&self.db.pool)
+                                                        .await;
+                                                }
+                                                DbStore::Sqlite(pool) => {
+                                                    let _ = sqlx::query("UPDATE inbox_messages SET status = ? WHERE id = ? AND tenant_id = ?")
+                                                        .bind("replied")
+                                                        .bind(inbox_id)
+                                                        .bind(tenant_id)
+                                                        .execute(pool)
+                                                        .await;
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
                     if payload.get("feature_type").and_then(|v| v.as_str()) == Some("quote_draft") {
                         let price = payload.get("suggested_price").and_then(|v| v.as_f64()).unwrap_or(0.0);
                         let deposit_amount = (price * 0.20) as i64 * 100;

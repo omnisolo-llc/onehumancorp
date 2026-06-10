@@ -5621,6 +5621,7 @@ dependencies = [
  "server_pricing",
  "server_telemetry",
  "server_utils",
+ "sha1",
  "sha2",
  "sqlx",
  "tauri-cli",

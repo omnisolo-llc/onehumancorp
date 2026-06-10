@@ -10,7 +10,6 @@ use sha2::Sha256;
 use std::sync::Arc;
 use crate::hub::Hub;
 use uuid::Uuid;
-use crate::api::agents::translation::{translate_inbox_message_with_llm, generate_inbox_draft_reply, InboxTranslation};
 use crate::orchestration::departments::types::DepartmentType;
 use crate::orchestration::departments::types::ActionRisk;
 
@@ -147,11 +146,11 @@ pub async fn meta_webhook_post_handler(
 async fn process_omnichannel_message(state: &MetaWebhookState, tenant_id: String, source: String, sender_id: String, text: String) {
     let target_language = "English";
 
-    let translation = match translate_inbox_message_with_llm(&tenant_id, &source, &text, target_language).await {
+    let translation = match crate::api::agents::translation::translate_inbox_message_with_llm(&tenant_id, &source, &text, target_language).await {
         Ok(t) => t,
         Err(e) => {
             tracing::error!("Translation failed: {}", e);
-            InboxTranslation {
+            crate::api::agents::translation::InboxTranslation {
                 translated_content: text.clone(),
                 source_language: Some("Unknown".to_string()),
                 target_language: target_language.to_string(),
@@ -160,7 +159,7 @@ async fn process_omnichannel_message(state: &MetaWebhookState, tenant_id: String
         }
     };
 
-    let draft_reply = match generate_inbox_draft_reply(&tenant_id, &source, &translation).await {
+    let draft_reply = match crate::api::agents::translation::generate_inbox_draft_reply(&tenant_id, &source, &translation).await {
         Ok(d) => d,
         Err(e) => {
             tracing::error!("Failed to generate draft reply: {}", e);
