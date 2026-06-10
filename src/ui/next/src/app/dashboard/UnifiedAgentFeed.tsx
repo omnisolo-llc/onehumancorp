@@ -103,6 +103,7 @@ export function UnifiedAgentFeed() {
 
         if (mounted) {
           // Listen to SSE updates
+          if (typeof EventSource === "undefined") return;
           const eventSource = new EventSource(`/api/agents/approvals/stream?tenant_id=${tenant}`);
 
           eventSource.onmessage = (event) => {
