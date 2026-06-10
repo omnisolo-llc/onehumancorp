@@ -1,0 +1,529 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Embeddable Work Intake Widget</title>
+    <style>
+      :root {
+        --bg-color: #f5f5f7;
+        --text-color: #1d1d1f;
+        --primary-color: #0066ff;
+        --secondary-text: #86868b;
+        --glass-bg: rgba(255, 255, 255, 0.65);
+        --glass-border: rgba(255, 255, 255, 0.4);
+      }
+
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg-color: #16161a;
+          --text-color: #f5f5f7;
+          --secondary-text: #a1a1a6;
+          --glass-bg: rgba(22, 22, 26, 0.85);
+          --glass-border: rgba(255, 255, 255, 0.1);
+        }
+      }
+
+      body {
+        font-family:
+          "Outfit",
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          Roboto,
+          Helvetica,
+          Arial,
+          sans-serif;
+        background-color: var(--bg-color);
+        color: var(--text-color);
+        margin: 0;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        min-height: 100vh;
+        box-sizing: border-box;
+      }
+
+      .container {
+        width: 100%;
+        max-width: 600px;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+      }
+
+      .card {
+        background: var(--glass-bg);
+        backdrop-filter: blur(30px) saturate(210%);
+        border-radius: 16px;
+        padding: 30px;
+        border: 1px solid var(--glass-border);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+      }
+
+      h1,
+      h2,
+      h3 {
+        margin-top: 0;
+        color: var(--text-color);
+      }
+
+      h1 {
+        font-size: 24px;
+        font-weight: 700;
+        text-align: center;
+        margin-bottom: 20px;
+      }
+
+      p {
+        color: var(--secondary-text);
+        font-size: 14px;
+        line-height: 1.5;
+      }
+
+      .form-group {
+        margin-bottom: 15px;
+        text-align: left;
+      }
+
+      .form-group label {
+        display: block;
+        font-size: 14px;
+        font-weight: 600;
+        margin-bottom: 5px;
+        color: var(--text-color);
+      }
+
+      .form-group input,
+      .form-group textarea {
+        width: 100%;
+        padding: 12px;
+        border-radius: 8px;
+        border: 1px solid rgba(0, 0, 0, 0.2);
+        font-size: 14px;
+        font-family: inherit;
+        box-sizing: border-box;
+        background: rgba(255, 255, 255, 0.8);
+        color: #1d1d1f;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        .form-group input,
+        .form-group textarea {
+          background: rgba(0, 0, 0, 0.2);
+          border-color: rgba(255, 255, 255, 0.2);
+          color: #f5f5f7;
+        }
+      }
+
+      .toggle-group {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin: 20px 0;
+      }
+
+      .toggle-group label {
+        font-size: 14px;
+        font-weight: 600;
+      }
+
+      .btn {
+        background: var(--primary-color);
+        color: white;
+        padding: 14px 24px;
+        border-radius: 8px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        border: none;
+        width: 100%;
+        transition: background-color 0.2s;
+      }
+
+      .btn:hover {
+        background-color: #0052cc;
+      }
+
+      .preview-container {
+        margin-top: 30px;
+        text-align: left;
+      }
+
+      .preview-wrapper {
+        background: #ffffff;
+        border-radius: 12px;
+        border: 1px solid #e5e5ea;
+        padding: 20px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        position: relative;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        .preview-wrapper {
+          background: #2c2c2e;
+          border-color: #3a3a3c;
+        }
+      }
+
+      .preview-footer {
+        text-align: center;
+        margin-top: 15px;
+        font-size: 12px;
+        font-weight: 600;
+      }
+
+      .preview-footer a {
+        color: var(--secondary-text);
+        text-decoration: none;
+      }
+
+      .preview-footer a:hover {
+        text-decoration: underline;
+      }
+
+      textarea#embed-code {
+        width: 100%;
+        height: 120px;
+        margin-top: 20px;
+        font-family: monospace;
+        font-size: 12px;
+        display: none;
+        resize: vertical;
+      }
+
+      /* Soft Paywall Modal */
+      #soft-paywall-modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: rgba(0, 0, 0, 0.4);
+        z-index: 10000;
+        align-items: center;
+        justify-content: center;
+        backdrop-filter: blur(5px);
+      }
+      .modal-content {
+        background: var(--glass-bg);
+        backdrop-filter: blur(30px) saturate(210%);
+        border: 1px solid var(--glass-border);
+        border-radius: 20px;
+        padding: 32px;
+        max-width: 400px;
+        width: 90%;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+        text-align: center;
+      }
+      .modal-content h2 {
+        margin-bottom: 12px;
+        font-size: 24px;
+        color: var(--text-color);
+      }
+      .modal-content p {
+        color: var(--secondary-text);
+        margin-bottom: 24px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="card">
+        <h1>Work Intake Widget</h1>
+        <p style="text-align: center">
+          Generate a beautiful, AI-powered intake form to embed on your existing
+          website and capture leads autonomously.
+        </p>
+
+        <div class="form-group">
+          <label for="widget-title">Form Title</label>
+          <input type="text" id="widget-title" value="Get a Quote" />
+        </div>
+
+        <div class="form-group">
+          <label for="widget-desc">Description</label>
+          <textarea id="widget-desc" rows="2">
+Tell us about your project and we'll get back to you within 24 hours.</textarea
+          >
+        </div>
+
+        <div class="form-group">
+          <label for="widget-cta">Button Text</label>
+          <input type="text" id="widget-cta" value="Request Quote" />
+        </div>
+
+        <div class="toggle-group">
+          <input type="checkbox" id="remove-branding" />
+          <label for="remove-branding"
+            >Remove "Powered by OHC" Badge (Pro)</label
+          >
+        </div>
+
+        <button class="btn" id="generate-btn">Generate Embed Code</button>
+
+        <textarea id="embed-code" readonly></textarea>
+      </div>
+
+      <div class="card preview-container">
+        <h3
+          style="
+            margin-top: 0;
+            color: var(--secondary-text);
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            text-align: center;
+          "
+        >
+          Live Preview
+        </h3>
+
+        <div class="preview-wrapper" id="preview-wrapper">
+          <h3 id="preview-title" style="margin-bottom: 8px">Get a Quote</h3>
+          <p id="preview-desc" style="margin-bottom: 16px">
+            Tell us about your project and we'll get back to you within 24
+            hours.
+          </p>
+
+          <input
+            type="text"
+            placeholder="Your Name"
+            style="
+              width: 100%;
+              padding: 10px;
+              margin-bottom: 10px;
+              border: 1px solid #ccc;
+              border-radius: 6px;
+              box-sizing: border-box;
+            "
+            disabled
+          />
+          <input
+            type="email"
+            placeholder="Your Email"
+            style="
+              width: 100%;
+              padding: 10px;
+              margin-bottom: 10px;
+              border: 1px solid #ccc;
+              border-radius: 6px;
+              box-sizing: border-box;
+            "
+            disabled
+          />
+          <textarea
+            placeholder="Project Details"
+            rows="3"
+            style="
+              width: 100%;
+              padding: 10px;
+              margin-bottom: 15px;
+              border: 1px solid #ccc;
+              border-radius: 6px;
+              box-sizing: border-box;
+            "
+            disabled
+          ></textarea>
+
+          <button
+            id="preview-cta"
+            style="
+              width: 100%;
+              padding: 12px;
+              background: #000;
+              color: #fff;
+              border: none;
+              border-radius: 6px;
+              font-weight: bold;
+            "
+            disabled
+          >
+            Request Quote
+          </button>
+
+          <div class="preview-footer" id="preview-footer-el">
+            <a
+              href="/api/v1/growth/referrals/click?target=/onboarding&ref=default-team"
+              id="branding-link"
+              target="_blank"
+            >
+              <span>⚡</span> Powered by OHC
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Soft Paywall Modal -->
+    <div id="soft-paywall-modal">
+      <div class="modal-content">
+        <div style="font-size: 40px; margin-bottom: 16px">🚀</div>
+        <h2>Upgrade to Pro</h2>
+        <p>
+          Removing the "Powered by OHC" watermark is a Pro feature. Upgrade your
+          account or share OHC to unlock 7 Days of Pro for free!
+        </p>
+        <div style="display: flex; flex-direction: column; gap: 12px">
+          <button
+            id="soft-paywall-share-btn"
+            style="
+              background-color: #1da1f2;
+              color: white;
+              border: none;
+              padding: 12px;
+              border-radius: 10px;
+              font-weight: 600;
+              cursor: pointer;
+              transition: opacity 0.2s;
+            "
+          >
+            Share on X to Unlock
+          </button>
+          <button
+            onclick="window.location.href = 'setup.html#billing'"
+            style="
+              background-color: #0066ff;
+              color: white;
+              border: none;
+              padding: 12px;
+              border-radius: 10px;
+              font-weight: 600;
+              cursor: pointer;
+            "
+          >
+            Upgrade to Pro
+          </button>
+          <button
+            id="soft-paywall-close-btn"
+            style="
+              background: none;
+              border: none;
+              color: #86868b;
+              font-weight: 500;
+              cursor: pointer;
+              padding: 8px;
+            "
+          >
+            Maybe Later
+          </button>
+        </div>
+        <p
+          id="soft-paywall-status"
+          style="
+            display: none;
+            color: var(--text-color);
+            margin-top: 16px;
+            font-weight: 500;
+          "
+        >
+          Verifying...
+        </p>
+      </div>
+    </div>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        const titleInput = document.getElementById("widget-title");
+        const descInput = document.getElementById("widget-desc");
+        const ctaInput = document.getElementById("widget-cta");
+        const brandingToggle = document.getElementById("remove-branding");
+
+        const previewTitle = document.getElementById("preview-title");
+        const previewDesc = document.getElementById("preview-desc");
+        const previewCta = document.getElementById("preview-cta");
+        const footerEl = document.getElementById("preview-footer-el");
+
+        const generateBtn = document.getElementById("generate-btn");
+        const embedCode = document.getElementById("embed-code");
+
+        const softPaywallModal = document.getElementById("soft-paywall-modal");
+        const closePaywallBtn = document.getElementById(
+          "soft-paywall-close-btn",
+        );
+
+        function updatePreview() {
+          previewTitle.textContent = titleInput.value || "Title";
+          previewDesc.textContent = descInput.value || "Description";
+          previewCta.textContent = ctaInput.value || "Submit";
+
+          if (brandingToggle.checked) {
+            footerEl.style.display = "none";
+          } else {
+            footerEl.style.display = "block";
+          }
+        }
+
+        titleInput.addEventListener("input", updatePreview);
+        descInput.addEventListener("input", updatePreview);
+        ctaInput.addEventListener("input", updatePreview);
+
+        brandingToggle.addEventListener("change", (e) => {
+          const isPro = localStorage.getItem("has_pro") === "true";
+          if (e.target.checked && !isPro) {
+            e.target.checked = false; // Revert
+            softPaywallModal.style.display = "flex";
+          }
+          updatePreview();
+        });
+
+        closePaywallBtn.addEventListener("click", () => {
+          softPaywallModal.style.display = "none";
+        });
+
+        generateBtn.addEventListener("click", () => {
+          const tenant = localStorage.getItem("tenant_id") || "default";
+          const hasBranding = !brandingToggle.checked;
+
+          const code = `<!-- OHC Work Intake Widget -->
+<div id="ohc-intake-widget" data-tenant="${tenant}" data-title="${encodeURIComponent(titleInput.value)}" data-desc="${encodeURIComponent(descInput.value)}" data-cta="${encodeURIComponent(ctaInput.value)}" data-branding="${hasBranding}"></div>
+<script src="https://ohc.app/widgets/intake.js" async><\/script>
+${hasBranding ? "<!-- ⚡ Powered by OHC -->" : ""}`;
+
+          embedCode.value = code;
+          embedCode.style.display = "block";
+
+          // Copy to clipboard
+          embedCode.select();
+          document.execCommand("copy");
+
+          const originalText = generateBtn.textContent;
+          generateBtn.textContent = "Copied to Clipboard!";
+          generateBtn.style.backgroundColor = "#34C759";
+
+          setTimeout(() => {
+            generateBtn.textContent = originalText;
+            generateBtn.style.backgroundColor = "";
+          }, 2000);
+        });
+
+        // Share bypass mock for testing
+        document
+          .getElementById("soft-paywall-share-btn")
+          .addEventListener("click", () => {
+            const status = document.getElementById("soft-paywall-status");
+            status.style.display = "block";
+            status.textContent = "Verifying Share...";
+
+            setTimeout(() => {
+              status.textContent = "Unlocked!";
+              status.style.color = "#34C759";
+              localStorage.setItem("has_pro", "true");
+              setTimeout(() => {
+                softPaywallModal.style.display = "none";
+                brandingToggle.checked = true;
+                updatePreview();
+              }, 1000);
+            }, 500);
+          });
+
+        // Init tenant in link if possible
+        const tenantId = localStorage.getItem("tenant_id") || "default";
+        document.getElementById("branding-link").href =
+          `/api/v1/growth/referrals/click?target=/onboarding&ref=${tenantId}`;
+      });
+    </script>
+  </body>
+</html>
