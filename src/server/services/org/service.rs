@@ -106,6 +106,9 @@ impl OrgService for MyOrgService {
                 return Ok(Response::new(cached));
             }
 
+            // Prevent thundering herd by extending the TTL briefly before spawning
+            analytics_cache_clone.set(&cache_key, cached.clone(), std::time::Duration::from_secs(5)).await;
+
             // Stale cache hit, spawn background task
             let cache_key_bg = cache_key.clone();
             let hub_bg = self.hub.clone();

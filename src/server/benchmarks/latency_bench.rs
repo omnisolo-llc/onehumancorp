@@ -129,7 +129,8 @@ pub async fn bench_api_response_time() {
     }
 
     let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
-    let iterations = 2000;
+    // Reduced from 2000 to prevent ThreadPool starvation in `bench_hybrid_latency`
+    let iterations = 200;
 
     let (tx, _rx) = tokio::sync::mpsc::channel(100);
 
@@ -249,7 +250,8 @@ pub async fn bench_agent_snapshot() {
 
     let hub = Arc::new(crate::hub::Hub::new(tx, db.pool.clone()));
 
-    let iterations = 2000;
+    // Reduced from 2000 to prevent ThreadPool starvation in `bench_hybrid_latency`
+    let iterations = 200;
     let mut fetch_times = Vec::new();
 
     let meeting_id = format!("meeting-{}", Uuid::new_v4());
@@ -335,7 +337,8 @@ pub async fn bench_dashboard_snapshot() {
 
     let hub = Arc::new(crate::hub::Hub::new(tx, db.pool.clone()));
 
-    let iterations = 2000;
+    // Reduced from 2000 to prevent ThreadPool starvation in `bench_hybrid_latency`
+    let iterations = 200;
     let mut fetch_times = Vec::new();
 
     let meeting_id = format!("meeting-{}", Uuid::new_v4());
