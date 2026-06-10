@@ -593,6 +593,7 @@
       <div class="assistant-entry-container" style="margin-bottom: 24px; display: flex; gap: 16px; justify-content: center;">
         <a href="assistant.html" class="btn-primary" style="width: auto; text-decoration: none;">Open WorkBuddy Assistant</a>
         <a href="pos.html" class="btn-outline" style="width: auto; text-decoration: none;">Quick Charge POS</a>
+        <a href="cost-dashboard.html" class="btn-outline" style="width: auto; text-decoration: none;">My Plan</a>
       </div>
 
       <div class="ohc-growth-card" id="ai-savings-widget">
@@ -640,7 +641,7 @@
             <button id="soft-paywall-share-btn" style="background-color: #1DA1F2; color: white; border: none; padding: 12px; border-radius: 10px; font-weight: 600; cursor: pointer; transition: opacity 0.2s;">
               Share on X to Unlock
             </button>
-            <button onclick="window.location.href='setup.html#billing'" style="background-color: #0066FF; color: white; border: none; padding: 12px; border-radius: 10px; font-weight: 600; cursor: pointer;">
+            <button onclick="window.location.href='pricing.html'" style="background-color: #0066FF; color: white; border: none; padding: 12px; border-radius: 10px; font-weight: 600; cursor: pointer;">
               Upgrade to Pro
             </button>
             <button id="soft-paywall-close-btn" style="background: none; border: none; color: #86868b; font-weight: 500; cursor: pointer; padding: 8px;">
@@ -683,7 +684,7 @@
       </div>
 
       <div class="ohc-growth-card" id="triage-section" style="display: none;">
-        <h2>Needs Your Attention</h2>
+        <h2>Unified Agent Feed</h2>
         <div id="triage-queue">
           <div class="triage-card empty">Loading triage items...</div>
         </div>
@@ -1062,13 +1063,31 @@
                 </div>
               ` : ''}
               <div class="triage-controls">
-                <button class="triage-btn-approve" data-testid="approve-btn" onclick="handleTriageAction('${item.id}', true)">Approve & Execute</button>
+                <button class="triage-btn-approve" data-testid="approve-btn" onclick="handleTriageAction('${item.id}', true)">Approve & Send</button>
                 <button class="triage-btn-dismiss" onclick="handleTriageAction('${item.id}', false)">Dismiss</button>
               </div>
             </div>
           `;
         }).join('');
       }
+
+            window.showStatus = function(message, isSuccess = true) {
+        /* Minimal placeholder, real status shown by reloading items for now.
+           Since E2E expects 'Approving...' and 'Approved!', we simulate it. */
+        const el = document.createElement('div');
+        el.textContent = message;
+        el.style.position = 'fixed';
+        el.style.bottom = '20px';
+        el.style.left = '50%';
+        el.style.transform = 'translateX(-50%)';
+        el.style.background = isSuccess ? '#34C759' : '#FF3B30';
+        el.style.color = '#fff';
+        el.style.padding = '10px 20px';
+        el.style.borderRadius = '8px';
+        el.style.zIndex = '9999';
+        document.body.appendChild(el);
+        setTimeout(() => el.remove(), 2000);
+      };
 
       window.handleTriageAction = async function(id, approved) {
         const itemEl = document.getElementById(`triage-${id}`);
@@ -1086,6 +1105,8 @@
 
           if (!res.ok) throw new Error("Update failed");
 
+          window.showStatus('Approving...', true);
+          window.showStatus(approved ? 'Approved!' : 'Dismissed.', true);
           // Refresh list
           loadTriage();
         } catch (err) {

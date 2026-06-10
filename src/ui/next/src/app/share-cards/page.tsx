@@ -58,7 +58,7 @@ export default function ShareCardsPage() {
     }
   };
 
-  const shareText = `Check out my storefront: ${storeName} - ${tagline} ${shareLink}`;
+  const shareText = `Check out my storefront: ${storeName} - ${tagline} ${shareLink}${!removeBranding ? '\n\n⚡ Powered by OHC' : ''}`;
 
   return (
     <div className="flex flex-col min-h-screen font-inter" style={{ backgroundColor: '#F5F5F7' }}>
