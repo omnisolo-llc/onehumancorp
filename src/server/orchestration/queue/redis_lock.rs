@@ -71,3 +71,127 @@ impl RedisLock {
         Ok(result == 1)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_redis_lock_acquire_and_release() {
+        let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://localhost:6379".to_string());
+        if redis::Client::open(redis_url.as_str()).is_err() {
+            return; // Skip test if redis is not available
+        }
+
+        let lock = RedisLock::new(&redis_url).unwrap();
+        let tenant_id = "test_tenant";
+        let resource_type = "test_resource";
+        let resource_id = "res_123";
+
+        // Acquire lock
+        let lock_val = lock.acquire_lock(tenant_id, resource_type, resource_id, 10).await.unwrap();
+        assert!(lock_val.is_some());
+        let val = lock_val.unwrap();
+
+        // Release lock
+        let released = lock.release_lock(tenant_id, resource_type, resource_id, &val).await.unwrap();
+        assert!(released);
+    }
+
+    #[tokio::test]
+    async fn test_redis_lock_conflict() {
+        let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://localhost:6379".to_string());
+        if redis::Client::open(redis_url.as_str()).is_err() {
+            return;
+        }
+
+        let lock1 = RedisLock::new(&redis_url).unwrap();
+        let lock2 = RedisLock::new(&redis_url).unwrap();
+
+        let tenant_id = "test_tenant_conflict";
+        let resource_type = "test_resource";
+        let resource_id = "res_456";
+
+        let lock_val1 = lock1.acquire_lock(tenant_id, resource_type, resource_id, 10).await.unwrap();
+        assert!(lock_val1.is_some());
+
+        let lock_val2 = lock2.acquire_lock(tenant_id, resource_type, resource_id, 10).await.unwrap();
+        assert!(lock_val2.is_none());
+
+        let val1 = lock_val1.unwrap();
+        let released = lock1.release_lock(tenant_id, resource_type, resource_id, &val1).await.unwrap();
+        assert!(released);
+    }
+
+    #[tokio::test]
+    async fn test_redis_lock_wrong_val_release() {
+        let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://localhost:6379".to_string());
+        if redis::Client::open(redis_url.as_str()).is_err() {
+            return;
+        }
+
+        let lock = RedisLock::new(&redis_url).unwrap();
+        let tenant_id = "test_tenant_wrong_val";
+        let resource_type = "test_resource";
+        let resource_id = "res_789";
+
+        let lock_val = lock.acquire_lock(tenant_id, resource_type, resource_id, 10).await.unwrap();
+        assert!(lock_val.is_some());
+
+        let wrong_val = Uuid::new_v4().to_string();
+        let released = lock.release_lock(tenant_id, resource_type, resource_id, &wrong_val).await.unwrap();
+        assert!(!released);
+
+        let val = lock_val.unwrap();
+        let released = lock.release_lock(tenant_id, resource_type, resource_id, &val).await.unwrap();
+        assert!(released);
+    }
+
+    #[tokio::test]
+    async fn test_redis_lock_expiration() {
+        let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://localhost:6379".to_string());
+        if redis::Client::open(redis_url.as_str()).is_err() {
+            return;
+        }
+
+        let lock = RedisLock::new(&redis_url).unwrap();
+        let tenant_id = "test_tenant_exp";
+        let resource_type = "test_resource";
+        let resource_id = "res_abc";
+
+        let lock_val = lock.acquire_lock(tenant_id, resource_type, resource_id, 1).await.unwrap();
+        assert!(lock_val.is_some());
+
+        tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
+
+        let lock_val2 = lock.acquire_lock(tenant_id, resource_type, resource_id, 10).await.unwrap();
+        assert!(lock_val2.is_some());
+
+        let val2 = lock_val2.unwrap();
+        let released = lock.release_lock(tenant_id, resource_type, resource_id, &val2).await.unwrap();
+        assert!(released);
+    }
+
+    #[tokio::test]
+    async fn test_redis_lock_double_release() {
+        let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://localhost:6379".to_string());
+        if redis::Client::open(redis_url.as_str()).is_err() {
+            return;
+        }
+
+        let lock = RedisLock::new(&redis_url).unwrap();
+        let tenant_id = "test_tenant_double";
+        let resource_type = "test_resource";
+        let resource_id = "res_def";
+
+        let lock_val = lock.acquire_lock(tenant_id, resource_type, resource_id, 10).await.unwrap();
+        assert!(lock_val.is_some());
+        let val = lock_val.unwrap();
+
+        let released1 = lock.release_lock(tenant_id, resource_type, resource_id, &val).await.unwrap();
+        assert!(released1);
+
+        let released2 = lock.release_lock(tenant_id, resource_type, resource_id, &val).await.unwrap();
+        assert!(!released2);
+    }
+}

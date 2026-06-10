@@ -217,16 +217,43 @@ export async function GET(request: Request) {
     </footer>
 
     <script>
+        // Simulate real-time websocket/polling updates for POS locks
+        // In a real implementation this would listen to Server-Sent Events or WebSockets.
+        setInterval(() => {
+            // Mock random lock event for testing UI
+            if (Math.random() > 0.95) {
+                const buttons = document.querySelectorAll('.buy-button:not([disabled])');
+                if (buttons.length > 0) {
+                    const btn = buttons[Math.floor(Math.random() * buttons.length)];
+                    btn.innerText = 'Reserved at POS';
+                    btn.disabled = true;
+                    btn.style.backgroundColor = 'var(--muted)';
+                    btn.style.cursor = 'not-allowed';
+
+                    // Release lock after some time
+                    setTimeout(() => {
+                        btn.innerText = 'Add to Cart';
+                        btn.disabled = false;
+                        btn.style.backgroundColor = 'var(--primary)';
+                        btn.style.cursor = 'pointer';
+                    }, 5000);
+                }
+            }
+        }, 3000);
+
         // Simple interactivity for the mock buttons
         document.querySelectorAll('.buy-button').forEach(btn => {
             btn.addEventListener('click', function() {
+                if (this.disabled) return;
                 const originalText = this.innerText;
                 this.innerText = 'Added ✓';
                 this.style.backgroundColor = '#10b981';
 
                 setTimeout(() => {
-                    this.innerText = originalText;
-                    this.style.backgroundColor = 'var(--primary)';
+                    if (!this.disabled) {
+                        this.innerText = originalText;
+                        this.style.backgroundColor = 'var(--primary)';
+                    }
                 }, 2000);
             });
         });

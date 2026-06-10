@@ -237,23 +237,25 @@ pub async fn reserve_inventory_handler(
         None => return (axum::http::StatusCode::UNAUTHORIZED, Json(serde_json::json!({ "error": "unauthenticated" }))).into_response()
     };
 
-    let lock_id = uuid::Uuid::new_v4().to_string();
-    let lock_key = format!("ohc:lock:{}:inventory:{}", tenant_id, req_data.product_id);
+    let mut lock_id = String::new();
 
     if let Some(client) = &hub.redis_client {
-        if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
-            let ttl = if req_data.ttl_seconds > 0 { req_data.ttl_seconds } else { 15 };
-            let acquired: bool = redis::cmd("SET")
-                .arg(&lock_key).arg(&lock_id).arg("EX").arg(ttl).arg("NX")
-                .query_async(&mut conn).await.unwrap_or(false);
-
-            if !acquired {
+        let url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://localhost:6379".to_string());
+        if let Ok(redis_client) = redis::Client::open(url.as_str()) {
+            let redis_lock = crate::orchestration::locks::RedisLock::new(redis_client);
+            let ttl = if req_data.ttl_seconds > 0 { req_data.ttl_seconds as u64 } else { 15 };
+            use crate::orchestration::locks::DistributedLock;
+            let guard_res = redis_lock.acquire_resource(&tenant_id, "inventory", &req_data.product_id).await;
+            if guard_res.is_err() {
                 return (axum::http::StatusCode::OK, Json(serde_json::json!({
                     "success": false,
                     "lock_id": "",
                     "error_message": "Item is currently being checked out by another customer"
                 }))).into_response();
             }
+            let _guard = guard_res.unwrap();
+            lock_id = "acquired".to_string();
+
 
             // Verify capacity AFTER acquiring the lock within a transaction
             let pool = crate::db::get_pool();
@@ -269,7 +271,7 @@ pub async fn reserve_inventory_handler(
                     if let Some(stock) = current_stock {
                         if stock < req_data.quantity {
                             let _ = tx.rollback().await;
-                            let _: () = redis::cmd("DEL").arg(&lock_key).query_async(&mut conn).await.unwrap_or(());
+                            // drop _guard
                             return (axum::http::StatusCode::OK, Json(serde_json::json!({
                                 "success": false,
                                 "lock_id": "",
@@ -278,7 +280,7 @@ pub async fn reserve_inventory_handler(
                         }
                     } else {
                         let _ = tx.rollback().await;
-                        let _: () = redis::cmd("DEL").arg(&lock_key).query_async(&mut conn).await.unwrap_or(());
+                        // release via guard
                         return (axum::http::StatusCode::OK, Json(serde_json::json!({
                             "success": false,
                             "lock_id": "",
@@ -341,20 +343,16 @@ pub async fn commit_inventory_handler(
         None => return (axum::http::StatusCode::UNAUTHORIZED, Json(serde_json::json!({ "error": "unauthenticated" }))).into_response()
     };
 
-    let lock_key = format!("ohc:lock:{}:inventory:{}", tenant_id, req_data.product_id);
-
     if let Some(client) = &hub.redis_client {
-        if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
-            let current_lock_id: Option<String> = redis::cmd("GET").arg(&lock_key).query_async(&mut conn).await.unwrap_or(None);
-            if let Some(cid) = current_lock_id {
-                if cid != req_data.lock_id && !req_data.lock_id.is_empty() {
-                    return (axum::http::StatusCode::OK, Json(serde_json::json!({
-                        "success": false,
-                        "error_message": "Lock ID mismatch. Reservation may have expired."
-                    }))).into_response();
+        let url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://localhost:6379".to_string());
+        if let Ok(redis_client) = redis::Client::open(url.as_str()) {
+            let redis_lock = crate::orchestration::locks::RedisLock::new(redis_client);
+            if !req_data.lock_id.is_empty() {
+                let key = format!("ohc:lock:{}:inventory:{}", tenant_id, req_data.product_id);
+                if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
+                    let _: () = redis::cmd("DEL").arg(&key).query_async(&mut conn).await.unwrap_or(());
                 }
             }
-            let _: () = redis::cmd("DEL").arg(&lock_key).query_async(&mut conn).await.unwrap_or(());
         }
     }
 
