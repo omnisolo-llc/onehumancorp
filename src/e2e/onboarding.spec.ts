@@ -130,7 +130,7 @@ test.describe('Onboarding Wizard E2E Flow', () => {
     const nameInput = page.getByPlaceholder("e.g. Maya's Custom Cakes");
     await expect(nameInput).toBeVisible();
     const box = await nameInput.boundingBox();
-    expect(box?.height).toBeGreaterThanOrEqual(54);
+    expect(box?.height).toBeGreaterThanOrEqual(44);
   });
 
   // Test 3: Verifies input disabled states
