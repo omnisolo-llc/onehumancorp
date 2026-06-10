@@ -131,17 +131,18 @@ export default function HelpCenterPage() {
 
       {selectedVideo && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="relative w-full max-w-4xl bg-black rounded-2xl overflow-hidden shadow-2xl">
-            <div className="absolute top-4 right-4 z-10 flex space-x-2">
+          <div className="relative w-full max-w-[375px] mx-auto aspect-[9/16] bg-black rounded-3xl overflow-hidden shadow-2xl flex flex-col border border-white/20">
+            <div className="absolute top-0 left-0 right-0 p-4 bg-gradient-to-b from-black/90 to-transparent z-10 flex justify-between items-start pt-6">
+              <h3 className="text-white font-bold font-outfit text-base pr-4 line-clamp-2 drop-shadow-md leading-tight">{selectedVideo.title}</h3>
               <button
                 aria-label="Close video"
                 onClick={() => setSelectedVideo(null)}
-                className="bg-white/10 hover:bg-white/20 text-white rounded-full p-2 backdrop-blur-md transition-all font-inter text-sm px-4 flex items-center gap-2 border border-white/20 shadow-lg"
+                className="text-white/80 hover:text-white bg-white/20 hover:bg-white/30 backdrop-blur-md border border-white/20 rounded-full p-2 transition-all min-h-[44px] min-w-[44px] flex items-center justify-center flex-shrink-0"
               >
-                Close video
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
             </div>
-            <div className="aspect-video w-full bg-gray-900 flex items-center justify-center relative">
+            <div className="flex-1 flex items-center justify-center relative bg-black">
               <video
                 src={selectedVideo.video_url || undefined}
                 controls
@@ -151,9 +152,8 @@ export default function HelpCenterPage() {
                 Your browser does not support the video tag.
               </video>
             </div>
-            <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black/80 to-transparent">
-              <h3 className="text-white font-outfit text-xl font-bold">{selectedVideo.title}</h3>
-              <p className="text-white/80 font-inter text-sm">{selectedVideo.duration}</p>
+            <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black/80 to-transparent pointer-events-none">
+              <p className="text-white/80 font-inter text-sm font-medium drop-shadow-md">{selectedVideo.duration}</p>
             </div>
           </div>
         </div>
