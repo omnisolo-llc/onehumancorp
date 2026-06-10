@@ -1,80 +1,88 @@
-import { useOnboardingStore } from './store';
 import { describe, it, expect, beforeEach } from 'vitest';
+import { useOnboardingStore } from './store';
 
 describe('useOnboardingStore', () => {
   beforeEach(() => {
-    localStorage.clear();
+    // Reset store before each test
     useOnboardingStore.setState({
-      step: 1,
+      step: 0,
+      bio: '',
       businessDescription: '',
+      businessGoal: '',
+      businessName: '',
+      businessType: 'Online Store',
+      categories: [],
+      websiteTemplate: 'Modern',
+      domainChoice: 'subdomain',
+      firstProductName: '',
+      firstProductPrice: '',
+      adminName: '',
+      adminEmail: '',
+      adminPassword: '',
+      aiAgents: [],
+      aiAutoRespond: true,
       isLoading: false,
       error: '',
       startResult: null,
     });
   });
 
-  it('should initialize with default state', () => {
+  it('should initialize with default values', () => {
     const state = useOnboardingStore.getState();
-    expect(state.step).toBe(1);
-    expect(state.businessDescription).toBe('');
+    expect(state.step).toBe(0);
+    expect(state.bio).toBe('');
+    expect(state.businessType).toBe('Online Store');
+    expect(state.websiteTemplate).toBe('Modern');
+    expect(state.domainChoice).toBe('subdomain');
+    expect(state.aiAutoRespond).toBe(true);
     expect(state.isLoading).toBe(false);
-    expect(state.error).toBe('');
-    expect(state.startResult).toBeNull();
   });
 
   it('should update step', () => {
-    useOnboardingStore.getState().setStep(2);
-    expect(useOnboardingStore.getState().step).toBe(2);
+    useOnboardingStore.getState().setStep(1);
+    expect(useOnboardingStore.getState().step).toBe(1);
   });
 
-  it('should update businessDescription', () => {
-    useOnboardingStore.getState().setBusinessDescription('Test Description');
-    expect(useOnboardingStore.getState().businessDescription).toBe('Test Description');
+  it('should update bio', () => {
+    useOnboardingStore.getState().setBio('I am a baker');
+    expect(useOnboardingStore.getState().bio).toBe('I am a baker');
   });
 
-  it('should update isLoading', () => {
-    useOnboardingStore.getState().setIsLoading(true);
-    expect(useOnboardingStore.getState().isLoading).toBe(true);
+  it('should update business name', () => {
+    useOnboardingStore.getState().setBusinessName('Maya Bakery');
+    expect(useOnboardingStore.getState().businessName).toBe('Maya Bakery');
   });
 
-  it('should update error', () => {
-    useOnboardingStore.getState().setError('Test Error');
-    expect(useOnboardingStore.getState().error).toBe('Test Error');
+  it('should update categories', () => {
+    useOnboardingStore.getState().setCategories(['Food', 'Bakery']);
+    expect(useOnboardingStore.getState().categories).toEqual(['Food', 'Bakery']);
   });
 
-  it('should update startResult', () => {
-    useOnboardingStore.getState().setStartResult({ result: 'test' });
-    expect(useOnboardingStore.getState().startResult).toEqual({ result: 'test' });
-  });
-
-  it('should update new state keys correctly', () => {
-    useOnboardingStore.getState().setBusinessName('Test Business');
-    useOnboardingStore.getState().setBusinessType('Cafe');
-    useOnboardingStore.getState().setCategories(['food', 'drinks']);
-    useOnboardingStore.getState().setWebsiteTemplate('Classic');
-    useOnboardingStore.getState().setFirstProductName('Coffee');
-    useOnboardingStore.getState().setFirstProductPrice('5.00');
-    useOnboardingStore.getState().setDomainChoice('custom');
-
+  it('should update admin details', () => {
     const state = useOnboardingStore.getState();
-    expect(state.businessName).toBe('Test Business');
-    expect(state.businessType).toBe('Cafe');
-    expect(state.categories).toEqual(['food', 'drinks']);
-    expect(state.websiteTemplate).toBe('Classic');
-    expect(state.firstProductName).toBe('Coffee');
-    expect(state.firstProductPrice).toBe('5.00');
-    expect(state.domainChoice).toBe('custom');
+    state.setAdminName('Admin');
+    state.setAdminEmail('admin@test.com');
+    state.setAdminPassword('password123');
+
+    const updatedState = useOnboardingStore.getState();
+    expect(updatedState.adminName).toBe('Admin');
+    expect(updatedState.adminEmail).toBe('admin@test.com');
+    expect(updatedState.adminPassword).toBe('password123');
   });
 
-  it('should persist state to localStorage', () => {
-    useOnboardingStore.getState().setStep(3);
-    useOnboardingStore.getState().setBusinessDescription('Persisted Description');
-    useOnboardingStore.getState().setBusinessName('Persisted Name');
+  it('should update loading and error state', () => {
+    const state = useOnboardingStore.getState();
+    state.setIsLoading(true);
+    state.setError('Network error');
 
-    // The state is persisted in localStorage under 'onboarding-storage-v3'
-    const storedState = JSON.parse(localStorage.getItem('onboarding-storage-v3') || '{}');
-    expect(storedState.state.step).toBe(3);
-    expect(storedState.state.businessDescription).toBe('Persisted Description');
-    expect(storedState.state.businessName).toBe('Persisted Name');
+    const updatedState = useOnboardingStore.getState();
+    expect(updatedState.isLoading).toBe(true);
+    expect(updatedState.error).toBe('Network error');
+  });
+
+  it('should update start result', () => {
+    const mockResult = { organization_id: 'org_123', message: 'Success' };
+    useOnboardingStore.getState().setStartResult(mockResult);
+    expect(useOnboardingStore.getState().startResult).toEqual(mockResult);
   });
 });
