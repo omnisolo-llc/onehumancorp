@@ -18,6 +18,16 @@ type ApprovalsResponse = {
   next_cursor?: string | null;
 };
 
+type AgentFeedItem = {
+  id: string;
+  tenant_id: string;
+  event_source: string;
+  context_payload?: any;
+  proposed_action?: any;
+  lifecycle_state: string;
+  created_at: string;
+};
+
 type OHCLedgerEntry = {
   id: string;
   tenant_id: string;
@@ -33,6 +43,7 @@ type LedgerResponse = {
 
 export function UnifiedAgentFeed() {
   const [approvals, setApprovals] = useState<ApprovalRequest[]>([]);
+  const [feedItems, setFeedItems] = useState<AgentFeedItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [activeTab, setActiveTab] = useState<"proposals" | "activity">("proposals");
@@ -53,18 +64,24 @@ export function UnifiedAgentFeed() {
         setActivityLoading(true);
         const tenant = tenantId();
 
-        const unifiedRes = await fetch(`/api/ui/dashboard/unified-agent-feed?tenant_id=${tenant}`, {
-          headers: {
-            "x-tenant-id": tenant,
-            "x-user-id": "default",
-          },
-        });
+        const [unifiedRes, feedRes] = await Promise.all([
+          fetch(`/api/ui/dashboard/unified-agent-feed?tenant_id=${tenant}`, {
+            headers: {
+              "x-tenant-id": tenant,
+              "x-user-id": "default",
+            },
+          }),
+          fetch(`/api/agent-feed?tenant_id=${tenant}`, {
+            headers: { "x-tenant-id": tenant, "x-user-id": "default" },
+          })
+        ]);
 
-        if (!unifiedRes.ok) {
+        if (!unifiedRes.ok || !feedRes.ok) {
           throw new Error("Failed to load agent feed");
         }
 
         const unifiedData = await unifiedRes.json();
+        const feedDataRes = await feedRes.json();
 
         const feedData = { pending_approvals: unifiedData.pending_approvals || [] };
         const activityData = { entries: unifiedData.entries || [] };
@@ -72,6 +89,9 @@ export function UnifiedAgentFeed() {
         if (mounted) {
           if (feedData.pending_approvals) {
             setApprovals(feedData.pending_approvals);
+          }
+          if (feedDataRes.items) {
+            setFeedItems(feedDataRes.items.filter((item: AgentFeedItem) => item.lifecycle_state === "PENDING_APPROVAL"));
           }
           // Fallback to fetch from approvals activity endpoint if ledger entries are empty/missing
           if (activityData.entries && activityData.entries.length > 0) {
@@ -233,6 +253,22 @@ export function UnifiedAgentFeed() {
     return () => events.close();
   }, []);
 
+  async function handleFeedItemAction(id: string, actionType: "APPROVED" | "DISMISSED") {
+    const tenant = tenantId();
+    try {
+      const res = await fetch(`/api/agent-feed/${id}/state?tenant_id=${tenant}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ state: actionType })
+      });
+      if (res.ok) {
+        setFeedItems(prev => prev.filter(i => i.id !== id));
+      }
+    } catch (e) {
+      console.error("Failed to update feed item state", e);
+    }
+  }
+
   const handleDecision = async (id: string, approved: boolean) => {
     // Optimistic UI update
     setApprovals(prev => prev.filter(app => app.id !== id));
@@ -286,7 +322,7 @@ export function UnifiedAgentFeed() {
               : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
           }`}
         >
-          Proposals ({approvals.length})
+          Proposals ({approvals.length + feedItems.length})
         </button>
         <button
           onClick={() => setActiveTab("activity")}
@@ -349,7 +385,7 @@ export function UnifiedAgentFeed() {
                 Loading Agent Proposals...
               </div>
             )}
-            {!loading && approvals.length === 0 && (
+            {!loading && approvals.length === 0 && feedItems.length === 0 && (
               <div className="w-full flex flex-col items-center gap-6 p-6 glassmorphism rounded-[16px] border border-white/40 dark:border-white/10 shadow-sm opacity-90 text-center">
                 <div className="text-3xl mb-2">✨</div>
                 <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7]">All caught up!</h3>
@@ -361,6 +397,50 @@ export function UnifiedAgentFeed() {
                 </div>
               </div>
             )}
+            {feedItems.map((item) => (
+              <div key={item.id} className="glassmorphism p-5 rounded-[16px] border border-white/40 dark:border-white/10 shadow-sm flex flex-col gap-4" data-testid={`feed-item-${item.id}`}>
+                <div className="flex flex-col gap-1">
+                  <div className="flex justify-between items-start">
+                    <span className="text-xs font-bold uppercase tracking-wider text-[#0066FF] bg-[#0066FF]/10 dark:bg-[#3388FF]/20 dark:text-[#3388FF] px-2 py-1 rounded">
+                      {item.event_source}
+                    </span>
+                    <span className="text-xs text-gray-500 font-inter">{new Date(item.created_at).toLocaleString()}</span>
+                  </div>
+                  <h3 className="text-[17px] font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] font-outfit mt-2 leading-tight">
+                    {item.context_payload?.message || item.context_payload?.description || JSON.stringify(item.context_payload)}
+                  </h3>
+                  {item.proposed_action && (
+                    <div className="mt-2 text-sm text-gray-600 dark:text-gray-400 border-l-2 border-blue-400 pl-3">
+                      <strong>Proposed Action: </strong>
+                      {item.proposed_action?.message || item.proposed_action?.action || item.proposed_action?.description || JSON.stringify(item.proposed_action)}
+                    </div>
+                  )}
+                </div>
+                <div className="flex flex-col sm:flex-row gap-3 w-full mt-2">
+                  <button
+                    onClick={() => handleFeedItemAction(item.id, "APPROVED")}
+                    className="flex-1 min-h-[44px] rounded-lg font-bold text-sm bg-[#0066FF] hover:bg-blue-600 dark:bg-[#3388FF] dark:hover:bg-blue-500 text-white shadow-sm transition-transform active:scale-[0.98]"
+                    data-testid="approve-feed-item"
+                  >
+                    Approve
+                  </button>
+                  <button
+                    onClick={() => handleFeedItemAction(item.id, "DISMISSED")}
+                    className="flex-1 min-h-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex items-center justify-center"
+                    aria-label="Edit Draft"
+                  >
+                    Edit Draft
+                  </button>
+                  <button
+                    onClick={() => handleFeedItemAction(item.id, "DISMISSED")}
+                    className="flex-1 min-h-[44px] rounded-lg font-bold text-sm bg-red-100 hover:bg-red-200 text-red-600 dark:bg-red-900/30 dark:hover:bg-red-900/50 dark:text-red-400 transition-transform active:scale-[0.98]"
+                  >
+                    Dismiss
+                  </button>
+                </div>
+              </div>
+            ))}
+
             {approvals.map((approval) => (
               <div
                 key={approval.id}
