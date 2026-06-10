@@ -1239,7 +1239,7 @@ impl crate::tools::anthropic_memory::MemoryAccessor for Anthropic3TierMemoryStor
             let content = tokio::fs::read_to_string(entry.path())
                 .await
                 .map_err(|e| e.to_string())?;
-            for par in content.split("\n\n") {
+            for par in content.split("\n") {
                 if par.to_lowercase().contains(&query.to_lowercase()) {
                     results.push(par.to_string());
                     if results.len() >= limit {
@@ -1342,7 +1342,7 @@ impl LongTermMemory for Anthropic3TierMemoryStore {
             let content = tokio::fs::read_to_string(entry.path())
                 .await
                 .map_err(|e| e.to_string())?;
-            for par in content.split("\n\n") {
+            for par in content.split("\n") {
                 if par.to_lowercase().contains(&query.to_lowercase()) {
                     results.push(par.to_string());
                     if results.len() >= limit {
