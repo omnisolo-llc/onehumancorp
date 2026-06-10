@@ -4,12 +4,14 @@ import React, { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { WithTooltip } from "../../components/TooltipRegistry";
 import { PoweredByOHC } from "../components/PoweredByOHC";
+import { useCurrency } from "../../lib/localizationStore";
 
 import { Suspense } from "react";
 
 function CheckoutContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { currency, convert } = useCurrency();
   const tier = searchParams?.get("tier");
   const discountParam = searchParams?.get("discount");
   const [isProcessing, setIsProcessing] = useState(false);
@@ -226,7 +228,11 @@ function CheckoutContent() {
                     Monthly subscription
                   </p>
                   <div className="mt-2 text-sm font-medium text-gray-900">
-                    {tier.toLowerCase() === 'starter' ? '$29.00 / month' : tier.toLowerCase() === 'pro' ? '$79.00 / month' : '$299.00 / month'}
+                    {(() => {
+                      let basePrice = tier.toLowerCase() === 'starter' ? 2900 : tier.toLowerCase() === 'pro' ? 7900 : 29900;
+                      const { amount: convertedAmount } = convert(basePrice, 'USD', currency);
+                      return `${currency === 'USD' ? '$' : currency === 'EUR' ? '€' : currency === 'GBP' ? '£' : currency + ' '}${(convertedAmount / 100).toFixed(2)} / month`;
+                    })()}
                   </div>
                 </div>
               </div>
@@ -355,7 +361,12 @@ function CheckoutContent() {
               disabled={isProcessing}
               className={`w-full px-4 py-3 text-white rounded-lg font-medium transition-colors shadow-sm ${isProcessing ? "bg-indigo-400 cursor-not-allowed" : "bg-indigo-600 hover:bg-indigo-700"}`}
             >
-              {isProcessing ? "Processing..." : "Pay Now"}
+              {isProcessing ? "Processing..." : `Pay ${currency === 'USD' ? '$' : currency === 'EUR' ? '€' : currency === 'GBP' ? '£' : currency + ' '}${(() => {
+                let basePrice = tier?.toLowerCase() === 'starter' ? 2900 : tier?.toLowerCase() === 'pro' ? 7900 : 29900;
+                let finalPrice = discountParam === "100" ? 0 : basePrice;
+                const { amount } = convert(finalPrice, 'USD', currency);
+                return (amount / 100).toFixed(2);
+              })()}`}
             </button>
           </WithTooltip>
 

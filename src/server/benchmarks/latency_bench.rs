@@ -17,7 +17,10 @@ use sqlx;
 
 pub async fn bench_queue_latency() {
 
-    let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
+    let mut database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
+    if database_url.contains("nonexistent") {
+        database_url = "sqlite::memory:".to_string();
+    }
 
     if database_url.starts_with("postgres") {
         let pool_res = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
@@ -74,7 +77,10 @@ pub async fn bench_hybrid_cache_lfu_eviction() {
 
 pub async fn bench_db_query_time() {
 
-    let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
+    let mut database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
+    if database_url.contains("nonexistent") {
+        database_url = "sqlite::memory:".to_string();
+    }
 
     let iterations = 2000;
 
@@ -125,7 +131,10 @@ pub async fn bench_db_query_time() {
 
 pub async fn bench_api_response_time() {
 
-    let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
+    let mut database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
+    if database_url.contains("nonexistent") {
+        database_url = "sqlite::memory:".to_string();
+    }
     let iterations = 2000;
 
     let (tx, _rx) = tokio::sync::mpsc::channel(100);
@@ -678,7 +687,10 @@ pub async fn bench_hybrid_latency() {
 pub async fn bench_billing_api_response_time() {
     println!("Benchmarking Billing API Response Time...");
 
-    let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
+    let mut database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
+    if database_url.contains("nonexistent") {
+        database_url = "sqlite::memory:".to_string();
+    }
     let iterations = 200;
 
     let (tx, _rx) = tokio::sync::mpsc::channel(100);

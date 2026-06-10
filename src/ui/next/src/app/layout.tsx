@@ -6,6 +6,7 @@ import { TooltipProvider } from '../components/TooltipRegistry';
 
 import { HelpChat } from "../components/HelpChat";
 import { RateLimitWarningProvider } from '../components/RateLimitWarning';
+import { LocalizationToggle } from '../components/LocalizationToggle';
 
 export const metadata: Metadata = {
   title: 'OHC Builder',

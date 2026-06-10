@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { WithTooltip } from "../../components/TooltipRegistry";
+import { LocalizationToggle } from "../../components/LocalizationToggle";
 
 type StatusItem = {
   label: string;
@@ -174,6 +175,9 @@ export function AppShell({
             {subtitle && <p className="app-subtitle">{subtitle}</p>}
           </div>
           <div className="app-topbar-right">
+            <div className="flex items-center gap-4 mr-2">
+               <LocalizationToggle />
+            </div>
             <div className="app-status-strip">
               {statusItems.map((item) => (
                 <div key={item.label} className="app-status-item">
