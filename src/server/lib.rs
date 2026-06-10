@@ -2656,6 +2656,15 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .route("/api/v1/webhooks/meta", axum::routing::post(api::meta_webhook::meta_webhook_post_handler))
         .with_state(meta_webhook_state);
 
+    let twilio_webhook_state = api::twilio_webhook::TwilioWebhookState {
+        hub: hub.clone(),
+        db: db.clone(),
+        orchestrator: dept_orchestrator.clone(),
+    };
+    let twilio_webhook_router = axum::Router::new()
+        .route("/api/v1/webhooks/twilio", axum::routing::post(api::twilio_webhook::twilio_webhook_post_handler))
+        .with_state(twilio_webhook_state);
+
     let health_router = axum::Router::new()
         .route("/api/v1/health", axum::routing::get(api::health::health_handler))
         .with_state(hub.clone());
@@ -2823,6 +2832,36 @@ pub async fn update_ui_triage_action_handler(
             }
 
             let status = if payload.approved { "resolved" } else { "dismissed" };
+
+            // Check if we need to send a message
+            if payload.approved {
+                if let Ok(row) = sqlx::query("SELECT action_type, action_payload FROM triage_items WHERE id = $1 AND tenant_id = $2")
+                    .bind(&payload.triage_item_id)
+                    .bind(&tenant_id)
+                    .fetch_one(&mut *tx)
+                    .await
+                {
+                    use sqlx::Row;
+                    if let Ok(action_type) = row.try_get::<String, _>("action_type") {
+                        if action_type == "ambassador_reply" {
+                            if let Ok(payload_str) = row.try_get::<String, _>("action_payload") {
+                                if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&payload_str) {
+                                    let source = parsed.get("source").and_then(|v| v.as_str()).unwrap_or("");
+                                    let draft = parsed.get("draft_reply").and_then(|v| v.as_str()).unwrap_or("");
+                                    let sender_id = parsed.get("sender_id").and_then(|v| v.as_str()).unwrap_or("");
+
+                                    if source == "whatsapp" && !draft.is_empty() && !sender_id.is_empty() {
+                                        // Dispatch to registry
+                                        let integrations = std::sync::Arc::new(crate::integrations::registry::IntegrationsRegistry::new());
+                                        let _ = integrations.send_sms("twilio", sender_id, &tenant_id, draft).await;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
             match sqlx::query("UPDATE triage_items SET status = $1 WHERE id = $2 AND tenant_id = $3").bind(status).bind(&payload.triage_item_id).bind(&tenant_id).execute(&mut *tx).await {
                 Ok(_) => {
                     let _ = tx.commit().await;
@@ -4315,6 +4354,7 @@ async fn create_ui_bom_item_handler(
             default_config: ohc_builtin_agent::agent::AgentRunConfig::default(),
         })))
         .merge(meta_webhook_router)
+        .merge(twilio_webhook_router)
         .merge(health_router)
         .fallback(api_not_found_handler);
 
