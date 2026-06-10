@@ -31,6 +31,8 @@ exports_files(
         "agent_feed.rs",
         "audio_command.rs",
         "invoice.rs",
+        "omnichannel.rs",
+        "omnichannel_test.rs",
     ],
     visibility = ["//visibility:public"],
 )
@@ -68,6 +70,8 @@ rust_library(
         "agent_feed.rs",
         "audio_command.rs",
         "invoice.rs",
+        "omnichannel.rs",
+        "omnichannel_test.rs",
         "//src/server/api/agents:approvals.rs",
         "//src/server/api/agents:client_intake.rs",
         "//src/server/api/agents:hire.rs",

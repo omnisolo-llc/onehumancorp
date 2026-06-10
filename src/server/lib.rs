@@ -2657,6 +2657,14 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         db: db.clone(),
     };
 
+    let omnichannel_webhook_state = api::omnichannel::OmnichannelWebhookState {
+        db: db.clone(),
+        orchestrator: dept_orchestrator.clone(),
+    };
+    let omnichannel_webhook_router = axum::Router::new()
+        .route("/api/v1/webhooks/omnichannel", axum::routing::post(api::omnichannel::omnichannel_webhook_handler))
+        .with_state(omnichannel_webhook_state);
+
     let webhook_router = axum::Router::new()
         .route("/api/v1/webhooks/stripe", axum::routing::post(api::billing_webhook::stripe_webhook_handler))
         .route("/api/v1/webhooks/mercadopago", axum::routing::post(api::billing_webhook::mercadopago_webhook_handler))
@@ -4621,6 +4629,7 @@ async fn create_ui_bom_item_handler(
             }))
         }))
         .merge(webhook_router)
+        .merge(omnichannel_webhook_router)
         .merge(ohc_builtin_agent::visual_workflow_client::create_router(std::sync::Arc::new(ohc_builtin_agent::visual_workflow_client::VisualWorkflowState {
             default_agent: std::sync::Arc::new(ohc_builtin_agent::agent::Agent::new(std::sync::Arc::new(ohc_builtin_agent::llm::openai::OpenAIClient::new("dummy".to_string())), vec![])),
             tools: vec![],

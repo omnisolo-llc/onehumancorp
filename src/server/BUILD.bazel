@@ -45,6 +45,8 @@ SERVER_RS_SRCS = [
     "//src/server/api:mcp_webhook.rs",
     "//src/server/api:mesh_handler.rs",
     "//src/server/api:meta_webhook.rs",
+    "//src/server/api:omnichannel.rs",
+    "//src/server/api:omnichannel_test.rs",
     "//src/server/api:docs.rs",
     "//src/server/api:local_seo.rs",
     "//src/server/api:recovery.rs",
