@@ -20,6 +20,8 @@ pub struct WebhookPayload {
     pub source: String,
     #[serde(default)]
     pub target_language: Option<String>,
+    #[serde(default)]
+    pub sender_id: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -171,11 +173,16 @@ async fn handle_webhook(
 
     let pool = get_pool();
     let id = Uuid::new_v4().to_string();
+    let sender_id = payload.sender_id.unwrap_or_default();
+
+    // Attempt Identity Resolution
+    let customer_id = crate::api::agents::identity_resolution::resolve_customer_identity(&payload.tenant_id, &sender_id).await;
+
     // Insert the raw message initially; the TranslationAgent will update it with translated content and a draft reply.
     let _ = sqlx::query(
         r#"
-        INSERT INTO inbox_messages (id, tenant_id, source, original_content, content, translated_from_language, draft_reply, status, created_at)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, 'unread', NOW())
+        INSERT INTO inbox_messages (id, tenant_id, source, original_content, content, translated_from_language, draft_reply, status, sender_id, created_at)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, 'unread', $8, NOW())
         "#
     )
     .bind(&id)
@@ -185,22 +192,42 @@ async fn handle_webhook(
     .bind(&payload.message) // content starts as original until translated
     .bind(None::<String>) // translated_from_language starts empty
     .bind(None::<String>) // draft_reply starts empty
+    .bind(&sender_id)
     .execute(&pool)
     .await;
 
     let target_language = payload.target_language.unwrap_or_else(|| "English".to_string());
 
+    let mut event_payload = serde_json::json!({
+        "source": payload.source,
+        "original_message": payload.message,
+        "target_language": target_language,
+        "inbox_message_id": id,
+        "sender_id": sender_id,
+    });
+
+    if let Some(c_id) = customer_id {
+        event_payload["customer_id"] = serde_json::Value::String(c_id);
+    }
+
     let event = crate::orchestration::departments::types::DepartmentEvent {
         id: uuid::Uuid::new_v4().to_string(),
         tenant_id: payload.tenant_id.clone(),
         event_type: "tenant.omnichannel.message.received".to_string(),
-        payload: serde_json::json!({
-            "source": payload.source,
-            "original_message": payload.message,
-            "target_language": target_language,
-            "inbox_message_id": id,
-        }),
+        payload: event_payload.clone(),
     };
+
+    let inbound_event = crate::orchestration::departments::types::DepartmentEvent {
+        id: uuid::Uuid::new_v4().to_string(),
+        tenant_id: payload.tenant_id.clone(),
+        event_type: "InboundMessage".to_string(),
+        payload: event_payload,
+    };
+
+    let orchestrator_clone = orchestrator.clone();
+    tokio::spawn(async move {
+        let _ = orchestrator_clone.dispatch_event(inbound_event).await;
+    });
 
     match orchestrator.dispatch_event(event).await {
         Ok(_) => (StatusCode::OK, Json(WebhookResponse { success: true, request_id: Some(id) })).into_response(),
