@@ -7,7 +7,8 @@ test.describe('Cost Dashboard "My Plan" functionality', () => {
     await page.goto('/dashboard.html');
     await page.waitForLoadState('networkidle');
 
-    await page.goto('/cost-dashboard');
+    // Explicitly click the 'My Plan' link from the dashboard
+    await page.locator('a:has-text("My Plan")').click();
     await page.waitForLoadState('networkidle');
 
     // 3. Check for My Plan components
@@ -81,7 +82,9 @@ test.describe('Cost Dashboard "My Plan" functionality', () => {
 
   test('Cost Dashboard renders the cost transparency section completely', async ({ page, adminUser, loginAs }) => {
     await loginAs(page, adminUser);
-    await page.goto('/cost-dashboard');
+    await page.goto('/dashboard.html');
+    await page.waitForLoadState('networkidle');
+    await page.locator('a:has-text("My Plan")').click();
     await page.waitForLoadState('networkidle');
 
     // Verify Cost Transparency headers and text
@@ -122,7 +125,9 @@ test.describe('Cost Dashboard "My Plan" functionality', () => {
     await expect(page).toHaveURL(/.*checkout.stripe.com.*/);
 
     // Now go to the My Plan page
-    await page.goto('/cost-dashboard');
+    await page.goto('/dashboard.html');
+    await page.waitForLoadState('networkidle');
+    await page.locator('a:has-text("My Plan")').click();
     await page.waitForLoadState('networkidle');
   });
 });
