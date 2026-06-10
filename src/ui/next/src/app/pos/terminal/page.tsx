@@ -99,7 +99,7 @@ export default function TerminalPage() {
             if (posTransactions.length > 0) {
               const sessionId = localStorage.getItem("ohc_active_terminal_session_id");
               syncTasks.push(
-                fetch("/api/pos/transactions/sync", {
+                fetch("/api/v1/payments/terminal/sync_offline", {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({ session_id: sessionId, transactions: posTransactions })
@@ -204,7 +204,7 @@ export default function TerminalPage() {
       setOrderStatus(t('Processing/Reserving...'));
 
       try {
-        const reserveRes = await fetch('/api/pos/terminal/reserve', {
+        const reserveRes = await fetch('/api/v1/payments/terminal/reserve', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ tenant_id: activeStaff?.tenant_id || "default_tenant", product_id: 'prod_123', quantity: 1, ttl_seconds: 15 })
@@ -220,7 +220,7 @@ export default function TerminalPage() {
 
         setOrderStatus(`${t('New Order Total')}: ${converted.amount / 100} ${currency}`);
 
-        await fetch('/api/pos/terminal/commit', {
+        await fetch('/api/v1/payments/terminal/commit', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ tenant_id: activeStaff?.tenant_id || "default_tenant", product_id: 'prod_123', quantity: 1, lock_id: reserveData.lock_id })

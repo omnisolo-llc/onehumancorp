@@ -22,7 +22,7 @@ export default function StripeTerminalClient({ amount, productId, tenantId }: { 
 
       const term = StripeTerminal.create({
         onFetchConnectionToken: async () => {
-          const res = await fetch('/api/terminal/connection_token', { method: 'POST' });
+          const res = await fetch('/api/v1/payments/terminal/token', { method: 'POST' });
           const data = await res.json();
           return data.secret;
         },
@@ -30,7 +30,7 @@ export default function StripeTerminalClient({ amount, productId, tenantId }: { 
           setStatus('Reader disconnected unexpectedly.');
           setConnectedReader(null);
           if (sessionId && navigator.onLine) {
-            await fetch('/api/terminal/session/update', {
+            await fetch('/api/v1/payments/terminal/session/update', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ session_id: sessionId, status: 'OFFLINE' })
@@ -46,7 +46,7 @@ export default function StripeTerminalClient({ amount, productId, tenantId }: { 
     return () => {
       // End session on unmount
       if (sessionId && navigator.onLine) {
-        fetch('/api/terminal/session/end', {
+        fetch('/api/v1/payments/terminal/session/end', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Keep-Alive': 'timeout=5, max=100' },
           body: JSON.stringify({ session_id: sessionId }),
@@ -59,7 +59,7 @@ export default function StripeTerminalClient({ amount, productId, tenantId }: { 
   useEffect(() => {
     const handleOnline = async () => {
       if (sessionId && connectedReader) {
-        await fetch('/api/terminal/session/update', {
+        await fetch('/api/v1/payments/terminal/session/update', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ session_id: sessionId, status: 'ACTIVE' })
@@ -106,7 +106,7 @@ export default function StripeTerminalClient({ amount, productId, tenantId }: { 
 
       // Start a session
       try {
-        const res = await fetch('/api/terminal/session/start', {
+        const res = await fetch('/api/v1/payments/terminal/session/start', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ device_id: result.reader.id })
@@ -170,7 +170,7 @@ export default function StripeTerminalClient({ amount, productId, tenantId }: { 
 
     let lockId = '';
     try {
-      const reserveRes = await fetch('/api/pos/terminal/reserve', {
+      const reserveRes = await fetch('/api/v1/payments/terminal/reserve', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tenant_id: tenantId, product_id: productId, quantity: 1, ttl_seconds: 15 })
@@ -191,7 +191,7 @@ export default function StripeTerminalClient({ amount, productId, tenantId }: { 
 
     setStatus('Creating payment intent...');
     try {
-      const res = await fetch('/api/terminal/create_payment_intent', {
+      const res = await fetch('/api/v1/payments/terminal/intent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ amount, currency: 'usd' })
@@ -214,7 +214,7 @@ export default function StripeTerminalClient({ amount, productId, tenantId }: { 
         setStatus('Payment successful. Committing inventory...');
 
         try {
-          const commitRes = await fetch('/api/pos/terminal/commit', {
+          const commitRes = await fetch('/api/v1/payments/terminal/commit', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ tenant_id: tenantId, product_id: productId, quantity: 1, lock_id: lockId })
