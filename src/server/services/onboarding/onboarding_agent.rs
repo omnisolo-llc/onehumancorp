@@ -194,7 +194,7 @@ impl OnboardingAgent {
             serde_json::json!({ "step": 0 })
         };
 
-        cache.set(&cache_key, state.clone(), std::time::Duration::from_secs(60)).await;
+        cache.set(&cache_key, state.clone(), std::time::Duration::from_secs(3600)).await;
         Ok(state)
     }
 
