@@ -197,7 +197,7 @@ export default function ApprovalInbox({
                             d="M5 13l4 4L19 7"
                           />
                         </svg>
-                        AI Draft
+                        Draft Reply
                       </div>
                       <div className="bg-blue-600 p-3 rounded-lg text-xs text-white shadow-inner">
                         {req.payload.generated_response}
