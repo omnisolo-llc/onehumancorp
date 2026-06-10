@@ -336,7 +336,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                   Mark requested to reschedule his 4 PM lesson to 5 PM today. You have a conflict. Suggest tomorrow at 4 PM?
                 </h3>
               </div>
-              <div className="flex gap-2 w-full mt-2">
+              <div className="flex flex-col sm:flex-row gap-3 w-full mt-2">
                 <button
                   className="flex-1 min-h-[44px] rounded-lg font-bold text-sm bg-green-500 hover:bg-green-600 text-white shadow-sm transition-transform active:scale-[0.98]"
                 >
