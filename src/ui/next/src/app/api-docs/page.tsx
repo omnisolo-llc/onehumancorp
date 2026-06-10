@@ -39,7 +39,7 @@ export default function ApiDocsPage() {
         </div>
       )}
       {mounted && !loading && spec && (
-        <div className="app-card backdrop-blur-[30px] saturate-[210%] p-6 rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.05)] border border-white/40 bg-white/65">
+        <div className="glassmorphism p-6 shadow-[0_8px_32px_rgba(0,0,0,0.05)]">
           <SwaggerUI spec={spec} />
         </div>
       )}

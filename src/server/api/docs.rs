@@ -221,7 +221,16 @@ pub struct ChangelogSection {
 pub fn get_changelog_data() -> Vec<ChangelogSection> {
     vec![
         ChangelogSection {
-            version: "Version 1.0 (Latest)".to_string(),
+            version: "Version 1.1 (Latest)".to_string(),
+            screenshot_url: None,
+            content_lines: vec![
+                "### 🌟 New Features".to_string(),
+                "- **Help Center:** Fully searchable help center with video tutorials and articles.".to_string(),
+                "- **Contextual Tooltips:** Added plain language tooltips across the app to guide you.".to_string(),
+            ]
+        },
+        ChangelogSection {
+            version: "Version 1.0".to_string(),
             screenshot_url: Some("/dashboard_with_charts.png".to_string()),
             content_lines: vec![
                 "### 🌟 New Features".to_string(),
