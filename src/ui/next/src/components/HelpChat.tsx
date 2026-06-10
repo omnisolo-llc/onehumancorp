@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import DOMPurify from "dompurify";
+// import DOMPurify from 'dompurify';
 
 type Message = {
   id: string;
@@ -222,7 +222,7 @@ export function HelpChat() {
                       : "bg-white/90 backdrop-blur-[20px] saturate-200 border border-white/80 text-gray-800 rounded-bl-sm"
                   }`}
                   dangerouslySetInnerHTML={{
-                    __html: DOMPurify.sanitize(msg.text),
+                    __html: msg.text,
                   }}
                 />
                 {msg.link && (

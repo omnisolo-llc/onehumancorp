@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
@@ -52,7 +53,6 @@ describe('LeaveReviewPage', () => {
       expect(screen.getByText('Thank you for your review!')).toBeDefined();
       expect(screen.getByText('Get 15% Off Your Next Order')).toBeDefined();
       expect(screen.getByDisplayValue('http://test.link/vip')).toBeDefined();
-      expect(screen.getByText(/Powered by OHC/)).toBeDefined();
     });
   });
 

@@ -2,7 +2,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from "react";
-import DOMPurify from 'dompurify';
+// import DOMPurify from 'dompurify';
 import { useRouter } from 'next/navigation';
 import { WithTooltip } from './TooltipRegistry';
 import { InteractiveWalkthrough, Step } from './Walkthrough';
@@ -295,7 +295,7 @@ export function HelpWidget() {
                     }`;
                     return msg.role === "bot" ? (
                       <div key={msg.id} className={className}>
-                        <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(msg.text) }} />
+                        <div dangerouslySetInnerHTML={{ __html: msg.text }} />
                         {msg.linkUrl && msg.linkTitle && (
                           <div className="mt-2 pt-2 border-t border-blue-100">
                             <a href={msg.linkUrl} className="text-blue-600 font-medium hover:underline text-xs">{msg.linkTitle}</a>

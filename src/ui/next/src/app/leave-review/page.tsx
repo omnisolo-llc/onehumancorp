@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState } from 'react';
@@ -28,7 +29,7 @@ function LeaveReviewContent() {
         body: JSON.stringify({ tenantId: typeof window !== 'undefined' ? (localStorage.getItem('tenant_id') || 'e2e-tenant') : 'e2e-tenant', customMessage: 'I just left a 5-star review!' }),
       });
 
-      let link = 'https://ohc.app/invite?ref=demo';
+      let link = 'http://localhost:3000/invite?ref=mock';
       if (response.ok) {
         const data = await response.json();
         if (data.referral_link) {
@@ -38,7 +39,7 @@ function LeaveReviewContent() {
       setReferralLink(link);
       setSubmitted(true);
     } catch (error) {
-       setReferralLink('https://ohc.app/invite?ref=demo');
+       setReferralLink('http://localhost:3000/invite?ref=mock');
        setSubmitted(true);
     } finally {
       setIsSubmitting(false);
@@ -69,8 +70,11 @@ function LeaveReviewContent() {
                       <h3 className="font-bold text-indigo-900 font-outfit">Get 15% Off Your Next Order</h3>
                     </div>
                     <p className="text-indigo-800 text-sm mb-4">
-                      Share this link with friends. They get 15% off, and you get 15% off when they buy! ⚡ Powered by OHC
+                      Share this link with friends. They get 15% off, and you get 15% off when they buy!
                     </p>
+                    <div className="mb-4">
+                      <span className="text-xs font-semibold text-gray-400 uppercase tracking-widest branding-success">⚡ Powered by OHC</span>
+                    </div>
 
                     <div className="flex gap-2">
                       <input
@@ -152,7 +156,7 @@ function LeaveReviewContent() {
            </button>
 
            <div className="mt-6 text-center">
-             <span className="text-xs font-semibold text-gray-400 uppercase tracking-widest">⚡ Powered by OHC</span>
+             <span className="text-xs font-semibold text-gray-400 uppercase tracking-widest branding-form">⚡ Powered by OHC</span>
            </div>
        </div>
     </div>
