@@ -235,6 +235,18 @@ impl DepartmentOrchestrator {
                                         ::server_telemetry::record_error_signal("Failed to insert dead letter into DB");
                                         tracing::error!("Failed to insert dead letter into DB: {}", err);
                                     }
+
+                                    let _ = sqlx::query(
+                                        "INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
+                                         VALUES ($1, $2, $3, $4, 'PENDING', 'P1', 'LOW', 'PENDING', $5)"
+                                    )
+                                    .bind(uuid::Uuid::new_v4().to_string())
+                                    .bind(&event.tenant_id)
+                                    .bind(format!("AI Agent Paused: {}", dep_type.to_string()))
+                                    .bind("The AI agent is paused because the AI service is unavailable.")
+                                    .bind(r#"{"proposed_content": "System is paused. Please manually check the relevant work."}"#)
+                                    .execute(&self.db.pool)
+                                    .await;
                                 }
                                 DbStore::Sqlite(pool) => {
                                     let res = sqlx::query(
@@ -252,6 +264,18 @@ impl DepartmentOrchestrator {
                                         ::server_telemetry::record_error_signal("Failed to insert dead letter into DB");
                                         tracing::error!("Failed to insert dead letter into DB: {}", err);
                                     }
+
+                                    let _ = sqlx::query(
+                                        "INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
+                                         VALUES (?, ?, ?, ?, 'PENDING', 'P1', 'LOW', 'PENDING', ?)"
+                                    )
+                                    .bind(uuid::Uuid::new_v4().to_string())
+                                    .bind(&event.tenant_id)
+                                    .bind(format!("AI Agent Paused: {}", dep_type.to_string()))
+                                    .bind("The AI agent is paused because the AI service is unavailable.")
+                                    .bind(r#"{"proposed_content": "System is paused. Please manually check the relevant work."}"#)
+                                    .execute(pool)
+                                    .await;
                                 }
                             }
                         }
