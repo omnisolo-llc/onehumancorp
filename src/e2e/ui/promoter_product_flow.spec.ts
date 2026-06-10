@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-test.skip('End-to-End Promoter Product Creation Flow', async ({ page }) => {
+test('End-to-End Promoter Product Creation Flow', async ({ page }) => {
   // 1. Navigate to Add Product page directly
   await page.goto('/products/new');
   await expect(page.locator('h1').filter({ hasText: 'Add Product' })).toBeVisible();
