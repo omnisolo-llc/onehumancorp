@@ -80,7 +80,8 @@ export class SyncManager {
              amount: Math.round(m.amount),
              payment_method: 'terminal',
              payment_intent_id: m.idempotency_key,
-             currency: m.currency || 'usd'
+             currency: m.currency || 'usd',
+             mutation_type: 'tap_to_pay'
           };
         } else if (m.type === 'draft_quote') {
           return {
@@ -102,16 +103,43 @@ export class SyncManager {
       const tenantId = localStorage.getItem("tenant_id") || localStorage.getItem("tenant") || "default";
       const spiffeId = `spiffe://ohc/org/${tenantId}/agent/ui`;
 
+      // Try Terminal sync endpoint first for tap_to_pay, otherwise use general offline sync
+      const hasTapToPay = queue.some(m => m.type === 'tap_to_pay');
+      if (hasTapToPay) {
+         const sessionId = localStorage.getItem("ohc_active_terminal_session_id");
+         const posTransactions = queue.filter(m => m.type === 'tap_to_pay').map(m => ({
+            id: m.id,
+            client_id: m.device_id || 'terminal_1',
+            amount_cents: Math.round(m.amount),
+            currency: m.currency || 'usd',
+            payload: JSON.stringify([{ product_id: m.product_id, quantity: m.quantity || 1 }]),
+            idempotency_key: m.idempotency_key,
+            device_id: m.device_id
+         }));
+
+         const termRes = await fetch('/api/v1/payments/terminal/sync_offline', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-spiffe-id': spiffeId
+            },
+            body: JSON.stringify({ session_id: sessionId, transactions: posTransactions })
+         });
+         if (!termRes.ok) throw new Error('Terminal sync failed');
+      }
+
       const response = await fetch('/api/v1/sync/offline', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'x-spiffe-id': spiffeId
         },
-        body: JSON.stringify({ mutations })
+        body: JSON.stringify({ mutations: mutations.filter(m => (m as any).mutation_type !== 'tap_to_pay') })
       });
 
       if (response.ok) {
+        // Only clear the items that were successfully synced if we wanted to be very precise,
+        // but for now we clear the whole queue as per current pattern, but ensuring both succeeded.
         localStorage.setItem(this.queueKey, '[]');
         this.notifyListeners();
         this.retryDelayMs = 1000; // Reset delay on success

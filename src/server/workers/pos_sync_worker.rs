@@ -30,11 +30,30 @@ impl PosSyncWorker {
             return Err("Failed to set org context".into());
         }
 
-        sqlx::query("UPDATE pos_offline_transactions SET status = 'RESOLVED' WHERE id = $1")
+        sqlx::query("UPDATE pos_offline_transactions SET status = 'RESOLVED', updated_at = CURRENT_TIMESTAMP WHERE id = $1")
             .bind(transaction_id)
             .execute(&mut *tx)
             .await
             .unwrap();
+
+        // Trigger Sales Agent for receipt drafting
+        let receipt_job_id = uuid::Uuid::new_v4().to_string();
+        let receipt_payload = serde_json::json!({
+            "transaction_id": transaction_id,
+            "tenant_id": job.tenant_id,
+            "action": "DraftReceipt",
+            "context": "Offline POS transaction synced. Draft a professional receipt for the customer."
+        }).to_string();
+
+        let _ = sqlx::query(
+            "INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status)
+             VALUES ($1, $2, 'sales', 'DraftReceiptEvent', $3::jsonb, 'PENDING')"
+        )
+        .bind(&receipt_job_id)
+        .bind(&job.tenant_id)
+        .bind(&receipt_payload)
+        .execute(&mut *tx)
+        .await;
 
         if let Some(mutation) = payload.get("mutation") {
             let product_id = mutation["product_id"].as_str().unwrap();

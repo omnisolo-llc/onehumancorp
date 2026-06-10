@@ -13,6 +13,8 @@ pub struct OfflineMutation {
     pub currency: Option<String>,
     pub mutation_type: Option<String>,
     pub payload: Option<String>,
+    pub idempotency_key: Option<String>,
+    pub device_id: Option<String>,
 }
 
 pub struct CRDTOfflineSynchronizer;
@@ -51,9 +53,9 @@ impl CRDTOfflineSynchronizer {
                 Ok(Some(_)) => {
                     // Record successful pos offline transaction
                     let res = sqlx::query(
-                        "INSERT INTO pos_offline_transactions (id, tenant_id, client_id, status, amount_cents, currency, payload)
-                         VALUES ($1, $2, $3, 'RESOLVED', $4, $5, $6::jsonb)
-                         ON CONFLICT DO NOTHING"
+                        "INSERT INTO pos_offline_transactions (id, tenant_id, client_id, status, amount_cents, currency, payload, idempotency_key, device_id)
+                         VALUES ($1, $2, $3, 'RESOLVED', $4, $5, $6::jsonb, $7, $8)
+                         ON CONFLICT (id) DO UPDATE SET status = 'RESOLVED', updated_at = CURRENT_TIMESTAMP"
                     )
                     .bind(Uuid::new_v4().to_string())
                     .bind(tenant_id)
@@ -61,6 +63,8 @@ impl CRDTOfflineSynchronizer {
                     .bind(mutation.amount.unwrap_or(0))
                     .bind(mutation.currency.as_deref().unwrap_or("USD"))
                     .bind(serde_json::to_value(mutation).unwrap())
+                    .bind(mutation.idempotency_key.clone())
+                    .bind(mutation.device_id.clone())
                     .execute(&mut *tx)
                     .await;
 
@@ -87,9 +91,9 @@ impl CRDTOfflineSynchronizer {
 
             // Record failure in pos_offline_transactions
             let _ = sqlx::query(
-                "INSERT INTO pos_offline_transactions (id, tenant_id, client_id, status, amount_cents, currency, payload)
-                 VALUES ($1, $2, $3, 'FAILED', $4, $5, $6::jsonb)
-                 ON CONFLICT DO NOTHING"
+                "INSERT INTO pos_offline_transactions (id, tenant_id, client_id, status, amount_cents, currency, payload, idempotency_key, device_id)
+                 VALUES ($1, $2, $3, 'FAILED', $4, $5, $6::jsonb, $7, $8)
+                 ON CONFLICT (id) DO UPDATE SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP"
             )
             .bind(Uuid::new_v4().to_string())
             .bind(tenant_id)
@@ -97,6 +101,8 @@ impl CRDTOfflineSynchronizer {
             .bind(mutation.amount.unwrap_or(0))
             .bind(mutation.currency.as_deref().unwrap_or("USD"))
             .bind(serde_json::to_value(mutation).unwrap())
+            .bind(mutation.idempotency_key.clone())
+            .bind(mutation.device_id.clone())
             .execute(pool)
             .await;
 

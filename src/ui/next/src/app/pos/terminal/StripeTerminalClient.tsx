@@ -140,11 +140,13 @@ export default function StripeTerminalClient({ amount, productId, tenantId }: { 
           const transactionId = `tx_offline_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
           const tx = {
              id: transactionId,
-             client_id: 'terminal_1',
+             client_id: connectedReader?.id || 'terminal_1',
              amount_cents: amount,
              currency: 'usd',
              payload: JSON.stringify([{ product_id: productId, quantity: 1 }]),
-             timestamp: new Date().toISOString()
+             timestamp: new Date().toISOString(),
+             idempotency_key: `idemp_${transactionId}`,
+             device_id: connectedReader?.id || 'terminal_1'
           };
           // Also sync with OfflineStore directly to match page.tsx expectations
           const existingTxs = JSON.parse(localStorage.getItem('ohc_offline_pos_tx') || '[]');
@@ -158,9 +160,12 @@ export default function StripeTerminalClient({ amount, productId, tenantId }: { 
              amount: amount,
              quantity: 1,
              idempotency_key: `idemp_${transactionId}`,
+             device_id: connectedReader?.id || 'terminal_1',
              currency: 'usd'
           });
           setStatus('Payment saved offline. Will sync when network is restored.');
+          // Fire custom event for success modal in page.tsx if not already handled by SyncManager listeners
+          window.dispatchEvent(new CustomEvent('pos_offline_success', { detail: { amount, currency: 'usd' } }));
           setReserving(false);
        }, 1500);
        return;

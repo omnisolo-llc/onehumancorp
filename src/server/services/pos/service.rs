@@ -80,8 +80,9 @@ impl PosService for MyPosService {
                 }
 
                 let insert_res = sqlx::query(
-                    "INSERT INTO pos_offline_transactions (id, tenant_id, client_id, amount_cents, currency, payload, status)
-                     VALUES ($1, $2, $3, $4, $5, $6::jsonb, 'PENDING')"
+                    "INSERT INTO pos_offline_transactions (id, tenant_id, client_id, amount_cents, currency, payload, status, idempotency_key, device_id)
+                     VALUES ($1, $2, $3, $4, $5, $6::jsonb, 'PENDING', $7, $8)
+                     ON CONFLICT (id) DO UPDATE SET status = 'PENDING', updated_at = CURRENT_TIMESTAMP"
                 )
                 .bind(&tx_id)
                 .bind(&tenant_id_clone)
@@ -89,6 +90,8 @@ impl PosService for MyPosService {
                 .bind(tx.amount_cents)
                 .bind(&tx.currency)
                 .bind(&tx.payload)
+                .bind(tx.idempotency_key.clone())
+                .bind(tx.device_id.clone())
                 .execute(&mut *db_tx)
                 .await;
 
@@ -350,6 +353,8 @@ mod tests {
                     payload: "{}".to_string(),
                     status: "PENDING".to_string(),
                     created_at_unix: 0,
+                        idempotency_key: "idemp_1".to_string(),
+                        device_id: "terminal_1".to_string(),
                 }
             ],
             session_id: Some("test_session".to_string()),

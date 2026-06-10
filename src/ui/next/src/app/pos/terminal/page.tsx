@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useTranslation, useCurrency } from '../../../lib/localizationStore';
 import { LocalizationToggle } from '../../../components/LocalizationToggle';
 import StripeTerminalClient from './StripeTerminalClient';
+import { SyncManager } from '../../../lib/sync/SyncManager';
 
 // Offline storage helper for staff data
 const OfflineStore = {
@@ -40,6 +41,8 @@ export default function TerminalPage() {
   const [syncCount, setSyncCount] = useState(0);
   const [orderStatus, setOrderStatus] = useState('');
   const [reserving, setReserving] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [lastTxAmount, setLastTxAmount] = useState(0);
 
   useEffect(() => {
     if (navigator.onLine) {
@@ -59,6 +62,15 @@ export default function TerminalPage() {
 
   // Network listener
   useEffect(() => {
+    const handlePosSuccess = (e: any) => {
+        setLastTxAmount(e.detail.amount);
+        setShowSuccessModal(true);
+        if (window.navigator.vibrate) {
+            window.navigator.vibrate(200);
+        }
+    };
+    window.addEventListener('pos_offline_success', handlePosSuccess);
+
     const handleOnline = () => setIsOffline(false);
     const handleOffline = () => setIsOffline(true);
 
@@ -69,6 +81,7 @@ export default function TerminalPage() {
     window.addEventListener('offline', handleOffline);
 
     return () => {
+      window.removeEventListener('pos_offline_success', handlePosSuccess);
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
@@ -168,7 +181,7 @@ export default function TerminalPage() {
 
     const event = {
       staff_id: activeStaff.id,
-      tenant_id: 'default_tenant',
+      tenant_id: activeStaff.tenant_id || 'default_tenant',
       event_type: type,
       timestamp: new Date().toISOString(),
       sync_status: 'PENDING'
@@ -189,15 +202,35 @@ export default function TerminalPage() {
     if (isOffline) {
       setOrderStatus(`${t('New Order Total')}: ${converted.amount / 100} ${currency}`);
       // Bypass Stripe Terminal and save offline
+      const transactionId = `tx_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       const tx = {
-        id: `tx_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        id: transactionId,
         amount_cents: converted.amount,
         currency: currency,
         payload: JSON.stringify([{ product_id: 'prod_123', quantity: 1 }]),
         client_id: 'terminal_1',
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        idempotency_key: `idemp_${transactionId}`,
+        device_id: 'terminal_1'
       };
       OfflineStore.addPosTransaction(tx);
+      setLastTxAmount(converted.amount);
+      setShowSuccessModal(true);
+      if (window.navigator.vibrate) {
+          window.navigator.vibrate(200);
+      }
+
+      SyncManager.getInstance().enqueue({
+          type: 'tap_to_pay',
+          id: transactionId,
+          product_id: 'prod_123',
+          amount: converted.amount,
+          quantity: 1,
+          idempotency_key: `idemp_${transactionId}`,
+          device_id: 'terminal_1',
+          currency: currency
+      });
+
       setOrderStatus(`${t('Payment Saved Offline')} - ${converted.amount / 100} ${currency}`);
     } else {
       setReserving(true);
@@ -382,6 +415,30 @@ export default function TerminalPage() {
            <StripeTerminalClient amount={activeStaff?.id ? 5000 : 0} productId="prod_123" tenantId={activeStaff?.tenant_id || "default_tenant"} />
            {orderStatus && <p className="mt-4 rounded-xl bg-blue-50 px-4 py-3 text-sm font-semibold text-blue-800" role="status">{orderStatus}</p>}
         </div>
+
+        {/* Success Modal */}
+        {showSuccessModal && (
+          <div className="absolute inset-0 z-50 flex items-center justify-center p-6 bg-black/20 backdrop-blur-md animate-in fade-in duration-300">
+            <div className="w-full max-w-[300px] bg-white/80 backdrop-blur-2xl rounded-[32px] p-8 shadow-2xl border border-white/40 flex flex-col items-center text-center transform animate-in zoom-in-95 duration-300">
+              <div className="w-20 h-20 bg-green-500 rounded-full flex items-center justify-center mb-6 shadow-lg shadow-green-500/40">
+                <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">{t('Success')}</h2>
+              <p className="text-gray-600 mb-8 font-medium">
+                {t('Transaction of')} ${(lastTxAmount / 100).toFixed(2)} {currency} {t('recorded.')}
+                {isOffline && <span className="block mt-1 text-amber-600 text-xs">{t('Will sync when online.')}</span>}
+              </p>
+              <button
+                onClick={() => setShowSuccessModal(false)}
+                className="w-full py-4 bg-gray-900 text-white rounded-2xl font-bold active:scale-[0.95] transition-transform shadow-xl"
+              >
+                {t('Done')}
+              </button>
+            </div>
+          </div>
+        )}
 
         {syncing && (
           <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-blue-600/90 backdrop-blur-[30px] border border-white/20 text-white px-6 py-3 rounded-full shadow-lg font-bold min-h-[44px] flex items-center justify-center space-x-2 z-50">

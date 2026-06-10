@@ -460,6 +460,8 @@ pub struct PosOfflineTransaction {
     pub currency: String,
     pub payload: String,
     pub timestamp: Option<String>,
+    pub idempotency_key: Option<String>,
+    pub device_id: Option<String>,
 }
 
 #[derive(serde::Deserialize)]
@@ -502,7 +504,8 @@ pub async fn sync_offline_transactions_handler(
         }
     };
 
-    info!(tenant_id = %tenant_id, tx_count = req_data.transactions.len(), "Syncing offline POS transactions");
+    let req_inner = req_data.0;
+    info!(tenant_id = %tenant_id, tx_count = req_inner.transactions.len(), "Syncing offline POS transactions");
 
     let pool = crate::db::get_pool();
     let mut synced_count = 0;
@@ -510,10 +513,10 @@ pub async fn sync_offline_transactions_handler(
 
     let mut futures = Vec::new();
 
-    let client_id = req_data.transactions.first().and_then(|tx| tx.client_id.clone()).unwrap_or_else(|| "unknown".to_string());
+    let client_id = req_inner.transactions.first().and_then(|tx| tx.client_id.clone()).unwrap_or_else(|| "unknown".to_string());
 
     // Update pos_terminal_sessions
-    let session_id = req_data.session_id.clone().unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
+    let session_id = req_inner.session_id.clone().unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
     let _ = sqlx::query(
         "INSERT INTO pos_terminal_sessions (id, tenant_id, device_id, status, started_at, last_synced_at, offline_changes_count)
          VALUES ($1, $2, $3, 'ACTIVE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, $4)
@@ -522,11 +525,11 @@ pub async fn sync_offline_transactions_handler(
     .bind(&session_id)
     .bind(&tenant_id)
     .bind(&client_id)
-    .bind(req_data.transactions.len() as i32)
+    .bind(req_inner.transactions.len() as i32)
     .execute(&pool)
     .await;
 
-    for tx in &req_data.transactions {
+    for tx in req_inner.transactions {
 
         let pool_clone = pool.clone();
         let tenant_id_clone = tenant_id.clone();
@@ -536,8 +539,10 @@ pub async fn sync_offline_transactions_handler(
         let amount_cents = tx.amount_cents;
         let currency = tx.currency.clone();
         let payload_str = tx.payload.clone();
+        let idempotency_key = tx.idempotency_key.clone();
+        let device_id = tx.device_id.clone();
 
-        futures.push(tokio::spawn(async move {
+        futures.push(async move {
             let mut db_tx = match pool_clone.begin().await {
                 Ok(t) => t,
                 Err(e) => {
@@ -552,8 +557,10 @@ pub async fn sync_offline_transactions_handler(
             }
 
             let insert_res = sqlx::query(
-                "INSERT INTO pos_offline_transactions (id, tenant_id, client_id, amount_cents, currency, payload, status)
-                 VALUES ($1, $2, $3, $4, $5, $6::jsonb, 'PENDING')"
+                "INSERT INTO pos_offline_transactions (id, tenant_id, client_id, amount_cents, currency, payload, status, idempotency_key, device_id)
+                 VALUES ($1, $2, $3, $4, $5, $6::jsonb, 'PENDING', $7, $8)
+                 ON CONFLICT (tenant_id, idempotency_key) DO UPDATE SET status = 'PENDING', updated_at = CURRENT_TIMESTAMP
+                 ON CONFLICT (id) DO UPDATE SET status = 'PENDING', updated_at = CURRENT_TIMESTAMP"
             )
             .bind(&tx_id)
             .bind(&tenant_id_clone)
@@ -561,6 +568,8 @@ pub async fn sync_offline_transactions_handler(
             .bind(amount_cents)
             .bind(&currency)
             .bind(&payload_str)
+            .bind(idempotency_key)
+            .bind(device_id)
             .execute(&mut *db_tx)
             .await;
 
@@ -599,21 +608,18 @@ pub async fn sync_offline_transactions_handler(
             }
 
             Ok(())
-        }));
+        });
     }
 
     let results = futures::future::join_all(futures).await;
 
     for res in results {
         match res {
-            Ok(Ok(())) => {
+            Ok(()) => {
                 synced_count += 1;
             }
-            Ok(Err(id)) => {
+            Err(id) => {
                 failed_ids.push(id);
-            }
-            Err(e) => {
-                tracing::error!("Task failed to execute: {}", e);
             }
         }
     }
