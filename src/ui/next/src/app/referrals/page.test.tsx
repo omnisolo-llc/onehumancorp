@@ -82,4 +82,14 @@ describe('ReferralsPage', () => {
 
     consoleErrorSpy.mockRestore();
   });
+
+  it('renders Powered by OHC footer', async () => {
+    (global.fetch as any).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ referral_link: 'https://ohc.app/ref/test1234' }),
+    });
+    render(<ReferralsPage />);
+    const footerLink = screen.getByText('⚡ Powered by OHC');
+    expect(footerLink).toBeDefined();
+  });
 });
