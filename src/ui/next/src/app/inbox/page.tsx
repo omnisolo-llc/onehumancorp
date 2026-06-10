@@ -11,6 +11,7 @@ type Message = {
   translated_from_language?: string;
   draft_reply?: string;
   status?: string;
+  sender_id?: string;
   created_at?: string;
 };
 
@@ -160,6 +161,10 @@ export default function InboxPage() {
               <div className="mb-4">
                 <div className="app-metric-label">Source</div>
                 <div className="mt-1 text-sm font-semibold text-gray-900">{selected.source || "Unknown source"}</div>
+              </div>
+              <div className="mb-4">
+                <div className="app-metric-label">Sender ID</div>
+                <div className="mt-1 text-sm font-semibold text-gray-900">{selected.sender_id || "Unknown"}</div>
               </div>
               <div className="mb-4">
                 <div className="flex items-center justify-between gap-3">
