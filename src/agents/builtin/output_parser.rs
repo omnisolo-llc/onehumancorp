@@ -174,7 +174,7 @@ impl<'a, T: DeserializeOwned> RetryWithErrorOutputParser<'a, T> {
                 Ok(parsed) => return Ok(parsed),
                 Err(parse_error_msg) => {
                     if attempt >= max_retries {
-                        return Err(ToolError::Fatal(format!(
+                        return Err(ToolError::LlmRecoverable(format!(
                             "Output parsing failed after {} retries. Last error: {}",
                             max_retries, parse_error_msg
                         )));
@@ -487,7 +487,7 @@ mod tests {
         let result: Result<TestOutput, _> =
             parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 2).await;
         assert!(result.is_err());
-        if let Err(ToolError::Fatal(msg)) = result {
+        if let Err(ToolError::LlmRecoverable(msg)) = result {
             assert!(
                 msg.contains("Failed to parse arguments")
                     || msg.contains("Output parsing failed after"),
@@ -495,7 +495,7 @@ mod tests {
                 msg
             );
         } else {
-            panic!("Expected Fatal error, got {:?}", result);
+            panic!("Expected LlmRecoverable error, got {:?}", result);
         }
     }
 
@@ -556,10 +556,10 @@ mod tests {
             parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 2).await;
         assert!(result.is_err());
         match result {
-            Err(ToolError::Fatal(msg)) => {
+            Err(ToolError::LlmRecoverable(msg)) => {
                 assert!(msg.contains("Output parsing failed after 2 retries"));
             }
-            _ => panic!("Expected Fatal error for exhaustion"),
+            _ => panic!("Expected LlmRecoverable error for exhaustion"),
         }
     }
 }
