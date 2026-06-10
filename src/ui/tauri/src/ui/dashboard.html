@@ -67,7 +67,7 @@
       }
       @media (prefers-color-scheme: dark) {
         .milestone-card {
-          background: rgba(22, 22, 26, 0.85);
+          background: rgba(22, 22, 26, 0.7);
           border: 1px solid rgba(0, 102, 255, 0.5);
           box-shadow: 0 10px 40px rgba(0, 102, 255, 0.2);
         }
@@ -116,7 +116,7 @@
         background: rgba(0, 102, 255, 0.1);
         color: #0066FF;
         padding: 4px 12px;
-        border-radius: 12px;
+        border-radius: 16px;
         font-size: 11px;
         font-weight: 800;
         text-transform: uppercase;
@@ -476,7 +476,7 @@
         max-width: 600px;
         background: rgba(255, 255, 255, 0.9);
         border: 1px solid rgba(255, 255, 255, 0.4);
-        border-radius: 12px;
+        border-radius: 16px;
         box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
         overflow: hidden;
         display: flex;
@@ -592,6 +592,7 @@
 
       <div class="assistant-entry-container" style="margin-bottom: 24px; display: flex; gap: 16px; justify-content: center;">
         <a href="assistant.html" class="btn-primary" style="width: auto; text-decoration: none;">Open WorkBuddy Assistant</a>
+        <a href="pos.html" class="btn-outline" style="width: auto; text-decoration: none;">Quick Charge POS</a>
       </div>
 
       <div class="ohc-growth-card" id="ai-savings-widget">
@@ -631,7 +632,7 @@
 
       <!-- Soft Paywall Modal -->
       <div id="soft-paywall-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.4); z-index: 10000; align-items: center; justify-content: center; backdrop-filter: blur(5px);">
-        <div style="background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.6); border-radius: 20px; padding: 32px; max-width: 400px; width: 90%; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15); text-align: center;">
+        <div style="background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.6); border-radius: 16px; padding: 32px; max-width: 400px; width: 90%; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15); text-align: center;">
           <div style="font-size: 40px; margin-bottom: 16px;">🚀</div>
           <h2 style="margin-bottom: 12px; font-size: 24px; color: #1D1D1F;">Unlock Advanced Features</h2>
           <p style="color: #86868b; margin-bottom: 24px;">Advanced AI Automations are available on the Pro plan. Upgrade now or share OHC to unlock 7 Days of Pro for free!</p>
@@ -963,10 +964,18 @@
             linkContainer.style.display = 'block';
           });
         } else {
-          // Playwright mock environment fallback if Tauri API isn't injected
-          referralLink.value = "https://cloud.ohc.network/invite/test-" + Date.now();
-          generateBtn.style.display = 'none';
-          linkContainer.style.display = 'block';
+          try {
+            const res = await fetch('/api/v1/growth/referrals/generate', { method: 'POST' });
+            const data = await res.json();
+            referralLink.value = data.referral_link || "https://cloud.ohc.network/invite/fallback";
+            generateBtn.style.display = 'none';
+            linkContainer.style.display = 'block';
+          } catch(e) {
+            console.error(e);
+            referralLink.value = "https://cloud.ohc.network/invite/fallback";
+            generateBtn.style.display = 'none';
+            linkContainer.style.display = 'block';
+          }
         }
       });
 
@@ -1014,9 +1023,6 @@
         try {
           // Adjust port for Tauri dev server, or use relative if integrated
           let url = '/api/ui/triage';
-          if (false) {
-            url = '/api/ui/triage';
-          }
 
           const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default';
           const res = await fetch(`${url}?tenant_id=${encodeURIComponent(tenantId)}`);
@@ -1070,9 +1076,6 @@
 
         try {
           let url = '/api/ui/triage/action';
-          if (false) {
-            url = '/api/ui/triage/action';
-          }
 
           const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default';
           const res = await fetch(`${url}?tenant_id=${encodeURIComponent(tenantId)}`, {
@@ -1134,9 +1137,6 @@
             // For Tauri app, fallback to local fetch if API not injected directly
             // Adjust port if necessary, typically 18789 for Tauri dev server
             let url = `/api/v1/search?q=${encodeURIComponent(query)}`;
-            if (false) {
-               url = `http://localhost:18789/api/v1/search?q=${encodeURIComponent(query)}`;
-            }
             const res = await fetch(url);
             const data = await res.json();
 
@@ -1170,7 +1170,7 @@ document.addEventListener('DOMContentLoaded', () => {
             backdrop-filter: blur(20px) saturate(210%);
             -webkit-backdrop-filter: blur(20px) saturate(210%);
             border: 1px solid rgba(255, 255, 255, 0.6);
-            border-radius: 12px;
+            border-radius: 16px;
             padding: 12px 16px;
             color: #1d1d1f;
             font-family: "Outfit", -apple-system, BlinkMacSystemFont, sans-serif;
@@ -1191,7 +1191,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         @media (prefers-color-scheme: dark) {
             .ohc-tooltip {
-                background: rgba(22, 22, 26, 0.85);
+                background: rgba(22, 22, 26, 0.7);
                 border-color: rgba(255, 255, 255, 0.1);
                 color: #f5f5f7;
             }

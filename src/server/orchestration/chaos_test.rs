@@ -753,25 +753,6 @@ mod chaos_tests {
         let mesh: Arc<dyn TeammateMesh> = Arc::new(SleepingMockMesh);
         let state_manager = CloudStateManager::new(db.clone(), mesh);
 
-
-        sqlx::query(
-            "CREATE TABLE IF NOT EXISTS swarm_tasks (
-                id TEXT PRIMARY KEY,
-                mission_id TEXT,
-                title TEXT,
-                status TEXT,
-                dependencies TEXT,
-                payload TEXT,
-                tenant_id TEXT,
-                locked_until TEXT,
-                created_at TEXT,
-                updated_at TEXT
-            )",
-        )
-        .execute(&dummy_sqlite_pool)
-        .await
-        .unwrap();
-
         let start = std::time::Instant::now();
 
         let tasks = tokio::time::timeout(std::time::Duration::from_secs(5), state_manager.pull_available_tasks(10)).await.expect("Test hung").unwrap_or(vec![]);
