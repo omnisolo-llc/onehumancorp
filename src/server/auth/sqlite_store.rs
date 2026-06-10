@@ -322,6 +322,8 @@ impl UserRepository for SqliteUserRepository {
 
     async fn revoke_token(&self, jti: String, exp: DateTime<Utc>, org_id: &str) -> Result<(), String> {
         validate_org_id!(org_id);
+        let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
+
         sqlx::query(
             r#"
             INSERT INTO revoked_tokens (jti, expires_at, tenant_id) VALUES ($1, $2, $3)
@@ -331,23 +333,27 @@ impl UserRepository for SqliteUserRepository {
         .bind(jti)
         .bind(exp)
         .bind(org_id)
-        .execute(&self.pool)
+        .execute(&mut *tx)
         .await
         .map_err(|e: sqlx::Error| e.to_string())?;
 
         // GC expired entries
-        let _ = sqlx::query("DELETE FROM revoked_tokens WHERE expires_at < CURRENT_TIMESTAMP AND tenant_id = $1")
+        let _ = sqlx::query("DELETE FROM revoked_tokens WHERE expires_at < $1 AND tenant_id = $2")
+            .bind(Utc::now())
             .bind(org_id)
-            .execute(&self.pool)
+            .execute(&mut *tx)
             .await;
+
+        tx.commit().await.map_err(|e| e.to_string())?;
 
         Ok(())
     }
 
     async fn is_revoked(&self, jti: &str, org_id: &str) -> Result<bool, String> {
         validate_org_id!(org_id);
-        let row = sqlx::query("SELECT COUNT(*) FROM revoked_tokens WHERE jti = $1 AND expires_at >= CURRENT_TIMESTAMP AND tenant_id = $2")
+        let row = sqlx::query("SELECT COUNT(*) FROM revoked_tokens WHERE jti = $1 AND expires_at >= $2 AND tenant_id = $3")
             .bind(jti)
+            .bind(Utc::now())
             .bind(org_id)
             .fetch_one(&self.pool)
             .await
