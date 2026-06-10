@@ -3605,6 +3605,118 @@ async fn create_ui_raw_material_handler(
     }
 }
 
+async fn get_translation_settings_handler(
+    axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
+    axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
+) -> axum::response::Response {
+    use axum::response::IntoResponse;
+    let tenant_id = claims.organization_id;
+
+    let db_result: Result<Option<(bool, serde_json::Value)>, String> = match &db.store {
+        crate::db::DbStore::Postgres => {
+            match sqlx::query("SELECT auto_translate, target_languages FROM ohc_translation_preferences WHERE tenant_id = $1")
+                .bind(&tenant_id)
+                .fetch_optional(&db.pool)
+                .await {
+                Ok(Some(row)) => {
+                    use sqlx::Row;
+                    Ok(Some((row.get("auto_translate"), row.get("target_languages"))))
+                },
+                Ok(None) => Ok(None),
+                Err(e) => Err(e.to_string()),
+            }
+        },
+        crate::db::DbStore::Sqlite(pool) => {
+            match sqlx::query("SELECT auto_translate, target_languages FROM ohc_translation_preferences WHERE tenant_id = ?")
+                .bind(&tenant_id)
+                .fetch_optional(pool)
+                .await {
+                Ok(Some(row)) => {
+                    use sqlx::Row;
+                    Ok(Some((row.get("auto_translate"), row.get("target_languages"))))
+                },
+                Ok(None) => Ok(None),
+                Err(e) => Err(e.to_string()),
+            }
+        }
+    };
+
+    match db_result {
+        Ok(Some((auto_translate, target_languages))) => {
+            let target_languages_vec: Vec<String> = serde_json::from_value(target_languages).unwrap_or_default();
+            (axum::http::StatusCode::OK, axum::Json(serde_json::json!({
+                "auto_translate": auto_translate,
+                "target_languages": target_languages_vec
+            }))).into_response()
+        },
+        Ok(None) => {
+            (axum::http::StatusCode::OK, axum::Json(serde_json::json!({
+                "auto_translate": true,
+                "target_languages": []
+            }))).into_response()
+        },
+        Err(e) => {
+            tracing::error!("Failed to fetch translation settings: {}", e);
+            (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": "database error"}))).into_response()
+        }
+    }
+}
+
+async fn set_translation_settings_handler(
+    axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
+    axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
+    axum::Json(payload): axum::Json<serde_json::Value>,
+) -> axum::response::Response {
+    use axum::response::IntoResponse;
+    let tenant_id = claims.organization_id;
+    let auto_translate = payload.get("auto_translate").and_then(|v| v.as_bool()).unwrap_or(true);
+    let target_languages = payload.get("target_languages").cloned().unwrap_or(serde_json::json!([]));
+    let id = uuid::Uuid::new_v4().to_string();
+
+    let result: Result<(), String> = match &db.store {
+        crate::db::DbStore::Postgres => {
+            sqlx::query(
+                "INSERT INTO ohc_translation_preferences (id, tenant_id, auto_translate, target_languages, updated_at)
+                 VALUES ($1, $2, $3, $4, NOW())
+                 ON CONFLICT (tenant_id)
+                 DO UPDATE SET auto_translate = EXCLUDED.auto_translate, target_languages = EXCLUDED.target_languages, updated_at = NOW()"
+            )
+            .bind(&id)
+            .bind(&tenant_id)
+            .bind(&auto_translate)
+            .bind(&target_languages)
+            .execute(&db.pool)
+            .await
+            .map(|_| ())
+            .map_err(|e| e.to_string())
+        },
+        crate::db::DbStore::Sqlite(pool) => {
+            sqlx::query(
+                "INSERT INTO ohc_translation_preferences (id, tenant_id, auto_translate, target_languages, updated_at)
+                 VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+                 ON CONFLICT (tenant_id)
+                 DO UPDATE SET auto_translate = excluded.auto_translate, target_languages = excluded.target_languages, updated_at = CURRENT_TIMESTAMP"
+            )
+            .bind(&id)
+            .bind(&tenant_id)
+            .bind(&auto_translate)
+            .bind(&target_languages)
+            .execute(pool)
+            .await
+            .map(|_| ())
+            .map_err(|e| e.to_string())
+        }
+    };
+
+    match result {
+        Ok(_) => (axum::http::StatusCode::OK, axum::Json(serde_json::json!({"success": true}))).into_response(),
+        Err(e) => {
+            tracing::error!("Failed to save translation settings: {}", e);
+            (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"success": false, "error": "database write failed"}))).into_response()
+        }
+    }
+}
+
 async fn create_ui_bom_item_handler(
     axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
     axum::extract::Query(query): axum::extract::Query<UiTenantQuery>,
@@ -3841,6 +3953,8 @@ async fn create_ui_bom_item_handler(
                 axum::response::Json(serde_json::json!({ "success": true }))
             }
         }))
+        .route("/api/settings/translation", axum::routing::get(get_translation_settings_handler).with_state(db.clone()))
+        .route("/api/settings/translation", axum::routing::post(set_translation_settings_handler).with_state(db.clone()))
         .route("/api/settings/voice/provision", axum::routing::post({
             let settings_store = settings_store.clone();
             move |axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>| async move {
