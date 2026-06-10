@@ -1,6 +1,6 @@
 import { test, expect } from './fixtures';
 
-test.describe.skip('Conversational Checkout & Instant Deposit Engine', () => {
+test.describe('Conversational Checkout & Instant Deposit Engine', () => {
   test('Sales AI generates conversational checkout link from inbox intent', async ({ page }) => {
     await page.goto('/inbox');
     await expect(page.getByRole('heading', { name: 'Inbox' })).toBeVisible();

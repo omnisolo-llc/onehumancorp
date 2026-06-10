@@ -452,9 +452,9 @@ pub async fn stripe_webhook_handler(
 
             StatusCode::OK.into_response()
         },
-        "checkout.session.completed" | "customer.subscription.updated" => {
+        "checkout.session.completed" | "checkout.session.expired" | "customer.subscription.updated" => {
             let obj = &payload.data.object;
-            if payload.r#type == "checkout.session.completed" {
+            if payload.r#type == "checkout.session.completed" || payload.r#type == "checkout.session.expired" {
                 release_inventory_locks_for_payment(&webhook_state, obj).await;
             }
 
