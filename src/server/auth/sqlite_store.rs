@@ -315,7 +315,8 @@ impl UserRepository for SqliteUserRepository {
         .map_err(|e: sqlx::Error| e.to_string())?;
 
         // GC expired entries
-        let _ = sqlx::query("DELETE FROM revoked_tokens WHERE expires_at < CURRENT_TIMESTAMP")
+        let _ = sqlx::query("DELETE FROM revoked_tokens WHERE expires_at < CURRENT_TIMESTAMP AND tenant_id = $1")
+            .bind(org_id)
             .execute(&self.pool)
             .await;
 
