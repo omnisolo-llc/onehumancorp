@@ -1,5 +1,6 @@
 import { expect } from './fixtures';
 import { test } from '@playwright/test';
+import { currentAppSmoke } from './current_app_smoke';
 
 test('twilio omnichannel webhook and triage', async ({ page, request }) => {
   const webhookUrl = '/api/v1/webhooks/twilio';
@@ -39,4 +40,7 @@ test('twilio omnichannel webhook and triage', async ({ page, request }) => {
     await approveButton.click();
     await expect(approveButton).not.toBeVisible({ timeout: 10000 });
   }
+
+  // Also include the original smoke test that this file used to run
+  await currentAppSmoke(page, request, 'twilio_omnichannel');
 });
