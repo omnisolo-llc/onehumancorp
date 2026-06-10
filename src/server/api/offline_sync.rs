@@ -102,6 +102,23 @@ pub async fn offline_sync_handler(
                         .execute(&mut *db_tx)
                         .await;
 
+                    if new_stock <= 5 && !is_conflict {
+                        let ai_task_id = uuid::Uuid::new_v4().to_string();
+                        let ai_payload = serde_json::json!({
+                            "product_id": mutation.product_id,
+                            "remaining_stock": new_stock,
+                        }).to_string();
+                        let _ = sqlx::query(
+                            "INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status)
+                             VALUES ($1, $2, 'operations', 'LowStockAlert', $3::jsonb, 'PENDING')"
+                        )
+                        .bind(&ai_task_id)
+                        .bind(&tenant_id_clone)
+                        .bind(&ai_payload)
+                        .execute(&mut *db_tx)
+                        .await;
+                    }
+
                     if is_conflict {
                         let ai_task_id = uuid::Uuid::new_v4().to_string();
                         let ai_payload = serde_json::json!({

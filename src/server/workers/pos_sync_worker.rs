@@ -159,6 +159,21 @@ impl PosSyncWorker {
                                 }).to_string();
                                 let _ = sqlx::query("INSERT INTO agent_action_requests (id, tenant_id, action_type, status, confidence_score, product_id, payload, created_at, updated_at) VALUES ($1, $2, 'Reorder', 'Pending', 0.95, $3, $4::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
                                     .bind(&action_request_id).bind(&job.tenant_id).bind(product_id).bind(&payload).execute(&mut *tx).await;
+
+                                let ai_task_id = uuid::Uuid::new_v4().to_string();
+                                let ai_payload = serde_json::json!({
+                                    "product_id": product_id,
+                                    "remaining_stock": new_stock,
+                                }).to_string();
+                                let _ = sqlx::query(
+                                    "INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status)
+                                     VALUES ($1, $2, 'operations', 'LowStockAlert', $3::jsonb, 'PENDING')"
+                                )
+                                .bind(&ai_task_id)
+                                .bind(&job.tenant_id)
+                                .bind(&ai_payload)
+                                .execute(&mut *tx)
+                                .await;
                             }
 
                             if is_conflict {
