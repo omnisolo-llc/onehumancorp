@@ -15,7 +15,7 @@ type AgentFeedItem = {
 };
 
 type ApprovalsResponse = {
-  pending_approvals: ApprovalRequest[];
+  pending_approvals: AgentFeedItem[];
   next_cursor?: string | null;
 };
 
@@ -42,7 +42,7 @@ type ApprovalRequest = {
   payload: any;
 };
 
-export function UnifiedAgentFeed() {
+export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
   const [items, setItems] = useState<AgentFeedItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -75,21 +75,25 @@ export function UnifiedAgentFeed() {
         setActivityLoading(true);
         const tenant = tenantId();
 
-        const unifiedRes = await fetch(`/api/agent-feed?tenant_id=${tenant}`, {
-          headers: {
-            "x-tenant-id": tenant,
-            "x-user-id": "default",
-          },
-        });
+        let unifiedData = initialData;
 
-        if (!unifiedRes.ok) {
-          throw new Error("Failed to load agent feed");
+        if (!unifiedData) {
+          const unifiedRes = await fetch(`/api/agent-feed?tenant_id=${tenant}`, {
+            headers: {
+              "x-tenant-id": tenant,
+              "x-user-id": "default",
+            },
+          });
+
+          if (!unifiedRes.ok) {
+            throw new Error("Failed to load agent feed");
+          }
+
+          unifiedData = await unifiedRes.json();
         }
 
-        const unifiedData = await unifiedRes.json();
-
         if (mounted) {
-          if (unifiedData.items) {
+          if (unifiedData?.items) {
             setItems(unifiedData.items.filter((i: any) => i.lifecycle_state !== "APPROVED" && i.lifecycle_state !== "DISMISSED"));
 
             // Map items for activity feed as well
@@ -166,7 +170,7 @@ export function UnifiedAgentFeed() {
       mounted = false;
       cleanup.then((fn: any) => fn && typeof fn === 'function' && fn());
     };
-  }, []);
+  }, [initialData]);
 
   useEffect(() => {
     if (typeof EventSource === 'undefined') return;
@@ -256,12 +260,14 @@ export function UnifiedAgentFeed() {
 
       if (!res.ok) {
         // If it fails, we might want to fetch again to restore state
-        const refreshRes = await fetch(`/api/agents/approvals?tenant_id=${tenant}`, {
+        const refreshRes = await fetch(`/api/agent-feed?tenant_id=${tenant}`, {
             headers: { "x-tenant-id": tenant, "x-user-id": "default" }
         });
         if (refreshRes.ok) {
-            const data: ApprovalsResponse = await refreshRes.json();
-            setItems(data.pending_approvals);
+            const data: any = await refreshRes.json();
+            if (data.items) {
+               setItems(data.items.filter((i: any) => i.lifecycle_state !== "APPROVED" && i.lifecycle_state !== "DISMISSED"));
+            }
         }
         throw new Error("Failed to submit decision");
       }
@@ -383,23 +389,23 @@ export function UnifiedAgentFeed() {
                     )}
                   </div>
                   <h3 className="text-lg font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] leading-snug mt-1">
-                    {(approval.proposed_action?.message || approval.proposed_action?.action_type || approval.event_source)}
+                    {(approval.context_payload?.description || approval.proposed_action?.message || approval.proposed_action?.action_type || approval.event_source)}
                   </h3>
                   {((approval.proposed_action || approval.context_payload)?.context || (approval.proposed_action || approval.context_payload)?.remaining_stock !== undefined || (approval.proposed_action || approval.context_payload)?.feature_type === "quote_draft" || (approval.proposed_action || approval.context_payload)?.feature_type === "social_post_draft") && (
                     <div className="mt-2 flex flex-col gap-1 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
                       {(approval.proposed_action || approval.context_payload)?.feature_type === "quote_draft" && (
-                        <div className="mb-4 p-4 rounded-xl bg-blue-50/50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/30 flex flex-col gap-3" data-testid="draft-quote-card">
-                          <div className="flex items-center gap-2 text-blue-800 dark:text-blue-300 font-semibold text-sm">
+                        <div className="mb-4 p-4 rounded-xl glassmorphism border border-white/40 dark:border-white/10 flex flex-col gap-3" data-testid="quote-draft-card">
+                          <div className="flex items-center gap-2 text-[#0066FF] font-semibold text-sm">
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                             </svg>
                             Draft Quote: {(approval.proposed_action || approval.context_payload).service || 'Plumbing Fix'} for Customer
                           </div>
-                          <div className="text-xs text-blue-700 dark:text-blue-400 font-medium">
+                          <div className="text-xs text-[#0066FF] dark:text-blue-400 font-medium">
                             {(approval.proposed_action || approval.context_payload).customer_inquiry}
                           </div>
-                          <div className="app-card dark:bg-gray-800 p-3 rounded-lg border border-blue-100 dark:border-blue-900/50 relative mt-2">
-                            <div className="text-[10px] uppercase font-bold text-gray-400 mb-2">AI Proposed Quote</div>
+                          <div className="glassmorphism dark:bg-gray-800 p-3 rounded-lg border border-white/40 dark:border-white/10 relative mt-2">
+                            <div className="text-[10px] uppercase font-bold text-gray-500 mb-2">AI Proposed Quote</div>
                             <div className="space-y-2">
                               <div className="flex justify-between">
                                 <span className="text-xs text-gray-500">Calculated Total:</span>
@@ -666,7 +672,7 @@ export function UnifiedAgentFeed() {
                         onClick={() => handleDecision(approval.id, true)}
                         className="w-full min-h-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-colors shadow-md flex items-center justify-center mb-3"
                         aria-label="Approve & Send Proposal"
-                        data-testid="approve-proposal"
+                        data-testid="approve-send-proposal"
                       >
                         Approve & Send Proposal
                       </button>
@@ -714,7 +720,7 @@ export function UnifiedAgentFeed() {
                           aria-label="Reject proposal"
                           data-testid="reject-proposal"
                         >
-                          Decline
+                          Deny
                         </button>
                       </div>
                     </>
