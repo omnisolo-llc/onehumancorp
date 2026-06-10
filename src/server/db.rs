@@ -769,6 +769,7 @@ impl DB {
                         id TEXT PRIMARY KEY,
                         tenant_id TEXT,
                         customer_id TEXT,
+                        quote_id TEXT,
                         service_id TEXT,
                         start_time TEXT,
                         end_time TEXT,

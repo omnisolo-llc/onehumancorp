@@ -268,6 +268,107 @@ impl BookingService {
         tx.commit().await.map_err(|e| e.to_string())?;
         Ok(())
     }
+    async fn get_quote(
+        &self,
+        request: Request<::server_ohc::app::GetQuoteRequest>,
+    ) -> Result<Response<::server_ohc::app::GetQuoteResponse>, Status> {
+        let req = request.into_inner();
+
+        let pool = crate::db::get_pool();
+        let quote_record = match sqlx::query(
+            "SELECT q.id, q.status, c.name as customer_name FROM quotes q LEFT JOIN customers c ON c.id = q.customer_id AND c.tenant_id = q.tenant_id WHERE q.tenant_id = $1 AND q.id = $2"
+        )
+        .bind(&req.tenant_id)
+        .bind(&req.quote_id)
+        .fetch_optional(&pool)
+        .await
+        .map_err(|e| Status::internal(e.to_string()))?
+        {
+            Some(r) => r,
+            None => return Err(Status::not_found("Quote not found")),
+        };
+
+        let items_records = sqlx::query(
+            "SELECT id, description, price, quantity, is_optional, selected FROM quote_items WHERE tenant_id = $1 AND quote_id = $2"
+        )
+        .bind(&req.tenant_id)
+        .bind(&req.quote_id)
+        .fetch_all(&pool)
+        .await
+        .map_err(|e| Status::internal(e.to_string()))?;
+
+        use sqlx::Row;
+        let items: Vec<::server_ohc::app::QuoteItem> = items_records.into_iter().map(|r| ::server_ohc::app::QuoteItem {
+            id: r.try_get("id").unwrap_or_default(),
+            description: r.try_get("description").unwrap_or_default(),
+            price: r.try_get("price").unwrap_or(0),
+            quantity: r.try_get("quantity").unwrap_or(1),
+            is_optional: r.try_get("is_optional").unwrap_or(false),
+            selected: r.try_get("selected").unwrap_or(true),
+        }).collect();
+
+        let quote = ::server_ohc::app::Quote {
+            id: req.quote_id,
+            tenant_id: req.tenant_id,
+            customer_id: String::new(),
+            status: quote_record.try_get("status").unwrap_or_else(|_| "DRAFT".to_string()),
+            total_amount: 0,
+            required_deposit: 0,
+            expires_at_unix: 0,
+            items,
+        };
+
+        Ok(Response::new(::server_ohc::app::GetQuoteResponse {
+            quote: Some(quote),
+            customer_name: quote_record.try_get("customer_name").unwrap_or_else(|_| "Unknown".to_string()),
+            request_text: "Service inquiry".to_string(),
+        }))
+    }
+
+    async fn accept_quote(
+        &self,
+        request: Request<::server_ohc::app::AcceptQuoteRequest>,
+    ) -> Result<Response<::server_ohc::app::AcceptQuoteResponse>, Status> {
+        let req = request.into_inner();
+        let pool = crate::db::get_pool();
+        let mut tx = pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+        crate::common::auth_utils::set_org_context(&mut *tx, &req.tenant_id)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        sqlx::query("UPDATE quotes SET status = 'ACCEPTED' WHERE tenant_id = $1 AND id = $2")
+            .bind(&req.tenant_id)
+            .bind(&req.quote_id)
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        for item_id in req.selected_item_ids {
+            sqlx::query("UPDATE quote_items SET selected = true WHERE tenant_id = $1 AND quote_id = $2 AND id = $3")
+                .bind(&req.tenant_id)
+                .bind(&req.quote_id)
+                .bind(&item_id)
+                .execute(&mut *tx)
+                .await
+                .map_err(|e| Status::internal(e.to_string()))?;
+        }
+
+        let booking_id = uuid::Uuid::new_v4().to_string();
+        sqlx::query("INSERT INTO bookings (id, tenant_id, quote_id, status) VALUES ($1, $2, $3, 'Pending Deposit') ON CONFLICT DO NOTHING")
+            .bind(&booking_id)
+            .bind(&req.tenant_id)
+            .bind(&req.quote_id)
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
+
+        Ok(Response::new(::server_ohc::app::AcceptQuoteResponse {
+            success: true,
+            checkout_url: "https://checkout.stripe.com/pay/cs_test_dummy".to_string(),
+        }))
+    }
 }
 
 #[cfg(test)]
@@ -1147,6 +1248,20 @@ mod native_booking_tests {
     use ::server_ohc::app::booking_engine_service_server::BookingEngineService;
     use ::server_ohc::app::{
     ReserveTimeSlotRequest, CreateConversationalCheckoutRequest};
+
+    #[tokio::test]
+    #[ignore = "requires db setup"]
+    async fn test_native_get_quote_not_found() {
+        let svc = NativeBookingService { redis_client: None };
+        let req = Request::new(::server_ohc::app::GetQuoteRequest {
+            tenant_id: "t1".to_string(),
+            quote_id: "q_invalid".to_string(),
+        });
+
+        let res = svc.get_quote(req).await;
+        assert!(res.is_err());
+        assert_eq!(res.unwrap_err().code(), tonic::Code::NotFound);
+    }
 
     #[tokio::test]
     async fn local_capacity_lock_blocks_and_releases_timeslot() {

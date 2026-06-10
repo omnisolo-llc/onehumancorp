@@ -1,0 +1,20 @@
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+
+rust_library(
+    name = "quoting",
+    srcs = [
+        "mod.rs",
+        "request.rs",
+    ],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/server/db",
+        "//src/server/orchestration",
+        "@crates//:axum",
+        "@crates//:serde",
+        "@crates//:serde_json",
+        "@crates//:sqlx",
+        "@crates//:uuid",
+        "@crates//:tracing",
+    ],
+)
