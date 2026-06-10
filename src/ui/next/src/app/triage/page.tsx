@@ -113,6 +113,49 @@ export default function TriagePage() {
         </p>
       </div>
 
+<<<<<<< HEAD
+      <div className="app-grid two grid grid-cols-1 lg:grid-cols-[1.5fr_0.8fr] gap-6">
+        <section className="app-panel glassmorphism">
+          <div className="app-panel-header">
+            <div>
+              <div className="app-panel-title">Triage Queue</div>
+            </div>
+          </div>
+          <div id="triage-list" className="app-list">
+            {error && <div className="app-empty">{error}</div>}
+            {!error && items.length === 0 ? (
+              <div className="app-empty">{loading ? "Loading triage items..." : "No items need your attention right now. Great job!"}</div>
+            ) : items.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                data-testid={`triage-card-${item.id}`}
+                onClick={() => setSelectedId(item.id)}
+                className="app-list-item w-full text-left min-h-[44px]"
+                style={{ background: selected?.id === item.id ? "#f8fafc" : "transparent" }}
+              >
+                <div className="min-w-0">
+                  <div className="app-list-title">{item.source || "Unknown Source"}</div>
+                  <div className="app-list-subtitle truncate">{item.context || "No context provided"}</div>
+                </div>
+                <span className={`app-badge ${badgeTone(item.priority)}`}>{item.priority || "Normal"}</span>
+              </button>
+            ))}
+          </div>
+        </section>
+
+        <section className="app-panel glassmorphism">
+          <div className="app-panel-header">
+            <div className="app-panel-title">Triage Detail</div>
+          </div>
+          {!selected ? (
+            <div className="app-empty">Select a triage item to review it.</div>
+          ) : (
+            <div className="app-panel-body">
+              <div className="mb-4">
+                <div className="app-metric-label">Source</div>
+                <div className="mt-1 text-sm font-semibold text-gray-900">{selected.source || "Unknown source"}</div>
+=======
       <div className="max-w-3xl mx-auto flex flex-col gap-4 relative">
         {error && <div className="app-empty glassmorphism">{error}</div>}
         {!error && items.length === 0 ? (
@@ -138,6 +181,7 @@ export default function TriagePage() {
                 <div className="text-sm text-gray-600 dark:text-gray-400 truncate">
                   {item.context || "No context provided"}
                 </div>
+>>>>>>> 94702a9f (fix(ui): implement mobile-first conversational triage feed (#26253))
               </div>
               <div className="text-blue-600 dark:text-blue-400 text-sm font-medium shrink-0 flex items-center">
                 Review <span className="ml-1 text-lg">›</span>
@@ -200,7 +244,22 @@ export default function TriagePage() {
                 </div>
               )}
 
+<<<<<<< HEAD
+              <div className="grid grid-cols-2 gap-3 mb-6">
+                <div className="app-card glassmorphism">
+                  <div className="app-metric-label">Priority</div>
+                  <div className="mt-2"><span className={`app-badge ${badgeTone(selected.priority)}`}>{selected.priority || "Normal"}</span></div>
+                </div>
+                <div className="app-card glassmorphism">
+                  <div className="app-metric-label">Created</div>
+                  <div className="mt-2 text-sm font-semibold text-gray-900">{new Date(selected.created_at || Date.now()).toLocaleString()}</div>
+                </div>
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-3">
+=======
               <div className="flex flex-col gap-3">
+>>>>>>> 94702a9f (fix(ui): implement mobile-first conversational triage feed (#26253))
                 <button
                   className="w-full min-h-[44px] rounded-xl bg-[#0066FF] hover:bg-[#005CE6] text-white font-semibold flex items-center justify-center gap-2 transition-colors shadow-sm"
                   data-testid="approve-btn"

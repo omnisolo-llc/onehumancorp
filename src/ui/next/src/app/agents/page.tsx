@@ -1,6 +1,7 @@
 'use client';
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { AgentWorkflowBuilder } from './components/AgentWorkflowBuilder';
 import {
   automations,
   connectors,
@@ -384,7 +385,7 @@ export default function AgentsPage() {
           {panel === 'remote' && <RemotePanel />}
           {panel === 'data' && <DataPanel />}
           {panel === 'operations' && <OperationsPanel />}
-          {panel === 'workflows' && <WorkflowsPanel workflows={workflows} />}
+          {panel === 'workflows' && <WorkflowsPanel workflows={workflows} setWorkflows={setWorkflows} />}
           {panel === 'feed' && <FeedPanel feed={feed} />}
           {panel === 'approvals' && <ApprovalsPanel approvals={approvals} decideApproval={decideApproval} />}
         </section>
@@ -1115,10 +1116,27 @@ function OperationsPanel() {
     </section>
   );
 }
-function WorkflowsPanel({ workflows }: { workflows: WorkflowRecord[] }) {
+function WorkflowsPanel({ workflows, setWorkflows }: { workflows: WorkflowRecord[], setWorkflows: React.Dispatch<React.SetStateAction<WorkflowRecord[]>> }) {
+  const handleSaveWorkflow = async (name: string, task: string) => {
+    const res = await fetch('/api/agents/workflows', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, task }),
+    });
+    if (!res.ok) {
+      throw new Error('Failed to create workflow');
+    }
+    const data = await res.json();
+    setWorkflows(current => [data.workflow, ...current]);
+  };
+
   return (
     <section className="rounded-lg border border-zinc-200 bg-white p-4">
       <SectionHeader title="Workflows" detail="Active expert and expert-team runs." />
+
+      <div className="mb-8">
+        <AgentWorkflowBuilder onSave={handleSaveWorkflow} />
+      </div>
       {workflows.length === 0 ? (
         <p className="rounded-md border border-dashed border-zinc-300 p-4 text-sm text-zinc-600">No workflows yet.</p>
       ) : (
