@@ -1,7 +1,9 @@
 import { test, expect } from './fixtures';
 import { currentAppSmoke } from './current_app_smoke';
 
-currentAppSmoke('team_chat');
+test('team chat smoke test', async ({ page, request }) => {
+  await currentAppSmoke(page, request, 'team_chat');
+});
 
 test.describe('Team Chat E2E', () => {
   test('should load team chat page and display initial greeting from OHC', async ({ page }) => {
