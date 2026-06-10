@@ -402,7 +402,7 @@ impl GrowthService for MyGrowthService {
         // Implement Credit Attribution: "both get 1 month free Pro"
         // In a real app we'd update a billing or organizations table.
         // For now, we simulate credit attribution.
-        let _ = sqlx::query("UPDATE organizations SET plan_tier = 'Pro', current_period_end = current_period_end + interval '1 month' WHERE id = $1 OR id = (SELECT organization_id FROM referrals WHERE id = $2)")
+        let _ = sqlx::query("UPDATE tenants SET plan_tier = 'Pro', updated_at = CURRENT_TIMESTAMP WHERE id = $1 OR id = (SELECT organization_id FROM referrals WHERE id = $2)")
             .bind(&org_id)
             .bind(&req.id)
             .execute(&mut *tx)
@@ -794,7 +794,7 @@ mod tests {
         assert_eq!(resp.user_id, "test_user");
         assert_eq!(resp.referral_code, "TESTCODE");
 
-        let _ = sqlx::query("INSERT INTO organizations (id, name, plan_tier) VALUES ('org1', 'Test Org', 'Free') ON CONFLICT DO NOTHING")
+        let _ = sqlx::query("INSERT INTO tenants (id, business_name, plan_tier) VALUES ('org1', 'Test Org', 'Free') ON CONFLICT DO NOTHING")
             .execute(&service.pool).await;
 
         let mut click_req = Request::new(GrowthIdRequest { id: resp.id.clone() });
@@ -803,7 +803,7 @@ mod tests {
         assert_eq!(click_resp.clicks, 1);
 
         // Verify plan is still Free after click
-        let org_tier: String = sqlx::query_scalar("SELECT plan_tier FROM organizations WHERE id = 'org1'")
+        let org_tier: String = sqlx::query_scalar("SELECT plan_tier FROM tenants WHERE id = 'org1'")
             .fetch_one(&service.pool).await.unwrap_or_else(|_| "Free".to_string());
         assert_eq!(org_tier, "Free", "Plan should not upgrade on click");
 
@@ -813,7 +813,7 @@ mod tests {
         assert_eq!(conv_resp.conversions, 1);
 
         // Verify plan is upgraded to Pro after conversion
-        let upgraded_tier: String = sqlx::query_scalar("SELECT plan_tier FROM organizations WHERE id = 'org1'")
+        let upgraded_tier: String = sqlx::query_scalar("SELECT plan_tier FROM tenants WHERE id = 'org1'")
             .fetch_one(&service.pool).await.unwrap_or_else(|_| "Free".to_string());
         assert_eq!(upgraded_tier, "Pro", "Plan should upgrade on conversion");
 
