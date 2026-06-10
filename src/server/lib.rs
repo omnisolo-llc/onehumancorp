@@ -2977,6 +2977,7 @@ async fn ui_dashboard_analytics_briefing_handler(
         pending_orders: 0,
         total_sales: 0.0,
         total_campaigns_sent: 0,
+        auto_replied_count: 0,
     });
 
     let inbox_messages = load_ui_inbox_from_db(&db, &tenant_id).await.unwrap_or_default();
@@ -3014,7 +3015,7 @@ async fn ui_dashboard_analytics_chat_handler(
             format!("Your latest messages are from: {}.", senders.join(", "))
         }
     } else if text.contains("order") || text.contains("booking") || text.contains("revenue") || text.contains("sale") {
-        let metrics = load_ui_dashboard_metrics(&db, &tenant_id).await.unwrap_or(UiDashboardMetrics { active_customers: 0, pending_orders: 0, total_sales: 0.0, total_campaigns_sent: 0 });
+        let metrics = load_ui_dashboard_metrics(&db, &tenant_id).await.unwrap_or(UiDashboardMetrics { active_customers: 0, pending_orders: 0, total_sales: 0.0, total_campaigns_sent: 0, auto_replied_count: 0 });
         format!("You currently have {} pending orders, with a total expected revenue of ${:.2}.", metrics.pending_orders, metrics.total_sales)
     } else {
         "I am your Decision Assistant. I can help you check orders, messages, and revenue.".to_string()
