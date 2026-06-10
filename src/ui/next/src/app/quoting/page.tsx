@@ -40,23 +40,29 @@ function MobileQuotingPageContent() {
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [activeQuoteId, setActiveQuoteId] = useState<string | null>(null);
 
-  // Mock loading initial data
+  // Fetch initial data
   useEffect(() => {
-    setQuotes([
-      {
-        id: quoteId || "quote-1",
-        customerName: "Alex Rivera",
-        customerPhotoUrl: "https://i.pravatar.cc/150?u=alex",
-        requestText: "Hi Carlos, the pipe under my kitchen sink started leaking yesterday. It's a steady drip. Can you take a look?",
-        status: "DRAFT",
-        items: [
-          { id: "item-1", description: "Callout Fee & Diagnostics", price: 75.00, quantity: 1, isOptional: false, selected: true },
-          { id: "item-2", description: "Standard P-Trap Replacement", price: 120.00, quantity: 1, isOptional: false, selected: true },
-          { id: "item-3", description: "Emergency Weekend Surcharge", price: 50.00, quantity: 1, isOptional: true, selected: false }
-        ]
+    async function loadQuotes() {
+      try {
+        const res = await fetch(`/api/quotes${quoteId ? `/${quoteId}` : ''}`);
+        if (res.ok) {
+          const data = await res.json();
+          // API might return single quote or array
+          const fetchedQuotes = Array.isArray(data) ? data : [data];
+          if (fetchedQuotes.length > 0) {
+            setQuotes(fetchedQuotes);
+            setActiveQuoteId(quoteId || fetchedQuotes[0].id);
+            return;
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load quotes", err);
       }
-    ]);
-    setActiveQuoteId(quoteId || "quote-1");
+      // Fallback empty state
+      setQuotes([]);
+      setActiveQuoteId(null);
+    }
+    loadQuotes();
   }, [quoteId]);
 
   const activeQuote = quotes.find(q => q.id === activeQuoteId);
@@ -95,15 +101,23 @@ function MobileQuotingPageContent() {
       .reduce((sum, item) => sum + (item.price * item.quantity), 0);
   };
 
-  const handleApprove = () => {
+  const handleApprove = async () => {
     if (!activeQuote) return;
-    // In a real app, this would make an API call to approve and send via Stripe
-    setQuotes(prev => prev.map(q =>
-      q.id === activeQuoteId ? { ...q, status: 'SENT' as const } : q
-    ));
-    setTimeout(() => {
-        alert("Quote approved and Stripe Payment Link sent!");
-    }, 500);
+    try {
+      const res = await fetch(`/api/quotes/${activeQuoteId}/approve`, {
+        method: 'PATCH'
+      });
+      if (res.ok) {
+        setQuotes(prev => prev.map(q =>
+          q.id === activeQuoteId ? { ...q, status: 'SENT' as const } : q
+        ));
+        setTimeout(() => {
+            alert("Quote approved and Stripe Payment Link sent!");
+        }, 500);
+      }
+    } catch(err) {
+      console.error(err);
+    }
   };
 
   if (!activeQuote) {
