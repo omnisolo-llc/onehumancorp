@@ -3,24 +3,22 @@ import { FloatingActionButton } from "./FAB";
 import { VoiceAssistantFAB } from "./VoiceAssistantFAB";
 import { MorningBriefingCard } from "./MorningBriefingCard";
 
-
-
-
-
-
 import { useEffect, useMemo, useState } from "react";
-import { TriageFeed } from "./TriageFeed";
+
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AppShell } from "../components/AppShell";
-import { InteractiveWalkthrough, WalkthroughTarget } from "../../components/Walkthrough";
+import {
+  InteractiveWalkthrough,
+  WalkthroughTarget,
+} from "../../components/Walkthrough";
 import { WithTooltip } from "../../components/TooltipRegistry";
 import GrowthReferralWidget from "../components/GrowthReferralWidget";
 import AiTimeSavingsWidget from "../components/AiTimeSavingsWidget";
 
 import { SmartBlock } from "../builder/components";
 import { UnifiedAgentFeed } from "./UnifiedAgentFeed";
-import { ReviewFeedCard } from './ReviewFeedCard';
+import { ReviewFeedCard } from "./ReviewFeedCard";
 
 import { NeighborhoodPulseCard } from "./NeighborhoodPulseCard";
 import { PromoterCard } from "./PromoterCard";
@@ -75,16 +73,28 @@ const emptyMetrics: DashboardMetrics = {
 
 function tenantId() {
   if (typeof window === "undefined") return "default";
-  return localStorage.getItem("tenant_id") || localStorage.getItem("tenant") || "default";
+  return (
+    localStorage.getItem("tenant_id") ||
+    localStorage.getItem("tenant") ||
+    "default"
+  );
 }
 
 function money(value: number | undefined) {
-  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(value || 0);
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+  }).format(value || 0);
 }
 
 function statusTone(status?: string) {
   const normalized = (status || "").toLowerCase();
-  if (["paid", "completed", "shipped", "delivered", "auto_replied"].includes(normalized)) return "good";
+  if (
+    ["paid", "completed", "shipped", "delivered", "auto_replied"].includes(
+      normalized,
+    )
+  )
+    return "good";
   if (["pending", "unfulfilled", "open"].includes(normalized)) return "warn";
   if (["failed", "cancelled", "canceled"].includes(normalized)) return "bad";
   return "neutral";
@@ -101,9 +111,15 @@ export default function Dashboard() {
   const [metrics, setMetrics] = useState<DashboardMetrics>(emptyMetrics);
   const [orders, setOrders] = useState<Order[]>([]);
   const [messages, setMessages] = useState<InboxMessage[]>([]);
-  const [supply, setSupply] = useState<SupplyPayload>({ vendors: [], raw_materials: [], bom_items: [] });
+  const [supply, setSupply] = useState<SupplyPayload>({
+    vendors: [],
+    raw_materials: [],
+    bom_items: [],
+  });
   const [approvals, setApprovals] = useState<any[]>([]);
-  const [dashboardData, setDashboardData] = useState<any>({ pendingReviews: [] });
+  const [dashboardData, setDashboardData] = useState<any>({
+    pendingReviews: [],
+  });
   const [loading, setLoading] = useState(true);
   const [ledgerBalance, setLedgerBalance] = useState<number | null>(null);
   const [ledgerCurrency, setLedgerCurrency] = useState<string>("USD");
@@ -115,7 +131,9 @@ export default function Dashboard() {
         const res = await fetch("/api/ledger/accounts");
         if (res.ok) {
           const data = await res.json();
-          const mainAccount = data.accounts?.find((a: any) => a.name === "main");
+          const mainAccount = data.accounts?.find(
+            (a: any) => a.name === "main",
+          );
           if (mainAccount) {
             setLedgerBalance(mainAccount.balance);
             setLedgerCurrency(mainAccount.currency);
@@ -139,7 +157,9 @@ export default function Dashboard() {
   const [userName, setUserName] = useState("Human");
   const [showMigration, setShowMigration] = useState(false);
   const [migrationUrl, setMigrationUrl] = useState("");
-  const [migrationStatus, setMigrationStatus] = useState<"idle" | "running" | "complete">("idle");
+  const [migrationStatus, setMigrationStatus] = useState<
+    "idle" | "running" | "complete"
+  >("idle");
   const [actionMessage, setActionMessage] = useState("");
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncErrorCount, setSyncErrorCount] = useState(0);
@@ -150,11 +170,19 @@ export default function Dashboard() {
       const token = localStorage.getItem("token") || "";
       const res = await fetch(`/api/agents/approvals/${approvalId}`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
-        body: JSON.stringify({ approved: true })
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ approved: true }),
       });
       if (res.ok) {
-        setDashboardData((prev: any) => ({ ...prev, pendingReviews: prev.pendingReviews.filter((a: any) => a.id !== approvalId) }));
+        setDashboardData((prev: any) => ({
+          ...prev,
+          pendingReviews: prev.pendingReviews.filter(
+            (a: any) => a.id !== approvalId,
+          ),
+        }));
       }
     } catch (e) {
       console.error(e);
@@ -174,7 +202,9 @@ export default function Dashboard() {
     const updateOfflineStatus = () => {
       setIsOffline(!navigator.onLine);
       try {
-        setOfflineQueueCount(JSON.parse(localStorage.getItem("ohc_offline_queue") || "[]").length);
+        setOfflineQueueCount(
+          JSON.parse(localStorage.getItem("ohc_offline_queue") || "[]").length,
+        );
       } catch {
         setOfflineQueueCount(0);
       }
@@ -203,12 +233,16 @@ export default function Dashboard() {
           }
 
           // Re-fetch queue in case new items were added during the sync
-          const currentQueueStr = localStorage.getItem("ohc_offline_queue") || "[]";
+          const currentQueueStr =
+            localStorage.getItem("ohc_offline_queue") || "[]";
           const currentQueue = JSON.parse(currentQueueStr);
           // Remove exactly the items we just synced (by matching id and timestamp or simply slicing by length)
           // Simple slice is safe if we assume append-only queue
           const remainingQueue = currentQueue.slice(queue.length);
-          localStorage.setItem("ohc_offline_queue", JSON.stringify(remainingQueue));
+          localStorage.setItem(
+            "ohc_offline_queue",
+            JSON.stringify(remainingQueue),
+          );
           setOfflineQueueCount(remainingQueue.length);
         }
       } catch (e) {
@@ -226,22 +260,32 @@ export default function Dashboard() {
       try {
         const userId = localStorage.getItem("user_id") || "default";
         const [unifiedRes, onboardingRes] = await Promise.all([
-          fetch(`/api/ui/dashboard/unified-feed?tenant_id=${tenant}&mobile_optimized=${window.innerWidth < 768}`),
-          fetch(`/api/onboarding/state`, { headers: { 'X-Tenant-ID': tenant, 'X-User-ID': userId } }),
+          fetch(
+            `/api/ui/dashboard/unified-feed?tenant_id=${tenant}&mobile_optimized=${window.innerWidth < 768}`,
+          ),
+          fetch(`/api/onboarding/state`, {
+            headers: { "X-Tenant-ID": tenant, "X-User-ID": userId },
+          }),
         ]);
 
         if (!unifiedRes.ok) {
           throw new Error("Unified UI feed endpoint failed");
         }
 
-        const [unifiedData, onboardingData, approvalsData, agentFeedData] = await Promise.all([
-          unifiedRes.json(),
-          onboardingRes.ok ? onboardingRes.json() : Promise.resolve(null),
-          approvalsRes.ok ? approvalsRes.json() : Promise.resolve([]),
-          agentFeedRes.ok ? agentFeedRes.json() : Promise.resolve({ items: [] }),
-        ]);
+        const [unifiedData, onboardingData, approvalsData, agentFeedData] =
+          await Promise.all([
+            unifiedRes.json(),
+            onboardingRes.ok ? onboardingRes.json() : Promise.resolve(null),
+            approvalsRes.ok ? approvalsRes.json() : Promise.resolve([]),
+            agentFeedRes.ok
+              ? agentFeedRes.json()
+              : Promise.resolve({ items: [] }),
+          ]);
 
-        setDashboardData((prev: any) => ({ ...prev, initialAgentFeed: agentFeedData }));
+        setDashboardData((prev: any) => ({
+          ...prev,
+          initialAgentFeed: agentFeedData,
+        }));
 
         const metricsData = unifiedData.metrics || {};
         const ordersData = unifiedData.orders || [];
@@ -259,10 +303,20 @@ export default function Dashboard() {
         setMessages(Array.isArray(inboxData) ? inboxData : []);
         setSupply({
           vendors: Array.isArray(supplyData?.vendors) ? supplyData.vendors : [],
-          raw_materials: Array.isArray(supplyData?.raw_materials) ? supplyData.raw_materials : [],
-          bom_items: Array.isArray(supplyData?.bom_items) ? supplyData.bom_items : [],
+          raw_materials: Array.isArray(supplyData?.raw_materials)
+            ? supplyData.raw_materials
+            : [],
+          bom_items: Array.isArray(supplyData?.bom_items)
+            ? supplyData.bom_items
+            : [],
         });
-        setApprovals(Array.isArray(approvalsData?.approvals) ? approvalsData.approvals : (Array.isArray(approvalsData) ? approvalsData : []));
+        setApprovals(
+          Array.isArray(approvalsData?.approvals)
+            ? approvalsData.approvals
+            : Array.isArray(approvalsData)
+              ? approvalsData
+              : [],
+        );
       } catch (e: any) {
         setError(e?.message || "Failed to load dashboard data");
       } finally {
@@ -278,10 +332,7 @@ export default function Dashboard() {
     window.addEventListener("offline", updateOfflineStatus);
     window.addEventListener("storage", updateOfflineStatus);
 
-
-
-
-  return () => {
+    return () => {
       window.removeEventListener("online", updateOfflineStatus);
       window.removeEventListener("online", handleSync);
       window.removeEventListener("offline", updateOfflineStatus);
@@ -290,14 +341,29 @@ export default function Dashboard() {
   }, []);
 
   const lowStockCount = useMemo(
-    () => supply.raw_materials.filter((item) => item.current_quantity <= item.reorder_threshold).length,
+    () =>
+      supply.raw_materials.filter(
+        (item) => item.current_quantity <= item.reorder_threshold,
+      ).length,
     [supply.raw_materials],
   );
 
   const statusItems = [
-    { label: "API", value: error ? "Degraded" : "Online", tone: error ? "bad" as const : "good" as const },
-    { label: "Orders", value: String(metrics.pending_orders || 0), tone: metrics.pending_orders > 0 ? "warn" as const : "good" as const },
-    { label: "Stock", value: String(lowStockCount), tone: lowStockCount > 0 ? "warn" as const : "good" as const },
+    {
+      label: "API",
+      value: error ? "Degraded" : "Online",
+      tone: error ? ("bad" as const) : ("good" as const),
+    },
+    {
+      label: "Orders",
+      value: String(metrics.pending_orders || 0),
+      tone: metrics.pending_orders > 0 ? ("warn" as const) : ("good" as const),
+    },
+    {
+      label: "Stock",
+      value: String(lowStockCount),
+      tone: lowStockCount > 0 ? ("warn" as const) : ("good" as const),
+    },
     { label: "Growth", value: "Active", tone: "good" as const },
   ];
 
@@ -305,13 +371,15 @@ export default function Dashboard() {
     {
       targetId: "sales-card-target",
       title: "Business Analytics",
-      content: "This panel reads sales and customer counts from the database-backed dashboard endpoint.",
+      content:
+        "This panel reads sales and customer counts from the database-backed dashboard endpoint.",
       position: "bottom" as const,
     },
     {
       targetId: "operations-map-target",
       title: "Operations Map",
-      content: "Use this area to see the live state of orders, inbox, and inventory from your database.",
+      content:
+        "Use this area to see the live state of orders, inbox, and inventory from your database.",
       position: "bottom" as const,
     },
   ];
@@ -327,11 +395,15 @@ export default function Dashboard() {
       ]}
     >
       <div className="mb-6 p-6 rounded-[16px] glassmorphism border border-white/40 dark:border-white/10">
-        <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Welcome back, {userName}.</h2>
-        <p className="text-gray-600 dark:text-gray-400">Your agents are working on your behalf.</p>
+        <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">
+          Welcome back, {userName}.
+        </h2>
+        <p className="text-gray-600 dark:text-gray-400">
+          Your agents are working on your behalf.
+        </p>
       </div>
 
-      <TriageFeed tenantId={tenantId()} />
+      <UnifiedAgentFeed />
       <AiTimeSavingsWidget />
       <NeighborhoodPulseCard tenant={tenantId()} />
       <FloatingActionButton />
@@ -360,58 +432,106 @@ export default function Dashboard() {
         >
           Start Tour
         </button>
-        <button type="button" onClick={() => router.push("/business-setup")} className="app-button">
+        <button
+          type="button"
+          onClick={() => router.push("/business-setup")}
+          className="app-button"
+        >
           Launch Site
         </button>
-        <button type="button" onClick={() => setShowMigration((open) => !open)} className="app-button">
+        <button
+          type="button"
+          onClick={() => setShowMigration((open) => !open)}
+          className="app-button"
+        >
           Migrate Existing Store
         </button>
-        <div id="queue-dashboard" className={offlineQueueCount > 0 ? "app-badge warn block" : "hidden"}>
+        <div
+          id="queue-dashboard"
+          className={offlineQueueCount > 0 ? "app-badge warn block" : "hidden"}
+        >
           {offlineQueueCount} Payments Pending Sync
         </div>
-        <div id="network-status-indicator" className={isOffline ? "app-badge warn block" : "hidden"} style={{ display: isOffline ? 'block' : 'none' }}>
+        <div
+          id="network-status-indicator"
+          className={isOffline ? "app-badge warn block" : "hidden"}
+          style={{ display: isOffline ? "block" : "none" }}
+        >
           Offline - changes saved locally
         </div>
         {isSyncing && (
           <div className="fixed bottom-4 right-4 bg-indigo-600 text-white px-4 py-3 rounded-xl shadow-lg font-medium animate-in slide-in-from-bottom-5 z-50 flex items-center gap-2">
-            <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            <svg
+              className="animate-spin h-5 w-5 text-white"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <circle
+                className="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                strokeWidth="4"
+              ></circle>
+              <path
+                className="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+              ></path>
             </svg>
             Syncing {offlineQueueCount} offline payments...
           </div>
         )}
         {syncErrorCount > 0 && (
           <div className="app-badge bad" role="alert">
-            {syncErrorCount} payment{syncErrorCount > 1 ? 's' : ''} failed to sync. Tap to resolve.
+            {syncErrorCount} payment{syncErrorCount > 1 ? "s" : ""} failed to
+            sync. Tap to resolve.
           </div>
         )}
         {error && <div className="app-badge bad">{error}</div>}
-        {actionMessage && <div className="app-badge good" role="status">{actionMessage}</div>}
+        {actionMessage && (
+          <div className="app-badge good" role="status">
+            {actionMessage}
+          </div>
+        )}
       </div>
 
       <SuccessMilestoneAlert />
       <ViralLoopPerformanceWidget />
       <div className="mb-6">
-        <div className="mb-4"><CartRecoveryWidget /></div>
+        <div className="mb-4">
+          <CartRecoveryWidget />
+        </div>
         <AffiliateMarketingWidget />
       </div>
 
       <div className="mb-6">
-          <SmartBlock type="PoweredBy" props={{ tenantId: tenantId(), isPremium: false }} />
+        <SmartBlock
+          type="PoweredBy"
+          props={{ tenantId: tenantId(), isPremium: false }}
+        />
       </div>
 
       <section className="app-panel glassmorphism border border-white/40 dark:border-white/10 mb-6">
         <div className="app-panel-header">
           <div>
             <h2 className="app-panel-title">2024 Store Wrapped</h2>
-            <div className="app-list-subtitle">A shareable snapshot of your strongest store moments.</div>
+            <div className="app-list-subtitle">
+              A shareable snapshot of your strongest store moments.
+            </div>
           </div>
           <span className="app-badge good">Viral Loop</span>
         </div>
         <div className="app-panel-body">
-          <p className="app-list-subtitle mb-3">Turn your sales, products, and milestones into a referral-friendly recap.</p>
-          <Link href="/wrapped" className="app-button">View Your Wrapped 🎁</Link>
+          <p className="app-list-subtitle mb-3">
+            Turn your sales, products, and milestones into a referral-friendly
+            recap.
+          </p>
+          <Link href="/wrapped" className="app-button">
+            View Your Wrapped 🎁
+          </Link>
         </div>
       </section>
 
@@ -420,7 +540,10 @@ export default function Dashboard() {
           <div className="app-panel-header">
             <div>
               <div className="app-panel-title">Store Migration</div>
-              <div className="app-list-subtitle">Import products and storefront details from an existing shop URL.</div>
+              <div className="app-list-subtitle">
+                Import products and storefront details from an existing shop
+                URL.
+              </div>
             </div>
           </div>
           <div className="app-panel-body">
@@ -448,12 +571,19 @@ export default function Dashboard() {
               </button>
             </div>
             {migrationStatus === "running" && (
-              <p className="mt-4 app-list-subtitle">Our AI is carefully moving your catalog, product photos, and store settings.</p>
+              <p className="mt-4 app-list-subtitle">
+                Our AI is carefully moving your catalog, product photos, and
+                store settings.
+              </p>
             )}
             {migrationStatus === "complete" && (
               <div className="mt-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <p className="app-list-title">Migration Complete</p>
-                <button type="button" className="app-button" onClick={() => router.push("/products")}>
+                <button
+                  type="button"
+                  className="app-button"
+                  onClick={() => router.push("/products")}
+                >
                   Review & Publish
                 </button>
               </div>
@@ -465,15 +595,24 @@ export default function Dashboard() {
       <main id="dashboard-screen" className="app-grid" style={{ gap: 16 }}>
         {activeDepartments.length > 0 && (
           <section className="mb-6 w-full col-span-full">
-            <h2 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-4">Active AI Departments</h2>
+            <h2 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-4">
+              Active AI Departments
+            </h2>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {activeDepartments.map(dept => (
-                <div key={dept} className="glassmorphism p-4 rounded-[16px] border border-white/40 dark:border-white/10 shadow-sm flex flex-col gap-2">
+              {activeDepartments.map((dept) => (
+                <div
+                  key={dept}
+                  className="glassmorphism p-4 rounded-[16px] border border-white/40 dark:border-white/10 shadow-sm flex flex-col gap-2"
+                >
                   <div className="flex items-center justify-between">
-                    <span className="font-semibold text-sm text-[#1D1D1F] dark:text-[#F5F5F7]">{dept}</span>
+                    <span className="font-semibold text-sm text-[#1D1D1F] dark:text-[#F5F5F7]">
+                      {dept}
+                    </span>
                     <span className="w-2 h-2 rounded-full bg-[#34C759]"></span>
                   </div>
-                  <span className="text-xs text-gray-500 dark:text-[#A1A1A6]">Active & Monitoring</span>
+                  <span className="text-xs text-gray-500 dark:text-[#A1A1A6]">
+                    Active & Monitoring
+                  </span>
                 </div>
               ))}
             </div>
@@ -481,14 +620,22 @@ export default function Dashboard() {
         )}
 
         <div className="mb-6">
-          <Link href="/assistant" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10 relative overflow-hidden bg-gradient-to-br from-blue-50/50 to-indigo-50/50 dark:from-blue-900/20 dark:to-indigo-900/20">
+          <Link
+            href="/assistant"
+            className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10 relative overflow-hidden bg-gradient-to-br from-blue-50/50 to-indigo-50/50 dark:from-blue-900/20 dark:to-indigo-900/20"
+          >
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 rounded-[12px] bg-[#0066FF] flex items-center justify-center text-white text-xl shadow-sm">
                 ✨
               </div>
               <div className="flex-1">
-                <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7]">Open WorkBuddy Assistant</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Your AI workspace for managing tasks, messages, scheduling, and operations.</p>
+                <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7]">
+                  Open WorkBuddy Assistant
+                </h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                  Your AI workspace for managing tasks, messages, scheduling,
+                  and operations.
+                </p>
               </div>
               <div className="text-[#0066FF] opacity-0 group-hover:opacity-100 transition-opacity transform group-hover:translate-x-1 duration-200">
                 →
@@ -500,59 +647,73 @@ export default function Dashboard() {
         <PromoterCard />
 
         {dashboardData?.pendingReviews?.map((item: any, idx: number) => (
-             <ReviewFeedCard
-               key={idx}
-               review={{
-                 id: item.review?.id || "",
-                 rating: item.review?.rating || 5,
-                 content: item.review?.content || '',
-                 source: item.review?.source || 'sms',
-                 createdAtUnix: item.review?.createdAtUnix || Date.now() / 1000
-               }}
-               response={{
-                 id: item.response?.id || "",
-                 draftedContent: item.response?.draftedContent || "",
-                 status: item.response?.status || "draft"
-               }}
-               onApprove={async (id, content) => {
-                 try {
-                     // Optimistic update
-                     setDashboardData((prev: any) => ({
-                         ...prev,
-                         pendingReviews: prev.pendingReviews.filter((r: any) => r?.response?.id !== id)
-                     }));
-                     const res = await fetch('/api/reviews/action', {
-                         method: 'POST',
-                         headers: { 'Content-Type': 'application/json' },
-                         body: JSON.stringify({ action: 'approve', responseId: id, content })
-                     });
-                     if (!res.ok) {
-                         // Rollback if needed
-                         console.error("Failed to approve");
-                     }
-                 } catch (e) { console.error(e); }
-               }}
-               onDismiss={async (id) => {
-                 try {
-                     // Optimistic update
-                     setDashboardData((prev: any) => ({
-                         ...prev,
-                         pendingReviews: prev.pendingReviews.filter((r: any) => r?.response?.id !== id)
-                     }));
-                     const res = await fetch('/api/reviews/action', {
-                         method: 'POST',
-                         headers: { 'Content-Type': 'application/json' },
-                         body: JSON.stringify({ action: 'dismiss', responseId: id })
-                     });
-                     if (!res.ok) {
-                         console.error("Failed to dismiss");
-                     }
-                 } catch (e) { console.error(e); }
-               }}
-             />
+          <ReviewFeedCard
+            key={idx}
+            review={{
+              id: item.review?.id || "",
+              rating: item.review?.rating || 5,
+              content: item.review?.content || "",
+              source: item.review?.source || "sms",
+              createdAtUnix: item.review?.createdAtUnix || Date.now() / 1000,
+            }}
+            response={{
+              id: item.response?.id || "",
+              draftedContent: item.response?.draftedContent || "",
+              status: item.response?.status || "draft",
+            }}
+            onApprove={async (id, content) => {
+              try {
+                // Optimistic update
+                setDashboardData((prev: any) => ({
+                  ...prev,
+                  pendingReviews: prev.pendingReviews.filter(
+                    (r: any) => r?.response?.id !== id,
+                  ),
+                }));
+                const res = await fetch("/api/reviews/action", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    action: "approve",
+                    responseId: id,
+                    content,
+                  }),
+                });
+                if (!res.ok) {
+                  // Rollback if needed
+                  console.error("Failed to approve");
+                }
+              } catch (e) {
+                console.error(e);
+              }
+            }}
+            onDismiss={async (id) => {
+              try {
+                // Optimistic update
+                setDashboardData((prev: any) => ({
+                  ...prev,
+                  pendingReviews: prev.pendingReviews.filter(
+                    (r: any) => r?.response?.id !== id,
+                  ),
+                }));
+                const res = await fetch("/api/reviews/action", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ action: "dismiss", responseId: id }),
+                });
+                if (!res.ok) {
+                  console.error("Failed to dismiss");
+                }
+              } catch (e) {
+                console.error(e);
+              }
+            }}
+          />
         ))}
 
-        <UnifiedAgentFeed initialData={{ proposals: pendingApprovals, activity: activities }} />
+        <UnifiedAgentFeed
+          initialData={{ proposals: pendingApprovals, activity: activities }}
+        />
 
         <section>
           <div className="mb-6 p-6 rounded-[16px] bg-white/65 dark:bg-[#16161a]/70 border border-white/40 dark:border-white/10">
@@ -560,15 +721,21 @@ export default function Dashboard() {
               <div className="flex items-center gap-4">
                 <div className="text-4xl">🎉</div>
                 <div>
-                  <h3 className="text-xl font-bold text-[#1D1D1F] dark:text-[#F5F5F7] font-outfit">Milestone Unlocked!</h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-300">You completed your first 5 orders!</p>
+                  <h3 className="text-xl font-bold text-[#1D1D1F] dark:text-[#F5F5F7] font-outfit">
+                    Milestone Unlocked!
+                  </h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-300">
+                    You completed your first 5 orders!
+                  </p>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => {
                   const inviteUrl = `${window.location.origin}/onboarding?ref=${tenantId()}`;
-                  navigator.clipboard?.writeText(inviteUrl).catch(() => undefined);
+                  navigator.clipboard
+                    ?.writeText(inviteUrl)
+                    .catch(() => undefined);
                   setActionMessage("Reward claimed. Invite link copied.");
                 }}
                 className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium shadow-sm transition-colors"
@@ -581,23 +748,36 @@ export default function Dashboard() {
           <div className="mb-3 flex items-center justify-between gap-3">
             <div>
               <h2 className="app-panel-title">Business Analytics</h2>
-              <p className="app-list-subtitle">Loaded from `/api/ui/dashboard/unified-feed`.</p>
+              <p className="app-list-subtitle">
+                Loaded from `/api/ui/dashboard/unified-feed`.
+              </p>
             </div>
-            <Link href="/business-analytics" className="app-button">Business Analytics</Link>
+            <Link href="/business-analytics" className="app-button">
+              Business Analytics
+            </Link>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-[1fr_300px] gap-6">
             <div className="app-grid metrics !grid-cols-2 lg:!grid-cols-4">
               <WalkthroughTarget id="sales-card-target" className="app-card">
-                <WithTooltip id="total-sales-tooltip" defaultText="Total revenue generated from database orders.">
+                <WithTooltip
+                  id="total-sales-tooltip"
+                  defaultText="Total revenue generated from database orders."
+                >
                   <div className="app-metric-label">Total Sales</div>
                 </WithTooltip>
-                <div className="app-metric-value">{money(metrics.total_sales)}</div>
-                <div className="app-metric-note">{loading ? "Loading database rows" : "All recorded orders"}</div>
+                <div className="app-metric-value">
+                  {money(metrics.total_sales)}
+                </div>
+                <div className="app-metric-note">
+                  {loading ? "Loading database rows" : "All recorded orders"}
+                </div>
               </WalkthroughTarget>
               <div className="app-card">
                 <div className="app-metric-label">Customers</div>
-                <div className="app-metric-value">{metrics.active_customers}</div>
+                <div className="app-metric-value">
+                  {metrics.active_customers}
+                </div>
                 <div className="app-metric-note">Database customer records</div>
               </div>
               <div className="app-card">
@@ -611,19 +791,24 @@ export default function Dashboard() {
                 <div className="app-metric-note">Materials below threshold</div>
               </div>
             </div>
-
-
           </div>
         </section>
 
         <section className="app-grid two">
-          <WalkthroughTarget id="operations-map-target" className="app-panel glassmorphism border border-white/40 dark:border-white/10">
+          <WalkthroughTarget
+            id="operations-map-target"
+            className="app-panel glassmorphism border border-white/40 dark:border-white/10"
+          >
             <div className="app-panel-header">
               <div>
                 <div className="app-panel-title">Operations Map</div>
-                <div className="app-list-subtitle">Live database state across the store workflow.</div>
+                <div className="app-list-subtitle">
+                  Live database state across the store workflow.
+                </div>
               </div>
-              <Link href="/orders" className="app-button">Open Orders</Link>
+              <Link href="/orders" className="app-button">
+                Open Orders
+              </Link>
             </div>
             <div className="app-panel-body">
               <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
@@ -639,7 +824,9 @@ export default function Dashboard() {
                 </div>
                 <div className="app-card">
                   <div className="app-metric-label">Vendors</div>
-                  <div className="app-metric-value">{supply.vendors.length}</div>
+                  <div className="app-metric-value">
+                    {supply.vendors.length}
+                  </div>
                   <div className="app-metric-note">Supply partners</div>
                 </div>
               </div>
@@ -649,31 +836,68 @@ export default function Dashboard() {
           <div className="app-panel glassmorphism border border-white/40 dark:border-white/10">
             <div className="app-panel-header">
               <div className="app-panel-title">Action Required</div>
-              <Link href="/inventory" className="app-button">Inventory</Link>
+              <Link href="/inventory" className="app-button">
+                Inventory
+              </Link>
             </div>
             <div className="app-list">
-                            {(dashboardData?.pendingReviews || []).filter((a: any) => a.payload?.feature_type === 'ambassador_reply').map(approval => (
-                <div key={approval.id} className="app-list-item flex flex-col items-start gap-3">
-                  <div className="w-full">
-                    <div className="app-list-title">Action Required: Approve Reply</div>
-                    <div className="app-list-subtitle font-semibold text-gray-900 mt-1">1 New Message from {approval.payload?.source || "Instagram DM"}</div>
-                    <div className="app-list-subtitle mt-2 bg-gray-50 p-2 rounded border border-gray-100 text-xs italic">"{approval.payload?.original_message || approval.payload?.message || "Customer message"}"</div>
-                    <div className="app-list-subtitle mt-2 p-2 rounded bg-blue-50 border border-blue-100 text-blue-900 text-sm">
-                      <span className="font-semibold text-blue-800 text-xs uppercase mb-1 block">AI Draft</span>
-                      {approval.payload?.generated_response || approval.payload?.draft_reply || "Ready to send."}
+              {(dashboardData?.pendingReviews || [])
+                .filter(
+                  (a: any) => a.payload?.feature_type === "ambassador_reply",
+                )
+                .map((approval) => (
+                  <div
+                    key={approval.id}
+                    className="app-list-item flex flex-col items-start gap-3"
+                  >
+                    <div className="w-full">
+                      <div className="app-list-title">
+                        Action Required: Approve Reply
+                      </div>
+                      <div className="app-list-subtitle font-semibold text-gray-900 mt-1">
+                        1 New Message from{" "}
+                        {approval.payload?.source || "Instagram DM"}
+                      </div>
+                      <div className="app-list-subtitle mt-2 bg-gray-50 p-2 rounded border border-gray-100 text-xs italic">
+                        "
+                        {approval.payload?.original_message ||
+                          approval.payload?.message ||
+                          "Customer message"}
+                        "
+                      </div>
+                      <div className="app-list-subtitle mt-2 p-2 rounded bg-blue-50 border border-blue-100 text-blue-900 text-sm">
+                        <span className="font-semibold text-blue-800 text-xs uppercase mb-1 block">
+                          AI Draft
+                        </span>
+                        {approval.payload?.generated_response ||
+                          approval.payload?.draft_reply ||
+                          "Ready to send."}
+                      </div>
+                    </div>
+                    <div className="flex gap-2 w-full mt-1">
+                      <button
+                        type="button"
+                        className="app-btn-primary flex-1 py-2"
+                        onClick={() => handleApproveDraft(approval.id)}
+                      >
+                        ✨ 1-Tap Approve
+                      </button>
+                      <Link
+                        href="/inbox"
+                        className="app-button flex-1 py-2 text-center bg-gray-100"
+                      >
+                        Edit
+                      </Link>
                     </div>
                   </div>
-                  <div className="flex gap-2 w-full mt-1">
-                    <button type="button" className="app-btn-primary flex-1 py-2" onClick={() => handleApproveDraft(approval.id)}>✨ 1-Tap Approve</button>
-                    <Link href="/inbox" className="app-button flex-1 py-2 text-center bg-gray-100">Edit</Link>
-                  </div>
-                </div>
-              ))}
+                ))}
               {metrics.pending_orders > 0 && (
                 <div className="app-list-item">
                   <div>
                     <div className="app-list-title">Pending fulfillment</div>
-                    <div className="app-list-subtitle">{metrics.pending_orders} order records need attention.</div>
+                    <div className="app-list-subtitle">
+                      {metrics.pending_orders} order records need attention.
+                    </div>
                   </div>
                   <span className="app-badge warn">Orders</span>
                 </div>
@@ -682,36 +906,61 @@ export default function Dashboard() {
                 <div className="app-list-item">
                   <div>
                     <div className="app-list-title">Low stock</div>
-                    <div className="app-list-subtitle">{lowStockCount} material records are below reorder threshold.</div>
+                    <div className="app-list-subtitle">
+                      {lowStockCount} material records are below reorder
+                      threshold.
+                    </div>
                   </div>
                   <span className="app-badge warn">Supply</span>
                 </div>
               )}
-              {messages.some((message) => (message.status || "").toLowerCase() !== "closed") && (
+              {messages.some(
+                (message) => (message.status || "").toLowerCase() !== "closed",
+              ) && (
                 <div className="app-list-item">
                   <div>
                     <div className="app-list-title">Inbox messages</div>
-                    <div className="app-list-subtitle">Open customer conversations are waiting in the database.</div>
+                    <div className="app-list-subtitle">
+                      Open customer conversations are waiting in the database.
+                    </div>
                   </div>
                   <span className="app-badge">Inbox</span>
                 </div>
               )}
-              {!loading && metrics.pending_orders === 0 && lowStockCount === 0 && messages.length === 0 && (dashboardData?.pendingReviews || []).filter((a: any) => a.payload?.feature_type === "ambassador_reply").length === 0 && (
-                <div className="app-empty">No database-backed actions are currently open.</div>
-              )}
+              {!loading &&
+                metrics.pending_orders === 0 &&
+                lowStockCount === 0 &&
+                messages.length === 0 &&
+                (dashboardData?.pendingReviews || []).filter(
+                  (a: any) => a.payload?.feature_type === "ambassador_reply",
+                ).length === 0 && (
+                  <div className="app-empty">
+                    No database-backed actions are currently open.
+                  </div>
+                )}
             </div>
           </div>
         </section>
 
-
         <section className="app-grid two">
           <div className="app-panel glassmorphism border border-white/40 dark:border-white/10">
             <div className="app-panel-header">
-              <WithTooltip id="recent-orders-tooltip" defaultText="View the latest orders placed by your customers."><div className="app-panel-title">Recent Orders</div></WithTooltip>
-              <Link href="/orders" className="app-button">View All</Link>
+              <WithTooltip
+                id="recent-orders-tooltip"
+                defaultText="View the latest orders placed by your customers."
+              >
+                <div className="app-panel-title">Recent Orders</div>
+              </WithTooltip>
+              <Link href="/orders" className="app-button">
+                View All
+              </Link>
             </div>
             {orders.length === 0 ? (
-              <div className="app-empty">{loading ? "Loading orders from the database..." : "No order rows found for this tenant."}</div>
+              <div className="app-empty">
+                {loading
+                  ? "Loading orders from the database..."
+                  : "No order rows found for this tenant."}
+              </div>
             ) : (
               <div className="app-table-wrap">
                 <table className="app-table">
@@ -726,10 +975,23 @@ export default function Dashboard() {
                   <tbody>
                     {orders.slice(0, 8).map((order) => (
                       <tr key={order.id}>
-                        <td><Link href={`/orders/${order.id}`} className="font-semibold text-blue-700">{order.id}</Link></td>
+                        <td>
+                          <Link
+                            href={`/orders/${order.id}`}
+                            className="font-semibold text-blue-700"
+                          >
+                            {order.id}
+                          </Link>
+                        </td>
                         <td>{order.customer_name || "Unknown"}</td>
                         <td>{money(order.total_amount)}</td>
-                        <td><span className={`app-badge ${statusTone(order.status)}`}>{order.status || "Unknown"}</span></td>
+                        <td>
+                          <span
+                            className={`app-badge ${statusTone(order.status)}`}
+                          >
+                            {order.status || "Unknown"}
+                          </span>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -740,21 +1002,40 @@ export default function Dashboard() {
 
           <div className="app-panel glassmorphism border border-white/40 dark:border-white/10">
             <div className="app-panel-header">
-              <WithTooltip id="inbox-activity-tooltip" defaultText="Keep track of recent customer messages."><div className="app-panel-title">Inbox Activity</div></WithTooltip>
-              <Link href="/inbox" className="app-button">Open Inbox</Link>
+              <WithTooltip
+                id="inbox-activity-tooltip"
+                defaultText="Keep track of recent customer messages."
+              >
+                <div className="app-panel-title">Inbox Activity</div>
+              </WithTooltip>
+              <Link href="/inbox" className="app-button">
+                Open Inbox
+              </Link>
             </div>
             <div className="app-list">
               {messages.length === 0 ? (
-                <div className="app-empty">{loading ? "Loading inbox from the database..." : "No inbox message rows found for this tenant."}</div>
-              ) : messages.slice(0, 6).map((message) => (
-                <div key={message.id} className="app-list-item">
-                  <div>
-                    <div className="app-list-title">{message.source || "Unknown source"}</div>
-                    <div className="app-list-subtitle">{message.content || "Empty message"}</div>
-                  </div>
-                  <span className={`app-badge ${statusTone(message.status)}`}>{formatStatus(message.status)}</span>
+                <div className="app-empty">
+                  {loading
+                    ? "Loading inbox from the database..."
+                    : "No inbox message rows found for this tenant."}
                 </div>
-              ))}
+              ) : (
+                messages.slice(0, 6).map((message) => (
+                  <div key={message.id} className="app-list-item">
+                    <div>
+                      <div className="app-list-title">
+                        {message.source || "Unknown source"}
+                      </div>
+                      <div className="app-list-subtitle">
+                        {message.content || "Empty message"}
+                      </div>
+                    </div>
+                    <span className={`app-badge ${statusTone(message.status)}`}>
+                      {formatStatus(message.status)}
+                    </span>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </section>
@@ -763,240 +1044,527 @@ export default function Dashboard() {
           <div className="mb-3 flex items-center justify-between gap-3">
             <div>
               <h2 className="app-panel-title">Growth & Virality</h2>
-              <p className="app-list-subtitle">Unlock new customers and track milestones.</p>
+              <p className="app-list-subtitle">
+                Unlock new customers and track milestones.
+              </p>
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <Link href="/dashboard/campaigns" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <Link
+              href="/dashboard/campaigns"
+              className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10"
+            >
               <div className="flex items-start justify-between mb-4">
-                <div className="w-12 h-12 rounded-full bg-sky-50 dark:bg-sky-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">↗</div>
-                <div className="text-sky-700 dark:text-sky-300 font-semibold text-sm bg-sky-50 dark:bg-sky-900/30 px-3 py-1 rounded-full">Orchestrate</div>
+                <div className="w-12 h-12 rounded-full bg-sky-50 dark:bg-sky-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">
+                  ↗
+                </div>
+                <div className="text-sky-700 dark:text-sky-300 font-semibold text-sm bg-sky-50 dark:bg-sky-900/30 px-3 py-1 rounded-full">
+                  Orchestrate
+                </div>
               </div>
-              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Campaign Orchestration</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Plan, generate, review, and launch customer campaigns from live dashboard data.</p>
+              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">
+                Campaign Orchestration
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Plan, generate, review, and launch customer campaigns from live
+                dashboard data.
+              </p>
             </Link>
 
-            <Link href="/upgrade-roi" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <Link
+              href="/upgrade-roi"
+              className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10"
+            >
               <div className="flex items-start justify-between mb-4">
-                <div className="w-12 h-12 rounded-full bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">📈</div>
-                <div className="text-indigo-600 dark:text-indigo-400 font-semibold text-sm bg-indigo-50 dark:bg-indigo-900/30 px-3 py-1 rounded-full">ROI</div>
+                <div className="w-12 h-12 rounded-full bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">
+                  📈
+                </div>
+                <div className="text-indigo-600 dark:text-indigo-400 font-semibold text-sm bg-indigo-50 dark:bg-indigo-900/30 px-3 py-1 rounded-full">
+                  ROI
+                </div>
               </div>
-              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Pro Plan ROI Calculator</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">See how much extra revenue you could generate by unlocking the Pro Plan.</p>
+              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">
+                Pro Plan ROI Calculator
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                See how much extra revenue you could generate by unlocking the
+                Pro Plan.
+              </p>
             </Link>
 
-            <Link href="/referrals" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <Link
+              href="/referrals"
+              className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10"
+            >
               <div className="flex items-start justify-between mb-4">
-                <div className="w-12 h-12 rounded-full bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🤝</div>
-                <div className="text-indigo-600 dark:text-indigo-400 font-semibold text-sm bg-indigo-50 dark:bg-indigo-900/30 px-3 py-1 rounded-full">Earn $50</div>
+                <div className="w-12 h-12 rounded-full bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">
+                  🤝
+                </div>
+                <div className="text-indigo-600 dark:text-indigo-400 font-semibold text-sm bg-indigo-50 dark:bg-indigo-900/30 px-3 py-1 rounded-full">
+                  Earn $50
+                </div>
               </div>
-              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Referrals</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Invite other business owners to OHC and earn premium credits.</p>
+              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">
+                Referrals
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Invite other business owners to OHC and earn premium credits.
+              </p>
             </Link>
 
-            <Link href="/finance" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <Link
+              href="/finance"
+              className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10"
+            >
               <div className="flex items-start justify-between mb-4">
-                <div className="w-12 h-12 rounded-full bg-green-50 dark:bg-green-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">💰</div>
-                <div className="text-green-600 dark:text-green-400 font-semibold text-sm bg-green-50 dark:bg-green-900/30 px-3 py-1 rounded-full">Finance</div>
+                <div className="w-12 h-12 rounded-full bg-green-50 dark:bg-green-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">
+                  💰
+                </div>
+                <div className="text-green-600 dark:text-green-400 font-semibold text-sm bg-green-50 dark:bg-green-900/30 px-3 py-1 rounded-full">
+                  Finance
+                </div>
               </div>
-              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Finance & Invoicing</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Manage cash flow, invoices, and automated payment follow-ups.</p>
+              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">
+                Finance & Invoicing
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Manage cash flow, invoices, and automated payment follow-ups.
+              </p>
             </Link>
 
-            <Link href="/invoice-generator" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <Link
+              href="/invoice-generator"
+              className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10"
+            >
               <div className="flex items-start justify-between mb-4">
-                <div className="w-12 h-12 rounded-full bg-cyan-50 dark:bg-cyan-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🧾</div>
-                <div className="text-cyan-600 dark:text-cyan-400 font-semibold text-sm bg-cyan-50 dark:bg-cyan-900/30 px-3 py-1 rounded-full">Billing</div>
+                <div className="w-12 h-12 rounded-full bg-cyan-50 dark:bg-cyan-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">
+                  🧾
+                </div>
+                <div className="text-cyan-600 dark:text-cyan-400 font-semibold text-sm bg-cyan-50 dark:bg-cyan-900/30 px-3 py-1 rounded-full">
+                  Billing
+                </div>
               </div>
-              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">AI Invoice Generator</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Generate professional, shareable invoices that bring new customers to OHC.</p>
+              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">
+                AI Invoice Generator
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Generate professional, shareable invoices that bring new
+                customers to OHC.
+              </p>
             </Link>
 
-            <Link href="/milestones" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <Link
+              href="/milestones"
+              className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10"
+            >
               <div className="flex items-start justify-between mb-4">
-                <div className="w-12 h-12 rounded-full bg-purple-50 dark:bg-purple-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform" aria-hidden="true">🏆</div>
-                <div className="text-purple-600 dark:text-purple-400 font-semibold text-sm bg-purple-50 dark:bg-purple-900/30 px-3 py-1 rounded-full">Share</div>
+                <div
+                  className="w-12 h-12 rounded-full bg-purple-50 dark:bg-purple-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform"
+                  aria-hidden="true"
+                >
+                  🏆
+                </div>
+                <div className="text-purple-600 dark:text-purple-400 font-semibold text-sm bg-purple-50 dark:bg-purple-900/30 px-3 py-1 rounded-full">
+                  Share
+                </div>
               </div>
-              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Milestones</h3>
+              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">
+                Milestones
+              </h3>
 
-              <p className="text-sm text-gray-600 dark:text-gray-400">Track and share your business achievements with your audience.</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Track and share your business achievements with your audience.
+              </p>
             </Link>
 
-            <Link href="/loyalty-program" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <Link
+              href="/loyalty-program"
+              className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10"
+            >
               <div className="flex items-start justify-between mb-4">
-                <div className="w-12 h-12 rounded-full bg-yellow-50 dark:bg-yellow-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🤝</div>
-                <div className="text-yellow-600 dark:text-yellow-400 font-semibold text-sm bg-yellow-50 dark:bg-yellow-900/30 px-3 py-1 rounded-full">Loyalty</div>
+                <div className="w-12 h-12 rounded-full bg-yellow-50 dark:bg-yellow-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">
+                  🤝
+                </div>
+                <div className="text-yellow-600 dark:text-yellow-400 font-semibold text-sm bg-yellow-50 dark:bg-yellow-900/30 px-3 py-1 rounded-full">
+                  Loyalty
+                </div>
               </div>
-              <h3 className="text-xl font-bold font-outfit text-gray-900 dark:text-white mb-2">Customer Loyalty</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Set up a 'Give X, Get Y' referral program and generate campaigns.</p>
+              <h3 className="text-xl font-bold font-outfit text-gray-900 dark:text-white mb-2">
+                Customer Loyalty
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Set up a 'Give X, Get Y' referral program and generate
+                campaigns.
+              </p>
             </Link>
 
-            <Link href="/customer-referral-program" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <Link
+              href="/customer-referral-program"
+              className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10"
+            >
               <div className="flex items-start justify-between mb-4">
-                <div className="w-12 h-12 rounded-full bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">💸</div>
-                <div className="text-emerald-600 dark:text-emerald-400 font-semibold text-sm bg-emerald-50 dark:bg-emerald-900/30 px-3 py-1 rounded-full">Referrals</div>
+                <div className="w-12 h-12 rounded-full bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">
+                  💸
+                </div>
+                <div className="text-emerald-600 dark:text-emerald-400 font-semibold text-sm bg-emerald-50 dark:bg-emerald-900/30 px-3 py-1 rounded-full">
+                  Referrals
+                </div>
               </div>
-              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Customer Referral Program</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Launch a Give $10, Get $10 program to turn your customers into advocates.</p>
+              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">
+                Customer Referral Program
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Launch a Give $10, Get $10 program to turn your customers into
+                advocates.
+              </p>
             </Link>
 
-            <Link href="/share-cards" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <Link
+              href="/share-cards"
+              className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10"
+            >
               <div className="flex items-start justify-between mb-4">
-                <div className="w-12 h-12 rounded-full bg-pink-50 dark:bg-pink-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🎴</div>
-                <div className="text-pink-600 dark:text-pink-400 font-semibold text-sm bg-pink-50 dark:bg-pink-900/30 px-3 py-1 rounded-full">Cards</div>
+                <div className="w-12 h-12 rounded-full bg-pink-50 dark:bg-pink-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">
+                  🎴
+                </div>
+                <div className="text-pink-600 dark:text-pink-400 font-semibold text-sm bg-pink-50 dark:bg-pink-900/30 px-3 py-1 rounded-full">
+                  Cards
+                </div>
               </div>
-              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Social Share Cards</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Generate Share Cards to promote your brand on social media.</p>
+              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">
+                Social Share Cards
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Generate Share Cards to promote your brand on social media.
+              </p>
             </Link>
 
-            <Link href="/storefront-widget" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <Link
+              href="/storefront-widget"
+              className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10"
+            >
               <div className="flex items-start justify-between mb-4">
-                <div className="w-12 h-12 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🌐</div>
-                <div className="text-blue-600 dark:text-blue-400 font-semibold text-sm bg-blue-50 dark:bg-blue-900/30 px-3 py-1 rounded-full">Widget</div>
+                <div className="w-12 h-12 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">
+                  🌐
+                </div>
+                <div className="text-blue-600 dark:text-blue-400 font-semibold text-sm bg-blue-50 dark:bg-blue-900/30 px-3 py-1 rounded-full">
+                  Widget
+                </div>
               </div>
-              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Storefront Widget</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Embed a mini storefront on your blog or website to boost sales.</p>
+              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">
+                Storefront Widget
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Embed a mini storefront on your blog or website to boost sales.
+              </p>
             </Link>
 
-            <Link href="/embed-builder" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <Link
+              href="/embed-builder"
+              className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10"
+            >
               <div className="flex items-start justify-between mb-4">
-                <div className="w-12 h-12 rounded-full bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🔌</div>
-                <div className="text-emerald-600 dark:text-emerald-400 font-semibold text-sm bg-emerald-50 dark:bg-emerald-900/30 px-3 py-1 rounded-full">Widget</div>
+                <div className="w-12 h-12 rounded-full bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">
+                  🔌
+                </div>
+                <div className="text-emerald-600 dark:text-emerald-400 font-semibold text-sm bg-emerald-50 dark:bg-emerald-900/30 px-3 py-1 rounded-full">
+                  Widget
+                </div>
               </div>
-              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Interactive Embed</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Build custom intake, booking, or quote widgets for your site.</p>
+              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">
+                Interactive Embed
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Build custom intake, booking, or quote widgets for your site.
+              </p>
             </Link>
 
-            <Link href="/subscriptions" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <Link
+              href="/subscriptions"
+              className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10"
+            >
               <div className="flex items-start justify-between mb-4">
-                <div className="w-12 h-12 rounded-full bg-amber-50 dark:bg-amber-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">📦</div>
-                <div className="text-amber-700 dark:text-amber-300 font-semibold text-sm bg-amber-50 dark:bg-amber-900/30 px-3 py-1 rounded-full">Recurring</div>
+                <div className="w-12 h-12 rounded-full bg-amber-50 dark:bg-amber-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">
+                  📦
+                </div>
+                <div className="text-amber-700 dark:text-amber-300 font-semibold text-sm bg-amber-50 dark:bg-amber-900/30 px-3 py-1 rounded-full">
+                  Recurring
+                </div>
               </div>
-              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Subscriptions & Fulfillments</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Manage recurring products, subscribers, and shipping batches.</p>
+              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">
+                Subscriptions & Fulfillments
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Manage recurring products, subscribers, and shipping batches.
+              </p>
             </Link>
 
-            <Link href="/social-proof-nudge" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <Link
+              href="/social-proof-nudge"
+              className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10"
+            >
               <div className="flex items-start justify-between mb-4">
-                <div className="w-12 h-12 rounded-full bg-green-50 dark:bg-green-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🚀</div>
-                <div className="text-green-600 dark:text-green-400 font-semibold text-sm bg-green-50 dark:bg-green-900/30 px-3 py-1 rounded-full">Proof</div>
+                <div className="w-12 h-12 rounded-full bg-green-50 dark:bg-green-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">
+                  🚀
+                </div>
+                <div className="text-green-600 dark:text-green-400 font-semibold text-sm bg-green-50 dark:bg-green-900/30 px-3 py-1 rounded-full">
+                  Proof
+                </div>
               </div>
-              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Social Proof Nudge</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Show visitors that others are buying to increase conversions.</p>
+              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">
+                Social Proof Nudge
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Show visitors that others are buying to increase conversions.
+              </p>
             </Link>
 
-            <Link href="/work-intake-widget" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <Link
+              href="/work-intake-widget"
+              className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10"
+            >
               <div className="flex items-start justify-between mb-4">
-                <div className="w-12 h-12 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">📋</div>
-                <div className="text-blue-600 dark:text-blue-400 font-semibold text-sm bg-blue-50 dark:bg-blue-900/30 px-3 py-1 rounded-full">Leads</div>
+                <div className="w-12 h-12 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">
+                  📋
+                </div>
+                <div className="text-blue-600 dark:text-blue-400 font-semibold text-sm bg-blue-50 dark:bg-blue-900/30 px-3 py-1 rounded-full">
+                  Leads
+                </div>
               </div>
-              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Work-Intake Widget</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Embed a smart lead capture form with a viral loop directly on your site.</p>
+              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">
+                Work-Intake Widget
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Embed a smart lead capture form with a viral loop directly on
+                your site.
+              </p>
             </Link>
 
-            <Link href="/link-in-bio-generator" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <Link
+              href="/link-in-bio-generator"
+              className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10"
+            >
               <div className="flex items-start justify-between mb-4">
-                <div className="w-12 h-12 rounded-full bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🔗</div>
-                <div className="text-emerald-600 dark:text-emerald-400 font-semibold text-sm bg-emerald-50 dark:bg-emerald-900/30 px-3 py-1 rounded-full">Bio</div>
+                <div className="w-12 h-12 rounded-full bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">
+                  🔗
+                </div>
+                <div className="text-emerald-600 dark:text-emerald-400 font-semibold text-sm bg-emerald-50 dark:bg-emerald-900/30 px-3 py-1 rounded-full">
+                  Bio
+                </div>
               </div>
-              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Create Link-in-Bio Page</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Publish a lightweight social profile page for your storefront and offers.</p>
+              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">
+                Create Link-in-Bio Page
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Publish a lightweight social profile page for your storefront
+                and offers.
+              </p>
             </Link>
 
-            <Link href="/giveaway" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <Link
+              href="/giveaway"
+              className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10"
+            >
               <div className="flex items-start justify-between mb-4">
-                <div className="w-12 h-12 rounded-full bg-pink-50 dark:bg-pink-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🎁</div>
-                <div className="text-pink-600 dark:text-pink-400 font-semibold text-sm bg-pink-50 dark:bg-pink-900/30 px-3 py-1 rounded-full">Viral</div>
+                <div className="w-12 h-12 rounded-full bg-pink-50 dark:bg-pink-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">
+                  🎁
+                </div>
+                <div className="text-pink-600 dark:text-pink-400 font-semibold text-sm bg-pink-50 dark:bg-pink-900/30 px-3 py-1 rounded-full">
+                  Viral
+                </div>
               </div>
-              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Viral Giveaway Generator</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Launch a viral sweepstakes to capture emails and drive social shares.</p>
+              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">
+                Viral Giveaway Generator
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Launch a viral sweepstakes to capture emails and drive social
+                shares.
+              </p>
             </Link>
 
-            <Link href="/win-back" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <Link
+              href="/win-back"
+              className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10"
+            >
               <div className="flex items-start justify-between mb-4">
-                <div className="w-12 h-12 rounded-full bg-purple-50 dark:bg-purple-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">💌</div>
-                <div className="text-purple-600 dark:text-purple-400 font-semibold text-sm bg-purple-50 dark:bg-purple-900/30 px-3 py-1 rounded-full">Retain</div>
+                <div className="w-12 h-12 rounded-full bg-purple-50 dark:bg-purple-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">
+                  💌
+                </div>
+                <div className="text-purple-600 dark:text-purple-400 font-semibold text-sm bg-purple-50 dark:bg-purple-900/30 px-3 py-1 rounded-full">
+                  Retain
+                </div>
               </div>
-              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Customer Win-back</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Re-engage inactive customers with AI-generated email campaigns.</p>
+              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">
+                Customer Win-back
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Re-engage inactive customers with AI-generated email campaigns.
+              </p>
             </Link>
 
-            <Link href="/review-campaigns" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <Link
+              href="/review-campaigns"
+              className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10"
+            >
               <div className="flex items-start justify-between mb-4">
-                <div className="w-12 h-12 rounded-full bg-yellow-50 dark:bg-yellow-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">⭐️</div>
-                <div className="text-yellow-600 dark:text-yellow-400 font-semibold text-sm bg-yellow-50 dark:bg-yellow-900/30 px-3 py-1 rounded-full">Reviews</div>
+                <div className="w-12 h-12 rounded-full bg-yellow-50 dark:bg-yellow-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">
+                  ⭐️
+                </div>
+                <div className="text-yellow-600 dark:text-yellow-400 font-semibold text-sm bg-yellow-50 dark:bg-yellow-900/30 px-3 py-1 rounded-full">
+                  Reviews
+                </div>
               </div>
-              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Automated Reviews</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Generate highly-converting, personalized review request emails.</p>
+              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">
+                Automated Reviews
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Generate highly-converting, personalized review request emails.
+              </p>
             </Link>
 
-            <Link href="/seasonal-promo" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <Link
+              href="/seasonal-promo"
+              className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10"
+            >
               <div className="flex items-start justify-between mb-4">
-                <div className="w-12 h-12 rounded-full bg-teal-50 dark:bg-teal-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">✨</div>
-                <div className="text-teal-600 dark:text-teal-400 font-semibold text-sm bg-teal-50 dark:bg-teal-900/30 px-3 py-1 rounded-full">Promo</div>
+                <div className="w-12 h-12 rounded-full bg-teal-50 dark:bg-teal-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">
+                  ✨
+                </div>
+                <div className="text-teal-600 dark:text-teal-400 font-semibold text-sm bg-teal-50 dark:bg-teal-900/30 px-3 py-1 rounded-full">
+                  Promo
+                </div>
               </div>
-              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Seasonal Promo Generator</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Create AI campaigns and promo codes for special occasions instantly.</p>
+              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">
+                Seasonal Promo Generator
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Create AI campaigns and promo codes for special occasions
+                instantly.
+              </p>
             </Link>
 
-            <Link href="/cart-recovery" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <Link
+              href="/cart-recovery"
+              className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10"
+            >
               <div className="flex items-start justify-between mb-4">
-                <div className="w-12 h-12 rounded-full bg-orange-50 dark:bg-orange-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🛒</div>
-                <div className="text-orange-600 dark:text-orange-400 font-semibold text-sm bg-orange-50 dark:bg-orange-900/30 px-3 py-1 rounded-full">Recover</div>
+                <div className="w-12 h-12 rounded-full bg-orange-50 dark:bg-orange-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">
+                  🛒
+                </div>
+                <div className="text-orange-600 dark:text-orange-400 font-semibold text-sm bg-orange-50 dark:bg-orange-900/30 px-3 py-1 rounded-full">
+                  Recover
+                </div>
               </div>
-              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Cart Recovery</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Recover abandoned carts with personalized AI follow-ups.</p>
+              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">
+                Cart Recovery
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Recover abandoned carts with personalized AI follow-ups.
+              </p>
             </Link>
 
-            <Link href="/flash-sale-generator" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <Link
+              href="/flash-sale-generator"
+              className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10"
+            >
               <div className="flex items-start justify-between mb-4">
-                <div className="w-12 h-12 rounded-full bg-red-50 dark:bg-red-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">⚡</div>
-                <div className="text-red-600 dark:text-red-400 font-semibold text-sm bg-red-50 dark:bg-red-900/30 px-3 py-1 rounded-full">Urgency</div>
+                <div className="w-12 h-12 rounded-full bg-red-50 dark:bg-red-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">
+                  ⚡
+                </div>
+                <div className="text-red-600 dark:text-red-400 font-semibold text-sm bg-red-50 dark:bg-red-900/30 px-3 py-1 rounded-full">
+                  Urgency
+                </div>
               </div>
-              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Flash Sale Generator</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Create high-converting flash sale countdown widgets.</p>
+              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">
+                Flash Sale Generator
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Create high-converting flash sale countdown widgets.
+              </p>
             </Link>
 
-
-            <Link href="/marketing/lead-gen" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <Link
+              href="/marketing/lead-gen"
+              className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10"
+            >
               <div className="flex items-start justify-between mb-4">
-                <div className="w-12 h-12 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🎯</div>
-                <div className="text-blue-600 dark:text-blue-400 font-semibold text-sm bg-blue-50 dark:bg-blue-900/30 px-3 py-1 rounded-full">Leads</div>
+                <div className="w-12 h-12 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">
+                  🎯
+                </div>
+                <div className="text-blue-600 dark:text-blue-400 font-semibold text-sm bg-blue-50 dark:bg-blue-900/30 px-3 py-1 rounded-full">
+                  Leads
+                </div>
               </div>
-              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Want more local jobs this week? [Tap here]</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Launch an autonomous hyper-local lead generation campaign.</p>
+              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">
+                Want more local jobs this week? [Tap here]
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Launch an autonomous hyper-local lead generation campaign.
+              </p>
             </Link>
 
-            <Link href="/trial-extension" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <Link
+              href="/trial-extension"
+              className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10"
+            >
               <div className="flex items-start justify-between mb-4">
-                <div className="w-12 h-12 rounded-full bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🎁</div>
-                <div className="text-emerald-600 dark:text-emerald-400 font-semibold text-sm bg-emerald-50 dark:bg-emerald-900/30 px-3 py-1 rounded-full">Extension</div>
+                <div className="w-12 h-12 rounded-full bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">
+                  🎁
+                </div>
+                <div className="text-emerald-600 dark:text-emerald-400 font-semibold text-sm bg-emerald-50 dark:bg-emerald-900/30 px-3 py-1 rounded-full">
+                  Extension
+                </div>
               </div>
-              <h3 className="text-xl font-bold font-outfit text-gray-900 dark:text-white mb-2">Interactive Trial Extension</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Share your setup on X to instantly unlock 7 extra days of Pro.</p>
+              <h3 className="text-xl font-bold font-outfit text-gray-900 dark:text-white mb-2">
+                Interactive Trial Extension
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Share your setup on X to instantly unlock 7 extra days of Pro.
+              </p>
             </Link>
 
-            <Link href="/field-ops/jobs" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <Link
+              href="/field-ops/jobs"
+              className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10"
+            >
               <div className="flex items-start justify-between mb-4">
-                <div className="w-12 h-12 rounded-full bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">📍</div>
-                <div className="text-indigo-600 dark:text-indigo-400 font-semibold text-sm bg-indigo-50 dark:bg-indigo-900/30 px-3 py-1 rounded-full">Operations</div>
+                <div className="w-12 h-12 rounded-full bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">
+                  📍
+                </div>
+                <div className="text-indigo-600 dark:text-indigo-400 font-semibold text-sm bg-indigo-50 dark:bg-indigo-900/30 px-3 py-1 rounded-full">
+                  Operations
+                </div>
               </div>
-              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Field Ops Route</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Offline-first mobile route management for field service workers.</p>
+              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">
+                Field Ops Route
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Offline-first mobile route management for field service workers.
+              </p>
             </Link>
 
-            <Link href="/settings" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+            <Link
+              href="/settings"
+              className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10"
+            >
               <div className="flex items-start justify-between mb-4">
-                <div className="w-12 h-12 rounded-full bg-gray-50 dark:bg-gray-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">⚙️</div>
-                <div className="text-gray-600 dark:text-gray-400 font-semibold text-sm bg-gray-50 dark:bg-gray-900/30 px-3 py-1 rounded-full">Config</div>
+                <div className="w-12 h-12 rounded-full bg-gray-50 dark:bg-gray-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">
+                  ⚙️
+                </div>
+                <div className="text-gray-600 dark:text-gray-400 font-semibold text-sm bg-gray-50 dark:bg-gray-900/30 px-3 py-1 rounded-full">
+                  Config
+                </div>
               </div>
-              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Settings</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Manage your account and preferences.</p>
+              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">
+                Settings
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Manage your account and preferences.
+              </p>
             </Link>
           </div>
         </section>
       </main>
-
     </AppShell>
   );
 }

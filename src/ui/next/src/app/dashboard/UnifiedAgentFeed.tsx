@@ -47,14 +47,20 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
   const [items, setItems] = useState<AgentFeedItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [activeTab, setActiveTab] = useState<"proposals" | "activity">("proposals");
+  const [activeTab, setActiveTab] = useState<"proposals" | "activity">(
+    "proposals",
+  );
   const [activities, setActivities] = useState<OHCLedgerEntry[]>([]);
   const [activityLoading, setActivityLoading] = useState(false);
   const [isOffline, setIsOffline] = useState(false);
 
   const tenantId = () => {
     if (typeof window === "undefined") return "default";
-    return localStorage.getItem("tenant_id") || localStorage.getItem("tenant") || "default";
+    return (
+      localStorage.getItem("tenant_id") ||
+      localStorage.getItem("tenant") ||
+      "default"
+    );
   };
 
   useEffect(() => {
@@ -64,8 +70,15 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
         window.location.reload();
       }, 500);
     };
-    window.addEventListener('voice-command-processed', handleVoiceCommandProcessed as EventListener);
-    return () => window.removeEventListener('voice-command-processed', handleVoiceCommandProcessed as EventListener);
+    window.addEventListener(
+      "voice-command-processed",
+      handleVoiceCommandProcessed as EventListener,
+    );
+    return () =>
+      window.removeEventListener(
+        "voice-command-processed",
+        handleVoiceCommandProcessed as EventListener,
+      );
   }, []);
 
   useEffect(() => {
@@ -77,7 +90,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
       try {
         const actions = await getActions();
         for (const action of actions) {
-          if (action.type === 'approve_agent_feed') {
+          if (action.type === "approve_agent_feed") {
             await submitDecision(action.id, action.payload.approved);
             await removeAction(action.id);
           }
@@ -112,12 +125,15 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
         let unifiedData = initialData;
 
         if (!unifiedData) {
-          const unifiedRes = await fetch(`/api/agent-feed?tenant_id=${tenant}`, {
-            headers: {
-              "x-tenant-id": tenant,
-              "x-user-id": "default",
+          const unifiedRes = await fetch(
+            `/api/agent-feed?tenant_id=${tenant}`,
+            {
+              headers: {
+                "x-tenant-id": tenant,
+                "x-user-id": "default",
+              },
             },
-          });
+          );
 
           if (!unifiedRes.ok) {
             throw new Error("Failed to load agent feed");
@@ -128,17 +144,37 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
 
         if (mounted) {
           if (unifiedData?.items) {
-            setItems(unifiedData.items.filter((i: any) => i.lifecycle_state !== "APPROVED" && i.lifecycle_state !== "DISMISSED"));
+            setItems(
+              unifiedData.items.filter(
+                (i: any) =>
+                  i.lifecycle_state !== "APPROVED" &&
+                  i.lifecycle_state !== "DISMISSED",
+              ),
+            );
 
             // Map items for activity feed as well
-            const mappedActivities = unifiedData.items.filter((i: any) => i.lifecycle_state === "APPROVED" || i.lifecycle_state === "DISMISSED").map((a: any) => ({
-              id: a.id,
-              tenant_id: a.tenant_id,
-              event_type: a.lifecycle_state,
-              department: a.event_source,
-              payload: JSON.stringify({ original_payload: { description: a.proposed_action?.message || a.proposed_action?.action_type || a.event_source } }),
-              created_at: a.updated_at || a.created_at || new Date().toISOString()
-            }));
+            const mappedActivities = unifiedData.items
+              .filter(
+                (i: any) =>
+                  i.lifecycle_state === "APPROVED" ||
+                  i.lifecycle_state === "DISMISSED",
+              )
+              .map((a: any) => ({
+                id: a.id,
+                tenant_id: a.tenant_id,
+                event_type: a.lifecycle_state,
+                department: a.event_source,
+                payload: JSON.stringify({
+                  original_payload: {
+                    description:
+                      a.proposed_action?.message ||
+                      a.proposed_action?.action_type ||
+                      a.event_source,
+                  },
+                }),
+                created_at:
+                  a.updated_at || a.created_at || new Date().toISOString(),
+              }));
             setActivities(mappedActivities);
           }
         }
@@ -146,7 +182,9 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
         if (mounted) {
           // Listen to SSE updates
           if (typeof EventSource === "undefined") return;
-          const eventSource = new EventSource(`/api/agents/approvals/stream?tenant_id=${tenant}`);
+          const eventSource = new EventSource(
+            `/api/agents/approvals/stream?tenant_id=${tenant}`,
+          );
 
           eventSource.onmessage = (event) => {
             try {
@@ -158,13 +196,15 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                   return [payload.data, ...prev];
                 });
               } else if (payload.event_type === "approval_decision") {
-                setItems((prev) => prev.filter((a) => a.id !== payload.data.request_id));
+                setItems((prev) =>
+                  prev.filter((a) => a.id !== payload.data.request_id),
+                );
                 setActivities((prev) => {
                   const newActivity = {
                     id: crypto.randomUUID(),
                     tenant_id: tenant,
-                    event_type: payload.data.status || 'APPROVED',
-                    department: payload.data.department || 'general',
+                    event_type: payload.data.status || "APPROVED",
+                    department: payload.data.department || "general",
                     payload: payload.data,
                     created_at: new Date().toISOString(),
                   };
@@ -202,21 +242,27 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
     const cleanup = fetchAll();
     return () => {
       mounted = false;
-      cleanup.then((fn: any) => fn && typeof fn === 'function' && fn());
+      cleanup.then((fn: any) => fn && typeof fn === "function" && fn());
     };
   }, [initialData]);
 
   useEffect(() => {
-    if (typeof EventSource === 'undefined') return;
-    const events = new EventSource('/api/agents/events');
+    if (typeof EventSource === "undefined") return;
+    const events = new EventSource("/api/agents/events");
     events.onmessage = (event) => {
       try {
         const item = JSON.parse(event.data);
         if (!item?.id || !item?.description) return;
 
         // If it's a DRAFT or PENDING, add to proposals
-        if (String(item.status || '').toUpperCase() === 'DRAFT' || String(item.status || '').toUpperCase() === 'PENDING') {
-          setItems((current) => [item, ...current.filter((existing) => existing.id !== item.id)]);
+        if (
+          String(item.status || "").toUpperCase() === "DRAFT" ||
+          String(item.status || "").toUpperCase() === "PENDING"
+        ) {
+          setItems((current) => [
+            item,
+            ...current.filter((existing) => existing.id !== item.id),
+          ]);
         } else {
           // It's an activity event (Approved, Rejected, etc.)
           setActivities((current) => {
@@ -225,16 +271,24 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
               tenant_id: item.tenant_id || "default",
               event_type: item.status,
               department: item.department,
-              payload: typeof item.payload === 'object' ? JSON.stringify({ original_payload: item.payload }) : item.payload,
-              created_at: new Date().toISOString()
+              payload:
+                typeof item.payload === "object"
+                  ? JSON.stringify({ original_payload: item.payload })
+                  : item.payload,
+              created_at: new Date().toISOString(),
             };
-            return [mappedActivity, ...current.filter((existing) => existing.id !== item.id)];
+            return [
+              mappedActivity,
+              ...current.filter((existing) => existing.id !== item.id),
+            ];
           });
           // Also remove from approvals if it was there
-          setItems((current) => current.filter((existing) => existing.id !== item.id));
+          setItems((current) =>
+            current.filter((existing) => existing.id !== item.id),
+          );
         }
       } catch (err) {
-        console.error('Failed to parse agent feed event:', err);
+        console.error("Failed to parse agent feed event:", err);
       }
     };
     events.onerror = () => events.close();
@@ -242,16 +296,22 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
   }, []);
 
   useEffect(() => {
-    if (typeof EventSource === 'undefined') return;
-    const events = new EventSource('/api/agents/events');
+    if (typeof EventSource === "undefined") return;
+    const events = new EventSource("/api/agents/events");
     events.onmessage = (event) => {
       try {
         const item = JSON.parse(event.data);
         if (!item?.id || !item?.description) return;
 
         // If it's a DRAFT or PENDING, add to proposals
-        if (String(item.status || '').toUpperCase() === 'DRAFT' || String(item.status || '').toUpperCase() === 'PENDING') {
-          setItems((current) => [item, ...current.filter((existing) => existing.id !== item.id)]);
+        if (
+          String(item.status || "").toUpperCase() === "DRAFT" ||
+          String(item.status || "").toUpperCase() === "PENDING"
+        ) {
+          setItems((current) => [
+            item,
+            ...current.filter((existing) => existing.id !== item.id),
+          ]);
         } else {
           // It's an activity event (Approved, Rejected, etc.)
           setActivities((current) => {
@@ -260,16 +320,24 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
               tenant_id: item.tenant_id || "default",
               event_type: item.status,
               department: item.department,
-              payload: typeof item.payload === 'object' ? JSON.stringify({ original_payload: item.payload }) : item.payload,
-              created_at: new Date().toISOString()
+              payload:
+                typeof item.payload === "object"
+                  ? JSON.stringify({ original_payload: item.payload })
+                  : item.payload,
+              created_at: new Date().toISOString(),
             };
-            return [mappedActivity, ...current.filter((existing) => existing.id !== item.id)];
+            return [
+              mappedActivity,
+              ...current.filter((existing) => existing.id !== item.id),
+            ];
           });
           // Also remove from approvals if it was there
-          setItems((current) => current.filter((existing) => existing.id !== item.id));
+          setItems((current) =>
+            current.filter((existing) => existing.id !== item.id),
+          );
         }
       } catch (err) {
-        console.error('Failed to parse agent feed event:', err);
+        console.error("Failed to parse agent feed event:", err);
       }
     };
     events.onerror = () => events.close();
@@ -295,15 +363,15 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
 
   const handleDecision = async (id: string, approved: boolean) => {
     // Optimistic UI update
-    setItems(prev => prev.filter(app => app.id !== id));
+    setItems((prev) => prev.filter((app) => app.id !== id));
 
     if (isOffline) {
       // Enqueue offline action
       await enqueueAction({
         id: crypto.randomUUID(),
-        type: 'approve_agent_feed',
+        type: "approve_agent_feed",
         payload: { id, approved },
-        timestamp: Date.now()
+        timestamp: Date.now(),
       });
       return;
     }
@@ -315,13 +383,19 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
       const tenant = tenantId();
       try {
         const refreshRes = await fetch(`/api/agent-feed?tenant_id=${tenant}`, {
-            headers: { "x-tenant-id": tenant, "x-user-id": "default" }
+          headers: { "x-tenant-id": tenant, "x-user-id": "default" },
         });
         if (refreshRes.ok) {
-            const data: any = await refreshRes.json();
-            if (data.items) {
-               setItems(data.items.filter((i: any) => i.lifecycle_state !== "APPROVED" && i.lifecycle_state !== "DISMISSED"));
-            }
+          const data: any = await refreshRes.json();
+          if (data.items) {
+            setItems(
+              data.items.filter(
+                (i: any) =>
+                  i.lifecycle_state !== "APPROVED" &&
+                  i.lifecycle_state !== "DISMISSED",
+              ),
+            );
+          }
         }
       } catch (e) {
         console.error("Failed to restore state", e);
@@ -329,8 +403,6 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
       setError(err.message || "Action failed");
     }
   };
-
-
 
   if (error) {
     return (
@@ -341,7 +413,10 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
   }
 
   return (
-    <section className="mb-6 max-w-[375px] w-full mx-auto sm:max-w-none" aria-label="Unified Agent Feed">
+    <section
+      className="mb-6 max-w-[375px] w-full mx-auto sm:max-w-none"
+      aria-label="Unified Agent Feed"
+    >
       {isOffline && (
         <div className="mb-4 w-full p-2 glassmorphism rounded-[8px] bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 text-center text-sm font-semibold flex items-center justify-center gap-2">
           <span>📡</span> You are offline. Actions will sync when online.
@@ -376,11 +451,16 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
             <div className="glassmorphism p-5 rounded-[16px] border border-white/40 dark:border-white/10 shadow-sm flex flex-col gap-4">
               <div className="flex flex-col gap-1">
                 <div className="flex justify-between items-start">
-                  <span className="text-xs font-bold uppercase tracking-wider text-green-600 bg-green-100 dark:bg-green-900 dark:text-green-300 px-2 py-1 rounded">Action Needed</span>
-                  <span className="text-xs text-gray-500 font-inter">Just now</span>
+                  <span className="text-xs font-bold uppercase tracking-wider text-green-600 bg-green-100 dark:bg-green-900 dark:text-green-300 px-2 py-1 rounded">
+                    Action Needed
+                  </span>
+                  <span className="text-xs text-gray-500 font-inter">
+                    Just now
+                  </span>
                 </div>
                 <h3 className="text-[17px] font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] font-outfit mt-2 leading-tight">
-                  Agent tentatively booked a roof repair estimate for Sarah on Tuesday 2 PM. Pending $50 deposit. No action needed.
+                  Agent tentatively booked a roof repair estimate for Sarah on
+                  Tuesday 2 PM. Pending $50 deposit. No action needed.
                 </h3>
               </div>
             </div>
@@ -388,27 +468,26 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
             <div className="glassmorphism p-5 rounded-[16px] border border-white/40 dark:border-white/10 shadow-sm flex flex-col gap-4">
               <div className="flex flex-col gap-1">
                 <div className="flex justify-between items-start">
-                  <span className="text-xs font-bold uppercase tracking-wider text-[#0066FF] bg-[#0066FF]/10 dark:bg-[#3388FF]/20 dark:text-[#3388FF] px-2 py-1 rounded">Approval</span>
-                  <span className="text-xs text-gray-500 font-inter">5 min ago</span>
+                  <span className="text-xs font-bold uppercase tracking-wider text-[#0066FF] bg-[#0066FF]/10 dark:bg-[#3388FF]/20 dark:text-[#3388FF] px-2 py-1 rounded">
+                    Approval
+                  </span>
+                  <span className="text-xs text-gray-500 font-inter">
+                    5 min ago
+                  </span>
                 </div>
                 <h3 className="text-[17px] font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] font-outfit mt-2 leading-tight">
-                  Mark requested to reschedule his 4 PM lesson to 5 PM today. You have a conflict. Suggest tomorrow at 4 PM?
+                  Mark requested to reschedule his 4 PM lesson to 5 PM today.
+                  You have a conflict. Suggest tomorrow at 4 PM?
                 </h3>
               </div>
               <div className="flex flex-col sm:flex-row gap-3 w-full mt-2">
-                <button
-                  className="flex-1 min-h-[44px] rounded-lg font-bold text-sm bg-green-500 hover:bg-green-600 text-white shadow-sm transition-transform active:scale-[0.98]"
-                >
+                <button className="flex-1 min-h-[44px] rounded-lg font-bold text-sm bg-green-500 hover:bg-green-600 text-white shadow-sm transition-transform active:scale-[0.98]">
                   Approve
                 </button>
-                <button
-                  className="flex-1 min-h-[44px] rounded-lg font-bold text-sm bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 text-[#1D1D1F] dark:text-[#F5F5F7] transition-transform active:scale-[0.98]"
-                >
+                <button className="flex-1 min-h-[44px] rounded-lg font-bold text-sm bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 text-[#1D1D1F] dark:text-[#F5F5F7] transition-transform active:scale-[0.98]">
                   Edit
                 </button>
-                <button
-                  className="flex-1 min-h-[44px] rounded-lg font-bold text-sm bg-red-100 hover:bg-red-200 text-red-600 dark:bg-red-900/30 dark:hover:bg-red-900/50 dark:text-red-400 transition-transform active:scale-[0.98]"
-                >
+                <button className="flex-1 min-h-[44px] rounded-lg font-bold text-sm bg-red-100 hover:bg-red-200 text-red-600 dark:bg-red-900/30 dark:hover:bg-red-900/50 dark:text-red-400 transition-transform active:scale-[0.98]">
                   Deny
                 </button>
               </div>
@@ -422,12 +501,15 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
             {!loading && items.length === 0 && (
               <div className="w-full flex flex-col items-center gap-6 p-6 glassmorphism rounded-[16px] border border-white/40 dark:border-white/10 shadow-sm opacity-90 text-center">
                 <div className="text-3xl mb-2">✨</div>
-                <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7]">All caught up!</h3>
+                <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7]">
+                  All caught up!
+                </h3>
                 <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                  Your agents are currently monitoring the business. While you're here, why not help us grow?
+                  Your agents are currently monitoring the business. While
+                  you're here, why not help us grow?
                 </p>
                 <div className="w-full max-w-md text-left">
-                   <GrowthReferralWidget />
+                  <GrowthReferralWidget />
                 </div>
               </div>
             )}
@@ -439,200 +521,513 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                 <div className="flex flex-col gap-1">
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-1 rounded-md">
-                      {approval.event_source.replace('_', ' ')}
+                      {approval.event_source.replace("_", " ")}
                     </span>
-                    {(approval.lifecycle_state === 'PENDING_APPROVAL') && (
+                    {approval.lifecycle_state === "PENDING_APPROVAL" && (
                       <span className="text-xs font-bold uppercase tracking-wider text-red-600 bg-red-50 px-2 py-1 rounded-md">
                         Requires Review
                       </span>
                     )}
                   </div>
                   <h3 className="text-lg font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] leading-snug mt-1">
-                    {(approval.context_payload?.description || approval.proposed_action?.message || approval.proposed_action?.action_type || approval.event_source)}
+                    {approval.context_payload?.description ||
+                      approval.proposed_action?.message ||
+                      approval.proposed_action?.action_type ||
+                      approval.event_source}
                   </h3>
-                  {((approval.proposed_action || approval.context_payload)?.context || (approval.proposed_action || approval.context_payload)?.remaining_stock !== undefined || (approval.proposed_action || approval.context_payload)?.feature_type === "quote_draft" || (approval.proposed_action || approval.context_payload)?.feature_type === "social_post_draft" || (approval.proposed_action || approval.context_payload)?.feature_type === "ambassador_reply") && (
+                  {((approval.proposed_action || approval.context_payload)
+                    ?.context ||
+                    (approval.proposed_action || approval.context_payload)
+                      ?.remaining_stock !== undefined ||
+                    (approval.proposed_action || approval.context_payload)
+                      ?.feature_type === "quote_draft" ||
+                    (approval.proposed_action || approval.context_payload)
+                      ?.feature_type === "social_post_draft" ||
+                    (approval.proposed_action || approval.context_payload)
+                      ?.feature_type === "ambassador_reply") && (
                     <div className="mt-2 flex flex-col gap-1 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
-                      {(approval.proposed_action || approval.context_payload)?.feature_type === "ambassador_reply" && (
-                        <div className="mb-4 p-4 rounded-xl glassmorphism border border-white/40 dark:border-white/10 flex flex-col gap-3" data-testid="ambassador-reply-card">
+                      {(approval.proposed_action || approval.context_payload)
+                        ?.feature_type === "ambassador_reply" && (
+                        <div
+                          className="mb-4 p-4 rounded-xl glassmorphism border border-white/40 dark:border-white/10 flex flex-col gap-3"
+                          data-testid="ambassador-reply-card"
+                        >
                           <div className="flex items-center gap-2 text-[#0066FF] font-semibold text-sm">
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                            <svg
+                              className="w-5 h-5"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"
+                              />
                             </svg>
                             Customer Inquiry
                           </div>
                           <div className="app-card p-3 rounded-lg border border-white/40 dark:border-white/10 text-xs text-[#1D1D1F] dark:text-[#F5F5F7] italic">
-                            "{(approval.proposed_action || approval.context_payload).original_message}"
+                            "
+                            {
+                              (
+                                approval.proposed_action ||
+                                approval.context_payload
+                              ).original_message
+                            }
+                            "
                           </div>
                           <div className="text-[#0066FF] font-semibold text-sm mt-2 flex items-center gap-2">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            <svg
+                              className="w-4 h-4"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M5 13l4 4L19 7"
+                              />
                             </svg>
                             Draft Reply
                           </div>
                           <div className="bg-[#0066FF] p-3 rounded-lg text-xs text-white shadow-inner">
-                            {(approval.proposed_action || approval.context_payload).generated_response}
+                            {
+                              (
+                                approval.proposed_action ||
+                                approval.context_payload
+                              ).generated_response
+                            }
                           </div>
                         </div>
                       )}
-                      {(approval.proposed_action || approval.context_payload)?.feature_type === "quote_draft" && (
-                        <div className="mb-4 p-4 rounded-xl glassmorphism border border-white/40 dark:border-white/10 flex flex-col gap-3" data-testid="quote-draft-card">
+                      {(approval.proposed_action || approval.context_payload)
+                        ?.feature_type === "quote_draft" && (
+                        <div
+                          className="mb-4 p-4 rounded-xl glassmorphism border border-white/40 dark:border-white/10 flex flex-col gap-3"
+                          data-testid="quote-draft-card"
+                        >
                           <div className="flex items-center gap-2 text-[#0066FF] font-semibold text-sm">
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            <svg
+                              className="w-5 h-5"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                              />
                             </svg>
-                            Draft Quote: {(approval.proposed_action || approval.context_payload).service || 'Plumbing Fix'} for Customer
+                            Draft Quote:{" "}
+                            {(
+                              approval.proposed_action ||
+                              approval.context_payload
+                            ).service || "Plumbing Fix"}{" "}
+                            for Customer
                           </div>
                           <div className="text-xs text-[#0066FF] dark:text-blue-400 font-medium">
-                            {(approval.proposed_action || approval.context_payload).customer_inquiry}
+                            {
+                              (
+                                approval.proposed_action ||
+                                approval.context_payload
+                              ).customer_inquiry
+                            }
                           </div>
                           <div className="glassmorphism dark:bg-gray-800 p-3 rounded-lg border border-white/40 dark:border-white/10 relative mt-2">
-                            <div className="text-[10px] uppercase font-bold text-gray-500 mb-2">AI Proposed Quote</div>
+                            <div className="text-[10px] uppercase font-bold text-gray-500 mb-2">
+                              AI Proposed Quote
+                            </div>
                             <div className="space-y-2">
                               <div className="flex justify-between">
-                                <span className="text-xs text-gray-500">Calculated Total:</span>
-                                <span className="text-xs font-semibold text-gray-900 dark:text-gray-100">${(approval.proposed_action || approval.context_payload).suggested_price}</span>
+                                <span className="text-xs text-gray-500">
+                                  Calculated Total:
+                                </span>
+                                <span className="text-xs font-semibold text-gray-900 dark:text-gray-100">
+                                  $
+                                  {
+                                    (
+                                      approval.proposed_action ||
+                                      approval.context_payload
+                                    ).suggested_price
+                                  }
+                                </span>
                               </div>
                               <div className="flex justify-between">
-                                <span className="text-xs text-gray-500">Scope of Work:</span>
-                                <span className="text-xs font-medium text-gray-800 dark:text-gray-200">{(approval.proposed_action || approval.context_payload).scope}</span>
+                                <span className="text-xs text-gray-500">
+                                  Scope of Work:
+                                </span>
+                                <span className="text-xs font-medium text-gray-800 dark:text-gray-200">
+                                  {
+                                    (
+                                      approval.proposed_action ||
+                                      approval.context_payload
+                                    ).scope
+                                  }
+                                </span>
                               </div>
                               <div className="flex justify-between">
-                                <span className="text-xs text-gray-500">Suggested Time:</span>
-                                <span className="text-xs font-medium text-gray-800 dark:text-gray-200">{(approval.proposed_action || approval.context_payload).suggested_time}</span>
+                                <span className="text-xs text-gray-500">
+                                  Suggested Time:
+                                </span>
+                                <span className="text-xs font-medium text-gray-800 dark:text-gray-200">
+                                  {
+                                    (
+                                      approval.proposed_action ||
+                                      approval.context_payload
+                                    ).suggested_time
+                                  }
+                                </span>
                               </div>
                             </div>
                           </div>
                         </div>
                       )}
-                      {(approval.proposed_action || approval.context_payload)?.feature_type === 'social_post_draft' ? (
+                      {(approval.proposed_action || approval.context_payload)
+                        ?.feature_type === "social_post_draft" ? (
                         <div className="flex flex-col gap-3">
                           <div className="flex justify-between items-center text-sm">
-                            <span className="text-gray-500 dark:text-gray-400 font-semibold">New product detected!</span>
-                            <span className="text-pink-500 font-bold text-xs">Schedule a post?</span>
+                            <span className="text-gray-500 dark:text-gray-400 font-semibold">
+                              New product detected!
+                            </span>
+                            <span className="text-pink-500 font-bold text-xs">
+                              Schedule a post?
+                            </span>
                           </div>
                           <div className="app-card dark:bg-gray-800 p-3 rounded-lg border border-pink-100 dark:border-pink-900/50">
-                            <div className="text-[10px] uppercase font-bold text-gray-400 mb-2 flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-pink-500"></span> Instagram / TikTok Draft</div>
+                            <div className="text-[10px] uppercase font-bold text-gray-400 mb-2 flex items-center gap-1">
+                              <span className="w-2 h-2 rounded-full bg-pink-500"></span>{" "}
+                              Instagram / TikTok Draft
+                            </div>
                             <div className="text-xs text-gray-700 dark:text-gray-300 italic line-clamp-3">
-                                "{(approval.proposed_action || approval.context_payload).instagram || (approval.proposed_action || approval.context_payload).tiktok || 'Check out our new product!'}"
+                              "
+                              {(
+                                approval.proposed_action ||
+                                approval.context_payload
+                              ).instagram ||
+                                (
+                                  approval.proposed_action ||
+                                  approval.context_payload
+                                ).tiktok ||
+                                "Check out our new product!"}
+                              "
                             </div>
                           </div>
                         </div>
-                      ) : (approval.proposed_action || approval.context_payload)?.feature_type === 'stockout_restock_and_price' ? (
+                      ) : (approval.proposed_action || approval.context_payload)
+                          ?.feature_type === "stockout_restock_and_price" ? (
                         <>
                           <div className="flex justify-between items-center text-sm mb-1">
-                            <span className="text-gray-500 dark:text-gray-400">Current Price:</span>
+                            <span className="text-gray-500 dark:text-gray-400">
+                              Current Price:
+                            </span>
                             <span className="font-semibold text-gray-400 dark:text-gray-500 line-through">
-                               ${Number((approval.proposed_action || approval.context_payload).old_price).toFixed(2)}
+                              $
+                              {Number(
+                                (
+                                  approval.proposed_action ||
+                                  approval.context_payload
+                                ).old_price,
+                              ).toFixed(2)}
                             </span>
                           </div>
                           <div className="flex justify-between items-center text-sm mb-1">
-                            <span className="text-gray-500 dark:text-gray-400">Suggested Price:</span>
-                            <span className="font-bold text-green-600 dark:text-green-400 text-base" data-testid="stockout-new-price">
-                               ${Number((approval.proposed_action || approval.context_payload).new_price).toFixed(2)}
+                            <span className="text-gray-500 dark:text-gray-400">
+                              Suggested Price:
+                            </span>
+                            <span
+                              className="font-bold text-green-600 dark:text-green-400 text-base"
+                              data-testid="stockout-new-price"
+                            >
+                              $
+                              {Number(
+                                (
+                                  approval.proposed_action ||
+                                  approval.context_payload
+                                ).new_price,
+                              ).toFixed(2)}
                             </span>
                           </div>
                           <div className="flex justify-between items-center text-sm mb-1">
-                            <span className="text-gray-500 dark:text-gray-400">Reorder Quantity:</span>
-                            <span className="font-bold text-blue-600 dark:text-blue-400 text-base" data-testid="stockout-reorder">
-                               {(approval.proposed_action || approval.context_payload).suggested_reorder_quantity} Units
+                            <span className="text-gray-500 dark:text-gray-400">
+                              Reorder Quantity:
+                            </span>
+                            <span
+                              className="font-bold text-blue-600 dark:text-blue-400 text-base"
+                              data-testid="stockout-reorder"
+                            >
+                              {
+                                (
+                                  approval.proposed_action ||
+                                  approval.context_payload
+                                ).suggested_reorder_quantity
+                              }{" "}
+                              Units
                             </span>
                           </div>
                           <div className="text-sm font-medium text-gray-800 dark:text-gray-200 mt-2">
-                            {(approval.proposed_action || approval.context_payload).message}
+                            {
+                              (
+                                approval.proposed_action ||
+                                approval.context_payload
+                              ).message
+                            }
                           </div>
                         </>
-                      ) : (approval.proposed_action || approval.context_payload)?.context?.smart_pricing === true ? (
+                      ) : (approval.proposed_action || approval.context_payload)
+                          ?.context?.smart_pricing === true ? (
                         <>
                           <div className="flex justify-between items-center text-sm mb-1">
-                            <span className="text-gray-500 dark:text-gray-400">Current Price:</span>
+                            <span className="text-gray-500 dark:text-gray-400">
+                              Current Price:
+                            </span>
                             <span className="font-semibold text-gray-400 dark:text-gray-500 line-through">
-                              ${Number((approval.proposed_action || approval.context_payload).context.old_price).toFixed(2)}
+                              $
+                              {Number(
+                                (
+                                  approval.proposed_action ||
+                                  approval.context_payload
+                                ).context.old_price,
+                              ).toFixed(2)}
                             </span>
                           </div>
                           <div className="flex justify-between items-center text-sm mb-1">
-                            <span className="text-gray-500 dark:text-gray-400">Suggested Price:</span>
-                            <span className="font-bold text-green-600 dark:text-green-400 text-base" data-testid="smart-pricing-new-price">
-                              ${Number((approval.proposed_action || approval.context_payload).context.new_price).toFixed(2)}
+                            <span className="text-gray-500 dark:text-gray-400">
+                              Suggested Price:
+                            </span>
+                            <span
+                              className="font-bold text-green-600 dark:text-green-400 text-base"
+                              data-testid="smart-pricing-new-price"
+                            >
+                              $
+                              {Number(
+                                (
+                                  approval.proposed_action ||
+                                  approval.context_payload
+                                ).context.new_price,
+                              ).toFixed(2)}
                             </span>
                           </div>
                           <div className="flex justify-between items-center text-sm">
-                            <span className="text-gray-500 dark:text-gray-400">Sales Projection:</span>
-                            <span className="font-semibold text-indigo-600 dark:text-indigo-400" data-testid="smart-pricing-sales-projection">
-                              {(approval.proposed_action || approval.context_payload).context.sales_projection}
+                            <span className="text-gray-500 dark:text-gray-400">
+                              Sales Projection:
+                            </span>
+                            <span
+                              className="font-semibold text-indigo-600 dark:text-indigo-400"
+                              data-testid="smart-pricing-sales-projection"
+                            >
+                              {
+                                (
+                                  approval.proposed_action ||
+                                  approval.context_payload
+                                ).context.sales_projection
+                              }
                             </span>
                           </div>
                         </>
-                      ) : (approval.proposed_action || approval.context_payload)?.feature_type === 'ambassador_reply' ? (
+                      ) : (approval.proposed_action || approval.context_payload)
+                          ?.feature_type === "ambassador_reply" ? (
                         <div className="flex flex-col gap-2">
                           <div className="flex justify-between items-center text-sm">
-                            <span className="text-gray-500 dark:text-gray-400">Context:</span>
-                            <span className="font-semibold text-gray-900 dark:text-gray-100">{(approval.proposed_action || approval.context_payload).source || 'Message'}</span>
+                            <span className="text-gray-500 dark:text-gray-400">
+                              Context:
+                            </span>
+                            <span className="font-semibold text-gray-900 dark:text-gray-100">
+                              {(
+                                approval.proposed_action ||
+                                approval.context_payload
+                              ).source || "Message"}
+                            </span>
                           </div>
                           <div className="flex flex-col text-sm mt-1">
-                            <span className="text-gray-500 dark:text-gray-400">Draft:</span>
-                            <span className="font-semibold text-gray-900 dark:text-gray-100 line-clamp-2 mt-1">{(approval.proposed_action || approval.context_payload).generated_response}</span>
+                            <span className="text-gray-500 dark:text-gray-400">
+                              Draft:
+                            </span>
+                            <span className="font-semibold text-gray-900 dark:text-gray-100 line-clamp-2 mt-1">
+                              {
+                                (
+                                  approval.proposed_action ||
+                                  approval.context_payload
+                                ).generated_response
+                              }
+                            </span>
                           </div>
                         </div>
-                      ) : (approval.proposed_action || approval.context_payload)?.feature_type === 'quote_draft' ? (
+                      ) : (approval.proposed_action || approval.context_payload)
+                          ?.feature_type === "quote_draft" ? (
                         <div className="flex flex-col gap-2">
                           <div className="flex justify-between items-center text-sm">
-                            <span className="text-gray-500 dark:text-gray-400">Context:</span>
-                            <span className="font-semibold text-gray-900 dark:text-gray-100">{(approval.proposed_action || approval.context_payload).customer_inquiry || 'Client Inquiry'}</span>
+                            <span className="text-gray-500 dark:text-gray-400">
+                              Context:
+                            </span>
+                            <span className="font-semibold text-gray-900 dark:text-gray-100">
+                              {(
+                                approval.proposed_action ||
+                                approval.context_payload
+                              ).customer_inquiry || "Client Inquiry"}
+                            </span>
                           </div>
                           <div className="flex justify-between items-center text-sm">
-                            <span className="text-gray-500 dark:text-gray-400">Scope:</span>
-                            <span className="font-semibold text-gray-900 dark:text-gray-100">{(approval.proposed_action || approval.context_payload).scope || (approval.proposed_action || approval.context_payload).service}</span>
+                            <span className="text-gray-500 dark:text-gray-400">
+                              Scope:
+                            </span>
+                            <span className="font-semibold text-gray-900 dark:text-gray-100">
+                              {(
+                                approval.proposed_action ||
+                                approval.context_payload
+                              ).scope ||
+                                (
+                                  approval.proposed_action ||
+                                  approval.context_payload
+                                ).service}
+                            </span>
                           </div>
                           <div className="flex justify-between items-center text-sm">
-                            <span className="text-gray-500 dark:text-gray-400">Timeline:</span>
-                            <span className="font-semibold text-gray-900 dark:text-gray-100">{(approval.proposed_action || approval.context_payload).suggested_time || 'TBD'}</span>
+                            <span className="text-gray-500 dark:text-gray-400">
+                              Timeline:
+                            </span>
+                            <span className="font-semibold text-gray-900 dark:text-gray-100">
+                              {(
+                                approval.proposed_action ||
+                                approval.context_payload
+                              ).suggested_time || "TBD"}
+                            </span>
                           </div>
                           <div className="flex justify-between items-center text-sm">
-                            <span className="text-gray-500 dark:text-gray-400">Price:</span>
+                            <span className="text-gray-500 dark:text-gray-400">
+                              Price:
+                            </span>
                             <span className="font-semibold text-green-600 dark:text-green-400">
-                              ${Number((approval.proposed_action || approval.context_payload).suggested_price || (approval.proposed_action || approval.context_payload).price || 0).toFixed(2)}
+                              $
+                              {Number(
+                                (
+                                  approval.proposed_action ||
+                                  approval.context_payload
+                                ).suggested_price ||
+                                  (
+                                    approval.proposed_action ||
+                                    approval.context_payload
+                                  ).price ||
+                                  0,
+                              ).toFixed(2)}
                             </span>
                           </div>
                         </div>
                       ) : (
                         <>
-                          {(approval.proposed_action || approval.context_payload)?.context?.weekly_health_report === true ? (                            <div className="flex flex-col gap-2">
+                          {(
+                            approval.proposed_action || approval.context_payload
+                          )?.context?.weekly_health_report === true ? (
+                            <div className="flex flex-col gap-2">
                               <div className="text-sm text-gray-700 dark:text-gray-300">
-                                <span className="font-semibold">Summary:</span> {(approval.proposed_action || approval.context_payload).context.summary}
+                                <span className="font-semibold">Summary:</span>{" "}
+                                {
+                                  (
+                                    approval.proposed_action ||
+                                    approval.context_payload
+                                  ).context.summary
+                                }
                               </div>
                               <div className="text-sm text-indigo-600 dark:text-indigo-400 font-medium">
-                                <span className="font-semibold text-gray-700 dark:text-gray-300">Suggestion:</span> {(approval.proposed_action || approval.context_payload).context.actionable_suggestion}
+                                <span className="font-semibold text-gray-700 dark:text-gray-300">
+                                  Suggestion:
+                                </span>{" "}
+                                {
+                                  (
+                                    approval.proposed_action ||
+                                    approval.context_payload
+                                  ).context.actionable_suggestion
+                                }
                               </div>
                             </div>
                           ) : (
                             <>
-                              {(approval.proposed_action || approval.context_payload)?.context?.abandoned_carts_count !== undefined && (
+                              {(
+                                approval.proposed_action ||
+                                approval.context_payload
+                              )?.context?.abandoned_carts_count !==
+                                undefined && (
                                 <div className="flex justify-between items-center text-sm">
-                                  <span className="text-gray-500 dark:text-gray-400">Abandoned Carts:</span>
-                                  <span className="font-semibold text-gray-900 dark:text-gray-100">{(approval.proposed_action || approval.context_payload).context.abandoned_carts_count}</span>
-                                </div>
-                              )}
-                              {(approval.proposed_action || approval.context_payload)?.context?.potential_revenue !== undefined && (
-                                <div className="flex justify-between items-center text-sm">
-                                  <span className="text-gray-500 dark:text-gray-400">Potential Revenue:</span>
-                                  <span className="font-semibold text-green-600 dark:text-green-400">
-                                    ${Number((approval.proposed_action || approval.context_payload).context.potential_revenue).toFixed(2)}
+                                  <span className="text-gray-500 dark:text-gray-400">
+                                    Abandoned Carts:
+                                  </span>
+                                  <span className="font-semibold text-gray-900 dark:text-gray-100">
+                                    {
+                                      (
+                                        approval.proposed_action ||
+                                        approval.context_payload
+                                      ).context.abandoned_carts_count
+                                    }
                                   </span>
                                 </div>
                               )}
-                              {(approval.proposed_action || approval.context_payload)?.remaining_stock !== undefined && (
+                              {(
+                                approval.proposed_action ||
+                                approval.context_payload
+                              )?.context?.potential_revenue !== undefined && (
+                                <div className="flex justify-between items-center text-sm">
+                                  <span className="text-gray-500 dark:text-gray-400">
+                                    Potential Revenue:
+                                  </span>
+                                  <span className="font-semibold text-green-600 dark:text-green-400">
+                                    $
+                                    {Number(
+                                      (
+                                        approval.proposed_action ||
+                                        approval.context_payload
+                                      ).context.potential_revenue,
+                                    ).toFixed(2)}
+                                  </span>
+                                </div>
+                              )}
+                              {(
+                                approval.proposed_action ||
+                                approval.context_payload
+                              )?.remaining_stock !== undefined && (
                                 <div className="flex flex-col gap-2">
                                   <div className="flex justify-between items-center text-sm">
-                                    <span className="text-gray-500 dark:text-gray-400">Product ID:</span>
-                                    <span className="font-semibold text-gray-900 dark:text-gray-100">{(approval.proposed_action || approval.context_payload).product_id}</span>
+                                    <span className="text-gray-500 dark:text-gray-400">
+                                      Product ID:
+                                    </span>
+                                    <span className="font-semibold text-gray-900 dark:text-gray-100">
+                                      {
+                                        (
+                                          approval.proposed_action ||
+                                          approval.context_payload
+                                        ).product_id
+                                      }
+                                    </span>
                                   </div>
                                   <div className="flex justify-between items-center text-sm">
-                                    <span className="text-gray-500 dark:text-gray-400">Remaining Stock:</span>
-                                    <span className="font-semibold text-red-600 dark:text-red-400">{(approval.proposed_action || approval.context_payload).remaining_stock}</span>
+                                    <span className="text-gray-500 dark:text-gray-400">
+                                      Remaining Stock:
+                                    </span>
+                                    <span className="font-semibold text-red-600 dark:text-red-400">
+                                      {
+                                        (
+                                          approval.proposed_action ||
+                                          approval.context_payload
+                                        ).remaining_stock
+                                      }
+                                    </span>
                                   </div>
                                   <div className="flex justify-between items-center text-sm">
-                                    <span className="text-gray-500 dark:text-gray-400">Alert Message:</span>
-                                    <span className="font-semibold text-gray-900 dark:text-gray-100">{(approval.proposed_action || approval.context_payload).message}</span>
+                                    <span className="text-gray-500 dark:text-gray-400">
+                                      Alert Message:
+                                    </span>
+                                    <span className="font-semibold text-gray-900 dark:text-gray-100">
+                                      {
+                                        (
+                                          approval.proposed_action ||
+                                          approval.context_payload
+                                        ).message
+                                      }
+                                    </span>
                                   </div>
                                 </div>
                               )}
@@ -645,7 +1040,8 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                 </div>
 
                 <div className="flex flex-col gap-3 w-full mt-2">
-                  {(approval.proposed_action || approval.context_payload)?.feature_type === 'social_post_draft' ? (
+                  {(approval.proposed_action || approval.context_payload)
+                    ?.feature_type === "social_post_draft" ? (
                     <div className="flex flex-col sm:flex-row gap-3 w-full">
                       <button
                         onClick={() => handleDecision(approval.id, true)}
@@ -664,7 +1060,8 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                         Dismiss
                       </button>
                     </div>
-                  ) : (approval.proposed_action || approval.context_payload)?.feature_type === 'stockout_restock_and_price' ? (
+                  ) : (approval.proposed_action || approval.context_payload)
+                      ?.feature_type === "stockout_restock_and_price" ? (
                     <div className="flex flex-col sm:flex-row gap-3 w-full">
                       <button
                         onClick={() => handleDecision(approval.id, true)}
@@ -683,7 +1080,8 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                         Dismiss
                       </button>
                     </div>
-                  ) : (approval.proposed_action || approval.context_payload)?.feature_type === 'ambassador_reply' ? (
+                  ) : (approval.proposed_action || approval.context_payload)
+                      ?.feature_type === "ambassador_reply" ? (
                     <div className="flex flex-col sm:flex-row gap-3 w-full">
                       <button
                         onClick={() => handleDecision(approval.id, true)}
@@ -702,12 +1100,14 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                         Dismiss
                       </button>
                     </div>
-                  ) : (approval.proposed_action || approval.context_payload)?.feature_type === "quote_draft" ? (
+                  ) : (approval.proposed_action || approval.context_payload)
+                      ?.feature_type === "quote_draft" ? (
                     <div className="flex flex-col sm:flex-row gap-3 w-full">
                       <button
                         onClick={() => handleDecision(approval.id, true)}
-                        className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center"
+                        className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-inter text-sm font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-sm flex items-center justify-center"
                         aria-label="Approve & Send Proposal"
+                        data-testid="approve-draft"
                         data-testid="approve-quote-draft"
                       >
                         Approve & Send Proposal
@@ -721,11 +1121,12 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                         Edit Draft
                       </a>
                     </div>
-                  ) : (approval.proposed_action || approval.context_payload)?.context?.smart_pricing === true ? (
+                  ) : (approval.proposed_action || approval.context_payload)
+                      ?.context?.smart_pricing === true ? (
                     <div className="flex flex-col sm:flex-row gap-3 w-full">
                       <button
                         onClick={() => handleDecision(approval.id, true)}
-                        className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center"
+                        className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-inter text-sm font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-sm flex items-center justify-center"
                         aria-label="Approve & Run Sale"
                         data-testid="approve-run-sale"
                       >
@@ -740,7 +1141,8 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                         Dismiss
                       </button>
                     </div>
-                  ) : (approval.proposed_action || approval.context_payload)?.context?.weekly_health_report === true ? (
+                  ) : (approval.proposed_action || approval.context_payload)
+                      ?.context?.weekly_health_report === true ? (
                     <div className="flex flex-col sm:flex-row gap-3 w-full">
                       <button
                         onClick={() => handleDecision(approval.id, true)}
@@ -758,7 +1160,9 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                       >
                         Dismiss
                       </button>
-                    </div>                  ) : (approval.proposed_action || approval.context_payload)?.remaining_stock !== undefined ? (
+                    </div>
+                  ) : (approval.proposed_action || approval.context_payload)
+                      ?.remaining_stock !== undefined ? (
                     <div className="flex flex-col sm:flex-row gap-3 w-full">
                       <button
                         onClick={() => handleDecision(approval.id, true)}
@@ -777,12 +1181,14 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                         Dismiss
                       </button>
                     </div>
-                  ) : (approval.proposed_action || approval.context_payload)?.feature_type === 'quote_draft' ? (
+                  ) : (approval.proposed_action || approval.context_payload)
+                      ?.feature_type === "quote_draft" ? (
                     <>
                       <button
                         onClick={() => handleDecision(approval.id, true)}
                         className="w-full min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center mb-3"
                         aria-label="Approve & Send Proposal"
+                        data-testid="approve-draft"
                         data-testid="approve-send-proposal"
                       >
                         Approve & Send Proposal
@@ -812,6 +1218,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                         onClick={() => handleDecision(approval.id, true)}
                         className="w-full min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center mb-3"
                         aria-label="Approve proposal"
+                        data-testid="approve-draft"
                         data-testid="approve-proposal"
                       >
                         Approve
@@ -829,6 +1236,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                           onClick={() => handleDecision(approval.id, false)}
                           className="flex-1 min-h-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
                           aria-label="Reject proposal"
+                          data-testid="dismiss-draft"
                           data-testid="reject-proposal"
                         >
                           Deny
@@ -857,42 +1265,57 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
               </div>
             )}
             <div className="flex flex-col gap-3 min-w-[320px] max-w-full">
-            {activities.map((activity) => (
-              <div
-                key={activity.id}
-                className="glassmorphism p-5 rounded-[16px] border border-white/40 dark:border-white/10 shadow-sm flex flex-col gap-3 opacity-90 min-h-[44px]"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold font-outfit uppercase tracking-wider text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-1 rounded-md">
-                    {activity.department.replace('_', ' ')}
-                  </span>
-                  {activity.event_type === 'Paused' || activity.event_type === 'PAUSED' ? (
-                    <span className="text-xs font-bold font-outfit uppercase tracking-wider px-2 py-1 rounded-md text-yellow-600 bg-yellow-50 dark:text-yellow-400 dark:bg-yellow-900/30">
-                      PAUSED
+              {activities.map((activity) => (
+                <div
+                  key={activity.id}
+                  className="glassmorphism p-5 rounded-[16px] border border-white/40 dark:border-white/10 shadow-sm flex flex-col gap-3 opacity-90 min-h-[44px]"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold font-outfit uppercase tracking-wider text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-1 rounded-md">
+                      {activity.department.replace("_", " ")}
                     </span>
-                  ) : (
-                    <span className="text-xs font-bold font-outfit uppercase tracking-wider px-2 py-1 rounded-md text-green-600 bg-green-50 dark:text-green-400 dark:bg-green-900/30">
-                      {activity.event_type === 'Approved' || activity.event_type === 'APPROVED' ? 'APPROVED' : activity.event_type}
-                    </span>
-                  )}
-                </div>
-                <h3 className="text-md font-semibold font-inter text-[#1D1D1F] dark:text-[#F5F5F7] leading-snug">
-                  {(() => {
-                    try {
-                      const p = typeof activity.payload === 'string' ? JSON.parse(activity.payload) : activity.payload;
-                      // Fallback logic specific to Paused state that gets stored inside proposed_content
-                      if (p?.original_payload?.proposed_content?.includes("System is paused")) {
+                    {activity.event_type === "Paused" ||
+                    activity.event_type === "PAUSED" ? (
+                      <span className="text-xs font-bold font-outfit uppercase tracking-wider px-2 py-1 rounded-md text-yellow-600 bg-yellow-50 dark:text-yellow-400 dark:bg-yellow-900/30">
+                        PAUSED
+                      </span>
+                    ) : (
+                      <span className="text-xs font-bold font-outfit uppercase tracking-wider px-2 py-1 rounded-md text-green-600 bg-green-50 dark:text-green-400 dark:bg-green-900/30">
+                        {activity.event_type === "Approved" ||
+                        activity.event_type === "APPROVED"
+                          ? "APPROVED"
+                          : activity.event_type}
+                      </span>
+                    )}
+                  </div>
+                  <h3 className="text-md font-semibold font-inter text-[#1D1D1F] dark:text-[#F5F5F7] leading-snug">
+                    {(() => {
+                      try {
+                        const p =
+                          typeof activity.payload === "string"
+                            ? JSON.parse(activity.payload)
+                            : activity.payload;
+                        // Fallback logic specific to Paused state that gets stored inside proposed_content
+                        if (
+                          p?.original_payload?.proposed_content?.includes(
+                            "System is paused",
+                          )
+                        ) {
                           return p.original_payload.proposed_content;
+                        }
+                        return (
+                          p?.original_payload?.description || "Action completed"
+                        );
+                      } catch (e) {
+                        return "Action completed";
                       }
-                      return p?.original_payload?.description || 'Action completed';
-                    } catch (e) {
-                      return 'Action completed';
-                    }
-                  })()}
-                </h3>
-                <span className="text-xs text-gray-500 font-inter">{new Date(activity.created_at).toLocaleString()}</span>
-              </div>
-            ))}
+                    })()}
+                  </h3>
+                  <span className="text-xs text-gray-500 font-inter">
+                    {new Date(activity.created_at).toLocaleString()}
+                  </span>
+                </div>
+              ))}
             </div>
           </>
         )}
