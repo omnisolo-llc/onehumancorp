@@ -209,3 +209,40 @@ async fn test_masking_logic_depth() {
     assert_eq!(tr2.role, Role::Tool);
     assert!(tr2.tool_results[0].content.contains("Long output content"), "Expected Result 2 NOT to be masked in turn 3");
 }
+
+#[test]
+fn test_json_fallback_bug() {
+    use ohc_builtin_agent::types::{Message, Role, ToolResult};
+    use ohc_builtin_agent::observation_masking::JetBrainsObservationMasker;
+    use serde_json::Value;
+
+    let json_str = "{\"a\": 1, \"b\": 2, \"c\": 3, \"d\": 4, \"e\": 5, \"f\": 6, \"g\": 7, \"h\": 8, \"i\": 9, \"j\": 10, \"k\": 11}";
+    let mut messages = vec![Message {
+        role: Role::Tool,
+        content: String::new(),
+        tool_calls: vec![],
+        tool_results: vec![ToolResult {
+            tool_call_id: "test".to_string(),
+            content: json_str.to_string(),
+            error: String::new(),
+        }],
+        response_id: None,
+        previous_response_id: None,
+    }, Message {
+        role: Role::Assistant,
+        content: String::new(),
+        tool_calls: vec![],
+        tool_results: vec![],
+        response_id: None,
+        previous_response_id: None,
+    }];
+
+    let masker = JetBrainsObservationMasker::new(0, 10, 20);
+    masker.apply_masking(&mut messages);
+
+    let result = &messages[0].tool_results[0].content;
+
+    // Ideally it should still be valid JSON.
+    // If it falls back to raw string, it will be "[Observation Masked ...]" which is invalid JSON.
+    assert!(serde_json::from_str::<Value>(result).is_ok(), "Fails to parse as JSON because it fell back to raw string masking");
+}

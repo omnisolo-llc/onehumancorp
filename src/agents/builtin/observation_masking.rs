@@ -133,18 +133,29 @@ impl JetBrainsObservationMasker {
                         if tr.error.is_empty() && !tr.content.starts_with("[Observation Masked") {
                             let bytes = tr.content.len();
                             if bytes > self.size_limit {
-                                // Try structural JSON masking first
-                                if let Ok(mut json_val) = serde_json::from_str::<Value>(&tr.content)
-                                {
-                                    if Self::mask_json_value(
-                                        &mut json_val,
-                                        self.size_limit,
-                                        self.element_limit,
-                                        0,
-                                    ) {
-                                        tr.content = serde_json::to_string(&json_val)
-                                            .unwrap_or_else(|_| tr.content.clone());
-                                        continue; // Successfully masked as JSON
+                                // Try structural JSON masking first (fast path check for JSON structure)
+                                let content_trimmed = tr.content.trim();
+                                if content_trimmed.starts_with('{') || content_trimmed.starts_with('[') {
+                                    if let Ok(mut json_val) = serde_json::from_str::<Value>(&tr.content)
+                                    {
+                                        let modified = Self::mask_json_value(
+                                            &mut json_val,
+                                            self.size_limit,
+                                            self.element_limit,
+                                            0,
+                                        );
+                                        let new_content = serde_json::to_string(&json_val).unwrap_or_else(|_| tr.content.clone());
+                                        if modified && new_content.len() <= self.size_limit {
+                                            tr.content = new_content;
+                                        } else {
+                                            // Either it wasn't modified, or the modification still didn't bring it under the limit.
+                                            // We replace the entire content with a safe JSON string indicating masking.
+                                            tr.content = format!(
+                                                "{{\"error\": \"[Observation Masked to save context. Output was {} bytes. Use 'RecallObservation' with ID '{}' to retrieve full output.]\"}}",
+                                                bytes, tr.tool_call_id
+                                            );
+                                        }
+                                        continue; // Treated as JSON, don't fall back to raw string masking
                                     }
                                 }
 
