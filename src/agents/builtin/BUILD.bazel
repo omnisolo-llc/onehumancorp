@@ -67,6 +67,7 @@ rust_library(
         "in_memory_store.rs",
         "langgraph.rs",
         "lib.rs",
+        "aider_repomap.rs",
         "local_provider.rs",
         "marketplace.rs",
         "memory_exhaustive_tests.rs",
