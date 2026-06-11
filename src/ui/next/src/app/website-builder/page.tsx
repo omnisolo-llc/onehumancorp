@@ -345,14 +345,14 @@ export default function WebsiteBuilderPage() {
 
                   <div className="flex flex-col sm:flex-row gap-4 sm:gap-6">
                     <button
-                      className="w-full min-h-[54px] bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all"
+                      className="w-full min-h-[54px] bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] hover:shadow-[0_6px_20px_rgba(0,102,255,0.23)] active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)]"
                       onClick={() => setWizardStep(1)}
                     >
                       Start My Business
                     </button>
 
                     <button
-                      className="w-full min-h-[54px] glassmorphism text-[#0071E3] border border-[#0071E3] p-4 font-bold rounded-[8px] shadow-sm hover:bg-blue-50 transition-all"
+                      className="w-full min-h-[54px] glassmorphism text-[#1D1D1F] dark:text-white border border-gray-200 dark:border-white/10 p-4 font-bold rounded-[8px] shadow-sm hover:border-gray-400 dark:hover:border-gray-500 active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)]"
                       onClick={() => { setBio(''); setWizardStep('instant-build'); }}
                     >
                       Instant Build
