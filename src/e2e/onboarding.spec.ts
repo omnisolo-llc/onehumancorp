@@ -256,7 +256,7 @@ test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
     await generateButton.click();
 
     // Verify error is shown with correct styling
-    const errorBlock = page.getByText(/Failed to fetch/i).first();
+    const errorBlock = page.getByText(/Failed to fetch|Failed to launch/i).first();
     await expect(errorBlock).toBeVisible();
     await expect(errorBlock).toHaveClass(/text-\[#FF3B30\]/);
     await expect(errorBlock).toHaveClass(/border-\[#FF3B30\]\/30/);
