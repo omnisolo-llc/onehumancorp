@@ -5430,3 +5430,6 @@ async fn test_api_settings_voice() {
 /*
 
 */
+
+#[cfg(test)]
+mod health_test;
