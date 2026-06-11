@@ -176,7 +176,7 @@ export function TriageFeed({ tenantId }: { tenantId: string }) {
                   ✨ Approve &amp; Execute
                 </button>
                 <button
-                  className="px-4 py-2 rounded-md border border-gray-300 dark:border-white/20 text-[#1D1D1F] dark:text-[#F5F5F7] bg-white/50 dark:bg-black/20 hover:bg-white/80 dark:hover:bg-black/40 flex-1 min-h-[44px] font-medium transition-colors"
+                  className="px-4 py-2 rounded-[16px] border border-white/40 dark:border-white/20 text-[#1D1D1F] dark:text-[#F5F5F7] bg-white/50 dark:bg-black/20 hover:bg-white/80 dark:hover:bg-black/40 flex-1 min-h-[44px] font-medium transition-colors backdrop-blur-md"
                   data-testid="dismiss-btn"
                   onClick={() => handleDecision(selected.id, false)}
                 >
