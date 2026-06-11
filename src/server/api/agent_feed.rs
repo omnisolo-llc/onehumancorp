@@ -202,6 +202,23 @@ async fn update_feed_item_state(
                     .await;
             }
 
+            // Handle incident resolution execution
+            if payload.state == "APPROVED" {
+                if let Ok(Some(item)) = repo.get(&tenant_id, &id).await {
+                    if item.event_source == "incident_resolution" {
+                        if let Some(payload) = item.context_payload {
+                            if let Some(incident_id) = payload.get("incident_id").and_then(|v| v.as_str()) {
+                                let _ = sqlx::query("UPDATE incidents SET status = 'RESOLVED', updated_at = NOW() WHERE id = $1 AND tenant_id = $2")
+                                    .bind(incident_id)
+                                    .bind(&tenant_id)
+                                    .execute(&pool)
+                                    .await;
+                            }
+                        }
+                    }
+                }
+            }
+
             let cache = get_agent_feed_cache();
             let tag = format!("agent_feed_tenant:{}", tenant_id);
             cache.invalidate_by_tag(&tag).await;
