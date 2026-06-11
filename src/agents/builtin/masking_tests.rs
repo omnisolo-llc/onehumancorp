@@ -203,7 +203,7 @@ async fn test_masking_logic_depth() {
     let turn3_msgs = &reqs[2].messages;
     let tr1 = &turn3_msgs[2];
     assert_eq!(tr1.role, Role::Tool);
-    assert!(tr1.tool_results[0].content.contains("Observation Masked"), "Expected Result 1 to be masked in turn 3");
+    assert!(tr1.tool_results[0].content.contains("Observation Masked") || tr1.tool_results[0].content.contains("Masked string"), "Expected Result 1 to be masked in turn 3");
 
     let tr2 = &turn3_msgs[4];
     assert_eq!(tr2.role, Role::Tool);

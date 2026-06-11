@@ -176,21 +176,26 @@ impl<'a, T: DeserializeOwned> RetryWithErrorOutputParser<'a, T> {
             match self.parser.parse_message(msg) {
                 Ok(parsed) => return Ok(parsed),
                 Err(parse_error_msg) => {
+                    let detailed_error = if parse_error_msg.contains("Validation Error") {
+                        parse_error_msg.clone()
+                    } else {
+                        crate::types::format_pydantic_error_string(&parse_error_msg, None, None)
+                    };
+
                     if attempt >= max_retries {
-                        return Err(ToolError::LlmRecoverable(format!(
-                            "Output parsing failed after {} retries. Last error: {}",
-                            max_retries, parse_error_msg
-                        )));
+                        if detailed_error.contains("Semantic validation failed") && max_retries == 0 {
+                            return Err(ToolError::LlmRecoverable(detailed_error));
+                        } else {
+                            return Err(ToolError::LlmRecoverable(format!(
+                                "Output parsing failed after {} retries. Last error: {}",
+                                max_retries, parse_error_msg
+                            )));
+                        }
                     }
 
                     // Feed the original prompt, the failed completion, and the parsing error back to the model as an LLM-recoverable ToolMessage
                     if !msg.tool_calls.is_empty() {
                         current_req.messages.push(msg.clone());
-                        let detailed_error = if parse_error_msg.contains("Validation Error") {
-                            parse_error_msg.clone()
-                        } else {
-                            format!("Validation Error (Pydantic-first tool schema): Failed to parse arguments.\nReason: Semantic validation failed: {}\nPlease strictly follow the tool's JSON schema and try again.", parse_error_msg)
-                        };
                         let tool_results = msg
                             .tool_calls
                             .iter()
