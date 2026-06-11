@@ -1,16 +1,16 @@
 use ::server_ohc::app::inventory_sync_service_server::InventorySyncService;
 use ::server_ohc::app::{ReserveInventoryRequest, ReserveInventoryResponse, CommitInventoryRequest, CommitInventoryResponse};
-use std::sync::Arc;
+
 use tonic::{Request, Response, Status};
 
 pub struct MyInventorySyncService {
-    db: Arc<crate::db::DB>,
+
     redis_client: Option<redis::Client>,
 }
 
 impl MyInventorySyncService {
-    pub fn new(db: Arc<crate::db::DB>, redis_client: Option<redis::Client>) -> Self {
-        Self { db, redis_client }
+    pub fn new( redis_client: Option<redis::Client>) -> Self {
+        Self { redis_client }
     }
 }
 
@@ -34,7 +34,7 @@ impl InventorySyncService for MyInventorySyncService {
         }
 
         let req = request.into_inner();
-        let service = crate::services::inventory::InventoryService::new(self.db.clone(), self.redis_client.clone());
+        let service = crate::services::inventory::InventoryService::new(self.redis_client.clone());
 
         match service.reserve_inventory(&tenant_id, &req.product_id, req.quantity, req.ttl_seconds).await {
             Ok(result) => {
@@ -66,7 +66,7 @@ impl InventorySyncService for MyInventorySyncService {
         }
 
         let req = request.into_inner();
-        let service = crate::services::inventory::InventoryService::new(self.db.clone(), self.redis_client.clone());
+        let service = crate::services::inventory::InventoryService::new(self.redis_client.clone());
 
         match service.commit_inventory(&tenant_id, &req.product_id, req.quantity, &req.lock_id).await {
             Ok(result) => {

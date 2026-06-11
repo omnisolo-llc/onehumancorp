@@ -1,8 +1,9 @@
 use std::sync::Arc;
+
 use uuid::Uuid;
 
 pub struct InventoryService {
-    db: Arc<crate::db::DB>,
+
     redis_client: Option<redis::Client>,
 }
 
@@ -26,8 +27,8 @@ pub struct CommitResult {
 }
 
 impl InventoryService {
-    pub fn new(db: Arc<crate::db::DB>, redis_client: Option<redis::Client>) -> Self {
-        Self { db, redis_client }
+    pub fn new( redis_client: Option<redis::Client>) -> Self {
+        Self { redis_client }
     }
 
     pub async fn reserve_inventory(
@@ -365,7 +366,7 @@ mod tests {
         }
 
         let pool = crate::db::get_pool();
-        let db = Arc::new(crate::db::DB {
+        let _db = Arc::new(crate::db::DB {
             pool: pool.clone(),
             store: DbStore::Postgres,
         });
@@ -388,7 +389,7 @@ mod tests {
         let redis_url = std::env::var("OHC_REDIS_URL").unwrap_or_else(|_| "redis://localhost:6379".to_string());
         let redis_client_opt = redis::Client::open(redis_url).ok();
 
-        let service = Arc::new(InventoryService::new(db, redis_client_opt));
+        let service = Arc::new(InventoryService::new( redis_client_opt));
 
         let svc1 = service.clone();
         let svc2 = service.clone();

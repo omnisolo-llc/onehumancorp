@@ -241,7 +241,6 @@ pub async fn reserve_inventory_handler(
     };
 
     let service = crate::services::inventory::InventoryService::new(
-        Arc::new(crate::db::DB { pool: crate::db::get_pool(), store: crate::db::DbStore::Postgres }),
         hub.redis_client.clone()
     );
 
@@ -454,7 +453,6 @@ pub async fn commit_inventory_handler(
     };
 
     let service = crate::services::inventory::InventoryService::new(
-        Arc::new(crate::db::DB { pool: crate::db::get_pool(), store: crate::db::DbStore::Postgres }),
         hub.redis_client.clone()
     );
 
@@ -534,7 +532,6 @@ pub async fn create_payment_intent_handler(
     if let Some(product_id) = &req_data.product_id {
         let quantity = req_data.quantity.unwrap_or(1);
         let service = crate::services::inventory::InventoryService::new(
-            Arc::new(crate::db::DB { pool: crate::db::get_pool(), store: crate::db::DbStore::Postgres }),
             hub.redis_client.clone()
         );
         match service.reserve_inventory(&tenant_id, product_id, quantity, 15).await {
@@ -574,7 +571,6 @@ pub async fn create_payment_intent_handler(
                 if let (Some(lock_id), Some(product_id)) = (&lock_id_out, &req_data.product_id) {
                     let quantity = req_data.quantity.unwrap_or(1);
                     let service = crate::services::inventory::InventoryService::new(
-                        Arc::new(crate::db::DB { pool: crate::db::get_pool(), store: crate::db::DbStore::Postgres }),
                         hub.redis_client.clone()
                     );
                     let _ = service.release_inventory(&tenant_id, product_id, quantity, lock_id).await;
@@ -586,7 +582,6 @@ pub async fn create_payment_intent_handler(
             if let (Some(lock_id), Some(product_id)) = (&lock_id_out, &req_data.product_id) {
                 let quantity = req_data.quantity.unwrap_or(1);
                 let service = crate::services::inventory::InventoryService::new(
-                    Arc::new(crate::db::DB { pool: crate::db::get_pool(), store: crate::db::DbStore::Postgres }),
                     hub.redis_client.clone()
                 );
                 let _ = service.release_inventory(&tenant_id, product_id, quantity, lock_id).await;

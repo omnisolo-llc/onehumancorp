@@ -297,8 +297,10 @@ fn upstream_path_for(class: WebhookTunnelClass, service: &str) -> Option<&'stati
     }
 }
 
-use crate::agents::mcp::proxy::server::ReverseTunnelServer;
+
 use axum::extract::Path;
+use crate::agents::mcp::proxy::server::ReverseTunnelServer;
+
 use axum::body::Bytes;
 
 pub async fn handle_relay_webhook(
