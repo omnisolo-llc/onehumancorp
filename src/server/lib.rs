@@ -2404,6 +2404,8 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let proactive_analysis_worker = crate::workers::proactive_analysis_job::ProactiveAnalysisWorker::new(db.clone());
     proactive_analysis_worker.start();
 
+    crate::workers::churn_prediction_job::ChurnPredictionJob::start(db.clone());
+
     if matches!(&db.store, crate::db::DbStore::Postgres) {
         crate::cart_recovery::start_cart_recovery_background_workers(Arc::new(db.pool.clone()));
     }
