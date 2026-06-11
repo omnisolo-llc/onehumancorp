@@ -3305,7 +3305,7 @@ async fn load_ui_inbox_from_db(db: &crate::db::DB, tenant_id: &str) -> Result<Ve
     }
 }
 
-async fn load_ui_supply_from_db(db: &crate::db::DB, tenant_id: &str) -> Result<serde_json::Value, sqlx::Error> {
+async fn load_ui_supply_from_db(db: &crate::db::DB, tenant_id: &str, mobile_optimized: bool) -> Result<serde_json::Value, sqlx::Error> {
     use sqlx::Row;
     match &db.store {
         crate::db::DbStore::Postgres => {
@@ -3317,7 +3317,11 @@ async fn load_ui_supply_from_db(db: &crate::db::DB, tenant_id: &str) -> Result<s
             let vendors = v_res.unwrap_or_default().into_iter().map(|row| serde_json::json!({ "id": row.get::<String, _>("id"), "name": row.get::<String, _>("name"), "contact_info": row.get::<String, _>("contact_info") })).collect::<Vec<_>>();
             let raw_materials = rm_res.unwrap_or_default().into_iter().map(|row| serde_json::json!({ "id": row.get::<String, _>("id"), "name": row.get::<String, _>("name"), "current_quantity": row.get::<i32, _>("current_quantity"), "reorder_threshold": row.get::<i32, _>("reorder_threshold") })).collect::<Vec<_>>();
             let bom_items = bi_res.unwrap_or_default().into_iter().map(|row| serde_json::json!({ "id": row.get::<String, _>("id"), "finished_good_id": row.get::<String, _>("finished_good_id"), "raw_material_id": row.get::<String, _>("raw_material_id"), "quantity_required": row.get::<i32, _>("quantity_required") })).collect::<Vec<_>>();
-            Ok(serde_json::json!({ "vendors": vendors, "raw_materials": raw_materials, "bom_items": bom_items }))
+            if mobile_optimized {
+                Ok(serde_json::json!({ "raw_materials": raw_materials }))
+            } else {
+                Ok(serde_json::json!({ "vendors": vendors, "raw_materials": raw_materials, "bom_items": bom_items }))
+            }
         },
         crate::db::DbStore::Sqlite(pool) => {
             let (v_res, rm_res, bi_res) = tokio::join!(
@@ -3328,7 +3332,11 @@ async fn load_ui_supply_from_db(db: &crate::db::DB, tenant_id: &str) -> Result<s
             let vendors = v_res.unwrap_or_default().into_iter().map(|row| serde_json::json!({ "id": row.get::<String, _>("id"), "name": row.get::<String, _>("name"), "contact_info": row.get::<String, _>("contact_info") })).collect::<Vec<_>>();
             let raw_materials = rm_res.unwrap_or_default().into_iter().map(|row| serde_json::json!({ "id": row.get::<String, _>("id"), "name": row.get::<String, _>("name"), "current_quantity": row.get::<i32, _>("current_quantity"), "reorder_threshold": row.get::<i32, _>("reorder_threshold") })).collect::<Vec<_>>();
             let bom_items = bi_res.unwrap_or_default().into_iter().map(|row| serde_json::json!({ "id": row.get::<String, _>("id"), "finished_good_id": row.get::<String, _>("finished_good_id"), "raw_material_id": row.get::<String, _>("raw_material_id"), "quantity_required": row.get::<i32, _>("quantity_required") })).collect::<Vec<_>>();
-            Ok(serde_json::json!({ "vendors": vendors, "raw_materials": raw_materials, "bom_items": bom_items }))
+            if mobile_optimized {
+                Ok(serde_json::json!({ "raw_materials": raw_materials }))
+            } else {
+                Ok(serde_json::json!({ "vendors": vendors, "raw_materials": raw_materials, "bom_items": bom_items }))
+            }
         }
     }
 }
@@ -3567,7 +3575,7 @@ async fn ui_dashboard_unified_feed_handler(
         if !is_stale {
             // Supply should not be cached because it changes continuously (inventory counts),
             // so we fetch supply and merge it on cache hit.
-            let supply_res = load_ui_supply_from_db(&db, &tenant_id).await.unwrap_or_else(|_| serde_json::json!({}));
+            let supply_res = load_ui_supply_from_db(&db, &tenant_id, mobile_optimized).await.unwrap_or_else(|_| serde_json::json!({}));
             let mut final_cached = cached.clone();
             if let Some(obj) = final_cached.as_object_mut() {
                 obj.insert("supply".to_string(), supply_res);
@@ -3645,7 +3653,7 @@ async fn ui_dashboard_unified_feed_handler(
             }
         });
 
-        let supply_res = load_ui_supply_from_db(&db, &tenant_id).await.unwrap_or_else(|_| serde_json::json!({}));
+        let supply_res = load_ui_supply_from_db(&db, &tenant_id, mobile_optimized).await.unwrap_or_else(|_| serde_json::json!({}));
         let mut final_cached = cached.clone();
         if let Some(obj) = final_cached.as_object_mut() {
             obj.insert("supply".to_string(), supply_res);
@@ -3657,7 +3665,7 @@ async fn ui_dashboard_unified_feed_handler(
         tokio::spawn({ let db = db.clone(); let t = tenant_id.clone(); async move { load_ui_dashboard_metrics(&db, &t).await } }),
         tokio::spawn({ let db = db.clone(); let t = tenant_id.clone(); async move { load_ui_orders_from_db(&db, &t).await } }),
         tokio::spawn({ let db = db.clone(); let t = tenant_id.clone(); async move { load_ui_inbox_from_db(&db, &t).await } }),
-        tokio::spawn({ let db = db.clone(); let t = tenant_id.clone(); async move { load_ui_supply_from_db(&db, &t).await } }),
+        tokio::spawn({ let db = db.clone(); let t = tenant_id.clone(); async move { load_ui_supply_from_db(&db, &t, mobile_optimized).await } }),
         tokio::spawn({ let db = db.clone(); let t = tenant_id.clone(); async move { load_ui_triage_from_db(&db, &t).await } }),
         tokio::spawn({ let db = db.clone(); let t = tenant_id.clone(); async move { load_ui_agent_approvals_from_db(&db, &t).await } }),
         tokio::spawn({ let db = db.clone(); let t = tenant_id.clone(); async move { load_ui_agent_feed_from_db(&db, &t).await } }),
