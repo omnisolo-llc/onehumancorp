@@ -86,12 +86,36 @@
   </head>
   <body>
     <div class="container">
-      <h1>You're all set!</h1>
+      <h1 id="success-title">You're all set!</h1>
       <p id="success-msg">Your workspace is ready.</p>
+
+      <div id="referral-success-card" style="display: none; margin: 24px 0; padding: 24px; background: rgba(0, 102, 255, 0.05); border: 1px solid rgba(0, 102, 255, 0.2); border-radius: 20px; text-align: center;" data-testid="referral-success-card">
+          <div style="font-size: 32px; margin-bottom: 12px;">🚀</div>
+          <h2 style="font-size: 18px; font-weight: 700; color: #1d1d1f; margin: 0 0 8px 0;">Start Your AI Business</h2>
+          <p style="font-size: 13px; color: #86868b; margin: 0 0 16px 0; line-height: 1.4;">Inspired? Launch your own AI-powered business hub just like this in 2 minutes.</p>
+          <a href="#" id="referral-success-link" style="display: inline-block; background: #0066FF; color: white; text-decoration: none; padding: 12px 24px; border-radius: 12px; font-weight: 700; font-size: 14px;">Get OHC Free</a>
+      </div>
+
       <button id="dashboard-btn">Go to Assistant</button>
     </div>
     <script>
+      const urlParams = new URLSearchParams(window.location.search);
+      const successType = urlParams.get('type');
+      const tenantId = urlParams.get('tenant') || 'e2e-tenant';
+
       function showSuccess(name, assistantName) {
+        if (successType === 'booking_deposit') {
+            document.getElementById('success-title').innerText = 'Deposit Paid!';
+            document.getElementById('success-msg').innerText = 'Your booking is confirmed. We will reach out shortly.';
+            document.getElementById('dashboard-btn').style.display = 'none';
+
+            const refCard = document.getElementById('referral-success-card');
+            const refLink = document.getElementById('referral-success-link');
+            refCard.style.display = 'block';
+            refLink.href = `https://ohc.app/onboarding?ref=${encodeURIComponent(tenantId)}&source=success_page`;
+            return;
+        }
+
         if (name) {
             let msg = `Workspace created for ${name}.`;
             if (assistantName) {

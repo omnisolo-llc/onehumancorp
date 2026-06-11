@@ -234,6 +234,60 @@
       width: 100%;
       margin: 10px 0;
     }
+
+    /* Viral Growth Badge */
+    .ohc-viral-badge {
+      display: none; /* Hidden by default, shown via JS in customer mode */
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: calc(100% - 32px);
+      max-width: 343px;
+      padding: 16px;
+      background: rgba(255, 255, 255, 0.6);
+      backdrop-filter: blur(20px) saturate(180%);
+      -webkit-backdrop-filter: blur(20px) saturate(180%);
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      border-radius: 20px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+      z-index: 1000;
+      text-align: center;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    @media (prefers-color-scheme: dark) {
+      .ohc-viral-badge {
+        background: rgba(28, 28, 30, 0.6);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+    }
+    .ohc-viral-badge:hover {
+      transform: translateX(-50%) translateY(-2px);
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+    }
+    .ohc-viral-badge p {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-main);
+      margin: 0 0 12px 0;
+    }
+    .ohc-viral-badge .btn-viral {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 10px 20px;
+      background: var(--accent-color);
+      color: white;
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 700;
+      border-radius: 12px;
+      transition: opacity 0.2s;
+    }
+    .ohc-viral-badge .btn-viral:active {
+      opacity: 0.8;
+    }
   </style>
 </head>
 <body>
@@ -290,12 +344,20 @@
       </div>
     </div>
 
-    <div id="action-buttons">
+    <div id="action-buttons" style="margin-bottom: 100px;">
       <button class="btn btn-primary" id="btn-approve-send" style="display: none;">Approve & Send to Customer</button>
       <button class="btn btn-apple-pay" id="btn-pay-deposit" style="display: none;">Pay Deposit with Pay</button>
       <button class="btn btn-primary" id="btn-pay-card" style="display: none; background-color: #333;">Pay with Card</button>
     </div>
 
+  </div>
+
+  <div class="ohc-viral-badge" id="viral-badge" data-testid="viral-quote-badge">
+    <p>Run your business like this with AI assistant.</p>
+    <a href="#" class="btn-viral" id="viral-badge-link">
+      Get OHC
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14m-7-7 7 7-7 7"/></svg>
+    </a>
   </div>
 
   <script>
@@ -404,6 +466,14 @@
         btnPayDeposit.style.display = 'flex';
         btnPayCard.style.display = 'block';
         document.getElementById('quote-status').innerText = 'Action Required';
+
+        // Show viral badge
+        const viralBadge = document.getElementById('viral-badge');
+        const viralLink = document.getElementById('viral-badge-link');
+        const tenantId = urlParams.get('tenant') || 'e2e-tenant';
+
+        viralBadge.style.display = 'block';
+        viralLink.href = `https://ohc.app/onboarding?ref=${encodeURIComponent(tenantId)}&source=quote_viewer`;
 
         const handlePayment = async () => {
           btnPayCard.innerText = 'Processing...';
