@@ -5,469 +5,107 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>OHC Help Center</title>
     <style>
-      body {
-        font-family: "Outfit", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-        background-color: #f5f5f7;
-        margin: 0;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        padding: 40px 20px;
-        box-sizing: border-box;
-        min-height: 100vh;
-      }
-      .container {
-        max-width: 800px;
-        width: 100%;
-        box-sizing: border-box;
-      }
-      .header-card {
-        background: rgba(255, 255, 255, 0.65);
-        backdrop-filter: blur(30px) saturate(210%);
-        -webkit-backdrop-filter: blur(30px) saturate(210%);
-        border-radius: 16px;
-        padding: 40px;
-        text-align: center;
-        border: 1px solid rgba(255, 255, 255, 0.4);
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
-        margin-bottom: 40px;
-      }
-      h1 {
-        color: #1d1d1f;
-        font-size: 32px;
-        font-weight: 800;
-        margin-top: 0;
-        margin-bottom: 20px;
-        letter-spacing: -0.5px;
-      }
-      input[type="text"] {
-        width: 100%;
-        max-width: 500px;
-        padding: 16px 20px;
-        border-radius: 16px;
-        border: 1px solid rgba(0, 0, 0, 0.1);
-        font-size: 16px;
-        background: rgba(255, 255, 255, 0.8);
-        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.02);
-        outline: none;
-        transition: border-color 0.2s, box-shadow 0.2s;
-        box-sizing: border-box;
-        min-height: 44px; /* Touch target */
-      }
-      input[type="text"]:focus {
-        border-color: #0066FF;
-        box-shadow: 0 4px 14px rgba(0, 102, 255, 0.1);
-      }
-      .section-title {
-        font-size: 24px;
-        font-weight: 700;
-        color: #1d1d1f;
-        margin-bottom: 20px;
-        margin-top: 40px;
-        display: flex;
-        align-items: center;
-      }
-      .section-title::after {
-        content: "";
-        flex-grow: 1;
-        height: 1px;
-        background: rgba(0, 0, 0, 0.1);
-        margin-left: 15px;
-      }
-      .grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-        gap: 20px;
-      }
-      .card {
-        background: rgba(255, 255, 255, 0.65);
-        backdrop-filter: blur(30px) saturate(210%);
-        -webkit-backdrop-filter: blur(30px) saturate(210%);
-        border-radius: 16px;
-        padding: 24px;
-        border: 1px solid rgba(255, 255, 255, 0.4);
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
-        cursor: pointer;
-        transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
-        display: flex;
-        flex-direction: column;
-        min-height: 120px;
-        text-decoration: none;
-      }
-      .card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 24px rgba(0, 102, 255, 0.15);
-        border-color: rgba(0, 102, 255, 0.3);
-      }
-      .card h3 {
-        color: #0066FF;
-        margin-top: 0;
-        margin-bottom: 10px;
-        font-size: 18px;
-        font-weight: 700;
-      }
-      .card p {
-        color: #555;
-        font-size: 14px;
-        line-height: 1.5;
-        margin: 0;
-        flex-grow: 1;
-      }
-      .videos-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-        gap: 15px;
-      }
-      .video-card {
-        aspect-ratio: 9/16;
-        background: #e5e5ea;
-        border-radius: 16px;
-        position: relative;
-        overflow: hidden;
-        cursor: pointer;
-        border: 1px solid rgba(255, 255, 255, 0.3);
-        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        transition: transform 0.2s;
-      }
-      .video-card:hover {
-        transform: scale(1.02);
-      }
-      .video-card::before {
-        content: "";
-        position: absolute;
-        inset: 0;
-        background: rgba(0,0,0,0.2);
-        transition: background 0.2s;
-      }
-      .video-card:hover::before {
-        background: rgba(0,0,0,0.1);
-      }
-      .play-btn {
-        width: 40px;
-        height: 40px;
-        background: rgba(255,255,255,0.9);
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 10;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-      }
-      .play-btn svg {
-        width: 20px;
-        height: 20px;
-        fill: #0066FF;
-        margin-left: 2px;
-      }
-      .video-info {
-        position: absolute;
-        bottom: 10px;
-        left: 10px;
-        right: 10px;
-        z-index: 10;
-      }
-      .video-title {
-        color: white;
-        font-size: 12px;
-        font-weight: 700;
-        text-shadow: 0 1px 3px rgba(0,0,0,0.8);
-        margin: 0 0 2px 0;
-        display: -webkit-box;
-        -webkit-line-clamp: 2;
-        -webkit-box-orient: vertical;
-        overflow: hidden;
-      }
-      .video-duration {
-        color: rgba(255,255,255,0.8);
-        font-size: 10px;
-        margin: 0;
-      }
-      .back-link {
-        display: inline-flex;
-        align-items: center;
-        color: #0066FF;
-        text-decoration: none;
-        font-weight: 600;
-        margin-bottom: 20px;
-        font-size: 14px;
-        padding: 8px 0;
-        min-height: 44px;
-      }
-      .back-link svg {
-        width: 16px;
-        height: 16px;
-        margin-right: 5px;
-      }
-      .back-link:hover {
-        text-decoration: underline;
-      }
-      .empty-state {
-        text-align: center;
-        padding: 40px;
-        background: rgba(255, 255, 255, 0.4);
-        border-radius: 16px;
-        border: 1px solid rgba(255,255,255,0.3);
-      }
-
-      /* Modal for Video */
-      #video-modal {
-        display: none;
-        position: fixed;
-        inset: 0;
-        background: rgba(0,0,0,0.8);
-        backdrop-filter: blur(10px);
-        z-index: 1000;
-        align-items: center;
-        justify-content: center;
-        padding: 20px;
-      }
-      .modal-content {
-        background: #000;
-        width: 100%;
-        max-width: 800px;
-        border-radius: 16px;
-        overflow: hidden;
-        position: relative;
-        box-shadow: 0 20px 40px rgba(0,0,0,0.5);
-      }
-      .modal-close {
-        position: absolute;
-        top: 15px;
-        right: 15px;
-        background: rgba(255,255,255,0.2);
-        color: white;
-        border: 1px solid rgba(255,255,255,0.3);
-        padding: 8px 16px;
-        border-radius: 16px;
-        cursor: pointer;
-        z-index: 10;
-        font-size: 12px;
-        font-weight: 600;
-        backdrop-filter: blur(5px);
-        min-height: 44px;
-      }
-      .modal-close:hover {
-        background: rgba(255,255,255,0.3);
-      }
-      video {
-        width: 100%;
-        aspect-ratio: 16/9;
-        display: block;
-      }
-      .modal-info {
-        padding: 20px;
-        background: linear-gradient(to top, rgba(0,0,0,1), rgba(0,0,0,0));
-        position: absolute;
-        bottom: 0;
-        left: 0;
-        right: 0;
-      }
-      .modal-title {
-        color: white;
-        margin: 0 0 5px 0;
-        font-size: 18px;
-      }
-      .modal-duration {
-        color: rgba(255,255,255,0.7);
-        margin: 0;
-        font-size: 12px;
-      }
+      body { font-family: "Outfit", sans-serif; background-color: #f5f5f7; margin: 0; display: flex; flex-direction: column; align-items: center; padding: 40px 20px; box-sizing: border-box; min-height: 100vh; }
+      .container { max-width: 800px; width: 100%; box-sizing: border-box; }
+      .header-card { background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px); border-radius: 16px; padding: 40px; text-align: center; border: 1px solid rgba(255, 255, 255, 0.4); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05); margin-bottom: 40px; }
+      h1 { color: #1d1d1f; font-size: 32px; font-weight: 800; margin-top: 0; margin-bottom: 20px; }
+      .search-box { display: flex; max-width: 500px; margin: 0 auto; position: relative; }
+      .search-box input { flex-grow: 1; padding: 14px 20px; border-radius: 12px; border: 1px solid #d2d2d7; font-size: 16px; outline: none; transition: border-color 0.2s; font-family: "Outfit", sans-serif; }
+      .search-box input:focus { border-color: #0066FF; }
+      .search-box button { background: #0066FF; color: white; border: none; padding: 0 24px; border-radius: 12px; font-weight: 600; cursor: pointer; margin-left: 10px; transition: background 0.2s; }
+      .search-box button:hover { background: #0052cc; }
+      .section-title { font-size: 20px; font-weight: 700; color: #1d1d1f; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
+      .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; margin-bottom: 40px; }
+      .card { background: white; border-radius: 16px; padding: 24px; box-shadow: 0 4px 10px rgba(0,0,0,0.03); border: 1px solid #e5e5ea; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; display: flex; flex-direction: column; text-decoration: none; color: inherit; }
+      .card:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(0,0,0,0.06); }
+      .card-title { font-weight: 600; font-size: 16px; color: #1d1d1f; margin-bottom: 8px; }
+      .card-desc { font-size: 14px; color: #86868b; line-height: 1.4; flex-grow: 1; margin: 0; }
+      .video-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
+      .video-card { background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.03); border: 1px solid #e5e5ea; text-decoration: none; color: inherit; display: block; transition: transform 0.2s; }
+      .video-card:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(0,0,0,0.06); }
+      .video-thumb { background: #000; height: 160px; position: relative; display: flex; align-items: center; justify-content: center; }
+      .video-thumb::after { content: "▶"; color: white; font-size: 32px; opacity: 0.8; }
+      .video-info { padding: 16px; }
+      .video-title { font-weight: 600; font-size: 14px; margin-bottom: 4px; color: #1d1d1f; }
+      .video-meta { font-size: 12px; color: #86868b; }
+      .bottom-nav { margin-top: 40px; text-align: center; }
+      .bottom-nav a { color: #0066FF; text-decoration: none; font-weight: 600; font-size: 14px; }
+      .bottom-nav a:hover { text-decoration: underline; }
 
       @media (prefers-color-scheme: dark) {
         body { background-color: #16161a; }
-        .header-card {
-          background: rgba(22, 22, 26, 0.7);
-          border-color: rgba(255, 255, 255, 0.1);
-        }
-        h1, .section-title { color: #f5f5f7; }
-        .section-title::after { background: rgba(255, 255, 255, 0.1); }
-        input[type="text"] {
-          background: rgba(0, 0, 0, 0.2);
-          border-color: rgba(255, 255, 255, 0.2);
-          color: white;
-        }
-        input[type="text"]:focus {
-          background: rgba(0, 0, 0, 0.3);
-          border-color: #0066FF;
-        }
-        .card {
-          background: rgba(22, 22, 26, 0.7);
-          border-color: rgba(255, 255, 255, 0.1);
-        }
-        .card p { color: #a1a1a6; }
-        .card:hover {
-           background: rgba(30, 30, 35, 0.8);
-           border-color: rgba(0, 102, 255, 0.4);
-        }
-        .empty-state {
-           background: rgba(0, 0, 0, 0.2);
-           border-color: rgba(255,255,255,0.1);
-        }
-        .empty-state p { color: #a1a1a6; }
-        .video-card { border-color: rgba(255,255,255,0.1); }
+        .header-card { background: rgba(22, 22, 26, 0.7); border-color: rgba(255, 255, 255, 0.1); }
+        h1, .section-title, .card-title, .video-title { color: #F5F5F7; }
+        .card, .video-card { background: #1c1c1e; border-color: #2c2c2e; }
+        .card-desc, .video-meta { color: #a1a1a6; }
+        .search-box input { background: #1c1c1e; border-color: #2c2c2e; color: #F5F5F7; }
       }
     </style>
   </head>
   <body>
     <div class="container">
-      <a href="dashboard.html" class="back-link">
-        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
-        Back to Dashboard
-      </a>
-
       <div class="header-card">
-        <h1>Help Center</h1>
-        <input type="text" id="search-input" placeholder="Search for help articles and videos..." />
+        <h1>How can we help?</h1>
+        <div class="search-box">
+          <input type="text" id="help-search" placeholder="Search for help..." />
+          <button id="search-btn">Search</button>
+        </div>
       </div>
 
-      <div id="content-area">
-        <div class="empty-state" style="display:none;" id="loading-state">
-           <p>Loading help content...</p>
-        </div>
-        <div id="results"></div>
+      <div class="section-title">Help Topics</div>
+      <div class="grid" id="topics-grid">
+        <!-- Rendered by JS -->
       </div>
-    </div>
 
-    <!-- Video Modal -->
-    <div id="video-modal">
-      <div class="modal-content">
-        <button class="modal-close" id="close-video">Close video</button>
-        <video id="video-player" controls>
-          Your browser does not support the video tag.
-        </video>
-        <div class="modal-info">
-          <h3 class="modal-title" id="video-modal-title"></h3>
-          <p class="modal-duration" id="video-modal-duration"></p>
-        </div>
+      <div class="section-title">Video Tutorials</div>
+      <div class="video-grid" id="videos-grid">
+        <!-- Rendered by JS -->
+      </div>
+
+      <div class="bottom-nav">
+        <a href="dashboard.html">← Back to Dashboard</a>
       </div>
     </div>
 
     <script>
+      async function loadHelp() {
+          const fetchArticles = window.__TAURI__ ? window.__TAURI__.core.invoke("get_help_articles") : fetch('/api/help').then(r => r.json());
+          const fetchVideos = window.__TAURI__ ? window.__TAURI__.core.invoke("get_help_videos") : fetch('/api/videos').then(r => r.json());
+
+          try {
+              const [articles, videos] = await Promise.all([fetchArticles, fetchVideos]);
+
+              const grid = document.getElementById('topics-grid');
+              grid.innerHTML = articles.map(a => `
+                <a class="card" href="help_article.html?id=${a.link.split('/').pop()}">
+                  <div class="card-title">${a.title}</div>
+                  <div class="card-desc">${a.desc}</div>
+                </a>
+              `).join('');
+
+              const vGrid = document.getElementById('videos-grid');
+              vGrid.innerHTML = videos.map(v => `
+                <a class="video-card" href="#">
+                  <div class="video-thumb"></div>
+                  <div class="video-info">
+                    <div class="video-title">${v.title}</div>
+                    <div class="video-meta">${v.duration}</div>
+                  </div>
+                </a>
+              `).join('');
+          } catch(e) {
+              console.error(e);
+          }
+      }
+
+      document.addEventListener('DOMContentLoaded', loadHelp);
+    </script>
+  <script>
+
+// Global Help Agent Chat
 document.addEventListener('DOMContentLoaded', () => {
-    // Inject tooltip CSS
-    const style = document.createElement('style');
-    style.textContent = `
-        .ohc-tooltip {
-            position: fixed;
-            background: rgba(255, 255, 255, 0.85);
-            backdrop-filter: blur(20px) saturate(210%);
-            -webkit-backdrop-filter: blur(20px) saturate(210%);
-            border: 1px solid rgba(255, 255, 255, 0.6);
-            border-radius: 16px;
-            padding: 12px 16px;
-            color: #1d1d1f;
-            font-family: "Outfit", -apple-system, BlinkMacSystemFont, sans-serif;
-            font-size: 14px;
-            line-height: 1.4;
-            max-width: 250px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-            z-index: 10000;
-            pointer-events: none;
-            opacity: 0;
-            transform: translateY(10px);
-            transition: opacity 0.2s ease, transform 0.2s ease;
-            text-align: center;
-        }
-        .ohc-tooltip.visible {
-            opacity: 1;
-            transform: translateY(0);
-        }
-        @media (prefers-color-scheme: dark) {
-            .ohc-tooltip {
-                background: rgba(22, 22, 26, 0.7);
-                border-color: rgba(255, 255, 255, 0.1);
-                color: #f5f5f7;
-            }
-        }
-    `;
-    document.head.appendChild(style);
+    if (document.getElementById('ohc-help-btn')) return;
 
-    if (!window.OHC_TOOLTIPS) {
-        window.OHC_TOOLTIPS = {};
-        fetch("/api/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(console.error);
-    }
-    const tooltipEl = document.createElement('div');
-    tooltipEl.className = 'ohc-tooltip';
-    document.body.appendChild(tooltipEl);
-
-    let hideTimeout;
-
-    function showTooltip(e, text) {
-        clearTimeout(hideTimeout);
-        tooltipEl.textContent = text;
-
-        const targetRect = e.target.getBoundingClientRect();
-
-        // Position below the element by default
-        let top = targetRect.bottom + 10;
-        let left = targetRect.left + (targetRect.width / 2) - (tooltipEl.offsetWidth / 2);
-
-        // Adjust if it goes off screen
-        if (left < 10) left = 10;
-        if (left + tooltipEl.offsetWidth > window.innerWidth - 10) {
-            left = window.innerWidth - tooltipEl.offsetWidth - 10;
-        }
-
-        if (top + tooltipEl.offsetHeight > window.innerHeight - 10) {
-            // Position above if it doesn't fit below
-            top = targetRect.top - tooltipEl.offsetHeight - 10;
-        }
-
-        tooltipEl.style.top = `${top}px`;
-        tooltipEl.style.left = `${left}px`;
-        tooltipEl.classList.add('visible');
-    }
-
-    function hideTooltip() {
-        hideTimeout = setTimeout(() => {
-            tooltipEl.classList.remove('visible');
-        }, 100); // slight delay to prevent flicker
-    }
-
-    // Desktop hover
-    document.addEventListener('mouseover', (e) => {
-        const t = e.target;
-        const target = t && typeof t.closest === 'function' ? t.closest('[data-tooltip]') : null;
-        if (target) {
-            showTooltip(e, (window.OHC_TOOLTIPS && window.OHC_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip'));
-        }
-    });
-
-    document.addEventListener('mouseout', (e) => {
-        const target = e.target; if (target && typeof target.closest === 'function' && target.closest('[data-tooltip]')) {
-            hideTooltip();
-        }
-    });
-
-    // Mobile long press (contextmenu) or touchstart
-    let touchTimeout;
-    document.addEventListener('touchstart', (e) => {
-        const t = e.target;
-        const target = t && typeof t.closest === 'function' ? t.closest('[data-tooltip]') : null;
-        if (target) {
-            touchTimeout = setTimeout(() => {
-                showTooltip(e, (window.OHC_TOOLTIPS && window.OHC_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip'));
-            }, 500); // 500ms long press
-        }
-    });
-
-    document.addEventListener('touchend', () => {
-        clearTimeout(touchTimeout);
-        hideTooltip();
-    });
-
-    document.addEventListener('touchmove', () => {
-        clearTimeout(touchTimeout);
-        hideTooltip();
-    });
-});
-
-</script>
-    <script>
-document.addEventListener('DOMContentLoaded', () => {
     // Inject chat CSS
     const style = document.createElement('style');
     style.textContent = `
@@ -489,16 +127,9 @@ document.addEventListener('DOMContentLoaded', () => {
             z-index: 9999;
             transition: transform 0.2s;
         }
-        #ohc-help-btn:hover {
-            transform: scale(1.05);
-        }
-        #ohc-help-btn svg {
-            width: 28px;
-            height: 28px;
-            fill: none;
-            stroke: currentColor;
-            stroke-width: 2;
-        }
+        #ohc-help-btn:hover { transform: scale(1.05); }
+        #ohc-help-btn svg { width: 28px; height: 28px; fill: none; stroke: currentColor; stroke-width: 2; }
+
         #ohc-help-chat-overlay {
             position: fixed;
             bottom: 90px;
@@ -525,370 +156,105 @@ document.addEventListener('DOMContentLoaded', () => {
             0% { transform: scale(0.5); opacity: 0; }
             100% { transform: scale(1); opacity: 1; }
         }
-        #ohc-help-chat-header {
-            padding: 15px 20px;
-            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: rgba(255, 255, 255, 0.5);
-        }
-        #ohc-help-chat-header h3 {
-            margin: 0;
-            font-size: 16px;
-            color: #1d1d1f;
-        }
-        #ohc-help-close {
-            background: none;
-            border: none;
-            color: #86868b;
-            cursor: pointer;
-            padding: 5px;
-        }
-        #ohc-help-close:hover { color: #1d1d1f; }
-        #ohc-help-messages {
-            flex-grow: 1;
-            padding: 20px;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
-        .msg {
-            max-width: 85%;
-            padding: 12px 16px;
-            border-radius: 16px;
-            font-size: 14px;
-            line-height: 1.4;
-        }
-        .msg-user {
-            align-self: flex-end;
-            background: #0066FF;
-            color: white;
-            border-bottom-right-radius: 4px;
-        }
-        .msg-ai {
-            align-self: flex-start;
-            background: rgba(0, 0, 0, 0.05);
-            color: #1d1d1f;
-            border-bottom-left-radius: 4px;
-        }
-        .msg-ai a {
-            color: #0066FF;
-            font-weight: 600;
-            text-decoration: none;
-            display: block;
-            margin-top: 5px;
-        }
-        #ohc-help-input-area {
-            padding: 15px;
-            border-top: 1px solid rgba(0, 0, 0, 0.1);
-            display: flex;
-            gap: 10px;
-            background: rgba(255, 255, 255, 0.5);
-        }
-        #ohc-help-input {
-            flex-grow: 1;
-            border: 1px solid rgba(0, 0, 0, 0.2);
-            border-radius: 16px;
-            padding: 10px 15px;
-            outline: none;
-            background: rgba(255, 255, 255, 0.8);
-            font-size: 14px;
-        }
-        #ohc-help-input:focus { border-color: #0066FF; }
-        #ohc-help-send {
-            background: #0066FF;
-            color: white;
-            border: none;
-            width: 40px;
-            height: 40px;
-            border-radius: 16px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
+        #ohc-help-chat-header { padding: 15px 20px; border-bottom: 1px solid rgba(0, 0, 0, 0.1); display: flex; justify-content: space-between; align-items: center; background: rgba(255, 255, 255, 0.5); }
+        #ohc-help-chat-header h3 { margin: 0; font-size: 16px; color: #1d1d1f; }
+        #ohc-help-close { background: none; border: none; color: #86868b; cursor: pointer; padding: 5px; }
+        #ohc-help-messages { flex-grow: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; }
+        .msg { max-width: 85%; padding: 12px 16px; border-radius: 16px; font-size: 14px; line-height: 1.4; }
+        .msg-user { align-self: flex-end; background: #0066FF; color: white; border-bottom-right-radius: 4px; }
+        .msg-ai { align-self: flex-start; background: rgba(0, 0, 0, 0.05); color: #1d1d1f; border-bottom-left-radius: 4px; }
+        #ohc-help-input-area { padding: 15px; border-top: 1px solid rgba(0, 0, 0, 0.1); display: flex; gap: 10px; background: rgba(255, 255, 255, 0.5); }
+        #ohc-help-input { flex-grow: 1; border: 1px solid #d2d2d7; border-radius: 20px; padding: 10px 15px; font-size: 14px; outline: none; font-family: "Outfit", sans-serif; }
+        #ohc-help-send { background: #0066FF; color: white; border: none; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+        #ohc-help-send svg { width: 16px; height: 16px; fill: currentColor; }
 
         @media (prefers-color-scheme: dark) {
-            #ohc-help-chat-overlay {
-                background: rgba(22, 22, 26, 0.7);
-                border-color: rgba(255, 255, 255, 0.1);
-            }
-            #ohc-help-chat-header, #ohc-help-input-area {
-                background: rgba(0, 0, 0, 0.2);
-                border-color: rgba(255, 255, 255, 0.1);
-            }
+            #ohc-help-chat-overlay { background: rgba(30, 30, 30, 0.85); border-color: rgba(255,255,255,0.1); }
+            #ohc-help-chat-header { background: rgba(0,0,0,0.2); }
             #ohc-help-chat-header h3 { color: #f5f5f7; }
-            .msg-ai {
-                background: rgba(255, 255, 255, 0.1);
-                color: #f5f5f7;
-            }
-            #ohc-help-input {
-                background: rgba(0, 0, 0, 0.3);
-                border-color: rgba(255, 255, 255, 0.2);
-                color: white;
-            }
+            .msg-ai { background: rgba(255,255,255,0.1); color: #f5f5f7; }
+            #ohc-help-input-area { background: rgba(0,0,0,0.2); }
+            #ohc-help-input { background: rgba(0,0,0,0.2); color: #f5f5f7; border-color: #444; }
         }
     `;
     document.head.appendChild(style);
 
-    // Inject HTML
+    // Inject chat HTML
     const btn = document.createElement('button');
     btn.id = 'ohc-help-btn';
-    btn.setAttribute('aria-label', 'Open help chat');
-    btn.innerHTML = `<svg viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
+    btn.setAttribute('aria-label', 'Help Chat');
+    btn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>';
     document.body.appendChild(btn);
 
     const overlay = document.createElement('div');
     overlay.id = 'ohc-help-chat-overlay';
     overlay.innerHTML = `
         <div id="ohc-help-chat-header">
-            <h3>Ask AI Help</h3>
+            <h3>Ask anything</h3>
             <button id="ohc-help-close" aria-label="Close help chat">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path></svg>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
             </button>
         </div>
         <div id="ohc-help-messages">
             <div class="msg msg-ai">Hi! I am your AI Help Agent! How can I assist you with OHC today?</div>
         </div>
         <div id="ohc-help-input-area">
-            <input type="text" id="ohc-help-input" placeholder="Ask me anything..." />
+            <input type="text" id="ohc-help-input" placeholder="Ask about OHC features..." />
             <button id="ohc-help-send" aria-label="Send message">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
+                <svg viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
             </button>
         </div>
     `;
     document.body.appendChild(overlay);
 
-    const closeBtn = document.getElementById('ohc-help-close');
-    const messages = document.getElementById('ohc-help-messages');
+    const msgs = document.getElementById('ohc-help-messages');
     const input = document.getElementById('ohc-help-input');
-    const sendBtn = document.getElementById('ohc-help-send');
 
     btn.addEventListener('click', () => {
-        overlay.style.display = 'flex';
-        input.focus();
+        overlay.style.display = overlay.style.display === 'flex' ? 'none' : 'flex';
+        if (overlay.style.display === 'flex') input.focus();
     });
 
-    closeBtn.addEventListener('click', () => {
+    document.getElementById('ohc-help-close').addEventListener('click', () => {
         overlay.style.display = 'none';
     });
 
-        async function sendMessage() {
+    async function sendMessage() {
         const text = input.value.trim();
         if (!text) return;
 
-        // Add user msg
-        const uMsg = document.createElement('div');
-        uMsg.className = 'msg msg-user';
-        uMsg.textContent = text;
-        messages.appendChild(uMsg);
         input.value = '';
-        messages.scrollTop = messages.scrollHeight;
+        msgs.innerHTML += `<div class="msg msg-user">${text}</div>`;
+        msgs.scrollTop = msgs.scrollHeight;
 
         try {
-            let url = '/api/chat';
-            if (window.__TAURI__ && window.__TAURI__.core) {
-                url = 'http://127.0.0.1:18789/api/chat';
-            }
-            const response = await fetch(url, {
+            const req = await fetch('/api/chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message: text })
+                body: JSON.stringify({ message: text, provider: 'help-agent' })
             });
-            const data = await response.json();
+            const res = await req.json();
 
-            const aiMsg = document.createElement('div');
-            aiMsg.className = 'msg msg-ai';
-            if (data.link && data.link.url) {
-                aiMsg.innerHTML = `${data.reply}<br/><a href="${data.link.url}">${data.link.title}</a>`;
-            } else {
-                aiMsg.textContent = data.reply;
+            let replyText = res.response || "I couldn't find an answer. Please check our Help Center.";
+
+            // Link to full article if provided
+            if (res.article_id) {
+                replyText += `<br><br><a href="help_article.html?id=${res.article_id}" style="color: #0066FF; font-weight: bold; text-decoration: none;">Read the full article →</a>`;
             }
-            messages.appendChild(aiMsg);
-            messages.scrollTop = messages.scrollHeight;
+
+            msgs.innerHTML += `<div class="msg msg-ai">${replyText}</div>`;
         } catch (e) {
-            console.error(e);
-            const aiMsg = document.createElement('div');
-            aiMsg.className = 'msg msg-ai';
-            aiMsg.textContent = 'Sorry, there was an error connecting to the help assistant.';
-            messages.appendChild(aiMsg);
-            messages.scrollTop = messages.scrollHeight;
+            msgs.innerHTML += `<div class="msg msg-ai" style="color: red;">Failed to connect.</div>`;
         }
+        msgs.scrollTop = msgs.scrollHeight;
     }
 
-    sendBtn.addEventListener('click', sendMessage);
-    input.addEventListener('keydown', (e) => {
+    document.getElementById('ohc-help-send').addEventListener('click', sendMessage);
+    input.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') sendMessage();
     });
 });
 
 </script>
-
-    <script>
-      let allArticles = [];
-      let allVideos = [];
-
-      const searchInput = document.getElementById('search-input');
-      const resultsContainer = document.getElementById('results');
-      const loadingState = document.getElementById('loading-state');
-      const videoModal = document.getElementById('video-modal');
-      const videoPlayer = document.getElementById('video-player');
-      const closeVideoBtn = document.getElementById('close-video');
-      const videoModalTitle = document.getElementById('video-modal-title');
-      const videoModalDuration = document.getElementById('video-modal-duration');
-
-      async function fetchData() {
-        loadingState.style.display = 'block';
-        resultsContainer.innerHTML = '';
-        try {
-          if (window.__TAURI__ && window.__TAURI__.core) {
-             const [articlesRes, videosRes] = await Promise.all([
-                window.__TAURI__.core.invoke('get_help_articles', {}),
-                window.__TAURI__.core.invoke('get_help_videos', {})
-             ]);
-             allArticles = articlesRes || [];
-             allVideos = videosRes || [];
-          } else {
-             // Fallback for playwright test environment
-             const [articlesRes, videosRes] = await Promise.all([
-                 fetch('/api/help').then(r => r.json()).catch(() => []),
-                 fetch('/api/videos').then(r => r.json()).catch(() => [])
-             ]);
-             allArticles = articlesRes || [];
-             allVideos = videosRes || [];
-
-
-          }
-        } catch (e) {
-          console.error("Failed to load help data", e);
-        } finally {
-          loadingState.style.display = 'none';
-          renderContent('');
-        }
-      }
-
-      function playVideo(url, title) {
-        const modal = document.getElementById("video-modal");
-        const player = document.getElementById("video-player");
-        document.getElementById("video-title").innerText = title;
-        player.src = url;
-        modal.style.display = "flex";
-        player.play().catch(console.error);
-      }
-      function closeVideo() {
-        const modal = document.getElementById("video-modal");
-        const player = document.getElementById("video-player");
-        player.pause();
-        player.src = "";
-        modal.style.display = "none";
-      }
-      function renderContent(query) {
-        const lowerQuery = query.toLowerCase().trim();
-
-        let filteredArticles = allArticles;
-        let filteredVideos = allVideos;
-
-        if (lowerQuery) {
-            filteredArticles = allArticles.filter(a =>
-                a.title.toLowerCase().includes(lowerQuery) ||
-                (a.desc && a.desc.toLowerCase().includes(lowerQuery)) ||
-                (a.category && a.category.toLowerCase().includes(lowerQuery))
-            );
-            filteredVideos = allVideos.filter(v =>
-                v.title.toLowerCase().includes(lowerQuery)
-            );
-        }
-
-        if (filteredArticles.length === 0 && filteredVideos.length === 0) {
-            resultsContainer.innerHTML = `
-              <div class="empty-state">
-                 <p style="margin:0; font-size: 16px;">No results found matching <strong>"${query}"</strong></p>
-                 <p style="margin-top:10px; font-size: 14px; opacity: 0.7;">Try adjusting your search terms or ask our AI assistant for help.</p><button style="margin-top: 15px; padding: 10px 20px; border-radius: 8px; background-color: #0066FF; color: white; border: none; cursor: pointer; font-family: Outfit;" onclick="document.getElementById('ohc-help-btn').click()">Ask AI Support Agent</button>
-              </div>
-            `;
-            return;
-        }
-
-        let html = '';
-
-        // Group articles by category
-        if (filteredArticles.length > 0) {
-            const categories = [...new Set(filteredArticles.map(a => a.category || 'General'))];
-
-            categories.forEach(category => {
-                html += `<div class="section-title">${category}</div><div class="grid">`;
-
-                const catArticles = filteredArticles.filter(a => (a.category || 'General') === category);
-                catArticles.forEach(article => {
-                    // Extract article ID from link for Tauri routing
-                    const articleId = article.link.split('/').pop();
-                    html += `
-                      <a href="help_article.html?id=${articleId}" class="card">
-                        <h3>${article.title}</h3>
-                        <p>${article.desc}</p>
-                      </a>
-                    `;
-                });
-                html += `</div>`;
-            });
-        }
-
-        // Videos
-        if (filteredVideos.length > 0) {
-            html += `<div class="section-title">Video Tutorials</div><div class="videos-grid">`;
-            filteredVideos.forEach(v => {
-                html += `
-                  <div class="video-card" onclick="openVideo('${v.video_url}', '${v.title.replace(/'/g, "\\'")}', '${v.duration}')">
-                    <div class="play-btn">
-                      <svg viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"></path></svg>
-                    </div>
-                    <div class="video-info">
-                      <p class="video-title">${v.title}</p>
-                      <p class="video-duration">${v.duration}</p>
-                    </div>
-                  </div>
-                `;
-            });
-            html += `</div>`;
-        }
-
-        html += `
-          <section style="margin-top: 48px; padding-top: 32px; border-top: 1px solid rgba(0,0,0,0.1);">
-            <div style="background: rgba(254, 243, 199, 0.5); border-radius: 16px; padding: 24px; border: 1px solid rgba(253, 230, 138, 0.5); display: flex; flex-direction: column; gap: 16px; align-items: flex-start;">
-              <div style="display: flex; flex-direction: column; gap: 4px;">
-                <h3 style="font-size: 18px; font-weight: bold; color: #78350f; margin: 0;">Advanced Users</h3>
-                <p style="font-size: 14px; color: rgba(146, 64, 14, 0.8); margin: 0;">For users who want to use OHC's APIs directly (e.g., connect a custom checkout).</p>
-              </div>
-              <a href="api-docs.html" style="background: #fef3c7; color: #78350f; padding: 10px 24px; border-radius: 12px; font-weight: 600; text-decoration: none; border: 1px solid rgba(252, 211, 77, 0.5); font-size: 14px;">API Documentation</a>
-            </div>
-          </section>
-        `;
-
-        resultsContainer.innerHTML = html;
-      }
-
-      searchInput.addEventListener('input', (e) => {
-          renderContent(e.target.value);
-      });
-
-      // Video Modal logic
-      window.openVideo = function(url, title, duration) {
-          videoPlayer.src = url;
-          videoModalTitle.innerText = title;
-          videoModalDuration.innerText = duration;
-          videoModal.style.display = 'flex';
-          videoPlayer.play().catch(e => console.warn("Auto-play prevented", e));
-      };
-
-      closeVideoBtn.addEventListener('click', () => {
-          videoPlayer.pause();
-          videoPlayer.src = "";
-          videoModal.style.display = 'none';
-      });
-
-      fetchData();
-    </script>
-  </body>
+</body>
 </html>

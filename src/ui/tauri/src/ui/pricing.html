@@ -276,5 +276,161 @@
         }
       }
     </script>
-  </body>
+  <script>
+
+// Global Help Agent Chat
+document.addEventListener('DOMContentLoaded', () => {
+    if (document.getElementById('ohc-help-btn')) return;
+
+    // Inject chat CSS
+    const style = document.createElement('style');
+    style.textContent = `
+        #ohc-help-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 56px;
+            height: 56px;
+            border-radius: 16px;
+            background: #0066FF;
+            color: white;
+            border: none;
+            box-shadow: 0 4px 14px rgba(0, 102, 255, 0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 9999;
+            transition: transform 0.2s;
+        }
+        #ohc-help-btn:hover { transform: scale(1.05); }
+        #ohc-help-btn svg { width: 28px; height: 28px; fill: none; stroke: currentColor; stroke-width: 2; }
+
+        #ohc-help-chat-overlay {
+            position: fixed;
+            bottom: 90px;
+            right: 20px;
+            width: 350px;
+            height: 500px;
+            max-height: calc(100vh - 120px);
+            max-width: calc(100vw - 40px);
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(30px) saturate(210%);
+            -webkit-backdrop-filter: blur(30px) saturate(210%);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            border-radius: 16px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+            display: none;
+            flex-direction: column;
+            z-index: 9998;
+            overflow: hidden;
+            font-family: "Outfit", sans-serif;
+            transform-origin: bottom right;
+            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        @keyframes popIn {
+            0% { transform: scale(0.5); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        #ohc-help-chat-header { padding: 15px 20px; border-bottom: 1px solid rgba(0, 0, 0, 0.1); display: flex; justify-content: space-between; align-items: center; background: rgba(255, 255, 255, 0.5); }
+        #ohc-help-chat-header h3 { margin: 0; font-size: 16px; color: #1d1d1f; }
+        #ohc-help-close { background: none; border: none; color: #86868b; cursor: pointer; padding: 5px; }
+        #ohc-help-messages { flex-grow: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; }
+        .msg { max-width: 85%; padding: 12px 16px; border-radius: 16px; font-size: 14px; line-height: 1.4; }
+        .msg-user { align-self: flex-end; background: #0066FF; color: white; border-bottom-right-radius: 4px; }
+        .msg-ai { align-self: flex-start; background: rgba(0, 0, 0, 0.05); color: #1d1d1f; border-bottom-left-radius: 4px; }
+        #ohc-help-input-area { padding: 15px; border-top: 1px solid rgba(0, 0, 0, 0.1); display: flex; gap: 10px; background: rgba(255, 255, 255, 0.5); }
+        #ohc-help-input { flex-grow: 1; border: 1px solid #d2d2d7; border-radius: 20px; padding: 10px 15px; font-size: 14px; outline: none; font-family: "Outfit", sans-serif; }
+        #ohc-help-send { background: #0066FF; color: white; border: none; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+        #ohc-help-send svg { width: 16px; height: 16px; fill: currentColor; }
+
+        @media (prefers-color-scheme: dark) {
+            #ohc-help-chat-overlay { background: rgba(30, 30, 30, 0.85); border-color: rgba(255,255,255,0.1); }
+            #ohc-help-chat-header { background: rgba(0,0,0,0.2); }
+            #ohc-help-chat-header h3 { color: #f5f5f7; }
+            .msg-ai { background: rgba(255,255,255,0.1); color: #f5f5f7; }
+            #ohc-help-input-area { background: rgba(0,0,0,0.2); }
+            #ohc-help-input { background: rgba(0,0,0,0.2); color: #f5f5f7; border-color: #444; }
+        }
+    `;
+    document.head.appendChild(style);
+
+    // Inject chat HTML
+    const btn = document.createElement('button');
+    btn.id = 'ohc-help-btn';
+    btn.setAttribute('aria-label', 'Help Chat');
+    btn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>';
+    document.body.appendChild(btn);
+
+    const overlay = document.createElement('div');
+    overlay.id = 'ohc-help-chat-overlay';
+    overlay.innerHTML = `
+        <div id="ohc-help-chat-header">
+            <h3>Ask anything</h3>
+            <button id="ohc-help-close" aria-label="Close help chat">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+        </div>
+        <div id="ohc-help-messages">
+            <div class="msg msg-ai">Hi! I am your AI Help Agent! How can I assist you with OHC today?</div>
+        </div>
+        <div id="ohc-help-input-area">
+            <input type="text" id="ohc-help-input" placeholder="Ask about OHC features..." />
+            <button id="ohc-help-send" aria-label="Send message">
+                <svg viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+            </button>
+        </div>
+    `;
+    document.body.appendChild(overlay);
+
+    const msgs = document.getElementById('ohc-help-messages');
+    const input = document.getElementById('ohc-help-input');
+
+    btn.addEventListener('click', () => {
+        overlay.style.display = overlay.style.display === 'flex' ? 'none' : 'flex';
+        if (overlay.style.display === 'flex') input.focus();
+    });
+
+    document.getElementById('ohc-help-close').addEventListener('click', () => {
+        overlay.style.display = 'none';
+    });
+
+    async function sendMessage() {
+        const text = input.value.trim();
+        if (!text) return;
+
+        input.value = '';
+        msgs.innerHTML += `<div class="msg msg-user">${text}</div>`;
+        msgs.scrollTop = msgs.scrollHeight;
+
+        try {
+            const req = await fetch('/api/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: text, provider: 'help-agent' })
+            });
+            const res = await req.json();
+
+            let replyText = res.response || "I couldn't find an answer. Please check our Help Center.";
+
+            // Link to full article if provided
+            if (res.article_id) {
+                replyText += `<br><br><a href="help_article.html?id=${res.article_id}" style="color: #0066FF; font-weight: bold; text-decoration: none;">Read the full article →</a>`;
+            }
+
+            msgs.innerHTML += `<div class="msg msg-ai">${replyText}</div>`;
+        } catch (e) {
+            msgs.innerHTML += `<div class="msg msg-ai" style="color: red;">Failed to connect.</div>`;
+        }
+        msgs.scrollTop = msgs.scrollHeight;
+    }
+
+    document.getElementById('ohc-help-send').addEventListener('click', sendMessage);
+    input.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') sendMessage();
+    });
+});
+
+</script>
+</body>
 </html>
