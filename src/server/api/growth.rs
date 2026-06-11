@@ -1921,7 +1921,6 @@ async fn handle_cloud_bridge_invite(
 #[cfg(test)]
 mod cloud_bridge_tests {
     use super::*;
-    use axum::http::StatusCode;
     use super::tests::setup_db;
     use crate::hub::Hub;
     use std::sync::Arc;

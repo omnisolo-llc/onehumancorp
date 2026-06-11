@@ -1,10 +1,10 @@
-use serde::{Deserialize, Serialize};
-#[cfg(ohc_bazel)]
 use crate::integrations::mercadopago::client::MercadoPagoClient;
-#[cfg(not(ohc_bazel))]
-use server_integrations_mercadopago::client::MercadoPagoClient;
+use serde::{Deserialize, Serialize};
+use crate::integrations::stripe::payout_batcher::PayoutBatcher;
 
-use super::payout_batcher::PayoutBatcher;
+
+
+
 use super::routing::{PaymentMethod, PaymentRouter};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

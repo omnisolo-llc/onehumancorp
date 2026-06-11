@@ -372,7 +372,6 @@ pub mod services {
     #[cfg(ohc_bazel)]
     pub use ::server_services_b2b as b2b;
     #[cfg(not(ohc_bazel))]
-    pub mod b2b;
     pub mod integration;
     pub mod ops;
     pub mod mcp;

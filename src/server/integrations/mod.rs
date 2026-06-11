@@ -4,7 +4,7 @@ pub mod chat;
 #[cfg(ohc_bazel)]
 pub mod chatwoot;
 #[cfg(not(ohc_bazel))]
-pub use ::server_integrations_chatwoot as chatwoot;
+
 pub mod githubissues;
 pub mod imessage;
 pub mod jira;
