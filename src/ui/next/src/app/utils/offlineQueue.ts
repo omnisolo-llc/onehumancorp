@@ -11,9 +11,6 @@ const DB_VERSION = 1;
 
 function getDB(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
-    if (typeof window === "undefined" || !window.indexedDB) {
-      return reject(new Error("IndexedDB not available"));
-    }
 
     const request = window.indexedDB.open(DB_NAME, DB_VERSION);
 
@@ -39,6 +36,7 @@ function getDB(): Promise<IDBDatabase> {
 }
 
 export async function enqueueAction(action: OfflineAction): Promise<void> {
+  if (typeof window === "undefined" || !window.indexedDB) return;
   try {
     const db = await getDB();
     return new Promise((resolve, reject) => {
@@ -57,6 +55,7 @@ export async function enqueueAction(action: OfflineAction): Promise<void> {
 }
 
 export async function getActions(): Promise<OfflineAction[]> {
+  if (typeof window === "undefined" || !window.indexedDB) return [];
   try {
     const db = await getDB();
     return new Promise((resolve, reject) => {
@@ -78,6 +77,7 @@ export async function getActions(): Promise<OfflineAction[]> {
 }
 
 export async function removeAction(id: string): Promise<void> {
+  if (typeof window === "undefined" || !window.indexedDB) return;
   try {
     const db = await getDB();
     return new Promise((resolve, reject) => {

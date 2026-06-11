@@ -162,17 +162,42 @@ pub async fn handle_omnichannel_webhook(
         return (StatusCode::INTERNAL_SERVER_ERROR, Json(WebhookResponse { success: false, message_id: None })).into_response();
     }
 
-    // 3. Emit Event Mesh Message
+    // 3. Enqueue message_triage job
+    let job_id = Uuid::new_v4().to_string();
     let mut payload_json = serde_json::json!({
+        "message_id": inbox_id,
         "source": channel,
-        "message": message,
-        "original_message": message,
-        "sender_id": sender_id,
-        "inbox_message_id": inbox_id,
+        "content": message,
+        "sender_id": sender_id
     });
 
-    if let Some(c_id) = customer_id {
+    if let Some(c_id) = &customer_id {
         payload_json["customer_id"] = serde_json::json!(c_id);
+    }
+
+    let enqueue_result = match &state.db.store {
+        crate::db::DbStore::Postgres => {
+            sqlx::query("INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload, status) VALUES ($1, $2, 'message_triage', $3, 'PENDING')")
+                .bind(&job_id)
+                .bind(tenant_id)
+                .bind(payload_json.to_string())
+                .execute(&state.db.pool)
+                .await
+                .map(|_| ())
+        },
+        crate::db::DbStore::Sqlite(sqlite_pool) => {
+            sqlx::query("INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload, status) VALUES (?, ?, 'message_triage', ?, 'PENDING')")
+                .bind(&job_id)
+                .bind(tenant_id)
+                .bind(payload_json.to_string())
+                .execute(sqlite_pool)
+                .await
+                .map(|_| ())
+        }
+    };
+
+    if let Err(e) = enqueue_result {
+        tracing::error!("Failed to enqueue message_triage job: {}", e);
     }
 
     let event = crate::orchestration::departments::types::DepartmentEvent {
