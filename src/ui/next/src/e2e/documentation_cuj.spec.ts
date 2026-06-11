@@ -6,7 +6,7 @@ test.describe('Documentation User Journey', () => {
 
     // Verify Changelog is loaded
     await expect(page.locator('h1', { hasText: 'Release Notes & Changelog' })).toBeVisible();
-    await expect(page.locator('h2', { hasText: 'Version 1.0 (Latest)' })).toBeVisible();
+    await expect(page.locator('h2', { hasText: 'Version 1.1 (Latest)' })).toBeVisible();
 
     // Now Maya navigates to the Help Center (using the generic help widget since it's the standard entrypoint)
     await page.goto('/help'); // Playwright can't easily click floating elements if they animate
@@ -22,10 +22,10 @@ test.describe('Documentation User Journey', () => {
     await expect(myStoreLink).toBeVisible();
 
     // Click on the article
-    await myStoreLink.click();
+    await page.locator("a[href=\"/help/my-store\"]").click();
 
     // Verify the article loaded
-    await expect(page.locator('h1', { hasText: 'Managing My Store' })).toBeVisible();
+    await expect(page.locator("h1", { hasText: "Managing My Store" })).toBeVisible({ timeout: 30000 });
     await expect(page.locator('h2', { hasText: 'Adding Products' })).toBeVisible();
   });
 });

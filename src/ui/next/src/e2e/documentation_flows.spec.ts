@@ -14,14 +14,14 @@ test.describe('Documentation Flows', () => {
 
   test('Tooltips load and display properly', async ({ page }) => {
     // Go to a page with the help widget
-    await page.goto('/help');
+    await page.goto('/dashboard');
 
     // Make sure the help button exists
-    const helpBtn = page.getByRole('button', { name: 'Help', exact: true });
+    const helpBtn = page.locator("a[aria-label=\"Help Center\"]");
     await expect(helpBtn).toBeVisible();
 
     // Hover over the help button to trigger the tooltip
-    await helpBtn.hover();
+    await helpBtn.scrollIntoViewIfNeeded(); await helpBtn.hover();
 
     // Verify the tooltip loads with expected content
     // We expect the tooltip to fetch from the API which defaults to "Need help? Click here for guides, videos, and to ask our AI." or the defaultText "Need help? Click here to access our Help Center, Ask AI, Video Tutorials, and Release Notes."

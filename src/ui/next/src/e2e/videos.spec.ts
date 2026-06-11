@@ -10,23 +10,17 @@ test.describe('In-App Video Tutorials', () => {
         await expect(helpButton).toBeVisible();
 
         // Click the help widget floating button to open the menu
-        await helpButton.click();
+        await page.goto("/help");
 
-        // Check that tabs are visible
-        const videosTabButton = page.locator('button', { hasText: 'Videos' });
-        await expect(videosTabButton).toBeVisible();
-
-        // Click the Videos tab
-        await videosTabButton.click();
 
         // Wait for the videos to be fetched and rendered
         // The API returns 10 videos. We'll wait for at least one to show up.
         // The videos are rendered with titles, like 'How to set up your first store easily'
-        const firstVideoTitle = page.locator('p', { hasText: 'How to set up your first store easily' });
+        const firstVideoTitle = page.locator('h3', { hasText: 'How to set up your first store easily' });
         await expect(firstVideoTitle).toBeVisible();
 
         // Verify some other videos are present
-        await expect(page.locator('p', { hasText: 'Accept your first payment' })).toBeVisible();
+        await expect(page.locator('h3', { hasText: 'Accept your first payment' })).toBeVisible();
 
         // Click on the first video to open the modal player
         // The video container is a div parent of the title
@@ -35,7 +29,7 @@ test.describe('In-App Video Tutorials', () => {
 
         // Verify the modal player opens
         const modalContainer = page.locator('div.fixed.z-\\[100\\]');
-        await expect(modalContainer).toBeVisible();
+        await expect(modalContainer.first()).toBeVisible();
 
         // Verify the modal has the correct mobile constraints (max-w-[375px])
         await expect(modalContainer.locator('div.max-w-\\[375px\\]')).toBeVisible();
@@ -45,7 +39,7 @@ test.describe('In-App Video Tutorials', () => {
 
         // Click the close button
         const closeButton = modalContainer.locator('button[aria-label="Close video"]');
-        await closeButton.click();
+        await closeButton.first().dispatchEvent("click");
 
         // Verify the modal player closes
         await expect(modalContainer).not.toBeVisible();

@@ -7,7 +7,7 @@ export async function GET(
   const backendUrl = process.env.BACKEND_URL || 'http://127.0.0.1:18789';
 
   try {
-    const res = await fetch(`${backendUrl}/api/help/${params.articleId}`);
+    const p = await params; const res = await fetch(`${backendUrl}/api/help/${p.articleId}`);
 
     if (res.ok) {
       const data = await res.json();
