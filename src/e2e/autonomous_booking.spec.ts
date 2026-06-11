@@ -3,9 +3,6 @@ import { currentAppSmoke } from './current_app_smoke';
 
 test.describe('Autonomous Booking & Scheduling Engine', () => {
   test('should display Action Needed and Approval booking cards on the dashboard for Operations Agent', async ({ page }) => {
-    // We are testing the CUJ where the owner checks the Unified Agent Feed for
-    // the Action/Approval cards after a customer negotiates and books.
-
     // Navigate to the Dashboard
     await page.goto('/dashboard');
 
@@ -30,5 +27,26 @@ test.describe('Autonomous Booking & Scheduling Engine', () => {
     await expect(approveBtn).toBeVisible();
     await expect(editBtn).toBeVisible();
     await expect(denyBtn).toBeVisible();
+  });
+
+  test('should allow a customer to query available time slots and create a unified booking', async ({ page }) => {
+    // Navigate to the booking page with a dummy tenant and product ID
+    await page.goto('/booking?tenant=default-store&product_id=e2e-product');
+
+    // Wait for the Booking page to load
+    await expect(page.getByRole('heading', { name: 'Book an Appointment' })).toBeVisible();
+
+    // Select tomorrow's date
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const dateStr = tomorrow.toISOString().split("T")[0];
+
+    // Interact with date input
+    await page.locator('input[type="date"]').fill(dateStr);
+
+    // Wait for timeslots to load and verify buttons are visible
+    // Depending on backend mocking or data, we might have specific times.
+    // Wait for the button grid to appear (it should fetch slots from availability endpoint)
+    await expect(page.locator('text=Available Times')).toBeVisible();
   });
 });

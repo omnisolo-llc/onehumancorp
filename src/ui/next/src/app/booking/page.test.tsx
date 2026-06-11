@@ -25,22 +25,44 @@ describe('BookingPage', () => {
     mockUseSearchParams.mockReturnValue(new URLSearchParams(''));
   });
 
-  it('renders the booking form', () => {
+  it('renders the booking form', async () => {
     render(<BookingPage />);
-    expect(screen.getByText('Request a Service')).toBeInTheDocument();
+    await waitFor(() => {
+        expect(screen.getByText('Book an Appointment')).toBeInTheDocument();
+    });
   });
 
   it('submits the form and shows the success screen with OneTapReferral', async () => {
+    (global.fetch as any).mockImplementation((url: string) => {
+        if (url.includes('/availability')) {
+            return Promise.resolve({
+                ok: true,
+                json: async () => ({ available_slots: [{ start_time: '2026-06-06T10:00:00Z', end_time: '2026-06-06T11:00:00Z' }] })
+            });
+        }
+        return Promise.resolve({
+            ok: true,
+            json: async () => ({ success: true })
+        });
+    });
+
     render(<BookingPage />);
+
+    await waitFor(() => {
+        expect(screen.queryByText('Loading slots...')).not.toBeInTheDocument();
+    });
 
     const textarea = screen.getByPlaceholderText(/I have a leaky faucet/i);
     fireEvent.change(textarea, { target: { value: 'Test description' } });
 
-    const submitButton = screen.getByRole('button', { name: /Get a Quote/i });
-    fireEvent.click(submitButton);
+    const slotButton = await screen.findByRole('button', { name: /10:00 AM/i });
+    fireEvent.click(slotButton);
+
+    const submitButtons = screen.getAllByRole('button', { name: /Confirm Booking/i });
+    fireEvent.click(submitButtons[0]);
 
     await waitFor(() => {
-      expect(screen.getByText('Request Sent!')).toBeInTheDocument();
+      expect(screen.getByText('Booking Confirmed!')).toBeInTheDocument();
     });
 
     // Check for the OneTapReferral component
