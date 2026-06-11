@@ -181,6 +181,7 @@ where
         .route("/referrals/tier", get(handle_referral_tier))
         .route("/team-invites/accept", post(handle_team_invite_accept))
         .route("/cloud-bridge/invite", post(handle_cloud_bridge_invite))
+        .route("/embed/widget", get(handle_embed_widget))
         .route("/referrals/generate", post(handle_referral_generate))
         .route("/onboarding-metrics", get(handle_onboarding_metrics))
         .route("/discount_share/generate", post(handle_generate_discount_share))
@@ -2108,4 +2109,70 @@ mod cloud_bridge_tests {
         let recent_events = state.hub.recent_events(10);
         assert!(recent_events.iter().any(|e| e.r#type == "growth.cloud_bridge_invite_created"));
     }
+}
+
+#[derive(Deserialize, Debug)]
+pub struct EmbedWidgetQuery {
+    pub tenant_id: Option<String>,
+    pub r#type: Option<String>,
+    pub theme: Option<String>,
+}
+
+fn escape_html(s: &str) -> String {
+    let mut escaped = String::with_capacity(s.len());
+    for c in s.chars() {
+        match c {
+            '<' => escaped.push_str("&lt;"),
+            '>' => escaped.push_str("&gt;"),
+            '&' => escaped.push_str("&amp;"),
+            '"' => escaped.push_str("&quot;"),
+            '\'' => escaped.push_str("&#x27;"),
+            _ => escaped.push(c),
+        }
+    }
+    escaped
+}
+
+pub async fn handle_embed_widget(
+    axum::extract::Extension(_state): axum::extract::Extension<GrowthState>,
+    axum::extract::Query(query): axum::extract::Query<EmbedWidgetQuery>
+) -> axum::response::Html<String> {
+    let tenant = query.tenant_id.unwrap_or_else(|| "default-tenant".to_string());
+    let w_type = query.r#type.unwrap_or_else(|| "booking".to_string());
+    let theme = query.theme.unwrap_or_else(|| "light".to_string());
+
+    let bg_color = if theme == "dark" { "#1d1d1f" } else { "#ffffff" };
+    let text_color = if theme == "dark" { "#f5f5f7" } else { "#1d1d1f" };
+
+    let escaped_type = escape_html(&w_type);
+    let escaped_tenant = escape_html(&tenant);
+
+    let html = format!(
+        r#"<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body {{ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: {}; color: {}; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; box-sizing: border-box; }}
+    h2 {{ margin: 0 0 10px 0; font-size: 20px; }}
+    p {{ margin: 0 0 20px 0; font-size: 14px; opacity: 0.8; text-align: center; }}
+    button {{ background: #0066FF; color: white; border: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 16px; transition: background 0.2s; }}
+    button:hover {{ background: #0055DD; }}
+  </style>
+</head>
+<body>
+  <h2>Request a {}</h2>
+  <p>Workspace: {}</p>
+  <button id="start-btn" data-type="{}">Start {}</button>
+
+  <script>
+    document.getElementById('start-btn').addEventListener('click', function() {{
+      alert('Demand captured for ' + this.getAttribute('data-type'));
+    }});
+  </script>
+</body>
+</html>"#,
+        bg_color, text_color, escaped_type, escaped_tenant, escaped_type, escaped_type
+    );
+    axum::response::Html(html)
 }
