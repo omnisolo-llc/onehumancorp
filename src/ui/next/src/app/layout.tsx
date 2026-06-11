@@ -7,6 +7,7 @@ import { TooltipProvider } from '../components/TooltipRegistry';
 import { HelpChat } from "../components/HelpChat";
 import { VoiceAssistant } from "../components/VoiceAssistant";
 import { RateLimitWarningProvider } from '../components/RateLimitWarning';
+import { PowerSyncProvider } from "./PowerSyncProvider";
 
 export const metadata: Metadata = {
   title: 'OHC Builder',
@@ -27,12 +28,14 @@ export default function RootLayout({
       <body>
         <RateLimitWarningProvider>
           <TooltipProvider>
+            <PowerSyncProvider>
                     <WalkthroughProvider>
               {children}
               <WalkthroughTarget id="help-widget-container"><HelpWidget /></WalkthroughTarget>
               <HelpChat />
               <VoiceAssistant />
             </WalkthroughProvider>
+            </PowerSyncProvider>
                   </TooltipProvider>
         </RateLimitWarningProvider>
       </body>
