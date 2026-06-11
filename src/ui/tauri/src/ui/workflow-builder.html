@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Visual Workflow Builder</title>
+    <style>
+      body {
+        font-family: "Outfit", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        background-color: #f5f5f7;
+        margin: 0;
+        padding: 40px;
+      }
+      h1 { margin-top: 0; }
+      .container {
+        display: flex;
+        gap: 20px;
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+      .sidebar {
+        width: 250px;
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+      }
+      .canvas {
+        flex: 1;
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        min-height: 500px;
+        position: relative;
+        overflow: hidden;
+      }
+      .block-type {
+        padding: 10px;
+        margin-bottom: 10px;
+        background: #f0f0f0;
+        border-radius: 4px;
+        cursor: grab;
+        border: 1px solid #ddd;
+      }
+      .block-type:hover {
+        background: #e0e0e0;
+      }
+      .node {
+        position: absolute;
+        padding: 15px;
+        background: #0066FF;
+        color: white;
+        border-radius: 8px;
+        cursor: move;
+        min-width: 120px;
+        text-align: center;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        user-select: none;
+        z-index: 10;
+      }
+      .node-endpoint {
+        width: 12px;
+        height: 12px;
+        background: white;
+        border-radius: 50%;
+        position: absolute;
+        border: 2px solid #0066FF;
+        cursor: pointer;
+        z-index: 20;
+      }
+      .node-endpoint:hover {
+        background: #ccc;
+      }
+      .node-endpoint.top {
+        top: -7px;
+        left: calc(50% - 6px);
+      }
+      .node-endpoint.bottom {
+        bottom: -7px;
+        left: calc(50% - 6px);
+      }
+      svg.edges {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        z-index: 1;
+      }
+      path.edge {
+        stroke: #ccc;
+        stroke-width: 3;
+        fill: none;
+        pointer-events: visibleStroke;
+        cursor: pointer;
+      }
+      path.edge:hover {
+        stroke: #ff3b30;
+      }
+      .controls {
+        margin-bottom: 20px;
+      }
+      button {
+        padding: 8px 16px;
+        background: #1d1d1f;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+      button:hover { background: #333; }
+      #result { margin-top: 20px; white-space: pre-wrap; font-family: monospace; background: #eee; padding: 15px; border-radius: 4px; }
+      .prompt-input {
+        width: 90%;
+        margin-top: 10px;
+        padding: 5px;
+        border-radius: 4px;
+        border: 1px solid #ccc;
+        color: #333;
+      }
+      .delete-btn {
+        position: absolute;
+        top: -10px;
+        right: -10px;
+        background: #ff3b30;
+        color: white;
+        border: none;
+        border-radius: 50%;
+        width: 20px;
+        height: 20px;
+        font-size: 12px;
+        cursor: pointer;
+        display: none;
+      }
+      .node:hover .delete-btn {
+        display: block;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Visual Workflow Builder</h1>
+    <a href="dashboard.html" style="display:inline-block; margin-bottom:20px; color:#0066FF; text-decoration:none;">&larr; Back to Dashboard</a>
+
+    <div class="controls">
+      <input type="text" id="workflow-input" placeholder="Input data..." style="padding:8px; width:200px; border-radius:4px; border:1px solid #ccc;" />
+      <button id="run-btn">Run Workflow</button>
+      <button id="clear-btn" style="background:#ff3b30; margin-left:10px;">Clear</button>
+    </div>
+
+    <div class="container">
+      <div class="sidebar" id="palette">
+        <h3>Node Types</h3>
+        <div class="block-type" draggable="true" data-type="Input">Input Node</div>
+        <div class="block-type" draggable="true" data-type="Llm">LLM Processing</div>
+        <div class="block-type" draggable="true" data-type="ParallelFork">Parallel Fork</div>
+        <div class="block-type" draggable="true" data-type="ParallelJoin">Parallel Join</div>
+        <div class="block-type" draggable="true" data-type="Output">Output Node</div>
+        <p style="font-size: 12px; color: #666; margin-top: 20px;">
+          Drag nodes to canvas.<br><br>
+          Click a bottom port, then click a top port on another node to connect.<br><br>
+          Click an edge or a node's 'x' to delete it.
+        </p>
+      </div>
+      <div class="canvas" id="canvas" ondrop="drop(event)" ondragover="allowDrop(event)">
+        <svg class="edges" id="edges-svg"></svg>
+      </div>
+    </div>
+
+    <div id="result"></div>
+
+    <script>
+      let nodes = [];
+      let edges = [];
+      let nextNodeId = 1;
+      let connectingFrom = null;
+      let isDraggingNode = false;
+      let currentDraggingNode = null;
+      let offset = {x: 0, y: 0};
+
+      const canvas = document.getElementById('canvas');
+      const edgesSvg = document.getElementById('edges-svg');
+
+      function allowDrop(ev) {
+        ev.preventDefault();
+      }
+
+      function drop(ev) {
+        ev.preventDefault();
+        const type = ev.dataTransfer.getData("type");
+        if (type) {
+          const rect = canvas.getBoundingClientRect();
+          const x = ev.clientX - rect.left;
+          const y = ev.clientY - rect.top;
+          addNode(type, x, y);
+        }
+      }
+
+      document.querySelectorAll('.block-type').forEach(el => {
+        el.addEventListener('dragstart', (e) => {
+          e.dataTransfer.setData("type", e.target.dataset.type);
+        });
+      });
+
+      function addNode(type, x, y) {
+        const id = 'node_' + nextNodeId++;
+
+        const div = document.createElement('div');
+        div.className = 'node';
+        div.id = id;
+        div.style.left = x + 'px';
+        div.style.top = y + 'px';
+        div.dataset.id = id;
+        div.dataset.type = type;
+
+        let innerHTML = `<strong>${type}</strong>`;
+
+        if (type === 'Llm') {
+           innerHTML += `<br><input type="text" class="prompt-input" placeholder="Prompt template..." value="Process: {{in}}" />`;
+        } else if (type === 'Input') {
+           innerHTML += `<br><span style="font-size:12px">Reads root input</span>`;
+        } else if (type === 'Output') {
+           innerHTML += `<br><span style="font-size:12px">Final Result</span>`;
+        } else if (type === 'ParallelJoin') {
+           innerHTML += `<br><input type="text" class="join-output-key" placeholder="output_key..." value="joined_${id}" style="width: 90%; margin-top: 10px; padding: 5px;" />`;
+        }
+
+        innerHTML += `<button class="delete-btn" onclick="deleteNode('${id}')">X</button>`;
+
+        if (type !== 'Input') {
+           innerHTML += `<div class="node-endpoint top" data-port="in" onclick="handlePortClick('${id}', 'in', event)"></div>`;
+        }
+        if (type !== 'Output') {
+           innerHTML += `<div class="node-endpoint bottom" data-port="out" onclick="handlePortClick('${id}', 'out', event)"></div>`;
+        }
+
+        div.innerHTML = innerHTML;
+
+        setupNodeDrag(div);
+        canvas.appendChild(div);
+
+        nodes.push({ id, type, element: div });
+        drawEdges();
+      }
+
+      window.deleteNode = function(id) {
+        edges = edges.filter(e => e.from !== id && e.to !== id);
+        const el = document.getElementById(id);
+        if (el) el.remove();
+        nodes = nodes.filter(n => n.id !== id);
+        drawEdges();
+      };
+
+      window.handlePortClick = function(id, portType, event) {
+        event.stopPropagation();
+
+        if (portType === 'out') {
+          connectingFrom = id;
+          document.querySelectorAll('.node-endpoint.bottom').forEach(el => el.style.background = 'white');
+          event.target.style.background = '#ffeb3b';
+        } else if (portType === 'in' && connectingFrom && connectingFrom !== id) {
+          if (!edges.some(e => e.from === connectingFrom && e.to === id)) {
+            edges.push({ from: connectingFrom, to: id });
+          }
+          document.querySelectorAll('.node-endpoint.bottom').forEach(el => el.style.background = 'white');
+          connectingFrom = null;
+          drawEdges();
+        }
+      };
+
+      function setupNodeDrag(node) {
+        node.addEventListener('mousedown', (e) => {
+          if (e.target.classList.contains('node-endpoint') || e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON') return;
+          isDraggingNode = true;
+          currentDraggingNode = node;
+          const rect = node.getBoundingClientRect();
+          offset = {
+            x: e.clientX - rect.left,
+            y: e.clientY - rect.top
+          };
+        });
+      }
+
+      document.addEventListener('mousemove', (e) => {
+        if (isDraggingNode && currentDraggingNode) {
+          const canvasRect = canvas.getBoundingClientRect();
+          let x = e.clientX - canvasRect.left - offset.x;
+          let y = e.clientY - canvasRect.top - offset.y;
+
+          x = Math.max(0, Math.min(x, canvasRect.width - currentDraggingNode.offsetWidth));
+          y = Math.max(0, Math.min(y, canvasRect.height - currentDraggingNode.offsetHeight));
+
+          currentDraggingNode.style.left = x + 'px';
+          currentDraggingNode.style.top = y + 'px';
+          drawEdges();
+        }
+      });
+
+      document.addEventListener('mouseup', () => {
+        isDraggingNode = false;
+        currentDraggingNode = null;
+      });
+
+      function drawEdges() {
+        edgesSvg.innerHTML = '';
+        edges.forEach((edge, index) => {
+          const fromNode = document.getElementById(edge.from);
+          const toNode = document.getElementById(edge.to);
+          if (!fromNode || !toNode) return;
+
+          const fromPort = fromNode.querySelector('.node-endpoint.bottom');
+          const toPort = toNode.querySelector('.node-endpoint.top');
+
+          if (!fromPort || !toPort) return;
+
+          const fromRect = fromPort.getBoundingClientRect();
+          const toRect = toPort.getBoundingClientRect();
+          const canvasRect = canvas.getBoundingClientRect();
+
+          const x1 = fromRect.left - canvasRect.left + fromRect.width/2;
+          const y1 = fromRect.top - canvasRect.top + fromRect.height/2;
+          const x2 = toRect.left - canvasRect.left + toRect.width/2;
+          const y2 = toRect.top - canvasRect.top + toRect.height/2;
+
+          const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+          path.setAttribute('class', 'edge');
+          path.setAttribute('d', `M ${x1} ${y1} C ${x1} ${(y1+y2)/2}, ${x2} ${(y1+y2)/2}, ${x2} ${y2}`);
+          path.dataset.index = index;
+
+          path.addEventListener('click', () => {
+             edges.splice(index, 1);
+             drawEdges();
+          });
+
+          edgesSvg.appendChild(path);
+        });
+      }
+
+      document.getElementById('clear-btn').addEventListener('click', () => {
+        document.querySelectorAll('.node').forEach(n => n.remove());
+        nodes = [];
+        edges = [];
+        drawEdges();
+      });
+
+      // Default setup
+      addNode('Input', 350, 50);
+      addNode('Llm', 350, 200);
+      addNode('Output', 350, 350);
+      edges.push({ from: nodes[0].id, to: nodes[1].id });
+      edges.push({ from: nodes[1].id, to: nodes[2].id });
+      drawEdges();
+
+      document.getElementById('run-btn').addEventListener('click', async () => {
+        const inputData = document.getElementById('workflow-input').value || "test_input";
+        const resultEl = document.getElementById('result');
+        resultEl.textContent = "Compiling graph & running workflow...";
+
+        let graphNodes = [];
+
+        nodes.forEach(n => {
+           let nodeObj = { id: n.id };
+           if (n.type === 'Input') {
+               nodeObj.node_type = { Input: { name: "input_var" } };
+           } else if (n.type === 'Output') {
+               nodeObj.node_type = "Output";
+           } else if (n.type === 'Llm') {
+               const prompt = n.element.querySelector('.prompt-input').value;
+               nodeObj.node_type = { Llm: { prompt_template: prompt } };
+           } else if (n.type === 'ParallelFork') {
+               const targets = edges.filter(e => e.from === n.id).map(e => e.to);
+               nodeObj.node_type = { ParallelFork: { targets } };
+           } else if (n.type === 'ParallelJoin') {
+               const state_keys = edges.filter(e => e.to === n.id).map(e => e.from);
+               const output_key = n.element.querySelector('.join-output-key').value || `joined_${n.id}`;
+               nodeObj.node_type = { ParallelJoin: { state_keys, output_key } };
+           }
+           graphNodes.push(nodeObj);
+        });
+
+        let graphEdges = edges.map(e => ({ source: e.from, target: e.to }));
+
+        const payload = {
+          graph: {
+            nodes: graphNodes,
+            edges: graphEdges
+          },
+          inputs: {
+            "input_var": inputData
+          }
+        };
+
+        try {
+          const url = '/api/workflow/run';
+          const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+
+          const data = await response.json();
+          if (data.success) {
+            resultEl.textContent = "Result:\n" + data.result;
+          } else {
+            resultEl.textContent = "Error:\n" + data.error;
+          }
+        } catch (e) {
+          resultEl.textContent = "Request failed:\n" + e.toString();
+        }
+      });
+    </script>
+  </body>
+</html>

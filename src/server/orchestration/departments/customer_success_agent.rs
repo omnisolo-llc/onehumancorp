@@ -33,6 +33,7 @@ impl Department for CustomerSuccessAgent {
         vec![
             "tenant.order.fulfillment_ready".to_string(),
             "tenant.message.received".to_string(),
+            "tenant.omnichannel.message.received".to_string(),
             "agent:customer_success:approved".to_string(),
         ]
     }
@@ -135,7 +136,7 @@ impl Department for CustomerSuccessAgent {
             return Ok(());
         }
 
-        if event.event_type == "tenant.message.received" {
+        if event.event_type == "tenant.message.received" || event.event_type == "tenant.omnichannel.message.received" {
             let message = event.payload.get("original_message")
                 .or_else(|| event.payload.get("message"))
                 .and_then(|v| v.as_str()).unwrap_or("");
@@ -195,6 +196,9 @@ impl Department for CustomerSuccessAgent {
             let inbox_id = event.payload.get("inbox_message_id").and_then(|v| v.as_str()).unwrap_or("");
             if !inbox_id.is_empty() {
                 let _ = self.orchestrator.update_inbox_message_draft(inbox_id, &event.tenant_id, &generated_response).await;
+                if risk == ActionRisk::AutoExecute {
+                    let _ = self.orchestrator.update_inbox_message_status(inbox_id, &event.tenant_id, "auto_replied").await;
+                }
             }
 
             let action_payload = serde_json::json!({
@@ -207,13 +211,26 @@ impl Department for CustomerSuccessAgent {
                 "original_content": message,
             });
 
-            self.orchestrator.execute_action(
+            let approval_req = self.orchestrator.execute_action(
                 DepartmentType::CustomerSuccess,
                 description,
                 event.tenant_id.clone(),
-                risk,
-                action_payload,
-            ).await.map(|_| ())?;
+                risk.clone(),
+                action_payload.clone(),
+            ).await.map_err(|e| e.to_string())?;
+
+            if risk == ActionRisk::AutoExecute {
+                let approved_event = DepartmentEvent {
+                    id: uuid::Uuid::new_v4().to_string(),
+                    tenant_id: event.tenant_id.clone(),
+                    event_type: "agent:customer_success:approved".to_string(),
+                    payload: serde_json::json!({
+                        "original_payload": action_payload,
+                        "approval_id": approval_req.id
+                    }),
+                };
+                let _ = self.orchestrator.dispatch_event(approved_event).await;
+            }
 
             return Ok(());
         }
@@ -258,7 +275,28 @@ impl BaseAgent for CustomerSuccessAgent {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+    use std::sync::Arc;
+    use crate::orchestration::mesh::CentrifugeNode;
+    use ohc_builtin_agent::mesh::transport::InProcessTransport;
 
+    #[tokio::test]
+    async fn test_customer_success_agent_subscribed_events() {
+        if std::env::var("OHC_DATABASE_URL").is_err() {
+            // For environments without DB URL, skip or use memory.
+            return;
+        }
+        let db = Arc::new(crate::db::DB::new().await.unwrap());
+        let transport = Arc::new(InProcessTransport::new());
+        let mesh = Arc::new(CentrifugeNode::new(transport));
+        let orchestrator = Arc::new(DepartmentOrchestrator::new(db, mesh));
+        let agent = CustomerSuccessAgent::new(orchestrator);
+        let events = agent.subscribed_events();
+        assert!(events.contains(&"tenant.message.received".to_string()));
+        assert!(events.contains(&"tenant.omnichannel.message.received".to_string()));
+        assert!(events.contains(&"tenant.order.fulfillment_ready".to_string()));
+        assert!(events.contains(&"agent:customer_success:approved".to_string()));
+    }
 
     #[test]
     fn test_customer_success_agent_struct_exists() {

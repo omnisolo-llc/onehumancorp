@@ -27,12 +27,14 @@ import { PromoterCard } from "./PromoterCard";
 import { ViralLoopPerformanceWidget } from "./ViralLoopPerformanceWidget";
 import { SuccessMilestoneAlert } from "./SuccessMilestoneAlert";
 import AffiliateMarketingWidget from "./AffiliateMarketingWidget";
+import { CartRecoveryWidget } from "./CartRecoveryWidget";
 
 type DashboardMetrics = {
   active_customers: number;
   pending_orders: number;
   total_sales: number;
   total_campaigns_sent?: number;
+  auto_replied?: number;
 };
 
 type Order = {
@@ -68,6 +70,7 @@ const emptyMetrics: DashboardMetrics = {
   pending_orders: 0,
   total_sales: 0,
   total_campaigns_sent: 0,
+  auto_replied: 0,
 };
 
 function tenantId() {
@@ -81,10 +84,16 @@ function money(value: number | undefined) {
 
 function statusTone(status?: string) {
   const normalized = (status || "").toLowerCase();
-  if (["paid", "completed", "shipped", "delivered"].includes(normalized)) return "good";
+  if (["paid", "completed", "shipped", "delivered", "auto_replied"].includes(normalized)) return "good";
   if (["pending", "unfulfilled", "open"].includes(normalized)) return "warn";
   if (["failed", "cancelled", "canceled"].includes(normalized)) return "bad";
   return "neutral";
+}
+
+function formatStatus(status?: string) {
+  const normalized = (status || "").toLowerCase();
+  if (normalized === "auto_replied") return "✨ AI Handled";
+  return status || "Open";
 }
 
 export default function Dashboard() {
@@ -383,6 +392,7 @@ export default function Dashboard() {
       <SuccessMilestoneAlert />
       <ViralLoopPerformanceWidget />
       <div className="mb-6">
+        <div className="mb-4"><CartRecoveryWidget /></div>
         <AffiliateMarketingWidget />
       </div>
 
@@ -741,7 +751,7 @@ export default function Dashboard() {
                     <div className="app-list-title">{message.source || "Unknown source"}</div>
                     <div className="app-list-subtitle">{message.content || "Empty message"}</div>
                   </div>
-                  <span className={`app-badge ${statusTone(message.status)}`}>{message.status || "Open"}</span>
+                  <span className={`app-badge ${statusTone(message.status)}`}>{formatStatus(message.status)}</span>
                 </div>
               ))}
             </div>
@@ -928,15 +938,6 @@ export default function Dashboard() {
               <p className="text-sm text-gray-600 dark:text-gray-400">Create AI campaigns and promo codes for special occasions instantly.</p>
             </Link>
 
-            <Link href="/store-manager" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
-              <div className="flex items-start justify-between mb-4">
-                <div className="w-12 h-12 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🤖</div>
-                <div className="text-blue-600 dark:text-blue-400 font-semibold text-sm bg-blue-50 dark:bg-blue-900/30 px-3 py-1 rounded-full">Assistant</div>
-              </div>
-              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Store Manager AI</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Conversational interface to manage your business operations and inventory.</p>
-            </Link>
-
             <Link href="/cart-recovery" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-orange-50 dark:bg-orange-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🛒</div>
@@ -981,15 +982,6 @@ export default function Dashboard() {
               </div>
               <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Field Ops Route</h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">Offline-first mobile route management for field service workers.</p>
-            </Link>
-
-            <Link href="/chat" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
-              <div className="flex items-start justify-between mb-4">
-                <div className="w-12 h-12 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">💬</div>
-                <div className="text-blue-600 dark:text-blue-400 font-semibold text-sm bg-blue-50 dark:bg-blue-900/30 px-3 py-1 rounded-full">Assistant</div>
-              </div>
-              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Store Manager Chat</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Manage your business directly from a chat interface.</p>
             </Link>
 
             <Link href="/settings" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">

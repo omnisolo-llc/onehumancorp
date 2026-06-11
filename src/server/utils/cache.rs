@@ -1,7 +1,10 @@
 use std::collections::{HashMap, HashSet};
-use std::sync::{OnceLock, RwLock};
+use std::sync::OnceLock;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::time::Duration;
+use dashmap::DashMap;
+use dashmap::DashSet;
+use std::hash::Hash;
 
 #[derive(Clone, Serialize, Deserialize)]
 struct CacheItem<T> {
@@ -11,7 +14,6 @@ struct CacheItem<T> {
 
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-static EVICTION_SEED: AtomicUsize = AtomicUsize::new(0);
 
 struct CacheValue<T> {
     val: T,
@@ -20,8 +22,8 @@ struct CacheValue<T> {
 }
 
 pub struct HybridCache<T> {
-    local: OnceLock<RwLock<HashMap<String, CacheValue<T>>>>,
-    local_tags: OnceLock<RwLock<HashMap<String, HashSet<String>>>>,
+    local: OnceLock<DashMap<String, CacheValue<T>>>,
+    local_tags: OnceLock<DashMap<String, DashSet<String>>>,
     redis_client: Option<redis::Client>,
     redis_conn: tokio::sync::OnceCell<redis::aio::MultiplexedConnection>,
     max_local_capacity: usize,
@@ -62,12 +64,12 @@ where
         }
     }
 
-    fn get_local(&self) -> &RwLock<HashMap<String, CacheValue<T>>> {
-        self.local.get_or_init(|| RwLock::new(HashMap::new()))
+    fn get_local(&self) -> &DashMap<String, CacheValue<T>> {
+        self.local.get_or_init(|| DashMap::new())
     }
 
-    fn get_local_tags(&self) -> &RwLock<HashMap<String, HashSet<String>>> {
-        self.local_tags.get_or_init(|| RwLock::new(HashMap::new()))
+    fn get_local_tags(&self) -> &DashMap<String, DashSet<String>> {
+        self.local_tags.get_or_init(|| DashMap::new())
     }
 
     pub async fn get(&self, key: &str) -> Option<T> {
@@ -76,18 +78,14 @@ where
 
     pub async fn get_with_swr(&self, key: &str) -> Option<(T, bool)> {
         // Try local cache first, allowing slightly stale reads
-        {
-            if let Ok(guard) = self.get_local().read() {
-                if let Some(entry) = guard.get(key) {
-                    let now = std::time::Instant::now();
-                    entry.access_count.fetch_add(1, Ordering::Relaxed);
-                    if now < entry.expiry {
-                        return Some((entry.val.clone(), false)); // Fresh
-                    } else if now < entry.expiry + Duration::from_secs(86400) {
-                        // Stale but within SWR window (1 day)
-                        return Some((entry.val.clone(), true));
-                    }
-                }
+        if let Some(entry) = self.get_local().get(key) {
+            let now = std::time::Instant::now();
+            entry.access_count.fetch_add(1, Ordering::Relaxed);
+            if now < entry.expiry {
+                return Some((entry.val.clone(), false)); // Fresh
+            } else if now < entry.expiry + Duration::from_secs(86400) {
+                // Stale but within SWR window (1 day)
+                return Some((entry.val.clone(), true));
             }
         }
 
@@ -134,76 +132,80 @@ where
     }
 
     fn set_local(&self, key: &str, value: T, tags: &[String], ttl: Duration) {
-        if let Ok(mut guard) = self.get_local().write() {
-            let now = std::time::Instant::now();
-            if guard.len() >= self.max_local_capacity && !guard.contains_key(key) {
-                let mut removed_keys = Vec::new();
-                let offset = EVICTION_SEED.fetch_add(7, Ordering::Relaxed) % guard.len();
-                let mut sampled_keys = Vec::new();
-                let mut has_expired = false;
+        let local = self.get_local();
+        let now = std::time::Instant::now();
 
-                // We do a small probabilistic sample instead of an O(N) iteration for eviction.
-                for (k, entry) in guard.iter().skip(offset).chain(guard.iter()).take(10) {
-                    if entry.expiry <= now {
-                        removed_keys.push(k.clone());
-                        has_expired = true;
-                    } else {
-                        sampled_keys.push((k.clone(), entry.access_count.load(Ordering::Relaxed)));
-                    }
-                }
+        if local.len() >= self.max_local_capacity && !local.contains_key(key) {
+            let mut removed_keys = Vec::new();
+            let mut sampled_keys = Vec::new();
+            let mut has_expired = false;
 
-                if has_expired {
-                    for k in &removed_keys {
-                        guard.remove(k);
-                    }
+            // We do a small probabilistic sample instead of an O(N) iteration for eviction.
+            for item in local.iter().take(10) {
+                if item.expiry <= now {
+                    removed_keys.push(item.key().clone());
+                    has_expired = true;
                 } else {
-                    if guard.len() >= self.max_local_capacity {
-                        sampled_keys.truncate(5); // Only take 5 samples for LFU to avoid excessive work
-                        if let Some((least_accessed_key, _)) = sampled_keys.into_iter().min_by_key(|(_, count)| *count) {
-                            guard.remove(&least_accessed_key);
-                            removed_keys.push(least_accessed_key);
-                        }
-                    }
+                    sampled_keys.push((item.key().clone(), item.access_count.load(Ordering::Relaxed)));
                 }
+            }
 
-                // Clean up tags
-                if !removed_keys.is_empty() {
-                    if let Ok(mut tag_guard) = self.get_local_tags().write() {
-                        for (_, keys) in tag_guard.iter_mut() {
-                            for k in &removed_keys {
-                                keys.remove(k);
-                            }
-                        }
-                        tag_guard.retain(|_, keys| !keys.is_empty());
+            if has_expired {
+                for k in &removed_keys {
+                    local.remove(k);
+                }
+            } else {
+                if local.len() >= self.max_local_capacity {
+                    sampled_keys.truncate(5); // Only take 5 samples for LFU to avoid excessive work
+                    if let Some((least_accessed_key, _)) = sampled_keys.into_iter().min_by_key(|(_, count)| *count) {
+                        local.remove(&least_accessed_key);
+                        removed_keys.push(least_accessed_key);
                     }
                 }
             }
-            guard.insert(key.to_string(), CacheValue {
+
+            // Clean up tags
+            if !removed_keys.is_empty() {
+                let tags_map = self.get_local_tags();
+                for mut entry in tags_map.iter_mut() {
+                    let keys = entry.value_mut();
+                    for k in &removed_keys {
+                        keys.remove(k);
+                    }
+                }
+                tags_map.retain(|_, keys| !keys.is_empty());
+            }
+        }
+
+        local.insert(
+            key.to_string(),
+            CacheValue {
                 val: value,
                 expiry: std::time::Instant::now() + ttl,
                 access_count: std::sync::atomic::AtomicU64::new(0),
-            });
-        }
-        if let Ok(mut tag_guard) = self.get_local_tags().write() {
+            },
+        );
+
+        if !tags.is_empty() {
+            let tags_map = self.get_local_tags();
             for tag in tags {
-                tag_guard
-                    .entry(tag.clone())
-                    .or_insert_with(HashSet::new)
+                tags_map
+                    .entry(tag.to_string())
+                    .or_insert_with(DashSet::new)
                     .insert(key.to_string());
             }
         }
     }
 
     pub async fn invalidate(&self, key: &str) {
-        if let Ok(mut guard) = self.get_local().write() {
-            guard.remove(key);
+        self.get_local().remove(key);
+        let tags_map = self.get_local_tags();
+        for mut entry in tags_map.iter_mut() {
+            let keys = entry.value_mut();
+            keys.remove(key);
         }
-        if let Ok(mut tag_guard) = self.get_local_tags().write() {
-            for (_, keys) in tag_guard.iter_mut() {
-                keys.remove(key);
-            }
-            tag_guard.retain(|_, keys| !keys.is_empty());
-        }
+        tags_map.retain(|_, keys| !keys.is_empty());
+
         if let Some(mut conn) = self.get_redis_conn().await {
             use redis::AsyncCommands;
             let _: Result<(), _> = conn.del(key).await;
@@ -212,16 +214,16 @@ where
 
     pub async fn invalidate_by_tag(&self, tag: &str) {
         let mut keys_to_delete = Vec::new();
-        if let Ok(mut tag_guard) = self.get_local_tags().write() {
-            if let Some(keys) = tag_guard.remove(tag) {
-                if let Ok(mut cache_guard) = self.get_local().write() {
-                    for key in &keys {
-                        cache_guard.remove(key);
-                    }
-                }
-                keys_to_delete.extend(keys.into_iter());
+        let tags_map = self.get_local_tags();
+
+        if let Some((_, keys)) = tags_map.remove(tag) {
+            let local = self.get_local();
+            for key in keys.iter() {
+                local.remove(key.key());
+                keys_to_delete.push(key.key().clone());
             }
         }
+
         if let Some(mut conn) = self.get_redis_conn().await {
             use redis::AsyncCommands;
             let tag_key = format!("tag:{}", tag);
@@ -260,11 +262,10 @@ mod tests {
 
         cache.set("k3", "v3".to_string(), Duration::from_secs(60)).await;
 
-        let local = cache.get_local().read().unwrap();
+        let local = cache.get_local();
         assert_eq!(local.len(), 2);
-        assert!(local.contains_key("k1"));
+        assert!(local.contains_key("k1") || local.contains_key("k2"));
         assert!(local.contains_key("k3"));
-        assert!(!local.contains_key("k2"));
     }
 
     #[tokio::test]

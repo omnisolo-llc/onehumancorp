@@ -117,7 +117,7 @@ impl Actor for ToolActor {
                                         tool_call_id: tc.id.clone(),
                                         content: String::new(),
                                         error: match e {
-                                            ohc_builtin_agent_core::types::ToolError::LlmRecoverable(msg) => msg,
+                                            ohc_builtin_agent_core::types::ToolError::LlmRecoverable(msg) => format!("LLM-Recoverable Error: {}. Please analyze this error, correct your tool arguments, and try again.", msg),
                                             ohc_builtin_agent_core::types::ToolError::UserFixable(msg) => msg,
                                             ohc_builtin_agent_core::types::ToolError::Fatal(msg) => format!("Fatal Error: {}", msg),
                                             ohc_builtin_agent_core::types::ToolError::Transient(msg) => format!("Transient Error: {}", msg),
