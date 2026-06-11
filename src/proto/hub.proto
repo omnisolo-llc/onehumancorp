@@ -1684,6 +1684,10 @@ message CostDashboardResponse {
   string period_end = 7;
   int64 bandwidth_savings = 8;
   int64 network_cost = 9;
+  int64 projected_monthly_cost = 10;
+  int64 compute_cost = 11;
+  double cache_hit_rate = 12;
+  double cost_per_1k_tokens = 13;
 }
 
 message SelectPlanRequest {
