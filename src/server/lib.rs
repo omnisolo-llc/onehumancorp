@@ -3524,16 +3524,18 @@ async fn ui_dashboard_unified_feed_handler(
         let t_bg = tenant_id.clone();
         let cache_key_bg = cache_key.clone();
         tokio::spawn(async move {
-            let (metrics_res, orders_res, messages_res, triage_res, approvals_res, agent_feed_res) = tokio::join!(
+            let (metrics_res, orders_res, messages_res, supply_res, triage_res, approvals_res, agent_feed_res) = tokio::join!(
                 tokio::spawn({ let db = db_bg.clone(); let t = t_bg.clone(); async move { load_ui_dashboard_metrics(&db, &t).await } }),
                 tokio::spawn({ let db = db_bg.clone(); let t = t_bg.clone(); async move { load_ui_orders_from_db(&db, &t).await } }),
                 tokio::spawn({ let db = db_bg.clone(); let t = t_bg.clone(); async move { load_ui_inbox_from_db(&db, &t).await } }),
+                tokio::spawn({ let db = db_bg.clone(); let t = t_bg.clone(); async move { load_ui_supply_from_db(&db, &t).await } }),
                 tokio::spawn({ let db = db_bg.clone(); let t = t_bg.clone(); async move { load_ui_triage_from_db(&db, &t).await } }),
                 tokio::spawn({ let db = db_bg.clone(); let t = t_bg.clone(); async move { load_ui_agent_approvals_from_db(&db, &t).await } }),
                 tokio::spawn({ let db = db_bg.clone(); let t = t_bg.clone(); async move { load_ui_agent_feed_from_db(&db, &t).await } })
             );
 
             let mut orders = orders_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
+            let supply = supply_res.unwrap_or_else(|_| Ok(serde_json::json!({}))).unwrap_or_default();
             let mut inbox = messages_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
             let mut triage = triage_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
             let mut approvals = approvals_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
@@ -3574,6 +3576,7 @@ async fn ui_dashboard_unified_feed_handler(
                 "orders": orders,
                 "inbox": inbox,
                 "triage": triage,
+                "supply": supply,
                 "pending_approvals": approvals,
                 "agent_feed": agent_feed,
             });
