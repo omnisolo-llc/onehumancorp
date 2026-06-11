@@ -21,20 +21,25 @@ impl PromptBuilder {
 
                 // Summarize recent tool errors if any exist near the end of the context
                 let recent_errors = Self::summarize_recent_tool_errors(final_messages);
+                let momentum = Self::summarize_recent_momentum(final_messages);
 
                 let mut reminder_text = format!(
-                    "[System Reminder to combat 'Lost in the Middle' effect: Remember your core objective: {}]{}",
-                    core_objective,
-                    if recent_errors.is_empty() {
-                        String::new()
-                    } else {
-                        format!(" | Recent Tool Errors: {}", recent_errors)
-                    }
+                    "[SYSTEM NOTIFICATION: Context Rot Prevention Anchor]\n\
+                     Remember your core objective: {}\n",
+                    core_objective
                 );
+
+                if !momentum.is_empty() {
+                    reminder_text.push_str(&format!("| {}\n", momentum));
+                }
+
+                if !recent_errors.is_empty() {
+                    reminder_text.push_str(&format!("| Recent Tool Errors: {}\n", recent_errors));
+                }
 
                 if !developer_instructions.is_empty() {
                     reminder_text.push_str(&format!(
-                        "\n\n[Developer Instructions Reminder: {}]",
+                        "\n[Developer Instructions Reminder: {}]",
                         developer_instructions
                     ));
                 }
@@ -54,7 +59,7 @@ impl PromptBuilder {
         }
     }
 
-    fn extract_core_objective(user_instructions: &str) -> String {
+    pub(crate) fn extract_core_objective(user_instructions: &str) -> String {
         let first_paragraph = user_instructions
             .split("\n\n")
             .next()
@@ -67,6 +72,48 @@ impl PromptBuilder {
             format!("{}...", truncated)
         } else {
             first_paragraph.to_string()
+        }
+    }
+
+    fn summarize_recent_momentum(messages: &[Message]) -> String {
+        let mut successes = Vec::new();
+        let mut successful_ids = std::collections::HashSet::new();
+
+        // Step 1: Collect successful tool call IDs from Tool messages
+        for msg in messages.iter().rev().take(10) {
+            if msg.role == crate::types::Role::Tool {
+                for tr in &msg.tool_results {
+                    if tr.error.is_empty() && !tr.content.is_empty() && !tr.content.starts_with("[Observation Masked") {
+                        successful_ids.insert(&tr.tool_call_id);
+                    }
+                }
+            }
+        }
+
+        // Step 2: Find tool names for those IDs from Assistant messages
+        for msg in messages.iter().rev().take(15) {
+            if msg.role == crate::types::Role::Assistant {
+                for tc in msg.tool_calls.iter().rev() {
+                    if successful_ids.contains(&tc.id) {
+                        if !successes.contains(&tc.name) {
+                            successes.push(tc.name.clone());
+                        }
+                    }
+                    if successes.len() >= 3 {
+                        break;
+                    }
+                }
+            }
+            if successes.len() >= 3 {
+                break;
+            }
+        }
+
+        if successes.is_empty() {
+            String::new()
+        } else {
+            successes.reverse();
+            format!("Recent Momentum: {}", successes.join(" -> "))
         }
     }
 
@@ -93,6 +140,49 @@ impl PromptBuilder {
     }
 }
 
+/// Industry Standard: Cascading AGENTS.md loader.
+/// More deeply-nested files take precedence (are loaded first).
+/// Capped at 32 KiB to prevent context explosion.
+pub async fn load_cascading_instructions(start_dir: Option<&std::path::Path>) -> String {
+    let mut contents = Vec::new();
+    let mut current_dir = start_dir
+        .map(|p| p.to_path_buf())
+        .or_else(|| std::env::current_dir().ok());
+
+    let mut max_depth = 50;
+    while let Some(dir) = current_dir {
+        let agents_file = dir.join("AGENTS.md");
+        if let Ok(content) = tokio::fs::read_to_string(&agents_file).await {
+            contents.push(content);
+        }
+        current_dir = dir.parent().map(|p| p.to_path_buf());
+        max_depth -= 1;
+        if max_depth == 0 {
+            break;
+        }
+    }
+
+    let mut combined = String::new();
+    let limit = 32768; // char limit
+
+    for content in contents {
+        if combined.is_empty() {
+            combined.push_str(&content);
+        } else {
+            combined.push_str("\n\n---\n\n");
+            combined.push_str(&content);
+        }
+
+        if combined.chars().count() > limit {
+            let truncated: String = combined.chars().take(limit).collect();
+            combined = format!("{}\n\n[System: AGENTS.md content truncated to 32KiB limit.]", truncated);
+            break;
+        }
+    }
+
+    combined
+}
+
 /// 4. User Instructions (capped at 32 KiB)
 pub struct HierarchicalPromptBuilder {
     server_system_message: String,
@@ -113,52 +203,12 @@ impl HierarchicalPromptBuilder {
             tool_defs.pop(); // Remove trailing newline
         }
 
-        let mut source_name = "User Instructions";
-        let mut user_instr = if cfg.user_instructions.is_empty() {
-            let mut contents = Vec::new();
-            let mut current_dir = std::env::current_dir().ok();
-            while let Some(dir) = current_dir {
-                let agents_file = dir.join("AGENTS.md");
-                if let Ok(content) = std::fs::read_to_string(&agents_file) {
-                    contents.push(content);
-                }
-                current_dir = dir.parent().map(|p| p.to_path_buf());
-            }
+        let mut user_instr = cfg.user_instructions.clone();
+        let limit = 32768;
 
-            let mut combined_agents_md = String::new();
-            let limit = 32768; // char limit
-
-            // Prioritize more deeply nested files.
-            // `contents` has deepest first because we started at current_dir and went up.
-            for content in contents {
-                if combined_agents_md.is_empty() {
-                    combined_agents_md.push_str(&content);
-                } else {
-                    let addition = format!("\n\n{}", content);
-                    combined_agents_md.push_str(&addition);
-                }
-
-                let current_char_count = combined_agents_md.chars().count();
-                if current_char_count > limit {
-                    let truncated: String = combined_agents_md.chars().take(limit).collect();
-                    combined_agents_md = format!("{}\n... [AGENTS.md TRUNCATED TO 32KiB]", truncated);
-                    break;
-                }
-            }
-
-            if !combined_agents_md.is_empty() {
-                source_name = "AGENTS.md";
-            }
-            combined_agents_md
-        } else {
-            source_name = "User Instructions";
-            cfg.user_instructions.clone()
-        };
-
-        let user_instr_char_count = user_instr.chars().count();
-        if source_name == "User Instructions" && user_instr_char_count > 32768 {
-            let truncated: String = user_instr.chars().take(32768).collect();
-            user_instr = format!("{}\n... [{} TRUNCATED TO 32KiB]", truncated, source_name);
+        if user_instr.chars().count() > limit {
+            let truncated: String = user_instr.chars().take(limit).collect();
+            user_instr = format!("{}\n... [User Instructions TRUNCATED TO 32KiB]", truncated);
         }
 
         Self {
@@ -205,6 +255,18 @@ impl HierarchicalPromptBuilder {
             combined_system.push_str(&self.user_instructions);
         }
 
+        // High-Signal Re-injection (System Anchor)
+        // If the system prompt is long, re-inject critical instructions at the end.
+        if combined_system.chars().count() > 4000 {
+            let core_objective = PromptBuilder::extract_core_objective(&self.user_instructions);
+            combined_system.push_str("\n\n[System Anchor: High-Signal Context Re-injection]\n");
+            combined_system.push_str("To maintain focus in this large context, remember your core objective and constraints:\n");
+            combined_system.push_str(&format!("Core Objective: {}\n", core_objective));
+            if !self.developer_instructions.is_empty() {
+                combined_system.push_str(&format!("Developer Instructions: {}\n", self.developer_instructions));
+            }
+        }
+
         // 5. Conversation History (happens at run loop outside this builder)
 
         // Lost in the Middle prevention is handled by `apply_lost_in_the_middle_prevention`
@@ -249,14 +311,13 @@ mod tests {
         // So combined is: grandchild + child + root.
         // Thus, "C"s should all be there, "B"s should all be there, and "A"s will be truncated.
 
-        let original_dir = std::env::current_dir().unwrap();
-        std::env::set_current_dir(&grandchild_dir).unwrap();
-
-        let cfg = AgentRunConfig::default();
-        let builder = HierarchicalPromptBuilder::new(&cfg, &[]);
-        let built = builder.build();
-
-        std::env::set_current_dir(original_dir).unwrap();
+        let built = tokio::runtime::Runtime::new().unwrap().block_on(async {
+            let user_instructions = load_cascading_instructions(Some(&grandchild_dir)).await;
+            let mut cfg = AgentRunConfig::default();
+            cfg.user_instructions = user_instructions;
+            let builder = HierarchicalPromptBuilder::new(&cfg, &[]);
+            builder.build()
+        });
 
         assert!(
             built.contains(&grandchild_content),
@@ -270,16 +331,15 @@ mod tests {
         // Root content should be partially present and truncated.
         assert!(built.contains("AAAA"), "Should contain some of root");
         assert!(
-            built.contains("[AGENTS.md TRUNCATED TO 32KiB]"),
+            built.contains("[System: AGENTS.md content truncated to 32KiB limit.]") ||
+            built.contains("[User Instructions TRUNCATED TO 32KiB]"),
             "Should contain truncation warning"
         );
 
-        // Total size of user instructions part should be around 32,768 + length of the truncation warning message.
-        // Let's just check the length of the string `built`. It includes the headers "[User Instructions]\n".
-        let user_instructions_section_len = built.len() - "[User Instructions]\n".len();
+        // Total size of user instructions part should be bounded.
         assert!(
-            user_instructions_section_len <= 33000,
-            "Output should be bounded to around 32KiB + padding"
+            built.len() <= 35000,
+            "Output should be bounded. Current length: {}", built.len()
         );
     }
 
@@ -294,16 +354,16 @@ mod tests {
         content.push_str("😊");
         fs::write(root_dir.join("AGENTS.md"), &content).unwrap();
 
-        let original_dir = std::env::current_dir().unwrap();
-        std::env::set_current_dir(&root_dir).unwrap();
+        let built = tokio::runtime::Runtime::new().unwrap().block_on(async {
+            let user_instructions = load_cascading_instructions(Some(&root_dir)).await;
+            let mut cfg = AgentRunConfig::default();
+            cfg.user_instructions = user_instructions;
+            let builder = HierarchicalPromptBuilder::new(&cfg, &[]);
+            builder.build()
+        });
 
-        let cfg = AgentRunConfig::default();
-        let builder = HierarchicalPromptBuilder::new(&cfg, &[]);
-        let built = builder.build();
-
-        std::env::set_current_dir(original_dir).unwrap();
-
-        assert!(built.contains("[AGENTS.md TRUNCATED TO 32KiB]"));
+        assert!(built.contains("[System: AGENTS.md content truncated to 32KiB limit.]") ||
+                built.contains("[User Instructions TRUNCATED TO 32KiB]"));
         // The emoji should be stripped because it's past the 32768 limit
         assert!(
             !built.contains("😊"),
@@ -337,7 +397,8 @@ mod tests {
         assert_eq!(messages.len(), 5);
         let last_msg = &messages[4];
         assert_eq!(last_msg.role, Role::User);
-        assert!(last_msg.content.contains("[System Reminder to combat 'Lost in the Middle' effect: Remember your core objective: Build a web server.]"));
+        assert!(last_msg.content.contains("[SYSTEM NOTIFICATION: Context Rot Prevention Anchor]"));
+        assert!(last_msg.content.contains("Remember your core objective: Build a web server."));
         assert!(
             last_msg
                 .content
@@ -360,7 +421,7 @@ mod tests {
         assert!(
             last_msg
                 .content
-                .contains("Recent Tool Errors: There was an error: file not found")
+                .contains("| Recent Tool Errors: There was an error: file not found")
         );
     }
 
@@ -410,5 +471,71 @@ mod tests {
         // 97 logical chars: 'error: ' (7 chars) + 88 'A' + '😊' (1 char) + 'B' (1 char)
         let expected = "error: ".to_string() + &"A".repeat(88) + "😊B...";
         assert_eq!(summary, expected);
+    }
+
+    #[test]
+    fn test_high_signal_reinjection_trigger() {
+        let mut cfg = AgentRunConfig::default();
+        cfg.user_instructions = "Objective: Build a skyscraper.".repeat(200); // ~6000 chars
+        cfg.developer_instructions = "Use steel beams.".repeat(50); // ~800 chars
+        // Total will be > 4000 chars
+
+        let tools = vec![];
+        let builder = HierarchicalPromptBuilder::new(&cfg, &tools);
+        let built = builder.build();
+
+        assert!(built.contains("[System Anchor: High-Signal Context Re-injection]"));
+        assert!(built.contains("Core Objective: Objective: Build a skyscraper."));
+        assert!(built.contains("Developer Instructions: Use steel beams."));
+    }
+
+    #[test]
+    fn test_summarize_recent_momentum() {
+        use crate::types::{ToolCall, ToolResult};
+
+        let messages = vec![
+            Message {
+                role: Role::Assistant,
+                content: "Calling tools".to_string(),
+                tool_calls: vec![
+                    ToolCall { id: "c1".to_string(), name: "read_file".to_string(), arguments: serde_json::json!({}) },
+                    ToolCall { id: "c2".to_string(), name: "ls".to_string(), arguments: serde_json::json!({}) },
+                ],
+                tool_results: vec![],
+                response_id: None,
+                previous_response_id: None,
+            },
+            Message {
+                role: Role::Tool,
+                content: "".to_string(),
+                tool_calls: vec![],
+                tool_results: vec![
+                    ToolResult { tool_call_id: "c1".to_string(), content: "file content".to_string(), error: "".to_string() },
+                    ToolResult { tool_call_id: "c2".to_string(), content: "dir list".to_string(), error: "".to_string() },
+                ],
+                response_id: None,
+                previous_response_id: None,
+            },
+        ];
+
+        let momentum = PromptBuilder::summarize_recent_momentum(&messages);
+        assert_eq!(momentum, "Recent Momentum: read_file -> ls");
+    }
+
+    #[tokio::test]
+    async fn test_load_cascading_instructions_precedence() {
+        let dir = tempdir().unwrap();
+        let root_dir = dir.path().join("root");
+        let child_dir = root_dir.join("child");
+        fs::create_dir_all(&child_dir).unwrap();
+
+        fs::write(root_dir.join("AGENTS.md"), "Root Rule").unwrap();
+        fs::write(child_dir.join("AGENTS.md"), "Child Rule").unwrap();
+
+        let combined = load_cascading_instructions(Some(&child_dir)).await;
+
+        // More deeply nested (Child) should come first in the vec, thus first in combined string
+        assert!(combined.starts_with("Child Rule"));
+        assert!(combined.contains("Root Rule"));
     }
 }
