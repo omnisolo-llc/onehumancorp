@@ -224,7 +224,7 @@ test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
     try {
         await expect(successHeading).toBeVisible({ timeout: 15000 });
     } catch {
-        await expect(errorHeading).toBeVisible({ timeout: 15000 });
+        await expect(page.getByText(/Failed to launch|Failed to fetch/i).first()).toBeVisible({ timeout: 15000 });
     }
   });
 

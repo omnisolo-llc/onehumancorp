@@ -39,6 +39,8 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
               const currentState = stateStr ? JSON.parse(stateStr) : {};
               sessionStorage.setItem('mockState', JSON.stringify({ ...currentState, ...args.state }));
               return null;
+            } else if (cmd === 'start_onboarding') {
+              return null;
             }
             throw new Error(`Unhandled command: ${cmd}`);
           }
