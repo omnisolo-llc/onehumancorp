@@ -276,7 +276,7 @@ export default function CostDashboardPage() {
                             ))}
                         </ul>
                     ) : (
-                        <p className="text-sm text-gray-500">No agent cost data available.</p>
+                        <p className="text-sm text-gray-500">No agent cost data available. Your active agents will appear here once they complete tasks.</p>
                     )}
                 </div>
 

@@ -30,17 +30,14 @@ impl PromptCache {
     }
 
     pub fn get(&self, prompt: &str) -> Option<CachedResponse> {
-        let entry = self.cache.get(prompt);
-        if let Some(entry_ref) = entry {
+        let mut entry = self.cache.get_mut(prompt);
+        if let Some(mut entry_ref) = entry {
             if entry_ref.created_at.elapsed() <= entry_ref.ttl {
                 // Update access time for LRU-like eviction
-                // DashMap doesn't easily support mutable iteration without locking.
-                // We'll update created_at as an access time surrogate if we needed strict LRU,
-                // but since it has TTL, we just return it. True LRU eviction will sort by created_at.
+                entry_ref.created_at = Instant::now();
                 return Some(entry_ref.clone());
             }
             drop(entry_ref);
-            // Remove expired entry atomically
             self.cache.remove_if(prompt, |_, v| v.created_at.elapsed() > v.ttl);
         }
         None
