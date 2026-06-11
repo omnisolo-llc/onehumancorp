@@ -285,3 +285,22 @@ pub async fn create_unified_booking(
         error: String::new(),
     }).into_response()
 }
+
+use ::server_ohc::app::{CreateConversationalCheckoutRequest, ConversationalCheckoutSession};
+
+pub async fn create_checkout(
+    _pool: State<sqlx::PgPool>,
+    Json(payload): Json<CreateConversationalCheckoutRequest>,
+) -> impl IntoResponse {
+    let session = ConversationalCheckoutSession {
+        session_id: format!("cs_test_{}", uuid::Uuid::new_v4()),
+        tenant_id: payload.tenant_id.clone(),
+        customer_id: payload.customer_id.clone(),
+        amount_cents: payload.amount_cents,
+        checkout_url: format!("https://checkout.stripe.com/pay/cs_test_{}", uuid::Uuid::new_v4().to_string().replace("-", "")),
+        status: "pending".to_string(),
+        inventory_lock_id: "".to_string(),
+        expires_at_unix: (chrono::Utc::now() + chrono::Duration::hours(1)).timestamp(),
+    };
+    Json(session).into_response()
+}

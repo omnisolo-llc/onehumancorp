@@ -5091,6 +5091,7 @@ async fn create_ui_bom_item_handler(
         .route("/api/v1/booking/resources", axum::routing::post(api::booking::unified::get_resources).with_state(db.pool.clone()))
         .route("/api/v1/booking/services", axum::routing::post(api::booking::unified::get_services).with_state(db.pool.clone()))
         .route("/api/v1/booking/create_unified", axum::routing::post(api::booking::unified::create_unified_booking).with_state(db.pool.clone()))
+        .route("/api/v1/booking/checkout", axum::routing::post(api::booking::unified::create_checkout).with_state(db.pool.clone()))
         .nest("/api/agents/mission", api::agents::mission::handoff::router(std::sync::Arc::new(crate::sip::SipDB::new(db.pool.clone(), "default".to_string()))))
         .route("/api/telemetry/sync", axum::routing::post(api::telemetry::sync_telemetry_handler))
         .route("/api/v1/chaos/report", axum::routing::get(api::chaos::get_chaos_report_handler).with_state(db.pool.clone()))

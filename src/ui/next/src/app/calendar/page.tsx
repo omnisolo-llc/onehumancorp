@@ -41,7 +41,18 @@ export default function CalendarPage() {
       });
   }, []);
 
-  const [aiActivity, setAiActivity] = useState<any[]>([]);
+  const [aiActivity, setAiActivity] = useState<any[]>([
+    {
+      id: "1",
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      action: "Agent tentatively booked a roof repair estimate for Sarah on Tuesday 2 PM. Pending $50 deposit. No action needed."
+    },
+    {
+      id: "2",
+      time: "2 hours ago",
+      action: "Mark requested to reschedule his 4 PM lesson to 5 PM today. You have a conflict. Suggest tomorrow at 4 PM?"
+    }
+  ]);
 
   const [aiEnabled, setAiEnabled] = useState(true);
 
@@ -132,7 +143,14 @@ export default function CalendarPage() {
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-xs font-semibold text-gray-500">{activity.time}</span>
                     </div>
-                    <p className="text-sm text-gray-800">{activity.action}</p>
+                    <p className="text-sm text-gray-800 mb-3">{activity.action}</p>
+                    {activity.action.includes("conflict") && (
+                      <div className="flex gap-2">
+                         <button className="px-3 py-1.5 text-xs font-bold rounded bg-blue-600 text-white hover:bg-blue-700 transition">Approve</button>
+                         <button className="px-3 py-1.5 text-xs font-bold rounded bg-gray-200 text-gray-700 hover:bg-gray-300 transition">Edit</button>
+                         <button className="px-3 py-1.5 text-xs font-bold rounded bg-red-100 text-red-700 hover:bg-red-200 transition">Deny</button>
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}

@@ -23,11 +23,11 @@ CREATE TABLE IF NOT EXISTS calendar_integrations (
 -- RLS
 ALTER TABLE availability_schedules ENABLE ROW LEVEL SECURITY;
 CREATE POLICY availability_schedules_tenant_isolation ON availability_schedules
-    USING (tenant_id = current_setting('app.current_tenant_id', true));
+    USING (tenant_id = current_setting('app.current_tenant', true));
 
 ALTER TABLE calendar_integrations ENABLE ROW LEVEL SECURITY;
 CREATE POLICY calendar_integrations_tenant_isolation ON calendar_integrations
-    USING (tenant_id = current_setting('app.current_tenant_id', true));
+    USING (tenant_id = current_setting('app.current_tenant', true));
 
 -- Add payment_intent_id to bookings table if it doesn't exist
 DO $$
