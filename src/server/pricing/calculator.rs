@@ -381,6 +381,16 @@ mod tests {
         assert_eq!(calculate_projected_monthly_cost(10.0, 0, 30), 0.0);
         assert_eq!(calculate_projected_monthly_cost(10.0, 30, 30), 10.0);
         assert_eq!(calculate_projected_monthly_cost(15.5, 10, 31), 48.05);
+        assert_eq!(calculate_projected_monthly_cost(10.0, 5, 0), 0.0);
+    }
+
+    #[test]
+    fn test_calculate_projected_monthly_cost_cents() {
+        assert_eq!(calculate_projected_monthly_cost_cents(10.0, 5, 30), 6000);
+        assert_eq!(calculate_projected_monthly_cost_cents(10.0, 0, 30), 0);
+        assert_eq!(calculate_projected_monthly_cost_cents(10.0, 30, 30), 1000);
+        assert_eq!(calculate_projected_monthly_cost_cents(15.5, 10, 31), 4805);
+        assert_eq!(calculate_projected_monthly_cost_cents(10.0, 5, 0), 0);
     }
 
     #[test]
@@ -391,5 +401,6 @@ mod tests {
         assert_eq!(calculate_heuristic_token_efficiency(100_000, 50_000, "gpt-4o"), 0.25);
         assert_eq!(calculate_heuristic_token_efficiency(10_000, 10_000, "gpt-4o"), 0.0);
         assert_eq!(calculate_heuristic_token_efficiency(10_000, 20_000, "gpt-4o"), 0.0);
+        assert_eq!(calculate_heuristic_token_efficiency(-10_000, 0, "gpt-4o"), 0.0);
     }
 }
