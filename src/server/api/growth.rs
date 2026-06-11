@@ -1098,14 +1098,15 @@ async fn handle_get_milestone_card(
         "10th_order" => ("10th Order!", "Business is booming", "📈", "#ff9a9e", "#fecfef"),
         "100_visitors" => ("100 Visitors!", "Traffic is soaring", "🚀", "#a1c4fd", "#c2e9fb"),
         "5_referrals" => ("High Connector!", "Referred 5 businesses", "🤝", "#f6d365", "#fda085"),
-        "revenue_1k" => ("Four-Figure Club", "Revenue > $1,000", "💰", "#84fab0", "#8fd3f4"),
+        "revenue_1k" => ("Four-Figure Club", "Crossed $1k in Revenue!", "💰", "#f43f5e", "#fb923c"),
         "100_orders" => ("Century of Orders", "100 sales fulfilled", "📦", "#ffecd2", "#fcb69f"),
         _ => ("Success Milestone!", "Built with OHC", "✨", "#667eea", "#764ba2"),
     };
 
     let branding = if !has_pro {
         format!(r##"<a href="/api/v1/growth/referrals/click?target=/onboarding&ref={}" target="_blank">
-    <text x="1100" y="590" font-family="sans-serif" font-size="24" font-weight="bold" text-anchor="end" fill="#ffffff" opacity="0.8">⚡ Powered by OHC</text>
+    <text x="1100" y="580" font-family="sans-serif" font-size="24" font-weight="bold" text-anchor="end" fill="#ffffff" opacity="0.8">⚡ Powered by OHC</text>
+    <text x="1100" y="605" font-family="sans-serif" font-size="18" font-weight="medium" text-anchor="end" fill="#ffffff" opacity="0.7">Join OHC & get 14 days of Pro free</text>
   </a>"##, tenant_id)
     } else {
         "".to_string()
