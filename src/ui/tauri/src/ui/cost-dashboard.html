@@ -182,6 +182,14 @@
                   <div class="stat-title">Total Costs</div>
                   <div class="stat-value" id="total-costs" style="font-size: 20px;">$0.00</div>
                </div>
+               <div class="metric-box">
+                  <div class="stat-title">Projected Monthly Cost</div>
+                  <div class="stat-value" id="projected-monthly-cost" style="color: #0066FF; font-size: 20px;">$0.00</div>
+               </div>
+            </div>
+
+            <div id="budget-health-alert" style="display:none; color: #FF3B30; margin-top: 16px; padding: 12px; background: rgba(255, 59, 48, 0.1); border-radius: 8px; font-weight: 500;">
+              ⚠️ Budget Health Warning: Your projected monthly cost is exceeding your typical baseline. Consider reviewing your agent usage.
             </div>
 
             <div style="margin-top: 24px; font-weight: 600; margin-bottom: 12px;">Cost Breakdown</div>
@@ -272,6 +280,12 @@
                 const costData = await costRes.json();
                 document.getElementById('total-revenue').innerText = formatCents(costData.total_revenue || 0);
                 document.getElementById('total-costs').innerText = formatCents(costData.total_costs || 0);
+                document.getElementById('projected-monthly-cost').innerText = formatCents(costData.projected_monthly_cost || 0);
+
+                if (costData.projected_monthly_cost > 10000) {
+                    document.getElementById('budget-health-alert').style.display = 'block';
+                }
+
                 document.getElementById('llm-cost').innerText = formatCents(costData.llm_cost || 0);
                 document.getElementById('storage-cost').innerText = formatCents(costData.storage_cost || 0);
                 document.getElementById('network-cost').innerText = formatCents(costData.network_cost || 0);

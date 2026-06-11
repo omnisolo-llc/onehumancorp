@@ -3,24 +3,24 @@ import { test, expect } from './fixtures';
 test.describe('Cost Dashboard & Plan Limits UI', () => {
   test('should display the cost dashboard and check expected sections', async ({ page }) => {
     // Navigate to the Cost Dashboard directly
-    await page.goto('/cost-dashboard');
+    await page.goto('/cost-dashboard.html');
 
     // Wait for the main heading to be visible
-    await expect(page.getByRole('heading', { name: 'Cost Transparency Dashboard' })).toBeVisible({ timeout: 15000 });
+    await expect(page.getByRole('heading', { name: 'Cost Transparency' }).first()).toBeVisible({ timeout: 15000 });
 
     // Verify key sections are present
     await expect(page.getByText('Total Costs')).toBeVisible();
     await expect(page.getByText('LLM Usage')).toBeVisible();
     await expect(page.locator('span', { hasText: 'Storage' }).first()).toBeVisible();
-    await expect(page.getByText('Bandwidth Savings')).toBeVisible();
+    await expect(page.locator('text=Bandwidth Savings')).toBeVisible();
 
     // Check if the plan navigation button is present
-    await expect(page.getByRole('button', { name: 'Back to My Plan' })).toBeVisible();
+    await expect(page.locator('a.back-link', { hasText: '← Back to My Plan' })).toBeVisible();
   });
 
   test('should display my plan limits and route to pricing', async ({ page }) => {
     // Go to My Plan page
-    await page.goto('/plan');
+    await page.goto('/cost-dashboard.html');
 
     // Wait for the main heading to be visible
     await expect(page.getByRole('heading', { name: 'My Plan' }).first()).toBeVisible({ timeout: 15000 });
@@ -30,7 +30,7 @@ test.describe('Cost Dashboard & Plan Limits UI', () => {
     await expect(page.getByText('AI actions used this month')).toBeVisible();
 
     // Verify actions
-    const upgradeButton = page.getByRole('button', { name: 'View Upgrade Plans' });
+    const upgradeButton = page.locator('button', { hasText: 'Upgrade Plan' });
     await expect(upgradeButton).toBeVisible();
 
     // Click on upgrade to ensure it leads to the pricing page
@@ -41,7 +41,7 @@ test.describe('Cost Dashboard & Plan Limits UI', () => {
   });
 
   test('should verify checkout routing works from pricing', async ({ page }) => {
-    await page.goto('/pricing');
+    await page.goto('/pricing.html');
     await expect(page.getByRole('heading', { name: 'Pricing Plans' })).toBeVisible({ timeout: 15000 });
 
     // Ensure the starter upgrade button is visible

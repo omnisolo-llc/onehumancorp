@@ -7,7 +7,7 @@ test.describe('Cost Dashboard "My Plan" functionality', () => {
     await page.goto('/dashboard.html');
     await page.waitForLoadState('networkidle');
 
-    await page.goto('/cost-dashboard');
+    await page.goto('/cost-dashboard.html');
     await page.waitForLoadState('networkidle');
 
     // 3. Check for My Plan components
@@ -17,15 +17,15 @@ test.describe('Cost Dashboard "My Plan" functionality', () => {
     await expect(page.locator('div.stat-title:has-text("AI actions used this month")').first()).toBeVisible();
     await expect(page.locator('div.stat-title:has-text("Storage used")').first()).toBeVisible();
     await expect(page.locator('div.stat-title:has-text("Estimated Next Bill")').first()).toBeVisible();
-    await expect(page.locator('button:has-text("Upgrade")').first()).toBeVisible();
+    await expect(page.locator('button:has-text("Upgrade Plan")').first()).toBeVisible();
 
     // The tenant `e2e-tenant` seeded in DB may have a Starter plan limit, so we won't strictly enforce / Unlimited here.
     // The component test covers the unlimited logic explicitly.
     // Just ensure the page renders correctly and the user can navigate to pricing.
 
     // 4. Click Upgrade
-    await page.locator('button:has-text("Upgrade")').click();
-    await expect(page).toHaveURL(/.*\/pricing/);
+    await page.locator('button:has-text("Upgrade Plan")').click();
+    await expect(page).toHaveURL(/.*\/pricing.html/);
   });
 
   test('Cost Dashboard renders limits correctly for Pro tenants', async ({ unlimitedAdminUser, loginAs, browser }) => {
@@ -81,7 +81,7 @@ test.describe('Cost Dashboard "My Plan" functionality', () => {
 
   test('Cost Dashboard renders the cost transparency section completely', async ({ page, adminUser, loginAs }) => {
     await loginAs(page, adminUser);
-    await page.goto('/cost-dashboard');
+    await page.goto('/cost-dashboard.html');
     await page.waitForLoadState('networkidle');
 
     // Verify Cost Transparency headers and text
@@ -122,7 +122,7 @@ test.describe('Cost Dashboard "My Plan" functionality', () => {
     await expect(page).toHaveURL(/.*checkout.stripe.com.*/);
 
     // Now go to the My Plan page
-    await page.goto('/cost-dashboard');
+    await page.goto('/cost-dashboard.html');
     await page.waitForLoadState('networkidle');
   });
 });
