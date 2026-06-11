@@ -1073,6 +1073,25 @@ impl DB {
                         last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                     );
                     CREATE INDEX IF NOT EXISTS idx_loyalty_ledger_tenant_customer ON loyalty_ledger(tenant_id, customer_id);
+                    CREATE TABLE IF NOT EXISTS loyalty_wallet (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        customer_id TEXT NOT NULL,
+                        points_balance INTEGER DEFAULT 0,
+                        tier_name TEXT,
+                        last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        UNIQUE(tenant_id, customer_id)
+                    );
+                    CREATE INDEX IF NOT EXISTS idx_loyalty_wallet_tenant_customer ON loyalty_wallet(tenant_id, customer_id);
+                    CREATE TABLE IF NOT EXISTS reward_ledger (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        customer_id TEXT NOT NULL,
+                        points_change INTEGER NOT NULL,
+                        reason TEXT NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+                    CREATE INDEX IF NOT EXISTS idx_reward_ledger_tenant_customer ON reward_ledger(tenant_id, customer_id);
 "#;
                 sqlx::query(schema).execute(sqlite_pool).await?;
             }

@@ -459,12 +459,193 @@ pub async fn stripe_webhook_handler(
                 }
             }
 
+            if payload.r#type == "payment_intent.succeeded" {
+                let customer_id_opt = obj.get("customer").and_then(|c| c.as_str())
+                    .or_else(|| obj.get("metadata").and_then(|m| m.get("customer_id")).and_then(|id| id.as_str()));
+
+                let tenant_id_opt = obj.get("metadata").and_then(|m| m.get("tenant_id")).and_then(|id| id.as_str());
+
+                if let (Some(customer_id), Some(tenant_id)) = (customer_id_opt, tenant_id_opt) {
+                    let amount = obj.get("amount").and_then(|a| a.as_i64()).unwrap_or(0);
+                    let points_earned = (amount / 100) as i32; // Assuming amount is in cents, 1 point per $1
+
+                    if points_earned > 0 {
+                        let event_id = obj.get("id").and_then(|id| id.as_str()).map(|s| s.to_string()).unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
+                        match &webhook_state.db.store {
+                            crate::db::DbStore::Sqlite(pool) => {
+                                if let Err(e) = sqlx::query("INSERT INTO loyalty_wallet (id, tenant_id, customer_id, points_balance, last_updated) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP) ON CONFLICT (tenant_id, customer_id) DO UPDATE SET points_balance = loyalty_wallet.points_balance + EXCLUDED.points_balance, last_updated = CURRENT_TIMESTAMP")
+                                    .bind(uuid::Uuid::new_v4().to_string())
+                                    .bind(tenant_id)
+                                    .bind(customer_id)
+                                    .bind(points_earned)
+                                    .execute(pool)
+                                    .await { tracing::error!("Failed to update loyalty_wallet: {}", e); }
+
+                                if let Err(e) = sqlx::query("INSERT INTO reward_ledger (id, tenant_id, customer_id, points_change, reason, created_at) VALUES (?, ?, ?, ?, 'payment_intent.succeeded', CURRENT_TIMESTAMP) ON CONFLICT (id) DO NOTHING")
+                                    .bind(&event_id) // Idempotency
+                                    .bind(tenant_id)
+                                    .bind(customer_id)
+                                    .bind(points_earned)
+                                    .execute(pool)
+                                    .await { tracing::error!("Failed to update reward_ledger: {}", e); return StatusCode::OK.into_response(); }
+
+                                let points_balance: i32 = sqlx::query_scalar("SELECT points_balance FROM loyalty_wallet WHERE tenant_id = ? AND customer_id = ?")
+                                    .bind(tenant_id).bind(customer_id).fetch_one(pool)
+                                    .await.unwrap_or(0);
+
+                                if points_balance >= 100 && (points_balance - points_earned) < 100 { // Only trigger when crossing the threshold
+                                    let payload_json = serde_json::json!({
+                                        "customer_id": customer_id,
+                                        "points_balance": points_balance,
+                                        "reward_earned": "20% off next purchase"
+                                    });
+                                    if let Err(e) = sqlx::query("INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at) VALUES (?, ?, 'loyalty', ?, ?, 'PENDING_APPROVAL', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
+                                        .bind(uuid::Uuid::new_v4().to_string())
+                                        .bind(tenant_id)
+                                        .bind(payload_json.to_string())
+                                        .bind("{}")
+                                        .execute(pool)
+                                        .await { tracing::error!("Failed to create agent feed item: {}", e); }
+                                }
+                            }
+                            crate::db::DbStore::Postgres => {
+                                if let Err(e) = sqlx::query("INSERT INTO loyalty_wallet (id, tenant_id, customer_id, points_balance, last_updated) VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP) ON CONFLICT (tenant_id, customer_id) DO UPDATE SET points_balance = loyalty_wallet.points_balance + EXCLUDED.points_balance, last_updated = CURRENT_TIMESTAMP")
+                                    .bind(uuid::Uuid::new_v4().to_string())
+                                    .bind(tenant_id)
+                                    .bind(customer_id)
+                                    .bind(points_earned)
+                                    .execute(&webhook_state.db.pool)
+                                    .await { tracing::error!("Failed to update loyalty_wallet: {}", e); }
+
+                                if let Err(e) = sqlx::query("INSERT INTO reward_ledger (id, tenant_id, customer_id, points_change, reason, created_at) VALUES ($1, $2, $3, $4, 'payment_intent.succeeded', CURRENT_TIMESTAMP) ON CONFLICT (id) DO NOTHING")
+                                    .bind(&event_id) // Idempotency
+                                    .bind(tenant_id)
+                                    .bind(customer_id)
+                                    .bind(points_earned)
+                                    .execute(&webhook_state.db.pool)
+                                    .await { tracing::error!("Failed to update reward_ledger: {}", e); return StatusCode::OK.into_response(); }
+
+                                let points_balance: i32 = sqlx::query_scalar("SELECT points_balance FROM loyalty_wallet WHERE tenant_id = $1 AND customer_id = $2")
+                                    .bind(tenant_id).bind(customer_id).fetch_one(&webhook_state.db.pool)
+                                    .await.unwrap_or(0);
+
+                                if points_balance >= 100 && (points_balance - points_earned) < 100 { // Only trigger when crossing the threshold
+                                    let payload_json = serde_json::json!({
+                                        "customer_id": customer_id,
+                                        "points_balance": points_balance,
+                                        "reward_earned": "20% off next purchase"
+                                    });
+                                    if let Err(e) = sqlx::query("INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at) VALUES ($1, $2, 'loyalty', $3::jsonb, $4::jsonb, 'PENDING_APPROVAL', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
+                                        .bind(uuid::Uuid::new_v4().to_string())
+                                        .bind(tenant_id)
+                                        .bind(payload_json.to_string())
+                                        .bind("{}")
+                                        .execute(&webhook_state.db.pool)
+                                        .await { tracing::error!("Failed to create agent feed item: {}", e); }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
             StatusCode::OK.into_response()
         },
         "checkout.session.completed" | "customer.subscription.updated" => {
             let obj = &payload.data.object;
             if payload.r#type == "checkout.session.completed" {
                 release_inventory_locks_for_payment(&webhook_state, obj).await;
+
+                // Handle loyalty points for checkout.session.completed
+                let customer_id_opt = obj.get("customer").and_then(|c| c.as_str())
+                    .or_else(|| obj.get("customer_details").and_then(|cd| cd.get("email")).and_then(|e| e.as_str()))
+                    .or_else(|| obj.get("metadata").and_then(|m| m.get("customer_id")).and_then(|id| id.as_str()));
+
+                let tenant_id_opt = obj.get("metadata").and_then(|m| m.get("tenant_id")).and_then(|id| id.as_str())
+                    .or_else(|| obj.get("client_reference_id").and_then(|id| id.as_str()));
+
+                if let (Some(customer_id), Some(tenant_id)) = (customer_id_opt, tenant_id_opt) {
+                    let amount = obj.get("amount_total").and_then(|a| a.as_i64()).unwrap_or(0);
+                    let points_earned = (amount / 100) as i32;
+
+                    if points_earned > 0 {
+                        let event_id = obj.get("id").and_then(|id| id.as_str()).map(|s| s.to_string()).unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
+                        match &webhook_state.db.store {
+                            crate::db::DbStore::Sqlite(pool) => {
+                                if let Err(e) = sqlx::query("INSERT INTO loyalty_wallet (id, tenant_id, customer_id, points_balance, last_updated) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP) ON CONFLICT (tenant_id, customer_id) DO UPDATE SET points_balance = loyalty_wallet.points_balance + EXCLUDED.points_balance, last_updated = CURRENT_TIMESTAMP")
+                                    .bind(uuid::Uuid::new_v4().to_string())
+                                    .bind(tenant_id)
+                                    .bind(customer_id)
+                                    .bind(points_earned)
+                                    .execute(pool)
+                                    .await { tracing::error!("Failed to update loyalty_wallet: {}", e); }
+
+                                if let Err(e) = sqlx::query("INSERT INTO reward_ledger (id, tenant_id, customer_id, points_change, reason, created_at) VALUES (?, ?, ?, ?, 'checkout.session.completed', CURRENT_TIMESTAMP) ON CONFLICT (id) DO NOTHING")
+                                    .bind(&event_id) // Idempotency
+                                    .bind(tenant_id)
+                                    .bind(customer_id)
+                                    .bind(points_earned)
+                                    .execute(pool)
+                                    .await { tracing::error!("Failed to update reward_ledger: {}", e); return StatusCode::OK.into_response(); }
+
+                                let points_balance: i32 = sqlx::query_scalar("SELECT points_balance FROM loyalty_wallet WHERE tenant_id = ? AND customer_id = ?")
+                                    .bind(tenant_id).bind(customer_id).fetch_one(pool)
+                                    .await.unwrap_or(0);
+
+                                if points_balance >= 100 && (points_balance - points_earned) < 100 { // Only trigger when crossing the threshold
+                                    let payload_json = serde_json::json!({
+                                        "customer_id": customer_id,
+                                        "points_balance": points_balance,
+                                        "reward_earned": "20% off next purchase"
+                                    });
+                                    if let Err(e) = sqlx::query("INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at) VALUES (?, ?, 'loyalty', ?, ?, 'PENDING_APPROVAL', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
+                                        .bind(uuid::Uuid::new_v4().to_string())
+                                        .bind(tenant_id)
+                                        .bind(payload_json.to_string())
+                                        .bind("{}")
+                                        .execute(pool)
+                                        .await { tracing::error!("Failed to create agent feed item: {}", e); }
+                                }
+                            }
+                            crate::db::DbStore::Postgres => {
+                                if let Err(e) = sqlx::query("INSERT INTO loyalty_wallet (id, tenant_id, customer_id, points_balance, last_updated) VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP) ON CONFLICT (tenant_id, customer_id) DO UPDATE SET points_balance = loyalty_wallet.points_balance + EXCLUDED.points_balance, last_updated = CURRENT_TIMESTAMP")
+                                    .bind(uuid::Uuid::new_v4().to_string())
+                                    .bind(tenant_id)
+                                    .bind(customer_id)
+                                    .bind(points_earned)
+                                    .execute(&webhook_state.db.pool)
+                                    .await { tracing::error!("Failed to update loyalty_wallet: {}", e); }
+
+                                if let Err(e) = sqlx::query("INSERT INTO reward_ledger (id, tenant_id, customer_id, points_change, reason, created_at) VALUES ($1, $2, $3, $4, 'checkout.session.completed', CURRENT_TIMESTAMP) ON CONFLICT (id) DO NOTHING")
+                                    .bind(&event_id) // Idempotency
+                                    .bind(tenant_id)
+                                    .bind(customer_id)
+                                    .bind(points_earned)
+                                    .execute(&webhook_state.db.pool)
+                                    .await { tracing::error!("Failed to update reward_ledger: {}", e); return StatusCode::OK.into_response(); }
+
+                                let points_balance: i32 = sqlx::query_scalar("SELECT points_balance FROM loyalty_wallet WHERE tenant_id = $1 AND customer_id = $2")
+                                    .bind(tenant_id).bind(customer_id).fetch_one(&webhook_state.db.pool)
+                                    .await.unwrap_or(0);
+
+                                if points_balance >= 100 && (points_balance - points_earned) < 100 { // Only trigger when crossing the threshold
+                                    let payload_json = serde_json::json!({
+                                        "customer_id": customer_id,
+                                        "points_balance": points_balance,
+                                        "reward_earned": "20% off next purchase"
+                                    });
+                                    if let Err(e) = sqlx::query("INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at) VALUES ($1, $2, 'loyalty', $3::jsonb, $4::jsonb, 'PENDING_APPROVAL', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
+                                        .bind(uuid::Uuid::new_v4().to_string())
+                                        .bind(tenant_id)
+                                        .bind(payload_json.to_string())
+                                        .bind("{}")
+                                        .execute(&webhook_state.db.pool)
+                                        .await { tracing::error!("Failed to create agent feed item: {}", e); }
+                                }
+                            }
+                        }
+                    }
+                }
             }
 
             // Extract tenant ID. Depending on your Stripe setup, this might be in metadata

@@ -163,6 +163,7 @@ where
         .route("/campaign/generate-cart", post(handle_generate_cart))
         .route("/campaign/send-cart", post(handle_send_cart))
         .route("/campaign/abandoned-carts-count", get(handle_abandoned_carts_count))
+        .route("/loyalty/balance", get(handle_get_loyalty_balance))
         .route("/storefront/track", post(handle_track_visitor))
         .route("/storefront/embed", get(handle_storefront_embed))
                 .route("/storefront/og-card", get(handle_og_card))
@@ -1811,6 +1812,48 @@ async fn handle_aggregated_team_invites_metrics(
         },
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
     }
+}
+
+#[derive(Deserialize)]
+pub struct LoyaltyBalanceQuery {
+    pub tenant_id: Option<String>,
+    pub customer_id: Option<String>,
+}
+
+async fn handle_get_loyalty_balance(
+    Extension(state): Extension<GrowthState>,
+    axum::extract::Query(query): axum::extract::Query<LoyaltyBalanceQuery>,
+) -> impl IntoResponse {
+    let tenant_id = match query.tenant_id {
+        Some(t) => t,
+        None => return (StatusCode::BAD_REQUEST, Json(serde_json::json!({ "error": "tenant_id is required" }))).into_response(),
+    };
+
+    let customer_id = match query.customer_id {
+        Some(c) => c,
+        None => return (StatusCode::BAD_REQUEST, Json(serde_json::json!({ "error": "customer_id is required" }))).into_response(),
+    };
+
+    let pool = &state.pool;
+    let row = match sqlx::query("SELECT points_balance FROM loyalty_wallet WHERE tenant_id = $1 AND customer_id = $2")
+        .bind(&tenant_id)
+        .bind(&customer_id)
+        .fetch_one(pool)
+        .await
+    {
+        Ok(r) => r,
+        Err(sqlx::Error::RowNotFound) => {
+            return (StatusCode::OK, Json(serde_json::json!({ "points_balance": 0 }))).into_response();
+        }
+        Err(e) => {
+            tracing::error!("Failed to fetch loyalty balance: {}", e);
+            return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": "Database error" }))).into_response();
+        }
+    };
+
+    let points_balance: i32 = sqlx::Row::get(&row, "points_balance");
+
+    (StatusCode::OK, Json(serde_json::json!({ "points_balance": points_balance }))).into_response()
 }
 
 async fn handle_abandoned_carts_count(
