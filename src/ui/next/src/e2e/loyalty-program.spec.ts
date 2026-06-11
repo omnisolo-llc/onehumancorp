@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { adminPage } from '../../e2e/fixtures';
+
 
 test.describe('Automated Loyalty Campaign Growth Loop', () => {
   test('should generate a loyalty program VIP email via AI', async ({ page }) => {
