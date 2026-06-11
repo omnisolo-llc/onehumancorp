@@ -186,6 +186,8 @@ where
         .route("/milestone/card", get(handle_get_milestone_card))
         .route("/trial-extension/claim", post(handle_trial_extension_claim))
         .route("/time-savings", get(handle_time_savings))
+        .route("/widget.js", get(handle_widget_js))
+        .route("/widget/chat", get(handle_widget_chat))
         .layer(Extension(GrowthState { pool, hub }))
 }
 
@@ -239,6 +241,167 @@ pub struct TimeSavingsResponse {
     pub appointments_scheduled: i64,
     pub carts_recovered: i64,
     pub auto_replied: i64,
+}
+
+use axum::response::Html;
+use axum::http::header;
+
+async fn handle_widget_js(
+    axum::extract::Query(query): axum::extract::Query<std::collections::HashMap<String, String>>,
+) -> impl IntoResponse {
+    let tenant = query.get("tenant").cloned().unwrap_or_else(|| "default-tenant".to_string());
+    let encoded_tenant = urlencoding::encode(&tenant);
+
+    let js_content = format!(
+        r#"
+(function() {{
+    var chatButton = document.createElement('div');
+    chatButton.id = 'ohc-widget-button';
+    chatButton.style.position = 'fixed';
+    chatButton.style.bottom = '20px';
+    chatButton.style.right = '20px';
+    chatButton.style.width = '60px';
+    chatButton.style.height = '60px';
+    chatButton.style.backgroundColor = '#0066FF';
+    chatButton.style.color = 'white';
+    chatButton.style.borderRadius = '50%';
+    chatButton.style.display = 'flex';
+    chatButton.style.alignItems = 'center';
+    chatButton.style.justifyContent = 'center';
+    chatButton.style.cursor = 'pointer';
+    chatButton.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+    chatButton.style.zIndex = '999999';
+    chatButton.innerHTML = '<svg style="width:30px;height:30px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>';
+    document.body.appendChild(chatButton);
+
+    var iframeContainer = document.createElement('div');
+    iframeContainer.id = 'ohc-widget-container';
+    iframeContainer.style.position = 'fixed';
+    iframeContainer.style.bottom = '90px';
+    iframeContainer.style.right = '20px';
+    iframeContainer.style.width = '350px';
+    iframeContainer.style.height = '500px';
+    iframeContainer.style.border = '1px solid #e5e7eb';
+    iframeContainer.style.borderRadius = '16px';
+    iframeContainer.style.boxShadow = '0 10px 25px rgba(0,0,0,0.1)';
+    iframeContainer.style.zIndex = '999998';
+    iframeContainer.style.display = 'none';
+    iframeContainer.style.overflow = 'hidden';
+    iframeContainer.style.backgroundColor = 'white';
+
+    var iframe = document.createElement('iframe');
+    iframe.src = 'https://cloud.ohc.network/api/v1/growth/widget/chat?tenant={encoded_tenant}';
+    iframe.style.width = '100%';
+    iframe.style.height = '100%';
+    iframe.style.border = 'none';
+    iframeContainer.appendChild(iframe);
+    document.body.appendChild(iframeContainer);
+
+    var isOpen = false;
+    chatButton.addEventListener('click', function() {{
+        isOpen = !isOpen;
+        iframeContainer.style.display = isOpen ? 'block' : 'none';
+        chatButton.innerHTML = isOpen ? '<svg style="width:30px;height:30px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>' : '<svg style="width:30px;height:30px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>';
+    }});
+}})();
+        "#,
+        encoded_tenant = encoded_tenant
+    );
+
+    (
+        [(header::CONTENT_TYPE, "application/javascript")],
+        js_content,
+    )
+}
+
+async fn handle_widget_chat(
+    axum::extract::Query(query): axum::extract::Query<std::collections::HashMap<String, String>>,
+) -> Html<String> {
+    let tenant = query.get("tenant").cloned().unwrap_or_else(|| "default-tenant".to_string());
+    // Basic HTML escaping to prevent XSS
+    let escaped_tenant = tenant
+        .replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+        .replace("\"", "&quot;")
+        .replace("'", "&#x27;");
+
+    let html = format!(
+        r#"
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat</title>
+    <style>
+        body {{ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 0; display: flex; flex-direction: column; height: 100vh; background-color: #f9fafb; }}
+        .header {{ background-color: #ffffff; padding: 16px; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; justify-content: center; }}
+        .header h2 {{ margin: 0; font-size: 16px; color: #111827; }}
+        .messages {{ flex: 1; padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }}
+        .message {{ max-width: 80%; padding: 12px; border-radius: 12px; font-size: 14px; line-height: 1.4; }}
+        .message.agent {{ background-color: #ffffff; color: #1f2937; align-self: flex-start; border: 1px solid #e5e7eb; border-bottom-left-radius: 2px; }}
+        .message.user {{ background-color: #0066FF; color: #ffffff; align-self: flex-end; border-bottom-right-radius: 2px; }}
+        .input-area {{ padding: 16px; background-color: #ffffff; border-top: 1px solid #e5e7eb; display: flex; gap: 8px; }}
+        input[type="text"] {{ flex: 1; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 20px; font-size: 14px; outline: none; }}
+        input[type="text"]:focus {{ border-color: #0066FF; }}
+        button {{ background-color: #0066FF; color: white; border: none; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; }}
+        .footer {{ text-align: center; padding: 8px; font-size: 11px; background-color: #ffffff; }}
+        .footer a {{ color: #6b7280; text-decoration: none; font-weight: 500; display: inline-flex; align-items: center; gap: 4px; }}
+        .footer a:hover {{ color: #374151; }}
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h2>Assistant</h2>
+    </div>
+    <div class="messages" id="messages">
+        <div class="message agent">Hi there! How can I help you today?</div>
+    </div>
+    <div class="input-area">
+        <input type="text" id="chat-input" placeholder="Type a message..." autocomplete="off">
+        <button id="send-btn"><svg style="width:16px;height:16px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg></button>
+    </div>
+    <div class="footer">
+        <a href="https://cloud.ohc.network/onboarding?ref={escaped_tenant}" target="_blank">⚡ Powered by OHC</a>
+    </div>
+
+    <script>
+        const input = document.getElementById('chat-input');
+        const sendBtn = document.getElementById('send-btn');
+        const messages = document.getElementById('messages');
+
+        function addMessage(text, sender) {{
+            const div = document.createElement('div');
+            div.className = 'message ' + sender;
+            div.textContent = text;
+            messages.appendChild(div);
+            messages.scrollTop = messages.scrollHeight;
+        }}
+
+        function sendMessage() {{
+            const text = input.value.trim();
+            if (!text) return;
+            addMessage(text, 'user');
+            input.value = '';
+
+            setTimeout(() => {{
+                addMessage("Thanks for your message! An agent will get back to you shortly.", 'agent');
+            }}, 1000);
+        }}
+
+        sendBtn.addEventListener('click', sendMessage);
+        input.addEventListener('keypress', (e) => {{
+            if (e.key === 'Enter') sendMessage();
+        }});
+    </script>
+</body>
+</html>
+        "#,
+        escaped_tenant = escaped_tenant
+    );
+
+    Html(html)
 }
 
 async fn handle_time_savings(
