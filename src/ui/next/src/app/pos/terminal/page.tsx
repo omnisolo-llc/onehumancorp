@@ -433,11 +433,22 @@ export default function TerminalPage() {
            </div>
 
            {selectedProduct && (
-             <StripeTerminalClient
-                amount={selectedProduct.price_cents}
-                productId={selectedProduct.id}
-                tenantId={activeStaff?.tenant_id || "default_tenant"}
-             />
+             <>
+               <div className="bg-green-50 border border-green-100 rounded-xl p-4 my-4 mb-4">
+                 <div className="flex justify-between items-center">
+                   <span className="text-green-800 text-sm font-bold">Available Rewards</span>
+                   <span className="text-green-800 text-sm font-bold">1 Reward Available</span>
+                 </div>
+                 <p className="text-green-700 text-xs font-medium mt-1">
+                   Tap to Pay to automatically apply reward to this transaction.
+                 </p>
+               </div>
+               <StripeTerminalClient
+                  amount={selectedProduct.price_cents}
+                  productId={selectedProduct.id}
+                  tenantId={activeStaff?.tenant_id || "default_tenant"}
+               />
+             </>
            )}
 
            {orderStatus && <p className="mt-4 rounded-xl bg-blue-50 px-4 py-3 text-sm font-semibold text-blue-800 animate-in fade-in slide-in-from-top-2" role="status">{orderStatus}</p>}
