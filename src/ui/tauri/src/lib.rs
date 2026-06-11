@@ -42,6 +42,15 @@ fn generate_cloud_invite() -> String {
 }
 
 #[tauri::command]
+fn generate_cloud_bridge_invite() -> String {
+    let ts = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_secs();
+    format!("https://cloud.ohc.network/invite/cb-{}", ts)
+}
+
+#[tauri::command]
 fn load_ai_provider() -> Result<AiProviderView, String> {
     Ok(to_provider_view(read_ai_provider_config()?))
 }
@@ -513,6 +522,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             greet,
             generate_cloud_invite,
+            generate_cloud_bridge_invite,
             load_ai_provider,
             save_ai_provider,
             test_ai_provider,
