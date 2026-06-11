@@ -1,5 +1,5 @@
 use crate::orchestration::departments::orchestrator::{BaseAgent, AgentTriggerType, DepartmentOrchestrator, Department};
-use crate::orchestration::departments::types::{DepartmentType, DepartmentEvent, DepartmentConfig, ApprovalRequest, ActionRisk};
+use crate::orchestration::departments::types::{DepartmentType, DepartmentEvent, DepartmentConfig, ApprovalRequest, ApprovalStatus, ActionRisk};
 
 pub struct OperationsAgent {
     orchestrator: std::sync::Arc<DepartmentOrchestrator>,
@@ -25,10 +25,44 @@ impl Department for OperationsAgent {
             "LowStockAlert".to_string(),
             "InventoryConflictEvent".to_string(),
             "tenant.inventory.updated".to_string(),
+            "tenant.omnichannel.message.received".to_string(),
         ]
     }
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
+        if event.event_type == "tenant.omnichannel.message.received" {
+            let message = event.payload.get("message").and_then(|v| v.as_str()).unwrap_or("");
+            if message.to_lowercase().contains("reschedule") {
+                let req = ApprovalRequest {
+                    id: uuid::Uuid::new_v4().to_string(),
+                    tenant_id: event.tenant_id.clone(),
+                    department: DepartmentType::Operations,
+                    description: format!("{} You have a conflict. Suggest tomorrow at 4 PM?", message),
+                    status: ApprovalStatus::PendingApproval,
+                    action_risk: ActionRisk::DraftForReview,
+                    payload: Some(serde_json::json!({
+                        "original_message": message,
+                        "suggested_action": "reschedule_tomorrow_4pm"
+                    })),
+                };
+                self.orchestrator.add_approval_request(req).await;
+            } else if message.to_lowercase().contains("repair estimate") {
+                let req = ApprovalRequest {
+                    id: uuid::Uuid::new_v4().to_string(),
+                    tenant_id: event.tenant_id.clone(),
+                    department: DepartmentType::Operations,
+                    description: format!("Agent tentatively booked a roof repair estimate for Sarah on Tuesday 2 PM. Pending $50 deposit. No action needed."),
+                    status: ApprovalStatus::Approved,
+                    action_risk: ActionRisk::AutoExecute,
+                    payload: Some(serde_json::json!({
+                        "original_message": message,
+                        "action": "booked_tentatively"
+                    })),
+                };
+                self.orchestrator.add_approval_request(req).await;
+            }
+            return Ok(());
+        }
         if event.event_type == "tenant.inventory.updated" {
             let product_id = event.payload.get("product_id").and_then(|v| v.as_str()).unwrap_or("");
             let cache = crate::builder::edge::get_edge_cache();

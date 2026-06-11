@@ -17,7 +17,7 @@ function BookingForm() {
     // Simulating form submission
     await fetch("/api/v1/booking/request", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "x-tenant-id": tenant },
       body: JSON.stringify({
         description,
         fileName: file?.name,
