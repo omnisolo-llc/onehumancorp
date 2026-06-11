@@ -1,7 +1,7 @@
-import { test, expect } from './fixtures';
+import { test, expect, e2eTest } from './fixtures';
 
 test.describe('Help Center', () => {
-  test('Persona: Business Owner uses help center and chat', async ({ page }) => {
+  e2eTest('Persona: Business Owner uses help center and chat', async ({ page }) => {
     // Navigate to dashboard
     await page.goto('/dashboard?test_chat=true');
 
@@ -41,20 +41,20 @@ test.describe('Help Center', () => {
     await expect(page.locator('text=Getting Paid').first()).toBeVisible();
   });
 
-  test('Persona: Business Owner views the Changelog', async ({ page }) => {
+  e2eTest('Persona: Business Owner views the Changelog', async ({ page }) => {
     await page.goto('/changelog');
     await expect(page.locator('text=Release Notes & Changelog').first()).toBeVisible();
     await expect(page.locator('text=Version 1.1 (Latest)').first()).toBeVisible();
     await expect(page.locator('text=New Features').first()).toBeVisible();
   });
 
-  test('Persona: Developer views the API documentation', async ({ page }) => {
+  e2eTest('Persona: Developer views the API documentation', async ({ page }) => {
     await page.goto('/api-docs');
     await expect(page.locator('text=Advanced:').first()).toBeVisible();
     await expect(page.locator('text=OHC Advanced API Reference').first()).toBeVisible();
   });
 
-  test('Persona: Business Owner interacts with a Tooltip', async ({ page }) => {
+  e2eTest('Persona: Business Owner interacts with a Tooltip', async ({ page }) => {
     await page.goto('/dashboard');
     const kairosLink = page.locator('a[href="/kairos"]');
     await expect(kairosLink).toBeVisible();
@@ -62,9 +62,52 @@ test.describe('Help Center', () => {
     await expect(page.locator('text=Click here to see what your AI helpers are working on and how they plan.').first()).toBeVisible();
   });
 
-  test('Persona: Business Owner navigates to KAIROS page', async ({ page }) => {
+  e2eTest('Persona: Business Owner navigates to KAIROS page', async ({ page }) => {
      await page.goto('/kairos');
      // Ensure page loaded
      await expect(page.getByRole('heading', { name: 'Kairos' })).toBeVisible();
   });
 });
+
+  e2eTest('Persona: Business Owner uses new help center empty state and dashboard walkthrough', async ({ page }) => {
+    // Test Help Center functionality
+    await page.goto('/help');
+    await expect(page.locator('text=Help Center').first()).toBeVisible();
+
+    // Search for something that does not exist
+    await page.fill('input[placeholder="Search for help articles and videos..."]', 'Nonexistent search query that yields nothing');
+
+    // Should show the empty state and the "Ask AI" button
+    await expect(page.locator('text=No results found matching').first()).toBeVisible();
+    const askAiBtn = page.locator('button:has-text("Ask AI Support Agent")');
+    await expect(askAiBtn).toBeVisible();
+
+    // Hover over the button to trigger the tooltip
+    await askAiBtn.hover();
+    // Wait for tooltip to appear
+    await expect(page.locator('.ohc-tooltip')).toBeVisible();
+    // Assert tooltip text is fetched from backend (or fallback)
+    await expect(page.locator('.ohc-tooltip')).toHaveText('Open AI Help Chat to get answers instantly.');
+
+    // Test Walkthrough and Tooltip in Dashboard
+    await page.goto('/dashboard');
+    await expect(page.locator('text=Welcome back').first()).toBeVisible();
+
+    const walkthroughBtn = page.locator('#dashboard-walkthrough-btn');
+    await expect(walkthroughBtn).toBeVisible();
+
+    // Hover to trigger tooltip
+    await walkthroughBtn.hover();
+    await expect(page.locator('.ohc-tooltip')).toBeVisible();
+    await expect(page.locator('.ohc-tooltip')).toHaveText('Start an interactive guide to learn how to use your dashboard.');
+
+    // Click walkthrough to verify it starts
+    await walkthroughBtn.click();
+    const walkthroughBubble = page.locator('.ohc-walkthrough-bubble');
+    await expect(walkthroughBubble).toBeVisible();
+    await expect(page.locator('.ohc-walkthrough-title').first()).toBeVisible();
+
+    // Close walkthrough
+    await page.locator('.ohc-walkthrough-close').click();
+    await expect(walkthroughBubble).not.toBeVisible();
+  });

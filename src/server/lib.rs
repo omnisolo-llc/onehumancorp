@@ -117,6 +117,10 @@ fn get_tooltips_registry() -> &'static RwLock<HashMap<String, String>> {
     m.insert("checkout-mercadopago-tooltip".to_string(), "Pay securely using Mercado Pago.".to_string());
     m.insert("checkout-cancel-tooltip".to_string(), "Go back to the previous screen without subscribing.".to_string());
     m.insert("checkout-plan-upgrade-tooltip".to_string(), "Click here to securely subscribe to the plan.".to_string());
+    m.insert("dashboard-walkthrough-btn".to_string(), "Start an interactive guide to learn how to use your dashboard.".to_string());
+    m.insert("pos-walkthrough-btn".to_string(), "Start an interactive guide to learn how to accept payments.".to_string());
+    m.insert("assistant-walkthrough-btn".to_string(), "Start an interactive guide to learn how to chat with your AI agent.".to_string());
+    m.insert("help-center-nav-btn".to_string(), "Access the Help Center and tutorials.".to_string());
     m.insert("change-vibe-tooltip".to_string(), "Change the theme and colors of your website.".to_string());
     m.insert("help-center-nav-btn".to_string(), "Access the Help Center".to_string());
     m.insert("dashboard-walkthrough-btn".to_string(), "Take a tour of the dashboard".to_string());
@@ -140,7 +144,6 @@ fn get_tooltips_registry() -> &'static RwLock<HashMap<String, String>> {
     m.insert("credit-tooltip".to_string(), "Earn credits to use on premium tools when you refer a friend.".to_string());
     m.insert("todays-sales-tooltip".to_string(), "Your total sales for today. Check back often to track your progress.".to_string());
     m.insert("approval-inbox-tooltip".to_string(), "Review tasks that your AI agents need permission to execute. Approve or deny them here.".to_string());
-    m.insert("ask-ai-tooltip".to_string(), "Open the AI Chat to get answers instantly. The AI reads our entire Help Center for you.".to_string());
     m.insert("morning-briefing".to_string(), "Your AI Decision Assistant's daily summary.".to_string());
     m.insert("checkout-mercadopago-plan-upgrade-tooltip".to_string(), "Click here to securely subscribe to the plan via Mercado Pago.".to_string());
     m.insert("api-docs-spec-tooltip".to_string(), "The raw OpenAPI JSON specification.".to_string());
