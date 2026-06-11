@@ -54,7 +54,7 @@ test.describe('Viral Giveaway Loop', () => {
     await expect(publicPage.getByText('Enter your email to win an iPad')).toBeVisible();
 
     // Verify "Powered by OHC" footer
-    const footerLink = publicPage.getByRole('link', { name: '⚡ Powered by OHC' });
+    const footerLink = publicPage.locator('a', { hasText: 'Powered by OHC' }).first();
     await expect(footerLink).toBeVisible();
     const footerHref = await footerLink.getAttribute('href');
     expect(footerHref).toContain('/onboarding?ref=');

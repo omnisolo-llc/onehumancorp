@@ -1226,7 +1226,7 @@
 
               copyBtn.addEventListener('click', async () => {
                 const link = await getInviteLink();
-                const textToCopy = `I just hit a huge business milestone (${reachedMilestone.title}) using OHC! Launch your own store today: ${link}\n\n⚡ Powered by OHC`;
+                const textToCopy = `I just hit a huge business milestone (${reachedMilestone.title}) using OHC! Launch your own store today: ${link} ⚡ Powered by OHC`;
                 const tempInput = document.createElement('textarea');
                 tempInput.value = textToCopy;
                 document.body.appendChild(tempInput);
@@ -1243,7 +1243,7 @@
 
               xBtn.addEventListener('click', async () => {
                 const link = await getInviteLink();
-                const text = `I just hit a huge business milestone (${reachedMilestone.title}) using OHC! Launch your own store today: ${link}\n\n⚡ Powered by OHC`;
+                const text = `I just hit a huge business milestone (${reachedMilestone.title}) using OHC! Launch your own store today: ${link} ⚡ Powered by OHC`;
                 window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, '_blank');
               });
             }

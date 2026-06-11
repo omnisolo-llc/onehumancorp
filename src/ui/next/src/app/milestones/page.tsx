@@ -62,7 +62,11 @@ export default function MilestonesPage() {
     }
   }, []);
 
-  const shareText = `I just hit a huge business milestone using OHC! Launch your own store today: ${shareTarget}`;
+  const getShareText = () => {
+    const activeM = milestones.find(m => m.id === selectedMilestone);
+    const title = activeM ? activeM.title.replace('🎉 Milestone: ', '') : 'huge business milestone';
+    return `I just hit a huge business milestone (🎉 Milestone: ${title}) using OHC! Launch your own store today: ${shareTarget} ⚡ Powered by OHC`;
+  };
 
   return (
     <div className="flex flex-col min-h-screen font-inter bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
@@ -163,7 +167,7 @@ export default function MilestonesPage() {
 
                                 <button
                                     onClick={() => {
-                                        navigator.clipboard.writeText(shareText);
+                                        navigator.clipboard.writeText(getShareText());
                                         setCopied(true);
                                         setTimeout(() => setCopied(false), 2000);
                                     }}
@@ -172,7 +176,7 @@ export default function MilestonesPage() {
                                     {copied ? 'Copied Message!' : 'Copy Share Message'}
                                 </button>
                                 <a
-                                    href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`}
+                                    href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(getShareText())}`}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="w-full flex items-center justify-center gap-2 bg-black text-white py-3 rounded-xl font-bold text-sm shadow-md hover:bg-gray-800 transition-all hover:-translate-y-0.5"
@@ -181,7 +185,7 @@ export default function MilestonesPage() {
                                     Share on X
                                 </a>
                                 <a
-                                    href={`https://wa.me/?text=${encodeURIComponent(shareText)}`}
+                                    href={`https://wa.me/?text=${encodeURIComponent(getShareText())}`}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="w-full flex items-center justify-center gap-2 bg-[#25D366]/80 text-white py-3 rounded-xl font-bold text-sm shadow-md hover:bg-[#20bd5a] transition-all hover:-translate-y-0.5"
@@ -190,7 +194,7 @@ export default function MilestonesPage() {
                                     Share to WhatsApp
                                 </a>
                                 <a
-                                    href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareTarget)}&quote=${encodeURIComponent(shareText)}`}
+                                    href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareTarget)}&quote=${encodeURIComponent(getShareText())}`}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="w-full flex items-center justify-center gap-2 bg-[#1877F2]/80 text-white py-3 rounded-xl font-bold text-sm shadow-md hover:bg-[#166fe5] transition-all hover:-translate-y-0.5"
