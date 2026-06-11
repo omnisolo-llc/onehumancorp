@@ -1281,7 +1281,7 @@ impl HubService for MyHubService {
 
         let auditor_future = tokio::task::spawn_blocking(move || {
             (
-                auditor_clone.get_tenant_cost(&tenant_id_clone_2),
+                auditor_clone.get_tenant_cost_cents(&tenant_id_clone_2),
                 auditor_clone.get_tenant_revenue(&tenant_id_clone_2),
                 auditor_clone.get_tenant_payment_fees(&tenant_id_clone_2),
                 auditor_clone.get_tenant_compute_cost(&tenant_id_clone_2),
@@ -1300,7 +1300,8 @@ impl HubService for MyHubService {
         let (storage_res, auditor_res) = tokio::join!(storage_future, auditor_future);
 
         let storage_bytes = storage_res.unwrap_or(0);
-        let (llm_cost_f64, total_revenue_f64, payment_fees_f64, compute_cost_f64, network_cost_f64, bandwidth_savings_f64, total_tokens, cached_tokens) = auditor_res.unwrap_or((0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0, 0));
+        let (llm_cost_cents, total_revenue_f64, payment_fees_f64, compute_cost_f64, network_cost_f64, bandwidth_savings_f64, total_tokens, cached_tokens) = auditor_res.unwrap_or((0, 0.0, 0.0, 0.0, 0.0, 0.0, 0, 0));
+        let llm_cost_f64 = llm_cost_cents as f64 / 100.0;
 
         let cache_hit_rate = if total_tokens + cached_tokens > 0 {
             (cached_tokens as f64 / (total_tokens as f64 + cached_tokens as f64)) * 100.0
@@ -1337,7 +1338,7 @@ impl HubService for MyHubService {
             total_revenue: (total_revenue_f64 * 100.0).round() as i64,
             total_costs: (total_costs_f64 * 100.0).round() as i64,
             projected_monthly_cost: ::server_pricing::calculator::calculate_projected_monthly_cost_cents(total_costs_f64, elapsed_days, 30),
-            llm_cost: (llm_cost_f64 * 100.0).round() as i64,
+            llm_cost: llm_cost_cents,
             storage_cost: (storage_cost_f64 * 100.0).round() as i64,
             payment_fees: (payment_fees_f64 * 100.0).round() as i64,
             network_cost: (network_cost_f64 * 100.0).round() as i64,
