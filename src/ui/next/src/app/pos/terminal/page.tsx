@@ -332,7 +332,7 @@ export default function TerminalPage() {
 
   return (
      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 font-inter md:py-10 w-full overflow-hidden">
-      <div className="w-full max-w-[375px] min-h-[100dvh] md:h-[812px] md:min-h-0 bg-white md:shadow-2xl overflow-hidden flex flex-col relative border-x border-gray-200">
+      <div className="w-full max-w-[375px] min-h-[100dvh] md:h-[812px] md:min-h-0 bg-white md:shadow-2xl overflow-hidden flex flex-col relative border-x border-white/40">
 
         {/* Header */}
         <div className="pt-12 pb-6 px-6 bg-white/65 backdrop-blur-[30px] border-b border-gray-200 sticky top-0 z-10 flex justify-between items-center">
@@ -354,9 +354,9 @@ export default function TerminalPage() {
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto px-4 py-6 bg-gray-50">
+        <div className="flex-1 overflow-y-auto px-4 py-6 bg-[#F5F5F7]">
 
-           <div className="app-card rounded-2xl p-6 shadow-sm border border-gray-100 mb-6 text-center">
+           <div className="rounded-[24px] p-6 shadow-lg border border-white/40 bg-white/65 backdrop-blur-[30px] saturate-[210%] mb-6 text-center">
              <div className={`w-16 h-16 mx-auto rounded-full flex items-center justify-center mb-4 ${clockedIn ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'}`}>
                 <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -392,7 +392,7 @@ export default function TerminalPage() {
              <button
                 onClick={handleQuickCharge}
                 disabled={reserving}
-                className={`bg-white p-4 rounded-2xl shadow-sm border border-gray-100 text-left ${reserving ? 'opacity-50' : 'active:scale-[0.98]'}`}
+                className={`p-4 rounded-[24px] shadow-lg border border-white/40 bg-white/65 backdrop-blur-[30px] saturate-[210%] text-left ${reserving ? 'opacity-50' : 'active:scale-[0.98]'}`}
              >
                <div className="text-blue-500 mb-2">
                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
@@ -400,7 +400,7 @@ export default function TerminalPage() {
                <span className="font-medium text-gray-900">{t('Quick Charge $50')}</span>
              </button>
 
-             <button className="app-card p-4 rounded-2xl shadow-sm border border-gray-100 text-left active:scale-[0.98]">
+             <button className="p-4 rounded-[24px] shadow-lg border border-white/40 bg-white/65 backdrop-blur-[30px] saturate-[210%] text-left active:scale-[0.98]">
                <div className="text-orange-500 mb-2">
                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 15v-1a4 4 0 00-4-4H8m0 0l3 3m-3-3l3-3m9 14V5a2 2 0 00-2-2H6a2 2 0 00-2 2v16l4-2 4 2 4-2 4 2z" /></svg>
                </div>
@@ -417,7 +417,7 @@ export default function TerminalPage() {
                 <button
                   key={product.id}
                   onClick={() => handleSelectProduct(product)}
-                  className={`bg-white p-4 rounded-2xl shadow-sm border text-left transition-all ${selectedProduct?.id === product.id ? 'border-blue-500 ring-2 ring-blue-500/20' : 'border-gray-100'} active:scale-[0.98] min-h-[64px]`}
+                  className={`p-4 rounded-[24px] shadow-lg border text-left bg-white/65 backdrop-blur-[30px] saturate-[210%] transition-all ${selectedProduct?.id === product.id ? 'border-[#0066FF] ring-2 ring-[#0066FF]/20' : 'border-white/40'} active:scale-[0.98] min-h-[64px]`}
                 >
                   <div className="flex justify-between items-center">
                     <div>

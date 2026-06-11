@@ -235,7 +235,7 @@ function CheckoutContent() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen font-inter bg-[#F8F9FA] text-gray-900 overflow-x-hidden">
+    <div className="flex flex-col min-h-screen font-inter bg-slate-50 text-gray-900 overflow-x-hidden relative">
       <header className="px-4 md:px-6 py-4 flex flex-col md:flex-row items-center justify-between gap-4 sticky top-0 z-50 bg-white/70 backdrop-blur-xl saturate-200 border-b border-white/40 shadow-sm">
         <WithTooltip
           id="checkout-title-tooltip"
@@ -252,7 +252,7 @@ function CheckoutContent() {
         className="p-4 md:p-8 flex-1 max-w-lg mx-auto w-full flex flex-col justify-center"
       >
         {tier ? (
-            <div className="p-6 md:p-8 flex flex-col justify-between bg-white/60 backdrop-blur-2xl saturate-200 border border-white/40 shadow-lg rounded-[24px]">
+            <div className="p-6 md:p-8 flex flex-col justify-between bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-white/40 shadow-lg rounded-[24px]">
               <div className="mb-6">
                 <h3 className="text-2xl font-bold font-outfit mb-2 text-gray-900">OHC {tier} Plan</h3>
                 <p className="text-gray-600 text-sm">You are upgrading to the {tier} tier. Your card will be charged based on your region's pricing.</p>
