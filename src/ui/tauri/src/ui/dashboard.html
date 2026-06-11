@@ -1409,6 +1409,23 @@
             const approveTestId = isDraft ? "approve-draft" : "approve-proposal";
             const approveText = isDraft ? "Yes, draft it!" : "Approve";
 
+            if (item.proposed_action?.feature_type === 'quote_draft' || item.context_payload?.feature_type === 'quote_draft') {
+              return `
+                <div class="triage-item" data-testid="triage-card-${item.id}" id="triage-${item.id}">
+                  <div class="triage-header">
+                    <div class="triage-source" style="text-transform: uppercase; font-size: 10px; background: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 4px 8px; border-radius: 4px;">${(item.event_source || 'Unknown').replace('_', ' ')}</div>
+                    <div class="triage-priority" style="font-size: 12px; color: #6b7280;">Action Needed</div>
+                  </div>
+                  <div class="triage-context" style="font-size: 16px; font-weight: 600; margin-top: 8px;">${description}</div>
+                  <div class="triage-controls" style="margin-top: 12px;">
+                    <button class="triage-btn-approve" data-testid="edit-quote-draft" onclick="window.location.href='quote.html?id=${item.id}'">Review Quote</button>
+                    <button class="triage-btn-dismiss" data-testid="reject-proposal" onclick="handleTriageAction('${item.id}', 'DISMISSED')">Dismiss</button>
+                  </div>
+                </div>
+              `;
+            }
+
+
 
           if (item.proposed_action?.action_type === 'SocialPostDraft') {
             let parsedPayload = item.proposed_action || {};
