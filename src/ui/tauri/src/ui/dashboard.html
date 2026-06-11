@@ -668,8 +668,18 @@
         <p id="referral-tier-subtext" style="font-size: 13px; color: #666;"></p>
       </div>
 
+
+      <div class="ohc-growth-card" style="margin-bottom: 20px;">
+        <h2>Embed Your AI Agent</h2>
+        <p>Embed a smart chat widget on your own website. Every embedded widget includes a referral link that earns you rewards.</p>
+        <button id="dashboard-embed-chat-btn" style="background-color: #0066FF; color: white; border: none; padding: 10px 16px; border-radius: 16px; cursor: pointer;">
+          Copy Chat Embed Code
+        </button>
+      </div>
+
       <div class="ohc-growth-card" style="margin-bottom: 20px;">
         <h2>Agent Public Profile</h2>
+
         <p>Generate a shareable public card for your AI agent to build trust and acquire new customers.</p>
         <button onclick="window.location.href='agent-card.html'" style="background-color: #0066FF; color: white; border: none; padding: 10px 16px; border-radius: 16px; cursor: pointer;">
           Create Agent Card
@@ -688,6 +698,7 @@
         <div class="action-buttons">
             <button class="btn-secondary" id="copy-btn" data-tooltip="Copy the referral link to your clipboard.">Copy</button>
             <button class="btn-secondary" id="share-whatsapp-btn">Share on WhatsApp</button>
+            <button class="btn-secondary" id="share-x-btn" style="background-color: #1DA1F2; color: white;">Share on X (Twitter)</button>
           </div>
         </div>
       </div>
@@ -712,7 +723,8 @@
       <div class="ohc-growth-card">
         <h2>Viral Campaigns</h2>
         <p>Acquire new users and grow your audience through viral sharing.</p>
-        <a href="giveaway/index.html" style="display: inline-block; background-color: #0066FF; color: white; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s;">Viral Giveaway Generator</a>
+        <a href="giveaway/index.html" id="giveaway-link" style="display: inline-block; background-color: #0066FF; color: white; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Viral Giveaway Generator</a>
+        <a href="work-intake-widget.html" id="work-intake-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s;">Work-Intake Widget 📋</a>
       </div>
 
 
@@ -1253,7 +1265,24 @@
       checkMilestones();
 
 
+
       const generateBtn = document.getElementById('generate-link-btn');
+
+      const chatEmbedBtn = document.getElementById('dashboard-embed-chat-btn');
+      if (chatEmbedBtn) {
+        chatEmbedBtn.addEventListener('click', () => {
+          const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default-team';
+          const embedCode = `<iframe src="https://ohc.app/api/ui/chat-embed.html?tenant=${tenantId}&name=Support&welcome=How%20can%20I%20help%3F" width="350" height="500" style="border:none; border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.1); position:fixed; bottom:20px; right:20px; z-index:99999;"></iframe>`;
+          navigator.clipboard.writeText(embedCode).then(() => {
+            const originalText = chatEmbedBtn.textContent;
+            chatEmbedBtn.textContent = 'Copied!';
+            setTimeout(() => {
+              chatEmbedBtn.textContent = originalText;
+            }, 2000);
+          });
+        });
+      }
+
       const linkContainer = document.getElementById('link-container');
       const copyBtn = document.getElementById('copy-btn');
       const referralLink = document.getElementById('referral-link');
@@ -1325,6 +1354,13 @@
         const link = referralLink.value;
         const text = `Join my team on OHC! Here is your invite link:\n\n${link}\n\n⚡ Powered by OHC`;
         window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+      });
+
+      const shareXBtn = document.getElementById('share-x-btn');
+      shareXBtn.addEventListener('click', () => {
+        const link = referralLink.value;
+        const text = `Join my team on OHC! Here is your invite link:\n\n${link}\n\n⚡ Powered by OHC`;
+        window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, '_blank');
       });
 
 
