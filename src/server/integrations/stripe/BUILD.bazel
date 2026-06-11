@@ -3,6 +3,7 @@ load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 exports_files(
     [
         "client.rs",
+        "webhooks.rs",
         "mod.rs",
         "payout_batcher.rs",
         "routing.rs",
@@ -15,6 +16,7 @@ rust_library(
     srcs = [
         "bazel_lib.rs",
         "client.rs",
+        "webhooks.rs",
         "mod.rs",
         "payout_batcher.rs",
         "routing.rs",

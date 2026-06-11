@@ -52,6 +52,7 @@ rust_library(
         "//src/server/integrations/stripe:mod.rs",
         "//src/server/integrations/stripe:payout_batcher.rs",
         "//src/server/integrations/stripe:routing.rs",
+        "//src/server/integrations/stripe:webhooks.rs",
         "//src/server/integrations/lob:client.rs",
         "//src/server/integrations/lob:mod.rs",
         "//src/server/integrations/lob:provider.rs",

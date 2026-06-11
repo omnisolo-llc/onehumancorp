@@ -368,6 +368,99 @@ impl SubscriptionService {
         })
     }
 
+    pub async fn get_subscription_by_stripe_id(&self, tenant_id: &str, stripe_id: &str) -> Result<Option<crate::domain::subscription::Subscription>, sqlx::Error> {
+        let mut tx = self.db.pool.begin().await?;
+
+        sqlx::query("SELECT set_config('app.current_tenant', $1, true)")
+            .bind(tenant_id)
+            .execute(&mut *tx)
+            .await?;
+
+        let sub = sqlx::query_as::<_, crate::domain::subscription::Subscription>(
+            r#"
+            SELECT id, tenant_id, customer_id, product_id, stripe_subscription_id, status, current_period_end, created_at, updated_at
+            FROM subscriptions
+            WHERE stripe_subscription_id = $1 AND tenant_id = $2
+            "#,
+        )
+        .bind(stripe_id)
+        .bind(tenant_id)
+        .fetch_optional(&mut *tx)
+        .await?;
+
+        tx.commit().await?;
+
+        Ok(sub)
+    }
+
+    pub async fn update_subscription_status_ledger(
+        &self,
+        tenant_id: &str,
+        subscription_id: &str,
+        new_status: &str,
+        agent_id: Option<&str>,
+    ) -> Result<crate::domain::subscription::Subscription, sqlx::Error> {
+        let mut tx = self.db.pool.begin().await?;
+
+        sqlx::query("SELECT set_config('app.current_tenant', $1, true)")
+            .bind(tenant_id)
+            .execute(&mut *tx)
+            .await?;
+
+        let now = chrono::Utc::now();
+
+        let sub = sqlx::query_as::<_, crate::domain::subscription::Subscription>(
+            r#"
+            UPDATE subscriptions
+            SET status = $1, updated_at = $2
+            WHERE id = $3 AND tenant_id = $4
+            RETURNING id, tenant_id, customer_id, product_id, stripe_subscription_id, status, current_period_end, created_at, updated_at
+            "#,
+        )
+        .bind(new_status)
+        .bind(now)
+        .bind(subscription_id)
+        .bind(tenant_id)
+        .fetch_one(&mut *tx)
+        .await?;
+
+        self.log_event_tx(&mut tx, tenant_id, subscription_id, new_status, agent_id).await?;
+
+        tx.commit().await?;
+
+        Ok(sub)
+    }
+
+    async fn log_event_tx(
+        &self,
+        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+        tenant_id: &str,
+        subscription_id: &str,
+        event_type: &str,
+        agent_id: Option<&str>,
+    ) -> Result<crate::domain::subscription::SubscriptionEvent, sqlx::Error> {
+        let event_id = uuid::Uuid::new_v4().to_string();
+        let now = chrono::Utc::now();
+
+        let event = sqlx::query_as::<_, crate::domain::subscription::SubscriptionEvent>(
+            r#"
+            INSERT INTO subscription_events (id, tenant_id, subscription_id, event_type, agent_id, created_at)
+            VALUES ($1, $2, $3, $4, $5, $6)
+            RETURNING id, tenant_id, subscription_id, event_type, agent_id, created_at
+            "#,
+        )
+        .bind(event_id)
+        .bind(tenant_id)
+        .bind(subscription_id)
+        .bind(event_type)
+        .bind(agent_id)
+        .bind(now)
+        .fetch_one(&mut **tx)
+        .await?;
+
+        Ok(event)
+    }
+
     async fn ensure_subscription_schema(&self) -> Result<(), String> {
         match &self.db.store {
             DbStore::Postgres => {

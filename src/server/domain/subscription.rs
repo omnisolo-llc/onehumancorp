@@ -53,3 +53,26 @@ pub struct FulfillmentBatch {
     pub label_url: Option<String>,
     pub created_at: i64,
 }
+
+#[derive(Debug, Serialize, Deserialize, Clone, sqlx::FromRow)]
+pub struct Subscription {
+    pub id: String,
+    pub tenant_id: String,
+    pub customer_id: String,
+    pub product_id: String,
+    pub stripe_subscription_id: Option<String>,
+    pub status: String,
+    pub current_period_end: Option<chrono::DateTime<chrono::Utc>>,
+    pub created_at: chrono::DateTime<chrono::Utc>,
+    pub updated_at: chrono::DateTime<chrono::Utc>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, sqlx::FromRow)]
+pub struct SubscriptionEvent {
+    pub id: String,
+    pub tenant_id: String,
+    pub subscription_id: String,
+    pub event_type: String,
+    pub agent_id: Option<String>,
+    pub created_at: chrono::DateTime<chrono::Utc>,
+}
