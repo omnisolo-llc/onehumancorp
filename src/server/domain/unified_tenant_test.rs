@@ -158,6 +158,8 @@ mod tests {
             currency: None,
             in_stock: None,
             inventory_count: None,
+            locked_quantity: None,
+            available_quantity: None,
             is_sold_out: None,
             metadata: None,
             created_at: None,
