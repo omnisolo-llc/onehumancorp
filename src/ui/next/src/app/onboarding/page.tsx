@@ -307,12 +307,12 @@ export default function OnboardingWizard() {
       setCategories(mappedCategories);
 
       // Auto-configure AI Departments based on inferred business context
-      const newAgents = ['Operations', 'Marketing', 'Finance', 'Legal', 'Advisory'];
+      const newAgents = ['Store Manager', 'Marketing Assistant', 'Support Agent'];
       if (mappedCategories.includes('physical') || mappedCategories.includes('digital') || mappedCategories.includes('subscriptions')) {
-        newAgents.push('Sales');
+        newAgents.push('Sales Coordinator');
       }
       if (mappedCategories.includes('services') || mappedCategories.includes('food') || mappedCategories.includes('physical')) {
-        newAgents.push('Customer Success');
+        newAgents.push('Customer Happiness');
       }
       setAiAgents(newAgents);
 
@@ -427,7 +427,7 @@ export default function OnboardingWizard() {
 
   return (
     <div className="min-h-screen w-full bg-[#F5F5F7] dark:bg-[#16161a] flex items-center justify-center p-4">
-      <div id="setup-screen" className="w-full sm:max-w-md lg:max-w-lg xl:max-w-2xl mx-auto overflow-hidden flex flex-col min-h-[640px] sm:min-h-[812px] relative rounded-[16px] glassmorphism border border-white/20 shadow-2xl">
+      <div id="setup-screen" className="w-full sm:max-w-md lg:max-w-lg xl:max-w-2xl mx-auto overflow-hidden flex flex-col min-h-[640px] sm:min-h-[812px] relative glassmorphism border border-white/20 shadow-2xl">
         <div className="px-6 pt-5 text-center">
           <h1 className="text-xl font-bold text-[#1D1D1F] dark:text-[#F5F5F7]">Setup</h1>
           <p className="text-sm text-gray-500 dark:text-[#A1A1A6]">Your business, live in minutes.</p>
@@ -613,7 +613,7 @@ export default function OnboardingWizard() {
                   <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">What's the name of your business?</h2>
                   <div className="flex items-start sm:items-center justify-between mb-6 w-full gap-2">
                     <p className="text-gray-500 dark:text-[#A1A1A6] text-sm pr-4">
-                      Our AI will instantly generate your storefront, products, and back-office agents.
+                      Our assistant will instantly build your storefront and add your helper team.
                     </p>
                     <button
                       onClick={() => handleSaveDraft()}
@@ -1162,7 +1162,7 @@ export default function OnboardingWizard() {
                 </div>
 
                 <div className="pt-2">
-                  <label className="flex items-center justify-between cursor-pointer p-3 rounded-[8px] glassmorphism text-[#1D1D1F] dark:text-white">
+                  <label className="flex items-center justify-between cursor-pointer p-3 glassmorphism text-[#1D1D1F] dark:text-white">
                     <span className="font-semibold text-sm">Allow AI to Auto-Respond</span>
                     <input
                       type="checkbox"
@@ -1226,7 +1226,7 @@ export default function OnboardingWizard() {
               </p>
 
               <div className="w-full space-y-3 mt-auto">
-                <div className="p-3 glassmorphism rounded-[8px] flex flex-col items-center mb-6">
+                <div className="p-3 glassmorphism flex flex-col items-center mb-6">
                    <p className="text-xs text-gray-500 dark:text-[#A1A1A6] uppercase font-bold tracking-wider mb-2">Your Shareable Link</p>
                    <div className="flex items-center gap-2">
                       <span className="text-[#0066FF] font-semibold">{generateSubdomain(businessName)}</span>
