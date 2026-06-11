@@ -1,10 +1,11 @@
-use std::collections::{HashMap, HashSet};
+use std::sync::atomic::Ordering;
+
 use std::sync::OnceLock;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::time::Duration;
 use dashmap::DashMap;
 use dashmap::DashSet;
-use std::hash::Hash;
+
 
 #[derive(Clone, Serialize, Deserialize)]
 struct CacheItem<T> {
@@ -12,7 +13,7 @@ struct CacheItem<T> {
     tags: Vec<String>,
 }
 
-use std::sync::atomic::{AtomicUsize, Ordering};
+
 
 
 struct CacheValue<T> {
@@ -90,7 +91,7 @@ where
         }
 
         // Then Redis
-        if let Some(mut conn) = self.get_redis_conn().await {
+        if let Some(mut conn) = HybridCache::<T>::get_redis_conn(self).await {
             use redis::AsyncCommands;
             let res: Result<Option<String>, _> = conn.get(key).await;
             if let Ok(Some(data)) = res {
@@ -117,7 +118,7 @@ where
         self.set_local(key, value.clone(), &tags, ttl);
 
         // 2. Set Redis if available
-        if let Some(mut conn) = self.get_redis_conn().await {
+        if let Some(mut conn) = HybridCache::<T>::get_redis_conn(self).await {
             use redis::AsyncCommands;
             let item = CacheItem { value, tags: tags.clone() };
             if let Ok(data) = serde_json::to_string(&item) {
@@ -168,12 +169,12 @@ where
             if !removed_keys.is_empty() {
                 let tags_map = self.get_local_tags();
                 for mut entry in tags_map.iter_mut() {
-                    let keys = entry.value_mut();
+                    let mut keys = entry.value_mut();
                     for k in &removed_keys {
                         keys.remove(k);
                     }
                 }
-                tags_map.retain(|_, keys| !keys.is_empty());
+                tags_map.retain(|_, keys: &mut DashSet<String>| !keys.is_empty());
             }
         }
 
@@ -201,12 +202,12 @@ where
         self.get_local().remove(key);
         let tags_map = self.get_local_tags();
         for mut entry in tags_map.iter_mut() {
-            let keys = entry.value_mut();
+            let mut keys = entry.value_mut();
             keys.remove(key);
         }
-        tags_map.retain(|_, keys| !keys.is_empty());
+        tags_map.retain(|_, keys: &mut DashSet<String>| !keys.is_empty());
 
-        if let Some(mut conn) = self.get_redis_conn().await {
+        if let Some(mut conn) = HybridCache::<T>::get_redis_conn(self).await {
             use redis::AsyncCommands;
             let _: Result<(), _> = conn.del(key).await;
         }
@@ -224,7 +225,7 @@ where
             }
         }
 
-        if let Some(mut conn) = self.get_redis_conn().await {
+        if let Some(mut conn) = HybridCache::<T>::get_redis_conn(self).await {
             use redis::AsyncCommands;
             let tag_key = format!("tag:{}", tag);
             let redis_keys: Result<Vec<String>, _> = conn.smembers(&tag_key).await;
