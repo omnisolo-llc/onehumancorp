@@ -46,19 +46,19 @@ export function ViralLoopPerformanceWidget() {
       </div>
       <div className="app-panel-body">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <div className="ohc-hybrid-panel p-5 shadow-sm flex flex-col justify-between border border-gray-100 rounded-xl bg-white">
+          <div className="app-card flex flex-col justify-between">
             <div className="text-sm font-medium mb-1 text-indigo-800">Invites Sent</div>
             <div className="text-3xl font-bold font-outfit text-indigo-900">{invitesSent}</div>
           </div>
-          <div className="ohc-hybrid-panel p-5 shadow-sm flex flex-col justify-between border border-gray-100 rounded-xl bg-white">
+          <div className="app-card flex flex-col justify-between">
             <div className="text-sm font-medium mb-1 text-indigo-800">Active Referrals</div>
             <div className="text-3xl font-bold font-outfit text-indigo-900">{activeReferrals}</div>
           </div>
-          <div className="ohc-hybrid-panel p-5 shadow-sm flex flex-col justify-between border border-gray-100 rounded-xl bg-white">
+          <div className="app-card flex flex-col justify-between">
             <div className="text-sm font-medium mb-1 text-indigo-800">Revenue from Referrals</div>
             <div className="text-3xl font-bold font-outfit text-indigo-900">${revenue.toFixed(2)}</div>
           </div>
-          <div className="ohc-hybrid-panel p-5 shadow-sm flex flex-col justify-between border border-gray-100 rounded-xl bg-white">
+          <div className="app-card flex flex-col justify-between">
             <div className="text-sm font-medium mb-1 text-indigo-800">Pending Rewards</div>
             <div className="text-3xl font-bold font-outfit text-indigo-900">${pendingRewards.toFixed(2)}</div>
           </div>
