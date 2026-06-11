@@ -626,7 +626,7 @@ export default function ApprovalInbox({
                   <div className="flex gap-3">
                     <button
                       onClick={() => {
-                        if (payload && (payload.original_message || payload.feature_type === "quote_draft")) {
+                        if (payload && (payload.original_message || payload.feature_type === "quote_draft" || payload.feature_type === "ambassador_reply")) {
                           setSelectedReview(req);
                         } else {
                           onReject(req.id);
@@ -634,8 +634,8 @@ export default function ApprovalInbox({
                       }}
                       className="flex-1 py-3 px-4 rounded-xl font-semibold text-sm bg-gray-100 text-gray-700 hover:bg-gray-200 active:scale-[0.98] transition-all min-h-[44px] min-w-[44px]"
                     >
-                      {payload && (payload.original_message || payload.feature_type === "quote_draft")
-                        ? "Review"
+                      {payload && (payload.original_message || payload.feature_type === "quote_draft" || payload.feature_type === "ambassador_reply")
+                        ? "Edit"
                         : "Reject / Edit"}
                     </button>
                     <button
@@ -648,6 +648,8 @@ export default function ApprovalInbox({
                         ? "Schedule Post"
                         : req.payload?.feature_type === "quote_draft"
                         ? "Approve & Send"
+                        : req.payload?.feature_type === "ambassador_reply"
+                        ? "Send Draft"
                         : "Approve"}
                     </button>
                   </div>
@@ -686,7 +688,7 @@ export default function ApprovalInbox({
                 </p>
                 <div className="glassmorphism p-3 rounded-xl border border-blue-100 text-sm text-gray-800 italic relative">
                   {extractPayload(selectedReview.description).payload
-                    ?.generated_response || "N/A"}
+                    ?.generated_response || extractPayload(selectedReview.description).payload?.draft_reply || extractPayload(selectedReview.description).payload?.reply || "N/A"}
                 </div>
               </div>
 
@@ -713,9 +715,9 @@ export default function ApprovalInbox({
                     onApprove(selectedReview.id);
                     setSelectedReview(null);
                   }}
-                  className="flex-1 py-3 px-4 rounded-xl font-bold text-sm bg-blue-600 text-white hover:bg-blue-700 min-h-[44px] min-w-[44px]"
+                  className="flex-1 py-3 px-4 rounded-xl font-bold text-sm bg-[#0066FF] text-white hover:bg-[#0052CC] shadow-md shadow-[#0066FF]/20 active:scale-[0.98] transition-all min-h-[44px] min-w-[44px]"
                 >
-                  Send Now
+                  Send Draft
                 </button>
               </div>
             </div>
