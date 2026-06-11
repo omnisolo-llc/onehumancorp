@@ -406,7 +406,33 @@
           min-height: 44px !important;
         }
       }
-        </style>
+
+      @media (max-width: 375px) {
+        .stepper {
+          gap: 4px;
+        }
+        .step-indicator {
+          width: 8px;
+          height: 8px;
+        }
+        .step-indicator.active {
+          transform: scale(1.2);
+        }
+        .container {
+          padding: 16px;
+        }
+        .radio-option {
+          padding: 8px 12px;
+        }
+      }
+
+
+      *:focus-visible {
+        outline: 3px solid #0066FF;
+        outline-offset: 2px;
+      }
+
+    </style>
   </head>
   <body>
         <div class="container glassmorphism" id="form-container">
