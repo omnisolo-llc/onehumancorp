@@ -1,10 +1,10 @@
+import { WalkthroughTarget } from "@/components/help"
 "use client";
 
 import { useState, useEffect } from "react";
 import { SmartBlock, DraggableBlock } from "../builder/components";
 import { useWalkthrough } from "../../components/help";
 import { WithTooltip } from "../../components/TooltipRegistry";
-import { WalkthroughTarget } from "../../components/Walkthrough";
 
 export default function StorefrontBuilderPage() {
   const [bio, setBio] = useState("");
@@ -237,9 +237,8 @@ export default function StorefrontBuilderPage() {
               </p>
 
               <label className="text-sm font-semibold text-gray-700 dark:text-[#a1a1a6] mb-2 block">Your Business Details</label>
-              <WalkthroughTarget id="bio-input-tooltip">
-                <WithTooltip id="bio-input-tooltip" defaultText="Describe what you sell, your target audience, and the vibe of your brand.">
-                  <textarea
+              <WithTooltip id="bio-input-tooltip" defaultText="Describe what you sell, your target audience, and the vibe of your brand.">
+                <textarea
                   id="bio-input"
                   enterKeyHint="done"
                   autoCapitalize="sentences"
@@ -254,16 +253,14 @@ export default function StorefrontBuilderPage() {
                       }
                     }
                   }}
-                    placeholder="e.g. I run a mobile dog grooming service in Portland"
-                    rows={6}
-                  />
-                </WithTooltip>
-              </WalkthroughTarget>
+                  placeholder="e.g. I run a mobile dog grooming service in Portland"
+                  rows={6}
+                />
+              </WithTooltip>
 
               <div className="flex gap-4">
-                <WalkthroughTarget id="generate-btn-tooltip">
-                  <WithTooltip id="generate-btn-tooltip" defaultText="Our AI agents will analyze your description and build a ready-to-launch store for you.">
-                    <button
+                <WithTooltip id="generate-btn-tooltip" defaultText="Our AI agents will analyze your description and build a ready-to-launch store for you.">
+                  <button
                     id="generate-btn"
                     className={`flex-[2] p-4 font-bold font-outfit text-lg transition-all rounded-[8px] ${
                       bio.trim().length > 5
@@ -271,12 +268,11 @@ export default function StorefrontBuilderPage() {
                         : "bg-gray-100 text-gray-400 cursor-not-allowed"
                     }`}
                     onClick={handleGenerate}
-                      disabled={bio.trim().length <= 5}
-                    >
-                      Build My Storefront
-                    </button>
-                  </WithTooltip>
-                </WalkthroughTarget>
+                    disabled={bio.trim().length <= 5}
+                  >
+                    Build My Storefront
+                  </button>
+                </WithTooltip>
               </div>
             </div>
           </div>
