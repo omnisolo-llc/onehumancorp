@@ -2950,14 +2950,13 @@ pub async fn update_ui_triage_action_handler(
                     if action_type == "Draft Reply" {
                         let new_msg_id = format!("msg-{}", uuid::Uuid::new_v4());
                         let _ = sqlx::query(
-                            "INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, status) VALUES ($1, $2, $3, $4, $5, $6, $7)"
+                            "INSERT INTO inbox_messages (id, tenant_id, source, content, draft_reply, status) VALUES ($1, $2, $3, $4, $5, $6)"
                         )
                         .bind(&new_msg_id)
                         .bind(&tenant_id)
-                        .bind("triage-action")
+                        .bind("Triage Action")
                         .bind(&action_payload)
-                        .bind(&action_payload)
-                        .bind("en")
+                        .bind("")
                         .bind("sent")
                         .execute(&mut *tx)
                         .await;
