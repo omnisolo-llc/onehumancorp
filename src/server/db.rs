@@ -635,6 +635,42 @@ impl DB {
                         version INTEGER DEFAULT 1,
                         auto_dreamed BOOLEAN DEFAULT 0
                     );
+                    CREATE TABLE IF NOT EXISTS shared_tasks_decomposition (
+                        id TEXT PRIMARY KEY,
+                        organization_id TEXT NOT NULL,
+                        title TEXT NOT NULL,
+                        description TEXT,
+                        status TEXT NOT NULL DEFAULT 'PENDING',
+                        assigned_agent_id TEXT,
+                        priority TEXT NOT NULL DEFAULT 'P2',
+                        payload TEXT,
+                        parent_plan_id TEXT,
+                        dependencies TEXT NOT NULL DEFAULT '[]',
+                        locked_until TIMESTAMP,
+                        ultraplan_phase TEXT,
+                        deliberation_log TEXT,
+                        depth INTEGER,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        action_risk TEXT,
+                        approval_status TEXT,
+                        proposed_content TEXT,
+                        mission_id TEXT NOT NULL,
+                        _sync_status TEXT DEFAULT 'pending',
+                        version INTEGER DEFAULT 1
+                    );
+                    CREATE TABLE IF NOT EXISTS task_dependencies (
+                        task_id TEXT NOT NULL,
+                        depends_on_task_id TEXT NOT NULL,
+                        tenant_id TEXT,
+                        PRIMARY KEY (task_id, depends_on_task_id)
+                    );
+                    CREATE TABLE IF NOT EXISTS shared_task_dependencies (
+                        task_id TEXT NOT NULL,
+                        depends_on_task_id TEXT NOT NULL,
+                        organization_id TEXT,
+                        PRIMARY KEY (task_id, depends_on_task_id)
+                    );
 
                     DROP TABLE IF EXISTS shared_tasks;
                     CREATE TABLE IF NOT EXISTS shared_tasks (
