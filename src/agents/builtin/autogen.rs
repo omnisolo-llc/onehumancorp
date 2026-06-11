@@ -118,12 +118,11 @@ impl GroupChatManager {
             let current_transcript = self.chat.transcript.read().await.clone();
 
             // Check termination condition
-            if let Some(last_msg) = current_transcript.last() {
-                if last_msg.content.contains("TERMINATE") {
+            if let Some(last_msg) = current_transcript.last()
+                && last_msg.content.contains("TERMINATE") {
                     tracing::info!("Group chat terminated via TERMINATE keyword.");
                     break;
                 }
-            }
 
             // Select next speaker
             let next_speaker = self.select_speaker(&current_transcript).await?;
@@ -304,9 +303,9 @@ impl MagenticManager {
             let mut routed_task = None;
 
             for line in response.lines() {
-                if let Some(route_idx) = line.find("ROUTE_TO:") {
-                    if let Some(task_idx) = line.find("TASK:") {
-                        if route_idx < task_idx {
+                if let Some(route_idx) = line.find("ROUTE_TO:")
+                    && let Some(task_idx) = line.find("TASK:")
+                        && route_idx < task_idx {
                             let agent_part = line[route_idx + "ROUTE_TO:".len()..task_idx]
                                 .trim()
                                 .to_string();
@@ -314,12 +313,10 @@ impl MagenticManager {
                             routed_agent = Some(agent_part);
                             routed_task = Some(task_part);
                         }
-                    }
-                }
             }
 
-            if let (Some(agent_name), Some(task_id)) = (routed_agent, routed_task) {
-                if let Some(agent) = self.sub_agents.iter().find(|a| a.name == agent_name) {
+            if let (Some(agent_name), Some(task_id)) = (routed_agent, routed_task)
+                && let Some(agent) = self.sub_agents.iter().find(|a| a.name == agent_name) {
                     let sub_sys_msg = format!(
                         "You are participating in a magentic workflow as {}.\n\
                         You have been assigned TASK: {}. \n\
@@ -355,7 +352,6 @@ impl MagenticManager {
                         }))
                         .await;
                 }
-            }
         }
 
         Ok(transcript)
@@ -413,7 +409,7 @@ Provide your response.",
         let results = futures::future::join_all(futures).await;
         let mut combined_responses = String::new();
 
-        for (_i, res) in results.into_iter().enumerate() {
+        for res in results.into_iter() {
             let text = res?;
             combined_responses.push_str(&text);
             combined_responses.push_str("\n\n");

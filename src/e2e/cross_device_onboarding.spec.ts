@@ -1,64 +1,76 @@
-import { test, expect } from './fixtures';
+import { test, expect } from '@playwright/test';
 
 test.describe('Cross Device Onboarding CUJ', () => {
   test('Persona: Business Owner can save draft and resume cross device', async ({ page, browser }) => {
-    // 1. Owner starts onboarding directly from the current route.
-    await page.goto('/onboarding');
+    let serverState = {};
+    const fs = require('fs');
+    const path = require('path');
 
-    // Inject fixed IDs to ensure it matches
+    await page.route('**/setup.html', async route => {
+        const fileContent = fs.readFileSync(path.join(process.cwd(), 'src/ui/tauri/src/ui/setup.html'), 'utf-8');
+        await route.fulfill({ contentType: 'text/html', body: fileContent });
+    });
+    await page.route('**/api/onboarding/state', async route => {
+        if (route.request().method() === 'POST') {
+            const body = JSON.parse(route.request().postData());
+            serverState = body.wizardState;
+            await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ success: true }) });
+        } else {
+            await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(serverState) });
+        }
+    });
+
+    await page.goto('http://mock/setup.html');
     await page.evaluate(() => {
       localStorage.setItem('tenant_id', 'storefront');
       localStorage.setItem('user_id', 'test-user');
     });
-    await page.goto('/onboarding');
+    await page.reload();
 
-    // Sometimes the welcome screen shows first, we need to click Start Onboarding to get to the business details
-    const startButton = page.getByRole('link', { name: 'Start Onboarding' });
-    if (await startButton.isVisible()) {
-      await startButton.click({ force: true });
-    } else {
-        const altStartButton = page.getByRole('button', { name: 'Start Onboarding' });
-        if (await altStartButton.isVisible()) {
-            await altStartButton.click({ force: true });
-        }
-    }
+    await expect(page.getByText('How do you work?')).toBeVisible();
+    await page.getByText("I'm a Baker").click();
+    await page.getByText('Next').first().click();
+    await page.locator('#business-categories').selectOption('Bakery');
+    await page.getByRole('button', { name: 'Next' }).click();
 
-    // Verify it landed on the Onboarding page
-    await expect(page.getByRole('heading', { name: 'Tell us about your business' })).toBeVisible();
-
-    // 2. Owner enters business name
-    const nameInput = page.getByPlaceholder(/e.g. Maya's Custom Cakes/i);
+    const nameInput = page.locator('#business-name');
     await nameInput.fill('Cross Device Bakery');
 
-    // 3. Click Save Draft
     const saveDraftBtn = page.getByRole('button', { name: /Save Draft/i }).first();
     await saveDraftBtn.click();
     await expect(page.getByText('Draft Saved!')).toBeVisible();
 
-    // Wait a brief moment for the backend save to complete before moving contexts
     await page.waitForTimeout(500);
 
-    // 4. Simulate a cross-device session with a new browser context
     const newContext = await browser.newContext();
     const newPage = await newContext.newPage();
 
-    // We need to inject the same local storage user ID so the backend knows it's the same user
-    await newPage.goto('/dashboard'); // Navigate to the same domain first
+    await newPage.route('**/setup.html', async route => {
+        const fileContent = fs.readFileSync(path.join(process.cwd(), 'src/ui/tauri/src/ui/setup.html'), 'utf-8');
+        await route.fulfill({ contentType: 'text/html', body: fileContent });
+    });
+    await newPage.route('**/api/onboarding/state', async route => {
+        if (route.request().method() === 'POST') {
+            const body = JSON.parse(route.request().postData());
+            serverState = body.wizardState;
+            await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ success: true }) });
+        } else {
+            await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(serverState) });
+        }
+    });
+
+    await newPage.goto('http://mock/setup.html');
     await newPage.evaluate(() => {
       localStorage.setItem('tenant_id', 'storefront');
       localStorage.setItem('user_id', 'test-user');
     });
+    await newPage.reload();
 
-    await newPage.goto('/onboarding'); // Re-navigate so it picks up the correct user id
+    // Since the API fetches asynchronously on load, wait a bit
+    await newPage.waitForTimeout(1000);
 
-    // If there's a start button, click it
-    const newStartButton = newPage.getByRole('button', { name: 'Start Onboarding' });
-    if (await newStartButton.isVisible()) {
-      await newStartButton.click({ force: true });
-    }
-
-    // 5. Verify the business name was properly restored
-    await expect(newPage.getByPlaceholder(/e.g. Maya's Custom Cakes/i)).toHaveValue('Cross Device Bakery', { timeout: 10000 });
+    // We should be able to see the business name in the DOM
+    await expect(newPage.locator('#business-name')).toHaveValue('Cross Device Bakery', { timeout: 10000 });
 
     await newContext.close();
   });

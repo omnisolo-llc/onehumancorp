@@ -26,6 +26,8 @@ pub struct CreateInvoiceDraftRequest {
     pub due_date: Option<chrono::DateTime<Utc>>,
     pub items: Vec<CreateInvoiceLineItem>,
     pub tax_nexus: Option<String>,
+    pub split_partner_id: Option<String>,
+    pub split_percentage: Option<f64>,
 }
 
 #[derive(Deserialize)]
@@ -110,6 +112,8 @@ async fn create_invoice_draft(
         total_amount: Some(total_amount),
         currency: Some("USD".to_string()),
         tax_nexus: payload.tax_nexus,
+        split_partner_id: payload.split_partner_id,
+        split_percentage: payload.split_percentage,
         created_at: Some(Utc::now()),
         updated_at: Some(Utc::now()),
     };

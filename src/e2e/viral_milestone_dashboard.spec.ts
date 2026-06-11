@@ -13,7 +13,6 @@ test.describe('Dashboard Milestone Card UI', () => {
         ['ms_test_10th_order', tenantId, '10th_order']
       );
     } catch (e) {
-      console.log("Could not seed milestone:", e);
     }
 
     // Login

@@ -20,7 +20,7 @@ describe('GrowthReferralWidget', () => {
   it('renders correctly', () => {
     render(<GrowthReferralWidget />);
     expect(screen.getByText('Grow Your Team')).toBeInTheDocument();
-    expect(screen.getByText('Get My Invite Link')).toBeInTheDocument();
+    expect(screen.getByText('Invite to Cloud Team')).toBeInTheDocument();
   });
 
   it('generates a link successfully', async () => {
@@ -31,7 +31,7 @@ describe('GrowthReferralWidget', () => {
 
     render(<GrowthReferralWidget />);
 
-    const button = screen.getByText('Get My Invite Link');
+    const button = screen.getByText('Invite to Cloud Team');
     fireEvent.click(button);
 
     expect(screen.getByText('Generating...')).toBeInTheDocument();
@@ -51,7 +51,7 @@ describe('GrowthReferralWidget', () => {
 
     render(<GrowthReferralWidget />);
 
-    const button = screen.getByText('Get My Invite Link');
+    const button = screen.getByText('Invite to Cloud Team');
     fireEvent.click(button);
 
     await waitFor(() => {
@@ -66,7 +66,7 @@ describe('GrowthReferralWidget', () => {
     });
 
     render(<GrowthReferralWidget />);
-    fireEvent.click(screen.getByText('Get My Invite Link'));
+    fireEvent.click(screen.getByText('Invite to Cloud Team'));
 
     await waitFor(() => {
       expect(screen.getByDisplayValue('https://ohc.app/invite/123')).toBeInTheDocument();

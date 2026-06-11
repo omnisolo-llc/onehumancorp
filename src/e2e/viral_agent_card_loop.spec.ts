@@ -1,7 +1,10 @@
 import { test, expect } from './fixtures';
 import { currentAppSmoke } from './current_app_smoke';
 
-currentAppSmoke('viral_agent_card_loop');
+test('viral_agent_card_loop', async ({ page, request, loginAs, adminUser }) => {
+  await loginAs(page, adminUser);
+  await currentAppSmoke(page, request, 'viral_agent_card_loop');
+});
 
 test.describe('Viral Agent Card Growth Loop', () => {
   test('should allow creating an agent card, toggle branding, and copy link', async ({ page, context }) => {

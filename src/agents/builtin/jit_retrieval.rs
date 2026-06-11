@@ -55,21 +55,20 @@ impl JitContextRetriever {
         // 1. Try to search general memory
         let mut combined_context = String::new();
 
-        if let Ok(results) = self.memory_store.retrieve(&query, 3).await {
-            if !results.is_empty() {
+        if let Ok(results) = self.memory_store.retrieve(&query, 3).await
+            && !results.is_empty() {
                 combined_context.push_str("Relevant General Knowledge (JIT Retrieval):\n");
                 for res in results {
                     combined_context.push_str(&res);
                     combined_context.push_str("\n---\n");
                 }
             }
-        }
 
         // 2. Try to search past session messages
-        if let Ok(results) = self.memory_store.search_session_messages(&self.session_id, &query, 3, false).await {
-            if !results.is_empty() {
+        if let Ok(results) = self.memory_store.search_session_messages(&self.session_id, &query, 3, false).await
+            && !results.is_empty() {
                 if !combined_context.is_empty() {
-                    combined_context.push_str("\n");
+                    combined_context.push('\n');
                 }
                 combined_context.push_str("Relevant Past Session Context (JIT Retrieval):\n");
                 for res in results {
@@ -77,7 +76,6 @@ impl JitContextRetriever {
                     combined_context.push_str("\n---\n");
                 }
             }
-        }
 
         if combined_context.is_empty() {
             None

@@ -16,6 +16,12 @@ pub struct Marketplace {
     registry: HashMap<String, AgentDefinition>,
 }
 
+impl Default for Marketplace {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Marketplace {
     pub fn new() -> Self {
         let mut registry = HashMap::new();

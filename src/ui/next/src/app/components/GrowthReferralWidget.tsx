@@ -88,12 +88,12 @@ export default function GrowthReferralWidget() {
               disabled={loading}
               className="w-full md:w-auto app-button bg-indigo-600 hover:bg-indigo-700 text-white border-none py-3 px-6 text-base"
             >
-              {loading ? 'Generating...' : 'Get My Invite Link'}
+              {loading ? 'Generating...' : 'Invite to Cloud Team'}
             </button>
           ) : (
             <div className="flex flex-col gap-3 w-full md:w-auto">
               <div className="flex items-center gap-2 bg-white/50 dark:bg-black/20 p-2 rounded-lg border border-gray-200 dark:border-gray-700">
-                <input
+                <input id="cloud-bridge-invite-link"
                   type="text"
                   readOnly
                   value={referralLink}

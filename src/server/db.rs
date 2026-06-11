@@ -149,7 +149,7 @@ impl DB {
                     if let Ok(file) = OpenOptions::new()
                         .read(true)
                         .write(true)
-                        .create(true)
+                        .create_new(true)
                         .mode(0o600)
                         .open(&db_path)
                     {
@@ -191,11 +191,17 @@ impl DB {
                              std::fs::set_permissions(&db_path, perms)?;
                          }
                     } else if !db_path.as_os_str().is_empty() && db_path.as_os_str() != ":memory:" {
-                         let _file = std::fs::OpenOptions::new()
+                         let file = std::fs::OpenOptions::new()
+                            .read(true)
                             .write(true)
-                            .create(true)
+                            .create_new(true)
                             .mode(0o600)
                             .open(&db_path)?;
+                         let mut perms = file.metadata()?.permissions();
+                         if perms.mode() & 0o777 != 0o600 {
+                             perms.set_mode(0o600);
+                             std::fs::set_permissions(&db_path, perms)?;
+                         }
                     }
                 }
             }
@@ -508,7 +514,10 @@ impl DB {
     {
         let mut attempt = 0;
         let max_attempts = 10;
+        #[cfg(not(test))]
         let mut backoff = std::time::Duration::from_millis(50);
+        #[cfg(test)]
+        let mut backoff = std::time::Duration::from_millis(1);
 
         loop {
             match f().await {
@@ -652,6 +661,17 @@ impl DB {
                         version INTEGER DEFAULT 1,
                         auto_dreamed BOOLEAN DEFAULT 0
                     );
+                    CREATE TABLE IF NOT EXISTS incidents (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        description TEXT NOT NULL,
+                        status TEXT NOT NULL DEFAULT 'OPEN',
+                        affected_orders JSONB DEFAULT '[]',
+                        affected_inventory JSONB DEFAULT '[]',
+                        resolution_plan JSONB DEFAULT '{}',
+                        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+                    );
                     CREATE TABLE IF NOT EXISTS customer_timeline (
                         id TEXT PRIMARY KEY,
                         tenant_id TEXT NOT NULL,
@@ -744,6 +764,31 @@ impl DB {
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1
                     );
+                    CREATE TABLE IF NOT EXISTS pos_terminal_sessions (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        device_id TEXT NOT NULL,
+                        status TEXT NOT NULL DEFAULT 'ACTIVE',
+                        started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        last_synced_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        offline_changes_count INTEGER DEFAULT 0,
+                        UNIQUE(tenant_id, device_id)
+                    );
+
+                    CREATE TABLE IF NOT EXISTS pos_offline_transactions (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        client_id TEXT NOT NULL,
+                        status TEXT NOT NULL DEFAULT 'PENDING',
+                        amount_cents INTEGER NOT NULL,
+                        currency TEXT NOT NULL,
+                        payload TEXT NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        _sync_status TEXT DEFAULT 'pending',
+                        version INTEGER DEFAULT 1
+                    );
+
                     CREATE TABLE IF NOT EXISTS orders (
                         id TEXT PRIMARY KEY,
                         tenant_id TEXT,

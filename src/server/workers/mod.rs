@@ -7,3 +7,5 @@ pub mod calendar_sync;
 pub mod booking_reengagement;
 
 pub mod pos_conflict_worker;
+pub mod proactive_analysis_job;
+pub mod message_triage_worker;

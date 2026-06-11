@@ -23,7 +23,9 @@ describe('ReferralsPage', () => {
     // Return an unresolved promise to keep it in loading state
     (global.fetch as any).mockImplementation(() => new Promise(() => {}));
 
-    render(<ReferralsPage />);
+    await act(async () => {
+      render(<ReferralsPage />);
+    });
     expect(screen.getByText('Generating your unique link...')).toBeDefined();
 
     // Copy button should be disabled
@@ -51,7 +53,9 @@ describe('ReferralsPage', () => {
       json: async () => ({ referral_link: 'https://ohc.app/ref/test1234' }),
     });
 
-    render(<ReferralsPage />);
+    await act(async () => {
+      render(<ReferralsPage />);
+    });
 
     // Wait for the fetch to resolve
     await waitFor(() => {
@@ -71,7 +75,9 @@ describe('ReferralsPage', () => {
     (global.fetch as any).mockRejectedValueOnce(new Error('API failed'));
     (window.localStorage.getItem as any).mockReturnValue('my-tenant-store');
 
-    render(<ReferralsPage />);
+    await act(async () => {
+      render(<ReferralsPage />);
+    });
 
     await waitFor(() => {
       expect(screen.queryByText('Generating your unique link...')).toBeNull();
@@ -88,7 +94,9 @@ describe('ReferralsPage', () => {
       ok: true,
       json: async () => ({ referral_link: 'https://ohc.app/ref/test1234' }),
     });
-    render(<ReferralsPage />);
+    await act(async () => {
+      render(<ReferralsPage />);
+    });
     const footerLink = screen.getByText('⚡ Powered by OHC');
     expect(footerLink).toBeDefined();
   });

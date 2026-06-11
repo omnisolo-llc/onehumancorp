@@ -225,9 +225,11 @@ export default function Dashboard() {
 
       try {
         const userId = localStorage.getItem("user_id") || "default";
-        const [unifiedRes, onboardingRes] = await Promise.all([
+        const [unifiedRes, onboardingRes, approvalsRes, agentFeedRes] = await Promise.all([
           fetch(`/api/ui/dashboard/unified-feed?tenant_id=${tenant}&mobile_optimized=${window.innerWidth < 768}`),
           fetch(`/api/onboarding/state`, { headers: { 'X-Tenant-ID': tenant, 'X-User-ID': userId } }),
+          fetch(`/api/agents/approvals?tenant_id=${tenant}`),
+          fetch(`/api/agent-feed?tenant_id=${tenant}`, { headers: { 'x-tenant-id': tenant, 'x-user-id': userId } }),
         ]);
 
         if (!unifiedRes.ok) {
@@ -242,6 +244,20 @@ export default function Dashboard() {
         ]);
 
         setDashboardData((prev: any) => ({ ...prev, initialAgentFeed: agentFeedData }));
+
+        if (approvalsData && Array.isArray(approvalsData)) {
+            setPendingApprovals(approvalsData.filter((i: any) => i.status !== "APPROVED" && i.status !== "REJECTED"));
+            setActivities(approvalsData.filter((i: any) => i.status === "APPROVED" || i.status === "REJECTED"));
+        } else if (agentFeedData && agentFeedData.items) {
+            setPendingApprovals(agentFeedData.items.filter((i: any) => i.lifecycle_state !== "APPROVED" && i.lifecycle_state !== "DISMISSED"));
+            setActivities(agentFeedData.items.filter((i: any) => i.lifecycle_state === "APPROVED" || i.lifecycle_state === "DISMISSED").map((a: any) => ({
+                id: a.id,
+                event_type: a.lifecycle_state,
+                department: a.event_source,
+                payload: typeof a.context_payload === 'object' ? JSON.stringify({ original_payload: a.context_payload }) : a.context_payload,
+                created_at: a.created_at
+            })));
+        }
 
         const metricsData = unifiedData.metrics || {};
         const ordersData = unifiedData.orders || [];
@@ -397,8 +413,15 @@ export default function Dashboard() {
         <AffiliateMarketingWidget />
       </div>
 
-      <div className="mb-6">
+      <div className="mb-6 flex flex-col md:flex-row justify-between items-center gap-4">
           <SmartBlock type="PoweredBy" props={{ tenantId: tenantId(), isPremium: false }} />
+          <button
+            onClick={() => router.push("/incidents")}
+            className="h-[44px] px-6 rounded-[8px] bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 font-medium hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors border border-red-200 dark:border-red-800/50"
+            data-testid="report-incident-btn"
+          >
+            Report Incident
+          </button>
       </div>
 
       <section className="app-panel glassmorphism border border-white/40 dark:border-white/10 mb-6">
@@ -910,6 +933,15 @@ export default function Dashboard() {
               </div>
               <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Viral Giveaway Generator</h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">Launch a viral sweepstakes to capture emails and drive social shares.</p>
+            </Link>
+
+            <Link href="/share-to-unlock-generator" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+              <div className="flex items-start justify-between mb-4">
+                <div className="w-12 h-12 rounded-full bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🔓</div>
+                <div className="text-indigo-600 dark:text-indigo-400 font-semibold text-sm bg-indigo-50 dark:bg-indigo-900/30 px-3 py-1 rounded-full">Growth</div>
+              </div>
+              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Share-to-Unlock Generator</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Require customers to share your page on social media to reveal a discount code.</p>
             </Link>
 
             <Link href="/win-back" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">

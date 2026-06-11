@@ -67,7 +67,7 @@ pub fn get_sandbox_violation_total() -> &'static UpDownCounter<i64> {
     SANDBOX_VIOLATION_TOTAL.get_or_init(|| {
         let meter = global::meter("ohc.sandbox");
         meter
-            .i64_up_down_counter("ohc_sandbox_violations_total")
+            .i64_up_down_counter("ohc_agent_sandbox_violations_total")
             .with_description("Total number of LocalSandbox policy violations")
             .build()
     })
@@ -1233,7 +1233,7 @@ pub fn is_sensitive_key(key: &str) -> bool {
         || k.contains("pii")
         || k.contains("jwt")
         || k.contains("bearer")
-        || k.contains("session_id")
+        || k.contains("sessionid")
         || k.contains("payload")
         || k.contains("credit")
         || k.contains("card")
@@ -1245,17 +1245,17 @@ pub fn is_sensitive_key(key: &str) -> bool {
         || k.contains("account")
         || k.contains("stripe")
         || k.contains("billing")
-        || k.contains("ip_address")
-        || k.contains("mac_address")
+        || k.contains("ipaddress")
+        || k.contains("macaddress")
         || k.contains("geolocation")
         || k.contains("medical")
         || k.contains("health")
         || k.contains("salary")
         || k.contains("tax")
-        || k.contains("social_security")
-        || k.contains("ip_address")
-        || k.contains("mac_address")
-        || k.contains("credit_card")
+        || k.contains("socialsecurity")
+        || k.contains("ipaddress")
+        || k.contains("macaddress")
+        || k.contains("creditcard")
 }
 
 pub fn is_email(s: &str) -> bool {
@@ -1334,7 +1334,7 @@ pub async fn record_email_send_cost(
     organization_id: &str,
     count: i64,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let cost_cents = count * 1; // Assuming 1 cent per email
+    let cost_cents = count; // Assuming 1 cent per email
     buffer_metric_i64(
         pool,
         "ohc_email_send_cost",
@@ -1542,7 +1542,7 @@ pub fn get_tasks_completed_total() -> &'static Counter<u64> {
     let meter = global::meter("orchestration_state_machine");
     TASKS_COMPLETED_TOTAL.get_or_init(|| {
         meter
-            .u64_counter("tasks_completed_total")
+            .u64_counter("ohc_task_completed_total")
             .with_description("Total number of successfully completed shared tasks")
             .build()
     })
@@ -1552,7 +1552,7 @@ pub fn get_tasks_failed_total() -> &'static Counter<u64> {
     let meter = global::meter("orchestration_state_machine");
     TASKS_FAILED_TOTAL.get_or_init(|| {
         meter
-            .u64_counter("tasks_failed_total")
+            .u64_counter("ohc_task_failed_total")
             .with_description("Total number of failed shared tasks")
             .build()
     })
@@ -1562,7 +1562,7 @@ pub fn get_tasks_transitions_total() -> &'static Counter<u64> {
     let meter = global::meter("orchestration_state_machine");
     TASKS_TRANSITIONS_TOTAL.get_or_init(|| {
         meter
-            .u64_counter("tasks_transitions_total")
+            .u64_counter("ohc_task_transitions_total")
             .with_description("Total number of task state transitions")
             .build()
     })

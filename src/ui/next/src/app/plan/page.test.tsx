@@ -70,7 +70,7 @@ describe('MyPlanPage', () => {
     expect(mockPush).toHaveBeenCalledWith('/dashboard');
   });
 
-  it('navigates to pricing when clicking "Upgrade Plan"', async () => {
+  it('navigates to pricing when clicking "Upgrade"', async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({ current_plan: 'Free', next_bill_estimated: 0, ai_actions_used: 0, storage_used_bytes: 0 }),
@@ -79,7 +79,7 @@ describe('MyPlanPage', () => {
     render(<MyPlanPage />);
     await waitFor(() => expect(screen.queryByText('Loading your plan...')).toBeNull());
 
-    const upgradeButtons = screen.getAllByText(/Upgrade Plan/i);
+    const upgradeButtons = screen.getAllByRole('button', { name: /Upgrade/i });
     fireEvent.click(upgradeButtons[0]);
     expect(mockPush).toHaveBeenCalledWith('/pricing');
   });

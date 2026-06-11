@@ -111,14 +111,12 @@ impl Anthropic3TierMemory {
         let mut entries = fs::read_dir(&self.transcripts_dir).await?;
         while let Ok(Some(entry)) = entries.next_entry().await {
             let path = entry.path();
-            if path.is_file() {
-                if let Ok(content) = fs::read_to_string(&path).await {
-                    if content.to_lowercase().contains(&query_lower) {
+            if path.is_file()
+                && let Ok(content) = fs::read_to_string(&path).await
+                    && content.to_lowercase().contains(&query_lower) {
                         let filename = path.file_name().unwrap_or_default().to_string_lossy();
                         results.push(format!("Transcript {}:\n{}", filename, content));
                     }
-                }
-            }
         }
         Ok(results)
     }

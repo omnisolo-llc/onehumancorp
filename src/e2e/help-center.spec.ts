@@ -44,7 +44,7 @@ test.describe('Help Center', () => {
   test('Persona: Business Owner views the Changelog', async ({ page }) => {
     await page.goto('/changelog');
     await expect(page.locator('text=Release Notes & Changelog').first()).toBeVisible();
-    await expect(page.locator('text=Version 1.0 (Latest)').first()).toBeVisible();
+    await expect(page.locator('text=Version 1.1 (Latest)').first()).toBeVisible();
     await expect(page.locator('text=New Features').first()).toBeVisible();
   });
 

@@ -17,6 +17,10 @@ function AutoCatalogContent() {
   const [subscriptionMode, setSubscriptionMode] = useState(false);
   const [subscriptionInterval, setSubscriptionInterval] = useState('monthly');
   const [subscriptionCutoff, setSubscriptionCutoff] = useState('5');
+  const [isSplitEnabled, setIsSplitEnabled] = useState(false);
+  const [splitContact, setSplitContact] = useState('');
+  const [splitPercentage, setSplitPercentage] = useState<number>(70);
+
   const [productData, setProductData] = useState<{
     title: string;
     description: string;
@@ -343,6 +347,52 @@ function AutoCatalogContent() {
                       />
                   </div>
               </div>
+
+              <div className="mt-4 border-t border-white/40 pt-4">
+                  <label className="flex items-center justify-between cursor-pointer">
+                      <div className="text-gray-900 font-bold text-sm">
+                          Split this payment
+                      </div>
+                      <div className="relative">
+                          <input type="checkbox" className="sr-only" checked={isSplitEnabled} onChange={(e) => setIsSplitEnabled(e.target.checked)} />
+                          <div className={`block w-10 h-6 rounded-full transition-colors ${isSplitEnabled ? 'bg-blue-500' : 'bg-gray-300'}`}></div>
+                          <div className={`dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${isSplitEnabled ? 'transform translate-x-4' : ''}`}></div>
+                      </div>
+                  </label>
+
+                  {isSplitEnabled && (
+                      <div className="mt-4 p-4 bg-white/40 border border-white/60 rounded-xl animate-fade-in-up">
+                          <div className="mb-3">
+                              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Who gets a cut?</label>
+                              <input
+                                  type="text"
+                                  placeholder="e.g. Sarah (Artist)"
+                                  value={splitContact}
+                                  onChange={(e) => setSplitContact(e.target.value)}
+                                  className="w-full bg-white/80 border border-white/60 rounded-[8px] px-3 py-2 text-gray-900 font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                              />
+                          </div>
+                          <div className="mb-3">
+                              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Their Percentage: {splitPercentage}%</label>
+                              <input
+                                  type="range"
+                                  min="1"
+                                  max="99"
+                                  value={splitPercentage}
+                                  onChange={(e) => setSplitPercentage(parseInt(e.target.value))}
+                                  className="w-full accent-blue-600"
+                              />
+                          </div>
+
+                          <div className="bg-blue-50/50 p-3 rounded-lg border border-blue-100">
+                             <p className="text-xs text-blue-800 font-medium leading-relaxed">
+                                 If this sells for ${productData.price || '0'}, {splitContact || 'your partner'} gets ${((parseFloat(productData.price || '0') * splitPercentage) / 100).toFixed(2)}, you get ${((parseFloat(productData.price || '0') * (100 - splitPercentage)) / 100).toFixed(2)}.
+                             </p>
+                          </div>
+                      </div>
+                  )}
+              </div>
+
               <div className="mt-4 border-t border-white/40 pt-4">
                   <label className="flex items-center cursor-pointer">
                       <div className="relative">

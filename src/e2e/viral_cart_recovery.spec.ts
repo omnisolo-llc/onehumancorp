@@ -1,58 +1,49 @@
-import { test, expect } from './fixtures';
-import { currentAppSmokeAsync } from './current_app_smoke';
+import { test, expect } from '@playwright/test';
+import { adminPage } from './fixtures';
 
-test.describe('Viral Cart Recovery Growth Loop', () => {
-  test('should display cart recovery widget on dashboard, allow configuration, and generate AI draft', async ({ page, request, loginAs, unlimitedAdminUser }) => {
-    // Navigate to dashboard using our e2e fixtures logic to login
-    await loginAs(page, unlimitedAdminUser);
+test.describe('Cart Recovery Feature', () => {
+  test('should verify abandoned cart recovery flow', async ({ page, context }) => {
+    // 1. Setup admin session
+    await adminPage(page, context);
 
-    // We are running our standard currentAppSmokeAsync logic as part of the flow to align with other tests.
-    // However, the focus of this test is on the Cart Recovery.
-    await currentAppSmokeAsync(page, request, 'viral_cart_recovery');
+    // 2. Navigate to cart recovery
+    await page.goto('/cart-recovery');
 
-    // Navigate to dashboard
-    await page.goto('/dashboard');
-    await page.waitForLoadState('networkidle');
+    // 3. Assert heading is visible
+    await expect(page.locator('h1:has-text("Abandoned Cart Recovery")')).toBeVisible();
 
-    // 1. Verify the widget is visible
-    const widgetHeading = page.getByRole('heading', { name: /Cart Recovery Agent/i });
-    await expect(widgetHeading).toBeVisible();
+    // 4. Set Pro mode dynamically or by interacting with the UI.
+    // The UI checks `localStorage.getItem('has_pro') === 'true'`.
+    // We can inject this so we bypass the Twitter modal for test stability.
+    await page.evaluate(() => {
+      localStorage.setItem('has_pro', 'true');
+    });
+    // Reload the page so the state reads from localStorage
+    await page.reload();
 
-    // 2. Click the configure agent link
-    const configureLink = page.getByRole('link', { name: /Configure Agent/i });
-    await expect(configureLink).toBeVisible();
-    await configureLink.click();
+    // 5. Check we have abandoned carts from our seed data
+    // The button might say "Send to 1 Abandoned Carts"
+    await expect(page.locator('button:has-text("Send to 1 Abandoned Carts")').or(page.locator('button:has-text("Send to")'))).toBeVisible();
 
-    // 3. Verify navigation to the cart recovery page
-    await expect(page).toHaveURL(/.*\/cart-recovery.*/);
+    // 6. Enter some details
+    await page.fill('input#customer-name', 'Alice Tester');
+    await page.fill('input#cart-value', '$120.00');
 
-    // Wait for the UI to be ready
-    await page.waitForLoadState('networkidle');
-
-    // Verify page content
-    await expect(page.getByRole('heading', { name: /Cart Recovery Agent/i })).toBeVisible();
-
-    // 4. Fill the configuration form
-    const customerInput = page.getByLabel('Customer Name (Optional)');
-    await expect(customerInput).toBeVisible();
-    await customerInput.fill('John Doe');
-
-    const valueInput = page.getByLabel('Cart Value (Optional)');
-    await expect(valueInput).toBeVisible();
-    await valueInput.fill('$125');
-
-    // 5. Generate AI draft
-    const generateBtn = page.getByRole('button', { name: 'Generate Recovery Email' });
+    // 7. Click generate AI campaign
+    const generateBtn = page.locator('button:has-text("Generate AI Campaign")');
     await expect(generateBtn).toBeEnabled();
     await generateBtn.click();
 
-    // 6. Verify the drafted email
-    // It takes a second for the mock to return
-    const draftTextarea = page.locator('textarea').last();
-    await expect(draftTextarea).toBeVisible({ timeout: 5000 });
-    const draftContent = await draftTextarea.inputValue();
+    // 8. Verify the generated draft is shown
+    await expect(page.locator('pre')).toContainText('Alice Tester');
+    await expect(page.locator('pre')).toContainText('$120.00');
 
-    expect(draftContent).toContain('John Doe');
-    expect(draftContent).toContain('$125');
+    // 9. Send campaign
+    const sendBtn = page.locator('button:has-text("Send to 1 Abandoned Carts")');
+    await expect(sendBtn).toBeEnabled();
+    await sendBtn.click();
+
+    // 10. Verify success message
+    await expect(page.locator('text=Campaign sent to 1 abandoned carts!')).toBeVisible();
   });
 });

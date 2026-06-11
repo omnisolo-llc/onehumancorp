@@ -1097,6 +1097,62 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_token_budget_server_side_enforcement() {
+        let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Standalone");
+        use sqlx::sqlite::SqlitePoolOptions;
+
+        // "Token budgets must be enforced server-side, not just client-side."
+        let db_id = uuid::Uuid::new_v4().to_string();
+        let uri = format!("sqlite:file:{}?mode=memory&cache=shared", db_id);
+        let pool = SqlitePoolOptions::new().max_connections(5).connect(&uri).await.unwrap();
+
+        sqlx::query(
+            "CREATE TABLE IF NOT EXISTS tenants (
+                tenant_id TEXT PRIMARY KEY,
+                tier TEXT NOT NULL
+            );"
+        ).execute(&pool).await.unwrap();
+
+        sqlx::query(
+            "CREATE TABLE IF NOT EXISTS tenant_ai_budgets (
+                tenant_id TEXT,
+                year_month TEXT,
+                actions_used INTEGER DEFAULT 0,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (tenant_id, year_month)
+            );"
+        ).execute(&pool).await.unwrap();
+
+        let db = std::sync::Arc::new(crate::db::DB {
+            pool: sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://dummy").unwrap(),
+            store: crate::db::DbStore::Sqlite(pool.clone()),
+        });
+
+        let throttler = crate::orchestration::departments::throttling::ThrottlingManager::new(db);
+
+        // Explicitly setup tenant tier = "starter" (which has a hard limit of 500)
+        let tenant_id = "tenant_starter_test";
+        sqlx::query("INSERT INTO tenants (tenant_id, tier) VALUES (?, 'starter')")
+            .bind(tenant_id)
+            .execute(&pool).await.unwrap();
+
+        let mut success_count = 0;
+        let mut failure_count = 0;
+
+        for _ in 0..50 {
+            // Attempt to consume 20 points
+            match throttler.check_and_consume_budget(tenant_id, 20).await {
+                Ok(true) => success_count += 1,
+                Ok(false) => failure_count += 1,
+                Err(e) => panic!("Budget check failed completely: {}", e),
+            }
+        }
+
+        assert_eq!(success_count, 25, "Exactly 25 requests (20 points * 25 = 500) should be allowed");
+        assert_eq!(failure_count, 25, "The remaining 25 requests must be rejected server-side");
+    }
+
+    #[tokio::test]
     async fn test_sipdb_multi_tenancy_isolation() {
         let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Standalone");
         use sqlx::sqlite::SqlitePoolOptions;
