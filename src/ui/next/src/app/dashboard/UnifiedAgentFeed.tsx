@@ -78,7 +78,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
         let unifiedData = initialData;
 
         if (!unifiedData) {
-          const unifiedRes = await fetch(`/api/agent-feed?tenant_id=${tenant}`, {
+          const unifiedRes = await fetch(`/api/agents/approvals?tenant_id=${tenant}`, {
             headers: {
               "x-tenant-id": tenant,
               "x-user-id": "default",
@@ -93,7 +93,9 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
         }
 
         if (mounted) {
-          if (unifiedData?.items) {
+          if (unifiedData?.pending_approvals) {
+            setItems(unifiedData.pending_approvals);
+          } else if (unifiedData?.items) {
             setItems(unifiedData.items.filter((i: any) => i.lifecycle_state !== "APPROVED" && i.lifecycle_state !== "DISMISSED"));
 
             // Map items for activity feed as well
@@ -181,7 +183,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
         if (!item?.id || !item?.description) return;
 
         // If it's a DRAFT or PENDING, add to proposals
-        if (String(item.status || '').toUpperCase() === 'DRAFT' || String(item.status || '').toUpperCase() === 'PENDING') {
+        if (String(item.status || item.lifecycle_state || '').toUpperCase() === 'DRAFT' || String(item.status || item.lifecycle_state || '').toUpperCase() === 'PENDING') {
           setItems((current) => [item, ...current.filter((existing) => existing.id !== item.id)]);
         } else {
           // It's an activity event (Approved, Rejected, etc.)
@@ -242,12 +244,63 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
     return () => events.close();
   }, []);
 
+  const syncOfflineQueue = async () => {
+    if (typeof window === "undefined") return;
+    const queueStr = localStorage.getItem("offline_approval_queue");
+    if (!queueStr) return;
+
+    try {
+      const queue = JSON.parse(queueStr) as { id: string, approved: boolean, tenant: string }[];
+      if (queue.length === 0) return;
+
+      const newQueue = [];
+      for (const item of queue) {
+        try {
+          const res = await fetch(`/api/agents/approvals/${item.id}`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "x-tenant-id": item.tenant,
+              "x-user-id": "default",
+            },
+            body: JSON.stringify({ approved: item.approved }),
+          });
+          if (!res.ok && res.status >= 500) {
+            newQueue.push(item);
+          }
+        } catch (e) {
+          newQueue.push(item);
+        }
+      }
+      localStorage.setItem("offline_approval_queue", JSON.stringify(newQueue));
+    } catch (e) {
+      console.error("Failed to sync offline queue", e);
+    }
+  };
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      window.addEventListener("online", syncOfflineQueue);
+      return () => window.removeEventListener("online", syncOfflineQueue);
+    }
+  }, []);
+
   const handleDecision = async (id: string, approved: boolean) => {
     // Optimistic UI update
     setItems(prev => prev.filter(app => app.id !== id));
 
     try {
       const tenant = tenantId();
+
+      if (!navigator.onLine) {
+         // Offline queue
+         const queueStr = localStorage.getItem("offline_approval_queue");
+         const queue = queueStr ? JSON.parse(queueStr) : [];
+         queue.push({ id, approved, tenant });
+         localStorage.setItem("offline_approval_queue", JSON.stringify(queue));
+         return;
+      }
+
       const res = await fetch(`/api/agents/approvals/${id}`, {
         method: "POST",
         headers: {
@@ -260,12 +313,14 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
 
       if (!res.ok) {
         // If it fails, we might want to fetch again to restore state
-        const refreshRes = await fetch(`/api/agent-feed?tenant_id=${tenant}`, {
+        const refreshRes = await fetch(`/api/agents/approvals?tenant_id=${tenant}`, {
             headers: { "x-tenant-id": tenant, "x-user-id": "default" }
         });
         if (refreshRes.ok) {
             const data: any = await refreshRes.json();
-            if (data.items) {
+            if (data.pending_approvals) {
+               setItems(data.pending_approvals);
+            } else if (data.items) {
                setItems(data.items.filter((i: any) => i.lifecycle_state !== "APPROVED" && i.lifecycle_state !== "DISMISSED"));
             }
         }
@@ -375,7 +430,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
             {items.map((approval) => (
               <div
                 key={approval.id}
-                className="glassmorphism p-5 rounded-[16px] border border-white/40 dark:border-white/10 shadow-sm flex flex-col gap-4"
+                className="app-card glassmorphism p-5 rounded-[16px] shadow-sm flex flex-col gap-4"
               >
                 <div className="flex flex-col gap-1">
                   <div className="flex items-center gap-2">
@@ -749,7 +804,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
             {activities.map((activity) => (
               <div
                 key={activity.id}
-                className="glassmorphism p-5 rounded-[16px] border border-white/40 dark:border-white/10 shadow-sm flex flex-col gap-3 opacity-90 min-h-[44px]"
+                className="app-card glassmorphism p-5 rounded-[16px] shadow-sm flex flex-col gap-3 opacity-90 min-h-[44px]"
               >
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold font-outfit uppercase tracking-wider text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-1 rounded-md">
