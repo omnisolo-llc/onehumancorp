@@ -87,6 +87,8 @@ rust_library(
         "//src/server/api/booking:mod.rs",
         "//src/server/api/booking:request.rs",
         "//src/server/api/booking:unified.rs",
+        "//src/server/api/incident:mod.rs",
+        "//src/server/api/incident:routes.rs",
     ],
     crate_root = "bazel_lib.rs",
     edition = "2024",

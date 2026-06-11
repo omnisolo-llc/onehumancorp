@@ -5086,6 +5086,7 @@ async fn create_ui_bom_item_handler(
         .nest("/api/agents/chat", api::agents::chat::router(dept_orchestrator.clone(), semantic_router.clone()))
         .nest("/api/agents/webhook", api::agents::webhook::router(dept_orchestrator.clone()))
         .nest("/api/agent-feed", api::agent_feed::router().with_state(db.pool.clone()))
+        .nest("/api/incidents", api::incident::router(db.pool.clone()))
         .nest("/api/v1/invoices", api::invoice::router(hub.clone()))
         .nest("/api/v1/booking/request", api::booking::request::router(dept_orchestrator.clone()))
         .route("/api/v1/booking/resources", axum::routing::post(api::booking::unified::get_resources).with_state(db.pool.clone()))
