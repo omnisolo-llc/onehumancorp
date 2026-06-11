@@ -65,6 +65,10 @@ struct OnboardingState {
     work_context: Option<String>,
     categories: Option<String>,
     tagline: Option<String>,
+    #[serde(rename = "adminEmail")]
+    admin_email: Option<String>,
+    #[serde(rename = "adminPassword")]
+    admin_password: Option<String>,
     first_offer: Option<String>,
 }
 
@@ -141,6 +145,8 @@ async fn get_onboarding_state(_app_handle: tauri::AppHandle) -> Result<Onboardin
         work_context: None,
         categories: None,
         tagline: None,
+        admin_email: None,
+        admin_password: None,
         first_offer: None,
     })
 }

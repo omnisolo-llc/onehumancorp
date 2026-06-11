@@ -42,7 +42,14 @@ test.describe('Persona-Driven Onboarding E2E', () => {
     await expect(assistantTone).toHaveValue("Friendly");
     await page.getByRole('button', { name: 'Next' }).click();
 
-    // Step 5: First Offer
+
+    // Step 5: Admin Credentials
+    await expect(page.getByText("Admin Credentials")).toBeVisible();
+    await page.locator('#admin-email').fill('maya@example.com');
+    await page.locator('#admin-password').fill('securepassword123');
+    await page.getByRole('button', { name: 'Next' }).click();
+
+    // Step 6: First Offer
     await expect(page.getByText("Your First Offer")).toBeVisible();
     const firstOffer = page.locator('#first-offer');
     await expect(firstOffer).toHaveValue("Custom Birthday Cake");
@@ -65,7 +72,12 @@ test.describe('Persona-Driven Onboarding E2E', () => {
     await expect(page.locator('#business-name')).toHaveValue("Carlos Repairs");
     await page.getByRole('button', { name: 'Next' }).click();
 
+
     await expect(page.locator('#assistant-name')).toHaveValue("Tools");
+    await page.getByRole('button', { name: 'Next' }).click();
+
+    await page.locator('#admin-email').fill('carlos@example.com');
+    await page.locator('#admin-password').fill('securepassword123');
     await page.getByRole('button', { name: 'Next' }).click();
 
     await expect(page.locator('#first-offer')).toHaveValue("Standard Repair Visit");

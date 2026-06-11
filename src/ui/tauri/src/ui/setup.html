@@ -398,6 +398,7 @@
         <div class="step-indicator" data-step="step-categories"></div>
         <div class="step-indicator" data-step="step-name"></div>
         <div class="step-indicator" data-step="step-assistant"></div>
+        <div class="step-indicator" data-step="step-admin"></div>
         <div class="step-indicator" data-step="step-offer"></div>
         <div class="step-indicator" data-step="step-template"></div>
       </div>
@@ -505,12 +506,31 @@
 
         <div class="btn-group">
           <button type="button" class="btn-secondary save-draft-btn">Save Draft</button>
-          <button class="next-step-btn" data-next="step-offer">Next</button>
+          <button class="next-step-btn" data-next="step-admin">Next</button>
           <button class="btn-secondary prev-step-btn" data-prev="step-name">Back</button>
         </div>
       </div>
 
-      <!-- Step 5: First Offer -->
+
+      <!-- Step 5: Admin Setup -->
+      <div class="step" id="step-admin">
+        <h1>Admin Credentials</h1>
+        <p>Set up your login details.</p>
+
+        <input type="email" id="admin-email" class="glassmorphism" placeholder="admin@mybusiness.com" />
+        <div id="email-error" class="error-msg">Please enter a valid email address.</div>
+
+        <input type="password" id="admin-password" class="glassmorphism" placeholder="Password (min 8 chars)" />
+        <div id="password-error" class="error-msg">Password must be at least 8 characters.</div>
+
+        <div class="btn-group">
+          <button type="button" class="btn-secondary save-draft-btn">Save Draft</button>
+          <button class="next-step-btn" data-next="step-offer">Next</button>
+          <button class="btn-secondary prev-step-btn" data-prev="step-assistant">Back</button>
+        </div>
+      </div>
+
+      <!-- Step 6: First Offer -->
       <div class="step" id="step-offer">
         <h1>Your First Offer</h1>
         <p>What is the main thing you sell?</p>
@@ -519,7 +539,7 @@
         <div class="btn-group">
           <button type="button" class="btn-secondary save-draft-btn">Save Draft</button>
           <button class="next-step-btn" data-next="step-template">Next</button>
-          <button class="btn-secondary prev-step-btn" data-prev="step-assistant">Back</button>
+          <button class="btn-secondary prev-step-btn" data-prev="step-admin">Back</button>
         </div>
       </div>
 
@@ -598,6 +618,8 @@
           tagline: document.getElementById('business-tagline'),
           assistantName: document.getElementById('assistant-name'),
           assistantTone: document.getElementById('assistant-tone'),
+          adminEmail: document.getElementById('admin-email'),
+          adminPassword: document.getElementById('admin-password'),
           firstOffer: document.getElementById('first-offer'),
           templateSelection: document.getElementById('template-selection')
       };
@@ -608,6 +630,8 @@
           name: document.getElementById('name-error'),
           assistantName: document.getElementById('assistant-name-error'),
           assistantTone: document.getElementById('tone-error'),
+          adminEmail: document.getElementById('email-error'),
+          adminPassword: document.getElementById('password-error'),
           firstOffer: document.getElementById('offer-error'),
           templateSelection: document.getElementById('template-error')
       };
@@ -671,6 +695,8 @@
 
           if (state.assistantName) inputs.assistantName.value = state.assistantName;
           if (state.assistantTone) inputs.assistantTone.value = state.assistantTone;
+          if (state.adminEmail) inputs.adminEmail.value = state.adminEmail;
+          if (state.adminPassword) inputs.adminPassword.value = state.adminPassword;
           if (state.first_offer) inputs.firstOffer.value = state.first_offer;
           if (state.templateSelection) inputs.templateSelection.value = state.templateSelection;
 
@@ -686,7 +712,7 @@
           }
 
           if (state.step !== undefined && state.step > 0) {
-              const steps = ['step-context', 'step-categories', 'step-name', 'step-assistant', 'step-offer', 'step-template'];
+              const steps = ['step-context', 'step-categories', 'step-name', 'step-assistant', 'step-admin', 'step-offer', 'step-template'];
               if (state.step < steps.length) {
                   goToStep(steps[state.step]);
               }
@@ -716,8 +742,9 @@
               if (activeStep.id === 'step-categories') stepNumber = 1;
               if (activeStep.id === 'step-name') stepNumber = 2;
               if (activeStep.id === 'step-assistant') stepNumber = 3;
-              if (activeStep.id === 'step-offer') stepNumber = 4;
-              if (activeStep.id === 'step-template') stepNumber = 5;
+              if (activeStep.id === 'step-admin') stepNumber = 4;
+              if (activeStep.id === 'step-offer') stepNumber = 5;
+              if (activeStep.id === 'step-template') stepNumber = 6;
           }
           state.step = stepNumber;
 
@@ -784,6 +811,36 @@
                   state.assistantTone = inputs.assistantTone.value;
               }
           }
+          else if (stepId === 'step-admin') {
+              const emailVal = inputs.adminEmail.value.trim();
+              const passVal = inputs.adminPassword.value.trim();
+              let stepValid = true;
+
+              if (emailVal === '' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal)) {
+                  errors.adminEmail.style.display = 'block';
+                  inputs.adminEmail.style.borderColor = '#FF3B30';
+                  stepValid = false;
+              } else {
+                  errors.adminEmail.style.display = 'none';
+                  inputs.adminEmail.style.borderColor = 'rgba(255, 255, 255, 0.5)';
+              }
+
+              if (passVal.length < 8) {
+                  errors.adminPassword.style.display = 'block';
+                  inputs.adminPassword.style.borderColor = '#FF3B30';
+                  stepValid = false;
+              } else {
+                  errors.adminPassword.style.display = 'none';
+                  inputs.adminPassword.style.borderColor = 'rgba(255, 255, 255, 0.5)';
+              }
+
+              if (stepValid) {
+                  state.adminEmail = emailVal;
+                  state.adminPassword = passVal;
+              } else {
+                  isValid = false;
+              }
+          }
           else if (stepId === 'step-offer') {
               if (inputs.firstOffer.value.trim() === '') {
                   errors.firstOffer.style.display = 'block';
@@ -814,7 +871,7 @@
 
 
       function updateStepper(stepId) {
-          const steps = ['step-context', 'step-categories', 'step-name', 'step-assistant', 'step-offer', 'step-template'];
+          const steps = ['step-context', 'step-categories', 'step-name', 'step-assistant', 'step-admin', 'step-offer', 'step-template'];
           const currentIndex = steps.indexOf(stepId);
 
           document.querySelectorAll('.step-indicator').forEach((indicator, index) => {
@@ -922,9 +979,9 @@
                    companyDescription: state.tagline || "",
                    sellingCategories: state.categories ? [state.categories] : [],
                    paymentPref: "online",
-                   adminEmail: "admin@mybusiness.com",
+                   adminEmail: state.adminEmail || "admin@mybusiness.com",
                    adminName: state.assistantName || "Admin",
-                   adminPassword: "password",
+                   adminPassword: state.adminPassword || "password",
                    websiteTemplate: state.templateSelection || "Modern",
                    firstProductName: state.firstOffer || "First Offer",
                    firstProductPrice: "0.00",
