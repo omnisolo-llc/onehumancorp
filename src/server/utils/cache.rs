@@ -168,12 +168,12 @@ where
             if !removed_keys.is_empty() {
                 let tags_map = self.get_local_tags();
                 for mut entry in tags_map.iter_mut() {
-                    let keys: &mut DashSet<String> = entry.value_mut();
+                    let keys = entry.value_mut();
                     for k in &removed_keys {
                         keys.remove(k);
                     }
                 }
-                tags_map.retain(|_, keys: &mut DashSet<String>| !keys.is_empty());
+                tags_map.retain(|_, keys| !keys.is_empty());
             }
         }
 
@@ -201,10 +201,10 @@ where
         self.get_local().remove(key);
         let tags_map = self.get_local_tags();
         for mut entry in tags_map.iter_mut() {
-            let keys: &mut DashSet<String> = entry.value_mut();
+            let keys = entry.value_mut();
             keys.remove(key);
         }
-        tags_map.retain(|_, keys: &mut DashSet<String>| !keys.is_empty());
+        tags_map.retain(|_, keys| !keys.is_empty());
 
         if let Some(mut conn) = self.get_redis_conn().await {
             use redis::AsyncCommands;
