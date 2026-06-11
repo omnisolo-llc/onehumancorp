@@ -59,7 +59,7 @@ export default function ActionCenterPage() {
         body: JSON.stringify({ approved: true })
       });
       if (response.ok) {
-        setActionStatus("Action approved and executed.");
+        setActionStatus("Action approved and executed..");
       } else {
         setActionStatus("Failed to approve action.");
         fetchApprovals();
@@ -134,7 +134,7 @@ export default function ActionCenterPage() {
         ) : approvals.length === 0 ? (
           <div className="app-empty">
             <h3 className="text-lg font-bold text-gray-900 mb-2">All Caught Up!</h3>
-            <p className="text-sm text-gray-600">The Advisor has no pending recommendations for you right now.</p>
+            <p className="text-sm text-gray-600">There are no pending actions for you right now.</p>
           </div>
         ) : (
           <div className="space-y-4">
@@ -147,7 +147,7 @@ export default function ActionCenterPage() {
                 <div key={approval.id} className="app-card flex flex-col gap-4 p-4 border border-blue-100 bg-blue-50/30 rounded-2xl shadow-sm">
                   <div className="flex items-center gap-2 text-blue-800 font-semibold text-sm">
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-                    Recommendation from The Advisor
+                    Pending Approval
                   </div>
 
                   <div>
