@@ -51,6 +51,8 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
   const [activities, setActivities] = useState<OHCLedgerEntry[]>([]);
   const [activityLoading, setActivityLoading] = useState(false);
   const [isOffline, setIsOffline] = useState(false);
+  const [offlineActionsCount, setOfflineActionsCount] = useState(0);
+  const [queuedActionIds, setQueuedActionIds] = useState<Set<string>>(new Set());
 
   const tenantId = () => {
     if (typeof window === "undefined") return "default";
@@ -69,6 +71,17 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
   }, []);
 
   useEffect(() => {
+    const updateOfflineCount = async () => {
+      try {
+        const actions = await getActions();
+        setOfflineActionsCount(actions.length);
+        const ids = new Set<string>();
+        actions.forEach(a => { if (a.payload && a.payload.id) ids.add(a.payload.id) });
+        setQueuedActionIds(ids);
+      } catch (err) {}
+    };
+    updateOfflineCount();
+
     setIsOffline(!navigator.onLine);
 
     const handleOnline = async () => {
@@ -78,8 +91,12 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
         const actions = await getActions();
         for (const action of actions) {
           if (action.type === 'approve_agent_feed') {
-            await submitDecision(action.id, action.payload.approved);
+            await submitDecision(action.payload.id, action.payload.approved);
             await removeAction(action.id);
+            setOfflineActionsCount(prev => Math.max(0, prev - 1));
+            setQueuedActionIds(prev => {
+              const newSet = new Set(prev); newSet.delete(action.payload.id); return newSet;
+            });
           }
         }
       } catch (err) {
@@ -294,9 +311,6 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
   };
 
   const handleDecision = async (id: string, approved: boolean) => {
-    // Optimistic UI update
-    setItems(prev => prev.filter(app => app.id !== id));
-
     if (isOffline) {
       // Enqueue offline action
       await enqueueAction({
@@ -305,8 +319,13 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
         payload: { id, approved },
         timestamp: Date.now()
       });
+      setOfflineActionsCount(prev => prev + 1);
+      setQueuedActionIds(prev => new Set(prev).add(id));
       return;
     }
+
+    // Optimistic UI update
+    setItems(prev => prev.filter(app => app.id !== id));
 
     try {
       await submitDecision(id, approved);
@@ -345,6 +364,11 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
       {isOffline && (
         <div className="mb-4 w-full p-2 glassmorphism rounded-[8px] bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 text-center text-sm font-semibold flex items-center justify-center gap-2">
           <span>📡</span> You are offline. Actions will sync when online.
+        </div>
+      )}
+      {offlineActionsCount > 0 && (
+        <div className="mb-4 w-full p-2 glassmorphism rounded-[8px] bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 text-center text-sm font-semibold flex items-center justify-center gap-2">
+          <span>🔄</span> Pending Sync ({offlineActionsCount})
         </div>
       )}
       <div className="mb-4 flex items-center border-b border-gray-200 dark:border-gray-700">
@@ -444,6 +468,11 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                     {(approval.lifecycle_state === 'PENDING_APPROVAL') && (
                       <span className="text-xs font-bold uppercase tracking-wider text-red-600 bg-red-50 px-2 py-1 rounded-md">
                         Requires Review
+                      </span>
+                    )}
+                    {queuedActionIds.has(approval.id) && (
+                      <span className="text-xs font-bold uppercase tracking-wider text-yellow-600 bg-yellow-50 px-2 py-1 rounded-md shadow-sm border border-yellow-200" data-testid="queued-badge">
+                        Queued
                       </span>
                     )}
                   </div>
