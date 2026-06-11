@@ -1011,26 +1011,30 @@ let db_for_products = self.db.clone();
                                             if attempts == MAX_RETRIES {
                                                 match &db_for_products.store {
                                                     crate::db::DbStore::Postgres => {
+                                                        let task_id_fail = Uuid::new_v4().to_string();
                                                         let _ = sqlx::query(
-                                                            r#"
-                                                            INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at)
-                                                            VALUES ($1, $2, 'marketing', '"{}"'::jsonb, '{}'::jsonb, 'PAUSED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-                                                            "#
+                                                            "INSERT INTO triage_items (id, tenant_id, source, priority, context, status) VALUES ($1, $2, $3, $4, $5, $6)"
                                                         )
-                                                        .bind(Uuid::new_v4().to_string())
+                                                        .bind(&task_id_fail)
                                                         .bind(&org_id)
+                                                        .bind("The Promoter")
+                                                        .bind("Medium")
+                                                        .bind("Failed to generate social post draft.")
+                                                        .bind("pending")
                                                         .execute(&db_for_products.pool)
                                                         .await;
                                                     },
                                                     crate::db::DbStore::Sqlite(pool) => {
+                                                        let task_id_fail = Uuid::new_v4().to_string();
                                                         let _ = sqlx::query(
-                                                            r#"
-                                                            INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at)
-                                                            VALUES (?, ?, 'marketing', '"{}"', '{}', 'PAUSED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-                                                            "#
+                                                            "INSERT INTO triage_items (id, tenant_id, source, priority, context, status) VALUES (?, ?, ?, ?, ?, ?)"
                                                         )
-                                                        .bind(Uuid::new_v4().to_string())
+                                                        .bind(&task_id_fail)
                                                         .bind(&org_id)
+                                                        .bind("The Promoter")
+                                                        .bind("Medium")
+                                                        .bind("Failed to generate social post draft.")
+                                                        .bind("pending")
                                                         .execute(pool)
                                                         .await;
                                                     }
@@ -1060,14 +1064,24 @@ let db_for_products = self.db.clone();
                                 match &db_for_products.store {
                                     crate::db::DbStore::Postgres => {
                                         let _ = sqlx::query(
-                                            r#"
-                                            INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at)
-                                            VALUES ($1, $2, 'marketing', $3::jsonb, $4::jsonb, 'PENDING_APPROVAL', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-                                            "#
+                                            "INSERT INTO triage_items (id, tenant_id, source, priority, context, status) VALUES ($1, $2, $3, $4, $5, $6)"
                                         )
                                         .bind(&task_id)
                                         .bind(&org_id)
-                                        .bind(serde_json::to_string(&serde_json::json!({"description": description})).unwrap_or_default())
+                                        .bind("The Promoter")
+                                        .bind("High")
+                                        .bind(&description)
+                                        .bind("pending")
+                                        .execute(&db_for_products.pool)
+                                        .await;
+
+                                        let _ = sqlx::query(
+                                            "INSERT INTO triage_proposed_actions (id, triage_item_id, tenant_id, action_type, payload) VALUES ($1, $2, $3, $4, $5)"
+                                        )
+                                        .bind(Uuid::new_v4().to_string())
+                                        .bind(&task_id)
+                                        .bind(&org_id)
+                                        .bind("SocialPostDraft")
                                         .bind(&proposed_content)
                                         .execute(&db_for_products.pool)
                                         .await;
@@ -1095,14 +1109,24 @@ let db_for_products = self.db.clone();
                                     },
                                     crate::db::DbStore::Sqlite(pool) => {
                                         let _ = sqlx::query(
-                                            r#"
-                                            INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at)
-                                            VALUES (?, ?, 'marketing', ?, ?, 'PENDING_APPROVAL', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-                                            "#
+                                            "INSERT INTO triage_items (id, tenant_id, source, priority, context, status) VALUES (?, ?, ?, ?, ?, ?)"
                                         )
                                         .bind(&task_id)
                                         .bind(&org_id)
-                                        .bind(serde_json::to_string(&serde_json::json!({"description": description})).unwrap_or_default())
+                                        .bind("The Promoter")
+                                        .bind("High")
+                                        .bind(&description)
+                                        .bind("pending")
+                                        .execute(pool)
+                                        .await;
+
+                                        let _ = sqlx::query(
+                                            "INSERT INTO triage_proposed_actions (id, triage_item_id, tenant_id, action_type, payload) VALUES (?, ?, ?, ?, ?)"
+                                        )
+                                        .bind(Uuid::new_v4().to_string())
+                                        .bind(&task_id)
+                                        .bind(&org_id)
+                                        .bind("SocialPostDraft")
                                         .bind(&proposed_content)
                                         .execute(pool)
                                         .await;
