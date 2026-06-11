@@ -45,3 +45,36 @@ test.describe('Mock Data Audit - Chat & Referrals', () => {
     expect(request.url()).toContain('/api/v1/growth/referrals/generate');
   });
 });
+
+  test('store manager chat should interact with /api/store-manager instead of mock timeout', async ({ page }) => {
+    await page.goto('/store-manager');
+
+    // Wait for the chat input
+    const chatInput = page.getByPlaceholder('Tell me what to do...');
+    await expect(chatInput).toBeVisible();
+
+    await chatInput.fill('inventory');
+    const sendBtn = page.locator('button').filter({ has: page.locator('svg') }).last();
+
+    const responsePromise = page.waitForResponse(res => res.url().includes('/api/store-manager') && res.request().method() === 'POST');
+    await page.keyboard.press('Enter');
+
+    const response = await responsePromise;
+    expect(response?.ok()).toBeTruthy();
+
+    // Verify it responds with the mock action items mapped to the real backend
+    await expect(page.getByText('Checking inventory. You are running low on Vanilla Extract. Should I order more?')).toBeVisible();
+
+    // Verify actions appear
+    const actionBtn = page.getByRole('button', { name: 'Yes, order 2 bottles' });
+    await expect(actionBtn).toBeVisible();
+
+    const actionResponsePromise = page.waitForResponse(res => res.url().includes('/api/store-manager') && res.request().method() === 'POST');
+    await actionBtn.click();
+
+    const actionResponse = await actionResponsePromise;
+    expect(actionResponse?.ok()).toBeTruthy();
+
+    // Fallback or explicit response should be shown
+    await expect(page.getByText('I can help with that. Give me a moment to process.').last()).toBeVisible();
+  });

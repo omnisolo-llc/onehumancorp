@@ -97,21 +97,37 @@ export function StoreManagerChat() {
 
     setIsTyping(true);
 
-    // Normally this would also hit the backend to confirm the action,
-    // but for the sake of the E2E test, we'll just mock the confirmation.
-    // In a real implementation we'd send the actionValue to the backend.
+    try {
+      const response = await fetch('/api/store-manager', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ message: actionValue }),
+      });
 
-    // Simulate backend processing action
-    await new Promise(resolve => setTimeout(resolve, 500));
-
-    setMessages(prev => [...prev, {
-      id: Date.now().toString(),
-      role: 'agent',
-      text: actionValue, // Echoing back the action for simplicity in this mock
-      timestamp: new Date(),
-    }]);
-
-    setIsTyping(false);
+      if (response.ok) {
+        const data = await response.json();
+        setMessages(prev => [...prev, {
+          id: Date.now().toString(),
+          role: 'agent',
+          text: data.text || actionValue,
+          timestamp: new Date(),
+          actions: data.actions
+        }]);
+      } else {
+        throw new Error('Network response was not ok');
+      }
+    } catch (error) {
+      setMessages(prev => [...prev, {
+        id: Date.now().toString(),
+        role: 'agent',
+        text: "I'm sorry, I couldn't process that request right now.",
+        timestamp: new Date(),
+      }]);
+    } finally {
+      setIsTyping(false);
+    }
   };
 
   return (

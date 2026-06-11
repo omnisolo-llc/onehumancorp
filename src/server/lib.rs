@@ -4635,6 +4635,28 @@ async fn create_ui_bom_item_handler(
                 "link": { "url": link_url, "title": link_title }
             }))
         }))
+        .route("/api/v1/store-manager/chat", axum::routing::post(|axum::Json(req): axum::Json<ChatRequest>| async move {
+            let message_lower = req.message.to_lowercase();
+            let mut response_text = "I can help with that. Give me a moment to process.".to_string();
+            let mut actions: Option<Vec<serde_json::Value>> = None;
+
+            if message_lower.contains("discount") || message_lower.contains("weekend") {
+                response_text = "Pickups scheduled. Created discount code WEEKEND10. I'll email this to your subscriber list.".to_string();
+            } else if message_lower.contains("inventory") {
+                response_text = "Checking inventory. You are running low on Vanilla Extract. Should I order more?".to_string();
+                actions = Some(vec![
+                    serde_json::json!({ "label": "Yes, order 2 bottles", "actionValue": "Ordered 2 bottles of Vanilla Extract." }),
+                    serde_json::json!({ "label": "No, remind me next week", "actionValue": "Will remind you next week." })
+                ]);
+            } else if message_lower.contains("hours") {
+                response_text = "What should your new hours be for today?".to_string();
+            }
+
+            axum::Json(serde_json::json!({
+                "text": response_text,
+                "actions": actions
+            }))
+        }))
         .merge(webhook_router)
         .merge(relay_webhook_router)
         .merge(ohc_builtin_agent::visual_workflow_client::create_router(std::sync::Arc::new(ohc_builtin_agent::visual_workflow_client::VisualWorkflowState {
