@@ -333,7 +333,7 @@ pub async fn cost_dashboard_handler(
     let auditor_clone = auditor.clone();
     let auditor_future = tokio::task::spawn_blocking(move || {
         (
-            auditor_clone.get_tenant_cost(&tenant_id_clone_2),
+            auditor_clone.get_tenant_cost_cents(&tenant_id_clone_2),
             auditor_clone.get_tenant_revenue(&tenant_id_clone_2),
             auditor_clone.get_tenant_payment_fees(&tenant_id_clone_2),
             auditor_clone.get_tenant_compute_cost(&tenant_id_clone_2),
@@ -376,7 +376,8 @@ pub async fn cost_dashboard_handler(
     let (storage_res, auditor_res, trend_res, agent_costs_res, department_res) = tokio::join!(storage_future, auditor_future, trend_future, agent_costs_future, department_future);
 
     let storage_bytes = storage_res.unwrap_or(0);
-    let (llm_cost_f64, total_revenue_f64, payment_fees_f64, compute_cost_f64, network_cost_f64, bandwidth_savings_f64, total_tokens, cached_tokens) = auditor_res.unwrap_or((0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0, 0));
+    let (llm_cost_cents, total_revenue_f64, payment_fees_f64, compute_cost_f64, network_cost_f64, bandwidth_savings_f64, total_tokens, cached_tokens) = auditor_res.unwrap_or((0, 0.0, 0.0, 0.0, 0.0, 0.0, 0, 0));
+    let llm_cost_f64 = llm_cost_cents as f64 / 100.0;
     let trend = trend_res.unwrap_or_else(|_| vec![]);
     let agent_costs = agent_costs_res.unwrap_or_else(|_| vec![]);
 
@@ -416,7 +417,7 @@ pub async fn cost_dashboard_handler(
         total_revenue: (total_revenue_f64 * 100.0).round() as i64,
         total_costs: (total_costs_f64 * 100.0).round() as i64,
         projected_monthly_cost: ::server_pricing::calculator::calculate_projected_monthly_cost_cents(total_costs_f64, elapsed_days, 30),
-        llm_cost: (llm_cost_f64 * 100.0).round() as i64,
+        llm_cost: llm_cost_cents,
         storage_cost: (storage_cost_f64 * 100.0).round() as i64,
         payment_fees: (payment_fees_f64 * 100.0).round() as i64,
         network_cost: (network_cost_f64 * 100.0).round() as i64,
