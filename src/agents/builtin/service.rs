@@ -1603,32 +1603,4 @@ mod memory_tests {
         }
     }
 
-    async fn test_anthropic_memory_initialization_and_accessor() {
-        unsafe {
-            std::env::set_var("OHC_ENABLE_ANTHROPIC_MEMORY", "true");
-            std::env::set_var("OHC_ANTHROPIC_MEMORY_DIR", ".test-agent-memory");
-        }
-
-        let mut service = AgentServiceImpl::new("test", AgentConfig::default(), AuthMode::Disabled);
-        service.init_memory().await;
-
-        assert!(
-            service.anthropic_memory.is_some(),
-            "Anthropic Memory should be initialized"
-        );
-        let mem = service.anthropic_memory.as_ref().unwrap();
-
-        use crate::memory_store::LongTermMemory;
-        let accessor = mem.as_anthropic_accessor();
-        assert!(
-            accessor.is_some(),
-            "Should return the anthropic memory accessor"
-        );
-
-        unsafe {
-            std::env::remove_var("OHC_ENABLE_ANTHROPIC_MEMORY");
-            std::env::remove_var("OHC_ANTHROPIC_MEMORY_DIR");
-        }
-        let _ = tokio::fs::remove_dir_all(".test-agent-memory").await;
-    }
 }
