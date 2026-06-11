@@ -18,12 +18,23 @@ pub trait UserRepository: Send + Sync {
 
 use ::server_common::auth_utils::set_org_context;
 use chrono::{DateTime, Utc};
+
+fn is_multitenant_mode() -> bool {
+    #[cfg(test)]
+    {
+        if let Ok(val) = std::env::var("OHC_MULTITENANT") {
+            return val == "true";
+        }
+    }
+    ::server_config::get().multitenant
+}
+
 use sqlx::Row;
 
 
 macro_rules! validate_org_id {
     ($org_id:expr) => {
-        if ::server_config::get().multitenant {
+        if is_multitenant_mode() {
             if $org_id.trim().eq_ignore_ascii_case("system") {
                 return Err("tenant_id 'system' cannot be queried in multi-tenant mode".into());
             }
@@ -81,8 +92,8 @@ impl UserRepository for PgUserRepository {
     async fn get_by_id(&self, id: &str, org_id: &str) -> Result<User, String> {
         validate_org_id!(org_id);
 
-        let is_multitenant = ::server_config::get().multitenant;
-        let should_bypass = (!is_multitenant) && org_id.eq_ignore_ascii_case("system");
+        let _is_multitenant = is_multitenant_mode();
+        let should_bypass = (!is_multitenant_mode()) && org_id.eq_ignore_ascii_case("system");
 
         let query = if should_bypass {
             "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE id = $1"
@@ -124,8 +135,8 @@ impl UserRepository for PgUserRepository {
     async fn get_by_username(&self, username: &str, org_id: &str) -> Result<User, String> {
         validate_org_id!(org_id);
 
-        let is_multitenant = ::server_config::get().multitenant;
-        let should_bypass = (!is_multitenant) && org_id.eq_ignore_ascii_case("system");
+        let _is_multitenant = is_multitenant_mode();
+        let should_bypass = (!is_multitenant_mode()) && org_id.eq_ignore_ascii_case("system");
 
         let query = if should_bypass {
             "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE username = $1"
@@ -166,8 +177,8 @@ impl UserRepository for PgUserRepository {
     async fn get_by_email(&self, email: &str, org_id: &str) -> Result<User, String> {
         validate_org_id!(org_id);
 
-        let is_multitenant = ::server_config::get().multitenant;
-        let should_bypass = (!is_multitenant) && org_id.eq_ignore_ascii_case("system");
+        let _is_multitenant = is_multitenant_mode();
+        let should_bypass = (!is_multitenant_mode()) && org_id.eq_ignore_ascii_case("system");
 
         let query = if should_bypass {
             "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE email = $1"
@@ -208,8 +219,8 @@ impl UserRepository for PgUserRepository {
     async fn get_by_oidc_subject(&self, sub: &str, org_id: &str) -> Result<User, String> {
         validate_org_id!(org_id);
 
-        let is_multitenant = ::server_config::get().multitenant;
-        let should_bypass = (!is_multitenant) && org_id.eq_ignore_ascii_case("system");
+        let _is_multitenant = is_multitenant_mode();
+        let should_bypass = (!is_multitenant_mode()) && org_id.eq_ignore_ascii_case("system");
 
         let query = if should_bypass {
             "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE oidc_subject = $1"
@@ -249,8 +260,8 @@ impl UserRepository for PgUserRepository {
 
     async fn list_users(&self, org_id: &str) -> Result<Vec<User>, String> {
         validate_org_id!(org_id);
-        let is_multitenant = ::server_config::get().multitenant;
-        let should_bypass = (!is_multitenant) && org_id.eq_ignore_ascii_case("system");
+        let _is_multitenant = is_multitenant_mode();
+        let should_bypass = (!is_multitenant_mode()) && org_id.eq_ignore_ascii_case("system");
         let query = if should_bypass {
             "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users ORDER BY created_at"
         } else {
@@ -293,8 +304,8 @@ impl UserRepository for PgUserRepository {
     async fn update_user(&self, user: User, org_id: &str) -> Result<(), String> {
         validate_org_id!(org_id);
         let roles_json = serde_json::to_string(&user.roles).unwrap_or_default();
-        let is_multitenant = ::server_config::get().multitenant;
-        let should_bypass = (!is_multitenant) && org_id.eq_ignore_ascii_case("system");
+        let _is_multitenant = is_multitenant_mode();
+        let should_bypass = (!is_multitenant_mode()) && org_id.eq_ignore_ascii_case("system");
 
         let query = if should_bypass {
             r#"
@@ -356,8 +367,8 @@ impl UserRepository for PgUserRepository {
 
     async fn delete_user(&self, id: &str, org_id: &str) -> Result<(), String> {
         validate_org_id!(org_id);
-        let is_multitenant = ::server_config::get().multitenant;
-        let should_bypass = (!is_multitenant) && org_id.eq_ignore_ascii_case("system");
+        let _is_multitenant = is_multitenant_mode();
+        let should_bypass = (!is_multitenant_mode()) && org_id.eq_ignore_ascii_case("system");
         let query = if should_bypass {
             "DELETE FROM users WHERE id = $1 RETURNING id"
         } else {
@@ -436,11 +447,14 @@ impl UserRepository for PgUserRepository {
 #[cfg(test)]
 mod security_tests {
     use super::*;
+    use std::sync::Mutex;
+    static ENV_MUTEX: Mutex<()> = Mutex::new(());
     use std::time::Duration;
     use sqlx::postgres::PgPoolOptions;
 
     #[tokio::test]
     async fn test_multitenant_idor_system_bypass_prevention() {
+        let _lock = ENV_MUTEX.lock().unwrap_or_else(|e| e.into_inner());
         let database_url = match std::env::var("OHC_DATABASE_URL") {
             Ok(url) => url,
             Err(_) => return,
@@ -457,18 +471,24 @@ mod security_tests {
 
         let repo = PgUserRepository::new(pool.clone());
 
-        // Since we can't reliably override the global `::server_config::get().multitenant` inline here
+        // Since we can't reliably override the global `is_multitenant_mode()` inline here
         // without unsafe/mocking because it returns a reference to a static OnceLock, we simulate the query generation logic.
 
         // Cloud multitenant mode should NOT allow bypassing.
-        let is_multitenant = true;
-        let org_id = "system"; let should_bypass = (!is_multitenant) && org_id.eq_ignore_ascii_case("system");
+        let old_val = std::env::var("OHC_MULTITENANT").ok();
+        unsafe { std::env::set_var("OHC_MULTITENANT", "true"); }
+        let org_id = "system"; let should_bypass = (!is_multitenant_mode()) && org_id.eq_ignore_ascii_case("system");
 
         // Ensure the condition strictly evaluates to false when multitenant is true.
         assert!(!should_bypass, "Cloud mode should NEVER bypass tenant filters when org_id is 'system'");
 
         let res = repo.get_by_id("dummy_id", "system").await;
-        assert!(res.is_err(), "Must reject system id in multitenant mode");
+        assert!(res.is_err(), "Must reject system id");
+        if let Some(ref val) = old_val {
+            unsafe { std::env::set_var("OHC_MULTITENANT", val); }
+        } else {
+            unsafe { std::env::remove_var("OHC_MULTITENANT"); }
+        }
     }
 
     #[tokio::test]
@@ -504,6 +524,7 @@ mod security_tests {
 
     #[tokio::test]
     async fn test_update_user_tenant_isolation_regression() {
+        let _lock = ENV_MUTEX.lock().unwrap_or_else(|e| e.into_inner());
         let database_url = match std::env::var("OHC_DATABASE_URL") {
             Ok(url) => url,
             Err(_) => return,
@@ -537,11 +558,11 @@ mod security_tests {
         let old_val = std::env::var("OHC_MULTITENANT").ok();
         unsafe { std::env::set_var("OHC_MULTITENANT", "true"); }
         let res = repo.update_user(dummy_user, "system").await;
-        if let Some(val) = old_val {
+        assert!(res.is_err(), "Must reject system org_id");
+        if let Some(ref val) = old_val {
             unsafe { std::env::set_var("OHC_MULTITENANT", val); }
         } else {
             unsafe { std::env::remove_var("OHC_MULTITENANT"); }
         }
-        assert!(res.is_err(), "Must reject system org_id for update in multitenant mode");
     }
 }
