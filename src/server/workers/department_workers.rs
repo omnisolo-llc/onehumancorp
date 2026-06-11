@@ -58,13 +58,13 @@ impl OperationsWorker {
                         SET status = 'IN_PROGRESS', locked_until = $1, updated_at = CURRENT_TIMESTAMP
                         WHERE id = (
                             SELECT id FROM department_tasks
-                            WHERE status = 'PENDING' AND department = 'operations' AND (event_type = 'OrderReceived' OR event_type = 'OrderPlaced')
+                            WHERE status = 'PENDING' AND department = 'operations' AND (event_type = 'OrderReceived' OR event_type = 'OrderPlaced' OR event_type = 'InventoryConflictEvent')
                             AND (locked_until IS NULL OR locked_until < CURRENT_TIMESTAMP)
                             ORDER BY created_at ASC
                             LIMIT 1
                             FOR UPDATE SKIP LOCKED
                         )
-                        RETURNING id, tenant_id, payload
+                        RETURNING id, tenant_id, payload, event_type
                         "#
                     )
                     .bind(Utc::now() + chrono::Duration::minutes(5))
@@ -72,7 +72,7 @@ impl OperationsWorker {
                     .await
                     .map_err(|e| e.to_string())?;
 
-                    let res = row.map(|r| (r.get::<String, _>("id"), r.get::<String, _>("tenant_id"), r.get::<serde_json::Value, _>("payload")));
+                    let res = row.map(|r| (r.get::<String, _>("id"), r.get::<String, _>("tenant_id"), r.get::<serde_json::Value, _>("payload"), r.get::<String, _>("event_type")));
                     tx.commit().await.map_err(|e| e.to_string())?;
                     res
                 },
@@ -80,8 +80,8 @@ impl OperationsWorker {
                     let mut tx = sqlite_pool.begin().await.map_err(|e| e.to_string())?;
                     let row = sqlx::query(
                         r#"
-                        SELECT id, tenant_id, payload FROM department_tasks
-                        WHERE status = 'PENDING' AND department = 'operations' AND (event_type = 'OrderReceived' OR event_type = 'OrderPlaced')
+                        SELECT id, tenant_id, payload, event_type FROM department_tasks
+                        WHERE status = 'PENDING' AND department = 'operations' AND (event_type = 'OrderReceived' OR event_type = 'OrderPlaced' OR event_type = 'InventoryConflictEvent')
                         AND (locked_until IS NULL OR locked_until < CURRENT_TIMESTAMP)
                         ORDER BY created_at ASC
                         LIMIT 1
@@ -95,6 +95,7 @@ impl OperationsWorker {
                         let id: String = r.get("id");
                         let tenant_id: String = r.get("tenant_id");
                         let payload_str: String = r.get("payload");
+                        let event_type: String = r.get("event_type");
                         let payload: serde_json::Value = serde_json::from_str(&payload_str).unwrap_or(json!({}));
 
                         sqlx::query(
@@ -104,7 +105,7 @@ impl OperationsWorker {
                         .bind(&id)
                         .execute(&mut *tx).await.map_err(|e| e.to_string())?;
 
-                        Some((id, tenant_id, payload))
+                        Some((id, tenant_id, payload, event_type))
                     } else {
                         None
                     };
@@ -121,8 +122,101 @@ impl OperationsWorker {
         };
 
         let processed = task.is_some();
-        if let Some((id, tenant_id, payload)) = task {
+        if let Some((id, tenant_id, payload, event_type)) = task {
             let mut final_status = "COMPLETED";
+
+            if event_type == "InventoryConflictEvent" {
+                let transaction_id = payload.get("transaction_id").and_then(|v| v.as_str()).unwrap_or("unknown");
+                let product_id = payload.get("product_id").and_then(|v| v.as_str()).unwrap_or("unknown");
+                let expected = payload.get("expected_stock").and_then(|v| v.as_i64()).unwrap_or(0);
+                let actual = payload.get("actual_stock").and_then(|v| v.as_i64()).unwrap_or(0);
+                let deficit = expected - actual;
+
+                let title = "Inventory Reconciliation: Shopify Sync Issue".to_string();
+                let description = format!("Inventory discrepancy detected. We oversold the item {} by {}. Should I cancel the online order or draft a rush supply order for transaction {}?", product_id, deficit, transaction_id);
+
+                let mut drafted_msg = format!("We oversold the item {} by {}. Please advise if we should cancel order {} or draft a restock.", product_id, deficit, transaction_id);
+
+                let prompt = format!("Draft a concise message to our customer apologizing that their order {} for product {} is delayed because we oversold it by {} units due to an inventory sync issue. Offer them a refund or a delayed shipment.", transaction_id, product_id, deficit);
+
+                let mut attempts = 0;
+                while attempts < MAX_RETRIES {
+                    let ai_op = async {
+                        if let Ok(mut client) = ::server_ohc::orchestration::hub_service_client::HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:8081".to_string())).await {
+                            let reason_req = ::server_ohc::orchestration::ReasonRequest {
+                                prompt: prompt.clone(),
+                                from_agent_id: "operations".into(),
+                            };
+                            if let Ok(res) = client.reason(tonic::Request::new(reason_req)).await {
+                                return Ok(res.into_inner().content);
+                            }
+                        }
+                        Err("AI call failed".to_string())
+                    };
+
+                    match timeout(AI_AGENT_TIMEOUT, ai_op).await {
+                        Ok(Ok(content)) => {
+                            if !content.is_empty() {
+                                drafted_msg = content;
+                            }
+                            break;
+                        },
+                        _ => {
+                            attempts += 1;
+                            tokio::time::sleep(Duration::from_secs(2u64.pow(attempts))).await;
+                        }
+                    }
+                }
+
+                let task_id = Uuid::new_v4().to_string();
+                match &db.store {
+                    crate::db::DbStore::Postgres => {
+                        let _ = sqlx::query(
+                            r#"
+                            INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
+                            VALUES ($1, $2, $3, $4, 'PENDING', 'P1', 'LOW', 'PENDING', $5)
+                            "#
+                        )
+                        .bind(&task_id)
+                        .bind(&tenant_id)
+                        .bind(&title)
+                        .bind(&description)
+                        .bind(&drafted_msg)
+                        .execute(&db.pool)
+                        .await;
+
+                        sqlx::query("UPDATE department_tasks SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2")
+                            .bind(final_status)
+                            .bind(&id)
+                            .execute(&db.pool)
+                            .await
+                            .map_err(|e| e.to_string())?;
+                    },
+                    crate::db::DbStore::Sqlite(pool) => {
+                        let _ = sqlx::query(
+                            r#"
+                            INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
+                            VALUES (?, ?, ?, ?, 'PENDING', 'P1', 'LOW', 'PENDING', ?)
+                            "#
+                        )
+                        .bind(&task_id)
+                        .bind(&tenant_id)
+                        .bind(&title)
+                        .bind(&description)
+                        .bind(&drafted_msg)
+                        .execute(pool)
+                        .await;
+
+                        sqlx::query("UPDATE department_tasks SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?")
+                            .bind(final_status)
+                            .bind(&id)
+                            .execute(pool)
+                            .await
+                            .map_err(|e| e.to_string())?;
+                    }
+                }
+                return Ok(true);
+            }
 
             // Check inventory levels
             let items = payload.get("items").and_then(|v| v.as_array());
@@ -141,7 +235,7 @@ impl OperationsWorker {
 
                                 let cache = crate::builder::edge::get_edge_cache();
                                 cache.invalidate_by_tag(&format!("entity:product:{}", product_id)).await;
-                                cache.invalidate_by_tag(&format!("tenant-id:{}", tenant_id)).await;
+                                cache.invalidate_by_tag(format!("tenant-id:{}", tenant_id).as_str()).await;
 
                                 let pool_clone = db.pool.clone();
                                 let tenant_id_clone = uuid::Uuid::parse_str(&tenant_id).unwrap_or_default();
@@ -182,7 +276,7 @@ impl OperationsWorker {
 
                                 let cache = crate::builder::edge::get_edge_cache();
                                 cache.invalidate_by_tag(&format!("entity:product:{}", product_id)).await;
-                                cache.invalidate_by_tag(&format!("tenant-id:{}", tenant_id)).await;
+                                cache.invalidate_by_tag(format!("tenant-id:{}", tenant_id).as_str()).await;
 
                                 let pool_clone = db.pool.clone();
                                 let tenant_id_clone = uuid::Uuid::parse_str(&tenant_id).unwrap_or_default();
@@ -1411,6 +1505,47 @@ mod tests {
 
              // Verify task was marked COMPLETED
             let status: String = sqlx::query_scalar("SELECT status FROM department_tasks WHERE id = 'task2'")
+                .fetch_one(pool).await.unwrap();
+            assert_eq!(status, "COMPLETED");
+        }
+    }
+
+    #[tokio::test]
+    async fn test_operations_worker_inventory_conflict() {
+        let db = setup_test_db().await;
+        if let DbStore::Sqlite(pool) = &db.store {
+            let task_payload = json!({
+                "transaction_id": "tx_123",
+                "product_id": "prod_456",
+                "expected_stock": 2,
+                "actual_stock": -1,
+                "message": "Heads up!"
+            });
+            sqlx::query("INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status) VALUES ('task3', 'tenant1', 'operations', 'InventoryConflictEvent', ?, 'PENDING')")
+                .bind(task_payload.to_string())
+                .execute(pool).await.unwrap();
+        }
+
+        let processed = OperationsWorker::poll(&db).await.unwrap();
+        assert!(processed);
+
+        if let DbStore::Sqlite(pool) = &db.store {
+            tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+
+            let row = sqlx::query("SELECT title, proposed_content, approval_status FROM shared_tasks WHERE organization_id = 'tenant1'")
+                .fetch_optional(pool).await.unwrap();
+
+            if let Some(row) = row {
+                let title: String = row.get("title");
+                let content: String = row.get("proposed_content");
+                let approval_status: String = row.get("approval_status");
+
+                assert_eq!(title, "Inventory Reconciliation: Shopify Sync Issue");
+                assert_eq!(approval_status, "PENDING");
+                assert!(content.contains("We oversold the item"));
+            }
+
+            let status: String = sqlx::query_scalar("SELECT status FROM department_tasks WHERE id = 'task3'")
                 .fetch_one(pool).await.unwrap();
             assert_eq!(status, "COMPLETED");
         }

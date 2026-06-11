@@ -514,7 +514,7 @@ impl DepartmentOrchestrator {
                         let risk_str: String = row.get("action_risk");
                         let action_risk = ActionRisk::from_str(&risk_str).unwrap_or(ActionRisk::DraftForReview);
                         let payload_opt: Option<serde_json::Value> = match row.try_get::<String, _>("payload") {
-                            Ok(p) => serde_json::from_str(&p).unwrap_or(None),
+                            Ok(p) => serde_json::from_str(p.as_str()).unwrap_or(None),
                             Err(_) => match row.try_get::<serde_json::Value, _>("payload") {
                                 Ok(p) => Some(p),
                                 Err(_) => None,
@@ -671,7 +671,7 @@ impl DepartmentOrchestrator {
                         let risk_str: String = row.get("action_risk");
                         let action_risk = ActionRisk::from_str(&risk_str).unwrap_or(ActionRisk::DraftForReview);
                         let payload_opt: Option<serde_json::Value> = match row.try_get::<String, _>("payload") {
-                            Ok(p) => serde_json::from_str(&p).unwrap_or(None),
+                            Ok(p) => serde_json::from_str(p.as_str()).unwrap_or(None),
                             Err(_) => match row.try_get::<serde_json::Value, _>("payload") {
                                 Ok(p) => Some(p),
                                 Err(_) => None,
@@ -778,7 +778,7 @@ impl DepartmentOrchestrator {
                         use sqlx::Row;
                         let dep = r.get::<String, _>("department");
                         let payload_val: Option<serde_json::Value> = match r.try_get::<String, _>("payload") {
-                            Ok(p) => serde_json::from_str(&p).unwrap_or(None),
+                            Ok(p) => serde_json::from_str(p.as_str()).unwrap_or(None),
                             Err(_) => match r.try_get::<serde_json::Value, _>("payload") {
                                 Ok(p) => Some(p),
                                 Err(_) => None,
@@ -851,6 +851,12 @@ impl DepartmentOrchestrator {
                         let stripe = crate::integrations::stripe::client::StripeClient::new(api_key);
                         let stripe_link = stripe.create_checkout_session(&quote_id, "customer_123", price * 0.20, false).await.unwrap_or_default();
 
+                        let mut generated_reply = payload.get("generated_response").and_then(|v| v.as_str()).unwrap_or("").to_string();
+                        if !stripe_link.is_empty() {
+                            generated_reply.push_str(&format!("\n\nTo secure your booking, please pay the deposit here: {}", stripe_link));
+                        }
+                        let inbox_message_id = payload.get("inbox_message_id").and_then(|v| v.as_str()).unwrap_or("");
+
                         if let DbStore::Postgres = &self.db.store {
                             if let Err(e) = sqlx::query("INSERT INTO quotes (id, tenant_id, status, total_amount, required_deposit, expires_at, checkout_url) VALUES ($1, $2, $3, $4, $5, $6, $7)")
                                 .bind(&quote_id)
@@ -865,6 +871,18 @@ impl DepartmentOrchestrator {
                             {
                                 tracing::error!("Failed to insert quote: {}", e);
                             }
+
+                            if !inbox_message_id.is_empty() {
+                                if let Err(e) = sqlx::query("UPDATE inbox_messages SET draft_reply = $1, status = 'auto_replied' WHERE id = $2 AND tenant_id = $3")
+                                    .bind(&generated_reply)
+                                    .bind(inbox_message_id)
+                                    .bind(tenant_id)
+                                    .execute(&self.db.pool)
+                                    .await
+                                {
+                                    tracing::error!("Failed to update inbox_messages for quote draft: {}", e);
+                                }
+                            }
                         } else if let DbStore::Sqlite(pool) = &self.db.store {
                             if let Err(e) = sqlx::query("INSERT INTO quotes (id, tenant_id, status, total_amount, required_deposit, expires_at, checkout_url) VALUES (?, ?, ?, ?, ?, ?, ?)")
                                 .bind(&quote_id)
@@ -878,6 +896,18 @@ impl DepartmentOrchestrator {
                                 .await
                             {
                                 tracing::error!("Failed to insert quote: {}", e);
+                            }
+
+                            if !inbox_message_id.is_empty() {
+                                if let Err(e) = sqlx::query("UPDATE inbox_messages SET draft_reply = ?, status = 'auto_replied' WHERE id = ? AND tenant_id = ?")
+                                    .bind(&generated_reply)
+                                    .bind(inbox_message_id)
+                                    .bind(tenant_id)
+                                    .execute(pool)
+                                    .await
+                                {
+                                    tracing::error!("Failed to update inbox_messages for quote draft: {}", e);
+                                }
                             }
                         }
                     }

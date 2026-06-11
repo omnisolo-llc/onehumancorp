@@ -374,9 +374,9 @@ impl MyDashboardService {
                         // Assuming it matches what orders table handles, which doesn't query dates in sqlite branch for some reason.
                         // For safety we'll use a string fallback and parse
                         let start_time_str: String = r.try_get("start_time").unwrap_or_default();
-                        let start_time = DateTime::parse_from_rfc3339(&start_time_str).map(|d| d.with_timezone(&Utc)).unwrap_or_else(|_| Utc::now());
+                        let start_time = DateTime::parse_from_rfc3339(start_time_str.as_str()).map(|d| d.with_timezone(&Utc)).unwrap_or_else(|_| Utc::now());
                         let end_time_str: Option<String> = r.try_get("end_time").ok();
-                        let end_time = end_time_str.and_then(|s| DateTime::parse_from_rfc3339(&s).map(|d| d.with_timezone(&Utc)).ok());
+                        let end_time = end_time_str.and_then(|s| DateTime::parse_from_rfc3339(s.as_str()).map(|d| d.with_timezone(&Utc)).ok());
 
                         let b = ::server_ohc::app::Booking {
                             id: r.try_get("id").unwrap_or_default(),

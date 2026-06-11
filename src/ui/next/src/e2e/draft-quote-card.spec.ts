@@ -7,6 +7,9 @@ test.describe('Draft Quote Action Card CUJ', () => {
       headers: {
         'x-tenant-id': 'tenant-1',
         'x-user-id': 'default'
+      },
+      data: {
+        inbox_message_id: 'msg-1'
       }
     });
 

@@ -442,7 +442,7 @@ impl TaskDecompositionService {
             updated_at: row.get("updated_at"),
             action_risk: row
                 .get::<Option<String>, _>("action_risk")
-                .map(|s| crate::tasks::ActionRisk::from_str(&s)),
+                .map(|s| crate::tasks::ActionRisk::from_str(s.as_str())),
             approval_status: row.get("approval_status"),
             proposed_content: row.get("proposed_content"),
         })
@@ -497,7 +497,7 @@ impl TaskDecompositionService {
             updated_at: dt_updated,
             action_risk: row
                 .get::<Option<String>, _>("action_risk")
-                .map(|s| crate::tasks::ActionRisk::from_str(&s)),
+                .map(|s| crate::tasks::ActionRisk::from_str(s.as_str())),
             approval_status: row.get("approval_status"),
             proposed_content: row.get("proposed_content"),
         })
@@ -561,7 +561,7 @@ impl TaskDecompositionService {
                     updated_at: dt_updated,
                     action_risk: row
                         .get::<Option<String>, _>("action_risk")
-                        .map(|s| crate::tasks::ActionRisk::from_str(&s)),
+                        .map(|s| crate::tasks::ActionRisk::from_str(s.as_str())),
                     approval_status: row.get("approval_status"),
                     proposed_content: row.get("proposed_content"),
                 })
@@ -644,7 +644,7 @@ impl TaskDecompositionService {
                     updated_at: dt_updated,
                     action_risk: row
                         .get::<Option<String>, _>("action_risk")
-                        .map(|s| crate::tasks::ActionRisk::from_str(&s)),
+                        .map(|s| crate::tasks::ActionRisk::from_str(s.as_str())),
                     approval_status: row.get("approval_status"),
                     proposed_content: row.get("proposed_content"),
                 })
@@ -726,7 +726,7 @@ impl TaskDecompositionService {
 
                 tx.commit().await.map_err(|e| e.to_string())?;
 
-                if let (Some(role), Some(modl)) = (agent_role, model) {
+                if let (Some(role), Some(modl)) = (&agent_role, &model) {
                     let _ = ::server_telemetry::record_task_resolution_efficiency(
                         &self.db.pool,
                         "FAILED",
