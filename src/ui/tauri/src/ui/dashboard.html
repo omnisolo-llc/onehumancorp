@@ -1256,11 +1256,11 @@
       const copyBtn = document.getElementById('copy-btn');
       const referralLink = document.getElementById('referral-link');
 
-      generateBtn.addEventListener('click', () => {
+      generateBtn.addEventListener('click', async () => {
         generateBtn.innerText = "Generating...";
         // Call the real Tauri backend
         if (window.__TAURI__ && window.__TAURI__.core) {
-          window.__TAURI__.core.invoke("generate_cloud_invite").then((link) => {
+          window.__TAURI__.core.invoke("generate_cloud_bridge_invite").then((link) => {
             referralLink.value = link;
             generateBtn.style.display = 'none';
             linkContainer.style.display = 'block';
@@ -1272,9 +1272,14 @@
           });
         } else {
           try {
-            const res = await fetch('/api/v1/growth/referrals/generate', { method: 'POST' });
+            const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default';
+            const res = await fetch('/api/v1/growth/cloud-bridge/invite', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ team_id: tenantId, inviter_id: "owner", invitee_id: "pending" })
+            });
             const data = await res.json();
-            referralLink.value = data.referral_link || "https://cloud.ohc.network/invite/fallback";
+            referralLink.value = data.invite_link || "https://cloud.ohc.network/invite/fallback";
             generateBtn.style.display = 'none';
             linkContainer.style.display = 'block';
           } catch(e) {
@@ -1951,16 +1956,34 @@ document.addEventListener('DOMContentLoaded', () => {
     if(btn) {
         btn.addEventListener('click', async () => {
             btn.innerText = "Generating...";
-            try {
-                const res = await fetch('/api/v1/growth/referrals/generate', { method: 'POST' });
-                const data = await res.json();
-                linkInput.value = data.referral_link || "https://cloud.ohc.network/invite/fallback";
-            } catch(e) {
-                console.error(e);
+            if (window.__TAURI__ && window.__TAURI__.core) {
+              window.__TAURI__.core.invoke("generate_cloud_bridge_invite").then((link) => {
+                linkInput.value = link;
+                btn.style.display = 'none';
+                container.style.display = 'block';
+              }).catch((err) => {
+                console.error(err);
                 linkInput.value = "https://cloud.ohc.network/invite/fallback";
+                btn.style.display = 'none';
+                container.style.display = 'block';
+              });
+            } else {
+              try {
+                  const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default';
+                  const res = await fetch('/api/v1/growth/cloud-bridge/invite', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ team_id: tenantId, inviter_id: "owner", invitee_id: "pending" })
+                  });
+                  const data = await res.json();
+                  linkInput.value = data.invite_link || "https://cloud.ohc.network/invite/fallback";
+              } catch(e) {
+                  console.error(e);
+                  linkInput.value = "https://cloud.ohc.network/invite/fallback";
+              }
+              btn.style.display = 'none';
+              container.style.display = 'block';
             }
-            btn.style.display = 'none';
-            container.style.display = 'block';
         });
 
         copyBtn.addEventListener('click', () => {
