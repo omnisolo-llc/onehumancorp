@@ -1,0 +1,21 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "saga",
+    srcs = [
+        "coordinator.go",
+        "example_multi_step_saga.go",
+    ],
+    importpath = "github.com/onehumancorp/mono/src/server/go/saga",
+    visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "saga_test",
+    srcs = [
+        "coordinator_test.go",
+        "example_multi_step_saga_test.go",
+    ],
+    embed = [":saga"],
+    deps = [],
+)
