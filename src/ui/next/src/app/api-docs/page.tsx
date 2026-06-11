@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import SwaggerUI from "swagger-ui-react";
+import dynamic from "next/dynamic";
+const SwaggerUI = dynamic(() => import("swagger-ui-react"), { ssr: false });
 
 import { WithTooltip } from "../../components/TooltipRegistry";
 
