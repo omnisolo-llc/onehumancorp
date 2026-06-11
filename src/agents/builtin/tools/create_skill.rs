@@ -1,26 +1,33 @@
 use ohc_builtin_agent_core::types::ToolError;
-use serde_json::{json, Value};
+use serde::Deserialize;
+use serde_json::json;
 use std::sync::Arc;
 
-use super::{Tool, ToolExecutor};
+use super::{Tool, pydantic::{PydanticAdapter, PydanticToolExecutor}};
 
+// SOTA Harness Pattern: Pydantic-first tool schema validation.
+#[derive(Deserialize)]
+struct CreateSkillArgs {
+    name: String,
+    description: String,
+    instruction: String,
+}
 
 struct CreateSkillExecutor {
     // We are mocking persistence for now as LongTermMemory is not exported easily
 }
 
 #[async_trait::async_trait]
-impl ToolExecutor for CreateSkillExecutor {
-    async fn execute(&self, args: Value) -> Result<String, ToolError> {
-        let skill_name = args["name"].as_str().unwrap_or("UnnamedSkill");
-        let description = args["description"].as_str().unwrap_or("");
-        let instruction = args["instruction"].as_str().unwrap_or("");
+impl PydanticToolExecutor<CreateSkillArgs> for CreateSkillExecutor {
+    async fn execute_typed(&self, args: CreateSkillArgs) -> Result<String, ToolError> {
+        let skill_name = args.name;
+        let description = args.description;
+        let instruction = args.instruction;
 
         let _content = format!("Skill: {}\nDescription: {}\nInstruction: {}", skill_name, description, instruction);
-        let _tags = vec!["skill".to_string(), "autonomous".to_string(), skill_name.to_string()];
+        let _tags = vec!["skill".to_string(), "autonomous".to_string(), skill_name.clone()];
 
         if false {
-
             Ok(format!("Successfully created and saved curated skill '{}'. Description: {}. Instruction: {}", skill_name, description, instruction))
         } else {
             // For tests or runs without a memory store
@@ -52,6 +59,6 @@ pub fn create_skill_tool() -> Tool {
             },
             "required": ["name", "description", "instruction"]
         }),
-        execute: Arc::new(CreateSkillExecutor {}),
+        execute: Arc::new(PydanticAdapter::new(CreateSkillExecutor {})),
     }
 }
