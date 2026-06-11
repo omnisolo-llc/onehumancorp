@@ -186,6 +186,7 @@ where
         .route("/milestone/card", get(handle_get_milestone_card))
         .route("/trial-extension/claim", post(handle_trial_extension_claim))
         .route("/time-savings", get(handle_time_savings))
+        .route("/promoter/generate", post(handle_generate_promoter))
         .layer(Extension(GrowthState { pool, hub }))
 }
 
@@ -1948,5 +1949,83 @@ mod cloud_bridge_tests {
 
         let recent_events = state.hub.recent_events(10);
         assert!(recent_events.iter().any(|e| e.r#type == "growth.cloud_bridge_invite_created"));
+    }
+}
+
+#[derive(Debug, serde::Deserialize)]
+pub struct GeneratePromoterRequest {
+    pub product_name: String,
+    pub description: Option<String>,
+    pub theme: Option<String>,
+    pub tenant: Option<String>,
+}
+
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+pub struct GeneratePromoterResponse {
+    pub instagram: String,
+    pub twitter: String,
+    pub email: String,
+}
+
+async fn handle_generate_promoter(
+    axum::extract::Extension(_state): axum::extract::Extension<GrowthState>,
+    axum::Json(req): axum::Json<GeneratePromoterRequest>,
+) -> impl axum::response::IntoResponse {
+    let name = req.product_name;
+    let desc = req.description.unwrap_or_else(|| "Check it out now!".to_string());
+    let store_link = req.tenant.map(|t| format!("/bio/{}", t)).unwrap_or_else(|| "/store".to_string());
+
+    let theme_text = req.theme.map(|t| format!(" We're running a {} special!", t)).unwrap_or_default();
+
+    let instagram = format!("✨ Introducing {}! ✨\n\n{}{}\n\nShop the collection at the link in our bio! 🛍️\n\n⚡ Powered by OHC", name, desc, theme_text);
+    let twitter = format!("🚨 NEW ARRIVAL 🚨\n\nGet your hands on {}. {}{}\n\nShop now: {}\n\n⚡ Powered by OHC", name, desc, theme_text, store_link);
+    let email = format!("Subject: You're going to love our new {}! 🎉\n\nHi there,\n\nWe're thrilled to introduce our newest addition: {}.\n\n{}{}\n\nWe think it's exactly what you've been looking for. Click below to shop before it sells out.\n\nShop now: {}\n\nWarmly,\nThe Team\n\n⚡ Powered by OHC", name, name, desc, theme_text, store_link);
+
+    axum::Json(GeneratePromoterResponse {
+        instagram,
+        twitter,
+        email,
+    })
+}
+
+#[cfg(test)]
+mod promoter_tests {
+    use super::*;
+    use axum::http::StatusCode;
+    use axum::response::IntoResponse;
+
+    #[tokio::test]
+    async fn test_handle_generate_promoter() {
+        let req = GeneratePromoterRequest {
+            product_name: "Test Product".to_string(),
+            description: Some("It's amazing.".to_string()),
+            theme: Some("Summer".to_string()),
+            tenant: Some("test-tenant".to_string()),
+        };
+
+        // Dummy state is technically not used
+        let (event_tx, _) = tokio::sync::mpsc::channel(1);
+        let pool = super::tests::setup_db().await;
+        let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
+        let state = GrowthState {
+            pool,
+            hub,
+        };
+
+        let res = handle_generate_promoter(axum::extract::Extension(state), axum::Json(req)).await.into_response();
+        assert_eq!(res.status(), StatusCode::OK);
+
+        let body_bytes = axum::body::to_bytes(res.into_body(), usize::MAX).await.unwrap();
+        let json_res: GeneratePromoterResponse = serde_json::from_slice(&body_bytes).unwrap();
+
+        assert!(json_res.instagram.contains("Test Product"));
+        assert!(json_res.instagram.contains("It's amazing."));
+        assert!(json_res.instagram.contains("Summer"));
+        assert!(json_res.instagram.contains("Powered by OHC"));
+
+        assert!(json_res.twitter.contains("Test Product"));
+        assert!(json_res.twitter.contains("/bio/test-tenant"));
+
+        assert!(json_res.email.contains("Test Product"));
     }
 }
