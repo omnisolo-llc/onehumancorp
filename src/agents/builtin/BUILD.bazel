@@ -84,6 +84,7 @@ rust_library(
         "jit_retrieval.rs",
         "plugins.rs",
         "prompt_construction.rs",
+        "microagent.rs",
         "progressive_skills.rs",
         "proto.rs",
         "provider.rs",

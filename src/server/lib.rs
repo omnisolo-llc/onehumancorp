@@ -2603,7 +2603,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
             monitor_mesh,
             monitor_hub,
             is_cloud,
-            std::time::Duration::from_secs(30),
+            if is_cloud { std::time::Duration::from_secs(30) } else { std::time::Duration::from_secs(300) },
         )
         .await;
     });
@@ -3838,6 +3838,7 @@ async fn ui_dashboard_unified_agent_feed_handler(
                 for item in entries.iter_mut() {
                     if let Some(obj) = item.as_object_mut() {
                         obj.remove("payload");
+                        obj.remove("context_payload");
                     }
                 }
             }
@@ -3870,6 +3871,7 @@ async fn ui_dashboard_unified_agent_feed_handler(
         for item in entries.iter_mut() {
             if let Some(obj) = item.as_object_mut() {
                 obj.remove("payload");
+                obj.remove("context_payload");
             }
         }
     }
