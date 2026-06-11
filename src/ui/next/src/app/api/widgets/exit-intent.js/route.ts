@@ -1,3 +1,7 @@
+import { NextResponse } from 'next/server';
+
+export async function GET(req: Request) {
+    const script = `
 (function() {
   function initExitIntent() {
     var container = document.getElementById('ohc-exit-intent');
@@ -57,7 +61,6 @@
     btn.style.cursor = 'pointer';
 
     btn.onclick = function() {
-      // For demo: assume it copies a discount code or redirects
       alert('Discount code applied!');
       modal.style.display = 'none';
     };
@@ -108,3 +111,11 @@
     initExitIntent();
   }
 })();
+    `;
+
+    return new NextResponse(script, {
+        headers: {
+            'Content-Type': 'application/javascript',
+        },
+    });
+}
