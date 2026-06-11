@@ -9,6 +9,9 @@
     "test:ui": "vitest --ui"
   },
   "dependencies": {
+    "@journeyapps/wa-sqlite": "^1.7.0",
+    "@powersync/react": "^1.10.0",
+    "@powersync/web": "^1.38.3",
     "@stripe/terminal-js": "^0.26.0",
     "@testing-library/dom": "^10.4.1",
     "@types/dompurify": "^3.0.5",
