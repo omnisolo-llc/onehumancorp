@@ -66,9 +66,11 @@ pub struct CampaignResponse {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct TrackVisitorRequest {
-    pub page_url: String,
+    pub page_url: Option<String>,
     pub referrer: Option<String>,
-    pub visitor_id: String,
+    pub visitor_id: Option<String>,
+    pub email: Option<String>,
+    pub event_type: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
