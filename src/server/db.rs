@@ -582,6 +582,29 @@ impl DB {
             }
             DbStore::Sqlite(sqlite_pool) => {
                 let schema = r#"
+
+                    CREATE TABLE IF NOT EXISTS triage_items (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        customer_id TEXT,
+                        source TEXT,
+                        priority TEXT,
+                        context TEXT,
+                        status TEXT DEFAULT 'pending',
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS triage_proposed_actions (
+                        id TEXT PRIMARY KEY,
+                        triage_item_id TEXT NOT NULL REFERENCES triage_items(id) ON DELETE CASCADE,
+                        tenant_id TEXT NOT NULL,
+                        action_type TEXT,
+                        payload TEXT,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE INDEX IF NOT EXISTS idx_triage_items_tenant_status ON triage_items(tenant_id, status);
+
                     CREATE TABLE IF NOT EXISTS agent_session_data (
                         session_id TEXT PRIMARY KEY,
                         agent_id TEXT NOT NULL,

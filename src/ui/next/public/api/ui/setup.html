@@ -27,13 +27,6 @@
         border: 1px solid rgba(255, 255, 255, 0.4);
         box-sizing: border-box;
       }
-      .glassmorphism {
-        background: rgba(255, 255, 255, 0.65);
-        backdrop-filter: blur(30px) saturate(210%);
-        -webkit-backdrop-filter: blur(30px) saturate(210%);
-        border: 1px solid rgba(255, 255, 255, 0.4);
-        border-radius: 16px;
-      }
       h1 {
         margin-top: 0;
         color: #1d1d1f;
@@ -41,7 +34,7 @@
         font-weight: 700;
       }
       p {
-        color: #555555;
+        color: #86868b;
         font-size: 14px;
         margin-bottom: 20px;
       }
@@ -58,9 +51,6 @@
         backdrop-filter: blur(10px) saturate(200%);
         -webkit-backdrop-filter: blur(10px) saturate(200%);
         transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
-      }
-      input.glassmorphism {
-        border-radius: 8px;
       }
       input:focus {
         outline: none;
@@ -117,12 +107,6 @@
           -webkit-backdrop-filter: blur(30px) saturate(210%);
           border: 1px solid rgba(255, 255, 255, 0.1);
           border-radius: 16px;
-        }
-        .glassmorphism {
-          background: rgba(22, 22, 26, 0.7);
-          backdrop-filter: blur(30px) saturate(210%);
-          -webkit-backdrop-filter: blur(30px) saturate(210%);
-          border: 1px solid rgba(255, 255, 255, 0.1);
         }
         h1 {
           color: #F5F5F7;
@@ -203,7 +187,6 @@
       }
 
       select, textarea {
-        color: #1d1d1f;
         width: 100%;
         padding: 14px;
         min-height: 44px;
@@ -260,13 +243,13 @@
       }
       .radio-desc {
         font-size: 12px;
-        color: #555555;
+        color: #86868b;
         margin-top: 2px;
       }
 
       .btn-secondary {
         background-color: transparent;
-        color: #555555;
+        color: #86868b;
         box-shadow: none;
         border: 1px solid rgba(0, 0, 0, 0.1);
         margin-top: 10px;
@@ -314,22 +297,10 @@
           color: #F5F5F7;
         }
       }
-
-      @media (max-width: 768px) {
-        .container {
-          padding: 20px;
-          border-radius: 16px;
-          width: 100%;
-          border: none;
-        }
-        input, select, textarea, button, .radio-option {
-          min-height: 44px !important;
-        }
-      }
-        </style>
+    </style>
   </head>
   <body>
-        <div class="container glassmorphism" id="form-container">
+        <div class="container" id="form-container">
 
 
       <div class="stepper" id="stepper-indicator">
@@ -338,9 +309,7 @@
         <div class="step-indicator" data-step="step-name"></div>
         <div class="step-indicator" data-step="step-assistant"></div>
         <div class="step-indicator" data-step="step-offer"></div>
-        <div class="step-indicator" data-step="step-template"></div>
       </div>
-      <div id="draft-saved-msg" style="display: none; color: #34C759; font-weight: bold; margin-bottom: 15px;">Draft Saved!</div>
 
       <!-- Step 1: Work Context -->
       <div class="step active" id="step-context">
@@ -378,7 +347,6 @@
         </div>
         <div id="context-error" class="error-msg">Please select an option.</div>
         <div class="btn-group">
-          <button type="button" class="btn-secondary save-draft-btn">Save Draft</button>
           <button class="next-step-btn" data-next="step-categories">Next</button>
         </div>
       </div>
@@ -387,12 +355,9 @@
       <div class="step" id="step-categories">
         <h1>What's your category?</h1>
         <p>e.g. Baking, Plumbing, Design</p>
-        <select id="business-categories" class="glassmorphism">
-          <option value="" disabled selected>Select a category...</option>
-        </select>
+        <input type="text" id="business-categories" placeholder="e.g. Graphic Design" />
         <div id="categories-error" class="error-msg">Please enter a category.</div>
         <div class="btn-group">
-          <button type="button" class="btn-secondary save-draft-btn">Save Draft</button>
           <button class="next-step-btn" data-next="step-name">Next</button>
           <button class="btn-secondary prev-step-btn" data-prev="step-context">Back</button>
         </div>
@@ -402,13 +367,12 @@
       <div class="step" id="step-name">
         <h1>What's the name of your business?</h1>
         <p>We'll use this to set up your workspace.</p>
-        <input type="text" id="business-name" class="glassmorphism" placeholder="e.g. Maya's Bakery" />
+        <input type="text" id="business-name" placeholder="e.g. Maya's Bakery" />
         <div id="name-error" class="error-msg">Business Name must be at least 3 characters.</div>
 
-        <input type="text" id="business-tagline" class="glassmorphism" placeholder="Tagline (optional)" />
+        <input type="text" id="business-tagline" placeholder="Tagline (optional)" />
 
         <div class="btn-group">
-          <button type="button" class="btn-secondary save-draft-btn">Save Draft</button>
           <button class="next-step-btn" data-next="step-assistant">Next</button>
           <button class="btn-secondary prev-step-btn" data-prev="step-categories">Back</button>
         </div>
@@ -419,7 +383,7 @@
         <h1>Set up your Assistant</h1>
         <p>Give your AI assistant a name and tone.</p>
 
-        <input type="text" id="assistant-name" class="glassmorphism" placeholder="e.g. Jarvis" />
+        <input type="text" id="assistant-name" placeholder="e.g. Jarvis" />
         <div id="assistant-name-error" class="error-msg">Please enter a name for your assistant.</div>
 
         <select id="assistant-tone">
@@ -431,7 +395,6 @@
         <div id="tone-error" class="error-msg">Please select a tone.</div>
 
         <div class="btn-group">
-          <button type="button" class="btn-secondary save-draft-btn">Save Draft</button>
           <button class="next-step-btn" data-next="step-offer">Next</button>
           <button class="btn-secondary prev-step-btn" data-prev="step-name">Back</button>
         </div>
@@ -441,31 +404,11 @@
       <div class="step" id="step-offer">
         <h1>Your First Offer</h1>
         <p>What is the main thing you sell?</p>
-        <input type="text" id="first-offer" class="glassmorphism" placeholder="e.g. Custom Birthday Cake" />
+        <input type="text" id="first-offer" placeholder="e.g. Custom Birthday Cake" />
         <div id="offer-error" class="error-msg">Please enter an offer.</div>
         <div class="btn-group">
-          <button type="button" class="btn-secondary save-draft-btn">Save Draft</button>
-          <button class="next-step-btn" data-next="step-template">Next</button>
-          <button class="btn-secondary prev-step-btn" data-prev="step-assistant">Back</button>
-        </div>
-      </div>
-
-      <!-- Step 6: Template -->
-      <div class="step" id="step-template">
-        <h1>Template Selection</h1>
-        <p>Choose a look for your workspace</p>
-        <select id="template-selection">
-          <option value="" disabled selected>Select a template...</option>
-          <option value="Modern">Modern</option>
-          <option value="Classic">Classic</option>
-          <option value="Playful">Playful</option>
-        </select>
-        <div id="template-error" class="error-msg">Please select a template.</div>
-
-        <div class="btn-group">
-          <button type="button" class="btn-secondary save-draft-btn">Save Draft</button>
           <button id="finish-btn">Finish Setup</button>
-          <button class="btn-secondary prev-step-btn" data-prev="step-offer">Back</button>
+          <button class="btn-secondary prev-step-btn" data-prev="step-assistant">Back</button>
         </div>
       </div>
 
@@ -481,8 +424,7 @@
           tagline: document.getElementById('business-tagline'),
           assistantName: document.getElementById('assistant-name'),
           assistantTone: document.getElementById('assistant-tone'),
-          firstOffer: document.getElementById('first-offer'),
-          templateSelection: document.getElementById('template-selection')
+          firstOffer: document.getElementById('first-offer')
       };
 
       const errors = {
@@ -491,8 +433,7 @@
           name: document.getElementById('name-error'),
           assistantName: document.getElementById('assistant-name-error'),
           assistantTone: document.getElementById('tone-error'),
-          firstOffer: document.getElementById('offer-error'),
-          templateSelection: document.getElementById('template-error')
+          firstOffer: document.getElementById('offer-error')
       };
 
       let state = {
@@ -545,7 +486,6 @@
           if (state.assistantName) inputs.assistantName.value = state.assistantName;
           if (state.assistantTone) inputs.assistantTone.value = state.assistantTone;
           if (state.firstOffer) inputs.firstOffer.value = state.firstOffer;
-          if (state.templateSelection) inputs.templateSelection.value = state.templateSelection;
 
           const contextVal = state.workContext || state.work_context;
           if (contextVal) {
@@ -560,35 +500,6 @@
       }
 
             function saveCurrentState() {
-          state.categories = inputs.categories.value;
-          state.businessName = inputs.name.value;
-          state.tagline = inputs.tagline.value;
-          state.assistantName = inputs.assistantName.value;
-          state.assistantTone = inputs.assistantTone.value;
-          state.firstOffer = inputs.firstOffer.value;
-          state.templateSelection = inputs.templateSelection.value;
-
-          let selectedContext = document.querySelector('input[name="work_context"]:checked');
-          if (selectedContext) {
-              state.workContext = selectedContext.value;
-              state.work_context = selectedContext.value;
-          }
-
-          // Increment step if we are moving forward
-
-          let stepNumber = 0;
-          const activeStep = document.querySelector('.step.active');
-          if (activeStep) {
-              if (activeStep.id === 'step-context') stepNumber = 0;
-              if (activeStep.id === 'step-categories') stepNumber = 1;
-              if (activeStep.id === 'step-name') stepNumber = 2;
-              if (activeStep.id === 'step-assistant') stepNumber = 3;
-              if (activeStep.id === 'step-offer') stepNumber = 4;
-          }
-          state.step = stepNumber;
-          state.workContext = state.work_context || state.workContext;
-          state.work_context = state.workContext;
-
           if (window.__TAURI__ && window.__TAURI__.core) {
               window.__TAURI__.core.invoke("save_onboarding_state", { state }).catch(console.error);
           } else {
@@ -655,15 +566,6 @@
                   state.firstOffer = inputs.firstOffer.value.trim();
               }
           }
-          else if (stepId === 'step-template') {
-              if (inputs.templateSelection.value === '') {
-                  errors.templateSelection.style.display = 'block';
-                  isValid = false;
-              } else {
-                  errors.templateSelection.style.display = 'none';
-                  state.templateSelection = inputs.templateSelection.value;
-              }
-          }
 
           if (!isValid) {
               container.classList.remove('animate-shake');
@@ -676,7 +578,7 @@
 
 
       function updateStepper(stepId) {
-          const steps = ['step-context', 'step-categories', 'step-name', 'step-assistant', 'step-offer', 'step-template'];
+          const steps = ['step-context', 'step-categories', 'step-name', 'step-assistant', 'step-offer'];
           const currentIndex = steps.indexOf(stepId);
 
           document.querySelectorAll('.step-indicator').forEach((indicator, index) => {
@@ -693,34 +595,7 @@
           });
       }
 
-      const categoriesMap = {
-          'Local Service': ['Plumbing', 'Electrical', 'Cleaning', 'Landscaping', 'HVAC', 'Pest Control', 'Handyman', 'Other'],
-          'Storefront': ['Cafe', 'Restaurant', 'Retail', 'Salon', 'Spa', 'Gym', 'Boutique', 'Other'],
-          'Online Creator': ['Tutoring', 'Consulting', 'Digital Art', 'Software', 'Writing', 'Video Creation', 'Music', 'Other'],
-          'Agency': ['Marketing', 'Design', 'Development', 'Consulting', 'Advertising', 'PR', 'Other']
-      };
-
-      function populateCategories() {
-          const context = state.workContext || state.work_context;
-          const cats = categoriesMap[context] || ['Other'];
-          inputs.categories.innerHTML = '<option value="" disabled selected>Select a category...</option>';
-          cats.forEach(c => {
-              const opt = document.createElement('option');
-              opt.value = c;
-              opt.textContent = c;
-              inputs.categories.appendChild(opt);
-          });
-          if (state.categories && cats.includes(state.categories)) {
-              inputs.categories.value = state.categories;
-          } else {
-              inputs.categories.value = "";
-          }
-      }
-
       function goToStep(stepId) {
-          if (stepId === 'step-categories') {
-              populateCategories();
-          }
           document.querySelectorAll('.step').forEach(el => el.classList.remove('active'));
           document.getElementById(stepId).classList.add('active');
           updateStepper(stepId);
@@ -744,21 +619,9 @@
           });
       });
 
-      document.querySelectorAll('.save-draft-btn').forEach(btn => {
-          btn.addEventListener('click', (e) => {
-              e.preventDefault();
-              saveCurrentState();
-              const msg = document.getElementById('draft-saved-msg');
-              msg.style.display = 'block';
-              setTimeout(() => {
-                  msg.style.display = 'none';
-              }, 2000);
-          });
-      });
-
       if (finishBtn) {
         finishBtn.addEventListener('click', () => {
-           if (validateStep('step-template')) {
+           if (validateStep('step-offer')) {
                if (window.__TAURI__ && window.__TAURI__.core) {
                  finishBtn.disabled = true;
                  finishBtn.innerText = "Saving...";
@@ -983,7 +846,7 @@ document.addEventListener('DOMContentLoaded', () => {
         #ohc-help-close {
             background: none;
             border: none;
-            color: #555555;
+            color: #86868b;
             cursor: pointer;
             padding: 5px;
         }
@@ -1152,8 +1015,5 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 </script>
-
-
-
   </body>
 </html>

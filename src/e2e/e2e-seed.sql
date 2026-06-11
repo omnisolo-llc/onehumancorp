@@ -17,12 +17,16 @@ ALTER TABLE IF EXISTS agents DISABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS ohc_staff_member DISABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS users DISABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS business_milestones DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS triage_items DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS triage_proposed_actions DISABLE ROW LEVEL SECURITY;
+
 ALTER TABLE IF EXISTS tenants DISABLE ROW LEVEL SECURITY;
 
 INSERT INTO tenants (id, name, industry, tier)
 VALUES
   ('e2e-tenant', 'OHC E2E Bakery', 'Food and beverage', 'starter'),
-  ('e2e-tenant-unlimited', 'OHC E2E Pro Bakery', 'Food and beverage', 'Pro')
+  ('e2e-tenant-unlimited', 'OHC E2E Pro Bakery', 'Food and beverage', 'Pro'),
+  ('empty-tenant-triage-test-123', 'OHC Empty Triage', 'Food and beverage', 'starter')
 ON CONFLICT (id) DO UPDATE
 SET name = EXCLUDED.name,
     industry = EXCLUDED.industry,
@@ -95,7 +99,7 @@ VALUES
     'test@example.com',
     'test@example.com',
     '$2b$10$hmVhunI7Fq2ZzQ0PguAH5OeXUyb/gNAORUpLPD2g44Ik9/Fd9sM7a',
-    ARRAY['ADMIN'],
+    '["ADMIN"]',
     TRUE,
     'e2e-tenant',
     CURRENT_TIMESTAMP,
@@ -106,7 +110,7 @@ VALUES
     'member@example.com',
     'member@example.com',
     '$2b$10$DO879TauCkftPAQhaF3wt.34Fd4ntX8KrtpeQCoOa43kwLNxKqkLK',
-    ARRAY['OPERATOR'],
+    '["OPERATOR"]',
     TRUE,
     'e2e-tenant',
     CURRENT_TIMESTAMP,
@@ -117,7 +121,7 @@ VALUES
     'pro@example.com',
     'pro@example.com',
     '$2b$10$hmVhunI7Fq2ZzQ0PguAH5OeXUyb/gNAORUpLPD2g44Ik9/Fd9sM7a',
-    ARRAY['ADMIN'],
+    '["ADMIN"]',
     TRUE,
     'e2e-tenant-unlimited',
     CURRENT_TIMESTAMP,
@@ -146,20 +150,20 @@ SET name = EXCLUDED.name,
 
 INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at)
 VALUES
-('e2e-feed-social', 'e2e-tenant', 'marketing', '{"feature_type": "social_post_draft", "tiktok": "Check out our new product!", "instagram": "New arrival! Link in bio.", "facebook": "We just added a new product to our store."}'::jsonb, '{}'::jsonb, 'PENDING_APPROVAL', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+('e2e-feed-social', 'e2e-tenant', 'marketing', '{"feature_type": "social_post_draft", "tiktok": "Check out our new product!", "instagram": "New arrival! Link in bio.", "facebook": "We just added a new product to our store."}', '{}', 'PENDING_APPROVAL', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
 ON CONFLICT (id) DO UPDATE
 SET lifecycle_state = EXCLUDED.lifecycle_state,
     updated_at = CURRENT_TIMESTAMP;
 
 INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, payload, created_at, updated_at)
 VALUES
-('e2e-approval-1', 'e2e-tenant', 'customer_success', 'Draft email for review', 'DRAFT', 'HIGH', '{"feature_type": "ambassador_reply", "original_message": "Do you have vegan options for birthday cakes?", "generated_response": "Yes, we have several vegan options for birthday cakes. We would love to help you plan your special day!"}'::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+('e2e-approval-1', 'e2e-tenant', 'customer_success', 'Draft email for review', 'DRAFT', 'HIGH', '{"feature_type": "ambassador_reply", "original_message": "Do you have vegan options for birthday cakes?", "generated_response": "Yes, we have several vegan options for birthday cakes. We would love to help you plan your special day!"}', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
 ,
-('e2e-approval-social', 'e2e-tenant', 'marketing', 'Generated 7-day social media plan for Vegan Celebration Cake', 'DRAFT', 'LOW', '{"feature_type": "social_post_draft"}'::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-('e2e-approval-cart', 'e2e-tenant', 'sales', 'Abandoned cart recovery: 10% discount for Sarah', 'DRAFT', 'HIGH', '{"feature_type": "abandoned_cart", "context": {"abandoned_carts_count": 3, "potential_revenue": 120.00}}'::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-('e2e-approval-review', 'e2e-tenant', 'customer_success', '3 customers haven''t reviewed their orders. Request reviews?', 'DRAFT', 'HIGH', '{"feature_type": "automated_review_request", "target": "recent_unreviewed_orders", "count": 3}'::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-('e2e-approval-pricing', 'e2e-tenant', 'business_advisory', 'Smart Price Suggestion: Vegan Celebration Cake', 'DRAFT', 'HIGH', '{"context": {"smart_pricing": true, "product_id": "e2e-product-cake", "product_name": "Vegan Celebration Cake", "old_price": 39.99, "new_price": 45.00, "discount_amount": -5.01, "sales_projection": "+$150", "stagnant_days": 10, "margin_percent": 45}}'::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-,('e2e-approval-quote-draft', 'e2e-tenant', 'sales', 'Draft Quote Ready: Fix leaking sink for John Doe', 'DRAFT', 'HIGH', '{"feature_type": "quote_draft", "customer_inquiry": "How much to fix a leaking sink? Here is a picture", "suggested_price": 150.0, "scope": "Fix leaking sink including labor and standard materials.", "suggested_time": "Tomorrow at 2 PM", "generated_response": "Based on our past projects, I can offer Fix leaking sink starting at 50.00. Should I send over the formal agreement?", "service": "Fix leaking sink", "price": 150.0}'::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+('e2e-approval-social', 'e2e-tenant', 'marketing', 'Generated 7-day social media plan for Vegan Celebration Cake', 'DRAFT', 'LOW', '{"feature_type": "social_post_draft"}', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+('e2e-approval-cart', 'e2e-tenant', 'sales', 'Abandoned cart recovery: 10% discount for Sarah', 'DRAFT', 'HIGH', '{"feature_type": "abandoned_cart", "context": {"abandoned_carts_count": 3, "potential_revenue": 120.00}}', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+('e2e-approval-review', 'e2e-tenant', 'customer_success', '3 customers haven''t reviewed their orders. Request reviews?', 'DRAFT', 'HIGH', '{"feature_type": "automated_review_request", "target": "recent_unreviewed_orders", "count": 3}', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+('e2e-approval-pricing', 'e2e-tenant', 'business_advisory', 'Smart Price Suggestion: Vegan Celebration Cake', 'DRAFT', 'HIGH', '{"context": {"smart_pricing": true, "product_id": "e2e-product-cake", "product_name": "Vegan Celebration Cake", "old_price": 39.99, "new_price": 45.00, "discount_amount": -5.01, "sales_projection": "+$150", "stagnant_days": 10, "margin_percent": 45}}', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+,('e2e-approval-quote-draft', 'e2e-tenant', 'sales', 'Draft Quote Ready: Fix leaking sink for John Doe', 'DRAFT', 'HIGH', '{"feature_type": "quote_draft", "customer_inquiry": "How much to fix a leaking sink? Here is a picture", "suggested_price": 150.0, "scope": "Fix leaking sink including labor and standard materials.", "suggested_time": "Tomorrow at 2 PM", "generated_response": "Based on our past projects, I can offer Fix leaking sink starting at 50.00. Should I send over the formal agreement?", "service": "Fix leaking sink", "price": 150.0}', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
 ON CONFLICT (id) DO UPDATE
 SET status = EXCLUDED.status,
     updated_at = CURRENT_TIMESTAMP;
@@ -177,8 +181,8 @@ SET name = EXCLUDED.name,
 
 INSERT INTO customers (id, tenant_id, name, email, phone, preferences)
 VALUES
-  ('e2e-customer-ava', 'e2e-tenant', 'Ava Customer', 'ava@example.com', '+15550101010', '{"diet":"vegan"}'::jsonb),
-  ('e2e-customer-ben', 'e2e-tenant', 'Ben Buyer', 'ben@example.com', '+15550101011', '{}'::jsonb)
+  ('e2e-customer-ava', 'e2e-tenant', 'Ava Customer', 'ava@example.com', '+15550101010', '{"diet":"vegan"}'),
+  ('e2e-customer-ben', 'e2e-tenant', 'Ben Buyer', 'ben@example.com', '+15550101011', '{}')
 ON CONFLICT (id) DO UPDATE
 SET name = EXCLUDED.name,
     email = EXCLUDED.email,
@@ -188,8 +192,8 @@ SET name = EXCLUDED.name,
 
 INSERT INTO products (id, tenant_id, title, description, type, price, price_cents, currency, inventory_count, metadata)
 VALUES
-  ('e2e-product-cake', 'e2e-tenant', 'Vegan Celebration Cake', 'Plant-based celebration cake for local pickup.', 'physical', 39.99, 3999, 'USD', 12, '{"seeded_by":"e2e"}'::jsonb),
-  ('e2e-product-class', 'e2e-tenant', 'Cake Decorating Class', 'Hands-on decorating session for small groups.', 'booking', 75.00, 7500, 'USD', 8, '{"seeded_by":"e2e"}'::jsonb)
+  ('e2e-product-cake', 'e2e-tenant', 'Vegan Celebration Cake', 'Plant-based celebration cake for local pickup.', 'physical', 39.99, 3999, 'USD', 12, '{"seeded_by":"e2e"}'),
+  ('e2e-product-class', 'e2e-tenant', 'Cake Decorating Class', 'Hands-on decorating session for small groups.', 'booking', 75.00, 7500, 'USD', 8, '{"seeded_by":"e2e"}')
 ON CONFLICT (id) DO UPDATE
 SET title = EXCLUDED.title,
     description = EXCLUDED.description,
@@ -213,7 +217,7 @@ SET customer_id = EXCLUDED.customer_id,
 
 INSERT INTO bookings (id, tenant_id, customer_id, product_id, start_time, end_time, status)
 VALUES
-  ('e2e-booking-1', 'e2e-tenant', 'e2e-customer-ava', 'e2e-product-class', CURRENT_TIMESTAMP + interval '1 day', CURRENT_TIMESTAMP + interval '1 day 1 hour', 'confirmed')
+  ('e2e-booking-1', 'e2e-tenant', 'e2e-customer-ava', 'e2e-product-class', CURRENT_TIMESTAMP + 1, CURRENT_TIMESTAMP + 1, 'confirmed')
 ON CONFLICT (id) DO UPDATE
 SET customer_id = EXCLUDED.customer_id,
     product_id = EXCLUDED.product_id,
@@ -344,6 +348,9 @@ ALTER TABLE IF EXISTS depletion_logs FORCE ROW LEVEL SECURITY;
 
 COMMIT;
 
+ALTER TABLE IF EXISTS triage_items DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS triage_proposed_actions DISABLE ROW LEVEL SECURITY;
+
 -- Triage seed data
 INSERT INTO triage_items (id, tenant_id, source, priority, context, status)
 VALUES
@@ -359,5 +366,5 @@ ON CONFLICT (id) DO NOTHING;
 
 -- Seed 10th order milestone for e2e-tenant
 INSERT INTO business_milestones (id, tenant_id, milestone_type, reached_at)
-VALUES ('ms_e2e_10th_order', 'e2e-tenant', '10th_order', NOW())
+VALUES ('ms_e2e_10th_order', 'e2e-tenant', '10th_order', CURRENT_TIMESTAMP)
 ON CONFLICT (id) DO NOTHING;

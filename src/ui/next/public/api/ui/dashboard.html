@@ -219,12 +219,10 @@
 
       /* OHC Glassmorphism token */
       .ohc-growth-card {
-        background: rgba(255, 255, 255, 0.65);
-        backdrop-filter: blur(30px) saturate(210%);
-        -webkit-backdrop-filter: blur(30px) saturate(210%);
+        background: rgba(255, 255, 255, 0.5);
         border: 1px solid rgba(255, 255, 255, 0.4);
         color: #1d1d1f;
-        border-radius: 16px;
+        border-radius: 12px;
         padding: 24px;
         margin-top: 20px;
         text-align: center;
@@ -250,9 +248,7 @@
           color: #f5f5f7;
         }
         .ohc-growth-card {
-          background: rgba(22, 22, 26, 0.7);
-          backdrop-filter: blur(30px) saturate(210%);
-          -webkit-backdrop-filter: blur(30px) saturate(210%);
+          background: rgba(255, 255, 255, 0.05);
           border: 1px solid rgba(255, 255, 255, 0.1);
           color: #ffffff;
         }
@@ -340,12 +336,10 @@
       }
 
             .triage-card {
-        background: rgba(255, 255, 255, 0.65);
-        backdrop-filter: blur(30px) saturate(210%);
-        -webkit-backdrop-filter: blur(30px) saturate(210%);
+        background: rgba(255, 255, 255, 0.5);
         border: 1px solid rgba(255, 255, 255, 0.4);
         color: #1d1d1f;
-        border-radius: 16px;
+        border-radius: 12px;
         padding: 24px;
         margin-top: 20px;
         text-align: left;
@@ -357,9 +351,7 @@
       }
       @media (prefers-color-scheme: dark) {
         .triage-card {
-          background: rgba(22, 22, 26, 0.7);
-          backdrop-filter: blur(30px) saturate(210%);
-          -webkit-backdrop-filter: blur(30px) saturate(210%);
+          background: rgba(255, 255, 255, 0.05);
           border: 1px solid rgba(255, 255, 255, 0.1);
           color: #ffffff;
         }
@@ -590,10 +582,6 @@
       <h1 id="dashboard-title">Dashboard</h1>
       <div class="subtitle">Your private agentic workspace.</div>
 
-      <div class="assistant-entry-container" style="margin-bottom: 24px; display: flex; gap: 16px; justify-content: center;">
-        <a href="assistant.html" class="btn-primary" style="width: auto; text-decoration: none;">Open WorkBuddy Assistant</a>
-      </div>
-
       <div class="ohc-growth-card" id="ai-savings-widget">
         <div style="display: flex; flex-direction: column; gap: 16px;">
           <div>
@@ -621,7 +609,7 @@
       <div class="ohc-growth-card" style="margin-bottom: 20px;">
         <div style="display: flex; justify-content: space-between; align-items: center;">
           <div>
-            <h2 style="margin-bottom: 4px;">Advanced AI Automations</h2>
+            <h2 style="margin-bottom: 4px;">Advanced AI Automations <span style="font-size: 12px; background: #E5E5EA; padding: 2px 6px; border-radius: 4px; color: #1D1D1F; vertical-align: middle; margin-left: 8px;">PRO</span></h2>
             <p style="margin-top: 0; margin-bottom: 0;">Multi-agent workflows and predictive routing.</p>
           </div>
           <button id="enable-advanced-automations-btn" style="background-color: #1d1d1f; color: white; border: none; padding: 10px 16px; border-radius: 8px; cursor: pointer;">Enable</button>
@@ -666,8 +654,7 @@
 
         <div class="link-container" id="link-container">
           <input type="text" class="link-input" id="referral-link" readonly value="" />
-          <button class="btn-secondary" onclick="window.startWalkthrough([{selector: '.main-content h1', title: 'Welcome', text: 'Welcome to your dashboard!'}, {selector: '.stat-card:first-child', title: 'Tasks', text: 'Here are your pending tasks.'}])">Start Walkthrough</button>
-        <div class="action-buttons">
+          <div class="action-buttons">
             <button class="btn-secondary" id="copy-btn" data-tooltip="Copy the referral link to your clipboard.">Copy</button>
             <button class="btn-secondary" id="share-whatsapp-btn">Share on WhatsApp</button>
           </div>
@@ -689,17 +676,8 @@
       </div>
     </div>
 
-    <footer style="margin-top: 40px; text-align: center; padding: 20px; font-size: 14px; font-weight: 600;">
-      <a href="#" id="dashboard-footer-viral-link" style="color: #6b7280; text-decoration: none;">⚡ Powered by OHC</a>
-    </footer>
-
     <script>
       document.addEventListener('DOMContentLoaded', async () => {
-        const tenantIdForFooter = localStorage.getItem("tenant_id") || localStorage.getItem("tenant") || "default-team";
-        const footerLink = document.getElementById("dashboard-footer-viral-link");
-        if (footerLink) {
-          footerLink.href = `/onboarding?ref=${tenantIdForFooter}&source=footer_widget`;
-        }
         const tenant = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default-team';
         try {
           const res = await fetch(`/api/v1/growth/milestones/check?tenant=${tenant}`);
@@ -831,7 +809,7 @@
         } catch (error) {
           console.error("Error fetching time savings data:", error);
           aiSavingsTitle.innerText = "You saved 0 hours this week";
-          aiSavingsDesc.innerText = "No tasks processed this week.";
+          aiSavingsDesc.innerText = "Failed to load time savings data.";
         }
 
         if (shareSavingsBtn) {
@@ -1203,9 +1181,324 @@ document.addEventListener('DOMContentLoaded', () => {
         window.OHC_TOOLTIPS = {};
         fetch("/api/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(console.error);
     }
+    const tooltipEl = document.createElement('div');
+    tooltipEl.className = 'ohc-tooltip';
+    document.body.appendChild(tooltipEl);
 
+    let hideTimeout;
 
+    function showTooltip(e, text) {
+        clearTimeout(hideTimeout);
+        tooltipEl.textContent = text;
 
+        const targetRect = e.target.getBoundingClientRect();
 
+        // Position below the element by default
+        let top = targetRect.bottom + 10;
+        let left = targetRect.left + (targetRect.width / 2) - (tooltipEl.offsetWidth / 2);
+
+        // Adjust if it goes off screen
+        if (left < 10) left = 10;
+        if (left + tooltipEl.offsetWidth > window.innerWidth - 10) {
+            left = window.innerWidth - tooltipEl.offsetWidth - 10;
+        }
+
+        if (top + tooltipEl.offsetHeight > window.innerHeight - 10) {
+            // Position above if it doesn't fit below
+            top = targetRect.top - tooltipEl.offsetHeight - 10;
+        }
+
+        tooltipEl.style.top = `${top}px`;
+        tooltipEl.style.left = `${left}px`;
+        tooltipEl.classList.add('visible');
+    }
+
+    function hideTooltip() {
+        hideTimeout = setTimeout(() => {
+            tooltipEl.classList.remove('visible');
+        }, 100); // slight delay to prevent flicker
+    }
+
+    // Desktop hover
+    document.addEventListener('mouseover', (e) => {
+        const target = e.target.closest('[data-tooltip]');
+        if (target) {
+            showTooltip(e, (window.OHC_TOOLTIPS && window.OHC_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip'));
+        }
+    });
+
+    document.addEventListener('mouseout', (e) => {
+        if (e.target.closest('[data-tooltip]')) {
+            hideTooltip();
+        }
+    });
+
+    // Mobile long press (contextmenu) or touchstart
+    let touchTimeout;
+    document.addEventListener('touchstart', (e) => {
+        const target = e.target.closest('[data-tooltip]');
+        if (target) {
+            touchTimeout = setTimeout(() => {
+                showTooltip(e, (window.OHC_TOOLTIPS && window.OHC_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip'));
+            }, 500); // 500ms long press
+        }
+    });
+
+    document.addEventListener('touchend', () => {
+        clearTimeout(touchTimeout);
+        hideTooltip();
+    });
+
+    document.addEventListener('touchmove', () => {
+        clearTimeout(touchTimeout);
+        hideTooltip();
+    });
+});
+
+</script>
+    <script>
+document.addEventListener('DOMContentLoaded', () => {
+    // Inject chat CSS
+    const style = document.createElement('style');
+    style.textContent = `
+        #ohc-help-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 56px;
+            height: 56px;
+            border-radius: 28px;
+            background: #0066FF;
+            color: white;
+            border: none;
+            box-shadow: 0 4px 14px rgba(0, 102, 255, 0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 9999;
+            transition: transform 0.2s;
+        }
+        #ohc-help-btn:hover {
+            transform: scale(1.05);
+        }
+        #ohc-help-btn svg {
+            width: 28px;
+            height: 28px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2;
+        }
+        #ohc-help-chat-overlay {
+            position: fixed;
+            bottom: 90px;
+            right: 20px;
+            width: 350px;
+            height: 500px;
+            max-height: calc(100vh - 120px);
+            max-width: calc(100vw - 40px);
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(30px) saturate(210%);
+            -webkit-backdrop-filter: blur(30px) saturate(210%);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+            display: none;
+            flex-direction: column;
+            z-index: 9998;
+            overflow: hidden;
+            font-family: "Outfit", sans-serif;
+            transform-origin: bottom right;
+            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        @keyframes popIn {
+            0% { transform: scale(0.5); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        #ohc-help-chat-header {
+            padding: 15px 20px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.5);
+        }
+        #ohc-help-chat-header h3 {
+            margin: 0;
+            font-size: 16px;
+            color: #1d1d1f;
+        }
+        #ohc-help-close {
+            background: none;
+            border: none;
+            color: #86868b;
+            cursor: pointer;
+            padding: 5px;
+        }
+        #ohc-help-close:hover { color: #1d1d1f; }
+        #ohc-help-messages {
+            flex-grow: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .msg {
+            max-width: 85%;
+            padding: 12px 16px;
+            border-radius: 18px;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+        .msg-user {
+            align-self: flex-end;
+            background: #0066FF;
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+        .msg-ai {
+            align-self: flex-start;
+            background: rgba(0, 0, 0, 0.05);
+            color: #1d1d1f;
+            border-bottom-left-radius: 4px;
+        }
+        .msg-ai a {
+            color: #0066FF;
+            font-weight: 600;
+            text-decoration: none;
+            display: block;
+            margin-top: 5px;
+        }
+        #ohc-help-input-area {
+            padding: 15px;
+            border-top: 1px solid rgba(0, 0, 0, 0.1);
+            display: flex;
+            gap: 10px;
+            background: rgba(255, 255, 255, 0.5);
+        }
+        #ohc-help-input {
+            flex-grow: 1;
+            border: 1px solid rgba(0, 0, 0, 0.2);
+            border-radius: 20px;
+            padding: 10px 15px;
+            outline: none;
+            background: rgba(255, 255, 255, 0.8);
+            font-size: 14px;
+        }
+        #ohc-help-input:focus { border-color: #0066FF; }
+        #ohc-help-send {
+            background: #0066FF;
+            color: white;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            #ohc-help-chat-overlay {
+                background: rgba(22, 22, 26, 0.85);
+                border-color: rgba(255, 255, 255, 0.1);
+            }
+            #ohc-help-chat-header, #ohc-help-input-area {
+                background: rgba(0, 0, 0, 0.2);
+                border-color: rgba(255, 255, 255, 0.1);
+            }
+            #ohc-help-chat-header h3 { color: #f5f5f7; }
+            .msg-ai {
+                background: rgba(255, 255, 255, 0.1);
+                color: #f5f5f7;
+            }
+            #ohc-help-input {
+                background: rgba(0, 0, 0, 0.3);
+                border-color: rgba(255, 255, 255, 0.2);
+                color: white;
+            }
+        }
+    `;
+    document.head.appendChild(style);
+
+    // Inject HTML
+    const btn = document.createElement('button');
+    btn.id = 'ohc-help-btn';
+    btn.setAttribute('aria-label', 'Open help chat');
+    btn.innerHTML = `<svg viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
+    document.body.appendChild(btn);
+
+    const overlay = document.createElement('div');
+    overlay.id = 'ohc-help-chat-overlay';
+    overlay.innerHTML = `
+        <div id="ohc-help-chat-header">
+            <h3>Ask AI Help</h3>
+            <button id="ohc-help-close" aria-label="Close help chat">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+        </div>
+        <div id="ohc-help-messages">
+            <div class="msg msg-ai">Hi! I am your AI Help Agent! How can I assist you with OHC today?</div>
+        </div>
+        <div id="ohc-help-input-area">
+            <input type="text" id="ohc-help-input" placeholder="Ask me anything..." />
+            <button id="ohc-help-send" aria-label="Send message">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
+            </button>
+        </div>
+    `;
+    document.body.appendChild(overlay);
+
+    const closeBtn = document.getElementById('ohc-help-close');
+    const messages = document.getElementById('ohc-help-messages');
+    const input = document.getElementById('ohc-help-input');
+    const sendBtn = document.getElementById('ohc-help-send');
+
+    btn.addEventListener('click', () => {
+        overlay.style.display = 'flex';
+        input.focus();
+    });
+
+    closeBtn.addEventListener('click', () => {
+        overlay.style.display = 'none';
+    });
+
+    async function sendMessage() {
+        const text = input.value.trim();
+        if (!text) return;
+
+        // Add user msg
+        const uMsg = document.createElement('div');
+        uMsg.className = 'msg msg-user';
+        uMsg.textContent = text;
+        messages.appendChild(uMsg);
+        input.value = '';
+        messages.scrollTop = messages.scrollHeight;
+
+        // Fake AI response based on tests and common queries
+        setTimeout(() => {
+            const aiMsg = document.createElement('div');
+            aiMsg.className = 'msg msg-ai';
+
+            if (text.toLowerCase().includes('credit card') || text.toLowerCase().includes('pay')) {
+                aiMsg.innerHTML = `You can accept credit cards by connecting your bank account in the Payments section.<br/><a href="help_article.html?id=payments">Read the full article →</a>`;
+            } else {
+                aiMsg.innerHTML = `I can help you with that! Check out our Help Center for a detailed guide.<br/><a href="help.html">Read the full article →</a>`;
+            }
+
+            messages.appendChild(aiMsg);
+            messages.scrollTop = messages.scrollHeight;
+        }, 800);
+    }
+
+    sendBtn.addEventListener('click', sendMessage);
+    input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') sendMessage();
+    });
+});
+
+</script>
   </body>
 </html>

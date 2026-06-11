@@ -1,19 +1,20 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('Work Triage Agentic Inbox', () => {
-  const tenantId = 'test-tenant';
+test.describe.parallel('Work Triage Agentic Inbox', () => {
+  const tenantId = 'e2e-tenant';
 
   test('Owner reviews and approves a triage item', async ({ page }) => {
     // Log in with tenant
     await page.goto('/login');
     await page.fill('input[type="text"]', tenantId);
-    await page.click('button[type="submit"]');
+    await page.getByRole('button', { name: 'Log In' }).click();
 
-    // Go to Triage
-    await page.goto('/dashboard');
+    // Wait for dashboard to load completely
+    await page.waitForURL('/dashboard');
+    await page.waitForLoadState('networkidle');
 
     // Wait for the triage queue to load
-    await expect(page.locator('h2').filter({ hasText: 'Needs Your Attention' })).toBeVisible({ timeout: 15000 });
+    await expect(page.getByRole('heading', { name: 'Needs Your Attention' })).toBeVisible({ timeout: 15000 });
 
     const triageCard = page.locator('[data-testid="triage-card-triage-test-1"]');
 
@@ -34,10 +35,11 @@ test.describe('Work Triage Agentic Inbox', () => {
 
   test('Owner sees empty state when there are no items', async ({ page }) => {
     await page.goto('/login');
-    await page.fill('input[type="text"]', 'empty-tenant-triage-test');
-    await page.click('button[type="submit"]');
+    await page.fill('input[type="text"]', 'empty-tenant-triage-test-123');
+    await page.getByRole('button', { name: 'Log In' }).click();
 
-    await page.goto('/dashboard');
+    await page.waitForURL('/dashboard');
+    await page.waitForLoadState('networkidle');
 
     // It should not render the needs attention section if there are no items
     // Since it's loading initially, we wait for a known dashboard element instead
@@ -45,15 +47,16 @@ test.describe('Work Triage Agentic Inbox', () => {
 
     // Wait a bit to ensure it finished loading, then assert not visible
     await page.waitForTimeout(2000);
-    await expect(page.locator('h2').filter({ hasText: 'Needs Your Attention' })).not.toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Needs Your Attention' })).not.toBeVisible();
   });
 
   test('Owner can dismiss a triage item', async ({ page }) => {
     await page.goto('/login');
     await page.fill('input[type="text"]', tenantId);
-    await page.click('button[type="submit"]');
+    await page.getByRole('button', { name: 'Log In' }).click();
 
-    await page.goto('/dashboard');
+    await page.waitForURL('/dashboard');
+    await page.waitForLoadState('networkidle');
 
     const triageCard = page.locator('[data-testid="triage-card-triage-test-2"]');
 
@@ -69,9 +72,10 @@ test.describe('Work Triage Agentic Inbox', () => {
   test('Triage feed renders items correctly', async ({ page }) => {
     await page.goto('/login');
     await page.fill('input[type="text"]', tenantId);
-    await page.click('button[type="submit"]');
+    await page.getByRole('button', { name: 'Log In' }).click();
 
-    await page.goto('/dashboard');
+    await page.waitForURL('/dashboard');
+    await page.waitForLoadState('networkidle');
 
     const triageCard = page.locator('[data-testid="triage-card-triage-test-1"]');
     await expect(triageCard).toBeVisible({ timeout: 15000 });
@@ -82,9 +86,10 @@ test.describe('Work Triage Agentic Inbox', () => {
   test('Triage detail shows correct information on click', async ({ page }) => {
     await page.goto('/login');
     await page.fill('input[type="text"]', tenantId);
-    await page.click('button[type="submit"]');
+    await page.getByRole('button', { name: 'Log In' }).click();
 
-    await page.goto('/dashboard');
+    await page.waitForURL('/dashboard');
+    await page.waitForLoadState('networkidle');
 
     const triageCard = page.locator('[data-testid="triage-card-triage-test-2"]');
     await expect(triageCard).toBeVisible({ timeout: 15000 });

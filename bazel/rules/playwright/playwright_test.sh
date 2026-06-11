@@ -627,7 +627,14 @@ if (( ${#PLAYWRIGHT_SPEC_ARGS[@]} > 0 )); then
     fi
   fi
 
-  echo "[playwright] Running specs: ${PLAYWRIGHT_SPEC_ARGS[*]}"
+
+if [ "$USE_STANDALONE_MODE" = true ] && [ -f "$WORK_DIR/src/e2e/e2e-seed.sql" ]; then
+    echo "[playwright] Seeding SQLite database from e2e-seed.sql (filtering out RLS and Postgres specifics)..."
+    grep -vi "ROW LEVEL SECURITY" "$WORK_DIR/src/e2e/e2e-seed.sql" > "$WORK_DIR/src/e2e/sqlite-seed.sql"
+    sqlite3 "$TEST_TMPDIR/ohc-e2e.db" < "$WORK_DIR/src/e2e/sqlite-seed.sql" || true
+fi
+
+echo "[playwright] Running specs: ${PLAYWRIGHT_SPEC_ARGS[*]}"
   "$PLAYWRIGHT_CLI" test --config ./playwright.config.ts --output "$PLAYWRIGHT_OUTPUT_DIR" --workers 1 "${PLAYWRIGHT_SPEC_ARGS[@]}" ${PLAYWRIGHT_SHARD_ARG}
 else
   echo "[playwright] Running all specs on host"
