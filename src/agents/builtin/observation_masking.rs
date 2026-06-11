@@ -163,7 +163,7 @@ impl JetBrainsObservationMasker {
                                 // Adapt preview size to the allowed size limit
                                 let preview_chars = std::cmp::max(100, self.size_limit / 4);
                                 let char_count = tr.content.chars().count();
-                                if char_count > preview_chars * 2 {
+                                let masked_str = if char_count > preview_chars * 2 {
                                     let start_preview: String =
                                         tr.content.chars().take(preview_chars).collect();
                                     let end_preview: String = tr
@@ -171,16 +171,21 @@ impl JetBrainsObservationMasker {
                                         .chars()
                                         .skip(char_count - preview_chars)
                                         .collect();
-                                    tr.content = format!(
+                                    format!(
                                         "[Observation Masked to save context. Output was {} bytes. Preview: {}...{} The tool call itself remains visible. Use 'RecallObservation' with ID '{}' if you need the full output again.]",
                                         bytes, start_preview, end_preview, tr.tool_call_id
-                                    );
+                                    )
                                 } else {
-                                    tr.content = format!(
+                                    format!(
                                         "[Observation Masked to save context. Output was {} bytes. The tool call itself remains visible. Use 'RecallObservation' with ID '{}' if you need the full output again.]",
                                         bytes, tr.tool_call_id
-                                    );
-                                }
+                                    )
+                                };
+
+                                // Return as valid JSON object containing the masked string.
+                                tr.content = serde_json::json!({
+                                    "_masked_observation": masked_str
+                                }).to_string();
                             }
                         }
                     }
