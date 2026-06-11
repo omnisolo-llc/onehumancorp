@@ -29,6 +29,8 @@ interface CostDashboardData {
   trend: DailyCost[];
   agent_costs?: { agent_id: string; cost_cents: number; }[];
   department_tier_usage?: DepartmentTierUsage;
+  email_cost: number;
+  api_cost: number;
 }
 
 interface DepartmentTierUsage {
@@ -298,6 +300,22 @@ export default function CostDashboardPage() {
                         <p className="text-sm text-gray-500 mt-1">Cost of CDN delivery and outbound traffic.</p>
                     </div>
                     <span id="cost-dashboard-network" className="text-lg font-semibold text-gray-900">{formatCurrency(data?.network_cost || 0)}</span>
+                </div>
+
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 app-card bg-white/70 backdrop-blur-xl saturate-200 border border-white/40 rounded-xl hover:-translate-y-1 hover:shadow-md transition-all duration-300">
+                    <div>
+                        <span className="font-medium text-gray-900">Email Sends</span>
+                        <p className="text-sm text-gray-500 mt-1">Cost of transactional and marketing email delivery.</p>
+                    </div>
+                    <span id="cost-dashboard-email" className="text-lg font-semibold text-gray-900">{formatCurrency(data?.email_cost || 0)}</span>
+                </div>
+
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 app-card bg-white/70 backdrop-blur-xl saturate-200 border border-white/40 rounded-xl hover:-translate-y-1 hover:shadow-md transition-all duration-300">
+                    <div>
+                        <span className="font-medium text-gray-900">Outbound API Calls</span>
+                        <p className="text-sm text-gray-500 mt-1">Cost of third-party integration usage.</p>
+                    </div>
+                    <span id="cost-dashboard-api" className="text-lg font-semibold text-gray-900">{formatCurrency(data?.api_cost || 0)}</span>
                 </div>
 
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 app-card bg-white/70 backdrop-blur-xl saturate-200 border border-white/40 rounded-xl hover:-translate-y-1 hover:shadow-md transition-all duration-300">

@@ -77,6 +77,10 @@
         {
           "expr": "sum(rate(ohc_outbound_api_cost[5m])) by (organization_id)",
           "refId": "A"
+        },
+        {
+          "expr": "sum(rate(ohc_api_call_cost[5m])) by (organization_id)",
+          "refId": "B"
         }
       ],
       "title": "Outbound API Cost by Tenant",

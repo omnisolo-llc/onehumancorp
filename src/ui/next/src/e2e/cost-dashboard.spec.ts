@@ -30,6 +30,8 @@ test.describe('Cost Dashboard Loop', () => {
     await expect(page.locator('span', { hasText: 'Storage' })).toBeVisible();
     await expect(page.locator('span', { hasText: 'Payment Fees' })).toBeVisible();
     await expect(page.locator('span', { hasText: 'Compute Usage' })).toBeVisible();
+    await expect(page.locator('span', { hasText: 'Email Sends' })).toBeVisible();
+    await expect(page.locator('span', { hasText: 'Outbound API Calls' })).toBeVisible();
 
     // Check navigation works
     await page.locator('button', { hasText: 'Back to My Plan' }).click();
