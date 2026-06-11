@@ -757,17 +757,20 @@ impl VectorRepository {
                     }
                 } else {
                     // Fallback for tests environments without sqlite-vec loaded:
-                    let query = "
-                        SELECT
-                            id, tenant_id, agent_id, content, embedding, source_type, created_at, last_referenced_at, reference_count, reliability_score, owner_override, metadata
-                        FROM consolidated_memory LIMIT 1000
-                    ";
+                    // Optimize by fetching only id, tenant_id, and embedding to minimize memory usage
+                    let query = "SELECT id, tenant_id, embedding FROM consolidated_memory";
                     let rows = sqlx::query(query)
                         .fetch_all(pool)
                         .await
                         .map_err(|e| e.to_string())?;
 
-                    let mut all_records = Vec::new();
+                    struct MinimalRecord {
+                        id: String,
+                        tenant_id: String,
+                        embedding: Vec<f32>,
+                    }
+
+                    let mut all_records = Vec::with_capacity(rows.len());
                     for row in rows {
                         let emb_str: String = row.try_get("embedding").unwrap_or_else(|_| {
                             String::from_utf8(row.get::<Vec<u8>, _>("embedding"))
@@ -776,29 +779,16 @@ impl VectorRepository {
                         let embedding: Vec<f32> =
                             serde_json::from_str(&emb_str).unwrap_or_default();
 
-                        let record = EmbeddingRecord {
+                        let record = MinimalRecord {
                             id: row.get("id"),
                             tenant_id: row.get("tenant_id"),
-                            agent_id: row.get::<Option<String>, _>("agent_id").unwrap_or_default(),
-                            content: row.get("content"),
                             embedding,
-                            source_type: row.get("source_type"),
-                            created_at: row
-                                .try_get::<DateTime<Utc>, _>("created_at")
-                                .map_err(|e| e.to_string())?,
-                            last_referenced_at: row
-                                .try_get::<DateTime<Utc>, _>("last_referenced_at")
-                                .map_err(|e| e.to_string())?,
-                            reference_count: row.get("reference_count"),
-                            reliability_score: row.get("reliability_score"),
-                            owner_override: row.get("owner_override"),
-                            metadata: row.get("metadata"),
                         };
                         all_records.push(record);
                     }
 
                     use std::collections::HashMap;
-                    let mut grouped_records: HashMap<String, Vec<EmbeddingRecord>> = HashMap::new();
+                    let mut grouped_records: HashMap<String, Vec<MinimalRecord>> = HashMap::new();
                     for record in all_records {
                         grouped_records
                             .entry(record.tenant_id.clone())
@@ -806,9 +796,10 @@ impl VectorRepository {
                             .push(record);
                     }
 
+                    let mut conflicting_pairs_ids: Vec<(String, String)> = Vec::new();
                     let mut match_count = 0;
+
                     'outer: for (_, records) in grouped_records {
-                        // Pre-calculate vector magnitudes to optimize cosine distance checks
                         let magnitudes: Vec<f32> = records
                             .iter()
                             .map(|r| r.embedding.iter().map(|&val| val * val).sum::<f32>().sqrt())
@@ -816,7 +807,6 @@ impl VectorRepository {
 
                         for i in 0..records.len() {
                             let mag_a = magnitudes[i];
-                            // Skip completely zero vectors to avoid division by zero early
                             if mag_a == 0.0 {
                                 continue;
                             }
@@ -830,8 +820,6 @@ impl VectorRepository {
                                 let a = &records[i];
                                 let b = &records[j];
 
-                                // Cosine distance = 1.0 - (dot_product / (mag_a * mag_b))
-                                // If distance < 0.05, then dot_product / (mag_a * mag_b) > 0.95
                                 let dot_product: f32 = a
                                     .embedding
                                     .iter()
@@ -842,16 +830,24 @@ impl VectorRepository {
                                 let distance = 1.0 - similarity;
 
                                 if distance < 0.05 {
-                                    // Ensure a consistent ordering to avoid duplicate pairs in different orders
-                                    let (record_a, record_b) =
-                                        if a.id < b.id { (a, b) } else { (b, a) };
-                                    conflicts.push((record_a.clone(), record_b.clone()));
+                                    let (id_a, id_b) =
+                                        if a.id < b.id { (a.id.clone(), b.id.clone()) } else { (b.id.clone(), a.id.clone()) };
+                                    conflicting_pairs_ids.push((id_a, id_b));
                                     match_count += 1;
                                     if match_count >= 10 {
                                         break 'outer;
                                     }
                                 }
                             }
+                        }
+                    }
+
+                    // Fetch full records only for the matched IDs
+                    for (id_a, id_b) in conflicting_pairs_ids {
+                        let record_a = self.get_by_id(&id_a).await?;
+                        let record_b = self.get_by_id(&id_b).await?;
+                        if let (Some(a), Some(b)) = (record_a, record_b) {
+                            conflicts.push((a, b));
                         }
                     }
                 }
