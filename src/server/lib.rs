@@ -2864,6 +2864,38 @@ pub async fn update_ui_triage_action_handler(
             }
 
             let status = if payload.approved { "resolved" } else { "dismissed" };
+
+            if payload.approved {
+                use sqlx::Row;
+                let action_res = sqlx::query("SELECT action_type, payload FROM triage_proposed_actions WHERE triage_item_id = $1 AND tenant_id = $2")
+                    .bind(&payload.triage_item_id)
+                    .bind(&tenant_id)
+                    .fetch_optional(&mut *tx)
+                    .await;
+
+                if let Ok(Some(row)) = action_res {
+                    let action_type: String = row.try_get("action_type").unwrap_or_default();
+                    let action_payload: String = row.try_get("payload").unwrap_or_default();
+
+                    let job_id = uuid::Uuid::new_v4().to_string();
+                    let job_payload = serde_json::json!({
+                        "triage_item_id": &payload.triage_item_id,
+                        "action_type": action_type,
+                        "action_payload": action_payload
+                    });
+
+                    let _ = sqlx::query(
+                        "INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload, status, next_retry_at) VALUES ($1, $2, $3, $4, 'PENDING', CURRENT_TIMESTAMP)"
+                    )
+                    .bind(&job_id)
+                    .bind(&tenant_id)
+                    .bind("triage_action_execution")
+                    .bind(job_payload)
+                    .execute(&mut *tx)
+                    .await;
+                }
+            }
+
             match sqlx::query("UPDATE triage_items SET status = $1 WHERE id = $2 AND tenant_id = $3").bind(status).bind(&payload.triage_item_id).bind(&tenant_id).execute(&mut *tx).await {
                 Ok(_) => {
                     let _ = tx.commit().await;
@@ -4310,8 +4342,8 @@ async fn create_ui_bom_item_handler(
                                     .bind("triage-test-1")
                                     .bind(tenant_id)
                                     .bind("cust_demo1")
-                                    .bind("Instagram")
-                                    .bind("High")
+                                    .bind("Instagram DM")
+                                    .bind("Urgent")
                                     .bind("Maya requested a custom cake")
                                     .bind("pending")
                                     .execute(pool)
@@ -4326,6 +4358,20 @@ async fn create_ui_bom_item_handler(
                                     .bind(tenant_id)
                                     .bind("Draft Reply")
                                     .bind("Send deposit link to Maya")
+                                    .execute(pool)
+                                    .await
+                                    .map_err(|e| e.to_string())?;
+
+                                    sqlx::query(
+                                        "INSERT OR IGNORE INTO triage_items (id, tenant_id, customer_id, source, priority, context, status) VALUES (?, ?, ?, ?, ?, ?, ?)"
+                                    )
+                                    .bind("triage-test-2")
+                                    .bind(tenant_id)
+                                    .bind("cust_demo2")
+                                    .bind("WhatsApp")
+                                    .bind("Normal")
+                                    .bind("Question about delivery times")
+                                    .bind("pending")
                                     .execute(pool)
                                     .await
                                     .map_err(|e| e.to_string())?;
@@ -4400,8 +4446,8 @@ async fn create_ui_bom_item_handler(
                                     .bind("triage-test-1")
                                     .bind(tenant_id)
                                     .bind("cust_demo1")
-                                    .bind("Instagram")
-                                    .bind("High")
+                                    .bind("Instagram DM")
+                                    .bind("Urgent")
                                     .bind("Maya requested a custom cake")
                                     .bind("pending")
                                     .execute(&db.pool)
@@ -4416,6 +4462,20 @@ async fn create_ui_bom_item_handler(
                                     .bind(tenant_id)
                                     .bind("Draft Reply")
                                     .bind("Send deposit link to Maya")
+                                    .execute(&db.pool)
+                                    .await
+                                    .map_err(|e| e.to_string())?;
+
+                                    sqlx::query(
+                                        "INSERT INTO triage_items (id, tenant_id, customer_id, source, priority, context, status) VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT (id) DO NOTHING"
+                                    )
+                                    .bind("triage-test-2")
+                                    .bind(tenant_id)
+                                    .bind("cust_demo2")
+                                    .bind("WhatsApp")
+                                    .bind("Normal")
+                                    .bind("Question about delivery times")
+                                    .bind("pending")
                                     .execute(&db.pool)
                                     .await
                                     .map_err(|e| e.to_string())?;
