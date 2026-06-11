@@ -147,6 +147,22 @@ pub async fn meta_webhook_post_handler(
 async fn process_omnichannel_message(state: &MetaWebhookState, tenant_id: String, source: String, sender_id: String, text: String) {
     let target_language = "English";
 
+    let customer_id = sender_id.clone();
+    if let Ok(None) = state.orchestrator.get_customer360(&tenant_id, &customer_id).await {
+        let new_cust = crate::orchestration::departments::types::Customer360 {
+            id: uuid::Uuid::new_v4().to_string(),
+            tenant_id: tenant_id.clone(),
+            customer_id: customer_id.clone(),
+            email: None,
+            phone: if source == "whatsapp" { Some(sender_id.clone()) } else { None },
+            mood: None,
+            preferences: None,
+            created_at: Some(chrono::Utc::now()),
+            updated_at: Some(chrono::Utc::now()),
+        };
+        let _ = state.orchestrator.upsert_customer360(&new_cust).await;
+    }
+
     let translation = match translate_inbox_message_with_llm(&tenant_id, &source, &text, target_language).await {
         Ok(t) => t,
         Err(e) => {
