@@ -144,7 +144,21 @@
       const urlParams = new URLSearchParams(window.location.search);
       const tenantId = urlParams.get('tenant') || 'demo-tenant';
 
-      document.getElementById('business-name').innerText = "Carlos' Handyman Services"; // Mock
+
+      // Fetch actual business profile
+      fetch(`/api/v1/builder/edge/${tenantId}/profile`)
+        .then(res => res.json())
+        .then(data => {
+            if(data && data.business_name) {
+                document.getElementById('business-name').innerText = data.business_name;
+            } else {
+                document.getElementById('business-name').innerText = "Business Services";
+            }
+        })
+        .catch(() => {
+            document.getElementById('business-name').innerText = "Business Services";
+        });
+
 
       document.getElementById('booking-form').addEventListener('submit', async (e) => {
         e.preventDefault();
