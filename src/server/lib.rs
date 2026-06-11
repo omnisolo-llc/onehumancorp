@@ -2735,6 +2735,15 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .route("/api/v1/webhooks/meta", axum::routing::post(api::meta_webhook::meta_webhook_post_handler))
         .with_state(meta_webhook_state);
 
+    let omnichannel_webhook_state = api::omnichannel_webhook::AppState {
+        orchestrator: dept_orchestrator.clone(),
+        db: db.clone(),
+    };
+    let omnichannel_webhook_router = axum::Router::new()
+        .route("/api/v1/omnichannel/webhook", axum::routing::post(api::omnichannel_webhook::handle_omnichannel_webhook))
+        .route("/api/v1/webhooks/omnichannel", axum::routing::post(api::omnichannel_webhook::handle_omnichannel_webhook))
+        .with_state(omnichannel_webhook_state);
+
     let health_router = axum::Router::new()
         .route("/api/v1/health", axum::routing::get(api::health::health_handler))
         .with_state(hub.clone());
@@ -5086,11 +5095,9 @@ async fn create_ui_bom_item_handler(
         .nest("/api/agents/chat", api::agents::chat::router(dept_orchestrator.clone(), semantic_router.clone()))
         .nest("/api/agents/webhook", api::agents::webhook::router(dept_orchestrator.clone()))
         .nest("/api/agent-feed", api::agent_feed::router().with_state(db.pool.clone()))
+        .nest("/api/v1/incidents", api::incidents::router().with_state(db.pool.clone()))
         .nest("/api/v1/invoices", api::invoice::router(hub.clone()))
         .nest("/api/v1/booking/request", api::booking::request::router(dept_orchestrator.clone()))
-        .route("/api/v1/booking/resources", axum::routing::post(api::booking::unified::get_resources).with_state(db.pool.clone()))
-        .route("/api/v1/booking/services", axum::routing::post(api::booking::unified::get_services).with_state(db.pool.clone()))
-        .route("/api/v1/booking/create_unified", axum::routing::post(api::booking::unified::create_unified_booking).with_state(db.pool.clone()))
         .nest("/api/agents/mission", api::agents::mission::handoff::router(std::sync::Arc::new(crate::sip::SipDB::new(db.pool.clone(), "default".to_string()))))
         .route("/api/telemetry/sync", axum::routing::post(api::telemetry::sync_telemetry_handler))
         .route("/api/v1/chaos/report", axum::routing::get(api::chaos::get_chaos_report_handler).with_state(db.pool.clone()))
@@ -5102,18 +5109,8 @@ async fn create_ui_bom_item_handler(
         .route("/api/help", axum::routing::get(crate::api::docs::list_articles))
         .route("/api/help/search", axum::routing::get(crate::api::docs::search_articles))
         .route("/api/help/{article_id}", axum::routing::get(crate::api::docs::get_article_handler))
-        .route("/api/tooltips", axum::routing::get(|| async {
-            let registry = get_tooltips_registry();
-            let m = registry.read().unwrap();
-            axum::Json(serde_json::to_value(&*m).unwrap())
-        }).post(|axum::Json(payload): axum::Json<HashMap<String, String>>| async {
-            let registry = get_tooltips_registry();
-            let mut m = registry.write().unwrap();
-            for (k, v) in payload {
-                m.insert(k, v);
-            }
-            axum::Json(serde_json::json!({"success": true}))
-        }))
+        .route("/api/tooltips", axum::routing::get(crate::api::docs::get_tooltips))
+        .route("/api/walkthrough/{page}", axum::routing::get(crate::api::docs::get_walkthrough))
         .route("/api/videos", axum::routing::get(crate::api::docs::list_videos))
         .route("/api/changelog", axum::routing::get(crate::api::docs::get_changelog))
         .route("/api/api-docs-spec", axum::routing::get(crate::api::docs::get_api_docs_spec))
@@ -5186,6 +5183,7 @@ async fn create_ui_bom_item_handler(
             default_config: ohc_builtin_agent::agent::AgentRunConfig::default(),
         })))
         .merge(meta_webhook_router)
+        .merge(omnichannel_webhook_router)
         .merge(health_router)
         .fallback(api_not_found_handler);
 
@@ -5420,3 +5418,6 @@ async fn test_api_settings_voice() {
 /*
 
 */
+
+#[cfg(test)]
+mod health_test;

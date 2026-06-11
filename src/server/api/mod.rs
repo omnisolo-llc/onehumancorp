@@ -1,6 +1,7 @@
 pub mod oauth;
 pub mod offline_sync;
 pub mod mesh_handler;
+pub mod omnichannel_webhook;
 pub mod autodream;
 pub mod terminal_api;
 pub mod pos;
@@ -32,3 +33,4 @@ pub mod recovery;
 pub mod agent_feed;
 pub mod invoice;
 pub mod audio_command;
+pub mod incidents;

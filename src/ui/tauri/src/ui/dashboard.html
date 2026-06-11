@@ -688,6 +688,7 @@
         <div class="action-buttons">
             <button class="btn-secondary" id="copy-btn" data-tooltip="Copy the referral link to your clipboard.">Copy</button>
             <button class="btn-secondary" id="share-whatsapp-btn">Share on WhatsApp</button>
+            <button class="btn-secondary" id="share-x-btn" style="background-color: #1DA1F2; color: white;">Share on X (Twitter)</button>
           </div>
         </div>
       </div>
@@ -712,7 +713,8 @@
       <div class="ohc-growth-card">
         <h2>Viral Campaigns</h2>
         <p>Acquire new users and grow your audience through viral sharing.</p>
-        <a href="giveaway/index.html" style="display: inline-block; background-color: #0066FF; color: white; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s;">Viral Giveaway Generator</a>
+        <a href="giveaway/index.html" id="giveaway-link" style="display: inline-block; background-color: #0066FF; color: white; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Viral Giveaway Generator</a>
+        <a href="work-intake-widget.html" id="work-intake-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s;">Work-Intake Widget 📋</a>
       </div>
 
 
@@ -1325,6 +1327,13 @@
         const link = referralLink.value;
         const text = `Join my team on OHC! Here is your invite link:\n\n${link}\n\n⚡ Powered by OHC`;
         window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+      });
+
+      const shareXBtn = document.getElementById('share-x-btn');
+      shareXBtn.addEventListener('click', () => {
+        const link = referralLink.value;
+        const text = `Join my team on OHC! Here is your invite link:\n\n${link}\n\n⚡ Powered by OHC`;
+        window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, '_blank');
       });
 
 

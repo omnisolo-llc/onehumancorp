@@ -2,12 +2,19 @@ import { test, expect } from './fixtures';
 
 test.describe('Work-Intake Widget Growth Loop', () => {
   test.beforeEach(async ({ page }) => {
-    // Navigate to the work intake widget builder page
-    await page.goto('/work-intake-widget');
+    // Navigate to the work intake widget builder page directly or from dashboard
+    await page.goto('/dashboard');
+    const link = page.locator('a[href="work-intake-widget.html"]');
+    await link.click();
     await page.waitForLoadState('networkidle');
   });
 
   test('should display the widget builder, update live preview, and generate embed code with branding', async ({ page }) => {
+    // Check if redirect worked or we need to just navigate
+    if (page.url().includes('dashboard')) {
+        await page.goto('/work-intake-widget.html');
+    }
+
     // 1. Verify the page header
     await expect(page.getByRole('heading', { name: 'Work-Intake Widget 📋' })).toBeVisible();
 
@@ -20,8 +27,8 @@ test.describe('Work-Intake Widget Growth Loop', () => {
     await titleInput.fill('E2E Custom Request');
 
     // 4. Toggle dark theme
-    const darkThemeBtn = page.getByRole('button', { name: 'Dark' });
-    await darkThemeBtn.click();
+    const themeSelect = page.locator('select');
+    await themeSelect.selectOption('dark');
 
     // 5. Verify the iframe URL updates correctly
     const iframe = page.locator('iframe');
