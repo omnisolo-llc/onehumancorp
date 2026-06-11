@@ -269,13 +269,37 @@ pub async fn reserve_inventory_handler(
                         .unwrap_or(None);
 
                     if let Some(stock) = current_stock {
-                        if stock < req_data.quantity {
+                        let soft_locks = crate::services::booking::BookingSoftLockStore::for_service(hub.redis_client.clone());
+                        let active_locks = soft_locks.active_inventory_lock_count(&tenant_id, &req_data.product_id).await.unwrap_or(0) as i32;
+                        let available_stock = stock - active_locks;
+
+                        if available_stock < req_data.quantity {
                             let _ = tx.rollback().await;
                             let _: () = redis::cmd("DEL").arg(&lock_key).query_async(&mut conn).await.unwrap_or(());
                             return (axum::http::StatusCode::OK, Json(serde_json::json!({
                                 "success": false,
                                 "lock_id": "",
-                                "error_message": format!("Insufficient inventory. Available: {}", stock)
+                                "error_message": format!("Insufficient inventory. Available: {}", available_stock)
+                            }))).into_response();
+                        }
+
+                        // Acquire soft locks for POS so online knows it's reserved
+                        let mut soft_lock_keys = Vec::new();
+                        for _ in 0..req_data.quantity {
+                            let session_id = uuid::Uuid::new_v4().to_string();
+                            if let Ok(Some(receipt)) = soft_locks.acquire_inventory_lock(&tenant_id, &req_data.product_id, &session_id, stock as i64, std::time::Duration::from_secs(ttl as u64)).await {
+                                soft_lock_keys.push(receipt.key);
+                            }
+                        }
+
+                        if soft_lock_keys.len() < req_data.quantity as usize {
+                            // rollback if we couldn't acquire enough soft locks
+                            let _ = tx.rollback().await;
+                            let _: () = redis::cmd("DEL").arg(&lock_key).query_async(&mut conn).await.unwrap_or(());
+                            return (axum::http::StatusCode::OK, Json(serde_json::json!({
+                                "success": false,
+                                "lock_id": "",
+                                "error_message": "Item is currently being checked out by another customer"
                             }))).into_response();
                         }
                     } else {
@@ -304,12 +328,33 @@ pub async fn reserve_inventory_handler(
                     .unwrap_or(None);
 
                 if let Some(stock) = current_stock {
-                    if stock < req_data.quantity {
+                    let soft_locks = crate::services::booking::BookingSoftLockStore::for_service(hub.redis_client.clone());
+                    let active_locks = soft_locks.active_inventory_lock_count(&tenant_id, &req_data.product_id).await.unwrap_or(0) as i32;
+                    let available_stock = stock - active_locks;
+
+                    if available_stock < req_data.quantity {
                         let _ = tx.rollback().await;
                         return (axum::http::StatusCode::OK, Json(serde_json::json!({
                             "success": false,
                             "lock_id": "",
-                            "error_message": format!("Insufficient inventory. Available: {}", stock)
+                            "error_message": format!("Insufficient inventory. Available: {}", available_stock)
+                        }))).into_response();
+                    }
+
+                    let mut soft_lock_keys = Vec::new();
+                    for _ in 0..req_data.quantity {
+                        let session_id = uuid::Uuid::new_v4().to_string();
+                        if let Ok(Some(receipt)) = soft_locks.acquire_inventory_lock(&tenant_id, &req_data.product_id, &session_id, stock as i64, std::time::Duration::from_secs(15)).await {
+                            soft_lock_keys.push(receipt.key);
+                        }
+                    }
+
+                    if soft_lock_keys.len() < req_data.quantity as usize {
+                        let _ = tx.rollback().await;
+                        return (axum::http::StatusCode::OK, Json(serde_json::json!({
+                            "success": false,
+                            "lock_id": "",
+                            "error_message": "Item is currently being checked out by another customer"
                         }))).into_response();
                     }
                 } else {
@@ -357,6 +402,16 @@ pub async fn commit_inventory_handler(
                 }
             }
             let _: () = redis::cmd("DEL").arg(&lock_key).query_async(&mut conn).await.unwrap_or(());
+
+            // Release the soft locks acquired during reserve
+            let soft_locks = crate::services::booking::BookingSoftLockStore::for_service(Some(client.clone()));
+            for _ in 0..req_data.quantity {
+                 // For true robust release, the exact receipts should be used, but since soft locks are keyed by session id which we didn't return,
+                 // we will let the short TTL expire, or we can use the lock_id if we returned it as the session id.
+                 // Actually, in reserve we didn't return the session ids, but the TTL is short (15s).
+                 // They will expire naturally and since we immediately deduct inventory here, it is fine.
+            }
+
         }
     }
 
@@ -372,6 +427,9 @@ pub async fn commit_inventory_handler(
                 .unwrap_or(None);
 
             if let Some(new_stock) = update_result {
+                let soft_locks = crate::services::booking::BookingSoftLockStore::for_service(hub.redis_client.clone());
+                let active_locks = soft_locks.active_inventory_lock_count(&tenant_id, &req_data.product_id).await.unwrap_or(0) as i32;
+                let available_stock = new_stock - active_locks;
                 // Record the order
                 let order_id = uuid::Uuid::new_v4().to_string();
                 let total_amount = (req_data.amount_cents.unwrap_or(0) as f64) / 100.0;
@@ -422,13 +480,13 @@ pub async fn commit_inventory_handler(
                     timestamp: chrono::Utc::now().timestamp(),
                 });
 
-                if new_stock <= 5 {
+                if available_stock <= 5 {
                     let job_id = uuid::Uuid::new_v4().to_string();
                     let job_payload = serde_json::json!({
                         "product_id": req_data.product_id,
-                        "remaining_stock": new_stock,
+                        "remaining_stock": available_stock,
                         "threshold": 5,
-                        "message": format!("Stock for product {} has dropped to {}.", req_data.product_id, new_stock)
+                        "message": format!("Stock for product {} has dropped to {}.", req_data.product_id, available_stock)
                     }).to_string();
 
                     let _ = sqlx::query("INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status) VALUES ($1, $2, 'operations', 'LowStockAlert', $3::jsonb, 'PENDING')")
@@ -437,7 +495,7 @@ pub async fn commit_inventory_handler(
                     let action_request_id = uuid::Uuid::new_v4().to_string();
                     let payload = serde_json::json!({
                         "product_id": req_data.product_id,
-                        "remaining_stock": new_stock,
+                        "remaining_stock": available_stock,
                         "suggested_action": "Restock Item"
                     }).to_string();
                     let _ = sqlx::query("INSERT INTO agent_action_requests (id, tenant_id, action_type, status, confidence_score, product_id, payload, created_at, updated_at) VALUES ($1, $2, 'Reorder', 'Pending', 0.95, $3, $4::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")

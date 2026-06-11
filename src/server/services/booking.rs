@@ -358,14 +358,14 @@ const INVENTORY_LOCK_TTL: Duration = Duration::from_secs(15 * 60);
 const INVENTORY_CAPACITY_LOCK_TTL: Duration = Duration::from_secs(10);
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-struct SoftLockReceipt {
-    key: String,
-    owner: String,
+pub struct SoftLockReceipt {
+    pub key: String,
+    pub owner: String,
 }
 
 #[derive(Debug)]
 struct LocalSoftLock {
-    owner: String,
+    pub owner: String,
     expires_at: Instant,
 }
 
@@ -426,13 +426,13 @@ impl LocalBookingSoftLockStore {
 }
 
 #[derive(Clone)]
-struct BookingSoftLockStore {
+pub struct BookingSoftLockStore {
     redis_client: Option<redis::Client>,
     local: Arc<LocalBookingSoftLockStore>,
 }
 
 impl BookingSoftLockStore {
-    fn for_service(redis_client: Option<redis::Client>) -> Self {
+    pub fn for_service(redis_client: Option<redis::Client>) -> Self {
         static LOCAL_LOCKS: OnceLock<Arc<LocalBookingSoftLockStore>> = OnceLock::new();
         Self {
             redis_client,
@@ -474,7 +474,7 @@ impl BookingSoftLockStore {
         self.key_exists(&key).await
     }
 
-    async fn acquire_inventory_lock(
+    pub async fn acquire_inventory_lock(
         &self,
         tenant_id: &str,
         product_id: &str,
@@ -563,7 +563,7 @@ impl BookingSoftLockStore {
         Ok(self.local.exists(key).await)
     }
 
-    async fn active_inventory_lock_count(
+    pub async fn active_inventory_lock_count(
         &self,
         tenant_id: &str,
         product_id: &str,
