@@ -37,11 +37,23 @@ where
 async fn handle_booking_request(
     State(orchestrator): State<Arc<DepartmentOrchestrator>>,
     headers: axum::http::HeaderMap,
+    auth_info_opt: Option<axum::extract::Extension<::server_auth::orchestration::AuthInfo>>,
     Json(payload): Json<BookingRequestPayload>,
 ) -> impl IntoResponse {
-    let tenant_id = match headers.get("x-tenant-id").and_then(|h| h.to_str().ok()) {
-        Some(t) if !t.trim().is_empty() => t.to_string(),
-        _ => return (axum::http::StatusCode::UNAUTHORIZED, axum::Json(serde_json::json!({"error": "unauthorized"}))).into_response(),
+    let tenant_id = if ::server_config::get().multitenant {
+        let auth_info = match auth_info_opt {
+            Some(axum::extract::Extension(info)) => info,
+            None => return (axum::http::StatusCode::UNAUTHORIZED, axum::Json(serde_json::json!({"error": "unauthorized"}))).into_response(),
+        };
+        if auth_info.org_id.trim().is_empty() {
+            return (axum::http::StatusCode::UNAUTHORIZED, axum::Json(serde_json::json!({"error": "unauthorized"}))).into_response();
+        }
+        auth_info.org_id
+    } else {
+        match headers.get("x-tenant-id").and_then(|h| h.to_str().ok()) {
+            Some(t) if !t.trim().is_empty() => t.to_string(),
+            _ => return (axum::http::StatusCode::UNAUTHORIZED, axum::Json(serde_json::json!({"error": "unauthorized"}))).into_response(),
+        }
     };
 
     let event = DepartmentEvent {

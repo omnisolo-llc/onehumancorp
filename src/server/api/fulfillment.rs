@@ -343,18 +343,23 @@ async fn doordash_webhook(
             return (StatusCode::BAD_REQUEST, Json(serde_json::json!({"error": err}))).into_response();
         }
     };
-    let tenant_id = match claims
-        .and_then(|Extension(claims)| claims.organization_id)
-        .or_else(|| {
-            headers
-                .get("x-tenant-id")
-                .and_then(|value| value.to_str().ok())
-                .map(|value| value.to_string())
-        })
-        .or_else(|| find_string_by_key(&payload, &["organization_id", "tenant_id"]))
-    {
+    let tenant_id = match claims.and_then(|Extension(claims)| claims.organization_id) {
         Some(id) if !id.trim().is_empty() => id,
-        _ => return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({"error": "unauthorized"}))).into_response(),
+        _ => {
+            if ::server_config::get().multitenant {
+                return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({"error": "unauthorized"}))).into_response();
+            } else {
+                match headers
+                    .get("x-tenant-id")
+                    .and_then(|value| value.to_str().ok())
+                    .map(|value| value.to_string())
+                    .or_else(|| find_string_by_key(&payload, &["organization_id", "tenant_id"]))
+                {
+                    Some(id) if !id.trim().is_empty() => id,
+                    _ => return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({"error": "unauthorized"}))).into_response(),
+                }
+            }
+        }
     };
 
     match persist_doordash_tracking_update(&state.pool, &tenant_id, &update).await {
