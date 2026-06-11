@@ -10,9 +10,6 @@ use sha2::Sha256;
 use std::sync::Arc;
 use crate::hub::Hub;
 use uuid::Uuid;
-use crate::api::agents::translation::{translate_inbox_message_with_llm, generate_inbox_draft_reply, InboxTranslation};
-use crate::orchestration::departments::types::DepartmentType;
-use crate::orchestration::departments::types::ActionRisk;
 
 #[derive(Clone)]
 pub struct MetaWebhookState {

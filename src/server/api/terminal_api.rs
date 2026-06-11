@@ -131,14 +131,29 @@ pub async fn update_terminal_session_status_handler(
 
     let pool = crate::db::get_pool();
 
-    let res = sqlx::query(
+
+    let status_str = req_data.status.as_str();
+    let query = if status_str == "RESOLVED" {
+        "UPDATE pos_terminal_sessions SET status = 'ACTIVE', sync_status = 'SYNCED', pending_reconciliation = '[]'::jsonb, last_conflict_resolved_at = CURRENT_TIMESTAMP WHERE id = $1 AND tenant_id = $2"
+    } else {
         "UPDATE pos_terminal_sessions SET status = $1, last_synced_at = CURRENT_TIMESTAMP WHERE id = $2 AND tenant_id = $3"
-    )
-    .bind(&req_data.status)
-    .bind(&req_data.session_id)
-    .bind(&tenant_id)
-    .execute(&pool)
-    .await;
+    };
+
+    let res = if status_str == "RESOLVED" {
+        sqlx::query(query)
+            .bind(&req_data.session_id)
+            .bind(&tenant_id)
+            .execute(&pool)
+            .await
+    } else {
+        sqlx::query(query)
+            .bind(&req_data.status)
+            .bind(&req_data.session_id)
+            .bind(&tenant_id)
+            .execute(&pool)
+            .await
+    };
+
 
     match res {
         Ok(result) => {
