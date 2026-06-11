@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-export async function GET(req: Request, { params }: { params: { id: string } }) {
+export async function GET(req: Request, context: { params: Promise<{ id: string }> }) {
   const backendUrl = process.env.BACKEND_URL || 'http://127.0.0.1:18789';
   const tenantId = req.headers.get('x-tenant-id') || 'default';
   const userId = req.headers.get('x-user-id') || 'default';
@@ -15,7 +15,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   }
 
   try {
-    const res = await fetch(`${backendUrl}/api/v1/quotes/${params.id}`, {
+    const res = await fetch(`${backendUrl}/api/v1/quotes/${(await context.params).id}`, {
       method: 'GET',
       headers,
     });

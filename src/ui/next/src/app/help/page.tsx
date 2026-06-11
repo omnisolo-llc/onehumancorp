@@ -9,13 +9,22 @@ export default function HelpCenterPage() {
   const [articles, setArticles] = useState<{category: string, title: string, desc: string, link: string}[]>([]);
   const [videos, setVideos] = useState<{id: number, title: string, duration: string, video_url: string}[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const url = searchQuery.trim() ? `/api/help/search?q=${encodeURIComponent(searchQuery.trim())}` : '/api/help';
-    fetch(url)
-      .then(res => res.json())
-      .then(data => setArticles(data))
-      .catch(console.error);
+    const fetchHelpData = async () => {
+      try {
+        const url = searchQuery.trim() ? `/api/help/search?q=${encodeURIComponent(searchQuery.trim())}` : '/api/help';
+        const articlesRes = await fetch(url);
+        const articlesData = await articlesRes.json();
+        setArticles(articlesData);
+      } catch (error) {
+        console.error("Failed to fetch articles:", error);
+      }
+      setIsLoading(false);
+    };
+
+    fetchHelpData();
   }, [searchQuery]);
 
   useEffect(() => {
@@ -46,14 +55,25 @@ export default function HelpCenterPage() {
           />
         </div>
 
-        {filteredArticles.length === 0 && filteredVideos.length === 0 ? (
-          <div className="flex flex-col items-center justify-center glassmorphism py-16 px-4 shadow-[0_4px_16px_rgba(0,0,0,0.02)]">
-            <svg className="w-16 h-16 text-gray-400 mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        {isLoading ? (
+          <div className="flex flex-col items-center justify-center py-16">
+            <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+            <p className="mt-4 text-gray-500 font-medium">Loading Help Center...</p>
+          </div>
+        ) : filteredArticles.length === 0 && filteredVideos.length === 0 ? (
+          <div className="flex flex-col items-center justify-center glassmorphism py-16 px-4 shadow-[0_4px_16px_rgba(0,0,0,0.02)] max-w-md mx-auto">
+            <svg style={{ width: "4rem", height: "4rem" }} className="text-gray-400 mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            <p className="text-center text-gray-600 font-medium text-lg">
-              No results found matching <span className="text-gray-900 font-semibold">"{searchQuery}"</span>
-            </p>
+            {searchQuery.trim() !== "" ? (
+              <p className="text-center text-gray-600 font-medium text-lg">
+                No results found matching <span className="text-gray-900 font-semibold">"{searchQuery}"</span>
+              </p>
+            ) : (
+              <p className="text-center text-gray-600 font-medium text-lg">
+                No articles available yet.
+              </p>
+            )}
             <p className="text-center text-gray-500 mt-2 text-sm">
               Try adjusting your search terms or ask our AI assistant for help.
             </p>
