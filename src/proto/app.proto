@@ -206,6 +206,7 @@ message CheckAvailabilityRequest {
   string tenant_id = 1;
   string product_id = 2;
   string date = 3; // YYYY-MM-DD
+  repeated string resource_ids = 4;
 }
 
 message TimeSlot {
@@ -225,6 +226,7 @@ message ReserveTimeSlotRequest {
   string end_time = 5; // RFC3339
   bool requires_deposit = 6;
   string timezone = 7;
+  repeated string resource_ids = 8;
 }
 
 message ReserveTimeSlotResponse {

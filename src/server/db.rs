@@ -780,6 +780,31 @@ impl DB {
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1
                     );
+
+                    CREATE TABLE IF NOT EXISTS resources (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT,
+                        name TEXT,
+                        type TEXT,
+                        description TEXT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        _sync_status TEXT DEFAULT 'pending',
+                        version INTEGER DEFAULT 1
+                    );
+                    CREATE TABLE IF NOT EXISTS service_resources (
+                        service_id TEXT,
+                        resource_id TEXT,
+                        tenant_id TEXT,
+                        quantity INTEGER DEFAULT 1,
+                        PRIMARY KEY (service_id, resource_id)
+                    );
+                    CREATE TABLE IF NOT EXISTS booking_resources (
+                        booking_id TEXT,
+                        resource_id TEXT,
+                        tenant_id TEXT,
+                        PRIMARY KEY (booking_id, resource_id)
+                    );
                     CREATE TABLE IF NOT EXISTS products (
                         id TEXT PRIMARY KEY,
                         tenant_id TEXT,
