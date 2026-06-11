@@ -308,6 +308,8 @@ pub struct Invoice {
     pub total_amount: Option<f64>,
     pub currency: Option<String>,
     pub tax_nexus: Option<String>,
+    pub split_partner_id: Option<String>,
+    pub split_percentage: Option<f64>,
     pub created_at: Option<DateTime<Utc>>,
     pub updated_at: Option<DateTime<Utc>>,
 }

@@ -21,12 +21,13 @@ impl LedgerRepository {
                     r#"
                     INSERT INTO invoices (
                         id, tenant_id, customer_id, status, due_date,
-                        total_amount, currency, tax_nexus, created_at, updated_at
-                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+                        total_amount, currency, tax_nexus, split_partner_id, split_percentage, created_at, updated_at
+                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
                     "#
                 )
                 .bind(&invoice.id).bind(&invoice.tenant_id).bind(&invoice.customer_id).bind(&invoice.status)
                 .bind(&invoice.due_date).bind(&invoice.total_amount).bind(&invoice.currency).bind(&invoice.tax_nexus)
+                .bind(&invoice.split_partner_id).bind(&invoice.split_percentage)
                 .bind(&invoice.created_at).bind(&invoice.updated_at)
                 .execute(&mut *tx).await.map_err(|e| e.to_string())?;
 
@@ -50,12 +51,13 @@ impl LedgerRepository {
                     r#"
                     INSERT INTO invoices (
                         id, tenant_id, customer_id, status, due_date,
-                        total_amount, currency, tax_nexus, created_at, updated_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        total_amount, currency, tax_nexus, split_partner_id, split_percentage, created_at, updated_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     "#
                 )
                 .bind(&invoice.id).bind(&invoice.tenant_id).bind(&invoice.customer_id).bind(&invoice.status)
                 .bind(&invoice.due_date).bind(&invoice.total_amount).bind(&invoice.currency).bind(&invoice.tax_nexus)
+                .bind(&invoice.split_partner_id).bind(&invoice.split_percentage)
                 .bind(&invoice.created_at).bind(&invoice.updated_at)
                 .execute(&mut *tx).await.map_err(|e| e.to_string())?;
 
@@ -82,7 +84,7 @@ impl LedgerRepository {
             DbStore::Postgres => {
                 sqlx::query_as::<_, Invoice>(
                     r#"
-                    SELECT id, tenant_id, customer_id, status, due_date, total_amount, currency, tax_nexus, created_at, updated_at
+                    SELECT id, tenant_id, customer_id, status, due_date, total_amount, currency, tax_nexus, split_partner_id, split_percentage, created_at, updated_at
                     FROM invoices
                     WHERE tenant_id = $1 AND id = $2
                     "#
@@ -96,7 +98,7 @@ impl LedgerRepository {
             DbStore::Sqlite(sqlite_pool) => {
                 sqlx::query_as::<_, Invoice>(
                     r#"
-                    SELECT id, tenant_id, customer_id, status, due_date, total_amount, currency, tax_nexus, created_at, updated_at
+                    SELECT id, tenant_id, customer_id, status, due_date, total_amount, currency, tax_nexus, split_partner_id, split_percentage, created_at, updated_at
                     FROM invoices
                     WHERE tenant_id = ? AND id = ?
                     "#
@@ -177,6 +179,52 @@ impl LedgerRepository {
                 .bind(&debit_entry_id).bind(&event.tenant_id).bind(&event.id).bind(0.0).bind(event.amount).bind("Cash").bind(now).bind(now)
                 .execute(&mut *tx).await.map_err(|e| e.to_string())?;
 
+                let invoice = sqlx::query_as::<_, Invoice>(
+                    r#"SELECT * FROM invoices WHERE tenant_id = $1 AND id = $2"#
+                )
+                .bind(&event.tenant_id).bind(&event.invoice_id)
+                .fetch_optional(&mut *tx)
+                .await.map_err(|e| e.to_string())?;
+
+                if let Some(inv) = invoice {
+                    if let (Some(partner_id), Some(pct)) = (inv.split_partner_id, inv.split_percentage) {
+                        let partner_amount = event.amount * (pct / 100.0);
+                        let partner_credit_id = Uuid::new_v4().to_string();
+                        let partner_debit_id = Uuid::new_v4().to_string();
+
+                        sqlx::query(r#"INSERT INTO ledger_entries (id, tenant_id, payment_event_id, credit, debit, entry_type, posted_at, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#)
+                        .bind(&partner_credit_id).bind(&event.tenant_id).bind(&event.id).bind(partner_amount).bind(0.0).bind(format!("Payable to {}", partner_id)).bind(now).bind(now)
+                        .execute(&mut *tx).await.map_err(|e| e.to_string())?;
+
+                        sqlx::query(r#"INSERT INTO ledger_entries (id, tenant_id, payment_event_id, credit, debit, entry_type, posted_at, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#)
+                        .bind(&partner_debit_id).bind(&event.tenant_id).bind(&event.id).bind(0.0).bind(partner_amount).bind("Revenue Split").bind(now).bind(now)
+                        .execute(&mut *tx).await.map_err(|e| e.to_string())?;
+                    }
+                }
+
+                let invoice = sqlx::query_as::<_, Invoice>(
+                    r#"SELECT * FROM invoices WHERE tenant_id = $1 AND id = $2"#
+                )
+                .bind(&event.tenant_id).bind(&event.invoice_id)
+                .fetch_optional(&mut *tx)
+                .await.map_err(|e| e.to_string())?;
+
+                if let Some(inv) = invoice {
+                    if let (Some(partner_id), Some(pct)) = (inv.split_partner_id, inv.split_percentage) {
+                        let partner_amount = event.amount * (pct / 100.0);
+                        let partner_credit_id = Uuid::new_v4().to_string();
+                        let partner_debit_id = Uuid::new_v4().to_string();
+
+                        sqlx::query(r#"INSERT INTO ledger_entries (id, tenant_id, payment_event_id, credit, debit, entry_type, posted_at, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#)
+                        .bind(&partner_credit_id).bind(&event.tenant_id).bind(&event.id).bind(partner_amount).bind(0.0).bind(format!("Payable to {}", partner_id)).bind(now).bind(now)
+                        .execute(&mut *tx).await.map_err(|e| e.to_string())?;
+
+                        sqlx::query(r#"INSERT INTO ledger_entries (id, tenant_id, payment_event_id, credit, debit, entry_type, posted_at, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"#)
+                        .bind(&partner_debit_id).bind(&event.tenant_id).bind(&event.id).bind(0.0).bind(partner_amount).bind("Revenue Split").bind(now).bind(now)
+                        .execute(&mut *tx).await.map_err(|e| e.to_string())?;
+                    }
+                }
+
                 sqlx::query(r#"UPDATE invoices SET status = 'Paid', updated_at = $1 WHERE tenant_id = $2 AND id = $3"#)
                 .bind(now).bind(&event.tenant_id).bind(&event.invoice_id)
                 .execute(&mut *tx).await.map_err(|e| e.to_string())?;
@@ -198,6 +246,52 @@ impl LedgerRepository {
                 sqlx::query(r#"INSERT INTO ledger_entries (id, tenant_id, payment_event_id, credit, debit, entry_type, posted_at, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"#)
                 .bind(&debit_entry_id).bind(&event.tenant_id).bind(&event.id).bind(0.0).bind(event.amount).bind("Cash").bind(now).bind(now)
                 .execute(&mut *tx).await.map_err(|e| e.to_string())?;
+
+                let invoice = sqlx::query_as::<_, Invoice>(
+                    r#"SELECT * FROM invoices WHERE tenant_id = ? AND id = ?"#
+                )
+                .bind(&event.tenant_id).bind(&event.invoice_id)
+                .fetch_optional(&mut *tx)
+                .await.map_err(|e| e.to_string())?;
+
+                if let Some(inv) = invoice {
+                    if let (Some(partner_id), Some(pct)) = (inv.split_partner_id, inv.split_percentage) {
+                        let partner_amount = event.amount * (pct / 100.0);
+                        let partner_credit_id = Uuid::new_v4().to_string();
+                        let partner_debit_id = Uuid::new_v4().to_string();
+
+                        sqlx::query(r#"INSERT INTO ledger_entries (id, tenant_id, payment_event_id, credit, debit, entry_type, posted_at, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"#)
+                        .bind(&partner_credit_id).bind(&event.tenant_id).bind(&event.id).bind(partner_amount).bind(0.0).bind(format!("Payable to {}", partner_id)).bind(now).bind(now)
+                        .execute(&mut *tx).await.map_err(|e| e.to_string())?;
+
+                        sqlx::query(r#"INSERT INTO ledger_entries (id, tenant_id, payment_event_id, credit, debit, entry_type, posted_at, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"#)
+                        .bind(&partner_debit_id).bind(&event.tenant_id).bind(&event.id).bind(0.0).bind(partner_amount).bind("Revenue Split").bind(now).bind(now)
+                        .execute(&mut *tx).await.map_err(|e| e.to_string())?;
+                    }
+                }
+
+                let invoice = sqlx::query_as::<_, Invoice>(
+                    r#"SELECT * FROM invoices WHERE tenant_id = ? AND id = ?"#
+                )
+                .bind(&event.tenant_id).bind(&event.invoice_id)
+                .fetch_optional(&mut *tx)
+                .await.map_err(|e| e.to_string())?;
+
+                if let Some(inv) = invoice {
+                    if let (Some(partner_id), Some(pct)) = (inv.split_partner_id, inv.split_percentage) {
+                        let partner_amount = event.amount * (pct / 100.0);
+                        let partner_credit_id = Uuid::new_v4().to_string();
+                        let partner_debit_id = Uuid::new_v4().to_string();
+
+                        sqlx::query(r#"INSERT INTO ledger_entries (id, tenant_id, payment_event_id, credit, debit, entry_type, posted_at, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"#)
+                        .bind(&partner_credit_id).bind(&event.tenant_id).bind(&event.id).bind(partner_amount).bind(0.0).bind(format!("Payable to {}", partner_id)).bind(now).bind(now)
+                        .execute(&mut *tx).await.map_err(|e| e.to_string())?;
+
+                        sqlx::query(r#"INSERT INTO ledger_entries (id, tenant_id, payment_event_id, credit, debit, entry_type, posted_at, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"#)
+                        .bind(&partner_debit_id).bind(&event.tenant_id).bind(&event.id).bind(0.0).bind(partner_amount).bind("Revenue Split").bind(now).bind(now)
+                        .execute(&mut *tx).await.map_err(|e| e.to_string())?;
+                    }
+                }
 
                 sqlx::query(r#"UPDATE invoices SET status = 'Paid', updated_at = ? WHERE tenant_id = ? AND id = ?"#)
                 .bind(now).bind(&event.tenant_id).bind(&event.invoice_id)
@@ -264,6 +358,8 @@ mod ledger_tests {
                 total_amount REAL,
                 currency TEXT,
                 tax_nexus TEXT,
+                split_partner_id TEXT,
+                split_percentage REAL,
                 created_at TEXT,
                 updated_at TEXT
             );
@@ -329,6 +425,8 @@ mod ledger_tests {
             total_amount: Some(100.0),
             currency: Some("USD".into()),
             tax_nexus: None,
+            split_partner_id: None,
+            split_percentage: None,
             created_at: Some(Utc::now()),
             updated_at: Some(Utc::now()),
         };
@@ -366,6 +464,8 @@ mod ledger_tests {
             total_amount: Some(250.0),
             currency: Some("USD".into()),
             tax_nexus: None,
+            split_partner_id: None,
+            split_percentage: None,
             created_at: Some(Utc::now()),
             updated_at: Some(Utc::now()),
         };
@@ -423,6 +523,8 @@ mod ledger_tests {
             total_amount: Some(50.0),
             currency: Some("USD".into()),
             tax_nexus: None,
+            split_partner_id: None,
+            split_percentage: None,
             created_at: Some(Utc::now()),
             updated_at: Some(Utc::now()),
         };
@@ -437,6 +539,8 @@ mod ledger_tests {
             total_amount: Some(70.0),
             currency: Some("USD".into()),
             tax_nexus: None,
+            split_partner_id: None,
+            split_percentage: None,
             created_at: Some(Utc::now()),
             updated_at: Some(Utc::now()),
         };
@@ -450,5 +554,93 @@ mod ledger_tests {
 
         let entries_tenant4 = repo.get_ledger_entries("tenant_4").await.unwrap();
         assert_eq!(entries_tenant4.len(), 2);
+    }
+
+    #[tokio::test]
+    async fn test_apply_payment_with_split() {
+        let db = setup_test_db().await;
+        let repo = LedgerRepository::new(db);
+
+        let invoice = Invoice {
+            id: "inv_split".into(),
+            tenant_id: "tenant_split".into(),
+            customer_id: "cust_split".into(),
+            status: Some("Sent".into()),
+            due_date: Some(Utc::now()),
+            total_amount: Some(100.0),
+            currency: Some("USD".into()),
+            tax_nexus: None,
+            split_partner_id: Some("Sarah".into()),
+            split_percentage: Some(70.0),
+            created_at: Some(Utc::now()),
+            updated_at: Some(Utc::now()),
+        };
+        repo.create_invoice(invoice, vec![]).await.unwrap();
+
+        let event = PaymentEvent {
+            id: "evt_split".into(),
+            tenant_id: "tenant_split".into(),
+            invoice_id: "inv_split".into(),
+            amount: 100.0,
+            method: "Card".into(),
+            completed_at: Some(Utc::now()),
+            created_at: Some(Utc::now()),
+        };
+
+        repo.apply_payment_event(event).await.unwrap();
+
+        let entries = repo.get_ledger_entries("tenant_split").await.unwrap();
+        // Should have 4 entries: Revenue, Cash, Payable to Sarah, Revenue Split
+        assert_eq!(entries.len(), 4);
+
+        let partner_credit = entries.iter().find(|e| e.entry_type == "Payable to Sarah").unwrap();
+        assert_eq!(partner_credit.credit, 70.0);
+
+        let split_debit = entries.iter().find(|e| e.entry_type == "Revenue Split").unwrap();
+        assert_eq!(split_debit.debit, 70.0);
+    }
+
+    #[tokio::test]
+    async fn test_apply_payment_with_split() {
+        let db = setup_test_db().await;
+        let repo = LedgerRepository::new(db);
+
+        let invoice = Invoice {
+            id: "inv_split".into(),
+            tenant_id: "tenant_split".into(),
+            customer_id: "cust_split".into(),
+            status: Some("Sent".into()),
+            due_date: Some(Utc::now()),
+            total_amount: Some(100.0),
+            currency: Some("USD".into()),
+            tax_nexus: None,
+            split_partner_id: Some("Sarah".into()),
+            split_percentage: Some(70.0),
+            created_at: Some(Utc::now()),
+            updated_at: Some(Utc::now()),
+        };
+        repo.create_invoice(invoice, vec![]).await.unwrap();
+
+        let event = PaymentEvent {
+            id: "evt_split".into(),
+            tenant_id: "tenant_split".into(),
+            invoice_id: "inv_split".into(),
+            amount: 100.0,
+            method: "Card".into(),
+            completed_at: Some(Utc::now()),
+            created_at: Some(Utc::now()),
+        };
+
+        repo.apply_payment_event(event).await.unwrap();
+
+        let entries = repo.get_ledger_entries("tenant_split").await.unwrap();
+        // Should have 4 entries: Revenue, Cash, Payable to Sarah, Revenue Split
+        assert_eq!(entries.len(), 4);
+
+        let partner_credit = entries.iter().find(|e| e.entry_type == "Payable to Sarah").unwrap();
+        assert_eq!(partner_credit.credit, 70.0);
+
+        let split_debit = entries.iter().find(|e| e.entry_type == "Revenue Split").unwrap();
+        assert_eq!(split_debit.debit, 70.0);
     }
 }
