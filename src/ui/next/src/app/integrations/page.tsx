@@ -14,7 +14,7 @@ export default function Integrations() {
     { id: "mailerlite", name: "MailerLite", category: "marketing", status: "disconnected", icon: "📨", description: "Embedded, No-Jargon Email Campaigns." },
     { id: "mercadopago", name: "Mercado Pago", category: "finance", status: "disconnected", icon: "🌎", description: "Accept credit cards and local payment methods in Latin America." },
     { id: "shippo", name: "Shippo", category: "operations", status: "disconnected", icon: "📦", description: "Painless Shipping Labels & Tracking." },
-    { id: "twilio", name: "Twilio Conversations", category: "operations", status: "disconnected", icon: "🔔", description: "Central omnichannel inbox via Twilio Conversations API for SMS, WhatsApp, and chat." },
+    { id: "twilio", name: "WhatsApp Business (Twilio)", category: "operations", status: "disconnected", icon: "🔔", description: "Central WhatsApp Inbox via Twilio for Work Triage and Customer Assistant." },
     { id: "whereby", name: "Whereby", category: "operations", status: "disconnected", icon: "📹", description: "Zero-Setup Online Lessons and video conferencing." },
     { id: "resend", name: "Resend", category: "marketing", status: "disconnected", icon: "📧", description: "Transactional and Marketing Emails." },
     { id: "whatsapp", name: "WhatsApp Cloud API", category: "social", status: "disconnected", icon: "💬", description: "Central WhatsApp Inbox for Work Triage and Customer Assistant." },
@@ -32,6 +32,11 @@ export default function Integrations() {
     instagram: false,
     facebook: false,
     sms: true,
+  });
+  const [twilioCreds, setTwilioCreds] = useState({
+    accountSid: '',
+    authToken: '',
+    fromNumber: '',
   });
 
   const handleConnect = async (id: string) => {
@@ -80,13 +85,39 @@ export default function Integrations() {
     }
   };
 
-  const saveTwilioIntegration = () => {
-    setIntegrations(prev => prev.map(integration =>
-      integration.id === 'twilio' ? { ...integration, status: "connected" } : integration
-    ));
-    setShowTwilioModal(false);
-    setStatusMessage("Twilio Conversations connected.");
-    router.push('/inbox');
+  const saveTwilioIntegration = async () => {
+    setStatusMessage("Connecting Twilio...");
+    try {
+      const res = await fetch(`/api/integrations/twilio/credentials`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({
+          api_token: twilioCreds.authToken,
+          extra_params: {
+            account_sid: twilioCreds.accountSid,
+            from_number: twilioCreds.fromNumber,
+            channels: twilioChannels
+          }
+        })
+      });
+
+      if (!res.ok) {
+        setStatusMessage("Failed to connect Twilio. Check your credentials.");
+        return;
+      }
+
+      setIntegrations(prev => prev.map(integration =>
+        integration.id === 'twilio' ? { ...integration, status: "connected" } : integration
+      ));
+      setShowTwilioModal(false);
+      setStatusMessage("Twilio WhatsApp connected.");
+      router.push('/inbox');
+    } catch (err) {
+      setStatusMessage("Unable to connect Twilio.");
+    }
   };
 
   const saveWhatsAppIntegration = () => {
@@ -148,30 +179,69 @@ export default function Integrations() {
               </button>
             </div>
 
-            <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">Connect Twilio Conversations</h2>
+            <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">Connect Twilio WhatsApp</h2>
             <p className="text-gray-600 mb-6 text-sm leading-relaxed">
-              Select the channels you want to route into your central inbox. You can update this later without losing message history.
+              Configure your Twilio WhatsApp Business API credentials. Incoming messages will be automatically routed into Work Triage.
             </p>
 
             <div className="space-y-4 mb-6">
-              {Object.entries(twilioChannels).map(([key, value]) => (
-                <div key={key} className="flex items-center justify-between p-3 rounded-xl border border-gray-100 bg-gray-50">
-                  <span className="text-sm font-semibold text-gray-800 capitalize">{key}</span>
-                  <button
-                    onClick={() => setTwilioChannels(prev => ({ ...prev, [key]: !prev[key as keyof typeof twilioChannels] }))}
-                    className={`w-12 h-6 rounded-full transition-colors relative ${value ? 'bg-[#34C759]' : 'bg-gray-300'}`}
-                  >
-                    <div className={`w-5 h-5 bg-white rounded-full absolute top-0.5 transition-transform ${value ? 'translate-x-6' : 'translate-x-0.5'}`} />
-                  </button>
+              <div>
+                <label htmlFor="account_sid" className="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">Account SID</label>
+                <input
+                  id="account_sid"
+                  type="text"
+                  placeholder="AC..."
+                  value={twilioCreds.accountSid}
+                  onChange={(e) => setTwilioCreds(prev => ({ ...prev, accountSid: e.target.value }))}
+                  className="w-full p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+                />
+              </div>
+              <div>
+                <label htmlFor="auth_token" className="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">Auth Token</label>
+                <input
+                  id="auth_token"
+                  type="password"
+                  placeholder="Required"
+                  value={twilioCreds.authToken}
+                  onChange={(e) => setTwilioCreds(prev => ({ ...prev, authToken: e.target.value }))}
+                  className="w-full p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+                />
+              </div>
+              <div>
+                <label htmlFor="whatsapp_number" className="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1">WhatsApp Number</label>
+                <input
+                  id="whatsapp_number"
+                  type="text"
+                  placeholder="whatsapp:+1..."
+                  value={twilioCreds.fromNumber}
+                  onChange={(e) => setTwilioCreds(prev => ({ ...prev, fromNumber: e.target.value }))}
+                  className="w-full p-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+                />
+              </div>
+
+              <div className="pt-2">
+                <label className="block text-xs font-bold text-gray-500 uppercase mb-2 ml-1">Channels</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {Object.entries(twilioChannels).map(([key, value]) => (
+                    <div key={key} className="flex items-center justify-between p-3 rounded-xl border border-gray-100 bg-gray-50">
+                      <span className="text-xs font-semibold text-gray-800 capitalize">{key}</span>
+                      <button
+                        onClick={() => setTwilioChannels(prev => ({ ...prev, [key]: !prev[key as keyof typeof twilioChannels] }))}
+                        className={`w-10 h-5 rounded-full transition-colors relative ${value ? 'bg-[#34C759]' : 'bg-gray-300'}`}
+                      >
+                        <div className={`w-4 h-4 bg-white rounded-full absolute top-0.5 transition-transform ${value ? 'translate-x-5' : 'translate-x-0.5'}`} />
+                      </button>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              </div>
             </div>
 
             <button
               onClick={saveTwilioIntegration}
               className="w-full bg-[#0066FF] text-white py-3 rounded-xl font-bold text-sm shadow-sm hover:bg-[#005bb5] transition-colors"
             >
-              Save & Connect
+              Connect Twilio
             </button>
           </div>
         </div>

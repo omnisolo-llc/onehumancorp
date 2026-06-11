@@ -750,6 +750,7 @@ impl DB {
                         customer_id TEXT,
                         total_amount REAL,
                         status TEXT,
+                        sender_id TEXT,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         _sync_status TEXT DEFAULT 'pending',
@@ -775,6 +776,7 @@ impl DB {
                         start_time TEXT,
                         end_time TEXT,
                         status TEXT,
+                        sender_id TEXT,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         _sync_status TEXT DEFAULT 'pending',
@@ -997,6 +999,7 @@ impl DB {
                         translated_from_language TEXT,
                         draft_reply TEXT,
                         status TEXT,
+                        sender_id TEXT,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                     );
 

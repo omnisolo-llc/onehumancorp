@@ -49,6 +49,14 @@ impl TwilioProvider {
         }
         self.client.send_sms(to, from, body).await
     }
+
+    pub async fn send_whatsapp_message(&self, to: &str, from: &str, body: &str) -> Result<(), String> {
+        // Mock checking opt-out status
+        if self.is_opted_out(to).await {
+            return Err("User opted out".to_string());
+        }
+        self.client.send_whatsapp(to, from, body).await
+    }
 }
 
 #[cfg(test)]
@@ -65,6 +73,10 @@ mod tests {
     #[async_trait]
     impl TwilioClientWrapper for MockTwilioClient {
         async fn send_sms(&self, _to: &str, _from: &str, _body: &str) -> Result<(), String> {
+            self.sent_messages.fetch_add(1, Ordering::SeqCst);
+            Ok(())
+        }
+        async fn send_whatsapp(&self, _to: &str, _from: &str, _body: &str) -> Result<(), String> {
             self.sent_messages.fetch_add(1, Ordering::SeqCst);
             Ok(())
         }

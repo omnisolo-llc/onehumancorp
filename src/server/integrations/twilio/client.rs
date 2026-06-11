@@ -3,6 +3,7 @@ use async_trait::async_trait;
 #[async_trait]
 pub trait TwilioClientWrapper: Send + Sync {
     async fn send_sms(&self, to: &str, from: &str, body: &str) -> Result<(), String>;
+    async fn send_whatsapp(&self, to: &str, from: &str, body: &str) -> Result<(), String>;
 }
 
 use reqwest::Client;
@@ -42,10 +43,45 @@ impl TwilioClientWrapper for RealTwilioClient {
 
         match res {
             Ok(resp) => {
-                if resp.status().is_success() {
+                let status = resp.status();
+                if status.is_success() {
                     Ok(())
                 } else {
-                    Err(format!("Twilio API error: {}", resp.status()))
+                    let err_body = resp.text().await.unwrap_or_default();
+                    Err(format!("Twilio API error (SMS): {} - {}", status, err_body))
+                }
+            }
+            Err(e) => Err(format!("Network error: {}", e)),
+        }
+    }
+
+    async fn send_whatsapp(&self, to: &str, from: &str, body: &str) -> Result<(), String> {
+        let url = format!("https://api.twilio.com/2010-04-01/Accounts/{}/Messages.json", self.account_sid);
+
+        // Twilio requires WhatsApp numbers to be prefixed with 'whatsapp:'
+        let to_whatsapp = if to.starts_with("whatsapp:") { to.to_string() } else { format!("whatsapp:{}", to) };
+        let from_whatsapp = if from.starts_with("whatsapp:") { from.to_string() } else { format!("whatsapp:{}", from) };
+
+        let params = [
+            ("To", to_whatsapp.as_str()),
+            ("From", from_whatsapp.as_str()),
+            ("Body", body),
+        ];
+
+        let res = self.http_client.post(&url)
+            .basic_auth(&self.account_sid, Some(&self.auth_token))
+            .form(&params)
+            .send()
+            .await;
+
+        match res {
+            Ok(resp) => {
+                let status = resp.status();
+                if status.is_success() {
+                    Ok(())
+                } else {
+                    let err_body = resp.text().await.unwrap_or_default();
+                    Err(format!("Twilio API error (WhatsApp): {} - {}", status, err_body))
                 }
             }
             Err(e) => Err(format!("Network error: {}", e)),

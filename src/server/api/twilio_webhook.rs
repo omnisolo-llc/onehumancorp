@@ -44,29 +44,61 @@ pub async fn twilio_webhook_post_handler(
 
         let pool = &state.db.pool;
 
+        // Twilio prefixes WhatsApp numbers with "whatsapp:" in webhooks
+        let normalized_to = _to_number.strip_prefix("whatsapp:").unwrap_or(&_to_number);
+
         // Find the correct tenant by mapping the `To` number
+        // We first check the integration_credentials table for specialized integrations,
+        // then fallback to settings.
         let tenant_id = match &state.db.store {
             crate::db::DbStore::Postgres => {
-                match sqlx::query_scalar::<_, String>(
-                    "SELECT tenant_id FROM settings WHERE sms_critical_phone = $1 OR voice_receptionist_number = $1 LIMIT 1"
+                let cred_tenant = sqlx::query_scalar::<_, String>(
+                    "SELECT tenant_id FROM integration_credentials WHERE integration_id = 'twilio' AND extra_params->>'from_number' = $1 LIMIT 1"
                 )
-                .bind(&_to_number)
+                .bind(normalized_to)
                 .fetch_optional(pool)
-                .await {
-                    Ok(Some(id)) => id,
-                    _ => "test_tenant".to_string(), // Fallback if no specific tenant is found
+                .await
+                .ok()
+                .flatten();
+
+                if let Some(id) = cred_tenant {
+                    id
+                } else {
+                    match sqlx::query_scalar::<_, String>(
+                        "SELECT tenant_id FROM settings WHERE sms_critical_phone = $1 OR voice_receptionist_number = $1 LIMIT 1"
+                    )
+                    .bind(normalized_to)
+                    .fetch_optional(pool)
+                    .await {
+                        Ok(Some(id)) => id,
+                        _ => "test_tenant".to_string(),
+                    }
                 }
             },
             crate::db::DbStore::Sqlite(sqlite_pool) => {
-                match sqlx::query_scalar::<_, String>(
-                    "SELECT tenant_id FROM settings WHERE sms_critical_phone = ? OR voice_receptionist_number = ? LIMIT 1"
+                // SQLite JSON extraction syntax is different
+                let cred_tenant = sqlx::query_scalar::<_, String>(
+                    "SELECT tenant_id FROM integration_credentials WHERE integration_id = 'twilio' AND json_extract(extra_params, '$.from_number') = ? LIMIT 1"
                 )
-                .bind(&_to_number)
-                .bind(&_to_number)
+                .bind(normalized_to)
                 .fetch_optional(sqlite_pool)
-                .await {
-                    Ok(Some(id)) => id,
-                    _ => "test_tenant".to_string(),
+                .await
+                .ok()
+                .flatten();
+
+                if let Some(id) = cred_tenant {
+                    id
+                } else {
+                    match sqlx::query_scalar::<_, String>(
+                        "SELECT tenant_id FROM settings WHERE sms_critical_phone = ? OR voice_receptionist_number = ? LIMIT 1"
+                    )
+                    .bind(normalized_to)
+                    .bind(normalized_to)
+                    .fetch_optional(sqlite_pool)
+                    .await {
+                        Ok(Some(id)) => id,
+                        _ => "test_tenant".to_string(),
+                    }
                 }
             }
         };

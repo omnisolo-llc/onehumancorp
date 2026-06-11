@@ -272,6 +272,59 @@ pub fn dispatch_workflow(record: WorkflowRecord) {
         }
     });
 }
+async fn save_integration_credentials_handler(
+    axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
+    axum::extract::Path(integration_id): axum::extract::Path<String>,
+    axum::extract::Extension(user): axum::extract::Extension<::server_common::Claims>,
+    axum::Json(payload): axum::Json<serde_json::Value>,
+) -> axum::response::Response {
+    use axum::response::IntoResponse;
+    let tenant_id = user.organization_id.unwrap_or_else(|| "default".to_string());
+    let api_token = payload.get("api_token").and_then(|v| v.as_str()).map(|s| s.to_string());
+    let extra_params = payload.get("extra_params").cloned().unwrap_or(serde_json::json!({}));
+
+    let result = match &db.store {
+        crate::db::DbStore::Postgres => {
+            sqlx::query(
+                "INSERT INTO integration_credentials (tenant_id, integration_id, api_token, extra_params, updated_at) \
+                 VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP) \
+                 ON CONFLICT (tenant_id, integration_id) DO UPDATE \
+                 SET api_token = EXCLUDED.api_token, extra_params = EXCLUDED.extra_params, updated_at = CURRENT_TIMESTAMP"
+            )
+            .bind(&tenant_id)
+            .bind(&integration_id)
+            .bind(api_token)
+            .bind(extra_params)
+            .execute(&db.pool)
+            .await
+            .map(|_| ())
+        },
+        crate::db::DbStore::Sqlite(pool) => {
+            sqlx::query(
+                "INSERT INTO integration_credentials (tenant_id, integration_id, api_token, extra_params, updated_at) \
+                 VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP) \
+                 ON CONFLICT (tenant_id, integration_id) DO UPDATE \
+                 SET api_token = excluded.api_token, extra_params = excluded.extra_params, updated_at = CURRENT_TIMESTAMP"
+            )
+            .bind(&tenant_id)
+            .bind(&integration_id)
+            .bind(api_token)
+            .bind(serde_json::to_string(&extra_params).unwrap_or_else(|_| "{}".to_string()))
+            .execute(pool)
+            .await
+            .map(|_| ())
+        }
+    };
+
+    match result {
+        Ok(_) => (axum::http::StatusCode::OK, axum::Json(serde_json::json!({"success": true}))).into_response(),
+        Err(e) => {
+            tracing::error!("Failed to save integration credentials: {}", e);
+            (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": e.to_string()}))).into_response()
+        }
+    }
+}
+
 
 async fn list_workflows_handler() -> axum::Json<serde_json::Value> {
     let workflows = get_workflow_registry()
@@ -4719,6 +4772,27 @@ async fn create_ui_bom_item_handler(
             }
         }))
         .route("/api/integrations/manychat/draft", axum::routing::post(generate_manychat_draft_handler))
+        .route("/api/integrations/{id}/credentials", axum::routing::post(save_integration_credentials_handler).with_state(db.clone()).layer(
+            axum::middleware::from_fn(
+                |req: axum::extract::Request, next: axum::middleware::Next| async move {
+                    use axum::response::IntoResponse;
+                    let store = std::sync::Arc::new(crate::auth::Store::new());
+                    let auth_header = req.headers().get("authorization").and_then(|h| h.to_str().ok());
+                    let token = match auth_header {
+                        Some(h) if h.to_lowercase().starts_with("bearer ") => &h[7..],
+                        _ => return (axum::http::StatusCode::UNAUTHORIZED, "Unauthorized").into_response(),
+                    };
+                    let claims = match store.validate_token(token).await {
+                        Ok(c) => c,
+                        Err(_) => return (axum::http::StatusCode::UNAUTHORIZED, "Unauthorized").into_response(),
+                    };
+                    let mut req = req;
+                    req.extensions_mut().insert(claims);
+                    next.run(req).await
+                }
+            )
+        ))
+
                 .route("/api/ui/dashboard/metrics", axum::routing::get(ui_dashboard_metrics_handler).with_state(db.clone()))
         .route("/api/ui/dashboard/unified-feed", axum::routing::get(ui_dashboard_unified_feed_handler).with_state(db.clone()))
         .route("/api/ui/dashboard/unified-agent-feed", axum::routing::get(ui_dashboard_unified_agent_feed_handler).with_state(db.clone()))
