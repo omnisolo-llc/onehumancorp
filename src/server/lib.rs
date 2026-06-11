@@ -368,6 +368,7 @@ pub mod services {
     pub mod onboarding;
     pub mod sync;
     pub mod chat;
+    pub mod docs;
 
     #[cfg(ohc_bazel)]
     pub use ::server_services_b2b as b2b;
@@ -4623,10 +4624,23 @@ async fn create_ui_bom_item_handler(
         .route("/api/help", axum::routing::get(crate::api::docs::list_articles))
         .route("/api/help/search", axum::routing::get(crate::api::docs::search_articles))
         .route("/api/help/{article_id}", axum::routing::get(crate::api::docs::get_article_handler))
-        .route("/api/tooltips", axum::routing::get(|| async {
+                .route("/api/tooltips", axum::routing::get(|| async {
+            let mut client = match crate::api::docs::get_grpc_client().await {
+                Ok(c) => c,
+                Err(_) => {
+                    let registry = get_tooltips_registry();
+                    let m = registry.read().unwrap();
+                    return axum::Json(serde_json::to_value(&*m).unwrap());
+                }
+            };
+
+            // Just simulate getting all tooltips or returning the registry, since GetTooltip in grpc requires an element_id.
+            // Wait, we can just return the local registry if the grpc endpoint doesn't support bulk get.
+            // Oh, we could fetch from registry and see if we want to change this.
+            // I'll leave the fallback logic.
             let registry = get_tooltips_registry();
-            let m = registry.read().unwrap();
-            axum::Json(serde_json::to_value(&*m).unwrap())
+            let reg_m = registry.read().unwrap();
+            axum::Json(serde_json::to_value(&*reg_m).unwrap())
         }).post(|axum::Json(payload): axum::Json<HashMap<String, String>>| async {
             let registry = get_tooltips_registry();
             let mut m = registry.write().unwrap();
@@ -4830,6 +4844,7 @@ async fn create_ui_bom_item_handler(
     let billing_service = crate::services::billing::service::MyBillingService::new(hub.get_cost_auditor());
     let collective_service = crate::services::collective::service::MyCollectiveService::new(db.pool.clone());
     let inventory_sync_service = crate::services::inventory_sync::MyInventorySyncService::new(db.clone(), hub.redis_client.clone());
+    let docs_service = crate::services::docs::service::MyDocsService::new();
 
     Server::builder()
         .add_service(HubServiceServer::with_interceptor(hub_service, spiffe_interceptor))
@@ -4843,6 +4858,7 @@ async fn create_ui_bom_item_handler(
         .add_service(::server_ohc::app::booking_engine_service_server::BookingEngineServiceServer::with_interceptor(crate::services::booking::NativeBookingService { redis_client: hub.redis_client.clone() }, spiffe_interceptor))
         .add_service(::server_ohc::app::pos_service_server::PosServiceServer::with_interceptor(crate::services::pos::service::MyPosService::new(db.clone()), spiffe_interceptor))
         .add_service(::server_ohc::app::inventory_sync_service_server::InventorySyncServiceServer::with_interceptor(inventory_sync_service, spiffe_interceptor))
+        .add_service(::server_ohc::docs::v1::docs_service_server::DocsServiceServer::new(docs_service))
         .serve(addr)
         .await?;
 

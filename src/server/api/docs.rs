@@ -1,5 +1,17 @@
 use axum::{extract::Query, Json};
 use serde::{Deserialize, Serialize};
+use server_ohc::docs::v1::docs_service_client::DocsServiceClient;
+use server_ohc::docs::v1::{
+    GetHelpArticleRequest, GetTooltipRequest, GetVideoTutorialsRequest, SearchHelpArticlesRequest,
+};
+use tonic::transport::Channel;
+
+pub async fn get_grpc_client() -> Result<DocsServiceClient<Channel>, Box<dyn std::error::Error>> {
+    let grpc_port = std::env::var("OHC_GRPC_PORT").unwrap_or_else(|_| "8081".to_string());
+    let url = format!("http://127.0.0.1:{}", grpc_port);
+    let channel = Channel::from_shared(url)?.connect().await?;
+    Ok(DocsServiceClient::new(channel))
+}
 
 #[derive(Serialize, Clone)]
 pub struct HelpArticle {
@@ -47,20 +59,78 @@ pub fn get_videos() -> Vec<VideoTutorial> {
 }
 
 pub async fn list_articles() -> Json<Vec<HelpArticle>> {
-    Json(get_articles())
+    let mut client = match get_grpc_client().await {
+        Ok(c) => c,
+        Err(_) => return Json(get_articles()), // Fallback
+    };
+    let req = tonic::Request::new(SearchHelpArticlesRequest { query: "".to_string(), topic_filter: "".to_string() });
+    match client.search_help_articles(req).await {
+        Ok(res) => {
+            let articles = res.into_inner().articles.into_iter().map(|a| HelpArticle {
+                category: a.topic,
+                title: a.title,
+                desc: a.content_markdown,
+                link: format!("/help/{}", a.id),
+            }).collect();
+            Json(articles)
+        },
+        Err(_) => Json(get_articles()), // Fallback
+    }
 }
 
 pub async fn search_articles(Query(query): Query<SearchQuery>) -> Json<Vec<HelpArticle>> {
-    let q = query.q.to_lowercase();
-    let articles = get_articles();
-    let filtered = articles.into_iter().filter(|a| {
-        a.category.to_lowercase().contains(&q) || a.title.to_lowercase().contains(&q) || a.desc.to_lowercase().contains(&q)
-    }).collect();
-    Json(filtered)
+    let q = query.q.clone();
+    let mut client = match get_grpc_client().await {
+        Ok(c) => c,
+        Err(_) => {
+            let q_lower = q.to_lowercase();
+            let articles = get_articles();
+            let filtered = articles.into_iter().filter(|a| {
+                a.category.to_lowercase().contains(&q_lower) || a.title.to_lowercase().contains(&q_lower) || a.desc.to_lowercase().contains(&q_lower)
+            }).collect();
+            return Json(filtered);
+        }
+    };
+    let req = tonic::Request::new(SearchHelpArticlesRequest { query: q.clone(), topic_filter: "".to_string() });
+    match client.search_help_articles(req).await {
+        Ok(res) => {
+            let articles = res.into_inner().articles.into_iter().map(|a| HelpArticle {
+                category: a.topic,
+                title: a.title,
+                desc: a.content_markdown,
+                link: format!("/help/{}", a.id),
+            }).collect();
+            Json(articles)
+        },
+        Err(_) => {
+            let q_lower = q.to_lowercase();
+            let articles = get_articles();
+            let filtered = articles.into_iter().filter(|a| {
+                a.category.to_lowercase().contains(&q_lower) || a.title.to_lowercase().contains(&q_lower) || a.desc.to_lowercase().contains(&q_lower)
+            }).collect();
+            Json(filtered)
+        },
+    }
 }
 
 pub async fn list_videos() -> Json<Vec<VideoTutorial>> {
-    Json(get_videos())
+    let mut client = match get_grpc_client().await {
+        Ok(c) => c,
+        Err(_) => return Json(get_videos()),
+    };
+    let req = tonic::Request::new(GetVideoTutorialsRequest {});
+    match client.get_video_tutorials(req).await {
+        Ok(res) => {
+            let videos = res.into_inner().tutorials.into_iter().map(|v| VideoTutorial {
+                id: v.id,
+                title: v.title,
+                duration: v.duration,
+                video_url: format!("/videos/{}.mp4", v.id),
+            }).collect();
+            Json(videos)
+        },
+        Err(_) => Json(get_videos()),
+    }
 }
 
 
@@ -137,75 +207,44 @@ pub fn get_article(id: &str) -> Option<HelpArticleDetail> {
       </p>
             "#.to_string()
         }),
-        "account-billing" => Some(HelpArticleDetail {
-            title: "Account & Billing".to_string(),
-            content_html: r#"
-      <p class="text-gray-700 mb-4 leading-relaxed text-lg">
-        Manage your monthly plan, view your past bills, and invite people to help run your business.
-      </p>
-      <h2 class="text-2xl font-bold font-outfit text-gray-800 mt-8 mb-4">Managing Your Plan</h2>
-      <p class="text-gray-700 mb-4">
-        You can check what plan you are on by going to the Billing page. If your business is growing and you need more features, you can upgrade your plan at any time.
-      </p>
-      <h2 class="text-2xl font-bold font-outfit text-gray-800 mt-8 mb-4">Viewing Your Bills</h2>
-      <p class="text-gray-700 mb-4">
-        You can see a history of all the payments you have made to OneHumanCorp. This makes it easy to keep track of your expenses for your own records.
-      </p>
-      <h2 class="text-2xl font-bold font-outfit text-gray-800 mt-8 mb-4">Inviting Team Members</h2>
-      <p class="text-gray-700 mb-4">
-        If you have business partners or staff who need to access your store settings, you can invite them to your team. Just enter their email address and they will get an invite to join.
-      </p>
-            "#.to_string()
-        }),
-        "payments" => Some(HelpArticleDetail {
-            title: "Getting Paid".to_string(),
-            content_html: r#"
-      <p class="text-gray-700 mb-4 leading-relaxed text-lg">
-        Getting paid is the most exciting part! We make it secure and easy for your customers to pay you.
-      </p>
-      <h2 class="text-2xl font-bold font-outfit text-gray-800 mt-8 mb-4">Connecting Your Bank Account</h2>
-      <p class="text-gray-700 mb-4">
-        To start taking money, you need to connect a bank account. We use Stripe, a safe and trusted system. Just click the "Connect Stripe" button in your setup to securely link your bank.
-      </p>
-      <h2 class="text-2xl font-bold font-outfit text-gray-800 mt-8 mb-4">Viewing Your Deposits</h2>
-      <p class="text-gray-700 mb-4">
-        When a customer buys something, the money goes into your connected bank account. You can check the Dashboard to see your recent sales and see when the money will arrive in your bank.
-      </p>
-      <h2 class="text-2xl font-bold font-outfit text-gray-800 mt-8 mb-4">Taxes and Fees</h2>
-      <p class="text-gray-700 mb-4">
-        We help handle simple taxes for you at checkout. A small fee is taken out of each sale to cover the cost of securely moving the money from the customer's card to your bank.
-      </p>
-            "#.to_string()
-        }),
-        "ai-agents" => Some(HelpArticleDetail {
-            title: "Your AI Helpers".to_string(),
-            content_html: r#"
-      <p class="text-gray-700 mb-4 leading-relaxed text-lg">
-        Running a business takes a lot of work. That's why we give you AI helpers—smart computer programs that can do tasks for you, like a real team!
-      </p>
-      <h2 class="text-2xl font-bold font-outfit text-gray-800 mt-8 mb-4">Hiring AI Helpers</h2>
-      <p class="text-gray-700 mb-4">
-        Go to the AI Departments page to see all the helpers you can hire. Some helpers are good at marketing, some are good at writing, and others are good at keeping track of numbers.
-      </p>
-      <h2 class="text-2xl font-bold font-outfit text-gray-800 mt-8 mb-4">Giving Them Tasks</h2>
-      <p class="text-gray-700 mb-4">
-        Once you hire a helper, you can tell them what to do. You just type what you need in plain English. For example, "Write an email to my customers about a summer sale." The helper will do the work and show it to you.
-      </p>
-      <h2 class="text-2xl font-bold font-outfit text-gray-800 mt-8 mb-4">Approving Their Work</h2>
-      <p class="text-gray-700 mb-4">
-        Helpers are smart, but you are the boss. Before they send an email or change your store, they will ask for your permission. You can check your Inbox to review and approve their tasks.
-      </p>
-            "#.to_string()
-        }),
         _ => None,
     }
 }
 
 pub async fn get_article_handler(axum::extract::Path(article_id): axum::extract::Path<String>) -> Result<Json<HelpArticleDetail>, axum::http::StatusCode> {
-    if let Some(article) = get_article(&article_id) {
-        Ok(Json(article))
-    } else {
-        Err(axum::http::StatusCode::NOT_FOUND)
+    let mut client = match get_grpc_client().await {
+        Ok(c) => c,
+        Err(_) => {
+            if let Some(article) = get_article(&article_id) {
+                return Ok(Json(article));
+            } else {
+                return Err(axum::http::StatusCode::NOT_FOUND);
+            }
+        }
+    };
+    let req = tonic::Request::new(GetHelpArticleRequest { id: article_id.clone() });
+    match client.get_help_article(req).await {
+        Ok(res) => {
+            let article = res.into_inner().article.unwrap();
+            Ok(Json(HelpArticleDetail {
+                title: article.title,
+                content_html: format!("<p class=\"text-gray-700 mb-4 leading-relaxed text-lg\">{}</p>", article.content_markdown),
+            }))
+        },
+        Err(e) => {
+            if e.code() == tonic::Code::NotFound {
+                // Try fallback
+                if let Some(article) = get_article(&article_id) {
+                    return Ok(Json(article));
+                }
+                Err(axum::http::StatusCode::NOT_FOUND)
+            } else {
+                if let Some(article) = get_article(&article_id) {
+                    return Ok(Json(article));
+                }
+                Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR)
+            }
+        }
     }
 }
 
@@ -227,16 +266,9 @@ pub fn get_changelog_data() -> Vec<ChangelogSection> {
                 "### 🌟 New Features".to_string(),
                 "- **Help Center:** Fully searchable help center with video tutorials and articles.".to_string(),
                 "- **Contextual Tooltips:** Added plain language tooltips across the app to guide you.".to_string(),
-            ]
-        },
-        ChangelogSection {
-            version: "Version 1.0".to_string(),
-            screenshot_url: Some("/dashboard_with_charts.png".to_string()),
-            content_lines: vec![
-                "### 🌟 New Features".to_string(),
-                "- **Interactive AI Store Builder:** You can now generate a complete storefront from just a short description of your business. AI will handle the layout and copy for you.".to_string(),
-                "- **Smart Tooltips:** We added helpful text bubbles to all major buttons to help you learn the system faster.".to_string(),
-                "- **Help Center Upgrade:** Find answers instantly with our new searchable Help Center.".to_string(),
+                "- **Interactive Walkthroughs:** Step-by-step tours added for key flows.".to_string(),
+                "- **Ask AI Support Agent:** A floating chat button to ask anything, anytime.".to_string(),
+                "".to_string(),
                 "### 🛠️ Improvements".to_string(),
                 "- Faster loading times for product images.".to_string(),
                 "- Simplified checkout process for your customers.".to_string(),
@@ -267,7 +299,7 @@ pub async fn get_api_docs_spec() -> Json<serde_json::Value> {
             "/api/help": {
                 "get": {
                     "summary": "Get Help Articles",
-                    "description": "Retrieves a list of available help articles for the Help Center.",
+                    "description": "Retrieves all available help articles categorized by topic.",
                     "tags": ["Documentation"],
                     "responses": {
                         "200": {
@@ -279,6 +311,7 @@ pub async fn get_api_docs_spec() -> Json<serde_json::Value> {
                                         "items": {
                                             "type": "object",
                                             "properties": {
+                                                "category": { "type": "string" },
                                                 "title": { "type": "string" },
                                                 "desc": { "type": "string" },
                                                 "link": { "type": "string" }
@@ -293,8 +326,8 @@ pub async fn get_api_docs_spec() -> Json<serde_json::Value> {
             },
             "/api/tooltips": {
                 "get": {
-                    "summary": "Get Tooltips Registry",
-                    "description": "Retrieves the key-value dictionary of all UI tooltips.",
+                    "summary": "Get Contextual Tooltips",
+                    "description": "Retrieves the registry of plain-language tooltips for the UI.",
                     "tags": ["Documentation"],
                     "responses": {
                         "200": {
@@ -303,50 +336,8 @@ pub async fn get_api_docs_spec() -> Json<serde_json::Value> {
                                 "application/json": {
                                     "schema": {
                                         "type": "object",
-                                        "additionalProperties": { "type": "string" }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            },
-            "/api/v1/catalog/product": {
-                "post": {
-                    "summary": "Create a Product",
-                    "description": "Creates a new product or service in the catalog.",
-                    "tags": ["Catalog"],
-                    "requestBody": {
-                        "required": true,
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object",
-                                    "properties": {
-                                        "name": { "type": "string", "example": "Vegan Birthday Cake" },
-                                        "price": { "type": "string", "example": "45.00" },
-                                        "duration": { "type": "integer", "example": 60 },
-                                        "description": { "type": "string", "example": "Delicious plant-based cake." },
-                                        "item_type": { "type": "string", "example": "physical" },
-                                        "is_subscription": { "type": "boolean", "example": false },
-                                        "subscription_interval": { "type": "string", "example": "month" },
-                                        "subscription_discount": { "type": "integer", "example": 10 }
-                                    },
-                                    "required": ["name", "price", "description", "item_type"]
-                                }
-                            }
-                        }
-                    },
-                    "responses": {
-                        "200": {
-                            "description": "Success",
-                            "content": {
-                                "application/json": {
-                                    "schema": {
-                                        "type": "object",
-                                        "properties": {
-                                            "success": { "type": "boolean" },
-                                            "message": { "type": "string" }
+                                        "additionalProperties": {
+                                            "type": "string"
                                         }
                                     }
                                 }
@@ -355,48 +346,9 @@ pub async fn get_api_docs_spec() -> Json<serde_json::Value> {
                     }
                 }
             },
-            "/api/v1/builder/generate": {
+            "/api/v1/builder/draft": {
                 "post": {
-                    "summary": "Generate a Storefront",
-                    "description": "Generates a new storefront draft using AI.",
-                    "tags": ["Builder"],
-                    "requestBody": {
-                        "required": true,
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object",
-                                    "properties": {
-                                        "description": { "type": "string", "example": "A boutique pet bakery" }
-                                    },
-                                    "required": ["description"]
-                                }
-                            }
-                        }
-                    },
-                    "responses": {
-                        "200": {
-                            "description": "Success",
-                            "content": {
-                                "application/json": {
-                                    "schema": {
-                                        "type": "object",
-                                        "properties": {
-                                            "domain": { "type": "string", "nullable": true },
-                                            "theme": { "type": "string" },
-                                            "pages": { "type": "array", "items": { "type": "object" } },
-                                            "sample_products": { "type": "array", "items": { "type": "object" } }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            },
-            "/api/v1/builder/publish_draft": {
-                "post": {
-                    "summary": "Publish Storefront Draft",
+                    "summary": "Publish a Storefront Draft",
                     "description": "Publishes a storefront draft.",
                     "tags": ["Builder"],
                     "requestBody": {
