@@ -238,9 +238,48 @@ impl Department for SalesAgent {
     }
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
+
         if event.event_type == "agent:sales:approved" {
             if let Some(payload) = event.payload.get("original_payload") {
                 if let Some(feature_type) = payload.get("feature_type").and_then(|v| v.as_str()) {
+                    if feature_type == "price_recommendation" {
+                        let product_id = payload.get("product_id").and_then(|v| v.as_str()).unwrap_or("");
+                        let discount_percent = payload.get("discount_percent").and_then(|v| v.as_f64()).unwrap_or(0.0);
+                        let target_segment = payload.get("target_segment").and_then(|v| v.as_str()).unwrap_or("");
+
+                        let pool = crate::db::get_pool();
+                        let suggestion_text = payload.get("suggestion_text").and_then(|v| v.as_str()).unwrap_or("");
+
+                        // insert into targeted discounts
+                        let _ = sqlx::query(
+                            "INSERT INTO targeted_discounts (id, tenant_id, product_id, customer_segment, discount_percent, status, expires_at)
+                             VALUES ($1, $2, $3, $4, $5, 'ACTIVE', CURRENT_TIMESTAMP + interval '7 days')"
+                        )
+                        .bind(uuid::Uuid::new_v4().to_string())
+                        .bind(&event.tenant_id)
+                        .bind(product_id)
+                        .bind(target_segment)
+                        .bind(discount_percent)
+                        .execute(&pool)
+                        .await;
+
+                        // create pricing rule
+                        let _ = sqlx::query(
+                            "INSERT INTO pricing_rules (id, tenant_id, name, description, condition_type, discount_percent, status)
+                             VALUES ($1, $2, $3, $4, $5, $6, 'ACTIVE')"
+                        )
+                        .bind(uuid::Uuid::new_v4().to_string())
+                        .bind(&event.tenant_id)
+                        .bind(format!("Clearance Rule for {}", product_id))
+                        .bind(suggestion_text)
+                        .bind(format!("segment:{}", target_segment))
+                        .bind(discount_percent)
+                        .execute(&pool)
+                        .await;
+
+                        return Ok(());
+                    }
+
                     if feature_type == "quote_draft" {
                         let suggested_price = payload.get("suggested_price").and_then(|v| v.as_f64()).unwrap_or(0.0);
                         let customer_inquiry = payload.get("customer_inquiry").and_then(|v| v.as_str()).unwrap_or("Unknown");
@@ -270,6 +309,36 @@ impl Department for SalesAgent {
                     }
                 }
             }
+            return Ok(());
+        }
+
+
+        if event.event_type == "tenant.inventory.aged" {
+            let product_id = event.payload.get("product_id").and_then(|v| v.as_str()).unwrap_or("");
+            let days_stagnant = event.payload.get("days_stagnant").and_then(|v| v.as_i64()).unwrap_or(0);
+            let product_name = event.payload.get("product_name").and_then(|v| v.as_str()).unwrap_or("Item");
+
+            let suggestion_text = format!("Sales of {} are stagnant ({} days). Recommend offering a 15% discount to your top 50 customers to clear inventory.", product_name, days_stagnant);
+
+            let action_payload = serde_json::json!({
+                "product_id": product_id,
+                "days_stagnant": days_stagnant,
+                "suggestion_text": suggestion_text,
+                "discount_percent": 15.0,
+                "target_segment": "top_50_customers",
+                "feature_type": "price_recommendation",
+            });
+
+            self.orchestrator
+                .execute_action(
+                    DepartmentType::Sales,
+                    format!("Price Recommendation for {}", product_name),
+                    event.tenant_id.clone(),
+                    ActionRisk::DraftForReview,
+                    action_payload,
+                )
+                .await
+                .map(|_| ())?;
             return Ok(());
         }
 
