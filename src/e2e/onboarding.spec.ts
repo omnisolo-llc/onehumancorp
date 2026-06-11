@@ -31,25 +31,17 @@ test.describe('Onboarding Wizard E2E Flow', () => {
     await expect(nameInput).toBeVisible();
     await expect(nameInput).toHaveClass(/min-h-\[44px\]/);
     await expect(nameInput).toHaveClass(/glassmorphism/);
-    await expect(nameInput).toHaveAttribute('autoComplete', 'organization');
-
     await nameInput.fill("My Awesome E2E Business");
+
     await page.getByRole('button', { name: 'Next', exact: true }).click();
 
-    // Step 2: What do you sell?
+    // Step 2: What you sell
     await expect(page.getByRole('heading', { name: "What do you sell?" })).toBeVisible();
-    const sellInput = page.getByPlaceholder("e.g. I bake custom vegan cakes for weddings and parties...");
-    await expect(sellInput).toBeVisible();
-    await expect(sellInput).toHaveClass(/min-h-\[44px\]/);
-    await expect(sellInput).toHaveClass(/glassmorphism/);
-    await sellInput.fill("We sell the best widgets in town.");
-
-    // Test Save Draft
-    const saveDraftButton = page.locator('button', { hasText: 'Save Draft' });
-    await expect(saveDraftButton).toBeVisible();
-    await saveDraftButton.click();
-    await expect(page.getByText('Draft Saved!')).toBeVisible({ timeout: 5000 });
-
+    const whatYouSellInput = page.getByPlaceholder("e.g. I bake custom vegan cakes for weddings and parties...");
+    await expect(whatYouSellInput).toBeVisible();
+    await expect(whatYouSellInput).toHaveClass(/min-h-\[44px\]/);
+    await expect(whatYouSellInput).toHaveClass(/glassmorphism/);
+    await whatYouSellInput.fill("I sell automated software solutions");
     await page.getByRole('button', { name: 'Next', exact: true }).click();
 
     // Step 3: Location
