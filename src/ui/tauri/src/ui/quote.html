@@ -290,6 +290,10 @@
       </div>
     </div>
 
+    <footer style="margin-top: 40px; text-align: center; padding: 20px; font-size: 14px; font-weight: 600;">
+      <a href="/onboarding?source=quote_footer" id="quote-footer-viral-link" style="color: #6b7280; text-decoration: none;">⚡ Powered by OHC</a>
+    </footer>
+
     <div id="action-buttons">
       <button class="btn btn-primary" id="btn-approve-send" style="display: none;">Approve & Send to Customer</button>
       <button class="btn btn-apple-pay" id="btn-pay-deposit" style="display: none;">Pay Deposit with Pay</button>
@@ -302,6 +306,11 @@
     document.addEventListener('DOMContentLoaded', async () => {
       const urlParams = new URLSearchParams(window.location.search);
       const quoteId = urlParams.get('id');
+      const tenantId = urlParams.get('tenant') || 'demo-tenant';
+      const footerLink = document.getElementById("quote-footer-viral-link");
+      if (footerLink && tenantId) {
+        footerLink.href = `/onboarding?ref=${tenantId}&source=quote_footer`;
+      }
       const viewMode = urlParams.get('mode') || 'customer'; // 'owner' or 'customer'
 
       // Elements

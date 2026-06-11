@@ -128,6 +128,10 @@
         <textarea id="description" placeholder="e.g. I have a leaky faucet in the kitchen that needs fixing." required></textarea>
         <button type="submit" class="btn btn-primary" id="btn-submit">Get a Quote</button>
       </form>
+
+    <footer style="margin-top: 40px; text-align: center; padding: 20px; font-size: 14px; font-weight: 600;">
+      <a href="/onboarding?source=booking_footer" id="booking-footer-viral-link" style="color: #6b7280; text-decoration: none;">⚡ Powered by OHC</a>
+    </footer>
     </div>
   </div>
 
@@ -143,6 +147,10 @@
     document.addEventListener('DOMContentLoaded', () => {
       const urlParams = new URLSearchParams(window.location.search);
       const tenantId = urlParams.get('tenant') || 'demo-tenant';
+      const footerLink = document.getElementById("booking-footer-viral-link");
+      if (footerLink && tenantId) {
+        footerLink.href = `/onboarding?ref=${tenantId}&source=booking_footer`;
+      }
 
       document.getElementById('business-name').innerText = "Carlos' Handyman Services"; // Mock
 

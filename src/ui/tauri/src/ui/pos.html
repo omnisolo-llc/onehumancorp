@@ -311,6 +311,10 @@
 
         <button class="btn-outline" style="background: rgba(0,0,0,0.05); border: none; padding: 12px 24px; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; margin-bottom: 12px; width: 100%;">Email Receipt</button>
         <button class="charge-btn" onclick="resetPOS()">New Sale</button>
+        <footer style="margin-top: 40px; text-align: center; padding: 20px; font-size: 14px; font-weight: 600;">
+          <a href="/onboarding?source=pos_footer" id="pos-footer-viral-link" style="color: #6b7280; text-decoration: none;">⚡ Powered by OHC</a>
+        </footer>
+
       </div>
 
     </div>
@@ -326,6 +330,11 @@
       const receiptScreen = document.getElementById('receipt-screen');
       const receiptAmount = document.getElementById('receipt-amount');
       const simulateTapBtn = document.getElementById('simulate-tap-btn');
+      const footerLink = document.getElementById("pos-footer-viral-link");
+      if (footerLink) {
+        const tenantIdForFooter = localStorage.getItem("tenant_id") || localStorage.getItem("tenant") || "default-team";
+        footerLink.href = `/onboarding?ref=${tenantIdForFooter}&source=pos_footer`;
+      }
 
       function updateDisplay() {
         const dollars = (currentAmountCents / 100).toFixed(2);
