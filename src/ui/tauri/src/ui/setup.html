@@ -403,6 +403,20 @@
       </div>
       <div id="draft-saved-msg" style="display: none; color: #34C759; font-weight: bold; margin-bottom: 15px;">Draft Saved!</div>
 
+
+      <!-- Step: Instant Build -->
+      <div class="step" id="step-instant-build">
+        <h1>Tell us about your business</h1>
+        <p>Our AI will handle the rest in 30 seconds.</p>
+        <textarea id="business-bio" class="glassmorphism" placeholder="e.g. I run a local bakery that sells custom vegan cakes..." rows="6" style="width:100%; min-height: 120px; margin-bottom: 20px; padding:14px; font-family: inherit; font-size:16px; border:1px solid rgba(255,255,255,0.5);"></textarea>
+        <div id="bio-error" class="error-msg">Please tell us about your business.</div>
+        <div id="instant-build-error" class="error-msg" style="color: #FF3B30;"></div>
+        <div class="btn-group">
+          <button id="instant-build-btn" style="background-color: #0066FF; color: white;">Generate Storefront</button>
+          <button class="btn-secondary prev-step-btn" data-prev="step-context">Back</button>
+        </div>
+      </div>
+
       <!-- Step 1: Work Context -->
       <div class="step active" id="step-context">
         <h1>How do you work?</h1>
@@ -446,9 +460,10 @@
           </label>
         </div>
         <div id="context-error" class="error-msg">Please select an option.</div>
-        <div class="btn-group">
+                <div class="btn-group">
           <button type="button" class="btn-secondary save-draft-btn">Save Draft</button>
           <button class="next-step-btn" data-next="step-categories">Next</button>
+          <button type="button" class="btn-secondary" id="go-to-instant-build">Instant Build</button>
         </div>
       </div>
 
@@ -542,6 +557,15 @@
         </div>
       </div>
 
+
+      <!-- Step: Success -->
+      <div class="step" id="step-success" style="text-align:center;">
+        <h1 style="color:#34C759;">You're Live!</h1>
+        <p>Your business is ready.</p>
+        <div class="btn-group" style="justify-content: center;">
+          <a href="/dashboard.html" style="background:#0066FF; color:white; padding:14px 24px; text-decoration:none; border-radius:8px; display:inline-block; font-weight:600;">Go to Dashboard</a>
+        </div>
+      </div>
     </div>
     <script>
       const container = document.getElementById('form-container');
@@ -880,6 +904,63 @@
               const prevStepId = e.target.getAttribute('data-prev');
               goToStep(prevStepId);
           });
+      });
+
+
+      document.getElementById('go-to-instant-build').addEventListener('click', (e) => {
+          e.preventDefault();
+          goToStep('step-instant-build');
+      });
+
+      document.getElementById('instant-build-btn').addEventListener('click', async (e) => {
+          e.preventDefault();
+          const bio = document.getElementById('business-bio').value.trim();
+          const errDiv = document.getElementById('bio-error');
+          const submitErrDiv = document.getElementById('instant-build-error');
+
+          if (!bio) {
+              errDiv.style.display = 'block';
+              return;
+          }
+          errDiv.style.display = 'none';
+          submitErrDiv.style.display = 'none';
+
+          const btn = e.target;
+          btn.innerText = "Building...";
+          btn.disabled = true;
+
+          try {
+              let res;
+              if (window.__TAURI__ && window.__TAURI__.core) {
+                  res = await window.__TAURI__.core.invoke("plugin:http|fetch", {
+                      method: "POST",
+                      url: "http://localhost:8080/api/onboarding/intake",
+                      headers: {"Content-Type": "application/json"},
+                      body: { type: "Json", payload: { description: bio } }
+                  });
+              } else {
+                  // Using ${backendUrl} correctly for real API call
+                  const targetUrl = typeof backendUrl !== 'undefined' && backendUrl ? `${backendUrl}/api/onboarding/intake` : '/api/onboarding/intake';
+                  res = await fetch(targetUrl, {
+                      method: "POST",
+                      headers: {"Content-Type": "application/json"},
+                      body: JSON.stringify({ description: bio })
+                  });
+              }
+
+              if (!res.ok && res.status !== 200) {
+                  throw new Error("Failed to generate storefront. Please try again.");
+              }
+
+              goToStep('step-success');
+
+          } catch (error) {
+              console.error(error);
+              submitErrDiv.innerText = "Failed to launch. Please try again.";
+              submitErrDiv.style.display = 'block';
+              btn.innerText = "Generate Storefront";
+              btn.disabled = false;
+          }
       });
 
       document.querySelectorAll('.save-draft-btn').forEach(btn => {

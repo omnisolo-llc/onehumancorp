@@ -91,3 +91,9 @@ sh_test(
     srcs = ["verify_artifacts.sh"],
     tags = ["lint"],
 )
+
+filegroup(
+    name = "setup_ui_spec",
+    srcs = ["setup_ui.spec.ts"],
+    visibility = ["//visibility:public"],
+)
