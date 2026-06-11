@@ -1,11 +1,11 @@
 use ohc_builtin_agent_core::types::ToolError;
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
+use serde_json::json;
 use std::collections::VecDeque;
 use std::sync::Arc;
 
 
-use super::{SharedMailbox, Tool, ToolExecutor};
+use super::{SharedMailbox, Tool, pydantic::{PydanticToolExecutor, PydanticAdapter}};
 
 /// A message in the mailbox.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -32,21 +32,22 @@ impl Mailbox {
     }
 }
 
+#[derive(Deserialize)]
+struct SendMessageArgs {
+    to: Option<String>,
+    message: String,
+}
+
+
 struct SendMessageExecutor {
     mailbox: SharedMailbox,
 }
 
 #[async_trait::async_trait]
-impl ToolExecutor for SendMessageExecutor {
-    async fn execute(
-        &self,
-        args: Value,
-    ) -> Result<String, ToolError> {
-        let to = args["to"].as_str().unwrap_or("coordinator").to_string();
-        let content = args["message"]
-            .as_str()
-            .ok_or_else(|| ToolError::LlmRecoverable("sendmessage: message is required".to_string()))?
-            .to_string();
+impl PydanticToolExecutor<SendMessageArgs> for SendMessageExecutor {
+    async fn execute_typed(&self, args: SendMessageArgs) -> Result<String, ToolError> {
+        let to = args.to.unwrap_or("coordinator".to_string());
+        let content = args.message;
 
         let msg = MailboxMessage {
             from: "agent".to_string(),
@@ -81,6 +82,6 @@ pub fn sendmessage_tool(mailbox: SharedMailbox) -> Tool {
             },
             "required": ["message"]
         }),
-        execute: Arc::new(SendMessageExecutor { mailbox }),
+        execute: Arc::new(PydanticAdapter::new(SendMessageExecutor { mailbox })),
     }
 }

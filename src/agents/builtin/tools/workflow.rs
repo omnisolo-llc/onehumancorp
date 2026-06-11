@@ -1,6 +1,6 @@
-use crate::{Tool, ToolExecutor};
+use crate::{Tool, pydantic::{PydanticToolExecutor, PydanticAdapter}};
 use ohc_builtin_agent_core::types::ToolError;
-use serde_json::{Value, json};
+use serde_json::json;
 use std::sync::Arc;
 
 #[derive(Clone)]
@@ -17,25 +17,25 @@ struct BusinessShard {
     focus: &'static str,
 }
 
+#[derive(serde::Deserialize)]
+pub struct WorkflowArgs {
+    workflow: Option<String>,
+    task: Option<String>,
+}
+
 pub struct WorkflowExecutor {
     pub runner: Arc<dyn crate::runner::CommandRunner>,
 }
 
 #[async_trait::async_trait]
-impl ToolExecutor for WorkflowExecutor {
-    async fn execute(&self, args: Value) -> Result<String, ToolError> {
-        let workflow = args
-            .get("workflow")
-            .and_then(Value::as_str)
-            .unwrap_or("ohc_review_branch");
-        let task = args
-            .get("task")
-            .and_then(Value::as_str)
-            .unwrap_or("Review the current branch for correctness, security, deployment, and test coverage issues.");
+impl PydanticToolExecutor<WorkflowArgs> for WorkflowExecutor {
+    async fn execute_typed(&self, args: WorkflowArgs) -> Result<String, ToolError> {
+        let workflow = args.workflow.unwrap_or("ohc_review_branch".to_string());
+        let task = args.task.unwrap_or("Review the current branch for correctness, security, deployment, and test coverage issues.".to_string());
 
-        match workflow {
-            "ohc_review_branch" | "review_branch" => self.run_review_branch(task).await,
-            "ohc_business_swarm" | "business_swarm" => self.run_business_swarm(task).await,
+        match workflow.as_str() {
+            "ohc_review_branch" | "review_branch" => self.run_review_branch(&task).await,
+            "ohc_business_swarm" | "business_swarm" => self.run_business_swarm(&task).await,
             other => Err(ToolError::LlmRecoverable(format!(
                 "Unknown workflow '{}'. Supported workflows: ohc_review_branch, ohc_business_swarm",
                 other
@@ -337,7 +337,7 @@ pub fn workflow_tool(runner: Arc<dyn crate::runner::CommandRunner>) -> Tool {
             },
             "required": ["workflow"]
         }),
-        execute: Arc::new(WorkflowExecutor { runner }),
+        execute: Arc::new(PydanticAdapter::new(WorkflowExecutor { runner })),
     }
 }
 
@@ -361,7 +361,8 @@ mod tests {
     async fn run_workflow_rejects_unknown_workflow() {
         let runner = Arc::new(crate::runner::mock::MockCommandRunner::new());
         let executor = WorkflowExecutor { runner };
-        let result = executor.execute(json!({"workflow": "unknown"})).await;
+        let adapter = PydanticAdapter::new(executor);
+        let result = adapter.execute(json!({"workflow": "unknown"})).await;
 
         assert!(matches!(result, Err(ToolError::LlmRecoverable(_))));
     }
@@ -383,7 +384,8 @@ mod tests {
         }
 
         let executor = WorkflowExecutor { runner };
-        let result = executor
+        let adapter = PydanticAdapter::new(executor);
+        let result = adapter
             .execute(json!({
                 "workflow": "ohc_review_branch",
                 "task": "review the branch"
