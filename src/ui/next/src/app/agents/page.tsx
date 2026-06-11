@@ -1118,6 +1118,38 @@ function OperationsPanel() {
 }
 function WorkflowsPanel({ workflows, setWorkflows }: { workflows: WorkflowRecord[], setWorkflows: React.Dispatch<React.SetStateAction<WorkflowRecord[]>> }) {
   const handleSaveWorkflow = async (name: string, task: string) => {
+    // 1. Try to run it as a visual workflow via our new bridge API
+    try {
+      const parsedTask = JSON.parse(task);
+      if (parsedTask.nodes && parsedTask.version) {
+        const wfRes = await fetch('/api/workflow/run', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(parsedTask),
+        });
+
+        if (wfRes.ok) {
+           const wfData = await wfRes.json();
+           console.log("Visual workflow result:", wfData);
+           setWorkflows(current => [{
+               id: Date.now().toString(),
+               name,
+               workflow: 'visual_workflow',
+               task: "Visual Workflow Result: " + (wfData.result || JSON.stringify(wfData)),
+               status: wfData.success ? 'completed' : 'failed',
+               command: '',
+               created_at: new Date().toISOString()
+           }, ...current]);
+           return;
+        } else {
+           console.warn("Visual workflow API failed, falling back to legacy workflow endpoint");
+        }
+      }
+    } catch (e) {
+      // Not JSON or other error, fallback to legacy
+    }
+
+    // 2. Fallback to standard ohc_review_branch workflow task string
     const res = await fetch('/api/agents/workflows', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
