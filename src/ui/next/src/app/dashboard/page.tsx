@@ -225,9 +225,11 @@ export default function Dashboard() {
 
       try {
         const userId = localStorage.getItem("user_id") || "default";
-        const [unifiedRes, onboardingRes] = await Promise.all([
+        const [unifiedRes, onboardingRes, approvalsRes, agentFeedRes] = await Promise.all([
           fetch(`/api/ui/dashboard/unified-feed?tenant_id=${tenant}&mobile_optimized=${window.innerWidth < 768}`),
           fetch(`/api/onboarding/state`, { headers: { 'X-Tenant-ID': tenant, 'X-User-ID': userId } }),
+          fetch(`/api/approvals?tenant_id=${tenant}`),
+          fetch(`/api/agent/feed?tenant_id=${tenant}`)
         ]);
 
         if (!unifiedRes.ok) {
