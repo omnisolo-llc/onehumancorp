@@ -241,7 +241,7 @@ export default function StorefrontBuilderPage() {
                   id="bio-input"
                   enterKeyHint="done"
                   autoCapitalize="sentences"
-                  className="w-full border border-gray-200 bg-white/70 backdrop-blur-sm p-4 mb-8 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all resize-none text-gray-800 dark:text-[#f5f5f7] rounded-[8px]"
+                  className="w-full border border-gray-200 bg-white/70 backdrop-blur-sm p-4 mb-8 focus:ring-2 focus:ring-[#0066FF] focus:border-[#0066FF] outline-none transition-all resize-none text-gray-800 dark:text-[#f5f5f7] rounded-[8px]"
                   value={bio}
                   onChange={(e) => updateBio(e.target.value)}
                   onKeyDown={(e) => {
@@ -263,7 +263,7 @@ export default function StorefrontBuilderPage() {
                     id="generate-btn"
                     className={`flex-[2] p-4 font-bold font-outfit text-lg transition-all rounded-[8px] ${
                       bio.trim().length > 5
-                        ? "text-white shadow-md active:scale-[0.98] bg-[#0071E3]"
+                        ? "text-white shadow-md active:scale-[0.98] bg-[#0066FF]"
                         : "bg-gray-100 text-gray-400 cursor-not-allowed"
                     }`}
                     onClick={handleGenerate}

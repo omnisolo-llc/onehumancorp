@@ -279,7 +279,7 @@ export default function BuilderPage() {
           <div className="px-8 pt-12 pb-4">
              <div className="flex justify-between mb-8">
                {[1, 2, 3].map(step => (
-                 <div key={step} className={`h-1.5 flex-1 mx-1 rounded-full ${step <= wizardStep ? 'bg-[#0071E3]' : 'bg-gray-200 dark:bg-gray-700'}`} style={{ transition: 'all 250ms cubic-bezier(0.4, 0, 0.2, 1)' }} />
+                 <div key={step} className={`h-1.5 flex-1 mx-1 rounded-full ${step <= wizardStep ? 'bg-[#0066FF]' : 'bg-gray-200 dark:bg-gray-700'}`} style={{ transition: 'all 250ms cubic-bezier(0.4, 0, 0.2, 1)' }} />
                ))}
              </div>
           </div>
