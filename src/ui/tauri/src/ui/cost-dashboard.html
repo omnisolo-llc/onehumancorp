@@ -189,13 +189,13 @@
                </div>
             </div>
 
-            <div id="budget-health-alert" style="display: none; margin-top: 20px; padding: 16px; background: rgba(255, 149, 0, 0.1); border: 1px solid rgba(255, 149, 0, 0.3); border-radius: 12px; align-items: flex-start; gap: 12px;">
-                <svg style="width: 20px; height: 20px; color: #ff9500; flex-shrink: 0; margin-top: 2px;" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <div id="budget-health-alert" style="display: none; margin-top: 20px; padding: 16px; background: rgba(255, 251, 235, 0.7); border: 1px solid rgba(253, 230, 138, 1); border-radius: 12px; align-items: flex-start; gap: 12px; backdrop-filter: blur(24px) saturate(200%);">
+                <svg style="width: 20px; height: 20px; color: #d97706; flex-shrink: 0; margin-top: 2px;" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                 </svg>
                 <div>
-                    <h3 style="margin: 0 0 4px 0; font-size: 14px; font-weight: 600; color: #995900;">Budget Health Warning</h3>
-                    <p style="margin: 0; font-size: 14px; color: #cc7700;">Your projected monthly cost is exceeding your typical baseline. Consider reviewing your agent usage or upgrading your tier for better bulk rates.</p>
+                    <h3 style="margin: 0 0 4px 0; font-size: 14px; font-weight: 600; color: #92400e;">Budget Health Warning</h3>
+                    <p id="budget-health-alert-text" style="margin: 0; font-size: 14px; color: #b45309;">Your projected monthly cost is exceeding your typical baseline. Consider reviewing your agent usage or upgrading your tier for better bulk rates.</p>
                 </div>
             </div>
 
@@ -219,6 +219,18 @@
             <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
                 <span style="color: #86868b;">Bandwidth Savings</span>
                 <span id="bandwidth-savings" style="font-weight: 500; color: #34C759;">$0.00</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                <span style="color: #86868b;">Compute Usage</span>
+                <span id="compute-cost" style="font-weight: 500;">$0.00</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                <span style="color: #86868b;">Email Sends</span>
+                <span id="email-cost" style="font-weight: 500;">$0.00</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                <span style="color: #86868b;">Outbound API Calls</span>
+                <span id="api-cost" style="font-weight: 500;">$0.00</span>
             </div>
 
             <div style="margin-top: 24px; font-weight: 600; margin-bottom: 12px;">Agent & Feature Costs</div>
@@ -291,6 +303,7 @@
 
                 if (costData.projected_monthly_cost > 10000) {
                     document.getElementById('budget-health-alert').style.display = 'flex';
+                    document.getElementById('budget-health-alert-text').innerText = `Your projected monthly cost (${formatCents(costData.projected_monthly_cost)}) is exceeding your typical baseline. Consider reviewing your agent usage or upgrading your tier for better bulk rates.`;
                 } else {
                     document.getElementById('budget-health-alert').style.display = 'none';
                 }
@@ -300,6 +313,9 @@
                 document.getElementById('network-cost').innerText = formatCents(costData.network_cost || 0);
                 document.getElementById('payment-fees').innerText = formatCents(costData.payment_fees || 0);
                 document.getElementById('bandwidth-savings').innerText = formatCents(costData.bandwidth_savings || 0);
+                document.getElementById('compute-cost').innerText = formatCents(costData.compute_cost || 0);
+                document.getElementById('email-cost').innerText = formatCents(costData.email_cost || 0);
+                document.getElementById('api-cost').innerText = formatCents(costData.api_cost || 0);
 
                 if (costData.agent_costs && costData.agent_costs.length > 0) {
                     const agentList = document.getElementById('cost-dashboard-agent-costs');
