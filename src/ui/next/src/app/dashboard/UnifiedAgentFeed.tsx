@@ -12,7 +12,7 @@ type AgentFeedItem = {
   proposed_action: any;
   lifecycle_state: string;
   created_at: string;
-  updated_at: string;
+  updated_at: string; department?: string; description?: string;
 };
 
 type ApprovalsResponse = {
@@ -463,7 +463,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                 <div className="flex flex-col gap-1">
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-1 rounded-md">
-                      {approval.event_source.replace('_', ' ')}
+                      {(approval.event_source || approval.department || '').replace('_', ' ')}
                     </span>
                     {(approval.lifecycle_state === 'PENDING_APPROVAL') && (
                       <span className="text-xs font-bold uppercase tracking-wider text-red-600 bg-red-50 px-2 py-1 rounded-md">
@@ -477,7 +477,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                     )}
                   </div>
                   <h3 className="text-lg font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] leading-snug mt-1">
-                    {(approval.context_payload?.description || approval.proposed_action?.message || approval.proposed_action?.action_type || approval.event_source)}
+                    {(approval.context_payload?.description || approval.proposed_action?.message || approval.proposed_action?.action_type || approval.event_source || approval.description || approval.department)}
                   </h3>
                   {((approval.proposed_action || approval.context_payload)?.context || (approval.proposed_action || approval.context_payload)?.remaining_stock !== undefined || (approval.proposed_action || approval.context_payload)?.feature_type === "quote_draft" || (approval.proposed_action || approval.context_payload)?.feature_type === "social_post_draft" || (approval.proposed_action || approval.context_payload)?.feature_type === "ambassador_reply" || (approval.proposed_action || approval.context_payload)?.feature_type === "incident_resolution" || (approval.proposed_action || approval.context_payload)?.feature_type === "instagram_dm") && (
                     <div className="mt-2 flex flex-col gap-1 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
