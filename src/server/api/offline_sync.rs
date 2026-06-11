@@ -121,6 +121,28 @@ pub async fn offline_sync_handler(
                         .bind(&ai_payload)
                         .execute(&mut *db_tx)
                         .await;
+
+                        // Refined TerminalSession data schema update for offline-sync reconciliation
+                        // Add this conflict to the session's pending_reconciliation array
+                        let conflict_payload = serde_json::json!({
+                            "transaction_id": mutation.transaction_id,
+                            "product_id": mutation.product_id,
+                            "shortage": mutation.quantity_deducted - stock,
+                            "timestamp": chrono::Utc::now().to_rfc3339()
+                        }).to_string();
+
+                        let _ = sqlx::query(
+                            "UPDATE pos_terminal_sessions
+                             SET sync_status = 'CONFLICTS_PENDING',
+                                 pending_reconciliation = pending_reconciliation || $1::jsonb
+                             WHERE tenant_id = $2
+                             AND device_id = (SELECT client_id FROM pos_offline_transactions WHERE id = $3)"
+                        )
+                        .bind(serde_json::json!([serde_json::from_str::<serde_json::Value>(&conflict_payload).unwrap()]))
+                        .bind(&tenant_id_clone)
+                        .bind(&tx_id)
+                        .execute(&mut *db_tx)
+                        .await;
                     }
 
                     // Also queue an offline_pos_sync job to record the transaction
