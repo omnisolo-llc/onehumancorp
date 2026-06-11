@@ -4829,7 +4829,7 @@ async fn create_ui_bom_item_handler(
     let dashboard_service = crate::services::dashboard::service::MyDashboardService::new(db.clone(), hub.clone());
     let billing_service = crate::services::billing::service::MyBillingService::new(hub.get_cost_auditor());
     let collective_service = crate::services::collective::service::MyCollectiveService::new(db.pool.clone());
-    let inventory_sync_service = crate::services::inventory_sync::MyInventorySyncService::new(db.clone(), hub.redis_client.clone());
+    let inventory_sync_service = crate::services::inventory_sync::MyInventorySyncService::new(hub.redis_client.clone());
 
     Server::builder()
         .add_service(HubServiceServer::with_interceptor(hub_service, spiffe_interceptor))
