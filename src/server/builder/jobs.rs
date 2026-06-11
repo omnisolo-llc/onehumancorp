@@ -64,25 +64,8 @@ async fn execute_publish_site_job(
 
             let prompt = format!("You are an expert SEO AI. Based on the following page content, generate a JSON object with SEO metadata (name, description, keywords). Only return the JSON object. Content: {}", block_texts.join(" "));
 
-            let mut attempts = 0;
-            let mut ai_call_succeeded = false;
-            let mut ai_res = String::new();
-            while attempts < 3 {
-                match tokio::time::timeout(std::time::Duration::from_secs(60), minimax.reason(&prompt)).await {
-                    Ok(Ok(res)) => {
-                        ai_res = res;
-                        ai_call_succeeded = true;
-                        break;
-                    },
-                    _ => {
-                        attempts += 1;
-                        tokio::time::sleep(std::time::Duration::from_secs(2u64.pow(attempts))).await;
-                    }
-                }
-            }
-
-            if ai_call_succeeded {
-                let cleaned = ai_res.trim().trim_start_matches("```json").trim_start_matches("```").trim_end_matches("```").trim();
+            if let Ok(res) = minimax.reason(&prompt).await {
+                let cleaned = res.trim().trim_start_matches("```json").trim_start_matches("```").trim_end_matches("```").trim();
                 if let Ok(mut seo_json) = serde_json::from_str::<serde_json::Value>(cleaned) {
                     if seo_json.get("@context").is_none() {
                         seo_json["@context"] = serde_json::Value::String("https://schema.org".to_string());

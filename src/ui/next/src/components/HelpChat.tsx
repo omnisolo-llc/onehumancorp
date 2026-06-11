@@ -173,7 +173,7 @@ export function HelpChat() {
 
       {/* Chat Interface */}
       {isOpen && (
-        <div id="ai-chat-interface" className="fixed bottom-24 right-6 z-[9999] w-[350px] max-w-[calc(100vw-32px)] bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] saturate-[210%] rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.1)] flex flex-col overflow-hidden border border-white/40 dark:border-white/10 animate-slide-up-chat text-gray-800 dark:text-gray-100">
+        <div id="ai-chat-interface" className="fixed bottom-24 right-6 z-[9999] w-[350px] max-w-[calc(100vw-32px)] bg-white/65 backdrop-blur-[30px] saturate-[210%] rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.1)] flex flex-col overflow-hidden border border-white/40 animate-slide-up-chat">
           {/* Header */}
           <div
             id="ai-chat-header"
@@ -215,7 +215,7 @@ export function HelpChat() {
           </div>
 
           {/* Messages */}
-          <div className="flex-1 p-5 overflow-y-auto h-[350px] bg-gradient-to-b from-white/40 to-transparent dark:from-white/5 flex flex-col gap-5 font-inter text-sm">
+          <div className="flex-1 p-5 overflow-y-auto h-[350px] bg-gradient-to-b from-white/40 to-transparent flex flex-col gap-5 font-inter text-sm">
             {messages.map((msg) => (
               <div
                 key={msg.id}
@@ -225,7 +225,7 @@ export function HelpChat() {
                   className={`px-4 py-3 rounded-2xl max-w-[85%] leading-relaxed shadow-[0_2px_10px_rgba(0,0,0,0.02)] ${
                     msg.sender === "user"
                       ? "bg-blue-600/95 backdrop-blur-[30px] saturate-[210%] text-white rounded-br-sm border border-blue-500/50"
-                      : "bg-white/65 dark:bg-white/10 backdrop-blur-[30px] saturate-[210%] border border-white/40 dark:border-white/10 text-gray-800 dark:text-gray-100 rounded-bl-sm"
+                      : "bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-white/40 text-gray-800 rounded-bl-sm"
                   }`}
                   dangerouslySetInnerHTML={{
                     __html: DOMPurify.sanitize(msg.text),
@@ -265,7 +265,7 @@ export function HelpChat() {
           {/* Input */}
           <form
             onSubmit={handleSend}
-            className="p-3 bg-white/60 dark:bg-transparent backdrop-blur-[30px] saturate-[210%] border-t border-white/40 dark:border-white/10 flex gap-2"
+            className="p-3 bg-white/60 backdrop-blur-[30px] saturate-[210%] border-t border-white/40 flex gap-2"
           >
             <input
               type="text"
@@ -273,7 +273,7 @@ export function HelpChat() {
               onChange={(e) => setInputValue(e.target.value)}
               placeholder="Ask me anything..."
               disabled={isLoading}
-              className="flex-1 bg-white/65 dark:bg-white/10 backdrop-blur-[30px] saturate-[210%] border border-white/40 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 font-inter shadow-inner disabled:opacity-70 disabled:bg-gray-50/70"
+              className="flex-1 bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-white/40 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 font-inter shadow-inner disabled:opacity-70 disabled:bg-gray-50/70"
             />
             <button
               type="submit"

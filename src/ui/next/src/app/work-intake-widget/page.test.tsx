@@ -44,18 +44,21 @@ describe('WorkIntakeWidgetPage', () => {
     expect(textarea.value).toContain('Powered by OHC');
   });
 
-  it('shows soft paywall when checkbox is checked', () => {
+  it('removes branding when checkbox is checked', () => {
     render(<WorkIntakeWidgetPage />);
 
     // Click checkbox
     const checkbox = screen.getByLabelText('Remove "Powered by OHC" branding');
     fireEvent.click(checkbox);
 
-    // Check if soft paywall shows up
-    expect(screen.getAllByText('Upgrade to Pro')).toBeDefined();
+    // Open Modal
+    fireEvent.click(screen.getByText('Get Widget Code'));
 
-    // Checkbox should be un-checked
-    expect((checkbox as HTMLInputElement).checked).toBe(false);
+    // Verify textarea content
+    const textareas = screen.getAllByRole('textbox') as HTMLTextAreaElement[];
+    const textarea = textareas.find(ta => ta.value.includes('<iframe'))!;
+    expect(textarea).toBeDefined();
+    expect(textarea.value).not.toContain('Powered by OHC');
   });
 
   it('changes theme when theme buttons are clicked', () => {

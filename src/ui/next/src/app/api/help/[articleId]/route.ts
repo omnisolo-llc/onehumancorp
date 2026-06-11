@@ -2,12 +2,12 @@ import { NextResponse, NextRequest } from 'next/server';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ articleId: string }> }
+  { params }: { params: { articleId: string } }
 ) {
   const backendUrl = process.env.BACKEND_URL || 'http://127.0.0.1:18789';
 
   try {
-    const res = await fetch(`${backendUrl}/api/help/${(await params).articleId}`);
+    const res = await fetch(`${backendUrl}/api/help/${params.articleId}`);
 
     if (res.ok) {
       const data = await res.json();

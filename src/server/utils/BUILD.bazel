@@ -33,7 +33,6 @@ rust_library(
         "@crates//:serde_json",
         "@crates//:sqlx",
         "@crates//:tokio",
-        "@crates//:dashmap",
         "@crates//:tracing",
     ],
 )

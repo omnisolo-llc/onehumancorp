@@ -461,7 +461,7 @@ mod tests {
             .get(0);
         assert_eq!(count, 1, "GC leak across tenants");
 
-        let _count_tenant_1: i64 = sqlx::query("SELECT COUNT(*) FROM revoked_tokens WHERE tenant_id = 'tenant-1' AND jti != 'jti-3'")
+        let count_tenant_1: i64 = sqlx::query("SELECT COUNT(*) FROM revoked_tokens WHERE tenant_id = 'tenant-1' AND jti != 'jti-3'")
             .fetch_one(&pool)
             .await
             .unwrap()

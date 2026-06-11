@@ -119,12 +119,6 @@ impl SipDB {
         let mut tx = self.pool.begin().await?;
         ::server_common::auth_utils::set_system_context(&mut *tx).await?;
 
-        sqlx::query("INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message) SELECT gen_random_uuid()::text, tenant_id, 'mission_stagnant', 'agent_missions', payload, 'Mission became stagnant' FROM agent_missions WHERE (status = 'PENDING' OR status = 'BURSTING' OR status = 'STUCK' OR status = 'IN_PROGRESS' OR status = 'RUNNING') AND updated_at < $1 AND tenant_id = $2")
-            .bind(threshold_time)
-            .bind(&self.org_id)
-            .execute(&mut *tx)
-            .await?;
-
         sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE (status = 'PENDING' OR status = 'BURSTING' OR status = 'STUCK' OR status = 'IN_PROGRESS' OR status = 'RUNNING') AND updated_at < $1 AND tenant_id = $2")
             .bind(threshold_time)
             .bind(&self.org_id)
@@ -150,12 +144,6 @@ impl SipDB {
                 // Backlog Management: Sanitize and prioritize the agent_missions queue, ensuring no "stuck" missions persist in either mode.
                 ::server_common::auth_utils::set_system_context(&mut *tx).await?;
 
-                sqlx::query("INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message) SELECT gen_random_uuid()::text, tenant_id, 'mission_stuck', 'agent_missions', payload, 'Mission became stuck' FROM agent_missions WHERE (status = 'PENDING' OR status = 'BURSTING' OR status = 'STUCK' OR status = 'IN_PROGRESS' OR status = 'RUNNING') AND updated_at < $1 AND tenant_id = $2")
-                    .bind(stuck_threshold)
-                    .bind(&self.org_id)
-                    .execute(&mut *tx)
-                    .await?;
-
                 sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE (status = 'PENDING' OR status = 'BURSTING' OR status = 'STUCK' OR status = 'IN_PROGRESS' OR status = 'RUNNING') AND updated_at < $1 AND tenant_id = $2")
                     .bind(stuck_threshold)
                     .bind(&self.org_id)
@@ -164,12 +152,6 @@ impl SipDB {
 
                 // Prioritize backlog by bumping updated_at for oldest pending missions
                 sqlx::query("UPDATE agent_missions SET updated_at = CURRENT_TIMESTAMP WHERE id IN (SELECT id FROM agent_missions WHERE status = 'PENDING' AND tenant_id = $1 ORDER BY created_at ASC LIMIT 10) RETURNING id")
-                    .bind(&self.org_id)
-                    .execute(&mut *tx)
-                    .await?;
-
-                sqlx::query("INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message) SELECT gen_random_uuid()::text, tenant_id, 'mission_stale', 'agent_missions', payload, 'Mission became stale' FROM agent_missions WHERE (status = 'PENDING' OR status = 'BURSTING') AND created_at < $1 AND tenant_id = $2")
-                    .bind(fail_threshold)
                     .bind(&self.org_id)
                     .execute(&mut *tx)
                     .await?;
@@ -725,21 +707,6 @@ mod tests {
             .await
             .unwrap();
 
-            sqlx::query(
-                "CREATE TABLE IF NOT EXISTS department_dead_letters (
-                    id TEXT PRIMARY KEY,
-                    tenant_id TEXT NOT NULL,
-                    event_type TEXT NOT NULL,
-                    department TEXT NOT NULL,
-                    payload TEXT NOT NULL,
-                    error_message TEXT NOT NULL,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )"
-            )
-            .execute(&mut *tx)
-            .await
-            .unwrap();
-
             let old_time = chrono::Utc::now() - chrono::Duration::hours(2);
             sqlx::query("INSERT INTO agent_missions (id, status, payload, tenant_id, updated_at) VALUES ($1, $2, $3, $4, $5) ON CONFLICT DO NOTHING")
                 .bind("stuck_mission_id")
@@ -863,20 +830,9 @@ mod tests {
             let status_normal: String = row_normal.get("status");
             assert_eq!(status_normal, "PENDING");
 
-            // Verify dead letters were created
-            let dl_count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM department_dead_letters WHERE tenant_id = 'test_org'")
-                .fetch_one(&pool)
-                .await
-                .unwrap();
-            assert!(dl_count.0 > 0);
-
             // Clean up using a transaction
             let mut tx_clean = pool.begin().await.unwrap();
             sqlx::query("DELETE FROM agent_missions WHERE id IN ('stuck_mission_id', 'stuck_running_mission_id', 'stuck_in_progress_mission_id', 'stale_pending_mission_id', 'normal_pending_mission_id')")
-                .execute(&mut *tx_clean)
-                .await
-                .unwrap();
-            sqlx::query("DELETE FROM department_dead_letters WHERE tenant_id = 'test_org'")
                 .execute(&mut *tx_clean)
                 .await
                 .unwrap();
@@ -914,21 +870,6 @@ mod tests {
             .await
             .unwrap();
 
-            sqlx::query(
-                "CREATE TABLE IF NOT EXISTS department_dead_letters (
-                    id TEXT PRIMARY KEY,
-                    tenant_id TEXT NOT NULL,
-                    event_type TEXT NOT NULL,
-                    department TEXT NOT NULL,
-                    payload TEXT NOT NULL,
-                    error_message TEXT NOT NULL,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )"
-            )
-            .execute(&mut *tx)
-            .await
-            .unwrap();
-
             let old_time = chrono::Utc::now() - chrono::Duration::minutes(10);
             sqlx::query("INSERT INTO agent_missions (id, status, payload, tenant_id, updated_at) VALUES ($1, $2, $3, $4, $5) ON CONFLICT DO NOTHING")
                 .bind("stagnant_in_progress_mission")
@@ -947,29 +888,6 @@ mod tests {
                 .bind("{}")
                 .bind("test_org")
                 .bind(recent_time.naive_utc())
-                .execute(&mut *tx)
-                .await
-                .unwrap();
-
-
-            let old_pending_time = chrono::Utc::now() - chrono::Duration::minutes(10);
-            sqlx::query("INSERT INTO agent_missions (id, status, payload, tenant_id, updated_at) VALUES ($1, $2, $3, $4, $5) ON CONFLICT DO NOTHING")
-                .bind("stagnant_pending_mission")
-                .bind("PENDING")
-                .bind("{}")
-                .bind("test_org")
-                .bind(old_pending_time.naive_utc())
-                .execute(&mut *tx)
-                .await
-                .unwrap();
-
-            let old_bursting_time = chrono::Utc::now() - chrono::Duration::minutes(10);
-            sqlx::query("INSERT INTO agent_missions (id, status, payload, tenant_id, updated_at) VALUES ($1, $2, $3, $4, $5) ON CONFLICT DO NOTHING")
-                .bind("stagnant_bursting_mission")
-                .bind("BURSTING")
-                .bind("{}")
-                .bind("test_org")
-                .bind(old_bursting_time.naive_utc())
                 .execute(&mut *tx)
                 .await
                 .unwrap();
@@ -1011,20 +929,9 @@ mod tests {
             let status_recent: String = row_recent.get("status");
             assert_eq!(status_recent, "IN_PROGRESS");
 
-            // Verify dead letters were created
-            let dl_count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM department_dead_letters WHERE tenant_id = 'test_org'")
-                .fetch_one(&pool)
-                .await
-                .unwrap();
-            assert!(dl_count.0 > 0);
-
             // Clean up
             let mut tx_clean = pool.begin().await.unwrap();
             sqlx::query("DELETE FROM agent_missions WHERE id IN ('stagnant_in_progress_mission', 'recent_in_progress_mission', 'stagnant_pending_mission', 'stagnant_bursting_mission')")
-                .execute(&mut *tx_clean)
-                .await
-                .unwrap();
-            sqlx::query("DELETE FROM department_dead_letters WHERE tenant_id = 'test_org'")
                 .execute(&mut *tx_clean)
                 .await
                 .unwrap();

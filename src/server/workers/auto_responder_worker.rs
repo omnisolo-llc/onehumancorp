@@ -143,52 +143,20 @@ impl AutoResponderWorker {
             );
             let compressed_prompt = crate::pricing::compression::reduce_tokens(&prompt);
 
-            let mut drafted_msg = "Thanks for reaching out! We will get back to you soon.".to_string();
-            let mut retry_count = 0;
-            let max_retries = 3;
-            let mut backoff = Duration::from_secs(2);
-
-            while retry_count < max_retries {
-                let llm_call = async {
-                    match std::env::var("OHC_INBOX_DRAFT_LLM_PROVIDER")
-                        .or_else(|_| std::env::var("OHC_LLM_PROVIDER"))
-                        .as_deref()
-                    {
-                        Ok("minimax") => {
-                            let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
-                            if !api_key.is_empty() {
-                                crate::minimax::MinimaxClient::new(api_key).reason(&compressed_prompt).await
-                            } else {
-                                crate::minimax::LocalLLMClient::new().reason(&compressed_prompt).await
-                            }
-                        }
-                        _ => crate::minimax::LocalLLMClient::new().reason(&compressed_prompt).await,
-                    }
-                };
-
-                match tokio::time::timeout(Duration::from_secs(60), llm_call).await {
-                    Ok(Ok(reply)) => {
-                        drafted_msg = reply;
-                        break;
-                    }
-                    Ok(Err(e)) => {
-                        retry_count += 1;
-                        tracing::warn!("LLM error in AutoResponderWorker (attempt {}/{}): {}", retry_count, max_retries, e);
-                        if retry_count < max_retries {
-                            tokio::time::sleep(backoff).await;
-                            backoff *= 2;
-                        }
-                    }
-                    Err(_) => {
-                        retry_count += 1;
-                        tracing::warn!("LLM timeout in AutoResponderWorker (attempt {}/{}): 60s exceeded", retry_count, max_retries);
-                        if retry_count < max_retries {
-                            tokio::time::sleep(backoff).await;
-                            backoff *= 2;
-                        }
+            let drafted_msg = match std::env::var("OHC_INBOX_DRAFT_LLM_PROVIDER")
+                .or_else(|_| std::env::var("OHC_LLM_PROVIDER"))
+                .as_deref()
+            {
+                Ok("minimax") => {
+                    let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
+                    if !api_key.is_empty() {
+                        crate::minimax::MinimaxClient::new(api_key).reason(&compressed_prompt).await.unwrap_or_else(|_| "Thanks for reaching out! We will get back to you soon.".to_string())
+                    } else {
+                        crate::minimax::LocalLLMClient::new().reason(&compressed_prompt).await.unwrap_or_else(|_| "Thanks for reaching out! We will get back to you soon.".to_string())
                     }
                 }
-            }
+                _ => crate::minimax::LocalLLMClient::new().reason(&compressed_prompt).await.unwrap_or_else(|_| "Thanks for reaching out! We will get back to you soon.".to_string()),
+            };
 
             match &db.store {
                 crate::db::DbStore::Postgres => {

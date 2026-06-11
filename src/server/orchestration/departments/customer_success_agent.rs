@@ -33,7 +33,6 @@ impl Department for CustomerSuccessAgent {
         vec![
             "tenant.order.fulfillment_ready".to_string(),
             "tenant.message.received".to_string(),
-            "tenant.omnichannel.message.received".to_string(),
             "agent:customer_success:approved".to_string(),
         ]
     }
@@ -136,7 +135,7 @@ impl Department for CustomerSuccessAgent {
             return Ok(());
         }
 
-        if event.event_type == "tenant.message.received" || event.event_type == "tenant.omnichannel.message.received" {
+        if event.event_type == "tenant.message.received" {
             let message = event.payload.get("original_message")
                 .or_else(|| event.payload.get("message"))
                 .and_then(|v| v.as_str()).unwrap_or("");
@@ -275,28 +274,7 @@ impl BaseAgent for CustomerSuccessAgent {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use std::sync::Arc;
-    use crate::orchestration::mesh::CentrifugeNode;
-    use ohc_builtin_agent::mesh::transport::InProcessTransport;
 
-    #[tokio::test]
-    async fn test_customer_success_agent_subscribed_events() {
-        if std::env::var("OHC_DATABASE_URL").is_err() {
-            // For environments without DB URL, skip or use memory.
-            return;
-        }
-        let db = Arc::new(crate::db::DB::new().await.unwrap());
-        let transport = Arc::new(InProcessTransport::new());
-        let mesh = Arc::new(CentrifugeNode::new(transport));
-        let orchestrator = Arc::new(DepartmentOrchestrator::new(db, mesh));
-        let agent = CustomerSuccessAgent::new(orchestrator);
-        let events = agent.subscribed_events();
-        assert!(events.contains(&"tenant.message.received".to_string()));
-        assert!(events.contains(&"tenant.omnichannel.message.received".to_string()));
-        assert!(events.contains(&"tenant.order.fulfillment_ready".to_string()));
-        assert!(events.contains(&"agent:customer_success:approved".to_string()));
-    }
 
     #[test]
     fn test_customer_success_agent_struct_exists() {

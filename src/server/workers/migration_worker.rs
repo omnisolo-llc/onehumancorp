@@ -104,24 +104,7 @@ impl MigrationWorker {
             &html_content.chars().take(20000).collect::<String>() // truncate to avoid massive prompts
         );
 
-        let mut attempts = 0;
-        let mut response = String::new();
-        while attempts < 3 {
-            let res = tokio::time::timeout(std::time::Duration::from_secs(60), minimax.reason(&prompt)).await;
-            match res {
-                Ok(Ok(content)) => {
-                    response = content;
-                    break;
-                },
-                _ => {
-                    attempts += 1;
-                    if attempts == 3 {
-                        return Err("AI migration extraction failed after 3 attempts".into());
-                    }
-                    tokio::time::sleep(std::time::Duration::from_secs(2u64.pow(attempts))).await;
-                }
-            }
-        }
+        let mut response = minimax.reason(&prompt).await?;
 
         response = response.trim_start_matches("```json").trim_start_matches("```").trim_end_matches("```").trim().to_string();
 

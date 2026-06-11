@@ -339,8 +339,6 @@ pub use ::server_pricing as pricing;
 pub mod analytics;
 pub use ::server_telemetry as telemetry;
 pub mod chaos;
-#[cfg(test)]
-pub mod chaos_db_test;
 pub mod integrations;
 pub use ::server_utils as utils;
 pub mod orchestration;
@@ -1153,6 +1151,7 @@ impl HubService for MyHubService {
                 "details": req.details
             }),
         };
+        let _ = self.dept_orchestrator.dispatch_event(ops_event).await;
 
         // Manually enqueue an approval request for Customer Success (for the test scenario)
         let cs_approval = crate::orchestration::departments::types::ApprovalRequest {
@@ -1168,11 +1167,7 @@ impl HubService for MyHubService {
                 "details": req.details
             })),
         };
-
-        let (_, _) = tokio::join!(
-            self.dept_orchestrator.dispatch_event(ops_event),
-            self.dept_orchestrator.add_approval_request(cs_approval)
-        );
+        self.dept_orchestrator.add_approval_request(cs_approval).await;
 
         Ok(Response::new(TriggerCustomOrderResponse {
             success: true,
@@ -2664,12 +2659,6 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         db: db.clone(),
     };
 
-    let reverse_tunnel_server = crate::agents::mcp::proxy::server::ReverseTunnelServer::new(std::sync::Arc::new(db.pool.clone()));
-
-    let relay_webhook_router = axum::Router::new()
-        .route("/api/v1/relay/webhook/{agent_id}", axum::routing::post(api::mcp_webhook::handle_relay_webhook))
-        .with_state(reverse_tunnel_server.clone());
-
     let webhook_router = axum::Router::new()
         .route("/api/v1/webhooks/stripe", axum::routing::post(api::billing_webhook::stripe_webhook_handler))
         .route("/api/v1/webhooks/mercadopago", axum::routing::post(api::billing_webhook::mercadopago_webhook_handler))
@@ -2817,7 +2806,7 @@ pub async fn list_ui_triage_handler(
             }
 
             match sqlx::query(
-                "SELECT t.id, t.tenant_id, t.customer_id, t.source, t.priority, t.context, t.status, t.created_at, a.action_type, a.payload AS action_payload FROM triage_items t LEFT JOIN triage_proposed_actions a ON t.id = a.triage_item_id WHERE t.tenant_id = $1 AND t.status != 'resolved' AND t.status != 'dismissed' ORDER BY t.created_at DESC"
+                "SELECT t.id, t.tenant_id, t.customer_id, t.source, t.priority, t.context, t.status, t.created_at, a.action_type, a.payload AS action_payload FROM triage_items t LEFT JOIN triage_proposed_actions a ON t.id = a.triage_item_id WHERE t.tenant_id = $1 AND t.status != 'resolved' ORDER BY t.created_at DESC"
             )
             .bind(&tenant_id)
             .fetch_all(&mut *tx)
@@ -2869,40 +2858,6 @@ pub async fn update_ui_triage_action_handler(
             }
 
             let status = if payload.approved { "resolved" } else { "dismissed" };
-
-            if payload.approved {
-                use sqlx::Row;
-                // Check if there is a proposed action to execute
-                if let Ok(Some(row)) = sqlx::query("SELECT action_type, payload FROM triage_proposed_actions WHERE triage_item_id = $1 AND tenant_id = $2")
-                    .bind(&payload.triage_item_id)
-                    .bind(&tenant_id)
-                    .fetch_optional(&mut *tx)
-                    .await
-                {
-                    let action_type = row.try_get::<String, _>("action_type").unwrap_or_default();
-                    let action_payload = row.try_get::<String, _>("payload").unwrap_or_default();
-
-                    if action_type == "Draft Reply" {
-                        let new_msg_id = format!("msg-{}", uuid::Uuid::new_v4());
-                        let _ = sqlx::query(
-                            "INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, status) VALUES ($1, $2, $3, $4, $5, $6, $7)"
-                        )
-                        .bind(&new_msg_id)
-                        .bind(&tenant_id)
-                        .bind("triage-action")
-                        .bind(&action_payload)
-                        .bind(&action_payload)
-                        .bind("en")
-                        .bind("sent")
-                        .execute(&mut *tx)
-                        .await;
-                    } else if action_type == "ProposedInvoice" || action_type == "SuggestedCalendarSlot" {
-                        // TODO: Implement other action types like ProposedInvoice or SuggestedCalendarSlot as outlined in issue #26616
-                        tracing::info!("Executing proposed action: {}, payload: {}", action_type, action_payload);
-                    }
-                }
-            }
-
             match sqlx::query("UPDATE triage_items SET status = $1 WHERE id = $2 AND tenant_id = $3").bind(status).bind(&payload.triage_item_id).bind(&tenant_id).execute(&mut *tx).await {
                 Ok(_) => {
                     let _ = tx.commit().await;
@@ -3017,19 +2972,15 @@ async fn ui_dashboard_analytics_briefing_handler(
     use axum::response::IntoResponse;
     let tenant_id = ui_tenant_id(&query);
 
-    let (metrics_res, inbox_res) = tokio::join!(
-        load_ui_dashboard_metrics(&db, &tenant_id),
-        load_ui_inbox_from_db(&db, &tenant_id)
-    );
-
-    let metrics = metrics_res.unwrap_or(UiDashboardMetrics {
+    let metrics = load_ui_dashboard_metrics(&db, &tenant_id).await.unwrap_or(UiDashboardMetrics {
         active_customers: 0,
         pending_orders: 0,
         total_sales: 0.0,
         total_campaigns_sent: 0,
         auto_replied: 0,
     });
-    let inbox_messages = inbox_res.unwrap_or_default();
+
+    let inbox_messages = load_ui_inbox_from_db(&db, &tenant_id).await.unwrap_or_default();
     let unanswered_dms = inbox_messages.iter().filter(|m| m.get("status").and_then(|s| s.as_str()).unwrap_or("") != "closed").count();
 
     let total_sales_formatted = format!("${:.2}", metrics.total_sales);
@@ -4679,7 +4630,6 @@ async fn create_ui_bom_item_handler(
             }))
         }))
         .merge(webhook_router)
-        .merge(relay_webhook_router)
         .merge(ohc_builtin_agent::visual_workflow_client::create_router(std::sync::Arc::new(ohc_builtin_agent::visual_workflow_client::VisualWorkflowState {
             default_agent: std::sync::Arc::new(ohc_builtin_agent::agent::Agent::new(std::sync::Arc::new(ohc_builtin_agent::llm::openai::OpenAIClient::new("dummy".to_string())), vec![])),
             tools: vec![],
@@ -4825,7 +4775,6 @@ async fn create_ui_bom_item_handler(
 
     Server::builder()
         .add_service(HubServiceServer::with_interceptor(hub_service, spiffe_interceptor))
-        .add_service(::server_ohc::mcp_proxy::mcp_reverse_tunnel_service_server::McpReverseTunnelServiceServer::with_interceptor(reverse_tunnel_server.clone(), spiffe_interceptor))
         .add_service(::server_ohc::collective::collective_service_server::CollectiveServiceServer::with_interceptor(collective_service, spiffe_interceptor))
         .add_service(::server_ohc::orchestration::auth_service_server::AuthServiceServer::new(::server_auth::AuthServiceServerImpl::new(store)))
         .add_service(GrowthServiceServer::with_interceptor(growth_service, spiffe_interceptor))

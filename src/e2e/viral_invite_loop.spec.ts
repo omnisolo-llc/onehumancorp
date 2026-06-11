@@ -28,8 +28,5 @@ test.describe('Viral Invite Loop on Team Page', () => {
 
     // Verify share on WhatsApp is available
     await expect(page.getByRole('button', { name: 'Share on WhatsApp' })).toBeVisible();
-
-    // Verify share on X (Twitter) is available
-    await expect(page.getByRole('button', { name: 'Share on X (Twitter)' })).toBeVisible();
   });
 });

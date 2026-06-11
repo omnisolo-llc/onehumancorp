@@ -1261,32 +1261,18 @@ Only return the JSON. No markdown formatting, no explanations."#,
         payload.description
     );
 
-    let mut attempts = 0;
-    let mut ai_res_advisor = String::new();
-    let mut ai_call_succeeded = false;
-    while attempts < 3 {
-        match tokio::time::timeout(std::time::Duration::from_secs(60), minimax.reason(&advisor_prompt)).await {
-            Ok(Ok(res)) => {
-                ai_res_advisor = res;
-                ai_call_succeeded = true;
-                break;
-            },
-            _ => {
-                attempts += 1;
-                tokio::time::sleep(std::time::Duration::from_secs(2u64.pow(attempts))).await;
-            }
+    let business_context: BusinessContext = match minimax.reason(&advisor_prompt).await {
+        Ok(advisor_response) => {
+            let cleaned_advisor = clean_model_json(&advisor_response);
+            serde_json::from_str(cleaned_advisor).unwrap_or_else(|e| {
+                tracing::warn!("Failed to parse JSON from Advisor AI, using heuristic context: {}", e);
+                infer_business_context(&payload.description, active_brand_dna)
+            })
+        },
+        Err(e) => {
+            tracing::warn!("Advisor AI unavailable, using heuristic context: {}", e);
+            infer_business_context(&payload.description, active_brand_dna)
         }
-    }
-
-    let business_context: BusinessContext = if ai_call_succeeded {
-        let cleaned_advisor = clean_model_json(&ai_res_advisor);
-        serde_json::from_str(cleaned_advisor).unwrap_or_else(|e| {
-            tracing::warn!("Failed to parse JSON from Advisor AI, using heuristic context: {}", e);
-            infer_business_context(&payload.description, active_brand_dna.clone())
-        })
-    } else {
-        tracing::warn!("Advisor AI unavailable, using heuristic context");
-        infer_business_context(&payload.description, active_brand_dna.clone())
     };
 
     let source_context = [

@@ -7,7 +7,7 @@ _NEXT_UI_E2E_SPECS = [
     "//src/ui/next:src/e2e/agentic-booking.spec.ts",
     "//src/ui/next:src/e2e/ambassador-reply.spec.ts",
     "//src/ui/next:src/e2e/whatsapp-flow.spec.ts",
-
+    "//src/ui/next:src/e2e/api-docs.spec.ts",
     "//src/ui/next:src/e2e/branding-loop.spec.ts",
     "//src/ui/next:src/e2e/business-analytics.spec.ts",
     "//src/ui/next:src/e2e/changelog.spec.ts",
@@ -30,6 +30,7 @@ _NEXT_UI_E2E_SPECS = [
     "//src/ui/next:src/e2e/verify-ui.spec.ts",
     "//src/ui/next:src/e2e/videos.spec.ts",
     "//src/ui/next:src/e2e/viral-social-proof.spec.ts",
+    "//src/ui/next:src/e2e/viral_share_cards_intent.spec.ts",
     "//src/ui/next:src/e2e/test_viewport.spec.ts",
     "//src/ui/next:src/e2e/unified_agent_feed_interaction.spec.ts",
 

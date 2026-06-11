@@ -7,7 +7,7 @@ test.describe('Morning Briefing & Triage Feed', () => {
     await page.goto('/dashboard');
 
     // 2. User views the "Morning Briefing" Triage Feed.
-    await expect(page.getByText('Unified Agent Feed')).toBeVisible();
+    await expect(page.getByText('Needs Your Attention')).toBeVisible();
     await expect(page.getByText('Review AI-prepared actions and reply drafts across all channels.')).toBeVisible();
 
     // 3. User selects a "Quote Request" triage item.

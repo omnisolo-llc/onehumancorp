@@ -55,15 +55,6 @@ export default function GrowthReferralWidget() {
     }
   };
 
-  const handleTwitter = () => {
-    if (referralLink) {
-      const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(
-        `Hey! I use OneHumanCorp to run my business. It's super easy. Check it out: ${referralLink}\n\n⚡ Powered by OHC`
-      )}`;
-      window.open(url, '_blank');
-    }
-  };
-
   return (
     <div className="ohc-growth-card flex flex-col gap-8">
       <div className="glassmorphism p-6 rounded-[16px] border border-white/40 dark:border-white/10 shadow-lg mb-6">
@@ -111,13 +102,6 @@ export default function GrowthReferralWidget() {
                 className="w-full app-button bg-[#25D366] hover:bg-[#1ebd5a] text-white border-none py-2 text-sm flex items-center justify-center gap-2"
               >
                 Share on WhatsApp
-              </button>
-              <button
-                onClick={handleTwitter}
-                className="w-full app-button bg-black hover:bg-gray-800 text-white border-none py-2 text-sm flex items-center justify-center gap-2 shadow-sm transition-all"
-              >
-                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.008 5.94H5.078z"/></svg>
-                Share on X (Twitter)
               </button>
             </div>
           )}

@@ -81,9 +81,8 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
     await expect(page.getByRole('heading', { name: "What's your category?" })).toBeVisible();
     await page.locator('#step-categories').getByRole('button', { name: 'Next' }).click();
     await expect(page.locator('#categories-error')).toBeVisible();
-    await page.waitForTimeout(500);
 
-    await page.locator('#business-categories').selectOption({ label: 'Handyman' });
+    await page.getByPlaceholder("e.g. Graphic Design").fill("Home Repair");
     await page.locator('#step-categories').getByRole('button', { name: 'Next' }).click();
 
     // Step 3: Name
@@ -167,11 +166,10 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
     await newPage.goto('http://mock/setup.html');
 
     // It should load the values, we can skip through
-    await newPage.waitForTimeout(500);
     await expect(newPage.locator('input[value="Local Service"]')).toBeChecked();
-    await newPage.evaluate(() => { document.querySelector('#step-context .next-step-btn').click(); });
+    await newPage.locator('#step-context').getByRole('button', { name: 'Next' }).click();
 
-    await expect(newPage.locator('#business-categories')).toHaveValue('Handyman');
+    await expect(newPage.getByPlaceholder("e.g. Graphic Design")).toHaveValue("Home Repair");
     await newPage.locator('#step-categories').getByRole('button', { name: 'Next' }).click();
 
     await expect(newPage.getByPlaceholder("e.g. Maya's Bakery")).toHaveValue("Test Business");
@@ -230,9 +228,11 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
     await expect(container).toBeVisible();
     await expect(container).toHaveClass(/glassmorphism/);
 
+    const catInput = page.getByPlaceholder("e.g. Graphic Design");
+    const box = await catInput.boundingBox();
+    // Inputs are initially hidden. We need to navigate to that step or test something visible
     const option = page.locator('.radio-option').first();
     const optionBox = await option.boundingBox();
-    const catInput = page.getByPlaceholder("e.g. Graphic Design");
 
     if (optionBox) {
         expect(optionBox.height).toBeGreaterThanOrEqual(44);

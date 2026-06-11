@@ -105,7 +105,6 @@ async fn list_feed_items(
                 if mobile_optimized {
                     for item in items.iter_mut() {
                         item.context_payload = None;
-                        item.proposed_action = None;
                     }
                 }
                 let response = AgentFeedListResponse { items };
@@ -124,7 +123,6 @@ async fn list_feed_items(
             if mobile_optimized {
                 for item in items.iter_mut() {
                     item.context_payload = None;
-                    item.proposed_action = None;
                 }
             }
             let response = AgentFeedListResponse { items };

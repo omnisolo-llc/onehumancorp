@@ -1210,13 +1210,11 @@ pub fn is_pii_value_pattern(s: &str) -> bool {
 }
 
 pub fn is_sensitive_key(key: &str) -> bool {
-    let key_lower = key.to_lowercase();
+    let k = key.to_lowercase();
     // Exclude tenant_id and organization_id from being redacted
-    if key_lower == "tenant_id" || key_lower == "organization_id" {
+    if k == "tenant_id" || k == "organization_id" {
         return false;
     }
-
-    let k: String = key.chars().filter(|c| c.is_alphanumeric()).flat_map(|c| c.to_lowercase()).collect();
 
     k.contains("password")
         || k.contains("secret")

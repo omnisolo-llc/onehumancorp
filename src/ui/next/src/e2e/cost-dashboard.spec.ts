@@ -8,7 +8,7 @@ test.describe('Cost Dashboard Loop', () => {
     await page.goto('/cost-dashboard');
 
     // Wait for the main heading to appear, indicating successful load
-    await expect(page.locator('h1', { hasText: 'Cost Transparency Dashboard' })).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('h1', { hasText: 'Business Advisory Dashboard' })).toBeVisible({ timeout: 10000 });
 
     // Check that the Advisory Summary is present
     await expect(page.locator('h2', { hasText: 'Advisory Summary' })).toBeVisible();
