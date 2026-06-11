@@ -2362,8 +2362,6 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         crate::cart_recovery::start_cart_recovery_background_workers(Arc::new(db.pool.clone()));
     }
 
-
-
     // Start Token Forecast Engine
     let forecaster = Arc::new(crate::telemetry::forecaster::Forecaster::new(db.pool.clone()));
     forecaster.start();
@@ -2659,12 +2657,6 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         db: db.clone(),
     };
 
-    let reverse_tunnel_server = crate::agents::mcp::proxy::server::ReverseTunnelServer::new(std::sync::Arc::new(db.pool.clone()));
-
-    let relay_webhook_router = axum::Router::new()
-        .route("/api/v1/relay/webhook/{agent_id}", axum::routing::post(api::mcp_webhook::handle_relay_webhook))
-        .with_state(reverse_tunnel_server.clone());
-
     let webhook_router = axum::Router::new()
         .route("/api/v1/webhooks/stripe", axum::routing::post(api::billing_webhook::stripe_webhook_handler))
         .route("/api/v1/webhooks/mercadopago", axum::routing::post(api::billing_webhook::mercadopago_webhook_handler))
@@ -2812,7 +2804,7 @@ pub async fn list_ui_triage_handler(
             }
 
             match sqlx::query(
-                "SELECT t.id, t.tenant_id, t.customer_id, t.source, t.priority, t.context, t.status, t.created_at, a.action_type, a.payload AS action_payload FROM triage_items t LEFT JOIN triage_proposed_actions a ON t.id = a.triage_item_id WHERE t.tenant_id = $1 AND t.status != 'resolved' AND t.status != 'dismissed' ORDER BY t.created_at DESC"
+                "SELECT t.id, t.tenant_id, t.customer_id, t.source, t.priority, t.context, t.status, t.created_at, a.action_type, a.payload AS action_payload FROM triage_items t LEFT JOIN triage_proposed_actions a ON t.id = a.triage_item_id WHERE t.tenant_id = $1 AND t.status != 'resolved' ORDER BY t.created_at DESC"
             )
             .bind(&tenant_id)
             .fetch_all(&mut *tx)
@@ -3101,7 +3093,7 @@ async fn load_ui_agent_approvals_from_db(db: &crate::db::DB, tenant_id: &str) ->
     let limit = 20i64;
     match &db.store {
         crate::db::DbStore::Postgres => {
-            sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = $1 AND status IN ('DRAFT', 'PAUSED') ORDER BY id ASC LIMIT $2")
+            sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = $1 AND status = 'DRAFT' ORDER BY id ASC LIMIT $2")
                 .bind(tenant_id)
                 .bind(limit)
                 .fetch_all(&db.pool)
@@ -3116,7 +3108,7 @@ async fn load_ui_agent_approvals_from_db(db: &crate::db::DB, tenant_id: &str) ->
                 })).collect())
         },
         crate::db::DbStore::Sqlite(pool) => {
-            sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = ? AND status IN ('DRAFT', 'PAUSED') ORDER BY id ASC LIMIT ?")
+            sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = ? AND status = 'DRAFT' ORDER BY id ASC LIMIT ?")
                 .bind(tenant_id)
                 .bind(limit)
                 .fetch_all(pool)
@@ -4563,7 +4555,6 @@ async fn create_ui_bom_item_handler(
         .nest("/api/v1/booking/request", api::booking::request::router(dept_orchestrator.clone()))
         .nest("/api/agents/mission", api::agents::mission::handoff::router(std::sync::Arc::new(crate::sip::SipDB::new(db.pool.clone(), "default".to_string()))))
         .route("/api/telemetry/sync", axum::routing::post(api::telemetry::sync_telemetry_handler))
-        .route("/api/v1/chaos/report", axum::routing::get(api::chaos::get_chaos_report_handler).with_state(db.pool.clone()))
         .route_layer(axum::middleware::from_fn_with_state(
             rate_limiter,
             ::server_utils::tier_middleware::tier_middleware,
@@ -4636,7 +4627,6 @@ async fn create_ui_bom_item_handler(
             }))
         }))
         .merge(webhook_router)
-        .merge(relay_webhook_router)
         .merge(ohc_builtin_agent::visual_workflow_client::create_router(std::sync::Arc::new(ohc_builtin_agent::visual_workflow_client::VisualWorkflowState {
             default_agent: std::sync::Arc::new(ohc_builtin_agent::agent::Agent::new(std::sync::Arc::new(ohc_builtin_agent::llm::openai::OpenAIClient::new("dummy".to_string())), vec![])),
             tools: vec![],
@@ -4782,7 +4772,6 @@ async fn create_ui_bom_item_handler(
 
     Server::builder()
         .add_service(HubServiceServer::with_interceptor(hub_service, spiffe_interceptor))
-        .add_service(::server_ohc::mcp_proxy::mcp_reverse_tunnel_service_server::McpReverseTunnelServiceServer::with_interceptor(reverse_tunnel_server.clone(), spiffe_interceptor))
         .add_service(::server_ohc::collective::collective_service_server::CollectiveServiceServer::with_interceptor(collective_service, spiffe_interceptor))
         .add_service(::server_ohc::orchestration::auth_service_server::AuthServiceServer::new(::server_auth::AuthServiceServerImpl::new(store)))
         .add_service(GrowthServiceServer::with_interceptor(growth_service, spiffe_interceptor))

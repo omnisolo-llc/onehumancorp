@@ -59,26 +59,6 @@ struct OnboardingState {
     first_offer: Option<String>,
 }
 
-#[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
-#[serde(rename_all = "camelCase")]
-struct StartOnboardingRequest {
-    business_type: Option<String>,
-    company_name: Option<String>,
-    company_description: Option<String>,
-    selling_categories: Option<Vec<String>>,
-    payment_pref: Option<String>,
-    admin_email: Option<String>,
-    website_template: Option<String>,
-    first_product_name: Option<String>,
-    first_product_price: Option<String>,
-    domain_choice: Option<String>,
-    admin_name: Option<String>,
-    admin_password: Option<String>,
-    price_type: Option<String>,
-    location: Option<String>,
-    target_audience: Option<String>,
-}
-
 fn onboarding_state_path() -> std::path::PathBuf {
     std::env::var("OHC_ONBOARDING_STATE_PATH")
         .ok()
@@ -134,24 +114,6 @@ async fn get_onboarding_state(_app_handle: tauri::AppHandle) -> Result<Onboardin
         tagline: None,
         first_offer: None,
     })
-}
-
-#[tauri::command]
-async fn start_onboarding(req: StartOnboardingRequest, _app_handle: tauri::AppHandle) -> Result<(), String> {
-    let backend_url = std::env::var("BACKEND_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string());
-    let url = format!("{}/api/onboarding/start", backend_url);
-
-    let request = reqwest::Client::builder()
-        .timeout(std::time::Duration::from_secs(30))
-        .build()
-        .map_err(|err| err.to_string())?
-        .post(&url)
-        .header("Content-Type", "application/json")
-        .json(&req);
-
-    let _ = request.send().await;
-
-    Ok(())
 }
 
 #[tauri::command]
@@ -518,7 +480,6 @@ pub fn run() {
             test_ai_provider,
             get_onboarding_state,
             save_onboarding_state,
-            start_onboarding,
             get_help_articles,
             get_help_article,
             get_help_videos,

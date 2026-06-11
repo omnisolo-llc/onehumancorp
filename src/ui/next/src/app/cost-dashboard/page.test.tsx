@@ -30,7 +30,7 @@ describe('CostDashboardPage', () => {
     global.fetch = vi.fn(() => new Promise(() => {})) as any;
 
     render(<CostDashboardPage />);
-    expect(screen.getByTestId('cost-dashboard-loading')).toBeDefined();
+    expect(screen.getByText('Loading...')).toBeDefined();
   });
 
   test('renders cost data after fetch', async () => {
@@ -108,7 +108,7 @@ describe('CostDashboardPage', () => {
     render(<CostDashboardPage />);
 
     await waitFor(() => {
-      expect(screen.queryByTestId('cost-dashboard-loading')).toBeNull();
+      expect(screen.queryByText('Loading...')).toBeNull();
     });
 
     // My Plan assertions
@@ -176,7 +176,7 @@ describe('CostDashboardPage', () => {
     render(<CostDashboardPage />);
 
     await waitFor(() => {
-      expect(screen.queryByTestId('cost-dashboard-loading')).toBeNull();
+      expect(screen.queryByText('Loading...')).toBeNull();
     });
 
     expect(consoleSpy).toHaveBeenCalledWith("Failed to fetch cost data:", 500);
@@ -223,7 +223,7 @@ describe('CostDashboardPage', () => {
     render(<CostDashboardPage />);
 
     await waitFor(() => {
-      expect(screen.queryByTestId('cost-dashboard-loading')).toBeNull();
+      expect(screen.queryByText('Loading...')).toBeNull();
     });
 
     expect(screen.getAllByText(/\/ 0/)[0]).toBeDefined();
@@ -267,7 +267,7 @@ describe('CostDashboardPage', () => {
     render(<CostDashboardPage />);
 
     await waitFor(() => {
-      expect(screen.queryByTestId('cost-dashboard-loading')).toBeNull();
+      expect(screen.queryByText('Loading...')).toBeNull();
     });
 
     expect(screen.getAllByText(/\/ Unlimited/)[0]).toBeDefined();

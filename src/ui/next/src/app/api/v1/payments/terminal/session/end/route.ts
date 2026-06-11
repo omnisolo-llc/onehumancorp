@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { backendHeaders } from "../../../../../ui/backendProxy";
+import { backendHeaders } from "../../../../../../ui/backendProxy";
 
 export async function POST(request: Request) {
   const body = await request.json();

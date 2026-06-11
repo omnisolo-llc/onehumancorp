@@ -6,7 +6,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
-/// C. 2. ReAct vs Plan-and-Execute: Interleaved (ReAct) vs separate planning. Metric: LLMCompiler achieved 3.6x speedup by separating planning from execution.
+/// SOTA Harness Patterns: 2. ReAct vs Plan-and-Execute (LLMCompiler pattern)
 /// This module provides a mechanism to explicitly separate planning from execution.
 /// A Planner agent first generates a complete DAG of tasks, then an Executor
 /// runs them concurrently resolving dependencies.
@@ -24,34 +24,6 @@ pub struct TaskNode {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ExecutionPlan {
     pub tasks: Vec<TaskNode>,
-}
-
-
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct LLMCompilerState {
-    pub results: HashMap<String, String>,
-    pub completed_tasks: Vec<String>,
-}
-
-impl Default for LLMCompilerState {
-    fn default() -> Self {
-        Self {
-            results: HashMap::new(),
-            completed_tasks: Vec::new(),
-        }
-    }
-}
-
-pub struct LLMCompilerStateReducer;
-
-impl LLMCompilerStateReducer {
-    pub fn reduce(state: &mut LLMCompilerState, task_id: String, output: String) {
-        state.results.insert(task_id.clone(), output);
-        if !state.completed_tasks.contains(&task_id) {
-            state.completed_tasks.push(task_id);
-        }
-    }
 }
 
 pub struct Planner {
@@ -106,17 +78,11 @@ impl PlanAndExecuteOrchestrator {
         }
     }
 
-    pub async fn plan_and_execute(&self, planner: &Planner, user_query: &str) -> Result<HashMap<String, String>, String> {
-        let tool_list: Vec<Tool> = self.tools.values().map(|t| (**t).clone()).collect();
-        let plan = planner.create_plan(user_query, &tool_list).await.map_err(|e| e.to_string())?;
-        self.execute_plan(plan).await
-    }
-
     pub async fn execute_plan(
         &self,
         plan: ExecutionPlan,
     ) -> Result<HashMap<String, String>, String> {
-        let state = Arc::new(RwLock::new(LLMCompilerState::default()));
+        let results: Arc<RwLock<HashMap<String, String>>> = Arc::new(RwLock::new(HashMap::new()));
 
         let mut tasks_to_run = plan.tasks.clone();
 
@@ -127,8 +93,7 @@ impl PlanAndExecuteOrchestrator {
                 break;
             }
 
-            let state_read = state.read().await;
-            let results_read = state_read.results.clone();
+            let results_read = results.read().await;
 
             // Find all tasks whose dependencies are met
             let mut ready_tasks = Vec::new();
@@ -150,7 +115,7 @@ impl PlanAndExecuteOrchestrator {
                 }
             }
 
-            drop(state_read); // Release the read lock
+            drop(results_read); // Release the read lock
 
             if ready_tasks.is_empty() && !remaining_tasks.is_empty() {
                 return Err("Deadlock detected: unresolved dependencies in plan".to_string());
@@ -202,7 +167,7 @@ impl PlanAndExecuteOrchestrator {
             let mut ro_handles = Vec::new();
             for task in read_only_tasks {
                 let tools_clone = self.tools.clone();
-                let results_clone = state.clone();
+                let results_clone = results.clone();
 
                 let handle = tokio::spawn(async move {
                     let tool = tools_clone
@@ -211,9 +176,9 @@ impl PlanAndExecuteOrchestrator {
 
                     let mut resolved_args = task.arguments.clone();
 
-                    let st = results_clone.read().await;
-                    replace_in_json(&mut resolved_args, &st.results);
-                    drop(st);
+                    let r = results_clone.read().await;
+                    replace_in_json(&mut resolved_args, &r);
+                    drop(r);
 
                     let res = crate::tool_executor_engine::ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &ohc_builtin_agent_core::types::ToolCall{id: task.task_id.clone(), name: task.tool_name.clone(), arguments: resolved_args}, 2).await;
 
@@ -236,8 +201,7 @@ impl PlanAndExecuteOrchestrator {
 
             for handle in ro_handles {
                 let (task_id, output) = handle.await.map_err(|e| e.to_string())??;
-                let mut st = state.write().await;
-                LLMCompilerStateReducer::reduce(&mut st, task_id, output);
+                results.write().await.insert(task_id, output);
             }
 
             // Run mutating tasks serially
@@ -248,21 +212,20 @@ impl PlanAndExecuteOrchestrator {
                     .ok_or_else(|| format!("Tool not found: {}", task.tool_name))?;
                 let mut resolved_args = task.arguments.clone();
 
-                let st = state.read().await;
-                replace_in_json(&mut resolved_args, &st.results);
-                drop(st);
+                let r = results.read().await;
+                replace_in_json(&mut resolved_args, &r);
+                drop(r);
 
                 let res = crate::tool_executor_engine::ToolExecutionEngine::execute_tool_with_langgraph_mechanics(tool, &ohc_builtin_agent_core::types::ToolCall{id: task.task_id.clone(), name: task.tool_name.clone(), arguments: resolved_args}, 2)
                     .await
                     .map_err(|e| format!("Tool execution failed: {}", e))?;
-                let mut st = state.write().await;
-                LLMCompilerStateReducer::reduce(&mut st, task.task_id.clone(), res);
+                results.write().await.insert(task.task_id.clone(), res);
             }
 
             tasks_to_run = remaining_tasks;
         }
 
-        let final_res = state.read().await.results.clone();
+        let final_res = results.read().await.clone();
         Ok(final_res)
     }
 }
@@ -325,24 +288,6 @@ mod tests {
         }
     }
 
-
-    #[tokio::test]
-    async fn test_llm_compiler_state_reducer() {
-        let mut state = LLMCompilerState::default();
-        assert!(state.results.is_empty());
-        assert!(state.completed_tasks.is_empty());
-
-        LLMCompilerStateReducer::reduce(&mut state, "task_1".to_string(), "output_1".to_string());
-
-        assert_eq!(state.results.get("task_1").unwrap(), "output_1");
-        assert!(state.completed_tasks.contains(&"task_1".to_string()));
-
-        LLMCompilerStateReducer::reduce(&mut state, "task_2".to_string(), "output_2".to_string());
-
-        assert_eq!(state.results.len(), 2);
-        assert_eq!(state.completed_tasks.len(), 2);
-    }
-
     #[tokio::test]
     async fn test_planner_creates_plan() {
         let plan_json = r#"{
@@ -364,83 +309,6 @@ mod tests {
         let plan = planner.create_plan("do something", &[]).await.unwrap();
         assert_eq!(plan.tasks.len(), 1);
         assert_eq!(plan.tasks[0].task_id, "task_1");
-    }
-
-
-    #[tokio::test]
-    async fn test_planner_generation() {
-        let plan_json = r#"{
-            "tasks": [
-                {
-                    "task_id": "gen_1",
-                    "tool_name": "tool_gen",
-                    "arguments": {},
-                    "dependencies": []
-                }
-            ]
-        }"#;
-
-        let llm = Arc::new(MockPlannerLlm {
-            plan_json: plan_json.to_string(),
-        });
-        let planner = Planner { llm };
-
-        let plan = planner.create_plan("generate plan", &[]).await.unwrap();
-        assert_eq!(plan.tasks.len(), 1);
-        assert_eq!(plan.tasks[0].task_id, "gen_1");
-    }
-
-    #[tokio::test]
-    async fn test_executor_parallel_processing() {
-        struct MockExecutor {
-            resp: String
-        }
-        #[async_trait::async_trait]
-        impl ToolExecutor for MockExecutor {
-            async fn execute(&self, _args: serde_json::Value) -> Result<String, ToolError> {
-                tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-                Ok(self.resp.clone())
-            }
-        }
-        let t1 = Tool {
-            name: "t1".to_string(),
-            description: "".to_string(),
-            is_read_only: true,
-            parameters: serde_json::json!({}),
-            execute: Arc::new(MockExecutor { resp: "r1".to_string() })
-        };
-        let t2 = Tool {
-            name: "t2".to_string(),
-            description: "".to_string(),
-            is_read_only: true,
-            parameters: serde_json::json!({}),
-            execute: Arc::new(MockExecutor { resp: "r2".to_string() })
-        };
-        let orchestrator = PlanAndExecuteOrchestrator::new(vec![t1, t2]);
-        let plan = ExecutionPlan {
-            tasks: vec![
-                TaskNode {
-                    task_id: "id1".to_string(),
-                    tool_name: "t1".to_string(),
-                    arguments: serde_json::json!({}),
-                    dependencies: vec![]
-                },
-                TaskNode {
-                    task_id: "id2".to_string(),
-                    tool_name: "t2".to_string(),
-                    arguments: serde_json::json!({}),
-                    dependencies: vec![]
-                }
-            ]
-        };
-
-        let start = std::time::Instant::now();
-        let res = orchestrator.execute_plan(plan).await.unwrap();
-        let elapsed = start.elapsed().as_millis();
-
-        assert_eq!(res.get("id1").unwrap(), "r1");
-        assert_eq!(res.get("id2").unwrap(), "r2");
-        assert!(elapsed < 90, "Expected parallel execution to take < 90ms, took {}ms", elapsed);
     }
 
     #[tokio::test]

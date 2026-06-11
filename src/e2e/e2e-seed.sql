@@ -369,29 +369,3 @@ ON CONFLICT (id) DO NOTHING;
 INSERT INTO business_milestones (id, tenant_id, milestone_type, reached_at)
 VALUES ('ms_e2e_10th_order', 'e2e-tenant', '10th_order', NOW())
 ON CONFLICT (id) DO NOTHING;
--- Seed real data for Chaos Report
-INSERT INTO telemetry_buffer (tenant_id, metric_name, metric_type, value, labels_json, timestamp, sync_status) VALUES
-('test_org', 'api_latency', 'histogram', 12.0, '{}', CURRENT_TIMESTAMP, 'PENDING');
-INSERT INTO telemetry_buffer (tenant_id, metric_name, metric_type, value, labels_json, timestamp, sync_status) VALUES
-('test_org', 'api_latency', 'histogram', 22.5, '{}', CURRENT_TIMESTAMP, 'PENDING');
-INSERT INTO telemetry_buffer (tenant_id, metric_name, metric_type, value, labels_json, timestamp, sync_status) VALUES
-('test_org', 'api_latency', 'histogram', 35.0, '{}', CURRENT_TIMESTAMP, 'PENDING');
-INSERT INTO telemetry_buffer (tenant_id, metric_name, metric_type, value, labels_json, timestamp, sync_status) VALUES
-('test_org', 'api_latency', 'histogram', 65.0, '{}', CURRENT_TIMESTAMP, 'PENDING');
-INSERT INTO telemetry_buffer (tenant_id, metric_name, metric_type, value, labels_json, timestamp, sync_status) VALUES
-('test_org', 'api_latency', 'histogram', 150.0, '{}', CURRENT_TIMESTAMP, 'PENDING');
-INSERT INTO telemetry_buffer (tenant_id, metric_name, metric_type, value, labels_json, timestamp, sync_status) VALUES
-('test_org', 'api_latency', 'histogram', 400.0, '{}', CURRENT_TIMESTAMP, 'PENDING');
-INSERT INTO telemetry_buffer (tenant_id, metric_name, metric_type, value, labels_json, timestamp, sync_status) VALUES
-('test_org', 'api_latency', 'histogram', 850.0, '{}', CURRENT_TIMESTAMP, 'PENDING');
-
-INSERT INTO telemetry_buffer (tenant_id, metric_name, metric_type, value, labels_json, timestamp, sync_status) VALUES
-('test_org', 'error_rate', 'gauge', 0.012, '{}', CURRENT_TIMESTAMP, 'PENDING');
-INSERT INTO telemetry_buffer (tenant_id, metric_name, metric_type, value, labels_json, timestamp, sync_status) VALUES
-('test_org', 'error_rate', 'gauge', 0.021, '{}', CURRENT_TIMESTAMP, 'PENDING');
-INSERT INTO telemetry_buffer (tenant_id, metric_name, metric_type, value, labels_json, timestamp, sync_status) VALUES
-('test_org', 'error_rate', 'gauge', 0.038, '{}', CURRENT_TIMESTAMP, 'PENDING');
-INSERT INTO telemetry_buffer (tenant_id, metric_name, metric_type, value, labels_json, timestamp, sync_status) VALUES
-('test_org', 'error_rate', 'gauge', 0.025, '{}', CURRENT_TIMESTAMP, 'PENDING');
-INSERT INTO telemetry_buffer (tenant_id, metric_name, metric_type, value, labels_json, timestamp, sync_status) VALUES
-('test_org', 'error_rate', 'gauge', 0.008, '{}', CURRENT_TIMESTAMP, 'PENDING');

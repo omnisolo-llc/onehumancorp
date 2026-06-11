@@ -1210,13 +1210,11 @@ pub fn is_pii_value_pattern(s: &str) -> bool {
 }
 
 pub fn is_sensitive_key(key: &str) -> bool {
-    let key_lower = key.to_lowercase();
+    let k = key.to_lowercase();
     // Exclude tenant_id and organization_id from being redacted
-    if key_lower == "tenant_id" || key_lower == "organization_id" {
+    if k == "tenant_id" || k == "organization_id" {
         return false;
     }
-
-    let k: String = key.chars().filter(|c| c.is_alphanumeric()).flat_map(|c| c.to_lowercase()).collect();
 
     k.contains("password")
         || k.contains("secret")
@@ -1314,8 +1312,8 @@ pub async fn record_storage_rw_cost(
     operation: &str,
     size_bytes: i64,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let cost_cents = (size_bytes as f64 * 0.00000001).round() as i64;
-    buffer_metric_i64(
+    let cost_cents = (size_bytes as f64 * 0.00000001) as f32;
+    buffer_metric(
         pool,
         "ohc_storage_rw_cost",
         "counter",
@@ -1323,7 +1321,6 @@ pub async fn record_storage_rw_cost(
         serde_json::json!({
             "organization_id": organization_id,
             "operation": operation,
-            "cost_cents": cost_cents,
         }),
     )
     .await
@@ -1334,15 +1331,13 @@ pub async fn record_email_send_cost(
     organization_id: &str,
     count: i64,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let cost_cents = count * 1; // Assuming 1 cent per email
-    buffer_metric_i64(
+    buffer_metric(
         pool,
         "ohc_email_send_cost",
         "counter",
-        cost_cents,
+        count as f32,
         serde_json::json!({
             "organization_id": organization_id,
-            "cost_cents": cost_cents,
         }),
     )
     .await

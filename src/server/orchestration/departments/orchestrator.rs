@@ -237,8 +237,8 @@ impl DepartmentOrchestrator {
                                     }
 
                                     let _ = sqlx::query(
-                                        "INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, payload, created_at, updated_at)
-                                         VALUES ($1, $2, $3, $4, 'PAUSED', 'LOW', $5, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+                                        "INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
+                                         VALUES ($1, $2, $3, $4, 'PENDING', 'P1', 'LOW', 'PENDING', $5)"
                                     )
                                     .bind(uuid::Uuid::new_v4().to_string())
                                     .bind(&event.tenant_id)
@@ -266,8 +266,8 @@ impl DepartmentOrchestrator {
                                     }
 
                                     let _ = sqlx::query(
-                                        "INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, payload, created_at, updated_at)
-                                         VALUES (?, ?, ?, ?, 'PAUSED', 'LOW', ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+                                        "INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
+                                         VALUES (?, ?, ?, ?, 'PENDING', 'P1', 'LOW', 'PENDING', ?)"
                                     )
                                     .bind(uuid::Uuid::new_v4().to_string())
                                     .bind(&event.tenant_id)
@@ -477,14 +477,14 @@ impl DepartmentOrchestrator {
                 let fetch_res = if let Ok(mut tx) = self.db.pool.begin().await {
                     if ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await.is_ok() {
                         let rows = if let Some(ref cur) = cursor {
-                            sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = $1 AND status IN ('DRAFT', 'PAUSED') AND id > $2 ORDER BY id ASC LIMIT $3")
+                            sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = $1 AND status = 'DRAFT' AND id > $2 ORDER BY id ASC LIMIT $3")
                                 .bind(tenant_id)
                                 .bind(cur)
                                 .bind(limit)
                                 .fetch_all(&mut *tx)
                                 .await
                         } else {
-                            sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = $1 AND status IN ('DRAFT', 'PAUSED') ORDER BY id ASC LIMIT $2")
+                            sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = $1 AND status = 'DRAFT' ORDER BY id ASC LIMIT $2")
                                 .bind(tenant_id)
                                 .bind(limit)
                                 .fetch_all(&mut *tx)
@@ -534,14 +534,14 @@ impl DepartmentOrchestrator {
             }
             DbStore::Sqlite(pool) => {
                 let fetch_res = if let Some(ref cur) = cursor {
-                    sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = ? AND status IN ('DRAFT', 'PAUSED') AND id > ? ORDER BY id ASC LIMIT ?")
+                    sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = ? AND status = 'DRAFT' AND id > ? ORDER BY id ASC LIMIT ?")
                         .bind(tenant_id)
                         .bind(cur)
                         .bind(limit)
                         .fetch_all(pool)
                         .await
                 } else {
-                    sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = ? AND status IN ('DRAFT', 'PAUSED') ORDER BY id ASC LIMIT ?")
+                    sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = ? AND status = 'DRAFT' ORDER BY id ASC LIMIT ?")
                         .bind(tenant_id)
                         .bind(limit)
                         .fetch_all(pool)
@@ -634,14 +634,14 @@ impl DepartmentOrchestrator {
                 let fetch_res = if let Ok(mut tx) = self.db.pool.begin().await {
                     if ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await.is_ok() {
                         let rows = if let Some(ref cur) = cursor {
-                            sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = $1 AND status NOT IN ('DRAFT', 'PAUSED') AND id < $2 ORDER BY id DESC LIMIT $3")
+                            sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = $1 AND status != 'DRAFT' AND id < $2 ORDER BY id DESC LIMIT $3")
                                 .bind(tenant_id)
                                 .bind(cur)
                                 .bind(limit)
                                 .fetch_all(&mut *tx)
                                 .await
                         } else {
-                            sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = $1 AND status NOT IN ('DRAFT', 'PAUSED') ORDER BY id DESC LIMIT $2")
+                            sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = $1 AND status != 'DRAFT' ORDER BY id DESC LIMIT $2")
                                 .bind(tenant_id)
                                 .bind(limit)
                                 .fetch_all(&mut *tx)
@@ -691,14 +691,14 @@ impl DepartmentOrchestrator {
             }
             DbStore::Sqlite(pool) => {
                 let fetch_res = if let Some(ref cur) = cursor {
-                    sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = ? AND status NOT IN ('DRAFT', 'PAUSED') AND id < ? ORDER BY id DESC LIMIT ?")
+                    sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = ? AND status != 'DRAFT' AND id < ? ORDER BY id DESC LIMIT ?")
                         .bind(tenant_id)
                         .bind(cur)
                         .bind(limit)
                         .fetch_all(pool)
                         .await
                 } else {
-                    sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = ? AND status NOT IN ('DRAFT', 'PAUSED') ORDER BY id DESC LIMIT ?")
+                    sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = ? AND status != 'DRAFT' ORDER BY id DESC LIMIT ?")
                         .bind(tenant_id)
                         .bind(limit)
                         .fetch_all(pool)
