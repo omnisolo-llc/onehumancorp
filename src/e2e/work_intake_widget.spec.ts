@@ -47,20 +47,15 @@ test.describe('Work-Intake Widget Growth Loop', () => {
     expect(codeValue).toContain('Powered by OHC'); // Verify the viral loop is intact
   });
 
-  test('should remove branding when checkbox is checked', async ({ page }) => {
+  test('should show soft paywall when attempting to remove branding', async ({ page }) => {
     // Check the remove branding checkbox
     const removeBrandingCheckbox = page.getByLabel('Remove "Powered by OHC" branding');
     await removeBrandingCheckbox.check();
 
-    // Open the modal
-    const getCodeBtn = page.getByRole('button', { name: 'Get Widget Code' });
-    await getCodeBtn.click();
+    // Verify soft paywall appears
+    await expect(page.getByRole('heading', { name: 'Upgrade to Pro' })).toBeVisible();
 
-    // Verify the textarea does NOT contain the branding
-    const textarea = page.locator('textarea');
-    await expect(textarea).toBeVisible();
-    const codeValue = await textarea.inputValue();
-
-    expect(codeValue).not.toContain('Powered by OHC');
+    // Check that checkbox was unchecked automatically
+    expect(await removeBrandingCheckbox.isChecked()).toBeFalsy();
   });
 });

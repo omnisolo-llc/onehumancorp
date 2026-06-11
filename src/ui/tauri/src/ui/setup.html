@@ -59,6 +59,9 @@
         -webkit-backdrop-filter: blur(10px) saturate(200%);
         transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
       }
+      select.glassmorphism, textarea.glassmorphism {
+        border-radius: 8px;
+      }
       input.glassmorphism {
         border-radius: 8px;
       }
@@ -241,6 +244,7 @@
         -webkit-backdrop-filter: blur(10px) saturate(200%);
         border: 1px solid rgba(255, 255, 255, 0.5);
         padding: 12px 16px;
+        min-height: 44px;
         border-radius: 8px;
         cursor: pointer;
         transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
@@ -635,6 +639,10 @@
         }
       }
 
+      if (state.step === undefined || state.step === 0) {
+         updateStepper('step-context');
+      }
+
             // Clear name error on typing if valid
       inputs.name.addEventListener('input', () => {
           if (inputs.name.value.trim().length >= 3) {
@@ -893,10 +901,28 @@
       if (finishBtn) {
         finishBtn.addEventListener('click', () => {
            if (validateStep('step-template')) {
+               const req = {
+                   businessType: state.workContext || state.work_context || "Local Service",
+                   companyName: state.businessName,
+                   companyDescription: state.tagline || "",
+                   sellingCategories: state.categories ? [state.categories] : [],
+                   paymentPref: "online",
+                   adminEmail: "admin@mybusiness.com",
+                   adminName: state.assistantName || "Admin",
+                   adminPassword: "password",
+                   websiteTemplate: state.templateSelection || "Modern",
+                   firstProductName: state.firstOffer || "First Offer",
+                   firstProductPrice: "0.00",
+                   domainChoice: "subdomain",
+                   priceType: "fixed",
+                   location: "Local",
+                   targetAudience: "General"
+               };
+
                if (window.__TAURI__ && window.__TAURI__.core) {
                  finishBtn.disabled = true;
                  finishBtn.innerText = "Saving...";
-                 window.__TAURI__.core.invoke("save_onboarding_state", { state }).then(() => {
+                 window.__TAURI__.core.invoke("start_onboarding", { req }).then(() => {
                    window.location.href = "success.html";
                  }).catch((err) => {
                    console.error(err);
@@ -904,8 +930,27 @@
                    finishBtn.innerText = "Finish Setup";
                  });
                } else {
-                 localStorage.setItem('onboardingState', JSON.stringify(state));
-                 window.location.href = "success.html";
+                 finishBtn.disabled = true;
+                 finishBtn.innerText = "Saving...";
+                 const backendUrl = (window.location.origin.includes('localhost') || window.location.protocol === 'file:') ? 'http://127.0.0.1:18789' : '';
+                 fetch(`${backendUrl}/api/onboarding/start`, {
+                     method: 'POST',
+                     headers: {
+                         'Content-Type': 'application/json'
+                     },
+                     body: JSON.stringify(req)
+                 }).then(response => {
+                     if (response.ok) {
+                         localStorage.setItem('onboardingState', JSON.stringify(state));
+                         window.location.href = "success.html";
+                     } else {
+                         throw new Error('Failed to start onboarding');
+                     }
+                 }).catch((err) => {
+                     console.error(err);
+                     finishBtn.disabled = false;
+                     finishBtn.innerText = "Finish Setup";
+                 });
                }
            }
         });
