@@ -114,17 +114,19 @@ impl WorkflowExecutor {
                 .push(edge.target.clone());
         }
 
-        let mut visited = std::collections::HashSet::new();
+        let mut visit_counts = std::collections::HashMap::new();
 
         loop {
             let node = nodes_map
                 .get(&current_node_id)
                 .ok_or_else(|| format!("Node not found: {}", current_node_id))?;
 
-            if visited.contains(&current_node_id) {
+            let count = visit_counts.entry(current_node_id.clone()).or_insert(0);
+            *count += 1;
+
+            if *count > self.config.max_workflow_cycles.unwrap_or(1) {
                 return Err("Visual Orchestrator cycle detected".to_string());
             }
-            visited.insert(current_node_id.clone());
 
             match &node.node_type {
                 NodeType::ParallelFork { targets } => {
@@ -374,17 +376,19 @@ impl WorkflowExecutor {
                     .push(edge.target.clone());
             }
 
-            let mut visited = std::collections::HashSet::new();
+            let mut visit_counts = std::collections::HashMap::new();
 
             loop {
                 let node = nodes_map
                     .get(&current_node_id)
                     .ok_or_else(|| format!("Node not found: {}", current_node_id))?;
 
-                if visited.contains(&current_node_id) {
+                let count = visit_counts.entry(current_node_id.clone()).or_insert(0);
+                *count += 1;
+
+                if *count > self.config.max_workflow_cycles.unwrap_or(1) {
                     return Err("Visual Orchestrator cycle detected".to_string());
                 }
-                visited.insert(current_node_id.clone());
 
                 match &node.node_type {
                     NodeType::ParallelJoin { .. } => {
@@ -610,6 +614,178 @@ mod tests {
         async fn execute(&self, args: serde_json::Value) -> Result<String, ToolError> {
             Ok(format!("Tool echo: {}", args["val"].as_str().unwrap_or("")))
         }
+    }
+
+    #[tokio::test]
+    async fn test_visual_workflow_cycle_allowed_by_config() {
+        let graph = WorkflowGraph {
+            nodes: vec![
+                Node {
+                    id: "in".to_string(),
+                    node_type: NodeType::Input {
+                        name: "input_var".to_string(),
+                    },
+                },
+                Node {
+                    id: "llm1".to_string(),
+                    node_type: NodeType::Llm {
+                        prompt_template: "Loop: {{in}}".to_string(),
+                    },
+                },
+                Node {
+                    id: "cond".to_string(),
+                    node_type: NodeType::Condition {
+                        condition_expression: "trigger == trigger".to_string(),
+                        true_target: "llm1".to_string(),
+                        false_target: "out".to_string(),
+                    },
+                },
+                Node {
+                    id: "out".to_string(),
+                    node_type: NodeType::Output,
+                },
+            ],
+            edges: vec![
+                Edge {
+                    source: "in".to_string(),
+                    target: "llm1".to_string(),
+                },
+                Edge {
+                    source: "llm1".to_string(),
+                    target: "cond".to_string(),
+                },
+            ],
+        };
+
+        let agent = Arc::new(Agent::new(Arc::new(MockVisualLlmClient), vec![]));
+        let mut config = AgentRunConfig::default();
+        config.max_workflow_cycles = Some(3); // allow up to 3 visits
+
+        let executor = WorkflowExecutor::new(graph, agent, vec![], HashMap::new(), config);
+
+        let mut inputs = HashMap::new();
+        inputs.insert("in".to_string(), "trigger".to_string());
+
+        let result = executor.execute(inputs).await;
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), "Visual Orchestrator cycle detected");
+    }
+
+    #[tokio::test]
+    async fn test_visual_workflow_missing_node() {
+        let graph = WorkflowGraph {
+            nodes: vec![
+                Node {
+                    id: "in".to_string(),
+                    node_type: NodeType::Input {
+                        name: "input_var".to_string(),
+                    },
+                },
+            ],
+            edges: vec![
+                Edge {
+                    source: "in".to_string(),
+                    target: "missing".to_string(),
+                },
+            ],
+        };
+
+        let agent = Arc::new(Agent::new(Arc::new(MockVisualLlmClient), vec![]));
+        let config = AgentRunConfig::default();
+
+        let executor = WorkflowExecutor::new(graph, agent, vec![], HashMap::new(), config);
+        let mut inputs = HashMap::new();
+        inputs.insert("in".to_string(), "trigger".to_string());
+
+        let result = executor.execute(inputs).await;
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), "Node not found: missing");
+    }
+
+    struct ErrorMockVisualLlmClient;
+    #[async_trait::async_trait]
+    impl LlmClient for ErrorMockVisualLlmClient {
+        async fn chat(
+            &self,
+            _req: ChatRequest,
+        ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+            Err("Simulated LLM failure".into())
+        }
+    }
+
+    #[tokio::test]
+    async fn test_visual_workflow_llm_failure() {
+        let graph = WorkflowGraph {
+            nodes: vec![
+                Node {
+                    id: "in".to_string(),
+                    node_type: NodeType::Input {
+                        name: "input_var".to_string(),
+                    },
+                },
+                Node {
+                    id: "llm1".to_string(),
+                    node_type: NodeType::Llm {
+                        prompt_template: "Prompt".to_string(),
+                    },
+                },
+            ],
+            edges: vec![
+                Edge {
+                    source: "in".to_string(),
+                    target: "llm1".to_string(),
+                },
+            ],
+        };
+
+        let agent = Arc::new(Agent::new(Arc::new(ErrorMockVisualLlmClient), vec![]));
+        let config = AgentRunConfig::default();
+
+        let executor = WorkflowExecutor::new(graph, agent, vec![], HashMap::new(), config);
+        let mut inputs = HashMap::new();
+        inputs.insert("in".to_string(), "trigger".to_string());
+
+        let result = executor.execute(inputs).await;
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), "LLM node llm1 failed: LLM error: Simulated LLM failure");
+    }
+
+    #[tokio::test]
+    async fn test_visual_workflow_tool_failure() {
+        let graph = WorkflowGraph {
+            nodes: vec![
+                Node {
+                    id: "in".to_string(),
+                    node_type: NodeType::Input {
+                        name: "input_var".to_string(),
+                    },
+                },
+                Node {
+                    id: "tool1".to_string(),
+                    node_type: NodeType::Tool {
+                        tool_name: "test_tool".to_string(),
+                        args_template: "{invalid_json".to_string(),
+                    },
+                },
+            ],
+            edges: vec![
+                Edge {
+                    source: "in".to_string(),
+                    target: "tool1".to_string(),
+                },
+            ],
+        };
+
+        let agent = Arc::new(Agent::new(Arc::new(MockVisualLlmClient), vec![]));
+        let config = AgentRunConfig::default();
+
+        let executor = WorkflowExecutor::new(graph, agent, vec![], HashMap::new(), config);
+        let mut inputs = HashMap::new();
+        inputs.insert("in".to_string(), "trigger".to_string());
+
+        let result = executor.execute(inputs).await;
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Tool node tool1 failed to parse args"));
     }
 
     #[tokio::test]
