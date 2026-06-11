@@ -347,3 +347,14 @@ pub struct LedgerEntry {
     pub reference_id: String,
     pub created_at: Option<DateTime<Utc>>,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ActionItem {
+    pub id: String,
+    pub tenant_id: String,
+    pub agent_type: String,
+    pub context_type: String,
+    pub payload: serde_json::Value,
+    pub status: String,
+    pub created_at: chrono::DateTime<chrono::Utc>,
+}
