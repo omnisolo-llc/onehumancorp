@@ -600,10 +600,6 @@ mod tests {
         bench_time_savings_latency().await;
     }
 
-    async fn test_bench_billing_api_response_time() {
-        bench_billing_api_response_time().await;
-    }
-
     #[tokio::test]
     async fn test_bench_agent_snapshot() {
         bench_agent_snapshot().await;

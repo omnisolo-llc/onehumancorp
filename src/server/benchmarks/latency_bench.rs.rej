@@ -1,0 +1,13 @@
+--- latency_bench.rs
++++ latency_bench.rs
+@@ -600,10 +600,6 @@
+         bench_time_savings_latency().await;
+     }
+
+-    #[tokio::test]
+-    async fn test_bench_billing_api_response_time() {
+-        bench_billing_api_response_time().await;
+-    }
+
+     #[tokio::test]
+     async fn test_bench_agent_snapshot() {
