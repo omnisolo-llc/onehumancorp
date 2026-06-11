@@ -555,7 +555,7 @@ describe('OnboardingWizard', () => {
     await user.click(saveDraftButton);
 
     await waitFor(() => {
-      expect(screen.getByText('Draft Saved!')).toBeInTheDocument();
+      expect(screen.getByText(/Draft Saved! You can resume anytime at/i)).toBeInTheDocument();
     }, { timeout: 3000 });
 
     expect(fetchCalls).toBeGreaterThanOrEqual(2);
@@ -648,7 +648,7 @@ describe('OnboardingWizard', () => {
     await user.click(saveDraftButton);
 
     await waitFor(() => {
-      expect(screen.getByText('Draft Saved!')).toBeInTheDocument();
+      expect(screen.getByText(/Draft Saved! You can resume anytime at/i)).toBeInTheDocument();
     });
 
     // Verify API was called
@@ -773,7 +773,7 @@ describe('OnboardingWizard', () => {
     // Verify it saved
     expect(global.fetch).toHaveBeenCalledWith('/api/onboarding/draft', expect.objectContaining({ method: 'POST' }));
     await waitFor(() => {
-      expect(screen.getByText('Draft Saved!')).toBeInTheDocument();
+      expect(screen.getByText(/Draft Saved! You can resume anytime at/i)).toBeInTheDocument();
     });
   });
 });
