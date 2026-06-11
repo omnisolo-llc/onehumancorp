@@ -1,10 +1,10 @@
-use std::collections::{HashMap, HashSet};
+
 use std::sync::OnceLock;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::time::Duration;
 use dashmap::DashMap;
 use dashmap::DashSet;
-use std::hash::Hash;
+
 
 #[derive(Clone, Serialize, Deserialize)]
 struct CacheItem<T> {
@@ -14,7 +14,7 @@ struct CacheItem<T> {
 
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-static EVICTION_SEED: AtomicUsize = AtomicUsize::new(0);
+static _EVICTION_SEED: AtomicUsize = AtomicUsize::new(0);
 
 struct CacheValue<T> {
     val: T,
