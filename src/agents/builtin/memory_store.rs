@@ -654,13 +654,21 @@ impl VectorRepository {
 
         match &self.store {
             VectorMemoryStore::Postgres(pool) => {
+                // LATERAL join allows index usage on the right side of the join based on the left side
+                // It prevents an O(N^2) cartesian product over the whole table.
                 let query = "
                     SELECT
                         a.id AS a_id, a.tenant_id AS a_tenant_id, a.agent_id AS a_agent_id, a.content AS a_content, a.embedding::text AS a_embedding, a.source_type AS a_source_type, a.created_at AS a_created_at, a.last_referenced_at AS a_last_referenced_at, a.reference_count AS a_reference_count, a.reliability_score AS a_reliability_score, a.owner_override AS a_owner_override, a.metadata AS a_metadata,
                         b.id AS b_id, b.tenant_id AS b_tenant_id, b.agent_id AS b_agent_id, b.content AS b_content, b.embedding::text AS b_embedding, b.source_type AS b_source_type, b.created_at AS b_created_at, b.last_referenced_at AS b_last_referenced_at, b.reference_count AS b_reference_count, b.reliability_score AS b_reliability_score, b.owner_override AS b_owner_override, b.metadata AS b_metadata
                     FROM consolidated_memory a
-                    JOIN consolidated_memory b ON a.tenant_id = b.tenant_id AND a.id < b.id
-                    WHERE a.embedding <=> b.embedding < 0.05
+                    JOIN LATERAL (
+                        SELECT id, tenant_id, agent_id, content, embedding, source_type, created_at, last_referenced_at, reference_count, reliability_score, owner_override, metadata
+                        FROM consolidated_memory b_inner
+                        WHERE b_inner.tenant_id = a.tenant_id
+                          AND b_inner.id > a.id
+                        ORDER BY b_inner.embedding <=> a.embedding
+                        LIMIT 1
+                    ) b ON a.embedding <=> b.embedding < 0.05
                     LIMIT 10
                 ";
                 let rows = sqlx::query(query)
@@ -682,12 +690,21 @@ impl VectorRepository {
                     .is_ok();
 
                 if has_vec_extension {
+                    // SQLite doesn't natively support LATERAL joins in the same way, but we can use a correlated subquery
+                    // or rely on its optimizer for a similar index-nested-loop join pattern by keeping the join condition tight.
+                    // This uses a correlated subquery to find the nearest neighbor efficiently for each row.
                     let query = "
                         SELECT
                             a.id AS a_id, a.tenant_id AS a_tenant_id, a.agent_id AS a_agent_id, a.content AS a_content, a.embedding AS a_embedding, a.source_type AS a_source_type, a.created_at AS a_created_at, a.last_referenced_at AS a_last_referenced_at, a.reference_count AS a_reference_count, a.reliability_score AS a_reliability_score, a.owner_override AS a_owner_override, a.metadata AS a_metadata,
                             b.id AS b_id, b.tenant_id AS b_tenant_id, b.agent_id AS b_agent_id, b.content AS b_content, b.embedding AS b_embedding, b.source_type AS b_source_type, b.created_at AS b_created_at, b.last_referenced_at AS b_last_referenced_at, b.reference_count AS b_reference_count, b.reliability_score AS b_reliability_score, b.owner_override AS b_owner_override, b.metadata AS b_metadata
                         FROM consolidated_memory a
-                        JOIN consolidated_memory b ON a.tenant_id = b.tenant_id AND a.id < b.id
+                        JOIN consolidated_memory b ON b.id = (
+                            SELECT id FROM consolidated_memory b_inner
+                            WHERE b_inner.tenant_id = a.tenant_id
+                              AND b_inner.id > a.id
+                            ORDER BY vec_distance_cosine(b_inner.embedding, a.embedding)
+                            LIMIT 1
+                        )
                         WHERE vec_distance_cosine(a.embedding, b.embedding) < 0.05
                         LIMIT 10
                     ";
