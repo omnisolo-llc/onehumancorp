@@ -11,8 +11,10 @@ use chrono::Utc;
 use ::server_common::Claims;
 use crate::domain::repository::agent_feed_repo::{AgentFeedRepository, AgentFeedItem};
 use sqlx::PgPool;
+use std::sync::Arc;
+use crate::db::{DB, DbStore};
 use crate::utils::cache::HybridCache;
-use std::sync::{Arc, OnceLock};
+use std::sync::OnceLock;
 
 pub static AGENT_FEED_CACHE: OnceLock<Arc<HybridCache<AgentFeedListResponse>>> = OnceLock::new();
 
@@ -100,7 +102,8 @@ async fn list_feed_items(
         let cache_key_bg = cache_key.clone();
 
         tokio::spawn(async move {
-            let repo = AgentFeedRepository::new(pool_bg);
+            let db = std::sync::Arc::new(crate::db::DB { store: crate::db::DbStore::Postgres, pool: pool_bg });
+            let repo = AgentFeedRepository::new(db);
             if let Ok(mut items) = repo.list(&tenant_id_bg, limit, offset).await {
                 if mobile_optimized {
                     for item in items.iter_mut() {
@@ -117,7 +120,8 @@ async fn list_feed_items(
         return (StatusCode::OK, Json(cached_resp)).into_response();
     }
 
-    let repo = AgentFeedRepository::new(pool);
+    let db = std::sync::Arc::new(crate::db::DB { store: crate::db::DbStore::Postgres, pool: pool.clone() });
+    let repo = AgentFeedRepository::new(db);
 
     match repo.list(&tenant_id, limit, offset).await {
         Ok(mut items) => {
@@ -149,7 +153,8 @@ async fn create_feed_item(
         None => return StatusCode::UNAUTHORIZED.into_response(),
     };
 
-    let repo = AgentFeedRepository::new(pool);
+    let db = std::sync::Arc::new(crate::db::DB { store: crate::db::DbStore::Postgres, pool: pool.clone() });
+    let repo = AgentFeedRepository::new(db);
 
     let item = AgentFeedItem {
         id: Uuid::new_v4().to_string(),
@@ -187,7 +192,8 @@ async fn update_feed_item_state(
         None => return StatusCode::UNAUTHORIZED.into_response(),
     };
 
-    let repo = AgentFeedRepository::new(pool.clone());
+    let db = std::sync::Arc::new(crate::db::DB { store: crate::db::DbStore::Postgres, pool: pool.clone() });
+    let repo = AgentFeedRepository::new(db);
 
     match repo.update_state(&tenant_id, &id, &payload.state).await {
         Ok(updated_item) => {

@@ -1,6 +1,7 @@
-use sqlx::{PgPool, FromRow};
+use sqlx::FromRow;
 use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
+use crate::db::{DB, DbStore};
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct AgentFeedItem {
@@ -15,77 +16,146 @@ pub struct AgentFeedItem {
 }
 
 pub struct AgentFeedRepository {
-    pool: PgPool,
+    db: std::sync::Arc<DB>,
 }
 
 impl AgentFeedRepository {
-    pub fn new(pool: PgPool) -> Self {
-        Self { pool }
+    pub fn new(db: std::sync::Arc<DB>) -> Self {
+        Self { db }
     }
 
     pub async fn create(&self, item: AgentFeedItem) -> Result<AgentFeedItem, sqlx::Error> {
-        let rec = sqlx::query_as::<_, AgentFeedItem>(
-            r#"
-            INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-            RETURNING *
-            "#
-        )
-        .bind(item.id)
-        .bind(item.tenant_id)
-        .bind(item.event_source)
-        .bind(item.context_payload)
-        .bind(item.proposed_action)
-        .bind(item.lifecycle_state)
-        .bind(item.created_at)
-        .bind(item.updated_at)
-        .fetch_one(&self.pool)
-        .await?;
-
-        Ok(rec)
+        match &self.db.store {
+            DbStore::Postgres => {
+                let rec = sqlx::query_as::<_, AgentFeedItem>(
+                    r#"
+                    INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at)
+                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                    RETURNING *
+                    "#
+                )
+                .bind(&item.id)
+                .bind(&item.tenant_id)
+                .bind(&item.event_source)
+                .bind(&item.context_payload)
+                .bind(&item.proposed_action)
+                .bind(&item.lifecycle_state)
+                .bind(&item.created_at)
+                .bind(&item.updated_at)
+                .fetch_one(&self.db.pool)
+                .await?;
+                Ok(rec)
+            }
+            DbStore::Sqlite(pool) => {
+                let rec = sqlx::query_as::<_, AgentFeedItem>(
+                    r#"
+                    INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    RETURNING *
+                    "#
+                )
+                .bind(&item.id)
+                .bind(&item.tenant_id)
+                .bind(&item.event_source)
+                .bind(&item.context_payload)
+                .bind(&item.proposed_action)
+                .bind(&item.lifecycle_state)
+                .bind(&item.created_at)
+                .bind(&item.updated_at)
+                .fetch_one(pool)
+                .await?;
+                Ok(rec)
+            }
+        }
     }
 
     pub async fn get(&self, tenant_id: &str, id: &str) -> Result<Option<AgentFeedItem>, sqlx::Error> {
-        let rec = sqlx::query_as::<_, AgentFeedItem>(
-            "SELECT * FROM agent_feed_items WHERE tenant_id = $1 AND id = $2"
-        )
-        .bind(tenant_id)
-        .bind(id)
-        .fetch_optional(&self.pool)
-        .await?;
-
-        Ok(rec)
+        match &self.db.store {
+            DbStore::Postgres => {
+                let rec = sqlx::query_as::<_, AgentFeedItem>(
+                    "SELECT * FROM agent_feed_items WHERE tenant_id = $1 AND id = $2"
+                )
+                .bind(tenant_id)
+                .bind(id)
+                .fetch_optional(&self.db.pool)
+                .await?;
+                Ok(rec)
+            }
+            DbStore::Sqlite(pool) => {
+                let rec = sqlx::query_as::<_, AgentFeedItem>(
+                    "SELECT * FROM agent_feed_items WHERE tenant_id = ? AND id = ?"
+                )
+                .bind(tenant_id)
+                .bind(id)
+                .fetch_optional(pool)
+                .await?;
+                Ok(rec)
+            }
+        }
     }
 
     pub async fn list(&self, tenant_id: &str, limit: i64, offset: i64) -> Result<Vec<AgentFeedItem>, sqlx::Error> {
-        let items = sqlx::query_as::<_, AgentFeedItem>(
-            "SELECT * FROM agent_feed_items WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3"
-        )
-        .bind(tenant_id)
-        .bind(limit)
-        .bind(offset)
-        .fetch_all(&self.pool)
-        .await?;
-
-        Ok(items)
+        match &self.db.store {
+            DbStore::Postgres => {
+                let items = sqlx::query_as::<_, AgentFeedItem>(
+                    "SELECT * FROM agent_feed_items WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3"
+                )
+                .bind(tenant_id)
+                .bind(limit)
+                .bind(offset)
+                .fetch_all(&self.db.pool)
+                .await?;
+                Ok(items)
+            }
+            DbStore::Sqlite(pool) => {
+                let items = sqlx::query_as::<_, AgentFeedItem>(
+                    "SELECT * FROM agent_feed_items WHERE tenant_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?"
+                )
+                .bind(tenant_id)
+                .bind(limit)
+                .bind(offset)
+                .fetch_all(pool)
+                .await?;
+                Ok(items)
+            }
+        }
     }
 
     pub async fn update_state(&self, tenant_id: &str, id: &str, new_state: &str) -> Result<AgentFeedItem, sqlx::Error> {
-        let rec = sqlx::query_as::<_, AgentFeedItem>(
-            r#"
-            UPDATE agent_feed_items
-            SET lifecycle_state = $1, updated_at = NOW()
-            WHERE tenant_id = $2 AND id = $3
-            RETURNING *
-            "#
-        )
-        .bind(new_state)
-        .bind(tenant_id)
-        .bind(id)
-        .fetch_one(&self.pool)
-        .await?;
-
-        Ok(rec)
+        match &self.db.store {
+            DbStore::Postgres => {
+                let rec = sqlx::query_as::<_, AgentFeedItem>(
+                    r#"
+                    UPDATE agent_feed_items
+                    SET lifecycle_state = $1, updated_at = NOW()
+                    WHERE tenant_id = $2 AND id = $3
+                    RETURNING *
+                    "#
+                )
+                .bind(new_state)
+                .bind(tenant_id)
+                .bind(id)
+                .fetch_one(&self.db.pool)
+                .await?;
+                Ok(rec)
+            }
+            DbStore::Sqlite(pool) => {
+                let rec = sqlx::query_as::<_, AgentFeedItem>(
+                    r#"
+                    UPDATE agent_feed_items
+                    SET lifecycle_state = ?, updated_at = CURRENT_TIMESTAMP
+                    WHERE tenant_id = ? AND id = ?
+                    RETURNING *
+                    "#
+                )
+                .bind(new_state)
+                .bind(tenant_id)
+                .bind(id)
+                .fetch_one(pool)
+                .await?;
+                Ok(rec)
+            }
+        }
     }
 }
 
@@ -97,11 +167,34 @@ mod tests {
     use uuid::Uuid;
 
     #[tokio::test]
-    #[ignore] // Integration test requiring database
     async fn test_agent_feed_repo_lifecycle() {
-        let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
-        let pool = PgPool::connect(&database_url).await.unwrap();
-        let repo = AgentFeedRepository::new(pool);
+        let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+
+        sqlx::query(
+            "CREATE TABLE IF NOT EXISTS agent_feed_items (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                event_source TEXT NOT NULL,
+                context_payload JSON,
+                proposed_action JSON,
+                lifecycle_state TEXT NOT NULL,
+                created_at DATETIME,
+                updated_at DATETIME
+            )"
+        )
+        .execute(&sqlite_pool)
+        .await
+        .unwrap();
+
+        let dummy_pool = sqlx::postgres::PgPoolOptions::new()
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+
+        let db = std::sync::Arc::new(crate::db::DB { pool: dummy_pool, store: crate::db::DbStore::Sqlite(sqlite_pool) });
+        let repo = AgentFeedRepository::new(db);
 
         let tenant_id = "test-tenant-123";
 

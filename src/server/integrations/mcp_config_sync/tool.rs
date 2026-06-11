@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use sqlx::{PgPool, Row};
+use sqlx::Row;
+use crate::db::{DB, DbStore};
 use async_trait::async_trait;
 use tracing::{info, instrument};
 
@@ -50,8 +51,8 @@ pub trait ConfigSyncTool: Send + Sync {
     async fn get_config(&self, spiffe_id: &str, tenant_id: &str, key: &str) -> Result<ConfigResponse, McpConfigSyncError>;
 }
 
-pub struct PgConfigSyncTool {
-    pool: PgPool,
+pub struct DbConfigSyncTool {
+    db: std::sync::Arc<DB>,
 }
 
 pub fn verify_spiffe_id(spiffe_id: &str, tenant_id: &str) -> Result<(), McpConfigSyncError> {
@@ -66,14 +67,14 @@ pub fn verify_spiffe_id(spiffe_id: &str, tenant_id: &str) -> Result<(), McpConfi
     Ok(())
 }
 
-impl PgConfigSyncTool {
-    pub fn new(pool: PgPool) -> Self {
-        Self { pool }
+impl DbConfigSyncTool {
+    pub fn new(db: std::sync::Arc<DB>) -> Self {
+        Self { db }
     }
 }
 
 #[async_trait]
-impl ConfigSyncTool for PgConfigSyncTool {
+impl ConfigSyncTool for DbConfigSyncTool {
     #[instrument(skip(self))]
     async fn sync_config_to_cloud(&self, spiffe_id: &str, payload: ConfigSyncPayload) -> Result<(), McpConfigSyncError> {
         verify_spiffe_id(spiffe_id, &payload.tenant_id)?;
@@ -81,32 +82,54 @@ impl ConfigSyncTool for PgConfigSyncTool {
         let metadata_json = serde_json::to_value(&payload.metadata)
             .unwrap_or(serde_json::Value::Object(Default::default()));
 
-        let mut tx = self.pool.begin().await?;
-        // The correct query for tenant context:
-        sqlx::query("SELECT set_config('app.current_tenant', $1, true)")
-            .bind(&payload.tenant_id)
-            .execute(&mut *tx)
-            .await?;
+        match &self.db.store {
+            DbStore::Postgres => {
+                let mut tx = self.db.pool.begin().await?;
+                sqlx::query("SELECT set_config('app.current_tenant', $1, true)")
+                    .bind(&payload.tenant_id)
+                    .execute(&mut *tx)
+                    .await?;
 
-        sqlx::query(
-            "INSERT INTO mcp_config_sync_log (tenant_id, agent_id, config_key, config_value, metadata)
-             VALUES ($1, $2, $3, $4, $5)
-             ON CONFLICT (tenant_id, config_key)
-             DO UPDATE SET
-                agent_id = EXCLUDED.agent_id,
-                config_value = EXCLUDED.config_value,
-                metadata = EXCLUDED.metadata,
-                updated_at = CURRENT_TIMESTAMP"
-        )
-        .bind(&payload.tenant_id)
-        .bind(&payload.agent_id)
-        .bind(&payload.key)
-        .bind(&payload.value)
-        .bind(metadata_json)
-        .execute(&mut *tx)
-        .await?;
+                sqlx::query(
+                    "INSERT INTO mcp_config_sync_log (tenant_id, agent_id, config_key, config_value, metadata)
+                     VALUES ($1, $2, $3, $4, $5)
+                     ON CONFLICT (tenant_id, config_key)
+                     DO UPDATE SET
+                        agent_id = EXCLUDED.agent_id,
+                        config_value = EXCLUDED.config_value,
+                        metadata = EXCLUDED.metadata,
+                        updated_at = CURRENT_TIMESTAMP"
+                )
+                .bind(&payload.tenant_id)
+                .bind(&payload.agent_id)
+                .bind(&payload.key)
+                .bind(&payload.value)
+                .bind(&metadata_json)
+                .execute(&mut *tx)
+                .await?;
 
-        tx.commit().await?;
+                tx.commit().await?;
+            }
+            DbStore::Sqlite(pool) => {
+                sqlx::query(
+                    "INSERT INTO mcp_config_sync_log (tenant_id, agent_id, config_key, config_value, metadata)
+                     VALUES (?, ?, ?, ?, ?)
+                     ON CONFLICT (tenant_id, config_key)
+                     DO UPDATE SET
+                        agent_id = EXCLUDED.agent_id,
+                        config_value = EXCLUDED.config_value,
+                        metadata = EXCLUDED.metadata,
+                        updated_at = CURRENT_TIMESTAMP"
+                )
+                .bind(&payload.tenant_id)
+                .bind(&payload.agent_id)
+                .bind(&payload.key)
+                .bind(&payload.value)
+                .bind(serde_json::to_string(&metadata_json).unwrap_or_default())
+                .execute(pool)
+                .await?;
+            }
+        }
 
         info!(
             tenant_id = %payload.tenant_id,
@@ -122,31 +145,43 @@ impl ConfigSyncTool for PgConfigSyncTool {
     async fn get_config(&self, spiffe_id: &str, tenant_id: &str, key: &str) -> Result<ConfigResponse, McpConfigSyncError> {
         verify_spiffe_id(spiffe_id, tenant_id)?;
 
-        let mut tx = self.pool.begin().await?;
-        // The correct query for tenant context:
-        sqlx::query("SELECT set_config('app.current_tenant', $1, true)")
-            .bind(tenant_id)
-            .execute(&mut *tx)
-            .await?;
+        let value: Option<String> = match &self.db.store {
+            DbStore::Postgres => {
+                let mut tx = self.db.pool.begin().await?;
+                sqlx::query("SELECT set_config('app.current_tenant', $1, true)")
+                    .bind(tenant_id)
+                    .execute(&mut *tx)
+                    .await?;
 
-        let row = sqlx::query(
-            "SELECT config_value FROM mcp_config_sync_log WHERE tenant_id = $1 AND config_key = $2"
-        )
-        .bind(tenant_id)
-        .bind(key)
-        .fetch_optional(&mut *tx)
-        .await?;
+                let row = sqlx::query(
+                    "SELECT config_value FROM mcp_config_sync_log WHERE tenant_id = $1 AND config_key = $2"
+                )
+                .bind(tenant_id)
+                .bind(key)
+                .fetch_optional(&mut *tx)
+                .await?;
 
-        tx.commit().await?;
-
-        match row {
-            Some(r) => {
-                let value: String = r.get("config_value");
-                Ok(ConfigResponse {
-                    key: key.to_string(),
-                    value,
-                })
+                tx.commit().await?;
+                row.map(|r| r.get("config_value"))
             }
+            DbStore::Sqlite(pool) => {
+                let row = sqlx::query(
+                    "SELECT config_value FROM mcp_config_sync_log WHERE tenant_id = ? AND config_key = ?"
+                )
+                .bind(tenant_id)
+                .bind(key)
+                .fetch_optional(pool)
+                .await?;
+
+                row.map(|r| r.get("config_value"))
+            }
+        };
+
+        match value {
+            Some(v) => Ok(ConfigResponse {
+                key: key.to_string(),
+                value: v,
+            }),
             None => Err(McpConfigSyncError::NotFound(key.to_string())),
         }
     }
@@ -260,13 +295,35 @@ mod mock_tests {
 #[cfg(test)]
 mod db_tests {
     use super::*;
-    use sqlx::postgres::PgPoolOptions;
 
     #[tokio::test]
-    #[ignore]
     async fn test_sync_and_get_config() {
-        let pool = PgPoolOptions::new().connect("postgres://localhost/test_db").await.unwrap();
-        let tool = PgConfigSyncTool::new(pool);
+        let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+
+        sqlx::query(
+            "CREATE TABLE IF NOT EXISTS mcp_config_sync_log (
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT NOT NULL,
+                config_key TEXT NOT NULL,
+                config_value TEXT NOT NULL,
+                metadata TEXT,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (tenant_id, config_key)
+            )"
+        )
+        .execute(&sqlite_pool)
+        .await
+        .unwrap();
+
+        let dummy_pool = sqlx::postgres::PgPoolOptions::new()
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+
+        let db = std::sync::Arc::new(DB { pool: dummy_pool, store: DbStore::Sqlite(sqlite_pool) });
+        let tool = DbConfigSyncTool::new(db);
 
         let payload = ConfigSyncPayload {
             tenant_id: "tenant1".to_string(),
