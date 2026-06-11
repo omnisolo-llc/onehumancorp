@@ -51,16 +51,6 @@ impl AgentMemoryPipeline {
                     let context_data: String = row.get("context_data");
                     let tenant_id: String = row.get("tenant_id");
 
-                    let embedding = match self.embedding_api.generate_embedding(&context_data).await {
-                        Ok(emb) => emb,
-                        Err(e) => {
-                            ::server_telemetry::record_error_signal("AgentMemoryPipeline: failed to generate embedding");
-                            tracing::error!("AgentMemoryPipeline: failed to generate embedding: {}", e);
-                            vec![0.0; 1536]
-                        }
-                    };
-
-                    let emb_str = format!("[{}]", embedding.iter().map(|f| f.to_string()).collect::<Vec<_>>().join(","));
                     let mem_id = Uuid::new_v4();
 
                     sqlx::query("INSERT INTO consolidated_memory (id, tenant_id, agent_id, source_type, content, embedding) VALUES ($1, $2, $3, $4, $5, NULL)")

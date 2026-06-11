@@ -9,6 +9,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "../../../src/proto/common.proto",
         "../../../src/proto/hub.proto",
         "../../../src/proto/interop.proto",
+        "../../../src/proto/invoice.proto",
         "../../../src/proto/mcp_proxy.proto",
         "../../../src/proto/organization.proto",
     ];
