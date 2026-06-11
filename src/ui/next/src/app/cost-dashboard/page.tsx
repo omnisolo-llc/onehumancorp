@@ -54,6 +54,46 @@ export default function CostDashboardPage() {
   const [data, setData] = useState<CostDashboardData | null>(null);
   const [myPlanData, setMyPlanData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+    const [isClaiming, setIsClaiming] = useState(false);
+    const [hasClaimed, setHasClaimed] = useState(false);
+
+    useEffect(() => {
+        if (typeof localStorage !== 'undefined') {
+            const proStatus = localStorage.getItem('has_pro') === 'true';
+            setHasClaimed(proStatus);
+        }
+    }, []);
+
+    const handleShareAndClaim = async () => {
+        setIsClaiming(true);
+        const savings = data?.bandwidth_savings || 0;
+        const revenue = data?.total_revenue || 0;
+        const amountToBrag = savings > 0 ? savings : revenue;
+        const message = `I just managed my business and saved/earned ${formatCurrency(amountToBrag)} using OneHumanCorp's AI assistant! 🚀 #OneHumanCorp #SmallBiz #AI`;
+        const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(message)}`;
+        window.open(shareUrl, '_blank');
+
+        try {
+            const response = await fetch('/api/v1/growth/trial-extension/claim', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            });
+            if (response.ok) {
+                setHasClaimed(true);
+                if (typeof localStorage !== 'undefined') {
+                    localStorage.setItem('has_pro', 'true');
+                }
+            } else {
+                console.error('Failed to claim trial extension');
+                alert("Failed to claim trial extension. Please try again.");
+            }
+        } catch (error) {
+            console.error('Error claiming trial extension:', error);
+            alert("Error claiming trial extension. Please try again.");
+        } finally {
+            setIsClaiming(false);
+        }
+    };
 
   useEffect(() => {
     async function fetchCostData() {
@@ -166,6 +206,52 @@ export default function CostDashboardPage() {
               </div>
           </div>
         </section>
+
+            {/* Viral Share Savings Component */}
+            {hasClaimed ? (
+                <div className="glassmorphism p-6 rounded-[16px] border border-green-200 shadow-lg flex items-center justify-between bg-green-50/50">
+                    <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-full bg-green-100 text-green-600 flex items-center justify-center text-2xl shadow-inner">
+                            🎉
+                        </div>
+                        <div>
+                            <h3 className="text-lg font-bold font-outfit text-gray-900 mb-1">Trial Extended!</h3>
+                            <p className="text-sm text-gray-600">Your Pro trial has been successfully extended by 7 days. Enjoy the extra time!</p>
+                        </div>
+                    </div>
+                </div>
+            ) : (
+                <div className="glassmorphism p-6 rounded-[16px] border border-indigo-200 shadow-lg relative overflow-hidden group">
+                    <div className="absolute -top-10 -right-10 w-32 h-32 bg-indigo-500/10 rounded-full blur-2xl"></div>
+                    <div className="flex flex-col md:flex-row gap-6 items-center justify-between relative z-10">
+                        <div className="flex items-start gap-4">
+                            <div className="w-12 h-12 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-2xl shadow-inner shrink-0 group-hover:scale-110 transition-transform">
+                                💰
+                            </div>
+                            <div>
+                                <div className="inline-flex items-center gap-2 mb-1 px-2 py-0.5 rounded text-xs font-bold uppercase tracking-wider text-indigo-600 bg-indigo-50">
+                                    Savings & Success
+                                </div>
+                                <h3 className="text-xl font-bold font-outfit text-gray-900 mb-2">
+                                    Share your success to unlock a 7-Day Pro trial extension!
+                                </h3>
+                                <p className="text-sm text-gray-600">
+                                    You've generated {formatCurrency(data?.total_revenue || 0)} in revenue and saved {formatCurrency(data?.bandwidth_savings || 0)} on operations using OneHumanCorp.
+                                </p>
+                            </div>
+                        </div>
+                        <div className="w-full md:w-auto shrink-0 flex flex-col items-center md:items-end">
+                            <button
+                                onClick={handleShareAndClaim}
+                                disabled={isClaiming}
+                                className={`w-full md:w-auto px-6 py-3 rounded-xl font-bold transition-all shadow-md flex items-center justify-center gap-2 ${isClaiming ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-[#1DA1F2] hover:bg-[#1a91da] text-white hover:shadow-lg hover:-translate-y-0.5'}`}
+                            >
+                                {isClaiming ? 'Verifying Share...' : 'Share to get 7 Days Pro'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
         {/* Overview Section */}
         <section className="app-panel app-card bg-white/70 backdrop-blur-xl saturate-200 border border-white/40 hover:shadow-xl transition-shadow duration-300 rounded-2xl">
