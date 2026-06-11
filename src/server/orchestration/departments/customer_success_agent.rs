@@ -141,6 +141,35 @@ impl Department for CustomerSuccessAgent {
                 .or_else(|| event.payload.get("message"))
                 .and_then(|v| v.as_str()).unwrap_or("");
             let source = event.payload.get("source").and_then(|v| v.as_str()).unwrap_or("");
+            let sender_id = event.payload.get("sender_id").and_then(|v| v.as_str()).unwrap_or("");
+
+            // Identity Resolution: Look up customer by phone, email, or name
+            let mut customer_id = "".to_string();
+            let mut past_orders = "".to_string();
+            if !sender_id.is_empty() && sender_id != "unknown" {
+                let pool = crate::db::get_pool();
+                let result: Result<(String,), sqlx::Error> = sqlx::query_as("SELECT id FROM customers WHERE tenant_id = $1 AND (phone = $2 OR email = $2 OR name = $2) LIMIT 1")
+                    .bind(&event.tenant_id)
+                    .bind(&sender_id)
+                    .fetch_one(&pool)
+                    .await;
+                if let Ok((id,)) = result {
+                    customer_id = id.clone();
+                    tracing::info!("Resolved sender {} to customer {}", sender_id, customer_id);
+
+                    // Fetch past orders context
+                    let orders: Result<Vec<(f64,)>, sqlx::Error> = sqlx::query_as("SELECT total_amount FROM orders WHERE tenant_id = $1 AND customer_id = $2")
+                        .bind(&event.tenant_id)
+                        .bind(&customer_id)
+                        .fetch_all(&pool)
+                        .await;
+                    if let Ok(orders) = orders {
+                        if !orders.is_empty() {
+                            past_orders = format!("Returning Customer ({} past orders).", orders.len());
+                        }
+                    }
+                }
+            }
 
             let query_embedding = match std::env::var("OHC_INBOX_DRAFT_LLM_PROVIDER")
                 .or_else(|_| std::env::var("OHC_LLM_PROVIDER"))
@@ -162,6 +191,11 @@ impl Department for CustomerSuccessAgent {
             } else {
                 "No relevant memory found.".to_string()
             };
+
+            if !past_orders.is_empty() {
+                context_summary.push_str("\n");
+                context_summary.push_str(&past_orders);
+            }
 
             if let Ok(inventory_summary) = self.orchestrator.get_inventory_summary(&event.tenant_id).await {
                 context_summary.push_str("\n\n");
@@ -209,6 +243,9 @@ impl Department for CustomerSuccessAgent {
                 "inbox_message_id": inbox_id,
                 "source": source,
                 "original_content": message,
+                "sender_id": sender_id,
+                "customer_id": customer_id,
+                "past_orders": past_orders,
             });
 
             let approval_req = self.orchestrator.execute_action(

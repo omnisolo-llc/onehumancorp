@@ -10,6 +10,8 @@ function CheckoutContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const tier = searchParams?.get("tier");
+  const productId = searchParams?.get("product_id") || "prod_123";
+  const quantity = parseInt(searchParams?.get("quantity") || "1", 10);
   const discountParam = searchParams?.get("discount");
   const [isProcessing, setIsProcessing] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -66,7 +68,14 @@ function CheckoutContent() {
           "Content-Type": "application/json",
           ...(typeof localStorage !== "undefined" && localStorage.getItem('token') ? { "Authorization": `Bearer ${localStorage.getItem('token')}` } : {})
         },
-        body: JSON.stringify({ tier, is_subscription: true }),
+        // We do not lock inventory for purely subscription/plan upgrades unless product_id is given.
+        // For standard item purchases via checkout, we pass product_id to ensure the lock.
+        body: JSON.stringify({
+          tier,
+          is_subscription: true,
+          product_id: tier ? undefined : productId,
+          quantity: tier ? undefined : quantity
+        }),
       });
       const data = await response.json();
       if (!response.ok || !data.checkout_url) {
@@ -93,6 +102,29 @@ function CheckoutContent() {
     }
 
     try {
+      // First, attempt to lock inventory via POS reserve to simulate the lock during redirect
+      if (!tier) {
+        setCheckoutStatus("Reserving inventory...");
+        const reserveRes = await fetch("/api/v1/payments/terminal/reserve", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "x-tenant-id": tenant },
+          body: JSON.stringify({
+            tenant_id: tenant,
+            product_id: productId,
+            quantity: quantity,
+            ttl_seconds: 300,
+          }),
+        });
+        const reserveData = await reserveRes.json();
+        if (!reserveData.success) {
+          setCheckoutStatus("Sorry, this item was just purchased in-store.");
+          setIsMercadoPagoProcessing(false);
+          return;
+        }
+      }
+
+      setCheckoutStatus("Redirecting to Mercado Pago...");
+
       const response = await fetch("/api/checkout/mercadopago", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -130,8 +162,8 @@ function CheckoutContent() {
         headers: { "Content-Type": "application/json", "x-tenant-id": tenant },
         body: JSON.stringify({
           tenant_id: tenant,
-          product_id: "prod_123", // Default product for checkout
-          quantity: 1,
+          product_id: productId,
+          quantity: quantity,
           ttl_seconds: 15,
         }),
       });
@@ -154,8 +186,8 @@ function CheckoutContent() {
           headers: { "Content-Type": "application/json", "x-tenant-id": tenant },
           body: JSON.stringify({
             tenant_id: tenant,
-            product_id: "prod_123",
-            quantity: 1,
+            product_id: productId,
+            quantity: quantity,
             lock_id: lockId,
           }),
         });
@@ -276,9 +308,33 @@ function CheckoutContent() {
             {deliveryFee !== null && <p className="text-xs text-green-600 mt-1 font-medium">Delivery available: +${deliveryFee.toFixed(2)}</p>}
           </div>
 
-          <div className="flex items-center gap-2 mb-4">
-            <input type="checkbox" id="subscribe" checked={isSubscription} onChange={(e) => setIsSubscription(e.target.checked)} className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500" />
-            <label htmlFor="subscribe" className="text-sm font-medium text-gray-700">Subscribe & Save 10%</label>
+          <div className="flex items-center mb-4">
+            <label htmlFor="subscribe" className="flex items-center cursor-pointer group">
+              <div className="relative">
+                <input
+                  type="checkbox"
+                  id="subscribe"
+                  className="sr-only"
+                  checked={isSubscription}
+                  onChange={(e) => setIsSubscription(e.target.checked)}
+                />
+                <div className={`block w-10 h-6 rounded-full transition-colors duration-300 ease-in-out ${isSubscription ? 'bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.5)]' : 'bg-gray-300'}`}></div>
+                <div className={`dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform duration-300 ease-in-out shadow-sm ${isSubscription ? 'transform translate-x-4' : ''}`}></div>
+              </div>
+              <div className="ml-3 text-sm font-medium text-gray-700 group-hover:text-gray-900 transition-colors">
+                Subscribe & Save 10%
+              </div>
+            </label>
+          </div>
+
+          <div className="bg-green-50 border border-green-100 rounded-xl p-4 my-2 mb-4">
+            <div className="flex justify-between items-center">
+              <span className="text-green-800 text-sm font-bold">Available Rewards</span>
+              <span className="text-green-800 text-sm font-bold">1 Reward Available</span>
+            </div>
+            <p className="text-green-700 text-xs font-medium mt-1">
+              You have earned a free coffee! Tap 'Pay' to automatically apply your reward at checkout.
+            </p>
           </div>
 
           {deliveryFee !== null && (

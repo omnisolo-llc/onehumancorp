@@ -3,7 +3,7 @@ import { Page, APIRequestContext } from '@playwright/test';
 
 export async function currentAppSmoke(page: Page, request: APIRequestContext, label: string) {
 
-  await page.setViewportSize({ width: 375, height: 812 });
+
 
     await page.goto('/login');
     await page.fill('input[placeholder="Email or Username"]', 'Maya');

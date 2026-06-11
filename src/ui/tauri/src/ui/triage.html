@@ -66,7 +66,7 @@
       .action-status {
         margin-bottom: 16px;
         padding: 12px;
-        border-radius: 8px;
+        border-radius: 16px;
         font-weight: 500;
         font-size: 14px;
         display: none;
@@ -124,7 +124,7 @@
       .app-list-item {
         background: transparent;
         border: 1px solid rgba(0, 0, 0, 0.1);
-        border-radius: 8px;
+        border-radius: 16px;
         padding: 12px;
         cursor: pointer;
         display: flex;
@@ -209,7 +209,7 @@
         font-family: inherit;
         border: none;
         padding: 12px 20px;
-        border-radius: 8px;
+        border-radius: 16px;
         font-size: 15px;
         font-weight: 600;
         cursor: pointer;
@@ -863,14 +863,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Hover (desktop)
     document.addEventListener('mouseover', (e) => {
-        const target = e.target.closest('[data-tooltip]');
+        const t = e.target;
+        const target = t && typeof t.closest === 'function' ? t.closest('[data-tooltip]') : null;
         if (target) {
             showTooltip(e, (window.OHC_TOOLTIPS && window.OHC_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip'));
         }
     });
 
     document.addEventListener('mouseout', (e) => {
-        if (e.target.closest('[data-tooltip]')) {
+        const target = e.target; if (target && typeof target.closest === 'function' && target.closest('[data-tooltip]')) {
             hideTooltip();
         }
     });
@@ -878,7 +879,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // Mobile long press (contextmenu) or touchstart
     let touchTimeout;
     document.addEventListener('touchstart', (e) => {
-        const target = e.target.closest('[data-tooltip]');
+        const t = e.target;
+        const target = t && typeof t.closest === 'function' ? t.closest('[data-tooltip]') : null;
         if (target) {
             touchTimeout = setTimeout(() => {
                 showTooltip(e, (window.OHC_TOOLTIPS && window.OHC_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip'));

@@ -61,7 +61,7 @@
         display: flex;
         align-items: center;
         text-decoration: none;
-        border-radius: 8px;
+        border-radius: 16px;
         transition: background-color 0.2s;
       }
       .back-btn:hover {
@@ -187,7 +187,7 @@
         color: white;
         border: none;
         padding: 12px 24px;
-        border-radius: 8px;
+        border-radius: 16px;
         font-size: 16px;
         font-weight: 600;
         cursor: pointer;
@@ -309,7 +309,7 @@
         <div class="receipt-amount" id="receipt-amount">$0.00</div>
         <div class="receipt-text">Payment Successful</div>
 
-        <button class="btn-outline" style="background: rgba(0,0,0,0.05); border: none; padding: 12px 24px; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; margin-bottom: 12px; width: 100%;">Email Receipt</button>
+        <button class="btn-outline" style="background: rgba(0,0,0,0.05); border: none; padding: 12px 24px; border-radius: 16px; font-size: 16px; font-weight: 600; cursor: pointer; margin-bottom: 12px; width: 100%;">Email Receipt</button>
         <button class="charge-btn" onclick="resetPOS()">New Sale</button>
       </div>
 
@@ -783,14 +783,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Hover (desktop)
     document.addEventListener('mouseover', (e) => {
-        const target = e.target.closest('[data-tooltip]');
+        const t = e.target;
+        const target = t && typeof t.closest === 'function' ? t.closest('[data-tooltip]') : null;
         if (target) {
             showTooltip(e, (window.OHC_TOOLTIPS && window.OHC_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip'));
         }
     });
 
     document.addEventListener('mouseout', (e) => {
-        if (e.target.closest('[data-tooltip]')) {
+        const target = e.target; if (target && typeof target.closest === 'function' && target.closest('[data-tooltip]')) {
             hideTooltip();
         }
     });
@@ -798,7 +799,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // Mobile long press (contextmenu) or touchstart
     let touchTimeout;
     document.addEventListener('touchstart', (e) => {
-        const target = e.target.closest('[data-tooltip]');
+        const t = e.target;
+        const target = t && typeof t.closest === 'function' ? t.closest('[data-tooltip]') : null;
         if (target) {
             touchTimeout = setTimeout(() => {
                 showTooltip(e, (window.OHC_TOOLTIPS && window.OHC_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip'));

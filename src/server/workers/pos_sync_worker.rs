@@ -30,7 +30,7 @@ impl PosSyncWorker {
             return Err("Failed to set org context".into());
         }
 
-        sqlx::query("UPDATE pos_offline_transactions SET status = 'RESOLVED' WHERE id = $1")
+        sqlx::query("UPDATE pos_offline_transactions SET status = 'RESOLVED', _sync_status = 'synced' WHERE id = $1")
             .bind(transaction_id)
             .execute(&mut *tx)
             .await
@@ -77,8 +77,20 @@ impl PosSyncWorker {
                         "remaining_stock": new_stock,
                         "suggested_action": "Restock Item"
                     }).to_string();
-                    let _ = sqlx::query("INSERT INTO agent_action_requests (id, tenant_id, action_type, status, confidence_score, product_id, payload, created_at, updated_at) VALUES ($1, $2, 'Reorder', 'Pending', 0.95, $3, $4::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
-                        .bind(&action_request_id).bind(&job.tenant_id).bind(product_id).bind(&payload).execute(&mut *tx).await;
+                    sqlx::query("INSERT INTO agent_action_requests (id, tenant_id, action_type, status, confidence_score, product_id, payload, created_at, updated_at) VALUES ($1, $2, 'Reorder', 'Pending', 0.95, $3, $4::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
+                        .bind(&action_request_id).bind(&job.tenant_id).bind(product_id).bind(&payload).execute(&mut *tx).await
+                        .map_err(|e| e.to_string())?;
+
+                    let job_id = uuid::Uuid::new_v4().to_string();
+                    let job_payload = serde_json::json!({
+                        "product_id": product_id,
+                        "remaining_stock": new_stock,
+                        "threshold": 5,
+                        "message": format!("Stock for product {} has dropped to {}.", product_id, new_stock)
+                    }).to_string();
+                    sqlx::query("INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status) VALUES ($1, $2, 'operations', 'LowStockAlert', $3::jsonb, 'PENDING')")
+                        .bind(job_id).bind(&job.tenant_id).bind(&job_payload).execute(&mut *tx).await
+                        .map_err(|e| e.to_string())?;
                 }
 
                 if is_conflict {
@@ -181,8 +193,20 @@ impl PosSyncWorker {
                                     "remaining_stock": new_stock,
                                     "suggested_action": "Restock Item"
                                 }).to_string();
-                                let _ = sqlx::query("INSERT INTO agent_action_requests (id, tenant_id, action_type, status, confidence_score, product_id, payload, created_at, updated_at) VALUES ($1, $2, 'Reorder', 'Pending', 0.95, $3, $4::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
-                                    .bind(&action_request_id).bind(&job.tenant_id).bind(product_id).bind(&payload).execute(&mut *tx).await;
+                                sqlx::query("INSERT INTO agent_action_requests (id, tenant_id, action_type, status, confidence_score, product_id, payload, created_at, updated_at) VALUES ($1, $2, 'Reorder', 'Pending', 0.95, $3, $4::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
+                                    .bind(&action_request_id).bind(&job.tenant_id).bind(product_id).bind(&payload).execute(&mut *tx).await
+                                    .map_err(|e| e.to_string())?;
+
+                                let job_id = uuid::Uuid::new_v4().to_string();
+                                let job_payload = serde_json::json!({
+                                    "product_id": product_id,
+                                    "remaining_stock": new_stock,
+                                    "threshold": 5,
+                                    "message": format!("Stock for product {} has dropped to {}.", product_id, new_stock)
+                                }).to_string();
+                                sqlx::query("INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status) VALUES ($1, $2, 'operations', 'LowStockAlert', $3::jsonb, 'PENDING')")
+                                    .bind(job_id).bind(&job.tenant_id).bind(&job_payload).execute(&mut *tx).await
+                                    .map_err(|e| e.to_string())?;
                             }
 
                             if is_conflict {
@@ -202,6 +226,25 @@ impl PosSyncWorker {
                                 .bind(&ai_task_id)
                                 .bind(&job.tenant_id)
                                 .bind(&ai_payload)
+                                .execute(&mut *tx)
+                                .await;
+
+                                // Trigger an actionable push notification event via Operations Agent
+                                let notification_id = uuid::Uuid::new_v4().to_string();
+                                let notification_payload = serde_json::json!({
+                                    "product_id": product_id,
+                                    "expected_stock": qty,
+                                    "actual_stock": stock,
+                                    "message": format!("Inventory Sync Conflict: {} sold out offline, causing an online shortage. Operations is resolving this.", product_id)
+                                }).to_string();
+
+                                let _ = sqlx::query(
+                                    "INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status)
+                                     VALUES ($1, $2, 'operations', 'LowStockAlert', $3::jsonb, 'PENDING')"
+                                )
+                                .bind(&notification_id)
+                                .bind(&job.tenant_id)
+                                .bind(&notification_payload)
                                 .execute(&mut *tx)
                                 .await;
                             }
