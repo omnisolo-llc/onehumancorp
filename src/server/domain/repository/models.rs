@@ -100,6 +100,8 @@ pub struct Product {
     pub metadata: Option<sqlx::types::Json<serde_json::Value>>,
     pub created_at: Option<DateTime<Utc>>,
     pub updated_at: Option<DateTime<Utc>>,
+    pub split_partner_id: Option<String>,
+    pub split_percentage: Option<f64>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
@@ -284,6 +286,8 @@ pub struct Service {
     pub price_cents: i64,
     pub created_at: Option<DateTime<Utc>>,
     pub updated_at: Option<DateTime<Utc>>,
+    pub split_partner_id: Option<String>,
+    pub split_percentage: Option<f64>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]

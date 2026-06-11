@@ -39,6 +39,8 @@ pub struct CreateProductRequest {
     pub is_subscription: Option<bool>,
     pub subscription_interval: Option<String>,
     pub subscription_discount: Option<i32>,
+    pub split_partner_id: Option<String>,
+    pub split_percentage: Option<f64>,
 }
 
 #[derive(Serialize)]
@@ -150,13 +152,15 @@ async fn handle_create_product(
     let product_id = uuid::Uuid::new_v4().to_string();
 
     let insert_product = sqlx::query(
-        "INSERT INTO products (id, tenant_id, title, description, type, inventory_count) VALUES ($1, $2, $3, $4, $5, 100)"
+        "INSERT INTO products (id, tenant_id, title, description, type, inventory_count, split_partner_id, split_percentage) VALUES ($1, $2, $3, $4, $5, 100, $6, $7)"
     )
     .bind(&product_id)
     .bind(&tenant_id)
     .bind(&payload.name)
     .bind(&payload.description)
     .bind(&payload.item_type)
+    .bind(&payload.split_partner_id)
+    .bind(&payload.split_percentage)
     .execute(&mut *conn)
     .await;
 

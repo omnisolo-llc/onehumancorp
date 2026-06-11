@@ -698,6 +698,102 @@ pub async fn razorpay_webhook_handler(
                 }
             };
 
+
+            // Consignment Ledger: Retrieve product and split logic if applicable
+            let mut extracted_tenant_id = String::new();
+            let mut extracted_partner_id: Option<String> = None;
+            let mut extracted_percentage: Option<f64> = None;
+            let mut extracted_amount: Option<f64> = None;
+
+            match &webhook_state.db.store {
+                DbStore::Sqlite(pool) => {
+                    let res = sqlx::query(
+                        r#"
+                        SELECT o.tenant_id, p.split_partner_id, p.split_percentage, o.total_amount
+                        FROM orders o
+                        JOIN order_items oi ON o.id = oi.order_id
+                        JOIN products p ON oi.product_id = p.id
+                        WHERE o.id = ? LIMIT 1
+                        "#
+                    )
+                    .bind(order_id)
+                    .fetch_optional(pool)
+                    .await;
+
+                    if let Ok(Some(row)) = res {
+                        use sqlx::Row;
+                        extracted_tenant_id = row.try_get("tenant_id").unwrap_or_default();
+                        extracted_partner_id = row.try_get("split_partner_id").unwrap_or_default();
+                        extracted_percentage = row.try_get("split_percentage").unwrap_or_default();
+                        extracted_amount = row.try_get("total_amount").unwrap_or_default();
+                    }
+                }
+                DbStore::Postgres => {
+                    let res = sqlx::query(
+                        r#"
+                        SELECT o.tenant_id, p.split_partner_id, p.split_percentage, o.total_amount
+                        FROM orders o
+                        JOIN order_items oi ON o.id = oi.order_id
+                        JOIN products p ON oi.product_id = p.id
+                        WHERE o.id = $1 LIMIT 1
+                        "#
+                    )
+                    .bind(order_id)
+                    .fetch_optional(&webhook_state.db.pool)
+                    .await;
+
+                    if let Ok(Some(row)) = res {
+                        use sqlx::Row;
+                        extracted_tenant_id = row.try_get("tenant_id").unwrap_or_default();
+                        extracted_partner_id = row.try_get("split_partner_id").unwrap_or_default();
+                        extracted_percentage = row.try_get("split_percentage").unwrap_or_default();
+                        extracted_amount = row.try_get("total_amount").unwrap_or_default();
+                    }
+                }
+            }
+
+            if let (Some(partner_id), Some(percentage), Some(amount)) = (extracted_partner_id, extracted_percentage, extracted_amount) {
+                let tenant_id = extracted_tenant_id;
+                if percentage > 0.0 && percentage <= 100.0 {
+                    let partner_amount = amount * (percentage / 100.0);
+                    let owner_amount = amount - partner_amount;
+                    let tx_id = uuid::Uuid::new_v4().to_string();
+                    let partner_entry_id = uuid::Uuid::new_v4().to_string();
+                    let owner_entry_id = uuid::Uuid::new_v4().to_string();
+
+                    // Insert Ledger Entries asynchronously (Fire and forget, or handle properly in production)
+                    // Mocking the insert for both owner and partner ledger accounts
+                    let insert_ledger_res = match &webhook_state.db.store {
+                        DbStore::Sqlite(pool) => {
+                            let mut tx = pool.begin().await.unwrap();
+                            let _ = sqlx::query("INSERT INTO ledger_transactions (tenant_id, tx_id, amount, currency) VALUES (?, ?, ?, 'USD')")
+                                .bind(&tenant_id).bind(&tx_id).bind(amount).execute(&mut *tx).await;
+                            let _ = sqlx::query("INSERT INTO ledger_entries (tenant_id, entry_id, tx_id, account_id, direction, amount) VALUES (?, ?, ?, ?, 'CREDIT', ?)")
+                                .bind(&tenant_id).bind(&partner_entry_id).bind(&tx_id).bind(&partner_id).bind(partner_amount).execute(&mut *tx).await;
+                            let _ = sqlx::query("INSERT INTO ledger_entries (tenant_id, entry_id, tx_id, account_id, direction, amount) VALUES (?, ?, ?, 'primary_owner', 'CREDIT', ?)")
+                                .bind(&tenant_id).bind(&owner_entry_id).bind(&tx_id).bind(owner_amount).execute(&mut *tx).await;
+                            tx.commit().await
+                        }
+                        DbStore::Postgres => {
+                            let mut tx = webhook_state.db.pool.begin().await.unwrap();
+                            let _ = sqlx::query("INSERT INTO ledger_transactions (tenant_id, tx_id, amount, currency) VALUES ($1, $2, $3, 'USD')")
+                                .bind(&tenant_id).bind(&tx_id).bind(amount).execute(&mut *tx).await;
+                            let _ = sqlx::query("INSERT INTO ledger_entries (tenant_id, entry_id, tx_id, account_id, direction, amount) VALUES ($1, $2, $3, $4, 'CREDIT', $5)")
+                                .bind(&tenant_id).bind(&partner_entry_id).bind(&tx_id).bind(&partner_id).bind(partner_amount).execute(&mut *tx).await;
+                            let _ = sqlx::query("INSERT INTO ledger_entries (tenant_id, entry_id, tx_id, account_id, direction, amount) VALUES ($1, $2, $3, 'primary_owner', 'CREDIT', $4)")
+                                .bind(&tenant_id).bind(&owner_entry_id).bind(&tx_id).bind(owner_amount).execute(&mut *tx).await;
+                            tx.commit().await
+                        }
+                    };
+
+                    if let Err(e) = insert_ledger_res {
+                        tracing::error!("Failed to insert split ledger entries: {:?}", e);
+                    } else {
+                        tracing::info!("Split payment processed for order {}: partner {} got {}, owner got {}", order_id, partner_id, partner_amount, owner_amount);
+                    }
+                }
+            }
+
             if let Err(e) = res {
                 ::server_telemetry::record_error_signal("Failed to update order status: {:?}");
                 tracing::error!("Failed to update order status: {:?}", e);

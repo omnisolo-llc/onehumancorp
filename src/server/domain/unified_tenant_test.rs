@@ -164,6 +164,8 @@ mod tests {
             metadata: None,
             created_at: None,
             updated_at: None,
+            split_partner_id: None,
+            split_percentage: None,
         };
         assert_eq!(p.id, "p1");
 

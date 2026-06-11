@@ -10,6 +10,11 @@ export default function NewOfferingPage() {
   const [offeringData, setOfferingData] = useState<{ title: string; description: string; type: string; price: string } | null>(null);
   const [published, setPublished] = useState(false);
 
+  const [splitEnabled, setSplitEnabled] = useState(false);
+  const [splitPartner, setSplitPartner] = useState('');
+  const [splitPercentage, setSplitPercentage] = useState<number>(0);
+
+
   const handleIntentSubmit = () => {
     if (!intent.trim()) return;
     setLoading(true);
@@ -25,8 +30,30 @@ export default function NewOfferingPage() {
     }, 1500);
   };
 
-  const handlePublish = () => {
-    setPublished(true);
+  const handlePublish = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch('/api/product', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: offeringData?.title,
+          description: offeringData?.description,
+          price: offeringData?.price,
+          item_type: offeringData?.type,
+          is_subscription: false,
+          split_partner_id: splitEnabled && splitPartner.trim() ? splitPartner.trim() : undefined,
+          split_percentage: splitEnabled && splitPercentage > 0 ? splitPercentage : undefined
+        })
+      });
+      if (response.ok) {
+        setPublished(true);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (published) {
@@ -135,6 +162,51 @@ export default function NewOfferingPage() {
                       </div>
                   </div>
               </div>
+           </div>
+
+
+           {/* Split Configurator */}
+           <div className="p-5 rounded-[16px] shadow-sm flex flex-col gap-4 relative overflow-hidden bg-white/50 border border-white/60">
+              <div className="flex items-center justify-between">
+                 <label className="text-sm font-bold text-gray-900">Split this payment</label>
+                 <label className="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" className="sr-only peer" checked={splitEnabled} onChange={(e) => setSplitEnabled(e.target.checked)} />
+                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-[#0066FF]"></div>
+                 </label>
+              </div>
+
+              {splitEnabled && (
+                  <div className="mt-4 pt-4 border-t border-gray-200 flex flex-col gap-4 animate-in slide-in-from-top-2">
+                      <div>
+                          <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Who gets a cut?</label>
+                          <input
+                            type="text"
+                            placeholder="Partner name, phone, or email"
+                            value={splitPartner}
+                            onChange={(e) => setSplitPartner(e.target.value)}
+                            className="w-full bg-white/80 border border-gray-300 rounded-[8px] px-3 py-2 text-gray-900 font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                          />
+                      </div>
+
+                      <div>
+                          <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Percentage: {splitPercentage}%</label>
+                          <input
+                             type="range"
+                             min="0"
+                             max="100"
+                             value={splitPercentage}
+                             onChange={(e) => setSplitPercentage(parseInt(e.target.value))}
+                             className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-[#0066FF]"
+                          />
+                      </div>
+
+                      {splitPartner.trim() && splitPercentage > 0 && offeringData && (
+                          <div className="p-3 bg-blue-50 border border-blue-100 rounded-lg text-sm text-blue-800 font-medium">
+                              If this sells for ${offeringData.price}, {splitPartner} gets ${(parseFloat(offeringData.price) * (splitPercentage / 100)).toFixed(2)}, you get ${(parseFloat(offeringData.price) * ((100 - splitPercentage) / 100)).toFixed(2)}.
+                          </div>
+                      )}
+                  </div>
+              )}
            </div>
 
            <button

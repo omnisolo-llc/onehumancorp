@@ -30,8 +30,19 @@ test('End-to-End Unified Offering Creation Flow', async ({ page }) => {
   await expect(page.locator('input[value="Service"]')).toBeVisible();
   await expect(page.locator('input[value="50.00"]')).toBeVisible();
 
-  // 9. User modifies price to $45 and taps "Publish"
+
+  // 9. User toggles "Split this payment", enters partner, and slides percentage
+  await page.locator('label', { hasText: 'Split this payment' }).locator('..').locator('input[type="checkbox"]').check({ force: true });
+  await page.fill('input[placeholder="Partner name, phone, or email"]', 'Sarah');
+  await page.fill('input[type="range"]', '70');
+  await page.dispatchEvent('input[type="range"]', 'change');
+
+  // Verify split preview text
+  await expect(page.locator('div').filter({ hasText: /If this sells for \$50\.00, Sarah gets \$35\.00, you get \$15\.00/ })).toBeVisible();
+
+  // 10. User modifies price to $45 and taps "Publish"
   const priceInput = page.locator('input[value="50.00"]');
+
   await priceInput.fill('45.00');
   await page.click('button:has-text("Publish Offering")');
 
