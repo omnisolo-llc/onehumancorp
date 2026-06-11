@@ -2,7 +2,8 @@
 
 use crate::provider::{
     BuiltinProvider, ClaudeProvider, Credentials, GeminiProvider, IronClawProvider,
-    MiniMaxiProvider, OpenClawProvider, OpenCodeProvider, Provider, ProviderType, ScoutProvider,
+    MiniMaxiProvider, OpenClawProvider, OpenCodeProvider, OpenRouterProvider, Provider,
+    ProviderType, ScoutProvider,
 };
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -27,6 +28,7 @@ impl Registry {
         r.register(Arc::new(OpenClawProvider::new()));
         r.register(Arc::new(IronClawProvider::new()));
         r.register(Arc::new(MiniMaxiProvider::new()));
+        r.register(Arc::new(OpenRouterProvider::new()));
         r.register(Arc::new(BuiltinProvider::new()));
         r.register(Arc::new(ScoutProvider::new()));
         r
@@ -56,6 +58,7 @@ impl Registry {
             ProviderType::Builtin,
             ProviderType::Scout,
             ProviderType::MiniMaxi,
+            ProviderType::OpenRouter,
         ];
 
         let mut seen = std::collections::HashSet::new();
@@ -124,6 +127,7 @@ mod tests {
             ProviderType::OpenClaw,
             ProviderType::IronClaw,
             ProviderType::MiniMaxi,
+            ProviderType::OpenRouter,
         ];
 
         for t in test_cases {

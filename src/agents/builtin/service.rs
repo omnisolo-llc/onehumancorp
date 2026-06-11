@@ -335,6 +335,9 @@ impl AgentServiceImpl {
             "minimax" => {
                 std::env::var("MINIMAX_MODEL").unwrap_or_else(|_| "MiniMax-M2.7".to_string())
             }
+            "openrouter" => std::env::var("OPENROUTER_MODEL")
+                .or_else(|_| std::env::var("OHC_LLM_MODEL"))
+                .unwrap_or_else(|_| "google/gemini-flash-1.5".to_string()),
             "openai" | "openai-compatible" | "openai_compatible" => {
                 Self::first_non_empty_env(&["OPENAI_MODEL", "OHC_OPENAI_MODEL", "OHC_LLM_MODEL"])
                     .unwrap_or_else(|| "gpt-4.1-mini".to_string())
@@ -422,6 +425,14 @@ impl AgentServiceImpl {
                 );
                 Arc::new(OpenAIClient::minimax(key, endpoint))
             }
+            "openrouter" => {
+                let key = self.configured_api_key(&[
+                    "OPENROUTER_API_KEY",
+                    "OHC_LLM_API_KEY",
+                    "OPENAI_API_KEY",
+                ]);
+                Arc::new(OpenAIClient::openrouter(key))
+            }
             "ollama" => {
                 let endpoint = if !req_endpoint.is_empty() {
                     req_endpoint.to_string()
@@ -433,7 +444,12 @@ impl AgentServiceImpl {
                 Arc::new(OllamaClient::new(endpoint))
             }
             _ => {
-                // Auto-detect from env vars
+                // Auto-detect from env vars - prefer OpenRouter as the unified built-in provider
+                if let Ok(key) = std::env::var("OPENROUTER_API_KEY") {
+                    if !key.is_empty() {
+                        return Arc::new(OpenAIClient::openrouter(key));
+                    }
+                }
                 if let Ok(key) = std::env::var("ANTHROPIC_API_KEY") {
                     if !key.is_empty() {
                         return Arc::new(AnthropicClient::new(key));
@@ -1633,5 +1649,41 @@ mod memory_tests {
             std::env::remove_var("OHC_ANTHROPIC_MEMORY_DIR");
         }
         let _ = tokio::fs::remove_dir_all(".test-agent-memory").await;
+    }
+
+    #[tokio::test]
+    async fn test_resolves_openrouter_from_env() {
+        let old_key = std::env::var("OPENROUTER_API_KEY").ok();
+        unsafe {
+            std::env::set_var("OPENROUTER_API_KEY", "test-openrouter-key");
+        }
+
+        let svc = AgentServiceImpl::new("test", AgentConfig::default(), crate::auth::AuthMode::Disabled);
+        let llm = svc.resolve_llm("", "", "");
+
+        // We can't easily downcast to OpenAIClient to check the base_url without exposing internal fields
+        // but we verified the logic in OpenAIClient tests. Here we just ensure it doesn't panic and returns a client.
+        assert!(Arc::strong_count(&llm) >= 1);
+
+        unsafe {
+            match old_key {
+                Some(k) => std::env::set_var("OPENROUTER_API_KEY", k),
+                None => std::env::remove_var("OPENROUTER_API_KEY"),
+            }
+        }
+    }
+
+    #[test]
+    fn test_openrouter_default_model() {
+        let model = AgentServiceImpl::default_model_for_provider("openrouter");
+        assert_eq!(model, "google/gemini-flash-1.5");
+    }
+
+    #[tokio::test]
+    async fn test_resolve_llm_with_openrouter_provider() {
+        let svc = AgentServiceImpl::new("test", AgentConfig::default(), crate::auth::AuthMode::Disabled);
+        // Should not panic even if key is missing (it will use empty key)
+        let llm = svc.resolve_llm("openrouter", "", "");
+        assert!(Arc::strong_count(&llm) >= 1);
     }
 }

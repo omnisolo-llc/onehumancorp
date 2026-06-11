@@ -19,6 +19,7 @@ pub enum ProviderType {
     Builtin,
     Scout,
     MiniMaxi,
+    OpenRouter,
     AgenticSeek,
     Pi,
 }
@@ -34,6 +35,7 @@ impl std::fmt::Display for ProviderType {
             ProviderType::Builtin => "builtin",
             ProviderType::Scout => "scout",
             ProviderType::MiniMaxi => "minimaxi",
+            ProviderType::OpenRouter => "openrouter",
             ProviderType::AgenticSeek => "agenticseek",
             ProviderType::Pi => "pi",
         };
@@ -182,6 +184,106 @@ impl Provider for ClaudeProvider {
     fn authenticate(&self, creds: Credentials) -> Result<(), String> {
         if creds.api_key.is_empty() {
             return Err("claude provider requires an API key (ANTHROPIC_API_KEY)".to_string());
+        }
+        self.base.store(creds);
+        Ok(())
+    }
+    fn get_credentials(&self) -> Credentials {
+        self.base.load()
+    }
+    fn is_authenticated(&self) -> bool {
+        !self.base.load().is_empty()
+    }
+    async fn run_in_isolation(
+        &self,
+        command: &str,
+        worktree: &str,
+        transport: Option<Arc<dyn Transport>>,
+    ) -> Result<(), String> {
+        execute_in_isolation(
+            command,
+            &self.provider_type().to_string(),
+            worktree,
+            transport,
+        )
+        .await
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_openrouter_provider_properties() {
+        let provider = OpenRouterProvider::new();
+        assert_eq!(provider.provider_type(), ProviderType::OpenRouter);
+        assert!(provider.description().contains("OpenRouter"));
+        assert!(provider.supported_roles().contains(&"SOFTWARE_ENGINEER".to_string()));
+    }
+
+    #[test]
+    fn test_openrouter_provider_authentication() {
+        let provider = OpenRouterProvider::new();
+        let creds = Credentials {
+            api_key: "test-key".to_string(),
+            ..Default::default()
+        };
+        assert!(provider.authenticate(creds).is_ok());
+        assert!(provider.is_authenticated());
+        assert_eq!(provider.get_credentials().api_key, "test-key");
+
+        let empty_creds = Credentials::default();
+        assert!(provider.authenticate(empty_creds).is_err());
+    }
+}
+
+pub struct OpenRouterProvider {
+    base: BaseProvider,
+}
+
+impl OpenRouterProvider {
+    pub fn new() -> Self {
+        OpenRouterProvider {
+            base: BaseProvider::new(),
+        }
+    }
+}
+
+#[async_trait]
+impl Provider for OpenRouterProvider {
+    fn provider_type(&self) -> ProviderType {
+        ProviderType::OpenRouter
+    }
+    fn description(&self) -> String {
+        "OpenRouter — unified AI API providing access to hundreds of models (GPT-4, Claude 3, Llama 3, etc.) through a single interface.".to_string()
+    }
+    fn supported_roles(&self) -> Vec<String> {
+        vec![
+            "CEO".to_string(),
+            "PRODUCT_MANAGER".to_string(),
+            "SOFTWARE_ENGINEER".to_string(),
+            "ENGINEERING_DIRECTOR".to_string(),
+            "QA_TESTER".to_string(),
+            "SECURITY_ENGINEER".to_string(),
+            "DESIGNER".to_string(),
+            "MARKETING_MANAGER".to_string(),
+            "GROWTH_AGENT".to_string(),
+            "CONTENT_STRATEGIST".to_string(),
+            "SEO_SPECIALIST".to_string(),
+            "PAID_MEDIA_MANAGER".to_string(),
+            "ANALYTICS_ENGINEER".to_string(),
+            "CFO".to_string(),
+            "BOOKKEEPER".to_string(),
+            "TAX_SPECIALIST".to_string(),
+            "AUDIT_MANAGER".to_string(),
+            "PAYROLL_MANAGER".to_string(),
+            "AI_NEWS_COLLECTOR".to_string(),
+        ]
+    }
+    fn authenticate(&self, creds: Credentials) -> Result<(), String> {
+        if creds.api_key.is_empty() {
+            return Err("openrouter provider requires an API key (OPENROUTER_API_KEY)".to_string());
         }
         self.base.store(creds);
         Ok(())
