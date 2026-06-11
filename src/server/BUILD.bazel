@@ -296,6 +296,7 @@ SERVER_RS_SRCS = [
     "//src/server/workers:pos_conflict_worker.rs",
     "//src/server/workers:calendar_sync.rs",
     "//src/server/workers:booking_reengagement.rs",
+    "//src/server/workers:proactive_analysis_worker.rs",
     "//src/server/workers:mod.rs",
     "//src/server/voice:mod.rs",
     "//src/server/voice:engine.rs",
