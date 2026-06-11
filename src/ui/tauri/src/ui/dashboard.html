@@ -684,6 +684,22 @@
       </div>
 
 
+
+      <div class="ohc-growth-card" id="invite-earn-section">
+        <h2>Invite & Earn</h2>
+        <p>Invite a fellow business owner to OHC. They get 1 month free, you get $50 credit.</p>
+        <button id="dashboard-invite-btn" style="background-color: #0066FF; color: white; border: none; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: 600; width: 100%; box-sizing: border-box; transition: transform 0.1s;">
+          Get My Invite Link
+        </button>
+        <div id="dashboard-invite-container" style="display: none; margin-top: 15px;">
+          <input type="text" class="link-input" id="dashboard-invite-link" readonly value="" style="width: 100%;" />
+          <div class="action-buttons" style="margin-top: 10px;">
+            <button class="btn-secondary" id="dashboard-copy-btn" style="flex: 1;">Copy</button>
+            <button class="btn-secondary" id="dashboard-share-x-btn" style="flex: 1; background-color: #1DA1F2; color: white;">Share to X</button>
+          </div>
+        </div>
+      </div>
+
       <div class="ohc-growth-card">
         <h2>Viral Campaigns</h2>
         <p>Acquire new users and grow your audience through viral sharing.</p>
@@ -1559,6 +1575,44 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 
+</script>
+
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const btn = document.getElementById('dashboard-invite-btn');
+    const container = document.getElementById('dashboard-invite-container');
+    const linkInput = document.getElementById('dashboard-invite-link');
+    const copyBtn = document.getElementById('dashboard-copy-btn');
+    const shareXBtn = document.getElementById('dashboard-share-x-btn');
+
+    if(btn) {
+        btn.addEventListener('click', async () => {
+            btn.innerText = "Generating...";
+            try {
+                const res = await fetch('/api/v1/growth/referrals/generate', { method: 'POST' });
+                const data = await res.json();
+                linkInput.value = data.referral_link || "https://cloud.ohc.network/invite/fallback";
+            } catch(e) {
+                console.error(e);
+                linkInput.value = "https://cloud.ohc.network/invite/fallback";
+            }
+            btn.style.display = 'none';
+            container.style.display = 'block';
+        });
+
+        copyBtn.addEventListener('click', () => {
+            navigator.clipboard.writeText(linkInput.value);
+            copyBtn.innerText = 'Copied!';
+            setTimeout(() => { copyBtn.innerText = 'Copy'; }, 2000);
+        });
+
+        shareXBtn.addEventListener('click', () => {
+            const text = `I manage my business with OHC! Join using my invite link and get 1 month free: ${linkInput.value}\n\n⚡ Powered by OHC`;
+            window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, '_blank');
+        });
+    }
+});
 </script>
 
 </body>
