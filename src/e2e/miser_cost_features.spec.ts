@@ -6,7 +6,7 @@ test.describe('Miser Cost Features E2E', () => {
     await loginAs(page, adminUser);
 
     // Navigate to the Cost Dashboard
-    await page.goto('/cost-dashboard');
+    await page.goto('/cost-dashboard.html');
     await page.waitForLoadState('networkidle');
 
     // Wait for the main headings
@@ -28,13 +28,13 @@ test.describe('Miser Cost Features E2E', () => {
 
     // Click the button and verify URL changes to /plan
     await myPlanButton.click();
-    await page.waitForURL('**/plan', { timeout: 10000 });
-    await expect(page.locator('text=Your Current Usage')).toBeVisible({ timeout: 15000 });
+    await page.waitForURL('**/dashboard.html', { timeout: 10000 });
+    await expect(page.locator('text=AI actions used this month')).toBeVisible({ timeout: 15000 });
   });
 
   test('Pricing Page displays Free Tier details and "Current Plan" disabled button', async ({ page, adminUser, loginAs }) => {
     await loginAs(page, adminUser);
-    await page.goto('/pricing');
+    await page.goto('/pricing.html');
     await page.waitForLoadState('networkidle');
 
     const freeCard = page.locator('.app-card').filter({ has: page.getByRole('heading', { name: 'Free', exact: true }) });
@@ -52,7 +52,7 @@ test.describe('Miser Cost Features E2E', () => {
 
   test('Pricing Page displays Starter Tier details and navigates to checkout', async ({ page, adminUser, loginAs }) => {
     await loginAs(page, adminUser);
-    await page.goto('/pricing');
+    await page.goto('/pricing.html');
     await page.waitForLoadState('networkidle');
 
     const starterCard = page.locator('.app-card').filter({ has: page.getByRole('heading', { name: 'Starter', exact: true }) });
@@ -73,7 +73,7 @@ test.describe('Miser Cost Features E2E', () => {
 
   test('Pricing Page displays Pro Tier details and navigates to checkout', async ({ page, adminUser, loginAs }) => {
     await loginAs(page, adminUser);
-    await page.goto('/pricing');
+    await page.goto('/pricing.html');
     await page.waitForLoadState('networkidle');
 
     const proCard = page.locator('.app-card').filter({ has: page.getByRole('heading', { name: 'Pro', exact: true }) });
@@ -94,7 +94,7 @@ test.describe('Miser Cost Features E2E', () => {
 
   test('Pricing Page displays Business Tier details and navigates to checkout', async ({ page, adminUser, loginAs }) => {
     await loginAs(page, adminUser);
-    await page.goto('/pricing');
+    await page.goto('/pricing.html');
     await page.waitForLoadState('networkidle');
 
     const businessCard = page.locator('.app-card').filter({ has: page.getByRole('heading', { name: 'Business', exact: true }) });
