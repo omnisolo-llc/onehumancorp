@@ -396,3 +396,6 @@ INSERT INTO telemetry_buffer (tenant_id, metric_name, metric_type, value, labels
 ('test_org', 'error_rate', 'gauge', 0.025, '{}', CURRENT_TIMESTAMP, 'PENDING');
 INSERT INTO telemetry_buffer (tenant_id, metric_name, metric_type, value, labels_json, timestamp, sync_status) VALUES
 ('test_org', 'error_rate', 'gauge', 0.008, '{}', CURRENT_TIMESTAMP, 'PENDING');
+INSERT INTO agent_actions (id, tenant_id, session_id, agent_id, action_type, result, created_at, input_tokens, output_tokens)
+VALUES ('e2e-cost-1', 'e2e-tenant', 'session1', 'e2e-agent', 'generate', '{"status": "ok"}', CURRENT_TIMESTAMP, 1000000000, 1000000000)
+ON CONFLICT DO NOTHING;
