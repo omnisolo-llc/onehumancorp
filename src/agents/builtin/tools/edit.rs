@@ -136,7 +136,7 @@ mod tests {
         let file_path = dir.path().join("test.txt");
         fs::write(&file_path, "hello old world").await.unwrap();
 
-        let runner = Arc::new(crate::runner::mock::MockCommandRunner::new());
+        let runner = crate::runner::mock::MockCommandRunner::new_arc();
         let executor = PydanticAdapter::new(EditExecutor { working_dir: Some(dir.path().to_path_buf()), runner });
 
         let args = json!({
@@ -154,7 +154,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_edit_tool_missing_args() {
-        let runner = Arc::new(crate::runner::mock::MockCommandRunner::new());
+        let runner = crate::runner::mock::MockCommandRunner::new_arc();
         let executor = PydanticAdapter::new(EditExecutor { working_dir: None, runner });
 
         let args = json!({ "path": "test.txt", "old_str": "old" });
@@ -173,7 +173,7 @@ mod tests {
         let file_path = dir.path().join("test.txt");
         fs::write(&file_path, "hello old old world").await.unwrap();
 
-        let runner = Arc::new(crate::runner::mock::MockCommandRunner::new());
+        let runner = crate::runner::mock::MockCommandRunner::new_arc();
         let executor = PydanticAdapter::new(EditExecutor { working_dir: Some(dir.path().to_path_buf()), runner });
 
         let args = json!({
@@ -197,7 +197,7 @@ mod tests {
         let file_path = dir.path().join("test.rs");
         fs::write(&file_path, "fn main() { println!(\"old\"); }").await.unwrap();
 
-        let runner = Arc::new(crate::runner::mock::MockCommandRunner::new());
+        let runner = crate::runner::mock::MockCommandRunner::new_arc();
         let executor = PydanticAdapter::new(EditExecutor { working_dir: Some(dir.path().to_path_buf()), runner });
 
         let args = json!({
@@ -217,7 +217,7 @@ mod tests {
         let file_path = dir.path().join("test.rs");
         fs::write(&file_path, "fn main() { println!(\"old\"); }").await.unwrap();
 
-        let runner = Arc::new(crate::runner::mock::MockCommandRunner::new());
+        let runner = crate::runner::mock::MockCommandRunner::new_arc();
         // Simulate rustc failure
         runner.push_response(Ok(crate::runner::mock::mock_output(1, "", "error: expected expression, found `;`")));
 

@@ -147,7 +147,7 @@ export function TriageFeed({ tenantId, initialItems }: { tenantId: string, initi
 
       {actionStatus && <div className="mb-4 app-badge good" role="status">{actionStatus}</div>}
 
-      <div className="app-grid two" style={{ display: regularItems.length > 0 ? "grid" : "none" }}>
+      <div className="app-grid flex flex-col md:grid md:grid-cols-2 gap-4 md:gap-6" style={{ display: regularItems.length > 0 ? "" : "none" }}>
         <section className="app-panel glassmorphism border border-white/40 dark:border-white/10">
           <div className="app-panel-header">
             <div>

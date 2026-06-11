@@ -359,7 +359,7 @@ mod tests {
 
     #[tokio::test]
     async fn run_workflow_rejects_unknown_workflow() {
-        let runner = Arc::new(crate::runner::mock::MockCommandRunner::new());
+        let runner = crate::runner::mock::MockCommandRunner::new_arc();
         let executor = WorkflowExecutor { runner };
         let adapter = PydanticAdapter::new(executor);
         let result = adapter.execute(json!({"workflow": "unknown"})).await;
@@ -369,7 +369,7 @@ mod tests {
 
     #[tokio::test]
     async fn run_workflow_executes_shards_verifier_and_synthesizer() {
-        let runner = Arc::new(crate::runner::mock::MockCommandRunner::new());
+        let runner = crate::runner::mock::MockCommandRunner::new_arc();
 
         for label in [
             "rust report",

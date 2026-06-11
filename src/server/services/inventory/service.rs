@@ -1,4 +1,3 @@
-use std::sync::Arc;
 
 use uuid::Uuid;
 
@@ -358,6 +357,7 @@ impl InventoryService {
 mod tests {
     use super::*;
     use crate::db::DbStore;
+    use std::sync::Arc;
 
     #[tokio::test]
     async fn test_reserve_inventory_concurrent_redlock() {

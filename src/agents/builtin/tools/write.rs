@@ -120,7 +120,7 @@ mod tests {
     #[tokio::test]
     async fn test_write_tool_basic() {
         let dir = tempdir().unwrap();
-        let runner = Arc::new(crate::runner::mock::MockCommandRunner::new());
+        let runner = crate::runner::mock::MockCommandRunner::new_arc();
         let executor = PydanticAdapter::new(WriteExecutor { working_dir: Some(dir.path().to_path_buf()), runner });
 
         let args = json!({
@@ -137,7 +137,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_write_tool_missing_args() {
-        let runner = Arc::new(crate::runner::mock::MockCommandRunner::new());
+        let runner = crate::runner::mock::MockCommandRunner::new_arc();
         let executor = PydanticAdapter::new(WriteExecutor { working_dir: None, runner });
 
         let args = json!({ "path": "test.txt" });
@@ -152,7 +152,7 @@ mod tests {
     #[tokio::test]
     async fn test_write_tool_rust_verification_success() {
         let dir = tempdir().unwrap();
-        let runner = Arc::new(crate::runner::mock::MockCommandRunner::new());
+        let runner = crate::runner::mock::MockCommandRunner::new_arc();
         let executor = PydanticAdapter::new(WriteExecutor { working_dir: Some(dir.path().to_path_buf()), runner });
 
         let args = json!({
@@ -168,7 +168,7 @@ mod tests {
     #[tokio::test]
     async fn test_write_tool_rust_verification_failure() {
         let dir = tempdir().unwrap();
-        let runner = Arc::new(crate::runner::mock::MockCommandRunner::new());
+        let runner = crate::runner::mock::MockCommandRunner::new_arc();
         // Simulate rustc failure
         runner.push_response(Ok(crate::runner::mock::mock_output(1, "", "error: expected expression, found `;`")));
 

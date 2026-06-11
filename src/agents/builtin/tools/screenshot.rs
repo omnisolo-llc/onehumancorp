@@ -89,7 +89,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_screenshot_missing_url() {
-        let runner = Arc::new(crate::runner::mock::MockCommandRunner::new());
+        let runner = crate::runner::mock::MockCommandRunner::new_arc();
         let executor = PydanticAdapter::new(ScreenshotExecutor { working_dir: None, runner });
         let args = json!({ "path": "test.png" });
         let result = super::super::ToolExecutor::execute(&executor, args).await;
@@ -103,7 +103,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_screenshot_path_traversal() {
-        let runner = Arc::new(crate::runner::mock::MockCommandRunner::new());
+        let runner = crate::runner::mock::MockCommandRunner::new_arc();
         let executor = PydanticAdapter::new(ScreenshotExecutor { working_dir: None, runner });
 
         let args1 = json!({ "url": "https://example.com", "path": "../test.png" });
@@ -122,7 +122,7 @@ mod tests {
     #[tokio::test]
     async fn test_screenshot_tool_creation() {
         let wd = PathBuf::from("/tmp");
-        let runner = Arc::new(crate::runner::mock::MockCommandRunner::new());
+        let runner = crate::runner::mock::MockCommandRunner::new_arc();
         let tool = screenshot_tool(Some(wd.clone()), runner);
         assert_eq!(tool.name, "Screenshot");
         assert!(tool.is_read_only);
@@ -131,7 +131,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_screenshot_execute_success() {
-        let runner = Arc::new(crate::runner::mock::MockCommandRunner::new());
+        let runner = crate::runner::mock::MockCommandRunner::new_arc();
         let executor = PydanticAdapter::new(ScreenshotExecutor {
             working_dir: None,
             runner,
@@ -144,7 +144,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_screenshot_execute_failure() {
-        let runner = Arc::new(crate::runner::mock::MockCommandRunner::new());
+        let runner = crate::runner::mock::MockCommandRunner::new_arc();
         runner.push_response(Ok(crate::runner::mock::mock_output(1, "", "Error!")));
         
         let executor = PydanticAdapter::new(ScreenshotExecutor {
@@ -163,7 +163,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_screenshot_execute_bad_command() {
-        let runner = Arc::new(crate::runner::mock::MockCommandRunner::new());
+        let runner = crate::runner::mock::MockCommandRunner::new_arc();
         // Simulate binary missing error
         runner.push_response(Err(std::io::Error::new(std::io::ErrorKind::NotFound, "not found")));
 

@@ -355,7 +355,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_subagent_empty_task() {
-        let runner = Arc::new(crate::runner::mock::MockCommandRunner::new());
+        let runner = crate::runner::mock::MockCommandRunner::new_arc();
         let executor = SubagentExecutor { runner, llm: None };
         let args = json!({
             "task": "",
@@ -374,7 +374,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_subagent_invalid_mode() {
-        let runner = Arc::new(crate::runner::mock::MockCommandRunner::new());
+        let runner = crate::runner::mock::MockCommandRunner::new_arc();
         let executor = SubagentExecutor { runner, llm: None };
         let args = json!({
             "task": "do something",
@@ -401,7 +401,7 @@ mod tests {
         // We set the address to something invalid to quickly trigger connection failure for the background task
 
 
-        let runner = Arc::new(crate::runner::mock::MockCommandRunner::new());
+        let runner = crate::runner::mock::MockCommandRunner::new_arc();
         let executor = SubagentExecutor { runner, llm: None };
         let args = json!({
             "task": "Do this teammate task",
@@ -449,7 +449,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_subagent_worktree_mode() {
-        let runner = Arc::new(crate::runner::mock::MockCommandRunner::new());
+        let runner = crate::runner::mock::MockCommandRunner::new_arc();
         // Mock successful git worktree add
         runner.push_response(Ok(crate::runner::mock::mock_output(0, "Preparing worktree", "")));
         // Mock successful ohc_builtin_agent run
@@ -472,7 +472,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_subagent_output_truncation() {
-        let runner = Arc::new(crate::runner::mock::MockCommandRunner::new());
+        let runner = crate::runner::mock::MockCommandRunner::new_arc();
         let long_string = "a".repeat(9000);
 
         runner.push_response(Ok(crate::runner::mock::mock_output(0, &long_string, "")));
