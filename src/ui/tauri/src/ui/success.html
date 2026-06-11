@@ -106,8 +106,9 @@
           showSuccess(state.businessName, state.assistantName);
         }).catch(console.error);
       } else {
-        const name = localStorage.getItem('businessName');
-        const assistantName = localStorage.getItem('assistantName');
+        const state = JSON.parse(localStorage.getItem('onboardingState') || '{}');
+        const name = state.businessName;
+        const assistantName = state.assistantName;
         showSuccess(name, assistantName);
       }
 
