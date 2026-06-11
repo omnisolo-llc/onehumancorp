@@ -44,7 +44,6 @@ test.describe('Incident Room', () => {
     // 7. Verify success message
     await expect(page.locator('text=Plan executed successfully.')).toBeVisible();
   });
-});
 
   test('should display empty state when no incidents are available', async ({ page }) => {
     const tenantId = 'empty-tenant';
@@ -80,3 +79,4 @@ test.describe('Incident Room', () => {
 
     await expect(page.locator('text=Resolution Plan')).toBeHidden();
   });
+});
