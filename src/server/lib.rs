@@ -2956,9 +2956,119 @@ pub async fn update_ui_triage_action_handler(
                         tracing::info!("Approved and scheduled SocialPostDraft for tenant: {}", tenant_id);
                         // In a real implementation we would send this to AYRSHARE or similar buffer here
                         // For MVP, we simply mark it resolved.
-                    } else if action_type == "ProposedInvoice" || action_type == "SuggestedCalendarSlot" {
-                        // TODO: Implement other action types like ProposedInvoice or SuggestedCalendarSlot as outlined in issue #26616
-                        tracing::info!("Executing proposed action: {}, payload: {}", action_type, action_payload);
+                    } else if action_type == "ProposedInvoice" {
+                        tracing::info!("Executing proposed action: ProposedInvoice, payload: {}", action_payload);
+                        let json_payload: serde_json::Value = serde_json::from_str(&action_payload).unwrap_or(serde_json::json!({}));
+
+                        let triage_item = sqlx::query("SELECT customer_id FROM triage_items WHERE id = $1 AND tenant_id = $2")
+                            .bind(&payload.triage_item_id)
+                            .bind(&tenant_id)
+                            .fetch_optional(&mut *tx)
+                            .await
+                            .ok()
+                            .flatten();
+
+                        let triage_customer_id = triage_item.and_then(|r| r.try_get::<String, _>("customer_id").ok());
+
+                        let client_id = triage_customer_id.or_else(|| json_payload.get("client_id").and_then(|v| v.as_str()).map(|s| s.to_string()));
+
+                        if let Some(cid) = client_id {
+                            let client_name = json_payload.get("client_name").and_then(|v| v.as_str()).unwrap_or("Client").to_string();
+                            let total_amount = json_payload.get("total_amount").and_then(|v| v.as_f64()).unwrap_or(0.0);
+                            let due_date = json_payload.get("due_date").and_then(|v| v.as_i64()).unwrap_or_else(|| chrono::Utc::now().timestamp() + 30 * 24 * 3600);
+                            let currency = json_payload.get("currency").and_then(|v| v.as_str()).unwrap_or("USD").to_string();
+
+                            let invoice_id = format!("inv-{}", uuid::Uuid::new_v4());
+
+                            if let Err(e) = sqlx::query(
+                                "INSERT INTO invoices (id, tenant_id, client_id, client_name, status, due_date, currency, total_amount) VALUES ($1, $2, $3, $4, 'draft', $5, $6, $7)"
+                            )
+                            .bind(&invoice_id)
+                            .bind(&tenant_id)
+                            .bind(&cid)
+                            .bind(&client_name)
+                            .bind(due_date)
+                            .bind(&currency)
+                            .bind(total_amount)
+                            .execute(&mut *tx)
+                            .await {
+                                tracing::error!("Failed to insert proposed invoice for triage item {}: {:?}", payload.triage_item_id, e);
+                                // For now, we continue even if action fails to resolve the triage item.
+                            } else {
+                                if let Some(items) = json_payload.get("line_items").and_then(|v| v.as_array()) {
+                                    for item in items {
+                                        let desc = item.get("description").and_then(|v| v.as_str()).unwrap_or("Item");
+                                        let qty = item.get("quantity").and_then(|v| v.as_i64()).unwrap_or(1);
+                                        let unit_price = item.get("unit_price").and_then(|v| v.as_f64()).unwrap_or(0.0);
+                                        let amount = item.get("amount").and_then(|v| v.as_f64()).unwrap_or(qty as f64 * unit_price);
+
+                                        let item_id = format!("item-{}", uuid::Uuid::new_v4());
+                                        if let Err(e) = sqlx::query(
+                                            "INSERT INTO invoice_line_items (id, tenant_id, invoice_id, description, quantity, unit_price, amount) VALUES ($1, $2, $3, $4, $5, $6, $7)"
+                                        )
+                                        .bind(&item_id)
+                                        .bind(&tenant_id)
+                                        .bind(&invoice_id)
+                                        .bind(desc)
+                                        .bind(qty as i32)
+                                        .bind(unit_price)
+                                        .bind(amount)
+                                        .execute(&mut *tx)
+                                        .await {
+                                            tracing::error!("Failed to insert invoice line item for invoice {}: {:?}", invoice_id, e);
+                                        }
+                                    }
+                                }
+                            }
+                        } else {
+                            tracing::warn!("Could not extract a client_id for ProposedInvoice action payload: {}", action_payload);
+                        }
+                    } else if action_type == "SuggestedCalendarSlot" {
+                        tracing::info!("Executing proposed action: SuggestedCalendarSlot, payload: {}", action_payload);
+                        let json_payload: serde_json::Value = serde_json::from_str(&action_payload).unwrap_or(serde_json::json!({}));
+
+                        let triage_item = sqlx::query("SELECT customer_id FROM triage_items WHERE id = $1 AND tenant_id = $2")
+                            .bind(&payload.triage_item_id)
+                            .bind(&tenant_id)
+                            .fetch_optional(&mut *tx)
+                            .await
+                            .ok()
+                            .flatten();
+
+                        let customer_id = triage_item.and_then(|r| r.try_get::<String, _>("customer_id").ok()).or_else(|| json_payload.get("customer_id").and_then(|v| v.as_str()).map(|s| s.to_string()));
+
+                        if let Some(cid) = customer_id {
+                            let product_id = json_payload.get("product_id").and_then(|v| v.as_str()).unwrap_or("unknown_service").to_string();
+
+                            let start_time_str = json_payload.get("start_time").and_then(|v| v.as_str()).unwrap_or("");
+                            let end_time_str = json_payload.get("end_time").and_then(|v| v.as_str()).unwrap_or("");
+
+                            let start_time = chrono::DateTime::parse_from_rfc3339(start_time_str)
+                                .map(|dt| dt.with_timezone(&chrono::Utc))
+                                .unwrap_or_else(|_| chrono::Utc::now() + chrono::Duration::days(1));
+
+                            let end_time = chrono::DateTime::parse_from_rfc3339(end_time_str)
+                                .map(|dt| dt.with_timezone(&chrono::Utc))
+                                .unwrap_or_else(|_| start_time + chrono::Duration::hours(1));
+
+                            let booking_id = format!("booking-{}", uuid::Uuid::new_v4());
+
+                            if let Err(e) = sqlx::query(
+                                "INSERT INTO bookings (id, tenant_id, customer_id, product_id, start_time, end_time, status) VALUES ($1, $2, $3, $4, $5, $6, 'scheduled')"
+                            )
+                            .bind(&booking_id)
+                            .bind(&tenant_id)
+                            .bind(&cid)
+                            .bind(&product_id)
+                            .bind(start_time)
+                            .bind(end_time)
+                            .execute(&mut *tx)
+                            .await {
+                                tracing::error!("Failed to insert suggested calendar slot booking for triage item {}: {:?}", payload.triage_item_id, e);
+                            }
+                        } else {
+                            tracing::warn!("Could not extract a customer_id for SuggestedCalendarSlot action payload: {}", action_payload);
+                        }
                     }
                 }
             }
