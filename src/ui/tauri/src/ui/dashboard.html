@@ -555,6 +555,125 @@
         .omnibox-type { background: #333336; color: #f5f5f7; }
       }
 
+
+      /* Unified Agent Feed CSS */
+      .feed-tabs {
+        display: flex;
+        border-bottom: 1px solid rgba(0,0,0,0.1);
+        margin-bottom: 16px;
+      }
+      .feed-tab {
+        flex: 1;
+        padding: 12px;
+        text-align: center;
+        cursor: pointer;
+        font-weight: 600;
+        color: #86868b;
+        transition: all 0.2s;
+        border-bottom: 2px solid transparent;
+      }
+      .feed-tab.active {
+        color: #0066FF;
+        border-bottom: 2px solid #0066FF;
+      }
+      .feed-content {
+        display: none;
+      }
+      .feed-content.active {
+        display: block;
+      }
+      .action-card, .activity-card {
+        background: rgba(255, 255, 255, 0.65);
+        backdrop-filter: blur(30px) saturate(210%);
+        -webkit-backdrop-filter: blur(30px) saturate(210%);
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        border-radius: 16px;
+        padding: 16px;
+        margin-bottom: 12px;
+        text-align: left;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.02);
+      }
+      .activity-card {
+        min-height: 44px;
+      }
+      .action-card h3, .activity-card h3 {
+        margin: 0 0 8px 0;
+        font-size: 16px;
+        color: #1d1d1f;
+      }
+      .action-card p, .activity-card p {
+        margin: 0 0 12px 0;
+        font-size: 14px;
+        color: #555;
+      }
+      .feed-btn-row {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      .feed-btn {
+        flex: 1;
+        min-height: 44px;
+        padding: 0 16px;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: none;
+        font-size: 14px;
+      }
+      .feed-btn-primary {
+        background: #0066FF;
+        color: white;
+      }
+      .feed-btn-secondary {
+        background: transparent;
+        border: 1px solid rgba(0,0,0,0.2);
+        color: #1d1d1f;
+      }
+      .feed-badge {
+        display: inline-block;
+        font-size: 10px;
+        text-transform: uppercase;
+        font-weight: bold;
+        padding: 2px 6px;
+        border-radius: 4px;
+        margin-bottom: 8px;
+      }
+      .badge-dept {
+        background: #eef2ff;
+        color: #4f46e5;
+      }
+      .badge-status-paused {
+        background: #fefce8;
+        color: #a16207;
+        float: right;
+      }
+      .badge-status-approved {
+        background: #f0fdf4;
+        color: #16a34a;
+        float: right;
+      }
+      @media (prefers-color-scheme: dark) {
+        .feed-tabs { border-color: rgba(255,255,255,0.1); }
+        .action-card, .activity-card {
+          background: rgba(22, 22, 26, 0.7);
+          border-color: rgba(255,255,255,0.1);
+        }
+        .action-card h3, .activity-card h3 { color: #f5f5f7; }
+        .action-card p, .activity-card p { color: #a1a1a6; }
+        .feed-btn-secondary {
+          border-color: rgba(255,255,255,0.2);
+          color: #f5f5f7;
+        }
+        .feed-tab { color: #a1a1a6; }
+        .badge-dept { background: rgba(79,70,229,0.3); color: #818cf8; }
+        .badge-status-paused { background: rgba(161,98,7,0.3); color: #facc15; }
+        .badge-status-approved { background: rgba(22,163,74,0.3); color: #4ade80; }
+      }
+
     </style>
   </head>
   <body>
@@ -681,6 +800,26 @@
         <p>Acquire new users and grow your audience through viral sharing.</p>
         <a href="/giveaway" style="display: inline-block; background-color: #0066FF; color: white; padding: 12px 24px; border-radius: 8px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s;">Viral Giveaway Generator</a>
       </div>
+
+
+      <section class="ohc-growth-card" aria-label="Unified Agent Feed">
+        <div class="feed-tabs">
+          <div class="feed-tab active" id="tab-proposals" onclick="switchFeedTab('proposals')">Proposals</div>
+          <div class="feed-tab" id="tab-activity" onclick="switchFeedTab('activity')">Activity Feed</div>
+        </div>
+
+        <div id="content-proposals" class="feed-content active">
+          <div id="feed-proposals-loading" style="text-align:center; padding: 20px; color:#86868b;">Loading proposals...</div>
+          <div id="feed-proposals-empty" style="display:none; text-align:center; padding: 20px; color:#86868b;">No pending proposals.</div>
+          <div id="feed-proposals-list"></div>
+        </div>
+
+        <div id="content-activity" class="feed-content flex flex-col gap-3 min-w-[320px]">
+          <div id="feed-activity-loading" style="text-align:center; padding: 20px; color:#86868b;">Loading activity...</div>
+          <div id="feed-activity-empty" style="display:none; text-align:center; padding: 20px; color:#86868b;">No recent activity.</div>
+          <div id="feed-activity-list"></div>
+        </div>
+      </section>
 
       <div class="ohc-growth-card" id="triage-section" style="display: none;">
         <h2>Needs Your Attention</h2>
@@ -1097,6 +1236,202 @@
 
       // Load on start
       setTimeout(loadTriage, 500);
+
+      // Unified Agent Feed Logic
+      async function loadUnifiedFeed() {
+        try {
+          const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default-team';
+          const res = await fetch(`/api/ui/dashboard/unified-agent-feed?tenant_id=${encodeURIComponent(tenantId)}`);
+          if (!res.ok) throw new Error("Failed to load feed");
+
+          const data = await res.json();
+          renderProposals(data.pending_approvals || []);
+          renderActivity(data.entries || []);
+        } catch (e) {
+          console.error("Error loading unified feed:", e);
+          document.getElementById('feed-proposals-loading').innerText = "Failed to load proposals.";
+          document.getElementById('feed-activity-loading').innerText = "Failed to load activity.";
+        }
+      }
+
+      function switchFeedTab(tab) {
+        document.getElementById('tab-proposals').classList.remove('active');
+        document.getElementById('tab-activity').classList.remove('active');
+        document.getElementById('content-proposals').classList.remove('active');
+        document.getElementById('content-activity').classList.remove('active');
+
+        document.getElementById('tab-' + tab).classList.add('active');
+        document.getElementById('content-' + tab).classList.add('active');
+      }
+
+      function escapeHTML(str) {
+        if (!str) return '';
+        return String(str).replace(/[&<>'"]/g,
+          tag => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            "'": '&#39;',
+            '"': '&quot;'
+          }[tag] || tag)
+        );
+      }
+
+      function renderProposals(approvals) {
+        const loading = document.getElementById('feed-proposals-loading');
+        const empty = document.getElementById('feed-proposals-empty');
+        const list = document.getElementById('feed-proposals-list');
+
+        loading.style.display = 'none';
+        if (approvals.length === 0) {
+          empty.style.display = 'block';
+          list.innerHTML = '';
+          return;
+        }
+        empty.style.display = 'none';
+
+        list.innerHTML = approvals.map(approval => {
+          const payload = typeof approval.payload === 'string' ? JSON.parse(approval.payload) : (approval.payload || {});
+
+          let actionContent = '';
+          const actionContext = payload.context || {};
+
+          if (payload.feature_type === 'social_post') {
+            actionContent = `
+              <div class="feed-btn-row">
+                <button class="feed-btn feed-btn-primary" data-testid="approve-social-post" onclick="handleFeedDecision('${escapeHTML(approval.id)}', true)">Schedule Post</button>
+                <button class="feed-btn feed-btn-secondary" data-testid="dismiss-social-post" onclick="handleFeedDecision('${escapeHTML(approval.id)}', false)">Dismiss</button>
+              </div>
+            `;
+          } else if (payload.feature_type === 'sale_promo' || actionContext.weekly_health_report === true || payload.feature_type === 'quote_draft' || payload.feature_type === 'restock_inventory' || payload.remaining_stock !== undefined) {
+             let btnText = "Approve";
+             let testId = "approve-proposal";
+             let rejectTestId = "reject-proposal";
+             let btnReject = "Dismiss";
+
+             if (actionContext.weekly_health_report === true) {
+                 btnText = "Yes, draft it!";
+                 testId = "approve-draft";
+                 rejectTestId = "dismiss-draft";
+             } else if (payload.feature_type === 'sale_promo') {
+                 btnText = "Approve Sale";
+                 testId = "approve-sale";
+                 rejectTestId = "dismiss-sale";
+             } else if (payload.feature_type === 'quote_draft') {
+                 btnText = "Approve & Send Proposal";
+                 testId = "approve-send-proposal";
+                 rejectTestId = "reject-proposal";
+                 btnReject = "Ask Agent to Adjust";
+             } else if (payload.feature_type === 'restock_inventory' || payload.remaining_stock !== undefined) {
+                 btnText = "Approve Restock";
+                 testId = "approve-restock";
+                 rejectTestId = "dismiss-restock";
+             }
+
+             actionContent = `
+               <div class="feed-btn-row">
+                 <button class="feed-btn feed-btn-primary" data-testid="${testId}" onclick="handleFeedDecision('${escapeHTML(approval.id)}', true)">${btnText}</button>
+                 <button class="feed-btn feed-btn-secondary" data-testid="${rejectTestId}" onclick="handleFeedDecision('${escapeHTML(approval.id)}', false)">${btnReject}</button>
+               </div>
+             `;
+          } else {
+             actionContent = `
+               <div class="feed-btn-row">
+                 <button class="feed-btn feed-btn-primary" data-testid="approve-proposal" onclick="handleFeedDecision('${escapeHTML(approval.id)}', true)">Approve</button>
+                 <button class="feed-btn feed-btn-secondary" data-testid="reject-proposal" onclick="handleFeedDecision('${escapeHTML(approval.id)}', false)">Deny</button>
+               </div>
+             `;
+          }
+
+          let msg = payload.message || approval.description;
+          if (payload.feature_type === 'social_post') {
+              msg = "New product detected! Schedule a post?";
+          }
+          if (payload.context && payload.context.weekly_health_report === true) {
+              msg = "Draft promo email?";
+          }
+          if (payload.feature_type === 'quote_draft') {
+              msg = "Draft quote for Plumbing Fix";
+          }
+
+          return `
+            <div class="action-card" id="approval-${escapeHTML(approval.id)}">
+              <div class="feed-badge badge-dept">${escapeHTML(approval.department.replace('_', ' '))}</div>
+              <h3>${escapeHTML(approval.description)}</h3>
+              <p>${escapeHTML(msg)}</p>
+              ${actionContent}
+            </div>
+          `;
+        }).join('');
+      }
+
+      function renderActivity(activities) {
+        const loading = document.getElementById('feed-activity-loading');
+        const empty = document.getElementById('feed-activity-empty');
+        const list = document.getElementById('feed-activity-list');
+
+        loading.style.display = 'none';
+        if (activities.length === 0) {
+          empty.style.display = 'block';
+          list.innerHTML = '';
+          return;
+        }
+        empty.style.display = 'none';
+
+        list.innerHTML = activities.map(act => {
+          let eventTypeClass = 'badge-status-approved';
+          let eventTypeLabel = act.event_type;
+          if (act.event_type.toUpperCase() === 'PAUSED') {
+            eventTypeClass = 'badge-status-paused';
+            eventTypeLabel = 'PAUSED';
+          } else if (act.event_type.toUpperCase() === 'APPROVED') {
+            eventTypeLabel = 'APPROVED';
+          }
+
+          let title = "Action completed";
+          try {
+             const p = typeof act.payload === 'string' ? JSON.parse(act.payload) : act.payload;
+             if (p && p.original_payload && p.original_payload.proposed_content && p.original_payload.proposed_content.includes("System is paused")) {
+                 title = p.original_payload.proposed_content;
+             } else if (p && p.original_payload && p.original_payload.description) {
+                 title = p.original_payload.description;
+             }
+          } catch(e) {}
+
+          return `
+            <div class="activity-card">
+              <div class="feed-badge badge-dept">${escapeHTML((act.department || '').replace('_', ' '))}</div>
+              <div class="feed-badge ${eventTypeClass}">${escapeHTML(eventTypeLabel)}</div>
+              <h3>${escapeHTML(title)}</h3>
+              <p style="font-size:12px;">${escapeHTML(new Date(act.created_at).toLocaleString())}</p>
+            </div>
+          `;
+        }).join('');
+      }
+
+      window.handleFeedDecision = async function(id, approved) {
+        const el = document.getElementById(`approval-${id}`);
+        if (el) el.style.opacity = '0.5';
+
+        try {
+          const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default-team';
+          const res = await fetch(`/api/agents/approvals/${id}/decision`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-tenant-id': tenantId },
+            body: JSON.stringify({ approved })
+          });
+          if (!res.ok) throw new Error("Failed to process decision");
+          if (el) el.remove();
+          loadUnifiedFeed(); // Refresh to update activity log
+        } catch (err) {
+          console.error(err);
+          if (el) el.style.opacity = '1';
+          alert('Failed to update approval.');
+        }
+      };
+
+      setTimeout(loadUnifiedFeed, 500);
+
 
       // Omnibox logic
       const omniboxOverlay = document.getElementById('omnibox-overlay');
