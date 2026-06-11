@@ -295,14 +295,13 @@ impl SwarmCoordinator {
         let original_task = task.to_string();
         let mut actual_task = original_task.clone();
 
-        if let Some(memory) = &self.sona_memory {
-            if let Ok(Some(pattern)) = memory.recall_pattern(task).await {
+        if let Some(memory) = &self.sona_memory
+            && let Ok(Some(pattern)) = memory.recall_pattern(task).await {
                 actual_task = format!(
                     "[SONA Trajectory Hint: A similar past task followed this successful trajectory:\n{}\n]\n\nCurrent Task: {}",
                     pattern.successful_trajectory, task
                 );
             }
-        }
 
         let task = &actual_task;
 
@@ -406,8 +405,8 @@ impl SwarmCoordinator {
             }
         };
 
-        if let Ok(res_str) = &result {
-            if let Some(memory) = &self.sona_memory {
+        if let Ok(res_str) = &result
+            && let Some(memory) = &self.sona_memory {
                 let extract_instruction = "Extract a concise SONA trajectory pattern from the execution outcome. What were the key steps taken to solve this task? Return ONLY the trajectory steps.";
                 let trajectory_prompt = format!("Task: {}\nResult: {}\n", original_task, res_str);
                 if let Ok(trajectory) = self
@@ -422,7 +421,6 @@ impl SwarmCoordinator {
                     let _ = memory.store_pattern(pattern).await;
                 }
             }
-        }
 
         result
     }

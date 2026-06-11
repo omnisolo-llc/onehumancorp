@@ -49,6 +49,12 @@ pub struct ProcessIsolationStrategy {}
 
 pub struct AssistantClassIsolationStrategy {}
 
+impl Default for AssistantClassIsolationStrategy {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl AssistantClassIsolationStrategy {
     pub fn new() -> Self {
         AssistantClassIsolationStrategy {}
@@ -187,6 +193,12 @@ impl IsolationStrategy for AssistantClassIsolationStrategy {
     }
 }
 
+impl Default for ProcessIsolationStrategy {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ProcessIsolationStrategy {
     pub fn new() -> Self {
         ProcessIsolationStrategy {}
@@ -316,6 +328,12 @@ pub struct ASTValidator {
     blocked_commands: Vec<String>,
 }
 
+impl Default for ASTValidator {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ASTValidator {
     pub fn new() -> Self {
         let mut parser = Parser::new();
@@ -349,8 +367,8 @@ impl ASTValidator {
     fn walk_node_for_security(&self, node: Node<'_>, source: &str) -> Result<(), String> {
         let node_kind = node.kind();
 
-        if node_kind == "command" {
-            if let Some(command_name_node) = node.child_by_field_name("name") {
+        if node_kind == "command"
+            && let Some(command_name_node) = node.child_by_field_name("name") {
                 let name = &source[command_name_node.start_byte()..command_name_node.end_byte()];
 
                 let name_cleaned = name.replace("\"", "").replace("'", "").replace("\\", "");
@@ -394,7 +412,6 @@ impl ASTValidator {
                     return Err("eval is not allowed".to_string());
                 }
             }
-        }
 
         if node_kind == "process_substitution" {
             return Err("process substitution is not allowed".to_string());
@@ -402,9 +419,7 @@ impl ASTValidator {
 
         let mut cursor = node.walk();
         for child in node.children(&mut cursor) {
-            if let Err(e) = self.walk_node_for_security(child, source) {
-                return Err(e); // Propagate up
-            }
+            self.walk_node_for_security(child, source)?
         }
 
         Ok(())
@@ -516,12 +531,11 @@ impl LocalBackend {
             args.push("/var/run/ohc_proxy.sock".to_string());
         }
 
-        if self.config.enable_seccomp {
-            if let Some(path) = &self.config.seccomp_bpf_path {
+        if self.config.enable_seccomp
+            && let Some(path) = &self.config.seccomp_bpf_path {
                 args.push("--seccomp".to_string());
                 args.push(path.clone());
             }
-        }
 
         args.push("--".to_string());
         args.push("bash".to_string());
@@ -583,6 +597,12 @@ impl HarnessBackend for LocalBackend {
 
 pub struct DockerBackend;
 
+impl Default for DockerBackend {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl DockerBackend {
     pub fn new() -> Self {
         DockerBackend
@@ -603,6 +623,12 @@ impl HarnessBackend for DockerBackend {
 
 pub struct SshBackend;
 
+impl Default for SshBackend {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl SshBackend {
     pub fn new() -> Self {
         SshBackend
@@ -621,6 +647,12 @@ impl HarnessBackend for SshBackend {
 }
 
 pub struct SingularityBackend;
+
+impl Default for SingularityBackend {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 impl SingularityBackend {
     pub fn new() -> Self {
@@ -641,6 +673,12 @@ impl HarnessBackend for SingularityBackend {
 
 pub struct ModalBackend;
 
+impl Default for ModalBackend {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ModalBackend {
     pub fn new() -> Self {
         ModalBackend
@@ -660,6 +698,12 @@ impl HarnessBackend for ModalBackend {
 
 pub struct DaytonaBackend;
 
+impl Default for DaytonaBackend {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl DaytonaBackend {
     pub fn new() -> Self {
         DaytonaBackend
@@ -678,6 +722,12 @@ impl HarnessBackend for DaytonaBackend {
 }
 
 pub struct VercelSandboxBackend;
+
+impl Default for VercelSandboxBackend {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 impl VercelSandboxBackend {
     pub fn new() -> Self {

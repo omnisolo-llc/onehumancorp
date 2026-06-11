@@ -94,11 +94,10 @@ impl PromptBuilder {
         for msg in messages.iter().rev().take(15) {
             if msg.role == crate::types::Role::Assistant {
                 for tc in msg.tool_calls.iter().rev() {
-                    if successful_ids.contains(&tc.id) {
-                        if !successes.contains(&tc.name) {
+                    if successful_ids.contains(&tc.id)
+                        && !successes.contains(&tc.name) {
                             successes.push(tc.name.clone());
                         }
-                    }
                     if successes.len() >= 3 {
                         break;
                     }
@@ -196,9 +195,9 @@ impl HierarchicalPromptBuilder {
         let mut tool_defs = String::new();
         if !tools.is_empty() {
             for tool in tools {
-                let _ = write!(tool_defs, "Tool: {}\n", tool.name);
-                let _ = write!(tool_defs, "Description: {}\n", tool.description);
-                let _ = write!(tool_defs, "Parameters: {}\n", tool.parameters);
+                let _ = writeln!(tool_defs, "Tool: {}", tool.name);
+                let _ = writeln!(tool_defs, "Description: {}", tool.description);
+                let _ = writeln!(tool_defs, "Parameters: {}", tool.parameters);
             }
             tool_defs.pop(); // Remove trailing newline
         }

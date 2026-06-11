@@ -13,6 +13,12 @@ pub struct PatternMatcher {
     patterns: Vec<TrajectoryPattern>,
 }
 
+impl Default for PatternMatcher {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl PatternMatcher {
     pub fn new() -> Self {
         Self {

@@ -51,6 +51,12 @@ pub struct InProcessTransport {
     locks: DashMap<String, (String, i64)>,
 }
 
+impl Default for InProcessTransport {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl InProcessTransport {
     pub fn new() -> Self {
         InProcessTransport {
@@ -287,11 +293,10 @@ impl PgTransport {
                 for (id, topic, payload) in rows {
                     skip_locked_counter.add(1, &[KeyValue::new("action", "poll_messages")]);
                     last_id = id;
-                    if let Some(tx) = subs.get(&topic) {
-                        if let Ok(message) = Message::decode(&payload[..]) {
+                    if let Some(tx) = subs.get(&topic)
+                        && let Ok(message) = Message::decode(&payload[..]) {
                             let _ = tx.send(message);
                         }
-                    }
                 }
 
                 if has_rows {
@@ -548,11 +553,10 @@ impl SqliteTransport {
                 let has_rows = !rows.is_empty();
                 for (id, topic, payload) in rows {
                     last_id = id;
-                    if let Some(tx) = subs.get(&topic) {
-                        if let Ok(message) = Message::decode(&payload[..]) {
+                    if let Some(tx) = subs.get(&topic)
+                        && let Ok(message) = Message::decode(&payload[..]) {
                             let _ = tx.send(message);
                         }
-                    }
                 }
 
                 if has_rows {
@@ -762,11 +766,10 @@ impl MeshTransport for RedisPubSubTransport {
 
         let worker = tokio::spawn(async move {
             while let Some(msg) = stream.next().await {
-                if let Ok(buf) = msg.get_payload::<Vec<u8>>() {
-                    if let Ok(message) = Message::decode(&buf[..]) {
+                if let Ok(buf) = msg.get_payload::<Vec<u8>>()
+                    && let Ok(message) = Message::decode(&buf[..]) {
                         handler(message);
                     }
-                }
             }
         });
 
@@ -949,8 +952,8 @@ impl MeshTransport for NatsTransport {
 
         if let Ok(Some(entry)) = self.kv.entry(resource).await {
             let entry_str = String::from_utf8_lossy(&entry.value);
-            if let Some((stored_owner, stored_exp)) = entry_str.split_once(':') {
-                if let Ok(exp) = stored_exp.parse::<i64>() {
+            if let Some((stored_owner, stored_exp)) = entry_str.split_once(':')
+                && let Ok(exp) = stored_exp.parse::<i64>() {
                     if exp <= chrono::Utc::now().timestamp() || stored_owner == owner {
                         match self
                             .kv
@@ -968,7 +971,6 @@ impl MeshTransport for NatsTransport {
                         return Ok(false);
                     }
                 }
-            }
         }
 
         match self.kv.create(resource, payload.into_bytes().into()).await {
@@ -986,15 +988,14 @@ impl MeshTransport for NatsTransport {
     async fn release_lock(&self, resource: &str, owner: &str) -> Result<(), String> {
         if let Ok(Some(entry)) = self.kv.entry(resource).await {
             let entry_str = String::from_utf8_lossy(&entry.value);
-            if let Some((stored_owner, _)) = entry_str.split_once(':') {
-                if stored_owner == owner {
+            if let Some((stored_owner, _)) = entry_str.split_once(':')
+                && stored_owner == owner {
                     let payload = format!("{}:0", owner);
                     let _ = self
                         .kv
                         .update(resource, payload.into_bytes().into(), entry.revision)
                         .await;
                 }
-            }
         }
         Ok(())
     }
@@ -1021,11 +1022,11 @@ impl MeshTransport for NatsTransport {
         use futures::StreamExt;
         let now = chrono::Utc::now().timestamp();
         while let Some(Ok(key)) = keys.next().await {
-            if key.starts_with("presence_") {
-                if let Ok(Some(entry)) = self.kv.entry(&key).await {
+            if key.starts_with("presence_")
+                && let Ok(Some(entry)) = self.kv.entry(&key).await {
                     let entry_str = String::from_utf8_lossy(&entry.value);
-                    if let Some((status, stored_exp)) = entry_str.split_once(':') {
-                        if let Ok(exp) = stored_exp.parse::<i64>() {
+                    if let Some((status, stored_exp)) = entry_str.split_once(':')
+                        && let Ok(exp) = stored_exp.parse::<i64>() {
                             if exp > now {
                                 let agent_id = key.strip_prefix("presence_").unwrap().to_string();
                                 agents.push((agent_id, status.to_string()));
@@ -1033,9 +1034,7 @@ impl MeshTransport for NatsTransport {
                                 let _ = self.kv.delete(&key).await;
                             }
                         }
-                    }
                 }
-            }
         }
         Ok(agents)
     }
@@ -1100,11 +1099,10 @@ impl MeshOverlayTransport {
                         && buf[2] == 0xCC
                         && buf[3] == 0xDD
                     {
-                        if let Ok(msg_id) = String::from_utf8(buf[4..len].to_vec()) {
-                            if let Some((_, tx)) = ack_map.remove(&msg_id) {
+                        if let Ok(msg_id) = String::from_utf8(buf[4..len].to_vec())
+                            && let Some((_, tx)) = ack_map.remove(&msg_id) {
                                 let _ = tx.send(());
                             }
-                        }
                         continue;
                     }
 
@@ -1203,21 +1201,19 @@ impl MeshTransport for MeshOverlayTransport {
                 }
 
                 // 2. Fallback to TCP with framing
-                if !success {
-                    if let Some(tcp_addr) = &peer.tcp_addr {
-                        if let Ok(Ok(mut stream)) = tokio::time::timeout(std::time::Duration::from_secs(2), tokio::net::TcpStream::connect(tcp_addr)).await {
+                if !success
+                    && let Some(tcp_addr) = &peer.tcp_addr
+                        && let Ok(Ok(mut stream)) = tokio::time::timeout(std::time::Duration::from_secs(2), tokio::net::TcpStream::connect(tcp_addr)).await {
                             use tokio::io::AsyncWriteExt;
                             let len_bytes = (buf_clone.len() as u32).to_be_bytes();
                             if stream.write_all(&len_bytes).await.is_ok() && stream.write_all(&buf_clone).await.is_ok() {
                                 success = true;
                             }
                         }
-                    }
-                }
 
                 // 3. Fallback to HTTP
-                if !success {
-                    if let Some(http_url) = &peer.http_url {
+                if !success
+                    && let Some(http_url) = &peer.http_url {
                         let url = format!("{}/api/mesh/v2/direct", http_url);
                         let payload = serde_json::json!({
                             "target_agent_id": peer.id,
@@ -1230,13 +1226,11 @@ impl MeshTransport for MeshOverlayTransport {
                             }
                         });
 
-                        if let Ok(resp) = client.post(&url).json(&payload).send().await {
-                            if resp.status().is_success() {
+                        if let Ok(resp) = client.post(&url).json(&payload).send().await
+                            && resp.status().is_success() {
                                 success = true;
                             }
-                        }
                     }
-                }
 
                 if !success {
                     tracing::warn!("Failed to deliver message to peer {} via all transports", peer.id);
@@ -1381,8 +1375,8 @@ pub async fn create_transport(
     }
 
     // Standalone fallback
-    if let Ok(db_url) = std::env::var("OHC_DATABASE_URL") {
-        if db_url.starts_with("sqlite") {
+    if let Ok(db_url) = std::env::var("OHC_DATABASE_URL")
+        && db_url.starts_with("sqlite") {
             match sqlx::sqlite::SqlitePoolOptions::new()
                 .connect(&db_url)
                 .await
@@ -1408,7 +1402,6 @@ pub async fn create_transport(
                 }
             }
         }
-    }
 
     if let Some(url) = redis_url {
         match RedisPubSubTransport::new(url).await {
