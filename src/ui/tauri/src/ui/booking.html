@@ -129,6 +129,10 @@
         <button type="submit" class="btn btn-primary" id="btn-submit">Get a Quote</button>
       </form>
     </div>
+
+    <div id="ohc-viral-footer" style="text-align: center; margin-top: 24px; margin-bottom: 24px;">
+      <a id="ohc-viral-link" href="/onboarding" target="_blank" style="color: #86868b; text-decoration: none; font-size: 13px; font-weight: 600;">⚡ Powered by OHC</a>
+    </div>
   </div>
 
   <div class="mobile-container" id="success-view" style="display: none; align-items: center; justify-content: center; text-align: center;">
@@ -143,6 +147,7 @@
     document.addEventListener('DOMContentLoaded', () => {
       const urlParams = new URLSearchParams(window.location.search);
       const tenantId = urlParams.get('tenant') || 'demo-tenant';
+      document.getElementById('ohc-viral-link').href = `/onboarding?ref=${tenantId}&source=booking_viral_loop`;
 
 
       // Fetch actual business profile

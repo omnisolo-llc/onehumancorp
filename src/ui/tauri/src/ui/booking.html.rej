@@ -1,0 +1,16 @@
+--- src/ui/tauri/src/ui/booking.html
++++ src/ui/tauri/src/ui/booking.html
+@@ -159,12 +159,9 @@
+   </div>
+
+   <script>
+-    const urlParams = new URLSearchParams(window.location.search);
+-    const tenantId = urlParams.get('tenant') || localStorage.getItem('tenant_id') || 'default-tenant';
+-    document.getElementById('ohc-viral-link').href = \`/onboarding?ref=\${tenantId}&source=booking_viral_loop\`;
+-
+     document.addEventListener('DOMContentLoaded', () => {
+       const urlParams = new URLSearchParams(window.location.search);
+       const tenantId = urlParams.get('tenant') || 'demo-tenant';
++      document.getElementById('ohc-viral-link').href = \`/onboarding?ref=\${tenantId}&source=booking_viral_loop\`;
+
+       // Service selection

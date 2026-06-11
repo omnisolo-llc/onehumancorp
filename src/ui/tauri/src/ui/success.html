@@ -82,34 +82,97 @@
           background: rgba(255, 255, 255, 0.15);
         }
       }
+
+      /* Viral Widget Styles */
+      .viral-widget {
+        display: none;
+        background: rgba(0, 102, 255, 0.1);
+        border: 1px solid rgba(0, 102, 255, 0.2);
+        border-radius: 12px;
+        padding: 16px;
+        margin-bottom: 20px;
+        text-align: left;
+      }
+      .viral-widget h3 { margin-top: 0; color: #0066FF; font-size: 16px; margin-bottom: 8px; }
+      .viral-widget p { color: #1d1d1f; font-size: 13px; margin-bottom: 12px; }
+      .viral-actions { display: flex; gap: 8px; }
+      .viral-btn { flex: 1; padding: 8px; border-radius: 8px; border: none; font-size: 13px; font-weight: 600; cursor: pointer; }
+      .viral-copy { background: white; color: #0066FF; border: 1px solid #0066FF; }
+      .viral-wa { background: #25D366; color: white; }
+
+      @media (prefers-color-scheme: dark) {
+        .viral-widget p { color: #F5F5F7; }
+      }
     </style>
   </head>
   <body>
     <div class="container">
-      <h1>You're all set!</h1>
+      <h1 id="success-title">You're all set!</h1>
       <p id="success-msg">Your workspace is ready.</p>
+
+      <div id="viral-widget" class="viral-widget">
+        <h3>Give 20%, Get 10%</h3>
+        <p>Love what you bought? Share with friends! They get 20% off and you earn a 10% commission.</p>
+        <input type="text" id="viral-link-input" readonly style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #ccc; margin-bottom: 12px; font-size: 12px; box-sizing: border-box;" />
+        <div class="viral-actions">
+          <button id="btn-copy-viral" class="viral-btn viral-copy">Copy Link</button>
+          <button id="btn-wa-viral" class="viral-btn viral-wa">WhatsApp</button>
+        </div>
+      </div>
+
       <button id="dashboard-btn">Go to Assistant</button>
+
+      <div id="ohc-viral-footer" style="text-align: center; margin-top: 24px; display: none;">
+        <a id="ohc-viral-link-footer" href="#" target="_blank" style="color: #86868b; text-decoration: none; font-size: 13px; font-weight: 600;">⚡ Powered by OHC</a>
+      </div>
     </div>
     <script>
-      function showSuccess(name, assistantName) {
-        if (name) {
-            let msg = `Workspace created for ${name}.`;
-            if (assistantName) {
-                msg += ` ${assistantName} is ready to help.`;
-            }
-            document.getElementById('success-msg').innerText = msg;
-        }
-      }
+      const urlParams = new URLSearchParams(window.location.search);
+      const type = urlParams.get('type');
+      const tenantId = urlParams.get('tenant') || localStorage.getItem('tenant_id') || 'default-tenant';
 
-      if (window.__TAURI__ && window.__TAURI__.core) {
-        window.__TAURI__.core.invoke("get_onboarding_state").then((state) => {
-          showSuccess(state.businessName, state.assistantName);
-        }).catch(console.error);
+      if (type === 'booking_deposit') {
+        document.getElementById('success-title').innerText = 'Payment Successful!';
+        document.getElementById('success-msg').innerText = 'Your booking deposit is confirmed.';
+        document.getElementById('dashboard-btn').innerText = 'Return to Store';
+
+        document.getElementById('viral-widget').style.display = 'block';
+        document.getElementById('ohc-viral-footer').style.display = 'block';
+
+        const referralUrl = `https://ohc.app/onboarding?ref=${tenantId}&source=success_viral_loop`;
+        document.getElementById('viral-link-input').value = referralUrl;
+        document.getElementById('ohc-viral-link-footer').href = referralUrl;
+
+        document.getElementById('btn-copy-viral').addEventListener('click', () => {
+          navigator.clipboard.writeText(referralUrl);
+          document.getElementById('btn-copy-viral').innerText = 'Copied!';
+        });
+
+        document.getElementById('btn-wa-viral').addEventListener('click', () => {
+          window.open(`https://wa.me/?text=${encodeURIComponent('Get 20% off your first order! ' + referralUrl)}`, '_blank');
+        });
       } else {
-        const state = JSON.parse(localStorage.getItem('onboardingState') || '{}');
-        const name = state.businessName;
-        const assistantName = state.assistantName;
-        showSuccess(name, assistantName);
+        // Original onboarding success logic
+        function showSuccess(name, assistantName) {
+          if (name) {
+              let msg = `Workspace created for ${name}.`;
+              if (assistantName) {
+                  msg += ` ${assistantName} is ready to help.`;
+              }
+              document.getElementById('success-msg').innerText = msg;
+          }
+        }
+
+        if (window.__TAURI__ && window.__TAURI__.core) {
+          window.__TAURI__.core.invoke("get_onboarding_state").then((state) => {
+            showSuccess(state.businessName, state.assistantName);
+          }).catch(console.error);
+        } else {
+          const state = JSON.parse(localStorage.getItem('onboardingState') || '{}');
+          const name = state.businessName;
+          const assistantName = state.assistantName;
+          showSuccess(name, assistantName);
+        }
       }
 
       const dashboardBtn = document.getElementById('dashboard-btn');

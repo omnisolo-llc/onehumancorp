@@ -296,6 +296,10 @@
       <button class="btn btn-primary" id="btn-pay-card" style="display: none; background-color: #333;">Pay with Card</button>
     </div>
 
+    <div id="ohc-viral-footer" style="text-align: center; margin-top: 24px; display: none;">
+      <a id="ohc-viral-link" href="#" target="_blank" style="color: #86868b; text-decoration: none; font-size: 13px; font-weight: 600;">⚡ Powered by OHC</a>
+    </div>
+
   </div>
 
   <script>
@@ -404,6 +408,8 @@
         btnPayDeposit.style.display = 'flex';
         btnPayCard.style.display = 'block';
         document.getElementById('quote-status').innerText = 'Action Required';
+        document.getElementById('ohc-viral-footer').style.display = 'block';
+        document.getElementById('ohc-viral-link').href = `/onboarding?ref=${quoteData.tenantId}&source=quote_viral_loop`;
 
         const handlePayment = async () => {
           btnPayCard.innerText = 'Processing...';
