@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Work-Intake Widget Builder</title>
+  <style>
+    body {
+      font-family: "Outfit", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: #f5f5f7;
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      box-sizing: border-box;
+    }
+
+    h1 {
+      color: #1d1d1f;
+      font-size: 28px;
+      font-weight: 700;
+      margin-top: 20px;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    .main-container {
+      display: flex;
+      flex-direction: row;
+      gap: 30px;
+      max-width: 1200px;
+      width: 100%;
+    }
+
+    @media (max-width: 768px) {
+      .main-container {
+        flex-direction: column;
+      }
+    }
+
+    .config-panel, .preview-panel {
+      background: rgba(255, 255, 255, 0.65);
+      backdrop-filter: blur(30px) saturate(210%);
+      border-radius: 16px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+      padding: 30px;
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      flex: 1;
+      box-sizing: border-box;
+    }
+
+    h2 {
+      color: #1d1d1f;
+      font-size: 20px;
+      font-weight: 600;
+      margin-top: 0;
+      margin-bottom: 20px;
+    }
+
+    label {
+      display: block;
+      color: #1d1d1f;
+      font-weight: 600;
+      font-size: 14px;
+      margin-bottom: 8px;
+    }
+
+    input[type="text"], select {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid rgba(0, 0, 0, 0.2);
+      border-radius: 8px;
+      font-size: 14px;
+      box-sizing: border-box;
+      margin-bottom: 20px;
+      background: rgba(255, 255, 255, 0.8);
+      font-family: inherit;
+    }
+
+    .checkbox-container {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .checkbox-container input {
+      width: auto;
+      margin: 0;
+    }
+
+    .btn-primary {
+      background-color: #0066FF;
+      color: white;
+      border: none;
+      padding: 14px 24px;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      width: 100%;
+      transition: background-color 0.2s, transform 0.1s;
+      box-shadow: 0 4px 14px 0 rgba(0, 102, 255, 0.39);
+    }
+
+    .btn-primary:hover { background-color: #0052cc; }
+    .btn-primary:active { transform: scale(0.98); }
+
+    .iframe-container {
+      width: 100%;
+      height: 500px;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid rgba(0,0,0,0.1);
+      background: white;
+    }
+
+    iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+
+    /* Modal Styles */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(5px);
+    }
+
+    .modal-content {
+      background: white;
+      border-radius: 16px;
+      padding: 30px;
+      max-width: 600px;
+      width: 90%;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+    }
+
+    .modal-content h3 {
+      margin-top: 0;
+    }
+
+    textarea {
+      width: 100%;
+      height: 150px;
+      padding: 12px;
+      border: 1px solid rgba(0,0,0,0.2);
+      border-radius: 8px;
+      font-family: monospace;
+      font-size: 13px;
+      resize: vertical;
+      box-sizing: border-box;
+      margin-bottom: 20px;
+    }
+
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 15px;
+    }
+
+    .btn-secondary {
+      background: rgba(0,0,0,0.05);
+      border: none;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-secondary:hover { background: rgba(0,0,0,0.1); }
+
+    .back-link {
+      margin-top: 20px;
+      color: #0066FF;
+      text-decoration: none;
+      font-weight: 600;
+      display: block;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <h1>Work-Intake Widget 📋</h1>
+
+  <div class="main-container">
+    <div class="config-panel">
+      <h2>Configure Widget</h2>
+
+      <label for="tenant-input">Tenant ID</label>
+      <input type="text" id="tenant-input" placeholder="e.g. my-business" value="demo-tenant" />
+
+      <label for="title-input">Form Title</label>
+      <input type="text" id="title-input" placeholder="e.g. Work Request" value="Work Request" />
+
+      <label for="theme-select">Theme</label>
+      <select id="theme-select">
+        <option value="light">Light</option>
+        <option value="dark">Dark</option>
+      </select>
+
+      <div class="checkbox-container">
+        <input type="checkbox" id="remove-branding-checkbox" />
+        <label for="remove-branding-checkbox" style="margin-bottom: 0; font-weight: normal;">Remove "Powered by OHC" branding</label>
+      </div>
+
+      <button class="btn-primary" id="get-code-btn">Get Widget Code</button>
+    </div>
+
+    <div class="preview-panel">
+      <h2>Live Preview</h2>
+      <div class="iframe-container">
+        <iframe id="preview-iframe" src=""></iframe>
+      </div>
+    </div>
+  </div>
+
+  <a href="/dashboard.html" class="back-link">&larr; Back to Dashboard</a>
+
+  <!-- Soft Paywall Modal -->
+  <div class="modal-overlay" id="paywall-modal">
+    <div class="modal-content">
+      <h3>Upgrade to Pro</h3>
+      <p>Removing the "Powered by OHC" branding requires a Pro plan. Upgrade your account to unlock this feature.</p>
+      <div class="modal-actions">
+        <button class="btn-secondary" id="close-paywall-btn">Cancel</button>
+        <button class="btn-primary" style="width: auto;">Upgrade Now</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Embed Code Modal -->
+  <div class="modal-overlay" id="code-modal">
+    <div class="modal-content">
+      <h3>Embed Work-Intake Widget</h3>
+      <p>Copy and paste this code into your website's HTML where you want the widget to appear.</p>
+      <textarea id="embed-textarea" readonly></textarea>
+      <div class="modal-actions">
+        <button class="btn-secondary" id="close-code-btn">Close</button>
+        <button class="btn-primary" id="copy-code-btn" style="width: auto;">Copy to Clipboard</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const tenantInput = document.getElementById('tenant-input');
+    const titleInput = document.getElementById('title-input');
+    const themeSelect = document.getElementById('theme-select');
+    const removeBrandingCheckbox = document.getElementById('remove-branding-checkbox');
+    const previewIframe = document.getElementById('preview-iframe');
+
+    const paywallModal = document.getElementById('paywall-modal');
+    const closePaywallBtn = document.getElementById('close-paywall-btn');
+
+    const codeModal = document.getElementById('code-modal');
+    const closeCodeBtn = document.getElementById('close-code-btn');
+    const copyCodeBtn = document.getElementById('copy-code-btn');
+    const embedTextarea = document.getElementById('embed-textarea');
+    const getCodeBtn = document.getElementById('get-code-btn');
+
+    function updatePreview() {
+      const tenant = encodeURIComponent(tenantInput.value || 'demo-tenant');
+      const title = encodeURIComponent(titleInput.value || 'Work Request');
+      const theme = themeSelect.value;
+
+      const srcUrl = `/api/v1/growth/work-intake/embed?tenant=${tenant}&title=${title}&theme=${theme}`;
+      previewIframe.src = srcUrl;
+    }
+
+    tenantInput.addEventListener('input', updatePreview);
+    titleInput.addEventListener('input', updatePreview);
+    themeSelect.addEventListener('change', updatePreview);
+
+    removeBrandingCheckbox.addEventListener('change', (e) => {
+      // Simulate soft paywall if not Pro (for demo, assume always not pro unless mock set)
+      const hasPro = localStorage.getItem('has_pro') === 'true';
+      if (e.target.checked && !hasPro) {
+        e.target.checked = false;
+        paywallModal.style.display = 'flex';
+      }
+    });
+
+    closePaywallBtn.addEventListener('click', () => {
+      paywallModal.style.display = 'none';
+    });
+
+    getCodeBtn.addEventListener('click', () => {
+      const tenant = encodeURIComponent(tenantInput.value || 'demo-tenant');
+      const title = encodeURIComponent(titleInput.value || 'Work Request');
+      const theme = themeSelect.value;
+      const removeBranding = removeBrandingCheckbox.checked;
+
+      const iframeSrc = `https://ohc.app/api/v1/growth/work-intake/embed?tenant=${tenant}&title=${title}&theme=${theme}`;
+      let embedCode = `<iframe src="${iframeSrc}" width="100%" height="500" style="border:none; border-radius:16px;"></iframe>`;
+
+      if (!removeBranding) {
+        const referralLink = `https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref=${tenant}`;
+        embedCode += `\n<div style="text-align: center; margin-top: 8px; font-family: sans-serif; font-size: 12px;">\n  <a href="${referralLink}" target="_blank" style="color: #6b7280; text-decoration: none; font-weight: 600;">⚡ Powered by OHC</a>\n</div>`;
+      }
+
+      embedTextarea.value = embedCode;
+      codeModal.style.display = 'flex';
+    });
+
+    closeCodeBtn.addEventListener('click', () => {
+      codeModal.style.display = 'none';
+    });
+
+    copyCodeBtn.addEventListener('click', () => {
+      embedTextarea.select();
+      document.execCommand('copy');
+      copyCodeBtn.textContent = 'Copied!';
+      setTimeout(() => {
+        copyCodeBtn.textContent = 'Copy to Clipboard';
+      }, 2000);
+    });
+
+    // Initialize preview
+    updatePreview();
+  </script>
+</body>
+</html>
