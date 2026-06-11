@@ -188,6 +188,18 @@ impl Store {
                     key_bytes.to_vec()
                 };
 
+                if let Some(parent) = secret_path.parent() {
+                    #[cfg(unix)]
+                    {
+                        use std::os::unix::fs::DirBuilderExt;
+                        let _ = std::fs::DirBuilder::new().recursive(true).mode(0o700).create(parent);
+                    }
+                    #[cfg(not(unix))]
+                    {
+                        let _ = std::fs::create_dir_all(parent);
+                    }
+                }
+
                 #[cfg(unix)]
                 {
                     use std::os::unix::fs::OpenOptionsExt;
@@ -199,6 +211,12 @@ impl Store {
                         .open(&secret_path)
                     {
                         let _ = file.write_all(&new_secret);
+                        let mut perms = file.metadata().unwrap().permissions();
+                        use std::os::unix::fs::PermissionsExt;
+                        if perms.mode() & 0o777 != 0o600 {
+                            perms.set_mode(0o600);
+                            let _ = file.set_permissions(perms);
+                        }
                     }
                 }
                 #[cfg(not(unix))]

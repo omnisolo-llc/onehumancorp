@@ -227,6 +227,18 @@ impl DB {
                     rand::thread_rng().fill_bytes(&mut key_bytes);
                     let new_key = hex::encode(key_bytes);
 
+                    if let Some(parent) = secret_path.parent() {
+                        #[cfg(unix)]
+                        {
+                            use std::os::unix::fs::DirBuilderExt;
+                            let _ = std::fs::DirBuilder::new().recursive(true).mode(0o700).create(parent);
+                        }
+                        #[cfg(not(unix))]
+                        {
+                            let _ = std::fs::create_dir_all(parent);
+                        }
+                    }
+
                     #[cfg(unix)]
                     {
                         use std::io::Write;
@@ -235,9 +247,15 @@ impl DB {
                             .write(true)
                             .create_new(true)
                             .mode(0o600)
-                            .open(secret_path)
+                            .open(&secret_path)
                         {
                             let _ = file.write_all(new_key.as_bytes());
+                            let mut perms = file.metadata().unwrap().permissions();
+                            use std::os::unix::fs::PermissionsExt;
+                            if perms.mode() & 0o777 != 0o600 {
+                                perms.set_mode(0o600);
+                                let _ = file.set_permissions(perms);
+                            }
                         }
                     }
                     #[cfg(not(unix))]
