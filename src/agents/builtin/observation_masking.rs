@@ -182,9 +182,9 @@ impl JetBrainsObservationMasker {
                                 };
 
                                 // Return as valid JSON object containing the masked string.
-                                tr.content = serde_json::json!({
+                                tr.content = serde_json::to_string(&serde_json::json!({
                                     "_masked_observation": masked_str
-                                }).to_string();
+                                })).unwrap_or_else(|_| masked_str);
                             }
                         }
                     }
