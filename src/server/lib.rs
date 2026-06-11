@@ -385,6 +385,7 @@ pub mod services {
     pub mod pos;
     pub mod collective;
     pub mod inventory_sync;
+    pub mod inventory;
 }
 
 use tonic::{transport::Server, Request, Response, Status};
@@ -2896,6 +2897,10 @@ pub async fn update_ui_triage_action_handler(
                         .bind("sent")
                         .execute(&mut *tx)
                         .await;
+                    } else if action_type == "SocialPostDraft" {
+                        tracing::info!("Approved and scheduled SocialPostDraft for tenant: {}", tenant_id);
+                        // In a real implementation we would send this to AYRSHARE or similar buffer here
+                        // For MVP, we simply mark it resolved.
                     } else if action_type == "ProposedInvoice" || action_type == "SuggestedCalendarSlot" {
                         // TODO: Implement other action types like ProposedInvoice or SuggestedCalendarSlot as outlined in issue #26616
                         tracing::info!("Executing proposed action: {}, payload: {}", action_type, action_payload);
@@ -4604,6 +4609,9 @@ async fn create_ui_bom_item_handler(
         .nest("/api/agent-feed", api::agent_feed::router().with_state(db.pool.clone()))
         .nest("/api/v1/invoices", api::invoice::router(hub.clone()))
         .nest("/api/v1/booking/request", api::booking::request::router(dept_orchestrator.clone()))
+        .route("/api/v1/booking/resources", axum::routing::post(api::booking::unified::get_resources).with_state(db.pool.clone()))
+        .route("/api/v1/booking/services", axum::routing::post(api::booking::unified::get_services).with_state(db.pool.clone()))
+        .route("/api/v1/booking/create_unified", axum::routing::post(api::booking::unified::create_unified_booking).with_state(db.pool.clone()))
         .nest("/api/agents/mission", api::agents::mission::handoff::router(std::sync::Arc::new(crate::sip::SipDB::new(db.pool.clone(), "default".to_string()))))
         .route("/api/telemetry/sync", axum::routing::post(api::telemetry::sync_telemetry_handler))
         .route("/api/v1/chaos/report", axum::routing::get(api::chaos::get_chaos_report_handler).with_state(db.pool.clone()))
