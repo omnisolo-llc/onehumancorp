@@ -209,10 +209,6 @@
                 <span id="storage-cost" style="font-weight: 500;">$0.00</span>
             </div>
             <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                <span style="color: #86868b;">Network Cost</span>
-                <span id="network-cost" style="font-weight: 500;">$0.00</span>
-            </div>
-            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
                 <span style="color: #86868b;">Payment Fees</span>
                 <span id="payment-fees" style="font-weight: 500;">$0.00</span>
             </div>
@@ -297,7 +293,6 @@
 
                 document.getElementById('llm-cost').innerText = formatCents(costData.llm_cost || 0);
                 document.getElementById('storage-cost').innerText = formatCents(costData.storage_cost || 0);
-                document.getElementById('network-cost').innerText = formatCents(costData.network_cost || 0);
                 document.getElementById('payment-fees').innerText = formatCents(costData.payment_fees || 0);
                 document.getElementById('bandwidth-savings').innerText = formatCents(costData.bandwidth_savings || 0);
 
