@@ -137,7 +137,7 @@
       </a>
 
       <div class="header">
-        <h1><span class="badge">Advanced:</span> OHC Advanced API Reference</h1>
+        <h1><span id="api-docs-tooltip" data-tooltip="Direct API access is only for custom integrations." class="badge cursor-help" style="cursor: help;">Advanced:</span> API Reference for advanced users</h1>
         <p class="subtitle">Integrate your custom checkout or external tools directly with OHC.</p>
       </div>
 
@@ -744,3 +744,117 @@ initWalkthrough();
 
 </body>
 </html>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // Inject tooltip CSS
+    const style = document.createElement('style');
+    style.textContent = `
+        .ohc-tooltip {
+            position: absolute;
+            background: rgba(22, 22, 26, 0.9);
+            color: #f5f5f7;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-family: "Outfit", sans-serif;
+            pointer-events: none;
+            z-index: 10000;
+            opacity: 0;
+            transition: opacity 0.2s, transform 0.2s;
+            transform: translateY(5px);
+            white-space: nowrap;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .ohc-tooltip.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        @media (prefers-color-scheme: light) {
+            .ohc-tooltip {
+                background: rgba(255, 255, 255, 0.95);
+                color: #1d1d1f;
+                border: 1px solid rgba(0,0,0,0.1);
+            }
+        }
+    `;
+    document.head.appendChild(style);
+
+    // Fetch tooltips registry from API or Tauri
+    if (window.__TAURI__ && window.__TAURI__.core) {
+        // Mocking registry fetch for Tauri desktop since it's hardcoded via API
+        window.OHC_TOOLTIPS = { "api-docs-tooltip": "Direct API access is only for custom integrations." };
+    } else {
+        fetch("/api/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(console.error);
+    }
+
+    const tooltipEl = document.createElement('div');
+    tooltipEl.className = 'ohc-tooltip';
+    document.body.appendChild(tooltipEl);
+
+    function showTooltip(e, text) {
+        if (!text) return;
+        tooltipEl.textContent = text;
+        const target = e.target.closest('[data-tooltip]');
+        if(!target) return;
+        const rect = target.getBoundingClientRect();
+
+        let top = rect.top - tooltipEl.offsetHeight - 10;
+        let left = rect.left + (rect.width / 2) - (tooltipEl.offsetWidth / 2);
+
+        if (top < 10) {
+            top = rect.bottom + 10; // show below
+        }
+        if (left < 10) {
+            left = 10;
+        }
+        if (left + tooltipEl.offsetWidth > window.innerWidth - 10) {
+            left = window.innerWidth - tooltipEl.offsetWidth - 10;
+        }
+
+        tooltipEl.style.top = top + 'px';
+        tooltipEl.style.left = left + 'px';
+        tooltipEl.classList.add('visible');
+    }
+
+    function hideTooltip() {
+        tooltipEl.classList.remove('visible');
+    }
+
+    document.addEventListener('mouseover', (e) => {
+        const target = e.target && typeof e.target.closest === 'function' ? e.target.closest('[data-tooltip]') : null;
+        if (target) {
+            const text = (window.OHC_TOOLTIPS && window.OHC_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip');
+            showTooltip({target: target}, text);
+        }
+    });
+
+    document.addEventListener('mouseout', (e) => {
+        const target = e.target; if (target && typeof target.closest === 'function' && target.closest('[data-tooltip]')) {
+            hideTooltip();
+        }
+    });
+
+    // Mobile long press (contextmenu) or touchstart
+    let touchTimeout;
+    document.addEventListener('touchstart', (e) => {
+        const t = e.target;
+        const target = t && typeof t.closest === 'function' ? t.closest('[data-tooltip]') : null;
+        if (target) {
+            touchTimeout = setTimeout(() => {
+                showTooltip(e, (window.OHC_TOOLTIPS && window.OHC_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip'));
+            }, 500); // 500ms long press
+        }
+    });
+
+    document.addEventListener('touchend', () => {
+        clearTimeout(touchTimeout);
+        hideTooltip();
+    });
+
+    document.addEventListener('touchmove', () => {
+        clearTimeout(touchTimeout);
+        hideTooltip();
+    });
+});
+</script>
