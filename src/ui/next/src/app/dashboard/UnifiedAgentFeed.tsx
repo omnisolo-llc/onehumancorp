@@ -450,8 +450,30 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                   <h3 className="text-lg font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] leading-snug mt-1">
                     {(approval.context_payload?.description || approval.proposed_action?.message || approval.proposed_action?.action_type || approval.event_source)}
                   </h3>
-                  {((approval.proposed_action || approval.context_payload)?.context || (approval.proposed_action || approval.context_payload)?.remaining_stock !== undefined || (approval.proposed_action || approval.context_payload)?.feature_type === "quote_draft" || (approval.proposed_action || approval.context_payload)?.feature_type === "social_post_draft") && (
+                  {((approval.proposed_action || approval.context_payload)?.context || (approval.proposed_action || approval.context_payload)?.remaining_stock !== undefined || (approval.proposed_action || approval.context_payload)?.feature_type === "quote_draft" || (approval.proposed_action || approval.context_payload)?.feature_type === "social_post_draft" || (approval.proposed_action || approval.context_payload)?.feature_type === "ambassador_reply") && (
                     <div className="mt-2 flex flex-col gap-1 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+                      {(approval.proposed_action || approval.context_payload)?.feature_type === "ambassador_reply" && (
+                        <div className="mb-4 p-4 rounded-xl glassmorphism border border-white/40 dark:border-white/10 flex flex-col gap-3" data-testid="ambassador-reply-card">
+                          <div className="flex items-center gap-2 text-[#0066FF] font-semibold text-sm">
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                            </svg>
+                            Customer Inquiry
+                          </div>
+                          <div className="app-card p-3 rounded-lg border border-white/40 dark:border-white/10 text-xs text-[#1D1D1F] dark:text-[#F5F5F7] italic">
+                            "{(approval.proposed_action || approval.context_payload).original_message}"
+                          </div>
+                          <div className="text-[#0066FF] font-semibold text-sm mt-2 flex items-center gap-2">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                            Draft Reply
+                          </div>
+                          <div className="bg-[#0066FF] p-3 rounded-lg text-xs text-white shadow-inner">
+                            {(approval.proposed_action || approval.context_payload).generated_response}
+                          </div>
+                        </div>
+                      )}
                       {(approval.proposed_action || approval.context_payload)?.feature_type === "quote_draft" && (
                         <div className="mb-4 p-4 rounded-xl glassmorphism border border-white/40 dark:border-white/10 flex flex-col gap-3" data-testid="quote-draft-card">
                           <div className="flex items-center gap-2 text-[#0066FF] font-semibold text-sm">
@@ -540,6 +562,17 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                             </span>
                           </div>
                         </>
+                      ) : (approval.proposed_action || approval.context_payload)?.feature_type === 'ambassador_reply' ? (
+                        <div className="flex flex-col gap-2">
+                          <div className="flex justify-between items-center text-sm">
+                            <span className="text-gray-500 dark:text-gray-400">Context:</span>
+                            <span className="font-semibold text-gray-900 dark:text-gray-100">{(approval.proposed_action || approval.context_payload).source || 'Message'}</span>
+                          </div>
+                          <div className="flex flex-col text-sm mt-1">
+                            <span className="text-gray-500 dark:text-gray-400">Draft:</span>
+                            <span className="font-semibold text-gray-900 dark:text-gray-100 line-clamp-2 mt-1">{(approval.proposed_action || approval.context_payload).generated_response}</span>
+                          </div>
+                        </div>
                       ) : (approval.proposed_action || approval.context_payload)?.feature_type === 'quote_draft' ? (
                         <div className="flex flex-col gap-2">
                           <div className="flex justify-between items-center text-sm">
@@ -646,6 +679,25 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                         className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
                         aria-label="Dismiss"
                         data-testid="dismiss-stockout"
+                      >
+                        Dismiss
+                      </button>
+                    </div>
+                  ) : (approval.proposed_action || approval.context_payload)?.feature_type === 'ambassador_reply' ? (
+                    <div className="flex flex-col sm:flex-row gap-3 w-full">
+                      <button
+                        onClick={() => handleDecision(approval.id, true)}
+                        className="flex-1 min-h-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center"
+                        aria-label="Approve & Send Draft"
+                        data-testid="approve-ambassador-reply"
+                      >
+                        ✨ 1-Tap Approve
+                      </button>
+                      <button
+                        onClick={() => handleDecision(approval.id, false)}
+                        className="flex-1 min-h-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
+                        aria-label="Dismiss Draft"
+                        data-testid="dismiss-ambassador-reply"
                       >
                         Dismiss
                       </button>

@@ -1233,7 +1233,7 @@ pub fn is_sensitive_key(key: &str) -> bool {
         || k.contains("pii")
         || k.contains("jwt")
         || k.contains("bearer")
-        || k.contains("session_id")
+        || k.contains("sessionid")
         || k.contains("payload")
         || k.contains("credit")
         || k.contains("card")
@@ -1245,17 +1245,17 @@ pub fn is_sensitive_key(key: &str) -> bool {
         || k.contains("account")
         || k.contains("stripe")
         || k.contains("billing")
-        || k.contains("ip_address")
-        || k.contains("mac_address")
+        || k.contains("ipaddress")
+        || k.contains("macaddress")
         || k.contains("geolocation")
         || k.contains("medical")
         || k.contains("health")
         || k.contains("salary")
         || k.contains("tax")
-        || k.contains("social_security")
-        || k.contains("ip_address")
-        || k.contains("mac_address")
-        || k.contains("credit_card")
+        || k.contains("socialsecurity")
+        || k.contains("ipaddress")
+        || k.contains("macaddress")
+        || k.contains("creditcard")
 }
 
 pub fn is_email(s: &str) -> bool {
@@ -1334,7 +1334,7 @@ pub async fn record_email_send_cost(
     organization_id: &str,
     count: i64,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let cost_cents = count * 1; // Assuming 1 cent per email
+    let cost_cents = count; // Assuming 1 cent per email
     buffer_metric_i64(
         pool,
         "ohc_email_send_cost",

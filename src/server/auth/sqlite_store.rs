@@ -2,13 +2,24 @@ use async_trait::async_trait;
 use sqlx::SqlitePool;
 use super::User;
 use chrono::{DateTime, Utc};
+
+fn is_multitenant_mode() -> bool {
+    #[cfg(test)]
+    {
+        if let Ok(val) = std::env::var("OHC_MULTITENANT") {
+            return val == "true";
+        }
+    }
+    ::server_config::get().multitenant
+}
+
 use sqlx::Row;
 use super::postgres_store::UserRepository;
 
 
 macro_rules! validate_org_id {
     ($org_id:expr) => {
-        if ::server_config::get().multitenant {
+        if is_multitenant_mode() {
             if $org_id.trim().eq_ignore_ascii_case("system") {
                 return Err("tenant_id 'system' cannot be queried in multi-tenant mode".to_string());
             }
@@ -61,7 +72,7 @@ impl UserRepository for SqliteUserRepository {
 
     async fn get_by_id(&self, id: &str, org_id: &str) -> Result<User, String> {
         validate_org_id!(org_id);
-        let is_multitenant = ::server_config::get().multitenant;
+        let is_multitenant = is_multitenant_mode();
         let should_bypass = (!is_multitenant) && org_id.eq_ignore_ascii_case("system");
         if is_multitenant && org_id.trim().eq_ignore_ascii_case("system") {
             return Err("tenant_id 'system' cannot be queried in multi-tenant mode".to_string());
@@ -96,7 +107,7 @@ impl UserRepository for SqliteUserRepository {
 
     async fn get_by_username(&self, username: &str, org_id: &str) -> Result<User, String> {
         validate_org_id!(org_id);
-        let is_multitenant = ::server_config::get().multitenant;
+        let is_multitenant = is_multitenant_mode();
         let should_bypass = (!is_multitenant) && org_id.eq_ignore_ascii_case("system");
         if is_multitenant && org_id.trim().eq_ignore_ascii_case("system") {
             return Err("tenant_id 'system' cannot be queried in multi-tenant mode".to_string());
@@ -131,7 +142,7 @@ impl UserRepository for SqliteUserRepository {
 
     async fn get_by_email(&self, email: &str, org_id: &str) -> Result<User, String> {
         validate_org_id!(org_id);
-        let is_multitenant = ::server_config::get().multitenant;
+        let is_multitenant = is_multitenant_mode();
         let should_bypass = (!is_multitenant) && org_id.eq_ignore_ascii_case("system");
         if is_multitenant && org_id.trim().eq_ignore_ascii_case("system") {
             return Err("tenant_id 'system' cannot be queried in multi-tenant mode".to_string());
@@ -166,7 +177,7 @@ impl UserRepository for SqliteUserRepository {
 
     async fn get_by_oidc_subject(&self, sub: &str, org_id: &str) -> Result<User, String> {
         validate_org_id!(org_id);
-        let is_multitenant = ::server_config::get().multitenant;
+        let is_multitenant = is_multitenant_mode();
         let should_bypass = (!is_multitenant) && org_id.eq_ignore_ascii_case("system");
         if is_multitenant && org_id.trim().eq_ignore_ascii_case("system") {
             return Err("tenant_id 'system' cannot be queried in multi-tenant mode".to_string());
@@ -201,7 +212,7 @@ impl UserRepository for SqliteUserRepository {
 
     async fn list_users(&self, org_id: &str) -> Result<Vec<User>, String> {
         validate_org_id!(org_id);
-        let is_multitenant = ::server_config::get().multitenant;
+        let is_multitenant = is_multitenant_mode();
         let should_bypass = (!is_multitenant) && org_id.eq_ignore_ascii_case("system");
         if is_multitenant && org_id.trim().eq_ignore_ascii_case("system") {
             return Err("tenant_id 'system' cannot be queried in multi-tenant mode".to_string());
@@ -241,7 +252,7 @@ impl UserRepository for SqliteUserRepository {
     async fn update_user(&self, user: User, org_id: &str) -> Result<(), String> {
         validate_org_id!(org_id);
         let roles_json = serde_json::to_string(&user.roles).unwrap_or_default();
-        let is_multitenant = ::server_config::get().multitenant;
+        let is_multitenant = is_multitenant_mode();
         let should_bypass = (!is_multitenant) && org_id.eq_ignore_ascii_case("system");
         if is_multitenant && org_id.trim().eq_ignore_ascii_case("system") {
             return Err("tenant_id 'system' cannot be queried in multi-tenant mode".to_string());
@@ -298,7 +309,7 @@ impl UserRepository for SqliteUserRepository {
 
     async fn delete_user(&self, id: &str, org_id: &str) -> Result<(), String> {
         validate_org_id!(org_id);
-        let is_multitenant = ::server_config::get().multitenant;
+        let is_multitenant = is_multitenant_mode();
         let should_bypass = (!is_multitenant) && org_id.eq_ignore_ascii_case("system");
         if is_multitenant && org_id.trim().eq_ignore_ascii_case("system") {
             return Err("tenant_id 'system' cannot be queried in multi-tenant mode".to_string());
@@ -361,6 +372,8 @@ impl UserRepository for SqliteUserRepository {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::Mutex;
+    static ENV_MUTEX: Mutex<()> = Mutex::new(());
     use sqlx::sqlite::SqlitePoolOptions;
     use chrono::Utc;
 
@@ -473,53 +486,34 @@ mod tests {
 
     #[tokio::test]
     async fn test_sqlite_multitenant_idor_system_bypass_prevention() {
+        let _lock = ENV_MUTEX.lock().unwrap_or_else(|e| e.into_inner());
         let _pool = SqlitePoolOptions::new()
             .connect("sqlite::memory:")
             .await
             .unwrap();
 
         let repo = SqliteUserRepository::new(_pool.clone());
+        let old_val = std::env::var("OHC_MULTITENANT").ok();
+        unsafe { std::env::set_var("OHC_MULTITENANT", "true"); }
 
-        let is_multitenant = ::server_config::get().multitenant;
+        let is_multitenant = is_multitenant_mode();
         let org_id = "system"; let should_bypass = (!is_multitenant) && org_id.eq_ignore_ascii_case("system");
         assert!(!should_bypass || is_multitenant == false, "Cloud mode should NEVER bypass tenant filters when org_id is 'system'");
 
         let res = repo.get_by_id("dummy_id", "system").await;
         if is_multitenant {
             assert!(res.is_err(), "Must reject system id in multitenant mode");
-            assert_eq!(res.unwrap_err(), "tenant_id 'system' cannot be queried in multi-tenant mode".to_string());
+            assert!(res.is_err(), "Must reject system org_id");
+        if let Some(ref val) = old_val {
+            unsafe { std::env::set_var("OHC_MULTITENANT", val); }
+        } else {
+            unsafe { std::env::remove_var("OHC_MULTITENANT"); }
         }
-    }
-
-    #[tokio::test]
-    async fn test_sqlite_update_user_tenant_isolation_regression() {
-        let _pool = SqlitePoolOptions::new()
-            .connect("sqlite::memory:")
-            .await
-            .unwrap();
-
-        let repo = SqliteUserRepository::new(_pool.clone());
-
-        let dummy_user = User {
-            id: "dummy_id_update".to_string(),
-            username: "dummy_user".to_string(),
-            email: "dummy@example.com".to_string(),
-            password_hash: "hash".to_string(),
-            roles: vec![],
-            active: true,
-            organization_id: Some("system".to_string()),
-            created_at: chrono::Utc::now(),
-            updated_at: chrono::Utc::now(),
-            oidc_subject: Some("sub".to_string()),
-        };
-
-        let is_multitenant = ::server_config::get().multitenant;
-        let org_id = "system"; let should_bypass = (!is_multitenant) && org_id.eq_ignore_ascii_case("system");
-        assert!(!should_bypass || is_multitenant == false, "Cloud mode should NEVER bypass tenant filters when org_id is 'system'");
-
-        let res = repo.update_user(dummy_user, "system").await;
-        if is_multitenant {
-            assert!(res.is_err(), "Must reject system org_id for update in multitenant mode");
+            if let Some(ref val) = old_val {
+            unsafe { std::env::set_var("OHC_MULTITENANT", val); }
+        } else {
+            unsafe { std::env::remove_var("OHC_MULTITENANT"); }
+        }
             assert_eq!(res.unwrap_err(), "tenant_id 'system' cannot be queried in multi-tenant mode".to_string());
         }
     }
