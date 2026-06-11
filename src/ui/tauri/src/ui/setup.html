@@ -640,13 +640,36 @@
             populateForm();
           }
         }).catch(console.error);
+
       } else {
         const stored = localStorage.getItem('onboardingState');
         if (stored) {
           state = { ...state, ...JSON.parse(stored) };
           populateForm();
         }
+
+        // Fetch from API to support cross-device resume
+        const backendUrl = (window.location.origin.includes('localhost') || window.location.protocol === 'file:') ? 'http://127.0.0.1:18789' : '';
+        const tenantId = localStorage.getItem('tenant_id') || 'storefront';
+        const userId = localStorage.getItem('user_id') || 'test-user';
+
+        fetch(`${backendUrl}/api/onboarding/state`, {
+            method: 'GET',
+            headers: {
+                'X-Tenant-ID': tenantId,
+                'X-User-ID': userId
+            }
+        })
+        .then(res => res.json())
+        .then(apiState => {
+            if (apiState && Object.keys(apiState).length > 0) {
+                state = { ...state, ...apiState };
+                populateForm();
+            }
+        })
+        .catch(err => console.error('Failed to load cross-device state:', err));
       }
+
 
       if (state.step === undefined || state.step === 0) {
          updateStepper('step-context');
