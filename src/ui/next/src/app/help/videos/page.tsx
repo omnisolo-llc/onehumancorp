@@ -6,7 +6,7 @@ import { VideoTutorialList } from '../../../components/VideoTutorialList';
 
 export default function VideoTutorialsPage() {
   return (
-    <div className="min-h-screen bg-[#F5F5F7] py-12 px-4 sm:px-6 lg:px-8 font-inter">
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 py-12 px-4 sm:px-6 lg:px-8 font-inter">
       <div className="max-w-4xl mx-auto">
         <div className="mb-6">
           <Link href="/help" className="text-blue-600 hover:text-blue-800 flex items-center gap-2 font-medium">

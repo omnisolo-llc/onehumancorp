@@ -32,7 +32,7 @@ export default function HelpCenterPage() {
   );
 
   return (
-    <div className="min-h-screen bg-[#F5F5F7] py-12 px-4 sm:px-6 lg:px-8 font-inter">
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 py-12 px-4 sm:px-6 lg:px-8 font-inter">
       <div className="max-w-4xl mx-auto">
         <h1 className="text-3xl sm:text-4xl font-extrabold font-outfit text-[#1D1D1F] mb-8 text-center tracking-tight">Help Center</h1>
 
@@ -82,7 +82,7 @@ export default function HelpCenterPage() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                       {filteredArticles.filter(a => (a.category || "General") === category).map((article, idx) => (
                         <Link key={idx} href={article.link} className="block group">
-                          <div className="glassmorphism p-6 shadow-[0_4px_16px_rgba(0,0,0,0.04)] group-hover:border-blue-300 group-hover:shadow-[0_0_15px_rgba(59,130,246,0.5)] group-hover:-translate-y-1 hover:bg-white/75 transition-all duration-300 cursor-pointer h-full flex flex-col min-h-[140px]">
+                          <div className="bg-white/70 backdrop-blur-xl saturate-200 p-6 shadow-sm border border-white/40 group-hover:border-blue-300 group-hover:shadow-[0_0_15px_rgba(59,130,246,0.5)] group-hover:-translate-y-1 hover:bg-white/75 transition-all duration-300 cursor-pointer h-full flex flex-col min-h-[140px]">
                             <h3 className="text-xl font-bold font-outfit text-blue-600 mb-3 group-hover:text-blue-700">{article.title}</h3>
                             <p className="text-gray-600 leading-relaxed flex-grow">{article.desc}</p>
                           </div>

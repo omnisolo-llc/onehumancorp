@@ -7,9 +7,9 @@ export default function GettingStartedArticle() {
   const router = useRouter();
 
   return (
-    <div className="min-h-screen bg-[#F5F5F7] py-12 px-4 sm:px-6 lg:px-8 font-inter">
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 py-12 px-4 sm:px-6 lg:px-8 font-inter">
       <div className="max-w-4xl mx-auto">
-        <div className="app-card backdrop-blur-[20px] saturate-200 p-8 sm:p-12 rounded-3xl shadow-[0_8px_32px_rgba(0,0,0,0.04)] border border-white/50">
+        <div className="bg-white/70 backdrop-blur-xl saturate-200 p-8 sm:p-12 rounded-3xl shadow-lg border border-white/40">
           <h1 className="text-3xl sm:text-4xl font-extrabold font-outfit text-[#1D1D1F] mb-6 tracking-tight">
             Getting Started with Your Store
           </h1>
