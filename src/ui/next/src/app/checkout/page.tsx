@@ -3,6 +3,7 @@
 import React, { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { WithTooltip } from "../../components/TooltipRegistry";
+import { WalkthroughTarget } from "../../components/Walkthrough";
 import { PoweredByOHC } from "../components/PoweredByOHC";
 import { OneTapReferral } from "../components/OneTapReferral";
 
@@ -306,18 +307,20 @@ function CheckoutContent() {
             </button>
           </WithTooltip>
 
-          <WithTooltip
-            id="checkout-tap-to-pay-tooltip"
-            defaultText="Use your mobile device as a terminal to accept contactless payments."
-          >
-            <button
-              onClick={() => handlePayment(isSubscription)}
-              disabled={isProcessing}
-              className="w-full px-4 py-3 bg-indigo-50 text-indigo-700 rounded-lg font-medium hover:bg-indigo-100 transition-colors border border-indigo-100 shadow-sm flex items-center justify-center gap-2"
+          <WalkthroughTarget id="checkout-pay-now-tooltip">
+            <WithTooltip
+              id="checkout-tap-to-pay-tooltip"
+              defaultText="Use your mobile device as a terminal to accept contactless payments."
             >
-              Pay with Stripe
-            </button>
-          </WithTooltip>
+              <button
+                onClick={() => handlePayment(isSubscription)}
+                disabled={isProcessing}
+                className="w-full px-4 py-3 bg-indigo-50 text-indigo-700 rounded-lg font-medium hover:bg-indigo-100 transition-colors border border-indigo-100 shadow-sm flex items-center justify-center gap-2"
+              >
+                Pay with Stripe
+              </button>
+            </WithTooltip>
+          </WalkthroughTarget>
 
           <WithTooltip
             id="checkout-mercadopago-tooltip"
