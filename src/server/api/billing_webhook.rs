@@ -476,6 +476,99 @@ pub async fn stripe_webhook_handler(
 
             if let Some(tenant_id) = tenant_id_opt {
                 // Determine new tier based on price ID or plan name or metadata
+
+                // Track online loyalty points
+                let amount_total = obj.get("amount_total").and_then(|a| a.as_i64()).unwrap_or(0);
+                if amount_total > 0 {
+                    let earned_points = (amount_total / 100) as i32;
+                    let customer_id = obj.get("customer_email").and_then(|e| e.as_str())
+                        .or_else(|| obj.get("customer_details").and_then(|c| c.get("email")).and_then(|e| e.as_str()))
+                        .unwrap_or("anonymous").to_string();
+                    let ledger_id = uuid::Uuid::new_v4().to_string();
+                    let now = chrono::Utc::now();
+
+                    let update_loyalty = match &webhook_state.db.store {
+                        crate::db::DbStore::Sqlite(pool) => {
+                            sqlx::query("INSERT INTO loyalty_ledger (id, tenant_id, customer_id, points_balance, last_updated) VALUES (?, ?, ?, ?, ?) ON CONFLICT (id) DO UPDATE SET points_balance = loyalty_ledger.points_balance + EXCLUDED.points_balance, last_updated = EXCLUDED.last_updated")
+                                .bind(&ledger_id)
+                                .bind(&tenant_id)
+                                .bind(&customer_id)
+                                .bind(earned_points)
+                                .bind(&now)
+                                .execute(pool)
+                                .await
+                                .map(|_| ())
+                        }
+                        crate::db::DbStore::Postgres => {
+                            sqlx::query("INSERT INTO loyalty_ledger (id, tenant_id, customer_id, points_balance, last_updated) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (id) DO UPDATE SET points_balance = loyalty_ledger.points_balance + EXCLUDED.points_balance, last_updated = EXCLUDED.last_updated")
+                                .bind(&ledger_id)
+                                .bind(&tenant_id)
+                                .bind(&customer_id)
+                                .bind(earned_points)
+                                .bind(&now)
+                                .execute(&webhook_state.db.pool)
+                                .await
+                                .map(|_| ())
+                        }
+                    };
+
+                    if update_loyalty.is_ok() {
+                        let current_balance: Option<i32> = match &webhook_state.db.store {
+                            crate::db::DbStore::Sqlite(pool) => {
+                                sqlx::query_scalar("SELECT SUM(points_balance) FROM loyalty_ledger WHERE tenant_id = ? AND customer_id = ?")
+                                    .bind(&tenant_id)
+                                    .bind(&customer_id)
+                                    .fetch_optional(pool)
+                                    .await
+                                    .unwrap_or(None)
+                                    .flatten()
+                            }
+                            crate::db::DbStore::Postgres => {
+                                sqlx::query_scalar("SELECT SUM(points_balance) FROM loyalty_ledger WHERE tenant_id = $1 AND customer_id = $2")
+                                    .bind(&tenant_id)
+                                    .bind(&customer_id)
+                                    .fetch_optional(&webhook_state.db.pool)
+                                    .await
+                                    .unwrap_or(None)
+                                    .flatten()
+                            }
+                        };
+
+                        if let Some(balance) = current_balance {
+                            if balance >= 50 {
+                                let task_id = uuid::Uuid::new_v4().to_string();
+                                let title = "Loyalty Reward Notification";
+                                let desc = format!("Customer {} just earned 50 loyalty points. Send them a reward notification.", customer_id);
+                                let drafted_msg = format!("Congrats! You have {} loyalty points available for your next order.", balance);
+
+                                let _ = match &webhook_state.db.store {
+                                    crate::db::DbStore::Sqlite(pool) => {
+                                        sqlx::query("INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content) VALUES (?, ?, ?, ?, 'PENDING', 'P1', 'LOW', 'PENDING', ?)")
+                                            .bind(&task_id)
+                                            .bind(&tenant_id)
+                                            .bind(&title)
+                                            .bind(&desc)
+                                            .bind(&drafted_msg)
+                                            .execute(pool)
+                                            .await
+                                            .map(|_| ())
+                                    }
+                                    crate::db::DbStore::Postgres => {
+                                        sqlx::query("INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content) VALUES ($1, $2, $3, $4, 'PENDING', 'P1', 'LOW', 'PENDING', $5)")
+                                            .bind(&task_id)
+                                            .bind(&tenant_id)
+                                            .bind(&title)
+                                            .bind(&desc)
+                                            .bind(&drafted_msg)
+                                            .execute(&webhook_state.db.pool)
+                                            .await
+                                            .map(|_| ())
+                                    }
+                                };
+                            }
+                        }
+                    }
+                }
                 // For this example, let's assume we pass the target tier in metadata.tier
                 // or we deduce it. For simplicity in this demo, let's read metadata.tier
                 // and fallback to "Starter" if a payment succeeded.

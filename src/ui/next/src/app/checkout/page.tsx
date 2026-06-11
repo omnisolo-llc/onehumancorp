@@ -53,6 +53,29 @@ function CheckoutContent() {
     }
   };
 
+
+  const [loyaltyPoints, setLoyaltyPoints] = useState(0);
+  const [useLoyaltyPoints, setUseLoyaltyPoints] = useState(false);
+
+  useEffect(() => {
+    const fetchLoyalty = async () => {
+      try {
+        const res = await fetch("/api/v1/growth/loyalty/balance?customer_id=anonymous", {
+          headers: {
+            ...(typeof localStorage !== "undefined" && localStorage.getItem('token') ? { "Authorization": `Bearer ${localStorage.getItem('token')}` } : {})
+          }
+        });
+        const data = await res.json();
+        if (data.success) {
+          setLoyaltyPoints(data.balance);
+        }
+      } catch (e) {
+        console.error("Failed to fetch loyalty balance", e);
+      }
+    };
+    fetchLoyalty();
+  }, []);
+
   const [isSubscription, setIsSubscription] = useState(false);
 
 
@@ -90,6 +113,10 @@ function CheckoutContent() {
         if (tier.toLowerCase() === 'starter') amount_cents = 2900;
         else if (tier.toLowerCase() === 'pro') amount_cents = 7900;
         else if (tier.toLowerCase() === 'business') amount_cents = 29900;
+    }
+
+    if (useLoyaltyPoints) {
+        amount_cents = Math.max(0, Math.floor(amount_cents * 0.9));
     }
 
     try {
@@ -276,6 +303,27 @@ function CheckoutContent() {
             {deliveryFee !== null && <p className="text-xs text-green-600 mt-1 font-medium">Delivery available: +${deliveryFee.toFixed(2)}</p>}
           </div>
 
+
+          {loyaltyPoints > 0 && (
+            <div className="flex flex-col gap-2 mb-4 p-4 rounded-xl border border-indigo-200" style={{ background: "rgba(99, 102, 241, 0.05)" }}>
+              <div className="flex justify-between items-center">
+                <span className="font-semibold text-indigo-900 text-sm">Neighborhood Collective Points</span>
+                <span className="text-xs font-bold bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full">{loyaltyPoints} pts</span>
+              </div>
+              <p className="text-xs text-indigo-800">You have {loyaltyPoints} points available. Use them for a discount!</p>
+              <div className="flex items-center gap-2 mt-2">
+                <input
+                  type="checkbox"
+                  id="use_points"
+                  checked={useLoyaltyPoints}
+                  onChange={(e) => setUseLoyaltyPoints(e.target.checked)}
+                  className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                />
+                <label htmlFor="use_points" className="text-sm font-medium text-indigo-900">Apply points (-10% off)</label>
+              </div>
+            </div>
+          )}
+
           <div className="flex items-center gap-2 mb-4">
             <input type="checkbox" id="subscribe" checked={isSubscription} onChange={(e) => setIsSubscription(e.target.checked)} className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500" />
             <label htmlFor="subscribe" className="text-sm font-medium text-gray-700">Subscribe & Save 10%</label>
@@ -285,7 +333,7 @@ function CheckoutContent() {
              <div className="flex justify-between items-center pt-2 border-t border-gray-100">
                <span className="font-semibold text-gray-700">Total with Delivery</span>
                <span className="text-xl font-bold font-outfit text-gray-900">
-                 ${(45.00 + deliveryFee).toFixed(2)}
+                 ${useLoyaltyPoints ? ((45.00 + deliveryFee) * 0.9).toFixed(2) : (45.00 + deliveryFee).toFixed(2)}
                </span>
              </div>
           )}

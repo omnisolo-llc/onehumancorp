@@ -382,6 +382,53 @@ pub async fn commit_inventory_handler(
                 let _ = sqlx::query("INSERT INTO order_items (id, tenant_id, order_id, product_id, quantity, price) VALUES ($1, $2, $3, $4, $5, $6)")
                     .bind(&item_id).bind(&tenant_id).bind(&order_id).bind(&req_data.product_id).bind(req_data.quantity).bind(total_amount).execute(&mut *tx).await;
 
+                // Loyalty points tracking logic
+                let earned_points = (req_data.amount_cents.unwrap_or(0) / 100) as i32;
+                let active_customer_id = req_data.customer_id.clone().unwrap_or_else(|| "anonymous".to_string());
+                let ledger_id = uuid::Uuid::new_v4().to_string();
+                let now = chrono::Utc::now();
+
+                let _ = sqlx::query(
+                    "INSERT INTO loyalty_ledger (id, tenant_id, customer_id, points_balance, last_updated) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (id) DO UPDATE SET points_balance = loyalty_ledger.points_balance + EXCLUDED.points_balance, last_updated = EXCLUDED.last_updated"
+                )
+                .bind(&ledger_id)
+                .bind(&tenant_id)
+                .bind(&active_customer_id)
+                .bind(earned_points)
+                .bind(&now)
+                .execute(&mut *tx)
+                .await;
+
+                // Fetch the new balance, this query handles checking the aggregate for this customer
+                let current_balance: Option<i32> = sqlx::query_scalar(
+                    "SELECT SUM(points_balance) FROM loyalty_ledger WHERE tenant_id = $1 AND customer_id = $2"
+                )
+                .bind(&tenant_id)
+                .bind(&active_customer_id)
+                .fetch_optional(&mut *tx)
+                .await
+                .unwrap_or(None)
+                .flatten();
+
+                if let Some(balance) = current_balance {
+                    if balance >= 50 {
+                        let loyalty_payload = serde_json::json!({
+                            "customer_id": active_customer_id,
+                            "points_balance": balance,
+                            "earned_points": earned_points,
+                        });
+
+                        let loyalty_event = ::server_ohc::orchestration::TeammateMeshEvent {
+                            agent_id: "promoter".to_string(),
+                            action: "LoyaltyThresholdReached".to_string(),
+                            status: "completed".to_string(),
+                            payload: serde_json::to_vec(&loyalty_payload).unwrap_or_default(),
+                            msg_id: uuid::Uuid::new_v4().to_string(),
+                        };
+                        let _ = hub.publish_teammate_event("promoter_inbox".to_string(), loyalty_event);
+                    }
+                }
+
                 // Trigger agentic post-sale workflow
                 let event_payload = serde_json::json!({
                     "order_id": order_id,

@@ -1117,6 +1117,77 @@ let db_for_products = self.db.clone();
         let db_for_onboarding = self.db.clone();
         tokio::spawn(async move {
             while let Ok(event) = promoter_rx.recv().await {
+
+                if event.action == "LoyaltyThresholdReached" {
+                    if let Ok(payload_str) = String::from_utf8(event.payload.clone()) {
+                        if let Ok(payload_json) = serde_json::from_str::<serde_json::Value>(&payload_str) {
+                            let tenant_id = payload_json.get("tenant_id").and_then(|o| o.as_str()).unwrap_or("system").to_string();
+                            let customer_id = payload_json.get("customer_id").and_then(|o| o.as_str()).unwrap_or("anonymous").to_string();
+                            let points_balance = payload_json.get("points_balance").and_then(|o| o.as_i64()).unwrap_or(0);
+
+                            let prompt = format!("Draft a personalized SMS/DM for the customer notifying them they just earned a new reward. They now have {} loyalty points. Keep it concise, friendly, and under 160 characters.", points_balance);
+
+                            let mut drafted_msg = format!("Congrats! You have {} loyalty points available for your next order.", points_balance);
+                            let mut attempts = 0;
+                            while attempts < MAX_RETRIES {
+                                let ai_op = async {
+                                    if let Ok(mut client) = ::server_ohc::orchestration::hub_service_client::HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:8081".to_string())).await {
+                                        let reason_req = ::server_ohc::orchestration::ReasonRequest {
+                                            prompt: prompt.clone(),
+                                            from_agent_id: "The Promoter".into(),
+                                        };
+                                        if let Ok(res) = client.reason(tonic::Request::new(reason_req)).await {
+                                            return Ok(res.into_inner().content);
+                                        }
+                                    }
+                                    Err("AI call failed".to_string())
+                                };
+
+                                match tokio::time::timeout(AI_AGENT_TIMEOUT, ai_op).await {
+                                    Ok(Ok(content)) => {
+                                        drafted_msg = content;
+                                        break;
+                                    },
+                                    _ => {
+                                        attempts += 1;
+                                        tokio::time::sleep(Duration::from_secs(2u64.pow(attempts))).await;
+                                    }
+                                }
+                            }
+
+                            let task_id = Uuid::new_v4().to_string();
+                            let _description = format!("The Promoter drafted a loyalty reward notification for customer {}. Review and send.", customer_id);
+
+                            let task_payload = serde_json::json!({
+                                "customer_id": customer_id,
+                                "points_balance": points_balance,
+                                "drafted_message": drafted_msg
+                            });
+
+                            let _ = match &db_for_onboarding.store {
+                                crate::db::DbStore::Sqlite(pool) => {
+                                    sqlx::query("INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status) VALUES (?, ?, 'marketing', 'LoyaltyRewardDraft', ?, 'PENDING')")
+                                    .bind(&task_id)
+                                    .bind(&tenant_id)
+                                    .bind(serde_json::to_string(&task_payload).unwrap_or_default())
+                                    .execute(pool)
+                                    .await
+                                    .map(|_| ())
+                                }
+                                crate::db::DbStore::Postgres => {
+                                    sqlx::query("INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status) VALUES ($1, $2, 'marketing', 'LoyaltyRewardDraft', $3::jsonb, 'PENDING')")
+                                    .bind(&task_id)
+                                    .bind(&tenant_id)
+                                    .bind(serde_json::to_string(&task_payload).unwrap_or_default())
+                                    .execute(&db_for_onboarding.pool)
+                                    .await
+                                    .map(|_| ())
+                                }
+                            };
+                        }
+                    }
+                }
+
                 if event.action == "OnboardingStarted" {
                     if let Ok(payload_str) = String::from_utf8(event.payload.clone()) {
                         if let Ok(payload_json) = serde_json::from_str::<serde_json::Value>(&payload_str) {

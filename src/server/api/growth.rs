@@ -184,6 +184,7 @@ where
         .route("/milestone/card", get(handle_get_milestone_card))
         .route("/trial-extension/claim", post(handle_trial_extension_claim))
         .route("/time-savings", get(handle_time_savings))
+        .route("/loyalty/balance", get(handle_get_loyalty_balance))
         .layer(Extension(GrowthState { pool, hub }))
 }
 
@@ -407,7 +408,7 @@ pub struct TeamInvitesResponse {
 }
 
 #[derive(Clone)]
-struct GrowthState {
+pub struct GrowthState {
     pool: PgPool,
     hub: Arc<Hub>,
 }
@@ -1832,4 +1833,39 @@ async fn handle_abandoned_carts_count(
     };
 
     Json(serde_json::json!({ "count": count }))
+}
+
+
+#[derive(Debug, Deserialize)]
+pub struct LoyaltyBalanceQuery {
+    pub customer_id: Option<String>,
+}
+
+pub async fn handle_get_loyalty_balance(
+    Extension(state): Extension<GrowthState>,
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
+    axum::extract::Query(query): axum::extract::Query<LoyaltyBalanceQuery>,
+) -> impl IntoResponse {
+    let tenant_id = auth_info.org_id;
+    let customer_id = query.customer_id.unwrap_or_else(|| "anonymous".to_string());
+
+    let balance: i32 = match sqlx::query_scalar("SELECT SUM(points_balance) FROM loyalty_ledger WHERE tenant_id = $1 AND customer_id = $2")
+        .bind(&tenant_id)
+        .bind(&customer_id)
+        .fetch_optional(&state.pool)
+        .await
+    {
+        Ok(Some(Some(b))) => b,
+        Ok(Some(None)) | Ok(None) => 0,
+        Err(e) => {
+            tracing::error!("Failed to fetch loyalty balance: {}", e);
+            0
+        }
+    };
+
+    Json(serde_json::json!({
+        "success": true,
+        "balance": balance,
+        "customer_id": customer_id
+    }))
 }
