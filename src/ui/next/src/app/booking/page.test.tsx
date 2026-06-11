@@ -33,7 +33,19 @@ describe('BookingPage', () => {
   it('submits the form and shows the success screen with OneTapReferral', async () => {
     render(<BookingPage />);
 
-    const textarea = screen.getByPlaceholderText(/I have a leaky faucet/i);
+    const nameInput = screen.getByPlaceholderText('First Last');
+    fireEvent.change(nameInput, { target: { value: 'Test User' } });
+
+    const emailInput = screen.getByPlaceholderText('email@example.com');
+    fireEvent.change(emailInput, { target: { value: 'test@example.com' } });
+
+    const dateInput = screen.getByLabelText('Select a Date');
+    fireEvent.change(dateInput, { target: { value: '2026-10-10' } });
+
+    const slotButton = screen.getByRole('button', { name: '09:00 AM' });
+    fireEvent.click(slotButton);
+
+    const textarea = screen.getByPlaceholderText(/Any details we should know before the appointment/i);
     fireEvent.change(textarea, { target: { value: 'Test description' } });
 
     const submitButton = screen.getByRole('button', { name: /Get a Quote/i });
