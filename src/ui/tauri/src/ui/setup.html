@@ -703,7 +703,7 @@
         .then(res => res.json())
         .then(apiState => {
             if (apiState && Object.keys(apiState).length > 0) {
-                state = { ...state, ...apiState };
+                state = { ...state, ...(apiState.wizardState || apiState) };
                 populateForm();
             }
         })
