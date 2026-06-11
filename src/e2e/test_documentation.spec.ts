@@ -24,7 +24,7 @@ test('Documentation, Tooltips and Help flows', async ({ page }) => {
 
   await askAIBtn.click();
   // We assume the Help Chat popups and gets focus
-  const chatInput = page.getByPlaceholder('Ask anything...');
+  const chatInput = page.getByPlaceholder('Ask me anything...');
   await expect(chatInput).toBeVisible();
 
   // 4. Video Tutorials page

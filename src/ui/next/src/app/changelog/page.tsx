@@ -27,7 +27,7 @@ export default function ChangelogPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#F5F5F7]/80 py-12 px-4 sm:px-6 lg:px-8 font-inter backdrop-blur-[30px] saturate-[210%]">
+    <div className="min-h-screen bg-[#F5F5F7]/80 backdrop-blur-[30px] saturate-[210%] py-12 px-4 sm:px-6 lg:px-8 font-inter">
       <div className="max-w-3xl mx-auto">
         <h1 className="text-3xl font-bold text-gray-900 mb-8 font-outfit text-center tracking-tight">
           Release Notes & Changelog
@@ -38,14 +38,14 @@ export default function ChangelogPage() {
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
             </div>
           ) : sections.length === 0 ? (
-            <p className="text-center text-gray-500 font-medium py-8 glassmorphism">
+            <p className="text-center text-gray-500 font-medium py-8 glassmorphism bg-white/60 backdrop-blur-[30px] saturate-[210%] border border-white/20 rounded-2xl">
               No changelog available.
             </p>
           ) : (
             sections.map((section, idx) => (
               <div
                 key={idx}
-                className="glassmorphism p-6 shadow-[0_8px_32px_rgba(0,0,0,0.05)] transition-all"
+                className="glassmorphism bg-white/60 backdrop-blur-[30px] saturate-[210%] border border-white/20 rounded-2xl p-6 shadow-[0_8px_32px_rgba(0,0,0,0.05)] transition-all"
               >
                 <h2 className="text-xl font-bold text-blue-600 mb-4 font-outfit">
                   {section.version}
