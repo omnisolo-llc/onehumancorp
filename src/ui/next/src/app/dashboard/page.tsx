@@ -133,7 +133,9 @@ export default function Dashboard() {
   const [isOffline, setIsOffline] = useState(false);
   const [offlineQueueCount, setOfflineQueueCount] = useState(0);
   const [isWalkthroughOpen, setIsWalkthroughOpen] = useState(false);
-  const [initialTriage, setInitialTriage] = useState<any>(null);
+  const [pendingApprovals, setPendingApprovals] = useState<any[]>([]);
+  const [activities, setActivities] = useState<any[]>([]);
+  const [initialTriage, setInitialTriage] = useState<any[]>([]);
   const [userName, setUserName] = useState("Human");
   const [showMigration, setShowMigration] = useState(false);
   const [migrationUrl, setMigrationUrl] = useState("");
