@@ -3838,6 +3838,7 @@ async fn ui_dashboard_unified_agent_feed_handler(
                 for item in entries.iter_mut() {
                     if let Some(obj) = item.as_object_mut() {
                         obj.remove("payload");
+                        obj.remove("context_payload");
                     }
                 }
             }
@@ -3870,6 +3871,7 @@ async fn ui_dashboard_unified_agent_feed_handler(
         for item in entries.iter_mut() {
             if let Some(obj) = item.as_object_mut() {
                 obj.remove("payload");
+                obj.remove("context_payload");
             }
         }
     }
