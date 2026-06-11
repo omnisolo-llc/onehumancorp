@@ -77,7 +77,7 @@ export default function FlashSaleGeneratorPage() {
                         type="text"
                         value={saleTitle}
                         onChange={(e) => setSaleTitle(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#FF3B30]"
                         placeholder="e.g. 24-Hour Flash Sale!"
                     />
                 </div>
@@ -89,7 +89,7 @@ export default function FlashSaleGeneratorPage() {
                             type="text"
                             value={discountCode}
                             onChange={(e) => setDiscountCode(e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 uppercase"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#FF3B30] uppercase"
                             placeholder="e.g. FLASH20"
                         />
                     </div>
@@ -99,7 +99,7 @@ export default function FlashSaleGeneratorPage() {
                             type="number"
                             value={discountPercent}
                             onChange={(e) => setDiscountPercent(e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#FF3B30]"
                             placeholder="20"
                         />
                     </div>
@@ -111,7 +111,7 @@ export default function FlashSaleGeneratorPage() {
                         type="datetime-local"
                         value={endDate}
                         onChange={(e) => setEndDate(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#FF3B30]"
                     />
                 </div>
 
@@ -141,7 +141,7 @@ export default function FlashSaleGeneratorPage() {
                         type="text"
                         value={tenant}
                         onChange={(e) => setTenant(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#FF3B30]"
                         placeholder="e.g. my-store"
                     />
                 </div>
@@ -171,7 +171,7 @@ export default function FlashSaleGeneratorPage() {
 
                 {/* The Widget Preview */}
                 <div className="relative w-full max-w-md rounded-2xl shadow-2xl overflow-hidden" style={getThemeStyles()}>
-                    <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-red-500 via-orange-500 to-yellow-500"></div>
+                    <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-[#FF3B30] via-orange-500 to-yellow-500"></div>
 
                     <div className="p-6 flex flex-col items-center text-center">
                         <div className="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center text-2xl mb-3 shadow-inner">
@@ -183,7 +183,7 @@ export default function FlashSaleGeneratorPage() {
                         </h3>
 
                         <p className="text-sm mb-4" style={{ color: theme === 'dark' ? '#9ca3af' : '#4b5563' }}>
-                            Get <strong className="text-red-500">{discountPercent || '0'}% OFF</strong> your entire order
+                            Get <strong className="text-[#FF3B30]">{discountPercent || '0'}% OFF</strong> your entire order
                         </p>
 
                         {/* Countdown Timer */}
@@ -263,7 +263,7 @@ export default function FlashSaleGeneratorPage() {
                     <textarea
                         readOnly
                         value={embedCode}
-                        className="w-full h-32 p-4 bg-gray-50 border border-gray-200 rounded-xl font-mono text-sm text-gray-800 resize-none focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-all"
+                        className="w-full h-32 p-4 bg-gray-50 border border-gray-200 rounded-xl font-mono text-sm text-gray-800 resize-none focus:outline-none focus:ring-2 focus:ring-[#FF3B30]/20 focus:border-[#FF3B30] transition-all"
                     />
                     <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
                          <button
