@@ -73,13 +73,42 @@ impl Department for BusinessAdvisoryAgent {
 
             let mut drafted_msg = r#"{"summary": "Great job this week! You made a good amount of sales.", "actionable_suggestion": "Want me to draft a new promotional post for your website?"}"#.to_string();
 
-            if let Ok(mut client) = ::server_ohc::orchestration::hub_service_client::HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:8081".to_string())).await {
-                let reason_req = ::server_ohc::orchestration::ReasonRequest {
-                    prompt,
-                    from_agent_id: "The Advisor".into(),
+            let mut attempts = 0;
+
+            while attempts < 3 {
+                let ai_op = async {
+                    if let Ok(mut client) = ::server_ohc::orchestration::hub_service_client::HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:8081".to_string())).await {
+                        let reason_req = ::server_ohc::orchestration::ReasonRequest {
+                            prompt: prompt.clone(),
+                            from_agent_id: "The Advisor".into(),
+                        };
+                        if let Ok(res) = client.reason(tonic::Request::new(reason_req)).await {
+                            return Ok(res.into_inner().content);
+                        }
+                    }
+                    Err("AI call failed".to_string())
                 };
-                if let Ok(res) = client.reason(tonic::Request::new(reason_req)).await {
-                    drafted_msg = res.into_inner().content;
+
+                match tokio::time::timeout(std::time::Duration::from_secs(60), ai_op).await {
+                    Ok(Ok(content)) => {
+                        drafted_msg = content;
+
+                        break;
+                    },
+                    _ => {
+                        attempts += 1;
+                        if attempts == 3 {
+                            let _ = self.orchestrator.execute_action(
+                                DepartmentType::BusinessAdvisory,
+                                "AI Agent Paused: Advisory".to_string(),
+                                event.tenant_id.clone(),
+                                ActionRisk::DraftForReview,
+                                serde_json::json!({"error": "The AI agent responsible for answering questions is paused because the AI service is unavailable."})
+                            ).await;
+                        } else {
+                            tokio::time::sleep(std::time::Duration::from_secs(2u64.pow(attempts))).await;
+                        }
+                    }
                 }
             }
 
@@ -153,21 +182,39 @@ impl BaseAgent for BusinessAdvisoryAgent {
                 let tenant_id = payload.get("tenant_id").and_then(|v| v.as_str()).unwrap_or("system");
 
                 // Dispatch a job to The Promoter
-                if let Ok(mut client) = ::server_ohc::orchestration::hub_service_client::HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:8081".to_string())).await {
-                    let publish_req = ::server_ohc::orchestration::PublishMeshEventRequest {
-                        event: Some(::server_ohc::orchestration::MeshEvent {
-                            event_id: uuid::Uuid::new_v4().to_string(),
-                            topic: "tenant.marketing.draft_requested".to_string(),
-                            payload: serde_json::to_string(&serde_json::json!({
-                                "name": "Social Post from Advisory",
-                                "description": context.get("actionable_suggestion").and_then(|v| v.as_str()).unwrap_or(""),
-                                "action": "draft_social_post",
-                                "tenant_id": tenant_id.to_string()
-                            })).unwrap_or_default().into_bytes(),
-                            ..Default::default()
-                        }),
+                let mut attempts = 0;
+                while attempts < 3 {
+                    let ai_op = async {
+                        if let Ok(mut client) = ::server_ohc::orchestration::hub_service_client::HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:8081".to_string())).await {
+                            let publish_req = ::server_ohc::orchestration::PublishMeshEventRequest {
+                                event: Some(::server_ohc::orchestration::MeshEvent {
+                                    event_id: uuid::Uuid::new_v4().to_string(),
+                                    topic: "tenant.marketing.draft_requested".to_string(),
+                                    payload: serde_json::to_string(&serde_json::json!({
+                                        "name": "Social Post from Advisory",
+                                        "description": context.get("actionable_suggestion").and_then(|v| v.as_str()).unwrap_or(""),
+                                        "action": "draft_social_post",
+                                        "tenant_id": tenant_id.to_string()
+                                    })).unwrap_or_default().into_bytes(),
+                                    ..Default::default()
+                                }),
+                            };
+                            if let Ok(_) = client.publish_mesh_event(tonic::Request::new(publish_req)).await {
+                                return Ok(());
+                            }
+                        }
+                        Err("Hub call failed".to_string())
                     };
-                    let _ = client.publish_mesh_event(tonic::Request::new(publish_req)).await;
+
+                    match tokio::time::timeout(std::time::Duration::from_secs(60), ai_op).await {
+                        Ok(Ok(_)) => {
+                            break;
+                        },
+                        _ => {
+                            attempts += 1;
+                            tokio::time::sleep(std::time::Duration::from_secs(2u64.pow(attempts))).await;
+                        }
+                    }
                 }
             }
         }

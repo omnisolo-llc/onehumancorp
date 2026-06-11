@@ -11,6 +11,7 @@ export default function WorkIntakeWidgetPage() {
   const [copied, setCopied] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [removeBranding, setRemoveBranding] = useState(false);
+  const [showSoftPaywall, setShowSoftPaywall] = useState(false);
 
   useEffect(() => {
     if (typeof localStorage !== 'undefined') {
@@ -104,7 +105,14 @@ export default function WorkIntakeWidgetPage() {
                         <input
                             type="checkbox"
                             checked={removeBranding}
-                            onChange={(e) => setRemoveBranding(e.target.checked)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                  setShowSoftPaywall(true);
+                                  setRemoveBranding(false);
+                              } else {
+                                  setRemoveBranding(false);
+                              }
+                          }}
                             className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
                         />
                         <span className="text-sm text-gray-700">Remove "Powered by OHC" branding</span>
@@ -172,6 +180,39 @@ export default function WorkIntakeWidgetPage() {
              </div>
         </section>
       </main>
+      {/* Soft Paywall Modal */}
+      {showSoftPaywall && (
+        <div className="fixed inset-0 bg-black/60 z-[9999] flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-md rounded-2xl p-8 shadow-2xl relative overflow-hidden font-inter border border-indigo-100 text-center">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-50 rounded-bl-full -z-10"></div>
+
+            <div className="flex justify-end mb-2">
+              <button
+                onClick={() => setShowSoftPaywall(false)}
+                className="text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors w-8 h-8 flex items-center justify-center"
+              >
+                <span className="text-xl leading-none">&times;</span>
+              </button>
+            </div>
+
+            <div className="w-16 h-16 bg-indigo-100 rounded-2xl flex items-center justify-center text-3xl shadow-inner text-indigo-600 mx-auto mb-6">
+              ✨
+            </div>
+            <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-3">Upgrade to Pro</h2>
+            <p className="text-gray-600 mb-6 text-sm leading-relaxed">
+              Make the Work Intake Widget 100% yours. Upgrade to Pro to remove the "Powered by OHC" watermark.
+            </p>
+
+            <button
+              onClick={() => { setShowSoftPaywall(false); router.push('/pricing'); }}
+              className="w-full py-4 rounded-xl font-bold text-white mb-4 transition-all shadow-md hover:shadow-lg hover:opacity-90 bg-indigo-600 hover:bg-indigo-700"
+            >
+              Upgrade to Pro
+            </button>
+          </div>
+        </div>
+      )}
+
 
       {/* Embed Code Modal */}
       {showModal && (
