@@ -59,7 +59,7 @@ export default function ActionCenterPage() {
         body: JSON.stringify({ approved: true })
       });
       if (response.ok) {
-        setActionStatus("Action approved and executed.");
+        setActionStatus("Action approved and executed..");
       } else {
         setActionStatus("Failed to approve action.");
         fetchApprovals();
