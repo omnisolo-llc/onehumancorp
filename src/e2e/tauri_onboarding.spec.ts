@@ -40,6 +40,9 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
               sessionStorage.setItem('mockState', JSON.stringify({ ...currentState, ...args.state }));
               return null;
             }
+            if (cmd === "start_onboarding") {
+              return null;
+            }
             throw new Error(`Unhandled command: ${cmd}`);
           }
         }
@@ -284,6 +287,9 @@ test.describe('Tauri Dashboard UI and UX Improvements', () => {
           invoke: async (cmd, args) => {
             if (cmd === 'generate_cloud_invite') {
               return "https://cloud.ohc.network/invite/mock-test";
+            }
+            if (cmd === "start_onboarding") {
+              return null;
             }
             throw new Error(`Unhandled command: ${cmd}`);
           }
