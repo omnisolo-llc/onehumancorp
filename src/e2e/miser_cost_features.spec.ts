@@ -10,10 +10,10 @@ test.describe('Miser Cost Features E2E', () => {
     await page.waitForLoadState('networkidle');
 
     // Wait for the main headings
-    await expect(page.locator('text=Cost Transparency')).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('text=Cost Transparency Dashboard')).toBeVisible({ timeout: 15000 });
 
     // Verify Cost Transparency section
-    await expect(page.locator('text=Cost Transparency')).toBeVisible();
+    await expect(page.locator('text=Cost Transparency Dashboard')).toBeVisible();
 
     // Verify key metrics are rendered (we match the text labels)
     await expect(page.locator('text=Total Costs')).toBeVisible();
