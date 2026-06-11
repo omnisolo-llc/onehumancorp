@@ -514,6 +514,7 @@ SERVER_LIB_TEST_GROUPS = {
         "tasks::tests::test_get_pending_approvals",
         "tasks::tests::test_reject_task",
         "tasks::tests::test_review_task",
+        "tasks::tests::test_task_manager_mesh_broadcast",
         "ultraplan::",
     ],
     "interop": [
