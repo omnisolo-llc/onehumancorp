@@ -1,7 +1,10 @@
 import { test, expect } from './fixtures';
 import { currentAppSmoke } from './current_app_smoke';
 
-currentAppSmoke('viral_soft_paywall_loop');
+test('viral_soft_paywall_loop', async ({ page, request, loginAs, adminUser }) => {
+  await loginAs(page, adminUser);
+  await currentAppSmoke(page, request, 'viral_soft_paywall_loop');
+});
 
 test.describe('Viral Soft Paywall Loop', () => {
   test('should display the soft paywall modal and handle share bypass', async ({ page }) => {

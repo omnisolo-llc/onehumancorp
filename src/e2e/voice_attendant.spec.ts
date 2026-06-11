@@ -16,5 +16,8 @@ test.describe('Autonomous Voice AI Phone Attendant Engine', () => {
         await expect(page.getByRole('button', { name: /The Manager/ }).first()).toBeVisible();
     });
 
-    currentAppSmoke('voice_attendant_regression_check');
+    test('voice_attendant_regression_check', async ({ page, request, loginAs, adminUser }) => {
+  await loginAs(page, adminUser);
+  await currentAppSmoke(page, request, 'voice_attendant_regression_check');
+});
 });

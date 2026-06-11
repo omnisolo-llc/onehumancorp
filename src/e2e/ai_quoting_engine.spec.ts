@@ -1,7 +1,10 @@
 import { test, expect } from './fixtures';
 import { currentAppSmoke } from './current_app_smoke';
 
-currentAppSmoke('ai_quoting_engine');
+test('ai_quoting_engine', async ({ page, request, loginAs, adminUser }) => {
+  await loginAs(page, adminUser);
+  await currentAppSmoke(page, request, 'ai_quoting_engine');
+});
 
 test.describe('AI-Driven Dynamic Quoting & Proposal Engine', () => {
   test('Owner can receive a quote request, review the DraftQuoteCard, and approve it to generate a payment link', async ({ page }) => {
