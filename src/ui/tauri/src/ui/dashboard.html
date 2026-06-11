@@ -688,6 +688,7 @@
         <div class="action-buttons">
             <button class="btn-secondary" id="copy-btn" data-tooltip="Copy the referral link to your clipboard.">Copy</button>
             <button class="btn-secondary" id="share-whatsapp-btn">Share on WhatsApp</button>
+            <button class="btn-secondary" id="share-x-btn" style="background-color: #1DA1F2; color: white;">Share on X (Twitter)</button>
           </div>
         </div>
       </div>
@@ -1326,6 +1327,13 @@
         const link = referralLink.value;
         const text = `Join my team on OHC! Here is your invite link:\n\n${link}\n\n⚡ Powered by OHC`;
         window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+      });
+
+      const shareXBtn = document.getElementById('share-x-btn');
+      shareXBtn.addEventListener('click', () => {
+        const link = referralLink.value;
+        const text = `Join my team on OHC! Here is your invite link:\n\n${link}\n\n⚡ Powered by OHC`;
+        window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, '_blank');
       });
 
 
