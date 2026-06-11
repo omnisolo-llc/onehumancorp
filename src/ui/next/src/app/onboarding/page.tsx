@@ -394,7 +394,7 @@ export default function OnboardingWizard() {
         localStorage.setItem('tenant_id', result.organization_id);
         localStorage.setItem('tenant', result.organization_id);
       }
-      setTimeout(() => { setStep(5); syncStateToBackend({ step: 5 }); }, 100); // Go to "You're Live" screen
+      setStep(5); syncStateToBackend({ step: 5 });
       fetch('/api/onboarding/launch', { method: 'POST', headers: { 'X-Tenant-ID': tenantId, 'X-User-ID': userId } }).catch(console.error);
 
     } catch (err: any) {
@@ -545,6 +545,8 @@ export default function OnboardingWizard() {
                             first_product_price: inferredProductPrice,
                             price_type: 'physical',
                             location: inferredLocation,
+                            selling_categories: data.categories || ['physical'],
+                            company_description: bio,
                             ai_agents: ['Operations', 'Marketing', 'Finance', 'Legal', 'Advisory'],
                             auto_respond: true,
                             initial_products: data.initial_products || []
