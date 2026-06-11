@@ -1,13 +1,11 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test.describe('Work Triage Agentic Inbox', () => {
-  const tenantId = 'test-tenant';
+  const tenantId = 'e2e-tenant';
 
-  test('Owner reviews and approves a triage item', async ({ page }) => {
+  test('Owner reviews and approves a triage item', async ({ page, loginAs, adminUser }) => {
     // Log in with tenant
-    await page.goto('/login');
-    await page.fill('input[type="text"]', tenantId);
-    await page.click('button[type="submit"]');
+    await loginAs(page, adminUser);
 
     // Go to Triage
     await page.goto('/dashboard');
@@ -32,27 +30,22 @@ test.describe('Work Triage Agentic Inbox', () => {
     await expect(triageCard).not.toBeVisible();
   });
 
-  test('Owner sees empty state when there are no items', async ({ page }) => {
-    await page.goto('/login');
-    await page.fill('input[type="text"]', 'empty-tenant-triage-test');
-    await page.click('button[type="submit"]');
+  test('Owner sees empty state when there are no items', async ({ page, loginAs, memberUser }) => {
+    await loginAs(page, memberUser);
 
     await page.goto('/dashboard');
 
     // It should not render the needs attention section if there are no items
     // Since it's loading initially, we wait for a known dashboard element instead
-    await expect(page.locator('text=Business Analytics')).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('h1').filter({ hasText: 'Dashboard' })).toBeVisible({ timeout: 15000 });
 
     // Wait a bit to ensure it finished loading, then assert not visible
     await page.waitForTimeout(2000);
     await expect(page.locator('h2').filter({ hasText: 'Unified Agent Feed' })).not.toBeVisible();
   });
 
-  test('Owner can dismiss a triage item', async ({ page }) => {
-    await page.goto('/login');
-    await page.fill('input[type="text"]', tenantId);
-    await page.click('button[type="submit"]');
-
+  test('Owner can dismiss a triage item', async ({ page, loginAs, adminUser }) => {
+    await loginAs(page, adminUser);
     await page.goto('/dashboard');
 
     const triageCard = page.locator('[data-testid="triage-card-triage-test-2"]');
@@ -66,11 +59,8 @@ test.describe('Work Triage Agentic Inbox', () => {
     await expect(triageCard).not.toBeVisible();
   });
 
-  test('Triage feed renders items correctly', async ({ page }) => {
-    await page.goto('/login');
-    await page.fill('input[type="text"]', tenantId);
-    await page.click('button[type="submit"]');
-
+  test('Triage feed renders items correctly', async ({ page, loginAs, adminUser }) => {
+    await loginAs(page, adminUser);
     await page.goto('/dashboard');
 
     const triageCard = page.locator('[data-testid="triage-card-triage-test-1"]');
@@ -79,11 +69,8 @@ test.describe('Work Triage Agentic Inbox', () => {
     await expect(triageCard.locator('text=Urgent')).toBeVisible();
   });
 
-  test('Triage detail shows correct information on click', async ({ page }) => {
-    await page.goto('/login');
-    await page.fill('input[type="text"]', tenantId);
-    await page.click('button[type="submit"]');
-
+  test('Triage detail shows correct information on click', async ({ page, loginAs, adminUser }) => {
+    await loginAs(page, adminUser);
     await page.goto('/dashboard');
 
     const triageCard = page.locator('[data-testid="triage-card-triage-test-2"]');

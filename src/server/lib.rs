@@ -2357,6 +2357,8 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     // Start Booking Reengagement Worker
     let booking_reengagement_worker = crate::workers::booking_reengagement::BookingReengagementWorker::new(db.clone());
     booking_reengagement_worker.start();
+    let omnichannel_triage_worker = crate::workers::omnichannel_triage_worker::OmnichannelTriageWorker::new(db.clone());
+    omnichannel_triage_worker.start();
 
     if matches!(&db.store, crate::db::DbStore::Postgres) {
         crate::cart_recovery::start_cart_recovery_background_workers(Arc::new(db.pool.clone()));
@@ -2812,7 +2814,7 @@ pub async fn list_ui_triage_handler(
             }
 
             match sqlx::query(
-                "SELECT t.id, t.tenant_id, t.customer_id, t.source, t.priority, t.context, t.status, t.created_at, a.action_type, a.payload AS action_payload FROM triage_items t LEFT JOIN triage_proposed_actions a ON t.id = a.triage_item_id WHERE t.tenant_id = $1 AND t.status != 'resolved' AND t.status != 'dismissed' ORDER BY t.created_at DESC"
+                "SELECT t.id, t.tenant_id, t.customer_id, t.source, t.priority, t.context, t.status, t.created_at, a.action_type, a.payload AS action_payload FROM message_threads t LEFT JOIN agent_drafts a ON t.id = a.message_thread_id WHERE t.tenant_id = $1 AND t.status != 'resolved' AND t.status != 'dismissed' ORDER BY t.created_at DESC"
             )
             .bind(&tenant_id)
             .fetch_all(&mut *tx)
@@ -2864,7 +2866,7 @@ pub async fn update_ui_triage_action_handler(
             }
 
             let status = if payload.approved { "resolved" } else { "dismissed" };
-            match sqlx::query("UPDATE triage_items SET status = $1 WHERE id = $2 AND tenant_id = $3").bind(status).bind(&payload.triage_item_id).bind(&tenant_id).execute(&mut *tx).await {
+            match sqlx::query("UPDATE message_threads SET status = $1 WHERE id = $2 AND tenant_id = $3").bind(status).bind(&payload.triage_item_id).bind(&tenant_id).execute(&mut *tx).await {
                 Ok(_) => {
                     let _ = tx.commit().await;
                     let cache = UI_TRIAGE_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
@@ -4305,7 +4307,7 @@ async fn create_ui_bom_item_handler(
                                     .map_err(|e| e.to_string())?;
 
                                     sqlx::query(
-                                        "INSERT OR IGNORE INTO triage_items (id, tenant_id, customer_id, source, priority, context, status) VALUES (?, ?, ?, ?, ?, ?, ?)"
+                                        "INSERT OR IGNORE INTO message_threads (id, tenant_id, customer_id, source, priority, context, status) VALUES (?, ?, ?, ?, ?, ?, ?)"
                                     )
                                     .bind("triage-test-1")
                                     .bind(tenant_id)
@@ -4319,7 +4321,7 @@ async fn create_ui_bom_item_handler(
                                     .map_err(|e| e.to_string())?;
 
                                     sqlx::query(
-                                        "INSERT OR IGNORE INTO triage_proposed_actions (id, triage_item_id, tenant_id, action_type, payload) VALUES (?, ?, ?, ?, ?)"
+                                        "INSERT OR IGNORE INTO agent_drafts (id, message_thread_id, tenant_id, action_type, payload) VALUES (?, ?, ?, ?, ?)"
                                     )
                                     .bind("action-test-1")
                                     .bind("triage-test-1")
@@ -4395,7 +4397,7 @@ async fn create_ui_bom_item_handler(
                                     .map_err(|e| e.to_string())?;
 
                                     sqlx::query(
-                                        "INSERT INTO triage_items (id, tenant_id, customer_id, source, priority, context, status) VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT (id) DO NOTHING"
+                                        "INSERT INTO message_threads (id, tenant_id, customer_id, source, priority, context, status) VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT (id) DO NOTHING"
                                     )
                                     .bind("triage-test-1")
                                     .bind(tenant_id)
@@ -4409,7 +4411,7 @@ async fn create_ui_bom_item_handler(
                                     .map_err(|e| e.to_string())?;
 
                                     sqlx::query(
-                                        "INSERT INTO triage_proposed_actions (id, triage_item_id, tenant_id, action_type, payload) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (id) DO NOTHING"
+                                        "INSERT INTO agent_drafts (id, message_thread_id, tenant_id, action_type, payload) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (id) DO NOTHING"
                                     )
                                     .bind("action-test-1")
                                     .bind("triage-test-1")
