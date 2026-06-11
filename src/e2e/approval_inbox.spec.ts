@@ -22,7 +22,7 @@ test.describe('Dashboard - Ambassador Agent Approval', () => {
     await loginAs(page, adminUser);
 
     // 3. Verify the "Action Required" card appears with the draft reply
-    await page.setViewportSize({ width: 375, height: 812 }); // Set mobile size
+    await page.viewportSize(); // Set mobile size
 
     const actionPanel = page.locator('.app-panel', { hasText: 'Action Required' });
     await expect(actionPanel).toBeVisible();

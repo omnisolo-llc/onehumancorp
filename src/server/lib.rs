@@ -339,6 +339,8 @@ pub use ::server_pricing as pricing;
 pub mod analytics;
 pub use ::server_telemetry as telemetry;
 pub mod chaos;
+#[cfg(test)]
+pub mod chaos_db_test;
 pub mod integrations;
 pub use ::server_utils as utils;
 pub mod orchestration;
@@ -383,6 +385,7 @@ pub mod services {
     pub mod pos;
     pub mod collective;
     pub mod inventory_sync;
+    pub mod inventory;
 }
 
 use tonic::{transport::Server, Request, Response, Status};
@@ -1151,7 +1154,6 @@ impl HubService for MyHubService {
                 "details": req.details
             }),
         };
-        let _ = self.dept_orchestrator.dispatch_event(ops_event).await;
 
         // Manually enqueue an approval request for Customer Success (for the test scenario)
         let cs_approval = crate::orchestration::departments::types::ApprovalRequest {
@@ -1167,7 +1169,11 @@ impl HubService for MyHubService {
                 "details": req.details
             })),
         };
-        self.dept_orchestrator.add_approval_request(cs_approval).await;
+
+        let (_, _) = tokio::join!(
+            self.dept_orchestrator.dispatch_event(ops_event),
+            self.dept_orchestrator.add_approval_request(cs_approval)
+        );
 
         Ok(Response::new(TriggerCustomOrderResponse {
             success: true,
@@ -2891,6 +2897,10 @@ pub async fn update_ui_triage_action_handler(
                         .bind("sent")
                         .execute(&mut *tx)
                         .await;
+                    } else if action_type == "SocialPostDraft" {
+                        tracing::info!("Approved and scheduled SocialPostDraft for tenant: {}", tenant_id);
+                        // In a real implementation we would send this to AYRSHARE or similar buffer here
+                        // For MVP, we simply mark it resolved.
                     } else if action_type == "ProposedInvoice" || action_type == "SuggestedCalendarSlot" {
                         // TODO: Implement other action types like ProposedInvoice or SuggestedCalendarSlot as outlined in issue #26616
                         tracing::info!("Executing proposed action: {}, payload: {}", action_type, action_payload);
@@ -3012,15 +3022,19 @@ async fn ui_dashboard_analytics_briefing_handler(
     use axum::response::IntoResponse;
     let tenant_id = ui_tenant_id(&query);
 
-    let metrics = load_ui_dashboard_metrics(&db, &tenant_id).await.unwrap_or(UiDashboardMetrics {
+    let (metrics_res, inbox_res) = tokio::join!(
+        load_ui_dashboard_metrics(&db, &tenant_id),
+        load_ui_inbox_from_db(&db, &tenant_id)
+    );
+
+    let metrics = metrics_res.unwrap_or(UiDashboardMetrics {
         active_customers: 0,
         pending_orders: 0,
         total_sales: 0.0,
         total_campaigns_sent: 0,
         auto_replied: 0,
     });
-
-    let inbox_messages = load_ui_inbox_from_db(&db, &tenant_id).await.unwrap_or_default();
+    let inbox_messages = inbox_res.unwrap_or_default();
     let unanswered_dms = inbox_messages.iter().filter(|m| m.get("status").and_then(|s| s.as_str()).unwrap_or("") != "closed").count();
 
     let total_sales_formatted = format!("${:.2}", metrics.total_sales);
@@ -4595,6 +4609,9 @@ async fn create_ui_bom_item_handler(
         .nest("/api/agent-feed", api::agent_feed::router().with_state(db.pool.clone()))
         .nest("/api/v1/invoices", api::invoice::router(hub.clone()))
         .nest("/api/v1/booking/request", api::booking::request::router(dept_orchestrator.clone()))
+        .route("/api/v1/booking/resources", axum::routing::post(api::booking::unified::get_resources).with_state(db.pool.clone()))
+        .route("/api/v1/booking/services", axum::routing::post(api::booking::unified::get_services).with_state(db.pool.clone()))
+        .route("/api/v1/booking/create_unified", axum::routing::post(api::booking::unified::create_unified_booking).with_state(db.pool.clone()))
         .nest("/api/agents/mission", api::agents::mission::handoff::router(std::sync::Arc::new(crate::sip::SipDB::new(db.pool.clone(), "default".to_string()))))
         .route("/api/telemetry/sync", axum::routing::post(api::telemetry::sync_telemetry_handler))
         .route("/api/v1/chaos/report", axum::routing::get(api::chaos::get_chaos_report_handler).with_state(db.pool.clone()))
@@ -4635,15 +4652,15 @@ async fn create_ui_bom_item_handler(
             let query = req.message.to_lowercase();
             let mut reply = "I am your AI Help Agent! I specialize in answering questions about OHC features and helping you grow your small business. Check out our Getting Started guide.".to_string();
             let mut link_title = "Read the full article →";
-            let mut link_url = "/help/getting-started";
+            let mut link_url = "/help/getting-started-1";
 
             if query.contains("getting started") {
                 reply = format!("Based on our help center: {}", help_articles[0].1);
-                link_url = "/help/getting-started";
-            } else if query.contains("store") {
+                link_url = "/help/getting-started-1";
+            } else if query.contains("store") || query.contains("product") {
                 reply = format!("Based on our help center: {}", help_articles[1].1);
                 link_url = "/help/my-store";
-            } else if query.contains("payment") {
+            } else if query.contains("payment") || query.contains("credit card") {
                 reply = format!("Based on our help center: {}", help_articles[2].1);
                 link_url = "/help/payments";
             } else if query.contains("ai agent") {

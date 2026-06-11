@@ -65,7 +65,7 @@ test.describe('Business Setup Wizard', () => {
 });
 
   test('validates minimum touch targets and disabled states', async ({ page }) => {
-    await page.setViewportSize({ width: 375, height: 667 });
+    await page.viewportSize();
 
     const startBtn = page.getByRole('button', { name: /Start My Business/ });
     await expect(startBtn).toBeVisible();

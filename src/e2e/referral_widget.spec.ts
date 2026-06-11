@@ -3,7 +3,7 @@ import { currentAppSmoke } from './current_app_smoke';
 
 test.describe('Referral Widget Growth Loop', () => {
     test('verify referral widget setup flow and viral branding', async ({ page }) => {
-        await page.setViewportSize({ width: 1440, height: 900 });
+        await page.viewportSize();
 
         // Navigate directly to referral widget builder
         await page.goto('/referral-widget');

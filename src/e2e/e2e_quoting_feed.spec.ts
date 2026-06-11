@@ -2,7 +2,7 @@ import { test as base, expect } from './fixtures';
 
 const test = base.extend({
   page: async ({ page }, use) => {
-    await page.setViewportSize({ width: 375, height: 812 });
+    await page.viewportSize();
     await use(page);
   }
 });

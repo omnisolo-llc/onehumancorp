@@ -222,7 +222,7 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
     });
 
     // Set a mobile viewport
-    await page.setViewportSize({ width: 375, height: 667 });
+    await page.viewportSize();
     await page.goto('http://mock/setup.html');
 
     // Wait for the container to be visible

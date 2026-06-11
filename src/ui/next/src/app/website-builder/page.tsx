@@ -617,21 +617,23 @@ export default function WebsiteBuilderPage() {
                         if (!bio.trim()) return;
                         setStatus('generating');
                         let completed = false;
-                        const finishWithFallback = () => {
+                        const finishWithFallback = async () => {
                           if (completed) return;
                           completed = true;
                           setBusinessName('My Business');
                           setBusinessType('Online Store');
                           setProductName('First Product');
                           setProductPrice('10.00');
+
+                          // Do not start store in fallback
                           setStatus('live');
                         };
                         const safetyTimeout = window.setTimeout(finishWithFallback, 5000);
                         const controller = new AbortController();
                         const abortTimeout = window.setTimeout(() => controller.abort(), 4500);
+                        const tenantIdStr = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
+                        const userIdStr = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
                         try {
-                          const tenantIdStr = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
-                          const userIdStr = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
 
                           const res = await fetch('/api/onboarding/intake', {
                             method: 'POST',
@@ -653,10 +655,40 @@ export default function WebsiteBuilderPage() {
                             setProductName(data.initial_products?.[0]?.name || 'First Product');
                             setProductPrice(data.initial_products?.[0]?.price || '10.00');
 
-                            // Let the debounce save it
-                            setTimeout(() => {
-                              setStatus('live');
-                            }, 2000);
+                            const inferredBusinessName = data.business_name || 'My Business';
+                            const inferredBusinessType = data.business_type || 'Online Store';
+                            const inferredProductName = data.initial_products?.[0]?.name || 'First Product';
+                            const inferredProductPrice = data.initial_products?.[0]?.price || '10.00';
+                            const inferredLocation = data.location || 'Unknown';
+
+                            const startRes = await fetch('/api/onboarding/start', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': tenantIdStr, 'X-User-ID': userIdStr },
+                              body: JSON.stringify({
+                                company_name: inferredBusinessName,
+                                admin_email: userEmail || 'admin@example.com',
+                                admin_name: userName || 'Admin',
+                                admin_password: userPassword || '',
+                                business_type: inferredBusinessType,
+                                first_product_name: inferredProductName,
+                                first_product_price: inferredProductPrice,
+                                price_type: 'physical',
+                                location: inferredLocation,
+                                ai_agents: ['Operations', 'Marketing', 'Finance', 'Legal', 'Advisory'],
+                                auto_respond: true,
+                                initial_products: data.initial_products || []
+                              })
+                            });
+
+                            if (!startRes.ok) {
+                                throw new Error('Failed to start');
+                            }
+                            const startData = await startRes.json();
+                            if (startData.organization_id) {
+                                localStorage.setItem('tenant_id', startData.organization_id);
+                                localStorage.setItem('tenant', startData.organization_id);
+                            }
+                            setStatus('live');
                           } else {
                             console.error('Failed to generate storefront:', data);
                             finishWithFallback();

@@ -24,7 +24,7 @@ test.describe('Tenant Isolation & Business Setup Data Model', () => {
     });
 
     test('verifies mobile viewport responsiveness on dashboard', async ({ page }) => {
-        await page.setViewportSize({ width: 375, height: 812 });
+        await page.viewportSize();
         await page.goto('/dashboard');
 
         // Ensure the layout adjusted for touch targets

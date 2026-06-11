@@ -97,6 +97,7 @@ pub fn get_article(id: &str) -> Option<HelpArticleDetail> {
       </div>
             "#.to_string()
         }),
+
         "my-store" => Some(HelpArticleDetail {
             title: "Managing My Store".to_string(),
             content_html: r#"

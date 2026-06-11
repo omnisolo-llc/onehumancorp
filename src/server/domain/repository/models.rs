@@ -94,6 +94,8 @@ pub struct Product {
     pub currency: Option<String>,
     pub in_stock: Option<bool>,
     pub inventory_count: Option<i32>,
+    pub locked_quantity: Option<i32>,
+    pub available_quantity: Option<i32>,
     pub is_sold_out: Option<bool>,
     pub metadata: Option<sqlx::types::Json<serde_json::Value>>,
     pub created_at: Option<DateTime<Utc>>,

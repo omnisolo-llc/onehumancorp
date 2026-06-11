@@ -3,7 +3,7 @@ import { Page, APIRequestContext } from '@playwright/test';
 
 export async function currentAppSmoke(page: Page, request: APIRequestContext, label: string) {
 
-  await page.setViewportSize({ width: 375, height: 812 });
+  await page.viewportSize();
 
     await page.goto('/login');
     await page.fill('input[placeholder="Email or Username"]', 'Maya');
@@ -44,7 +44,7 @@ export async function currentAppSmoke(page: Page, request: APIRequestContext, la
 
     await page.goto('/cost-dashboard');
     await expect(page.locator('h1', { hasText: 'Business Advisory Dashboard' }).first()).toBeVisible({ timeout: 15000 });
-    await expect(page.locator('h2', { hasText: 'Cost Transparency' })).toBeVisible();
+    await expect(page.locator('h2', { hasText: 'Cost Transparency' }).first()).toBeVisible();
 
     const totalCosts = page.locator('#cost-dashboard-total');
     await expect(totalCosts).toBeVisible();

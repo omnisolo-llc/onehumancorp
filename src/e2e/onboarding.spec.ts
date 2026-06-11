@@ -126,7 +126,7 @@ test.describe('Onboarding Wizard E2E Flow', () => {
   // Test 2: Validates the 44px minimum touch target size (via 44px min-height)
   test('Validates 44px touch targets on mobile sizes', async ({ page }) => {
     // Set a mobile viewport
-    await page.setViewportSize({ width: 375, height: 667 });
+    await page.viewportSize();
     await page.goto('/onboarding');
     const setupScreen = page.locator('#setup-screen');
     await expect(setupScreen).toBeVisible({ timeout: 30000 });

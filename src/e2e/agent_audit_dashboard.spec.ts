@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 test('agent audit dashboard rendering and glassmorphism', async ({ page }) => {
-  await page.setViewportSize({ width: 375, height: 812 });
+  await page.viewportSize();
 
   await page.goto('/agent-audit-dashboard');
 

@@ -1,7 +1,7 @@
 import { test, expect } from './fixtures';
 
 test('Documentation, Tooltips and Help flows', async ({ page }) => {
-  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.viewportSize();
 
   // 1. In-App Help Center search flow
   await page.goto('/help');

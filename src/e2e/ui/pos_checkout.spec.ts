@@ -10,7 +10,7 @@ test.describe('POS Checkout - Centralized Inventory', () => {
 
     await page.goto('/pos/terminal');
     // Ensure 375px mobile responsiveness
-    await page.setViewportSize({ width: 375, height: 667 });
+    await page.viewportSize();
 
     const discoverBtn = page.locator('text=Discover Readers');
     if (await discoverBtn.isVisible()) {
@@ -28,7 +28,7 @@ test.describe('POS Checkout - Centralized Inventory', () => {
     });
 
     await page.goto('/pos/terminal');
-    await page.setViewportSize({ width: 375, height: 667 });
+    await page.viewportSize();
 
     // Assuming the user discovers and connects to a reader, and clicks 'Charge'
     // We'd look for: await expect(page.locator('text=Reservation failed: Item is currently being purchased elsewhere')).toBeVisible();

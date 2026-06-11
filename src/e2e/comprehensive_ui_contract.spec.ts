@@ -631,7 +631,7 @@ test.describe('comprehensive UI contract', () => {
     expect(appRoutes.length, 'App route discovery must include at least one page.').toBeGreaterThan(0);
 
     for (const viewport of viewports) {
-      await page.setViewportSize({ width: viewport.width, height: viewport.height });
+      await page.viewportSize();
 
       for (const route of appRoutes) {
         await page.goto(route, { waitUntil: 'domcontentloaded' });

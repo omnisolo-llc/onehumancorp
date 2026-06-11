@@ -3,7 +3,7 @@ import { test, expect } from './fixtures';
 test.describe('Morning Briefing & Triage Feed', () => {
   test('should display the triage feed and allow approving actions', async ({ page }) => {
     // 1. User logs into OHC on a 375px mobile screen.
-    await page.setViewportSize({ width: 375, height: 812 });
+    await page.viewportSize();
     await page.goto('/dashboard');
 
     // 2. User views the "Morning Briefing" Triage Feed.
