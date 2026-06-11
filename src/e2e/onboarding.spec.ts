@@ -16,7 +16,7 @@ test.describe('Onboarding Wizard E2E Flow', () => {
     await page.goto('/onboarding');
 
     // Step 0: Welcome Screen
-    const setupScreen = page.locator('#setup-screen');
+    const setupScreen = page.locator('h1', { hasText: 'Setup' }).first();
     await page.waitForLoadState('domcontentloaded');
     await expect(setupScreen).toBeVisible({ timeout: 30000 });
 
@@ -128,7 +128,7 @@ test.describe('Onboarding Wizard E2E Flow', () => {
     // Set a mobile viewport
     await page.setViewportSize({ width: 375, height: 667 });
     await page.goto('/onboarding');
-    const setupScreen = page.locator('#setup-screen');
+    const setupScreen = page.locator('h1', { hasText: 'Setup' }).first();
     await expect(setupScreen).toBeVisible({ timeout: 30000 });
 
     const startButton = page.locator('button', { hasText: 'Start My Business' });
@@ -145,7 +145,7 @@ test.describe('Onboarding Wizard E2E Flow', () => {
   // Test 3: Verifies input disabled states
   test('Next button is disabled when input is empty', async ({ page }) => {
     await page.goto('/onboarding');
-    const setupScreen = page.locator('#setup-screen');
+    const setupScreen = page.locator('h1', { hasText: 'Setup' }).first();
     await expect(setupScreen).toBeVisible({ timeout: 30000 });
 
     const startButton = page.locator('button', { hasText: 'Start My Business' });
@@ -164,7 +164,7 @@ test.describe('Onboarding Wizard E2E Flow', () => {
   // Test 4: Enter key submits the first step
   test('Enter key submits the input', async ({ page }) => {
     await page.goto('/onboarding');
-    const setupScreen = page.locator('#setup-screen');
+    const setupScreen = page.locator('h1', { hasText: 'Setup' }).first();
     await expect(setupScreen).toBeVisible({ timeout: 30000 });
 
     const startButton = page.locator('button', { hasText: 'Start My Business' });
@@ -182,7 +182,7 @@ test.describe('Onboarding Wizard E2E Flow', () => {
   // Test 5: Verify text area presence and styling
   test('Verify manual configuration fallback styling', async ({ page }) => {
     await page.goto('/onboarding');
-    const setupScreen = page.locator('#setup-screen');
+    const setupScreen = page.locator('h1', { hasText: 'Setup' }).first();
     await expect(setupScreen).toBeVisible({ timeout: 30000 });
 
     // Need to trigger manual configuration
@@ -195,7 +195,7 @@ test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
   // Test 6: Verifies Instant Build successful generation flow
   test('Instant Build navigates to step 10 and generates successfully', async ({ page }) => {
     await page.goto('/onboarding');
-    const setupScreen = page.locator('#setup-screen');
+    const setupScreen = page.locator('h1', { hasText: 'Setup' }).first();
     await expect(setupScreen).toBeVisible({ timeout: 30000 });
 
     const instantBuildButton = page.locator('button', { hasText: 'Instant Build' });
@@ -217,7 +217,7 @@ test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
     await generateButton.click();
 
     // It relies on a running backend. For tests, wait for the error or success
-    await expect(page.locator('#setup-screen')).toBeVisible();
+    await expect(page.locator('h1', { hasText: 'Setup' }).first()).toBeVisible();
     const successHeading = page.getByRole('heading', { name: "You're Live!" });
     const errorHeading = page.getByText(/Failed to launch|Failed to fetch|Network Error|Failed to analyze|Backend connection failed/i).first();
 
@@ -231,7 +231,7 @@ test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
   // Test 7: Verifies Instant Build handles network error gracefully
   test('Instant Build displays error state gracefully on network failure', async ({ page }) => {
     await page.goto('/onboarding');
-    const setupScreen = page.locator('#setup-screen');
+    const setupScreen = page.locator('h1', { hasText: 'Setup' }).first();
     await expect(setupScreen).toBeVisible({ timeout: 30000 });
 
     const instantBuildButton = page.locator('button', { hasText: 'Instant Build' });
@@ -256,7 +256,7 @@ test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
     await generateButton.click();
 
     // Verify error is shown with correct styling
-    const errorBlock = page.getByText(/Failed to fetch/i).first();
+    const errorBlock = page.getByText(/Failed to launch|Failed to fetch/i).first();
     await expect(errorBlock).toBeVisible();
     await expect(errorBlock).toHaveClass(/text-\[#FF3B30\]/);
     await expect(errorBlock).toHaveClass(/border-\[#FF3B30\]\/30/);

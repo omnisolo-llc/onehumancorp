@@ -107,6 +107,49 @@ export default function OnboardingWizard() {
       console.error('Failed to sync onboarding state', err);
     }
   };
+
+  useEffect(() => {
+    if (!isLoaded) return;
+    const timeout = setTimeout(() => {
+      const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
+      const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
+
+      const wizardState = {
+        step,
+        chatStep,
+        businessDescription,
+        businessName,
+        whatYouSell,
+        location,
+        targetAudience,
+        businessType,
+        categories,
+        websiteTemplate,
+        domainChoice,
+        firstProductName,
+        firstProductPrice,
+        adminName,
+        adminEmail,
+        adminPassword,
+        aiAgents,
+        aiAutoRespond
+      };
+
+      fetch('/api/onboarding/draft', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': tenantId, 'X-User-ID': userId },
+        body: JSON.stringify({ wizardState })
+      }).catch(err => console.error('Failed to sync onboarding draft', err));
+    }, 1500);
+
+    return () => clearTimeout(timeout);
+  }, [
+    step, chatStep, businessDescription, businessName, whatYouSell, location,
+    targetAudience, businessType, categories, websiteTemplate, domainChoice,
+    firstProductName, firstProductPrice, adminName, adminEmail, adminPassword,
+    aiAgents, aiAutoRespond, isLoaded
+  ]);
+
   const [validationError, setValidationError] = useState('');
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const [saveMessage, setSaveMessage] = useState('');
@@ -426,7 +469,7 @@ export default function OnboardingWizard() {
   };
 
   return (
-    <div className="min-h-screen w-full bg-[#F5F5F7] dark:bg-[#16161a] flex items-center justify-center p-4">
+    <div id="setup-screen" className="min-h-screen w-full bg-[#F5F5F7] dark:bg-[#16161a] flex items-center justify-center p-4">
       <div className="w-full sm:max-w-md lg:max-w-lg xl:max-w-2xl mx-auto overflow-hidden flex flex-col min-h-[640px] sm:min-h-[812px] relative rounded-[16px] glassmorphism border border-white/20 shadow-2xl">
         <div className="px-6 pt-5 text-center">
           <h1 className="text-xl font-bold text-[#1D1D1F] dark:text-[#F5F5F7]">Setup</h1>
