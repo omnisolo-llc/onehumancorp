@@ -103,7 +103,7 @@ impl AgentMemoryPipeline {
                         }
                     };
 
-                    let emb_str = format!("[{}]", embedding.iter().map(|f| f.to_string()).collect::<Vec<_>>().join(","));
+                    let _emb_str = format!("[{}]", embedding.iter().map(|f| f.to_string()).collect::<Vec<_>>().join(","));
                     let mem_id = Uuid::new_v4();
 
                     let mut tx = self.db.pool.begin().await?;
@@ -115,7 +115,7 @@ impl AgentMemoryPipeline {
                         .bind(&agent_id)
                         .bind("SESSION_DATA")
                         .bind(&context_data)
-                        .bind(&emb_str)
+                        .bind(&_emb_str)
                         .execute(&mut *tx)
                         .await?;
 
@@ -149,7 +149,7 @@ impl AgentMemoryPipeline {
 
                 match self.embedding_api.generate_embedding(&content).await {
                     Ok(embedding) => {
-                        let emb_str = format!("[{}]", embedding.iter().map(|f| f.to_string()).collect::<Vec<_>>().join(","));
+                        let _emb_str = format!("[{}]", embedding.iter().map(|f| f.to_string()).collect::<Vec<_>>().join(","));
                         let mem_id = Uuid::new_v4();
 
                         match &self.db.store {
@@ -170,7 +170,7 @@ impl AgentMemoryPipeline {
                                     .bind("fs-agent")
                                     .bind("FS_MEMORY")
                                     .bind(&content)
-                                    .bind(&emb_str)
+                                    .bind(&_emb_str)
                                     .execute(&self.db.pool)
                                     .await?;
                             }
