@@ -617,8 +617,8 @@ pub async fn sync_offline_transactions_handler(
             }
 
             let insert_res = sqlx::query(
-                "INSERT INTO pos_offline_transactions (id, tenant_id, client_id, amount_cents, currency, payload, status)
-                 VALUES ($1, $2, $3, $4, $5, $6::jsonb, 'PENDING')"
+                "INSERT INTO pos_offline_transactions (id, tenant_id, client_id, amount_cents, currency, payload, status, _sync_status)
+                 VALUES ($1, $2, $3, $4, $5, $6::jsonb, 'PENDING', 'pending')"
             )
             .bind(&tx_id)
             .bind(&tenant_id_clone)
