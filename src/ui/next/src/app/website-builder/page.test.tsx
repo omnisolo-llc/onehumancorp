@@ -295,10 +295,10 @@ describe('WebsiteBuilderPage', () => {
       vi.advanceTimersByTime(2500); // Wait for debounce and status change to live
     });
 
-    // Should have called fetch to sync
-    expect(global.fetch).toHaveBeenCalledWith('/api/onboarding/state', expect.objectContaining({
+    // Should have called fetch to start the store
+    expect(global.fetch).toHaveBeenCalledWith('/api/onboarding/start', expect.objectContaining({
       method: 'POST',
-      body: expect.stringContaining('status":"generating"')
+      body: expect.stringContaining('"company_name":"My Business"')
     }));
   });
 });
