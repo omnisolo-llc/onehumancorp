@@ -394,7 +394,7 @@ export function HelpWidget() {
                <video
                  controls
                  className="w-full h-full object-contain"
-                 src={activeVideo.video_url || undefined}
+                 src={activeVideo.video_url || ""}
                  autoPlay
                >
                  Your browser does not support the video tag.

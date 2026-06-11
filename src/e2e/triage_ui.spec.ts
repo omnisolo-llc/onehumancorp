@@ -13,7 +13,7 @@ test.describe('Work Triage Agentic Inbox', () => {
     await page.goto('/dashboard');
 
     // Wait for the triage queue to load
-    await expect(page.locator('h2').filter({ hasText: 'Unified Agent Feed' })).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('h2').filter({ hasText: 'Needs Your Attention' })).toBeVisible({ timeout: 15000 });
 
     const triageCard = page.locator('[data-testid="triage-card-triage-test-1"]');
 
@@ -45,7 +45,7 @@ test.describe('Work Triage Agentic Inbox', () => {
 
     // Wait a bit to ensure it finished loading, then assert not visible
     await page.waitForTimeout(2000);
-    await expect(page.locator('h2').filter({ hasText: 'Unified Agent Feed' })).not.toBeVisible();
+    await expect(page.locator('h2').filter({ hasText: 'Needs Your Attention' })).not.toBeVisible();
   });
 
   test('Owner can dismiss a triage item', async ({ page }) => {

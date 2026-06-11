@@ -18,7 +18,7 @@ async fn test_proxy_tunnel() {
     let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
     let addr = listener.local_addr().unwrap();
 
-    let server = ReverseTunnelServer::new(Arc::new(pool));
+    let server = ReverseTunnelServer { pool: Arc::new(pool) };
 
     tokio::spawn(async move {
         let _ = Server::builder()

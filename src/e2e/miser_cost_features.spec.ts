@@ -34,7 +34,7 @@ test.describe('Miser Cost Features E2E', () => {
 
   test('Pricing Page displays Free Tier details and "Current Plan" disabled button', async ({ page, adminUser, loginAs }) => {
     await loginAs(page, adminUser);
-    await page.goto('/pricing.html');
+    await page.goto('/pricing');
     await page.waitForLoadState('networkidle');
 
     await expect(page.getByRole('heading', { name: 'Free' })).toBeVisible({ timeout: 15000 });
@@ -51,7 +51,7 @@ test.describe('Miser Cost Features E2E', () => {
 
   test('Pricing Page displays Starter Tier details and navigates to checkout', async ({ page, adminUser, loginAs }) => {
     await loginAs(page, adminUser);
-    await page.goto('/pricing.html');
+    await page.goto('/pricing');
     await page.waitForLoadState('networkidle');
 
     await expect(page.getByRole('heading', { name: 'Starter' })).toBeVisible({ timeout: 15000 });
@@ -71,7 +71,7 @@ test.describe('Miser Cost Features E2E', () => {
 
   test('Pricing Page displays Pro Tier details and navigates to checkout', async ({ page, adminUser, loginAs }) => {
     await loginAs(page, adminUser);
-    await page.goto('/pricing.html');
+    await page.goto('/pricing');
     await page.waitForLoadState('networkidle');
 
     await expect(page.getByRole('heading', { name: 'Pro' })).toBeVisible({ timeout: 15000 });
@@ -91,7 +91,7 @@ test.describe('Miser Cost Features E2E', () => {
 
   test('Pricing Page displays Business Tier details and navigates to checkout', async ({ page, adminUser, loginAs }) => {
     await loginAs(page, adminUser);
-    await page.goto('/pricing.html');
+    await page.goto('/pricing');
     await page.waitForLoadState('networkidle');
 
     await expect(page.getByRole('heading', { name: 'Business' })).toBeVisible({ timeout: 15000 });

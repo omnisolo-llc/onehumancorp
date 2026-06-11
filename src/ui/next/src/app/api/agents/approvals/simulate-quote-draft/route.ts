@@ -20,8 +20,7 @@ export async function POST(request: NextRequest) {
           customer_inquiry: "Fix leaking sink",
           suggested_price: 150,
           scope: "Labor 2hrs, Parts $50",
-          suggested_time: "Today at 2:00 PM",
-          inbox_message_id: "msg-1"
+          suggested_time: "Today at 2:00 PM"
         }),
         action_risk: "medium"
       })

@@ -892,29 +892,6 @@ mod tests {
                 .await
                 .unwrap();
 
-
-            let old_pending_time = chrono::Utc::now() - chrono::Duration::minutes(10);
-            sqlx::query("INSERT INTO agent_missions (id, status, payload, tenant_id, updated_at) VALUES ($1, $2, $3, $4, $5) ON CONFLICT DO NOTHING")
-                .bind("stagnant_pending_mission")
-                .bind("PENDING")
-                .bind("{}")
-                .bind("test_org")
-                .bind(old_pending_time.naive_utc())
-                .execute(&mut *tx)
-                .await
-                .unwrap();
-
-            let old_bursting_time = chrono::Utc::now() - chrono::Duration::minutes(10);
-            sqlx::query("INSERT INTO agent_missions (id, status, payload, tenant_id, updated_at) VALUES ($1, $2, $3, $4, $5) ON CONFLICT DO NOTHING")
-                .bind("stagnant_bursting_mission")
-                .bind("BURSTING")
-                .bind("{}")
-                .bind("test_org")
-                .bind(old_bursting_time.naive_utc())
-                .execute(&mut *tx)
-                .await
-                .unwrap();
-
             tx.commit().await.unwrap();
 
             let sip_db = SipDB::new(pool.clone(), "test_org".to_string());

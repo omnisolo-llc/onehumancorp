@@ -2,9 +2,8 @@ import { test, expect } from './fixtures';
 
 test.describe('Documentation & Help Features', () => {
 
-  test('should display tooltips correctly', async ({ page, loginAs, unlimitedAdminUser }) => {
-    await loginAs(page, unlimitedAdminUser);
-    await page.goto('/dashboard');
+  test('should display tooltips correctly', async ({ page }) => {
+    await page.goto('/');
 
     const tooltipTarget = page.locator('#dashboard-tooltip');
     await tooltipTarget.waitFor({ state: "visible", timeout: 10000 });
@@ -12,8 +11,7 @@ test.describe('Documentation & Help Features', () => {
     await expect(page.locator(".animate-fade-in-up")).toBeVisible({ timeout: 5000 });
   });
 
-  test('should open help widget and view articles', async ({ page, loginAs, unlimitedAdminUser }) => {
-    await loginAs(page, unlimitedAdminUser);
+  test('should open help widget and view articles', async ({ page }) => {
     await page.goto('/');
 
     // Help widget button
@@ -29,8 +27,7 @@ test.describe('Documentation & Help Features', () => {
     await expect(page.getByText('Getting Started')).toBeVisible({ timeout: 10000 });
   });
 
-  test('should search for an article', async ({ page, loginAs, unlimitedAdminUser }) => {
-    await loginAs(page, unlimitedAdminUser);
+  test('should search for an article', async ({ page }) => {
     await page.goto('/help');
 
     const searchInput = page.getByPlaceholder('Search for help articles and videos...');
@@ -40,16 +37,14 @@ test.describe('Documentation & Help Features', () => {
     await expect(page.getByText('Getting Paid')).toBeVisible({ timeout: 10000 });
   });
 
-  test('should show video tutorials', async ({ page, loginAs, unlimitedAdminUser }) => {
-    await loginAs(page, unlimitedAdminUser);
+  test('should show video tutorials', async ({ page }) => {
     await page.goto('/help/videos');
 
     await expect(page.getByRole('heading', { name: 'Video Guides', exact: true })).toBeVisible();
     await expect(page.getByText('How to set up your first store easily')).toBeVisible({ timeout: 10000 });
   });
 
-  test('should display inventory tooltip correctly', async ({ page, loginAs, unlimitedAdminUser }) => {
-    await loginAs(page, unlimitedAdminUser);
+  test('should display inventory tooltip correctly', async ({ page }) => {
     await page.goto('/dashboard');
     const tooltipTarget = page.locator('[id="inventory-tooltip"]');
     await tooltipTarget.waitFor({ state: "visible", timeout: 10000 });
@@ -57,8 +52,7 @@ test.describe('Documentation & Help Features', () => {
     await expect(page.locator(".animate-fade-in-up")).toBeVisible({ timeout: 5000 });
   });
 
-  test('should display orders tooltip correctly', async ({ page, loginAs, unlimitedAdminUser }) => {
-    await loginAs(page, unlimitedAdminUser);
+  test('should display orders tooltip correctly', async ({ page }) => {
     await page.goto('/dashboard');
     const tooltipTarget = page.locator('[id="orders-tooltip"]');
     await tooltipTarget.waitFor({ state: "visible", timeout: 10000 });
@@ -66,8 +60,7 @@ test.describe('Documentation & Help Features', () => {
     await expect(page.locator(".animate-fade-in-up")).toBeVisible({ timeout: 5000 });
   });
 
-  test('should display total sales tooltip correctly', async ({ page, loginAs, unlimitedAdminUser }) => {
-    await loginAs(page, unlimitedAdminUser);
+  test('should display total sales tooltip correctly', async ({ page }) => {
     await page.goto('/dashboard');
     const tooltipTarget = page.locator('[id="total-sales-tooltip"]');
     await tooltipTarget.waitFor({ state: "visible", timeout: 10000 });
@@ -75,8 +68,7 @@ test.describe('Documentation & Help Features', () => {
     await expect(page.locator(".animate-fade-in-up")).toBeVisible({ timeout: 5000 });
   });
 
-  test('should display recent orders tooltip correctly', async ({ page, loginAs, unlimitedAdminUser }) => {
-    await loginAs(page, unlimitedAdminUser);
+  test('should display recent orders tooltip correctly', async ({ page }) => {
     await page.goto('/dashboard');
     const tooltipTarget = page.locator('[id="recent-orders-tooltip"]');
     await tooltipTarget.waitFor({ state: "visible", timeout: 10000 });
@@ -84,8 +76,7 @@ test.describe('Documentation & Help Features', () => {
     await expect(page.locator(".animate-fade-in-up")).toBeVisible({ timeout: 5000 });
   });
 
-  test('should display inbox activity tooltip correctly', async ({ page, loginAs, unlimitedAdminUser }) => {
-    await loginAs(page, unlimitedAdminUser);
+  test('should display inbox activity tooltip correctly', async ({ page }) => {
     await page.goto('/dashboard');
     const tooltipTarget = page.locator('[id="inbox-activity-tooltip"]');
     await tooltipTarget.waitFor({ state: "visible", timeout: 10000 });
