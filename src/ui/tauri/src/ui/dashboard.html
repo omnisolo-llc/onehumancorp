@@ -675,7 +675,7 @@
 
         <div class="link-container" id="link-container">
           <input type="text" class="link-input" id="referral-link" readonly value="" />
-          <button class="btn-secondary" onclick="window.startWalkthrough([{selector: '.main-content h1', title: 'Welcome', text: 'Welcome to your dashboard!'}, {selector: '.stat-card:first-child', title: 'Tasks', text: 'Here are your pending tasks.'}])">Start Walkthrough</button>
+          <button class="btn-secondary" id="dashboard-walkthrough-btn" data-tooltip="dashboard-walkthrough-btn" onclick="window.startWalkthrough([{selector: '#dashboard-title', title: 'Welcome', text: 'Welcome to your dashboard! This is your control center.'}, {selector: '#ai-savings-widget', title: 'AI Savings', text: 'Here you can see the time and effort your agents have saved you.'}])">Start Walkthrough</button>
         <div class="action-buttons">
             <button class="btn-secondary" id="copy-btn" data-tooltip="Copy the referral link to your clipboard.">Copy</button>
             <button class="btn-secondary" id="share-whatsapp-btn">Share on WhatsApp</button>
@@ -702,6 +702,7 @@
       <a href="#" id="dashboard-footer-viral-link" style="color: #6b7280; text-decoration: none;">⚡ Powered by OHC</a>
     </footer>
 
+    <script src="walkthrough.js"></script>
     <script>
       document.addEventListener('DOMContentLoaded', async () => {
         const tenantIdForFooter = localStorage.getItem("tenant_id") || localStorage.getItem("tenant") || "default-team";
