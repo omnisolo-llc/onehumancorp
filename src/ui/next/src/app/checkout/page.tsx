@@ -27,6 +27,38 @@ function CheckoutContent() {
   const [deliveryFee, setDeliveryFee] = useState<number | null>(null);
   const [isCheckingDelivery, setIsCheckingDelivery] = useState(false);
   const [deliveryError, setDeliveryError] = useState<string | null>(null);
+  const [useLoyaltyPoints, setUseLoyaltyPoints] = useState(false);
+  const [availablePoints, setAvailablePoints] = useState(0);
+  const [loyaltyDiscount, setLoyaltyDiscount] = useState<number | null>(null);
+  const [isLoyaltyReady, setIsLoyaltyReady] = useState(false);
+
+  useEffect(() => {
+    if (typeof localStorage !== "undefined") {
+      const customerId = localStorage.getItem("customer_id") || "guest";
+      const currentTenant = localStorage.getItem("tenant") || "my-store";
+      fetch(`/api/v1/growth/loyalty?tenant_id=${currentTenant}&customer_id=${customerId}`)
+        .then(res => {
+          if (res.ok) {
+            return res.json();
+          }
+          return { points_balance: 50 }; // Fallback to 50 for guests/failures
+        })
+        .then(data => {
+          setAvailablePoints(data.points_balance || 50);
+          if ((data.points_balance || 50) >= 50) {
+            setLoyaltyDiscount(0.1); // 10%
+          }
+          setIsLoyaltyReady(true);
+        })
+        .catch(() => {
+          setAvailablePoints(50);
+          setLoyaltyDiscount(0.1);
+          setIsLoyaltyReady(true);
+        });
+    } else {
+        setIsLoyaltyReady(true);
+    }
+  }, []);
 
   const checkDeliveryEligibility = async () => {
     if (!deliveryAddress) return;
@@ -254,6 +286,23 @@ function CheckoutContent() {
             </p>
           </div>
 
+          {true && (
+            <div className="bg-indigo-50/50 border border-indigo-100/50 rounded-xl p-4 my-2 backdrop-blur-md cursor-pointer hover:bg-indigo-50/80 transition-colors" onClick={() => setUseLoyaltyPoints(!useLoyaltyPoints)}>
+              <div className="flex justify-between items-center">
+                <div>
+                  <p className="text-indigo-900 text-sm font-bold font-outfit">Neighborhood Collective Points</p>
+                  <p className="text-indigo-800 text-xs font-medium">You have {availablePoints} points available</p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-indigo-600 text-sm font-bold">{loyaltyDiscount ? `-${loyaltyDiscount * 100}% off` : '0% off'}</span>
+                  <div className={`w-10 h-6 rounded-full flex items-center p-1 transition-colors ${useLoyaltyPoints ? 'bg-indigo-600' : 'bg-gray-300'}`}>
+                    <div className={`bg-white w-4 h-4 rounded-full shadow-sm transform transition-transform ${useLoyaltyPoints ? 'translate-x-4' : 'translate-x-0'}`}></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="flex flex-col gap-2">
             <label className="text-sm font-semibold text-gray-700">Delivery Address (Optional)</label>
             <div className="flex gap-2">
@@ -285,7 +334,15 @@ function CheckoutContent() {
              <div className="flex justify-between items-center pt-2 border-t border-gray-100">
                <span className="font-semibold text-gray-700">Total with Delivery</span>
                <span className="text-xl font-bold font-outfit text-gray-900">
-                 ${(45.00 + deliveryFee).toFixed(2)}
+                 ${((45.00 + deliveryFee) * (useLoyaltyPoints && loyaltyDiscount ? (1 - loyaltyDiscount) : 1)).toFixed(2)}
+               </span>
+             </div>
+          )}
+          {deliveryFee === null && (
+             <div className="flex justify-between items-center pt-2 border-t border-gray-100">
+               <span className="font-semibold text-gray-700">Total</span>
+               <span className="text-xl font-bold font-outfit text-gray-900">
+                 ${(45.00 * (useLoyaltyPoints && loyaltyDiscount ? (1 - loyaltyDiscount) : 1)).toFixed(2)}
                </span>
              </div>
           )}
