@@ -7,7 +7,7 @@ test.describe('Embeddable Storefront Widget Growth Loop', () => {
         await page.waitForLoadState('networkidle');
 
         // Look for the "Storefront Widget" link in the Dashboard Growth & Virality section
-        const widgetLink = page.locator('a[href="/storefront-widget"]').first();
+        const widgetLink = page.locator('a[href="storefront-widget.html"]').first();
         await expect(widgetLink).toBeVisible();
         await widgetLink.click();
 
@@ -18,7 +18,7 @@ test.describe('Embeddable Storefront Widget Growth Loop', () => {
         await expect(sectionHeader).toBeVisible();
 
         // Click "Get Widget" button
-        const getWidgetBtn = page.locator('button:has-text("Get Widget")');
+        const getWidgetBtn = page.locator('#get-widget-btn');
         await expect(getWidgetBtn).toBeVisible();
         await getWidgetBtn.click();
 
@@ -41,14 +41,14 @@ test.describe('Embeddable Storefront Widget Growth Loop', () => {
 
     test('2. storefront widget builder updates embed code when theme toggle is clicked', async ({ page, adminUser, loginAs }) => {
         await loginAs(page, adminUser);
-        await page.goto('/storefront-widget');
+        await page.goto('/storefront-widget.html');
         await page.waitForLoadState('networkidle');
 
-        const darkThemeBtn = page.locator('button', { hasText: 'Dark' }).first();
+        const darkThemeBtn = page.locator('#theme-dark').first();
         await expect(darkThemeBtn).toBeVisible();
         await darkThemeBtn.click();
 
-        const getWidgetBtn = page.locator('button:has-text("Get Widget")');
+        const getWidgetBtn = page.locator('#get-widget-btn');
         await getWidgetBtn.click();
 
         const textarea = page.locator('textarea').first();
