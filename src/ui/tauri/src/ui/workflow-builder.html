@@ -138,7 +138,35 @@
         display: block;
       }
     </style>
-  </head>
+  <style>
+@media (prefers-color-scheme: dark) {
+    body {
+        background-color: #16161a;
+        color: #f5f5f7;
+    }
+    .sidebar, .canvas {
+        background: rgba(22, 22, 26, 0.7) !important;
+        backdrop-filter: blur(30px) saturate(210%);
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    }
+    .block-type {
+        background: #333 !important;
+        color: #f5f5f7;
+        border: 1px solid #555 !important;
+    }
+    .block-type:hover {
+        background: #444 !important;
+    }
+    h3 {
+        color: #f5f5f7;
+    }
+    #result {
+        background: #222 !important;
+        color: #f5f5f7;
+    }
+}
+</style>
+</head>
   <body>
     <h1>Visual Workflow Builder</h1>
     <a href="dashboard.html" style="display:inline-block; margin-bottom:20px; color:#0066FF; text-decoration:none;">&larr; Back to Dashboard</a>

@@ -88,6 +88,7 @@ test.describe('Low Stock Restock Action Card', () => {
     await expect(page.locator('text=Status: Creating payment intent...')).toBeVisible();
     await expect(page.locator('text=Status: Payment successful!')).toBeVisible();
 
+
     // 2. Navigate to the Team/Approval Inbox to verify the new card
     await page.goto('/team/chat');
 
