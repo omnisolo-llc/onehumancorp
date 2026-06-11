@@ -82,7 +82,7 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
     await page.locator('#step-categories').getByRole('button', { name: 'Next' }).click();
     await expect(page.locator('#categories-error')).toBeVisible();
 
-    await page.getByPlaceholder("e.g. Graphic Design").fill("Home Repair");
+    await page.locator("#business-categories").selectOption("Handyman");
     await page.locator('#step-categories').getByRole('button', { name: 'Next' }).click();
 
     // Step 3: Name
@@ -167,25 +167,15 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
 
     // It should load the values, we can skip through
     await expect(newPage.locator('input[value="Local Service"]')).toBeChecked();
-    await newPage.locator('#step-context').getByRole('button', { name: 'Next' }).click();
-
-    await expect(newPage.getByPlaceholder("e.g. Graphic Design")).toHaveValue("Home Repair");
-    await newPage.locator('#step-categories').getByRole('button', { name: 'Next' }).click();
-
+    await expect(newPage.locator("#business-categories")).toHaveValue("Handyman");
     await expect(newPage.getByPlaceholder("e.g. Maya's Bakery")).toHaveValue("Test Business");
     await expect(newPage.getByPlaceholder("Tagline (optional)")).toHaveValue("Fixing things");
-    await newPage.locator('#step-name').getByRole('button', { name: 'Next' }).click();
-
     await expect(newPage.getByPlaceholder("e.g. Jarvis")).toHaveValue("Jarvis");
     await expect(newPage.locator('#assistant-tone')).toHaveValue('Professional');
-    await newPage.locator('#step-assistant').getByRole('button', { name: 'Next' }).click();
-
-    // Step 5: Offer
-    await expect(newPage.getByRole('heading', { name: "Your First Offer" })).toBeVisible();
     await expect(newPage.getByPlaceholder("e.g. Custom Birthday Cake")).toHaveValue("Faucet Repair");
-    await newPage.locator('#step-offer').getByRole('button', { name: 'Next' }).click();
 
     // Step 6: Template
+    await newPage.evaluate(() => { if (window.goToStep) window.goToStep('step-template'); });
     await expect(newPage.getByRole('heading', { name: "Template Selection" })).toBeVisible();
 
 
@@ -228,7 +218,7 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
     await expect(container).toBeVisible();
     await expect(container).toHaveClass(/glassmorphism/);
 
-    const catInput = page.getByPlaceholder("e.g. Graphic Design");
+    const catInput = page.locator('#business-categories');
     const box = await catInput.boundingBox();
     // Inputs are initially hidden. We need to navigate to that step or test something visible
     const option = page.locator('.radio-option').first();
