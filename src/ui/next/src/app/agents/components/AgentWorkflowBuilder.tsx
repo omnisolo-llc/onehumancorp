@@ -79,7 +79,7 @@ export function AgentWorkflowBuilder({ onSave }: { onSave: (name: string, payloa
   };
 
   return (
-    <div className="rounded-[16px] border border-[rgba(255,255,255,0.4)] bg-[rgba(255,255,255,0.65)] backdrop-blur-[30px] saturate-[210%] p-4 shadow-sm" data-testid="visual-workflow-builder">
+    <div className="rounded-[16px] border border-white/20 bg-white/60 backdrop-blur-3xl saturate-200 shadow-glass p-4 shadow-sm" data-testid="visual-workflow-builder">
       <h3 className="mb-4 text-lg font-bold text-zinc-900">Visual Workflow Builder</h3>
 
       {error && (
@@ -138,7 +138,7 @@ export function AgentWorkflowBuilder({ onSave }: { onSave: (name: string, payloa
             <div className="flex flex-col items-center gap-2 relative">
               {workflowBlocks.map((block, index) => (
                 <React.Fragment key={block.id}>
-                  <div className="w-full max-w-sm flex items-center justify-between rounded-[16px] border-2 border-teal-500 bg-[rgba(255,255,255,0.65)] backdrop-blur-[30px] saturate-[210%] p-3 shadow-sm" data-testid={`canvas-block-${index}`}>
+                  <div className="w-full max-w-sm flex items-center justify-between rounded-[16px] border-2 border-teal-500 bg-white/60 backdrop-blur-3xl saturate-200 shadow-glass p-3 shadow-sm" data-testid={`canvas-block-${index}`}>
                     <div>
                       <span className="text-xs font-bold text-teal-600 uppercase tracking-wider">{block.type}</span>
                       <p className="font-semibold text-zinc-900">{block.label}</p>
