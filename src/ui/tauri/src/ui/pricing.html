@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>OHC - Pricing Plans</title>
+    <style>
+      body {
+        font-family: "Outfit", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        background-color: #f5f5f7;
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        box-sizing: border-box;
+      }
+      header {
+        width: 100%;
+        padding: 16px 24px;
+        box-sizing: border-box;
+        background: rgba(255, 255, 255, 0.65);
+        backdrop-filter: blur(30px) saturate(210%);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.4);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        position: sticky;
+        top: 0;
+        z-index: 50;
+      }
+      h1 {
+        color: #1d1d1f;
+        font-size: 24px;
+        font-weight: 700;
+        margin: 0;
+      }
+      .btn-back {
+        background: #e5e5ea;
+        border: none;
+        padding: 10px 16px;
+        border-radius: 12px;
+        color: #1d1d1f;
+        font-weight: 500;
+        cursor: pointer;
+        transition: background-color 0.2s;
+        text-decoration: none;
+      }
+      .btn-back:hover {
+        background: #d1d1d6;
+      }
+      .container {
+        max-width: 1200px;
+        width: 100%;
+        padding: 40px 24px;
+        box-sizing: border-box;
+      }
+      .intro {
+        text-align: center;
+        margin-bottom: 40px;
+        color: #86868b;
+        font-size: 18px;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(1, 1fr);
+        gap: 24px;
+      }
+      @media (min-width: 768px) {
+        .grid { grid-template-columns: repeat(2, 1fr); }
+      }
+      @media (min-width: 1024px) {
+        .grid { grid-template-columns: repeat(4, 1fr); }
+      }
+      .card {
+        background: rgba(255, 255, 255, 0.65);
+        backdrop-filter: blur(30px) saturate(210%);
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        border-radius: 16px;
+        padding: 24px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        transition: transform 0.2s, box-shadow 0.2s;
+        position: relative;
+      }
+      .card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 14px 40px rgba(0, 0, 0, 0.1);
+      }
+      .card.recommended {
+        border: 2px solid #0066FF;
+        background: rgba(255, 255, 255, 0.85);
+      }
+      .recommended-badge {
+        position: absolute;
+        top: 0;
+        right: 0;
+        background: #0066FF;
+        color: white;
+        font-size: 12px;
+        font-weight: 700;
+        padding: 4px 12px;
+        border-bottom-left-radius: 12px;
+        border-top-right-radius: 14px;
+      }
+      .tier-name {
+        font-size: 24px;
+        font-weight: 700;
+        color: #1d1d1f;
+        margin-top: 0;
+        margin-bottom: 8px;
+      }
+      .tier-price {
+        font-size: 20px;
+        font-weight: 600;
+        color: #1d1d1f;
+        margin-top: 0;
+        margin-bottom: 16px;
+      }
+      .tier-price span {
+        font-size: 14px;
+        font-weight: 400;
+        color: #86868b;
+      }
+      .tier-desc {
+        font-size: 12px;
+        color: #0066FF;
+        font-weight: 500;
+        margin-top: -8px;
+        margin-bottom: 16px;
+      }
+      ul {
+        list-style: none;
+        padding: 0;
+        margin: 0 0 24px 0;
+      }
+      li {
+        font-size: 14px;
+        color: #1d1d1f;
+        margin-bottom: 12px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .btn {
+        width: 100%;
+        padding: 12px;
+        border-radius: 12px;
+        border: none;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: background-color 0.2s;
+        box-sizing: border-box;
+      }
+      .btn-primary {
+        background: #0066FF;
+        color: white;
+      }
+      .btn-primary:hover {
+        background: #0052cc;
+      }
+      .btn-dark {
+        background: #1d1d1f;
+        color: white;
+      }
+      .btn-dark:hover {
+        background: #000;
+      }
+      .btn-disabled {
+        background: #e5e5ea;
+        color: #86868b;
+        cursor: not-allowed;
+      }
+      .footer-text {
+        text-align: center;
+        color: #86868b;
+        font-size: 14px;
+        margin-top: 24px;
+      }
+      .faq-section {
+        background: rgba(255, 255, 255, 0.65);
+        backdrop-filter: blur(30px) saturate(210%);
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        border-radius: 16px;
+        padding: 24px;
+        margin-top: 32px;
+      }
+      .faq-title {
+        font-size: 20px;
+        font-weight: 700;
+        color: #1d1d1f;
+        margin-top: 0;
+        margin-bottom: 16px;
+      }
+      .faq-q {
+        font-weight: 600;
+        color: #1d1d1f;
+        margin-bottom: 4px;
+      }
+      .faq-a {
+        font-size: 14px;
+        color: #48484a;
+        margin-top: 0;
+        margin-bottom: 16px;
+      }
+      @media (prefers-color-scheme: dark) {
+        body { background-color: #000; }
+        header { background: rgba(28, 28, 30, 0.65); border-bottom: 1px solid rgba(255, 255, 255, 0.1); }
+        h1, .tier-name, .tier-price, li, .faq-title, .faq-q { color: #fff; }
+        .intro, .tier-price span, .footer-text, .faq-a { color: #8e8e93; }
+        .card, .faq-section { background: rgba(28, 28, 30, 0.65); border: 1px solid rgba(255, 255, 255, 0.1); }
+        .card.recommended { background: rgba(44, 44, 46, 0.85); border: 2px solid #0A84FF; }
+        .btn-back { background: #2c2c2e; color: #fff; }
+        .btn-back:hover { background: #3a3a3c; }
+        .btn-disabled { background: #2c2c2e; color: #8e8e93; }
+        .btn-dark { background: #fff; color: #000; }
+        .btn-dark:hover { background: #e5e5ea; }
+        .tier-desc, .recommended-badge { color: #0A84FF; }
+        .recommended-badge { background: #0A84FF; color: white; }
+        .btn-primary { background: #0A84FF; }
+        .btn-primary:hover { background: #007aff; }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Pricing Plans</h1>
+      <button class="btn-back" onclick="window.location.href='dashboard.html'">Back</button>
+    </header>
+
+    <main class="container">
+      <div class="intro">
+        Plain-language pricing — no hidden fees. Choose the best plan to grow your small business.
+      </div>
+
+      <div class="grid">
+        <!-- Free Tier -->
+        <div class="card">
+          <div>
+            <h3 class="tier-name">Free</h3>
+            <p class="tier-price">$0 <span>/ month</span></p>
+            <ul>
+              <li>✓ 1 Agent Limit</li>
+              <li>✓ 100 AI actions / month</li>
+              <li>✓ 500MB Storage Quota</li>
+              <li>✓ 10 Products Limit</li>
+            </ul>
+          </div>
+          <button class="btn btn-disabled" disabled>Current Plan</button>
+        </div>
+
+        <!-- Starter Tier -->
+        <div class="card recommended">
+          <div class="recommended-badge">Recommended</div>
+          <div>
+            <h3 class="tier-name">Starter</h3>
+            <p class="tier-price">$29 <span>/ month</span></p>
+            <p class="tier-desc">Suggested for growing stores</p>
+            <ul>
+              <li>✓ 3 Agents Limit</li>
+              <li>✓ 1,000 AI actions / month</li>
+              <li>✓ 5GB Storage Quota</li>
+              <li>✓ 100 Products Limit</li>
+            </ul>
+          </div>
+          <button class="btn btn-primary" onclick="handleUpgrade('Starter')">Upgrade to Starter via Stripe</button>
+        </div>
+
+        <!-- Pro Tier -->
+        <div class="card">
+          <div>
+            <h3 class="tier-name">Pro</h3>
+            <p class="tier-price">$79 <span>/ month</span></p>
+            <ul>
+              <li>✓ 10 Agents Limit</li>
+              <li>✓ Unlimited AI actions</li>
+              <li>✓ 50GB Storage Quota</li>
+              <li>✓ Unlimited Products</li>
+            </ul>
+          </div>
+          <button class="btn btn-dark" onclick="handleUpgrade('Pro')">Upgrade to Pro via Stripe</button>
+        </div>
+
+        <!-- Business Tier -->
+        <div class="card">
+          <div>
+            <h3 class="tier-name">Business</h3>
+            <p class="tier-price">$299 <span>/ month</span></p>
+            <ul>
+              <li>✓ Unlimited Agents</li>
+              <li>✓ Unlimited AI actions</li>
+              <li>✓ 500GB Storage Quota</li>
+              <li>✓ Unlimited Products</li>
+            </ul>
+          </div>
+          <button class="btn btn-dark" onclick="handleUpgrade('Business')">Upgrade to Business via Stripe</button>
+        </div>
+      </div>
+
+      <p class="footer-text">100% money back guarantee. Secure SSL payments powered by Stripe.</p>
+
+      <div class="faq-section">
+        <h2 class="faq-title">Frequently Asked Questions</h2>
+
+        <div class="faq-q">How do I upgrade, downgrade, or cancel?</div>
+        <p class="faq-a">Stripe Billing for self-serve plan upgrades, downgrades, and cancellation. You can upgrade, downgrade, or cancel anytime straight from the My Plan page.</p>
+
+        <div class="faq-q">What is the storage limit?</div>
+        <p class="faq-a">Storage limits vary by plan, starting at 500MB for Free and up to 500GB for Business.</p>
+      </div>
+    </main>
+
+    <script>
+      function handleUpgrade(tier) {
+        window.location.href = `/checkout?tier=${tier}`;
+      }
+    </script>
+  </body>
+</html>
