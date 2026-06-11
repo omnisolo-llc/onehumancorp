@@ -124,10 +124,11 @@ impl TaskWorker {
                     let payload_str = payload.to_string();
                     let role = a.role.clone();
                     let issue_id = issue.id.clone();
+                    let hub_clone = hub.clone();
                     let agent_id = a.id.clone();
                     
                     tokio::spawn(async move {
-                        if let Err(e) = Self::dispatch_to_builtin_agent(&payload_str, &format!("plane issue {}", issue_id), &role).await {
+                        if let Err(e) = Self::dispatch_to_builtin_agent(&payload_str, &format!("plane issue {}", issue_id), &role, &issue_id, &issue.name, hub_clone.clone()).await {
                             debug!("builtin agent dispatch error: {}, agent_id: {}", e, agent_id);
                         }
                     });
@@ -143,7 +144,7 @@ impl TaskWorker {
         }
     }
 
-    async fn dispatch_to_builtin_agent(payload: &str, description: &str, role: &str) -> Result<(), String> {
+    async fn dispatch_to_builtin_agent(payload: &str, description: &str, role: &str, issue_id: &str, issue_name: &str, hub: Arc<Hub>) -> Result<(), String> {
         let address = std::env::var("OHC_AGENT_ADDRESS").unwrap_or_else(|_| "127.0.0.1:50051".to_string());
         
         let mut attempt = 0;
@@ -164,14 +165,14 @@ impl TaskWorker {
 
                 // Actual implementation for business owner notification
                 let notification_payload = serde_json::json!({
-                    "issue_id": issue.id,
-                    "issue_name": issue.name,
+                    "issue_id": issue_id,
+                    "issue_name": issue_name,
                     "event": "agent_paused",
                     "reason": "Circuit breaker OPEN due to repeated failures. LLM API is unavailable."
                 });
 
                 let msg = crate::ohc::orchestration::Message {
-                    id: format!("notify-{}", issue.id),
+                    id: format!("notify-{}", issue_id),
                     from_agent: "SYSTEM".to_string(),
                     to_agent: "OWNER".to_string(),
                     r#type: "SystemNotification".to_string(),
