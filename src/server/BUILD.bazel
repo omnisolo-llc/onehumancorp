@@ -3,6 +3,7 @@ load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library", "rust_test")
 load("//bazel/rules:rust_sharded_test.bzl", "rust_sharded_test")
 
 SERVER_RS_SRCS = [
+    "health_test.rs",
     "analytics.rs",
     "autodream_sync.rs",
     "billing.rs",
@@ -294,6 +295,7 @@ SERVER_RS_SRCS = [
     "//src/server/workers:memory.rs",
     "//src/server/workers:pos_sync_worker.rs",
     "//src/server/workers:pos_conflict_worker.rs",
+    "//src/server/workers:proactive_analysis_job.rs",
     "//src/server/workers:calendar_sync.rs",
     "//src/server/workers:booking_reengagement.rs",
     "//src/server/workers:mod.rs",
@@ -323,6 +325,10 @@ rust_library(
 rust_library(
     name = "server_lib",
     srcs = SERVER_RS_SRCS,
+    compile_data = [
+        "//src/ui/tauri/src/ui:all_files",
+        "//src/ui/next/public/api/ui:all_files",
+    ],
     data = ["//src/server/migrations"],
     edition = "2024",
     rustc_flags = ["--cfg=ohc_bazel"],

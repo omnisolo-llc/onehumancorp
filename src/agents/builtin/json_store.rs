@@ -86,20 +86,17 @@ impl LongTermMemory for NamespaceJsonStore {
     async fn retrieve(&self, query: &str, limit: usize) -> Result<Vec<String>, String> {
         let mut all_entries = Vec::new();
 
-        if self.base_dir.exists() {
-            if let Ok(mut entries) = fs::read_dir(&self.base_dir).await {
+        if self.base_dir.exists()
+            && let Ok(mut entries) = fs::read_dir(&self.base_dir).await {
                 while let Ok(Some(entry)) = entries.next_entry().await {
                     let path = entry.path();
-                    if path.is_file() && path.extension().and_then(|s| s.to_str()) == Some("json") {
-                        if let Some(filename) = path.file_stem().and_then(|s| s.to_str()) {
-                            if let Ok(ns_entries) = self.read_namespace(filename).await {
+                    if path.is_file() && path.extension().and_then(|s| s.to_str()) == Some("json")
+                        && let Some(filename) = path.file_stem().and_then(|s| s.to_str())
+                            && let Ok(ns_entries) = self.read_namespace(filename).await {
                                 all_entries.extend(ns_entries);
                             }
-                        }
-                    }
                 }
             }
-        }
 
         // Basic naive search: sort by recency and filter by substring
         all_entries.sort_by(|a, b| b.timestamp.cmp(&a.timestamp));

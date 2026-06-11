@@ -32,6 +32,12 @@ pub struct GooseMcpRegistry {
     extensions: std::collections::HashMap<String, Arc<dyn McpExtension>>,
 }
 
+impl Default for GooseMcpRegistry {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl GooseMcpRegistry {
     pub fn new() -> Self {
         Self {

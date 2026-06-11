@@ -113,6 +113,12 @@ pub struct VerificationManager {
     inferential: Vec<Arc<dyn InferentialSensor>>,
 }
 
+impl Default for VerificationManager {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl VerificationManager {
     pub fn new() -> Self {
         Self {

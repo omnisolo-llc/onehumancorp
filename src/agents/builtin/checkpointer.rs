@@ -99,7 +99,7 @@ impl GitCheckpointer {
         }
 
         let name_out = StdCommand::new("git")
-            .args(&["config", "user.name", "Agent"])
+            .args(["config", "user.name", "Agent"])
             .current_dir(&repo_path)
             .output()
             .expect("Failed to execute git config user.name");
@@ -111,7 +111,7 @@ impl GitCheckpointer {
         }
 
         let err_out = StdCommand::new("git")
-            .args(&["config", "user.email", "agent@ohc.local"])
+            .args(["config", "user.email", "agent@ohc.local"])
             .current_dir(&repo_path)
             .output()
             .expect("Failed to execute git config user.email");
@@ -186,11 +186,34 @@ impl CheckpointSaver for GitCheckpointer {
             .await
             .map_err(|e| e.to_string())?;
 
-        // Structured scratchpad
-        let mut scratchpad = ProgressFile::default();
-        scratchpad.current_objective = format!("Checkpoint {}", checkpoint.checkpoint_id);
+        // Intelligently merge real RalphProgress state
+        let mut scratchpad_json_val = serde_json::to_value(ProgressFile::default()).unwrap();
+
+        if scratchpad_path.exists() {
+            if let Ok(content) = tokio::fs::read_to_string(&scratchpad_path).await {
+                // Try parsing as RalphProgress
+                if let Ok(mut ralph_prog) = serde_json::from_str::<crate::ralph_loop::RalphProgress>(&content) {
+                    ralph_prog.notes.push(format!("Checkpoint {}", checkpoint.checkpoint_id));
+                    scratchpad_json_val = serde_json::to_value(&ralph_prog).unwrap();
+                } else {
+                    // Try parsing as generic JSON to preserve unknown fields
+                    if let Ok(mut generic_json) = serde_json::from_str::<serde_json::Value>(&content) {
+                        if let Some(obj) = generic_json.as_object_mut() {
+                            obj.insert("current_objective".to_string(), serde_json::Value::String(format!("Checkpoint {}", checkpoint.checkpoint_id)));
+                        }
+                        scratchpad_json_val = generic_json;
+                    }
+                }
+            }
+        } else {
+             // Create a new ProgressFile but set objective
+             let mut pf = ProgressFile::default();
+             pf.current_objective = format!("Checkpoint {}", checkpoint.checkpoint_id);
+             scratchpad_json_val = serde_json::to_value(&pf).unwrap();
+        }
+
         let scratchpad_json =
-            serde_json::to_string_pretty(&scratchpad).map_err(|e| e.to_string())?;
+            serde_json::to_string_pretty(&scratchpad_json_val).map_err(|e| e.to_string())?;
         tokio::fs::write(&scratchpad_path, scratchpad_json)
             .await
             .map_err(|e| e.to_string())?;
@@ -535,7 +558,7 @@ fn decompress_data(data: &[u8]) -> Result<Vec<u8>, String> {
 
     let mut decoder = GzDecoder::new(&decoded[..]);
     let mut decompressed = Vec::new();
-    if let Err(_) = decoder.read_to_end(&mut decompressed) {
+    if decoder.read_to_end(&mut decompressed).is_err() {
         return Ok(data.to_vec()); // Fallback for valid base64 but not gzip
     }
 
@@ -817,6 +840,89 @@ mod tests {
         // Attempting to restore a missing checkpoint should fail gracefully
         let result = saver.restore_checkpoint("non-existent-checkpoint").await;
         assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_git_checkpointer_ralph_progress_preservation() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let saver = GitCheckpointer::new(temp_dir.path().to_path_buf());
+        let thread_id = "thread-ralph-preservation";
+
+        // Pre-create a scratchpad that simulates a RalphLoop progress file
+        let scratchpad_path = saver.scratchpad_file_path(thread_id);
+        let initial_progress = crate::ralph_loop::RalphProgress {
+            task_description: "Build a web server".to_string(),
+            features: vec![
+                crate::ralph_loop::Feature {
+                    name: "Step 1".to_string(),
+                    status: "completed".to_string(),
+                },
+            ],
+            current_feature_index: 1,
+            notes: vec!["Initialized".to_string()],
+            is_complete: false,
+        };
+
+        std::fs::write(
+            &scratchpad_path,
+            serde_json::to_string(&initial_progress).unwrap(),
+        )
+        .unwrap();
+
+        let cp1 = Checkpoint {
+            thread_id: thread_id.to_string(),
+            checkpoint_id: "cp-ralph-1".to_string(),
+            parent_id: None,
+            data: serde_json::json!({"state": "1"}),
+            metadata: serde_json::json!({}),
+            created_at: Utc::now(),
+        };
+
+        // When put_checkpoint is called, it should intelligently merge rather than overwrite
+        saver.put_checkpoint(cp1.clone()).await.unwrap();
+
+        // Verify the scratchpad file still parses as RalphProgress and contains the new note
+        let content = std::fs::read_to_string(&scratchpad_path).unwrap();
+        let updated_progress: crate::ralph_loop::RalphProgress =
+            serde_json::from_str(&content).unwrap();
+
+        assert_eq!(updated_progress.task_description, "Build a web server");
+        assert_eq!(updated_progress.features.len(), 1);
+        assert_eq!(updated_progress.notes.len(), 2);
+        assert!(updated_progress.notes[1].contains("Checkpoint cp-ralph-1"));
+    }
+
+    #[tokio::test]
+    async fn test_git_checkpointer_generic_json_preservation() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let saver = GitCheckpointer::new(temp_dir.path().to_path_buf());
+        let thread_id = "thread-generic-preservation";
+
+        // Pre-create a scratchpad with generic JSON
+        let scratchpad_path = saver.scratchpad_file_path(thread_id);
+        let initial_json = serde_json::json!({
+            "unknown_field": "val1",
+            "current_objective": "old_obj"
+        });
+
+        std::fs::write(&scratchpad_path, serde_json::to_string(&initial_json).unwrap()).unwrap();
+
+        let cp1 = Checkpoint {
+            thread_id: thread_id.to_string(),
+            checkpoint_id: "cp-generic-1".to_string(),
+            parent_id: None,
+            data: serde_json::json!({"state": "1"}),
+            metadata: serde_json::json!({}),
+            created_at: Utc::now(),
+        };
+
+        saver.put_checkpoint(cp1.clone()).await.unwrap();
+
+        let content = std::fs::read_to_string(&scratchpad_path).unwrap();
+        let updated_json: serde_json::Value = serde_json::from_str(&content).unwrap();
+
+        assert_eq!(updated_json["unknown_field"], "val1");
+        assert_eq!(updated_json["current_objective"], "Checkpoint cp-generic-1");
     }
 
     #[tokio::test]

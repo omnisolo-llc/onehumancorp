@@ -541,12 +541,16 @@ export default function OnboardingWizard() {
                             admin_name: adminName || 'Admin',
                             admin_password: adminPassword || 'password123',
                             business_type: inferredBusinessType,
+                            company_description: bio,
+                            selling_categories: data.categories || ["physical"],
+                            payment_pref: 'online',
+                            website_template: 'auto',
+                            domain_choice: 'subdomain',
                             first_product_name: inferredProductName,
                             first_product_price: inferredProductPrice,
                             price_type: 'physical',
                             location: inferredLocation,
-                            ai_agents: ['Operations', 'Marketing', 'Finance', 'Legal', 'Advisory'],
-                            auto_respond: true,
+                            target_audience: data.target_audience || '',
                             initial_products: data.initial_products || []
                           })
                         });
@@ -840,7 +844,7 @@ export default function OnboardingWizard() {
                           }
                         }}
                         placeholder="e.g. Local families, Tech startups"
-                        className="w-full p-3 sm:p-4 rounded-[8px] focus:border-[#0066FF] outline-none glassmorphism min-h-[44px] min-w-[44px] text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
+                        className={`w-full p-3 sm:p-4 rounded-[8px] border outline-none glassmorphism min-h-[44px] min-w-[44px] text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner ${validationError === 'Please tell us your target audience.' ? 'border-[#FF3B30]' : 'border-transparent focus:border-[#0066FF]'}`}
                       />
                     </div>
                   </div>

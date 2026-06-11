@@ -253,33 +253,39 @@ async fn handle_time_savings(
     let tenant_id_str = auth_info.org_id;
 
     // Calculate aggregated time savings based on completed tasks
-    let inquiries_handled: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM tasks WHERE (tenant_id = $1 OR organization_id = $1) AND title ILIKE '%inquiry%' AND status = 'COMPLETED'")
-        .bind(parsed_uuid)
-        .fetch_optional(&state.pool)
-        .await
-        .unwrap_or(Some(0))
-        .unwrap_or(0);
+    let f1 = async {
+        sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM tasks WHERE (tenant_id = $1 OR organization_id = $1) AND title ILIKE '%inquiry%' AND status = 'COMPLETED'")
+            .bind(parsed_uuid)
+            .fetch_optional(&state.pool)
+            .await
+    };
 
-    let appointments_scheduled: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM tasks WHERE (tenant_id = $1 OR organization_id = $1) AND title ILIKE '%appointment%' AND status = 'COMPLETED'")
-        .bind(parsed_uuid)
-        .fetch_optional(&state.pool)
-        .await
-        .unwrap_or(Some(0))
-        .unwrap_or(0);
+    let f2 = async {
+        sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM tasks WHERE (tenant_id = $1 OR organization_id = $1) AND title ILIKE '%appointment%' AND status = 'COMPLETED'")
+            .bind(parsed_uuid)
+            .fetch_optional(&state.pool)
+            .await
+    };
 
-    let carts_recovered: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM tasks WHERE (tenant_id = $1 OR organization_id = $1) AND title ILIKE '%cart%' AND status = 'COMPLETED'")
-        .bind(parsed_uuid)
-        .fetch_optional(&state.pool)
-        .await
-        .unwrap_or(Some(0))
-        .unwrap_or(0);
+    let f3 = async {
+        sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM tasks WHERE (tenant_id = $1 OR organization_id = $1) AND title ILIKE '%cart%' AND status = 'COMPLETED'")
+            .bind(parsed_uuid)
+            .fetch_optional(&state.pool)
+            .await
+    };
 
-    let auto_replied: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM inbox_messages WHERE tenant_id = $1 AND status = 'auto_replied'")
-        .bind(&tenant_id_str)
-        .fetch_optional(&state.pool)
-        .await
-        .unwrap_or(Some(0))
-        .unwrap_or(0);
+    let f4 = async {
+        sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM inbox_messages WHERE tenant_id = $1 AND status = 'auto_replied'")
+            .bind(&tenant_id_str)
+            .fetch_optional(&state.pool)
+            .await
+    };
+
+    let (res1, res2, res3, res4) = tokio::join!(f1, f2, f3, f4);
+    let inquiries_handled = res1.unwrap_or(Some(0)).unwrap_or(0);
+    let appointments_scheduled = res2.unwrap_or(Some(0)).unwrap_or(0);
+    let carts_recovered = res3.unwrap_or(Some(0)).unwrap_or(0);
+    let auto_replied = res4.unwrap_or(Some(0)).unwrap_or(0);
 
     // Calculate total hours saved
     let base_hours = (inquiries_handled as f64 * 0.2) + (appointments_scheduled as f64 * 0.3) + (carts_recovered as f64 * 0.43) + (auto_replied as f64 * 0.1);
@@ -593,6 +599,7 @@ async fn handle_create_lead_gen_campaign(
 
 async fn handle_send_campaign(
     Extension(state): Extension<GrowthState>,
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
     Json(req): Json<CampaignRequest>,
 ) -> impl IntoResponse {
     // In a real implementation we would:
@@ -601,8 +608,24 @@ async fn handle_send_campaign(
     // 3. Dispatch the emails.
     // 4. Record the campaign in DB.
 
-    // Simulate sending 12 emails (since the UI states "12 recent orders without reviews")
-    let target_emails = if req.target_segment == "recent_buyers_no_review" { 12 } else { 150 };
+    let target_emails: i64 = if req.target_segment == "abandoned_carts" {
+        match sqlx::query_scalar("SELECT COUNT(*) FROM orders WHERE status = 'abandoned' AND tenant_id = $1")
+            .bind(&auth_info.org_id)
+            .fetch_one(&state.pool)
+            .await
+        {
+            Ok(c) => c,
+            Err(e) => {
+                tracing::error!("Failed to fetch abandoned carts count for campaign: {}", e);
+                0
+            }
+        }
+    } else if req.target_segment == "recent_buyers_no_review" {
+        // Simulate sending 12 emails (since the UI states "12 recent orders without reviews")
+        12
+    } else {
+        150
+    };
 
     // We can emit an event here to the Hub to trigger any background tasks or metrics updates.
     let msg = state.hub.sanitize_hub_event(serde_json::json!({
@@ -614,7 +637,7 @@ async fn handle_send_campaign(
 
     Json(CampaignResponse {
         campaign_id: uuid::Uuid::new_v4().to_string(),
-        emails_sent: target_emails,
+        emails_sent: target_emails as i32,
     })
 }
 
@@ -1075,14 +1098,15 @@ async fn handle_get_milestone_card(
         "10th_order" => ("10th Order!", "Business is booming", "📈", "#ff9a9e", "#fecfef"),
         "100_visitors" => ("100 Visitors!", "Traffic is soaring", "🚀", "#a1c4fd", "#c2e9fb"),
         "5_referrals" => ("High Connector!", "Referred 5 businesses", "🤝", "#f6d365", "#fda085"),
-        "revenue_1k" => ("Four-Figure Club", "Revenue > $1,000", "💰", "#84fab0", "#8fd3f4"),
+        "revenue_1k" => ("Four-Figure Club", "Crossed $1k in Revenue!", "💰", "#f43f5e", "#fb923c"),
         "100_orders" => ("Century of Orders", "100 sales fulfilled", "📦", "#ffecd2", "#fcb69f"),
         _ => ("Success Milestone!", "Built with OHC", "✨", "#667eea", "#764ba2"),
     };
 
     let branding = if !has_pro {
         format!(r##"<a href="/api/v1/growth/referrals/click?target=/onboarding&ref={}" target="_blank">
-    <text x="1100" y="590" font-family="sans-serif" font-size="24" font-weight="bold" text-anchor="end" fill="#ffffff" opacity="0.8">⚡ Powered by OHC</text>
+    <text x="1100" y="580" font-family="sans-serif" font-size="24" font-weight="bold" text-anchor="end" fill="#ffffff" opacity="0.8">⚡ Powered by OHC</text>
+    <text x="1100" y="605" font-family="sans-serif" font-size="18" font-weight="medium" text-anchor="end" fill="#ffffff" opacity="0.7">Join OHC & get 14 days of Pro free</text>
   </a>"##, tenant_id)
     } else {
         "".to_string()
@@ -1860,12 +1884,12 @@ async fn handle_aggregated_team_invites_metrics(
 
 async fn handle_abandoned_carts_count(
     Extension(state): Extension<GrowthState>,
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
 ) -> impl IntoResponse {
     let pool = &state.pool;
 
-    // Attempt to query orders with status = 'abandoned'.
-    // Note: We use COALESCE to return 0 if no results.
-    let count: i64 = match sqlx::query_scalar("SELECT COUNT(*) FROM orders WHERE status = 'abandoned'")
+    let count: i64 = match sqlx::query_scalar("SELECT COUNT(*) FROM orders WHERE status = 'abandoned' AND tenant_id = $1")
+        .bind(&auth_info.org_id)
         .fetch_one(pool)
         .await
     {

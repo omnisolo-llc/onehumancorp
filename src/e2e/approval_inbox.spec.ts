@@ -1,16 +1,20 @@
 import { test, expect } from './fixtures';
 import { currentAppSmoke } from './current_app_smoke';
 
-currentAppSmoke('approval_inbox');
+test('approval_inbox', async ({ page, request, loginAs, adminUser }) => {
+  await loginAs(page, adminUser);
+  await currentAppSmoke(page, request, 'approval_inbox');
+});
 
 test.describe('Dashboard - Ambassador Agent Approval', () => {
   test('displays Action Required card for incoming message and allows 1-tap approve', async ({ request, page, adminUser, loginAs }) => {
     // 1. Send webhook simulating incoming message
-    const webhookRes = await request.post('/api/agents/webhook', {
+    const webhookRes = await request.post('/api/inbox/webhook', {
       data: {
         source: 'instagram',
         message: 'hello e2e vegan options',
-        tenant_id: 'e2e'
+        tenant_id: 'e2e',
+        sender_id: 'testuser'
       }
     });
     expect(webhookRes.ok()).toBeTruthy();

@@ -96,7 +96,7 @@ beforeEach(() => {
     expect(screen.getByText('Secure Checkout')).toBeDefined();
     expect(screen.getByText('Service Deposit')).toBeDefined();
     expect(screen.getByText('Subscribe & Save 10%')).toBeDefined();
-    expect(screen.getByText('$45.00')).toBeDefined();
+    expect(screen.getAllByText('$45.00')[0]).toBeDefined();
 
     const payButton = screen.getByText('Pay');
     fireEvent.click(payButton);
