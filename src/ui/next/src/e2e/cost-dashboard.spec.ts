@@ -27,6 +27,9 @@ test.describe('Cost Dashboard Loop', () => {
 
     // Check for individual breakdown items
     await expect(page.locator('span', { hasText: 'LLM Usage' })).toBeVisible();
+
+    // We do not explicitly test 'Budget Alert' here since it is dynamically triggered based on backend limits.
+    // However, we verify the structure surrounding the LLM usage metrics hasn't broken.
     await expect(page.locator('span', { hasText: 'Storage' })).toBeVisible();
     await expect(page.locator('span', { hasText: 'Payment Fees' })).toBeVisible();
     await expect(page.locator('span', { hasText: 'Compute Usage' })).toBeVisible();
