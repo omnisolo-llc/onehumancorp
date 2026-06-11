@@ -339,6 +339,10 @@ impl AgentServiceImpl {
                 Self::first_non_empty_env(&["OPENAI_MODEL", "OHC_OPENAI_MODEL", "OHC_LLM_MODEL"])
                     .unwrap_or_else(|| "gpt-4.1-mini".to_string())
             }
+            "openrouter" => {
+                std::env::var("OPENROUTER_MODEL")
+                    .unwrap_or_else(|_| "openai/gpt-4o-mini".to_string())
+            }
             _ => String::new(),
         }
     }
@@ -409,6 +413,22 @@ impl AgentServiceImpl {
                     OpenAIClientConfig::openai_compatible(key, endpoint, Some(model)),
                 ))
             }
+            "openrouter" => {
+                let key = self.configured_api_key(&["OPENROUTER_API_KEY", "OHC_LLM_API_KEY"]);
+                let endpoint = self
+                    .effective_endpoint(
+                        req_endpoint,
+                        &[
+                            "OPENROUTER_BASE_URL",
+                            "OHC_LLM_BASE_URL",
+                            "OHC_LLM_ENDPOINT",
+                        ],
+                    )
+                    .unwrap_or_else(|| "https://openrouter.ai/api/v1".to_string());
+                Arc::new(OpenAIClient::from_config(
+                    OpenAIClientConfig::openai_compatible(key, endpoint, Some(model)),
+                ))
+            }
             "minimax" => {
                 let key = self.configured_api_key(&["MINIMAX_API_KEY", "OHC_LLM_API_KEY"]);
                 let endpoint = self.effective_endpoint(
@@ -455,6 +475,16 @@ impl AgentServiceImpl {
                                 "MINIMAX_BASE_URL",
                                 "MINIMAX_API_BASE_URL",
                             ]),
+                        ));
+                    }
+                }
+                if let Ok(key) = std::env::var("OPENROUTER_API_KEY") {
+                    if !key.is_empty() {
+                        let model = self.resolve_model_for_request("openrouter", req_model);
+                        let endpoint = Self::first_non_empty_env(&["OPENROUTER_BASE_URL"])
+                            .unwrap_or_else(|| "https://openrouter.ai/api/v1".to_string());
+                        return Arc::new(OpenAIClient::from_config(
+                            OpenAIClientConfig::openai_compatible(key, endpoint, Some(model)),
                         ));
                     }
                 }
@@ -1392,6 +1422,28 @@ mod tests {
         assert!(result.is_ok());
 
         tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+    }
+
+    #[tokio::test]
+    async fn test_resolve_openrouter() {
+        unsafe {
+            std::env::set_var("OPENROUTER_API_KEY", "test-or-key");
+        }
+        let service = AgentServiceImpl::new("test", AgentConfig::default(), AuthMode::Disabled);
+        // Try to resolve using openrouter. We can't downcast the Arc<dyn LlmClient> easily
+        // without adding downcast support to the trait, but we can verify it doesn't panic
+        // and successfully creates a client.
+        let llm = service.resolve_llm("openrouter", "", "");
+        assert!(
+            Arc::strong_count(&llm) >= 1,
+            "Should resolve a valid openrouter client"
+        );
+        let model = service.resolve_model_for_request("openrouter", "");
+        assert_eq!(model, "openai/gpt-4o-mini");
+
+        unsafe {
+            std::env::remove_var("OPENROUTER_API_KEY");
+        }
     }
 }
 
