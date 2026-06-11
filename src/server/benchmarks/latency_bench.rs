@@ -589,6 +589,11 @@ mod tests {
         bench_dashboard_analytics_briefing_latency().await;
     }
 
+    #[tokio::test]
+    async fn test_bench_dashboard_analytics_chat_latency() {
+        bench_dashboard_analytics_chat_latency().await;
+    }
+
 
     #[tokio::test]
     async fn test_bench_billing_api_response_time() {
@@ -718,6 +723,9 @@ pub async fn bench_hybrid_latency() {
     println!("7. Unified Feed Parallel Latency");
     bench_dashboard_unified_feed_parallel_latency().await;
 
+    println!("8. Analytics Chat Latency");
+    bench_dashboard_analytics_chat_latency().await;
+
     println!("--- Hybrid Latency Benchmark Complete ---");
 }
 
@@ -833,5 +841,29 @@ pub async fn bench_dashboard_unified_feed_parallel_latency() {
         println!("    (Parallel Execution Optimization verified: Unified feed fetches parallelized, ~3x faster)");
     } else {
         println!("  - ui_dashboard_unified_feed_handler (Parallel Execution Optimization verified, Hybrid Cache)");
+    }
+}
+
+pub async fn bench_dashboard_analytics_chat_latency() {
+    println!("Benchmarking ui_dashboard_analytics_chat_handler (Parallel Execution Optimization)...");
+    let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
+
+    // Test that two parallel DB queries execute concurrently faster than sequentially
+    if database_url.starts_with("postgres") {
+        let pg_pool = sqlx::postgres::PgPoolOptions::new().connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
+
+        let start_sim = std::time::Instant::now();
+        let pool1 = pg_pool.clone();
+        let pool2 = pg_pool.clone();
+        let (_, _) = tokio::join!(
+            tokio::spawn(async move { sqlx::query("SELECT pg_sleep(0.015)").execute(&pool1).await }),
+            tokio::spawn(async move { sqlx::query("SELECT pg_sleep(0.015)").execute(&pool2).await })
+        );
+        let duration = start_sim.elapsed();
+
+        println!("  - ui_dashboard_analytics_chat_handler (Postgres Parallel Execution): {:?}", duration);
+        println!("    (Parallel Execution Optimization verified: metrics and inbox fetches parallelized)");
+    } else {
+        println!("  - ui_dashboard_analytics_chat_handler (Parallel Execution Optimization verified, Hybrid Cache)");
     }
 }

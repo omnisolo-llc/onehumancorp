@@ -3060,8 +3060,13 @@ async fn ui_dashboard_analytics_chat_handler(
     let tenant_id = ui_tenant_id(&query);
     let text = payload.message.to_lowercase();
 
+    let (inbox_res, metrics_res) = tokio::join!(
+        load_ui_inbox_from_db(&db, &tenant_id),
+        load_ui_dashboard_metrics(&db, &tenant_id)
+    );
+
     let response_text = if text.contains("dm") || text.contains("message") {
-        let inbox_messages = load_ui_inbox_from_db(&db, &tenant_id).await.unwrap_or_default();
+        let inbox_messages = inbox_res.unwrap_or_default();
         let senders: Vec<String> = inbox_messages.iter().take(3).filter_map(|m| m.get("source").and_then(|s| s.as_str()).map(|s| s.to_string())).collect();
         if senders.is_empty() {
             "You have no recent messages.".to_string()
@@ -3069,7 +3074,7 @@ async fn ui_dashboard_analytics_chat_handler(
             format!("Your latest messages are from: {}.", senders.join(", "))
         }
     } else if text.contains("order") || text.contains("booking") || text.contains("revenue") || text.contains("sale") {
-        let metrics = load_ui_dashboard_metrics(&db, &tenant_id).await.unwrap_or(UiDashboardMetrics { active_customers: 0, pending_orders: 0, total_sales: 0.0, total_campaigns_sent: 0, auto_replied: 0 });
+        let metrics = metrics_res.unwrap_or(UiDashboardMetrics { active_customers: 0, pending_orders: 0, total_sales: 0.0, total_campaigns_sent: 0, auto_replied: 0 });
         format!("You currently have {} pending orders, with a total expected revenue of ${:.2}.", metrics.pending_orders, metrics.total_sales)
     } else {
         "I am your Decision Assistant. I can help you check orders, messages, and revenue.".to_string()
