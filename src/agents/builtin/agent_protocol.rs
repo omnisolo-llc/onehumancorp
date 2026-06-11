@@ -116,6 +116,38 @@ impl AgentProtocolServer {
             .unwrap_or_else(|_| r#"{"error": "Serialization failed"}"#.to_string())
     }
 
+    /// GET /ap/v1/agent/tasks/{task_id}/artifacts
+    pub async fn list_task_artifacts(&self, _task_id: &str) -> String {
+        // Implementation for agentprotocol.ai to list workspace files
+        let resp = serde_json::json!({
+            "artifacts": [],
+            "pagination": {
+                "total_items": 0,
+                "total_pages": 1,
+                "current_page": 1,
+                "page_size": 10
+            }
+        });
+        serde_json::to_string(&resp).unwrap_or_else(|_| r#"{"error": "Serialization failed"}"#.to_string())
+    }
+
+    /// POST /ap/v1/agent/tasks/{task_id}/artifacts
+    pub async fn upload_task_artifact(&self, _task_id: &str, _req_json: &str) -> String {
+        // Mock implementation for agentprotocol.ai
+        let artifact = Artifact {
+            artifact_id: uuid::Uuid::new_v4().to_string(),
+            file_name: "uploaded_file.txt".to_string(),
+            relative_path: Some("./workspace".to_string()),
+        };
+        serde_json::to_string(&artifact).unwrap_or_else(|_| r#"{"error": "Serialization failed"}"#.to_string())
+    }
+
+    /// GET /ap/v1/agent/tasks/{task_id}/artifacts/{artifact_id}
+    pub async fn download_task_artifact(&self, _task_id: &str, _artifact_id: &str) -> String {
+        // Mock implementation
+        "file content".to_string()
+    }
+
     /// GET /ap/v1/agent/tasks
     pub async fn list_tasks(&self) -> String {
         let resp = TaskListResponse {

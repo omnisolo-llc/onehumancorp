@@ -252,6 +252,44 @@ impl AppServer {
                 meta: None,
             };
             return serde_json::to_string(&resp).unwrap_or_default();
+        } else if req.method == "ap_list_task_artifacts" {
+            let server = crate::agent_protocol::AgentProtocolServer::new(self.runner.clone());
+            let task_id = req.params.get("task_id").and_then(|v| v.as_str()).unwrap_or("");
+            let result = server.list_task_artifacts(task_id).await;
+            let resp = JsonRpcResponse {
+                jsonrpc: "2.0".to_string(),
+                id: req.id,
+                result: serde_json::from_str(&result).ok(),
+                error: None,
+                meta: None,
+            };
+            return serde_json::to_string(&resp).unwrap_or_default();
+        } else if req.method == "ap_upload_task_artifact" {
+            let server = crate::agent_protocol::AgentProtocolServer::new(self.runner.clone());
+            let task_id = req.params.get("task_id").and_then(|v| v.as_str()).unwrap_or("");
+            let req_json = serde_json::to_string(&req.params).unwrap_or_default();
+            let result = server.upload_task_artifact(task_id, &req_json).await;
+            let resp = JsonRpcResponse {
+                jsonrpc: "2.0".to_string(),
+                id: req.id,
+                result: serde_json::from_str(&result).ok(),
+                error: None,
+                meta: None,
+            };
+            return serde_json::to_string(&resp).unwrap_or_default();
+        } else if req.method == "ap_download_task_artifact" {
+            let server = crate::agent_protocol::AgentProtocolServer::new(self.runner.clone());
+            let task_id = req.params.get("task_id").and_then(|v| v.as_str()).unwrap_or("");
+            let artifact_id = req.params.get("artifact_id").and_then(|v| v.as_str()).unwrap_or("");
+            let result = server.download_task_artifact(task_id, artifact_id).await;
+            let resp = JsonRpcResponse {
+                jsonrpc: "2.0".to_string(),
+                id: req.id,
+                result: Some(serde_json::Value::String(result)),
+                error: None,
+                meta: None,
+            };
+            return serde_json::to_string(&resp).unwrap_or_default();
         }
 
         // Helper to extract total_cost from run_async execution if needed
@@ -1055,6 +1093,34 @@ mod tests {
             step_result.get("output").unwrap().as_str().unwrap(),
             "default output"
         );
+
+        // Test Agent Protocol Artifact Endpoints
+        let req_json_ap_list_artifacts = format!(
+            r#"{{"jsonrpc": "2.0", "id": "13", "method": "ap_list_task_artifacts", "params": {{"task_id": "{}"}}}}"#,
+            task_id
+        );
+        let resp_json_ap_list_artifacts = app_server.handle_request(&req_json_ap_list_artifacts).await;
+        let resp_ap_list_artifacts: JsonRpcResponse = serde_json::from_str(&resp_json_ap_list_artifacts).unwrap();
+        assert!(resp_ap_list_artifacts.error.is_none());
+        assert!(resp_ap_list_artifacts.result.unwrap().get("artifacts").is_some());
+
+        let req_json_ap_upload_artifact = format!(
+            r#"{{"jsonrpc": "2.0", "id": "14", "method": "ap_upload_task_artifact", "params": {{"task_id": "{}", "file": "base64data"}}}}"#,
+            task_id
+        );
+        let resp_json_ap_upload_artifact = app_server.handle_request(&req_json_ap_upload_artifact).await;
+        let resp_ap_upload_artifact: JsonRpcResponse = serde_json::from_str(&resp_json_ap_upload_artifact).unwrap();
+        assert!(resp_ap_upload_artifact.error.is_none());
+        let artifact_id = resp_ap_upload_artifact.result.unwrap().get("artifact_id").unwrap().as_str().unwrap().to_string();
+
+        let req_json_ap_download_artifact = format!(
+            r#"{{"jsonrpc": "2.0", "id": "15", "method": "ap_download_task_artifact", "params": {{"task_id": "{}", "artifact_id": "{}"}}}}"#,
+            task_id, artifact_id
+        );
+        let resp_json_ap_download_artifact = app_server.handle_request(&req_json_ap_download_artifact).await;
+        let resp_ap_download_artifact: JsonRpcResponse = serde_json::from_str(&resp_json_ap_download_artifact).unwrap();
+        assert!(resp_ap_download_artifact.error.is_none());
+        assert_eq!(resp_ap_download_artifact.result.unwrap().as_str().unwrap(), "file content");
 
         // Test SONA endpoints
         let record_req = r#"{"jsonrpc": "2.0", "id": "1", "method": "record_sona_pattern", "params": { "id": "p1", "initial_context": "ctx", "successful_tools": ["bash"], "outcome_score": 1.0 }}"#;
