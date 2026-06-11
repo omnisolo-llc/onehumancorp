@@ -118,6 +118,10 @@ fn get_tooltips_registry() -> &'static RwLock<HashMap<String, String>> {
     m.insert("checkout-cancel-tooltip".to_string(), "Go back to the previous screen without subscribing.".to_string());
     m.insert("checkout-plan-upgrade-tooltip".to_string(), "Click here to securely subscribe to the plan.".to_string());
     m.insert("change-vibe-tooltip".to_string(), "Change the theme and colors of your website.".to_string());
+    m.insert("help-center-nav-btn".to_string(), "Access the Help Center".to_string());
+    m.insert("dashboard-walkthrough-btn".to_string(), "Take a tour of the dashboard".to_string());
+    m.insert("pos-walkthrough-btn".to_string(), "Take a tour of Quick Charge POS".to_string());
+    m.insert("assistant-walkthrough-btn".to_string(), "Take a tour of the Assistant Workspace".to_string());
     m.insert("remove-branding-tooltip".to_string(), "Upgrade to Premium to remove OHC branding.".to_string());
     m.insert("settings-verify-tooltip".to_string(), "Verify your number to receive critical notifications.".to_string());
     m.insert("settings-otp-tooltip".to_string(), "Click to confirm the code sent to your phone.".to_string());
