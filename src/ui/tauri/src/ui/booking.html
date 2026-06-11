@@ -163,7 +163,7 @@
               'x-tenant-id': tenantId
             },
             body: JSON.stringify({ description })
-          }).catch(() => console.log('Mock fallback triggered'));
+          }).catch(() => { /* Mock fallback triggered */ });
 
           // In E2E tests, the backend creates the agent feed item.
           setTimeout(() => {

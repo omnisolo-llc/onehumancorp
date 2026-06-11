@@ -384,13 +384,9 @@
           // Even if it fails (unauthorized in test), we allow simulation for UI testing purposes
           if (res.ok) {
               const data = await res.json();
-              console.log("Payment intent created", data);
-          } else {
-              console.warn("Payment intent API returned error (expected in some mock environments)");
           }
 
         } catch (e) {
-          console.error("Failed to create intent", e);
         }
       }
 
