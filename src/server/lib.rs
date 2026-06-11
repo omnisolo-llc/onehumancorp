@@ -3456,6 +3456,52 @@ async fn load_ui_triage_from_db(db: &crate::db::DB, tenant_id: &str) -> Result<V
     }
 }
 
+async fn load_ui_priority_tasks_from_db(db: &crate::db::DB, tenant_id: &str) -> Result<Vec<serde_json::Value>, sqlx::Error> {
+    use sqlx::Row;
+    let limit = 20i64;
+    match &db.store {
+        crate::db::DbStore::Postgres => {
+            sqlx::query(
+                "SELECT id, title, description, status, created_at, updated_at FROM shared_tasks WHERE (organization_id = $1) AND status IN ('PENDING', 'IN_PROGRESS') ORDER BY created_at DESC LIMIT $2"
+            )
+            .bind(tenant_id)
+            .bind(limit)
+            .fetch_all(&db.pool)
+            .await
+            .map(|rows| rows.into_iter().map(|row| {
+                serde_json::json!({
+                    "id": row.get::<String, _>("id"),
+                    "title": row.try_get::<String, _>("title").unwrap_or_default(),
+                    "description": row.try_get::<String, _>("description").unwrap_or_default(),
+                    "status": row.try_get::<String, _>("status").unwrap_or_default(),
+                    "created_at": row.try_get::<chrono::DateTime<chrono::Utc>, _>("created_at").map(|dt| dt.to_rfc3339()).unwrap_or_default(),
+                    "updated_at": row.try_get::<chrono::DateTime<chrono::Utc>, _>("updated_at").map(|dt| dt.to_rfc3339()).unwrap_or_default(),
+                })
+            }).collect::<Vec<_>>())
+        }
+        crate::db::DbStore::Sqlite(pool) => {
+            let rows_res = sqlx::query("SELECT * FROM shared_tasks WHERE status IN ('PENDING', 'IN_PROGRESS') ORDER BY created_at DESC LIMIT ?")
+                .bind(limit)
+                .fetch_all(pool)
+                .await;
+
+            rows_res.map(|rows| rows.into_iter().filter_map(|row| {
+                let t_id = row.try_get::<String, _>("tenant_id").or_else(|_| row.try_get::<String, _>("organization_id")).unwrap_or_default();
+                if t_id == tenant_id {
+                    Some(serde_json::json!({
+                        "id": row.get::<String, _>("id"),
+                        "title": row.try_get::<String, _>("title").unwrap_or_default(),
+                        "description": row.try_get::<String, _>("description").unwrap_or_default(),
+                        "status": row.try_get::<String, _>("status").unwrap_or_default(),
+                        "created_at": row.try_get::<String, _>("created_at").unwrap_or_default(),
+                        "updated_at": row.try_get::<String, _>("updated_at").unwrap_or_default(),
+                    }))
+                } else { None }
+            }).collect::<Vec<_>>())
+        }
+    }
+}
+
 async fn load_ui_agent_feed_from_db(db: &crate::db::DB, tenant_id: &str) -> Result<Vec<serde_json::Value>, sqlx::Error> {
     use sqlx::Row;
     let limit = 20i64;
@@ -3533,13 +3579,14 @@ async fn ui_dashboard_unified_feed_handler(
         let t_bg = tenant_id.clone();
         let cache_key_bg = cache_key.clone();
         tokio::spawn(async move {
-            let (metrics_res, orders_res, messages_res, triage_res, approvals_res, agent_feed_res) = tokio::join!(
+            let (metrics_res, orders_res, messages_res, triage_res, approvals_res, agent_feed_res, priority_tasks_res) = tokio::join!(
                 tokio::spawn({ let db = db_bg.clone(); let t = t_bg.clone(); async move { load_ui_dashboard_metrics(&db, &t).await } }),
                 tokio::spawn({ let db = db_bg.clone(); let t = t_bg.clone(); async move { load_ui_orders_from_db(&db, &t).await } }),
                 tokio::spawn({ let db = db_bg.clone(); let t = t_bg.clone(); async move { load_ui_inbox_from_db(&db, &t).await } }),
                 tokio::spawn({ let db = db_bg.clone(); let t = t_bg.clone(); async move { load_ui_triage_from_db(&db, &t).await } }),
                 tokio::spawn({ let db = db_bg.clone(); let t = t_bg.clone(); async move { load_ui_agent_approvals_from_db(&db, &t).await } }),
-                tokio::spawn({ let db = db_bg.clone(); let t = t_bg.clone(); async move { load_ui_agent_feed_from_db(&db, &t).await } })
+                tokio::spawn({ let db = db_bg.clone(); let t = t_bg.clone(); async move { load_ui_agent_feed_from_db(&db, &t).await } }),
+                tokio::spawn({ let db = db_bg.clone(); let t = t_bg.clone(); async move { load_ui_priority_tasks_from_db(&db, &t).await } })
             );
 
             let mut orders = orders_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
@@ -3547,6 +3594,7 @@ async fn ui_dashboard_unified_feed_handler(
             let mut triage = triage_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
             let mut approvals = approvals_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
             let mut agent_feed = agent_feed_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
+            let mut priority_tasks = priority_tasks_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
 
             if mobile_optimized {
                 for order in orders.iter_mut() {
@@ -3576,6 +3624,11 @@ async fn ui_dashboard_unified_feed_handler(
                         obj.remove("context_payload");
                     }
                 }
+                for item in priority_tasks.iter_mut() {
+                    if let Some(obj) = item.as_object_mut() {
+                        obj.remove("description");
+                    }
+                }
             }
 
             let result = serde_json::json!({
@@ -3585,6 +3638,7 @@ async fn ui_dashboard_unified_feed_handler(
                 "triage": triage,
                 "pending_approvals": approvals,
                 "agent_feed": agent_feed,
+                "priority_tasks": priority_tasks,
             });
             if let Some(c) = UI_DASHBOARD_METRICS_CACHE.get() {
                 c.set(&cache_key_bg, result, std::time::Duration::from_secs(10)).await;
@@ -3599,14 +3653,15 @@ async fn ui_dashboard_unified_feed_handler(
         return (axum::http::StatusCode::OK, axum::Json(final_cached)).into_response();
     }
 
-    let (metrics_res, orders_res, messages_res, supply_res, triage_res, approvals_res, agent_feed_res) = tokio::join!(
+    let (metrics_res, orders_res, messages_res, supply_res, triage_res, approvals_res, agent_feed_res, priority_tasks_res) = tokio::join!(
         tokio::spawn({ let db = db.clone(); let t = tenant_id.clone(); async move { load_ui_dashboard_metrics(&db, &t).await } }),
         tokio::spawn({ let db = db.clone(); let t = tenant_id.clone(); async move { load_ui_orders_from_db(&db, &t).await } }),
         tokio::spawn({ let db = db.clone(); let t = tenant_id.clone(); async move { load_ui_inbox_from_db(&db, &t).await } }),
         tokio::spawn({ let db = db.clone(); let t = tenant_id.clone(); async move { load_ui_supply_from_db(&db, &t).await } }),
         tokio::spawn({ let db = db.clone(); let t = tenant_id.clone(); async move { load_ui_triage_from_db(&db, &t).await } }),
         tokio::spawn({ let db = db.clone(); let t = tenant_id.clone(); async move { load_ui_agent_approvals_from_db(&db, &t).await } }),
-        tokio::spawn({ let db = db.clone(); let t = tenant_id.clone(); async move { load_ui_agent_feed_from_db(&db, &t).await } })
+        tokio::spawn({ let db = db.clone(); let t = tenant_id.clone(); async move { load_ui_agent_feed_from_db(&db, &t).await } }),
+        tokio::spawn({ let db = db.clone(); let t = tenant_id.clone(); async move { load_ui_priority_tasks_from_db(&db, &t).await } })
     );
 
     let mut orders = orders_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
@@ -3614,6 +3669,7 @@ async fn ui_dashboard_unified_feed_handler(
     let mut triage = triage_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
     let mut approvals = approvals_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
     let mut agent_feed = agent_feed_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
+    let mut priority_tasks = priority_tasks_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
     let supply = supply_res.unwrap_or_else(|_| Ok(serde_json::json!({}))).unwrap_or_default();
 
     if mobile_optimized {
@@ -3644,6 +3700,11 @@ async fn ui_dashboard_unified_feed_handler(
                 obj.remove("context_payload");
             }
         }
+        for item in priority_tasks.iter_mut() {
+            if let Some(obj) = item.as_object_mut() {
+                obj.remove("description");
+            }
+        }
     }
 
     let cacheable_result = serde_json::json!({
@@ -3653,6 +3714,7 @@ async fn ui_dashboard_unified_feed_handler(
         "triage": triage,
         "pending_approvals": approvals,
         "agent_feed": agent_feed,
+        "priority_tasks": priority_tasks,
     });
 
     let _ = cache.set(&cache_key, cacheable_result.clone(), std::time::Duration::from_secs(10)).await;
