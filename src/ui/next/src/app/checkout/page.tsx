@@ -281,6 +281,16 @@ function CheckoutContent() {
             <label htmlFor="subscribe" className="text-sm font-medium text-gray-700">Subscribe & Save 10%</label>
           </div>
 
+          <div className="bg-green-50 border border-green-100 rounded-xl p-4 my-2 mb-4">
+            <div className="flex justify-between items-center">
+              <span className="text-green-800 text-sm font-bold">Available Rewards</span>
+              <span className="text-green-800 text-sm font-bold">1 Reward Available</span>
+            </div>
+            <p className="text-green-700 text-xs font-medium mt-1">
+              You have earned a free coffee! Tap 'Pay' to automatically apply your reward at checkout.
+            </p>
+          </div>
+
           {deliveryFee !== null && (
              <div className="flex justify-between items-center pt-2 border-t border-gray-100">
                <span className="font-semibold text-gray-700">Total with Delivery</span>
