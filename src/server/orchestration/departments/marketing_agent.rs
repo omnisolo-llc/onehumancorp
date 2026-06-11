@@ -239,7 +239,7 @@ impl Department for MarketingAgent {
     }
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
-        if event.event_type == "tenant.website.updated" {
+        if event.event_type == "tenant.website.updated" || event.event_type == "tenant.product.created" || event.event_type == "tenant.product.updated" {
             let site_id = event.payload.get("site_id").and_then(|v| v.as_str()).unwrap_or("unknown");
             let payload = serde_json::json!({
                 "site_id": site_id,
