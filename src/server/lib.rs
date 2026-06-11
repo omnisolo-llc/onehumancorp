@@ -5096,6 +5096,8 @@ async fn create_ui_bom_item_handler(
         .nest("/api/agents/webhook", api::agents::webhook::router(dept_orchestrator.clone()))
         .nest("/api/agent-feed", api::agent_feed::router().with_state(db.pool.clone()))
         .nest("/api/v1/invoices", api::invoice::router(hub.clone()))
+        .route("/api/v1/returns", axum::routing::get(crate::api::returns::list_returns).post(crate::api::returns::create_return))
+        .route("/api/v1/returns/:id/approve", axum::routing::post(crate::api::returns::approve_return))
         .nest("/api/v1/booking/request", api::booking::request::router(dept_orchestrator.clone()))
         .route("/api/v1/booking/resources", axum::routing::post(api::booking::unified::get_resources).with_state(db.pool.clone()))
         .route("/api/v1/booking/services", axum::routing::post(api::booking::unified::get_services).with_state(db.pool.clone()))

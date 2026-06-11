@@ -525,3 +525,8 @@ ALTER TABLE IF EXISTS triage_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS triage_proposed_actions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS vendors ENABLE ROW LEVEL SECURITY;
+
+-- Return request seed for e2e tests
+INSERT INTO return_requests (id, tenant_id, order_id, customer_id, product_id, reason, action_type, status, refund_amount_cents, payment_intent_id)
+VALUES ('return_e2e_123', 'e2e-tenant', 'ORD-4001', 'cust_001', 'prod_e2e_001', 'Item was too small', 'refund', 'pending', 4500, 'pi_mock_123')
+ON CONFLICT (id) DO NOTHING;

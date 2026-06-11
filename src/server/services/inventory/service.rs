@@ -213,6 +213,58 @@ impl InventoryService {
         })
     }
 
+    pub async fn restock_inventory(
+        &self,
+        tenant_id: &str,
+        product_id: &str,
+        quantity: i32,
+    ) -> Result<CommitResult, String> {
+        let pool = crate::db::get_pool();
+        let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
+
+        crate::common::auth_utils::set_org_context(&mut *tx, tenant_id)
+            .await
+            .map_err(|e| e.to_string())?;
+
+        let update_result: Option<i32> = sqlx::query_scalar("UPDATE products SET inventory_count = inventory_count + $1, available_quantity = available_quantity + $1 WHERE id = $2 AND tenant_id = $3 RETURNING inventory_count")
+            .bind(quantity)
+            .bind(product_id)
+            .bind(tenant_id)
+            .fetch_optional(&mut *tx)
+            .await
+            .map_err(|e| e.to_string())?;
+
+        if let Some(new_stock) = update_result {
+            let payload_str = serde_json::json!({
+                "product_id": product_id,
+                "quantity_added": quantity,
+                "remaining_stock": new_stock,
+                "reason": "Return Restock"
+            }).to_string();
+
+            let _ = sqlx::query("INSERT INTO ohc_universal_ledger (id, tenant_id, department, action_type, state_change) VALUES ($1, $2, 'Operations', 'INVENTORY_RESTOCK', $3::jsonb)")
+                .bind(Uuid::new_v4().to_string())
+                .bind(tenant_id)
+                .bind(&payload_str)
+                .execute(&mut *tx)
+                .await;
+        } else {
+            let _ = tx.rollback().await;
+            return Ok(CommitResult {
+                success: false,
+                error_message: "Product not found".to_string(),
+            });
+        }
+
+        tx.commit().await.map_err(|e| e.to_string())?;
+
+        Ok(CommitResult {
+            success: true,
+            error_message: "".to_string(),
+        })
+    }
+
+
     pub async fn commit_inventory(
         &self,
         tenant_id: &str,

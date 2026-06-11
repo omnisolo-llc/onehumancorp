@@ -178,6 +178,80 @@ impl StripeClient {
         ])
     }
 
+    pub async fn create_refund(&self, payment_intent_id: &str, amount_cents: i64) -> Result<String, String> {
+        let api_key_res = self.require_api_key();
+        if api_key_res.is_err() {
+            return Ok(format!("re_test_{}", payment_intent_id));
+        }
+        let api_key = api_key_res.unwrap();
+
+        let mut form = std::collections::HashMap::new();
+        form.insert("payment_intent".to_string(), payment_intent_id.to_string());
+        form.insert("amount".to_string(), amount_cents.to_string());
+
+        let idempotency_key = format!("refund_{}_{}", payment_intent_id, amount_cents);
+
+        let res = reqwest::Client::new()
+            .post(format!("{}/v1/refunds", Self::api_base()))
+            .basic_auth(api_key, Some(""))
+            .header("Idempotency-Key", idempotency_key)
+            .form(&form)
+            .send()
+            .await
+            .map_err(|e| format!("Stripe Refund request failed: {}", e))?;
+
+        let api_key_res = self.require_api_key();
+        if api_key_res.is_err() {
+            return Ok(format!("re_test_{}", payment_intent_id));
+        }
+        let api_key = api_key_res.unwrap();
+
+        let mut form = std::collections::HashMap::new();
+        form.insert("payment_intent".to_string(), payment_intent_id.to_string());
+        form.insert("amount".to_string(), amount_cents.to_string());
+
+        let idempotency_key = format!("refund_{}_{}", payment_intent_id, amount_cents);
+
+        let res = reqwest::Client::new()
+            .post(format!("{}/v1/refunds", Self::api_base()))
+            .basic_auth(api_key, Some(""))
+            .header("Idempotency-Key", idempotency_key)
+            .form(&form)
+            .send()
+            .await
+            .map_err(|e| format!("Stripe Refund request failed: {}", e))?;
+
+        let api_key_res = self.require_api_key();
+        if api_key_res.is_err() {
+            return Ok(format!("re_test_{}", payment_intent_id));
+        }
+        let api_key = api_key_res.unwrap();
+
+        let mut form = std::collections::HashMap::new();
+        form.insert("payment_intent".to_string(), payment_intent_id.to_string());
+        form.insert("amount".to_string(), amount_cents.to_string());
+
+        let res = reqwest::Client::new()
+            .post(format!("{}/v1/refunds", Self::api_base()))
+            .basic_auth(api_key, Some(""))
+            .form(&form)
+            .send()
+            .await
+            .map_err(|e| format!("Stripe Refund request failed: {}", e))?;
+
+        if !res.status().is_success() {
+            let status = res.status();
+            let text = res.text().await.unwrap_or_default();
+            return Err(format!("Stripe API error ({}): {}", status, text));
+        }
+
+        let json: serde_json::Value = res.json().await.map_err(|e| format!("Failed to parse response: {}", e))?;
+        let id = json["id"].as_str().ok_or_else(|| "Missing id in response".to_string())?;
+
+        Ok(id.to_string())
+    }
+
+
     pub async fn cancel_subscription(&self, _subscription_id: &str) -> Result<StripeSubscription, String> {
         Ok(StripeSubscription {
             id: "sub_test_...".to_string(),

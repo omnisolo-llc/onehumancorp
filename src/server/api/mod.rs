@@ -32,4 +32,5 @@ pub mod booking;
 pub mod recovery;
 pub mod agent_feed;
 pub mod invoice;
+pub mod returns;
 pub mod audio_command;
