@@ -521,7 +521,14 @@ document.addEventListener('DOMContentLoaded', () => {
         <div id="ohc-help-messages">
             <div class="msg msg-ai">Hi! I am your AI Help Agent! How can I assist you with OHC today?</div>
         </div>
-        <div id="ohc-help-input-area">
+
+        <div id="ohc-help-walkthroughs" style="margin-top: 15px; border-top: 1px solid rgba(0,0,0,0.1); padding-top: 15px;">
+            <h4 style="margin: 0 0 10px 0; font-size: 14px;">Interactive Tours</h4>
+            <button onclick="window.startWalkthrough && window.startWalkthrough([{targetId: 'nav-store', title: 'Set up your store', content: 'Click here to go to your storefront builder.'}])" style="width: 100%; text-align: left; padding: 8px; border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; background: white; margin-bottom: 8px; cursor: pointer; font-size: 13px;">Tour: Set up your store</button>
+            <button onclick="window.startWalkthrough && window.startWalkthrough([{targetId: 'nav-agents', title: 'Activate your AI Support Agent', content: 'Activate your AI agent to help with tasks.'}])" style="width: 100%; text-align: left; padding: 8px; border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; background: white; margin-bottom: 8px; cursor: pointer; font-size: 13px;">Tour: Activate your AI Support Agent</button>
+        </div>
+
+<div id="ohc-help-input-area">
             <input type="text" id="ohc-help-input" placeholder="Ask me anything..." />
             <button id="ohc-help-send" aria-label="Send message">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
@@ -707,6 +714,89 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('touchmove', () => {
         clearTimeout(touchTimeout);
         hideTooltip();
+    });
+});
+</script>
+
+<script src="walkthrough.js"></script>
+<script>initWalkthrough();</script>
+
+
+
+
+
+
+
+<style>
+.ohc-tooltip {
+    position: fixed;
+    background: #333;
+    color: white;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-family: Outfit, sans-serif;
+    z-index: 100000;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    max-width: 250px;
+    line-height: 1.4;
+}
+.ohc-tooltip.visible {
+    opacity: 1;
+}
+</style>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    if (!window.OHC_TOOLTIPS) {
+        window.OHC_TOOLTIPS = {};
+        fetch("/api/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(console.error);
+    }
+    const tooltipEl = document.createElement('div');
+    tooltipEl.className = 'ohc-tooltip';
+    document.body.appendChild(tooltipEl);
+
+    function showTooltip(e, text) {
+        if (!text) return;
+        tooltipEl.textContent = text;
+        const targetRect = e.target.closest('[id]') ? e.target.closest('[id]').getBoundingClientRect() : e.target.getBoundingClientRect();
+
+        let left = targetRect.left + (targetRect.width / 2) - (tooltipEl.offsetWidth / 2);
+        let top = targetRect.bottom + 10;
+
+        if (left + tooltipEl.offsetWidth > window.innerWidth - 10) {
+            left = window.innerWidth - tooltipEl.offsetWidth - 10;
+        } else if (left < 10) {
+            left = 10;
+        }
+
+        if (top + tooltipEl.offsetHeight > window.innerHeight - 10) {
+            top = targetRect.top - tooltipEl.offsetHeight - 10;
+        }
+
+        tooltipEl.style.top = `${top}px`;
+        tooltipEl.style.left = `${left}px`;
+        tooltipEl.classList.add('visible');
+    }
+
+    function hideTooltip() {
+        tooltipEl.classList.remove('visible');
+    }
+
+    document.addEventListener('mouseover', (e) => {
+        const target = e.target.closest('[id]');
+        if (target && target.id && window.OHC_TOOLTIPS[target.id]) {
+            showTooltip(e, window.OHC_TOOLTIPS[target.id]);
+        }
+    });
+
+    document.addEventListener('mouseout', (e) => {
+        const target = e.target.closest('[id]');
+        if (target && target.id && window.OHC_TOOLTIPS[target.id]) {
+            hideTooltip();
+        }
     });
 });
 </script>
