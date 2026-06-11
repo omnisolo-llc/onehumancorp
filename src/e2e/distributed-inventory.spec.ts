@@ -98,5 +98,21 @@ test.describe('Distributed Inventory Sync via UI', () => {
       expect(onlineLockReq.ok()).toBeTruthy();
       expect(onlineLockData.success).toBeFalsy();
       expect(onlineLockData.error_message).toContain('another customer');
+
+      // 5. Test online checkout API directly as well (billing_api create_checkout_session)
+      const onlineCheckoutReq = await request.post('/api/billing/create-checkout-session', {
+        data: {
+          tier: 'starter',
+          is_subscription: false,
+          product_id: 'prod_123',
+          quantity: 1,
+        },
+        headers: {
+          'x-tenant-id': 'default_tenant',
+          // mock fake auth token or tenant_id handling is via x-tenant-id in e2e setup
+        }
+      });
+      // Should fail since it's already reserved by POS
+      expect(onlineCheckoutReq.status()).toBe(409); // Conflict
   });
 });

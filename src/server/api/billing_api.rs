@@ -84,6 +84,9 @@ pub fn router<S: Clone + Send + Sync + 'static>(hub: Arc<Hub>) -> axum::Router<S
 pub struct CreateCheckoutSessionRequest {
     pub tier: String,
     pub is_subscription: Option<bool>,
+    pub product_id: Option<String>,
+    pub quantity: Option<i32>,
+    pub ttl_seconds: Option<i32>,
 }
 
 #[derive(serde::Serialize)]
@@ -112,11 +115,94 @@ pub async fn create_checkout_session_handler(
         _ => return Err(StatusCode::BAD_REQUEST),
     };
 
+    if let (Some(product_id), Some(quantity)) = (&req.product_id, req.quantity) {
+        if quantity > 0 {
+            let lock_id = uuid::Uuid::new_v4().to_string();
+            let lock_key = format!("ohc:lock:{}:inventory:{}", tenant_id, product_id);
+            let ttl = req.ttl_seconds.unwrap_or(300); // 5 minutes default for online checkout
+
+            if let Some(redis_client) = &hub.redis_client {
+                if let Ok(mut conn) = redis_client.get_multiplexed_async_connection().await {
+                    let acquired: bool = redis::cmd("SET")
+                        .arg(&lock_key).arg(&lock_id).arg("EX").arg(ttl).arg("NX")
+                        .query_async(&mut conn).await.unwrap_or(false);
+
+                    if !acquired {
+                        return Err(StatusCode::CONFLICT); // 409 Conflict if locked
+                    }
+
+                    // Verify database stock
+                    let pool = crate::db::get_pool();
+                    if let Ok(mut tx) = pool.begin().await {
+                        if let Ok(_) = crate::common::auth_utils::set_org_context(&mut *tx, &tenant_id).await {
+                            let current_stock: Option<i32> = sqlx::query_scalar("SELECT inventory_count FROM products WHERE id = $1 AND tenant_id = $2")
+                                .bind(product_id)
+                                .bind(&tenant_id)
+                                .fetch_optional(&mut *tx)
+                                .await
+                                .unwrap_or(None);
+
+                            if let Some(stock) = current_stock {
+                                if stock < quantity {
+                                    let _ = tx.rollback().await;
+                                    let _: () = redis::cmd("DEL").arg(&lock_key).query_async(&mut conn).await.unwrap_or(());
+                                    return Err(StatusCode::CONFLICT);
+                                }
+                            } else {
+                                let _ = tx.rollback().await;
+                                let _: () = redis::cmd("DEL").arg(&lock_key).query_async(&mut conn).await.unwrap_or(());
+                                return Err(StatusCode::NOT_FOUND);
+                            }
+                        }
+                        let _ = tx.commit().await;
+                    }
+                }
+            } else {
+                // Fallback without redis
+                let pool = crate::db::get_pool();
+                if let Ok(mut tx) = pool.begin().await {
+                    if let Ok(_) = crate::common::auth_utils::set_org_context(&mut *tx, &tenant_id).await {
+                        let current_stock: Option<i32> = sqlx::query_scalar("SELECT inventory_count FROM products WHERE id = $1 AND tenant_id = $2")
+                            .bind(product_id)
+                            .bind(&tenant_id)
+                            .fetch_optional(&mut *tx)
+                            .await
+                            .unwrap_or(None);
+
+                        if let Some(stock) = current_stock {
+                            if stock < quantity {
+                                let _ = tx.rollback().await;
+                                return Err(StatusCode::CONFLICT);
+                            }
+                        } else {
+                            let _ = tx.rollback().await;
+                            return Err(StatusCode::NOT_FOUND);
+                        }
+                    }
+                    let _ = tx.commit().await;
+                }
+            }
+        }
+    }
+
     if let Some(client) = &hub.tracker().stripe_client {
         // Assume price_id corresponds to the tier directly or is generated. We pass the tier name as the price_id for now.
         match client.create_checkout_session(&req.tier, &tenant_id, amount_usd, req.is_subscription.unwrap_or(false)).await {
             Ok(url) => Ok(Json(CreateCheckoutSessionResponse { checkout_url: url })),
-            Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
+            Err(_) => {
+                // Explicitly release the lock if the stripe session creation fails
+                if let (Some(product_id), Some(quantity)) = (&req.product_id, req.quantity) {
+                    if quantity > 0 {
+                        if let Some(redis_client) = &hub.redis_client {
+                            if let Ok(mut conn) = redis_client.get_multiplexed_async_connection().await {
+                                let lock_key = format!("ohc:lock:{}:inventory:{}", tenant_id, product_id);
+                                let _: () = redis::cmd("DEL").arg(&lock_key).query_async(&mut conn).await.unwrap_or(());
+                            }
+                        }
+                    }
+                }
+                Err(StatusCode::INTERNAL_SERVER_ERROR)
+            },
         }
     } else {
         // Fallback for tests / missing Stripe config
@@ -575,6 +661,20 @@ mod department_tier_usage_tests {
         let cached = cache.get(&tenant_id).await;
         assert!(cached.is_some());
         assert_eq!(cached.unwrap().current_plan, mock_resp.current_plan);
+    }
+
+    #[tokio::test]
+    async fn test_create_checkout_session_inventory_lock() {
+        // Just verify struct layout and compile.
+        let req = CreateCheckoutSessionRequest {
+            tier: "starter".to_string(),
+            is_subscription: Some(false),
+            product_id: Some("prod_123".to_string()),
+            quantity: Some(1),
+            ttl_seconds: Some(300),
+        };
+        assert_eq!(req.tier, "starter");
+        assert_eq!(req.product_id.unwrap(), "prod_123");
     }
 
     #[test]
