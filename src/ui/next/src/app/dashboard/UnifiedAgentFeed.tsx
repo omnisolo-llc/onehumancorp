@@ -280,7 +280,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
 
   if (error) {
     return (
-      <div className="w-full mb-6 p-4 glassmorphism rounded-[16px] border border-red-500/50 bg-red-500/10 text-red-500 text-center">
+      <div className="w-full mb-6 p-4 glassmorphism rounded-[16px] border border-[#FF3B30]/50 bg-[#FF3B30]/10 text-[#FF3B30] text-center">
         {error}
       </div>
     );
