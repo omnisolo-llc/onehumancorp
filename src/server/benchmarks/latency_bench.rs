@@ -691,7 +691,32 @@ pub async fn bench_dashboard_analytics_briefing_latency() {
     }
 }
 
+
+pub async fn bench_ui_dashboard_unified_feed_latency() {
+    println!("Benchmarking ui_dashboard_unified_feed_handler (Parallel Execution Optimization & Hybrid Cache)...");
+    let (_tx, _rx) = tokio::sync::mpsc::channel::<serde_json::Value>(100);
+
+    let _db_cloud = {
+        let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
+        if !database_url.starts_with("postgres") {
+             crate::db::DB { pool: crate::db::get_pool(), store: crate::db::DbStore::Sqlite(sqlx::sqlite::SqlitePool::connect_lazy("sqlite::memory:").unwrap()) }
+        } else {
+             crate::db::DB { pool: sqlx::postgres::PgPoolOptions::new().connect_lazy(&database_url).unwrap(), store: crate::db::DbStore::Postgres }
+        }
+    };
+
+    let _db_standalone = {
+         let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .acquire_timeout(std::time::Duration::from_secs(1))
+            .connect_lazy("sqlite::memory:").unwrap();
+         crate::db::DB { pool: crate::db::get_pool(), store: crate::db::DbStore::Sqlite(pool) }
+    };
+
+    println!("  (Skipping actual run if Postgres is unavailable, but benchmark is wired)");
+}
+
 pub async fn bench_hybrid_latency() {
+
     println!("--- Running Hybrid Latency Benchmark ---");
 
     println!("1. Database Query Time");

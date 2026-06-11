@@ -3223,7 +3223,7 @@ async fn ui_dashboard_unified_feed_handler(
     use axum::response::IntoResponse;
     let tenant_id = ui_tenant_id(&query);
 
-    let cache_key = format!("ui_dashboard_unified:{}", tenant_id);
+    let cache_key = format!("ui_dashboard_unified:{}:{}", tenant_id, query.mobile_optimized.unwrap_or(false));
     let cache = UI_DASHBOARD_METRICS_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
     if let Some((cached, is_stale)) = cache.get_with_swr(&cache_key).await {
         if !is_stale {
@@ -3233,12 +3233,15 @@ async fn ui_dashboard_unified_feed_handler(
         let db = db.clone();
         let t = tenant_id.clone();
         let cache_key_bg = cache_key.clone();
+        let mobile = query.mobile_optimized.unwrap_or(false);
         tokio::spawn(async move {
             let (metrics_res, orders_res, messages_res, supply_res) = tokio::join!(
                 tokio::spawn({ let db = db.clone(); let t = t.clone(); async move { load_ui_dashboard_metrics(&db, &t).await } }),
                 tokio::spawn({ let db = db.clone(); let t = t.clone(); async move { load_ui_orders_from_db(&db, &t).await } }),
                 tokio::spawn({ let db = db.clone(); let t = t.clone(); async move { load_ui_inbox_from_db(&db, &t).await } }),
-                tokio::spawn({ let db = db.clone(); let t = t.clone(); async move { load_ui_supply_from_db(&db, &t).await } })
+                tokio::spawn({ let db = db.clone(); let t = t.clone(); async move {
+                    if mobile { Ok(serde_json::json!({})) } else { load_ui_supply_from_db(&db, &t).await }
+                } })
             );
             let result = serde_json::json!({
                 "metrics": metrics_res.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound)).map(|m| serde_json::to_value(m).unwrap_or_default()).unwrap_or_default(),
@@ -3253,11 +3256,14 @@ async fn ui_dashboard_unified_feed_handler(
         return (axum::http::StatusCode::OK, axum::Json(cached)).into_response();
     }
 
+        let mobile = query.mobile_optimized.unwrap_or(false);
     let (metrics_res, orders_res, messages_res, supply_res) = tokio::join!(
         tokio::spawn({ let db = db.clone(); let t = tenant_id.clone(); async move { load_ui_dashboard_metrics(&db, &t).await } }),
         tokio::spawn({ let db = db.clone(); let t = tenant_id.clone(); async move { load_ui_orders_from_db(&db, &t).await } }),
         tokio::spawn({ let db = db.clone(); let t = tenant_id.clone(); async move { load_ui_inbox_from_db(&db, &t).await } }),
-        tokio::spawn({ let db = db.clone(); let t = tenant_id.clone(); async move { load_ui_supply_from_db(&db, &t).await } })
+        tokio::spawn({ let db = db.clone(); let t = tenant_id.clone(); async move {
+            if mobile { Ok(serde_json::json!({})) } else { load_ui_supply_from_db(&db, &t).await }
+        } })
     );
 
     let result = serde_json::json!({
@@ -3278,7 +3284,7 @@ async fn ui_dashboard_unified_agent_feed_handler(
     use axum::response::IntoResponse;
     let tenant_id = ui_tenant_id(&query);
 
-    let cache_key = format!("ui_unified_agent_feed:{}", tenant_id);
+    let cache_key = format!("ui_unified_agent_feed:{}:{}", tenant_id, query.mobile_optimized.unwrap_or(false));
     let cache = UI_UNIFIED_AGENT_FEED_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
     if let Some((cached, is_stale)) = cache.get_with_swr(&cache_key).await {
         if !is_stale {
@@ -3288,14 +3294,29 @@ async fn ui_dashboard_unified_agent_feed_handler(
         let db = db.clone();
         let t = tenant_id.clone();
         let cache_key_bg = cache_key.clone();
+        let mobile = query.mobile_optimized.unwrap_or(false);
         tokio::spawn(async move {
             let (approvals_res, ledger_res) = tokio::join!(
                 tokio::spawn({ let db = db.clone(); let t = t.clone(); async move { load_ui_agent_approvals_from_db(&db, &t).await } }),
                 tokio::spawn({ let db = db.clone(); let t = t.clone(); async move { load_ui_ledger_from_db(&db, &t).await } })
             );
+            let mut pending_approvals = approvals_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
+            let mut entries = ledger_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
+            if mobile {
+                for item in pending_approvals.iter_mut() {
+                    if let Some(obj) = item.as_object_mut() {
+                        obj.remove("payload");
+                    }
+                }
+                for item in entries.iter_mut() {
+                    if let Some(obj) = item.as_object_mut() {
+                        obj.remove("payload");
+                    }
+                }
+            }
             let result = serde_json::json!({
-                "pending_approvals": approvals_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default(),
-                "entries": ledger_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default()
+                "pending_approvals": pending_approvals,
+                "entries": entries
             });
             if let Some(c) = UI_UNIFIED_AGENT_FEED_CACHE.get() {
                 c.set(&cache_key_bg, result, std::time::Duration::from_secs(10)).await;
@@ -3304,14 +3325,29 @@ async fn ui_dashboard_unified_agent_feed_handler(
         return (axum::http::StatusCode::OK, axum::Json(cached)).into_response();
     }
 
+    let mobile = query.mobile_optimized.unwrap_or(false);
     let (approvals_res, ledger_res) = tokio::join!(
         tokio::spawn({ let db = db.clone(); let t = tenant_id.clone(); async move { load_ui_agent_approvals_from_db(&db, &t).await } }),
         tokio::spawn({ let db = db.clone(); let t = tenant_id.clone(); async move { load_ui_ledger_from_db(&db, &t).await } })
     );
 
+    let mut pending_approvals = approvals_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
+    let mut entries = ledger_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
+    if mobile {
+        for item in pending_approvals.iter_mut() {
+            if let Some(obj) = item.as_object_mut() {
+                obj.remove("payload");
+            }
+        }
+        for item in entries.iter_mut() {
+            if let Some(obj) = item.as_object_mut() {
+                obj.remove("payload");
+            }
+        }
+    }
     let result = serde_json::json!({
-        "pending_approvals": approvals_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default(),
-        "entries": ledger_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default()
+        "pending_approvals": pending_approvals,
+        "entries": entries
     });
 
     let _ = cache.set(&cache_key, result.clone(), std::time::Duration::from_secs(10)).await;
