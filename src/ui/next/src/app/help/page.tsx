@@ -25,7 +25,7 @@ export default function HelpCenterPage() {
       .catch(console.error);
   }, []);
 
-  const filteredArticles = articles;
+  const filteredArticles = articles.filter(a => a.category !== "Advanced");
 
   const filteredVideos = videos.filter(video =>
     video.title.toLowerCase().includes(searchQuery.toLowerCase())

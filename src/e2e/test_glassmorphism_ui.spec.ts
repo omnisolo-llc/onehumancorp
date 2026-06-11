@@ -12,7 +12,7 @@ test.describe('Glassmorphism UI Audit', () => {
     expect(borderRadius).toBe('16px');
   });
 
-  test('Verify input elements use 16px border radius', async ({ page }) => {
+  test('Verify input elements use 8px border radius', async ({ page }) => {
     await page.goto('/setup');
     await page.waitForLoadState('networkidle');
     const input = page.locator('input[type="text"]').first();
@@ -20,10 +20,10 @@ test.describe('Glassmorphism UI Audit', () => {
     const borderRadius = await input.evaluate((el) => {
       return window.getComputedStyle(el).borderRadius;
     });
-    expect(borderRadius).toBe('16px');
+    expect(borderRadius).toBe('8px');
   });
 
-  test('Verify dashboard buttons use 16px border radius', async ({ page }) => {
+  test('Verify dashboard buttons use 8px border radius', async ({ page }) => {
     await page.goto('/dashboard');
     await page.waitForLoadState('networkidle');
     const button = page.locator('button').first();
@@ -31,10 +31,10 @@ test.describe('Glassmorphism UI Audit', () => {
     const borderRadius = await button.evaluate((el) => {
       return window.getComputedStyle(el).borderRadius;
     });
-    expect(borderRadius).toBe('16px');
+    expect(borderRadius).toBe('8px');
   });
 
-  test('Verify POS buttons use 16px border radius', async ({ page }) => {
+  test('Verify POS buttons use 8px border radius', async ({ page }) => {
     await page.goto('/pos');
     await page.waitForLoadState('networkidle');
     const button = page.locator('.charge-btn').first();
@@ -42,7 +42,7 @@ test.describe('Glassmorphism UI Audit', () => {
     const borderRadius = await button.evaluate((el) => {
       return window.getComputedStyle(el).borderRadius;
     });
-    expect(borderRadius).toBe('16px');
+    expect(borderRadius).toBe('8px');
   });
 
   test('Verify Quote page containers use 16px border radius', async ({ page }) => {

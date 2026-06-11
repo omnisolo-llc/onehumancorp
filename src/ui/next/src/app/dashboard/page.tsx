@@ -25,6 +25,7 @@ import { ReviewFeedCard } from './ReviewFeedCard';
 import { NeighborhoodPulseCard } from "./NeighborhoodPulseCard";
 import { PromoterCard } from "./PromoterCard";
 import { ViralLoopPerformanceWidget } from "./ViralLoopPerformanceWidget";
+import { SuccessMilestoneWidget } from "./SuccessMilestoneWidget";
 import { SuccessMilestoneAlert } from "./SuccessMilestoneAlert";
 import AffiliateMarketingWidget from "./AffiliateMarketingWidget";
 import { CartRecoveryWidget } from "./CartRecoveryWidget";
@@ -407,14 +408,22 @@ export default function Dashboard() {
       </div>
 
       <SuccessMilestoneAlert />
+      <SuccessMilestoneWidget />
       <ViralLoopPerformanceWidget />
       <div className="mb-6">
         <div className="mb-4"><CartRecoveryWidget /></div>
         <AffiliateMarketingWidget />
       </div>
 
-      <div className="mb-6">
+      <div className="mb-6 flex flex-col md:flex-row justify-between items-center gap-4">
           <SmartBlock type="PoweredBy" props={{ tenantId: tenantId(), isPremium: false }} />
+          <button
+            onClick={() => router.push("/incidents")}
+            className="h-[44px] px-6 rounded-[8px] bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 font-medium hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors border border-red-200 dark:border-red-800/50"
+            data-testid="report-incident-btn"
+          >
+            Report Incident
+          </button>
       </div>
 
       <section className="app-panel glassmorphism border border-white/40 dark:border-white/10 mb-6">
@@ -826,6 +835,15 @@ export default function Dashboard() {
               </div>
               <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">AI Invoice Generator</h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">Generate professional, shareable invoices that bring new customers to OHC.</p>
+            </Link>
+
+            <Link href="/proposal-generator" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+              <div className="flex items-start justify-between mb-4">
+                <div className="w-12 h-12 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">📝</div>
+                <div className="text-blue-600 dark:text-blue-400 font-semibold text-sm bg-blue-50 dark:bg-blue-900/30 px-3 py-1 rounded-full">Sales</div>
+              </div>
+              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">AI Proposal Generator</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Create smart, shareable proposals with an interactive approval flow to win clients faster.</p>
             </Link>
 
             <Link href="/milestones" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">

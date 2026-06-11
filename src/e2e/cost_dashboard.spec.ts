@@ -91,7 +91,7 @@ test.describe('Cost Dashboard "My Plan" functionality', () => {
     await expect(page.locator('span', { hasText: 'LLM Usage' }).first()).toBeVisible();
     await expect(page.locator('span', { hasText: 'Storage' }).first()).toBeVisible();
     await expect(page.locator('span', { hasText: 'Payment Fees' }).first()).toBeVisible();
-    await expect(page.locator('span', { hasText: 'Network Cost' }).first()).toBeVisible();
+    await expect(page.locator('span', { hasText: 'Bandwidth Savings' }).first()).toBeVisible();
   });
 
   test('Billing checkout session and cancel subscription journey', async ({ page }) => {

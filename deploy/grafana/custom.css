@@ -2,25 +2,51 @@
 * {
     font-family: 'Outfit', 'Inter', sans-serif;
 }
+
+/* Base Panel Glass */
 .panel-container {
     backdrop-filter: blur(30px) saturate(210%);
     background: rgba(22, 22, 26, 0.7) !important;
     font-family: 'Outfit', 'Inter', sans-serif !important;
     border-radius: 12px !important;
     border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    color: #fff !important;
 }
+
 .grafana-app {
     backdrop-filter: blur(30px) saturate(210%) !important;
     background: rgba(22, 22, 26, 0.7) !important;
     font-family: 'Outfit', 'Inter', sans-serif !important;
 }
+
+/* Light Theme Classes & Media Queries */
 @media (prefers-color-scheme: light) {
     .panel-container {
         background: rgba(255, 255, 255, 0.65) !important;
         border: 1px solid rgba(255, 255, 255, 0.4) !important;
+        color: #000 !important;
     }
     .grafana-app {
         background: rgba(255, 255, 255, 0.65) !important;
         backdrop-filter: blur(30px) saturate(210%) !important;
     }
+}
+
+.theme-light .panel-container {
+    background: rgba(255, 255, 255, 0.65) !important;
+    backdrop-filter: blur(30px) saturate(210%) !important;
+    border: 1px solid rgba(255, 255, 255, 0.4) !important;
+    color: #000 !important;
+}
+
+.theme-dark .panel-container {
+    background: rgba(22, 22, 26, 0.7) !important;
+    backdrop-filter: blur(30px) saturate(210%) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    color: #fff !important;
+}
+
+/* Ensure text inside text panels uses inherited color rather than specific elements */
+.panel-container * {
+    color: inherit;
 }

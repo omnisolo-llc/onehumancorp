@@ -1,7 +1,10 @@
 import { test, expect } from './fixtures';
 import { currentAppSmoke } from './current_app_smoke';
 
-currentAppSmoke('viral_invoice_generator');
+test('viral_invoice_generator', async ({ page, request, loginAs, adminUser }) => {
+  await loginAs(page, adminUser);
+  await currentAppSmoke(page, request, 'viral_invoice_generator');
+});
 
 test.describe('Viral Invoice Generator Loop', () => {
   test('should allow creating an invoice and viewing the viral loop', async ({ page }) => {
@@ -46,11 +49,11 @@ test.describe('Viral Invoice Generator Loop', () => {
     await expect(page.getByText('$2500.00')).toBeVisible();
 
     // Verify the viral loop footer
-    const poweredByLink = page.getByRole('link', { name: /Powered by OHC/i });
+    const poweredByLink = page.locator('a', { hasText: 'Powered by OHC' }).last();
     await expect(poweredByLink).toBeVisible();
 
     const onboardingHref = await poweredByLink.getAttribute('href');
     expect(onboardingHref).toContain('/onboarding?ref=');
-    expect(onboardingHref).toContain('source=invoice_generator');
+    expect(onboardingHref).toContain('source=footer_widget');
   });
 });

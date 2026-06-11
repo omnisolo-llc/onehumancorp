@@ -1,7 +1,10 @@
 import { test, expect } from './fixtures';
 import { currentAppSmoke } from './current_app_smoke';
 
-currentAppSmoke('customer_referral_loop');
+test('customer_referral_loop', async ({ page, request, loginAs, adminUser }) => {
+  await loginAs(page, adminUser);
+  await currentAppSmoke(page, request, 'customer_referral_loop');
+});
 
 test.describe('Customer Referral Program Growth Loop', () => {
     test('dashboard links to Customer Referral Program, which generates an embed with a viral footer', async ({ page, request }) => {

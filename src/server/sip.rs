@@ -163,7 +163,7 @@ impl SipDB {
                     .await?;
 
                 // Prioritize backlog by bumping updated_at for oldest pending missions
-                sqlx::query("UPDATE agent_missions SET updated_at = CURRENT_TIMESTAMP WHERE id IN (SELECT id FROM agent_missions WHERE status = 'PENDING' AND tenant_id = $1 ORDER BY created_at ASC LIMIT 10) RETURNING id")
+                sqlx::query("UPDATE agent_missions SET updated_at = CURRENT_TIMESTAMP WHERE id IN (SELECT id FROM agent_missions WHERE status = 'PENDING' AND tenant_id = $1 ORDER BY created_at ASC LIMIT 10 FOR UPDATE SKIP LOCKED) RETURNING id")
                     .bind(&self.org_id)
                     .execute(&mut *tx)
                     .await?;
@@ -316,6 +316,15 @@ impl SipDB {
     pub fn enrich_payload_with_grounding_content(&self, payload: &str, grounding_content: &Option<String>) -> String {
         let mut final_payload = payload.to_string();
         if let Some(content) = grounding_content {
+            if let Ok(mut json_val) = serde_json::from_str::<serde_json::Value>(payload) {
+                if let Some(task_val) = json_val.get("task") {
+                    if let Some(task) = task_val.as_str() {
+                        let new_task = format!("{}\n\n[SYSTEM GROUNDING]:\n{}", task, content);
+                        json_val["task"] = serde_json::Value::String(new_task);
+                        return json_val.to_string();
+                    }
+                }
+            }
             final_payload = format!("{}\n\n[SYSTEM GROUNDING]:\n{}", payload, content);
         }
         final_payload
@@ -539,7 +548,7 @@ mod tests {
 
         assert!(enriched.contains("[SYSTEM GROUNDING]"));
         assert!(enriched.contains("Resilient Omni-Context instructions"));
-        assert!(enriched.starts_with("{\"task\":\"Scale K8s HPA\"}"));
+        assert!(serde_json::from_str::<serde_json::Value>(&enriched).is_ok());
 
         std::fs::remove_dir_all(&dir_str).unwrap();
     }
