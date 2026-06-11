@@ -179,6 +179,7 @@ where
         .route("/referrals/click", post(handle_referral_click))
         .route("/referrals/convert", post(handle_referral_convert))
         .route("/team-invites/accept", post(handle_team_invite_accept))
+        .route("/cloud-bridge/invite", post(handle_cloud_bridge_invite))
         .route("/referrals/generate", post(handle_referral_generate))
         .route("/onboarding-metrics", get(handle_onboarding_metrics))
         .route("/discount_share/generate", post(handle_generate_discount_share))
@@ -1382,7 +1383,7 @@ mod tests {
     use axum::extract::Query;
     use sqlx::PgPool;
 
-    async fn setup_db() -> PgPool {
+    pub(crate) async fn setup_db() -> PgPool {
         let database_url = std::env::var("OHC_DATABASE_URL")
             .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
         let pool = sqlx::postgres::PgPoolOptions::new()
@@ -1875,4 +1876,76 @@ async fn handle_abandoned_carts_count(
     };
 
     Json(serde_json::json!({ "count": count }))
+}
+
+#[derive(Debug, Deserialize)]
+pub struct CloudBridgeInviteRequest {
+    pub team_id: String,
+    pub inviter_id: String,
+    pub invitee_id: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct CloudBridgeInviteResponse {
+    pub invite_link: String,
+}
+
+async fn handle_cloud_bridge_invite(
+    Extension(state): Extension<GrowthState>,
+    Json(req): Json<CloudBridgeInviteRequest>,
+) -> Result<Json<CloudBridgeInviteResponse>, StatusCode> {
+    let repo = std::sync::Arc::new(crate::services::growth::invites::InviteRepository::new(state.pool.clone()));
+    let tracker = crate::services::growth::invites::InviteTracker::new(repo);
+
+    match tracker.record_invite(&req.team_id, &req.inviter_id, &req.invitee_id).await {
+        Ok(invite) => {
+            let cache_key_prefix = format!("team_invites:{}:", req.team_id);
+            let cache = TEAM_INVITES_CACHE.get_or_init(|| HybridCache::new(None));
+            // Invalidate specifically the first page commonly fetched. For robust cache invalidation across all pages, consider tag-based invalidation or shorter TTLs. We will rely on the short 30s TTL for subsequent pages.
+            cache.invalidate(&format!("{}None", cache_key_prefix)).await;
+
+            let msg = state.hub.sanitize_hub_event(serde_json::json!({ "type": "growth.cloud_bridge_invite_created", "team_id": req.team_id, "inviter_id": req.inviter_id, "invitee_id": req.invitee_id }));
+            state.hub.append_recent_event(msg);
+
+            let invite_link = format!("https://ohc.app/invite/{}", invite.id);
+            Ok(Json(CloudBridgeInviteResponse { invite_link }))
+        },
+        Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
+    }
+}
+
+#[cfg(test)]
+mod cloud_bridge_tests {
+    use super::*;
+    use super::tests::setup_db;
+    use crate::hub::Hub;
+    use std::sync::Arc;
+
+    #[tokio::test]
+    async fn test_cloud_bridge_invite() {
+        let pool = setup_db().await;
+        if sqlx::query("SELECT 1").execute(&pool).await.is_err() {
+            tracing::debug!("Skipping DB test, DB not available");
+            return;
+        }
+
+        let (event_tx, _) = tokio::sync::mpsc::channel(100);
+        let hub = Arc::new(Hub::new(event_tx, pool.clone()));
+        let state = GrowthState { pool: pool.clone(), hub: hub.clone() };
+
+        let req = CloudBridgeInviteRequest {
+            team_id: "test-team-cb".to_string(),
+            inviter_id: "inviter-abc".to_string(),
+            invitee_id: "invitee-xyz".to_string(),
+        };
+
+        let res = handle_cloud_bridge_invite(Extension(state.clone()), Json(req)).await;
+        assert!(res.is_ok());
+
+        let res_json = res.unwrap().0;
+        assert!(res_json.invite_link.starts_with("https://ohc.app/invite/"));
+
+        let recent_events = state.hub.recent_events(10);
+        assert!(recent_events.iter().any(|e| e.r#type == "growth.cloud_bridge_invite_created"));
+    }
 }

@@ -445,7 +445,7 @@ export default function ApprovalInbox({
                         <span className="font-semibold">{req.payload.product_name}</span>
                       </div>
 
-                      <div className="app-card rounded-lg border border-pink-100 overflow-hidden shadow-sm">
+                      <div className="app-card rounded-lg border border-pink-100 overflow-hidden shadow-sm flex flex-col gap-2">
                         {req.payload.image_url && (
                           <div className="w-full h-40 bg-gray-100 relative">
                             <img
@@ -455,14 +455,46 @@ export default function ApprovalInbox({
                             />
                           </div>
                         )}
-                        <div className="p-3">
-                          <div className="text-[10px] uppercase font-bold text-gray-400 mb-1">
-                            Draft Copy
+                        {req.payload.tiktok && (
+                          <div className="p-3 border-b border-pink-50 last:border-b-0">
+                            <div className="text-[10px] uppercase font-bold text-gray-400 mb-1 flex items-center gap-1">
+                              TikTok
+                            </div>
+                            <p className="text-xs text-gray-700 italic">
+                              "{req.payload.tiktok}"
+                            </p>
                           </div>
-                          <p className="text-xs text-gray-700 italic">
-                            "{req.payload.draft_copy}"
-                          </p>
-                        </div>
+                        )}
+                        {req.payload.instagram && (
+                          <div className="p-3 border-b border-pink-50 last:border-b-0">
+                            <div className="text-[10px] uppercase font-bold text-gray-400 mb-1 flex items-center gap-1">
+                              Instagram
+                            </div>
+                            <p className="text-xs text-gray-700 italic">
+                              "{req.payload.instagram}"
+                            </p>
+                          </div>
+                        )}
+                        {req.payload.facebook && (
+                          <div className="p-3 border-b border-pink-50 last:border-b-0">
+                            <div className="text-[10px] uppercase font-bold text-gray-400 mb-1 flex items-center gap-1">
+                              Facebook
+                            </div>
+                            <p className="text-xs text-gray-700 italic">
+                              "{req.payload.facebook}"
+                            </p>
+                          </div>
+                        )}
+                        {req.payload.draft_copy && (
+                          <div className="p-3 border-b border-pink-50 last:border-b-0">
+                            <div className="text-[10px] uppercase font-bold text-gray-400 mb-1 flex items-center gap-1">
+                              Draft Copy
+                            </div>
+                            <p className="text-xs text-gray-700 italic">
+                              "{req.payload.draft_copy}"
+                            </p>
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}

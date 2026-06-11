@@ -639,7 +639,7 @@ impl DB {
                     DROP TABLE IF EXISTS shared_tasks;
                     CREATE TABLE IF NOT EXISTS shared_tasks (
                         id TEXT PRIMARY KEY,
-                        organization_id TEXT NOT NULL,
+                        tenant_id TEXT NOT NULL,
                         parent_plan_id TEXT,
                         title TEXT NOT NULL,
                         description TEXT,
@@ -667,7 +667,7 @@ impl DB {
                         version INTEGER DEFAULT 1
                     );
                     CREATE INDEX IF NOT EXISTS idx_customer_timeline_tenant_customer ON customer_timeline(tenant_id, customer_id);
-                    CREATE INDEX IF NOT EXISTS idx_shared_tasks_organization_id ON shared_tasks(organization_id);
+                    CREATE INDEX IF NOT EXISTS idx_shared_tasks_tenant_id ON shared_tasks(tenant_id);
                     CREATE INDEX IF NOT EXISTS idx_shared_tasks_status ON shared_tasks(status);
                     CREATE TABLE IF NOT EXISTS agent_approvals (
                         id TEXT PRIMARY KEY,
@@ -793,6 +793,8 @@ impl DB {
                         title TEXT,
                         price REAL,
                         inventory_count INTEGER,
+                        locked_quantity INTEGER DEFAULT 0,
+                        available_quantity INTEGER DEFAULT 0,
                         supplier_name TEXT,
                         supplier_contact TEXT,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -1178,6 +1180,7 @@ impl DB {
             DbStore::Sqlite(sqlite_pool) => {
                 let shared_rows = sqlx::query("SELECT id, tenant_id, payload FROM shared_tasks WHERE status = 'COMPLETED' AND auto_dreamed = 0 LIMIT 25").fetch_all(sqlite_pool).await?;
                 for row in shared_rows {
+                    use sqlx::Row;
                     let id: String = row.get("id");
                     let org_id: String = row.get("tenant_id");
                     let payload: String = row.try_get("payload").unwrap_or_default();
@@ -1387,7 +1390,7 @@ impl DB {
                 let query = if table == "swarm_tasks" {
                     "UPDATE swarm_tasks SET auto_dreamed = 1 WHERE id = ? AND tenant_id = ?"
                 } else {
-                    "UPDATE shared_tasks SET auto_dreamed = 1 WHERE id = ? AND organization_id = ?"
+                    "UPDATE shared_tasks SET auto_dreamed = 1 WHERE id = ? AND tenant_id = ?"
                 };
                 sqlx::query(query)
                     .bind(task_id)
