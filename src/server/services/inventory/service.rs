@@ -57,7 +57,7 @@ impl InventoryService {
                 .unwrap_or(false);
 
             if !acquired {
-                let pool = crate::db::get_pool();
+                let pool = self.db.pool.clone();
                 let action_request_id = Uuid::new_v4().to_string();
                 let payload = serde_json::json!({
                     "product_id": product_id,
@@ -80,7 +80,7 @@ impl InventoryService {
                 });
             }
 
-            let pool = crate::db::get_pool();
+            let pool = self.db.pool.clone();
             if let Ok(mut tx) = pool.begin().await {
                 if let Ok(_) = crate::common::auth_utils::set_org_context(&mut *tx, tenant_id).await {
                     let current_stock: Option<i32> = sqlx::query_scalar("SELECT available_quantity FROM products WHERE id = $1 AND tenant_id = $2")
@@ -186,7 +186,7 @@ impl InventoryService {
                 }
             }
 
-            let pool = crate::db::get_pool();
+            let pool = self.db.pool.clone();
             if let Ok(mut tx) = pool.begin().await {
                 if let Ok(_) = crate::common::auth_utils::set_org_context(&mut *tx, tenant_id).await {
                     let _ = sqlx::query("UPDATE products SET locked_quantity = locked_quantity - $1, available_quantity = available_quantity + $1 WHERE id = $2 AND tenant_id = $3")
@@ -247,7 +247,7 @@ impl InventoryService {
                 .unwrap_or(());
         }
 
-        let pool = crate::db::get_pool();
+        let pool = self.db.pool.clone();
         let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
 
         crate::common::auth_utils::set_org_context(&mut *tx, tenant_id)

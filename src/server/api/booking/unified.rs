@@ -3,8 +3,6 @@ use axum::{
     response::IntoResponse,
     Json,
 };
-use std::sync::Arc;
-use sqlx::PgPool;
 use sqlx::Row;
 use ::server_ohc::app::{
     GetResourcesRequest, GetResourcesResponse, BookingResource,
