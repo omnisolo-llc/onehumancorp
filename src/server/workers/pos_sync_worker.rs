@@ -39,6 +39,8 @@ impl PosSyncWorker {
         if let Some(mutation) = payload.get("mutation") {
             let product_id = mutation["product_id"].as_str().unwrap();
             let quantity_deducted = mutation["quantity_deducted"].as_i64().unwrap();
+            let amount_cents = mutation.get("amount").and_then(|v| v.as_i64()).unwrap_or(0);
+            let customer_id = mutation.get("customer_id").and_then(|v| v.as_str());
 
             let current_stock_res = sqlx::query("SELECT inventory_count FROM products WHERE id = $1 AND tenant_id = $2 FOR UPDATE")
                 .bind(product_id)
@@ -56,6 +58,16 @@ impl PosSyncWorker {
                     .bind(&job.tenant_id)
                     .execute(&mut *tx)
                     .await;
+
+                // Record order for offline sync
+                let order_id = uuid::Uuid::new_v4().to_string();
+                let total_amount = (amount_cents as f64) / 100.0;
+                let _ = sqlx::query("INSERT INTO orders (id, tenant_id, customer_id, total_amount, status) VALUES ($1, $2, $3, $4, 'completed')")
+                    .bind(&order_id).bind(&job.tenant_id).bind(customer_id).bind(total_amount).execute(&mut *tx).await;
+
+                let item_id = uuid::Uuid::new_v4().to_string();
+                let _ = sqlx::query("INSERT INTO order_items (id, tenant_id, order_id, product_id, quantity, price) VALUES ($1, $2, $3, $4, $5, $6)")
+                    .bind(&item_id).bind(&job.tenant_id).bind(&order_id).bind(product_id).bind(quantity_deducted).bind(total_amount).execute(&mut *tx).await;
 
                 let new_stock = std::cmp::max(0, stock - quantity_deducted as i32);
                 if new_stock <= 5 && !is_conflict {
@@ -80,8 +92,8 @@ impl PosSyncWorker {
                     }).to_string();
 
                     let _ = sqlx::query(
-                        "INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status)
-                         VALUES ($1, $2, 'operations', 'InventoryConflictEvent', $3::jsonb, 'PENDING')"
+                        "INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload, status)
+                         VALUES ($1, $2, 'POS_INVENTORY_CONFLICT_RESOLUTION', $3::jsonb, 'PENDING')"
                     )
                     .bind(&ai_task_id)
                     .bind(&job.tenant_id)
@@ -111,10 +123,22 @@ impl PosSyncWorker {
         if let Some(items) = payload.get("payload") {
             if let Some(items_str) = items.as_str() {
                 if let Ok(items_array) = serde_json::from_str::<Vec<serde_json::Value>>(items_str) {
+                    let order_id = uuid::Uuid::new_v4().to_string();
+                    let amount_cents = payload.get("amount_cents").and_then(|v| v.as_i64()).unwrap_or(0);
+                    let total_amount = (amount_cents as f64) / 100.0;
+                    let customer_id = payload.get("customer_id").and_then(|v| v.as_str());
+
+                    let _ = sqlx::query("INSERT INTO orders (id, tenant_id, customer_id, total_amount, status) VALUES ($1, $2, $3, $4, 'completed') ON CONFLICT DO NOTHING")
+                        .bind(&order_id).bind(&job.tenant_id).bind(customer_id).bind(total_amount).execute(&mut *tx).await;
+
                     for item in items_array {
                         let product_id = item.get("product_id").and_then(|v| v.as_str()).unwrap_or("");
                         let qty = item.get("quantity").and_then(|v| v.as_i64()).unwrap_or(1);
                         if product_id.is_empty() { continue; }
+
+                        let item_id = uuid::Uuid::new_v4().to_string();
+                        let _ = sqlx::query("INSERT INTO order_items (id, tenant_id, order_id, product_id, quantity, price) VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT DO NOTHING")
+                            .bind(&item_id).bind(&job.tenant_id).bind(&order_id).bind(product_id).bind(qty).bind(total_amount).execute(&mut *tx).await;
 
                         let locker: Box<dyn crate::orchestration::locks::DistributedLock> = if std::env::var("OHC_STANDALONE_MODE").unwrap_or_default() == "true" {
                             Box::new(crate::orchestration::locks::StandaloneLock::new())
@@ -172,8 +196,8 @@ impl PosSyncWorker {
                                 }).to_string();
 
                                 let _ = sqlx::query(
-                                    "INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status)
-                                     VALUES ($1, $2, 'operations', 'InventoryConflictEvent', $3::jsonb, 'PENDING')"
+                                    "INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload, status)
+                                     VALUES ($1, $2, 'POS_INVENTORY_CONFLICT_RESOLUTION', $3::jsonb, 'PENDING')"
                                 )
                                 .bind(&ai_task_id)
                                 .bind(&job.tenant_id)
@@ -282,6 +306,10 @@ mod tests {
             .fetch_one(&pool).await.unwrap();
         assert!(ledger_count.0 > 0);
 
+
+        let conflict_jobs: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM ohc_job_queue WHERE job_type = 'POS_INVENTORY_CONFLICT_RESOLUTION'")
+            .fetch_one(&pool).await.unwrap();
+        assert_eq!(conflict_jobs.0, 0); // No conflict for this test
         // Verify agent_action_requests created for low stock (10 - 2 = 8, not low. Wait, I should deduct 6 instead)
     }
 

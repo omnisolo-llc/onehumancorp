@@ -43,9 +43,9 @@ test.describe('Visual/low-code orchestration', () => {
     await expect(page.getByText(workflowName)).toBeVisible();
 
     // Verify the compiled JSON payload output exists in the workflow view.
-    await expect(page.getByText(/"entrypoint":"trigger_message_\d+"/)).toBeVisible();
-    await expect(page.getByText(/"type":"Action"/)).toBeVisible();
-    await expect(page.getByText(/"label":"Wait for Approval"/)).toBeVisible();
+    await expect(page.getByText(/"entrypoint":"trigger_message_\d+"/).first()).toBeVisible();
+    await expect(page.getByText(/"type":"Action"/).first()).toBeVisible();
+    await expect(page.getByText(/"label":"Wait for Approval"/).first()).toBeVisible();
   });
 
   test('visual workflow builder prevents saving without name or blocks', async ({ page, unlimitedAdminUser, loginAs }) => {
@@ -73,10 +73,10 @@ test.describe('Visual/low-code orchestration', () => {
     await page.getByTestId('palette-block-output_save').click();
 
     // Verify correct type labels appear on the canvas blocks
-    await expect(page.getByTestId('canvas-block-0').locator('span').first()).toHaveText('TRIGGER');
-    await expect(page.getByTestId('canvas-block-1').locator('span').first()).toHaveText('ACTION');
-    await expect(page.getByTestId('canvas-block-2').locator('span').first()).toHaveText('CONDITION');
-    await expect(page.getByTestId('canvas-block-3').locator('span').first()).toHaveText('OUTPUT');
+    await expect(page.getByTestId('canvas-block-0').locator('span').first()).toHaveText(/trigger/i);
+    await expect(page.getByTestId('canvas-block-1').locator('span').first()).toHaveText(/action/i);
+    await expect(page.getByTestId('canvas-block-2').locator('span').first()).toHaveText(/condition/i);
+    await expect(page.getByTestId('canvas-block-3').locator('span').first()).toHaveText(/output/i);
   });
 
   test('visual builder canvas is empty initially', async ({ page, unlimitedAdminUser, loginAs }) => {

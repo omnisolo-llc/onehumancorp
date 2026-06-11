@@ -237,8 +237,8 @@ impl DepartmentOrchestrator {
                                     }
 
                                     let _ = sqlx::query(
-                                        "INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
-                                         VALUES ($1, $2, $3, $4, 'PENDING', 'P1', 'LOW', 'PENDING', $5)"
+                                        "INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, payload, created_at, updated_at)
+                                         VALUES ($1, $2, $3, $4, 'PAUSED', 'LOW', $5, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
                                     )
                                     .bind(uuid::Uuid::new_v4().to_string())
                                     .bind(&event.tenant_id)
@@ -266,8 +266,8 @@ impl DepartmentOrchestrator {
                                     }
 
                                     let _ = sqlx::query(
-                                        "INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
-                                         VALUES (?, ?, ?, ?, 'PENDING', 'P1', 'LOW', 'PENDING', ?)"
+                                        "INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, payload, created_at, updated_at)
+                                         VALUES (?, ?, ?, ?, 'PAUSED', 'LOW', ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
                                     )
                                     .bind(uuid::Uuid::new_v4().to_string())
                                     .bind(&event.tenant_id)
@@ -354,10 +354,23 @@ impl DepartmentOrchestrator {
             ApprovalStatus::Paused => "PAUSED",
         };
 
+        let lifecycle_state = match req.status {
+            ApprovalStatus::PendingApproval => "PENDING_APPROVAL",
+            ApprovalStatus::Approved => "APPROVED",
+            ApprovalStatus::Rejected => "REJECTED",
+            ApprovalStatus::Paused => "PAUSED",
+        };
+
         match &self.db.store {
             DbStore::Postgres => {
                 if let Ok(mut tx) = self.db.pool.begin().await {
                     if ::server_common::auth_utils::set_org_context(&mut *tx, &req.tenant_id).await.is_ok() {
+                        let payload_str = {
+                            let p = req.payload.clone().unwrap_or(serde_json::json!({}));
+                            let redacted = ::server_telemetry::redact_interface_pii(p);
+                            serde_json::to_string(&redacted).unwrap_or_else(|_| "{}".to_string())
+                        };
+
                         let _ = sqlx::query(
                             "INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, payload, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)"
                         )
@@ -367,20 +380,39 @@ impl DepartmentOrchestrator {
                         .bind(&req.description)
                         .bind(status_str)
                         .bind(req.action_risk.to_string())
-                        .bind({
-                            let p = req.payload.clone().unwrap_or(serde_json::json!({}));
-                            let redacted = ::server_telemetry::redact_interface_pii(p);
-                            serde_json::to_string(&redacted).unwrap_or_else(|_| "{}".to_string())
-                        })
+                        .bind(&payload_str)
                         .bind(now)
                         .bind(now)
                         .execute(&mut *tx)
                         .await;
+
+                        let context_payload = serde_json::json!({"description": req.description});
+
+                        let _ = sqlx::query(
+                            "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"
+                        )
+                        .bind(&req.id)
+                        .bind(&req.tenant_id)
+                        .bind(req.department.to_string())
+                        .bind(sqlx::types::Json(context_payload))
+                        .bind(sqlx::types::Json(req.payload.clone().unwrap_or_default()))
+                        .bind(lifecycle_state)
+                        .bind(now)
+                        .bind(now)
+                        .execute(&mut *tx)
+                        .await;
+
                         let _ = tx.commit().await;
                     }
                 }
             }
             DbStore::Sqlite(pool) => {
+                let payload_str = {
+                    let p = req.payload.clone().unwrap_or(serde_json::json!({}));
+                    let redacted = ::server_telemetry::redact_interface_pii(p);
+                    serde_json::to_string(&redacted).unwrap_or_else(|_| "{}".to_string())
+                };
+
                 let _ = sqlx::query(
                     "INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, payload, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
                 )
@@ -390,11 +422,28 @@ impl DepartmentOrchestrator {
                 .bind(&req.description)
                 .bind(status_str)
                 .bind(req.action_risk.to_string())
-                .bind({
-                    let p = req.payload.clone().unwrap_or(serde_json::json!({}));
-                    let redacted = ::server_telemetry::redact_interface_pii(p);
-                    serde_json::to_string(&redacted).unwrap_or_else(|_| "{}".to_string())
-                })
+                .bind(&payload_str)
+                .bind(now)
+                .bind(now)
+                .execute(pool)
+                .await;
+
+                let _ = sqlx::query(
+                    "CREATE TABLE IF NOT EXISTS agent_feed_items (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, event_source TEXT NOT NULL, context_payload TEXT, proposed_action TEXT, lifecycle_state TEXT NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)"
+                ).execute(pool).await;
+
+                let context_payload_str = serde_json::json!({"description": req.description}).to_string();
+                let proposed_action_str = req.payload.clone().unwrap_or_default().to_string();
+
+                let _ = sqlx::query(
+                    "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+                )
+                .bind(&req.id)
+                .bind(&req.tenant_id)
+                .bind(req.department.to_string())
+                .bind(&context_payload_str)
+                .bind(&proposed_action_str)
+                .bind(lifecycle_state)
                 .bind(now)
                 .bind(now)
                 .execute(pool)
@@ -428,14 +477,14 @@ impl DepartmentOrchestrator {
                 let fetch_res = if let Ok(mut tx) = self.db.pool.begin().await {
                     if ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await.is_ok() {
                         let rows = if let Some(ref cur) = cursor {
-                            sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = $1 AND status = 'DRAFT' AND id > $2 ORDER BY id ASC LIMIT $3")
+                            sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = $1 AND status IN ('DRAFT', 'PAUSED') AND id > $2 ORDER BY id ASC LIMIT $3")
                                 .bind(tenant_id)
                                 .bind(cur)
                                 .bind(limit)
                                 .fetch_all(&mut *tx)
                                 .await
                         } else {
-                            sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = $1 AND status = 'DRAFT' ORDER BY id ASC LIMIT $2")
+                            sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = $1 AND status IN ('DRAFT', 'PAUSED') ORDER BY id ASC LIMIT $2")
                                 .bind(tenant_id)
                                 .bind(limit)
                                 .fetch_all(&mut *tx)
@@ -485,14 +534,14 @@ impl DepartmentOrchestrator {
             }
             DbStore::Sqlite(pool) => {
                 let fetch_res = if let Some(ref cur) = cursor {
-                    sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = ? AND status = 'DRAFT' AND id > ? ORDER BY id ASC LIMIT ?")
+                    sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = ? AND status IN ('DRAFT', 'PAUSED') AND id > ? ORDER BY id ASC LIMIT ?")
                         .bind(tenant_id)
                         .bind(cur)
                         .bind(limit)
                         .fetch_all(pool)
                         .await
                 } else {
-                    sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = ? AND status = 'DRAFT' ORDER BY id ASC LIMIT ?")
+                    sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = ? AND status IN ('DRAFT', 'PAUSED') ORDER BY id ASC LIMIT ?")
                         .bind(tenant_id)
                         .bind(limit)
                         .fetch_all(pool)
@@ -585,14 +634,14 @@ impl DepartmentOrchestrator {
                 let fetch_res = if let Ok(mut tx) = self.db.pool.begin().await {
                     if ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await.is_ok() {
                         let rows = if let Some(ref cur) = cursor {
-                            sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = $1 AND status != 'DRAFT' AND id < $2 ORDER BY id DESC LIMIT $3")
+                            sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = $1 AND status NOT IN ('DRAFT', 'PAUSED') AND id < $2 ORDER BY id DESC LIMIT $3")
                                 .bind(tenant_id)
                                 .bind(cur)
                                 .bind(limit)
                                 .fetch_all(&mut *tx)
                                 .await
                         } else {
-                            sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = $1 AND status != 'DRAFT' ORDER BY id DESC LIMIT $2")
+                            sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = $1 AND status NOT IN ('DRAFT', 'PAUSED') ORDER BY id DESC LIMIT $2")
                                 .bind(tenant_id)
                                 .bind(limit)
                                 .fetch_all(&mut *tx)
@@ -642,14 +691,14 @@ impl DepartmentOrchestrator {
             }
             DbStore::Sqlite(pool) => {
                 let fetch_res = if let Some(ref cur) = cursor {
-                    sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = ? AND status != 'DRAFT' AND id < ? ORDER BY id DESC LIMIT ?")
+                    sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = ? AND status NOT IN ('DRAFT', 'PAUSED') AND id < ? ORDER BY id DESC LIMIT ?")
                         .bind(tenant_id)
                         .bind(cur)
                         .bind(limit)
                         .fetch_all(pool)
                         .await
                 } else {
-                    sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = ? AND status != 'DRAFT' ORDER BY id DESC LIMIT ?")
+                    sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = ? AND status NOT IN ('DRAFT', 'PAUSED') ORDER BY id DESC LIMIT ?")
                         .bind(tenant_id)
                         .bind(limit)
                         .fetch_all(pool)
@@ -802,6 +851,12 @@ impl DepartmentOrchestrator {
                         let stripe = crate::integrations::stripe::client::StripeClient::new(api_key);
                         let stripe_link = stripe.create_checkout_session(&quote_id, "customer_123", price * 0.20, false).await.unwrap_or_default();
 
+                        let mut generated_reply = payload.get("generated_response").and_then(|v| v.as_str()).unwrap_or("").to_string();
+                        if !stripe_link.is_empty() {
+                            generated_reply.push_str(&format!("\n\nTo secure your booking, please pay the deposit here: {}", stripe_link));
+                        }
+                        let inbox_message_id = payload.get("inbox_message_id").and_then(|v| v.as_str()).unwrap_or("");
+
                         if let DbStore::Postgres = &self.db.store {
                             if let Err(e) = sqlx::query("INSERT INTO quotes (id, tenant_id, status, total_amount, required_deposit, expires_at, checkout_url) VALUES ($1, $2, $3, $4, $5, $6, $7)")
                                 .bind(&quote_id)
@@ -816,6 +871,18 @@ impl DepartmentOrchestrator {
                             {
                                 tracing::error!("Failed to insert quote: {}", e);
                             }
+
+                            if !inbox_message_id.is_empty() {
+                                if let Err(e) = sqlx::query("UPDATE inbox_messages SET draft_reply = $1, status = 'auto_replied' WHERE id = $2 AND tenant_id = $3")
+                                    .bind(&generated_reply)
+                                    .bind(inbox_message_id)
+                                    .bind(tenant_id)
+                                    .execute(&self.db.pool)
+                                    .await
+                                {
+                                    tracing::error!("Failed to update inbox_messages for quote draft: {}", e);
+                                }
+                            }
                         } else if let DbStore::Sqlite(pool) = &self.db.store {
                             if let Err(e) = sqlx::query("INSERT INTO quotes (id, tenant_id, status, total_amount, required_deposit, expires_at, checkout_url) VALUES (?, ?, ?, ?, ?, ?, ?)")
                                 .bind(&quote_id)
@@ -829,6 +896,18 @@ impl DepartmentOrchestrator {
                                 .await
                             {
                                 tracing::error!("Failed to insert quote: {}", e);
+                            }
+
+                            if !inbox_message_id.is_empty() {
+                                if let Err(e) = sqlx::query("UPDATE inbox_messages SET draft_reply = ?, status = 'auto_replied' WHERE id = ? AND tenant_id = ?")
+                                    .bind(&generated_reply)
+                                    .bind(inbox_message_id)
+                                    .bind(tenant_id)
+                                    .execute(pool)
+                                    .await
+                                {
+                                    tracing::error!("Failed to update inbox_messages for quote draft: {}", e);
+                                }
                             }
                         }
                     }

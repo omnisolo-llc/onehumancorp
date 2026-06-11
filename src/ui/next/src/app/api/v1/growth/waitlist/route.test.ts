@@ -39,7 +39,7 @@ describe('POST /api/v1/growth/waitlist', () => {
 
         expect(response.status).toBe(200);
         expect(data).toEqual(mockResponse);
-        expect(global.fetch).toHaveBeenCalledWith(`${mockBackendUrl}/v1/growth/waitlist`, {
+        expect(global.fetch).toHaveBeenCalledWith(`${mockBackendUrl}/api/v1/growth/waitlist`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email: 'test@example.com', tenant_id: 'my-store', features: ['AI Agents'] })

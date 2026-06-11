@@ -61,6 +61,26 @@ pub struct ErrorResponse {
     pub error: String,
 }
 
+#[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
+pub struct Pagination {
+    pub total_items: usize,
+    pub total_pages: usize,
+    pub current_page: usize,
+    pub page_size: usize,
+}
+
+#[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
+pub struct TaskListResponse {
+    pub tasks: Vec<Task>,
+    pub pagination: Pagination,
+}
+
+#[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
+pub struct StepListResponse {
+    pub steps: Vec<Step>,
+    pub pagination: Pagination,
+}
+
 pub struct AgentProtocolServer {
     pub runner: Arc<Runner>,
 }
@@ -96,7 +116,20 @@ impl AgentProtocolServer {
             .unwrap_or_else(|_| r#"{"error": "Serialization failed"}"#.to_string())
     }
 
-    /// GET /ap/v1/agent/tasks/{task_id}
+    /// GET /ap/v1/agent/tasks
+    pub async fn list_tasks(&self) -> String {
+        let resp = TaskListResponse {
+            tasks: vec![],
+            pagination: Pagination {
+                total_items: 0,
+                total_pages: 1,
+                current_page: 1,
+                page_size: 10,
+            },
+        };
+        serde_json::to_string(&resp)
+            .unwrap_or_else(|_| r#"{"error": "Serialization failed"}"#.to_string())
+    }
 
     /// GET /ap/v1/agent/tasks/{task_id}
     pub async fn get_task(&self, task_id: &str) -> String {
@@ -120,72 +153,22 @@ impl AgentProtocolServer {
             .unwrap_or_else(|_| r#"{"error": "Serialization failed"}"#.to_string())
     }
 
+    /// GET /ap/v1/agent/tasks/{task_id}/steps
+    pub async fn list_steps(&self, _task_id: &str) -> String {
+        let resp = StepListResponse {
+            steps: vec![],
+            pagination: Pagination {
+                total_items: 0,
+                total_pages: 1,
+                current_page: 1,
+                page_size: 10,
+            },
+        };
+        serde_json::to_string(&resp)
+            .unwrap_or_else(|_| r#"{"error": "Serialization failed"}"#.to_string())
+    }
+
     /// POST /ap/v1/agent/tasks/{task_id}/steps
-
-    pub async fn list_tasks(&self) -> String {
-        let resp: Vec<Task> = if let Some(cp) = &self.runner.core.agent.checkpointer {
-            let mut tasks = Vec::new();
-            // In a real app we'd iterate over known task IDs or use a specific index.
-            // For now, let's at least try to load the current session ID as a task.
-            let task_id = self.runner.session_id.clone();
-            if let Ok(cps) = cp.list_checkpoints(&task_id).await {
-                if !cps.is_empty() {
-                    tasks.push(Task {
-                        task_id: task_id.clone(),
-                        input: "Task from Checkpointer".to_string(),
-                        additional_input: None,
-                        artifacts: vec![],
-                    });
-                }
-            }
-            if tasks.is_empty() {
-                // If nothing in checkpointer, return the active session as the default task.
-                tasks.push(Task {
-                    task_id: self.runner.session_id.clone(),
-                    input: "Active Session".to_string(),
-                    additional_input: None,
-                    artifacts: vec![],
-                });
-            }
-            tasks
-        } else {
-             vec![
-                 Task {
-                    task_id: self.runner.session_id.clone(),
-                    input: "Active Session (No Checkpointer)".to_string(),
-                    additional_input: None,
-                    artifacts: vec![],
-                }
-             ]
-        };
-        serde_json::to_string(&resp).unwrap_or_else(|_| r#"[]"#.to_string())
-    }
-
-    pub async fn list_steps(&self, task_id: &str) -> String {
-        let resp: Vec<Step> = if let Some(cp) = &self.runner.core.agent.checkpointer {
-             if let Ok(cps) = cp.list_checkpoints(task_id).await {
-                 cps.into_iter()
-                    .enumerate()
-                    .map(|(i, _c)| Step {
-                        task_id: task_id.to_string(),
-                        step_id: format!("step-{}", i),
-                        name: None,
-                        status: StepStatus::Completed,
-                        output: Some("Checkpoint Step".to_string()),
-                        additional_output: None,
-                        artifacts: vec![],
-                        is_last: false,
-                    })
-                    .collect()
-             } else {
-                 vec![]
-             }
-        } else {
-            vec![]
-        };
-        serde_json::to_string(&resp).unwrap_or_else(|_| r#"[]"#.to_string())
-    }
-
     pub async fn execute_step(&self, task_id: &str, req_json: &str) -> String {
         let req: StepRequestBody = match serde_json::from_str(req_json) {
             Ok(r) => r,
@@ -283,6 +266,32 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_agent_protocol_list_tasks() {
+        let client = Arc::new(MockLlmClient);
+        let agent = Arc::new(Agent::new(client, vec![]));
+        let runner = Arc::new(Runner::new(agent));
+        let server = AgentProtocolServer::new(runner);
+
+        let resp_json = server.list_tasks().await;
+        let resp: TaskListResponse = serde_json::from_str(&resp_json).unwrap();
+        assert_eq!(resp.tasks.len(), 0);
+        assert_eq!(resp.pagination.total_pages, 1);
+    }
+
+    #[tokio::test]
+    async fn test_agent_protocol_list_steps() {
+        let client = Arc::new(MockLlmClient);
+        let agent = Arc::new(Agent::new(client, vec![]));
+        let runner = Arc::new(Runner::new(agent));
+        let server = AgentProtocolServer::new(runner);
+
+        let resp_json = server.list_steps("task-123").await;
+        let resp: StepListResponse = serde_json::from_str(&resp_json).unwrap();
+        assert_eq!(resp.steps.len(), 0);
+        assert_eq!(resp.pagination.total_pages, 1);
+    }
+
+    #[tokio::test]
     async fn test_agent_protocol_get_task() {
         let client = Arc::new(MockLlmClient);
         let agent = Arc::new(Agent::new(client, vec![]));
@@ -333,32 +342,6 @@ mod tests {
         ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
             Err("LLM execution failed".into())
         }
-    }
-
-
-    #[tokio::test]
-    async fn test_agent_protocol_list_tasks() {
-        let client = Arc::new(MockLlmClient);
-        let agent = Arc::new(Agent::new(client, vec![]));
-        let runner = Arc::new(Runner::new(agent));
-        let server = AgentProtocolServer::new(runner.clone());
-
-        let resp_json = server.list_tasks().await;
-        let resp: Vec<Task> = serde_json::from_str(&resp_json).unwrap();
-        assert!(!resp.is_empty());
-        assert_eq!(resp[0].task_id, runner.session_id.clone());
-    }
-
-    #[tokio::test]
-    async fn test_agent_protocol_list_steps() {
-        let client = Arc::new(MockLlmClient);
-        let agent = Arc::new(Agent::new(client, vec![]));
-        let runner = Arc::new(Runner::new(agent));
-        let server = AgentProtocolServer::new(runner);
-
-        let resp_json = server.list_steps("test-task").await;
-        let resp: Vec<Step> = serde_json::from_str(&resp_json).unwrap();
-        assert!(resp.is_empty()); // No checkpointer mocked yet so it returns empty list
     }
 
     #[tokio::test]

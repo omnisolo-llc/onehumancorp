@@ -362,7 +362,7 @@ mod tests {
             "mode": "fork"
         });
 
-        let result = executor.execute(args).await;
+        let result = executor.execute_typed(serde_json::from_value(args).unwrap()).await;
         assert!(result.is_err());
         match result {
             Err(ToolError::LlmRecoverable(msg)) => {
@@ -381,7 +381,7 @@ mod tests {
             "mode": "invalid"
         });
 
-        let result = executor.execute(args).await;
+        let result = executor.execute_typed(serde_json::from_value(args).unwrap()).await;
         assert!(result.is_err());
         match result {
             Err(ToolError::LlmRecoverable(msg)) => {
@@ -408,7 +408,7 @@ mod tests {
             "mode": "teammate"
         });
 
-        let result = executor.execute(args).await;
+        let result = executor.execute_typed(serde_json::from_value(args).unwrap()).await;
         assert!(result.is_ok(), "Expected Ok for teammate mode");
         let msg = result.unwrap();
 
@@ -461,7 +461,7 @@ mod tests {
             "mode": "worktree"
         });
 
-        let result = executor.execute(args).await;
+        let result = executor.execute_typed(serde_json::from_value(args).unwrap()).await;
         assert!(result.is_ok(), "Expected Ok for worktree mode");
         let msg = result.unwrap();
 
@@ -509,7 +509,7 @@ mod tests {
             "mode": "fork"
         });
 
-        let result = executor.execute(args).await;
+        let result = executor.execute_typed(serde_json::from_value(args).unwrap()).await;
         assert!(result.is_ok(), "Expected Ok");
         let msg = result.unwrap();
         assert!(msg.contains("[Output truncated. Subagent failed to condense summary.]"), "Expected output to be truncated");

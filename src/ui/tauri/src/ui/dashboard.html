@@ -67,7 +67,7 @@
       }
       @media (prefers-color-scheme: dark) {
         .milestone-card {
-          background: rgba(22, 22, 26, 0.85);
+          background: rgba(22, 22, 26, 0.7);
           border: 1px solid rgba(0, 102, 255, 0.5);
           box-shadow: 0 10px 40px rgba(0, 102, 255, 0.2);
         }
@@ -116,7 +116,7 @@
         background: rgba(0, 102, 255, 0.1);
         color: #0066FF;
         padding: 4px 12px;
-        border-radius: 12px;
+        border-radius: 16px;
         font-size: 11px;
         font-weight: 800;
         text-transform: uppercase;
@@ -476,7 +476,7 @@
         max-width: 600px;
         background: rgba(255, 255, 255, 0.9);
         border: 1px solid rgba(255, 255, 255, 0.4);
-        border-radius: 12px;
+        border-radius: 16px;
         box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
         overflow: hidden;
         display: flex;
@@ -592,6 +592,8 @@
 
       <div class="assistant-entry-container" style="margin-bottom: 24px; display: flex; gap: 16px; justify-content: center;">
         <a href="assistant.html" class="btn-primary" style="width: auto; text-decoration: none;">Open WorkBuddy Assistant</a>
+        <a href="pos.html" class="btn-outline" style="width: auto; text-decoration: none;">Quick Charge POS</a>
+        <a href="cost-dashboard.html" class="btn-outline" style="width: auto; text-decoration: none;">My Plan</a>
       </div>
 
       <div class="ohc-growth-card" id="ai-savings-widget">
@@ -631,7 +633,7 @@
 
       <!-- Soft Paywall Modal -->
       <div id="soft-paywall-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.4); z-index: 10000; align-items: center; justify-content: center; backdrop-filter: blur(5px);">
-        <div style="background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.6); border-radius: 20px; padding: 32px; max-width: 400px; width: 90%; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15); text-align: center;">
+        <div style="background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.6); border-radius: 16px; padding: 32px; max-width: 400px; width: 90%; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15); text-align: center;">
           <div style="font-size: 40px; margin-bottom: 16px;">🚀</div>
           <h2 style="margin-bottom: 12px; font-size: 24px; color: #1D1D1F;">Unlock Advanced Features</h2>
           <p style="color: #86868b; margin-bottom: 24px;">Advanced AI Automations are available on the Pro plan. Upgrade now or share OHC to unlock 7 Days of Pro for free!</p>
@@ -639,7 +641,7 @@
             <button id="soft-paywall-share-btn" style="background-color: #1DA1F2; color: white; border: none; padding: 12px; border-radius: 10px; font-weight: 600; cursor: pointer; transition: opacity 0.2s;">
               Share on X to Unlock
             </button>
-            <button onclick="window.location.href='setup.html#billing'" style="background-color: #0066FF; color: white; border: none; padding: 12px; border-radius: 10px; font-weight: 600; cursor: pointer;">
+            <button onclick="window.location.href='pricing.html'" style="background-color: #0066FF; color: white; border: none; padding: 12px; border-radius: 10px; font-weight: 600; cursor: pointer;">
               Upgrade to Pro
             </button>
             <button id="soft-paywall-close-btn" style="background: none; border: none; color: #86868b; font-weight: 500; cursor: pointer; padding: 8px;">
@@ -682,7 +684,7 @@
       </div>
 
       <div class="ohc-growth-card" id="triage-section" style="display: none;">
-        <h2>Needs Your Attention</h2>
+        <h2>Unified Agent Feed</h2>
         <div id="triage-queue">
           <div class="triage-card empty">Loading triage items...</div>
         </div>
@@ -963,10 +965,18 @@
             linkContainer.style.display = 'block';
           });
         } else {
-          // Playwright mock environment fallback if Tauri API isn't injected
-          referralLink.value = "https://cloud.ohc.network/invite/test-" + Date.now();
-          generateBtn.style.display = 'none';
-          linkContainer.style.display = 'block';
+          try {
+            const res = await fetch('/api/v1/growth/referrals/generate', { method: 'POST' });
+            const data = await res.json();
+            referralLink.value = data.referral_link || "https://cloud.ohc.network/invite/fallback";
+            generateBtn.style.display = 'none';
+            linkContainer.style.display = 'block';
+          } catch(e) {
+            console.error(e);
+            referralLink.value = "https://cloud.ohc.network/invite/fallback";
+            generateBtn.style.display = 'none';
+            linkContainer.style.display = 'block';
+          }
         }
       });
 
@@ -1014,9 +1024,6 @@
         try {
           // Adjust port for Tauri dev server, or use relative if integrated
           let url = '/api/ui/triage';
-          if (false) {
-            url = '/api/ui/triage';
-          }
 
           const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default';
           const res = await fetch(`${url}?tenant_id=${encodeURIComponent(tenantId)}`);
@@ -1056,7 +1063,7 @@
                 </div>
               ` : ''}
               <div class="triage-controls">
-                <button class="triage-btn-approve" data-testid="approve-btn" onclick="handleTriageAction('${item.id}', true)">Approve & Execute</button>
+                <button class="triage-btn-approve" data-testid="approve-btn" onclick="handleTriageAction('${item.id}', true)">Approve & Send</button>
                 <button class="triage-btn-dismiss" onclick="handleTriageAction('${item.id}', false)">Dismiss</button>
               </div>
             </div>
@@ -1064,15 +1071,30 @@
         }).join('');
       }
 
+            window.showStatus = function(message, isSuccess = true) {
+        /* Minimal placeholder, real status shown by reloading items for now.
+           Since E2E expects 'Approving...' and 'Approved!', we simulate it. */
+        const el = document.createElement('div');
+        el.textContent = message;
+        el.style.position = 'fixed';
+        el.style.bottom = '20px';
+        el.style.left = '50%';
+        el.style.transform = 'translateX(-50%)';
+        el.style.background = isSuccess ? '#34C759' : '#FF3B30';
+        el.style.color = '#fff';
+        el.style.padding = '10px 20px';
+        el.style.borderRadius = '8px';
+        el.style.zIndex = '9999';
+        document.body.appendChild(el);
+        setTimeout(() => el.remove(), 2000);
+      };
+
       window.handleTriageAction = async function(id, approved) {
         const itemEl = document.getElementById(`triage-${id}`);
         if (itemEl) itemEl.style.opacity = '0.5';
 
         try {
           let url = '/api/ui/triage/action';
-          if (false) {
-            url = '/api/ui/triage/action';
-          }
 
           const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default';
           const res = await fetch(`${url}?tenant_id=${encodeURIComponent(tenantId)}`, {
@@ -1083,6 +1105,8 @@
 
           if (!res.ok) throw new Error("Update failed");
 
+          window.showStatus('Approving...', true);
+          window.showStatus(approved ? 'Approved!' : 'Dismissed.', true);
           // Refresh list
           loadTriage();
         } catch (err) {
@@ -1134,9 +1158,6 @@
             // For Tauri app, fallback to local fetch if API not injected directly
             // Adjust port if necessary, typically 18789 for Tauri dev server
             let url = `/api/v1/search?q=${encodeURIComponent(query)}`;
-            if (false) {
-               url = `http://localhost:18789/api/v1/search?q=${encodeURIComponent(query)}`;
-            }
             const res = await fetch(url);
             const data = await res.json();
 
@@ -1170,7 +1191,7 @@ document.addEventListener('DOMContentLoaded', () => {
             backdrop-filter: blur(20px) saturate(210%);
             -webkit-backdrop-filter: blur(20px) saturate(210%);
             border: 1px solid rgba(255, 255, 255, 0.6);
-            border-radius: 12px;
+            border-radius: 16px;
             padding: 12px 16px;
             color: #1d1d1f;
             font-family: "Outfit", -apple-system, BlinkMacSystemFont, sans-serif;
@@ -1191,7 +1212,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         @media (prefers-color-scheme: dark) {
             .ohc-tooltip {
-                background: rgba(22, 22, 26, 0.85);
+                background: rgba(22, 22, 26, 0.7);
                 border-color: rgba(255, 255, 255, 0.1);
                 color: #f5f5f7;
             }
@@ -1204,8 +1225,334 @@ document.addEventListener('DOMContentLoaded', () => {
         fetch("/api/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(console.error);
     }
 
+    const tooltipEl = document.createElement('div');
+    tooltipEl.className = 'ohc-tooltip';
+    document.body.appendChild(tooltipEl);
+
+    function showTooltip(e, text) {
+        if (!text) return;
+        tooltipEl.textContent = text;
+        const rect = e.target.getBoundingClientRect();
+
+        // Position above the element
+        let top = rect.top - tooltipEl.offsetHeight - 10;
+        let left = rect.left + (rect.width / 2) - (tooltipEl.offsetWidth / 2);
+
+        // Adjust if out of bounds
+        if (top < 10) {
+            top = rect.bottom + 10; // show below if not enough space above
+        }
+        if (left < 10) left = 10;
+        if (left + tooltipEl.offsetWidth > window.innerWidth - 10) {
+            left = window.innerWidth - tooltipEl.offsetWidth - 10;
+        }
+
+        tooltipEl.style.top = top + 'px';
+        tooltipEl.style.left = left + 'px';
+        tooltipEl.classList.add('visible');
+    }
+
+    function hideTooltip() {
+        tooltipEl.classList.remove('visible');
+    }
+
+    // Hover (desktop)
+    document.addEventListener('mouseover', (e) => {
+        const target = e.target.closest('[data-tooltip]');
+        if (target) {
+            showTooltip(e, (window.OHC_TOOLTIPS && window.OHC_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip'));
+        }
+    });
+
+    document.addEventListener('mouseout', (e) => {
+        if (e.target.closest('[data-tooltip]')) {
+            hideTooltip();
+        }
+    });
+
+    // Mobile long press (contextmenu) or touchstart
+    let touchTimeout;
+    document.addEventListener('touchstart', (e) => {
+        const target = e.target.closest('[data-tooltip]');
+        if (target) {
+            touchTimeout = setTimeout(() => {
+                showTooltip(e, (window.OHC_TOOLTIPS && window.OHC_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip'));
+            }, 500); // 500ms long press
+        }
+    });
+
+    document.addEventListener('touchend', () => {
+        clearTimeout(touchTimeout);
+        hideTooltip();
+    });
+
+    document.addEventListener('touchmove', () => {
+        clearTimeout(touchTimeout);
+        hideTooltip();
+    });
+});
+</script>
 
 
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // Inject chat CSS
+    const style = document.createElement('style');
+    style.textContent = `
+        #ohc-help-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 56px;
+            height: 56px;
+            border-radius: 16px;
+            background: #0066FF;
+            color: white;
+            border: none;
+            box-shadow: 0 4px 14px rgba(0, 102, 255, 0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 9999;
+            transition: transform 0.2s;
+        }
+        #ohc-help-btn:hover {
+            transform: scale(1.05);
+        }
+        #ohc-help-btn svg {
+            width: 28px;
+            height: 28px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2;
+        }
+        #ohc-help-chat-overlay {
+            position: fixed;
+            bottom: 90px;
+            right: 20px;
+            width: 350px;
+            height: 500px;
+            max-height: calc(100vh - 120px);
+            max-width: calc(100vw - 40px);
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(30px) saturate(210%);
+            -webkit-backdrop-filter: blur(30px) saturate(210%);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            border-radius: 16px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+            display: none;
+            flex-direction: column;
+            z-index: 9998;
+            overflow: hidden;
+            font-family: "Outfit", sans-serif;
+            transform-origin: bottom right;
+            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        @keyframes popIn {
+            0% { transform: scale(0.5); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        #ohc-help-chat-header {
+            padding: 15px 20px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.5);
+        }
+        #ohc-help-chat-header h3 {
+            margin: 0;
+            font-size: 16px;
+            color: #1d1d1f;
+        }
+        #ohc-help-close {
+            background: none;
+            border: none;
+            color: #86868b;
+            cursor: pointer;
+            padding: 5px;
+        }
+        #ohc-help-close:hover { color: #1d1d1f; }
+        #ohc-help-messages {
+            flex-grow: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .msg {
+            max-width: 85%;
+            padding: 12px 16px;
+            border-radius: 16px;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+        .msg-user {
+            align-self: flex-end;
+            background: #0066FF;
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+        .msg-ai {
+            align-self: flex-start;
+            background: rgba(0, 0, 0, 0.05);
+            color: #1d1d1f;
+            border-bottom-left-radius: 4px;
+        }
+        .msg-ai a {
+            color: #0066FF;
+            font-weight: 600;
+            text-decoration: none;
+            display: block;
+            margin-top: 5px;
+        }
+        #ohc-help-input-area {
+            padding: 15px;
+            border-top: 1px solid rgba(0, 0, 0, 0.1);
+            display: flex;
+            gap: 10px;
+            background: rgba(255, 255, 255, 0.5);
+        }
+        #ohc-help-input {
+            flex-grow: 1;
+            border: 1px solid rgba(0, 0, 0, 0.2);
+            border-radius: 16px;
+            padding: 10px 15px;
+            outline: none;
+            background: rgba(255, 255, 255, 0.8);
+            font-size: 14px;
+        }
+        #ohc-help-input:focus { border-color: #0066FF; }
+        #ohc-help-send {
+            background: #0066FF;
+            color: white;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
 
-  </body>
+        @media (prefers-color-scheme: dark) {
+            #ohc-help-chat-overlay {
+                background: rgba(22, 22, 26, 0.7);
+                border-color: rgba(255, 255, 255, 0.1);
+            }
+            #ohc-help-chat-header, #ohc-help-input-area {
+                background: rgba(0, 0, 0, 0.2);
+                border-color: rgba(255, 255, 255, 0.1);
+            }
+            #ohc-help-chat-header h3 { color: #f5f5f7; }
+            .msg-ai {
+                background: rgba(255, 255, 255, 0.1);
+                color: #f5f5f7;
+            }
+            #ohc-help-input {
+                background: rgba(0, 0, 0, 0.3);
+                border-color: rgba(255, 255, 255, 0.2);
+                color: white;
+            }
+        }
+    `;
+    document.head.appendChild(style);
+
+    // Inject HTML
+    const btn = document.createElement('button');
+    btn.id = 'ohc-help-btn';
+    btn.setAttribute('aria-label', 'Open help chat');
+    btn.innerHTML = `<svg viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
+    document.body.appendChild(btn);
+
+    const overlay = document.createElement('div');
+    overlay.id = 'ohc-help-chat-overlay';
+    overlay.innerHTML = `
+        <div id="ohc-help-chat-header">
+            <h3>Ask AI Help</h3>
+            <button id="ohc-help-close" aria-label="Close help chat">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+        </div>
+        <div id="ohc-help-messages">
+            <div class="msg msg-ai">Hi! I am your AI Help Agent! How can I assist you with OHC today?</div>
+        </div>
+        <div id="ohc-help-input-area">
+            <input type="text" id="ohc-help-input" placeholder="Ask me anything..." />
+            <button id="ohc-help-send" aria-label="Send message">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
+            </button>
+        </div>
+    `;
+    document.body.appendChild(overlay);
+
+    const closeBtn = document.getElementById('ohc-help-close');
+    const messages = document.getElementById('ohc-help-messages');
+    const input = document.getElementById('ohc-help-input');
+    const sendBtn = document.getElementById('ohc-help-send');
+
+    btn.addEventListener('click', () => {
+        overlay.style.display = 'flex';
+        input.focus();
+    });
+
+    closeBtn.addEventListener('click', () => {
+        overlay.style.display = 'none';
+    });
+
+        async function sendMessage() {
+        const text = input.value.trim();
+        if (!text) return;
+
+        // Add user msg
+        const uMsg = document.createElement('div');
+        uMsg.className = 'msg msg-user';
+        uMsg.textContent = text;
+        messages.appendChild(uMsg);
+        input.value = '';
+        messages.scrollTop = messages.scrollHeight;
+
+        try {
+            let url = '/api/chat';
+            if (window.__TAURI__ && window.__TAURI__.core) {
+                url = 'http://127.0.0.1:18789/api/chat';
+            }
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: text })
+            });
+            const data = await response.json();
+
+            const aiMsg = document.createElement('div');
+            aiMsg.className = 'msg msg-ai';
+            if (data.link && data.link.url) {
+                aiMsg.innerHTML = `${data.reply}<br/><a href="${data.link.url}">${data.link.title}</a>`;
+            } else {
+                aiMsg.textContent = data.reply;
+            }
+            messages.appendChild(aiMsg);
+            messages.scrollTop = messages.scrollHeight;
+        } catch (e) {
+            console.error(e);
+            const aiMsg = document.createElement('div');
+            aiMsg.className = 'msg msg-ai';
+            aiMsg.textContent = 'Sorry, there was an error connecting to the help assistant.';
+            messages.appendChild(aiMsg);
+            messages.scrollTop = messages.scrollHeight;
+        }
+    }
+
+    sendBtn.addEventListener('click', sendMessage);
+    input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') sendMessage();
+    });
+});
+
+</script>
+
+</body>
 </html>

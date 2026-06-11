@@ -113,6 +113,7 @@ pub struct AgentRunConfig {
     pub enable_observation_masking: bool,
     pub observation_masking_threshold: usize,
     pub observation_masking_size_limit: usize,
+    pub observation_masking_element_limit: usize,
     pub enable_lost_in_the_middle_prevention: bool,
     pub enable_context_compaction: bool,
     pub compaction_threshold_tokens: i32,
@@ -202,6 +203,7 @@ impl Default for AgentRunConfig {
             enable_observation_masking: true,
             observation_masking_threshold: 3,
             observation_masking_size_limit: 512,
+            observation_masking_element_limit: 50,
             enable_lost_in_the_middle_prevention: true,
             enable_context_compaction: true,
             compaction_threshold_tokens: 60_000,
@@ -852,7 +854,7 @@ impl Agent {
             let mut final_messages = messages.clone();
 
             if cfg.enable_observation_masking {
-                crate::observation_masking::apply_observation_masking(&mut final_messages, cfg.observation_masking_threshold, cfg.observation_masking_size_limit);
+                crate::observation_masking::apply_observation_masking(&mut final_messages, cfg.observation_masking_threshold, cfg.observation_masking_size_limit, cfg.observation_masking_element_limit);
             }
 
             if cfg.enable_acon_context_strategy {
@@ -1373,6 +1375,7 @@ impl Agent {
         // --- NODE 2: Tool Execution ---
         let tool_tools = session_tools_arc.clone();
         let cfg_max_retries = cfg.max_retries;
+        let _cfg_max_retries = cfg_max_retries;
         graph.add_node("tool_node", move |state| {
             let tt = tool_tools.clone();
             let cfg_arc_node = cfg_arc.clone();
@@ -1459,13 +1462,23 @@ impl Agent {
                                 error: self_correct_msg,
                             };
                         }
-                        Err(crate::types::ToolError::Unexpected(msg)) => {
-                            return Err(format!("Unexpected tool error: {}", msg));
-                        }
                         Err(crate::types::ToolError::Transient(msg)) => {
                             return Err(format!("Unexpected tool error: Transient error: {}", msg));
                         }
+                        Err(crate::types::ToolError::Unexpected(msg)) => {
+                            return Err(format!("Unexpected tool error: {}", msg));
+                        }
                         Err(crate::types::ToolError::UserFixable(msg)) => {
+                            if let Some(ref cb) = cfg_arc_node.human_input_callback.0 {
+                                if let Some(human_input) = cb(&msg).await {
+                                    tool_results[idx] = crate::types::ToolResult {
+                                        tool_call_id: id,
+                                        content: String::new(),
+                                        error: format!("USER_FIXABLE: {}. Human provided fix: {}", msg, human_input),
+                                    };
+                                    continue;
+                                }
+                            }
                             return Err(format!("USER_FIXABLE:{}", msg));
                         }
                         Err(crate::types::ToolError::Fatal(msg)) => {
@@ -1496,6 +1509,16 @@ impl Agent {
                                 };
                             }
                             crate::types::ToolError::UserFixable(msg) => {
+                                if let Some(ref cb) = cfg_arc_node.human_input_callback.0 {
+                                    if let Some(human_input) = cb(&msg).await {
+                                        tool_results[idx] = crate::types::ToolResult {
+                                            tool_call_id: id,
+                                            content: String::new(),
+                                            error: format!("USER_FIXABLE: {}. Human provided fix: {}", msg, human_input),
+                                        };
+                                        continue;
+                                    }
+                                }
                                 return Err(format!("USER_FIXABLE:{}", msg));
                             }
                             crate::types::ToolError::Transient(msg) => {
@@ -1535,9 +1558,7 @@ impl Agent {
                         ).await;
 
                         match final_res {
-                            Err(crate::types::ToolError::Transient(msg)) => {
-                                return Err(format!("Unexpected tool error: Transient error: {}", msg));
-                            }
+
                             Ok(res) => {
                                 error_counts.insert(name.clone(), 0);
                                 tool_results[idx] = crate::types::ToolResult {
@@ -1559,12 +1580,25 @@ impl Agent {
                                     error: self_correct_msg,
                                 };
                             }
+                            Err(crate::types::ToolError::Transient(msg)) => {
+                                return Err(format!("Unexpected tool error: Transient error: {}", msg));
+                            }
                             Err(crate::types::ToolError::Unexpected(msg)) => {
                                 return Err(format!("Unexpected tool error: {}", msg));
                             }
                             Err(crate::types::ToolError::UserFixable(msg)) => {
-                                return Err(format!("USER_FIXABLE:{}", msg));
+                            if let Some(ref cb) = cfg_arc_node.human_input_callback.0 {
+                                if let Some(human_input) = cb(&msg).await {
+                                    tool_results[idx] = crate::types::ToolResult {
+                                        tool_call_id: id,
+                                        content: String::new(),
+                                        error: format!("USER_FIXABLE: {}. Human provided fix: {}", msg, human_input),
+                                    };
+                                    continue;
+                                }
                             }
+                            return Err(format!("USER_FIXABLE:{}", msg));
+                        }
                             Err(crate::types::ToolError::Fatal(msg)) => {
                                 return Err(format!("Fatal tool error: {}", msg));
                             }
@@ -2946,6 +2980,7 @@ impl Agent {
                     &mut final_messages,
                     final_cfg.observation_masking_threshold,
                     final_cfg.observation_masking_size_limit,
+                    final_cfg.observation_masking_element_limit,
                 );
             }
 
@@ -3947,6 +3982,7 @@ impl Agent {
                     &mut messages,
                     final_cfg.observation_masking_threshold,
                     final_cfg.observation_masking_size_limit,
+                    final_cfg.observation_masking_element_limit,
                 );
             }
 

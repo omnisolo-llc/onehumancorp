@@ -27,12 +27,14 @@ import { PromoterCard } from "./PromoterCard";
 import { ViralLoopPerformanceWidget } from "./ViralLoopPerformanceWidget";
 import { SuccessMilestoneAlert } from "./SuccessMilestoneAlert";
 import AffiliateMarketingWidget from "./AffiliateMarketingWidget";
+import { CartRecoveryWidget } from "./CartRecoveryWidget";
 
 type DashboardMetrics = {
   active_customers: number;
   pending_orders: number;
   total_sales: number;
   total_campaigns_sent?: number;
+  auto_replied?: number;
 };
 
 type Order = {
@@ -68,6 +70,7 @@ const emptyMetrics: DashboardMetrics = {
   pending_orders: 0,
   total_sales: 0,
   total_campaigns_sent: 0,
+  auto_replied: 0,
 };
 
 function tenantId() {
@@ -81,10 +84,16 @@ function money(value: number | undefined) {
 
 function statusTone(status?: string) {
   const normalized = (status || "").toLowerCase();
-  if (["paid", "completed", "shipped", "delivered"].includes(normalized)) return "good";
+  if (["paid", "completed", "shipped", "delivered", "auto_replied"].includes(normalized)) return "good";
   if (["pending", "unfulfilled", "open"].includes(normalized)) return "warn";
   if (["failed", "cancelled", "canceled"].includes(normalized)) return "bad";
   return "neutral";
+}
+
+function formatStatus(status?: string) {
+  const normalized = (status || "").toLowerCase();
+  if (normalized === "auto_replied") return "✨ AI Handled";
+  return status || "Open";
 }
 
 export default function Dashboard() {
@@ -213,21 +222,25 @@ export default function Dashboard() {
 
       try {
         const userId = localStorage.getItem("user_id") || "default";
-        const [unifiedRes, onboardingRes, approvalsRes] = await Promise.all([
+        const [unifiedRes, onboardingRes, approvalsRes, agentFeedRes] = await Promise.all([
           fetch(`/api/ui/dashboard/unified-feed?tenant_id=${tenant}`),
           fetch(`/api/onboarding/state`, { headers: { 'X-Tenant-ID': tenant, 'X-User-ID': userId } }),
-          fetch(`/api/agents/approvals?tenant_id=${tenant}`)
+          fetch(`/api/agents/approvals?tenant_id=${tenant}`),
+          fetch(`/api/agent-feed?tenant_id=${tenant}`, { headers: { 'X-Tenant-ID': tenant, 'X-User-ID': userId } })
         ]);
 
         if (!unifiedRes.ok) {
           throw new Error("Unified UI feed endpoint failed");
         }
 
-        const [unifiedData, onboardingData, approvalsData] = await Promise.all([
+        const [unifiedData, onboardingData, approvalsData, agentFeedData] = await Promise.all([
           unifiedRes.json(),
           onboardingRes.ok ? onboardingRes.json() : Promise.resolve(null),
           approvalsRes.ok ? approvalsRes.json() : Promise.resolve([]),
+          agentFeedRes.ok ? agentFeedRes.json() : Promise.resolve({ items: [] }),
         ]);
+
+        setDashboardData((prev: any) => ({ ...prev, initialAgentFeed: agentFeedData }));
 
         const metricsData = unifiedData.metrics || {};
         const ordersData = unifiedData.orders || [];
@@ -379,6 +392,7 @@ export default function Dashboard() {
       <SuccessMilestoneAlert />
       <ViralLoopPerformanceWidget />
       <div className="mb-6">
+        <div className="mb-4"><CartRecoveryWidget /></div>
         <AffiliateMarketingWidget />
       </div>
 
@@ -537,7 +551,7 @@ export default function Dashboard() {
              />
         ))}
 
-        <UnifiedAgentFeed />
+        <UnifiedAgentFeed initialData={dashboardData?.initialAgentFeed} />
 
         <section>
           <div className="mb-6 p-6 rounded-[16px] bg-white/65 dark:bg-[#16161a]/70 border border-white/40 dark:border-white/10">
@@ -737,7 +751,7 @@ export default function Dashboard() {
                     <div className="app-list-title">{message.source || "Unknown source"}</div>
                     <div className="app-list-subtitle">{message.content || "Empty message"}</div>
                   </div>
-                  <span className={`app-badge ${statusTone(message.status)}`}>{message.status || "Open"}</span>
+                  <span className={`app-badge ${statusTone(message.status)}`}>{formatStatus(message.status)}</span>
                 </div>
               ))}
             </div>
@@ -777,6 +791,15 @@ export default function Dashboard() {
               </div>
               <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Referrals</h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">Invite other business owners to OHC and earn premium credits.</p>
+            </Link>
+
+            <Link href="/finance" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+              <div className="flex items-start justify-between mb-4">
+                <div className="w-12 h-12 rounded-full bg-green-50 dark:bg-green-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">💰</div>
+                <div className="text-green-600 dark:text-green-400 font-semibold text-sm bg-green-50 dark:bg-green-900/30 px-3 py-1 rounded-full">Finance</div>
+              </div>
+              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Finance & Invoicing</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Manage cash flow, invoices, and automated payment follow-ups.</p>
             </Link>
 
             <Link href="/invoice-generator" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
@@ -832,6 +855,15 @@ export default function Dashboard() {
               </div>
               <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Storefront Widget</h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">Embed a mini storefront on your blog or website to boost sales.</p>
+            </Link>
+
+            <Link href="/embed-builder" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+              <div className="flex items-start justify-between mb-4">
+                <div className="w-12 h-12 rounded-full bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🔌</div>
+                <div className="text-emerald-600 dark:text-emerald-400 font-semibold text-sm bg-emerald-50 dark:bg-emerald-900/30 px-3 py-1 rounded-full">Widget</div>
+              </div>
+              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Interactive Embed</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Build custom intake, booking, or quote widgets for your site.</p>
             </Link>
 
             <Link href="/subscriptions" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">

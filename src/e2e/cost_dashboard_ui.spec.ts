@@ -3,7 +3,7 @@ import { test, expect } from './fixtures';
 test.describe('Cost Dashboard & Plan Limits UI', () => {
   test('should display the cost dashboard and check expected sections', async ({ page }) => {
     // Navigate to the Cost Dashboard directly
-    await page.goto('/cost-dashboard.html');
+    await page.goto('/cost-dashboard');
 
     // Wait for the main heading to be visible
     await expect(page.getByRole('heading', { name: 'Cost Transparency' })).toBeVisible({ timeout: 15000 });
@@ -19,7 +19,7 @@ test.describe('Cost Dashboard & Plan Limits UI', () => {
 
   test('should display my plan limits and route to pricing', async ({ page }) => {
     // Go to My Plan page
-    await page.goto('/cost-dashboard.html');
+    await page.goto('/cost-dashboard');
 
     // Wait for the main heading to be visible
     await expect(page.getByRole('heading', { name: 'My Plan' }).first()).toBeVisible({ timeout: 15000 });

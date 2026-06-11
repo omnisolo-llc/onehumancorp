@@ -136,7 +136,10 @@ impl Department for CustomerSuccessAgent {
         }
 
         if event.event_type == "tenant.message.received" {
-            let message = event.payload.get("message").and_then(|v| v.as_str()).unwrap_or("");
+            let message = event.payload.get("original_message")
+                .or_else(|| event.payload.get("message"))
+                .and_then(|v| v.as_str()).unwrap_or("");
+            let source = event.payload.get("source").and_then(|v| v.as_str()).unwrap_or("");
 
             let query_embedding = match std::env::var("OHC_INBOX_DRAFT_LLM_PROVIDER")
                 .or_else(|_| std::env::var("OHC_LLM_PROVIDER"))
@@ -192,23 +195,41 @@ impl Department for CustomerSuccessAgent {
             let inbox_id = event.payload.get("inbox_message_id").and_then(|v| v.as_str()).unwrap_or("");
             if !inbox_id.is_empty() {
                 let _ = self.orchestrator.update_inbox_message_draft(inbox_id, &event.tenant_id, &generated_response).await;
+                if risk == ActionRisk::AutoExecute {
+                    let _ = self.orchestrator.update_inbox_message_status(inbox_id, &event.tenant_id, "auto_replied").await;
+                }
             }
 
             let action_payload = serde_json::json!({
                 "feature_type": "ambassador_reply",
-                "original_message": if message.is_empty() { "Do you have vegan options for birthday cakes?" } else { message },
+                "original_message": message,
                 "generated_response": generated_response,
                 "context_used": context_summary,
                 "inbox_message_id": inbox_id,
+                "source": source,
+                "original_content": message,
             });
 
-            self.orchestrator.execute_action(
+            let approval_req = self.orchestrator.execute_action(
                 DepartmentType::CustomerSuccess,
                 description,
                 event.tenant_id.clone(),
-                risk,
-                action_payload,
-            ).await.map(|_| ())?;
+                risk.clone(),
+                action_payload.clone(),
+            ).await.map_err(|e| e.to_string())?;
+
+            if risk == ActionRisk::AutoExecute {
+                let approved_event = DepartmentEvent {
+                    id: uuid::Uuid::new_v4().to_string(),
+                    tenant_id: event.tenant_id.clone(),
+                    event_type: "agent:customer_success:approved".to_string(),
+                    payload: serde_json::json!({
+                        "original_payload": action_payload,
+                        "approval_id": approval_req.id
+                    }),
+                };
+                let _ = self.orchestrator.dispatch_event(approved_event).await;
+            }
 
             return Ok(());
         }

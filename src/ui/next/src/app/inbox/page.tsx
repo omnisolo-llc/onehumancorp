@@ -21,10 +21,16 @@ function tenantId() {
 
 function badgeTone(status?: string) {
   const normalized = (status || "").toLowerCase();
-  if (["closed", "sent", "resolved"].includes(normalized)) return "good";
+  if (["closed", "sent", "resolved", "auto_replied"].includes(normalized)) return "good";
   if (["open", "pending", ""].includes(normalized)) return "warn";
   if (["failed", "blocked"].includes(normalized)) return "bad";
   return "";
+}
+
+function formatStatus(status?: string) {
+  const normalized = (status || "").toLowerCase();
+  if (normalized === "auto_replied") return "✨ AI Handled";
+  return status || "Open";
 }
 
 export default function InboxPage() {
@@ -107,7 +113,7 @@ export default function InboxPage() {
 
   return (
     <AppShell
-      title="Inbox"
+      title="Unified Inbox"
       subtitle="Database-backed customer conversations and generated drafts."
       statusItems={[
         { label: "Messages", value: String(messages.length), tone: messages.length > 0 ? "good" : "neutral" },
@@ -116,6 +122,7 @@ export default function InboxPage() {
       actions={[{ label: "Audit", href: "/agent-audit-dashboard" }]}
     >
       {actionStatus && <div className="mb-4 app-badge good" role="status">{actionStatus}</div>}
+      <div className="w-full max-w-[375px] mx-auto md:max-w-none">
       <div className="app-grid two">
         <section className="app-panel">
           <div className="app-panel-header">
@@ -143,7 +150,7 @@ export default function InboxPage() {
                   <div className="app-list-title">{message.source || "Unknown source"}</div>
                   <div className="app-list-subtitle truncate">{message.content || "Empty message"}</div>
                 </div>
-                <span className={`app-badge ${badgeTone(message.status)}`}>{message.status || "Open"}</span>
+                <span className={`app-badge ${badgeTone(message.status)}`}>{formatStatus(message.status)}</span>
               </button>
             ))}
           </div>
@@ -187,7 +194,7 @@ export default function InboxPage() {
               <div className="grid grid-cols-2 gap-3">
                 <div className="app-card">
                   <div className="app-metric-label">Status</div>
-                  <div className="mt-2"><span className={`app-badge ${badgeTone(selected.status)}`}>{selected.status || "Open"}</span></div>
+                  <div className="mt-2"><span className={`app-badge ${badgeTone(selected.status)}`}>{formatStatus(selected.status)}</span></div>
                 </div>
                 <div className="app-card">
                   <div className="app-metric-label">Created</div>
@@ -206,6 +213,7 @@ export default function InboxPage() {
           )}
         </section>
       </div>
+          </div>
     </AppShell>
   );
 }

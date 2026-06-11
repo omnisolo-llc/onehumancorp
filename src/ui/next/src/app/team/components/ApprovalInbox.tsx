@@ -197,7 +197,7 @@ export default function ApprovalInbox({
                             d="M5 13l4 4L19 7"
                           />
                         </svg>
-                        AI Draft
+                        Draft Reply
                       </div>
                       <div className="bg-blue-600 p-3 rounded-lg text-xs text-white shadow-inner">
                         {req.payload.generated_response}
@@ -468,7 +468,7 @@ export default function ApprovalInbox({
                   )}
 
                   {req.payload?.feature_type === "quote_draft" && (
-                    <div className="mb-6 p-4 rounded-xl glassmorphism border border-white/40 flex flex-col gap-3" data-testid="quote-draft-card">
+                    <div className="mb-6 p-4 rounded-xl glassmorphism border border-white/40 flex flex-col gap-3 max-w-full break-words" data-testid="quote-draft-card">
                       <div className="flex items-center gap-2 text-[#0066FF] font-semibold text-sm">
                         <svg
                           className="w-5 h-5"

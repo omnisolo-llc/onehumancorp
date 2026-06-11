@@ -10,30 +10,7 @@ describe('MasterMenu', () => {
     expect(output).toContain('Select an action (Use Up/Down arrows):');
     expect(output).toContain('1) Run Developer Setup');
     expect(output).toContain('2) Configure Environment (.env)');
-    expect(output).toContain('View Agent Protocol Tasks');
     expect(output).toContain('0) Exit');
-  });
-
-  test('handles view protocol toggle', async () => {
-    const { stdin, lastFrame } = render(<MasterMenu />);
-
-    // Scroll to View Agent Protocol Tasks (index 10)
-    for (let i = 0; i < 10; i++) {
-        stdin.write('\u001B[B');
-        await new Promise(r => setTimeout(r, 20));
-    }
-
-    // Press Enter to open
-    stdin.write('\r');
-    await new Promise(r => setTimeout(r, 20));
-
-    expect(lastFrame()).toContain('Agent Protocol Tasks');
-
-    // Press Esc to go back
-    stdin.write('\u001B'); // Esc
-    await new Promise(r => setTimeout(r, 20));
-
-    expect(lastFrame()).toContain('Select an action');
   });
 
   test('highlights the first option by default', () => {

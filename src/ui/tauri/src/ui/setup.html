@@ -22,7 +22,7 @@
         border-radius: 16px;
         box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
         text-align: center;
-        max-width: 450px;
+        max-width: 480px;
         width: 100%;
         border: 1px solid rgba(255, 255, 255, 0.4);
         box-sizing: border-box;
@@ -58,6 +58,9 @@
         backdrop-filter: blur(10px) saturate(200%);
         -webkit-backdrop-filter: blur(10px) saturate(200%);
         transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+      }
+      select.glassmorphism, textarea.glassmorphism {
+        border-radius: 8px;
       }
       input.glassmorphism {
         border-radius: 8px;
@@ -123,6 +126,7 @@
           backdrop-filter: blur(30px) saturate(210%);
           -webkit-backdrop-filter: blur(30px) saturate(210%);
           border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 16px;
         }
         h1 {
           color: #F5F5F7;
@@ -240,6 +244,7 @@
         -webkit-backdrop-filter: blur(10px) saturate(200%);
         border: 1px solid rgba(255, 255, 255, 0.5);
         padding: 12px 16px;
+        min-height: 44px;
         border-radius: 8px;
         cursor: pointer;
         transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
@@ -281,6 +286,48 @@
         gap: 10px;
       }
 
+      .persona-row {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 20px;
+        overflow-x: auto;
+        padding-bottom: 10px;
+        -webkit-overflow-scrolling: touch;
+      }
+      .persona-chip {
+        flex: 0 0 auto;
+        padding: 8px 16px;
+        border-radius: 20px;
+        background: rgba(0, 102, 255, 0.1);
+        color: #0066FF;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        border: 1px solid transparent;
+        transition: all 0.2s;
+      }
+      .persona-chip:hover {
+        background: rgba(0, 102, 255, 0.2);
+      }
+      .persona-chip.selected {
+        background: #0066FF;
+        color: white;
+      }
+
+      .chat-bubble {
+        background: rgba(255, 255, 255, 0.8);
+        border: 1px solid rgba(0, 0, 0, 0.05);
+        padding: 12px 16px;
+        border-radius: 18px;
+        border-bottom-left-radius: 4px;
+        font-size: 14px;
+        line-height: 1.4;
+        text-align: left;
+        margin-bottom: 20px;
+        color: #1d1d1f;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+      }
+
       @media (prefers-color-scheme: dark) {
         select, textarea {
           background: rgba(255, 255, 255, 0.1);
@@ -312,6 +359,11 @@
         .btn-secondary:hover {
           background-color: rgba(255, 255, 255, 0.1);
           color: #F5F5F7;
+        }
+        .chat-bubble {
+          background: rgba(255, 255, 255, 0.1);
+          color: #F5F5F7;
+          border-color: rgba(255, 255, 255, 0.1);
         }
       }
 
@@ -345,7 +397,15 @@
       <!-- Step 1: Work Context -->
       <div class="step active" id="step-context">
         <h1>How do you work?</h1>
-        <p>This helps OHC configure your tools.</p>
+        <p>Choose a quick-start or select how you work.</p>
+
+        <div class="persona-row">
+            <div class="persona-chip" onclick="applyPersona('Baker')">I'm a Baker</div>
+            <div class="persona-chip" onclick="applyPersona('Handyman')">I'm a Handyman</div>
+            <div class="persona-chip" onclick="applyPersona('Boutique')">I'm a Boutique Owner</div>
+            <div class="persona-chip" onclick="applyPersona('Tutor')">I'm a Tutor</div>
+        </div>
+
         <div class="radio-group" id="context-group">
           <label class="radio-option">
             <input type="radio" name="work_context" value="Local Service" />
@@ -419,6 +479,10 @@
         <h1>Set up your Assistant</h1>
         <p>Give your AI assistant a name and tone.</p>
 
+        <div class="chat-bubble" id="assistant-intro">
+            "Hi! I'll be your partner in growing this business. What should I call myself, and how should we talk?"
+        </div>
+
         <input type="text" id="assistant-name" class="glassmorphism" placeholder="e.g. Jarvis" />
         <div id="assistant-name-error" class="error-msg">Please enter a name for your assistant.</div>
 
@@ -472,6 +536,50 @@
     </div>
     <script>
       const container = document.getElementById('form-container');
+
+      function applyPersona(persona) {
+          document.querySelectorAll('.persona-chip').forEach(el => el.classList.remove('selected'));
+          event.target.classList.add('selected');
+
+          if (persona === 'Baker') {
+              state.work_context = 'Storefront';
+              state.categories = 'Bakery';
+              state.businessName = "Maya's Bakery";
+              state.assistantName = "Cookie";
+              state.assistantTone = "Friendly";
+              state.first_offer = "Custom Birthday Cake";
+          } else if (persona === 'Handyman') {
+              state.work_context = 'Local Service';
+              state.categories = 'Handyman';
+              state.businessName = "Carlos Repairs";
+              state.assistantName = "Tools";
+              state.assistantTone = "Concise";
+              state.first_offer = "Standard Repair Visit";
+          } else if (persona === 'Boutique') {
+              state.work_context = 'Storefront';
+              state.categories = 'Boutique';
+              state.businessName = "Priya's Boutique";
+              state.assistantName = "Style";
+              state.assistantTone = "Professional";
+              state.first_offer = "Signature Dress";
+          } else if (persona === 'Tutor') {
+              state.work_context = 'Online Creator';
+              state.categories = 'Tutoring';
+              state.businessName = "Leo's Music";
+              state.assistantName = "Melody";
+              state.assistantTone = "Friendly";
+              state.first_offer = "1-Hour Guitar Lesson";
+          }
+          populateForm();
+          saveCurrentState();
+
+          // Flash feedback
+          const chip = event.target;
+          const originalText = chip.innerText;
+          chip.innerText = "Applied!";
+          setTimeout(() => { chip.innerText = originalText; }, 1000);
+      }
+
       const finishBtn = document.getElementById('finish-btn');
 
       const inputs = {
@@ -499,10 +607,11 @@
           businessName: '',
           assistantName: '',
           assistantTone: '',
-          workContext: '',
+          work_context: '',
           categories: '',
           tagline: '',
-          firstOffer: ''
+          first_offer: '',
+          templateSelection: ''
       };
 
       // Handle radio buttons selection visual state
@@ -530,6 +639,10 @@
         }
       }
 
+      if (state.step === undefined || state.step === 0) {
+         updateStepper('step-context');
+      }
+
             // Clear name error on typing if valid
       inputs.name.addEventListener('input', () => {
           if (inputs.name.value.trim().length >= 3) {
@@ -541,13 +654,18 @@
       function populateForm() {
           if (state.businessName) inputs.name.value = state.businessName;
           if (state.tagline) inputs.tagline.value = state.tagline;
+
+          if (state.work_context) {
+              populateCategories();
+          }
           if (state.categories) inputs.categories.value = state.categories;
+
           if (state.assistantName) inputs.assistantName.value = state.assistantName;
           if (state.assistantTone) inputs.assistantTone.value = state.assistantTone;
-          if (state.firstOffer) inputs.firstOffer.value = state.firstOffer;
+          if (state.first_offer) inputs.firstOffer.value = state.first_offer;
           if (state.templateSelection) inputs.templateSelection.value = state.templateSelection;
 
-          const contextVal = state.workContext || state.work_context;
+          const contextVal = state.work_context;
           if (contextVal) {
               inputs.context.forEach(r => {
                   if (r.value === contextVal) {
@@ -557,6 +675,13 @@
                   }
               });
           }
+
+          if (state.step !== undefined && state.step > 0) {
+              const steps = ['step-context', 'step-categories', 'step-name', 'step-assistant', 'step-offer', 'step-template'];
+              if (state.step < steps.length) {
+                  goToStep(steps[state.step]);
+              }
+          }
       }
 
             function saveCurrentState() {
@@ -565,12 +690,11 @@
           state.tagline = inputs.tagline.value;
           state.assistantName = inputs.assistantName.value;
           state.assistantTone = inputs.assistantTone.value;
-          state.firstOffer = inputs.firstOffer.value;
+          state.first_offer = inputs.firstOffer.value;
           state.templateSelection = inputs.templateSelection.value;
 
           let selectedContext = document.querySelector('input[name="work_context"]:checked');
           if (selectedContext) {
-              state.workContext = selectedContext.value;
               state.work_context = selectedContext.value;
           }
 
@@ -584,10 +708,9 @@
               if (activeStep.id === 'step-name') stepNumber = 2;
               if (activeStep.id === 'step-assistant') stepNumber = 3;
               if (activeStep.id === 'step-offer') stepNumber = 4;
+              if (activeStep.id === 'step-template') stepNumber = 5;
           }
           state.step = stepNumber;
-          state.workContext = state.work_context || state.workContext;
-          state.work_context = state.workContext;
 
           if (window.__TAURI__ && window.__TAURI__.core) {
               window.__TAURI__.core.invoke("save_onboarding_state", { state }).catch(console.error);
@@ -605,7 +728,7 @@
                   errors.context.style.display = 'block';
                   isValid = false;
               } else {
-                  state.workContext = selected.value; state.work_context = selected.value;
+                  state.work_context = selected.value;
               }
           }
           else if (stepId === 'step-categories') {
@@ -652,7 +775,7 @@
                   isValid = false;
               } else {
                   errors.firstOffer.style.display = 'none';
-                  state.firstOffer = inputs.firstOffer.value.trim();
+                  state.first_offer = inputs.firstOffer.value.trim();
               }
           }
           else if (stepId === 'step-template') {
@@ -695,13 +818,13 @@
 
       const categoriesMap = {
           'Local Service': ['Plumbing', 'Electrical', 'Cleaning', 'Landscaping', 'HVAC', 'Pest Control', 'Handyman', 'Other'],
-          'Storefront': ['Cafe', 'Restaurant', 'Retail', 'Salon', 'Spa', 'Gym', 'Boutique', 'Other'],
+          'Storefront': ['Bakery', 'Cafe', 'Restaurant', 'Retail', 'Salon', 'Spa', 'Gym', 'Boutique', 'Other'],
           'Online Creator': ['Tutoring', 'Consulting', 'Digital Art', 'Software', 'Writing', 'Video Creation', 'Music', 'Other'],
           'Agency': ['Marketing', 'Design', 'Development', 'Consulting', 'Advertising', 'PR', 'Other']
       };
 
       function populateCategories() {
-          const context = state.workContext || state.work_context;
+          const context = state.work_context;
           const cats = categoriesMap[context] || ['Other'];
           inputs.categories.innerHTML = '<option value="" disabled selected>Select a category...</option>';
           cats.forEach(c => {
@@ -745,13 +868,32 @@
       });
 
       document.querySelectorAll('.save-draft-btn').forEach(btn => {
-          btn.addEventListener('click', (e) => {
+          btn.addEventListener('click', async (e) => {
               e.preventDefault();
+              const originalText = btn.innerText;
+              btn.innerText = "Saving...";
+              btn.disabled = true;
+
+              // Add a small delay to allow browser to render "Saving..."
+              await new Promise(r => setTimeout(r, 100));
+
               saveCurrentState();
+
+              btn.innerText = "Saved!";
+              btn.style.backgroundColor = "#34C759";
+              btn.style.color = "white";
+              btn.style.borderColor = "#34C759";
+
               const msg = document.getElementById('draft-saved-msg');
-              msg.style.display = 'block';
+              if (msg) msg.style.display = 'block';
+
               setTimeout(() => {
-                  msg.style.display = 'none';
+                  btn.innerText = originalText;
+                  btn.disabled = false;
+                  btn.style.backgroundColor = "";
+                  btn.style.color = "";
+                  btn.style.borderColor = "";
+                  if (msg) msg.style.display = 'none';
               }, 2000);
           });
       });
@@ -759,10 +901,28 @@
       if (finishBtn) {
         finishBtn.addEventListener('click', () => {
            if (validateStep('step-template')) {
+               const req = {
+                   businessType: state.workContext || state.work_context || "Local Service",
+                   companyName: state.businessName,
+                   companyDescription: state.tagline || "",
+                   sellingCategories: state.categories ? [state.categories] : [],
+                   paymentPref: "online",
+                   adminEmail: "admin@mybusiness.com",
+                   adminName: state.assistantName || "Admin",
+                   adminPassword: "password",
+                   websiteTemplate: state.templateSelection || "Modern",
+                   firstProductName: state.firstOffer || "First Offer",
+                   firstProductPrice: "0.00",
+                   domainChoice: "subdomain",
+                   priceType: "fixed",
+                   location: "Local",
+                   targetAudience: "General"
+               };
+
                if (window.__TAURI__ && window.__TAURI__.core) {
                  finishBtn.disabled = true;
                  finishBtn.innerText = "Saving...";
-                 window.__TAURI__.core.invoke("save_onboarding_state", { state }).then(() => {
+                 window.__TAURI__.core.invoke("start_onboarding", { req }).then(() => {
                    window.location.href = "success.html";
                  }).catch((err) => {
                    console.error(err);
@@ -770,8 +930,27 @@
                    finishBtn.innerText = "Finish Setup";
                  });
                } else {
-                 localStorage.setItem('onboardingState', JSON.stringify(state));
-                 window.location.href = "success.html";
+                 finishBtn.disabled = true;
+                 finishBtn.innerText = "Saving...";
+                 const backendUrl = (window.location.origin.includes('localhost') || window.location.protocol === 'file:') ? 'http://127.0.0.1:18789' : '';
+                 fetch(`${backendUrl}/api/onboarding/start`, {
+                     method: 'POST',
+                     headers: {
+                         'Content-Type': 'application/json'
+                     },
+                     body: JSON.stringify(req)
+                 }).then(response => {
+                     if (response.ok) {
+                         localStorage.setItem('onboardingState', JSON.stringify(state));
+                         window.location.href = "success.html";
+                     } else {
+                         throw new Error('Failed to start onboarding');
+                     }
+                 }).catch((err) => {
+                     console.error(err);
+                     finishBtn.disabled = false;
+                     finishBtn.innerText = "Finish Setup";
+                 });
                }
            }
         });
@@ -800,7 +979,7 @@ document.addEventListener('DOMContentLoaded', () => {
             backdrop-filter: blur(20px) saturate(210%);
             -webkit-backdrop-filter: blur(20px) saturate(210%);
             border: 1px solid rgba(255, 255, 255, 0.6);
-            border-radius: 12px;
+            border-radius: 16px;
             padding: 12px 16px;
             color: #1d1d1f;
             font-family: "Outfit", -apple-system, BlinkMacSystemFont, sans-serif;
@@ -821,7 +1000,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         @media (prefers-color-scheme: dark) {
             .ohc-tooltip {
-                background: rgba(22, 22, 26, 0.85);
+                background: rgba(22, 22, 26, 0.7);
                 border-color: rgba(255, 255, 255, 0.1);
                 color: #f5f5f7;
             }
@@ -919,7 +1098,7 @@ document.addEventListener('DOMContentLoaded', () => {
             right: 20px;
             width: 56px;
             height: 56px;
-            border-radius: 28px;
+            border-radius: 16px;
             background: #0066FF;
             color: white;
             border: none;
@@ -953,7 +1132,7 @@ document.addEventListener('DOMContentLoaded', () => {
             backdrop-filter: blur(30px) saturate(210%);
             -webkit-backdrop-filter: blur(30px) saturate(210%);
             border: 1px solid rgba(255, 255, 255, 0.6);
-            border-radius: 20px;
+            border-radius: 16px;
             box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
             display: none;
             flex-direction: column;
@@ -999,7 +1178,7 @@ document.addEventListener('DOMContentLoaded', () => {
         .msg {
             max-width: 85%;
             padding: 12px 16px;
-            border-radius: 18px;
+            border-radius: 16px;
             font-size: 14px;
             line-height: 1.4;
         }
@@ -1032,7 +1211,7 @@ document.addEventListener('DOMContentLoaded', () => {
         #ohc-help-input {
             flex-grow: 1;
             border: 1px solid rgba(0, 0, 0, 0.2);
-            border-radius: 20px;
+            border-radius: 16px;
             padding: 10px 15px;
             outline: none;
             background: rgba(255, 255, 255, 0.8);
@@ -1045,7 +1224,7 @@ document.addEventListener('DOMContentLoaded', () => {
             border: none;
             width: 40px;
             height: 40px;
-            border-radius: 20px;
+            border-radius: 16px;
             cursor: pointer;
             display: flex;
             align-items: center;
@@ -1054,7 +1233,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         @media (prefers-color-scheme: dark) {
             #ohc-help-chat-overlay {
-                background: rgba(22, 22, 26, 0.85);
+                background: rgba(22, 22, 26, 0.7);
                 border-color: rgba(255, 255, 255, 0.1);
             }
             #ohc-help-chat-header, #ohc-help-input-area {
@@ -1117,7 +1296,7 @@ document.addEventListener('DOMContentLoaded', () => {
         overlay.style.display = 'none';
     });
 
-    async function sendMessage() {
+        async function sendMessage() {
         const text = input.value.trim();
         if (!text) return;
 
@@ -1129,20 +1308,35 @@ document.addEventListener('DOMContentLoaded', () => {
         input.value = '';
         messages.scrollTop = messages.scrollHeight;
 
-        // Fake AI response based on tests and common queries
-        setTimeout(() => {
+        try {
+            let url = '/api/chat';
+            if (window.__TAURI__ && window.__TAURI__.core) {
+                url = 'http://127.0.0.1:18789/api/chat';
+            }
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: text })
+            });
+            const data = await response.json();
+
             const aiMsg = document.createElement('div');
             aiMsg.className = 'msg msg-ai';
-
-            if (text.toLowerCase().includes('credit card') || text.toLowerCase().includes('pay')) {
-                aiMsg.innerHTML = `You can accept credit cards by connecting your bank account in the Payments section.<br/><a href="help_article.html?id=payments">Read the full article →</a>`;
+            if (data.link && data.link.url) {
+                aiMsg.innerHTML = `${data.reply}<br/><a href="${data.link.url}">${data.link.title}</a>`;
             } else {
-                aiMsg.innerHTML = `I can help you with that! Check out our Help Center for a detailed guide.<br/><a href="help.html">Read the full article →</a>`;
+                aiMsg.textContent = data.reply;
             }
-
             messages.appendChild(aiMsg);
             messages.scrollTop = messages.scrollHeight;
-        }, 800);
+        } catch (e) {
+            console.error(e);
+            const aiMsg = document.createElement('div');
+            aiMsg.className = 'msg msg-ai';
+            aiMsg.textContent = 'Sorry, there was an error connecting to the help assistant.';
+            messages.appendChild(aiMsg);
+            messages.scrollTop = messages.scrollHeight;
+        }
     }
 
     sendBtn.addEventListener('click', sendMessage);

@@ -31,7 +31,7 @@ pub fn get_pool() -> PgPool {
                     Ok(true)
                 })
             })
-            .acquire_timeout(std::time::Duration::from_millis(500))
+            .max_connections(100).acquire_timeout(std::time::Duration::from_millis(15000))
             .connect_lazy(&database_url)
             .expect("Failed to connect to DB pool lazily")
     }).clone()
@@ -257,6 +257,8 @@ impl DB {
             conn_opts = conn_opts.pragma("key", pragma_key);
             // Force full encryption of the database
             conn_opts = conn_opts.pragma("cipher", "'sqlcipher'");
+            conn_opts = conn_opts.pragma("cipher_page_size", "4096");
+            conn_opts = conn_opts.pragma("cipher_compatibility", "4");
 
             let sqlite_pool = SqlitePoolOptions::new().max_connections(50)
                 .after_connect(|conn, _meta| {
@@ -701,9 +703,9 @@ impl DB {
                         version INTEGER DEFAULT 1
                     );
                     CREATE TABLE IF NOT EXISTS tenants (
-                        tenant_id TEXT PRIMARY KEY,
+                        id TEXT PRIMARY KEY,
                         owner_id TEXT,
-                        business_name TEXT,
+                        name TEXT,
                         tier TEXT,
                         subdomain TEXT,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -996,6 +998,15 @@ impl DB {
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                     );
 
+                    CREATE TABLE IF NOT EXISTS customer_identities (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        customer_id TEXT NOT NULL,
+                        channel TEXT NOT NULL,
+                        channel_identity TEXT NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        UNIQUE(tenant_id, channel, channel_identity)
+                    );
                     CREATE TABLE IF NOT EXISTS interactions (
                         id TEXT PRIMARY KEY,
                         tenant_id TEXT NOT NULL,
@@ -1637,7 +1648,10 @@ mod autodream_db_tests {
         // Ensure we handle cipher directives explicitly and gracefully
         let opts = SqliteConnectOptions::from_str("sqlite::memory:")
             .expect("Database URL or operation failed in test")
-            .pragma("key", "secure_test_key_123");
+            .pragma("key", "secure_test_key_123")
+            .pragma("cipher", "'sqlcipher'")
+            .pragma("cipher_page_size", "4096")
+            .pragma("cipher_compatibility", "4");
 
         let pool_result = sqlx::sqlite::SqlitePoolOptions::new()
             .after_connect(|conn, _meta| {

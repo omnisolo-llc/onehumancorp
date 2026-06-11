@@ -9,23 +9,33 @@ type VideoTutorial = {
   video_url: string;
 };
 
-export function VideoTutorialList() {
-  const [videos, setVideos] = useState<VideoTutorial[]>([]);
-  const [loading, setLoading] = useState(true);
+export function VideoTutorialList({
+  videos: initialVideos,
+  loading: externalLoading,
+}: {
+  videos?: VideoTutorial[];
+  loading?: boolean;
+} = {}) {
+  const [fetchedVideos, setFetchedVideos] = useState<VideoTutorial[]>([]);
+  const [fetchedLoading, setFetchedLoading] = useState(true);
   const [activeVideo, setActiveVideo] = useState<VideoTutorial | null>(null);
 
   useEffect(() => {
+    if (initialVideos !== undefined) return;
     fetch('/api/videos')
       .then(res => res.json())
       .then(data => {
-        setVideos(data);
-        setLoading(false);
+        setFetchedVideos(data);
+        setFetchedLoading(false);
       })
       .catch(err => {
         console.error('Failed to load video tutorials', err);
-        setLoading(false);
+        setFetchedLoading(false);
       });
-  }, []);
+  }, [initialVideos]);
+
+  const loading = externalLoading !== undefined ? externalLoading : fetchedLoading;
+  const videos = initialVideos !== undefined ? initialVideos : fetchedVideos;
 
   if (loading) {
     return (
@@ -90,7 +100,7 @@ export function VideoTutorialList() {
                <video
                  controls
                  className="w-full h-full object-contain"
-                 src={activeVideo.video_url || ""}
+                 src={activeVideo.video_url || undefined}
                  autoPlay
                >
                  Your browser does not support the video tag.

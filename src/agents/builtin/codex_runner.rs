@@ -180,37 +180,10 @@ impl AppServer {
             }
         };
 
-        if req.method == "ap_list_tasks" {
-            let server = crate::agent_protocol::AgentProtocolServer::new(self.runner.clone());
-            let result = server.list_tasks().await;
-            let resp = JsonRpcResponse {
-                jsonrpc: "2.0".to_string(),
-                id: req.id,
-                result: serde_json::from_str(&result).ok(),
-                error: None,
-                meta: None,
-            };
-            return serde_json::to_string(&resp).unwrap_or_default();
-        } else if req.method == "ap_create_task" {
+        if req.method == "ap_create_task" {
             let server = crate::agent_protocol::AgentProtocolServer::new(self.runner.clone());
             let req_json = serde_json::to_string(&req.params).unwrap_or_default();
             let result = server.create_task(&req_json).await;
-            let resp = JsonRpcResponse {
-                jsonrpc: "2.0".to_string(),
-                id: req.id,
-                result: serde_json::from_str(&result).ok(),
-                error: None,
-                meta: None,
-            };
-            return serde_json::to_string(&resp).unwrap_or_default();
-        } else if req.method == "ap_list_steps" {
-            let server = crate::agent_protocol::AgentProtocolServer::new(self.runner.clone());
-            let task_id = req
-                .params
-                .get("task_id")
-                .and_then(|v| v.as_str())
-                .unwrap_or("");
-            let result = server.list_steps(task_id).await;
             let resp = JsonRpcResponse {
                 jsonrpc: "2.0".to_string(),
                 id: req.id,
@@ -227,6 +200,33 @@ impl AppServer {
                 .and_then(|v| v.as_str())
                 .unwrap_or("");
             let result = server.get_task(task_id).await;
+            let resp = JsonRpcResponse {
+                jsonrpc: "2.0".to_string(),
+                id: req.id,
+                result: serde_json::from_str(&result).ok(),
+                error: None,
+                meta: None,
+            };
+            return serde_json::to_string(&resp).unwrap_or_default();
+        } else if req.method == "ap_list_tasks" {
+            let server = crate::agent_protocol::AgentProtocolServer::new(self.runner.clone());
+            let result = server.list_tasks().await;
+            let resp = JsonRpcResponse {
+                jsonrpc: "2.0".to_string(),
+                id: req.id,
+                result: serde_json::from_str(&result).ok(),
+                error: None,
+                meta: None,
+            };
+            return serde_json::to_string(&resp).unwrap_or_default();
+        } else if req.method == "ap_list_steps" {
+            let server = crate::agent_protocol::AgentProtocolServer::new(self.runner.clone());
+            let task_id = req
+                .params
+                .get("task_id")
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
+            let result = server.list_steps(task_id).await;
             let resp = JsonRpcResponse {
                 jsonrpc: "2.0".to_string(),
                 id: req.id,
@@ -1014,6 +1014,25 @@ mod tests {
                 .unwrap(),
             task_id
         );
+
+        // Test Agent Protocol ap_list_tasks method
+        let req_json_ap_list = format!(
+            r#"{{"jsonrpc": "2.0", "id": "11a", "method": "ap_list_tasks", "params": {{}}}}"#
+        );
+        let resp_json_ap_list = app_server.handle_request(&req_json_ap_list).await;
+        let resp_ap_list: JsonRpcResponse = serde_json::from_str(&resp_json_ap_list).unwrap();
+        assert!(resp_ap_list.error.is_none());
+        assert!(resp_ap_list.result.unwrap().get("tasks").is_some());
+
+        // Test Agent Protocol ap_list_steps method
+        let req_json_ap_list_steps = format!(
+            r#"{{"jsonrpc": "2.0", "id": "11b", "method": "ap_list_steps", "params": {{"task_id": "{}"}}}}"#,
+            task_id
+        );
+        let resp_json_ap_list_steps = app_server.handle_request(&req_json_ap_list_steps).await;
+        let resp_ap_list_steps: JsonRpcResponse = serde_json::from_str(&resp_json_ap_list_steps).unwrap();
+        assert!(resp_ap_list_steps.error.is_none());
+        assert!(resp_ap_list_steps.result.unwrap().get("steps").is_some());
 
         // Test Agent Protocol ap_execute_step method
         let req_json_ap_execute = format!(
