@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import PricingPage from './page';
 import { useRouter } from 'next/navigation';
@@ -22,9 +22,17 @@ describe('PricingPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     (useRouter as any).mockReturnValue({ push: mockPush });
+
+    // Mock fetch for the plan loading
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({
+        current_plan: 'Free'
+      })
+    });
   });
 
-  it('renders the pricing page', () => {
+  it('renders the pricing page', async () => {
     render(<PricingPage />);
     expect(screen.getByText('Pricing Plans')).toBeDefined();
     expect(screen.getByText('Free')).toBeDefined();
@@ -33,8 +41,14 @@ describe('PricingPage', () => {
     expect(screen.getByText('Business')).toBeDefined();
   });
 
-  it('navigates to checkout when upgrading to Starter', () => {
+  it('navigates to checkout when upgrading to Starter', async () => {
     render(<PricingPage />);
+
+    // Wait for the button text to change from "Loading..." to the actual text
+    await waitFor(() => {
+      expect(screen.getByText('Upgrade to Starter via Stripe')).toBeDefined();
+    });
+
     const upgradeButton = screen.getByText('Upgrade to Starter via Stripe');
     fireEvent.click(upgradeButton);
     expect(mockPush).toHaveBeenCalledWith('/checkout?tier=Starter');

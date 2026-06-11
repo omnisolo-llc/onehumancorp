@@ -1,16 +1,94 @@
 "use client";
 
 // Pricing Page Implementation
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { WithTooltip } from '../../components/TooltipRegistry';
 import { PoweredByOHC } from '../components/PoweredByOHC';
 
+interface PlanData {
+    current_plan: string;
+    ai_actions_used: number;
+    ai_actions_limit: number | null;
+    storage_used_bytes: number;
+    storage_limit_bytes: number | null;
+    next_bill_estimated: number;
+}
+
 export default function PricingPage() {
   const router = useRouter();
+  const [currentPlan, setCurrentPlan] = useState<string>('Free');
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchPlan = async () => {
+        try {
+            const token = localStorage.getItem('token');
+            const res = await fetch('/api/billing/my-plan', {
+                headers: {
+                    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                }
+            });
+            if (res.ok) {
+                const data: PlanData = await res.json();
+                setCurrentPlan(data.current_plan || 'Free');
+            }
+        } catch (e) {
+            console.error('Failed to fetch plan:', e);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+    fetchPlan();
+  }, []);
 
   const handleUpgrade = (tier: string) => {
     router.push('/checkout?tier=' + tier);
+  };
+
+  const planTiers = ["Free", "Starter", "Pro", "Business"];
+
+  const getButtonText = (tierName: string) => {
+    if (isLoading) return "Loading...";
+    if (tierName === currentPlan) return "Current Plan";
+    const currentIndex = planTiers.indexOf(currentPlan);
+    const tierIndex = planTiers.indexOf(tierName);
+    return tierIndex > currentIndex ? `Upgrade to ${tierName} via Stripe` : `Downgrade to ${tierName} via Stripe`;
+  };
+
+  const renderButton = (tierName: string) => {
+    const isCurrent = tierName === currentPlan;
+
+    if (isCurrent) {
+        return (
+            <button className="w-full min-h-[44px] px-4 py-2 bg-gray-200 text-gray-800 rounded-xl font-medium flex items-center justify-center cursor-not-allowed" disabled>
+                {getButtonText(tierName)}
+            </button>
+        );
+    }
+
+    // Check if downgrade
+    const currentIndex = planTiers.indexOf(currentPlan);
+    const tierIndex = planTiers.indexOf(tierName);
+    const isDowngrade = tierIndex < currentIndex;
+
+    let buttonClass = "";
+    if (tierName === "Starter") {
+        buttonClass = "w-full min-h-[44px] px-4 py-2 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 transition-colors shadow-sm flex items-center justify-center";
+    } else {
+        buttonClass = "w-full min-h-[44px] px-4 py-2 bg-gray-900 text-white rounded-xl font-medium hover:bg-black transition-colors shadow-sm flex items-center justify-center";
+    }
+
+    if (isDowngrade) {
+        // use a different style for downgrade to make it clear
+        buttonClass = "w-full min-h-[44px] px-4 py-2 bg-white text-gray-800 border border-gray-300 rounded-xl font-medium hover:bg-gray-50 transition-colors shadow-sm flex items-center justify-center";
+    }
+
+    return (
+        <button onClick={() => handleUpgrade(tierName)} className={buttonClass}>
+            {getButtonText(tierName)}
+        </button>
+    );
   };
 
   return (
@@ -31,7 +109,7 @@ export default function PricingPage() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 w-full">
           {/* Free Tier */}
-          <div className="p-6 flex flex-col justify-between app-card bg-white/70 backdrop-blur-xl saturate-200 border border-white/40 hover:shadow-xl transition-shadow duration-300 w-full rounded-2xl">
+          <div className={`p-6 flex flex-col justify-between app-card bg-white/70 backdrop-blur-xl saturate-200 border ${currentPlan === 'Free' ? 'border-indigo-400 shadow-md ring-2 ring-indigo-400' : 'border-white/40'} hover:shadow-xl transition-shadow duration-300 w-full rounded-2xl`}>
             <div>
               <h3 className="text-2xl font-bold font-outfit mb-2 text-gray-900">Free</h3>
               <p className="text-xl font-semibold mb-4 text-gray-900">$0 <span className="text-sm font-normal text-gray-500">/ month</span></p>
@@ -42,13 +120,11 @@ export default function PricingPage() {
                 <li className="flex items-center gap-2"><span>✓</span> 10 Products Limit</li>
               </ul>
             </div>
-            <button className="w-full min-h-[44px] px-4 py-2 bg-gray-200 text-gray-800 rounded-xl font-medium flex items-center justify-center cursor-not-allowed" disabled>
-              Current Plan
-            </button>
+            {renderButton('Free')}
           </div>
 
           {/* Starter Tier */}
-          <div className="p-6 flex flex-col justify-between relative app-card bg-white/70 backdrop-blur-xl saturate-200 border border-indigo-200 shadow-xl hover:shadow-2xl transition-shadow duration-300 w-full rounded-2xl">
+          <div className={`p-6 flex flex-col justify-between relative app-card bg-white/70 backdrop-blur-xl saturate-200 border ${currentPlan === 'Starter' ? 'border-indigo-400 shadow-md ring-2 ring-indigo-400' : 'border-indigo-200 shadow-xl'} hover:shadow-2xl transition-shadow duration-300 w-full rounded-2xl`}>
             <div className="absolute top-0 right-0 bg-indigo-600 text-white text-xs font-bold px-3 py-1 rounded-bl-xl rounded-tr-2xl">Recommended</div>
             <div>
               <h3 className="text-2xl font-bold font-outfit mb-2 text-gray-900">Starter</h3>
@@ -61,13 +137,11 @@ export default function PricingPage() {
                 <li className="flex items-center gap-2"><span>✓</span> 100 Products Limit</li>
               </ul>
             </div>
-            <button onClick={() => handleUpgrade('Starter')} className="w-full min-h-[44px] px-4 py-2 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 transition-colors shadow-sm flex items-center justify-center">
-              Upgrade to Starter via Stripe
-            </button>
+            {renderButton('Starter')}
           </div>
 
           {/* Pro Tier */}
-          <div className="p-6 flex flex-col justify-between app-card bg-white/70 backdrop-blur-xl saturate-200 border border-white/40 hover:shadow-xl transition-shadow duration-300 w-full rounded-2xl">
+          <div className={`p-6 flex flex-col justify-between app-card bg-white/70 backdrop-blur-xl saturate-200 border ${currentPlan === 'Pro' ? 'border-indigo-400 shadow-md ring-2 ring-indigo-400' : 'border-white/40'} hover:shadow-xl transition-shadow duration-300 w-full rounded-2xl`}>
             <div>
               <h3 className="text-2xl font-bold font-outfit mb-2 text-gray-900">Pro</h3>
               <p className="text-xl font-semibold mb-4 text-gray-900">$79 <span className="text-sm font-normal text-gray-500">/ month</span></p>
@@ -78,13 +152,11 @@ export default function PricingPage() {
                 <li className="flex items-center gap-2"><span>✓</span> Unlimited Products</li>
               </ul>
             </div>
-            <button onClick={() => handleUpgrade('Pro')} className="w-full min-h-[44px] px-4 py-2 bg-gray-900 text-white rounded-xl font-medium hover:bg-black transition-colors shadow-sm flex items-center justify-center">
-              Upgrade to Pro via Stripe
-            </button>
+            {renderButton('Pro')}
           </div>
 
           {/* Business Tier */}
-          <div className="p-6 flex flex-col justify-between app-card bg-white/70 backdrop-blur-xl saturate-200 border border-white/40 hover:shadow-xl transition-shadow duration-300 w-full rounded-2xl">
+          <div className={`p-6 flex flex-col justify-between app-card bg-white/70 backdrop-blur-xl saturate-200 border ${currentPlan === 'Business' ? 'border-indigo-400 shadow-md ring-2 ring-indigo-400' : 'border-white/40'} hover:shadow-xl transition-shadow duration-300 w-full rounded-2xl`}>
             <div>
               <h3 className="text-2xl font-bold font-outfit mb-2 text-gray-900">Business</h3>
               <p className="text-xl font-semibold mb-4 text-gray-900">$299 <span className="text-sm font-normal text-gray-500">/ month</span></p>
@@ -95,9 +167,7 @@ export default function PricingPage() {
                 <li className="flex items-center gap-2"><span>✓</span> Unlimited Products</li>
               </ul>
             </div>
-            <button onClick={() => handleUpgrade('Business')} className="w-full min-h-[44px] px-4 py-2 bg-gray-900 text-white rounded-xl font-medium hover:bg-black transition-colors shadow-sm flex items-center justify-center">
-              Upgrade to Business via Stripe
-            </button>
+            {renderButton('Business')}
           </div>
         </div>
 
