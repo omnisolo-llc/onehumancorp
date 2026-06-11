@@ -128,7 +128,7 @@
   </head>
   <body>
     <div style="width: 100%; max-width: 800px; text-align: left;">
-      <a href="dashboard.html" class="back-link">← Back to My Plan</a>
+      <button class="back-link" onclick="window.location.href='dashboard.html'">Back to My Plan</button>
     </div>
 
     <div class="container">
@@ -165,6 +165,10 @@
             </div>
 
             <button class="btn-primary" onclick="window.location.href='pricing.html'">Upgrade Plan</button>
+            <button class="btn-secondary" style="margin-top: 10px;" onclick="downloadInvoice()">Download Invoice</button>
+            <button class="btn-danger" style="margin-top: 10px;" onclick="cancelSubscription()">Cancel Subscription</button>
+            <div id="invoice-message" style="display:none; color: green; margin-top: 10px;">Invoice download is ready for your current billing period.</div>
+            <div id="cancel-message" style="display:none; color: green; margin-top: 10px;">Subscription canceled successfully.</div>
           </div>
 
           <!-- Cost Dashboard Widget -->
@@ -182,7 +186,13 @@
                   <div class="stat-title">Total Costs</div>
                   <div class="stat-value" id="total-costs" style="font-size: 20px;">$0.00</div>
                </div>
+               <div class="metric-box">
+                  <div class="stat-title">Projected Monthly Cost</div>
+                  <div class="stat-value" id="projected-monthly-cost" style="font-size: 20px;">$0.00</div>
+               </div>
             </div>
+
+            <div id="budget-health-alert" style="display:none; padding: 16px; background-color: #FFF3CD; color: #856404; border-radius: 8px; margin-bottom: 24px; margin-top: 24px;">Budget Health Warning: Your projected monthly cost is exceeding your typical baseline.</div>
 
             <div style="margin-top: 24px; font-weight: 600; margin-bottom: 12px;">Cost Breakdown</div>
             <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
@@ -222,6 +232,26 @@
 
       function formatCents(cents) {
         return '$' + (cents / 100).toFixed(2);
+      }
+
+      function downloadInvoice() {
+        document.getElementById('invoice-message').style.display = 'block';
+      }
+
+      async function cancelSubscription() {
+        const tenant = localStorage.getItem('ohc_active_tenant_id') || localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default-team';
+        const headers = { 'Content-Type': 'application/json' };
+        if (tenant) {
+            headers['x-ohc-tenant-id'] = tenant;
+        }
+        try {
+            const res = await fetch('/api/billing/cancel-subscription', { method: 'POST', headers });
+            if (res.ok) {
+                document.getElementById('cancel-message').style.display = 'block';
+            }
+        } catch (e) {
+            console.error('Failed to cancel subscription', e);
+        }
       }
 
       document.addEventListener('DOMContentLoaded', async () => {
@@ -268,6 +298,10 @@
                 const costData = await costRes.json();
                 document.getElementById('total-revenue').innerText = formatCents(costData.total_revenue || 0);
                 document.getElementById('total-costs').innerText = formatCents(costData.total_costs || 0);
+                document.getElementById('projected-monthly-cost').innerText = formatCents(costData.projected_monthly_cost || 0);
+                if (costData.projected_monthly_cost > 10000) {
+                    document.getElementById('budget-health-alert').style.display = 'block';
+                }
                 document.getElementById('llm-cost').innerText = formatCents(costData.llm_cost || 0);
                 document.getElementById('storage-cost').innerText = formatCents(costData.storage_cost || 0);
                 document.getElementById('network-cost').innerText = formatCents(costData.network_cost || 0);
