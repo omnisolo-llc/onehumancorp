@@ -21,11 +21,11 @@ test.describe('Work Triage Agentic Inbox', () => {
     await expect(triageCard).toBeVisible({ timeout: 10000 });
 
     // Verify detail view is populated from selected card
-    await expect(page.locator('text=Maya requested a custom cake')).toBeVisible();
-    await expect(page.locator('text=Draft Reply')).toBeVisible();
+    await expect(triageCard.locator('text=Maya requested a custom cake')).toBeVisible();
+    await expect(triageCard.locator('text=Draft Reply')).toBeVisible();
 
     // Approve action
-    const approveBtn = page.locator('[data-testid="approve-btn"]');
+    const approveBtn = triageCard.locator('[data-testid="approve-btn"]');
     await approveBtn.click();
 
     // Should show approved status and disappear from list
@@ -59,8 +59,7 @@ test.describe('Work Triage Agentic Inbox', () => {
 
     await expect(triageCard).toBeVisible({ timeout: 15000 });
 
-    await triageCard.click();
-    const dismissBtn = page.locator('[data-testid="dismiss-btn"]');
+    const dismissBtn = triageCard.locator('[data-testid="dismiss-btn"]');
     await dismissBtn.click();
 
     await expect(triageCard).not.toBeVisible();
@@ -89,9 +88,8 @@ test.describe('Work Triage Agentic Inbox', () => {
     const triageCard = page.locator('[data-testid="triage-card-triage-test-2"]');
     await expect(triageCard).toBeVisible({ timeout: 15000 });
 
-    await triageCard.click();
-    await expect(page.locator('text=WhatsApp')).toBeVisible();
-    await expect(page.locator('text=Question about delivery times')).toBeVisible();
+    await expect(triageCard.locator('text=WhatsApp')).toBeVisible();
+    await expect(triageCard.locator('text=Question about delivery times')).toBeVisible();
   });
 
   test('Backend action executes correctly on Approve Draft', async ({ page }) => {
@@ -105,7 +103,7 @@ test.describe('Work Triage Agentic Inbox', () => {
 
     // Since previous test might have consumed it, let's just make sure we click approve if visible
     if (await triageCard.isVisible()) {
-      const approveBtn = page.locator('[data-testid="approve-btn"]').first();
+      const approveBtn = triageCard.locator('[data-testid="approve-btn"]').first();
       await approveBtn.click();
       await expect(triageCard).not.toBeVisible({ timeout: 15000 });
     }
@@ -129,8 +127,7 @@ test.describe('Work Triage Agentic Inbox', () => {
     await expect(triageCard).toBeVisible({ timeout: 15000 });
 
     // Ensure detail view can be scrolled into view or is stacked correctly
-    await triageCard.click();
-    await expect(page.locator('text=Draft Reply')).toBeVisible();
-    await expect(page.locator('[data-testid="approve-btn"]')).toBeVisible();
+    await expect(triageCard.locator('text=Draft Reply')).toBeVisible();
+    await expect(triageCard.locator('[data-testid="approve-btn"]')).toBeVisible();
   });
 });

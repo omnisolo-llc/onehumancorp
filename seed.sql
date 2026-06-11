@@ -1,0 +1,2 @@
+INSERT INTO triage_items (id, tenant_id, source, priority, context, status) VALUES ('triage-test-1', 'test-tenant', 'Instagram DM', 'Urgent', 'Maya requested a custom cake', 'pending') ON CONFLICT DO NOTHING;
+INSERT INTO triage_proposed_actions (id, triage_item_id, tenant_id, action_type, payload) VALUES ('action-test-1', 'triage-test-1', 'test-tenant', 'Draft Reply', 'Hi Maya! I can definitely help with the custom cake. It will be $50.') ON CONFLICT DO NOTHING;

@@ -98,48 +98,8 @@ export function TriageFeed({ tenantId, initialItems }: { tenantId: string, initi
     return null;
   }
 
-  const proactiveItems = items.filter(item => item.source === "Proactive Context Agent");
-  const regularItems = items.filter(item => item.source !== "Proactive Context Agent");
-
   return (
     <div className="mb-6">
-      {proactiveItems.map((item) => (
-        <div key={item.id} className="mb-6 p-6 rounded-[16px] glassmorphism border border-orange-400/50 dark:border-orange-500/30 bg-orange-50/50 dark:bg-orange-900/10 shadow-lg relative overflow-hidden">
-          <div className="absolute top-0 left-0 w-1 h-full bg-orange-500"></div>
-          <div className="flex justify-between items-start mb-3">
-            <div>
-              <h2 className="text-xl font-bold font-outfit text-orange-900 dark:text-orange-100 flex items-center gap-2">
-                <span className="text-2xl">✨</span> Needs Attention Today
-              </h2>
-              <p className="text-orange-800/80 dark:text-orange-200/80 mt-1 text-sm font-medium">{item.context}</p>
-            </div>
-            <span className={`app-badge ${badgeTone(item.priority)}`}>{item.priority || "High"}</span>
-          </div>
-
-          {item.action_type && (
-            <div className="mt-4 mb-5 p-4 rounded-xl bg-white/60 dark:bg-black/40 border border-orange-200 dark:border-orange-900/50">
-              <div className="text-xs uppercase tracking-wider font-semibold text-orange-800 dark:text-orange-300 mb-1">Suggested Action: {item.action_type}</div>
-              <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{item.action_payload}</div>
-            </div>
-          )}
-
-          <div className="flex gap-3 mt-2">
-            <button
-              onClick={() => handleDecision(item.id, true)}
-              className="px-6 py-2.5 rounded-[16px] bg-orange-500 hover:bg-orange-600 text-white font-medium shadow-sm transition-colors"
-            >
-              Approve & Execute
-            </button>
-            <button
-              onClick={() => handleDecision(item.id, false)}
-              className="px-6 py-2.5 rounded-[16px] bg-white/50 dark:bg-black/30 border border-orange-200 dark:border-orange-900/30 hover:bg-white/80 dark:hover:bg-black/50 text-orange-900 dark:text-orange-100 font-medium transition-colors"
-            >
-              Dismiss
-            </button>
-          </div>
-        </div>
-      ))}
-
       <div className="mb-4 p-6 rounded-[16px] glassmorphism border border-white/40 dark:border-white/10">
         <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Unified Agent Feed</h2>
         <p className="text-gray-600 dark:text-gray-400">Review AI-prepared actions and reply drafts across all channels.</p>
@@ -147,91 +107,53 @@ export function TriageFeed({ tenantId, initialItems }: { tenantId: string, initi
 
       {actionStatus && <div className="mb-4 app-badge good" role="status">{actionStatus}</div>}
 
-      <div className="app-grid two" style={{ display: regularItems.length > 0 ? "grid" : "none" }}>
-        <section className="app-panel glassmorphism backdrop-blur-md bg-white/60 dark:bg-black/40 border border-white/20">
-          <div className="app-panel-header">
-            <div>
-              <div className="app-panel-title">Triage Queue</div>
+      <div className="flex flex-col gap-4">
+        {items.map((item) => (
+          <div key={item.id} data-testid={`triage-card-${item.id}`} className="p-6 rounded-[16px] glassmorphism border border-white/40 dark:border-white/10 bg-white/60 dark:bg-black/40 shadow-sm relative overflow-hidden">
+            <div className={`absolute top-0 left-0 w-1 h-full ${item.priority?.toLowerCase() === 'urgent' ? 'bg-red-500' : 'bg-[#0066FF]'}`}></div>
+            <div className="flex justify-between items-start mb-4">
+              <div className="flex flex-col">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-xs uppercase tracking-wider font-bold text-gray-500 dark:text-gray-400">
+                    Drafted by {item.source || "Agent"}
+                  </span>
+                  <span className={`app-badge ${badgeTone(item.priority)}`}>{item.priority || "Normal"}</span>
+                </div>
+              </div>
             </div>
-          </div>
-          <div id="triage-list" className="app-list">
-            {error && <div className="app-empty">{error}</div>}
-            {!error && regularItems.map((item) => (
+
+            <div className="mb-4">
+              <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Context</div>
+              <p className="text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7] leading-relaxed">
+                {item.context || "No context provided"}
+              </p>
+            </div>
+
+            {item.action_type && (
+              <div className="mb-5 p-4 rounded-xl bg-white/80 dark:bg-black/60 border border-gray-100 dark:border-gray-800">
+                <div className="text-xs uppercase tracking-wider font-semibold text-blue-800 dark:text-blue-300 mb-1">Proposed Action: {item.action_type}</div>
+                <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{item.action_payload}</div>
+              </div>
+            )}
+
+            <div className="flex flex-col sm:flex-row gap-3">
               <button
-                key={item.id}
-                type="button"
-                data-testid={`triage-card-${item.id}`}
-                onClick={() => setSelectedId(item.id)}
-                className="app-list-item w-full text-left min-h-[44px]"
-                style={{ background: selected?.id === item.id ? "rgba(255, 255, 255, 0.5)" : "transparent" }}
+                onClick={() => handleDecision(item.id, true)}
+                data-testid="approve-btn"
+                className="flex-1 py-3 px-4 rounded-[12px] bg-[#0066FF] hover:bg-[#0052CC] text-white font-semibold text-sm shadow-sm active:scale-[0.98] transition-all min-h-[44px]"
               >
-                <div className="min-w-0">
-                  <div className="app-list-title">{item.source || "Unknown Source"}</div>
-                  <div className="app-list-subtitle truncate">{item.context || "No context provided"}</div>
-                </div>
-                <span className={`app-badge ${badgeTone(item.priority)}`}>{item.priority || "Normal"}</span>
+                ✨ Approve & Execute
               </button>
-            ))}
-          </div>
-        </section>
-
-        <section className="app-panel glassmorphism backdrop-blur-md bg-white/60 dark:bg-black/40 border border-white/20">
-          <div className="app-panel-header">
-            <div className="app-panel-title">Triage Detail</div>
-          </div>
-          {!selected ? (
-            <div className="app-empty">Select a triage item to review it.</div>
-          ) : (
-            <div className="app-panel-body">
-              <div className="mb-4">
-                <div className="app-metric-label">Source</div>
-                <div className="mt-1 text-sm font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">{selected.source || "Unknown source"}</div>
-              </div>
-              <div className="mb-4">
-                <div className="app-metric-label">Context</div>
-                <div className="mt-2 rounded-md border border-gray-200 dark:border-white/10 bg-white/50 dark:bg-black/20 p-3 text-sm leading-6 text-[#1D1D1F] dark:text-[#F5F5F7]">
-                  {selected.context || "No context"}
-                </div>
-              </div>
-              {selected.action_type && (
-                <div className="mb-6">
-                  <div className="app-metric-label">Proposed Action: {selected.action_type}</div>
-                  <div className="mt-2 rounded-md border border-blue-200 dark:border-blue-900/30 bg-blue-50/50 dark:bg-blue-900/20 p-4 text-sm leading-6 text-blue-900 dark:text-blue-100 font-medium">
-                    {selected.action_payload || "No specific payload"}
-                  </div>
-                </div>
-              )}
-
-              <div className="grid grid-cols-2 gap-3 mb-6">
-                <div className="app-card glassmorphism backdrop-blur-md bg-white/30 dark:bg-black/30 border border-white/20">
-                  <div className="app-metric-label">Priority</div>
-                  <div className="mt-2"><span className={`app-badge ${badgeTone(selected.priority)}`}>{selected.priority || "Normal"}</span></div>
-                </div>
-                <div className="app-card glassmorphism backdrop-blur-md bg-white/30 dark:bg-black/30 border border-white/20">
-                  <div className="app-metric-label">Created</div>
-                  <div className="mt-2 text-sm font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">{new Date(selected.created_at || Date.now()).toLocaleString()}</div>
-                </div>
-              </div>
-
-              <div className="flex flex-col sm:flex-row gap-3">
-                <button
-                  className="app-btn-primary flex-1 min-h-[44px]"
-                  data-testid="approve-btn"
-                  onClick={() => handleDecision(selected.id, true)}
-                >
-                  ✨ Approve &amp; Execute
-                </button>
-                <button
-                  className="px-4 py-2 rounded-[16px] border border-white/40 dark:border-white/20 text-[#1D1D1F] dark:text-[#F5F5F7] bg-white/50 dark:bg-black/20 hover:bg-white/80 dark:hover:bg-black/40 flex-1 min-h-[44px] font-medium transition-colors backdrop-blur-md"
-                  data-testid="dismiss-btn"
-                  onClick={() => handleDecision(selected.id, false)}
-                >
-                  Dismiss
-                </button>
-              </div>
+              <button
+                onClick={() => handleDecision(item.id, false)}
+                data-testid="dismiss-btn"
+                className="flex-1 py-3 px-4 rounded-[12px] bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 font-semibold text-sm hover:bg-gray-50 dark:hover:bg-gray-700 active:scale-[0.98] transition-all min-h-[44px]"
+              >
+                Dismiss
+              </button>
             </div>
-          )}
-        </section>
+          </div>
+        ))}
       </div>
     </div>
   );
