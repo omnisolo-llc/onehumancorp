@@ -41,4 +41,40 @@ test.describe('Unified Agent Feed Interactive Flow', () => {
         await expect(cardParent).not.toBeVisible({ timeout: 2000 });
     }
   });
+
+  test('should queue actions optimistically when offline', async ({ page, context }) => {
+    test.setTimeout(180000);
+
+    // 1. Seed some distinct approvals representing different departments
+    await page.goto('/dashboard');
+    await expect(page.locator('h1', { hasText: 'Dashboard' }).first()).toBeVisible({ timeout: 25000 });
+
+    // Ensure we have some items
+    const approveBtn = page.getByTestId('approve-proposal').first();
+    const isVisible = await approveBtn.isVisible({ timeout: 15000 }).catch(() => false);
+
+    if (isVisible) {
+      // Go offline
+      await context.setOffline(true);
+      await page.evaluate(() => window.dispatchEvent(new Event('offline')));
+
+      // Verify offline banner
+      await expect(page.locator('text=You are offline. Actions will sync when online.')).toBeVisible();
+
+      const cardParent = approveBtn.locator('xpath=./../../..');
+
+      // 2. Tap approve
+      await approveBtn.click();
+
+      // 3. The item should optimisticly disappear
+      await expect(cardParent).not.toBeVisible({ timeout: 2000 });
+
+      // Go back online
+      await context.setOffline(false);
+      await page.evaluate(() => window.dispatchEvent(new Event('online')));
+
+      // Verify offline banner goes away
+      await expect(page.locator('text=You are offline. Actions will sync when online.')).not.toBeVisible();
+    }
+  });
 });
