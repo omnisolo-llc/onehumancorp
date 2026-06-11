@@ -45,6 +45,8 @@ pub struct CostDashboardResponse {
     pub trend: Vec<crate::pricing::cost_aggregator::DailyCost>,
     pub agent_costs: Vec<AgentCostRow>,
     pub department_tier_usage: DepartmentTierUsageResponse,
+    pub email_cost: i64,
+    pub api_cost: i64,
 }
 #[derive(serde::Serialize, serde::Deserialize, Clone, Default)]
 pub struct DepartmentTierUsageResponse {
@@ -221,7 +223,7 @@ pub async fn cost_dashboard_handler(
                 auth.org_id.clone()
             }
         },
-        None => return Json(CostDashboardResponse { total_revenue: 0, total_costs: 0, projected_monthly_cost: 0, llm_cost: 0, storage_cost: 0, payment_fees: 0, network_cost: 0, compute_cost: 0, bandwidth_savings: 0, cache_hit_rate: 0.0, cost_per_1k_tokens: 0.0, period_start: "2024-05-01".to_string(), period_end: "2024-05-31".to_string(), trend: vec![], agent_costs: vec![], department_tier_usage: empty_department_tier_usage_response() })
+        None => return Json(CostDashboardResponse { total_revenue: 0, total_costs: 0, projected_monthly_cost: 0, llm_cost: 0, storage_cost: 0, payment_fees: 0, network_cost: 0, compute_cost: 0, bandwidth_savings: 0, cache_hit_rate: 0.0, cost_per_1k_tokens: 0.0, period_start: "2024-05-01".to_string(), period_end: "2024-05-31".to_string(), trend: vec![], agent_costs: vec![], department_tier_usage: empty_department_tier_usage_response(), email_cost: 0, api_cost: 0 })
     };
 
     let cache = COST_DASHBOARD_CACHE.get_or_init(|| HybridCache::new(None));
@@ -309,7 +311,12 @@ pub async fn cost_dashboard_handler(
     let cost_per_gb = auditor.get_cost_per_gb_month();
     let storage_cost_f64 = storage_gb * cost_per_gb;
 
-    let total_costs_f64 = llm_cost_f64 + storage_cost_f64 + payment_fees_f64 + compute_cost_f64 + network_cost_f64;
+    let email_cost_cents: i64 = trend.iter().map(|d| d.email_cost).sum();
+    let api_cost_cents: i64 = trend.iter().map(|d| d.api_cost).sum();
+    let email_cost_f64 = email_cost_cents as f64 / 100.0;
+    let api_cost_f64 = api_cost_cents as f64 / 100.0;
+
+    let total_costs_f64 = llm_cost_f64 + storage_cost_f64 + payment_fees_f64 + compute_cost_f64 + network_cost_f64 + email_cost_f64 + api_cost_f64;
     let department_tier_usage = department_res.unwrap_or_else(|_| empty_department_tier_usage_response());
 
     // For deterministic hermetic tests, if a specific test tenant is detected, force elapsed days to 7.
@@ -336,6 +343,8 @@ pub async fn cost_dashboard_handler(
         trend,
         agent_costs: agent_costs.into_iter().map(|r| AgentCostRow { agent_id: r.agent_id, cost_cents: r.cost_cents }).collect(),
         department_tier_usage,
+        email_cost: email_cost_cents,
+        api_cost: api_cost_cents,
     };
     cache.set(&tenant_id, resp.clone(), std::time::Duration::from_secs(60)).await;
     Json(resp)
