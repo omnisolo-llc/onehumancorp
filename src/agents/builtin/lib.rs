@@ -31,6 +31,7 @@ pub mod observation_masking;
 pub mod tools_gating;
 pub mod verification_loops;
 
+pub mod agent_curated_memory;
 pub mod autogen;
 pub mod departments;
 pub mod goose;

@@ -2893,14 +2893,20 @@ impl Agent {
             // Hermes Agent Unique Harness Innovations: Agent-curated memory
             // Periodic nudges, autonomous skill creation after complex tasks.
             if final_cfg.enable_agent_curated_memory
-                && iteration % final_cfg.curated_memory_nudge_threshold == 0
                 && iteration > 0
                 && messages
                     .last()
                     .map(|m| m.role == Role::Tool)
                     .unwrap_or(false)
             {
-                messages.push(Message::system("Periodic Nudge: You have completed several complex steps. Consider using a `CreateSkill` tool to curate your recent trajectory into a reusable skill."));
+                let curator = crate::agent_curated_memory::MemoryCurator::new(final_cfg.curated_memory_nudge_threshold as usize);
+                if curator.is_complex_task(&messages) && iteration % final_cfg.curated_memory_nudge_threshold == 0 {
+                    if let Some(suggested_skill) = curator.autonomously_suggest_skill(&messages) {
+                        messages.push(Message::system(&format!("Periodic Nudge: You have completed several complex steps. Consider using a `CreateSkill` tool to curate your recent trajectory into a reusable skill. Suggestion: {}", suggested_skill)));
+                    } else {
+                        messages.push(Message::system("Periodic Nudge: You have completed several complex steps. Consider using a `CreateSkill` tool to curate your recent trajectory into a reusable skill."));
+                    }
+                }
             }
 
             let mut final_messages = messages.clone();
