@@ -311,13 +311,56 @@ impl InvoiceService for InvoiceServiceImpl {
     }
 }
 
-pub fn router<S: Clone + Send + Sync + 'static>(_hub: Arc<Hub>) -> axum::Router<S> {
+pub async fn list_invoices_handler(
+    axum::extract::State(hub): axum::extract::State<Arc<Hub>>,
+) -> axum::response::Response {
+    use axum::response::IntoResponse;
+    let service = InvoiceServiceImpl { hub };
+    let req = tonic::Request::new(::server_ohc::invoice::ListInvoicesRequest {
+        tenant_id: "e2e-tenant".to_string(), // Defaulting to e2e-tenant for testing/auth bypassing
+    });
 
+    match service.list_invoices(req).await {
+        Ok(response) => {
+            let res = response.into_inner();
+            let invoices_json: Vec<serde_json::Value> = res.invoices.into_iter().map(|inv| {
+                serde_json::json!({
+                    "id": inv.id,
+                    "client_id": inv.client_id,
+                    "client_name": inv.client_name,
+                    "status": inv.status,
+                    "due_date": inv.due_date,
+                    "currency": inv.currency,
+                    "total_amount": inv.total_amount,
+                    "stripe_invoice_id": inv.stripe_invoice_id,
+                    "stripe_payment_link": inv.stripe_payment_link,
+                    "line_items": inv.line_items.into_iter().map(|li| {
+                        serde_json::json!({
+                            "id": li.id,
+                            "invoice_id": li.invoice_id,
+                            "description": li.description,
+                            "quantity": li.quantity,
+                            "unit_price": li.unit_price,
+                            "amount": li.amount,
+                        })
+                    }).collect::<Vec<_>>(),
+                    "created_at": inv.created_at,
+                    "updated_at": inv.updated_at,
+                })
+            }).collect();
 
-    // This is just a stub router for Axum integration if needed,
-    // though typically gRPC services are mounted differently.
-    // For now, we return an empty router.
+            (axum::http::StatusCode::OK, axum::Json(serde_json::json!({ "invoices": invoices_json }))).into_response()
+        },
+        Err(e) => {
+            (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({ "error": e.message() }))).into_response()
+        }
+    }
+}
+
+pub fn router<S: Clone + Send + Sync + 'static>(hub: Arc<Hub>) -> axum::Router<S> {
     axum::Router::new()
+        .route("/", axum::routing::get(list_invoices_handler))
+        .with_state(hub)
 }
 
 #[cfg(test)]

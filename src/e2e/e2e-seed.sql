@@ -399,3 +399,12 @@ INSERT INTO telemetry_buffer (tenant_id, metric_name, metric_type, value, labels
 INSERT INTO agent_actions (id, tenant_id, session_id, agent_id, action_type, result, created_at, input_tokens, output_tokens)
 VALUES ('e2e-cost-1', 'e2e-tenant', 'session1', 'e2e-agent', 'generate', '{"status": "ok"}', CURRENT_TIMESTAMP, 1000000000, 1000000000)
 ON CONFLICT DO NOTHING;
+
+-- Seed Draft Invoice for Agentic Invoicing e2e test
+INSERT INTO invoices (id, tenant_id, client_id, client_name, status, due_date, currency, total_amount, stripe_invoice_id, stripe_payment_link)
+VALUES ('e2e-invoice-draft-1', 'e2e-tenant', 'nora_design', 'Nora''s Design Project', 'draft', 1798765432, 'USD', 1500.00, '', 'https://checkout.stripe.com/pay/cs_test_mock')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO invoice_line_items (id, tenant_id, invoice_id, description, quantity, unit_price, amount)
+VALUES ('e2e-line-item-1', 'e2e-tenant', 'e2e-invoice-draft-1', 'Logo Design', 1, 1500.00, 1500.00)
+ON CONFLICT (id) DO NOTHING;
