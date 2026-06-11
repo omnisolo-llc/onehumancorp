@@ -2896,9 +2896,101 @@ pub async fn update_ui_triage_action_handler(
                         .bind("sent")
                         .execute(&mut *tx)
                         .await;
-                    } else if action_type == "ProposedInvoice" || action_type == "SuggestedCalendarSlot" {
-                        // TODO: Implement other action types like ProposedInvoice or SuggestedCalendarSlot as outlined in issue #26616
-                        tracing::info!("Executing proposed action: {}, payload: {}", action_type, action_payload);
+                    } else if action_type == "ProposedInvoice" {
+                        #[derive(serde::Deserialize)]
+                        struct InvoicePayload {
+                            client_id: String,
+                            client_name: String,
+                            total_amount: f64,
+                            currency: Option<String>,
+                            due_date: Option<i64>,
+                        }
+
+                        match serde_json::from_str::<InvoicePayload>(&action_payload) {
+                            Ok(payload) => {
+                                let new_invoice_id = format!("inv-{}", uuid::Uuid::new_v4());
+                                let due_date = payload.due_date.unwrap_or_else(|| chrono::Utc::now().timestamp() + 86400 * 30);
+                                let currency = payload.currency.unwrap_or_else(|| "USD".to_string());
+
+                                if let Err(e) = sqlx::query(
+                                    "INSERT INTO invoices (id, tenant_id, client_id, client_name, status, due_date, currency, total_amount) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"
+                                )
+                                .bind(&new_invoice_id)
+                                .bind(&tenant_id)
+                                .bind(&payload.client_id)
+                                .bind(&payload.client_name)
+                                .bind("draft")
+                                .bind(due_date)
+                                .bind(currency)
+                                .bind(payload.total_amount)
+                                .execute(&mut *tx)
+                                .await {
+                                    tracing::error!("Failed to create proposed invoice: {:?}", e);
+                                    let _ = tx.rollback().await;
+                                    return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": e.to_string()}))).into_response();
+                                } else {
+                                    tracing::info!("Created proposed invoice: {}", new_invoice_id);
+                                }
+                            },
+                            Err(e) => {
+                                tracing::error!("Failed to parse ProposedInvoice payload: {:?}", e);
+                                let _ = tx.rollback().await;
+                                return (axum::http::StatusCode::BAD_REQUEST, axum::Json(serde_json::json!({"error": format!("Invalid payload: {}", e)}))).into_response();
+                            }
+                        }
+                    } else if action_type == "SuggestedCalendarSlot" {
+                        #[derive(serde::Deserialize)]
+                        struct SlotPayload {
+                            service_id: String,
+                            start_time: String,
+                            end_time: String,
+                        }
+
+                        match serde_json::from_str::<SlotPayload>(&action_payload) {
+                            Ok(payload) => {
+                                let new_block_id = format!("block-{}", uuid::Uuid::new_v4());
+
+                                let start_time = match chrono::DateTime::parse_from_rfc3339(&payload.start_time) {
+                                    Ok(dt) => dt,
+                                    Err(e) => {
+                                        tracing::error!("Invalid start_time format: {}", e);
+                                        let _ = tx.rollback().await;
+                                        return (axum::http::StatusCode::BAD_REQUEST, axum::Json(serde_json::json!({"error": "Invalid start_time format"}))).into_response();
+                                    }
+                                };
+                                let end_time = match chrono::DateTime::parse_from_rfc3339(&payload.end_time) {
+                                    Ok(dt) => dt,
+                                    Err(e) => {
+                                        tracing::error!("Invalid end_time format: {}", e);
+                                        let _ = tx.rollback().await;
+                                        return (axum::http::StatusCode::BAD_REQUEST, axum::Json(serde_json::json!({"error": "Invalid end_time format"}))).into_response();
+                                    }
+                                };
+
+                                if let Err(e) = sqlx::query(
+                                    "INSERT INTO availability_blocks (id, tenant_id, service_id, start_time, end_time, is_available) VALUES ($1, $2, $3, $4, $5, $6)"
+                                )
+                                .bind(&new_block_id)
+                                .bind(&tenant_id)
+                                .bind(&payload.service_id)
+                                .bind(start_time)
+                                .bind(end_time)
+                                .bind(true)
+                                .execute(&mut *tx)
+                                .await {
+                                    tracing::error!("Failed to create suggested calendar slot: {:?}", e);
+                                    let _ = tx.rollback().await;
+                                    return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": e.to_string()}))).into_response();
+                                } else {
+                                    tracing::info!("Created suggested calendar slot: {}", new_block_id);
+                                }
+                            },
+                            Err(e) => {
+                                tracing::error!("Failed to parse SuggestedCalendarSlot payload: {:?}", e);
+                                let _ = tx.rollback().await;
+                                return (axum::http::StatusCode::BAD_REQUEST, axum::Json(serde_json::json!({"error": format!("Invalid payload: {}", e)}))).into_response();
+                            }
+                        }
                     }
                 }
             }
