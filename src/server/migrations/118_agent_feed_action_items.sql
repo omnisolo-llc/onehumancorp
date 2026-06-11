@@ -1,6 +1,6 @@
 CREATE TABLE IF NOT EXISTS agent_feed_items (
     id TEXT PRIMARY KEY,
-    tenant_id TEXT NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
     event_source TEXT NOT NULL,
     context_payload JSONB,
     proposed_action JSONB,
