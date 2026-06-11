@@ -49,6 +49,27 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
   const [activeTab, setActiveTab] = useState<"proposals" | "activity">("proposals");
   const [activities, setActivities] = useState<OHCLedgerEntry[]>([]);
   const [activityLoading, setActivityLoading] = useState(false);
+  const [pendingSyncCount, setPendingSyncCount] = useState(0);
+
+  useEffect(() => {
+    const updateSyncCount = () => {
+      import('@/lib/sync/SyncManager').then(({ SyncManager }) => {
+        setPendingSyncCount(SyncManager.getInstance().getQueueLength());
+      });
+    };
+
+    // Initial fetch
+    updateSyncCount();
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('ohc_queue_updated', updateSyncCount);
+      window.addEventListener('online', updateSyncCount);
+      return () => {
+        window.removeEventListener('ohc_queue_updated', updateSyncCount);
+        window.removeEventListener('online', updateSyncCount);
+      };
+    }
+  }, []);
 
   const tenantId = () => {
     if (typeof window === "undefined") return "default";
@@ -246,33 +267,50 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
     // Optimistic UI update
     setItems(prev => prev.filter(app => app.id !== id));
 
+    const tenant = tenantId();
+    const state = approved ? "APPROVED" : "DISMISSED";
+
+    if (typeof window !== 'undefined' && !navigator.onLine) {
+      import('@/lib/sync/SyncManager').then(({ SyncManager }) => {
+        SyncManager.getInstance().enqueue({
+          type: 'agent_feed_decision',
+          id,
+          state,
+        });
+      });
+      return;
+    }
+
     try {
-      const tenant = tenantId();
-      const res = await fetch(`/api/agents/approvals/${id}`, {
-        method: "POST",
+      const res = await fetch(`/api/agent-feed/${id}/state`, {
+        method: "PUT",
         headers: {
           "Content-Type": "application/json",
           "x-tenant-id": tenant,
           "x-user-id": "default",
         },
-        body: JSON.stringify({ approved }),
+        body: JSON.stringify({ state }),
       });
 
       if (!res.ok) {
-        // If it fails, we might want to fetch again to restore state
-        const refreshRes = await fetch(`/api/agent-feed?tenant_id=${tenant}`, {
-            headers: { "x-tenant-id": tenant, "x-user-id": "default" }
+        // Enqueue for offline sync on non-ok (5xx, etc) if reasonable
+        import('@/lib/sync/SyncManager').then(({ SyncManager }) => {
+          SyncManager.getInstance().enqueue({
+            type: 'agent_feed_decision',
+            id,
+            state,
+          });
         });
-        if (refreshRes.ok) {
-            const data: any = await refreshRes.json();
-            if (data.items) {
-               setItems(data.items.filter((i: any) => i.lifecycle_state !== "APPROVED" && i.lifecycle_state !== "DISMISSED"));
-            }
-        }
-        throw new Error("Failed to submit decision");
       }
     } catch (err: any) {
-      setError(err.message || "Action failed");
+      // Network failure, fallback to optimistic sync queue
+      import('@/lib/sync/SyncManager').then(({ SyncManager }) => {
+        SyncManager.getInstance().enqueue({
+          type: 'agent_feed_decision',
+          id,
+          state,
+        });
+      });
     }
   };
 
@@ -288,6 +326,15 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
 
   return (
     <section className="mb-6 w-full" aria-label="Unified Agent Feed">
+      {pendingSyncCount > 0 && (
+        <div className="mb-4 flex items-center gap-2 px-3 py-2 bg-yellow-50 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 text-xs font-semibold rounded-[8px]">
+          <span className="relative flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-yellow-500"></span>
+          </span>
+          Pending Sync ({pendingSyncCount})
+        </div>
+      )}
       <div className="mb-4 flex items-center border-b border-gray-200 dark:border-gray-700">
         <button
           onClick={() => setActiveTab("proposals")}

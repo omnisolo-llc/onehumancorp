@@ -72,7 +72,10 @@ export class SyncManager {
         };
       });
 
-      const generalMutations = queue.filter(m => m.type !== 'tap_to_pay').map(m => {
+      // Process agent_feed_decision separately as it needs a specific endpoint
+      const agentFeedDecisions = queue.filter(m => m.type === 'agent_feed_decision');
+
+      const generalMutations = queue.filter(m => m.type !== 'tap_to_pay' && m.type !== 'agent_feed_decision').map(m => {
         if (m.type === 'inventory_toggle') {
            return {
               transaction_id: m.id,
@@ -121,6 +124,28 @@ export class SyncManager {
         if (!resPos.ok) {
           allOk = false;
           throw new Error(`POS Sync failed with status ${resPos.status}`);
+        }
+      }
+
+      // Sync agent feed decisions
+      for (const decision of agentFeedDecisions) {
+        try {
+          const res = await fetch(`/api/agent-feed/${decision.id}/state`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-tenant-id': tenantId,
+              'x-user-id': 'default'
+            },
+            body: JSON.stringify({ state: decision.state })
+          });
+          if (!res.ok) {
+            allOk = false;
+            console.error(`Agent Feed Sync failed for ${decision.id} with status ${res.status}`);
+          }
+        } catch (e) {
+          allOk = false;
+          console.error(`Agent Feed Sync failed for ${decision.id}:`, e);
         }
       }
 
