@@ -52,7 +52,7 @@
         min-height: 44px;
         margin-bottom: 20px;
         border: 1px solid rgba(255, 255, 255, 0.5);
-        border-radius: 16px;
+        border-radius: 8px;
         box-sizing: border-box;
         font-size: 16px;
         background: rgba(255, 255, 255, 0.5);
@@ -61,15 +61,12 @@
         transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
       }
       select.glassmorphism, textarea.glassmorphism {
-        border-radius: 16px;
-      }
-      input.glassmorphism {
-        border-radius: 16px;
-      }
-      select, textarea, input {
         border-radius: 8px;
       }
-      select, textarea, input {
+      input.glassmorphism {
+        border-radius: 8px;
+      }
+      select, textarea, input, button {
         border-radius: 8px;
       }
       input:focus {
@@ -84,7 +81,7 @@
         border: none;
         padding: 14px 24px;
         min-height: 44px;
-        border-radius: 16px;
+        border-radius: 8px;
         font-size: 16px;
         font-weight: 600;
         cursor: pointer;
@@ -222,7 +219,7 @@
         min-height: 44px;
         margin-bottom: 20px;
         border: 1px solid rgba(255, 255, 255, 0.5);
-        border-radius: 16px;
+        border-radius: 8px;
         box-sizing: border-box;
         font-size: 16px;
         background: rgba(255, 255, 255, 0.5);
@@ -254,7 +251,7 @@
         border: 1px solid rgba(255, 255, 255, 0.5);
         padding: 12px 16px;
         min-height: 44px;
-        border-radius: 16px;
+        border-radius: 8px;
         cursor: pointer;
         transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
       }
@@ -306,7 +303,7 @@
       .persona-chip {
         flex: 0 0 auto;
         padding: 8px 16px;
-        border-radius: 20px;
+        border-radius: 8px;
         background: rgba(0, 102, 255, 0.1);
         color: #0066FF;
         font-size: 13px;
@@ -327,7 +324,7 @@
         background: rgba(255, 255, 255, 0.8);
         border: 1px solid rgba(0, 0, 0, 0.05);
         padding: 12px 16px;
-        border-radius: 18px;
+        border-radius: 16px;
         border-bottom-left-radius: 4px;
         font-size: 14px;
         line-height: 1.4;
@@ -381,11 +378,15 @@
           padding: 20px;
           border-radius: 16px;
           width: 100%;
+          box-sizing: border-box;
           border: none;
         }
-        input, select, textarea, button, .radio-option {
-          min-height: 44px !important;
-        }
+      }
+
+      /* Ensure touch targets are >= 44px on all screens */
+      input, select, textarea, button, .radio-option {
+        min-height: 44px !important;
+        box-sizing: border-box;
       }
         </style>
   </head>
@@ -656,48 +657,50 @@
           });
       });
 
-      // Load existing state
-      if (window.__TAURI__ && window.__TAURI__.core) {
-        window.__TAURI__.core.invoke("get_onboarding_state").then((backendState) => {
-          if (backendState) {
-            state = { ...state, ...backendState };
-            populateForm();
+      // Refactored state loader
+      async function loadSavedState() {
+          if (window.__TAURI__ && window.__TAURI__.core) {
+              try {
+                  const backendState = await window.__TAURI__.core.invoke("get_onboarding_state");
+                  if (backendState) state = { ...state, ...backendState };
+              } catch (e) {
+                  console.error(e);
+              }
+          } else {
+              const stored = localStorage.getItem('onboardingState');
+              if (stored) {
+                  state = { ...state, ...JSON.parse(stored) };
+              }
+
+              try {
+                  const backendUrl = (window.location.origin.includes('localhost') || window.location.protocol === 'file:') ? 'http://127.0.0.1:18789' : '';
+                  const tenantId = localStorage.getItem('tenant_id') || 'storefront';
+                  const userId = localStorage.getItem('user_id') || 'test-user';
+
+                  const res = await fetch(`${backendUrl}/api/onboarding/state`, {
+                      method: 'GET',
+                      headers: {
+                          'X-Tenant-ID': tenantId,
+                          'X-User-ID': userId
+                      }
+                  });
+                  const apiState = await res.json();
+                  if (apiState && Object.keys(apiState).length > 0) {
+                      state = { ...state, ...apiState.wizardState || apiState };
+                  }
+              } catch (err) {
+                  console.error('Failed to load cross-device state:', err);
+              }
           }
-        }).catch(console.error);
 
-      } else {
-        const stored = localStorage.getItem('onboardingState');
-        if (stored) {
-          state = { ...state, ...JSON.parse(stored) };
           populateForm();
-        }
-
-        // Fetch from API to support cross-device resume
-        const backendUrl = (window.location.origin.includes('localhost') || window.location.protocol === 'file:') ? 'http://127.0.0.1:18789' : '';
-        const tenantId = localStorage.getItem('tenant_id') || 'storefront';
-        const userId = localStorage.getItem('user_id') || 'test-user';
-
-        fetch(`${backendUrl}/api/onboarding/state`, {
-            method: 'GET',
-            headers: {
-                'X-Tenant-ID': tenantId,
-                'X-User-ID': userId
-            }
-        })
-        .then(res => res.json())
-        .then(apiState => {
-            if (apiState && Object.keys(apiState).length > 0) {
-                state = { ...state, ...apiState };
-                populateForm();
-            }
-        })
-        .catch(err => console.error('Failed to load cross-device state:', err));
+          if (state.step === undefined || state.step === 0) {
+              updateStepper('step-context');
+          }
       }
 
-
-      if (state.step === undefined || state.step === 0) {
-         updateStepper('step-context');
-      }
+      // Load existing state immediately
+      loadSavedState();
 
             // Clear name error on typing if valid
       inputs.name.addEventListener('input', () => {
@@ -839,7 +842,8 @@
               const passVal = inputs.adminPassword.value.trim();
               let stepValid = true;
 
-              if (emailVal === '' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal)) {
+              const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+              if (emailVal === '' || !emailRegex.test(emailVal)) {
                   errors.adminEmail.style.display = 'block';
                   inputs.adminEmail.style.borderColor = '#FF3B30';
                   stepValid = false;
@@ -848,8 +852,10 @@
                   inputs.adminEmail.style.borderColor = 'rgba(255, 255, 255, 0.5)';
               }
 
-              if (passVal.length < 8) {
+              const passRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
+              if (!passRegex.test(passVal)) {
                   errors.adminPassword.style.display = 'block';
+                  errors.adminPassword.innerText = 'Password must be at least 8 chars and contain uppercase, lowercase, and a number.';
                   inputs.adminPassword.style.borderColor = '#FF3B30';
                   stepValid = false;
               } else {
@@ -1474,7 +1480,7 @@ document.addEventListener('DOMContentLoaded', () => {
     background: #333;
     color: white;
     padding: 8px 12px;
-    border-radius: 6px;
+    border-radius: 8px;
     font-size: 13px;
     font-family: Outfit, sans-serif;
     z-index: 100000;
