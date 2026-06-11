@@ -660,6 +660,15 @@
         </div>
       </div>
 
+      <div class="ohc-growth-card" id="referral-tier-section" style="margin-bottom: 20px; display: none;">
+        <h2>Your Referral Rewards</h2>
+        <p id="referral-tier-text">Loading your tier...</p>
+        <div style="background-color: rgba(0,0,0,0.1); border-radius: 8px; height: 10px; width: 100%; margin: 10px 0; overflow: hidden;">
+          <div id="referral-tier-progress" style="background-color: #0066FF; height: 100%; width: 0%; transition: width 0.5s ease;"></div>
+        </div>
+        <p id="referral-tier-subtext" style="font-size: 13px; color: #666;"></p>
+      </div>
+
       <div class="ohc-growth-card" style="margin-bottom: 20px;">
         <h2>Agent Public Profile</h2>
         <p>Generate a shareable public card for your AI agent to build trust and acquire new customers.</p>
@@ -916,6 +925,39 @@
       if (name) {
           document.getElementById('dashboard-title').innerText = `${name} Dashboard`;
       }
+
+
+      async function checkReferralTier() {
+        try {
+          const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'e2e-tenant';
+          const res = await fetch(`/api/v1/growth/referrals/tier`, {
+            headers: {
+              'authorization': `Bearer ${localStorage.getItem('ohc_token')}` // Ensure auth header if needed, backend relies on AuthInfo extension
+            }
+          });
+          if (res.ok) {
+            const data = await res.json();
+            document.getElementById('referral-tier-section').style.display = 'block';
+            document.getElementById('referral-tier-text').innerHTML = `You are on the <strong>${data.current_tier} Tier</strong>!`;
+
+            if (data.next_tier) {
+              const needed = data.referrals_needed_for_next;
+              const currentInTier = data.total_conversions; // This is a simplification. Real progress is total / target.
+              const target = currentInTier + needed;
+              const pct = (currentInTier / target) * 100;
+              document.getElementById('referral-tier-progress').style.width = `${pct}%`;
+              document.getElementById('referral-tier-subtext').innerText = `${needed} more referrals needed to reach ${data.next_tier} Tier.`;
+            } else {
+              document.getElementById('referral-tier-progress').style.width = `100%`;
+              document.getElementById('referral-tier-progress').style.backgroundColor = `#FFD700`; // Gold/Platinum color
+              document.getElementById('referral-tier-subtext').innerText = `You have reached the highest tier!`;
+            }
+          }
+        } catch (e) {
+          console.error("Failed to check referral tier", e);
+        }
+      }
+      checkReferralTier();
 
 
       // Milestone logic
