@@ -49,7 +49,7 @@ test.describe('In-Person Payment (POS) Flow', () => {
     await page.evaluate(() => window.dispatchEvent(new Event('offline')));
 
     // Trigger New Order
-    await page.locator('text=New Order').click();
+    await page.locator('text=Quick Charge').click();
     await expect(page.locator('text=Payment Saved Offline - 50 USD')).toBeVisible();
 
     // Perform an offline clock in
@@ -57,8 +57,6 @@ test.describe('In-Person Payment (POS) Flow', () => {
     await expect(page.locator('h2', { hasText: 'Clocked In' })).toBeVisible();
 
     // Test terminal offline payment queuing
-    await page.getByRole('button', { name: 'Discover Readers' }).click();
-    await page.waitForTimeout(500);
     // As mock does not work fully offline, we only rely on the "New Order" test for POS Tx
 
     // Restore network
