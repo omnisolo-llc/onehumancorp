@@ -460,9 +460,9 @@ pub struct TeamInvitesResponse {
 }
 
 #[derive(Clone)]
-struct GrowthState {
-    pool: PgPool,
-    hub: Arc<Hub>,
+pub struct GrowthState {
+    pub pool: PgPool,
+    pub hub: Arc<Hub>,
 }
 
 async fn handle_social_post(
