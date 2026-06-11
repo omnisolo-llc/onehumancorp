@@ -126,6 +126,11 @@ Or you can use the automated script:
 bazelisk run //:deploy_dev
 ```
 
+> **Note:** If you encounter Docker Hub rate limits (`error from registry: You have reached your unauthenticated pull rate limit.`) or missing images for `onehumancorp/server:latest` or `valkey/pgvector`, the local-first Bazel build flow via `npx @bazel/bazelisk run //deploy:load_all_images` is the required primary path. Additionally, ensure you include the override file when running compose manually:
+> ```bash
+> cd deploy && docker compose -f docker-compose.yml -f docker-compose.override.yml up -d
+> ```
+
 Services:
 | Service | Port | Description |
 |---------|------|-------------|

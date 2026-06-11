@@ -117,6 +117,22 @@
         animation: shake 0.2s ease-in-out 0s 2;
       }
 
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+      .spinner {
+        display: inline-block;
+        width: 16px;
+        height: 16px;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        border-radius: 50%;
+        border-top-color: #fff;
+        animation: spin 1s ease-in-out infinite;
+        vertical-align: middle;
+        margin-right: 8px;
+      }
+
       @media (prefers-color-scheme: dark) {
         body {
           background-color: #16161a;
@@ -306,6 +322,9 @@
       .persona-chip {
         flex: 0 0 auto;
         padding: 8px 16px;
+        min-height: 44px;
+        display: flex;
+        align-items: center;
         border-radius: 20px;
         background: rgba(0, 102, 255, 0.1);
         color: #0066FF;
@@ -383,7 +402,7 @@
           width: 100%;
           border: none;
         }
-        input, select, textarea, button, .radio-option {
+        input, select, textarea, button, .radio-option, .persona-chip {
           min-height: 44px !important;
         }
       }
@@ -410,10 +429,10 @@
         <p>Choose a quick-start or select how you work.</p>
 
         <div class="persona-row">
-            <div class="persona-chip" onclick="applyPersona('Baker')">I'm a Baker</div>
-            <div class="persona-chip" onclick="applyPersona('Handyman')">I'm a Handyman</div>
-            <div class="persona-chip" onclick="applyPersona('Boutique')">I'm a Boutique Owner</div>
-            <div class="persona-chip" onclick="applyPersona('Tutor')">I'm a Tutor</div>
+            <div class="persona-chip" onclick="applyPersona('Baker', event)">I'm a Baker</div>
+            <div class="persona-chip" onclick="applyPersona('Handyman', event)">I'm a Handyman</div>
+            <div class="persona-chip" onclick="applyPersona('Boutique', event)">I'm a Boutique Owner</div>
+            <div class="persona-chip" onclick="applyPersona('Tutor', event)">I'm a Tutor</div>
         </div>
 
         <div class="radio-group" id="context-group">
@@ -566,7 +585,7 @@
     <script>
       const container = document.getElementById('form-container');
 
-      function applyPersona(persona) {
+      function applyPersona(persona, event) {
           document.querySelectorAll('.persona-chip').forEach(el => el.classList.remove('selected'));
           event.target.classList.add('selected');
 
@@ -687,7 +706,7 @@
         .then(res => res.json())
         .then(apiState => {
             if (apiState && Object.keys(apiState).length > 0) {
-                state = { ...state, ...apiState };
+                state = { ...state, ...(apiState.wizardState || apiState) };
                 populateForm();
             }
         })
@@ -1016,7 +1035,7 @@
 
                if (window.__TAURI__ && window.__TAURI__.core) {
                  finishBtn.disabled = true;
-                 finishBtn.innerText = "Saving...";
+                 finishBtn.innerHTML = '<div class="spinner"></div>Saving...';
                  window.__TAURI__.core.invoke("start_onboarding", { req }).then(() => {
                    window.location.href = "success.html";
                  }).catch((err) => {
@@ -1026,7 +1045,7 @@
                  });
                } else {
                  finishBtn.disabled = true;
-                 finishBtn.innerText = "Saving...";
+                 finishBtn.innerHTML = '<div class="spinner"></div>Saving...';
                  const backendUrl = (window.location.origin.includes('localhost') || window.location.protocol === 'file:') ? 'http://127.0.0.1:18789' : '';
                  fetch(`${backendUrl}/api/onboarding/start`, {
                      method: 'POST',

@@ -25,6 +25,7 @@ import { ReviewFeedCard } from './ReviewFeedCard';
 import { NeighborhoodPulseCard } from "./NeighborhoodPulseCard";
 import { PromoterCard } from "./PromoterCard";
 import { ViralLoopPerformanceWidget } from "./ViralLoopPerformanceWidget";
+import { SuccessMilestoneWidget } from "./SuccessMilestoneWidget";
 import { SuccessMilestoneAlert } from "./SuccessMilestoneAlert";
 import AffiliateMarketingWidget from "./AffiliateMarketingWidget";
 import { CartRecoveryWidget } from "./CartRecoveryWidget";
@@ -407,6 +408,7 @@ export default function Dashboard() {
       </div>
 
       <SuccessMilestoneAlert />
+      <SuccessMilestoneWidget />
       <ViralLoopPerformanceWidget />
       <div className="mb-6">
         <div className="mb-4"><CartRecoveryWidget /></div>
@@ -833,6 +835,15 @@ export default function Dashboard() {
               </div>
               <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">AI Invoice Generator</h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">Generate professional, shareable invoices that bring new customers to OHC.</p>
+            </Link>
+
+            <Link href="/proposal-generator" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+              <div className="flex items-start justify-between mb-4">
+                <div className="w-12 h-12 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">📝</div>
+                <div className="text-blue-600 dark:text-blue-400 font-semibold text-sm bg-blue-50 dark:bg-blue-900/30 px-3 py-1 rounded-full">Sales</div>
+              </div>
+              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">AI Proposal Generator</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Create smart, shareable proposals with an interactive approval flow to win clients faster.</p>
             </Link>
 
             <Link href="/milestones" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">

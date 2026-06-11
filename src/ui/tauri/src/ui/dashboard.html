@@ -576,6 +576,12 @@
     <div class="container">
       <div class="status-badge">🟢 Standalone Mode (Zero Data Leakage)</div>
 
+      <div class="ohc-growth-card" id="promoter-card" style="margin-top: 20px;">
+        <h2>The Promoter Agent</h2>
+        <p>Automatically draft and schedule marketing copy for your newest products.</p>
+        <a href="promoter.html" id="promoter-btn" style="display: inline-block; background-color: #34C759; color: white; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s;">Promote New Product</a>
+      </div>
+
 
       <div id="milestone-container" class="milestone-card" data-testid="success-milestone-alert">
         <div class="milestone-badge">Milestone Unlocked</div>
@@ -668,8 +674,18 @@
         <p id="referral-tier-subtext" style="font-size: 13px; color: #666;"></p>
       </div>
 
+
+      <div class="ohc-growth-card" style="margin-bottom: 20px;">
+        <h2>Embed Your AI Agent</h2>
+        <p>Embed a smart chat widget on your own website. Every embedded widget includes a referral link that earns you rewards.</p>
+        <button id="dashboard-embed-chat-btn" style="background-color: #0066FF; color: white; border: none; padding: 10px 16px; border-radius: 16px; cursor: pointer;">
+          Copy Chat Embed Code
+        </button>
+      </div>
+
       <div class="ohc-growth-card" style="margin-bottom: 20px;">
         <h2>Agent Public Profile</h2>
+
         <p>Generate a shareable public card for your AI agent to build trust and acquire new customers.</p>
         <button onclick="window.location.href='agent-card.html'" style="background-color: #0066FF; color: white; border: none; padding: 10px 16px; border-radius: 16px; cursor: pointer;">
           Create Agent Card
@@ -681,6 +697,7 @@
         <p>Bridge your local sovereignty with cloud-native collaboration. Invite a team member to view agents in a secure cloud tenant.</p>
 
         <button id="generate-link-btn" data-tooltip="Click here to share access with a team member.">Get My Invite Link</button>
+        <div style="margin-top: 15px;"><a href="embed-builder.html" class="btn-primary" style="background-color: #34C759; text-decoration: none;">Open Widget Builder</a></div>
 
         <div class="link-container" id="link-container">
           <input type="text" class="link-input" id="referral-link" readonly value="" />
@@ -714,6 +731,7 @@
         <h2>Viral Campaigns</h2>
         <p>Acquire new users and grow your audience through viral sharing.</p>
         <a href="giveaway/index.html" id="giveaway-link" style="display: inline-block; background-color: #0066FF; color: white; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Viral Giveaway Generator</a>
+        <a href="share-cards.html" id="share-cards-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Social Share Cards ✨</a>
         <a href="work-intake-widget.html" id="work-intake-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s;">Work-Intake Widget 📋</a>
       </div>
 
@@ -1226,7 +1244,7 @@
 
               copyBtn.addEventListener('click', async () => {
                 const link = await getInviteLink();
-                const textToCopy = `I just hit a huge business milestone (${reachedMilestone.title}) using OHC! Launch your own store today: ${link}\n\n⚡ Powered by OHC`;
+                const textToCopy = `I just hit a huge business milestone (${reachedMilestone.title}) using OHC! Launch your own store today: ${link} ⚡ Powered by OHC`;
                 const tempInput = document.createElement('textarea');
                 tempInput.value = textToCopy;
                 document.body.appendChild(tempInput);
@@ -1243,7 +1261,7 @@
 
               xBtn.addEventListener('click', async () => {
                 const link = await getInviteLink();
-                const text = `I just hit a huge business milestone (${reachedMilestone.title}) using OHC! Launch your own store today: ${link}\n\n⚡ Powered by OHC`;
+                const text = `I just hit a huge business milestone (${reachedMilestone.title}) using OHC! Launch your own store today: ${link} ⚡ Powered by OHC`;
                 window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, '_blank');
               });
             }
@@ -1255,7 +1273,24 @@
       checkMilestones();
 
 
+
       const generateBtn = document.getElementById('generate-link-btn');
+
+      const chatEmbedBtn = document.getElementById('dashboard-embed-chat-btn');
+      if (chatEmbedBtn) {
+        chatEmbedBtn.addEventListener('click', () => {
+          const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default-team';
+          const embedCode = `<iframe src="https://ohc.app/api/ui/chat-embed.html?tenant=${tenantId}&name=Support&welcome=How%20can%20I%20help%3F" width="350" height="500" style="border:none; border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.1); position:fixed; bottom:20px; right:20px; z-index:99999;"></iframe>`;
+          navigator.clipboard.writeText(embedCode).then(() => {
+            const originalText = chatEmbedBtn.textContent;
+            chatEmbedBtn.textContent = 'Copied!';
+            setTimeout(() => {
+              chatEmbedBtn.textContent = originalText;
+            }, 2000);
+          });
+        });
+      }
+
       const linkContainer = document.getElementById('link-container');
       const copyBtn = document.getElementById('copy-btn');
       const referralLink = document.getElementById('referral-link');
@@ -1382,6 +1417,23 @@
             const approveTestId = isDraft ? "approve-draft" : "approve-proposal";
             const approveText = isDraft ? "Yes, draft it!" : "Approve";
 
+            if (item.proposed_action?.feature_type === 'quote_draft' || item.context_payload?.feature_type === 'quote_draft') {
+              return `
+                <div class="triage-item" data-testid="triage-card-${item.id}" id="triage-${item.id}">
+                  <div class="triage-header">
+                    <div class="triage-source" style="text-transform: uppercase; font-size: 10px; background: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 4px 8px; border-radius: 4px;">${(item.event_source || 'Unknown').replace('_', ' ')}</div>
+                    <div class="triage-priority" style="font-size: 12px; color: #6b7280;">Action Needed</div>
+                  </div>
+                  <div class="triage-context" style="font-size: 16px; font-weight: 600; margin-top: 8px;">${description}</div>
+                  <div class="triage-controls" style="margin-top: 12px;">
+                    <button class="triage-btn-approve" data-testid="edit-quote-draft" onclick="window.location.href='quote.html?id=${item.id}'">Review Quote</button>
+                    <button class="triage-btn-dismiss" data-testid="reject-proposal" onclick="handleTriageAction('${item.id}', 'DISMISSED')">Dismiss</button>
+                  </div>
+                </div>
+              `;
+            }
+
+
 
           if (item.proposed_action?.action_type === 'SocialPostDraft') {
             let parsedPayload = item.proposed_action || {};
@@ -1402,6 +1454,30 @@
                 </div>
                 <div class="triage-controls" style="display: flex; gap: 8px;">
                   <button class="triage-btn-approve" data-testid="approve-btn" onclick="handleTriageAction('${item.id}', 'APPROVED')" style="flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 12px; font-weight: 600; border: none; cursor: pointer;">Approve & Schedule</button>
+                  <button class="triage-btn-dismiss" onclick="handleTriageAction('${item.id}', 'DISMISSED')" style="flex: 1; background: rgba(0,0,0,0.05); color: #1d1d1f; padding: 12px; border-radius: 12px; font-weight: 600; border: none; cursor: pointer;">Edit Draft</button>
+                </div>
+              </div>
+            `;
+          }
+
+          if (item.event_source === 'instagram_dm' || item.context_payload?.feature_type === 'instagram_dm') {
+            let parsedPayload = item.context_payload || {};
+            return `
+              <div class="triage-item" data-testid="triage-card-${item.id}" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.4); backdrop-filter: blur(20px); border-radius: 16px; padding: 16px; border: 1px solid rgba(255,255,255,0.6);">
+                <div class="triage-header" style="margin-bottom: 12px;">
+                  <div class="triage-source" style="display: flex; align-items: center; gap: 8px;">
+                    <span style="font-size: 18px;">💬</span> <strong>Instagram DM</strong>
+                  </div>
+                  <div class="triage-priority ${priorityClass}">${item.priority || 'Normal'}</div>
+                </div>
+                <div class="triage-context" style="font-weight: 600; margin-bottom: 12px; font-size: 15px;">
+                  ${parsedPayload.customer_message || 'New message'}
+                </div>
+                <div style="background: rgba(0,0,0,0.03); padding: 12px; border-radius: 12px; margin-bottom: 16px; font-size: 14px; color: #333; font-style: italic;">
+                  ${parsedPayload.draft_reply || ''}
+                </div>
+                <div class="triage-controls" style="display: flex; gap: 8px;">
+                  <button class="triage-btn-approve" data-testid="approve-instagram-dm" onclick="handleTriageAction('${item.id}', 'APPROVED')" style="flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 12px; font-weight: 600; border: none; cursor: pointer;">Approve Reply</button>
                   <button class="triage-btn-dismiss" onclick="handleTriageAction('${item.id}', 'DISMISSED')" style="flex: 1; background: rgba(0,0,0,0.05); color: #1d1d1f; padding: 12px; border-radius: 12px; font-weight: 600; border: none; cursor: pointer;">Edit Draft</button>
                 </div>
               </div>
@@ -2214,4 +2290,5 @@ initWalkthrough();
 </script>
 
 </body>
+<script src="floating_help.js"></script>
 </html>

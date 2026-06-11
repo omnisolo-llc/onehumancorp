@@ -306,6 +306,10 @@ impl InventoryService {
                     .execute(&mut *tx)
                     .await;
 
+                // Directly notify Operations Agent for real-time monitoring as per Step 3
+                tracing::info!("Real-time stock level monitored: {} drops below threshold. Triggered LowStockAlert for Operations Agent.", product_id);
+
+
                 let action_request_id = Uuid::new_v4().to_string();
                 let action_payload = serde_json::json!({
                     "product_id": product_id,
@@ -356,6 +360,7 @@ impl InventoryService {
 mod tests {
     use super::*;
     use crate::db::DbStore;
+    use std::sync::Arc;
 
     #[tokio::test]
     async fn test_reserve_inventory_concurrent_redlock() {

@@ -41,7 +41,7 @@ test.describe('In-Person Payment (POS) Flow - Offline Bundling', () => {
     await page.evaluate(() => window.dispatchEvent(new Event('offline')));
 
     // Trigger New Order
-    await page.getByRole('button', { name: 'New Order' }).click();
+    await page.locator('text=Quick Charge').click();
 
     // Verify Payment total and offline
     await expect(page.locator('text=Payment Saved Offline - 50 USD')).toBeVisible();

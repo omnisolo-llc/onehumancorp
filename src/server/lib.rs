@@ -46,6 +46,7 @@ static UI_BOOKINGS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache
 static UI_INBOX_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<Vec<serde_json::Value>>> = std::sync::OnceLock::new();
 
 static UI_DASHBOARD_METRICS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<serde_json::Value>> = std::sync::OnceLock::new();
+static UI_UNIFIED_FEED_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<serde_json::Value>> = std::sync::OnceLock::new();
 static UI_UNIFIED_AGENT_FEED_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<serde_json::Value>> = std::sync::OnceLock::new();
 static UI_TRIAGE_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<Vec<serde_json::Value>>> = std::sync::OnceLock::new();
 static METRICS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<HttpMetricsResponse>> = std::sync::OnceLock::new();
@@ -96,6 +97,61 @@ pub fn is_standalone_runtime() -> bool {
     true
 }
 
+<<<<<<< Updated upstream
+pub fn get_tooltips_registry() -> &'static RwLock<HashMap<String, String>> {
+    TOOLTIPS_REGISTRY.get_or_init(|| {
+    let mut m = HashMap::new();
+    m.insert("bio-input-tooltip".to_string(), "Describe what you sell, your target audience, and the vibe of your brand.".to_string());
+    m.insert("generate-btn-tooltip".to_string(), "Our AI agents will analyze your description and build a ready-to-launch store for you.".to_string());
+    m.insert("launch-btn-tooltip".to_string(), "Launch your storefront immediately to a live URL.".to_string());
+    m.insert("dashboard-tooltip".to_string(), "View your daily sales and overall business health.".to_string());
+    m.insert("inventory-tooltip".to_string(), "Manage your inventory, prices, and stock levels.".to_string());
+    m.insert("orders-tooltip".to_string(), "See what customers bought and track order fulfillment.".to_string());
+    m.insert("team-activity-tooltip".to_string(), "Monitor the real-time actions and tasks being performed by your AI workforce.".to_string());
+    m.insert("referral-tooltip".to_string(), "Share your unique link to earn credits when friends join OHC.".to_string());
+    m.insert("changelog-nav-tooltip".to_string(), "See what's new in the latest OneHumanCorp updates.".to_string());
+    m.insert("walkthrough-btn-tooltip".to_string(), "Start an interactive guide to learn how to use OHC.".to_string());
+    m.insert("api-docs-tooltip".to_string(), "Direct API access is only for custom integrations.".to_string());
+    m.insert("checkout-pay-now-tooltip".to_string(), "Click here to securely finish your purchase and process your payment.".to_string());
+    m.insert("checkout-subscribe-tooltip".to_string(), "Start a monthly subscription using saved wallet payment for frictionless vaulting.".to_string());
+    m.insert("checkout-tap-to-pay-tooltip".to_string(), "Tap your card or phone on the reader to pay in person.".to_string());
+    m.insert("checkout-mercadopago-tooltip".to_string(), "Pay securely using Mercado Pago.".to_string());
+    m.insert("checkout-cancel-tooltip".to_string(), "Go back to the previous screen without subscribing.".to_string());
+    m.insert("checkout-plan-upgrade-tooltip".to_string(), "Click here to securely subscribe to the plan.".to_string());
+    m.insert("change-vibe-tooltip".to_string(), "Change the theme and colors of your website.".to_string());
+    m.insert("help-center-nav-btn".to_string(), "Access the Help Center".to_string());
+    m.insert("dashboard-walkthrough-btn".to_string(), "Take a tour of the dashboard".to_string());
+    m.insert("pos-walkthrough-btn".to_string(), "Take a tour of Quick Charge POS".to_string());
+    m.insert("assistant-walkthrough-btn".to_string(), "Take a tour of the Assistant Workspace".to_string());
+    m.insert("remove-branding-tooltip".to_string(), "Upgrade to Premium to remove OHC branding.".to_string());
+    m.insert("settings-verify-tooltip".to_string(), "Verify your number to receive critical notifications.".to_string());
+    m.insert("settings-otp-tooltip".to_string(), "Click to confirm the code sent to your phone.".to_string());
+    m.insert("settings-delivery-tooltip".to_string(), "Turn this on to offer local delivery to your customers.".to_string());
+    m.insert("total-sales-tooltip".to_string(), "Total revenue generated from database orders.".to_string());
+    m.insert("recent-orders-tooltip".to_string(), "View the latest orders placed by your customers.".to_string());
+    m.insert("inbox-activity-tooltip".to_string(), "Keep track of recent customer messages.".to_string());
+    m.insert("kairos-nav-link-tooltip".to_string(), "Click here to see what your AI helpers are working on and how they plan.".to_string());
+    m.insert("help-btn-tooltip".to_string(), "Need help? Click here to access our Help Center and tutorials.".to_string());
+    m.insert("pricing-tier-tooltip".to_string(), "Select the plan that best fits your business needs.".to_string());
+    m.insert("swarm-online-tooltip".to_string(), "Your AI workforce is active. They process tasks in the background.".to_string());
+    m.insert("department-card-tooltip".to_string(), "Click to view and manage pending approvals for this department.".to_string());
+    m.insert("nav-dashboard-tooltip".to_string(), "View your store metrics, recent orders, and overall performance.".to_string());
+    m.insert("nav-agents-tooltip".to_string(), "Manage your AI workforce, check their tasks, and hire new agents.".to_string());
+    m.insert("nav-setup-tooltip".to_string(), "Configure your business details, branding, and payment settings.".to_string());
+    m.insert("credit-tooltip".to_string(), "Earn credits to use on premium tools when you refer a friend.".to_string());
+    m.insert("todays-sales-tooltip".to_string(), "Your total sales for today. Check back often to track your progress.".to_string());
+    m.insert("approval-inbox-tooltip".to_string(), "Review tasks that your AI agents need permission to execute. Approve or deny them here.".to_string());
+    m.insert("ask-ai-tooltip".to_string(), "Open the AI Chat to get answers instantly. The AI reads our entire Help Center for you.".to_string());
+    m.insert("morning-briefing".to_string(), "Your AI Decision Assistant's daily summary.".to_string());
+    m.insert("checkout-mercadopago-plan-upgrade-tooltip".to_string(), "Click here to securely subscribe to the plan via Mercado Pago.".to_string());
+    m.insert("api-docs-spec-tooltip".to_string(), "The raw OpenAPI JSON specification.".to_string());
+    m.insert("help-search-tooltip".to_string(), "Search our knowledge base for help articles.".to_string());
+    m.insert("changelog-tooltip".to_string(), "See what has changed in the latest version.".to_string());
+    RwLock::new(m)
+    })
+}
+=======
+>>>>>>> Stashed changes
 
 pub fn get_workflow_registry() -> &'static RwLock<Vec<WorkflowRecord>> {
     WORKFLOW_REGISTRY.get_or_init(|| RwLock::new(Vec::new()))
@@ -2347,6 +2403,10 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let booking_reengagement_worker = crate::workers::booking_reengagement::BookingReengagementWorker::new(db.clone());
     booking_reengagement_worker.start();
 
+    // Start Message Triage Worker
+    let message_triage_worker = Arc::new(crate::workers::message_triage_worker::MessageTriageWorker::new(db.clone()));
+    message_triage_worker.start();
+
     // Start Proactive Analysis Worker
     let proactive_analysis_worker = crate::workers::proactive_analysis_job::ProactiveAnalysisWorker::new(db.clone());
     proactive_analysis_worker.start();
@@ -2545,7 +2605,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
             monitor_mesh,
             monitor_hub,
             is_cloud,
-            std::time::Duration::from_secs(30),
+            if is_cloud { std::time::Duration::from_secs(30) } else { std::time::Duration::from_secs(300) },
         )
         .await;
     });
@@ -2897,14 +2957,13 @@ pub async fn update_ui_triage_action_handler(
                     if action_type == "Draft Reply" {
                         let new_msg_id = format!("msg-{}", uuid::Uuid::new_v4());
                         let _ = sqlx::query(
-                            "INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, status) VALUES ($1, $2, $3, $4, $5, $6, $7)"
+                            "INSERT INTO inbox_messages (id, tenant_id, source, content, draft_reply, status) VALUES ($1, $2, $3, $4, $5, $6)"
                         )
                         .bind(&new_msg_id)
                         .bind(&tenant_id)
-                        .bind("triage-action")
+                        .bind("Triage Action")
                         .bind(&action_payload)
-                        .bind(&action_payload)
-                        .bind("en")
+                        .bind("")
                         .bind("sent")
                         .execute(&mut *tx)
                         .await;
@@ -3105,32 +3164,52 @@ pub(crate) async fn load_ui_dashboard_metrics(
 
 
 
-async fn load_ui_orders_from_db(db: &crate::db::DB, tenant_id: &str) -> Result<Vec<serde_json::Value>, sqlx::Error> {
+async fn load_ui_orders_from_db(db: &crate::db::DB, tenant_id: &str, mobile_optimized: bool) -> Result<Vec<serde_json::Value>, sqlx::Error> {
     use sqlx::Row;
     match &db.store {
         crate::db::DbStore::Postgres => {
             sqlx::query("SELECT o.id, COALESCE(c.name, '') AS customer_name, COALESCE(o.total_amount, 0.0) AS total_amount, COALESCE(o.status, '') AS status, COALESCE(o.created_at::text, '') AS created_at FROM orders o LEFT JOIN customers c ON c.id = o.customer_id AND c.tenant_id = o.tenant_id WHERE o.tenant_id = $1 ORDER BY o.created_at DESC LIMIT 50")
                 .bind(tenant_id)
                 .fetch_all(&db.pool)
-                .await.map(|rows| rows.into_iter().map(|row| serde_json::json!({
-                    "id": row.get::<String, _>("id"),
-                    "customer_name": row.get::<String, _>("customer_name"),
-                    "total_amount": row.get::<f64, _>("total_amount"),
-                    "status": row.get::<String, _>("status"),
-                    "created_at": row.get::<String, _>("created_at")
-                })).collect())
+                .await.map(|rows| rows.into_iter().map(|row| {
+                    if mobile_optimized {
+                        serde_json::json!({
+                            "id": row.get::<String, _>("id"),
+                            "total_amount": row.get::<f64, _>("total_amount"),
+                            "status": row.get::<String, _>("status"),
+                        })
+                    } else {
+                        serde_json::json!({
+                            "id": row.get::<String, _>("id"),
+                            "customer_name": row.get::<String, _>("customer_name"),
+                            "total_amount": row.get::<f64, _>("total_amount"),
+                            "status": row.get::<String, _>("status"),
+                            "created_at": row.get::<String, _>("created_at")
+                        })
+                    }
+                }).collect())
         },
         crate::db::DbStore::Sqlite(pool) => {
             sqlx::query("SELECT o.id, COALESCE(c.name, '') AS customer_name, COALESCE(o.total_amount, 0.0) AS total_amount, COALESCE(o.status, '') AS status, COALESCE(CAST(o.created_at AS TEXT), '') AS created_at FROM orders o LEFT JOIN customers c ON c.id = o.customer_id AND c.tenant_id = o.tenant_id WHERE o.tenant_id = ? ORDER BY o.created_at DESC LIMIT 50")
                 .bind(tenant_id)
                 .fetch_all(pool)
-                .await.map(|rows| rows.into_iter().map(|row| serde_json::json!({
-                    "id": row.get::<String, _>("id"),
-                    "customer_name": row.get::<String, _>("customer_name"),
-                    "total_amount": row.get::<f64, _>("total_amount"),
-                    "status": row.get::<String, _>("status"),
-                    "created_at": row.get::<String, _>("created_at")
-                })).collect())
+                .await.map(|rows| rows.into_iter().map(|row| {
+                    if mobile_optimized {
+                        serde_json::json!({
+                            "id": row.get::<String, _>("id"),
+                            "total_amount": row.get::<f64, _>("total_amount"),
+                            "status": row.get::<String, _>("status"),
+                        })
+                    } else {
+                        serde_json::json!({
+                            "id": row.get::<String, _>("id"),
+                            "customer_name": row.get::<String, _>("customer_name"),
+                            "total_amount": row.get::<f64, _>("total_amount"),
+                            "status": row.get::<String, _>("status"),
+                            "created_at": row.get::<String, _>("created_at")
+                        })
+                    }
+                }).collect())
         }
     }
 }
@@ -3150,7 +3229,7 @@ async fn ui_dashboard_analytics_briefing_handler(
 
     let (metrics_res, inbox_res) = tokio::join!(
         tokio::spawn(async move { load_ui_dashboard_metrics(&db1, &tenant_id1).await }),
-        tokio::spawn(async move { load_ui_inbox_from_db(&db2, &tenant_id2).await })
+        tokio::spawn(async move { load_ui_inbox_from_db(&db2, &tenant_id2, false).await })
     );
 
     let metrics_res = metrics_res.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound));
@@ -3190,7 +3269,7 @@ async fn ui_dashboard_analytics_chat_handler(
     let text = payload.message.to_lowercase();
 
     let (inbox_res, metrics_res) = tokio::join!(
-        load_ui_inbox_from_db(&db, &tenant_id),
+        load_ui_inbox_from_db(&db, &tenant_id, false),
         load_ui_dashboard_metrics(&db, &tenant_id)
     );
 
@@ -3214,40 +3293,64 @@ async fn ui_dashboard_analytics_chat_handler(
     }))).into_response()
 }
 
-async fn load_ui_inbox_from_db(db: &crate::db::DB, tenant_id: &str) -> Result<Vec<serde_json::Value>, sqlx::Error> {
+async fn load_ui_inbox_from_db(db: &crate::db::DB, tenant_id: &str, mobile_optimized: bool) -> Result<Vec<serde_json::Value>, sqlx::Error> {
     use sqlx::Row;
     match &db.store {
         crate::db::DbStore::Postgres => {
             sqlx::query("SELECT id, COALESCE(source, '') AS source, COALESCE(content, '') AS content, COALESCE(original_content, content, '') AS original_content, COALESCE(translated_from_language, '') AS translated_from_language, COALESCE(draft_reply, '') AS draft_reply, COALESCE(status, '') AS status, COALESCE(sender_id, '') AS sender_id, COALESCE(created_at::text, '') AS created_at FROM inbox_messages WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 50")
                 .bind(tenant_id)
                 .fetch_all(&db.pool)
-                .await.map(|rows| rows.into_iter().map(|row| serde_json::json!({
-                    "id": row.get::<String, _>("id"),
-                    "source": row.get::<String, _>("source"),
-                    "content": row.get::<String, _>("content"),
-                    "original_message": row.get::<String, _>("original_content"),
-                    "translated_from_language": row.get::<String, _>("translated_from_language"),
-                    "generated_response": row.get::<String, _>("draft_reply"),
-                    "status": row.get::<String, _>("status"),
-                    "sender_id": row.get::<String, _>("sender_id"),
-                    "created_at": row.get::<String, _>("created_at")
-                })).collect())
+                .await.map(|rows| rows.into_iter().map(|row| {
+                    if mobile_optimized {
+                        serde_json::json!({
+                            "id": row.get::<String, _>("id"),
+                            "source": row.get::<String, _>("source"),
+                            "content": row.get::<String, _>("content"),
+                            "status": row.get::<String, _>("status"),
+                            "created_at": row.get::<String, _>("created_at")
+                        })
+                    } else {
+                        serde_json::json!({
+                            "id": row.get::<String, _>("id"),
+                            "source": row.get::<String, _>("source"),
+                            "content": row.get::<String, _>("content"),
+                            "original_message": row.get::<String, _>("original_content"),
+                            "translated_from_language": row.get::<String, _>("translated_from_language"),
+                            "generated_response": row.get::<String, _>("draft_reply"),
+                            "status": row.get::<String, _>("status"),
+                            "sender_id": row.get::<String, _>("sender_id"),
+                            "created_at": row.get::<String, _>("created_at")
+                        })
+                    }
+                }).collect())
         },
         crate::db::DbStore::Sqlite(pool) => {
             sqlx::query("SELECT id, COALESCE(source, '') AS source, COALESCE(content, '') AS content, COALESCE(original_content, content, '') AS original_content, COALESCE(translated_from_language, '') AS translated_from_language, COALESCE(draft_reply, '') AS draft_reply, COALESCE(status, '') AS status, COALESCE(sender_id, '') AS sender_id, COALESCE(CAST(created_at AS TEXT), '') AS created_at FROM inbox_messages WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 50")
                 .bind(tenant_id)
                 .fetch_all(pool)
-                .await.map(|rows| rows.into_iter().map(|row| serde_json::json!({
-                    "id": row.get::<String, _>("id"),
-                    "source": row.get::<String, _>("source"),
-                    "content": row.get::<String, _>("content"),
-                    "original_message": row.get::<String, _>("original_content"),
-                    "translated_from_language": row.get::<String, _>("translated_from_language"),
-                    "generated_response": row.get::<String, _>("draft_reply"),
-                    "status": row.get::<String, _>("status"),
-                    "sender_id": row.get::<String, _>("sender_id"),
-                    "created_at": row.get::<String, _>("created_at")
-                })).collect())
+                .await.map(|rows| rows.into_iter().map(|row| {
+                    if mobile_optimized {
+                        serde_json::json!({
+                            "id": row.get::<String, _>("id"),
+                            "source": row.get::<String, _>("source"),
+                            "content": row.get::<String, _>("content"),
+                            "status": row.get::<String, _>("status"),
+                            "created_at": row.get::<String, _>("created_at")
+                        })
+                    } else {
+                        serde_json::json!({
+                            "id": row.get::<String, _>("id"),
+                            "source": row.get::<String, _>("source"),
+                            "content": row.get::<String, _>("content"),
+                            "original_message": row.get::<String, _>("original_content"),
+                            "translated_from_language": row.get::<String, _>("translated_from_language"),
+                            "generated_response": row.get::<String, _>("draft_reply"),
+                            "status": row.get::<String, _>("status"),
+                            "sender_id": row.get::<String, _>("sender_id"),
+                            "created_at": row.get::<String, _>("created_at")
+                        })
+                    }
+                }).collect())
         }
     }
 }
@@ -3353,7 +3456,7 @@ async fn load_ui_ledger_from_db(db: &crate::db::DB, tenant_id: &str) -> Result<V
 }
 
 
-async fn load_ui_triage_from_db(db: &crate::db::DB, tenant_id: &str) -> Result<Vec<serde_json::Value>, sqlx::Error> {
+async fn load_ui_triage_from_db(db: &crate::db::DB, tenant_id: &str, mobile_optimized: bool) -> Result<Vec<serde_json::Value>, sqlx::Error> {
     use sqlx::Row;
     match &db.store {
         crate::db::DbStore::Postgres => {
@@ -3364,18 +3467,31 @@ async fn load_ui_triage_from_db(db: &crate::db::DB, tenant_id: &str) -> Result<V
             .fetch_all(&db.pool)
             .await
             .map(|rows| rows.into_iter().map(|row| {
-                serde_json::json!({
-                    "id": row.get::<String, _>("id"),
-                    "tenant_id": row.get::<String, _>("tenant_id"),
-                    "customer_id": row.try_get::<String, _>("customer_id").unwrap_or_default(),
-                    "source": row.try_get::<String, _>("source").unwrap_or_default(),
-                    "priority": row.try_get::<String, _>("priority").unwrap_or_default(),
-                    "context": row.try_get::<String, _>("context").unwrap_or_default(),
-                    "status": row.try_get::<String, _>("status").unwrap_or_default(),
-                    "created_at": row.try_get::<chrono::DateTime<chrono::Utc>, _>("created_at").map(|dt| dt.to_rfc3339()).unwrap_or_default(),
-                    "action_type": row.try_get::<String, _>("action_type").unwrap_or_default(),
-                    "action_payload": row.try_get::<String, _>("action_payload").unwrap_or_default(),
-                })
+                if mobile_optimized {
+                    serde_json::json!({
+                        "id": row.get::<String, _>("id"),
+                        "tenant_id": row.get::<String, _>("tenant_id"),
+                        "customer_id": row.try_get::<String, _>("customer_id").unwrap_or_default(),
+                        "source": row.try_get::<String, _>("source").unwrap_or_default(),
+                        "priority": row.try_get::<String, _>("priority").unwrap_or_default(),
+                        "status": row.try_get::<String, _>("status").unwrap_or_default(),
+                        "created_at": row.try_get::<chrono::DateTime<chrono::Utc>, _>("created_at").map(|dt| dt.to_rfc3339()).unwrap_or_default(),
+                        "action_type": row.try_get::<String, _>("action_type").unwrap_or_default(),
+                    })
+                } else {
+                    serde_json::json!({
+                        "id": row.get::<String, _>("id"),
+                        "tenant_id": row.get::<String, _>("tenant_id"),
+                        "customer_id": row.try_get::<String, _>("customer_id").unwrap_or_default(),
+                        "source": row.try_get::<String, _>("source").unwrap_or_default(),
+                        "priority": row.try_get::<String, _>("priority").unwrap_or_default(),
+                        "context": row.try_get::<String, _>("context").unwrap_or_default(),
+                        "status": row.try_get::<String, _>("status").unwrap_or_default(),
+                        "created_at": row.try_get::<chrono::DateTime<chrono::Utc>, _>("created_at").map(|dt| dt.to_rfc3339()).unwrap_or_default(),
+                        "action_type": row.try_get::<String, _>("action_type").unwrap_or_default(),
+                        "action_payload": row.try_get::<String, _>("action_payload").unwrap_or_default(),
+                    })
+                }
             }).collect::<Vec<_>>())
         }
         crate::db::DbStore::Sqlite(pool) => {
@@ -3386,18 +3502,31 @@ async fn load_ui_triage_from_db(db: &crate::db::DB, tenant_id: &str) -> Result<V
             .fetch_all(pool)
             .await
             .map(|rows| rows.into_iter().map(|row| {
-                serde_json::json!({
-                    "id": row.get::<String, _>("id"),
-                    "tenant_id": row.get::<String, _>("tenant_id"),
-                    "customer_id": row.try_get::<String, _>("customer_id").unwrap_or_default(),
-                    "source": row.try_get::<String, _>("source").unwrap_or_default(),
-                    "priority": row.try_get::<String, _>("priority").unwrap_or_default(),
-                    "context": row.try_get::<String, _>("context").unwrap_or_default(),
-                    "status": row.try_get::<String, _>("status").unwrap_or_default(),
-                    "created_at": row.try_get::<String, _>("created_at").unwrap_or_default(),
-                    "action_type": row.try_get::<String, _>("action_type").unwrap_or_default(),
-                    "action_payload": row.try_get::<String, _>("action_payload").unwrap_or_default(),
-                })
+                if mobile_optimized {
+                    serde_json::json!({
+                        "id": row.get::<String, _>("id"),
+                        "tenant_id": row.get::<String, _>("tenant_id"),
+                        "customer_id": row.try_get::<String, _>("customer_id").unwrap_or_default(),
+                        "source": row.try_get::<String, _>("source").unwrap_or_default(),
+                        "priority": row.try_get::<String, _>("priority").unwrap_or_default(),
+                        "status": row.try_get::<String, _>("status").unwrap_or_default(),
+                        "created_at": row.try_get::<String, _>("created_at").unwrap_or_default(),
+                        "action_type": row.try_get::<String, _>("action_type").unwrap_or_default(),
+                    })
+                } else {
+                    serde_json::json!({
+                        "id": row.get::<String, _>("id"),
+                        "tenant_id": row.get::<String, _>("tenant_id"),
+                        "customer_id": row.try_get::<String, _>("customer_id").unwrap_or_default(),
+                        "source": row.try_get::<String, _>("source").unwrap_or_default(),
+                        "priority": row.try_get::<String, _>("priority").unwrap_or_default(),
+                        "context": row.try_get::<String, _>("context").unwrap_or_default(),
+                        "status": row.try_get::<String, _>("status").unwrap_or_default(),
+                        "created_at": row.try_get::<String, _>("created_at").unwrap_or_default(),
+                        "action_type": row.try_get::<String, _>("action_type").unwrap_or_default(),
+                        "action_payload": row.try_get::<String, _>("action_payload").unwrap_or_default(),
+                    })
+                }
             }).collect::<Vec<_>>())
         }
     }
@@ -3507,7 +3636,7 @@ async fn ui_dashboard_unified_feed_handler(
     let mobile_optimized = query.mobile_optimized.unwrap_or(false);
 
     let cache_key = format!("ui_dashboard_unified:{}:mobile:{}", tenant_id, mobile_optimized);
-    let cache = UI_DASHBOARD_METRICS_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
+    let cache = UI_UNIFIED_FEED_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
 
     // Check cache
     if let Some((cached, is_stale)) = cache.get_with_swr(&cache_key).await {
@@ -3528,9 +3657,9 @@ async fn ui_dashboard_unified_feed_handler(
         tokio::spawn(async move {
             let (metrics_res, orders_res, messages_res, triage_res, approvals_res, agent_feed_res, priority_tasks_res) = tokio::join!(
                 tokio::spawn({ let db = db_bg.clone(); let t = t_bg.clone(); async move { load_ui_dashboard_metrics(&db, &t).await } }),
-                tokio::spawn({ let db = db_bg.clone(); let t = t_bg.clone(); async move { load_ui_orders_from_db(&db, &t).await } }),
-                tokio::spawn({ let db = db_bg.clone(); let t = t_bg.clone(); async move { load_ui_inbox_from_db(&db, &t).await } }),
-                tokio::spawn({ let db = db_bg.clone(); let t = t_bg.clone(); async move { load_ui_triage_from_db(&db, &t).await } }),
+                tokio::spawn({ let db = db_bg.clone(); let t = t_bg.clone(); async move { load_ui_orders_from_db(&db, &t, mobile_optimized).await } }),
+                tokio::spawn({ let db = db_bg.clone(); let t = t_bg.clone(); async move { load_ui_inbox_from_db(&db, &t, mobile_optimized).await } }),
+                tokio::spawn({ let db = db_bg.clone(); let t = t_bg.clone(); async move { load_ui_triage_from_db(&db, &t, mobile_optimized).await } }),
                 tokio::spawn({ let db = db_bg.clone(); let t = t_bg.clone(); async move { load_ui_agent_approvals_from_db(&db, &t).await } }),
                 tokio::spawn({ let db = db_bg.clone(); let t = t_bg.clone(); async move { load_ui_agent_feed_from_db(&db, &t).await } }),
                 tokio::spawn({ let db = db_bg.clone(); let t = t_bg.clone(); async move { load_ui_priority_tasks_from_db(&db, &t).await } })
@@ -3587,7 +3716,7 @@ async fn ui_dashboard_unified_feed_handler(
                 "agent_feed": agent_feed,
                 "priority_tasks": priority_tasks,
             });
-            if let Some(c) = UI_DASHBOARD_METRICS_CACHE.get() {
+            if let Some(c) = UI_UNIFIED_FEED_CACHE.get() {
                 c.set(&cache_key_bg, result, std::time::Duration::from_secs(10)).await;
             }
         });
@@ -3602,10 +3731,10 @@ async fn ui_dashboard_unified_feed_handler(
 
     let (metrics_res, orders_res, messages_res, supply_res, triage_res, approvals_res, agent_feed_res, priority_tasks_res) = tokio::join!(
         tokio::spawn({ let db = db.clone(); let t = tenant_id.clone(); async move { load_ui_dashboard_metrics(&db, &t).await } }),
-        tokio::spawn({ let db = db.clone(); let t = tenant_id.clone(); async move { load_ui_orders_from_db(&db, &t).await } }),
-        tokio::spawn({ let db = db.clone(); let t = tenant_id.clone(); async move { load_ui_inbox_from_db(&db, &t).await } }),
+        tokio::spawn({ let db = db.clone(); let t = tenant_id.clone(); async move { load_ui_orders_from_db(&db, &t, mobile_optimized).await } }),
+        tokio::spawn({ let db = db.clone(); let t = tenant_id.clone(); async move { load_ui_inbox_from_db(&db, &t, mobile_optimized).await } }),
         tokio::spawn({ let db = db.clone(); let t = tenant_id.clone(); async move { load_ui_supply_from_db(&db, &t).await } }),
-        tokio::spawn({ let db = db.clone(); let t = tenant_id.clone(); async move { load_ui_triage_from_db(&db, &t).await } }),
+        tokio::spawn({ let db = db.clone(); let t = tenant_id.clone(); async move { load_ui_triage_from_db(&db, &t, mobile_optimized).await } }),
         tokio::spawn({ let db = db.clone(); let t = tenant_id.clone(); async move { load_ui_agent_approvals_from_db(&db, &t).await } }),
         tokio::spawn({ let db = db.clone(); let t = tenant_id.clone(); async move { load_ui_agent_feed_from_db(&db, &t).await } }),
         tokio::spawn({ let db = db.clone(); let t = tenant_id.clone(); async move { load_ui_priority_tasks_from_db(&db, &t).await } })
@@ -3711,6 +3840,7 @@ async fn ui_dashboard_unified_agent_feed_handler(
                 for item in entries.iter_mut() {
                     if let Some(obj) = item.as_object_mut() {
                         obj.remove("payload");
+                        obj.remove("context_payload");
                     }
                 }
             }
@@ -3743,6 +3873,7 @@ async fn ui_dashboard_unified_agent_feed_handler(
         for item in entries.iter_mut() {
             if let Some(obj) = item.as_object_mut() {
                 obj.remove("payload");
+                obj.remove("context_payload");
             }
         }
     }
@@ -3763,8 +3894,9 @@ async fn list_ui_orders_handler(
     use axum::response::IntoResponse;
     use sqlx::Row;
     let tenant_id = ui_tenant_id(&query);
+    let mobile_optimized = query.mobile_optimized.unwrap_or(false);
 
-    let cache_key = format!("ui_orders:{}", tenant_id);
+    let cache_key = format!("ui_orders:{}:mobile:{}", tenant_id, mobile_optimized);
     let cache = UI_ORDERS_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
     if let Some((cached, is_stale)) = cache.get_with_swr(&cache_key).await {
         if !is_stale {
@@ -3774,8 +3906,9 @@ async fn list_ui_orders_handler(
         let db = db.clone();
         let t = tenant_id.clone();
         let cache_key_bg = cache_key.clone();
+        let mobile_optimized = query.mobile_optimized.unwrap_or(false);
         tokio::spawn(async move {
-            if let Ok(orders) = load_ui_orders_from_db(&db, &t).await {
+            if let Ok(orders) = load_ui_orders_from_db(&db, &t, mobile_optimized).await {
                 if let Some(c) = UI_ORDERS_CACHE.get() {
                     c.set(&cache_key_bg, orders, std::time::Duration::from_secs(5)).await;
                 }
@@ -3865,8 +3998,9 @@ async fn list_ui_bookings_handler(
     use axum::response::IntoResponse;
     use sqlx::Row;
     let tenant_id = ui_tenant_id(&query);
+    let mobile_optimized = query.mobile_optimized.unwrap_or(false);
 
-    let cache_key = format!("ui_bookings:{}", tenant_id);
+    let cache_key = format!("ui_bookings:{}:mobile:{}", tenant_id, mobile_optimized);
     let cache = UI_BOOKINGS_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
     if let Some((cached, is_stale)) = cache.get_with_swr(&cache_key).await {
         if !is_stale {
@@ -4026,8 +4160,9 @@ async fn list_ui_inbox_handler(
     use axum::response::IntoResponse;
     use sqlx::Row;
     let tenant_id = ui_tenant_id(&query);
+    let mobile_optimized = query.mobile_optimized.unwrap_or(false);
 
-    let cache_key = format!("ui_inbox:{}", tenant_id);
+    let cache_key = format!("ui_inbox:{}:mobile:{}", tenant_id, mobile_optimized);
     let cache = UI_INBOX_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
     if let Some((cached, is_stale)) = cache.get_with_swr(&cache_key).await {
         if !is_stale {
@@ -4037,8 +4172,9 @@ async fn list_ui_inbox_handler(
         let db = db.clone();
         let t = tenant_id.clone();
         let cache_key_bg = cache_key.clone();
+        let mobile_optimized = query.mobile_optimized.unwrap_or(false);
         tokio::spawn(async move {
-            if let Ok(messages) = load_ui_inbox_from_db(&db, &t).await {
+            if let Ok(messages) = load_ui_inbox_from_db(&db, &t, mobile_optimized).await {
                 if let Some(c) = UI_INBOX_CACHE.get() {
                     c.set(&cache_key_bg, messages, std::time::Duration::from_secs(5)).await;
                 }
@@ -4155,8 +4291,9 @@ async fn ui_dashboard_metrics_handler(
 ) -> axum::response::Response {
     use axum::response::IntoResponse;
     let tenant_id = ui_tenant_id(&query);
+    let mobile_optimized = query.mobile_optimized.unwrap_or(false);
 
-    let cache_key = format!("ui_dashboard_metrics:{}", tenant_id);
+    let cache_key = format!("ui_dashboard_metrics:{}:mobile:{}", tenant_id, mobile_optimized);
     let cache = UI_DASHBOARD_METRICS_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
     if let Some((cached, is_stale)) = cache.get_with_swr(&cache_key).await {
         if !is_stale {
@@ -5119,6 +5256,7 @@ async fn create_ui_bom_item_handler(
         .route("/api/help/search", axum::routing::get(crate::api::docs::search_articles))
         .route("/api/help/{article_id}", axum::routing::get(crate::api::docs::get_article_handler))
         .route("/api/tooltips", axum::routing::get(crate::api::docs::get_tooltips))
+        .route("/api/tooltips", axum::routing::post(crate::api::docs::update_tooltip))
         .route("/api/walkthrough/{page}", axum::routing::get(crate::api::docs::get_walkthrough))
         .route("/api/videos", axum::routing::get(crate::api::docs::list_videos))
         .route("/api/changelog", axum::routing::get(crate::api::docs::get_changelog))
