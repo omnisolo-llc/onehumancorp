@@ -135,8 +135,8 @@ impl JetBrainsObservationMasker {
                             if bytes > self.size_limit {
                                 // Try structural JSON masking first (fast path check for JSON structure)
                                 let content_trimmed = tr.content.trim();
-                                if content_trimmed.starts_with('{') || content_trimmed.starts_with('[') {
-                                    if let Ok(mut json_val) = serde_json::from_str::<Value>(&tr.content)
+                                if (content_trimmed.starts_with('{') || content_trimmed.starts_with('['))
+                                    && let Ok(mut json_val) = serde_json::from_str::<Value>(&tr.content)
                                     {
                                         let modified = Self::mask_json_value(
                                             &mut json_val,
@@ -157,7 +157,6 @@ impl JetBrainsObservationMasker {
                                         }
                                         continue; // Treated as JSON, don't fall back to raw string masking
                                     }
-                                }
 
                                 // Fallback to raw string masking
                                 // Adapt preview size to the allowed size limit
