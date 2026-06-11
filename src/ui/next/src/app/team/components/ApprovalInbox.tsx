@@ -161,46 +161,46 @@ export default function ApprovalInbox({
                   </p>
 
                   {req.payload?.feature_type === "ambassador_reply" && (
-                    <div className="mb-6 p-4 rounded-xl glassmorphism border border-blue-100 flex flex-col gap-3">
-                      <div className="flex items-center gap-2 text-blue-800 font-semibold text-sm">
-                        <svg
-                          className="w-5 h-5"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"
-                          />
-                        </svg>
-                        Customer Inquiry
+                    <div className="mb-6 p-5 rounded-2xl bg-white/40 backdrop-blur-xl border border-white/60 flex flex-col gap-4 shadow-sm relative overflow-hidden group">
+                      <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 to-indigo-50/50 -z-10 transition-opacity duration-300 opacity-50 group-hover:opacity-100" />
+
+                      <div className="flex justify-between items-start">
+                        <div className="flex items-center gap-2 text-blue-900 font-bold text-sm tracking-tight">
+                          <div className="w-8 h-8 rounded-full bg-blue-100/80 flex items-center justify-center border border-blue-200 shadow-sm">
+                            <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                            </svg>
+                          </div>
+                          Customer Message
+                        </div>
+                        <span className="text-[10px] font-bold tracking-widest text-blue-400 uppercase bg-white/50 px-2 py-1 rounded-md border border-white">Via {req.payload.source}</span>
                       </div>
 
-                      <div className="app-card p-3 rounded-lg border border-blue-100 text-xs text-gray-700 italic">
+                      <div className="bg-white/70 p-3.5 rounded-xl border border-white shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] text-sm text-gray-800 italic relative">
+                        <div className="absolute -left-1 top-4 bottom-4 w-[3px] rounded-r-full bg-blue-200" />
                         "{req.payload.original_message}"
                       </div>
 
-                      <div className="text-blue-800 font-semibold text-sm mt-2 flex items-center gap-2">
-                        <svg
-                          className="w-4 h-4"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M5 13l4 4L19 7"
-                          />
-                        </svg>
-                        Draft Reply
-                      </div>
-                      <div className="bg-blue-600 p-3 rounded-lg text-xs text-white shadow-inner">
-                        {req.payload.generated_response}
+                      {req.payload.context_used && req.payload.context_used !== "No relevant memory found." && (
+                        <div className="bg-amber-50/60 p-3 rounded-lg border border-amber-100/50">
+                          <div className="flex items-center gap-1.5 text-amber-700 text-[10px] font-bold uppercase tracking-wider mb-1">
+                             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                             Context Retrieved
+                          </div>
+                          <p className="text-xs text-amber-900/80 line-clamp-2">{req.payload.context_used}</p>
+                        </div>
+                      )}
+
+                      <div className="flex flex-col gap-1.5 mt-2">
+                        <div className="text-blue-900 font-bold text-xs flex items-center gap-1.5 tracking-wide">
+                          <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                          </svg>
+                          AI Draft Response
+                        </div>
+                        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-3.5 rounded-xl text-sm text-white shadow-md leading-relaxed font-medium">
+                          {req.payload.generated_response}
+                        </div>
                       </div>
                     </div>
                   )}
@@ -468,7 +468,7 @@ export default function ApprovalInbox({
                   )}
 
                   {req.payload?.feature_type === "quote_draft" && (
-                    <div className="mb-6 p-4 rounded-xl glassmorphism border border-white/40 flex flex-col gap-3" data-testid="quote-draft-card">
+                    <div className="mb-6 p-4 rounded-xl glassmorphism border border-white/40 flex flex-col gap-3 max-w-full break-words" data-testid="quote-draft-card">
                       <div className="flex items-center gap-2 text-[#0066FF] font-semibold text-sm">
                         <svg
                           className="w-5 h-5"
@@ -616,6 +616,8 @@ export default function ApprovalInbox({
                         ? "Schedule Post"
                         : req.payload?.feature_type === "quote_draft"
                         ? "Approve & Send"
+                        : req.payload?.feature_type === "ambassador_reply"
+                        ? "Approve"
                         : "Approve"}
                     </button>
                   </div>
@@ -639,20 +641,35 @@ export default function ApprovalInbox({
               </h2>
 
               <div className="mb-4">
-                <p className="text-xs text-gray-500 font-medium uppercase tracking-wider mb-1">
-                  Context
+                <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
+                  Customer Inquiry
                 </p>
-                <div className="bg-gray-50 p-3 rounded-xl border border-gray-100 text-sm text-gray-700">
+                <div className="bg-gray-50/80 p-3.5 rounded-xl border border-gray-200 shadow-inner text-sm text-gray-800">
                   {extractPayload(selectedReview.description).payload
                     ?.original_message || extractPayload(selectedReview.description).payload?.customer_inquiry || "N/A"}
                 </div>
               </div>
 
+              {extractPayload(selectedReview.description).payload?.context_used && extractPayload(selectedReview.description).payload?.context_used !== "No relevant memory found." && (
+                <div className="mb-4">
+                  <p className="text-[10px] text-amber-600 font-bold uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    Business Context Applied
+                  </p>
+                  <div className="bg-amber-50/50 p-3 rounded-lg border border-amber-100 text-xs text-amber-900/80 line-clamp-3">
+                    {extractPayload(selectedReview.description).payload?.context_used}
+                  </div>
+                </div>
+              )}
+
               <div className="mb-6">
-                <p className="text-xs text-gray-500 font-medium uppercase tracking-wider mb-1">
-                  Draft
+                <p className="text-[10px] text-blue-600 font-bold uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                  Generated Draft
                 </p>
-                <div className="glassmorphism p-3 rounded-xl border border-blue-100 text-sm text-gray-800 italic relative">
+                <div className="glassmorphism p-4 rounded-xl border border-blue-200/60 shadow-[0_2px_12px_-4px_rgba(59,130,246,0.15)] text-sm text-blue-950 bg-gradient-to-br from-white/60 to-blue-50/40 relative">
+                  <div className="absolute -left-0.5 top-3 bottom-3 w-1 rounded-r-full bg-blue-500" />
                   {extractPayload(selectedReview.description).payload
                     ?.generated_response || "N/A"}
                 </div>
