@@ -47,11 +47,11 @@ export default function AffiliateMarketingWidget() {
           </p>
 
           <div className="grid grid-cols-2 gap-4 mb-6">
-            <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm text-center">
+            <div className="glassmorphism p-4 rounded-xl border border-gray-100 shadow-sm text-center">
               <div className="text-2xl font-bold font-outfit text-gray-900">{stats.total_affiliates}</div>
               <div className="text-xs text-gray-500 font-medium uppercase tracking-wide">Active Affiliates</div>
             </div>
-            <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm text-center">
+            <div className="glassmorphism p-4 rounded-xl border border-gray-100 shadow-sm text-center">
               <div className="text-2xl font-bold font-outfit text-gray-900">${commissionDollars}</div>
               <div className="text-xs text-gray-500 font-medium uppercase tracking-wide">Paid Commissions</div>
             </div>
