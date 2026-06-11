@@ -7,6 +7,10 @@ use serde_json::json;
 use ::server_pricing::rate_limit::{PlanTier, RedisRateLimiter};
 use crate::api::billing_webhook::{stripe_webhook_handler, WebhookState};
 use crate::db::DB;
+use crate::orchestration::departments::orchestrator::DepartmentOrchestrator;
+use crate::orchestration::mesh::CentrifugeNode;
+use ohc_builtin_agent::mesh::transport::InProcessTransport;
+use std::sync::Arc;
 
 #[test]
 fn payment_failure_extracts_subscription_and_customer_refs() {
@@ -117,10 +121,15 @@ async fn payment_failure_marks_subscriber_past_due_and_sends_dunning() {
         return;
     }
 
+    let db_arc = std::sync::Arc::new(db);
+    let transport = Arc::new(InProcessTransport::new());
+    let mesh = Arc::new(CentrifugeNode::new(transport));
+    let orchestrator = Arc::new(DepartmentOrchestrator::new(db_arc.clone(), mesh));
     let state = WebhookState {
         rate_limiter: std::sync::Arc::new(RedisRateLimiter::new(client)),
-        db_pool: db.pool.clone(),
-        db: std::sync::Arc::new(db),
+        db_pool: db_arc.pool.clone(),
+        db: db_arc,
+        orchestrator,
     };
     let sent = Arc::new(Mutex::new(Vec::new()));
     let notifier = RecordingNotifier { sent: sent.clone() };
@@ -174,10 +183,15 @@ async fn test_stripe_webhook_handler_completed() {
         Err(_) => return,
     };
 
+    let db_arc = std::sync::Arc::new(db.clone());
+    let transport = Arc::new(InProcessTransport::new());
+    let mesh = Arc::new(CentrifugeNode::new(transport));
+    let orchestrator = Arc::new(DepartmentOrchestrator::new(db_arc.clone(), mesh));
     let webhook_state = WebhookState {
         rate_limiter: rate_limiter.clone(),
-        db_pool: db.pool.clone(),
-        db: std::sync::Arc::new(db.clone()),
+        db_pool: db_arc.pool.clone(),
+        db: db_arc,
+        orchestrator,
     };
 
     // Seed the database with a test tenant
@@ -249,10 +263,15 @@ async fn test_stripe_webhook_handler_deleted() {
         Err(_) => return,
     };
 
+    let db_arc = std::sync::Arc::new(db.clone());
+    let transport = Arc::new(InProcessTransport::new());
+    let mesh = Arc::new(CentrifugeNode::new(transport));
+    let orchestrator = Arc::new(DepartmentOrchestrator::new(db_arc.clone(), mesh));
     let webhook_state = WebhookState {
         rate_limiter: rate_limiter.clone(),
-        db_pool: db.pool.clone(),
-        db: std::sync::Arc::new(db.clone()),
+        db_pool: db_arc.pool.clone(),
+        db: db_arc,
+        orchestrator,
     };
 
     // Seed the database with a test tenant
@@ -326,10 +345,15 @@ async fn test_mercadopago_webhook_handler_payment_created() {
         Err(_) => return,
     };
 
+    let db_arc = Arc::new(db);
+    let transport = Arc::new(InProcessTransport::new());
+    let mesh = Arc::new(CentrifugeNode::new(transport));
+    let orchestrator = Arc::new(DepartmentOrchestrator::new(db_arc.clone(), mesh));
     let state = WebhookState {
         rate_limiter,
-        db_pool: db.pool.clone(),
-        db: Arc::new(db),
+        db_pool: db_arc.pool.clone(),
+        db: db_arc,
+        orchestrator,
     };
 
     let event = MercadoPagoEvent {
@@ -369,10 +393,15 @@ async fn test_webhook_security_invalid_signature() {
         Err(_) => return,
     };
 
+    let db_arc = std::sync::Arc::new(db);
+    let transport = Arc::new(InProcessTransport::new());
+    let mesh = Arc::new(CentrifugeNode::new(transport));
+    let orchestrator = Arc::new(DepartmentOrchestrator::new(db_arc.clone(), mesh));
     let webhook_state = WebhookState {
         rate_limiter,
-        db_pool: db.pool.clone(),
-        db: std::sync::Arc::new(db),
+        db_pool: db_arc.pool.clone(),
+        db: db_arc,
+        orchestrator,
     };
 
     let app = Router::new()
@@ -412,10 +441,15 @@ async fn test_webhook_security_expired_timestamp() {
         Err(_) => return,
     };
 
+    let db_arc = std::sync::Arc::new(db);
+    let transport = Arc::new(InProcessTransport::new());
+    let mesh = Arc::new(CentrifugeNode::new(transport));
+    let orchestrator = Arc::new(DepartmentOrchestrator::new(db_arc.clone(), mesh));
     let webhook_state = WebhookState {
         rate_limiter,
-        db_pool: db.pool.clone(),
-        db: std::sync::Arc::new(db),
+        db_pool: db_arc.pool.clone(),
+        db: db_arc,
+        orchestrator,
     };
 
     let app = Router::new()
@@ -456,10 +490,15 @@ async fn test_webhook_security_replay_protection() {
         Err(_) => return,
     };
 
+    let db_arc = std::sync::Arc::new(db);
+    let transport = Arc::new(InProcessTransport::new());
+    let mesh = Arc::new(CentrifugeNode::new(transport));
+    let orchestrator = Arc::new(DepartmentOrchestrator::new(db_arc.clone(), mesh));
     let webhook_state = WebhookState {
         rate_limiter,
-        db_pool: db.pool.clone(),
-        db: std::sync::Arc::new(db),
+        db_pool: db_arc.pool.clone(),
+        db: db_arc,
+        orchestrator,
     };
 
     let app = Router::new()
@@ -510,10 +549,15 @@ async fn test_stripe_webhook_pos_transaction() {
         Err(_) => return,
     };
 
+    let db_arc = std::sync::Arc::new(db);
+    let transport = Arc::new(InProcessTransport::new());
+    let mesh = Arc::new(CentrifugeNode::new(transport));
+    let orchestrator = Arc::new(DepartmentOrchestrator::new(db_arc.clone(), mesh));
     let webhook_state = WebhookState {
         rate_limiter: rate_limiter.clone(),
-        db_pool: db.pool.clone(),
-        db: std::sync::Arc::new(db),
+        db_pool: db_arc.pool.clone(),
+        db: db_arc,
+        orchestrator,
     };
 
     let app = Router::new()
