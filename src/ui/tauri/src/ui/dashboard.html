@@ -601,6 +601,7 @@
         <a href="assistant.html" class="btn-primary" style="width: auto; text-decoration: none;">Open WorkBuddy Assistant</a>
         <a href="pos.html" class="btn-outline" style="width: auto; text-decoration: none;">Quick Charge POS</a>
         <a href="cost-dashboard.html" class="btn-outline" style="width: auto; text-decoration: none;">My Plan</a>
+        <a href="trial-extension.html" class="btn-outline" style="width: auto; text-decoration: none;">Interactive Trial Extension</a>
       </div>
 
       <div class="ohc-growth-card" id="ai-savings-widget">
@@ -810,7 +811,11 @@
             softPaywallStatus.innerText = 'Verifying Share...';
 
             try {
-              const response = await fetch('/api/v1/growth/trial-extension/claim', {
+              let url = '/api/v1/growth/trial-extension/claim';
+              if (window.__TAURI__ && window.__TAURI__.core) {
+                  url = 'http://127.0.0.1:18789/api/v1/growth/trial-extension/claim';
+              }
+              const response = await fetch(url, {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',
@@ -869,7 +874,11 @@
             savingsStatus.style.display = 'block';
 
             try {
-              const response = await fetch('/api/v1/growth/trial-extension/claim', {
+              let url = '/api/v1/growth/trial-extension/claim';
+              if (window.__TAURI__ && window.__TAURI__.core) {
+                  url = 'http://127.0.0.1:18789/api/v1/growth/trial-extension/claim';
+              }
+              const response = await fetch(url, {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',
