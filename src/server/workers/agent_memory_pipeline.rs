@@ -51,16 +51,6 @@ impl AgentMemoryPipeline {
                     let context_data: String = row.get("context_data");
                     let tenant_id: String = row.get("tenant_id");
 
-                    let embedding = match self.embedding_api.generate_embedding(&context_data).await {
-                        Ok(emb) => emb,
-                        Err(e) => {
-                            ::server_telemetry::record_error_signal("AgentMemoryPipeline: failed to generate embedding");
-                            tracing::error!("AgentMemoryPipeline: failed to generate embedding: {}", e);
-                            vec![0.0; 1536]
-                        }
-                    };
-
-                    let emb_str = format!("[{}]", embedding.iter().map(|f| f.to_string()).collect::<Vec<_>>().join(","));
                     let mem_id = Uuid::new_v4();
 
                     sqlx::query("INSERT INTO consolidated_memory (id, tenant_id, agent_id, source_type, content, embedding) VALUES ($1, $2, $3, $4, $5, NULL)")
@@ -94,30 +84,45 @@ impl AgentMemoryPipeline {
                     let context_data: String = row.get("context_data");
                     let tenant_id: String = row.get("tenant_id");
 
-                    let embedding = match self.embedding_api.generate_embedding(&context_data).await {
-                        Ok(emb) => emb,
-                        Err(e) => {
-                            ::server_telemetry::record_error_signal("AgentMemoryPipeline: failed to generate embedding");
-                            tracing::error!("AgentMemoryPipeline: failed to generate embedding: {}", e);
-                            vec![0.0; 1536]
-                        }
-                    };
-
-                    let emb_str = format!("[{}]", embedding.iter().map(|f| f.to_string()).collect::<Vec<_>>().join(","));
                     let mem_id = Uuid::new_v4();
 
                     let mut tx = self.db.pool.begin().await?;
                     ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await?;
 
-                    sqlx::query("INSERT INTO consolidated_memory (id, tenant_id, agent_id, source_type, content, embedding) VALUES ($1, $2, $3, $4, $5, $6::vector)")
-                        .bind(mem_id.to_string())
-                        .bind(&tenant_id)
-                        .bind(&agent_id)
-                        .bind("SESSION_DATA")
-                        .bind(&context_data)
-                        .bind(&emb_str)
-                        .execute(&mut *tx)
-                        .await?;
+                    match &self.db.store {
+                        DbStore::Sqlite(_sqlite_pool) => {
+                             sqlx::query("INSERT INTO consolidated_memory (id, tenant_id, agent_id, source_type, content, embedding) VALUES ($1, $2, $3, $4, $5, NULL)")
+                                .bind(mem_id.to_string())
+                                .bind(&tenant_id)
+                                .bind(&agent_id)
+                                .bind("SESSION_DATA")
+                                .bind(&context_data)
+                                .execute(&mut *tx)
+                                .await?;
+                        }
+                        DbStore::Postgres => {
+                            let embedding = match self.embedding_api.generate_embedding(&context_data).await {
+                                Ok(emb) => emb,
+                                Err(e) => {
+                                    ::server_telemetry::record_error_signal("AgentMemoryPipeline: failed to generate embedding");
+                                    tracing::error!("AgentMemoryPipeline: failed to generate embedding: {}", e);
+                                    vec![0.0; 1536]
+                                }
+                            };
+
+                            let emb_str = format!("[{}]", embedding.iter().map(|f| f.to_string()).collect::<Vec<_>>().join(","));
+
+                            sqlx::query("INSERT INTO consolidated_memory (id, tenant_id, agent_id, source_type, content, embedding) VALUES ($1, $2, $3, $4, $5, $6::vector)")
+                                .bind(mem_id.to_string())
+                                .bind(&tenant_id)
+                                .bind(&agent_id)
+                                .bind("SESSION_DATA")
+                                .bind(&context_data)
+                                .bind(&emb_str)
+                                .execute(&mut *tx)
+                                .await?;
+                        }
+                    }
 
                     sqlx::query("DELETE FROM agent_session_data WHERE session_id = $1")
                         .bind(&session_id)
@@ -147,23 +152,24 @@ impl AgentMemoryPipeline {
             if file_path.is_file() && file_path.extension().map_or(false, |ext| ext == "yml") {
                 let content = tokio::fs::read_to_string(&file_path).await?;
 
-                match self.embedding_api.generate_embedding(&content).await {
-                    Ok(embedding) => {
-                        let emb_str = format!("[{}]", embedding.iter().map(|f| f.to_string()).collect::<Vec<_>>().join(","));
+                match &self.db.store {
+                    DbStore::Sqlite(sqlite_pool) => {
                         let mem_id = Uuid::new_v4();
-
-                        match &self.db.store {
-                            DbStore::Sqlite(sqlite_pool) => {
-                                sqlx::query("INSERT INTO consolidated_memory (id, tenant_id, agent_id, source_type, content, embedding) VALUES ($1, $2, $3, $4, $5, NULL)")
-                                    .bind(mem_id.to_string())
-                                    .bind("system")
-                                    .bind("fs-agent")
-                                    .bind("FS_MEMORY")
-                                    .bind(&content)
-                                    .execute(sqlite_pool)
-                                    .await?;
-                            }
-                            DbStore::Postgres => {
+                        sqlx::query("INSERT INTO consolidated_memory (id, tenant_id, agent_id, source_type, content, embedding) VALUES ($1, $2, $3, $4, $5, NULL)")
+                            .bind(mem_id.to_string())
+                            .bind("system")
+                            .bind("fs-agent")
+                            .bind("FS_MEMORY")
+                            .bind(&content)
+                            .execute(sqlite_pool)
+                            .await?;
+                        let _ = tokio::fs::remove_file(&file_path).await;
+                    }
+                    DbStore::Postgres => {
+                        match self.embedding_api.generate_embedding(&content).await {
+                            Ok(embedding) => {
+                                let mem_id = Uuid::new_v4();
+                                let emb_str = format!("[{}]", embedding.iter().map(|f| f.to_string()).collect::<Vec<_>>().join(","));
                                 sqlx::query("INSERT INTO consolidated_memory (id, tenant_id, agent_id, source_type, content, embedding) VALUES ($1, $2, $3, $4, $5, $6::vector)")
                                     .bind(mem_id.to_string())
                                     .bind("system")
@@ -173,14 +179,13 @@ impl AgentMemoryPipeline {
                                     .bind(&emb_str)
                                     .execute(&self.db.pool)
                                     .await?;
+                                let _ = tokio::fs::remove_file(&file_path).await;
+                            }
+                            Err(e) => {
+                                ::server_telemetry::record_error_signal("AgentMemoryPipeline: failed to generate embedding for fs memory");
+                                tracing::error!("AgentMemoryPipeline: failed to generate embedding for fs memory: {}", e);
                             }
                         }
-
-                        let _ = tokio::fs::remove_file(&file_path).await;
-                    }
-                    Err(e) => {
-                        ::server_telemetry::record_error_signal("AgentMemoryPipeline: failed to generate embedding for fs memory");
-                        tracing::error!("AgentMemoryPipeline: failed to generate embedding for fs memory: {}", e);
                     }
                 }
             }
