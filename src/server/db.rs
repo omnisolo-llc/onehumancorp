@@ -537,7 +537,7 @@ impl DB {
                             )));
                         }
                         if is_postgres_lock {
-                            tracing::warn!("postgres_skip_locked contention in {}", operation);
+                            tracing::trace!("postgres_skip_locked contention in {}", operation);
                         } else {
                             let _ = ::server_telemetry::record_sqlite_lock_contention(
                                 &self.pool, operation,
