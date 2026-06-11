@@ -2872,6 +2872,13 @@ pub async fn update_ui_triage_action_handler(
 
             if payload.approved {
                 use sqlx::Row;
+
+                let customer_id = sqlx::query("SELECT customer_id FROM triage_items WHERE id = $1 AND tenant_id = $2")
+                    .bind(&payload.triage_item_id)
+                    .bind(&tenant_id)
+                    .fetch_optional(&mut *tx)
+                    .await.ok().flatten().and_then(|r| r.try_get::<String, _>("customer_id").ok()).unwrap_or_else(|| "unknown".to_string());
+
                 // Check if there is a proposed action to execute
                 if let Ok(Some(row)) = sqlx::query("SELECT action_type, payload FROM triage_proposed_actions WHERE triage_item_id = $1 AND tenant_id = $2")
                     .bind(&payload.triage_item_id)
@@ -2896,9 +2903,52 @@ pub async fn update_ui_triage_action_handler(
                         .bind("sent")
                         .execute(&mut *tx)
                         .await;
-                    } else if action_type == "ProposedInvoice" || action_type == "SuggestedCalendarSlot" {
-                        // TODO: Implement other action types like ProposedInvoice or SuggestedCalendarSlot as outlined in issue #26616
-                        tracing::info!("Executing proposed action: {}, payload: {}", action_type, action_payload);
+                    } else if action_type == "ProposedInvoice" {
+                        tracing::info!("Executing ProposedInvoice action with payload: {}", action_payload);
+                        let payload_json: serde_json::Value = serde_json::from_str(&action_payload).unwrap_or_else(|_| serde_json::json!({}));
+                        let amount = payload_json.get("amount").and_then(|v| v.as_f64()).unwrap_or(0.0);
+                        let client_name = payload_json.get("client_name").and_then(|v| v.as_str()).unwrap_or("Unknown Client");
+                        let due_date = payload_json.get("due_date").and_then(|v| v.as_i64()).unwrap_or_else(|| chrono::Utc::now().timestamp() + 30 * 24 * 3600);
+
+                        let new_invoice_id = format!("inv-{}", uuid::Uuid::new_v4());
+                        if let Err(e) = sqlx::query(
+                            "INSERT INTO invoices (id, tenant_id, client_id, client_name, status, due_date, currency, total_amount) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"
+                        )
+                        .bind(&new_invoice_id)
+                        .bind(&tenant_id)
+                        .bind(&customer_id)
+                        .bind(client_name)
+                        .bind("draft")
+                        .bind(due_date)
+                        .bind("USD")
+                        .bind(amount)
+                        .execute(&mut *tx)
+                        .await {
+                            tracing::error!("Failed to insert proposed invoice: {:?}", e);
+                        }
+                    } else if action_type == "SuggestedCalendarSlot" {
+                        tracing::info!("Executing SuggestedCalendarSlot action with payload: {}", action_payload);
+                        let payload_json: serde_json::Value = serde_json::from_str(&action_payload).unwrap_or_else(|_| serde_json::json!({}));
+                        let fallback_time = chrono::Utc::now().to_rfc3339();
+                        let start_time = payload_json.get("start_time").and_then(|v| v.as_str()).unwrap_or_else(|| fallback_time.as_str());
+                        let end_time = payload_json.get("end_time").and_then(|v| v.as_str()).unwrap_or_else(|| fallback_time.as_str());
+                        let service_id = payload_json.get("service_id").and_then(|v| v.as_str()).unwrap_or("unknown");
+
+                        let new_booking_id = format!("booking-{}", uuid::Uuid::new_v4());
+                        if let Err(e) = sqlx::query(
+                            "INSERT INTO bookings (id, tenant_id, customer_id, service_id, start_time, end_time, status) VALUES ($1, $2, $3, $4, $5, $6, $7)"
+                        )
+                        .bind(&new_booking_id)
+                        .bind(&tenant_id)
+                        .bind(&customer_id)
+                        .bind(service_id)
+                        .bind(start_time)
+                        .bind(end_time)
+                        .bind("pending")
+                        .execute(&mut *tx)
+                        .await {
+                            tracing::error!("Failed to insert suggested calendar slot: {:?}", e);
+                        }
                     }
                 }
             }
