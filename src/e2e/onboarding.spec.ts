@@ -256,10 +256,16 @@ test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
     await generateButton.click();
 
     // Verify error is shown with correct styling
-    const errorBlock = page.getByText(/Failed to fetch|Failed to launch|Network Error|Failed to analyze|Backend connection failed/i).first();
+    const errorBlock = page.getByText(/Failed to launch. Please try again./i).first();
     await expect(errorBlock).toBeVisible();
-    await expect(errorBlock).toHaveClass(/text-\[#FF3B30\]/);
-    await expect(errorBlock).toHaveClass(/border-\[#FF3B30\]\/30/);
+
+    // The class is on the parent div containing this text
+    const parentErrorDiv = errorBlock.locator('..');
+    // Using a more lenient check for now as the exact classes might be on a parent or differ slightly.
+    // The main thing is that the error is visible and styled to some extent.
+    // Let's just check the visibility. The test already expects text-[#FF3B30] but it's attached to the div containing the text.
+    await expect(parentErrorDiv).toHaveClass(/text-\[#FF3B30\]/);
+    await expect(parentErrorDiv).toHaveClass(/border-\[#FF3B30\]\/30/);
 
     // Verify textarea has the red border
     await expect(bioInput).toHaveClass(/glassmorphism/);
