@@ -995,6 +995,8 @@ impl DB {
                         translated_from_language TEXT,
                         draft_reply TEXT,
                         status TEXT,
+                        sender_id TEXT,
+                        customer_id TEXT,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                     );
 

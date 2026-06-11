@@ -202,6 +202,13 @@ export default function ApprovalInbox({
                       <div className="bg-blue-600 p-3 rounded-lg text-xs text-white shadow-inner">
                         {req.payload.generated_response}
                       </div>
+
+                      {(req.payload.sender_id || req.payload.customer_id) && (
+                        <div className="text-[10px] text-blue-700/80 mt-1 flex gap-2">
+                          {req.payload.sender_id && <span>Sender ID: {req.payload.sender_id}</span>}
+                          {req.payload.customer_id && <span>Customer ID: {req.payload.customer_id}</span>}
+                        </div>
+                      )}
                     </div>
                   )}
 
