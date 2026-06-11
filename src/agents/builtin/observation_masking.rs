@@ -145,7 +145,7 @@ impl JetBrainsObservationMasker {
                                             0,
                                         );
                                         let new_content = serde_json::to_string(&json_val).unwrap_or_else(|_| tr.content.clone());
-                                        if modified && new_content.len() <= self.size_limit {
+                                        if modified {
                                             tr.content = new_content;
                                         } else {
                                             // Either it wasn't modified, or the modification still didn't bring it under the limit.
