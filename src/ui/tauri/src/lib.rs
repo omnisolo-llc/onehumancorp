@@ -42,6 +42,15 @@ fn generate_cloud_invite() -> String {
 }
 
 #[tauri::command]
+fn generate_cloud_bridge_invite() -> String {
+    let ts = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_secs();
+    format!("https://cloud.ohc.network/invite/cb-{}", ts)
+}
+
+#[tauri::command]
 fn load_ai_provider() -> Result<AiProviderView, String> {
     Ok(to_provider_view(read_ai_provider_config()?))
 }
@@ -56,6 +65,10 @@ struct OnboardingState {
     work_context: Option<String>,
     categories: Option<String>,
     tagline: Option<String>,
+    #[serde(rename = "adminEmail")]
+    admin_email: Option<String>,
+    #[serde(rename = "adminPassword")]
+    admin_password: Option<String>,
     first_offer: Option<String>,
 }
 
@@ -132,6 +145,8 @@ async fn get_onboarding_state(_app_handle: tauri::AppHandle) -> Result<Onboardin
         work_context: None,
         categories: None,
         tagline: None,
+        admin_email: None,
+        admin_password: None,
         first_offer: None,
     })
 }
@@ -513,6 +528,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             greet,
             generate_cloud_invite,
+            generate_cloud_bridge_invite,
             load_ai_provider,
             save_ai_provider,
             test_ai_provider,

@@ -9,6 +9,7 @@ rust_library(
         "bash.rs",
         "booking.rs",
         "checkout.rs",
+        "quote.rs",
         "edit.rs",
         "finance.rs",
         "generative_visibility.rs",

@@ -398,6 +398,7 @@
         <div class="step-indicator" data-step="step-categories"></div>
         <div class="step-indicator" data-step="step-name"></div>
         <div class="step-indicator" data-step="step-assistant"></div>
+        <div class="step-indicator" data-step="step-admin"></div>
         <div class="step-indicator" data-step="step-offer"></div>
         <div class="step-indicator" data-step="step-template"></div>
       </div>
@@ -505,12 +506,31 @@
 
         <div class="btn-group">
           <button type="button" class="btn-secondary save-draft-btn">Save Draft</button>
-          <button class="next-step-btn" data-next="step-offer">Next</button>
+          <button class="next-step-btn" data-next="step-admin">Next</button>
           <button class="btn-secondary prev-step-btn" data-prev="step-name">Back</button>
         </div>
       </div>
 
-      <!-- Step 5: First Offer -->
+
+      <!-- Step 5: Admin Setup -->
+      <div class="step" id="step-admin">
+        <h1>Admin Credentials</h1>
+        <p>Set up your login details.</p>
+
+        <input type="email" id="admin-email" class="glassmorphism" placeholder="admin@mybusiness.com" />
+        <div id="email-error" class="error-msg">Please enter a valid email address.</div>
+
+        <input type="password" id="admin-password" class="glassmorphism" placeholder="Password (min 8 chars)" />
+        <div id="password-error" class="error-msg">Password must be at least 8 characters.</div>
+
+        <div class="btn-group">
+          <button type="button" class="btn-secondary save-draft-btn">Save Draft</button>
+          <button class="next-step-btn" data-next="step-offer">Next</button>
+          <button class="btn-secondary prev-step-btn" data-prev="step-assistant">Back</button>
+        </div>
+      </div>
+
+      <!-- Step 6: First Offer -->
       <div class="step" id="step-offer">
         <h1>Your First Offer</h1>
         <p>What is the main thing you sell?</p>
@@ -519,7 +539,7 @@
         <div class="btn-group">
           <button type="button" class="btn-secondary save-draft-btn">Save Draft</button>
           <button class="next-step-btn" data-next="step-template">Next</button>
-          <button class="btn-secondary prev-step-btn" data-prev="step-assistant">Back</button>
+          <button class="btn-secondary prev-step-btn" data-prev="step-admin">Back</button>
         </div>
       </div>
 
@@ -598,6 +618,8 @@
           tagline: document.getElementById('business-tagline'),
           assistantName: document.getElementById('assistant-name'),
           assistantTone: document.getElementById('assistant-tone'),
+          adminEmail: document.getElementById('admin-email'),
+          adminPassword: document.getElementById('admin-password'),
           firstOffer: document.getElementById('first-offer'),
           templateSelection: document.getElementById('template-selection')
       };
@@ -608,6 +630,8 @@
           name: document.getElementById('name-error'),
           assistantName: document.getElementById('assistant-name-error'),
           assistantTone: document.getElementById('tone-error'),
+          adminEmail: document.getElementById('email-error'),
+          adminPassword: document.getElementById('password-error'),
           firstOffer: document.getElementById('offer-error'),
           templateSelection: document.getElementById('template-error')
       };
@@ -671,6 +695,8 @@
 
           if (state.assistantName) inputs.assistantName.value = state.assistantName;
           if (state.assistantTone) inputs.assistantTone.value = state.assistantTone;
+          if (state.adminEmail) inputs.adminEmail.value = state.adminEmail;
+          if (state.adminPassword) inputs.adminPassword.value = state.adminPassword;
           if (state.first_offer) inputs.firstOffer.value = state.first_offer;
           if (state.templateSelection) inputs.templateSelection.value = state.templateSelection;
 
@@ -686,7 +712,7 @@
           }
 
           if (state.step !== undefined && state.step > 0) {
-              const steps = ['step-context', 'step-categories', 'step-name', 'step-assistant', 'step-offer', 'step-template'];
+              const steps = ['step-context', 'step-categories', 'step-name', 'step-assistant', 'step-admin', 'step-offer', 'step-template'];
               if (state.step < steps.length) {
                   goToStep(steps[state.step]);
               }
@@ -716,8 +742,9 @@
               if (activeStep.id === 'step-categories') stepNumber = 1;
               if (activeStep.id === 'step-name') stepNumber = 2;
               if (activeStep.id === 'step-assistant') stepNumber = 3;
-              if (activeStep.id === 'step-offer') stepNumber = 4;
-              if (activeStep.id === 'step-template') stepNumber = 5;
+              if (activeStep.id === 'step-admin') stepNumber = 4;
+              if (activeStep.id === 'step-offer') stepNumber = 5;
+              if (activeStep.id === 'step-template') stepNumber = 6;
           }
           state.step = stepNumber;
 
@@ -784,6 +811,36 @@
                   state.assistantTone = inputs.assistantTone.value;
               }
           }
+          else if (stepId === 'step-admin') {
+              const emailVal = inputs.adminEmail.value.trim();
+              const passVal = inputs.adminPassword.value.trim();
+              let stepValid = true;
+
+              if (emailVal === '' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal)) {
+                  errors.adminEmail.style.display = 'block';
+                  inputs.adminEmail.style.borderColor = '#FF3B30';
+                  stepValid = false;
+              } else {
+                  errors.adminEmail.style.display = 'none';
+                  inputs.adminEmail.style.borderColor = 'rgba(255, 255, 255, 0.5)';
+              }
+
+              if (passVal.length < 8) {
+                  errors.adminPassword.style.display = 'block';
+                  inputs.adminPassword.style.borderColor = '#FF3B30';
+                  stepValid = false;
+              } else {
+                  errors.adminPassword.style.display = 'none';
+                  inputs.adminPassword.style.borderColor = 'rgba(255, 255, 255, 0.5)';
+              }
+
+              if (stepValid) {
+                  state.adminEmail = emailVal;
+                  state.adminPassword = passVal;
+              } else {
+                  isValid = false;
+              }
+          }
           else if (stepId === 'step-offer') {
               if (inputs.firstOffer.value.trim() === '') {
                   errors.firstOffer.style.display = 'block';
@@ -814,7 +871,7 @@
 
 
       function updateStepper(stepId) {
-          const steps = ['step-context', 'step-categories', 'step-name', 'step-assistant', 'step-offer', 'step-template'];
+          const steps = ['step-context', 'step-categories', 'step-name', 'step-assistant', 'step-admin', 'step-offer', 'step-template'];
           const currentIndex = steps.indexOf(stepId);
 
           document.querySelectorAll('.step-indicator').forEach((indicator, index) => {
@@ -922,9 +979,9 @@
                    companyDescription: state.tagline || "",
                    sellingCategories: state.categories ? [state.categories] : [],
                    paymentPref: "online",
-                   adminEmail: "admin@mybusiness.com",
+                   adminEmail: state.adminEmail || "admin@mybusiness.com",
                    adminName: state.assistantName || "Admin",
-                   adminPassword: "password",
+                   adminPassword: state.adminPassword || "password",
                    websiteTemplate: state.templateSelection || "Modern",
                    firstProductName: state.firstOffer || "First Offer",
                    firstProductPrice: "0.00",
@@ -983,13 +1040,388 @@
           });
       });
     </script>
+    <script>
+document.addEventListener('DOMContentLoaded', () => {
+    // Inject tooltip CSS
+    const style = document.createElement('style');
+    style.textContent = `
+        .ohc-tooltip {
+            position: fixed;
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(20px) saturate(210%);
+            -webkit-backdrop-filter: blur(20px) saturate(210%);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            border-radius: 16px;
+            padding: 12px 16px;
+            color: #1d1d1f;
+            font-family: "Outfit", -apple-system, BlinkMacSystemFont, sans-serif;
+            font-size: 14px;
+            line-height: 1.4;
+            max-width: 250px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            z-index: 10000;
+            pointer-events: none;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: opacity 0.2s ease, transform 0.2s ease;
+            text-align: center;
+        }
+        .ohc-tooltip.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        @media (prefers-color-scheme: dark) {
+            .ohc-tooltip {
+                background: rgba(22, 22, 26, 0.7);
+                border-color: rgba(255, 255, 255, 0.1);
+                color: #f5f5f7;
+            }
+        }
+    `;
+    document.head.appendChild(style);
+
+    if (!window.OHC_TOOLTIPS) {
+        window.OHC_TOOLTIPS = {};
+        fetch("/api/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(console.error);
+    }
+    const tooltipEl = document.createElement('div');
+    tooltipEl.className = 'ohc-tooltip';
+    document.body.appendChild(tooltipEl);
+
+    let hideTimeout;
+
+    function showTooltip(e, text) {
+        clearTimeout(hideTimeout);
+        tooltipEl.textContent = text;
+
+        const targetRect = e.target.getBoundingClientRect();
+
+        // Position below the element by default
+        let top = targetRect.bottom + 10;
+        let left = targetRect.left + (targetRect.width / 2) - (tooltipEl.offsetWidth / 2);
+
+        // Adjust if it goes off screen
+        if (left < 10) left = 10;
+        if (left + tooltipEl.offsetWidth > window.innerWidth - 10) {
+            left = window.innerWidth - tooltipEl.offsetWidth - 10;
+        }
+
+        if (top + tooltipEl.offsetHeight > window.innerHeight - 10) {
+            // Position above if it doesn't fit below
+            top = targetRect.top - tooltipEl.offsetHeight - 10;
+        }
+
+        tooltipEl.style.top = `${top}px`;
+        tooltipEl.style.left = `${left}px`;
+        tooltipEl.classList.add('visible');
+    }
+
+    function hideTooltip() {
+        hideTimeout = setTimeout(() => {
+            tooltipEl.classList.remove('visible');
+        }, 100); // slight delay to prevent flicker
+    }
+
+    // Desktop hover
+    document.addEventListener('mouseover', (e) => {
+        const t = e.target;
+        const target = t && typeof t.closest === 'function' ? t.closest('[data-tooltip]') : null;
+        if (target) {
+            showTooltip(e, (window.OHC_TOOLTIPS && window.OHC_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip'));
+        }
+    });
+
+    document.addEventListener('mouseout', (e) => {
+        const target = e.target; if (target && typeof target.closest === 'function' && target.closest('[data-tooltip]')) {
+            hideTooltip();
+        }
+    });
+
+    // Mobile long press (contextmenu) or touchstart
+    let touchTimeout;
+    document.addEventListener('touchstart', (e) => {
+        const t = e.target;
+        const target = t && typeof t.closest === 'function' ? t.closest('[data-tooltip]') : null;
+        if (target) {
+            touchTimeout = setTimeout(() => {
+                showTooltip(e, (window.OHC_TOOLTIPS && window.OHC_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip'));
+            }, 500); // 500ms long press
+        }
+    });
+
+    document.addEventListener('touchend', () => {
+        clearTimeout(touchTimeout);
+        hideTooltip();
+    });
+
+    document.addEventListener('touchmove', () => {
+        clearTimeout(touchTimeout);
+        hideTooltip();
+    });
+});
+
+</script>
+    <script>
+document.addEventListener('DOMContentLoaded', () => {
+    // Inject chat CSS
+    const style = document.createElement('style');
+    style.textContent = `
+        #ohc-help-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 56px;
+            height: 56px;
+            border-radius: 16px;
+            background: #0066FF;
+            color: white;
+            border: none;
+            box-shadow: 0 4px 14px rgba(0, 102, 255, 0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 9999;
+            transition: transform 0.2s;
+        }
+        #ohc-help-btn:hover {
+            transform: scale(1.05);
+        }
+        #ohc-help-btn svg {
+            width: 28px;
+            height: 28px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2;
+        }
+        #ohc-help-chat-overlay {
+            position: fixed;
+            bottom: 90px;
+            right: 20px;
+            width: 350px;
+            height: 500px;
+            max-height: calc(100vh - 120px);
+            max-width: calc(100vw - 40px);
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(30px) saturate(210%);
+            -webkit-backdrop-filter: blur(30px) saturate(210%);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            border-radius: 16px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+            display: none;
+            flex-direction: column;
+            z-index: 9998;
+            overflow: hidden;
+            font-family: "Outfit", sans-serif;
+            transform-origin: bottom right;
+            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        @keyframes popIn {
+            0% { transform: scale(0.5); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        #ohc-help-chat-header {
+            padding: 15px 20px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.5);
+        }
+        #ohc-help-chat-header h3 {
+            margin: 0;
+            font-size: 16px;
+            color: #1d1d1f;
+        }
+        #ohc-help-close {
+            background: none;
+            border: none;
+            color: #555555;
+            cursor: pointer;
+            padding: 5px;
+        }
+        #ohc-help-close:hover { color: #1d1d1f; }
+        #ohc-help-messages {
+            flex-grow: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .msg {
+            max-width: 85%;
+            padding: 12px 16px;
+            border-radius: 16px;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+        .msg-user {
+            align-self: flex-end;
+            background: #0066FF;
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+        .msg-ai {
+            align-self: flex-start;
+            background: rgba(0, 0, 0, 0.05);
+            color: #1d1d1f;
+            border-bottom-left-radius: 4px;
+        }
+        .msg-ai a {
+            color: #0066FF;
+            font-weight: 600;
+            text-decoration: none;
+            display: block;
+            margin-top: 5px;
+        }
+        #ohc-help-input-area {
+            padding: 15px;
+            border-top: 1px solid rgba(0, 0, 0, 0.1);
+            display: flex;
+            gap: 10px;
+            background: rgba(255, 255, 255, 0.5);
+        }
+        #ohc-help-input {
+            flex-grow: 1;
+            border: 1px solid rgba(0, 0, 0, 0.2);
+            border-radius: 16px;
+            padding: 10px 15px;
+            outline: none;
+            background: rgba(255, 255, 255, 0.8);
+            font-size: 14px;
+        }
+        #ohc-help-input:focus { border-color: #0066FF; }
+        #ohc-help-send {
+            background: #0066FF;
+            color: white;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            #ohc-help-chat-overlay {
+                background: rgba(22, 22, 26, 0.7);
+                border-color: rgba(255, 255, 255, 0.1);
+            }
+            #ohc-help-chat-header, #ohc-help-input-area {
+                background: rgba(0, 0, 0, 0.2);
+                border-color: rgba(255, 255, 255, 0.1);
+            }
+            #ohc-help-chat-header h3 { color: #f5f5f7; }
+            .msg-ai {
+                background: rgba(255, 255, 255, 0.1);
+                color: #f5f5f7;
+            }
+            #ohc-help-input {
+                background: rgba(0, 0, 0, 0.3);
+                border-color: rgba(255, 255, 255, 0.2);
+                color: white;
+            }
+        }
+    `;
+    document.head.appendChild(style);
+
+    // Inject HTML
+    const btn = document.createElement('button');
+    btn.id = 'ohc-help-btn';
+    btn.setAttribute('aria-label', 'Open help chat');
+    btn.innerHTML = `<svg viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
+    document.body.appendChild(btn);
+
+    const overlay = document.createElement('div');
+    overlay.id = 'ohc-help-chat-overlay';
+    overlay.innerHTML = `
+        <div id="ohc-help-chat-header">
+            <h3>Ask AI Help</h3>
+            <button id="ohc-help-close" aria-label="Close help chat">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+        </div>
+        <div id="ohc-help-messages">
+            <div class="msg msg-ai">Hi! I am your AI Help Agent! How can I assist you with OHC today?</div>
+        </div>
+        <div id="ohc-help-input-area">
+            <input type="text" id="ohc-help-input" placeholder="Ask me anything..." />
+            <button id="ohc-help-send" aria-label="Send message">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
+            </button>
+        </div>
+    `;
+    document.body.appendChild(overlay);
+
+    const closeBtn = document.getElementById('ohc-help-close');
+    const messages = document.getElementById('ohc-help-messages');
+    const input = document.getElementById('ohc-help-input');
+    const sendBtn = document.getElementById('ohc-help-send');
+
+    btn.addEventListener('click', () => {
+        overlay.style.display = 'flex';
+        input.focus();
+    });
+
+    closeBtn.addEventListener('click', () => {
+        overlay.style.display = 'none';
+    });
+
+        async function sendMessage() {
+        const text = input.value.trim();
+        if (!text) return;
+
+        // Add user msg
+        const uMsg = document.createElement('div');
+        uMsg.className = 'msg msg-user';
+        uMsg.textContent = text;
+        messages.appendChild(uMsg);
+        input.value = '';
+        messages.scrollTop = messages.scrollHeight;
+
+        try {
+            let url = '/api/chat';
+            if (window.__TAURI__ && window.__TAURI__.core) {
+                url = 'http://127.0.0.1:18789/api/chat';
+            }
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: text })
+            });
+            const data = await response.json();
+
+            const aiMsg = document.createElement('div');
+            aiMsg.className = 'msg msg-ai';
+            if (data.link && data.link.url) {
+                aiMsg.innerHTML = `${data.reply}<br/><a href="${data.link.url}">${data.link.title}</a>`;
+            } else {
+                aiMsg.textContent = data.reply;
+            }
+            messages.appendChild(aiMsg);
+            messages.scrollTop = messages.scrollHeight;
+        } catch (e) {
+            console.error(e);
+            const aiMsg = document.createElement('div');
+            aiMsg.className = 'msg msg-ai';
+            aiMsg.textContent = 'Sorry, there was an error connecting to the help assistant.';
+            messages.appendChild(aiMsg);
+            messages.scrollTop = messages.scrollHeight;
+        }
+    }
+
+    sendBtn.addEventListener('click', sendMessage);
+    input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') sendMessage();
+    });
+});
+
+</script>
 
 
 
-
-
-      <script src="tooltips.js"></script>
-<script src="help-chat.js"></script>
-<script src="walkthrough.js"></script>
   </body>
 </html>

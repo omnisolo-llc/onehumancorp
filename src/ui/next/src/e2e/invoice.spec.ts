@@ -1,10 +1,9 @@
-
 import { test, expect } from '@playwright/test';
 
 test.describe('Agentic Invoicing System E2E', () => {
   test('should verify invoice generator page renders properly', async ({ page }) => {
     // Navigate to the invoice generator page
-    await page.goto('http://127.0.0.1:3000/invoice-generator');
+    await page.goto('/invoice-generator');
 
     // Verify header
     await expect(page.locator('h1')).toHaveText('Invoice Generator');
