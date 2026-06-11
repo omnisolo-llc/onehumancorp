@@ -23,12 +23,12 @@ test.describe('Miser Cost Features E2E', () => {
     await expect(page.locator('#budget-health-alert')).toBeVisible();
 
     // Verify navigation back to My Plan works
-    const myPlanButton = page.locator('button', { hasText: 'Back to My Plan' });
+    const myPlanButton = page.locator('button', { hasText: 'Back to Dashboard' });
     await expect(myPlanButton).toBeVisible();
 
-    // Click the button and verify URL changes to /plan
+    // Click the button and verify URL changes to /dashboard
     await myPlanButton.click();
-    await page.waitForURL('**/plan', { timeout: 10000 });
+    await page.waitForURL('**/dashboard', { timeout: 10000 });
     await expect(page.locator('text=Your Current Usage')).toBeVisible({ timeout: 15000 });
   });
 
