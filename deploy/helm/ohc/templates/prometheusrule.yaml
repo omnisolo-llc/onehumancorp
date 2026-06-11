@@ -18,7 +18,7 @@ spec:
         description: 'HPA {{ "{{ $labels.horizontalpodautoscaler }}" }} has been running at max replicas for longer than 15 minutes.'
     - alert: PodCrashLooping
       expr: rate(kube_pod_container_status_restarts_total[5m]) > 0
-      for: 5m
+      for: 10m
       labels:
         severity: warning
       annotations:

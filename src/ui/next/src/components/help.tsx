@@ -10,7 +10,7 @@ import { InteractiveWalkthrough, Step } from './Walkthrough';
 // --- Walkthrough System ---
 
 type HelpArticle = { title: string; desc: string; link?: string };
-type HelpVideo = { id: number; title: string; duration: string; video_url?: string; };
+type HelpVideo = { id: number; title: string; duration: string };
 type HelpTab = "center" | "chat" | "videos" | "whatsnew";
 type ChatMessage = { id: string; role: "bot" | "user"; text: string; linkUrl?: string; linkTitle?: string };
 

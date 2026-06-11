@@ -1,3 +1,5 @@
+
+
 /// Ruflo Unique Harness Innovations: SONA neural patterns (Self-learning trajectory patterns)
 /// Implements a simple pattern matching system to record and retrieve successful trajectories.
 
@@ -48,14 +50,12 @@ impl PatternMatcher {
             }
 
             // Simple Jaccard-like similarity
-            let similarity = match_count as f32
-                / (context_words.len() + pattern_words.len() - match_count) as f32;
+            let similarity = match_count as f32 / (context_words.len() + pattern_words.len() - match_count) as f32;
 
             // Combine with outcome score
             let total_score = similarity * pattern.outcome_score;
 
-            if total_score > best_score && similarity > 0.1 {
-                // Threshold
+            if total_score > best_score && similarity > 0.1 { // Threshold
                 best_score = total_score;
                 best_match = Some(pattern);
             }

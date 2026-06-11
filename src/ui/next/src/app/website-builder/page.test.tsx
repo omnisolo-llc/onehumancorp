@@ -76,7 +76,7 @@ describe('WebsiteBuilderPage', () => {
   });
 
   it('renders initial setup screen', async () => {
-    await act(async () => { render(<WebsiteBuilderPage />); });
+    render(<WebsiteBuilderPage />);
     expect(screen.getByText('Your business, live in minutes.')).toBeInTheDocument();
 
     // Check local storage init fetching
@@ -85,7 +85,7 @@ describe('WebsiteBuilderPage', () => {
 
   it('can follow the standard wizard flow', async () => {
     const user = userEvent.setup({ delay: null });
-    await act(async () => { render(<WebsiteBuilderPage />); });
+    render(<WebsiteBuilderPage />);
 
     // Step 0
     fireEvent.click(screen.getByText('Start My Business'));

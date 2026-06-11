@@ -355,17 +355,8 @@ pub async fn stripe_webhook_handler(
 ) -> impl IntoResponse {
 
     match payload.r#type.as_str() {
-        "terminal.reader.action.succeeded" | "pos_transaction" | "payment_intent.succeeded" => {
+        "terminal.reader.action.succeeded" | "pos_transaction" => {
             let obj = &payload.data.object;
-
-            // Only handle POS payment intents (where source is in_person) here, ignore online intents
-            if payload.r#type == "payment_intent.succeeded" {
-                let source = obj.get("metadata").and_then(|m| m.get("source")).and_then(|s| s.as_str());
-                if source != Some("in_person") {
-                    // It's a normal online payment intent, handled elsewhere or ignored here
-                    return StatusCode::OK.into_response();
-                }
-            }
 
             let tenant_id_opt = obj.get("metadata")
                 .and_then(|m| m.get("tenant_id"))

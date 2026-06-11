@@ -6,7 +6,6 @@ interface OnboardingState {
   chatStep: number;
   bio: string;
   businessDescription: string;
-  businessGoal: string;
   businessName: string;
   whatYouSell: string;
   location: string;
@@ -29,7 +28,6 @@ interface OnboardingState {
   setChatStep: (step: number) => void;
   setBio: (bio: string) => void;
   setBusinessDescription: (desc: string) => void;
-  setBusinessGoal: (goal: string) => void;
   setBusinessName: (name: string) => void;
   setWhatYouSell: (what: string) => void;
   setLocation: (location: string) => void;
@@ -57,7 +55,6 @@ export const useOnboardingStore = create<OnboardingState>()(
       chatStep: 1,
       bio: '',
       businessDescription: '',
-      businessGoal: '',
       businessName: '',
       whatYouSell: '',
       location: '',
@@ -80,7 +77,6 @@ export const useOnboardingStore = create<OnboardingState>()(
       setChatStep: (chatStep) => set({ chatStep }),
       setBio: (bio) => set({ bio }),
       setBusinessDescription: (businessDescription) => set({ businessDescription }),
-      setBusinessGoal: (businessGoal) => set({ businessGoal }),
       setBusinessName: (businessName) => set({ businessName }),
       setWhatYouSell: (whatYouSell) => set({ whatYouSell }),
       setLocation: (location) => set({ location }),

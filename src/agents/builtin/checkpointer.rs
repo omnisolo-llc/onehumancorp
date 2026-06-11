@@ -1,7 +1,7 @@
+/// Master Catalog B.7. State Management
+use serde::{Serialize, Deserialize};
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
-/// Master Catalog B.7. State Management
-use serde::{Deserialize, Serialize};
 use sqlx::Row;
 use std::path::PathBuf;
 use std::process::Command as StdCommand;
@@ -35,23 +35,16 @@ impl Default for ProgressFile {
     }
 }
 
+
 #[async_trait]
 pub trait CheckpointSaver: Send + Sync {
     #[allow(dead_code)]
-    async fn get_checkpoint(
-        &self,
-        thread_id: &str,
-        checkpoint_id: &str,
-    ) -> Result<Option<Checkpoint>, String>;
+    async fn get_checkpoint(&self, thread_id: &str, checkpoint_id: &str) -> Result<Option<Checkpoint>, String>;
     async fn put_checkpoint(&self, checkpoint: Checkpoint) -> Result<(), String>;
     async fn list_checkpoints(&self, thread_id: &str) -> Result<Vec<Checkpoint>, String>;
     #[allow(unused_variables)]
-    async fn restore_checkpoint(&self, checkpoint_id: &str) -> Result<(), String> {
-        Ok(())
-    }
-    fn storage_prefix(&self) -> &'static str {
-        "db"
-    }
+    async fn restore_checkpoint(&self, checkpoint_id: &str) -> Result<(), String> { Ok(()) }
+    fn storage_prefix(&self) -> &'static str { "db" }
 }
 
 pub struct PgCheckpointer {
@@ -80,8 +73,7 @@ pub struct GitCheckpointer {
 
 impl GitCheckpointer {
     fn scratchpad_file_path(&self, thread_id: &str) -> PathBuf {
-        self.repo_path
-            .join(format!(".scratchpad_{}.json", thread_id))
+        self.repo_path.join(format!(".scratchpad_{}.json", thread_id))
     }
 
     pub fn new(repo_path: PathBuf) -> Self {
@@ -92,10 +84,7 @@ impl GitCheckpointer {
             .output()
             .expect("Failed to execute git init");
         if !init_out.status.success() {
-            tracing::warn!(
-                "git init failed: {}",
-                String::from_utf8_lossy(&init_out.stderr)
-            );
+            tracing::warn!("git init failed: {}", String::from_utf8_lossy(&init_out.stderr));
         }
 
         let name_out = StdCommand::new("git")
@@ -104,10 +93,7 @@ impl GitCheckpointer {
             .output()
             .expect("Failed to execute git config user.name");
         if !name_out.status.success() {
-            tracing::warn!(
-                "git config user.name failed: {}",
-                String::from_utf8_lossy(&name_out.stderr)
-            );
+            tracing::warn!("git config user.name failed: {}", String::from_utf8_lossy(&name_out.stderr));
         }
 
         let err_out = StdCommand::new("git")
@@ -116,28 +102,20 @@ impl GitCheckpointer {
             .output()
             .expect("Failed to execute git config user.email");
         if !err_out.status.success() {
-            tracing::warn!(
-                "git cmd failed (err): {}",
-                String::from_utf8_lossy(&err_out.stderr)
-            );
+            tracing::warn!("git cmd failed (err): {}", String::from_utf8_lossy(&err_out.stderr));
         }
 
         GitCheckpointer { repo_path }
     }
 
     fn progress_file_path(&self, thread_id: &str) -> PathBuf {
-        self.repo_path
-            .join(format!(".agent_progress_{}.json", thread_id))
+        self.repo_path.join(format!(".agent_progress_{}.json", thread_id))
     }
 }
 
 #[async_trait]
 impl CheckpointSaver for GitCheckpointer {
-    async fn get_checkpoint(
-        &self,
-        thread_id: &str,
-        checkpoint_id: &str,
-    ) -> Result<Option<Checkpoint>, String> {
+    async fn get_checkpoint(&self, thread_id: &str, checkpoint_id: &str) -> Result<Option<Checkpoint>, String> {
         let file_name = format!(".agent_progress_{}.json", thread_id);
 
         // Try with checkpoint- prefix first (for actual checkpoint_ids),
@@ -148,8 +126,7 @@ impl CheckpointSaver for GitCheckpointer {
             .arg("show")
             .arg(format!("{}:{}", target_ref, file_name))
             .current_dir(&self.repo_path)
-            .output()
-            .await
+            .output().await
             .map_err(|e| e.to_string())?;
 
         if !output.status.success() {
@@ -158,8 +135,7 @@ impl CheckpointSaver for GitCheckpointer {
                 .arg("show")
                 .arg(format!("{}:{}", target_ref, file_name))
                 .current_dir(&self.repo_path)
-                .output()
-                .await
+                .output().await
                 .map_err(|e| e.to_string())?;
 
             if !output.status.success() {
@@ -182,18 +158,13 @@ impl CheckpointSaver for GitCheckpointer {
         let scratchpad_path = self.scratchpad_file_path(&checkpoint.thread_id);
 
         let json_data = serde_json::to_string_pretty(&checkpoint).map_err(|e| e.to_string())?;
-        tokio::fs::write(&file_path, json_data)
-            .await
-            .map_err(|e| e.to_string())?;
+        tokio::fs::write(&file_path, json_data).await.map_err(|e| e.to_string())?;
 
         // Structured scratchpad
         let mut scratchpad = ProgressFile::default();
         scratchpad.current_objective = format!("Checkpoint {}", checkpoint.checkpoint_id);
-        let scratchpad_json =
-            serde_json::to_string_pretty(&scratchpad).map_err(|e| e.to_string())?;
-        tokio::fs::write(&scratchpad_path, scratchpad_json)
-            .await
-            .map_err(|e| e.to_string())?;
+        let scratchpad_json = serde_json::to_string_pretty(&scratchpad).map_err(|e| e.to_string())?;
+        tokio::fs::write(&scratchpad_path, scratchpad_json).await.map_err(|e| e.to_string())?;
 
         // 0. Conflict Resolution / Stale Lock Files: Ensure no stale git index lock prevents us from adding files
         let lock_file = self.repo_path.join(".git/index.lock");
@@ -205,20 +176,13 @@ impl CheckpointSaver for GitCheckpointer {
         // 0.5. Missing .gitignore defaults: Ensure we don't snapshot massive build directories if user forgot to ignore them
         let gitignore_path = self.repo_path.join(".gitignore");
         if !gitignore_path.exists() {
-            let default_ignore =
-                "target/\nnode_modules/\n.idea/\n.vscode/\ndist/\nbuild/\n.scratchpad_*.json\n";
+            let default_ignore = "target/\nnode_modules/\n.idea/\n.vscode/\ndist/\nbuild/\n.scratchpad_*.json\n";
             let _ = tokio::fs::write(&gitignore_path, default_ignore).await;
             tracing::info!("Created default .gitignore to prevent massive snapshotting.");
         } else {
-            let content = tokio::fs::read_to_string(&gitignore_path)
-                .await
-                .unwrap_or_default();
+            let content = tokio::fs::read_to_string(&gitignore_path).await.unwrap_or_default();
             if !content.contains(".scratchpad_*.json") {
-                let _ = tokio::fs::write(
-                    &gitignore_path,
-                    format!("{}\n.scratchpad_*.json\n", content),
-                )
-                .await;
+                let _ = tokio::fs::write(&gitignore_path, format!("{}\n.scratchpad_*.json\n", content)).await;
             }
         }
 
@@ -227,15 +191,11 @@ impl CheckpointSaver for GitCheckpointer {
             .arg("add")
             .arg("-A")
             .current_dir(&self.repo_path)
-            .output()
-            .await
+            .output().await
             .map_err(|e| format!("Failed to execute git add: {}", e))?;
 
         if !add_out.status.success() {
-            return Err(format!(
-                "git add failed: {}",
-                String::from_utf8_lossy(&add_out.stderr)
-            ));
+            return Err(format!("git add failed: {}", String::from_utf8_lossy(&add_out.stderr)));
         }
 
         // 2. Commit the changes
@@ -246,15 +206,11 @@ impl CheckpointSaver for GitCheckpointer {
             .arg("-m")
             .arg(&commit_msg)
             .current_dir(&self.repo_path)
-            .output()
-            .await
+            .output().await
             .map_err(|e| format!("Failed to execute git commit: {}", e))?;
 
         if !output.status.success() {
-            return Err(format!(
-                "Failed to commit: {}",
-                String::from_utf8_lossy(&output.stderr)
-            ));
+            return Err(format!("Failed to commit: {}", String::from_utf8_lossy(&output.stderr)));
         }
 
         let tag_name = format!("checkpoint-{}", checkpoint.checkpoint_id);
@@ -263,19 +219,16 @@ impl CheckpointSaver for GitCheckpointer {
             .arg("-f")
             .arg(&tag_name)
             .current_dir(&self.repo_path)
-            .output()
-            .await
+            .output().await
             .map_err(|e| format!("Failed to execute git tag: {}", e))?;
 
         if !tag_output.status.success() {
-            return Err(format!(
-                "Failed to tag: {}",
-                String::from_utf8_lossy(&tag_output.stderr)
-            ));
+            return Err(format!("Failed to tag: {}", String::from_utf8_lossy(&tag_output.stderr)));
         }
 
         Ok(())
     }
+
 
     async fn restore_checkpoint(&self, checkpoint_id: &str) -> Result<(), String> {
         let tag_name = format!("checkpoint-{}", checkpoint_id);
@@ -286,16 +239,14 @@ impl CheckpointSaver for GitCheckpointer {
             .arg("clean")
             .arg("-fd")
             .current_dir(&self.repo_path)
-            .output()
-            .await;
+            .output().await;
 
         let output = Command::new("git")
             .arg("reset")
             .arg("--hard")
             .arg(&tag_name)
             .current_dir(&self.repo_path)
-            .output()
-            .await
+            .output().await
             .map_err(|e| e.to_string())?;
 
         if !output.status.success() {
@@ -305,15 +256,11 @@ impl CheckpointSaver for GitCheckpointer {
                 .arg("--hard")
                 .arg(checkpoint_id)
                 .current_dir(&self.repo_path)
-                .output()
-                .await
+                .output().await
                 .map_err(|e| e.to_string())?;
 
             if !fallback_output.status.success() {
-                return Err(format!(
-                    "Failed to restore workspace (reset): {}",
-                    String::from_utf8_lossy(&fallback_output.stderr)
-                ));
+                return Err(format!("Failed to restore workspace (reset): {}", String::from_utf8_lossy(&fallback_output.stderr)));
             }
         }
 
@@ -322,15 +269,11 @@ impl CheckpointSaver for GitCheckpointer {
             .arg("clean")
             .arg("-fd")
             .current_dir(&self.repo_path)
-            .output()
-            .await
+            .output().await
             .map_err(|e| e.to_string())?;
 
         if !clean_output.status.success() {
-            return Err(format!(
-                "Failed to restore workspace (clean): {}",
-                String::from_utf8_lossy(&clean_output.stderr)
-            ));
+            return Err(format!("Failed to restore workspace (clean): {}", String::from_utf8_lossy(&clean_output.stderr)));
         }
 
         // Additional edge case: detached HEAD cleanup / checkout logic if needed,
@@ -348,8 +291,7 @@ impl CheckpointSaver for GitCheckpointer {
             .arg("--")
             .arg(&file_name)
             .current_dir(&self.repo_path)
-            .output()
-            .await
+            .output().await
             .map_err(|e| e.to_string())?;
 
         if !output.status.success() {
@@ -361,9 +303,7 @@ impl CheckpointSaver for GitCheckpointer {
 
         for hash in hashes.lines() {
             let hash = hash.trim();
-            if hash.is_empty() {
-                continue;
-            }
+            if hash.is_empty() { continue; }
 
             if let Ok(Some(cp)) = self.get_checkpoint(thread_id, hash).await {
                 checkpoints.push(cp);
@@ -376,11 +316,7 @@ impl CheckpointSaver for GitCheckpointer {
 
 #[async_trait]
 impl CheckpointSaver for PgCheckpointer {
-    async fn get_checkpoint(
-        &self,
-        thread_id: &str,
-        checkpoint_id: &str,
-    ) -> Result<Option<Checkpoint>, String> {
+    async fn get_checkpoint(&self, thread_id: &str, checkpoint_id: &str) -> Result<Option<Checkpoint>, String> {
         let row = sqlx::query(
             "SELECT thread_id, checkpoint_id, parent_id, checkpoint, metadata, created_at FROM swarm_checkpoints WHERE thread_id = $1 AND checkpoint_id = $2"
         )
@@ -399,10 +335,8 @@ impl CheckpointSaver for PgCheckpointer {
             let created_at: DateTime<Utc> = row.get("created_at");
 
             let decompressed_data = decompress_data(&checkpoint_raw)?;
-            let data: serde_json::Value =
-                serde_json::from_slice(&decompressed_data).map_err(|e| e.to_string())?;
-            let metadata: serde_json::Value =
-                serde_json::from_slice(&metadata_raw).map_err(|e| e.to_string())?;
+            let data: serde_json::Value = serde_json::from_slice(&decompressed_data).map_err(|e| e.to_string())?;
+            let metadata: serde_json::Value = serde_json::from_slice(&metadata_raw).map_err(|e| e.to_string())?;
 
             Ok(Some(Checkpoint {
                 thread_id,
@@ -438,6 +372,7 @@ impl CheckpointSaver for PgCheckpointer {
         Ok(())
     }
 
+
     async fn list_checkpoints(&self, thread_id: &str) -> Result<Vec<Checkpoint>, String> {
         let rows = sqlx::query(
             "SELECT thread_id, checkpoint_id, parent_id, checkpoint, metadata, created_at FROM swarm_checkpoints WHERE thread_id = $1 ORDER BY created_at DESC"
@@ -457,10 +392,8 @@ impl CheckpointSaver for PgCheckpointer {
             let created_at: DateTime<Utc> = row.get("created_at");
 
             let decompressed_data = decompress_data(&checkpoint_raw)?;
-            let data: serde_json::Value =
-                serde_json::from_slice(&decompressed_data).map_err(|e| e.to_string())?;
-            let metadata: serde_json::Value =
-                serde_json::from_slice(&metadata_raw).map_err(|e| e.to_string())?;
+            let data: serde_json::Value = serde_json::from_slice(&decompressed_data).map_err(|e| e.to_string())?;
+            let metadata: serde_json::Value = serde_json::from_slice(&metadata_raw).map_err(|e| e.to_string())?;
 
             checkpoints.push(Checkpoint {
                 thread_id,
@@ -486,25 +419,22 @@ impl CheckpointSaver for PgCheckpointer {
         if row_opt.is_some() {
             Ok(())
         } else {
-            Err(format!(
-                "Checkpoint {} not found in database",
-                checkpoint_id
-            ))
+            Err(format!("Checkpoint {} not found in database", checkpoint_id))
         }
     }
 }
 
 fn compress_data(data: &[u8]) -> Result<Vec<u8>, String> {
-    use flate2::Compression;
     use flate2::write::GzEncoder;
+    use flate2::Compression;
     use std::io::Write;
 
     let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
     encoder.write_all(data).map_err(|e| e.to_string())?;
     let compressed = encoder.finish().map_err(|e| e.to_string())?;
 
-    use base64::Engine;
     use base64::engine::general_purpose::STANDARD;
+    use base64::Engine;
 
     let b64 = STANDARD.encode(&compressed);
     let mut result = Vec::new();
@@ -516,8 +446,8 @@ fn compress_data(data: &[u8]) -> Result<Vec<u8>, String> {
 }
 
 fn decompress_data(data: &[u8]) -> Result<Vec<u8>, String> {
-    use base64::Engine;
     use base64::engine::general_purpose::STANDARD;
+    use base64::Engine;
     use flate2::read::GzDecoder;
     use std::io::Read;
 
@@ -557,16 +487,16 @@ mod tests {
     #[test]
     fn test_decompress_unquoted() {
         let data = b"Hello, world!";
-        use flate2::Compression;
         use flate2::write::GzEncoder;
+        use flate2::Compression;
         use std::io::Write;
 
         let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
         encoder.write_all(data).unwrap();
         let compressed = encoder.finish().unwrap();
 
-        use base64::Engine;
         use base64::engine::general_purpose::STANDARD;
+        use base64::Engine;
 
         let b64 = STANDARD.encode(&compressed);
 
@@ -587,10 +517,7 @@ mod tests {
     #[tokio::test]
     async fn test_pg_checkpointer_save_and_load() {
         // Fallback testing if Postgres is unavailable
-        let pool = match sqlx::postgres::PgPoolOptions::new()
-            .connect("postgres://postgres:postgres@localhost/postgres")
-            .await
-        {
+        let pool = match sqlx::postgres::PgPoolOptions::new().connect("postgres://postgres:postgres@localhost/postgres").await {
             Ok(p) => p,
             Err(_) => {
                 // To achieve coverage without a real database, we must rely on mocking or just accept
@@ -627,23 +554,13 @@ mod tests {
         let restore_res = saver.restore_checkpoint("cp-1").await;
         assert!(restore_res.is_ok());
 
-        let _ = sqlx::query("DROP TABLE IF EXISTS swarm_checkpoints")
-            .execute(&pool)
-            .await;
+        let _ = sqlx::query("DROP TABLE IF EXISTS swarm_checkpoints").execute(&pool).await;
     }
 
     #[tokio::test]
     async fn test_pg_checkpointer_list_checkpoints() {
         let pool = sqlx::postgres::PgPoolOptions::new()
-            .after_release(|conn, _meta| {
-                Box::pin(async move {
-                    use sqlx::Executor;
-                    conn.execute("DISCARD ALL").await?;
-                    Ok(true)
-                })
-            })
-            .connect_lazy("postgres://localhost/dummy")
-            .unwrap();
+            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).connect_lazy("postgres://localhost/dummy").unwrap();
 
         let timeout_duration = std::time::Duration::from_millis(500);
         let query_future = sqlx::query("SELECT 1").execute(&pool);
@@ -690,10 +607,7 @@ mod tests {
         };
         let res2 = saver.put_checkpoint(cp2).await;
         assert!(res2.is_ok());
-        assert!(
-            !lock_file.exists(),
-            "The checkpoint operation should remove the stale lockfile"
-        );
+        assert!(!lock_file.exists(), "The checkpoint operation should remove the stale lockfile");
 
         // Verify .gitignore creation
         let gitignore = temp_dir.path().join(".gitignore");
@@ -718,10 +632,7 @@ mod tests {
 
         saver.put_checkpoint(cp.clone()).await.unwrap();
 
-        let retrieved = saver
-            .get_checkpoint("thread-git-2", "cp-git-2")
-            .await
-            .unwrap();
+        let retrieved = saver.get_checkpoint("thread-git-2", "cp-git-2").await.unwrap();
         assert!(retrieved.is_some());
         let retrieved = retrieved.unwrap();
         assert_eq!(retrieved.thread_id, cp.thread_id);
@@ -798,9 +709,7 @@ mod tests {
         saver.restore_checkpoint("cp-restore-1").await.unwrap();
 
         // Verify the checkpoint file was restored
-        let progress_path = temp_dir
-            .path()
-            .join(format!(".agent_progress_{}.json", "thread-git-restore"));
+        let progress_path = temp_dir.path().join(format!(".agent_progress_{}.json", "thread-git-restore"));
         let content = std::fs::read_to_string(&progress_path).unwrap();
         assert!(content.contains(r#""state": "1""#));
 
@@ -849,10 +758,7 @@ mod tests {
         assert!(tags.contains("checkpoint-cp-tag-1"));
 
         // Verify getting the checkpoint by raw ID works via prefix resolution
-        let retrieved = saver
-            .get_checkpoint("thread-git-tag", "cp-tag-1")
-            .await
-            .unwrap();
+        let retrieved = saver.get_checkpoint("thread-git-tag", "cp-tag-1").await.unwrap();
         assert!(retrieved.is_some());
         assert_eq!(retrieved.unwrap().checkpoint_id, "cp-tag-1");
     }

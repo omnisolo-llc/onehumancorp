@@ -24,61 +24,61 @@ pub mod scalable_multi_agent;
 
 pub use ohc_builtin_agent_core::*;
 
-pub mod agent;
-pub mod human_in_loop;
-pub mod observability;
 pub mod observation_masking;
-pub mod tools_gating;
+pub mod observability;
 pub mod verification_loops;
+pub mod agent;
+pub mod tools_gating;
+pub mod human_in_loop;
 
-pub mod autogen;
+pub mod service;
 pub mod departments;
-pub mod goose;
 pub mod guardrails;
-pub mod in_memory_store;
-pub mod json_store;
-pub mod memory;
-pub mod memory_exhaustive_tests;
 pub mod memory_store;
-pub mod openhands;
 pub mod prompt_construction;
+pub mod json_store;
+pub mod in_memory_store;
+pub mod memory_exhaustive_tests;
+pub mod autogen;
 pub mod ralph_loop;
 pub mod ruflo;
-pub mod service;
+pub mod openhands;
+pub mod goose;
+
 
 pub use ohc_builtin_agent_llm as llm;
 pub use ohc_builtin_agent_tools as tools;
-pub mod mesh;
 pub mod proto;
+pub mod mesh;
 pub use service::start_builtin_agent;
 
-pub mod checkpointer;
-pub mod codex_runner;
-pub mod consolidation_worker;
-pub mod harness;
-pub mod hibernation;
-pub mod json_rpc_server;
-pub mod langgraph;
-pub mod plane;
-pub mod progressive_skills;
 pub mod provider;
 pub mod registry;
+pub mod plane;
+pub mod checkpointer;
+pub mod harness;
+pub mod langgraph;
+pub mod codex_runner;
+pub mod json_rpc_server;
+pub mod progressive_skills;
+pub mod consolidation_worker;
 pub mod sqlite_memory;
+pub mod hibernation;
 
-pub mod actor_model;
 pub mod agent_protocol;
-pub mod gpt_researcher;
-pub mod marketplace;
-pub mod plan_and_execute;
-pub mod sona_patterns;
-pub mod swarm_topology;
+pub mod actor_model;
 pub mod visual_workflow;
 pub mod visual_workflow_client;
+pub mod marketplace;
+pub mod swarm_topology;
+pub mod sona_patterns;
+pub mod gpt_researcher;
+pub mod plan_and_execute;
 
+pub mod tool_executor_engine;
+pub mod ruflo_plugins;
 pub mod agentic_seek;
 pub mod pi;
-pub mod ruflo_plugins;
-pub mod tool_executor_engine;
 
 fn get_env(key: &str, default: &str) -> String {
     std::env::var(key).unwrap_or_else(|_| default.to_string())
@@ -97,33 +97,18 @@ async fn run_direct_workflow_if_requested(task: &str) -> Option<Result<String, S
     }
     let json_start = match task.find('{') {
         Some(index) => index,
-        None => {
-            return Some(Err(
-                "RunWorkflow instruction did not include JSON arguments".to_string(),
-            ));
-        }
+        None => return Some(Err("RunWorkflow instruction did not include JSON arguments".to_string())),
     };
     let mut deserializer = serde_json::Deserializer::from_str(&task[json_start..]);
     let args = match <serde_json::Value as serde::Deserialize>::deserialize(&mut deserializer) {
         Ok(args) => args,
-        Err(err) => {
-            return Some(Err(format!(
-                "Failed to parse RunWorkflow arguments: {}",
-                err
-            )));
-        }
+        Err(err) => return Some(Err(format!("Failed to parse RunWorkflow arguments: {}", err))),
     };
 
     use ohc_builtin_agent_tools::ToolExecutor;
-    let runner =
-        std::sync::Arc::new(ohc_builtin_agent_tools::runner::SandboxedCommandRunner::new(None));
+    let runner = std::sync::Arc::new(ohc_builtin_agent_tools::runner::SandboxedCommandRunner::new(None));
     let executor = ohc_builtin_agent_tools::workflow::WorkflowExecutor { runner };
-    Some(
-        executor
-            .execute(args)
-            .await
-            .map_err(|err| format!("{:?}", err)),
-    )
+    Some(executor.execute(args).await.map_err(|err| format!("{:?}", err)))
 }
 
 async fn hold_specialist_exit_if_requested(task: &str) {
@@ -141,9 +126,7 @@ async fn hold_specialist_exit_if_requested(task: &str) {
 
 fn init_otel() {
     use opentelemetry_otlp::WithExportConfig;
-    opentelemetry::global::set_text_map_propagator(
-        opentelemetry_sdk::propagation::TraceContextPropagator::new(),
-    );
+    opentelemetry::global::set_text_map_propagator(opentelemetry_sdk::propagation::TraceContextPropagator::new());
 
     let otlp_endpoint = std::env::var("OTEL_EXPORTER_OTLP_ENDPOINT")
         .unwrap_or_else(|_| "http://localhost:4317".to_string());
@@ -156,9 +139,7 @@ fn init_otel() {
 
     let tracer_provider = opentelemetry_sdk::trace::TracerProvider::builder()
         .with_batch_exporter(tracer, opentelemetry_sdk::runtime::Tokio)
-        .with_resource(opentelemetry_sdk::Resource::new(vec![
-            opentelemetry::KeyValue::new("service.name", "ohc-agent"),
-        ]))
+        .with_resource(opentelemetry_sdk::Resource::new(vec![opentelemetry::KeyValue::new("service.name", "ohc-agent")]))
         .build();
 
     opentelemetry::global::set_tracer_provider(tracer_provider.clone());
@@ -170,20 +151,14 @@ fn init_otel() {
         use tracing_subscriber::prelude::*;
         let _ = tracing_subscriber::registry()
             .with(tracing_subscriber::fmt::layer().json())
-            .with(
-                tracing_subscriber::EnvFilter::from_default_env()
-                    .add_directive(tracing::Level::INFO.into()),
-            )
+            .with(tracing_subscriber::EnvFilter::from_default_env().add_directive(tracing::Level::INFO.into()))
             .with(tracing_opentelemetry::layer().with_tracer(tracer))
             .try_init();
     } else {
         use tracing_subscriber::prelude::*;
         let _ = tracing_subscriber::registry()
             .with(tracing_subscriber::fmt::layer())
-            .with(
-                tracing_subscriber::EnvFilter::from_default_env()
-                    .add_directive(tracing::Level::INFO.into()),
-            )
+            .with(tracing_subscriber::EnvFilter::from_default_env().add_directive(tracing::Level::INFO.into()))
             .with(tracing_opentelemetry::layer().with_tracer(tracer))
             .try_init();
     }
@@ -308,10 +283,7 @@ pub async fn run_agent() -> Result<(), Box<dyn std::error::Error>> {
                 ..Default::default()
             };
 
-            match svc_impl
-                .dispatch_to_sub_agent(tonic::Request::new(req))
-                .await
-            {
+            match svc_impl.dispatch_to_sub_agent(tonic::Request::new(req)).await {
                 Ok(resp) => {
                     let inner = resp.into_inner();
                     if !inner.error.is_empty() {
@@ -333,11 +305,7 @@ pub async fn run_agent() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
 
-    tracing::info!(
-        "Starting OHC builtin agent (Rust) at {} (id: {})",
-        address,
-        agent_id
-    );
+    tracing::info!("Starting OHC builtin agent (Rust) at {} (id: {})", address, agent_id);
 
     let addr: std::net::SocketAddr = address.parse()?;
     let svc = std::sync::Arc::new(svc_impl);
@@ -354,10 +322,7 @@ pub async fn run_agent() -> Result<(), Box<dyn std::error::Error>> {
             let heartbeat_agent_id = agent_id.clone();
             tokio::spawn(async move {
                 loop {
-                    if let Err(e) = heartbeat_transport
-                        .register_presence(&heartbeat_agent_id, "active", 30)
-                        .await
-                    {
+                    if let Err(e) = heartbeat_transport.register_presence(&heartbeat_agent_id, "active", 30).await {
                         tracing::error!("Failed to register presence: {}", e);
                     }
                     tokio::time::sleep(std::time::Duration::from_secs(15)).await;
@@ -371,11 +336,7 @@ pub async fn run_agent() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     tonic::transport::Server::builder()
-        .add_service(
-            proto::agent_service::agent_service_server::AgentServiceServer::new(
-                service::SharedAgentService(svc),
-            ),
-        )
+        .add_service(proto::agent_service::agent_service_server::AgentServiceServer::new(service::SharedAgentService(svc)))
         .serve(addr)
         .await?;
 

@@ -1,17 +1,8 @@
-use super::{Tool, pydantic::{PydanticToolExecutor, PydanticAdapter}};
+use super::{Tool, ToolExecutor};
 use ohc_builtin_agent_core::types::ToolError;
 use serde_json::json;
-use serde::Deserialize;
 use std::sync::Arc;
 use super::marketplace::MarketplaceClient;
-
-// Pydantic-first tool schema validation: MarketplaceArgs
-#[derive(Deserialize)]
-struct MarketplaceArgs {
-    action: String,
-    query: Option<String>,
-    agent_id: Option<String>,
-}
 
 /// Exposes the marketplace to the agent so it can dynamically fetch new tools/agents.
 pub struct MarketplaceToolExecutor {
@@ -19,18 +10,18 @@ pub struct MarketplaceToolExecutor {
 }
 
 #[async_trait::async_trait]
-impl PydanticToolExecutor<MarketplaceArgs> for MarketplaceToolExecutor {
-    async fn execute_typed(&self, args: MarketplaceArgs) -> Result<String, ToolError> {
-        let action = args.action.as_str();
+impl ToolExecutor for MarketplaceToolExecutor {
+    async fn execute(&self, args: serde_json::Value) -> Result<String, ToolError> {
+        let query = args.get("query").and_then(|v| v.as_str()).unwrap_or("");
+        let action = args.get("action").and_then(|v| v.as_str()).unwrap_or("search");
 
         if action == "search" {
-            let query = args.query.as_deref().unwrap_or("");
             match self.client.search(query).await {
                 Ok(agents) => Ok(serde_json::to_string_pretty(&agents).unwrap_or_default()),
                 Err(e) => Err(ToolError::Transient(e)),
             }
         } else if action == "fetch" {
-            let agent_id = args.agent_id.as_deref().ok_or_else(|| {
+            let agent_id = args.get("agent_id").and_then(|v| v.as_str()).ok_or_else(|| {
                 ToolError::LlmRecoverable("Missing agent_id for fetch action".to_string())
             })?;
 
@@ -68,7 +59,7 @@ pub fn marketplace_tool(client: Arc<MarketplaceClient>) -> Tool {
             },
             "required": ["action"]
         }),
-        execute: Arc::new(PydanticAdapter::new(MarketplaceToolExecutor { client })),
+        execute: Arc::new(MarketplaceToolExecutor { client }),
     }
 }
 
@@ -105,23 +96,5 @@ mod tests {
         let result = tool.execute.execute(args).await.unwrap();
         assert!(result.contains("Successfully fetched"));
         assert!(result.contains("Data Analyst"));
-    }
-
-    #[tokio::test]
-    async fn test_marketplace_tool_pydantic_validation() {
-        let client = Arc::new(MarketplaceClient::new(Box::new(MockMarketplaceProvider)));
-        let tool = marketplace_tool(client);
-
-        let args = json!({
-            "wrong_key": "fetch"
-        });
-
-        let result = tool.execute.execute(args).await;
-        assert!(result.is_err());
-        if let Err(ToolError::LlmRecoverable(msg)) = result {
-            assert!(msg.contains("Validation Error (Pydantic-first tool schema)"));
-        } else {
-            panic!("Expected Pydantic-first validation error");
-        }
     }
 }

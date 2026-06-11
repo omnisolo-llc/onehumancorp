@@ -100,7 +100,6 @@ pub enum ApprovalStatus {
     PendingApproval,
     Approved,
     Rejected,
-    Paused,
 }
 
 

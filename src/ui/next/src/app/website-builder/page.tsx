@@ -325,16 +325,16 @@ export default function WebsiteBuilderPage() {
                     Zero tech skills needed. We do the heavy lifting. Review and add any extra details to help our AI generate the perfect store.
                   </p>
 
-                  <div className="flex flex-col sm:flex-row gap-4 sm:gap-6">
+                  <div className="flex flex-col gap-4">
                     <button
-                      className="w-full min-h-[54px] bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all"
+                      className="w-full bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all"
                       onClick={() => setWizardStep(1)}
                     >
                       Start My Business
                     </button>
 
                     <button
-                      className="w-full min-h-[54px] glassmorphism text-[#0071E3] border border-[#0071E3] p-4 font-bold rounded-[8px] shadow-sm hover:bg-blue-50 transition-all"
+                      className="w-full glassmorphism text-[#0071E3] border border-[#0071E3] p-4 font-bold rounded-[8px] shadow-sm hover:bg-blue-50 transition-all"
                       onClick={() => setWizardStep('instant-build')}
                     >
                       Instant Build
@@ -349,15 +349,15 @@ export default function WebsiteBuilderPage() {
               {wizardStep === 1 && (
                 <>
                   <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">What kind of business are you building?</h1>
-                  <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 mt-6">
+                  <div className="flex flex-col gap-4 mt-6">
                     <button
-                      className="w-full min-h-[54px] text-[#1D1D1F] dark:text-[#F5F5F7] glassmorphism p-4 font-bold rounded-[8px] shadow-sm hover:bg-white/60 dark:hover:bg-white/10 transition-all text-left"
+                      className="w-full text-[#1D1D1F] dark:text-[#F5F5F7] glassmorphism p-4 font-bold rounded-[8px] shadow-sm hover:bg-white/60 dark:hover:bg-white/10 transition-all text-left"
                       onClick={() => { setBusinessType('Online Store'); setWizardStep(2); }}
                     >
                       Online Store
                     </button>
                     <button
-                      className="w-full min-h-[54px] text-[#1D1D1F] dark:text-[#F5F5F7] glassmorphism p-4 font-bold rounded-[8px] shadow-sm hover:bg-white/60 dark:hover:bg-white/10 transition-all text-left"
+                      className="w-full text-[#1D1D1F] dark:text-[#F5F5F7] glassmorphism p-4 font-bold rounded-[8px] shadow-sm hover:bg-white/60 dark:hover:bg-white/10 transition-all text-left"
                       onClick={() => { setBusinessType('Restaurant'); setWizardStep(2); }}
                     >
                       Restaurant
@@ -369,24 +369,24 @@ export default function WebsiteBuilderPage() {
               {wizardStep === 2 && (
                 <>
                   <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Give your business a name</h1>
-                  <div id="step-3" className="mt-6 flex flex-col sm:flex-row gap-4 sm:gap-6">
+                  <div id="step-3" className="mt-6 flex flex-col gap-4">
                     <input
                       type="text"
-                      className="w-full min-h-[54px] glassmorphism p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-[#1D1D1F] dark:text-[#F5F5F7] bg-white/60 dark:bg-black/60 shadow-inner border border-gray-300/50 dark:border-gray-600/50  rounded-[8px]"
+                      className="w-full glassmorphism p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-gray-800 dark:text-[#f5f5f7] shadow-inner rounded-[8px]"
                       placeholder="What is your business called?"
                       value={businessName}
                       onChange={(e) => setBusinessName(e.target.value)}
                     />
                     <input
                       type="text"
-                      className="w-full min-h-[54px] glassmorphism p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-[#1D1D1F] dark:text-[#F5F5F7] bg-white/60 dark:bg-black/60 shadow-inner border border-gray-300/50 dark:border-gray-600/50  rounded-[8px]"
+                      className="w-full glassmorphism p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-gray-800 dark:text-[#f5f5f7] shadow-inner rounded-[8px]"
                       placeholder="e.g. Maya's Cakes"
                       value={bio}
                       onChange={(e) => setBio(e.target.value)}
                     />
                     <button
                       disabled={!businessName.trim()}
-                      className="w-full min-h-[54px] bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all mt-4 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all mt-4 disabled:opacity-50 disabled:cursor-not-allowed"
                       onClick={() => setWizardStep(3)}
                     >
                       Next
@@ -398,7 +398,7 @@ export default function WebsiteBuilderPage() {
               {wizardStep === 3 && (
                 <>
                   <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">What do you sell?</h1>
-                  <div id="step-4" className="mt-6 flex flex-col sm:flex-row gap-4 sm:gap-6">
+                  <div id="step-4" className="mt-6 flex flex-col gap-4">
                     <label className="flex items-center gap-3 p-4 glassmorphism rounded-[8px] cursor-pointer hover:bg-white/60 dark:hover:bg-white/10 text-[#1D1D1F] dark:text-[#F5F5F7]">
                       <input
                         type="checkbox"
@@ -430,24 +430,24 @@ export default function WebsiteBuilderPage() {
               {wizardStep === 4 && (
                 <>
                   <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Product details</h1>
-                  <div id="step-5" className="mt-6 flex flex-col sm:flex-row gap-4 sm:gap-6">
+                  <div id="step-5" className="mt-6 flex flex-col gap-4">
                     <input
                       type="text"
-                      className="w-full min-h-[54px] glassmorphism p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-[#1D1D1F] dark:text-[#F5F5F7] bg-white/60 dark:bg-black/60 shadow-inner border border-gray-300/50 dark:border-gray-600/50  rounded-[8px]"
+                      className="w-full glassmorphism p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-gray-800 dark:text-[#f5f5f7] shadow-inner rounded-[8px]"
                       placeholder="What is the name of this product?"
                       value={productName}
                       onChange={(e) => setProductName(e.target.value)}
                     />
                     <input
                       type="text"
-                      className="w-full min-h-[54px] glassmorphism p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-[#1D1D1F] dark:text-[#F5F5F7] bg-white/60 dark:bg-black/60 shadow-inner border border-gray-300/50 dark:border-gray-600/50  rounded-[8px]"
+                      className="w-full glassmorphism p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-gray-800 dark:text-[#f5f5f7] shadow-inner rounded-[8px]"
                       placeholder="0.00"
                       value={productPrice}
                       onChange={(e) => setProductPrice(e.target.value)}
                     />
                     <button
                       disabled={!productName.trim() || !productPrice.trim()}
-                      className="w-full min-h-[54px] bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all mt-4 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all mt-4 disabled:opacity-50 disabled:cursor-not-allowed"
                       onClick={() => setWizardStep(5)}
                     >
                       Next
@@ -461,13 +461,13 @@ export default function WebsiteBuilderPage() {
                   <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">How do you want to receive payments?</h1>
                   <div className="mt-6 flex flex-col sm:flex-row gap-4 sm:gap-6">
                     <button
-                      className="w-full min-h-[54px] text-[#1D1D1F] dark:text-[#F5F5F7] glassmorphism p-4 font-bold rounded-[8px] shadow-sm hover:bg-white/60 dark:hover:bg-white/10 transition-all text-left"
+                      className="w-full text-[#1D1D1F] dark:text-[#F5F5F7] glassmorphism p-4 font-bold rounded-[8px] shadow-sm hover:bg-white/60 dark:hover:bg-white/10 transition-all text-left"
                       onClick={() => { setPaymentMethod('Online'); setWizardStep(6); }}
                     >
                       Online
                     </button>
                     <button
-                      className="w-full min-h-[54px] text-[#1D1D1F] dark:text-[#F5F5F7] glassmorphism p-4 font-bold rounded-[8px] shadow-sm hover:bg-white/60 dark:hover:bg-white/10 transition-all text-left"
+                      className="w-full text-[#1D1D1F] dark:text-[#F5F5F7] glassmorphism p-4 font-bold rounded-[8px] shadow-sm hover:bg-white/60 dark:hover:bg-white/10 transition-all text-left"
                       onClick={() => { setPaymentMethod('In Person'); setWizardStep(6); }}
                     >
                       In Person
@@ -479,31 +479,31 @@ export default function WebsiteBuilderPage() {
               {wizardStep === 6 && (
                 <>
                   <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Create your account</h1>
-                  <div id="step-7" className="mt-6 flex flex-col sm:flex-row gap-4 sm:gap-6">
+                  <div id="step-7" className="mt-6 flex flex-col gap-4">
                     <input
                       type="text"
-                      className="w-full min-h-[54px] glassmorphism p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-[#1D1D1F] dark:text-[#F5F5F7] bg-white/60 dark:bg-black/60 shadow-inner border border-gray-300/50 dark:border-gray-600/50  rounded-[8px]"
+                      className="w-full glassmorphism p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-gray-800 dark:text-[#f5f5f7] shadow-inner rounded-[8px]"
                       placeholder="e.g. Maya Smith"
                       value={userName}
                       onChange={(e) => setUserName(e.target.value)}
                     />
                     <input
                       type="email"
-                      className="w-full min-h-[54px] glassmorphism p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-[#1D1D1F] dark:text-[#F5F5F7] bg-white/60 dark:bg-black/60 shadow-inner border border-gray-300/50 dark:border-gray-600/50  rounded-[8px]"
+                      className="w-full glassmorphism p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-gray-800 dark:text-[#f5f5f7] shadow-inner rounded-[8px]"
                       placeholder="you@email.com"
                       value={userEmail}
                       onChange={(e) => setUserEmail(e.target.value)}
                     />
                     <input
                       type="password"
-                      className="w-full min-h-[54px] glassmorphism p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-[#1D1D1F] dark:text-[#F5F5F7] bg-white/60 dark:bg-black/60 shadow-inner border border-gray-300/50 dark:border-gray-600/50  rounded-[8px]"
+                      className="w-full glassmorphism p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-gray-800 dark:text-[#f5f5f7] shadow-inner rounded-[8px]"
                       placeholder="Password"
                       value={userPassword}
                       onChange={(e) => setUserPassword(e.target.value)}
                     />
                     <button
                       disabled={!userName.trim() || !userEmail.trim() || !userPassword.trim() || !userEmail.includes('@') || userPassword.length < 8}
-                      className="w-full min-h-[54px] bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all mt-4 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all mt-4 disabled:opacity-50 disabled:cursor-not-allowed"
                       onClick={() => setWizardStep(7)}
                     >
                       Next
@@ -517,15 +517,15 @@ export default function WebsiteBuilderPage() {
               {wizardStep === 7 && (
                 <>
                   <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Template selection</h1>
-                  <div id="step-8" className="flex flex-col sm:flex-row gap-4 sm:gap-6 mt-6">
+                  <div id="step-8" className="flex flex-col gap-4 mt-6">
                     <button
-                      className="w-full min-h-[54px] text-[#1D1D1F] dark:text-[#F5F5F7] glassmorphism p-4 font-bold rounded-[8px] shadow-sm hover:bg-white/60 dark:hover:bg-white/10 transition-all text-left"
+                      className="w-full text-[#1D1D1F] dark:text-[#F5F5F7] glassmorphism p-4 font-bold rounded-[8px] shadow-sm hover:bg-white/60 dark:hover:bg-white/10 transition-all text-left"
                       onClick={() => { setTemplate('Modern'); setWizardStep('7.5'); }}
                     >
                       Modern
                     </button>
                     <button
-                      className="w-full min-h-[54px] text-[#1D1D1F] dark:text-[#F5F5F7] glassmorphism p-4 font-bold rounded-[8px] shadow-sm hover:bg-white/60 dark:hover:bg-white/10 transition-all text-left"
+                      className="w-full text-[#1D1D1F] dark:text-[#F5F5F7] glassmorphism p-4 font-bold rounded-[8px] shadow-sm hover:bg-white/60 dark:hover:bg-white/10 transition-all text-left"
                       onClick={() => { setTemplate('Bold'); setWizardStep('7.5'); }}
                     >
                       Bold
@@ -536,7 +536,7 @@ export default function WebsiteBuilderPage() {
 
               {wizardStep === '7.5' && (
                 <>
-                  <div id="step-8" className="flex flex-col sm:flex-row gap-4 sm:gap-6 mt-6">
+                  <div id="step-8" className="flex flex-col gap-4 mt-6">
                     <button
                       className="w-full bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all mt-4"
                       onClick={() => setWizardStep(8)}
@@ -550,15 +550,15 @@ export default function WebsiteBuilderPage() {
               {wizardStep === 8 && (
                 <>
                   <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Choose your domain</h1>
-                  <div id="step-9" className="flex flex-col sm:flex-row gap-4 sm:gap-6 mt-6">
+                  <div id="step-9" className="flex flex-col gap-4 mt-6">
                     <button
-                      className="w-full min-h-[54px] bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all"
+                      className="w-full bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all"
                       onClick={() => setWizardStep('8.5')}
                     >
                       Free OHC Domain
                     </button>
                     <button
-                      className="w-full min-h-[54px] glassmorphism text-[#0071E3] border border-[#0071E3] p-4 font-bold rounded-[8px] shadow-sm hover:bg-blue-50 transition-all"
+                      className="w-full glassmorphism text-[#0071E3] border border-[#0071E3] p-4 font-bold rounded-[8px] shadow-sm hover:bg-blue-50 transition-all"
                       onClick={() => setWizardStep('8.5')}
                     >
                       Connect Custom Domain
@@ -569,7 +569,7 @@ export default function WebsiteBuilderPage() {
 
               {wizardStep === '8.5' && (
                 <>
-                  <div id="step-9" className="flex flex-col sm:flex-row gap-4 sm:gap-6 mt-6">
+                  <div id="step-9" className="flex flex-col gap-4 mt-6">
                     <button
                       className="w-full bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all mt-4"
                       onClick={() => setWizardStep(9)}
@@ -583,9 +583,9 @@ export default function WebsiteBuilderPage() {
               {wizardStep === 9 && (
                 <>
                   <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Review your choices</h1>
-                  <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 mt-6">
+                  <div className="flex flex-col gap-4 mt-6">
                     <button
-                      className="w-full min-h-[54px] bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all"
+                      className="w-full bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all"
                       onClick={() => {
                         setStatus('generating');
                         setTimeout(() => {
@@ -602,16 +602,16 @@ export default function WebsiteBuilderPage() {
               {wizardStep === 'instant-build' && (
                 <>
                   <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Tell us about your business</h1>
-                  <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 mt-6">
+                  <div className="flex flex-col gap-4 mt-6">
                     <textarea
                       value={bio}
                       onChange={(e) => setBio(e.target.value)}
-                      className="w-full min-h-[54px] glassmorphism p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all resize-none text-[#1D1D1F] dark:text-[#F5F5F7] bg-white/60 dark:bg-black/60 shadow-inner border border-gray-300/50 dark:border-gray-600/50  rounded-[8px]"
+                      className="w-full glassmorphism p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all resize-none text-gray-800 dark:text-[#f5f5f7] shadow-inner rounded-[8px]"
                       placeholder="e.g. I run a local bakery"
                       rows={4}
                     />
                     <button
-                      className="w-full min-h-[54px] bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all disabled:opacity-50"
+                      className="w-full bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-md hover:bg-[#005bb5] transition-all disabled:opacity-50"
                       disabled={!bio.trim()}
                       onClick={async () => {
                         if (!bio.trim()) return;

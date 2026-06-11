@@ -4,8 +4,8 @@
 //! This module implements a basic bridge and UI stub pattern that enables
 //! the agent to interact with a theoretical TypeScript UI and host MCP extensions.
 
-use serde::{Deserialize, Serialize};
 use std::sync::Arc;
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ExtensionSpec {
@@ -47,11 +47,7 @@ impl GooseMcpRegistry {
         self.extensions.values().map(|ext| ext.spec()).collect()
     }
 
-    pub async fn execute_extension(
-        &self,
-        id: &str,
-        args: serde_json::Value,
-    ) -> Result<serde_json::Value, String> {
+    pub async fn execute_extension(&self, id: &str, args: serde_json::Value) -> Result<serde_json::Value, String> {
         if let Some(ext) = self.extensions.get(id) {
             ext.execute(args).await
         } else {
@@ -83,10 +79,7 @@ impl McpExtension for SampleExtension {
     }
 
     async fn execute(&self, args: serde_json::Value) -> Result<serde_json::Value, String> {
-        let echo = args
-            .get("echo")
-            .and_then(|v| v.as_str())
-            .unwrap_or("no_echo");
+        let echo = args.get("echo").and_then(|v| v.as_str()).unwrap_or("no_echo");
         Ok(serde_json::json!({
             "result": format!("Sample executed with echo: {}", echo)
         }))
@@ -107,10 +100,7 @@ mod tests {
         assert_eq!(specs[0].id, "sample_mcp");
 
         let args = serde_json::json!({"echo": "hello goose"});
-        let result = registry
-            .execute_extension("sample_mcp", args)
-            .await
-            .unwrap();
+        let result = registry.execute_extension("sample_mcp", args).await.unwrap();
         assert_eq!(result["result"], "Sample executed with echo: hello goose");
 
         let msg = UiMessage {
@@ -123,9 +113,7 @@ mod tests {
     #[tokio::test]
     async fn test_goose_mcp_not_found() {
         let registry = GooseMcpRegistry::new();
-        let result = registry
-            .execute_extension("non_existent", serde_json::json!({}))
-            .await;
+        let result = registry.execute_extension("non_existent", serde_json::json!({})).await;
         assert!(result.is_err());
         assert_eq!(result.unwrap_err(), "Extension 'non_existent' not found");
     }

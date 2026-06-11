@@ -19,19 +19,13 @@ export default function GiveawayGeneratorPage() {
       const storedTenant = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'my-store';
       setTenant(storedTenant);
       setHasPro(localStorage.getItem('has_pro') === 'true');
-
-      const checkStorage = () => {
-        setHasPro(localStorage.getItem('has_pro') === 'true');
-      };
-      window.addEventListener('storage', checkStorage);
-      return () => window.removeEventListener('storage', checkStorage);
     }
   }, []);
 
   const generateLink = () => {
     setIsGenerating(true);
     const origin = typeof window !== 'undefined' ? window.location.origin : 'https://ohc.app';
-    const link = `${origin}/giveaway/enter?tenant=${encodeURIComponent(tenant)}&title=${encodeURIComponent(title || 'Enter our Giveaway!')}&description=${encodeURIComponent(description)}`;
+    const link = `${origin}/giveaway/enter?tenant=${encodeURIComponent(tenant)}&title=${encodeURIComponent(title || 'Enter our Giveaway!')}`;
     setGiveawayLink(link);
     setIsGenerating(false);
   };

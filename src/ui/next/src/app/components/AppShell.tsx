@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { WithTooltip } from "../../components/TooltipRegistry";
-import { Omnibox } from "./Omnibox";
 
 type StatusItem = {
   label: string;
@@ -46,7 +45,6 @@ const primaryNav: NavItem[] = [
   { label: "Dashboard", href: "/dashboard", icon: "dashboard" },
   { label: "Assistant", href: "/assistant", icon: "assistant" },
   { label: "Setup", href: "/onboarding", icon: "setup" },
-  { label: "Triage", href: "/triage", icon: "inbox" },
   { label: "Orders", href: "/orders", icon: "orders" },
   { label: "Inbox", href: "/inbox", icon: "inbox" },
   { label: "Inventory", href: "/inventory", icon: "inventory" },
@@ -202,9 +200,7 @@ export function AppShell({
             </WithTooltip>
           </div>
         </header>
-        <main className="app-page">{children}
-        </main>
-        <Omnibox />
+        <main className="app-page">{children}</main>
       </div>
     </div>
   );

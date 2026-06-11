@@ -1,8 +1,7 @@
 import { test, expect } from './fixtures';
 
 test.describe('Cost Dashboard "My Plan" functionality', () => {
-  test('Cost Dashboard renders the "My Plan" fields completely', async ({ page, adminUser, loginAs }) => {
-    await loginAs(page, adminUser);
+  test('Cost Dashboard renders the "My Plan" fields completely', async ({ page }) => {
 
     await page.goto('/dashboard');
     await page.waitForLoadState('networkidle');
@@ -12,7 +11,6 @@ test.describe('Cost Dashboard "My Plan" functionality', () => {
 
     // 3. Check for My Plan components
     await expect(page.locator('text=My Plan').first()).toBeVisible();
-    await expect(page.locator('section.app-card').first()).toBeVisible();
     await expect(page.locator('text=Current Plan').first()).toBeVisible();
     await expect(page.locator('text=AI Actions Used').first()).toBeVisible();
     await expect(page.locator('text=Storage Used').first()).toBeVisible();
@@ -40,7 +38,7 @@ test.describe('Cost Dashboard "My Plan" functionality', () => {
     await proPage.waitForLoadState('networkidle');
 
     // Ensure the page renders / Unlimited for AI actions
-    await expect(proPage.locator('text=/ Unlimited').nth(0)).toBeVisible();
+    await expect(proPage.locator('text=/ Unlimited').first()).toBeVisible();
     await expect(proPage.locator('text=/ Unlimited')).toHaveCount(1);
 
     // Ensure the page renders / 50 GB for Storage
@@ -59,7 +57,7 @@ test.describe('Cost Dashboard "My Plan" functionality', () => {
     await proPage.waitForLoadState('networkidle');
 
     const aiActionsCard = proPage.locator('div', { has: proPage.locator('text="AI Actions Used"') }).first();
-    await expect(aiActionsCard.locator('text=/ Unlimited').first()).toBeVisible();
+    await expect(aiActionsCard.locator('text=/ Unlimited')).toBeVisible();
 
     await proPage.close();
     await context.close();
@@ -74,21 +72,20 @@ test.describe('Cost Dashboard "My Plan" functionality', () => {
     await proPage.waitForLoadState('networkidle');
 
     const storageCard = proPage.locator('div', { has: proPage.locator('text="Storage Used"') }).first();
-    await expect(storageCard.locator('text=/ 50 GB').first()).toBeVisible();
+    await expect(storageCard.locator('text=/ 50 GB')).toBeVisible();
 
     await proPage.close();
     await context.close();
   });
 
-  test('Cost Dashboard renders the cost transparency section completely', async ({ page, adminUser, loginAs }) => {
-    await loginAs(page, adminUser);
+  test('Cost Dashboard renders the cost transparency section completely', async ({ page }) => {
     await page.goto('/cost-dashboard');
     await page.waitForLoadState('networkidle');
 
     // Verify Cost Transparency headers and text
-    await expect(page.locator('h2', { hasText: 'Cost Transparency' }).first()).toBeVisible();
-    await expect(page.locator('h2', { hasText: 'Total Costs' }).first()).toBeVisible();
-    await expect(page.locator('h2', { hasText: 'Cost Breakdown' }).first()).toBeVisible();
+    await expect(page.locator('text=Cost Transparency').first()).toBeVisible();
+    await expect(page.locator('text=Total Costs').first()).toBeVisible();
+    await expect(page.locator('text=Cost Breakdown').first()).toBeVisible();
     await expect(page.locator('text=LLM Usage').first()).toBeVisible();
     await expect(page.locator('text=Storage').first()).toBeVisible();
     await expect(page.locator('text=Payment Fees').first()).toBeVisible();

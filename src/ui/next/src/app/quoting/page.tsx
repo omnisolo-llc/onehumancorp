@@ -2,8 +2,6 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { useSearchParams } from 'next/navigation';
-import { Suspense } from 'react';
 import { motion, AnimatePresence } from "framer-motion";
 import { FiCheck, FiX, FiDollarSign, FiClock, FiPlus, FiMessageSquare } from "react-icons/fi";
 
@@ -27,16 +25,6 @@ interface Quote {
 }
 
 export default function MobileQuotingPage() {
-  return (
-    <Suspense fallback={<div className="flex h-screen items-center justify-center bg-gray-50 text-gray-500">Loading quote...</div>}>
-      <MobileQuotingPageContent />
-    </Suspense>
-  );
-}
-
-function MobileQuotingPageContent() {
-  const searchParams = useSearchParams();
-  const quoteId = searchParams.get('id');
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [activeQuoteId, setActiveQuoteId] = useState<string | null>(null);
 
@@ -44,7 +32,7 @@ function MobileQuotingPageContent() {
   useEffect(() => {
     setQuotes([
       {
-        id: quoteId || "quote-1",
+        id: "quote-1",
         customerName: "Alex Rivera",
         customerPhotoUrl: "https://i.pravatar.cc/150?u=alex",
         requestText: "Hi Carlos, the pipe under my kitchen sink started leaking yesterday. It's a steady drip. Can you take a look?",
@@ -56,8 +44,8 @@ function MobileQuotingPageContent() {
         ]
       }
     ]);
-    setActiveQuoteId(quoteId || "quote-1");
-  }, [quoteId]);
+    setActiveQuoteId("quote-1");
+  }, []);
 
   const activeQuote = quotes.find(q => q.id === activeQuoteId);
 

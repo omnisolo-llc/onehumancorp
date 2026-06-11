@@ -1,5 +1,5 @@
-use crate::guardrails::{InputGuardrail, OutputGuardrail, ToolGuardrail};
 use ohc_builtin_agent_core::types::ToolCall;
+use crate::guardrails::{InputGuardrail, OutputGuardrail, ToolGuardrail};
 
 /// OpenAI Mechanic: 3 distinct hooks for guardrails
 /// 1. Input Validator
@@ -13,11 +13,7 @@ pub struct OpenAiInputValidator {
 }
 
 impl OpenAiInputValidator {
-    pub fn new(
-        max_length: usize,
-        require_patterns: Vec<String>,
-        deny_patterns: Vec<String>,
-    ) -> Self {
+    pub fn new(max_length: usize, require_patterns: Vec<String>, deny_patterns: Vec<String>) -> Self {
         Self {
             max_length,
             require_patterns,
@@ -29,27 +25,18 @@ impl OpenAiInputValidator {
 impl InputGuardrail for OpenAiInputValidator {
     fn check_input(&self, input: &str) -> Result<(), String> {
         if input.len() > self.max_length {
-            return Err(format!(
-                "OpenAI Input Guardrail tripped: Input exceeds maximum length of {} bytes.",
-                self.max_length
-            ));
+            return Err(format!("OpenAI Input Guardrail tripped: Input exceeds maximum length of {} bytes.", self.max_length));
         }
 
         for pattern in &self.require_patterns {
             if !input.contains(pattern) {
-                return Err(format!(
-                    "OpenAI Input Guardrail tripped: Input is missing required pattern '{}'.",
-                    pattern
-                ));
+                return Err(format!("OpenAI Input Guardrail tripped: Input is missing required pattern '{}'.", pattern));
             }
         }
 
         for pattern in &self.deny_patterns {
             if input.contains(pattern) {
-                return Err(format!(
-                    "OpenAI Input Guardrail tripped: Input contains denied pattern '{}'.",
-                    pattern
-                ));
+                return Err(format!("OpenAI Input Guardrail tripped: Input contains denied pattern '{}'.", pattern));
             }
         }
 
@@ -76,31 +63,20 @@ impl OpenAiOutputAuditor {
 impl OutputGuardrail for OpenAiOutputAuditor {
     fn check_output(&self, output: &str) -> Result<(), String> {
         if output.len() < self.min_length {
-            return Err(format!(
-                "OpenAI Output Guardrail tripped: Output is shorter than minimum length of {} bytes.",
-                self.min_length
-            ));
+            return Err(format!("OpenAI Output Guardrail tripped: Output is shorter than minimum length of {} bytes.", self.min_length));
         }
 
         if self.require_json {
             // A simple check to see if it starts with { or [
             let trimmed = output.trim();
-            if !(trimmed.starts_with('{') && trimmed.ends_with('}'))
-                && !(trimmed.starts_with('[') && trimmed.ends_with(']'))
-            {
-                return Err(
-                    "OpenAI Output Guardrail tripped: Output must be a valid JSON object or array."
-                        .to_string(),
-                );
+            if !(trimmed.starts_with('{') && trimmed.ends_with('}')) && !(trimmed.starts_with('[') && trimmed.ends_with(']')) {
+                return Err("OpenAI Output Guardrail tripped: Output must be a valid JSON object or array.".to_string());
             }
         }
 
         for pattern in &self.deny_patterns {
             if output.contains(pattern) {
-                return Err(format!(
-                    "OpenAI Output Guardrail tripped: Output contains denied pattern '{}'.",
-                    pattern
-                ));
+                return Err(format!("OpenAI Output Guardrail tripped: Output contains denied pattern '{}'.", pattern));
             }
         }
 
@@ -125,19 +101,13 @@ impl OpenAiToolPolicyEnforcer {
 impl ToolGuardrail for OpenAiToolPolicyEnforcer {
     fn check_tool(&self, tc: &ToolCall) -> Result<(), String> {
         if !self.allowed_tools.is_empty() && !self.allowed_tools.contains(&tc.name) {
-            return Err(format!(
-                "OpenAI Tool Guardrail tripped: Tool '{}' is not in the allowed policy list.",
-                tc.name
-            ));
+            return Err(format!("OpenAI Tool Guardrail tripped: Tool '{}' is not in the allowed policy list.", tc.name));
         }
 
         let args_str = tc.arguments.to_string();
         for blocked in &self.block_args {
             if args_str.contains(blocked) {
-                return Err(format!(
-                    "OpenAI Tool Guardrail tripped: Tool '{}' arguments contain blocked pattern '{}'.",
-                    tc.name, blocked
-                ));
+                return Err(format!("OpenAI Tool Guardrail tripped: Tool '{}' arguments contain blocked pattern '{}'.", tc.name, blocked));
             }
         }
 
@@ -147,10 +117,10 @@ impl ToolGuardrail for OpenAiToolPolicyEnforcer {
 
 #[cfg(test)]
 mod tests {
+    use std::sync::Arc;
     use super::*;
     use crate::guardrails::GuardrailRegistry;
     use serde_json::json;
-    use std::sync::Arc;
 
     #[test]
     fn test_openai_input_validator() {
@@ -161,11 +131,7 @@ mod tests {
         );
 
         // Success
-        assert!(
-            validator
-                .check_input("AGENT_INSTRUCTION: list files")
-                .is_ok()
-        );
+        assert!(validator.check_input("AGENT_INSTRUCTION: list files").is_ok());
 
         // Max length fail
         let long_input = format!("AGENT_INSTRUCTION: {}", "A".repeat(150));
@@ -186,14 +152,14 @@ mod tests {
 
     #[test]
     fn test_openai_output_auditor() {
-        let auditor = OpenAiOutputAuditor::new(10, true, vec!["SECRET_KEY".to_string()]);
+        let auditor = OpenAiOutputAuditor::new(
+            10,
+            true,
+            vec!["SECRET_KEY".to_string()],
+        );
 
         // Success
-        assert!(
-            auditor
-                .check_output(r#"{"status": "success", "data": 123}"#)
-                .is_ok()
-        );
+        assert!(auditor.check_output(r#"{"status": "success", "data": 123}"#).is_ok());
 
         // Min length fail
         let res1 = auditor.check_output(r#"{}"#);
@@ -245,30 +211,16 @@ mod tests {
         };
         let res2 = enforcer.check_tool(&tc_blocked_arg);
         assert!(res2.is_err());
-        assert!(
-            res2.unwrap_err()
-                .contains("arguments contain blocked pattern")
-        );
+        assert!(res2.unwrap_err().contains("arguments contain blocked pattern"));
     }
 
     #[test]
     fn test_openai_hooks_registry_integration() {
         let mut registry = GuardrailRegistry::new();
 
-        let input_hook = Arc::new(OpenAiInputValidator::new(
-            500,
-            vec![],
-            vec!["rm -rf".to_string()],
-        ));
-        let output_hook = Arc::new(OpenAiOutputAuditor::new(
-            5,
-            false,
-            vec!["error".to_string()],
-        ));
-        let tool_hook = Arc::new(OpenAiToolPolicyEnforcer::new(
-            vec!["safe_tool".to_string()],
-            vec![],
-        ));
+        let input_hook = Arc::new(OpenAiInputValidator::new(500, vec![], vec!["rm -rf".to_string()]));
+        let output_hook = Arc::new(OpenAiOutputAuditor::new(5, false, vec!["error".to_string()]));
+        let tool_hook = Arc::new(OpenAiToolPolicyEnforcer::new(vec!["safe_tool".to_string()], vec![]));
 
         registry.input_guardrails.push(input_hook);
         registry.output_guardrails.push(output_hook);
@@ -280,18 +232,10 @@ mod tests {
         assert!(registry.check_output("valid output").is_ok());
         assert!(registry.check_output("system error").is_err());
 
-        let tc1 = ToolCall {
-            id: "1".to_string(),
-            name: "safe_tool".to_string(),
-            arguments: json!({}),
-        };
+        let tc1 = ToolCall { id: "1".to_string(), name: "safe_tool".to_string(), arguments: json!({}) };
         assert!(registry.check_tool(&tc1).is_ok());
 
-        let tc2 = ToolCall {
-            id: "2".to_string(),
-            name: "unsafe_tool".to_string(),
-            arguments: json!({}),
-        };
+        let tc2 = ToolCall { id: "2".to_string(), name: "unsafe_tool".to_string(), arguments: json!({}) };
         assert!(registry.check_tool(&tc2).is_err());
     }
 }

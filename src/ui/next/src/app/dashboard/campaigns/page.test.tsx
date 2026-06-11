@@ -3,16 +3,6 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import CampaignOrchestrationPage from "./page";
 
-vi.mock('next/navigation', () => ({
-  useRouter: () => ({
-    push: vi.fn(),
-    replace: vi.fn(),
-    prefetch: vi.fn(),
-  }),
-  usePathname: () => '',
-  useSearchParams: () => new URLSearchParams(),
-}));
-
 const responses: Record<string, unknown> = {
   "/api/ui/dashboard/metrics": {
     active_customers: 42,
@@ -83,7 +73,7 @@ describe("CampaignOrchestrationPage", () => {
     expect(fetchMock).toHaveBeenCalledWith("/api/ui/orders?tenant_id=tenant-123");
     expect(fetchMock).toHaveBeenCalledWith("/api/ui/inbox/messages?tenant_id=tenant-123");
     expect(fetchMock).toHaveBeenCalledWith("/api/ui/supply?tenant_id=tenant-123");
-    // expect(screen.getByText("42")).toBeInTheDocument();
+    expect(screen.getByText("42")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Open review workflow/i })).toHaveAttribute("href", "/review-campaigns");
     expect(screen.getByRole("link", { name: /Open receipt workflow/i })).toHaveAttribute("href", "/orders/order-1001");
 

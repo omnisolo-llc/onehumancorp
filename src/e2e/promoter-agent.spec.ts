@@ -1,23 +1,30 @@
 import { test, expect } from '@playwright/test';
 
-test.skip('Promoter Agent Flow navigates from dashboard and generates posts', async ({ page }) => {
+test('Promoter Agent Flow navigates from dashboard and generates posts', async ({ page }) => {
     // 1. Start by logging in via UI (mandatory for owner E2E flow)
-    // By design, tests are pre-authenticated, so we can go straight to the dashboard or skip filling credentials
-    await page.goto('/dashboard');
+    await page.goto('/login');
+    // Ensure we are on the login page and use test credentials
+    await page.fill('input[type="email"]', 'admin@ohc.local');
+    await page.fill('input[type="password"]', 'changeme');
+    await page.click('button:has-text("Log In")');
 
     // Ensure successful navigation to the dashboard after login
     await expect(page).toHaveURL(/\/dashboard/);
 
+    // Check that the Promoter card is visible and has the correct link
+    const promoterCardLink = page.locator('a:has-text("Create Posts")');
+    await expect(promoterCardLink).toBeVisible();
+
     // Navigate to the promoter page
-    await page.goto('/promoter');
+    await promoterCardLink.click();
     await expect(page).toHaveURL(/\/promoter/);
 
     // 2. Interact with the Promoter Agent form
-    // Wait for the form
+    await expect(page.locator('text=Promote a Product')).toBeVisible();
 
     // Ensure button is disabled initially
     const generateBtn = page.locator('button:has-text("Generate Posts")');
-    // await expect(generateBtn).toBeDisabled();
+    await expect(generateBtn).toBeDisabled();
 
     // Fill out the form
     await page.fill('input[id="productName"]', 'Awesome New Toy');
@@ -34,7 +41,7 @@ test.skip('Promoter Agent Flow navigates from dashboard and generates posts', as
     await expect(page.locator('text=Generating...')).toBeVisible();
 
     // Wait for the results to load
-    await expect(page.locator('text=Instagram')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('text=Instagram / Facebook')).toBeVisible({ timeout: 10000 });
 
     // 4. Verify Viral Branding in Results
     const instagramContent = await page.locator('.bg-gray-50').nth(0).textContent();

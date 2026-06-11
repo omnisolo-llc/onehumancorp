@@ -1,5 +1,5 @@
-use serde::{Deserialize, Serialize};
 use std::path::Path;
+use serde::{Deserialize, Serialize};
 
 /// Hermes Agent Unique Harness Innovations: Serverless persistence
 /// Hibernates when idle, wakes on demand (works on $5 VPS to GPU clusters).
@@ -28,16 +28,10 @@ impl HibernationManager {
         }
     }
 
-    pub async fn hibernate(
-        &self,
-        session_id: &str,
-        state: &HibernationState,
-    ) -> Result<(), String> {
+    pub async fn hibernate(&self, session_id: &str, state: &HibernationState) -> Result<(), String> {
         let path = format!("{}/{}.json", self.storage_dir, session_id);
         let data = serde_json::to_string_pretty(state).map_err(|e| e.to_string())?;
-        tokio::fs::write(path, data)
-            .await
-            .map_err(|e| e.to_string())?;
+        tokio::fs::write(path, data).await.map_err(|e| e.to_string())?;
         Ok(())
     }
 
@@ -46,9 +40,7 @@ impl HibernationManager {
         if !tokio::fs::try_exists(&path).await.unwrap_or(false) {
             return Err(format!("Session {} not found", session_id));
         }
-        let data = tokio::fs::read_to_string(&path)
-            .await
-            .map_err(|e| e.to_string())?;
+        let data = tokio::fs::read_to_string(&path).await.map_err(|e| e.to_string())?;
         let state: HibernationState = serde_json::from_str(&data).map_err(|e| e.to_string())?;
         Ok(state)
     }
@@ -61,9 +53,7 @@ impl HibernationManager {
     pub async fn clear(&self, session_id: &str) -> Result<(), String> {
         let path = format!("{}/{}.json", self.storage_dir, session_id);
         if tokio::fs::try_exists(&path).await.unwrap_or(false) {
-            tokio::fs::remove_file(path)
-                .await
-                .map_err(|e| e.to_string())?;
+            tokio::fs::remove_file(path).await.map_err(|e| e.to_string())?;
         }
         Ok(())
     }
@@ -138,9 +128,7 @@ mod tests {
         let session_id = "corrupt-sess";
 
         let path = format!("{}/{}.json", dir, session_id);
-        tokio::fs::write(&path, "{\"invalid\": json}")
-            .await
-            .unwrap();
+        tokio::fs::write(&path, "{\"invalid\": json}").await.unwrap();
 
         let result = manager.wake(session_id).await;
         assert!(result.is_err());

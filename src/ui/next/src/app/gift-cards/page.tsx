@@ -44,7 +44,7 @@ export default function GiftCardsPage() {
 
         {/* Settings Panel */}
         <section className="w-full md:w-1/3 flex flex-col gap-6">
-          <div className="p-6 rounded-2xl shadow-sm border border-gray-200" style={{ background: 'rgba(255, 255, 255, 0.6)', backdropFilter: 'blur(30px) saturate(210%)' }}>
+          <div className="p-6 rounded-2xl shadow-sm border border-gray-200" style={{ background: 'rgba(255, 255, 255, 0.6)', backdropFilter: 'blur(20px)' }}>
             <h2 className="text-lg font-bold font-outfit mb-4">Card Details</h2>
 
             <div className="flex flex-col gap-4">

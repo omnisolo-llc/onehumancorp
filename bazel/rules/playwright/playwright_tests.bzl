@@ -8,14 +8,7 @@ load("@rules_shell//shell:sh_test.bzl", "sh_test")
 
 def _playwright_target_name(spec):
     """Convert a spec filename to a valid Bazel target name."""
-    name = "playwright_" + spec.replace("/", "_").replace(":", "_").replace(".", "_").replace("-", "_")
-    if spec.startswith("//src/ui/next"):
-        name += "_next_ui"
-    elif spec.startswith("//src/e2e"):
-        name += "_root_e2e"
-    elif spec == "smart-pricing.spec.ts":
-        name += "_root"
-    return name
+    return "playwright_" + spec.replace("/", "_").replace(":", "_").replace(".", "_").replace("-", "_")
 
 def _playwright_shard_target_name(index, total):
     return "playwright_shard_{}_of_{}".format(index + 1, total)

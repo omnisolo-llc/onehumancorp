@@ -119,7 +119,8 @@ test('shows result inspection and extension surfaces from Workbuddy', async () =
   expect(screen.getByText('Weekly business review')).toBeDefined();
 
   fireEvent.click(screen.getByRole('button', { name: 'Memory' }));
-  expect(screen.getByText('Consolidated Memory')).toBeDefined();
+  expect(screen.getByText('Conversation Memory')).toBeDefined();
+  expect(screen.getByText('Import from ChatGPT or Claude')).toBeDefined();
 });
 
 test('covers every Workbuddy efficient-tip feature surface', async () => {
@@ -161,7 +162,9 @@ test('covers every Workbuddy efficient-tip feature surface', async () => {
   expect(screen.getByText('Push notification')).toBeDefined();
 
   fireEvent.click(screen.getByRole('button', { name: 'Memory' }));
-  expect(screen.getByText('Consolidated Memory')).toBeDefined();
+  expect(screen.getByText('Nightly summary')).toBeDefined();
+  expect(screen.getByText('Edit memory')).toBeDefined();
+  expect(screen.getByText('Forget selected')).toBeDefined();
 
   fireEvent.click(screen.getByRole('button', { name: 'Results' }));
   expect(screen.getAllByText('Share result').length).toBeGreaterThan(0);

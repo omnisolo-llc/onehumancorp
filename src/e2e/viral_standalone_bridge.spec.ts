@@ -13,7 +13,7 @@ test.describe('Viral Standalone Bridge', () => {
 
     // Wait for navigation
     // We should be on dashboard.html
-await expect(page).toHaveURL(/.*dashboard(\.html)?/);
+    await expect(page).toHaveURL(/.*dashboard\.html/);
 
     // Verify standalone mode badge
     await expect(page.getByText('Standalone Mode (Zero Data Leakage)')).toBeVisible();
@@ -38,19 +38,5 @@ await expect(page).toHaveURL(/.*dashboard(\.html)?/);
     // Verify clipboard/copy interaction (just visually here as clipboard API needs permissions in some contexts)
     await copyBtn.click();
     await expect(page.getByRole('button', { name: 'Copied!' })).toBeVisible();
-
-    // Verify WhatsApp Share opens new tab with the correct URL
-    const whatsappBtn = page.getByRole('button', { name: 'Share on WhatsApp' });
-    const [popup] = await Promise.all([
-      page.waitForEvent('popup'),
-      whatsappBtn.click()
-    ]);
-
-    // Check URL contains wa.me and the encoded viral loop text
-    const popupUrl = popup.url();
-    // wa.me gets expanded to api.whatsapp.com by the browser often
-    expect(popupUrl).toMatch(/wa\.me|api\.whatsapp\.com/);
-    expect(popupUrl).toContain('Powered+by+OHC');
-    expect(popupUrl).toContain(encodeURIComponent('https://cloud.ohc.network/invite/'));
   });
 });

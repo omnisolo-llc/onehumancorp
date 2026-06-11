@@ -1,6 +1,6 @@
-import { test, expect } from './fixtures';
+import { test, expect } from '@playwright/test';
 
-test.describe('Help Center', () => {
+test.describe('Help Center and Contextual Help', () => {
   test('Persona: Business Owner uses help center and chat', async ({ page }) => {
     // Navigate to dashboard
     await page.goto('/dashboard?test_chat=true');
@@ -12,7 +12,7 @@ test.describe('Help Center', () => {
     const chatButton = page.locator('button[aria-label="Open help chat"]');
     await expect(chatButton).toBeVisible();
     await chatButton.click();
-    await expect(page.locator('text=Ask AI Help').first()).toBeVisible();
+    await expect(page.locator('text=Help Agent').first()).toBeVisible();
 
     const input = page.locator('input[placeholder="Ask me anything..."]');
     await input.fill('How do I accept credit cards?');
@@ -33,7 +33,7 @@ test.describe('Help Center', () => {
     await page.click('text=Getting Started');
     await expect(page).toHaveURL(/.*\/help\/getting-started/);
     await expect(page.locator('text=Getting Started with Your Store').first()).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Step 1: Tell us about your business' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: '1. Set up your basic info' })).toBeVisible();
 
     await page.goto('/help');
 

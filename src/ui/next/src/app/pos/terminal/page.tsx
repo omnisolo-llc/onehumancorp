@@ -85,39 +85,34 @@ export default function TerminalPage() {
           setSyncCount(events.length + posTransactions.length);
           setSyncing(true);
           try {
-            const syncTasks = [];
             if (events.length > 0) {
-              syncTasks.push(
-                fetch("/api/staff/timecard", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify(events)
-                }).then(res => { if (res.ok) OfflineStore.clearEvents(); })
-              );
+              const res = await fetch('/api/staff/timecard', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(events)
+              });
+              if (res.ok) {
+                OfflineStore.clearEvents();
+              }
             }
 
             if (posTransactions.length > 0) {
-              const sessionId = localStorage.getItem("ohc_active_terminal_session_id");
-              syncTasks.push(
-                fetch("/api/pos/transactions/sync", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ session_id: sessionId, transactions: posTransactions })
-                }).then(async (res) => {
-                  if (res.ok) {
-                    const data = await res.json();
-                    if (data.failed_transaction_ids && data.failed_transaction_ids.length > 0) {
-                      const failedTxs = posTransactions.filter((tx: any) => data.failed_transaction_ids.includes(tx.client_id || tx.id));
-                      OfflineStore.setPosTransactions(failedTxs);
-                    } else {
-                      OfflineStore.clearPosTransactions();
-                    }
-                  }
-                })
-              );
+              const sessionId = localStorage.getItem('ohc_active_terminal_session_id');
+              const res = await fetch('/api/pos/transactions/sync', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ session_id: sessionId, transactions: posTransactions })
+              });
+              if (res.ok) {
+                const data = await res.json();
+                if (data.failed_transaction_ids && data.failed_transaction_ids.length > 0) {
+                  const failedTxs = posTransactions.filter((tx: any) => data.failed_transaction_ids.includes(tx.client_id || tx.id));
+                  OfflineStore.setPosTransactions(failedTxs);
+                } else {
+                  OfflineStore.clearPosTransactions();
+                }
+              }
             }
-            await Promise.all(syncTasks);
-
           } catch (e) {
             console.error("Sync failed", e);
           } finally {
@@ -236,8 +231,8 @@ export default function TerminalPage() {
 
   if (!activeStaff) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-900 font-inter w-full overflow-hidden">
-        <div className="w-full max-w-[375px] min-h-[100dvh] md:h-[812px] md:min-h-0 bg-black text-white p-8 flex flex-col items-center relative overflow-x-hidden md:shadow-2xl">
+      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-900 font-inter">
+        <div className="w-[375px] h-[812px] bg-black text-white p-8 flex flex-col items-center relative overflow-hidden">
            <div className="absolute top-8 right-8 flex items-center gap-4">
               {isOffline && <span className="text-red-500 font-bold text-xs bg-red-100/10 px-2 py-1 rounded">{t('Offline Mode')}</span>}
               <LocalizationToggle />
@@ -256,12 +251,12 @@ export default function TerminalPage() {
 
            {error && <p className="text-red-500 mb-4 animate-bounce">{error}</p>}
 
-           <div className="grid grid-cols-3 gap-4 sm:gap-6 w-full max-w-[280px]">
+           <div className="grid grid-cols-3 gap-6 w-full max-w-[280px]">
              {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => (
                <button
                  key={num}
                  onClick={() => handlePinEntry(num.toString())}
-                 className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-gray-800 text-3xl font-light hover:bg-gray-700 active:bg-gray-600 transition-colors flex items-center justify-center mx-auto min-h-[44px] min-w-[44px]"
+                 className="w-20 h-20 rounded-full bg-gray-800 text-3xl font-light hover:bg-gray-700 active:bg-gray-600 transition-colors flex items-center justify-center"
                >
                  {num}
                </button>
@@ -269,7 +264,7 @@ export default function TerminalPage() {
              <div className="col-start-2">
                <button
                  onClick={() => handlePinEntry('0')}
-                 className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-gray-800 text-3xl font-light hover:bg-gray-700 active:bg-gray-600 transition-colors flex items-center justify-center mx-auto min-h-[44px] min-w-[44px]"
+                 className="w-20 h-20 rounded-full bg-gray-800 text-3xl font-light hover:bg-gray-700 active:bg-gray-600 transition-colors flex items-center justify-center"
                >
                  0
                </button>
@@ -278,7 +273,7 @@ export default function TerminalPage() {
                <button
                  onClick={handleClear}
                  disabled={!pin}
-                 className="text-gray-400 hover:text-white disabled:opacity-40 disabled:hover:text-gray-400 min-h-[44px] min-w-[44px]"
+                 className="text-gray-400 hover:text-white disabled:opacity-40 disabled:hover:text-gray-400"
                >
                  {t('Clear')}
                </button>
@@ -292,8 +287,8 @@ export default function TerminalPage() {
   }
 
   return (
-     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 font-inter md:py-10 w-full overflow-hidden">
-      <div className="w-full max-w-[375px] min-h-[100dvh] md:h-[812px] md:min-h-0 bg-white md:shadow-2xl overflow-hidden flex flex-col relative border-x border-gray-200">
+     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 font-inter py-10">
+      <div className="w-[375px] h-[812px] bg-white shadow-2xl overflow-hidden flex flex-col relative border-x border-gray-200">
 
         {/* Header */}
         <div className="pt-12 pb-6 px-6 bg-white/65 backdrop-blur-[30px] border-b border-gray-200 sticky top-0 z-10 flex justify-between items-center">

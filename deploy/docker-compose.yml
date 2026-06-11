@@ -24,7 +24,6 @@ services:
           cpus: "0.1"
           memory: 64M
     image: onehumancorp/mono-core:latest
-    pull_policy: never
     environment:
       LOG_FORMAT: "json"
       LOG_LEVEL: "info"
@@ -54,7 +53,6 @@ services:
           cpus: "0.1"
           memory: 64M
     image: onehumancorp/server:latest
-    pull_policy: never
     environment:
       LOG_FORMAT: "json"
       LOG_LEVEL: "info"

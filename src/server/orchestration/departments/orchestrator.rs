@@ -325,7 +325,6 @@ impl DepartmentOrchestrator {
             ApprovalStatus::PendingApproval => "DRAFT",
             ApprovalStatus::Approved => "APPROVED",
             ApprovalStatus::Rejected => "REJECTED",
-            ApprovalStatus::Paused => "PAUSED",
         };
 
         match &self.db.store {
@@ -416,7 +415,6 @@ impl DepartmentOrchestrator {
                             "DRAFT" => ApprovalStatus::PendingApproval,
                             "APPROVED" => ApprovalStatus::Approved,
                             "REJECTED" => ApprovalStatus::Rejected,
-                            "PAUSED" => ApprovalStatus::Paused,
                             _ => ApprovalStatus::PendingApproval,
                         };
                         let risk_str: String = row.get("action_risk");
@@ -465,7 +463,6 @@ impl DepartmentOrchestrator {
                             "DRAFT" => ApprovalStatus::PendingApproval,
                             "APPROVED" => ApprovalStatus::Approved,
                             "REJECTED" => ApprovalStatus::Rejected,
-                            "PAUSED" => ApprovalStatus::Paused,
                             _ => ApprovalStatus::PendingApproval,
                         };
                         let risk_str: String = row.get("action_risk");
@@ -573,7 +570,6 @@ impl DepartmentOrchestrator {
                             "DRAFT" => ApprovalStatus::PendingApproval,
                             "APPROVED" => ApprovalStatus::Approved,
                             "REJECTED" => ApprovalStatus::Rejected,
-                            "PAUSED" => ApprovalStatus::Paused,
                             _ => ApprovalStatus::PendingApproval,
                         };
                         let risk_str: String = row.get("action_risk");
@@ -622,7 +618,6 @@ impl DepartmentOrchestrator {
                             "DRAFT" => ApprovalStatus::PendingApproval,
                             "APPROVED" => ApprovalStatus::Approved,
                             "REJECTED" => ApprovalStatus::Rejected,
-                            "PAUSED" => ApprovalStatus::Paused,
                             _ => ApprovalStatus::PendingApproval,
                         };
                         let risk_str: String = row.get("action_risk");

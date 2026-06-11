@@ -1,14 +1,17 @@
 import { NextResponse } from 'next/server';
-import { backendHeaders } from "../../../../api/ui/backendProxy";
 
 export async function POST(req: Request) {
-  const backendUrl = process.env.BACKEND_URL || 'http://127.0.0.1:18789';
+  const backendUrl = process.env.OHC_API_URL || 'http://127.0.0.1:18789';
 
   try {
     const body = await req.json();
     const res = await fetch(`${backendUrl}/api/v1/payments/terminal/reserve`, {
       method: 'POST',
-      headers: backendHeaders(req, true),
+      headers: {
+        'Content-Type': 'application/json',
+        'x-spiffe-id': req.headers.get('x-spiffe-id') || '',
+        'authorization': req.headers.get('authorization') || '',
+      },
       body: JSON.stringify(body),
     });
 

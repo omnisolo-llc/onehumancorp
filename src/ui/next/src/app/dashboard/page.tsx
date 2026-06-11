@@ -1,7 +1,5 @@
 "use client";
 import { FloatingActionButton } from "./FAB";
-import { MorningBriefingCard } from "./MorningBriefingCard";
-
 
 
 
@@ -14,17 +12,12 @@ import { AppShell } from "../components/AppShell";
 import { InteractiveWalkthrough, WalkthroughTarget } from "../../components/Walkthrough";
 import { WithTooltip } from "../../components/TooltipRegistry";
 import GrowthReferralWidget from "../components/GrowthReferralWidget";
-import AiTimeSavingsWidget from "../components/AiTimeSavingsWidget";
-
 import { SmartBlock } from "../builder/components";
 import { UnifiedAgentFeed } from "./UnifiedAgentFeed";
-import { ReviewFeedCard } from './ReviewFeedCard';
-
 import { NeighborhoodPulseCard } from "./NeighborhoodPulseCard";
 import { PromoterCard } from "./PromoterCard";
 import { ViralLoopPerformanceWidget } from "./ViralLoopPerformanceWidget";
 import { SuccessMilestoneAlert } from "./SuccessMilestoneAlert";
-import AffiliateMarketingWidget from "./AffiliateMarketingWidget";
 
 type DashboardMetrics = {
   active_customers: number;
@@ -91,33 +84,7 @@ export default function Dashboard() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [messages, setMessages] = useState<InboxMessage[]>([]);
   const [supply, setSupply] = useState<SupplyPayload>({ vendors: [], raw_materials: [], bom_items: [] });
-  const [approvals, setApprovals] = useState<any[]>([]);
-  const [dashboardData, setDashboardData] = useState<any>({ pendingReviews: [] });
   const [loading, setLoading] = useState(true);
-  const [ledgerBalance, setLedgerBalance] = useState<number | null>(null);
-  const [ledgerCurrency, setLedgerCurrency] = useState<string>("USD");
-  const [ledgerLoading, setLedgerLoading] = useState(true);
-
-  useEffect(() => {
-    async function fetchLedgerBalance() {
-      try {
-        const res = await fetch("/api/ledger/accounts");
-        if (res.ok) {
-          const data = await res.json();
-          const mainAccount = data.accounts?.find((a: any) => a.name === "main");
-          if (mainAccount) {
-            setLedgerBalance(mainAccount.balance);
-            setLedgerCurrency(mainAccount.currency);
-          }
-        }
-      } catch (err) {
-        console.error("Failed to fetch ledger balance", err);
-      } finally {
-        setLedgerLoading(false);
-      }
-    }
-    fetchLedgerBalance();
-  }, []);
   const [error, setError] = useState("");
   const [isOffline, setIsOffline] = useState(false);
   const [offlineQueueCount, setOfflineQueueCount] = useState(0);
@@ -130,22 +97,6 @@ export default function Dashboard() {
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncErrorCount, setSyncErrorCount] = useState(0);
   const [activeDepartments, setActiveDepartments] = useState<string[]>([]);
-
-  const handleApproveDraft = async (approvalId: string) => {
-    try {
-      const token = localStorage.getItem("token") || "";
-      const res = await fetch(`/api/agents/approvals/${approvalId}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
-        body: JSON.stringify({ approved: true })
-      });
-      if (res.ok) {
-        setDashboardData((prev: any) => ({ ...prev, pendingReviews: prev.pendingReviews.filter((a: any) => a.id !== approvalId) }));
-      }
-    } catch (e) {
-      console.error(e);
-    }
-  };
 
   useEffect(() => {
     try {
@@ -211,26 +162,24 @@ export default function Dashboard() {
 
       try {
         const userId = localStorage.getItem("user_id") || "default";
-        const [metricsRes, ordersRes, inboxRes, supplyRes, onboardingRes, approvalsRes] = await Promise.all([
+        const [metricsRes, ordersRes, inboxRes, supplyRes, onboardingRes] = await Promise.all([
           fetch(`/api/ui/dashboard/metrics?tenant_id=${tenant}`),
           fetch(`/api/ui/orders?tenant_id=${tenant}`),
           fetch(`/api/ui/inbox/messages?tenant_id=${tenant}`),
           fetch(`/api/ui/supply?tenant_id=${tenant}`),
           fetch(`/api/onboarding/state`, { headers: { 'X-Tenant-ID': tenant, 'X-User-ID': userId } }),
-          fetch(`/api/agents/approvals?tenant_id=${tenant}`)
         ]);
 
         if (!metricsRes.ok || !ordersRes.ok || !inboxRes.ok || !supplyRes.ok) {
           throw new Error("One or more database-backed UI endpoints failed");
         }
 
-        const [metricsData, ordersData, inboxData, supplyData, onboardingData, approvalsData] = await Promise.all([
+        const [metricsData, ordersData, inboxData, supplyData, onboardingData] = await Promise.all([
           metricsRes.json(),
           ordersRes.json(),
           inboxRes.json(),
           supplyRes.json(),
           onboardingRes.ok ? onboardingRes.json() : Promise.resolve(null),
-          approvalsRes.ok ? approvalsRes.json() : Promise.resolve([]),
         ]);
 
         if (onboardingData?.wizardState?.aiAgents) {
@@ -247,7 +196,6 @@ export default function Dashboard() {
           raw_materials: Array.isArray(supplyData?.raw_materials) ? supplyData.raw_materials : [],
           bom_items: Array.isArray(supplyData?.bom_items) ? supplyData.bom_items : [],
         });
-        setApprovals(Array.isArray(approvalsData?.approvals) ? approvalsData.approvals : (Array.isArray(approvalsData) ? approvalsData : []));
       } catch (e: any) {
         setError(e?.message || "Failed to load dashboard data");
       } finally {
@@ -263,10 +211,7 @@ export default function Dashboard() {
     window.addEventListener("offline", updateOfflineStatus);
     window.addEventListener("storage", updateOfflineStatus);
 
-
-
-
-  return () => {
+    return () => {
       window.removeEventListener("online", updateOfflineStatus);
       window.removeEventListener("online", handleSync);
       window.removeEventListener("offline", updateOfflineStatus);
@@ -316,11 +261,8 @@ export default function Dashboard() {
         <p className="text-gray-600 dark:text-gray-400">Your agents are working on your behalf.</p>
       </div>
 
-      <AiTimeSavingsWidget />
       <NeighborhoodPulseCard tenant={tenantId()} />
       <FloatingActionButton />
-
-      <MorningBriefingCard tenant={tenantId()} />
 
       <InteractiveWalkthrough
         steps={walkthroughSteps}
@@ -375,9 +317,6 @@ export default function Dashboard() {
 
       <SuccessMilestoneAlert />
       <ViralLoopPerformanceWidget />
-      <div className="mb-6">
-        <AffiliateMarketingWidget />
-      </div>
 
       <div className="mb-6">
           <SmartBlock type="PoweredBy" props={{ tenantId: tenantId(), isPremium: false }} />
@@ -466,59 +405,6 @@ export default function Dashboard() {
 
         <PromoterCard />
 
-        {dashboardData?.pendingReviews?.map((item: any, idx: number) => (
-             <ReviewFeedCard
-               key={idx}
-               review={{
-                 id: item.review?.id || "",
-                 rating: item.review?.rating || 5,
-                 content: item.review?.content || '',
-                 source: item.review?.source || 'sms',
-                 createdAtUnix: item.review?.createdAtUnix || Date.now() / 1000
-               }}
-               response={{
-                 id: item.response?.id || "",
-                 draftedContent: item.response?.draftedContent || "",
-                 status: item.response?.status || "draft"
-               }}
-               onApprove={async (id, content) => {
-                 try {
-                     // Optimistic update
-                     setDashboardData((prev: any) => ({
-                         ...prev,
-                         pendingReviews: prev.pendingReviews.filter((r: any) => r?.response?.id !== id)
-                     }));
-                     const res = await fetch('/api/reviews/action', {
-                         method: 'POST',
-                         headers: { 'Content-Type': 'application/json' },
-                         body: JSON.stringify({ action: 'approve', responseId: id, content })
-                     });
-                     if (!res.ok) {
-                         // Rollback if needed
-                         console.error("Failed to approve");
-                     }
-                 } catch (e) { console.error(e); }
-               }}
-               onDismiss={async (id) => {
-                 try {
-                     // Optimistic update
-                     setDashboardData((prev: any) => ({
-                         ...prev,
-                         pendingReviews: prev.pendingReviews.filter((r: any) => r?.response?.id !== id)
-                     }));
-                     const res = await fetch('/api/reviews/action', {
-                         method: 'POST',
-                         headers: { 'Content-Type': 'application/json' },
-                         body: JSON.stringify({ action: 'dismiss', responseId: id })
-                     });
-                     if (!res.ok) {
-                         console.error("Failed to dismiss");
-                     }
-                 } catch (e) { console.error(e); }
-               }}
-             />
-        ))}
-
         <UnifiedAgentFeed />
 
         <section>
@@ -579,7 +465,22 @@ export default function Dashboard() {
               </div>
             </div>
 
-
+            <div className="glassmorphism p-4 rounded-[12px] border border-indigo-200/50 bg-gradient-to-br from-indigo-50/50 to-purple-50/50 flex flex-col justify-center items-center text-center relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-16 h-16 bg-white/40 rounded-bl-full"></div>
+              <h4 className="text-sm font-bold font-outfit text-[#1D1D1F] mb-1 flex items-center gap-1">
+                <span className="text-indigo-500">✨</span> Advanced AI Insights
+              </h4>
+              <p className="text-xs text-gray-600 mb-3">Unlock predictive analytics and AI-driven growth recommendations.</p>
+              <button
+                onClick={() => {
+                  setActionMessage('Opening Pro pricing for Advanced AI Insights.');
+                  router.push('/pricing');
+                }}
+                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg shadow-sm transition-colors w-full"
+              >
+                Upgrade to Pro
+              </button>
+            </div>
           </div>
         </section>
 
@@ -619,23 +520,6 @@ export default function Dashboard() {
               <Link href="/inventory" className="app-button">Inventory</Link>
             </div>
             <div className="app-list">
-                            {(dashboardData?.pendingReviews || []).filter((a: any) => a.payload?.feature_type === 'ambassador_reply').map(approval => (
-                <div key={approval.id} className="app-list-item flex flex-col items-start gap-3">
-                  <div className="w-full">
-                    <div className="app-list-title">Action Required: Approve Reply</div>
-                    <div className="app-list-subtitle font-semibold text-gray-900 mt-1">1 New Message from {approval.payload?.source || "Instagram DM"}</div>
-                    <div className="app-list-subtitle mt-2 bg-gray-50 p-2 rounded border border-gray-100 text-xs italic">"{approval.payload?.original_message || approval.payload?.message || "Customer message"}"</div>
-                    <div className="app-list-subtitle mt-2 p-2 rounded bg-blue-50 border border-blue-100 text-blue-900 text-sm">
-                      <span className="font-semibold text-blue-800 text-xs uppercase mb-1 block">AI Draft</span>
-                      {approval.payload?.generated_response || approval.payload?.draft_reply || "Ready to send."}
-                    </div>
-                  </div>
-                  <div className="flex gap-2 w-full mt-1">
-                    <button type="button" className="app-btn-primary flex-1 py-2" onClick={() => handleApproveDraft(approval.id)}>✨ 1-Tap Approve</button>
-                    <Link href="/inbox" className="app-button flex-1 py-2 text-center bg-gray-100">Edit</Link>
-                  </div>
-                </div>
-              ))}
               {metrics.pending_orders > 0 && (
                 <div className="app-list-item">
                   <div>
@@ -663,7 +547,7 @@ export default function Dashboard() {
                   <span className="app-badge">Inbox</span>
                 </div>
               )}
-              {!loading && metrics.pending_orders === 0 && lowStockCount === 0 && messages.length === 0 && (dashboardData?.pendingReviews || []).filter((a: any) => a.payload?.feature_type === "ambassador_reply").length === 0 && (
+              {!loading && metrics.pending_orders === 0 && lowStockCount === 0 && messages.length === 0 && (
                 <div className="app-empty">No database-backed actions are currently open.</div>
               )}
             </div>
@@ -761,15 +645,6 @@ export default function Dashboard() {
               <p className="text-sm text-gray-600 dark:text-gray-400">Invite other business owners to OHC and earn premium credits.</p>
             </Link>
 
-            <Link href="/invoice-generator" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
-              <div className="flex items-start justify-between mb-4">
-                <div className="w-12 h-12 rounded-full bg-cyan-50 dark:bg-cyan-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🧾</div>
-                <div className="text-cyan-600 dark:text-cyan-400 font-semibold text-sm bg-cyan-50 dark:bg-cyan-900/30 px-3 py-1 rounded-full">Billing</div>
-              </div>
-              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">AI Invoice Generator</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Generate professional, shareable invoices that bring new customers to OHC.</p>
-            </Link>
-
             <Link href="/milestones" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-purple-50 dark:bg-purple-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🏆</div>
@@ -787,15 +662,6 @@ export default function Dashboard() {
               </div>
               <h3 className="text-xl font-bold font-outfit text-gray-900 dark:text-white mb-2">Customer Loyalty</h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">Set up a 'Give X, Get Y' referral program and generate campaigns.</p>
-            </Link>
-
-            <Link href="/customer-referral-program" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
-              <div className="flex items-start justify-between mb-4">
-                <div className="w-12 h-12 rounded-full bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">💸</div>
-                <div className="text-emerald-600 dark:text-emerald-400 font-semibold text-sm bg-emerald-50 dark:bg-emerald-900/30 px-3 py-1 rounded-full">Referrals</div>
-              </div>
-              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Customer Referral Program</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Launch a Give $10, Get $10 program to turn your customers into advocates.</p>
             </Link>
 
             <Link href="/share-cards" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
@@ -923,15 +789,6 @@ export default function Dashboard() {
               </div>
               <h3 className="text-xl font-bold font-outfit text-gray-900 dark:text-white mb-2">Interactive Trial Extension</h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">Share your setup on X to instantly unlock 7 extra days of Pro.</p>
-            </Link>
-
-            <Link href="/field-ops/jobs" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
-              <div className="flex items-start justify-between mb-4">
-                <div className="w-12 h-12 rounded-full bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">📍</div>
-                <div className="text-indigo-600 dark:text-indigo-400 font-semibold text-sm bg-indigo-50 dark:bg-indigo-900/30 px-3 py-1 rounded-full">Operations</div>
-              </div>
-              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Field Ops Route</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Offline-first mobile route management for field service workers.</p>
             </Link>
 
             <Link href="/settings" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">

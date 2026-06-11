@@ -1,27 +1,18 @@
+use ohc_builtin_agent_core::types::{ToolCall, ToolError};
 use crate::agent::AgentRunConfig;
 use crate::human_in_loop::HumanInLoopManager;
-use ohc_builtin_agent_core::types::{ToolCall, ToolError};
 
 /// ToolGater implements the Anthropic Mechanic: 3-Stage Tool Gating.
 /// Trust establishment at project load -> Permission check before each tool call -> Explicit user confirmation for high-risk operations.
 pub struct ToolGater;
 
 impl ToolGater {
-    pub fn check_gating(
-        tc: &ToolCall,
-        is_read_only: bool,
-        cfg: &AgentRunConfig,
-    ) -> Result<(), ToolError> {
+    pub fn check_gating(tc: &ToolCall, is_read_only: bool, cfg: &AgentRunConfig) -> Result<(), ToolError> {
         // OpenAI Guardrail: Check Tool Guardrail registry
         if let Some(guardrails) = &cfg.guardrails {
             if let Err(e) = guardrails.check_tool(tc) {
-                if e.contains("Stage 3 (Confirmation)")
-                    || e.contains("requires explicit user confirmation")
-                {
-                    return Err(ToolError::UserFixable(format!(
-                        "Tool Guardrail tripped: {}",
-                        e
-                    )));
+                if e.contains("Stage 3 (Confirmation)") || e.contains("requires explicit user confirmation") {
+                    return Err(ToolError::UserFixable(format!("Tool Guardrail tripped: {}", e)));
                 }
                 return Err(ToolError::Fatal(format!("Tool Guardrail tripped: {}", e)));
             }
@@ -29,18 +20,13 @@ impl ToolGater {
 
         // Stage 1: Trust establishment at project load
         if !cfg.project_trusted && !is_read_only {
-            return Err(ToolError::Fatal(
-                "Project not trusted. Mutating tools are disabled.".to_string(),
-            ));
+            return Err(ToolError::Fatal("Project not trusted. Mutating tools are disabled.".to_string()));
         }
 
         // Stage 2: Permission check before each tool call
         if let Some(allowed) = &cfg.allowed_tools {
             if !allowed.contains(&tc.name) {
-                return Err(ToolError::Fatal(format!(
-                    "Tool '{}' is not in the allowed list.",
-                    tc.name
-                )));
+                return Err(ToolError::Fatal(format!("Tool '{}' is not in the allowed list.", tc.name)));
             }
         }
 
@@ -196,9 +182,7 @@ mod tests {
         }
 
         let mut registry = GuardrailRegistry::new();
-        registry
-            .tool_guardrails
-            .push(Arc::new(MockFailingGuardrail));
+        registry.tool_guardrails.push(Arc::new(MockFailingGuardrail));
 
         let mut cfg = AgentRunConfig::default();
         cfg.guardrails = Some(registry);

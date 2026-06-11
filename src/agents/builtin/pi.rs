@@ -1,9 +1,9 @@
-use crate::agent::AgentRunConfig;
-use crate::llm::LlmClient;
-use crate::llm::ollama::OllamaClient;
-use crate::provider::{Credentials, Provider, ProviderType, Transport};
-use std::collections::HashMap;
 use std::sync::Arc;
+use crate::llm::LlmClient;
+use crate::agent::AgentRunConfig;
+use crate::provider::{Provider, ProviderType, Credentials, Transport};
+use crate::llm::ollama::OllamaClient;
+use std::collections::HashMap;
 
 /// Pi (pi-agent-core): TypeScript monorepo architecture archetype.
 /// This Rust provider models the Pi harness structure for monorepo and TypeScript agent integration.
@@ -42,8 +42,7 @@ impl Provider for PiProvider {
     }
 
     fn description(&self) -> String {
-        "Pi (pi-agent-core) — Agent modeling a TypeScript monorepo harness architecture."
-            .to_string()
+        "Pi (pi-agent-core) — Agent modeling a TypeScript monorepo harness architecture.".to_string()
     }
 
     fn supported_roles(&self) -> Vec<String> {

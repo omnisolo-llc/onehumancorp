@@ -20,10 +20,7 @@ pub struct LangSmithProvider {
 
 impl LangSmithProvider {
     pub fn new(api_key: String, project_name: String) -> Self {
-        Self {
-            _api_key: api_key,
-            _project_name: project_name,
-        }
+        Self { _api_key: api_key, _project_name: project_name }
     }
 }
 
@@ -38,18 +35,10 @@ impl ObservabilityProvider for LangSmithProvider {
         tracing::info!("[LangSmith] LLM response for run_id: {}", run_id);
     }
     fn log_tool_call(&self, run_id: &str, tool_call: &ToolCall) {
-        tracing::info!(
-            "[LangSmith] Tool call: {} (run_id: {})",
-            tool_call.name,
-            run_id
-        );
+        tracing::info!("[LangSmith] Tool call: {} (run_id: {})", tool_call.name, run_id);
     }
     fn log_tool_result(&self, run_id: &str, tool_id: &str, _result: &str) {
-        tracing::info!(
-            "[LangSmith] Tool result for {} (run_id: {})",
-            tool_id,
-            run_id
-        );
+        tracing::info!("[LangSmith] Tool result for {} (run_id: {})", tool_id, run_id);
     }
     fn log_run_end(&self, run_id: &str, _final_output: &str) {
         tracing::info!("[LangSmith] Run end (run_id: {})", run_id);
@@ -66,10 +55,7 @@ pub struct LangfuseProvider {
 
 impl LangfuseProvider {
     pub fn new(public_key: String, secret_key: String) -> Self {
-        Self {
-            _public_key: public_key,
-            _secret_key: secret_key,
-        }
+        Self { _public_key: public_key, _secret_key: secret_key }
     }
 }
 
@@ -84,11 +70,7 @@ impl ObservabilityProvider for LangfuseProvider {
         tracing::info!("[Langfuse] LLM generation end for trace_id: {}", run_id);
     }
     fn log_tool_call(&self, run_id: &str, tool_call: &ToolCall) {
-        tracing::info!(
-            "[Langfuse] Span start: {} (trace_id: {})",
-            tool_call.name,
-            run_id
-        );
+        tracing::info!("[Langfuse] Span start: {} (trace_id: {})", tool_call.name, run_id);
     }
     fn log_tool_result(&self, run_id: &str, tool_id: &str, _result: &str) {
         tracing::info!("[Langfuse] Span end for {} (trace_id: {})", tool_id, run_id);
@@ -107,9 +89,7 @@ pub struct ObservabilityManager {
 
 impl ObservabilityManager {
     pub fn new() -> Self {
-        Self {
-            providers: Vec::new(),
-        }
+        Self { providers: Vec::new() }
     }
 
     pub fn add_provider(&mut self, provider: Arc<dyn ObservabilityProvider>) {
@@ -125,39 +105,25 @@ impl Default for ObservabilityManager {
 
 impl ObservabilityProvider for ObservabilityManager {
     fn log_run_start(&self, task: &str, run_id: &str) {
-        for p in &self.providers {
-            p.log_run_start(task, run_id);
-        }
+        for p in &self.providers { p.log_run_start(task, run_id); }
     }
     fn log_llm_request(&self, run_id: &str, req: &ChatRequest) {
-        for p in &self.providers {
-            p.log_llm_request(run_id, req);
-        }
+        for p in &self.providers { p.log_llm_request(run_id, req); }
     }
     fn log_llm_response(&self, run_id: &str, resp: &ChatResponse) {
-        for p in &self.providers {
-            p.log_llm_response(run_id, resp);
-        }
+        for p in &self.providers { p.log_llm_response(run_id, resp); }
     }
     fn log_tool_call(&self, run_id: &str, tool_call: &ToolCall) {
-        for p in &self.providers {
-            p.log_tool_call(run_id, tool_call);
-        }
+        for p in &self.providers { p.log_tool_call(run_id, tool_call); }
     }
     fn log_tool_result(&self, run_id: &str, tool_id: &str, result: &str) {
-        for p in &self.providers {
-            p.log_tool_result(run_id, tool_id, result);
-        }
+        for p in &self.providers { p.log_tool_result(run_id, tool_id, result); }
     }
     fn log_run_end(&self, run_id: &str, final_output: &str) {
-        for p in &self.providers {
-            p.log_run_end(run_id, final_output);
-        }
+        for p in &self.providers { p.log_run_end(run_id, final_output); }
     }
     fn log_error(&self, run_id: &str, error: &str) {
-        for p in &self.providers {
-            p.log_error(run_id, error);
-        }
+        for p in &self.providers { p.log_error(run_id, error); }
     }
 }
 
@@ -190,9 +156,7 @@ mod tests {
         let mut manager = ObservabilityManager::new();
         let provider1 = Arc::new(LangSmithProvider::new("k1".to_string(), "p1".to_string()));
         let provider2 = Arc::new(LangfuseProvider::new("pk1".to_string(), "sk1".to_string()));
-        let provider3 = Arc::new(MockObservabilityProvider {
-            log: std::sync::Mutex::new(vec![]),
-        });
+        let provider3 = Arc::new(MockObservabilityProvider { log: std::sync::Mutex::new(vec![]) });
 
         manager.add_provider(provider1);
         manager.add_provider(provider2);

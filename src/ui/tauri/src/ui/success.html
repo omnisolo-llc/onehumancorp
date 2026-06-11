@@ -88,33 +88,23 @@
     <div class="container">
       <h1>You're all set!</h1>
       <p id="success-msg">Your workspace is ready.</p>
-      <button id="dashboard-btn">Go to Assistant</button>
+      <button id="dashboard-btn">Go to Dashboard</button>
     </div>
     <script>
-      function showSuccess(name, assistantName) {
-        if (name) {
-            let msg = `Workspace created for ${name}.`;
-            if (assistantName) {
-                msg += ` ${assistantName} is ready to help.`;
-            }
-            document.getElementById('success-msg').innerText = msg;
-        }
-      }
-
-      if (window.__TAURI__ && window.__TAURI__.core) {
-        window.__TAURI__.core.invoke("get_onboarding_state").then((state) => {
-          showSuccess(state.businessName, state.assistantName);
-        }).catch(console.error);
-      } else {
-        const name = localStorage.getItem('businessName');
-        const assistantName = localStorage.getItem('assistantName');
-        showSuccess(name, assistantName);
+      const name = localStorage.getItem('businessName');
+      const assistantName = localStorage.getItem('assistantName');
+      if (name) {
+          let msg = `Workspace created for ${name}.`;
+          if (assistantName) {
+              msg += ` ${assistantName} is ready to help.`;
+          }
+          document.getElementById('success-msg').innerText = msg;
       }
 
       const dashboardBtn = document.getElementById('dashboard-btn');
       if (dashboardBtn) {
         dashboardBtn.addEventListener('click', () => {
-          window.location.href = "assistant.html";
+          window.location.href = "dashboard.html";
         });
       }
     </script>

@@ -110,21 +110,21 @@ onboarding, orchestration, and growth surfaces for shared-service deployments.
 
 ### Docker (single-machine deployment)
 
-Because we use local images built from source instead of pulling from Docker Hub, you must first build and load the required images locally into your Docker daemon before starting the stack:
+```bash
+bazelisk run //:deploy_dev
+```
+
+**Docker Hub Rate Limits & Local Builds**
+If you encounter a `You have reached your unauthenticated pull rate limit` error when running Docker Compose or `deploy_dev`, you can bypass it by building and loading the required images locally from source:
 
 1.  Build and load the local images into your Docker daemon:
     ```bash
     npx @bazel/bazelisk run //deploy:load_all_images
     ```
-2.  Use Docker Compose to launch the stack with the locally built images:
+2.  Use the provided override file to tell Docker Compose to use your local images instead of pulling from the registry:
     ```bash
-    cd deploy && docker compose -f docker-compose.yml up -d
+    cd deploy && docker compose -f docker-compose.yml -f docker-compose.override.yml up -d
     ```
-
-Or you can use the automated script:
-```bash
-bazelisk run //:deploy_dev
-```
 
 Services:
 | Service | Port | Description |

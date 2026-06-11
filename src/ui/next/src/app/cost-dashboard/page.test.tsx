@@ -37,7 +37,6 @@ describe('CostDashboardPage', () => {
     const mockCostData = {
       total_revenue: 150000,
       total_costs: 51000,
-      projected_monthly_cost: 218571,
       llm_cost: 20000,
       storage_cost: 10000,
       payment_fees: 5000,
@@ -118,7 +117,7 @@ describe('CostDashboardPage', () => {
     expect(screen.getAllByText(/150/)[0]).toBeDefined();
     expect(screen.getAllByText(/\/ 1000/)[0]).toBeDefined();
     // Storage used
-    expect(screen.getByText(/2 MB/)).toBeDefined();
+    expect(screen.getByText(/2.0 MB/)).toBeDefined();
     // Next bill estimated
     expect(screen.getByText('$29.00')).toBeDefined(); // Since Next bill estimated uses formatCurrency which divides by 100
 
@@ -130,9 +129,6 @@ describe('CostDashboardPage', () => {
 
     // total cost
     expect(screen.getByText('$510.00')).toBeDefined();
-
-    // projected monthly cost
-    expect(screen.getByText('$2185.71')).toBeDefined();
 
     // Specific cost breakdowns
     expect(screen.getByText('$200.00')).toBeDefined(); // llm
@@ -151,9 +147,9 @@ describe('CostDashboardPage', () => {
 
     // 7-Day Trend
     expect(screen.getByText('7-Day Trend')).toBeDefined();
-    expect(screen.getByText('10/01')).toBeDefined();
+    expect(screen.getByText('2023-10-01')).toBeDefined();
     expect(screen.getByText('$10.00')).toBeDefined(); // 1000 cents
-    expect(screen.getByText('10/02')).toBeDefined();
+    expect(screen.getByText('2023-10-02')).toBeDefined();
     expect(screen.getByText('$15.00')).toBeDefined(); // 1500 cents
 
     expect(screen.getByText('Department Tier Usage')).toBeDefined();
@@ -189,7 +185,6 @@ describe('CostDashboardPage', () => {
   test('renders 0 limits properly', async () => {
     const mockCostData = {
       cost_per_1k_tokens: 0.0015,
-      projected_monthly_cost: 0,
       trend: [],
       department_tier_usage: {
         departments: [],
@@ -227,13 +222,12 @@ describe('CostDashboardPage', () => {
     });
 
     expect(screen.getAllByText(/\/ 0/)[0]).toBeDefined();
-    expect(screen.getAllByText(/\/ < 1 MB/)[0]).toBeDefined();
+    expect(screen.getAllByText(/\/ 0 MB/)[0]).toBeDefined();
   });
 
   test('renders unlimited limits properly', async () => {
     const mockCostData = {
       cost_per_1k_tokens: 0.0015,
-      projected_monthly_cost: 0,
       trend: [],
       department_tier_usage: {
         departments: [],

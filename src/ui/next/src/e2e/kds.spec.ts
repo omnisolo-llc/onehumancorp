@@ -22,7 +22,7 @@ test.describe('KDS Offline & Multilingual', () => {
 
   test('KDS Order Sync & Multilingual Display', async ({ page }) => {
 
-    await expect(page.locator('text=#1 - Ahmed')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('text=#1 - Ahmed')).toBeVisible();
     await expect(page.getByText('Chicken Over Rice', { exact: true })).toBeVisible();
 
     // Toggle language
@@ -38,7 +38,7 @@ test.describe('KDS Offline & Multilingual', () => {
   });
 
   test('KDS Offline Actions & Background Sync', async ({ page, context }) => {
-    await expect(page.locator('text=#1 - Ahmed')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('text=#1 - Ahmed')).toBeVisible();
     // Verify initial state is "Received" before attempting to click "Prepare"
     await expect(page.getByTestId('btn-prepare-1')).toBeVisible({ timeout: 5000 });
 

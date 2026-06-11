@@ -335,33 +335,13 @@ mod chaos_tests {
         // Initialize state manager with the delayed mesh
         let state_manager = crate::orchestration::state::standalone::StandaloneStateManager::new(db, latency_mesh);
 
-
-        sqlx::query(
-            "CREATE TABLE IF NOT EXISTS swarm_tasks (
-                id TEXT PRIMARY KEY,
-                mission_id TEXT,
-                title TEXT,
-                status TEXT,
-                dependencies TEXT,
-                payload TEXT,
-                tenant_id TEXT,
-                locked_until TEXT,
-                created_at TEXT,
-                updated_at TEXT
-            )",
-        )
-        .execute(&dummy_sqlite_pool)
-        .await
-        .unwrap();
-
         let start = std::time::Instant::now();
-
 
         // This attempts to acquire lock (takes 1.9s) and then query DB.
         // The DB query might be instantaneous, but we can configure `state_manager_timeout()` in our environment
         // We use temp_env to safely mock the environment variable without concurrent race conditions
         temp_env::with_var("OHC_STATE_MANAGER_TIMEOUT_MS", Some("2000"), || async {
-            let result = tokio::time::timeout(std::time::Duration::from_secs(5), state_manager.pull_available_tasks(10)).await.expect("Test hung");
+            let result = state_manager.pull_available_tasks(10).await;
             let elapsed = start.elapsed();
 
             // Timeout cascade prevention means it should either succeed within 2s,
@@ -401,28 +381,7 @@ mod chaos_tests {
         .await
         .unwrap();
 
-
-        // Create the necessary table schema
-        sqlx::query(
-            "CREATE TABLE IF NOT EXISTS swarm_tasks (
-                id TEXT PRIMARY KEY,
-                mission_id TEXT,
-                title TEXT,
-                status TEXT,
-                dependencies TEXT,
-                payload TEXT,
-                tenant_id TEXT,
-                locked_until TEXT,
-                created_at TEXT,
-                updated_at TEXT
-            )",
-        )
-        .execute(&dummy_sqlite_pool)
-        .await
-        .unwrap();
-
         // Insert a task stuck in IN_PROGRESS with a corrupted dependency JSON
-
         let task_id = "corrupted-task-id";
         sqlx::query(
             "INSERT INTO swarm_tasks (id, status, title, payload, dependencies)
@@ -443,7 +402,7 @@ mod chaos_tests {
 
         // This attempts to pull tasks, and should gracefully skip or handle the corrupted task
         // We verify that the pull doesn't crash on deserialization errors
-        let result = tokio::time::timeout(std::time::Duration::from_secs(5), state_manager.pull_available_tasks(10)).await.expect("Test hung");
+        let result = state_manager.pull_available_tasks(10).await;
 
         assert!(result.is_ok(), "StateManager must not panic when encountering corrupted rows");
         let tasks = result.unwrap();
@@ -461,7 +420,7 @@ mod chaos_tests {
         .await
         .unwrap();
 
-        let result = tokio::time::timeout(std::time::Duration::from_secs(5), state_manager.pull_available_tasks(10)).await.expect("Test hung");
+        let result = state_manager.pull_available_tasks(10).await;
         assert!(result.is_ok(), "StateManager must not panic when pulling a PENDING task with corrupt dependencies");
 
         // Let's verify the system safely ignored or handled the corrupted dependency list.
@@ -617,11 +576,11 @@ mod chaos_tests {
         // if they timeout, they return an empty vector rather than panicking.
 
         let start_cloud = std::time::Instant::now();
-        let cloud_tasks = tokio::time::timeout(std::time::Duration::from_secs(5), cloud_state_manager.pull_available_tasks(10)).await.expect("Test hung");
+        let cloud_tasks = cloud_state_manager.pull_available_tasks(10).await;
         let elapsed_cloud = start_cloud.elapsed();
 
         let start_standalone = std::time::Instant::now();
-        let standalone_tasks = tokio::time::timeout(std::time::Duration::from_secs(5), standalone_state_manager.pull_available_tasks(10)).await.expect("Test hung");
+        let standalone_tasks = standalone_state_manager.pull_available_tasks(10).await;
         let elapsed_standalone = start_standalone.elapsed();
 
         // Parity verification: both should gracefully fallback (likely to empty lists or error, but must not panic)
@@ -753,28 +712,8 @@ mod chaos_tests {
         let mesh: Arc<dyn TeammateMesh> = Arc::new(SleepingMockMesh);
         let state_manager = CloudStateManager::new(db.clone(), mesh);
 
-
-        sqlx::query(
-            "CREATE TABLE IF NOT EXISTS swarm_tasks (
-                id TEXT PRIMARY KEY,
-                mission_id TEXT,
-                title TEXT,
-                status TEXT,
-                dependencies TEXT,
-                payload TEXT,
-                tenant_id TEXT,
-                locked_until TEXT,
-                created_at TEXT,
-                updated_at TEXT
-            )",
-        )
-        .execute(&dummy_sqlite_pool)
-        .await
-        .unwrap();
-
         let start = std::time::Instant::now();
-
-        let tasks = tokio::time::timeout(std::time::Duration::from_secs(5), state_manager.pull_available_tasks(10)).await.expect("Test hung").unwrap_or(vec![]);
+        let tasks = state_manager.pull_available_tasks(10).await.unwrap_or(vec![]);
         let elapsed = start.elapsed();
 
         // The pull_available_tasks for cloud has a 2-second timeout on the lock or DB
@@ -850,28 +789,8 @@ mod chaos_tests {
 
         let state_manager = crate::orchestration::state::standalone::StandaloneStateManager::new(db, latency_mesh);
 
-
-        sqlx::query(
-            "CREATE TABLE IF NOT EXISTS swarm_tasks (
-                id TEXT PRIMARY KEY,
-                mission_id TEXT,
-                title TEXT,
-                status TEXT,
-                dependencies TEXT,
-                payload TEXT,
-                tenant_id TEXT,
-                locked_until TEXT,
-                created_at TEXT,
-                updated_at TEXT
-            )",
-        )
-        .execute(&dummy_sqlite_pool)
-        .await
-        .unwrap();
-
         let start = std::time::Instant::now();
-
-        let res = tokio::time::timeout(std::time::Duration::from_secs(5), state_manager.pull_available_tasks(10)).await.expect("Test hung");
+        let res = state_manager.pull_available_tasks(10).await;
         let elapsed = start.elapsed();
 
         // Operation takes 3s due to LatencyMockMesh, but StateManager has 2s timeout

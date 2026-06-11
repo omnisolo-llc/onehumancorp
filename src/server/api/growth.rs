@@ -158,59 +158,7 @@ where
         .route("/discount_share/generate", post(handle_generate_discount_share))
         .route("/milestone/card", get(handle_get_milestone_card))
         .route("/trial-extension/claim", post(handle_trial_extension_claim))
-        .route("/time-savings", get(handle_time_savings))
         .layer(Extension(GrowthState { pool, hub }))
-}
-
-#[derive(Debug, Serialize)]
-pub struct TimeSavingsResponse {
-    pub hours_saved: f64,
-    pub inquiries_handled: i64,
-    pub appointments_scheduled: i64,
-    pub carts_recovered: i64,
-}
-
-async fn handle_time_savings(
-    Extension(state): Extension<GrowthState>,
-    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
-) -> Result<Json<TimeSavingsResponse>, StatusCode> {
-    let parsed_uuid = match uuid::Uuid::parse_str(&auth_info.org_id) {
-        Ok(u) => u,
-        Err(_) => return Err(StatusCode::BAD_REQUEST),
-    };
-
-    // Calculate aggregated time savings based on completed tasks
-    let inquiries_handled: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM tasks WHERE (tenant_id = $1 OR organization_id = $1) AND title ILIKE '%inquiry%' AND status = 'COMPLETED'")
-        .bind(parsed_uuid)
-        .fetch_optional(&state.pool)
-        .await
-        .unwrap_or(Some(0))
-        .unwrap_or(0);
-
-    let appointments_scheduled: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM tasks WHERE (tenant_id = $1 OR organization_id = $1) AND title ILIKE '%appointment%' AND status = 'COMPLETED'")
-        .bind(parsed_uuid)
-        .fetch_optional(&state.pool)
-        .await
-        .unwrap_or(Some(0))
-        .unwrap_or(0);
-
-    let carts_recovered: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM tasks WHERE (tenant_id = $1 OR organization_id = $1) AND title ILIKE '%cart%' AND status = 'COMPLETED'")
-        .bind(parsed_uuid)
-        .fetch_optional(&state.pool)
-        .await
-        .unwrap_or(Some(0))
-        .unwrap_or(0);
-
-    // Calculate total hours saved
-    let base_hours = (inquiries_handled as f64 * 0.2) + (appointments_scheduled as f64 * 0.3) + (carts_recovered as f64 * 0.43);
-    let hours_saved = (base_hours * 10.0).round() / 10.0; // round to 1 decimal place
-
-    Ok(Json(TimeSavingsResponse {
-        hours_saved,
-        inquiries_handled,
-        appointments_scheduled,
-        carts_recovered,
-    }))
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -228,28 +176,7 @@ async fn handle_trial_extension_claim(
         Err(_) => return Err(StatusCode::BAD_REQUEST),
     };
 
-    // First check if already claimed
-    let has_claimed: Option<bool> = match sqlx::query_scalar("SELECT has_claimed_trial_extension FROM tenants WHERE id = $1 OR tenant_id = $1")
-        .bind(parsed_uuid)
-        .fetch_optional(&state.pool)
-        .await
-    {
-        Ok(result) => result,
-        Err(e) => {
-            tracing::error!("Failed to query tenant for trial extension check: {}", e);
-            return Err(StatusCode::INTERNAL_SERVER_ERROR);
-        }
-    };
-
-    if let Some(claimed) = has_claimed {
-        if claimed {
-            return Err(StatusCode::BAD_REQUEST);
-        }
-    } else {
-        return Err(StatusCode::NOT_FOUND);
-    }
-
-    match sqlx::query("UPDATE tenants SET plan_tier = 'pro', has_claimed_trial_extension = true WHERE id = $1 OR tenant_id = $1")
+    match sqlx::query("UPDATE tenants SET plan_tier = 'pro' WHERE id = $1 OR tenant_id = $1")
         .bind(parsed_uuid)
         .execute(&state.pool)
         .await
@@ -451,7 +378,7 @@ async fn handle_send_receipt(
     let tenant_id = req.tenant_id.unwrap_or_else(|| "my-store".to_string());
 
     let generated = format!(
-        "Hi {},\n\nThank you for your order! Your payment of {} for order {} has been received.\n\nWarmly,\nThe Team\n\n<!-- ⚡ Powered by OHC -->\n<a href=\"https://ohc.store/join?ref={}\">Powered by OHC - Start your business today</a>",
+        "Hi {},\n\nThank you for your order! Your payment of {} for order {} has been received.\n\nWarmly,\nThe Team\n\n<!-- ⚡ Powered by OHC -->\n<a href=\"/api/v1/growth/referrals/click?target=/onboarding&ref={}\">Powered by OHC - Start your business today</a>",
         email, amount, order_id, tenant_id
     );
 
@@ -1561,7 +1488,7 @@ mod tests {
         let state = GrowthState { pool: pool.clone(), hub: hub.clone() };
 
         let tenant_id = "55555555-5555-5555-5555-555555555555";
-        sqlx::query("INSERT INTO tenants (id, business_name, plan_tier) VALUES ($1::uuid, 'Test Starter', 'starter') ON CONFLICT (id) DO UPDATE SET plan_tier = 'starter', has_claimed_trial_extension = false")
+        sqlx::query("INSERT INTO tenants (id, business_name, plan_tier) VALUES ($1::uuid, 'Test Starter', 'starter') ON CONFLICT (id) DO UPDATE SET plan_tier = 'starter'")
             .bind(tenant_id)
             .execute(&pool).await.unwrap();
 
@@ -1579,17 +1506,6 @@ mod tests {
             .fetch_one(&pool).await.unwrap();
 
         assert_eq!(plan_tier, "pro");
-
-        let has_claimed: bool = sqlx::query_scalar("SELECT has_claimed_trial_extension FROM tenants WHERE id = $1::uuid")
-            .bind(tenant_id)
-            .fetch_one(&pool).await.unwrap();
-
-        assert!(has_claimed);
-
-        // Try claiming again, it should fail
-        let res_again = super::handle_trial_extension_claim(Extension(state.clone()), axum::extract::Extension(auth_info.clone())).await;
-        assert!(res_again.is_err());
-        assert_eq!(res_again.unwrap_err(), StatusCode::BAD_REQUEST);
     }
 
     #[tokio::test]

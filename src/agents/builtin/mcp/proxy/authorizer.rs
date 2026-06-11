@@ -11,8 +11,8 @@ pub struct CapabilityProfile {
 
 pub trait SandboxViolationStore: Send + Sync {
     fn log_violation(&self, session_id: &str, capability: &str, tool_name: &str) -> Result<(), String>;
+    #[allow(dead_code)]
     fn get_violations(&self, session_id: &str) -> Result<Vec<String>, String>;
-    fn clear_violations(&self, session_id: &str) -> Result<(), String>;
 }
 
 pub struct InMemoryViolationStore {
@@ -50,17 +50,11 @@ impl SandboxViolationStore for InMemoryViolationStore {
         let violations = self.violations.read().unwrap();
         Ok(violations.get(session_id).cloned().unwrap_or_default())
     }
-
-    fn clear_violations(&self, session_id: &str) -> Result<(), String> {
-        let mut violations = self.violations.write().unwrap();
-        violations.remove(session_id);
-        Ok(())
-    }
 }
 
 pub struct CapabilityAuthorizer {
     profiles: RwLock<HashMap<String, CapabilityProfile>>,
-    pub violation_store: Box<dyn SandboxViolationStore>,
+    violation_store: Box<dyn SandboxViolationStore>,
 }
 
 impl CapabilityAuthorizer {
@@ -136,16 +130,5 @@ mod tests {
 
         let err = authorizer.authorize("non-existent", "read", "test_tool").unwrap_err();
         assert!(err.contains("no profile for session"));
-
-        // Test getting and clearing violations
-        let violations = authorizer.violation_store.get_violations(session_id).unwrap();
-        assert_eq!(violations.len(), 2); // 'delete' and 'execute' attempts
-
-        assert!(violations[0].contains("Denied capability 'delete'"));
-        assert!(violations[1].contains("Denied capability 'execute'"));
-
-        assert!(authorizer.violation_store.clear_violations(session_id).is_ok());
-        let empty_violations = authorizer.violation_store.get_violations(session_id).unwrap();
-        assert!(empty_violations.is_empty());
     }
 }

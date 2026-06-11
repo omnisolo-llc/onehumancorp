@@ -25,11 +25,6 @@ server_ohc = { path = "../../../server/ohc" }
 sqlx = { version = "0.8", features = ["postgres", "sqlite", "runtime-tokio-rustls", "chrono", "uuid", "macros"] }
 tokio = { workspace = true }
 tracing = "0.1"
-tree-sitter = "0.26.9"
-tree-sitter-go = "0.25.0"
-tree-sitter-python = "0.25.0"
-tree-sitter-rust = "0.24.2"
-tree-sitter-typescript = "0.23.2"
 urlencoding = "2"
 uuid = { version = "1", features = ["v4", "serde"] }
 

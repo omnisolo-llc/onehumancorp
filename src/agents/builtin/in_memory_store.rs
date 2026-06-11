@@ -1,8 +1,8 @@
-use crate::json_store::JsonMemoryEntry;
-use crate::memory_store::LongTermMemory;
 use async_trait::async_trait;
 use std::collections::{HashMap, HashSet};
-use std::sync::RwLock; // Re-use the struct for consistency
+use std::sync::RwLock;
+use crate::memory_store::LongTermMemory;
+use crate::json_store::JsonMemoryEntry; // Re-use the struct for consistency
 
 /// Memory: Short-term in-memory namespace store
 #[derive(Debug, Default)]
@@ -38,9 +38,7 @@ impl LongTermMemory for InMemoryNamespaceStore {
         let mut seen = HashSet::new();
 
         for entry in all_entries {
-            if !seen.contains(&entry.content)
-                && (query.is_empty() || entry.content.to_lowercase().contains(&query_lower))
-            {
+            if !seen.contains(&entry.content) && (query.is_empty() || entry.content.to_lowercase().contains(&query_lower)) {
                 seen.insert(entry.content.clone());
                 results.push(entry.content.clone());
                 if results.len() >= limit {
@@ -86,26 +84,11 @@ mod tests {
         let store = InMemoryNamespaceStore::new();
 
         // Test storing in default namespace
-        store
-            .store("This is a general memory", vec![])
-            .await
-            .unwrap();
+        store.store("This is a general memory", vec![]).await.unwrap();
 
         // Test storing in specific namespaces
-        store
-            .store(
-                "The architecture uses microservices",
-                vec!["architecture".to_string()],
-            )
-            .await
-            .unwrap();
-        store
-            .store(
-                "LangGraph uses state graphs",
-                vec!["architecture".to_string(), "langgraph".to_string()],
-            )
-            .await
-            .unwrap();
+        store.store("The architecture uses microservices", vec!["architecture".to_string()]).await.unwrap();
+        store.store("LangGraph uses state graphs", vec!["architecture".to_string(), "langgraph".to_string()]).await.unwrap();
 
         // Retrieve all
         let all_res = store.retrieve("", 10).await.unwrap();

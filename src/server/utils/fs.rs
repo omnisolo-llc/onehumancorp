@@ -25,9 +25,8 @@ pub fn write_file_atomic<P: AsRef<Path>>(filename: P, data: &[u8], _mode: u32) -
         .map(char::from)
         .collect();
     
+    // Use env::temp_dir() to avoid unbound tmp files in the same dir
     let mut tmp_name = std::env::temp_dir();
-    tmp_name.push("ohc-atomic-writes");
-    let _ = fs::create_dir_all(&tmp_name);
     tmp_name.push(format!("{}.{}.tmp", base_name_str, random_suffix));
     
     let mut options = fs::OpenOptions::new();
@@ -101,24 +100,5 @@ mod tests {
         }
 
         fs::remove_file(&filename).unwrap();
-    }
-}
-
-pub fn cleanup_stale_temp_files() {
-    let mut tmp_dir = std::env::temp_dir();
-    tmp_dir.push("ohc-atomic-writes");
-    if let Ok(entries) = std::fs::read_dir(&tmp_dir) {
-        let now = std::time::SystemTime::now();
-        for entry in entries.flatten() {
-            if let Ok(meta) = entry.metadata() {
-                if let Ok(modified) = meta.modified() {
-                    if let Ok(duration) = now.duration_since(modified) {
-                        if duration.as_secs() > 3600 {
-                            let _ = std::fs::remove_file(entry.path());
-                        }
-                    }
-                }
-            }
-        }
     }
 }

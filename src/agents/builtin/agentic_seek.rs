@@ -1,9 +1,9 @@
-use crate::agent::AgentRunConfig;
-use crate::llm::LlmClient;
-use crate::llm::ollama::OllamaClient;
-use crate::provider::{Credentials, Provider, ProviderType, Transport};
-use std::collections::HashMap;
 use std::sync::Arc;
+use crate::llm::LlmClient;
+use crate::agent::AgentRunConfig;
+use crate::provider::{Provider, ProviderType, Credentials, Transport};
+use crate::llm::ollama::OllamaClient;
+use std::collections::HashMap;
 
 /// agenticSeek: Fully local agent, no API costs
 pub struct AgenticSeekProvider {
@@ -39,8 +39,7 @@ impl Provider for AgenticSeekProvider {
     }
 
     fn description(&self) -> String {
-        "agenticSeek — Fully local agent, no API costs, operating purely on local compute."
-            .to_string()
+        "agenticSeek — Fully local agent, no API costs, operating purely on local compute.".to_string()
     }
 
     fn supported_roles(&self) -> Vec<String> {

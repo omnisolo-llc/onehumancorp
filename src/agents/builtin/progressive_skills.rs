@@ -1,6 +1,6 @@
+use std::path::PathBuf;
 use std::fs;
 use std::io;
-use std::path::PathBuf;
 
 /// DeerFlow Unique Harness Innovations: Progressive skills: Markdown-based skills loaded progressively.
 /// Represents a single progressive skill loaded from a Markdown file.
@@ -64,11 +64,7 @@ impl ProgressiveSkillManager {
                 name = line[2..].trim().to_string();
             } else if line.to_lowercase().starts_with("keywords:") {
                 let kw_str = line["keywords:".len()..].trim();
-                keywords = kw_str
-                    .split(',')
-                    .map(|s| s.trim().to_lowercase())
-                    .filter(|s| !s.is_empty())
-                    .collect();
+                keywords = kw_str.split(',').map(|s| s.trim().to_lowercase()).filter(|s| !s.is_empty()).collect();
             } else {
                 instruction_lines.push(line);
             }
@@ -124,23 +120,13 @@ mod tests {
         fs::create_dir(&skills_dir).unwrap();
 
         let review_md = skills_dir.join("review.md");
-        fs::write(
-            &review_md,
-            "# Review\nKeywords: review, diff\n\nReview code.",
-        )
-        .unwrap();
+        fs::write(&review_md, "# Review\nKeywords: review, diff\n\nReview code.").unwrap();
 
         let refactor_md = skills_dir.join("refactor.md");
-        fs::write(
-            &refactor_md,
-            "# Refactor\nKeywords: refactor, cleanup\n\nRefactor code.",
-        )
-        .unwrap();
+        fs::write(&refactor_md, "# Refactor\nKeywords: refactor, cleanup\n\nRefactor code.").unwrap();
 
         let manager = ProgressiveSkillManager::new(skills_dir);
-        let relevant = manager
-            .get_relevant_skills("Please do a review of this PR")
-            .unwrap();
+        let relevant = manager.get_relevant_skills("Please do a review of this PR").unwrap();
 
         assert_eq!(relevant.len(), 1);
         assert_eq!(relevant[0].name, "Review");

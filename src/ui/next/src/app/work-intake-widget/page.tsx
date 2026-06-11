@@ -54,7 +54,7 @@ export default function WorkIntakeWidgetPage() {
       <main className="p-6 md:p-8 flex-1 max-w-6xl mx-auto w-full flex flex-col md:flex-row gap-8">
         {/* Editor Sidebar */}
         <div className="w-full md:w-1/3 flex flex-col gap-6">
-            <div className="p-6 rounded-[20px]" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', boxShadow: '0 4px 24px rgba(0,0,0,0.04)' }}>
+            <div className="p-6 rounded-[20px]" style={{ background: 'rgba(255,255,255,0.8)', backdropFilter: 'blur(20px)', border: '1px solid rgba(255,255,255,0.5)', boxShadow: '0 4px 24px rgba(0,0,0,0.04)' }}>
                 <h2 className="text-lg font-semibold font-outfit mb-4">Widget Settings</h2>
 
                 <div className="mb-6">

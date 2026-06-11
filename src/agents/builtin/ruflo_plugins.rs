@@ -48,9 +48,7 @@ impl PluginRegistry {
     /// Initializes all registered plugins.
     pub fn initialize_all(&self) -> Result<(), String> {
         for (name, plugin) in &self.plugins {
-            plugin
-                .initialize()
-                .map_err(|e| format!("Failed to initialize plugin '{}': {}", name, e))?;
+            plugin.initialize().map_err(|e| format!("Failed to initialize plugin '{}': {}", name, e))?;
         }
         Ok(())
     }

@@ -30,7 +30,6 @@ pub struct AgentCostRow {
 pub struct CostDashboardResponse {
     pub total_revenue: i64,
     pub total_costs: i64,
-    pub projected_monthly_cost: i64,
     pub llm_cost: i64,
     pub storage_cost: i64,
     pub payment_fees: i64,
@@ -219,7 +218,7 @@ pub async fn cost_dashboard_handler(
                 auth.org_id.clone()
             }
         },
-        None => return Json(CostDashboardResponse { total_revenue: 0, total_costs: 0, projected_monthly_cost: 0, llm_cost: 0, storage_cost: 0, payment_fees: 0, network_cost: 0, compute_cost: 0, bandwidth_savings: 0, cache_hit_rate: 0.0, cost_per_1k_tokens: 0.0, period_start: "2024-05-01".to_string(), period_end: "2024-05-31".to_string(), trend: vec![], agent_costs: vec![], department_tier_usage: empty_department_tier_usage_response() })
+        None => return Json(CostDashboardResponse { total_revenue: 0, total_costs: 0, llm_cost: 0, storage_cost: 0, payment_fees: 0, network_cost: 0, compute_cost: 0, bandwidth_savings: 0, cache_hit_rate: 0.0, cost_per_1k_tokens: 0.0, period_start: "2024-05-01".to_string(), period_end: "2024-05-31".to_string(), trend: vec![], agent_costs: vec![], department_tier_usage: empty_department_tier_usage_response() })
     };
 
     let cache = COST_DASHBOARD_CACHE.get_or_init(|| HybridCache::new(None));
@@ -253,9 +252,8 @@ pub async fn cost_dashboard_handler(
         )
     });
 
-    let hub_clone_for_storage = hub_clone.clone();
     let storage_future = tokio::task::spawn(async move {
-        hub_clone_for_storage.tracker().get_tenant_storage_used(&tenant_id_clone).await.unwrap_or(0)
+        hub_clone.tracker().get_tenant_storage_used(&tenant_id_clone).await.unwrap_or(0)
     });
 
     let trend_future = tokio::task::spawn({
@@ -274,15 +272,7 @@ pub async fn cost_dashboard_handler(
         }
     });
 
-    let department_future = tokio::task::spawn({
-        let h = hub_clone.clone();
-        let t = tenant_id.clone();
-        async move {
-            department_tier_usage_for_tenant(&h, &t).await
-        }
-    });
-
-    let (storage_res, auditor_res, trend_res, agent_costs_res, department_res) = tokio::join!(storage_future, auditor_future, trend_future, agent_costs_future, department_future);
+    let (storage_res, auditor_res, trend_res, agent_costs_res) = tokio::join!(storage_future, auditor_future, trend_future, agent_costs_future);
 
     let storage_bytes = storage_res.unwrap_or(0);
     let (llm_cost_f64, total_revenue_f64, payment_fees_f64, compute_cost_f64, network_cost_f64, bandwidth_savings_f64, total_tokens, cached_tokens) = auditor_res.unwrap_or((0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0, 0));
@@ -306,12 +296,12 @@ pub async fn cost_dashboard_handler(
     let storage_cost_f64 = storage_gb * 0.10; // $0.10 per GB
 
     let total_costs_f64 = llm_cost_f64 + storage_cost_f64 + payment_fees_f64 + compute_cost_f64 + network_cost_f64;
-    let department_tier_usage = department_res.unwrap_or_else(|_| empty_department_tier_usage_response());
+
+    let department_tier_usage = department_tier_usage_for_tenant(&hub, &tenant_id).await;
 
     let resp = CostDashboardResponse {
         total_revenue: (total_revenue_f64 * 100.0).round() as i64,
         total_costs: (total_costs_f64 * 100.0).round() as i64,
-        projected_monthly_cost: (total_costs_f64 * 100.0 * 30.0 / 7.0).round() as i64,
         llm_cost: (llm_cost_f64 * 100.0).round() as i64,
         storage_cost: (storage_cost_f64 * 100.0).round() as i64,
         payment_fees: (payment_fees_f64 * 100.0).round() as i64,
@@ -345,33 +335,30 @@ pub async fn department_tier_usage_handler(
 }
 
 pub async fn department_tier_usage_for_tenant(hub: &Arc<Hub>, tenant_id: &str) -> DepartmentTierUsageResponse {
-    let tier_future = hub.tracker().get_tenant_tier(tenant_id);
-    let departments_future = load_department_records(&hub.pool, tenant_id);
-
-    let (tier_res, departments_res) = tokio::join!(tier_future, departments_future);
-
-    let tier = tier_res.unwrap_or(::server_pricing::rate_limit::PlanTier::Free);
+    let tier = hub
+        .tracker()
+        .get_tenant_tier(tenant_id)
+        .await
+        .unwrap_or(::server_pricing::rate_limit::PlanTier::Free);
     let current_plan = plan_name(&tier).to_string();
     let period = current_usage_period();
-    let departments = departments_res.unwrap_or_default();
+    let departments = load_department_records(&hub.pool, tenant_id).await.unwrap_or_default();
 
     let mut futures = Vec::new();
     for department in &departments {
         for key in department_usage_keys(department) {
-            let tracker = hub.tracker().clone();
+            let tracker = hub.tracker();
             let tenant_id = tenant_id.to_string();
-            futures.push(tokio::spawn(async move {
+            futures.push(async move {
                 let used = tracker.get_agent_actions_used(&tenant_id, &key).await.unwrap_or(0);
                 (key, used)
-            }));
+            });
         }
     }
 
     let mut usage_by_key = HashMap::new();
-    for res in futures::future::join_all(futures).await {
-        if let Ok((key, used)) = res {
-            usage_by_key.insert(key, used);
-        }
+    for (key, used) in futures::future::join_all(futures).await {
+        usage_by_key.insert(key, used);
     }
 
     build_department_tier_usage_response(current_plan, tier, period, departments, |agent_id| {

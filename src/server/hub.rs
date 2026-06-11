@@ -729,7 +729,7 @@ impl Hub {
         let local_to_cloud_sync_queue = sync_queue_res.unwrap_or(0);
         let sync_error_count = sync_errors_res.unwrap_or(0);
 
-        let mode = if std::env::var("OHC_STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true" {
+        let mode = if std::env::var("OHC_STANDALONE_MODE").unwrap_or_default() == "true" {
             "standalone"
         } else {
             "cloud"

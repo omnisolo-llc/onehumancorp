@@ -1077,37 +1077,17 @@ pub async fn buffer_metric_i64(
     let redacted_labels = redact_interface_pii(labels);
     let labels_json = serde_json::to_string(&redacted_labels)?;
 
-    let tenant_id = redacted_labels.get("tenant_id")
-        .or_else(|| redacted_labels.get("organization_id"))
-        .and_then(|v| v.as_str())
-        .map(|s| s.to_string());
-
-    if let Some(tenant_id) = tenant_id {
-        query(
-            "INSERT INTO telemetry_buffer (metric_name, metric_type, value, labels_json, timestamp, sync_status, tenant_id)
-             VALUES ($1, $2, $3, $4, $5, 'pending', $6)"
-        )
-        .bind(metric_name)
-        .bind(metric_type)
-        .bind(value as f64)
-        .bind(labels_json)
-        .bind(Utc::now())
-        .bind(tenant_id)
-        .execute(pool)
-        .await?;
-    } else {
-        query(
-            "INSERT INTO telemetry_buffer (metric_name, metric_type, value, labels_json, timestamp, sync_status)
-             VALUES ($1, $2, $3, $4, $5, 'pending')"
-        )
-        .bind(metric_name)
-        .bind(metric_type)
-        .bind(value as f64)
-        .bind(labels_json)
-        .bind(Utc::now())
-        .execute(pool)
-        .await?;
-    }
+    query(
+        "INSERT INTO telemetry_buffer (metric_name, metric_type, value, labels_json, timestamp, sync_status)
+         VALUES ($1, $2, $3, $4, $5, 'pending')"
+    )
+    .bind(metric_name)
+    .bind(metric_type)
+    .bind(value as f64)
+    .bind(labels_json)
+    .bind(Utc::now())
+    .execute(pool)
+    .await?;
 
     Ok(())
 }
@@ -1129,37 +1109,17 @@ pub async fn buffer_metric(
     let redacted_labels = redact_interface_pii(labels);
     let labels_json = serde_json::to_string(&redacted_labels)?;
 
-    let tenant_id = redacted_labels.get("tenant_id")
-        .or_else(|| redacted_labels.get("organization_id"))
-        .and_then(|v| v.as_str())
-        .map(|s| s.to_string());
-
-    if let Some(tenant_id) = tenant_id {
-        query(
-            "INSERT INTO telemetry_buffer (metric_name, metric_type, value, labels_json, timestamp, sync_status, tenant_id)
-             VALUES ($1, $2, $3, $4, $5, 'pending', $6)"
-        )
-        .bind(metric_name)
-        .bind(metric_type)
-        .bind(value)
-        .bind(labels_json)
-        .bind(Utc::now())
-        .bind(tenant_id)
-        .execute(pool)
-        .await?;
-    } else {
-        query(
-            "INSERT INTO telemetry_buffer (metric_name, metric_type, value, labels_json, timestamp, sync_status)
-             VALUES ($1, $2, $3, $4, $5, 'pending')"
-        )
-        .bind(metric_name)
-        .bind(metric_type)
-        .bind(value)
-        .bind(labels_json)
-        .bind(Utc::now())
-        .execute(pool)
-        .await?;
-    }
+    query(
+        "INSERT INTO telemetry_buffer (metric_name, metric_type, value, labels_json, timestamp, sync_status)
+         VALUES ($1, $2, $3, $4, $5, 'pending')"
+    )
+    .bind(metric_name)
+    .bind(metric_type)
+    .bind(value)
+    .bind(labels_json)
+    .bind(Utc::now())
+    .execute(pool)
+    .await?;
 
     Ok(())
 }

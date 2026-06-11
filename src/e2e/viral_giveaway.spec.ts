@@ -22,16 +22,14 @@ test.describe('Viral Giveaway Loop', () => {
 
     // 3. Fill out the giveaway configuration
     const titleInput = page.getByLabel('Prize / Title');
-    await titleInput.fill('Win a Free iPad');
-    await titleInput.pressSequentially('!');
+    await titleInput.fill('Win a Free iPad!');
 
     const descInput = page.getByLabel('Description');
-    await descInput.fill('Enter your email to win an iPad. Share with friends for extra entries');
-    await descInput.pressSequentially('!');
+    await descInput.fill('Enter your email to win an iPad. Share with friends for extra entries!');
 
     // 4. Click generate link
     // We mock localStorage if needed, but fixtures set it.
-    await page.evaluate(() => { localStorage.setItem('has_pro', 'true'); window.dispatchEvent(new Event('storage')); });
+    await page.evaluate(() => localStorage.setItem('has_pro', 'true'));
 
     const generateBtn = page.getByRole('button', { name: 'Generate Giveaway Link' });
     await expect(generateBtn).toBeEnabled();

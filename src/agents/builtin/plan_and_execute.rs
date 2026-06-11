@@ -1,6 +1,6 @@
-use crate::output_parser::{LlmClientForParser, parse_structured_output};
-use crate::tools::Tool;
 use ohc_builtin_agent_core::types::{ChatRequest, Message, ToolError};
+use crate::output_parser::{parse_structured_output, LlmClientForParser};
+use crate::tools::Tool;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -121,10 +121,7 @@ impl PlanAndExecuteOrchestrator {
                 return Err("Deadlock detected: unresolved dependencies in plan".to_string());
             }
 
-            fn replace_in_json(
-                value: &mut serde_json::Value,
-                results: &std::collections::HashMap<String, String>,
-            ) {
+            fn replace_in_json(value: &mut serde_json::Value, results: &std::collections::HashMap<String, String>) {
                 match value {
                     serde_json::Value::String(s) => {
                         let mut new_s = s.clone();
@@ -152,10 +149,7 @@ impl PlanAndExecuteOrchestrator {
             let mut mutating_tasks = Vec::new();
 
             for task in ready_tasks {
-                let tool = self
-                    .tools
-                    .get(&task.tool_name)
-                    .ok_or_else(|| format!("Tool not found: {}", task.tool_name))?;
+                let tool = self.tools.get(&task.tool_name).ok_or_else(|| format!("Tool not found: {}", task.tool_name))?;
                 if tool.is_read_only {
                     read_only_tasks.push(task);
                 } else {
@@ -185,13 +179,7 @@ impl PlanAndExecuteOrchestrator {
                     match res {
                         Ok(r) => Ok::<_, String>((task.task_id, r)),
                         Err(ohc_builtin_agent_core::types::ToolError::LlmRecoverable(msg)) => {
-                            Ok::<_, String>((
-                                task.task_id,
-                                format!(
-                                    "LLM-Recoverable Error: {}. Please analyze this error, correct your tool arguments, and try again.",
-                                    msg
-                                ),
-                            ))
+                            Ok::<_, String>((task.task_id, format!("LLM-Recoverable Error: {}. Please analyze this error, correct your tool arguments, and try again.", msg)))
                         }
                         Err(e) => Err(format!("Tool execution failed: {}", e)),
                     }
@@ -206,10 +194,7 @@ impl PlanAndExecuteOrchestrator {
 
             // Run mutating tasks serially
             for task in mutating_tasks {
-                let tool = self
-                    .tools
-                    .get(&task.tool_name)
-                    .ok_or_else(|| format!("Tool not found: {}", task.tool_name))?;
+                let tool = self.tools.get(&task.tool_name).ok_or_else(|| format!("Tool not found: {}", task.tool_name))?;
                 let mut resolved_args = task.arguments.clone();
 
                 let r = results.read().await;
@@ -379,10 +364,7 @@ mod tests {
             description: "".to_string(),
             is_read_only: true,
             parameters: serde_json::json!({}),
-            execute: Arc::new(TimingToolExecutor {
-                sleep_ms: 100,
-                response: "ro1".to_string(),
-            }),
+            execute: Arc::new(TimingToolExecutor { sleep_ms: 100, response: "ro1".to_string() }),
         };
 
         let tool_ro2 = Tool {
@@ -390,10 +372,7 @@ mod tests {
             description: "".to_string(),
             is_read_only: true,
             parameters: serde_json::json!({}),
-            execute: Arc::new(TimingToolExecutor {
-                sleep_ms: 100,
-                response: "ro2".to_string(),
-            }),
+            execute: Arc::new(TimingToolExecutor { sleep_ms: 100, response: "ro2".to_string() }),
         };
 
         let tool_mut = Tool {
@@ -401,34 +380,16 @@ mod tests {
             description: "".to_string(),
             is_read_only: false,
             parameters: serde_json::json!({}),
-            execute: Arc::new(TimingToolExecutor {
-                sleep_ms: 100,
-                response: "mut".to_string(),
-            }),
+            execute: Arc::new(TimingToolExecutor { sleep_ms: 100, response: "mut".to_string() }),
         };
 
         let orchestrator = PlanAndExecuteOrchestrator::new(vec![tool_ro1, tool_ro2, tool_mut]);
 
         let plan = ExecutionPlan {
             tasks: vec![
-                TaskNode {
-                    task_id: "ro1".to_string(),
-                    tool_name: "tool_ro1".to_string(),
-                    arguments: serde_json::json!({}),
-                    dependencies: vec![],
-                },
-                TaskNode {
-                    task_id: "ro2".to_string(),
-                    tool_name: "tool_ro2".to_string(),
-                    arguments: serde_json::json!({}),
-                    dependencies: vec![],
-                },
-                TaskNode {
-                    task_id: "mut".to_string(),
-                    tool_name: "tool_mut".to_string(),
-                    arguments: serde_json::json!({}),
-                    dependencies: vec![],
-                },
+                TaskNode { task_id: "ro1".to_string(), tool_name: "tool_ro1".to_string(), arguments: serde_json::json!({}), dependencies: vec![] },
+                TaskNode { task_id: "ro2".to_string(), tool_name: "tool_ro2".to_string(), arguments: serde_json::json!({}), dependencies: vec![] },
+                TaskNode { task_id: "mut".to_string(), tool_name: "tool_mut".to_string(), arguments: serde_json::json!({}), dependencies: vec![] },
             ],
         };
 
@@ -445,15 +406,7 @@ mod tests {
         // The total time should be roughly 200ms.
         // If all ran sequentially, it would take ~300ms.
         // We will assert that it took less than 280ms, but more than 150ms to ensure it didn't all run concurrently.
-        assert!(
-            elapsed >= 150,
-            "Execution was too fast, expected >= 150ms, got {}ms",
-            elapsed
-        );
-        assert!(
-            elapsed < 280,
-            "Execution was too slow, expected < 280ms (concurrent RO), got {}ms",
-            elapsed
-        );
+        assert!(elapsed >= 150, "Execution was too fast, expected >= 150ms, got {}ms", elapsed);
+        assert!(elapsed < 280, "Execution was too slow, expected < 280ms (concurrent RO), got {}ms", elapsed);
     }
 }

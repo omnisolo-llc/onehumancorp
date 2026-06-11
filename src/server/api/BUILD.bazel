@@ -28,7 +28,6 @@ exports_files(
 
 
         "local_seo.rs",
-        "recovery.rs",
     ],
     visibility = ["//visibility:public"],
 )
@@ -63,7 +62,6 @@ rust_library(
 
 
         "local_seo.rs",
-        "recovery.rs",
         "//src/server/api/agents:approvals.rs",
         "//src/server/api/agents:chat.rs",
         "//src/server/api/agents:hire.rs",

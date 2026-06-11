@@ -141,8 +141,12 @@ impl Store {
     pub fn set_voice_settings(&self, enabled: bool, number: Option<String>, persona: Option<String>) -> Result<(), String> {
         let mut data = self.data.write().unwrap();
         data.voice_receptionist_enabled = enabled;
-        data.voice_receptionist_number = number;
-        data.voice_receptionist_persona = persona;
+        if number.is_some() {
+            data.voice_receptionist_number = number;
+        }
+        if persona.is_some() {
+            data.voice_receptionist_persona = persona;
+        }
         drop(data);
         self.save()
     }

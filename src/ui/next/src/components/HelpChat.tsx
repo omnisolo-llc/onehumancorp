@@ -154,8 +154,6 @@ export function HelpChat() {
             onClick={() => setIsOpen(true)}
             className="bg-blue-600/95 text-white p-4 rounded-full shadow-2xl hover:shadow-xl hover:scale-105 transition-all flex items-center justify-center gap-2 group backdrop-blur-[20px] saturate-200"
             aria-label="Open help chat"
-            aria-expanded={isOpen}
-            aria-controls="ai-chat-interface"
           >
             <span className="text-xl">✨</span>
             <span className="font-outfit font-bold max-w-0 overflow-hidden group-hover:max-w-xs transition-all duration-300 whitespace-nowrap px-0 group-hover:px-2">
@@ -167,7 +165,7 @@ export function HelpChat() {
 
       {/* Chat Interface */}
       {isOpen && (
-        <div id="ai-chat-interface" className="fixed bottom-24 right-6 z-[9999] w-[350px] max-w-[calc(100vw-32px)] bg-white/70 backdrop-blur-[20px] saturate-200 rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.1)] flex flex-col overflow-hidden border border-white/60 animate-slide-up-chat">
+        <div className="fixed bottom-24 right-6 z-[9999] w-[350px] max-w-[calc(100vw-32px)] bg-white/70 backdrop-blur-[20px] saturate-200 rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.1)] flex flex-col overflow-hidden border border-white/60 animate-slide-up-chat">
           {/* Header */}
           <div
             id="ai-chat-header"
@@ -188,8 +186,6 @@ export function HelpChat() {
               onClick={() => setIsOpen(false)}
               className="text-blue-100 hover:text-white transition-colors bg-white/10 hover:bg-white/20 rounded-full p-1.5"
               aria-label="Close help chat"
-              aria-expanded={isOpen}
-              aria-controls="ai-chat-interface"
             >
               <span className="sr-only">✕</span>
               <svg

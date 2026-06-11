@@ -356,7 +356,6 @@ impl Department for SalesAgent {
                 );
 
                 let action_payload = serde_json::json!({
-                    "inbox_message_id": event.payload.get("inbox_message_id").and_then(|v| v.as_str()).unwrap_or(""),
                     "feature_type": "quote_draft",
                     "customer_inquiry": intent.original_message,
                     "suggested_price": price,
