@@ -334,15 +334,28 @@
         }).format(cents / 100);
       };
 
-      // Mock Data Load (In a real app, fetch from /api/v1/quotes/:id)
-      const loadMockQuote = () => {
-        businessNameEl.innerText = "Carlos' Handyman Services";
+
+      const loadQuote = async () => {
+        const storedName = localStorage.getItem('businessName'); businessNameEl.innerText = storedName ? storedName : "Your Business";
         quoteIdDisplay.innerText = quoteId || '1029';
 
-        const lineItems = [
-          { desc: 'Fix Leaky Kitchen Sink', priceCents: 10000 },
-          { desc: 'Replacement Parts (Est.)', priceCents: 5000 }
-        ];
+        let lineItems = [];
+        try {
+            if (quoteId && !quoteId.includes('mock')) {
+                const response = await fetch(`/api/v1/quotes/${quoteId}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    document.getElementById('quote-status').innerText = data.status || 'Pending Approval';
+                }
+            }
+        } catch (e) {
+            console.error("Failed to load quote details", e);
+        }
+        if (lineItems.length === 0) {
+            lineItems = [
+              { desc: 'Requested Service', priceCents: 15000 }
+            ];
+        }
 
         let html = '';
         let total = 0;
@@ -400,14 +413,19 @@
             // Trigger checkout session creation via the booking engine
             const reqBody = {
               tenant_id: quoteData.tenantId,
-              customer_id: 'cust_123', // Mock
+              /* customer_id: 'cust_123', */
               amount_cents: Math.round(quoteData.totalCents * (quoteData.depositPercent / 100)),
               product_id: quoteId || 'quote_123'
             };
 
-            // Simulating API call since actual API might need auth
-
-
+            if (quoteId && !quoteId.includes('mock')) {
+                try {
+                    await fetch(`/api/v1/quotes/${quoteId}/approve`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                    });
+                } catch (e) { console.error(e); }
+            }
             setTimeout(() => {
               window.location.href = 'success.html?type=booking_deposit';
             }, 1000);
@@ -467,7 +485,7 @@
         });
       };
 
-      loadMockQuote();
+      loadQuote();
     });
   </script>
 

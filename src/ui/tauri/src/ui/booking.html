@@ -144,7 +144,12 @@
       const urlParams = new URLSearchParams(window.location.search);
       const tenantId = urlParams.get('tenant') || 'demo-tenant';
 
-      document.getElementById('business-name').innerText = "Carlos' Handyman Services"; // Mock
+      // Attempt to load the real business name from API, fallback to localStorage, then default
+      const storedName = localStorage.getItem('businessName');
+      document.getElementById('business-name').innerText = storedName ? storedName : "Your Business";
+
+      // A complete implementation would fetch the tenant configuration from the backend.
+      // For now we rely on the localStorage value set during onboarding.
 
       document.getElementById('booking-form').addEventListener('submit', async (e) => {
         e.preventDefault();
