@@ -774,30 +774,310 @@ impl NativeBookingService {
 impl BookingEngineService for NativeBookingService {
     async fn get_resources(
         &self,
-        _request: tonic::Request<::server_ohc::app::GetResourcesRequest>,
+        request: tonic::Request<::server_ohc::app::GetResourcesRequest>,
     ) -> Result<tonic::Response<::server_ohc::app::GetResourcesResponse>, tonic::Status> {
+        let auth_info = request.extensions().get::<::server_auth::orchestration::AuthInfo>().cloned();
+        let tenant_id = match auth_info {
+            Some(info) => info.org_id,
+            None => {
+                let spiffe_id_str = request.metadata().get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
+                ::server_auth::parse_spiffe_id(spiffe_id_str).map_err(|_| Status::unauthenticated("invalid spiffe id"))?.0
+            }
+        };
+
+        if tenant_id.is_empty() {
+            return Err(Status::unauthenticated("missing tenant identity in session"));
+        }
+
+        let pool = crate::db::get_pool();
+        let mut tx = pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+        crate::common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| Status::internal(e.to_string()))?;
+
+        use sqlx::Row;
+        let rows = sqlx::query(
+            r#"
+            SELECT id, name, resource_type, availability_schedule
+            FROM booking_resources
+            WHERE tenant_id = $1
+            "#,
+        )
+        .bind(&tenant_id)
+        .fetch_all(&mut *tx)
+        .await
+        .map_err(|e| Status::internal(e.to_string()))?;
+
+        let resources = rows.into_iter().map(|row| ::server_ohc::app::BookingResource {
+            id: row.get("id"),
+            name: row.get("name"),
+            resource_type: row.get("resource_type"),
+            availability_schedule: row.get::<serde_json::Value, _>("availability_schedule").to_string(),
+        }).collect();
+
         Ok(tonic::Response::new(::server_ohc::app::GetResourcesResponse {
-            resources: vec![],
+            resources,
         }))
     }
 
     async fn get_services(
         &self,
-        _request: tonic::Request<::server_ohc::app::GetServicesRequest>,
+        request: tonic::Request<::server_ohc::app::GetServicesRequest>,
     ) -> Result<tonic::Response<::server_ohc::app::GetServicesResponse>, tonic::Status> {
+        let auth_info = request.extensions().get::<::server_auth::orchestration::AuthInfo>().cloned();
+        let tenant_id = match auth_info {
+            Some(info) => info.org_id,
+            None => {
+                let spiffe_id_str = request.metadata().get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
+                ::server_auth::parse_spiffe_id(spiffe_id_str).map_err(|_| Status::unauthenticated("invalid spiffe id"))?.0
+            }
+        };
+
+        if tenant_id.is_empty() {
+            return Err(Status::unauthenticated("missing tenant identity in session"));
+        }
+
+        let pool = crate::db::get_pool();
+        let mut tx = pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+        crate::common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| Status::internal(e.to_string()))?;
+
+        use sqlx::Row;
+        let rows = sqlx::query(
+            r#"
+            SELECT s.id, s.title, s.description, s.price_cents
+            FROM services s
+            WHERE s.tenant_id = $1
+            "#,
+        )
+        .bind(&tenant_id)
+        .fetch_all(&mut *tx)
+        .await
+        .map_err(|e| Status::internal(e.to_string()))?;
+
+        let mut service_definitions = Vec::new();
+        for row in rows {
+            let service_id: String = row.get("id");
+
+            let reqs = sqlx::query(
+                r#"
+                SELECT resource_type, quantity
+                FROM service_resource_requirements
+                WHERE service_id = $1
+                "#,
+            )
+            .bind(&service_id)
+            .fetch_all(&mut *tx)
+            .await
+            .unwrap_or_default();
+
+            let resource_requirements = reqs.into_iter().map(|r| ::server_ohc::app::ServiceResourceRequirement {
+                resource_type: r.get("resource_type"),
+                quantity: r.get::<i32, _>("quantity") as i32,
+            }).collect();
+
+            service_definitions.push(::server_ohc::app::ServiceDefinition {
+                id: service_id,
+                title: row.get("title"),
+                description: row.try_get("description").unwrap_or_default(),
+                price_cents: row.get("price_cents"),
+                resource_requirements,
+            });
+        }
+
         Ok(tonic::Response::new(::server_ohc::app::GetServicesResponse {
-            services: vec![],
+            services: service_definitions,
         }))
     }
 
     async fn create_unified_booking(
         &self,
-        _request: tonic::Request<::server_ohc::app::CreateUnifiedBookingRequest>,
+        request: tonic::Request<::server_ohc::app::CreateUnifiedBookingRequest>,
     ) -> Result<tonic::Response<::server_ohc::app::CreateUnifiedBookingResponse>, tonic::Status> {
+        let auth_info = request.extensions().get::<::server_auth::orchestration::AuthInfo>().cloned();
+        let auth_tenant_id = match auth_info {
+            Some(info) => info.org_id,
+            None => {
+                let spiffe_id_str = request.metadata().get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
+                ::server_auth::parse_spiffe_id(spiffe_id_str).map_err(|_| Status::unauthenticated("invalid spiffe id"))?.0
+            }
+        };
+
+        if auth_tenant_id.is_empty() {
+            return Err(Status::unauthenticated("missing tenant identity in session"));
+        }
+
+        let payload = request.into_inner();
+        let tenant_id = if payload.tenant_id.is_empty() { auth_tenant_id.clone() } else { payload.tenant_id };
+
+        if tenant_id != auth_tenant_id {
+            // Verify access if needed, or just reject cross-tenant booking depending on product rules.
+            // For now, assuming standard multi-tenant isolation.
+            return Err(Status::permission_denied("Cannot create booking for another tenant"));
+        }
+
+        let service_id = payload.service_id;
+        let start_time = payload.start_time;
+        let end_time = payload.end_time;
+        let customer_id = payload.customer_id;
+
+        let pool = crate::db::get_pool();
+        let mut tx = pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+        crate::common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| Status::internal(e.to_string()))?;
+
+        use sqlx::Row;
+
+        // 1. Determine resource requirements
+        let reqs = match sqlx::query(
+            r#"
+            SELECT resource_type, quantity
+            FROM service_resource_requirements
+            WHERE service_id = $1
+            "#
+        )
+        .bind(&service_id)
+        .fetch_all(&mut *tx)
+        .await {
+            Ok(rows) => rows,
+            Err(e) => {
+                tracing::error!("Failed to fetch resource requirements: {}", e);
+                return Ok(tonic::Response::new(::server_ohc::app::CreateUnifiedBookingResponse {
+                    success: false,
+                    booking: None,
+                    error: "Failed to fetch resource requirements".to_string(),
+                }));
+            }
+        };
+
+        let mut locked_resource_ids = Vec::new();
+
+        for req in reqs {
+            let r_type: String = req.get("resource_type");
+            let qty: i32 = req.get("quantity");
+
+            // 2. Find and lock available resources
+            // We use SKIP LOCKED to safely find resources not concurrently booked
+            let available_resources = match sqlx::query(
+                r#"
+                SELECT r.id
+                FROM booking_resources r
+                WHERE r.tenant_id = $1 AND r.resource_type = $2
+                AND r.id NOT IN (
+                    SELECT brr.resource_id
+                    FROM booking_resource_reservations brr
+                    JOIN bookings b ON brr.booking_id = b.id
+                    WHERE b.tenant_id = $1
+                    AND (
+                        (b.start_time < $4::timestamptz AND b.end_time > $3::timestamptz)
+                    )
+                    AND b.status IN ('pending', 'confirmed')
+                )
+                LIMIT $5
+                FOR UPDATE SKIP LOCKED
+                "#
+            )
+            .bind(&tenant_id)
+            .bind(&r_type)
+            .bind(&start_time)
+            .bind(&end_time)
+            .bind(qty)
+            .fetch_all(&mut *tx)
+            .await {
+                Ok(rows) => rows,
+                Err(e) => {
+                    tracing::error!("Failed to find available resources: {}", e);
+                    return Ok(tonic::Response::new(::server_ohc::app::CreateUnifiedBookingResponse {
+                        success: false,
+                        booking: None,
+                        error: "Failed to find available resources".to_string(),
+                    }));
+                }
+            };
+
+            if available_resources.len() < qty as usize {
+                // Not enough resources available
+                return Ok(tonic::Response::new(::server_ohc::app::CreateUnifiedBookingResponse {
+                    success: false,
+                    booking: None,
+                    error: format!("Not enough resources available for type {}", r_type),
+                }));
+            }
+
+            for row in available_resources {
+                locked_resource_ids.push(row.get::<String, _>("id"));
+            }
+        }
+
+        // 3. Create the booking
+        let booking_id = uuid::Uuid::new_v4().to_string();
+
+        if let Err(e) = sqlx::query(
+            r#"
+            INSERT INTO bookings (id, tenant_id, customer_id, product_id, start_time, end_time, status)
+            VALUES ($1, $2, $3, $4, $5::timestamptz, $6::timestamptz, 'confirmed')
+            "#
+        )
+        .bind(&booking_id)
+        .bind(&tenant_id)
+        .bind(&customer_id)
+        .bind(&service_id) // using service_id as product_id for now
+        .bind(&start_time)
+        .bind(&end_time)
+        .execute(&mut *tx)
+        .await {
+            tracing::error!("Failed to create booking: {}", e);
+            return Ok(tonic::Response::new(::server_ohc::app::CreateUnifiedBookingResponse {
+                success: false,
+                booking: None,
+                error: "Failed to create booking".to_string(),
+            }));
+        }
+
+        // 4. Create resource reservations
+        for res_id in &locked_resource_ids {
+            let res_res_id = uuid::Uuid::new_v4().to_string();
+            if let Err(e) = sqlx::query(
+                r#"
+                INSERT INTO booking_resource_reservations (id, tenant_id, booking_id, resource_id)
+                VALUES ($1, $2, $3, $4)
+                "#
+            )
+            .bind(&res_res_id)
+            .bind(&tenant_id)
+            .bind(&booking_id)
+            .bind(res_id)
+            .execute(&mut *tx)
+            .await {
+                tracing::error!("Failed to reserve resource: {}", e);
+                return Ok(tonic::Response::new(::server_ohc::app::CreateUnifiedBookingResponse {
+                    success: false,
+                    booking: None,
+                    error: "Failed to reserve resource".to_string(),
+                }));
+            }
+        }
+
+        // Commit transaction
+        if let Err(e) = tx.commit().await {
+            tracing::error!("Failed to commit transaction: {}", e);
+            return Ok(tonic::Response::new(::server_ohc::app::CreateUnifiedBookingResponse {
+                success: false,
+                booking: None,
+                error: "Failed to complete booking process".to_string(),
+            }));
+        }
+
+        let booking = ::server_ohc::app::UnifiedBooking {
+            id: booking_id,
+            customer_id,
+            service_id,
+            start_time,
+            end_time,
+            status: "confirmed".to_string(),
+            locked_resource_ids,
+        };
+
         Ok(tonic::Response::new(::server_ohc::app::CreateUnifiedBookingResponse {
             success: true,
-            booking: None,
-            error: "Not implemented in native grpc yet".to_string(),
+            booking: Some(booking),
+            error: String::new(),
         }))
     }
     async fn check_availability(
