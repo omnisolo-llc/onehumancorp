@@ -607,7 +607,26 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                             </span>
                           </div>
                         </>
-                      ) : (approval.proposed_action || approval.context_payload)?.feature_type === 'ambassador_reply' ? (
+                      ) : (approval.proposed_action || approval.context_payload)?.feature_type === 'return_request' ? (
+                    <div className="flex flex-col sm:flex-row gap-3 w-full">
+                      <button
+                        onClick={() => handleDecision(approval.id, true)}
+                        className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center"
+                        aria-label="Approve Return"
+                        data-testid="approve-return"
+                      >
+                        Approve Return
+                      </button>
+                      <button
+                        onClick={() => handleDecision(approval.id, false)}
+                        className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
+                        aria-label="Deny Return"
+                        data-testid="deny-return"
+                      >
+                        Deny Return
+                      </button>
+                    </div>
+                  ) : (approval.proposed_action || approval.context_payload)?.feature_type === 'ambassador_reply' ? (
                         <div className="flex flex-col gap-2">
                           <div className="flex justify-between items-center text-sm">
                             <span className="text-gray-500 dark:text-gray-400">Context:</span>

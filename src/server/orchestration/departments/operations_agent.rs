@@ -25,11 +25,40 @@ impl Department for OperationsAgent {
             "LowStockAlert".to_string(),
             "InventoryConflictEvent".to_string(),
             "tenant.inventory.updated".to_string(),
+            "tenant.return.requested".to_string(), "approval_decision".to_string(),
         ]
     }
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
-        if event.event_type == "tenant.inventory.updated" {
+
+        if event.event_type == "approval_decision" && event.payload.get("department").and_then(|v| v.as_str()) == Some("operations") {
+            let payload_str = event.payload.get("original_payload").and_then(|v| v.as_str()).unwrap_or("");
+            if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(payload_str) {
+                if parsed.get("feature_type").and_then(|v| v.as_str()) == Some("return_request") {
+                    let return_id = parsed.get("return_id").and_then(|v| v.as_str()).unwrap_or("");
+                    let decision = event.payload.get("decision").and_then(|v| v.as_bool()).unwrap_or(false);
+                    let new_status = if decision { "approved" } else { "rejected" };
+
+                    match &self.orchestrator.db.store {
+                        crate::db::DbStore::Postgres => {
+                            let _ = sqlx::query("UPDATE return_requests SET status = $1 WHERE id = $2 AND tenant_id = $3")
+                                .bind(new_status)
+                                .bind(return_id)
+                                .bind(&event.tenant_id)
+                                .execute(&self.orchestrator.db.pool).await;
+                        },
+                        crate::db::DbStore::Sqlite(pool) => {
+                            let _ = sqlx::query("UPDATE return_requests SET status = ? WHERE id = ? AND tenant_id = ?")
+                                .bind(new_status)
+                                .bind(return_id)
+                                .bind(&event.tenant_id)
+                                .execute(&pool.clone()).await;
+                        }
+                    }
+                }
+            }
+        }
+if event.event_type == "tenant.inventory.updated" {
             let product_id = event.payload.get("product_id").and_then(|v| v.as_str()).unwrap_or("");
             let cache = crate::builder::edge::get_edge_cache();
             cache.invalidate_by_tag(&format!("tenant-id:{}", event.tenant_id)).await;
@@ -38,7 +67,54 @@ impl Department for OperationsAgent {
             }
         }
 
-        let config = self.get_config(&event.tenant_id);
+
+        if event.event_type == "tenant.return.requested" {
+            let return_id = event.payload.get("return_id").and_then(|v| v.as_str()).unwrap_or("");
+            let order_id = event.payload.get("order_id").and_then(|v| v.as_str()).unwrap_or("");
+
+            // Check return policy
+            let mut auto_approve = true;
+            match &self.orchestrator.db.store {
+                crate::db::DbStore::Postgres => {
+                    if let Ok(Some(row)) = sqlx::query("SELECT auto_approve FROM return_policies WHERE tenant_id = $1")
+                        .bind(&event.tenant_id)
+                        .fetch_optional(&self.orchestrator.db.pool).await
+                    {
+                        use sqlx::Row;
+                        auto_approve = row.get("auto_approve");
+                    }
+                },
+                crate::db::DbStore::Sqlite(pool) => {
+                    if let Ok(Some(row)) = sqlx::query("SELECT auto_approve FROM return_policies WHERE tenant_id = ?")
+                        .bind(&event.tenant_id)
+                        .fetch_optional(&pool.clone()).await
+                    {
+                        use sqlx::Row;
+                        auto_approve = row.get("auto_approve");
+                    }
+                }
+            }
+
+            let risk = if auto_approve {
+                ActionRisk::AutoExecute
+            } else {
+                ActionRisk::DraftForReview
+            };
+
+            let description = format!("Return requested for order {}. Review and approve the return.", order_id);
+
+            self.orchestrator.execute_action(
+                DepartmentType::Operations,
+                description,
+                event.tenant_id.clone(),
+                risk,
+                event.payload.clone(),
+            ).await?;
+
+            return Ok(());
+        }
+
+let config = self.get_config(&event.tenant_id);
         let risk = if let Some(cfg) = config {
             if cfg.auto_approve_limits > 0.0 {
                 ActionRisk::AutoExecute

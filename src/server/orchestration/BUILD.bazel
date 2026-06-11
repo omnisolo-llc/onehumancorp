@@ -144,7 +144,9 @@ rust_library(
         "//src/server/integrations/sendgrid:server_integrations_sendgrid",
         "//src/server/integrations/shippo:server_integrations_shippo",
         "//src/server/integrations/task_scheduler:server_integrations_task_scheduler",
-        "//src/server/integrations/twilio:server_integrations_twilio",
+                "//src/server/integrations/twilio:server_integrations_twilio",
+        "//src/server/integrations/stripe:server_integrations_stripe",
+
         "//src/server/integrations/zoom:server_integrations_zoom",
         "//src/server/ohc:server_ohc",
         "//src/server/oidc:server_oidc",

@@ -189,6 +189,36 @@ impl StripeClient {
 
 impl StripeClient {
     /// Dispatches a batch payout check. If batched amount > threshold, actually performs payout.
+        pub async fn refund_payment(&self, payment_intent_id: &str, amount_cents: Option<i64>) -> Result<String, String> {
+        let api_key = self.require_api_key()?;
+        let mut form = std::collections::HashMap::new();
+        form.insert("payment_intent".to_string(), payment_intent_id.to_string());
+        if let Some(amount) = amount_cents {
+            form.insert("amount".to_string(), amount.to_string());
+        }
+
+        let idempotency_key = format!("refund_{}_{}", payment_intent_id, amount_cents.unwrap_or(0));
+
+        let client = reqwest::Client::new();
+        let res = client
+            .post(&format!("{}/v1/refunds", Self::api_base()))
+            .bearer_auth(api_key)
+            .header("Idempotency-Key", idempotency_key)
+            .form(&form)
+            .send()
+            .await
+            .map_err(|e| e.to_string())?;
+
+        if res.status().is_success() {
+            let body: serde_json::Value = res.json().await.map_err(|e| e.to_string())?;
+            Ok(body["id"].as_str().unwrap_or("unknown_refund").to_string())
+        } else {
+            let error_text = res.text().await.unwrap_or_default();
+            tracing::error!("Stripe refund failed: {}", error_text);
+            Err(format!("Stripe error: {}", error_text))
+        }
+    }
+
     pub async fn process_payout_with_batching(
         &self,
         account_id: &str,
