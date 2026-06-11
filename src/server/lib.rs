@@ -97,7 +97,7 @@ pub fn is_standalone_runtime() -> bool {
     true
 }
 
-fn get_tooltips_registry() -> &'static RwLock<HashMap<String, String>> {
+pub fn get_tooltips_registry() -> &'static RwLock<HashMap<String, String>> {
     TOOLTIPS_REGISTRY.get_or_init(|| {
     let mut m = HashMap::new();
     m.insert("bio-input-tooltip".to_string(), "Describe what you sell, your target audience, and the vibe of your brand.".to_string());
@@ -5110,6 +5110,7 @@ async fn create_ui_bom_item_handler(
         .route("/api/help/search", axum::routing::get(crate::api::docs::search_articles))
         .route("/api/help/{article_id}", axum::routing::get(crate::api::docs::get_article_handler))
         .route("/api/tooltips", axum::routing::get(crate::api::docs::get_tooltips))
+        .route("/api/tooltips", axum::routing::post(crate::api::docs::update_tooltip))
         .route("/api/walkthrough/{page}", axum::routing::get(crate::api::docs::get_walkthrough))
         .route("/api/videos", axum::routing::get(crate::api::docs::list_videos))
         .route("/api/changelog", axum::routing::get(crate::api::docs::get_changelog))
