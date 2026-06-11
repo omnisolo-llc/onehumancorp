@@ -149,7 +149,7 @@ impl DB {
                     if let Ok(file) = OpenOptions::new()
                         .read(true)
                         .write(true)
-                        .create(true)
+                        .create_new(true)
                         .mode(0o600)
                         .open(&db_path)
                     {
@@ -191,11 +191,17 @@ impl DB {
                              std::fs::set_permissions(&db_path, perms)?;
                          }
                     } else if !db_path.as_os_str().is_empty() && db_path.as_os_str() != ":memory:" {
-                         let _file = std::fs::OpenOptions::new()
+                         let file = std::fs::OpenOptions::new()
+                            .read(true)
                             .write(true)
-                            .create(true)
+                            .create_new(true)
                             .mode(0o600)
                             .open(&db_path)?;
+                         let mut perms = file.metadata()?.permissions();
+                         if perms.mode() & 0o777 != 0o600 {
+                             perms.set_mode(0o600);
+                             std::fs::set_permissions(&db_path, perms)?;
+                         }
                     }
                 }
             }
@@ -508,7 +514,10 @@ impl DB {
     {
         let mut attempt = 0;
         let max_attempts = 10;
+        #[cfg(not(test))]
         let mut backoff = std::time::Duration::from_millis(50);
+        #[cfg(test)]
+        let mut backoff = std::time::Duration::from_millis(1);
 
         loop {
             match f().await {

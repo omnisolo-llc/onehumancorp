@@ -118,6 +118,8 @@ impl UserRepository for PgUserRepository {
         let roles_json: String = row.get("roles");
         let roles: Vec<String> = serde_json::from_str(&roles_json).unwrap_or_default();
 
+        tx.rollback().await.map_err(|e| e.to_string())?;
+
         Ok(User {
             id: row.get("id"),
             username: row.get("username"),
@@ -159,6 +161,8 @@ impl UserRepository for PgUserRepository {
 
         let roles_json: String = row.get("roles");
         let roles: Vec<String> = serde_json::from_str(&roles_json).unwrap_or_default();
+
+        tx.rollback().await.map_err(|e| e.to_string())?;
 
         Ok(User {
             id: row.get("id"),
@@ -202,6 +206,8 @@ impl UserRepository for PgUserRepository {
         let roles_json: String = row.get("roles");
         let roles: Vec<String> = serde_json::from_str(&roles_json).unwrap_or_default();
 
+        tx.rollback().await.map_err(|e| e.to_string())?;
+
         Ok(User {
             id: row.get("id"),
             username: row.get("username"),
@@ -243,6 +249,8 @@ impl UserRepository for PgUserRepository {
 
         let roles_json: String = row.get("roles");
         let roles: Vec<String> = serde_json::from_str(&roles_json).unwrap_or_default();
+
+        tx.rollback().await.map_err(|e| e.to_string())?;
 
         Ok(User {
             id: row.get("id"),
@@ -298,6 +306,9 @@ impl UserRepository for PgUserRepository {
                 oidc_subject: row.get("oidc_subject"),
             });
         }
+
+        tx.rollback().await.map_err(|e| e.to_string())?;
+
         Ok(users)
     }
 
