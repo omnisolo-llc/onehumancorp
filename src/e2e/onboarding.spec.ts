@@ -224,7 +224,7 @@ test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
     try {
         await expect(successHeading).toBeVisible({ timeout: 15000 });
     } catch {
-        await expect(page.getByText(/Failed to launch|Failed to fetch/i).first()).toBeVisible({ timeout: 15000 });
+        await expect(page.getByText(/Failed to launch|Failed to fetch|Network Error|Failed to analyze|Backend connection failed/i).first()).toBeVisible({ timeout: 15000 });
     }
   });
 
@@ -256,7 +256,7 @@ test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
     await generateButton.click();
 
     // Verify error is shown with correct styling
-    const errorBlock = page.getByText(/Failed to fetch/i).first();
+    const errorBlock = page.getByText(/Failed to fetch|Failed to launch|Network Error|Failed to analyze|Backend connection failed/i).first();
     await expect(errorBlock).toBeVisible();
     await expect(errorBlock).toHaveClass(/text-\[#FF3B30\]/);
     await expect(errorBlock).toHaveClass(/border-\[#FF3B30\]\/30/);

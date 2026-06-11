@@ -43,7 +43,7 @@
         border: none;
         padding: 14px 24px;
         min-height: 44px;
-        border-radius: 8px;
+        border-radius: 16px;
         font-size: 16px;
         font-weight: 600;
         cursor: pointer;
@@ -106,8 +106,9 @@
           showSuccess(state.businessName, state.assistantName);
         }).catch(console.error);
       } else {
-        const name = localStorage.getItem('businessName');
-        const assistantName = localStorage.getItem('assistantName');
+        const state = JSON.parse(localStorage.getItem('onboardingState') || '{}');
+        const name = state.businessName;
+        const assistantName = state.assistantName;
         showSuccess(name, assistantName);
       }
 

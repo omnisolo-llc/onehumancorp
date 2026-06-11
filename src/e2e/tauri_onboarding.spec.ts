@@ -42,6 +42,9 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
             } else if (cmd === 'start_onboarding') {
               return null;
             }
+            if (cmd === "start_onboarding") {
+              return null;
+            }
             throw new Error(`Unhandled command: ${cmd}`);
           }
         }
@@ -116,7 +119,14 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
     await page.locator('#assistant-tone').selectOption('Professional');
     await page.locator('#step-assistant').getByRole('button', { name: 'Next' }).click();
 
-    // Step 5: Offer
+
+    // Step 5: Admin Setup
+    await expect(page.getByRole('heading', { name: "Admin Credentials" })).toBeVisible();
+    await page.getByPlaceholder("admin@mybusiness.com").fill("test@mybusiness.com");
+    await page.getByPlaceholder("Password (min 8 chars)").fill("mypassword");
+    await page.locator('#step-admin').getByRole('button', { name: 'Next' }).click();
+
+    // Step 6: Offer
     await expect(page.getByRole('heading', { name: "Your First Offer" })).toBeVisible();
 
     await page.getByPlaceholder("e.g. Custom Birthday Cake").fill("Faucet Repair");
@@ -184,7 +194,14 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
     await expect(newPage.locator('#assistant-tone')).toHaveValue('Professional');
     await newPage.locator('#step-assistant').getByRole('button', { name: 'Next' }).click();
 
-    // Step 5: Offer
+
+    // Step 5: Admin Setup
+    await expect(newPage.getByRole('heading', { name: "Admin Credentials" })).toBeVisible();
+    await expect(newPage.getByPlaceholder("admin@mybusiness.com")).toHaveValue("test@mybusiness.com");
+    await expect(newPage.getByPlaceholder("Password (min 8 chars)")).toHaveValue("mypassword");
+    await newPage.locator('#step-admin').getByRole('button', { name: 'Next' }).click();
+
+    // Step 6: Offer
     await expect(newPage.getByRole('heading', { name: "Your First Offer" })).toBeVisible();
     await expect(newPage.getByPlaceholder("e.g. Custom Birthday Cake")).toHaveValue("Faucet Repair");
     await newPage.locator('#step-offer').getByRole('button', { name: 'Next' }).click();
@@ -286,6 +303,9 @@ test.describe('Tauri Dashboard UI and UX Improvements', () => {
           invoke: async (cmd, args) => {
             if (cmd === 'generate_cloud_invite') {
               return "https://cloud.ohc.network/invite/mock-test";
+            }
+            if (cmd === "start_onboarding") {
+              return null;
             }
             throw new Error(`Unhandled command: ${cmd}`);
           }

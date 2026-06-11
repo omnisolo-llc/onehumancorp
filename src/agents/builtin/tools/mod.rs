@@ -46,6 +46,7 @@ pub mod marketplace_tool;
 pub mod expert_team_tool;
 pub mod workflow;
 pub mod checkout;
+pub mod quote;
 
 
 #[async_trait::async_trait]
@@ -157,6 +158,7 @@ pub fn all_tools(
         mcp_dynamic::mcp_invoke_tool(std::env::var("MCP_GATEWAY_URL").unwrap_or_else(|_| "http://localhost:8080".to_string())),
         restic::restic_tool(runner.clone()),
         checkout::conversational_checkout_tool(),
+        quote::generate_quote_tool(),
         aider_pair_programming::aider_pair_programming_tool(),
     ];
 
@@ -176,3 +178,12 @@ pub fn all_tools(
 pub mod native_state;
 mod aider_pair_programming;
 pub use aider_pair_programming::aider_pair_programming_tool;
+
+#[cfg(test)]
+mod marketing_test;
+
+#[cfg(test)]
+mod finance_test;
+
+#[cfg(test)]
+mod glob_test;

@@ -125,7 +125,7 @@ export default function MyPlanPage() {
                 </div>
                 <div className="flex flex-col justify-center mt-2 md:mt-0">
                     <button onClick={() => router.push('/pricing')} className="w-full min-h-[44px] py-3 bg-indigo-600 text-white font-medium rounded-xl hover:bg-indigo-700 transition-colors shadow-sm flex items-center justify-center">
-                        View Upgrade Plans
+                        Upgrade
                     </button>
                 </div>
             </div>

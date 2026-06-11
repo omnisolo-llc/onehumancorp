@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>OHC - My Plan & Costs</title>
+    <title>OHC - Cost Transparency Dashboard</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <style>
       body {
@@ -85,7 +85,7 @@
         color: white;
         border: none;
         padding: 14px 24px;
-        border-radius: 8px;
+        border-radius: 16px;
         font-size: 15px;
         font-weight: 600;
         cursor: pointer;
@@ -119,7 +119,7 @@
       .metric-box {
         padding: 16px;
         background: rgba(0, 0, 0, 0.03);
-        border-radius: 8px;
+        border-radius: 16px;
       }
       @media (prefers-color-scheme: dark) {
         .metric-box { background: rgba(255, 255, 255, 0.05); }
@@ -128,7 +128,7 @@
   </head>
   <body>
     <div style="width: 100%; max-width: 800px; text-align: left;">
-      <a href="dashboard.html" class="back-link">← Back to My Plan</a>
+      <a href="dashboard.html" class="back-link">← Back to Dashboard</a>
     </div>
 
     <div class="container">
@@ -165,11 +165,12 @@
             </div>
 
             <button class="btn-primary" onclick="window.location.href='pricing.html'">Upgrade Plan</button>
+            <button class="btn-outline" onclick="window.location.href='dashboard.html'" style="margin-top: 12px;">Back to Dashboard</button>
           </div>
 
           <!-- Cost Dashboard Widget -->
           <div class="card" id="cost-dashboard-widget">
-            <h2 style="margin-top: 0; font-size: 20px; border-bottom: 1px solid rgba(0,0,0,0.1); padding-bottom: 12px; margin-bottom: 20px;">Cost Transparency</h2>
+            <h2 style="margin-top: 0; font-size: 20px; border-bottom: 1px solid rgba(0,0,0,0.1); padding-bottom: 12px; margin-bottom: 20px;">Cost Transparency Dashboard</h2>
             <h2 style="display:none">Business Advisory Dashboard</h2>
             <div style="display:none">Advisory Summary</div>
 
@@ -182,6 +183,20 @@
                   <div class="stat-title">Total Costs</div>
                   <div class="stat-value" id="total-costs" style="font-size: 20px;">$0.00</div>
                </div>
+               <div class="metric-box">
+                  <div class="stat-title">Projected Monthly Cost</div>
+                  <div class="stat-value" id="projected-monthly-cost" style="font-size: 20px;">$0.00</div>
+               </div>
+            </div>
+
+            <div id="budget-health-alert" style="display: none; margin-top: 20px; padding: 16px; background: rgba(255, 149, 0, 0.1); border: 1px solid rgba(255, 149, 0, 0.3); border-radius: 12px; align-items: flex-start; gap: 12px;">
+                <svg style="width: 20px; height: 20px; color: #ff9500; flex-shrink: 0; margin-top: 2px;" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <div>
+                    <h3 style="margin: 0 0 4px 0; font-size: 14px; font-weight: 600; color: #995900;">Budget Health Warning</h3>
+                    <p style="margin: 0; font-size: 14px; color: #cc7700;">Your projected monthly cost is exceeding your typical baseline. Consider reviewing your agent usage or upgrading your tier for better bulk rates.</p>
+                </div>
             </div>
 
             <div style="margin-top: 24px; font-weight: 600; margin-bottom: 12px;">Cost Breakdown</div>
@@ -272,6 +287,14 @@
                 const costData = await costRes.json();
                 document.getElementById('total-revenue').innerText = formatCents(costData.total_revenue || 0);
                 document.getElementById('total-costs').innerText = formatCents(costData.total_costs || 0);
+                document.getElementById('projected-monthly-cost').innerText = formatCents(costData.projected_monthly_cost || 0);
+
+                if (costData.projected_monthly_cost > 10000) {
+                    document.getElementById('budget-health-alert').style.display = 'flex';
+                } else {
+                    document.getElementById('budget-health-alert').style.display = 'none';
+                }
+
                 document.getElementById('llm-cost').innerText = formatCents(costData.llm_cost || 0);
                 document.getElementById('storage-cost').innerText = formatCents(costData.storage_cost || 0);
                 document.getElementById('network-cost').innerText = formatCents(costData.network_cost || 0);

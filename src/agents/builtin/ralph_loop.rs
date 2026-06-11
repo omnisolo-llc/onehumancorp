@@ -191,12 +191,11 @@ impl RalphLoop {
         &self,
         task: &str,
     ) -> Result<RalphProgress, Box<dyn std::error::Error + Send + Sync>> {
-        if let Ok(data) = fs::read_to_string(&self.progress_file_path).await {
-            if let Ok(progress) = serde_json::from_str::<RalphProgress>(&data) {
+        if let Ok(data) = fs::read_to_string(&self.progress_file_path).await
+            && let Ok(progress) = serde_json::from_str::<RalphProgress>(&data) {
                 tracing::info!("Ralph Loop: Resuming from existing progress file.");
                 return Ok(progress);
             }
-        }
 
         tracing::info!("Ralph Loop: Initializing new progress file.");
 
@@ -273,15 +272,14 @@ impl RalphLoop {
             .arg("status")
             .current_dir(&self.repo_path)
             .output();
-        if git_status.is_err() || !git_status.unwrap().status.success() {
-            if let Err(e) = Command::new("git")
+        if (git_status.is_err() || !git_status.unwrap().status.success())
+            && let Err(e) = Command::new("git")
                 .arg("init")
                 .current_dir(&self.repo_path)
                 .output()
             {
                 tracing::error!("Failed to git init: {}", e);
             }
-        }
 
         let _ = Command::new("git")
             .arg("config")

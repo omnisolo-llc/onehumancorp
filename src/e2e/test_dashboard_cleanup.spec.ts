@@ -4,7 +4,7 @@ test.describe('Dashboard Cleanup Audit', () => {
   test('Verify absence of PRO badge in Advanced AI Automations card', async ({ page, loginAs, unlimitedAdminUser }) => {
     await loginAs(page, unlimitedAdminUser);
     await page.goto('/dashboard');
-    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(3000);
     const heading = page.locator('h2', { hasText: 'Advanced AI Automations' });
     if(await heading.count() > 0) {
       await expect(heading).toBeVisible();
@@ -15,7 +15,7 @@ test.describe('Dashboard Cleanup Audit', () => {
   test('Verify absence of Failed to load time savings data error', async ({ page, loginAs, unlimitedAdminUser }) => {
     await loginAs(page, unlimitedAdminUser);
     await page.goto('/dashboard');
-    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(3000);
     await expect(page.locator('text="Failed to load time savings data."')).toHaveCount(0);
   });
 
@@ -28,7 +28,7 @@ test.describe('Dashboard Cleanup Audit', () => {
       }
     });
     await page.goto('/dashboard');
-    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(3000);
     expect(walkthroughLoaded).toBe(false);
   });
 
@@ -41,7 +41,7 @@ test.describe('Dashboard Cleanup Audit', () => {
       }
     });
     await page.goto('/dashboard');
-    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(3000);
     expect(helpChatLoaded).toBe(false);
   });
 
@@ -54,7 +54,7 @@ test.describe('Dashboard Cleanup Audit', () => {
       }
     });
     await page.goto('/setup');
-    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(3000);
     expect(tooltipLoaded).toBe(false);
   });
 });

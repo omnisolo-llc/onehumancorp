@@ -163,7 +163,7 @@
         color: white;
         border: none;
         padding: 14px 24px;
-        border-radius: 8px;
+        border-radius: 16px;
         font-size: 15px;
         font-weight: 600;
         cursor: pointer;
@@ -187,7 +187,7 @@
         color: #1d1d1f;
         border: 1px solid rgba(0,0,0,0.2);
         padding: 14px 24px;
-        border-radius: 8px;
+        border-radius: 16px;
         font-size: 15px;
         font-weight: 600;
         cursor: pointer;
@@ -276,7 +276,7 @@
         color: white;
         border: none;
         padding: 14px 24px;
-        border-radius: 8px;
+        border-radius: 16px;
         font-size: 16px;
         font-weight: 600;
         cursor: pointer;
@@ -303,7 +303,7 @@
         width: 100%;
         padding: 12px;
         border: 1px solid rgba(0, 0, 0, 0.2);
-        border-radius: 8px;
+        border-radius: 16px;
         font-size: 14px;
         box-sizing: border-box;
         margin-bottom: 10px;
@@ -601,6 +601,7 @@
         <a href="assistant.html" class="btn-primary" style="width: auto; text-decoration: none;">Open WorkBuddy Assistant</a>
         <a href="pos.html" class="btn-outline" style="width: auto; text-decoration: none;">Quick Charge POS</a>
         <a href="cost-dashboard.html" class="btn-outline" style="width: auto; text-decoration: none;">My Plan</a>
+        <a href="trial-extension.html" class="btn-outline" style="width: auto; text-decoration: none;">Interactive Trial Extension</a>
       </div>
 
       <div class="ohc-growth-card" id="ai-savings-widget">
@@ -633,7 +634,7 @@
             <h2 style="margin-bottom: 4px;">Advanced AI Automations</h2>
             <p style="margin-top: 0; margin-bottom: 0;">Multi-agent workflows and predictive routing.</p>
           </div>
-          <button id="enable-advanced-automations-btn" style="background-color: #1d1d1f; color: white; border: none; padding: 10px 16px; border-radius: 8px; cursor: pointer;">Enable</button>
+          <button id="enable-advanced-automations-btn" style="background-color: #1d1d1f; color: white; border: none; padding: 10px 16px; border-radius: 16px; cursor: pointer;">Enable</button>
         </div>
         <p id="advanced-automations-status" style="display: none; color: #34C759; font-weight: 600; margin-top: 12px;">✅ Enabled</p>
       </div>
@@ -659,10 +660,19 @@
         </div>
       </div>
 
+      <div class="ohc-growth-card" id="referral-tier-section" style="margin-bottom: 20px; display: none;">
+        <h2>Your Referral Rewards</h2>
+        <p id="referral-tier-text">Loading your tier...</p>
+        <div style="background-color: rgba(0,0,0,0.1); border-radius: 8px; height: 10px; width: 100%; margin: 10px 0; overflow: hidden;">
+          <div id="referral-tier-progress" style="background-color: #0066FF; height: 100%; width: 0%; transition: width 0.5s ease;"></div>
+        </div>
+        <p id="referral-tier-subtext" style="font-size: 13px; color: #666;"></p>
+      </div>
+
       <div class="ohc-growth-card" style="margin-bottom: 20px;">
         <h2>Agent Public Profile</h2>
         <p>Generate a shareable public card for your AI agent to build trust and acquire new customers.</p>
-        <button onclick="window.location.href='agent-card.html'" style="background-color: #0066FF; color: white; border: none; padding: 10px 16px; border-radius: 8px; cursor: pointer;">
+        <button onclick="window.location.href='agent-card.html'" style="background-color: #0066FF; color: white; border: none; padding: 10px 16px; border-radius: 16px; cursor: pointer;">
           Create Agent Card
         </button>
       </div>
@@ -675,7 +685,7 @@
 
         <div class="link-container" id="link-container">
           <input type="text" class="link-input" id="referral-link" readonly value="" />
-          <button class="btn-secondary" onclick="window.startWalkthrough([{selector: '.main-content h1', title: 'Welcome', text: 'Welcome to your dashboard!'}, {selector: '.stat-card:first-child', title: 'Tasks', text: 'Here are your pending tasks.'}])">Start Walkthrough</button>
+          <button class="btn-secondary" id="dashboard-walkthrough-btn" data-tooltip="dashboard-walkthrough-btn" onclick="window.startWalkthrough([{selector: '#dashboard-title', title: 'Welcome', text: 'Welcome to your dashboard! This is your control center.'}, {selector: '#ai-savings-widget', title: 'AI Savings', text: 'Here you can see the time and effort your agents have saved you.'}])">Start Walkthrough</button>
         <div class="action-buttons">
             <button class="btn-secondary" id="copy-btn" data-tooltip="Copy the referral link to your clipboard.">Copy</button>
             <button class="btn-secondary" id="share-whatsapp-btn">Share on WhatsApp</button>
@@ -703,14 +713,28 @@
       <div class="ohc-growth-card">
         <h2>Viral Campaigns</h2>
         <p>Acquire new users and grow your audience through viral sharing.</p>
-        <a href="/giveaway" style="display: inline-block; background-color: #0066FF; color: white; padding: 12px 24px; border-radius: 8px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s;">Viral Giveaway Generator</a>
+        <a href="/giveaway" style="display: inline-block; background-color: #0066FF; color: white; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s;">Viral Giveaway Generator</a>
       </div>
 
-      <div class="ohc-growth-card" id="triage-section" style="display: none;">
-        <h2>Unified Agent Feed</h2>
-        <div id="triage-queue">
-          <div class="triage-card empty">Loading triage items...</div>
+
+
+      <div class="ohc-growth-card" id="triage-section" style="display: none; padding: 20px; border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px;">
+        <h2 style="font-size: 24px; font-weight: 700; color: #1D1D1F;">Unified Agent Feed</h2>
+        <p style="color: #6b7280; margin-bottom: 16px;">Review AI-prepared actions and reply drafts across all channels.</p>
+        <div class="triage-tab-container">
+          <div class="triage-tab active" id="tab-proposals" onclick="switchTriageTab('proposals')">Proposals</div>
+          <div class="triage-tab" id="tab-activity" onclick="switchTriageTab('activity')">Activity Feed</div>
         </div>
+        <div id="triage-queue">
+          <div class="triage-card empty">Loading agent feed...</div>
+        </div>
+      </div>
+
+        <div id="triage-queue">
+          <div class="triage-card empty">Loading agent feed...</div>
+        </div>
+      </div>
+
       </div>
     </div>
 
@@ -718,7 +742,225 @@
       <a href="#" id="dashboard-footer-viral-link" style="color: #6b7280; text-decoration: none;">⚡ Powered by OHC</a>
     </footer>
 
+
     <script>
+(function() {
+    // Inject walkthrough CSS
+    const style = document.createElement('style');
+    style.textContent = `
+        .ohc-walkthrough-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(2px);
+            z-index: 10000;
+            pointer-events: auto;
+        }
+        .ohc-walkthrough-highlight {
+            position: absolute;
+            box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.6);
+            border-radius: 8px;
+            pointer-events: none;
+            z-index: 10001;
+            transition: all 0.3s ease;
+        }
+        .ohc-walkthrough-bubble {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px) saturate(210%);
+            border: 1px solid rgba(0, 102, 255, 0.3);
+            border-radius: 16px;
+            padding: 20px;
+            width: 280px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            z-index: 10002;
+            font-family: "Outfit", sans-serif;
+            color: #1d1d1f;
+            transition: all 0.3s ease;
+            opacity: 0;
+            transform: translateY(10px);
+        }
+        .ohc-walkthrough-bubble.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .ohc-walkthrough-title {
+            font-size: 16px;
+            font-weight: 700;
+            margin: 0 0 8px 0;
+        }
+        .ohc-walkthrough-text {
+            font-size: 14px;
+            color: #86868b;
+            margin: 0 0 16px 0;
+            line-height: 1.4;
+        }
+        .ohc-walkthrough-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .ohc-walkthrough-btn {
+            background: #0066FF;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .ohc-walkthrough-btn-secondary {
+            background: rgba(0, 0, 0, 0.05);
+            color: #1d1d1f;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .ohc-walkthrough-close {
+            position: absolute;
+            top: 12px; right: 12px;
+            background: none; border: none; color: #86868b; cursor: pointer;
+        }
+        @media (prefers-color-scheme: dark) {
+            .ohc-walkthrough-bubble {
+                background: rgba(22, 22, 26, 0.95);
+                border-color: rgba(255, 255, 255, 0.1);
+                color: #f5f5f7;
+            }
+            .ohc-walkthrough-btn-secondary {
+                background: rgba(255, 255, 255, 0.1);
+                color: #f5f5f7;
+            }
+        }
+    `;
+    document.head.appendChild(style);
+
+    let currentSteps = [];
+    let currentStepIndex = 0;
+    let overlayEl = null;
+    let highlightEl = null;
+    let bubbleEl = null;
+
+    function renderStep() {
+        if (!currentSteps || currentStepIndex >= currentSteps.length) {
+            endWalkthrough();
+            return;
+        }
+
+        const step = currentSteps[currentStepIndex];
+        const targetEl = document.querySelector(step.selector);
+
+        if (!targetEl) {
+            console.warn('Walkthrough target not found:', step.selector);
+            endWalkthrough();
+            return;
+        }
+
+        targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+        setTimeout(() => {
+            const rect = targetEl.getBoundingClientRect();
+
+            highlightEl.style.top = (rect.top - 5) + 'px';
+            highlightEl.style.left = (rect.left - 5) + 'px';
+            highlightEl.style.width = (rect.width + 10) + 'px';
+            highlightEl.style.height = (rect.height + 10) + 'px';
+
+            bubbleEl.innerHTML = `
+                <button class="ohc-walkthrough-close" aria-label="Close walkthrough">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"></path></svg>
+                </button>
+                <h4 class="ohc-walkthrough-title">${step.title}</h4>
+                <p class="ohc-walkthrough-text">${step.text}</p>
+                <div class="ohc-walkthrough-controls">
+                    ${currentStepIndex > 0 ? '<button class="ohc-walkthrough-btn-secondary prev-btn">Back</button>' : '<div></div>'}
+                    <button class="ohc-walkthrough-btn next-btn">${currentStepIndex === currentSteps.length - 1 ? 'Finish' : 'Next'}</button>
+                </div>
+            `;
+
+            let bubbleTop = rect.bottom + 15;
+            let bubbleLeft = rect.left + (rect.width / 2) - 140;
+
+            if (bubbleLeft < 10) bubbleLeft = 10;
+            if (bubbleLeft + 280 > window.innerWidth - 10) bubbleLeft = window.innerWidth - 290;
+            if (bubbleTop + 200 > window.innerHeight) {
+                bubbleTop = rect.top - 180;
+            }
+
+            bubbleEl.style.top = bubbleTop + 'px';
+            bubbleEl.style.left = bubbleLeft + 'px';
+            bubbleEl.classList.add('visible');
+
+            bubbleEl.querySelector('.ohc-walkthrough-close').onclick = endWalkthrough;
+            bubbleEl.querySelector('.next-btn').onclick = () => {
+                bubbleEl.classList.remove('visible');
+                setTimeout(() => {
+                    currentStepIndex++;
+                    renderStep();
+                }, 300);
+            };
+            const prevBtn = bubbleEl.querySelector('.prev-btn');
+            if (prevBtn) {
+                prevBtn.onclick = () => {
+                    bubbleEl.classList.remove('visible');
+                    setTimeout(() => {
+                        currentStepIndex--;
+                        renderStep();
+                    }, 300);
+                };
+            }
+
+        }, 300);
+    }
+
+    function endWalkthrough() {
+        if (overlayEl) {
+            overlayEl.remove();
+            overlayEl = null;
+        }
+        if (highlightEl) {
+            highlightEl.remove();
+            highlightEl = null;
+        }
+        if (bubbleEl) {
+            bubbleEl.remove();
+            bubbleEl = null;
+        }
+        currentSteps = [];
+        currentStepIndex = 0;
+    }
+
+    window.startWalkthrough = function(steps) {
+        if (!steps || steps.length === 0) return;
+        currentSteps = steps;
+        currentStepIndex = 0;
+
+        endWalkthrough();
+
+        overlayEl = document.createElement('div');
+        overlayEl.className = 'ohc-walkthrough-overlay';
+
+        highlightEl = document.createElement('div');
+        highlightEl.className = 'ohc-walkthrough-highlight';
+
+        bubbleEl = document.createElement('div');
+        bubbleEl.className = 'ohc-walkthrough-bubble';
+
+        document.body.appendChild(overlayEl);
+        document.body.appendChild(highlightEl);
+        document.body.appendChild(bubbleEl);
+
+        renderStep();
+    };
+
+})();
+</script>
+
+<script>
       document.addEventListener('DOMContentLoaded', async () => {
         const tenantIdForFooter = localStorage.getItem("tenant_id") || localStorage.getItem("tenant") || "default-team";
         const footerLink = document.getElementById("dashboard-footer-viral-link");
@@ -745,10 +987,10 @@
                 <div class="ohc-growth-card" style="margin-top: 20px;">
                   <h2 style="font-size: 20px; font-weight: bold; margin-bottom: 8px;">🎉 10th Order! Share your success</h2>
                   <p style="margin-bottom: 16px;">You just hit a major milestone! Let your network know that your business is booming.</p>
-                  <div style="width: 100%; border-radius: 8px; overflow: hidden; margin-bottom: 16px; border: 1px solid rgba(255, 255, 255, 0.2);">
+                  <div style="width: 100%; border-radius: 16px; overflow: hidden; margin-bottom: 16px; border: 1px solid rgba(255, 255, 255, 0.2);">
                     <img src="/api/v1/growth/milestone/card?milestone_id=10th_order&tenant=${tenant}" alt="10th Order Milestone" style="width: 100%; height: auto; display: block;" />
                   </div>
-                  <a href="https://wa.me/?text=I%20just%20hit%20my%2010th%20order%20on%20OHC!%20Check%20it%20out:%20https://ohc.app/invite/${tenant}" target="_blank" rel="noopener noreferrer" style="display: inline-flex; align-items: center; justify-content: center; gap: 8px; background-color: #25D366; color: white; padding: 12px 24px; border-radius: 8px; font-weight: 600; text-decoration: none; width: 100%; box-sizing: border-box; transition: transform 0.1s;">
+                  <a href="https://wa.me/?text=I%20just%20hit%20my%2010th%20order%20on%20OHC!%20Check%20it%20out:%20https://ohc.app/invite/${tenant}" target="_blank" rel="noopener noreferrer" style="display: inline-flex; align-items: center; justify-content: center; gap: 8px; background-color: #25D366; color: white; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; width: 100%; box-sizing: border-box; transition: transform 0.1s;">
                     <svg style="width: 16px; height: 16px;" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 0 0-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/></svg>
                     Share to WhatsApp
                   </a>
@@ -810,7 +1052,11 @@
             softPaywallStatus.innerText = 'Verifying Share...';
 
             try {
-              const response = await fetch('/api/v1/growth/trial-extension/claim', {
+              let url = '/api/v1/growth/trial-extension/claim';
+              if (window.__TAURI__ && window.__TAURI__.core) {
+                  url = 'http://127.0.0.1:18789/api/v1/growth/trial-extension/claim';
+              }
+              const response = await fetch(url, {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',
@@ -869,7 +1115,11 @@
             savingsStatus.style.display = 'block';
 
             try {
-              const response = await fetch('/api/v1/growth/trial-extension/claim', {
+              let url = '/api/v1/growth/trial-extension/claim';
+              if (window.__TAURI__ && window.__TAURI__.core) {
+                  url = 'http://127.0.0.1:18789/api/v1/growth/trial-extension/claim';
+              }
+              const response = await fetch(url, {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',
@@ -893,6 +1143,39 @@
       if (name) {
           document.getElementById('dashboard-title').innerText = `${name} Dashboard`;
       }
+
+
+      async function checkReferralTier() {
+        try {
+          const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'e2e-tenant';
+          const res = await fetch(`/api/v1/growth/referrals/tier`, {
+            headers: {
+              'authorization': `Bearer ${localStorage.getItem('ohc_token')}` // Ensure auth header if needed, backend relies on AuthInfo extension
+            }
+          });
+          if (res.ok) {
+            const data = await res.json();
+            document.getElementById('referral-tier-section').style.display = 'block';
+            document.getElementById('referral-tier-text').innerHTML = `You are on the <strong>${data.current_tier} Tier</strong>!`;
+
+            if (data.next_tier) {
+              const needed = data.referrals_needed_for_next;
+              const currentInTier = data.total_conversions; // This is a simplification. Real progress is total / target.
+              const target = currentInTier + needed;
+              const pct = (currentInTier / target) * 100;
+              document.getElementById('referral-tier-progress').style.width = `${pct}%`;
+              document.getElementById('referral-tier-subtext').innerText = `${needed} more referrals needed to reach ${data.next_tier} Tier.`;
+            } else {
+              document.getElementById('referral-tier-progress').style.width = `100%`;
+              document.getElementById('referral-tier-progress').style.backgroundColor = `#FFD700`; // Gold/Platinum color
+              document.getElementById('referral-tier-subtext').innerText = `You have reached the highest tier!`;
+            }
+          }
+        } catch (e) {
+          console.error("Failed to check referral tier", e);
+        }
+      }
+      checkReferralTier();
 
 
       // Milestone logic
@@ -973,11 +1256,11 @@
       const copyBtn = document.getElementById('copy-btn');
       const referralLink = document.getElementById('referral-link');
 
-      generateBtn.addEventListener('click', () => {
+      generateBtn.addEventListener('click', async () => {
         generateBtn.innerText = "Generating...";
         // Call the real Tauri backend
         if (window.__TAURI__ && window.__TAURI__.core) {
-          window.__TAURI__.core.invoke("generate_cloud_invite").then((link) => {
+          window.__TAURI__.core.invoke("generate_cloud_bridge_invite").then((link) => {
             referralLink.value = link;
             generateBtn.style.display = 'none';
             linkContainer.style.display = 'block';
@@ -989,9 +1272,14 @@
           });
         } else {
           try {
-            const res = await fetch('/api/v1/growth/referrals/generate', { method: 'POST' });
+            const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default';
+            const res = await fetch('/api/v1/growth/cloud-bridge/invite', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ team_id: tenantId, inviter_id: "owner", invitee_id: "pending" })
+            });
             const data = await res.json();
-            referralLink.value = data.referral_link || "https://cloud.ohc.network/invite/fallback";
+            referralLink.value = data.invite_link || "https://cloud.ohc.network/invite/fallback";
             generateBtn.style.display = 'none';
             linkContainer.style.display = 'block';
           } catch(e) {
@@ -1038,39 +1326,76 @@
       });
 
 
-      // Triage Data Logic
+
       const triageSection = document.getElementById('triage-section');
       const triageQueue = document.getElementById('triage-queue');
+      let currentTriageTab = 'proposals';
+      let agentFeedItems = [];
+
+      window.switchTriageTab = function(tab) {
+        currentTriageTab = tab;
+        document.getElementById('tab-proposals').classList.toggle('active', tab === 'proposals');
+        document.getElementById('tab-activity').classList.toggle('active', tab === 'activity');
+        renderTriageItems(agentFeedItems);
+      };
 
       async function loadTriage() {
         triageSection.style.display = 'block';
         try {
-          // Adjust port for Tauri dev server, or use relative if integrated
-          let url = '/api/ui/triage';
-
           const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default';
-          const res = await fetch(`${url}?tenant_id=${encodeURIComponent(tenantId)}`);
+          const res = await fetch(`/api/agent-feed?tenant_id=${encodeURIComponent(tenantId)}`, {
+            headers: { 'X-Tenant-ID': tenantId, 'X-User-ID': 'default' }
+          });
           if (!res.ok) throw new Error("Failed to load");
 
-          const items = await res.json();
-          if (!Array.isArray(items) || items.length === 0) {
-            triageQueue.innerHTML = '<div class="triage-card empty">No items need your attention right now. Great job!</div>';
-            return;
-          }
-
-          renderTriageItems(items);
+          const data = await res.json();
+          agentFeedItems = data.items || [];
+          renderTriageItems(agentFeedItems);
         } catch (err) {
-          console.error("Triage load error:", err);
-          triageQueue.innerHTML = '<div class="triage-card empty" style="color: #FF3B30;">Error loading triage items.</div>';
+          console.error("Agent Feed load error:", err);
+          triageQueue.innerHTML = '<div class="triage-card empty" style="color: #FF3B30;">Error loading agent feed items.</div>';
         }
       }
 
+
       function renderTriageItems(items) {
-        triageQueue.innerHTML = items.map(item => {
-          let priorityClass = '';
-          const p = (item.priority || '').toLowerCase();
-          if (['urgent', 'high'].includes(p)) priorityClass = 'urgent';
-          else if (['action needed', 'medium'].includes(p)) priorityClass = 'medium';
+        if (currentTriageTab === 'proposals') {
+          const proposals = items.filter(i => i.lifecycle_state !== 'APPROVED' && i.lifecycle_state !== 'DISMISSED');
+          if (proposals.length === 0) {
+            triageQueue.innerHTML = '<div class="triage-card empty">No items need your attention right now. Great job!</div>';
+            return;
+          }
+          triageQueue.innerHTML = proposals.map(item => {
+            const description = item.proposed_action?.message || item.proposed_action?.action_type || item.context_payload?.description || 'Agent proposed an action.';
+            const isDraft = item.proposed_action?.context?.weekly_health_report === true;
+            const approveTestId = isDraft ? "approve-draft" : "approve-proposal";
+            const approveText = isDraft ? "Yes, draft it!" : "Approve";
+
+
+          if (item.proposed_action?.action_type === 'SocialPostDraft') {
+            let parsedPayload = item.proposed_action || {};
+            return `
+              <div class="triage-item" data-testid="triage-card-${item.id}" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.4); backdrop-filter: blur(20px); border-radius: 16px; padding: 16px; border: 1px solid rgba(255,255,255,0.6);">
+                <div class="triage-header" style="margin-bottom: 12px;">
+                  <div class="triage-source" style="display: flex; align-items: center; gap: 8px;">
+                    <span style="font-size: 18px;">✨</span> <strong>The Promoter</strong>
+                  </div>
+                  <div class="triage-priority" style="font-size: 12px; color: #6b7280;">Action Needed</div>
+                </div>
+                <div class="triage-context" style="font-weight: 600; margin-bottom: 12px; font-size: 15px;">
+                  ${item.context_payload?.description || 'New product detected! Schedule a post to drive sales?'}
+                </div>
+                <div style="background: rgba(0,0,0,0.03); padding: 12px; border-radius: 12px; margin-bottom: 16px; font-size: 14px; color: #333;">
+                  <strong>Instagram:</strong> ${parsedPayload.instagram || ''}<br/>
+                  <strong style="margin-top: 8px; display: inline-block;">TikTok:</strong> ${parsedPayload.tiktok || ''}
+                </div>
+                <div class="triage-controls" style="display: flex; gap: 8px;">
+                  <button class="triage-btn-approve" data-testid="approve-btn" onclick="handleTriageAction('${item.id}', 'APPROVED')" style="flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 12px; font-weight: 600; border: none; cursor: pointer;">Approve & Schedule</button>
+                  <button class="triage-btn-dismiss" onclick="handleTriageAction('${item.id}', 'DISMISSED')" style="flex: 1; background: rgba(0,0,0,0.05); color: #1d1d1f; padding: 12px; border-radius: 12px; font-weight: 600; border: none; cursor: pointer;">Edit Draft</button>
+                </div>
+              </div>
+            `;
+          }
 
           if (item.action_type === 'SocialPostDraft') {
             let parsedPayload = {};
@@ -1101,28 +1426,43 @@
           return `
             <div class="triage-item" data-testid="triage-card-${item.id}" id="triage-${item.id}">
               <div class="triage-header">
-                <div class="triage-source">${item.source || 'Unknown'}</div>
-                <div class="triage-priority ${priorityClass}">${item.priority || 'Normal'}</div>
+                <div class="triage-source" style="text-transform: uppercase; font-size: 10px; background: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 4px 8px; border-radius: 4px;">${(item.event_source || 'Unknown').replace('_', ' ')}</div>
+                <div class="triage-priority" style="font-size: 12px; color: #6b7280;">Action Needed</div>
               </div>
-              <div class="triage-context">${item.context || ''}</div>
-              ${item.action_type ? `
-                <div class="triage-action">
-                  <div class="triage-action-title">${item.action_type}</div>
-                  <div>${item.action_payload || ''}</div>
+              <div class="triage-context" style="font-size: 16px; font-weight: 600; margin-top: 8px;">${description}</div>
+              <div class="triage-controls" style="margin-top: 12px;">
+                <button class="triage-btn-approve" data-testid="${approveTestId}" onclick="handleTriageAction('${item.id}', 'APPROVED')">${approveText}</button>
+                <button class="triage-btn-dismiss" data-testid="reject-proposal" onclick="handleTriageAction('${item.id}', 'DISMISSED')">Dismiss</button>
+              </div>
+
                 </div>
-              ` : ''}
-              <div class="triage-controls">
-                <button class="triage-btn-approve" data-testid="approve-btn" onclick="handleTriageAction('${item.id}', true)">Approve & Send</button>
-                <button class="triage-btn-dismiss" onclick="handleTriageAction('${item.id}', false)">Dismiss</button>
               </div>
-            </div>
-          `;
-        }).join('');
+            `;
+          }).join('');
+        } else {
+
+          const activities = items.filter(i => i.lifecycle_state === 'APPROVED' || i.lifecycle_state === 'DISMISSED');
+          if (activities.length === 0) {
+            triageQueue.innerHTML = '<div class="triage-card empty">No recent activity found.</div>';
+            return;
+          }
+          triageQueue.innerHTML = activities.map(activity => {
+            const description = activity.proposed_action?.message || activity.proposed_action?.action_type || activity.context_payload?.description || 'Action completed';
+            return `
+              <div class="triage-item">
+                <div class="triage-header">
+                  <div class="triage-source" style="text-transform: uppercase; font-size: 10px; background: rgba(76, 175, 80, 0.1); color: #4CAF50; padding: 4px 8px; border-radius: 4px;">${(activity.event_source || 'Unknown').replace('_', ' ')}</div>
+                  <div class="triage-priority" style="font-size: 10px; background: rgba(0,0,0,0.05); padding: 4px 8px; border-radius: 4px;">${activity.lifecycle_state}</div>
+                </div>
+                <div class="triage-context" style="font-size: 14px; font-weight: 600; margin-top: 8px;">${description}</div>
+                <div style="font-size: 12px; color: #6b7280; margin-top: 4px;">${new Date(activity.updated_at || activity.created_at || Date.now()).toLocaleString()}</div>
+              </div>
+            `;
+          }).join('');
+        }
       }
 
-            window.showStatus = function(message, isSuccess = true) {
-        /* Minimal placeholder, real status shown by reloading items for now.
-           Since E2E expects 'Approving...' and 'Approved!', we simulate it. */
+      window.showStatus = function(message, isSuccess = true) {
         const el = document.createElement('div');
         el.textContent = message;
         el.style.position = 'fixed';
@@ -1138,30 +1478,28 @@
         setTimeout(() => el.remove(), 2000);
       };
 
-      window.handleTriageAction = async function(id, approved) {
+      window.handleTriageAction = async function(id, state) {
         const itemEl = document.getElementById(`triage-${id}`);
         if (itemEl) itemEl.style.opacity = '0.5';
 
         try {
-          let url = '/api/ui/triage/action';
-
+          let url = `/api/agent-feed/${id}/state`;
           const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default';
           const res = await fetch(`${url}?tenant_id=${encodeURIComponent(tenantId)}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ triage_item_id: id, approved })
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': tenantId, 'X-User-ID': 'default' },
+            body: JSON.stringify({ state })
           });
 
           if (!res.ok) throw new Error("Update failed");
 
           window.showStatus('Approving...', true);
-          window.showStatus(approved ? 'Approved!' : 'Dismissed.', true);
-          // Refresh list
+          window.showStatus(state === 'APPROVED' ? 'Approved!' : 'Dismissed.', true);
           loadTriage();
         } catch (err) {
           console.error(err);
           if (itemEl) itemEl.style.opacity = '1';
-          alert('Failed to update triage action.');
+          alert('Failed to update agent feed action.');
         }
       };
 
@@ -1618,16 +1956,34 @@ document.addEventListener('DOMContentLoaded', () => {
     if(btn) {
         btn.addEventListener('click', async () => {
             btn.innerText = "Generating...";
-            try {
-                const res = await fetch('/api/v1/growth/referrals/generate', { method: 'POST' });
-                const data = await res.json();
-                linkInput.value = data.referral_link || "https://cloud.ohc.network/invite/fallback";
-            } catch(e) {
-                console.error(e);
+            if (window.__TAURI__ && window.__TAURI__.core) {
+              window.__TAURI__.core.invoke("generate_cloud_bridge_invite").then((link) => {
+                linkInput.value = link;
+                btn.style.display = 'none';
+                container.style.display = 'block';
+              }).catch((err) => {
+                console.error(err);
                 linkInput.value = "https://cloud.ohc.network/invite/fallback";
+                btn.style.display = 'none';
+                container.style.display = 'block';
+              });
+            } else {
+              try {
+                  const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default';
+                  const res = await fetch('/api/v1/growth/cloud-bridge/invite', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ team_id: tenantId, inviter_id: "owner", invitee_id: "pending" })
+                  });
+                  const data = await res.json();
+                  linkInput.value = data.invite_link || "https://cloud.ohc.network/invite/fallback";
+              } catch(e) {
+                  console.error(e);
+                  linkInput.value = "https://cloud.ohc.network/invite/fallback";
+              }
+              btn.style.display = 'none';
+              container.style.display = 'block';
             }
-            btn.style.display = 'none';
-            container.style.display = 'block';
         });
 
         copyBtn.addEventListener('click', () => {

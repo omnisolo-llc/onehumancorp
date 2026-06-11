@@ -10,6 +10,14 @@ export default function InvoiceGeneratorPage() {
   const [shareLink, setShareLink] = useState('');
   const [copied, setCopied] = useState(false);
   const [tenantId, setTenantId] = useState('my-store');
+  const [isSplitEnabled, setIsSplitEnabled] = useState(false);
+  const [splitContact, setSplitContact] = useState('');
+  const [splitPercentage, setSplitPercentage] = useState<number>(70);
+
+  const [isSplitEnabled, setIsSplitEnabled] = useState(false);
+  const [splitContact, setSplitContact] = useState('');
+  const [splitPercentage, setSplitPercentage] = useState<number>(70);
+
 
   useEffect(() => {
     const tenant = localStorage.getItem('tenant') || 'my-store';
@@ -26,7 +34,9 @@ export default function InvoiceGeneratorPage() {
       tenant: tenantId,
       clientName,
       projectDetails,
-      amount
+      amount,
+      splitPartnerId: isSplitEnabled ? splitContact : undefined,
+      splitPercentage: isSplitEnabled ? splitPercentage : undefined
     };
 
     // Safely encode unicode string to base64url for URLs
@@ -92,6 +102,53 @@ export default function InvoiceGeneratorPage() {
                 placeholder="e.g. 1500.00"
                 className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
+            </div>
+
+
+
+            <div className="border-t border-gray-100 pt-6">
+              <label className="flex items-center justify-between cursor-pointer">
+                  <div className="text-gray-900 font-bold text-sm">
+                      Split this payment
+                  </div>
+                  <div className="relative">
+                      <input type="checkbox" className="sr-only" checked={isSplitEnabled} onChange={(e) => setIsSplitEnabled(e.target.checked)} />
+                      <div className={`block w-10 h-6 rounded-full transition-colors ${isSplitEnabled ? 'bg-indigo-500' : 'bg-gray-300'}`}></div>
+                      <div className={`dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${isSplitEnabled ? 'transform translate-x-4' : ''}`}></div>
+                  </div>
+              </label>
+
+              {isSplitEnabled && (
+                  <div className="mt-4 p-4 bg-gray-50 border border-gray-200 rounded-xl animate-fade-in">
+                      <div className="mb-4">
+                          <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Who gets a cut?</label>
+                          <input
+                              type="text"
+                              placeholder="e.g. Sarah (Artist)"
+                              value={splitContact}
+                              onChange={(e) => setSplitContact(e.target.value)}
+                              className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-gray-900 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                          />
+                      </div>
+                      <div className="mb-4">
+                          <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Their Percentage: {splitPercentage}%</label>
+                          <input
+                              type="range"
+                              min="1"
+                              max="99"
+                              value={splitPercentage}
+                              onChange={(e) => setSplitPercentage(parseInt(e.target.value))}
+                              className="w-full accent-indigo-600"
+                          />
+                      </div>
+
+                      <div className="bg-indigo-50 p-3 rounded-lg border border-indigo-100">
+                         <p className="text-xs text-indigo-800 font-medium leading-relaxed">
+                             If this pays for ${amount || '0'}, {splitContact || 'your partner'} gets ${((parseFloat(amount || '0') * splitPercentage) / 100).toFixed(2)}, you get ${((parseFloat(amount || '0') * (100 - splitPercentage)) / 100).toFixed(2)}.
+                         </p>
+                      </div>
+                  </div>
+              )}
             </div>
 
             <button

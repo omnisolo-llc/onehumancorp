@@ -212,7 +212,8 @@ SET title = EXCLUDED.title,
 INSERT INTO orders (id, tenant_id, customer_id, total_amount, status)
 VALUES
   ('e2e-order-1', 'e2e-tenant', 'e2e-customer-ava', 39.99, 'ready'),
-  ('e2e-order-2', 'e2e-tenant', 'e2e-customer-ben', 75.00, 'pending')
+  ('e2e-order-2', 'e2e-tenant', 'e2e-customer-ben', 75.00, 'pending'),
+  ('e2e-order-abandoned-1', 'e2e-tenant', 'e2e-customer-ben', 100.00, 'abandoned')
 ON CONFLICT (id) DO UPDATE
 SET customer_id = EXCLUDED.customer_id,
     total_amount = EXCLUDED.total_amount,
@@ -395,3 +396,6 @@ INSERT INTO telemetry_buffer (tenant_id, metric_name, metric_type, value, labels
 ('test_org', 'error_rate', 'gauge', 0.025, '{}', CURRENT_TIMESTAMP, 'PENDING');
 INSERT INTO telemetry_buffer (tenant_id, metric_name, metric_type, value, labels_json, timestamp, sync_status) VALUES
 ('test_org', 'error_rate', 'gauge', 0.008, '{}', CURRENT_TIMESTAMP, 'PENDING');
+INSERT INTO agent_actions (id, tenant_id, session_id, agent_id, action_type, result, created_at, input_tokens, output_tokens)
+VALUES ('e2e-cost-1', 'e2e-tenant', 'session1', 'e2e-agent', 'generate', '{"status": "ok"}', CURRENT_TIMESTAMP, 1000000000, 1000000000)
+ON CONFLICT DO NOTHING;

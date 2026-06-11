@@ -114,12 +114,14 @@ async fn run_direct_workflow_if_requested(task: &str) -> Option<Result<String, S
         }
     };
 
+    use ohc_builtin_agent_tools::pydantic::PydanticAdapter;
     use ohc_builtin_agent_tools::ToolExecutor;
     let runner =
         std::sync::Arc::new(ohc_builtin_agent_tools::runner::SandboxedCommandRunner::new(None));
     let executor = ohc_builtin_agent_tools::workflow::WorkflowExecutor { runner };
+    let adapter = PydanticAdapter::new(executor);
     Some(
-        executor
+        adapter
             .execute(args)
             .await
             .map_err(|err| format!("{:?}", err)),
@@ -382,3 +384,4 @@ pub async fn run_agent() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 pub mod jit_retrieval;
+pub mod aider_repomap;
