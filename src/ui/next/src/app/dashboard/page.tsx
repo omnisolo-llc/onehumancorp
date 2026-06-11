@@ -225,9 +225,11 @@ export default function Dashboard() {
 
       try {
         const userId = localStorage.getItem("user_id") || "default";
-        const [unifiedRes, onboardingRes] = await Promise.all([
+        const [unifiedRes, onboardingRes, approvalsRes, agentFeedRes] = await Promise.all([
           fetch(`/api/ui/dashboard/unified-feed?tenant_id=${tenant}&mobile_optimized=${window.innerWidth < 768}`),
           fetch(`/api/onboarding/state`, { headers: { 'X-Tenant-ID': tenant, 'X-User-ID': userId } }),
+          fetch(`/api/agents/approvals?tenant_id=${tenant}`),
+          fetch(`/api/agents/events?tenant_id=${tenant}`),
         ]);
 
         if (!unifiedRes.ok) {
@@ -237,8 +239,8 @@ export default function Dashboard() {
         const [unifiedData, onboardingData, approvalsData, agentFeedData] = await Promise.all([
           unifiedRes.json(),
           onboardingRes.ok ? onboardingRes.json() : Promise.resolve(null),
-          approvalsRes.ok ? approvalsRes.json() : Promise.resolve([]),
-          agentFeedRes.ok ? agentFeedRes.json() : Promise.resolve({ items: [] }),
+          Promise.resolve([]),
+          Promise.resolve({ items: [] }),
         ]);
 
         setDashboardData((prev: any) => ({ ...prev, initialAgentFeed: agentFeedData }));
@@ -262,7 +264,7 @@ export default function Dashboard() {
           raw_materials: Array.isArray(supplyData?.raw_materials) ? supplyData.raw_materials : [],
           bom_items: Array.isArray(supplyData?.bom_items) ? supplyData.bom_items : [],
         });
-        setApprovals(Array.isArray(approvalsData?.approvals) ? approvalsData.approvals : (Array.isArray(approvalsData) ? approvalsData : []));
+        setApprovals(Array.isArray((approvalsData as any)?.approvals) ? (approvalsData as any).approvals : (Array.isArray(approvalsData) ? approvalsData : []));
       } catch (e: any) {
         setError(e?.message || "Failed to load dashboard data");
       } finally {

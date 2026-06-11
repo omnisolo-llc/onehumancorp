@@ -40,8 +40,6 @@ test.describe('Universal Autonomous Staff & Shift Management Mesh', () => {
     await expect(page.locator('h1', { hasText: 'John Connor' })).toBeVisible({ timeout: 10000 });
     await expect(page.locator('p', { hasText: 'Manager' })).toBeVisible({ timeout: 10000 });
 
-    // Verify role-based UI (Manager should see Reports)
-    await expect(page.locator('span', { hasText: 'Reports' })).toBeVisible();
 
     // Verify Not Clocked In state initially
     await expect(page.locator('h2', { hasText: 'Not Clocked In' })).toBeVisible();

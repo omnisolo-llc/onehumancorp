@@ -198,7 +198,7 @@ function KairosContent() {
         <div className="app-panel-header">
           <div>
             <div className="app-panel-title">Teammate Mesh</div>
-            <div className="app-list-subtitle">Live mesh nodes only. No dark-theme node mockups.</div>
+            <div className="app-list-subtitle">Live mesh nodes only. No dark-theme node placeholders.</div>
           </div>
           <span className="app-badge">Nerves</span>
         </div>
