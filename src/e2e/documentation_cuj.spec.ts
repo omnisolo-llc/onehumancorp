@@ -24,6 +24,8 @@ test.describe('Documentation User Journey', () => {
   });
 
   test('Interactive Walkthrough can be started', async ({ page }) => {
+    test.setTimeout(10000);
+
     await page.goto('/dashboard.html');
     const helpBtn = page.locator('#ohc-help-btn');
     await expect(helpBtn).toBeVisible();
