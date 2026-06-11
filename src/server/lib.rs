@@ -143,6 +143,9 @@ fn get_tooltips_registry() -> &'static RwLock<HashMap<String, String>> {
     m.insert("ask-ai-tooltip".to_string(), "Open the AI Chat to get answers instantly. The AI reads our entire Help Center for you.".to_string());
     m.insert("morning-briefing".to_string(), "Your AI Decision Assistant's daily summary.".to_string());
     m.insert("checkout-mercadopago-plan-upgrade-tooltip".to_string(), "Click here to securely subscribe to the plan via Mercado Pago.".to_string());
+    m.insert("api-docs-spec-tooltip".to_string(), "The raw OpenAPI JSON specification.".to_string());
+    m.insert("help-search-tooltip".to_string(), "Search our knowledge base for help articles.".to_string());
+    m.insert("changelog-tooltip".to_string(), "See what has changed in the latest version.".to_string());
     RwLock::new(m)
     })
 }

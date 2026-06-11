@@ -29,7 +29,9 @@ pub fn get_articles() -> Vec<HelpArticle> {
         HelpArticle { category: "Payments".to_string(), title: "Getting Paid".to_string(), desc: "Set up how you get paid, view deposits, and handle simple taxes.".to_string(), link: "/help/payments".to_string() },
         HelpArticle { category: "AI Agents".to_string(), title: "Your AI Helpers".to_string(), desc: "Learn how to hire AI helpers and give them tasks to do.".to_string(), link: "/help/ai-agents".to_string() },
         HelpArticle { category: "Marketing".to_string(), title: "Finding Customers".to_string(), desc: "Send emails to customers and grow your business easily.".to_string(), link: "/help/marketing".to_string() },
-        HelpArticle { category: "Account & Billing".to_string(), title: "Account & Billing".to_string(), desc: "View your bills, manage your plan, and invite team members.".to_string(), link: "/help/account-billing".to_string() }
+        HelpArticle { category: "Account & Billing".to_string(), title: "Account & Billing".to_string(), desc: "View your bills, manage your plan, and invite team members.".to_string(), link: "/help/account-billing".to_string() },
+        HelpArticle { category: "Advanced".to_string(), title: "API Reference".to_string(), desc: "Use our OpenAPI specs to integrate with OHC.".to_string(), link: "/api-docs".to_string() },
+        HelpArticle { category: "Advanced".to_string(), title: "Webhooks".to_string(), desc: "Listen to real-time events.".to_string(), link: "/help/webhooks".to_string() }
     ]
 }
 
@@ -43,6 +45,7 @@ pub fn get_videos() -> Vec<VideoTutorial> {
         VideoTutorial { id: 6, title: "Send a campaign".to_string(), duration: "1:25".to_string(), video_url: "/videos/6.mp4".to_string() },
         VideoTutorial { id: 7, title: "Connect Stripe".to_string(), duration: "1:30".to_string(), video_url: "/videos/7.mp4".to_string() },
         VideoTutorial { id: 8, title: "Manage inventory".to_string(), duration: "1:00".to_string(), video_url: "/videos/8.mp4".to_string() },
+        VideoTutorial { id: 9, title: "How to use the OpenAPI spec".to_string(), duration: "3:45".to_string(), video_url: "/videos/9.mp4".to_string() },
     ]
 }
 
@@ -304,6 +307,102 @@ pub async fn get_api_docs_spec() -> Json<serde_json::Value> {
                                     "schema": {
                                         "type": "object",
                                         "additionalProperties": { "type": "string" }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "/api/help/search": {
+                "get": {
+                    "summary": "Search Help Articles",
+                    "description": "Searches for help articles by query.",
+                    "tags": ["Documentation"],
+                    "parameters": [
+                        {
+                            "name": "q",
+                            "in": "query",
+                            "description": "Search query",
+                            "required": true,
+                            "schema": {
+                                "type": "string"
+                            }
+                        }
+                    ],
+                    "responses": {
+                        "200": {
+                            "description": "Success",
+                            "content": {
+                                "application/json": {
+                                    "schema": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "object",
+                                            "properties": {
+                                                "title": { "type": "string" },
+                                                "desc": { "type": "string" },
+                                                "link": { "type": "string" }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "/api/videos": {
+                "get": {
+                    "summary": "Get Video Tutorials",
+                    "description": "Retrieves a list of available video tutorials.",
+                    "tags": ["Documentation"],
+                    "responses": {
+                        "200": {
+                            "description": "Success",
+                            "content": {
+                                "application/json": {
+                                    "schema": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "object",
+                                            "properties": {
+                                                "id": { "type": "integer" },
+                                                "title": { "type": "string" },
+                                                "duration": { "type": "string" },
+                                                "video_url": { "type": "string" }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "/api/changelog": {
+                "get": {
+                    "summary": "Get Release Notes and Changelog",
+                    "description": "Retrieves the release notes and changelog.",
+                    "tags": ["Documentation"],
+                    "responses": {
+                        "200": {
+                            "description": "Success",
+                            "content": {
+                                "application/json": {
+                                    "schema": {
+                                        "type": "object",
+                                        "properties": {
+                                            "version": { "type": "string" },
+                                            "features": {
+                                                "type": "array",
+                                                "items": { "type": "string" }
+                                            },
+                                            "fixes": {
+                                                "type": "array",
+                                                "items": { "type": "string" }
+                                            }
+                                        }
                                     }
                                 }
                             }
