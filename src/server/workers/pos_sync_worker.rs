@@ -309,13 +309,10 @@ mod tests {
             .execute(&pool).await.unwrap();
 
         let job_payload = serde_json::json!({
-            "transaction_id": "tx-test-worker",
-            "mutation": {
-                "product_id": "prod-worker-test-1",
-                "quantity_deducted": 2,
-                "amount": 5000,
-                "transaction_id": "tx-test-worker"
-            }
+            "pos_transaction_id": "tx-test-worker",
+            "amount_cents": 5000,
+            "currency": "usd",
+            "payload": "[{\"product_id\": \"prod-worker-test-1\", \"quantity\": 2}]"
         });
 
         let job = crate::queue::Job {
@@ -375,13 +372,10 @@ mod tests {
             .execute(&pool).await.unwrap();
 
         let job_payload = serde_json::json!({
-            "transaction_id": "tx-test-worker-2",
-            "mutation": {
-                "product_id": "prod-worker-test-2",
-                "quantity_deducted": 2,
-                "amount": 5000,
-                "transaction_id": "tx-test-worker-2"
-            }
+            "pos_transaction_id": "tx-test-worker-2",
+            "amount_cents": 5000,
+            "currency": "usd",
+            "payload": "[{\"product_id\": \"prod-worker-test-2\", \"quantity\": 2}]"
         });
 
         let job = crate::queue::Job {
