@@ -1409,6 +1409,9 @@ async fn handle_team_invite_accept(
                 cache.invalidate(&format!("{}None", cache_key_prefix)).await;
             }
 
+            let metrics_cache = METRICS_CACHE.get_or_init(|| HybridCache::new(None));
+            metrics_cache.invalidate("aggregated_metrics").await;
+
             let msg = state.hub.sanitize_hub_event(serde_json::json!({ "type": "growth.team_invite_accepted", "id": req.id }));
             state.hub.append_recent_event(msg);
             Ok(Json(()))
@@ -1430,6 +1433,9 @@ async fn handle_create_team_invite(
             let cache_key_prefix = format!("team_invites:{}:", req.team_id);
             let cache = TEAM_INVITES_CACHE.get_or_init(|| HybridCache::new(None));
             cache.invalidate(&format!("{}None", cache_key_prefix)).await;
+
+            let metrics_cache = METRICS_CACHE.get_or_init(|| HybridCache::new(None));
+            metrics_cache.invalidate("aggregated_metrics").await;
 
             let msg = state.hub.sanitize_hub_event(serde_json::json!({ "type": "growth.team_invite_created", "team_id": req.team_id, "inviter_id": req.inviter_id, "invitee_id": req.invitee_id }));
             state.hub.append_recent_event(msg);
@@ -1928,6 +1934,9 @@ async fn handle_cloud_bridge_invite(
             let cache = TEAM_INVITES_CACHE.get_or_init(|| HybridCache::new(None));
             // Invalidate specifically the first page commonly fetched. For robust cache invalidation across all pages, consider tag-based invalidation or shorter TTLs. We will rely on the short 30s TTL for subsequent pages.
             cache.invalidate(&format!("{}None", cache_key_prefix)).await;
+
+            let metrics_cache = METRICS_CACHE.get_or_init(|| HybridCache::new(None));
+            metrics_cache.invalidate("aggregated_metrics").await;
 
             let msg = state.hub.sanitize_hub_event(serde_json::json!({ "type": "growth.cloud_bridge_invite_created", "team_id": req.team_id, "inviter_id": req.inviter_id, "invitee_id": req.invitee_id }));
             state.hub.append_recent_event(msg);
