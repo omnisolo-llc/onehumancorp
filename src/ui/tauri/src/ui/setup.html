@@ -412,6 +412,16 @@
             <div class="persona-chip" onclick="applyPersona('Tutor')">I'm a Tutor</div>
         </div>
 
+
+        <div class="instant-build-section" style="margin-top: 30px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.3);">
+          <h3>✨ Instant AI Build (30s)</h3>
+          <p>Describe your business in one paragraph, and we'll configure everything automatically.</p>
+          <textarea id="instant-bio" class="glassmorphism" rows="4" placeholder="e.g. I run a home bakery making custom vegan cakes in Austin. I need delivery options and custom orders."></textarea>
+          <button type="button" id="instant-build-btn" style="background-color: #34C759; box-shadow: 0 4px 14px 0 rgba(52, 199, 89, 0.39);">Generate Storefront</button>
+          <div id="instant-loading" style="display: none; margin-top: 15px; font-weight: bold; color: #0066FF;">The Advisor is analyzing... Please wait.</div>
+          <div id="instant-error" class="error-msg" style="margin-top: 10px;"></div>
+        </div>
+
         <div class="radio-group" id="context-group">
           <label class="radio-option">
             <input type="radio" name="work_context" value="Local Service" />
@@ -860,6 +870,59 @@
           document.getElementById(stepId).classList.add('active');
           updateStepper(stepId);
       }
+
+
+      document.getElementById('instant-build-btn').addEventListener('click', async () => {
+          const bio = document.getElementById('instant-bio').value.trim();
+          const errorEl = document.getElementById('instant-error');
+          const loadingEl = document.getElementById('instant-loading');
+
+          if (!bio) {
+              errorEl.textContent = 'Please describe your business first.';
+              errorEl.style.display = 'block';
+              return;
+          }
+          errorEl.style.display = 'none';
+          loadingEl.style.display = 'block';
+          document.getElementById('instant-build-btn').disabled = true;
+
+          try {
+              const backendUrl = (window.location.origin.includes('localhost') || window.location.protocol === 'file:') ? 'http://127.0.0.1:18789' : '';
+              const response = await fetch(`${backendUrl}/api/onboarding/intake`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ description: bio })
+              });
+
+              if (!response.ok) {
+                  throw new Error('Failed to generate.');
+              }
+              const data = await response.json();
+
+              // Fill state
+              state.businessName = data.business_name;
+              state.categories = data.categories;
+              state.first_offer = data.initial_products && data.initial_products.length > 0 ? data.initial_products[0].name : '';
+              state.templateSelection = 'Modern';
+
+              // Update DOM
+              document.getElementById('business-name').value = state.businessName;
+              document.getElementById('first-offer').value = state.first_offer;
+              document.getElementById('template-selection').value = state.templateSelection;
+
+              // Save state and jump to final step
+              saveCurrentState();
+              goToStep('step-template');
+
+          } catch (err) {
+              console.error(err);
+              errorEl.textContent = 'Failed to analyze description. Please try again or use manual setup.';
+              errorEl.style.display = 'block';
+          } finally {
+              loadingEl.style.display = 'none';
+              document.getElementById('instant-build-btn').disabled = false;
+          }
+      });
 
       document.querySelectorAll('.next-step-btn').forEach(btn => {
           btn.addEventListener('click', (e) => {

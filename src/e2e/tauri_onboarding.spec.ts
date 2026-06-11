@@ -7,7 +7,7 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
     // Serve the local files dynamically
     const workspaceRoot = process.env.TEST_WORKSPACE
         ? path.join(process.env.TEST_SRCDIR, process.env.TEST_WORKSPACE)
-        : process.cwd();
+        : require('path').join(__dirname, '../..');
 
     const tauriUiDir = path.join(workspaceRoot, 'src/ui/tauri/src/ui');
 
@@ -40,6 +40,7 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
               sessionStorage.setItem('mockState', JSON.stringify({ ...currentState, ...args.state }));
               return null;
             }
+            if (cmd === 'start_onboarding') return { success: true };
             throw new Error(`Unhandled command: ${cmd}`);
           }
         }
@@ -138,6 +139,14 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
 
     const newContext = await browser.newContext();
     const newPage = await newContext.newPage();
+    await newPage.route('**/*success.html*', async route => {
+        const fs = require('fs');
+        const path = require('path');
+        const workspaceRoot = process.env.TEST_WORKSPACE ? path.join(process.env.TEST_SRCDIR, process.env.TEST_WORKSPACE) : path.join(__dirname, '../..');
+        const tauriUiDir = path.join(workspaceRoot, 'src/ui/tauri/src/ui');
+        const content = fs.readFileSync(path.join(tauriUiDir, 'success.html'), 'utf-8');
+        await route.fulfill({ contentType: 'text/html', body: content });
+    });
 
     await newPage.route('http://mock/index.html', async route => {
         const content = fs.readFileSync(path.join(tauriUiDir, 'index.html'), 'utf-8');
@@ -192,15 +201,18 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
 
 
     // Verify validation triggers
+    newPage.on('console', msg => console.log('NEWPAGE CONSOLE:', msg.text()));
     await newPage.getByRole('button', { name: 'Finish Setup' }).click();
     await expect(newPage.locator('#template-error')).toBeVisible();
 
     await newPage.locator('#template-selection').selectOption('Modern');
 
     // Submit
+    newPage.on('console', msg => console.log('NEWPAGE CONSOLE:', msg.text()));
     await newPage.getByRole('button', { name: 'Finish Setup' }).click();
 
     // Success page
+    await newPage.waitForLoadState('networkidle');
     await expect(newPage.getByRole('heading', { name: "You're all set!" })).toBeVisible();
     await expect(newPage.getByText('Workspace created for Test Business. Jarvis is ready to help.')).toBeVisible();
 
@@ -211,7 +223,7 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
   test('Validates 44px touch targets on mobile sizes and layout rules', async ({ page }) => {
     const workspaceRoot = process.env.TEST_WORKSPACE
         ? path.join(process.env.TEST_SRCDIR, process.env.TEST_WORKSPACE)
-        : process.cwd();
+        : require('path').join(__dirname, '../..');
 
     const tauriUiDir = path.join(workspaceRoot, 'src/ui/tauri/src/ui');
 
@@ -246,8 +258,8 @@ test.describe('Tauri Dashboard UI and UX Improvements', () => {
 
   test('Setup UI should have glassmorphism aesthetics applied', async ({ page }) => {
     const workspaceRoot = process.env.TEST_WORKSPACE
-        ? path.join(process.env.TEST_SRCDIR || process.cwd(), process.env.TEST_WORKSPACE)
-        : process.cwd();
+        ? path.join(process.env.TEST_SRCDIR || require('path').join(__dirname, '../..'), process.env.TEST_WORKSPACE)
+        : require('path').join(__dirname, '../..');
 
     const tauriUiDir = path.join(workspaceRoot, 'src/ui/tauri/src/ui');
 
@@ -269,7 +281,7 @@ test.describe('Tauri Dashboard UI and UX Improvements', () => {
   test('Dashboard should have glassmorphism aesthetics applied', async ({ page }) => {
     const workspaceRoot = process.env.TEST_WORKSPACE
         ? path.join(process.env.TEST_SRCDIR, process.env.TEST_WORKSPACE)
-        : process.cwd();
+        : require('path').join(__dirname, '../..');
 
     const tauriUiDir = path.join(workspaceRoot, 'src/ui/tauri/src/ui');
 
@@ -285,13 +297,23 @@ test.describe('Tauri Dashboard UI and UX Improvements', () => {
             if (cmd === 'generate_cloud_invite') {
               return "https://cloud.ohc.network/invite/mock-test";
             }
+            if (cmd === 'start_onboarding') return { success: true };
             throw new Error(`Unhandled command: ${cmd}`);
           }
         }
       };
     });
 
-    await page.goto('/dashboard.html');
+        await page.route('http://mock/dashboard.html', async route => {
+        const fs = require('fs');
+        const path = require('path');
+        const workspaceRoot = process.env.TEST_WORKSPACE ? path.join(process.env.TEST_SRCDIR, process.env.TEST_WORKSPACE) : path.join(__dirname, '../..');
+        const tauriUiDir = path.join(workspaceRoot, 'src/ui/tauri/src/ui');
+        const content = fs.readFileSync(path.join(tauriUiDir, 'dashboard.html'), 'utf-8');
+        await route.fulfill({ contentType: 'text/html', body: content });
+    });
+
+    await page.goto('http://mock/dashboard.html');
 
     // Check that the container class has the updated glassmorphism properties
     const container = page.locator('.container');
@@ -304,5 +326,66 @@ test.describe('Tauri Dashboard UI and UX Improvements', () => {
     await page.emulateMedia({ colorScheme: 'dark' });
     await expect(container).toHaveCSS('background-color', 'rgba(22, 22, 26, 0.7)');
     await expect(container).toHaveCSS('border', '1px solid rgba(255, 255, 255, 0.1)');
+  });
+
+  test('Instant AI Build completes setup quickly', async ({ page }) => {
+    // We navigate to /ui/tauri/src/ui/setup.html from the local server since that's what other tests use when they do page.goto('/ui/tauri/src/ui/setup.html')
+    // Wait, earlier tests did `await page.goto('http://mock/setup.html');` but they also override `fs` with `process.cwd()`
+    // We will just run the test via the mock server or local file protocol.
+
+    // Instead of overriding everything, let's just use what works
+    const path = require('path');
+    const fs = require('fs');
+    const workspaceRoot = process.env.TEST_WORKSPACE
+        ? path.join(process.env.TEST_SRCDIR, process.env.TEST_WORKSPACE)
+        : path.join(__dirname, '../..'); // This makes it work
+    const tauriUiDir = path.join(workspaceRoot, 'src/ui/tauri/src/ui');
+
+    await page.route('http://mock/setup.html', async route => {
+        const content = fs.readFileSync(path.join(tauriUiDir, 'setup.html'), 'utf-8');
+        await route.fulfill({ contentType: 'text/html', body: content });
+    });
+
+    // Mock API intercept for intake
+    await page.route('**/api/onboarding/intake', async route => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          business_name: 'Chicago Emergency Handyman',
+          business_type: 'Handyman',
+          categories: ['services', 'physical'],
+          location: 'Chicago, IL',
+          target_audience: 'Homeowners',
+          initial_products: [
+            { name: 'Emergency Plumbing Repair', price: '150.00', description: 'Fast repair' }
+          ]
+        })
+      });
+    });
+
+    // Mock state save/get
+    await page.route('**/api/onboarding/state', async route => {
+      if (route.request().method() === 'GET') {
+          await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({}) });
+      } else {
+          await route.fulfill({ status: 204 });
+      }
+    });
+
+    await page.goto('http://mock/setup.html');
+
+    // Fill instant bio
+    await page.fill('#instant-bio', 'I am a local handyman offering emergency plumbing and repair services in Chicago.');
+
+    // Click Instant Build
+    await page.click('#instant-build-btn');
+
+    // Wait for the step update
+    await page.waitForTimeout(1000);
+
+    // Verify it jumped to step-template
+    await expect(page.locator('#step-template')).toHaveClass(/active/);
+    await expect(page.locator('#template-selection')).toHaveValue('Modern');
   });
 });
