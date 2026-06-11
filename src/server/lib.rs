@@ -2631,7 +2631,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
             let _health_cancel = builtin_mesh.start_health_responder().await;
 
             let cfg = ohc_builtin_agent::service::AgentConfig {
-                llm_provider: std::env::var("OHC_LLM_PROVIDER").unwrap_or_default(),
+                llm_provider: std::env::var("OHC_LLM_PROVIDER").unwrap_or_else(|_| "openrouter".to_string()),
                 model: std::env::var("OHC_LLM_MODEL").unwrap_or_default(),
                 llm_endpoint: std::env::var("OHC_LOCAL_LLM_ENDPOINT").unwrap_or_default(),
                 system_prompt: ::server_pricing::compression::reduce_tokens(

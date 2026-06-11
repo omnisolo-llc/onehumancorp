@@ -245,7 +245,7 @@ pub async fn run_agent() -> Result<(), Box<dyn std::error::Error>> {
     );
 
     let cfg = service::AgentConfig {
-        llm_provider: get_env("OHC_LLM_PROVIDER", ""),
+        llm_provider: get_env("OHC_LLM_PROVIDER", "openrouter"),
         model: get_env("OHC_LLM_MODEL", ""),
         llm_endpoint: get_env(
             "OHC_LLM_BASE_URL",

@@ -313,7 +313,7 @@ impl AgentServiceImpl {
         if !provider.trim().is_empty() {
             provider.to_string()
         } else {
-            Self::ai_provider_config_string("provider").unwrap_or_default()
+            Self::ai_provider_config_string("provider").unwrap_or_else(|| "openrouter".to_string())
         }
     }
 
@@ -338,6 +338,9 @@ impl AgentServiceImpl {
             "openai" | "openai-compatible" | "openai_compatible" => {
                 Self::first_non_empty_env(&["OPENAI_MODEL", "OHC_OPENAI_MODEL", "OHC_LLM_MODEL"])
                     .unwrap_or_else(|| "gpt-4.1-mini".to_string())
+            }
+            "openrouter" => {
+                std::env::var("OPENROUTER_MODEL").unwrap_or_else(|_| "openrouter/auto".to_string())
             }
             _ => String::new(),
         }
@@ -372,6 +375,14 @@ impl AgentServiceImpl {
             "anthropic" => {
                 let key = std::env::var("ANTHROPIC_API_KEY").unwrap_or_default();
                 Arc::new(AnthropicClient::new(key))
+            }
+            "openrouter" => {
+                let key = self.configured_api_key(&["OPENROUTER_API_KEY", "OHC_LLM_API_KEY", "OPENAI_API_KEY"]);
+                let mut config = OpenAIClientConfig::openrouter(key);
+                if !model.is_empty() {
+                    config.default_model = Some(model.clone());
+                }
+                Arc::new(OpenAIClient::from_config(config))
             }
             "openai" => {
                 let key = self.configured_api_key(&["OPENAI_API_KEY", "OHC_LLM_API_KEY"]);
