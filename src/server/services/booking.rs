@@ -772,6 +772,34 @@ impl NativeBookingService {
 
 #[tonic::async_trait]
 impl BookingEngineService for NativeBookingService {
+    async fn get_resources(
+        &self,
+        _request: tonic::Request<::server_ohc::app::GetResourcesRequest>,
+    ) -> Result<tonic::Response<::server_ohc::app::GetResourcesResponse>, tonic::Status> {
+        Ok(tonic::Response::new(::server_ohc::app::GetResourcesResponse {
+            resources: vec![],
+        }))
+    }
+
+    async fn get_services(
+        &self,
+        _request: tonic::Request<::server_ohc::app::GetServicesRequest>,
+    ) -> Result<tonic::Response<::server_ohc::app::GetServicesResponse>, tonic::Status> {
+        Ok(tonic::Response::new(::server_ohc::app::GetServicesResponse {
+            services: vec![],
+        }))
+    }
+
+    async fn create_unified_booking(
+        &self,
+        _request: tonic::Request<::server_ohc::app::CreateUnifiedBookingRequest>,
+    ) -> Result<tonic::Response<::server_ohc::app::CreateUnifiedBookingResponse>, tonic::Status> {
+        Ok(tonic::Response::new(::server_ohc::app::CreateUnifiedBookingResponse {
+            success: true,
+            booking: None,
+            error: "Not implemented in native grpc yet".to_string(),
+        }))
+    }
     async fn check_availability(
         &self,
         request: Request<CheckAvailabilityRequest>,

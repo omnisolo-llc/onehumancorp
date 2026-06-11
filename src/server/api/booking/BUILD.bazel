@@ -4,6 +4,7 @@ exports_files(
     [
         "mod.rs",
         "request.rs",
+        "unified.rs"
     ],
     visibility = ["//visibility:public"],
 )
