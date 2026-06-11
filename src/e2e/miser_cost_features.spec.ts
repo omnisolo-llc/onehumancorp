@@ -18,6 +18,7 @@ test.describe('Miser Cost Features E2E', () => {
     // Verify key metrics are rendered (we match the text labels)
     await expect(page.locator('text=Total Costs')).toBeVisible();
     await expect(page.locator('text=Projected Monthly Cost')).toBeVisible();
+    await expect(page.locator('text=AI Cache Savings')).toBeVisible();
 
     // Verify Budget Health Alert is rendered
     await expect(page.locator('#budget-health-alert')).toBeVisible();

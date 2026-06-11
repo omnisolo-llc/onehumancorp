@@ -239,3 +239,26 @@ pub async fn aggregate_agent_costs(pool: &PgPool, tenant_id: &str) -> Vec<AgentC
     .filter(|r| r.cost_cents > 0)
     .collect()
 }
+
+pub async fn aggregate_prompt_cache_savings(pool: &sqlx::PgPool, tenant_id: &str) -> f64 {
+    let raw_rows_result = sqlx::query(
+        r#"
+        SELECT
+            SUM(value)::FLOAT8 as total
+        FROM telemetry_buffer
+        WHERE (labels_json::jsonb)->>'tenant_id' = $1
+          AND metric_name = 'ohc_prompt_cache_savings_cents'
+        "#
+    )
+    .bind(tenant_id)
+    .fetch_one(pool)
+    .await;
+
+    match raw_rows_result {
+        Ok(row) => {
+            use sqlx::Row;
+            row.try_get::<Option<f64>, _>("total").unwrap_or(Some(0.0)).unwrap_or(0.0)
+        }
+        Err(_) => 0.0
+    }
+}

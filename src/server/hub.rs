@@ -70,9 +70,15 @@ impl Hub {
         });
 
         let cost_auditor_clone = cost_auditor.clone();
+        let pool_clone_2 = pool.clone();
         tokio::spawn(async move {
             while let Some(event) = telemetry_rx.recv().await {
                 let cost = cost_auditor_clone.record_event(event.clone());
+                if event.cached_input_tokens > 0 {
+                    let saved = cost_auditor_clone.record_cache_hit(event.clone());
+                    let saved_cents = (saved * 100.0).round() as i64;
+                    let _ = ::server_telemetry::buffer_metric_i64(&pool_clone_2, "ohc_prompt_cache_savings_cents", "counter", saved_cents, serde_json::json!({"agent_id": event.agent_id, "tenant_id": event.tenant_id})).await;
+                }
 
                 let labels = serde_json::json!({
                     "agent_id": event.agent_id,

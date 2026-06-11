@@ -32,6 +32,7 @@ pub struct CostAuditor {
     storage_savings: Mutex<f64>,
     bandwidth_savings: Mutex<f64>,
     tenant_bandwidth_savings: Mutex<HashMap<String, f64>>,
+    tenant_caching_savings: Mutex<HashMap<String, f64>>,
     total_compute_cost: Mutex<f64>,
     total_network_cost: Mutex<f64>,
     tenant_compute_costs: Mutex<HashMap<String, f64>>,
@@ -68,6 +69,7 @@ impl CostAuditor {
             storage_savings: Mutex::new(0.0),
             bandwidth_savings: Mutex::new(0.0),
             tenant_bandwidth_savings: Mutex::new(HashMap::new()),
+            tenant_caching_savings: Mutex::new(HashMap::new()),
             total_compute_cost: Mutex::new(0.0),
             total_network_cost: Mutex::new(0.0),
             tenant_compute_costs: Mutex::new(HashMap::new()),
@@ -167,7 +169,16 @@ impl CostAuditor {
         let mut caching_savings = self.caching_savings.lock().unwrap();
         *caching_savings += saved_cost;
 
+        let mut tenant_caching_savings = self.tenant_caching_savings.lock().unwrap();
+        let current_tenant_savings = tenant_caching_savings.entry(event.tenant_id.to_string()).or_insert(0.0);
+        *current_tenant_savings += saved_cost;
+
         saved_cost
+    }
+
+    pub fn get_tenant_caching_savings(&self, tenant_id: &str) -> f64 {
+        let tenant_caching_savings = self.tenant_caching_savings.lock().unwrap();
+        *tenant_caching_savings.get(tenant_id).unwrap_or(&0.0)
     }
 
     pub fn get_agent_cost(&self, agent_id: &str) -> f64 {

@@ -38,6 +38,7 @@ pub struct CostDashboardResponse {
     pub network_cost: i64,
     pub compute_cost: i64,
     pub bandwidth_savings: i64,
+    pub cache_savings: i64,
     pub cache_hit_rate: f64,
     pub cost_per_1k_tokens: f64,
     pub period_start: String,
@@ -221,7 +222,7 @@ pub async fn cost_dashboard_handler(
                 auth.org_id.clone()
             }
         },
-        None => return Json(CostDashboardResponse { total_revenue: 0, total_costs: 0, projected_monthly_cost: 0, llm_cost: 0, storage_cost: 0, payment_fees: 0, network_cost: 0, compute_cost: 0, bandwidth_savings: 0, cache_hit_rate: 0.0, cost_per_1k_tokens: 0.0, period_start: "2024-05-01".to_string(), period_end: "2024-05-31".to_string(), trend: vec![], agent_costs: vec![], department_tier_usage: empty_department_tier_usage_response() })
+        None => return Json(CostDashboardResponse { total_revenue: 0, total_costs: 0, projected_monthly_cost: 0, llm_cost: 0, storage_cost: 0, payment_fees: 0, network_cost: 0, compute_cost: 0, bandwidth_savings: 0, cache_savings: 0, cache_hit_rate: 0.0, cost_per_1k_tokens: 0.0, period_start: "2024-05-01".to_string(), period_end: "2024-05-31".to_string(), trend: vec![], agent_costs: vec![], department_tier_usage: empty_department_tier_usage_response() })
     };
 
     let cache = COST_DASHBOARD_CACHE.get_or_init(|| HybridCache::new(None));
@@ -285,7 +286,15 @@ pub async fn cost_dashboard_handler(
         }
     });
 
-    let (storage_res, auditor_res, trend_res, agent_costs_res, department_res) = tokio::join!(storage_future, auditor_future, trend_future, agent_costs_future, department_future);
+    let cache_savings_future = tokio::task::spawn({
+        let pool = crate::db::get_pool();
+        let t_id = tenant_id.clone();
+        async move {
+            crate::pricing::cost_aggregator::aggregate_prompt_cache_savings(&pool, &t_id).await
+        }
+    });
+
+    let (storage_res, auditor_res, trend_res, agent_costs_res, department_res, cache_savings_res) = tokio::join!(storage_future, auditor_future, trend_future, agent_costs_future, department_future, cache_savings_future);
 
     let storage_bytes = storage_res.unwrap_or(0);
     let (llm_cost_f64, total_revenue_f64, payment_fees_f64, compute_cost_f64, network_cost_f64, bandwidth_savings_f64, total_tokens, cached_tokens) = auditor_res.unwrap_or((0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0, 0));
@@ -329,6 +338,7 @@ pub async fn cost_dashboard_handler(
         network_cost: (network_cost_f64 * 100.0).round() as i64,
         compute_cost: (compute_cost_f64 * 100.0).round() as i64,
         bandwidth_savings: (bandwidth_savings_f64 * 100.0).round() as i64,
+        cache_savings: cache_savings_res.unwrap_or(0.0) as i64 + (auditor.get_tenant_caching_savings(&tenant_id) * 100.0).round() as i64,
         cache_hit_rate: (cache_hit_rate * 100.0).round() / 100.0,
         cost_per_1k_tokens: (cost_per_1k_tokens * 10000.0).round() / 10000.0,
         period_start,

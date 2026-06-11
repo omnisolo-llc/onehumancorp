@@ -43,6 +43,7 @@ describe('CostDashboardPage', () => {
       payment_fees: 5000,
       network_cost: 16000,
       bandwidth_savings: 5000,
+      cache_savings: 2000,
       cache_hit_rate: 85.5,
       cost_per_1k_tokens: 0.0015,
       period_start: "2023-10-01",

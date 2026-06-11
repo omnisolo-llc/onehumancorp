@@ -22,6 +22,7 @@ interface CostDashboardData {
   payment_fees: number;
   network_cost: number;
   bandwidth_savings: number;
+  cache_savings?: number;
   cache_hit_rate: number;
   cost_per_1k_tokens: number;
   period_start: string;
@@ -188,7 +189,7 @@ export default function CostDashboardPage() {
                     </div>
                     <div className="app-card bg-white/70 backdrop-blur-xl saturate-200 border border-white/40 rounded-xl hover:-translate-y-1 hover:shadow-md transition-all duration-300 group">
                         <h2 className="text-sm font-medium text-green-700 mb-1">Network & Storage Savings</h2>
-                        <p id="cost-dashboard-total-savings" className="text-3xl font-bold font-outfit text-green-700">{formatCurrency((data?.bandwidth_savings || 0))}</p>
+                        <p id="cost-dashboard-total-savings" className="text-3xl font-bold font-outfit text-green-700">{formatCurrency((data?.bandwidth_savings || 0) + (data?.cache_savings || 0))}</p>
                         <p className="text-xs text-green-600 mt-2">Saved via auto-compression</p>
                     </div>
                 </div>
@@ -306,6 +307,14 @@ export default function CostDashboardPage() {
                         <p className="text-sm text-green-600 mt-1">Savings from automated WebP compression and minification.</p>
                     </div>
                     <span id="cost-dashboard-bandwidth-savings" className="text-lg font-semibold text-green-700">-{formatCurrency(data?.bandwidth_savings || 0)}</span>
+                </div>
+
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 app-card bg-white/70 backdrop-blur-xl saturate-200 border border-white/40 rounded-xl hover:-translate-y-1 hover:shadow-md transition-all duration-300">
+                    <div>
+                        <span className="font-medium text-green-700">AI Cache Savings</span>
+                        <p className="text-sm text-green-600 mt-1">Savings from intelligent prompt caching.</p>
+                    </div>
+                    <span id="cost-dashboard-cache-savings" className="text-lg font-semibold text-green-700">-{formatCurrency(data?.cache_savings || 0)}</span>
                 </div>
             </div>
         </section>
