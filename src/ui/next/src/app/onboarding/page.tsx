@@ -541,12 +541,16 @@ export default function OnboardingWizard() {
                             admin_name: adminName || 'Admin',
                             admin_password: adminPassword || 'password123',
                             business_type: inferredBusinessType,
+                            company_description: bio,
+                            selling_categories: data.categories || ["physical"],
+                            payment_pref: 'online',
+                            website_template: 'auto',
+                            domain_choice: 'subdomain',
                             first_product_name: inferredProductName,
                             first_product_price: inferredProductPrice,
                             price_type: 'physical',
                             location: inferredLocation,
-                            ai_agents: ['Operations', 'Marketing', 'Finance', 'Legal', 'Advisory'],
-                            auto_respond: true,
+                            target_audience: data.target_audience || '',
                             initial_products: data.initial_products || []
                           })
                         });
