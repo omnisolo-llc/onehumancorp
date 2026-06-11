@@ -2361,6 +2361,9 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
 
     // Start Booking Reengagement Worker
+    let proactive_worker = crate::workers::proactive_analysis_worker::ProactiveAnalysisWorker::new(db.clone());
+    proactive_worker.start();
+
     let booking_reengagement_worker = crate::workers::booking_reengagement::BookingReengagementWorker::new(db.clone());
     booking_reengagement_worker.start();
 
