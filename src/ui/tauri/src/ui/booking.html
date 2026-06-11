@@ -144,7 +144,17 @@
       const urlParams = new URLSearchParams(window.location.search);
       const tenantId = urlParams.get('tenant') || 'demo-tenant';
 
-      document.getElementById('business-name').innerText = "Carlos' Handyman Services"; // Mock
+
+      // Fetch real tenant info
+      fetch(`/api/v1/growth/tenant?tenant_id=${tenantId}`)
+        .then(res => res.json())
+        .then(data => {
+            document.getElementById('business-name').innerText = data.business_name || tenantId;
+        })
+        .catch(() => {
+            document.getElementById('business-name').innerText = tenantId;
+        });
+
 
       document.getElementById('booking-form').addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -163,7 +173,9 @@
               'x-tenant-id': tenantId
             },
             body: JSON.stringify({ description })
-          }).catch(() => console.log('Mock fallback triggered'));
+          }).catch((err) => {
+              console.error('Request failed:', err);
+          });
 
           // In E2E tests, the backend creates the agent feed item.
           setTimeout(() => {

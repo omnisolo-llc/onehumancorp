@@ -311,14 +311,90 @@ impl InvoiceService for InvoiceServiceImpl {
     }
 }
 
-pub fn router<S: Clone + Send + Sync + 'static>(_hub: Arc<Hub>) -> axum::Router<S> {
 
+use axum::{
+    extract::{Query, State},
+    routing::get,
+    Json,
+};
+use serde_json::{json, Value};
 
-    // This is just a stub router for Axum integration if needed,
-    // though typically gRPC services are mounted differently.
-    // For now, we return an empty router.
-    axum::Router::new()
+#[derive(serde::Deserialize)]
+pub struct InvoiceQuery {
+    pub tenant_id: Option<String>,
 }
+
+async fn get_invoices_handler(
+    State(hub): State<Arc<Hub>>,
+    Query(query): Query<InvoiceQuery>,
+) -> Json<Value> {
+    let tenant_id = query.tenant_id.unwrap_or_else(|| "default".to_string());
+    let pool = &hub.pool;
+
+    let rows = sqlx::query("SELECT * FROM invoices WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 50")
+        .bind(&tenant_id)
+        .fetch_all(pool)
+        .await
+        .unwrap_or_default();
+
+    if rows.is_empty() {
+        return Json(json!({ "invoices": [] }));
+    }
+
+    let mut invoice_ids = Vec::new();
+    for row in &rows {
+        use sqlx::Row;
+        let id: String = row.try_get("id").unwrap_or_default();
+        invoice_ids.push(id);
+    }
+
+    let items_rows = sqlx::query("SELECT * FROM invoice_line_items WHERE invoice_id = ANY($1)")
+        .bind(&invoice_ids)
+        .fetch_all(pool)
+        .await
+        .unwrap_or_default();
+
+    let mut line_items_map = std::collections::HashMap::new();
+    for item_row in items_rows {
+        use sqlx::Row;
+        let invoice_id: String = item_row.try_get("invoice_id").unwrap_or_default();
+        let item = json!({
+            "id": item_row.try_get::<String, _>("id").unwrap_or_default(),
+            "description": item_row.try_get::<String, _>("description").unwrap_or_default(),
+            "quantity": item_row.try_get::<i32, _>("quantity").unwrap_or_default(),
+            "unit_price": item_row.try_get::<f64, _>("unit_price").unwrap_or_default(),
+            "amount": item_row.try_get::<f64, _>("amount").unwrap_or_default(),
+        });
+        line_items_map.entry(invoice_id).or_insert_with(Vec::new).push(item);
+    }
+
+    let mut invoices = Vec::new();
+    for row in rows {
+        use sqlx::Row;
+        let invoice_id: String = row.try_get("id").unwrap_or_default();
+        let empty_vec = Vec::new();
+        let line_items = line_items_map.get(&invoice_id).unwrap_or(&empty_vec);
+
+        invoices.push(json!({
+            "id": invoice_id,
+            "client_id": row.try_get::<String, _>("client_id").unwrap_or_default(),
+            "client_name": row.try_get::<String, _>("client_name").unwrap_or_default(),
+            "status": row.try_get::<String, _>("status").unwrap_or_default(),
+            "due_date": row.try_get::<i64, _>("due_date").unwrap_or_default(),
+            "total_amount": row.try_get::<f64, _>("total_amount").unwrap_or_default(),
+            "line_items": line_items,
+        }));
+    }
+
+    Json(json!({ "invoices": invoices }))
+}
+
+pub fn router<S: Clone + Send + Sync + 'static>(hub: Arc<Hub>) -> axum::Router<S> {
+    axum::Router::new()
+        .route("/", get(get_invoices_handler))
+        .with_state(hub)
+}
+
 
 #[cfg(test)]
 mod tests {

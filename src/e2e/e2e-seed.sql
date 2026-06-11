@@ -395,3 +395,22 @@ INSERT INTO telemetry_buffer (tenant_id, metric_name, metric_type, value, labels
 ('test_org', 'error_rate', 'gauge', 0.025, '{}', CURRENT_TIMESTAMP, 'PENDING');
 INSERT INTO telemetry_buffer (tenant_id, metric_name, metric_type, value, labels_json, timestamp, sync_status) VALUES
 ('test_org', 'error_rate', 'gauge', 0.008, '{}', CURRENT_TIMESTAMP, 'PENDING');
+
+-- Invoices seed data
+INSERT INTO invoices (id, tenant_id, client_id, client_name, status, due_date, currency, total_amount, stripe_invoice_id, stripe_payment_link, created_at, updated_at)
+VALUES
+  ('INV-1234', 'e2e-tenant', 'cust_1', 'Nora''s Design Project', 'draft', extract(epoch from (now() + interval '30 days')) * 1000, 'USD', 2500.00, '', '', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+ON CONFLICT (id) DO UPDATE SET
+  client_name = EXCLUDED.client_name,
+  total_amount = EXCLUDED.total_amount,
+  status = EXCLUDED.status;
+
+INSERT INTO invoice_line_items (id, tenant_id, invoice_id, description, quantity, unit_price, amount, created_at, updated_at)
+VALUES
+  ('line_1', 'e2e-tenant', 'INV-1234', 'Logo Design', 1, 1500.00, 1500.00, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+  ('line_2', 'e2e-tenant', 'INV-1234', 'Brand Guidelines', 1, 1000.00, 1000.00, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+ON CONFLICT (id) DO UPDATE SET
+  description = EXCLUDED.description,
+  quantity = EXCLUDED.quantity,
+  unit_price = EXCLUDED.unit_price,
+  amount = EXCLUDED.amount;

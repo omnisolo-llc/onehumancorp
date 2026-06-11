@@ -1,31 +1,25 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import AppShell from '../../components/layout/AppShell';
+import { AppShell } from '../components/AppShell';
 
 export default function FinancePage() {
     const [invoices, setInvoices] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [showDraftModal, setShowDraftModal] = useState(false);
-
     useEffect(() => {
-        // Mock data loading
-        setTimeout(() => {
-            setInvoices([
-                {
-                    id: "INV-1234",
-                    client_name: "Nora's Design Project",
-                    status: "draft",
-                    total_amount: 2500.00,
-                    due_date: Date.now() + 30 * 24 * 3600 * 1000,
-                    line_items: [
-                        { description: "Logo Design", quantity: 1, unit_price: 1500.00, amount: 1500.00 },
-                        { description: "Brand Guidelines", quantity: 1, unit_price: 1000.00, amount: 1000.00 }
-                    ]
-                }
-            ]);
+        fetch('/api/v1/invoices', {
+            headers: { 'x-tenant-id': 'e2e-tenant' }
+        })
+        .then(res => res.json())
+        .then(data => {
+            setInvoices(data.invoices || []);
             setLoading(false);
-        }, 500);
+        })
+        .catch(err => {
+            console.error(err);
+            setLoading(false);
+        });
     }, []);
 
     const handleCreateInvoice = () => {
@@ -33,7 +27,7 @@ export default function FinancePage() {
     };
 
     return (
-        <AppShell>
+        <AppShell title="Finance & Invoicing" subtitle="Manage your cash flow, invoices, and deposits.">
             <main className="p-4 md:p-8 flex-1 w-full max-w-6xl mx-auto space-y-6 md:space-y-12 pb-24">
                 <header className="mb-4">
                     <h1 className="text-3xl font-bold font-outfit text-gray-900 dark:text-white">Finance & Invoicing</h1>

@@ -386,7 +386,8 @@
               const data = await res.json();
               console.log("Payment intent created", data);
           } else {
-              console.warn("Payment intent API returned error (expected in some mock environments)");
+              console.error("Payment intent API returned error");
+              alert("Payment failed: API error");
           }
 
         } catch (e) {

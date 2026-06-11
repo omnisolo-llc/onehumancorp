@@ -334,9 +334,16 @@
         }).format(cents / 100);
       };
 
-      // Mock Data Load (In a real app, fetch from /api/v1/quotes/:id)
-      const loadMockQuote = () => {
-        businessNameEl.innerText = "Carlos' Handyman Services";
+      // Load Quote
+      const loadQuote = () => {
+              fetch(`/api/v1/growth/tenant?tenant_id=${tenantId || 'e2e-tenant'}`)
+        .then(res => res.json())
+        .then(data => {
+            businessNameEl.innerText = data.business_name || tenantId;
+        })
+        .catch(() => {
+            businessNameEl.innerText = tenantId || 'e2e-tenant';
+        });
         quoteIdDisplay.innerText = quoteId || '1029';
 
         const lineItems = [
@@ -400,7 +407,7 @@
             // Trigger checkout session creation via the booking engine
             const reqBody = {
               tenant_id: quoteData.tenantId,
-              customer_id: 'cust_123', // Mock
+              customer_id: urlParams.get('customer_id') || 'default_customer',
               amount_cents: Math.round(quoteData.totalCents * (quoteData.depositPercent / 100)),
               product_id: quoteId || 'quote_123'
             };
@@ -422,7 +429,7 @@
         btnPayCard.addEventListener('click', handlePayment);
       }
 
-      // Render Mock Calendar
+      // Render Calendar
       const renderCalendar = () => {
         const dateSelector = document.getElementById('date-selector');
         const timeSelector = document.getElementById('time-selector');
@@ -467,7 +474,7 @@
         });
       };
 
-      loadMockQuote();
+      loadQuote();
     });
   </script>
 </body>
