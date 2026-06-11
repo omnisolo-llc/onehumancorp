@@ -385,6 +385,7 @@ pub mod services {
     pub mod pos;
     pub mod collective;
     pub mod inventory_sync;
+    pub mod inventory;
 }
 
 use tonic::{transport::Server, Request, Response, Status};
@@ -2896,6 +2897,10 @@ pub async fn update_ui_triage_action_handler(
                         .bind("sent")
                         .execute(&mut *tx)
                         .await;
+                    } else if action_type == "SocialPostDraft" {
+                        tracing::info!("Approved and scheduled SocialPostDraft for tenant: {}", tenant_id);
+                        // In a real implementation we would send this to AYRSHARE or similar buffer here
+                        // For MVP, we simply mark it resolved.
                     } else if action_type == "ProposedInvoice" || action_type == "SuggestedCalendarSlot" {
                         // TODO: Implement other action types like ProposedInvoice or SuggestedCalendarSlot as outlined in issue #26616
                         tracing::info!("Executing proposed action: {}, payload: {}", action_type, action_payload);
