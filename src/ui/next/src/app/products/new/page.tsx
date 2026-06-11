@@ -27,6 +27,8 @@ function AutoCatalogContent() {
     subscriptionDiscount?: string;
   } | null>(null);
   const [published, setPublished] = useState(false);
+  const [showUpdatingToast, setShowUpdatingToast] = useState(false);
+  const [showSuccessToast, setShowSuccessToast] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const searchParams = useSearchParams();
   const [textMode, setTextMode] = useState(searchParams.get('mode') === 'text');
@@ -121,6 +123,7 @@ function AutoCatalogContent() {
     if (!productData) return;
 
     setLoading(true);
+    setShowUpdatingToast(true);
     setError(null);
     if (subscriptionMode) {
       window.localStorage.setItem('last_subscription_plan', JSON.stringify({
@@ -128,6 +131,9 @@ function AutoCatalogContent() {
         interval: subscriptionInterval,
         cutoff: subscriptionCutoff,
       }));
+      setShowUpdatingToast(false);
+      setShowSuccessToast(true);
+      setTimeout(() => setShowSuccessToast(false), 3000);
       setPublished(true);
       setLoading(false);
       return;
@@ -150,12 +156,17 @@ function AutoCatalogContent() {
       const data = await response.json().catch(() => ({}));
 
       if (response.ok) {
+        setShowUpdatingToast(false);
+        setShowSuccessToast(true);
+        setTimeout(() => setShowSuccessToast(false), 3000);
         setPublished(true);
       } else {
+        setShowUpdatingToast(false);
         setError(data.message || 'Product could not be published.');
       }
     } catch (error) {
       console.error('Error publishing product:', error);
+      setShowUpdatingToast(false);
       setError('Product could not be published because the catalog backend is unavailable.');
     } finally {
       setLoading(false);
@@ -164,7 +175,23 @@ function AutoCatalogContent() {
 
   if (published) {
     return (
-      <div className="p-4 max-w-[375px] mx-auto min-h-screen bg-gray-50 flex flex-col justify-center items-center font-inter">
+      <div className="p-4 max-w-[375px] mx-auto min-h-screen bg-gray-50 flex flex-col justify-center items-center font-inter relative">
+        {/* Toast Notifications */}
+        {showUpdatingToast && (
+          <div className="absolute top-12 left-1/2 transform -translate-x-1/2 z-50 px-4 py-2 rounded-full shadow-lg border text-sm font-semibold flex items-center gap-2 animate-fade-in-up"
+               style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', borderColor: 'rgba(255, 255, 255, 0.4)', color: '#0066FF' }}>
+            <div className="w-4 h-4 rounded-full border-2 border-blue-500 border-t-transparent animate-spin"></div>
+            Updating storefront...
+          </div>
+        )}
+
+        {showSuccessToast && (
+          <div className="absolute top-12 left-1/2 transform -translate-x-1/2 z-50 px-4 py-2 rounded-full shadow-lg border text-sm font-semibold flex items-center gap-2 animate-fade-in-up"
+               style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', borderColor: 'rgba(255, 255, 255, 0.4)', color: '#10B981' }}>
+            <span>✨</span>
+            Storefront updated and optimized for search.
+          </div>
+        )}
          <div className="text-6xl mb-4">🎉</div>
          <h1 className="text-2xl font-bold mb-2">Product Published!</h1>
          <p className="text-gray-600 mb-6 text-center">Your new product is now live on your storefront.</p>

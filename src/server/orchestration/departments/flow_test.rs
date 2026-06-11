@@ -10,6 +10,7 @@ mod tests {
     use std::sync::Arc;
     use tokio::sync::RwLock;
     use uuid::Uuid;
+use crate::orchestration::departments::types::ApprovalStatus;
     use crate::db::DbStore;
 
     #[tokio::test]
@@ -307,6 +308,65 @@ mod tests {
         }
 
         assert!(has_case_study_draft, "Marketing Agent should draft a case study when a job is completed with media.");
+    }
+
+    #[tokio::test]
+    async fn test_marketing_agent_seo_prerender() {
+        if std::env::var("OHC_DATABASE_URL").is_err() {
+            return;
+        }
+
+        use crate::orchestration::departments::marketing_agent::MarketingAgent;
+
+        let db = Arc::new(crate::db::DB::new().await.unwrap());
+        let transport = Arc::new(InProcessTransport::new());
+        let mesh = Arc::new(CentrifugeNode::new(transport));
+
+        let orchestrator = Arc::new(DepartmentOrchestrator::new(db.clone(), mesh));
+        let marketing_agent = Arc::new(RwLock::new(MarketingAgent::new(orchestrator.clone())));
+        orchestrator.register_department(marketing_agent.clone()).await;
+
+        let tenant_id = uuid::Uuid::new_v4().to_string();
+        let site_id = uuid::Uuid::new_v4().to_string();
+
+        match &db.store {
+            DbStore::Postgres => {
+                let _ = sqlx::query("INSERT INTO tenants (id, name, tier) VALUES ($1, 'Test', 'starter') ON CONFLICT (id) DO UPDATE SET tier = 'starter'")
+                    .bind(&tenant_id)
+                    .execute(&db.pool)
+                    .await;
+            }
+            DbStore::Sqlite(pool) => {
+                let _ = sqlx::query("INSERT INTO tenants (tenant_id, business_name, tier) VALUES (?, 'Test', 'starter') ON CONFLICT (tenant_id) DO UPDATE SET tier = 'starter'")
+                    .bind(&tenant_id)
+                    .execute(pool)
+                    .await;
+            }
+        }
+
+        let event = DepartmentEvent {
+            id: Uuid::new_v4().to_string(),
+            tenant_id: tenant_id.clone(),
+            event_type: "tenant.website.updated".to_string(),
+            payload: serde_json::json!({
+                "site_id": site_id,
+            }),
+        };
+
+        let res = orchestrator.dispatch_event(event).await;
+        assert!(res.is_ok());
+
+        let mut has_seo_action = false;
+        for _ in 0..10 {
+            tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+            let approvals = orchestrator.get_activity_feed(&tenant_id, None, 100).await;
+            if approvals.iter().any(|req| req.description.contains("Trigger Agentic SEO Pre-rendering") && req.status == ApprovalStatus::Approved) {
+                has_seo_action = true;
+                break;
+            }
+        }
+
+        assert!(has_seo_action, "Marketing Agent should auto-execute SEO pre-rendering action when website is updated.");
     }
 
     #[tokio::test]

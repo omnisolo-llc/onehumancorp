@@ -240,11 +240,30 @@ impl Department for MarketingAgent {
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
         if event.event_type == "tenant.website.updated" {
-            let site_id = event.payload.get("site_id").and_then(|v| v.as_str()).unwrap_or("unknown");
+            let site_id_str = event.payload.get("site_id").and_then(|v| v.as_str()).unwrap_or("unknown");
             let payload = serde_json::json!({
-                "site_id": site_id,
+                "site_id": site_id_str,
             });
-            return self.orchestrator()?.execute_action(
+            let orchestrator = self.orchestrator()?.clone();
+
+            // Execute Agentic SEO Pre-rendering immediately since it's AutoExecute
+            if let (Ok(tenant_id), Ok(site_id)) = (uuid::Uuid::parse_str(&event.tenant_id), uuid::Uuid::parse_str(site_id_str)) {
+                let pool = orchestrator.get_db().pool.clone();
+                let cache_key = format!("edge_site_{}_{}_{}", tenant_id, site_id, "en-US");
+                let cache = crate::builder::edge::get_edge_cache();
+
+                tokio::spawn(async move {
+                    let _ = crate::builder::edge::regenerate_cache(
+                        pool,
+                        tenant_id,
+                        site_id,
+                        cache_key,
+                        cache
+                    ).await;
+                });
+            }
+
+            return orchestrator.execute_action(
                 DepartmentType::Marketing,
                 "Trigger Agentic SEO Pre-rendering".to_string(),
                 event.tenant_id.clone(),

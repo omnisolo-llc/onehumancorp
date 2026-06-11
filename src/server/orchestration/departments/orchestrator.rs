@@ -135,6 +135,10 @@ pub struct DepartmentOrchestrator {
 }
 
 impl DepartmentOrchestrator {
+    pub fn get_db(&self) -> Arc<crate::db::DB> {
+        self.db.clone()
+    }
+
     pub fn new(db: Arc<crate::db::DB>, mesh: Arc<dyn TeammateMesh>) -> Self {
         let memory_repo = match &db.store {
             DbStore::Postgres => Arc::new(VectorRepository::new(db.pool.clone())),
