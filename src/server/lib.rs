@@ -1391,7 +1391,7 @@ impl HubService for MyHubService {
         } else if let Some(mp_client) = mercadopago_client.filter(|_| is_latam) {
             mp_client.create_checkout_preference(&req.plan_id, &tenant_id).await
         } else {
-            client.create_checkout_session(&req.plan_id, &tenant_id, amount, true).await
+            client.create_checkout_session(&req.plan_id, &tenant_id, amount, true, None).await
         }
             .map_err(|e| tonic::Status::internal(e))?;
 

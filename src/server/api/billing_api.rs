@@ -117,9 +117,12 @@ pub async fn create_checkout_session_handler(
         _ => return Err(StatusCode::BAD_REQUEST),
     };
 
+    let mut lock_id_out = None;
+
     if let (Some(product_id), Some(quantity)) = (&req.product_id, req.quantity) {
         if quantity > 0 {
             let lock_id = uuid::Uuid::new_v4().to_string();
+            lock_id_out = Some(lock_id.clone());
             let lock_key = format!("ohc:lock:{}:inventory:{}", tenant_id, product_id);
             let ttl = req.ttl_seconds.unwrap_or(300); // 5 minutes default for online checkout
 
@@ -189,7 +192,7 @@ pub async fn create_checkout_session_handler(
 
     if let Some(client) = &hub.tracker().stripe_client {
         // Assume price_id corresponds to the tier directly or is generated. We pass the tier name as the price_id for now.
-        match client.create_checkout_session(&req.tier, &tenant_id, amount_usd, req.is_subscription.unwrap_or(false)).await {
+        match client.create_checkout_session(&req.tier, &tenant_id, amount_usd, req.is_subscription.unwrap_or(false), lock_id_out.as_deref()).await {
             Ok(url) => Ok(Json(CreateCheckoutSessionResponse { checkout_url: url })),
             Err(_) => {
                 // Explicitly release the lock if the stripe session creation fails

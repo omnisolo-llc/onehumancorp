@@ -849,7 +849,7 @@ impl DepartmentOrchestrator {
 
                         let api_key = std::env::var("STRIPE_SECRET_KEY").unwrap_or_else(|_| "sk_test_123".to_string());
                         let stripe = crate::integrations::stripe::client::StripeClient::new(api_key);
-                        let stripe_link = stripe.create_checkout_session(&quote_id, "customer_123", price * 0.20, false).await.unwrap_or_default();
+                        let stripe_link = stripe.create_checkout_session(&quote_id, "customer_123", price * 0.20, false, None).await.unwrap_or_default();
 
                         let mut generated_reply = payload.get("generated_response").and_then(|v| v.as_str()).unwrap_or("").to_string();
                         if !stripe_link.is_empty() {
