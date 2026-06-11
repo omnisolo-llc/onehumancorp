@@ -3062,10 +3062,18 @@ async fn ui_dashboard_analytics_briefing_handler(
     use axum::response::IntoResponse;
     let tenant_id = ui_tenant_id(&query);
 
+    let db1 = db.clone();
+    let db2 = db.clone();
+    let tenant_id1 = tenant_id.clone();
+    let tenant_id2 = tenant_id.clone();
+
     let (metrics_res, inbox_res) = tokio::join!(
-        load_ui_dashboard_metrics(&db, &tenant_id),
-        load_ui_inbox_from_db(&db, &tenant_id)
+        tokio::spawn(async move { load_ui_dashboard_metrics(&db1, &tenant_id1).await }),
+        tokio::spawn(async move { load_ui_inbox_from_db(&db2, &tenant_id2).await })
     );
+
+    let metrics_res = metrics_res.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound));
+    let inbox_res = inbox_res.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound));
 
     let metrics = metrics_res.unwrap_or(UiDashboardMetrics {
         active_customers: 0,
