@@ -168,18 +168,19 @@ impl BookingReengagementWorker {
                         }
                     };
 
-                    let drafted_message = format!("Hi {}, it's been a while since your last session. Would you like to book your next appointment? Let me know and I can send over my availability.", customer_name);
+                    let drafted_message = format!("Hi {}, I noticed we haven't had a session in a while! Hope everything is going great with your progress. Would you like to jump back in this week? I have some slots available. Here is a quick booking link: [Link]", customer_name);
 
                     match &db.store {
                         crate::db::DbStore::Postgres => {
                             let _ = sqlx::query(
                                 r#"
                                 INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
-                                VALUES ($1, $2, 'Approve Re-engagement', 'A customer hasn''t booked recently. Approve this follow-up message to secure a returning booking.', 'PENDING', 'P1', 'LOW', 'PENDING', $3)
+                                VALUES ($1, $2, 'Approve Re-engagement for ' || $3, 'AI detected that ' || $3 || ' is a returning customer who hasn''t booked in 14 days. This follow-up helps maintain momentum.', 'PENDING', 'P1', 'LOW', 'PENDING', $4)
                                 "#
                             )
                             .bind(Uuid::new_v4().to_string())
                             .bind(&tenant_id)
+                            .bind(&customer_name)
                             .bind(&drafted_message)
                             .execute(&pool)
                             .await;
@@ -188,11 +189,13 @@ impl BookingReengagementWorker {
                              let _ = sqlx::query(
                                 r#"
                                 INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
-                                VALUES (?, ?, 'Approve Re-engagement', 'A customer hasn''t booked recently. Approve this follow-up message to secure a returning booking.', 'PENDING', 'P1', 'LOW', 'PENDING', ?)
+                                VALUES (?, ?, 'Approve Re-engagement for ' || ?, 'AI detected that ' || ? || ' is a returning customer who hasn''t booked in 14 days. This follow-up helps maintain momentum.', 'PENDING', 'P1', 'LOW', 'PENDING', ?)
                                 "#
                             )
                             .bind(Uuid::new_v4().to_string())
                             .bind(&tenant_id)
+                            .bind(&customer_name)
+                            .bind(&customer_name)
                             .bind(&drafted_message)
                             .execute(sqlite_pool)
                             .await;
