@@ -113,7 +113,7 @@ rust_library(
 
 rust_test(
     name = "server_benchmarks_unit_test",
-    size = "large",
+    size = "enormous",
     crate = ":server_benchmarks",
     edition = "2024",
     env = {
