@@ -140,7 +140,7 @@ pub async fn offline_sync_handler(
                         )
                         .bind(serde_json::json!([serde_json::from_str::<serde_json::Value>(&conflict_payload).unwrap()]))
                         .bind(&tenant_id_clone)
-                        .bind(&tx_id)
+                        .bind(&mutation.transaction_id)
                         .execute(&mut *db_tx)
                         .await;
                     }
