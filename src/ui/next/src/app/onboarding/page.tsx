@@ -461,14 +461,14 @@ export default function OnboardingWizard() {
 
               <div className="flex flex-col gap-4 w-full">
                 <button
-                  className="w-full bg-[#0071E3] text-white p-4 font-bold rounded-[8px] shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#005bb5] transition-all"
+                  className="w-full bg-[#0066FF] text-white p-4 font-bold rounded-[8px] shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#005bb5] transition-all"
                   onClick={() => { setStep(1); syncStateToBackend({ step: 1 }); }}
                 >
                   Start My Business
                 </button>
 
                 <button
-                  className="w-full glassmorphism text-[#0071E3] border border-[#0071E3] p-4 font-bold rounded-[8px] shadow-sm hover:bg-blue-50 transition-all"
+                  className="w-full glassmorphism text-[#0066FF] border border-[#0066FF] p-4 font-bold rounded-[8px] shadow-sm hover:bg-blue-50 transition-all"
                   onClick={() => { setStep(10); syncStateToBackend({ step: 10 }); }}
                 >
                   Instant Build
@@ -493,7 +493,7 @@ export default function OnboardingWizard() {
                 <textarea
                   value={bio}
                   onChange={(e) => setBio(e.target.value)}
-                  className="w-full glassmorphism min-h-[44px] min-w-[44px] p-4 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all resize-none text-gray-800 dark:text-[#f5f5f7] shadow-inner rounded-[8px]"
+                  className="w-full glassmorphism min-h-[44px] min-w-[44px] p-4 focus:ring-2 focus:ring-[#0066FF] focus:border-[#0066FF] outline-none transition-all resize-none text-gray-800 dark:text-[#f5f5f7] shadow-inner rounded-[8px]"
                   placeholder="e.g. I run a local bakery that sells custom vegan cakes..."
                   rows={6}
                 />
