@@ -242,8 +242,8 @@ impl OperationsWorker {
                                 tokio::spawn(async move {
                                     if let Ok(sites) = crate::builder::db::list_sites(&pool_clone, tenant_id_clone).await {
                                         for site in sites {
-                                            let cache_key = format!("edge_site_{}_{}_en-US", tenant_id_clone, site.id);
-                                            let _ = crate::builder::edge::regenerate_cache(pool_clone.clone(), tenant_id_clone, site.id, cache_key, crate::builder::edge::get_edge_cache()).await;
+                                            let _ = crate::builder::jobs::enqueue_publish_site_job(&pool_clone, tenant_id_clone, site.id).await;
+
                                         }
                                     }
                                 });
@@ -283,8 +283,8 @@ impl OperationsWorker {
                                 tokio::spawn(async move {
                                     if let Ok(sites) = crate::builder::db::list_sites(&pool_clone, tenant_id_clone).await {
                                         for site in sites {
-                                            let cache_key = format!("edge_site_{}_{}_en-US", tenant_id_clone, site.id);
-                                            let _ = crate::builder::edge::regenerate_cache(pool_clone.clone(), tenant_id_clone, site.id, cache_key, crate::builder::edge::get_edge_cache()).await;
+                                            let _ = crate::builder::jobs::enqueue_publish_site_job(&pool_clone, tenant_id_clone, site.id).await;
+
                                         }
                                     }
                                 });
@@ -971,8 +971,8 @@ let db_for_products = self.db.clone();
                                 tokio::spawn(async move {
                                     if let Ok(sites) = crate::builder::db::list_sites(&pool_clone, tenant_id_clone).await {
                                         for site in sites {
-                                            let cache_key = format!("edge_site_{}_{}_en-US", tenant_id_clone, site.id);
-                                            let _ = crate::builder::edge::regenerate_cache(pool_clone.clone(), tenant_id_clone, site.id, cache_key, crate::builder::edge::get_edge_cache()).await;
+                                            let _ = crate::builder::jobs::enqueue_publish_site_job(&pool_clone, tenant_id_clone, site.id).await;
+
                                         }
                                     }
                                 });
