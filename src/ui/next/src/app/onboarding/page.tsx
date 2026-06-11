@@ -492,8 +492,11 @@ export default function OnboardingWizard() {
               <div className="space-y-4 flex-1 w-full">
                 <textarea
                   value={bio}
-                  onChange={(e) => setBio(e.target.value)}
-                  className="w-full glassmorphism min-h-[44px] min-w-[44px] p-4 focus:ring-2 focus:ring-[#0066FF] focus:border-[#0066FF] outline-none transition-all resize-none text-gray-800 dark:text-[#f5f5f7] shadow-inner rounded-[8px]"
+                  onChange={(e) => {
+                    setBio(e.target.value);
+                    if (error) setError('');
+                  }}
+                  className={`w-full glassmorphism min-h-[44px] min-w-[44px] p-4 border outline-none transition-all resize-none text-gray-800 dark:text-[#f5f5f7] shadow-inner rounded-[8px] ${error ? 'border-[#FF3B30] focus:ring-2 focus:ring-[#FF3B30] focus:border-[#FF3B30]' : 'border-transparent focus:ring-2 focus:ring-[#0066FF] focus:border-[#0066FF]'}`}
                   placeholder="e.g. I run a local bakery that sells custom vegan cakes..."
                   rows={6}
                 />
