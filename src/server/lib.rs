@@ -2896,9 +2896,75 @@ pub async fn update_ui_triage_action_handler(
                         .bind("sent")
                         .execute(&mut *tx)
                         .await;
-                    } else if action_type == "ProposedInvoice" || action_type == "SuggestedCalendarSlot" {
-                        // TODO: Implement other action types like ProposedInvoice or SuggestedCalendarSlot as outlined in issue #26616
-                        tracing::info!("Executing proposed action: {}, payload: {}", action_type, action_payload);
+                    } else if action_type == "ProposedInvoice" {
+                        let parsed: Result<serde_json::Value, _> = serde_json::from_str(&action_payload);
+                        if let Ok(json) = parsed {
+                            let new_id = format!("inv-{}", uuid::Uuid::new_v4());
+                            let client_id = json.get("client_id").and_then(|v| v.as_str()).unwrap_or("unknown");
+                            let client_name = json.get("client_name").and_then(|v| v.as_str()).unwrap_or("unknown");
+                            let total_amount = json.get("total_amount").and_then(|v| v.as_f64()).unwrap_or(0.0);
+                            let currency = json.get("currency").and_then(|v| v.as_str()).unwrap_or("USD");
+
+                            // due_date
+                            let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs() as i64;
+                            let due_date = json.get("due_date").and_then(|v| v.as_i64()).unwrap_or(now + 86400 * 7); // + 7 days
+
+                            if let Err(e) = sqlx::query(
+                                "INSERT INTO invoices (id, tenant_id, client_id, client_name, status, due_date, currency, total_amount) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"
+                            )
+                            .bind(&new_id)
+                            .bind(&tenant_id)
+                            .bind(client_id)
+                            .bind(client_name)
+                            .bind("draft")
+                            .bind(due_date)
+                            .bind(currency)
+                            .bind(total_amount)
+                            .execute(&mut *tx)
+                            .await
+                            {
+                                tracing::error!("Failed to insert ProposedInvoice: {:?}", e);
+                                return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": e.to_string()}))).into_response();
+                            }
+                        } else {
+                            tracing::warn!("Failed to parse ProposedInvoice payload: {}", action_payload);
+                            return (axum::http::StatusCode::BAD_REQUEST, axum::Json(serde_json::json!({"error": "Invalid JSON payload for ProposedInvoice"}))).into_response();
+                        }
+                    } else if action_type == "SuggestedCalendarSlot" {
+                        let parsed: Result<serde_json::Value, _> = serde_json::from_str(&action_payload);
+                        if let Ok(json) = parsed {
+                            let new_id = format!("booking-{}", uuid::Uuid::new_v4());
+                            let customer_id = json.get("customer_id").and_then(|v| v.as_str()).unwrap_or("unknown");
+                            let service_id = json.get("service_id").and_then(|v| v.as_str()).unwrap_or("unknown");
+
+                            let start_time = json.get("start_time").and_then(|v| v.as_str())
+                                .map(|s| chrono::DateTime::parse_from_rfc3339(s).unwrap_or(chrono::Utc::now().into()).with_timezone(&chrono::Utc))
+                                .unwrap_or_else(chrono::Utc::now);
+
+                            let end_time = json.get("end_time").and_then(|v| v.as_str())
+                                .map(|s| chrono::DateTime::parse_from_rfc3339(s).unwrap_or((chrono::Utc::now() + chrono::Duration::hours(1)).into()).with_timezone(&chrono::Utc))
+                                .unwrap_or_else(|| chrono::Utc::now() + chrono::Duration::hours(1));
+
+                            if let Err(e) = sqlx::query(
+                                "INSERT INTO bookings (id, tenant_id, customer_id, service_id, start_time, end_time, status) VALUES ($1, $2, $3, $4, $5, $6, $7)"
+                            )
+                            .bind(&new_id)
+                            .bind(&tenant_id)
+                            .bind(customer_id)
+                            .bind(service_id)
+                            .bind(start_time)
+                            .bind(end_time)
+                            .bind("scheduled")
+                            .execute(&mut *tx)
+                            .await
+                            {
+                                tracing::error!("Failed to insert SuggestedCalendarSlot: {:?}", e);
+                                return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": e.to_string()}))).into_response();
+                            }
+                        } else {
+                            tracing::warn!("Failed to parse SuggestedCalendarSlot payload: {}", action_payload);
+                            return (axum::http::StatusCode::BAD_REQUEST, axum::Json(serde_json::json!({"error": "Invalid JSON payload for SuggestedCalendarSlot"}))).into_response();
+                        }
                     }
                 }
             }
@@ -4916,6 +4982,7 @@ async fn test_api_settings_voice() {
     assert_eq!(updated.voice_receptionist_enabled, false);
     assert_eq!(updated.voice_receptionist_number, Some("+15551112222".to_string()));
     assert_eq!(updated.voice_receptionist_persona, Some("Professional".to_string()));
+}
 }
 
 /*
