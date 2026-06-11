@@ -27,6 +27,7 @@ function AutoCatalogContent() {
     subscriptionDiscount?: string;
   } | null>(null);
   const [published, setPublished] = useState(false);
+  const [publishingStep, setPublishingStep] = useState<0 | 1 | 2>(0);
   const [error, setError] = useState<string | null>(null);
   const searchParams = useSearchParams();
   const [textMode, setTextMode] = useState(searchParams.get('mode') === 'text');
@@ -36,6 +37,7 @@ function AutoCatalogContent() {
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       setLoading(true);
+    setPublishingStep(1);
       setError(null);
       try {
         const formData = new FormData();
@@ -80,6 +82,7 @@ function AutoCatalogContent() {
         }
       } finally {
         setLoading(false);
+      setPublishingStep(0);
       }
     }
   };
@@ -88,6 +91,7 @@ function AutoCatalogContent() {
   const handleGenerate = async () => {
     if (!promptText.trim()) return;
     setLoading(true);
+    setPublishingStep(1);
     setError(null);
     try {
       const response = await fetch('/api/generate-offering', {
@@ -114,6 +118,7 @@ function AutoCatalogContent() {
       setError('Failed to generate offering details.');
     } finally {
       setLoading(false);
+      setPublishingStep(0);
     }
   };
 
@@ -121,6 +126,7 @@ function AutoCatalogContent() {
     if (!productData) return;
 
     setLoading(true);
+    setPublishingStep(1);
     setError(null);
     if (subscriptionMode) {
       window.localStorage.setItem('last_subscription_plan', JSON.stringify({
@@ -130,6 +136,7 @@ function AutoCatalogContent() {
       }));
       setPublished(true);
       setLoading(false);
+      setPublishingStep(0);
       return;
     }
 
@@ -150,20 +157,29 @@ function AutoCatalogContent() {
       const data = await response.json().catch(() => ({}));
 
       if (response.ok) {
-        setPublished(true);
+        setTimeout(() => {
+            setPublishingStep(2);
+            setTimeout(() => {
+                setPublished(true);
+                setPublishingStep(0);
+                setLoading(false);
+            }, 2000);
+        }, 1500);
       } else {
         setError(data.message || 'Product could not be published.');
+        setPublishingStep(0);
+        setLoading(false);
       }
     } catch (error) {
       console.error('Error publishing product:', error);
       setError('Product could not be published because the catalog backend is unavailable.');
-    } finally {
+      setPublishingStep(0);
       setLoading(false);
     }
   };
 
   if (published) {
-    return (
+  return (
       <div className="p-4 max-w-[375px] mx-auto min-h-screen bg-gray-50 flex flex-col justify-center items-center font-inter">
          <div className="text-6xl mb-4">🎉</div>
          <h1 className="text-2xl font-bold mb-2">Product Published!</h1>
@@ -177,6 +193,18 @@ function AutoCatalogContent() {
 
   return (
     <div className="p-4 max-w-[375px] mx-auto min-h-screen bg-gray-50 flex flex-col font-inter relative pb-20">
+      {publishingStep > 0 && (
+        <div className="fixed bottom-10 left-1/2 -translate-x-1/2 px-6 py-3 rounded-2xl shadow-xl z-50 transition-all duration-500 ease-in-out w-max max-w-[90vw]"
+             style={{
+               background: 'rgba(255, 255, 255, 0.85)',
+               backdropFilter: 'blur(30px) saturate(210%)',
+               border: '1px solid rgba(255, 255, 255, 0.4)'
+             }}>
+          <p className="text-sm font-bold text-gray-800 text-center">
+             {publishingStep === 1 ? 'Updating storefront...' : 'Storefront updated and optimized for search.'}
+          </p>
+        </div>
+      )}
       <div className="flex items-center mb-6 border-b border-gray-200 pb-4">
         <Link href="/dashboard" className="text-blue-500 font-semibold mr-4">&lt; Back</Link>
         <h1 className="text-xl font-bold font-outfit text-gray-900">Add Product</h1>

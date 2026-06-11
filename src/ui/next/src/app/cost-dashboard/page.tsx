@@ -302,7 +302,7 @@ export default function CostDashboardPage() {
 
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 app-card bg-white/70 backdrop-blur-xl saturate-200 border border-white/40 rounded-xl hover:-translate-y-1 hover:shadow-md transition-all duration-300">
                     <div>
-                        <span className="font-medium text-green-700">Bandwidth Savings</span>
+                        <span className="font-medium text-green-700">Network & Storage Savings</span>
                         <p className="text-sm text-green-600 mt-1">Savings from automated WebP compression and minification.</p>
                     </div>
                     <span id="cost-dashboard-bandwidth-savings" className="text-lg font-semibold text-green-700">-{formatCurrency(data?.bandwidth_savings || 0)}</span>
