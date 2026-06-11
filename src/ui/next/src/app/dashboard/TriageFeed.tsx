@@ -148,7 +148,7 @@ export function TriageFeed({ tenantId, initialItems }: { tenantId: string, initi
       {actionStatus && <div className="mb-4 app-badge good" role="status">{actionStatus}</div>}
 
       <div className="app-grid two" style={{ display: regularItems.length > 0 ? "grid" : "none" }}>
-        <section className="app-panel glassmorphism border border-white/40 dark:border-white/10">
+        <section className="app-panel glassmorphism backdrop-blur-md bg-white/60 dark:bg-black/40 border border-white/20">
           <div className="app-panel-header">
             <div>
               <div className="app-panel-title">Triage Queue</div>
@@ -163,7 +163,7 @@ export function TriageFeed({ tenantId, initialItems }: { tenantId: string, initi
                 data-testid={`triage-card-${item.id}`}
                 onClick={() => setSelectedId(item.id)}
                 className="app-list-item w-full text-left min-h-[44px]"
-                style={{ background: selected?.id === item.id ? "rgba(255, 255, 255, 0.1)" : "transparent" }}
+                style={{ background: selected?.id === item.id ? "rgba(255, 255, 255, 0.5)" : "transparent" }}
               >
                 <div className="min-w-0">
                   <div className="app-list-title">{item.source || "Unknown Source"}</div>
@@ -175,7 +175,7 @@ export function TriageFeed({ tenantId, initialItems }: { tenantId: string, initi
           </div>
         </section>
 
-        <section className="app-panel glassmorphism border border-white/40 dark:border-white/10">
+        <section className="app-panel glassmorphism backdrop-blur-md bg-white/60 dark:bg-black/40 border border-white/20">
           <div className="app-panel-header">
             <div className="app-panel-title">Triage Detail</div>
           </div>
@@ -203,11 +203,11 @@ export function TriageFeed({ tenantId, initialItems }: { tenantId: string, initi
               )}
 
               <div className="grid grid-cols-2 gap-3 mb-6">
-                <div className="app-card bg-white/30 dark:bg-black/30 border border-white/40 dark:border-white/10">
+                <div className="app-card glassmorphism backdrop-blur-md bg-white/30 dark:bg-black/30 border border-white/20">
                   <div className="app-metric-label">Priority</div>
                   <div className="mt-2"><span className={`app-badge ${badgeTone(selected.priority)}`}>{selected.priority || "Normal"}</span></div>
                 </div>
-                <div className="app-card bg-white/30 dark:bg-black/30 border border-white/40 dark:border-white/10">
+                <div className="app-card glassmorphism backdrop-blur-md bg-white/30 dark:bg-black/30 border border-white/20">
                   <div className="app-metric-label">Created</div>
                   <div className="mt-2 text-sm font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">{new Date(selected.created_at || Date.now()).toLocaleString()}</div>
                 </div>
