@@ -1,4 +1,5 @@
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    println!("cargo::rustc-check-cfg=cfg(ohc_bazel)");
     let protos = [
         "../../../src/proto/agent.proto",
         "../../../src/proto/agent_service.proto",
