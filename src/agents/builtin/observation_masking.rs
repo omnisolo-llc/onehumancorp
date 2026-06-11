@@ -138,14 +138,14 @@ impl JetBrainsObservationMasker {
                                 if content_trimmed.starts_with('{') || content_trimmed.starts_with('[') {
                                     if let Ok(mut json_val) = serde_json::from_str::<Value>(&tr.content)
                                     {
-                                        let modified = Self::mask_json_value(
+                                        let _modified = Self::mask_json_value(
                                             &mut json_val,
                                             self.size_limit,
                                             self.element_limit,
                                             0,
                                         );
                                         let new_content = serde_json::to_string(&json_val).unwrap_or_else(|_| tr.content.clone());
-                                        if modified && new_content.len() <= self.size_limit {
+                                        if new_content.len() <= self.size_limit {
                                             tr.content = new_content;
                                         } else {
                                             // Either it wasn't modified, or the modification still didn't bring it under the limit.
