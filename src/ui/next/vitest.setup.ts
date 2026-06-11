@@ -163,3 +163,5 @@ global.fetch = vi.fn().mockImplementation(async (url: string | URL | Request, in
     }
     return originalFetch2(url, init);
 }) as any;
+// indexedDB mock for tests
+import 'fake-indexeddb/auto';
