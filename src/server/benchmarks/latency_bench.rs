@@ -415,8 +415,11 @@ pub async fn bench_dashboard_snapshot() {
     });
 
 
-    let res_mobile = dashboard_service.get_dashboard(req_mobile_t).await.unwrap().into_inner();
-    let res_desktop = dashboard_service.get_dashboard(req_desktop_t).await.unwrap().into_inner();
+    // Let's copy dashboard_service because get_dashboard consumes request
+    let s_mobile = dashboard_service.clone();
+    let s_desktop = dashboard_service.clone();
+    let res_mobile = s_mobile.get_dashboard(req_mobile_t).await.unwrap().into_inner();
+    let res_desktop = s_desktop.get_dashboard(req_desktop_t).await.unwrap().into_inner();
 
     if !res_mobile.meetings.is_empty() {
         assert_eq!(res_mobile.meetings[0].transcript.len(), 0, "Mobile payload optimization should clear transcripts");
