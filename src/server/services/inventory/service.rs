@@ -1,8 +1,9 @@
 use std::sync::Arc;
+
 use uuid::Uuid;
 
 pub struct InventoryService {
-    db: Arc<crate::db::DB>,
+    db: std::sync::Arc<crate::db::DB>,
     redis_client: Option<redis::Client>,
 }
 
@@ -26,7 +27,7 @@ pub struct CommitResult {
 }
 
 impl InventoryService {
-    pub fn new(db: Arc<crate::db::DB>, redis_client: Option<redis::Client>) -> Self {
+    pub fn new(db: std::sync::Arc<crate::db::DB>, redis_client: Option<redis::Client>) -> Self {
         Self { db, redis_client }
     }
 
@@ -57,7 +58,7 @@ impl InventoryService {
                 .unwrap_or(false);
 
             if !acquired {
-                let pool = crate::db::get_pool();
+                let pool = self.db.pool.clone();
                 let action_request_id = Uuid::new_v4().to_string();
                 let payload = serde_json::json!({
                     "product_id": product_id,
@@ -80,7 +81,7 @@ impl InventoryService {
                 });
             }
 
-            let pool = crate::db::get_pool();
+            let pool = self.db.pool.clone();
             if let Ok(mut tx) = pool.begin().await {
                 if let Ok(_) = crate::common::auth_utils::set_org_context(&mut *tx, tenant_id).await {
                     let current_stock: Option<i32> = sqlx::query_scalar("SELECT available_quantity FROM products WHERE id = $1 AND tenant_id = $2")
@@ -186,7 +187,7 @@ impl InventoryService {
                 }
             }
 
-            let pool = crate::db::get_pool();
+            let pool = self.db.pool.clone();
             if let Ok(mut tx) = pool.begin().await {
                 if let Ok(_) = crate::common::auth_utils::set_org_context(&mut *tx, tenant_id).await {
                     let _ = sqlx::query("UPDATE products SET locked_quantity = locked_quantity - $1, available_quantity = available_quantity + $1 WHERE id = $2 AND tenant_id = $3")
@@ -247,7 +248,7 @@ impl InventoryService {
                 .unwrap_or(());
         }
 
-        let pool = crate::db::get_pool();
+        let pool = self.db.pool.clone();
         let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
 
         crate::common::auth_utils::set_org_context(&mut *tx, tenant_id)
@@ -365,7 +366,7 @@ mod tests {
         }
 
         let pool = crate::db::get_pool();
-        let db = Arc::new(crate::db::DB {
+        let _db = Arc::new(crate::db::DB {
             pool: pool.clone(),
             store: DbStore::Postgres,
         });
@@ -388,7 +389,7 @@ mod tests {
         let redis_url = std::env::var("OHC_REDIS_URL").unwrap_or_else(|_| "redis://localhost:6379".to_string());
         let redis_client_opt = redis::Client::open(redis_url).ok();
 
-        let service = Arc::new(InventoryService::new(db, redis_client_opt));
+        let service = Arc::new(InventoryService::new(_db.clone(), redis_client_opt));
 
         let svc1 = service.clone();
         let svc2 = service.clone();

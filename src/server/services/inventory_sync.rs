@@ -1,16 +1,16 @@
 use ::server_ohc::app::inventory_sync_service_server::InventorySyncService;
 use ::server_ohc::app::{ReserveInventoryRequest, ReserveInventoryResponse, CommitInventoryRequest, CommitInventoryResponse};
-use std::sync::Arc;
+
 use tonic::{Request, Response, Status};
 
 pub struct MyInventorySyncService {
-    db: Arc<crate::db::DB>,
+
     redis_client: Option<redis::Client>,
 }
 
 impl MyInventorySyncService {
-    pub fn new(db: Arc<crate::db::DB>, redis_client: Option<redis::Client>) -> Self {
-        Self { db, redis_client }
+    pub fn new( redis_client: Option<redis::Client>) -> Self {
+        Self { redis_client }
     }
 }
 

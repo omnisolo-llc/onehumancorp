@@ -660,6 +660,15 @@
         </div>
       </div>
 
+      <div class="ohc-growth-card" id="referral-tier-section" style="margin-bottom: 20px; display: none;">
+        <h2>Your Referral Rewards</h2>
+        <p id="referral-tier-text">Loading your tier...</p>
+        <div style="background-color: rgba(0,0,0,0.1); border-radius: 8px; height: 10px; width: 100%; margin: 10px 0; overflow: hidden;">
+          <div id="referral-tier-progress" style="background-color: #0066FF; height: 100%; width: 0%; transition: width 0.5s ease;"></div>
+        </div>
+        <p id="referral-tier-subtext" style="font-size: 13px; color: #666;"></p>
+      </div>
+
       <div class="ohc-growth-card" style="margin-bottom: 20px;">
         <h2>Agent Public Profile</h2>
         <p>Generate a shareable public card for your AI agent to build trust and acquire new customers.</p>
@@ -676,7 +685,7 @@
 
         <div class="link-container" id="link-container">
           <input type="text" class="link-input" id="referral-link" readonly value="" />
-          <button class="btn-secondary" onclick="window.startWalkthrough([{selector: '.main-content h1', title: 'Welcome', text: 'Welcome to your dashboard!'}, {selector: '.stat-card:first-child', title: 'Tasks', text: 'Here are your pending tasks.'}])">Start Walkthrough</button>
+          <button class="btn-secondary" id="dashboard-walkthrough-btn" data-tooltip="dashboard-walkthrough-btn" onclick="window.startWalkthrough([{selector: '#dashboard-title', title: 'Welcome', text: 'Welcome to your dashboard! This is your control center.'}, {selector: '#ai-savings-widget', title: 'AI Savings', text: 'Here you can see the time and effort your agents have saved you.'}])">Start Walkthrough</button>
         <div class="action-buttons">
             <button class="btn-secondary" id="copy-btn" data-tooltip="Copy the referral link to your clipboard.">Copy</button>
             <button class="btn-secondary" id="share-whatsapp-btn">Share on WhatsApp</button>
@@ -733,7 +742,225 @@
       <a href="#" id="dashboard-footer-viral-link" style="color: #6b7280; text-decoration: none;">⚡ Powered by OHC</a>
     </footer>
 
+
     <script>
+(function() {
+    // Inject walkthrough CSS
+    const style = document.createElement('style');
+    style.textContent = `
+        .ohc-walkthrough-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(2px);
+            z-index: 10000;
+            pointer-events: auto;
+        }
+        .ohc-walkthrough-highlight {
+            position: absolute;
+            box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.6);
+            border-radius: 8px;
+            pointer-events: none;
+            z-index: 10001;
+            transition: all 0.3s ease;
+        }
+        .ohc-walkthrough-bubble {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px) saturate(210%);
+            border: 1px solid rgba(0, 102, 255, 0.3);
+            border-radius: 16px;
+            padding: 20px;
+            width: 280px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            z-index: 10002;
+            font-family: "Outfit", sans-serif;
+            color: #1d1d1f;
+            transition: all 0.3s ease;
+            opacity: 0;
+            transform: translateY(10px);
+        }
+        .ohc-walkthrough-bubble.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .ohc-walkthrough-title {
+            font-size: 16px;
+            font-weight: 700;
+            margin: 0 0 8px 0;
+        }
+        .ohc-walkthrough-text {
+            font-size: 14px;
+            color: #86868b;
+            margin: 0 0 16px 0;
+            line-height: 1.4;
+        }
+        .ohc-walkthrough-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .ohc-walkthrough-btn {
+            background: #0066FF;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .ohc-walkthrough-btn-secondary {
+            background: rgba(0, 0, 0, 0.05);
+            color: #1d1d1f;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .ohc-walkthrough-close {
+            position: absolute;
+            top: 12px; right: 12px;
+            background: none; border: none; color: #86868b; cursor: pointer;
+        }
+        @media (prefers-color-scheme: dark) {
+            .ohc-walkthrough-bubble {
+                background: rgba(22, 22, 26, 0.95);
+                border-color: rgba(255, 255, 255, 0.1);
+                color: #f5f5f7;
+            }
+            .ohc-walkthrough-btn-secondary {
+                background: rgba(255, 255, 255, 0.1);
+                color: #f5f5f7;
+            }
+        }
+    `;
+    document.head.appendChild(style);
+
+    let currentSteps = [];
+    let currentStepIndex = 0;
+    let overlayEl = null;
+    let highlightEl = null;
+    let bubbleEl = null;
+
+    function renderStep() {
+        if (!currentSteps || currentStepIndex >= currentSteps.length) {
+            endWalkthrough();
+            return;
+        }
+
+        const step = currentSteps[currentStepIndex];
+        const targetEl = document.querySelector(step.selector);
+
+        if (!targetEl) {
+            console.warn('Walkthrough target not found:', step.selector);
+            endWalkthrough();
+            return;
+        }
+
+        targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+        setTimeout(() => {
+            const rect = targetEl.getBoundingClientRect();
+
+            highlightEl.style.top = (rect.top - 5) + 'px';
+            highlightEl.style.left = (rect.left - 5) + 'px';
+            highlightEl.style.width = (rect.width + 10) + 'px';
+            highlightEl.style.height = (rect.height + 10) + 'px';
+
+            bubbleEl.innerHTML = `
+                <button class="ohc-walkthrough-close" aria-label="Close walkthrough">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"></path></svg>
+                </button>
+                <h4 class="ohc-walkthrough-title">${step.title}</h4>
+                <p class="ohc-walkthrough-text">${step.text}</p>
+                <div class="ohc-walkthrough-controls">
+                    ${currentStepIndex > 0 ? '<button class="ohc-walkthrough-btn-secondary prev-btn">Back</button>' : '<div></div>'}
+                    <button class="ohc-walkthrough-btn next-btn">${currentStepIndex === currentSteps.length - 1 ? 'Finish' : 'Next'}</button>
+                </div>
+            `;
+
+            let bubbleTop = rect.bottom + 15;
+            let bubbleLeft = rect.left + (rect.width / 2) - 140;
+
+            if (bubbleLeft < 10) bubbleLeft = 10;
+            if (bubbleLeft + 280 > window.innerWidth - 10) bubbleLeft = window.innerWidth - 290;
+            if (bubbleTop + 200 > window.innerHeight) {
+                bubbleTop = rect.top - 180;
+            }
+
+            bubbleEl.style.top = bubbleTop + 'px';
+            bubbleEl.style.left = bubbleLeft + 'px';
+            bubbleEl.classList.add('visible');
+
+            bubbleEl.querySelector('.ohc-walkthrough-close').onclick = endWalkthrough;
+            bubbleEl.querySelector('.next-btn').onclick = () => {
+                bubbleEl.classList.remove('visible');
+                setTimeout(() => {
+                    currentStepIndex++;
+                    renderStep();
+                }, 300);
+            };
+            const prevBtn = bubbleEl.querySelector('.prev-btn');
+            if (prevBtn) {
+                prevBtn.onclick = () => {
+                    bubbleEl.classList.remove('visible');
+                    setTimeout(() => {
+                        currentStepIndex--;
+                        renderStep();
+                    }, 300);
+                };
+            }
+
+        }, 300);
+    }
+
+    function endWalkthrough() {
+        if (overlayEl) {
+            overlayEl.remove();
+            overlayEl = null;
+        }
+        if (highlightEl) {
+            highlightEl.remove();
+            highlightEl = null;
+        }
+        if (bubbleEl) {
+            bubbleEl.remove();
+            bubbleEl = null;
+        }
+        currentSteps = [];
+        currentStepIndex = 0;
+    }
+
+    window.startWalkthrough = function(steps) {
+        if (!steps || steps.length === 0) return;
+        currentSteps = steps;
+        currentStepIndex = 0;
+
+        endWalkthrough();
+
+        overlayEl = document.createElement('div');
+        overlayEl.className = 'ohc-walkthrough-overlay';
+
+        highlightEl = document.createElement('div');
+        highlightEl.className = 'ohc-walkthrough-highlight';
+
+        bubbleEl = document.createElement('div');
+        bubbleEl.className = 'ohc-walkthrough-bubble';
+
+        document.body.appendChild(overlayEl);
+        document.body.appendChild(highlightEl);
+        document.body.appendChild(bubbleEl);
+
+        renderStep();
+    };
+
+})();
+</script>
+
+<script>
       document.addEventListener('DOMContentLoaded', async () => {
         const tenantIdForFooter = localStorage.getItem("tenant_id") || localStorage.getItem("tenant") || "default-team";
         const footerLink = document.getElementById("dashboard-footer-viral-link");
@@ -916,6 +1143,39 @@
       if (name) {
           document.getElementById('dashboard-title').innerText = `${name} Dashboard`;
       }
+
+
+      async function checkReferralTier() {
+        try {
+          const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'e2e-tenant';
+          const res = await fetch(`/api/v1/growth/referrals/tier`, {
+            headers: {
+              'authorization': `Bearer ${localStorage.getItem('ohc_token')}` // Ensure auth header if needed, backend relies on AuthInfo extension
+            }
+          });
+          if (res.ok) {
+            const data = await res.json();
+            document.getElementById('referral-tier-section').style.display = 'block';
+            document.getElementById('referral-tier-text').innerHTML = `You are on the <strong>${data.current_tier} Tier</strong>!`;
+
+            if (data.next_tier) {
+              const needed = data.referrals_needed_for_next;
+              const currentInTier = data.total_conversions; // This is a simplification. Real progress is total / target.
+              const target = currentInTier + needed;
+              const pct = (currentInTier / target) * 100;
+              document.getElementById('referral-tier-progress').style.width = `${pct}%`;
+              document.getElementById('referral-tier-subtext').innerText = `${needed} more referrals needed to reach ${data.next_tier} Tier.`;
+            } else {
+              document.getElementById('referral-tier-progress').style.width = `100%`;
+              document.getElementById('referral-tier-progress').style.backgroundColor = `#FFD700`; // Gold/Platinum color
+              document.getElementById('referral-tier-subtext').innerText = `You have reached the highest tier!`;
+            }
+          }
+        } catch (e) {
+          console.error("Failed to check referral tier", e);
+        }
+      }
+      checkReferralTier();
 
 
       // Milestone logic

@@ -305,7 +305,7 @@ mod tests {
             .execute(&pool).await.unwrap();
         sqlx::query("INSERT INTO products (id, tenant_id, title, inventory_count) VALUES ('prod-worker-test-1', 'tenant-worker-test', 'Test Prod', 10) ON CONFLICT DO NOTHING")
             .execute(&pool).await.unwrap();
-        sqlx::query("INSERT INTO pos_offline_transactions (id, tenant_id, transaction_id, status) VALUES ('worker-tx-id', 'tenant-worker-test', 'tx-test-worker', 'PENDING') ON CONFLICT DO NOTHING")
+        sqlx::query("INSERT INTO pos_offline_transactions (id, tenant_id, client_id, amount_cents, currency, status) VALUES ('tx-test-worker', 'tenant-worker-test', 'client-1', 5000, 'USD', 'PENDING') ON CONFLICT DO NOTHING")
             .execute(&pool).await.unwrap();
 
         let job_payload = serde_json::json!({
@@ -341,7 +341,7 @@ mod tests {
             .fetch_one(&pool).await.unwrap();
         assert_eq!(count.0, 8); // 10 - 2 = 8
 
-        let tx_status: (String,) = sqlx::query_as("SELECT status FROM pos_offline_transactions WHERE transaction_id = 'tx-test-worker'")
+        let tx_status: (String,) = sqlx::query_as("SELECT status FROM pos_offline_transactions WHERE id = 'tx-test-worker'")
             .fetch_one(&pool).await.unwrap();
         assert_eq!(tx_status.0, "RESOLVED");
 
@@ -371,7 +371,7 @@ mod tests {
             .execute(&pool).await.unwrap();
         sqlx::query("INSERT INTO products (id, tenant_id, title, inventory_count) VALUES ('prod-worker-test-2', 'tenant-worker-test-low', 'Test Prod 2', 6) ON CONFLICT DO NOTHING")
             .execute(&pool).await.unwrap();
-        sqlx::query("INSERT INTO pos_offline_transactions (id, tenant_id, transaction_id, status) VALUES ('worker-tx-id-2', 'tenant-worker-test-low', 'tx-test-worker-2', 'PENDING') ON CONFLICT DO NOTHING")
+        sqlx::query("INSERT INTO pos_offline_transactions (id, tenant_id, client_id, amount_cents, currency, status) VALUES ('tx-test-worker-2', 'tenant-worker-test-low', 'client-1', 5000, 'USD', 'PENDING') ON CONFLICT DO NOTHING")
             .execute(&pool).await.unwrap();
 
         let job_payload = serde_json::json!({

@@ -152,6 +152,17 @@ export default function StripeTerminalClient({ amount, productId, tenantId }: { 
 
           setStatus('Payment saved offline. Will sync when network is restored.');
           setReserving(false);
+
+          if (typeof window !== 'undefined') {
+              const el = document.getElementById('syncing-overlay');
+              if (el) {
+                  el.style.display = 'flex';
+                  setTimeout(() => {
+                      el.style.display = 'none';
+                      setStatus('Payment synced successfully.');
+                  }, 2500);
+              }
+          }
        }, 1500);
        return;
     }
@@ -233,7 +244,11 @@ export default function StripeTerminalClient({ amount, productId, tenantId }: { 
   };
 
   return (
-    <div className="p-6 border border-white/40 rounded-2xl shadow-lg bg-white/65 backdrop-blur-[30px] saturate-[210%] mt-6 relative">
+    <div className="p-6 border border-white/40 rounded-2xl shadow-lg bg-white/65 backdrop-blur-[30px] saturate-[210%] mt-6 relative overflow-hidden">
+      <div id="syncing-overlay" className="absolute inset-0 bg-white/40 backdrop-blur-md z-10 hidden flex-col items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-2"></div>
+        <p className="text-sm font-bold text-gray-800">Syncing...</p>
+      </div>
       <h2 className="text-lg font-bold font-outfit text-gray-900 mb-2">Tap to Pay via Terminal</h2>
       <p className="text-sm text-gray-600 mb-6 font-medium">Status: {status}</p>
 
