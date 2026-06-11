@@ -1334,7 +1334,7 @@ pub async fn record_email_send_cost(
     organization_id: &str,
     count: i64,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let cost_cents = count * 1; // Assuming 1 cent per email
+    let cost_cents = count; // Assuming 1 cent per email
     buffer_metric_i64(
         pool,
         "ohc_email_send_cost",
