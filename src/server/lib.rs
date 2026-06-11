@@ -2771,7 +2771,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
         "SELECT id, tenant_id, source, content,
                 COALESCE(original_content, content) AS original_content,
                 COALESCE(translated_from_language, '') AS translated_from_language,
-                draft_reply, status, created_at
+                draft_reply, status, COALESCE(customer_id, '') AS customer_id, created_at
          FROM inbox_messages
          ORDER BY created_at DESC"
     )
@@ -2793,6 +2793,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
                     "translated_from_language": row.get::<String, _>("translated_from_language"),
                     "generated_response": row.get::<String, _>("draft_reply"),
                     "status": row.get::<String, _>("status"),
+                    "customer_id": row.get::<String, _>("customer_id"),
                     "created_at": created_at_str,
                 })
             }).collect();
@@ -3152,7 +3153,7 @@ async fn load_ui_inbox_from_db(db: &crate::db::DB, tenant_id: &str) -> Result<Ve
     use sqlx::Row;
     match &db.store {
         crate::db::DbStore::Postgres => {
-            sqlx::query("SELECT id, COALESCE(source, '') AS source, COALESCE(content, '') AS content, COALESCE(original_content, content, '') AS original_content, COALESCE(translated_from_language, '') AS translated_from_language, COALESCE(draft_reply, '') AS draft_reply, COALESCE(status, '') AS status, COALESCE(sender_id, '') AS sender_id, COALESCE(created_at::text, '') AS created_at FROM inbox_messages WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 50")
+            sqlx::query("SELECT id, COALESCE(source, '') AS source, COALESCE(content, '') AS content, COALESCE(original_content, content, '') AS original_content, COALESCE(translated_from_language, '') AS translated_from_language, COALESCE(draft_reply, '') AS draft_reply, COALESCE(status, '') AS status, COALESCE(sender_id, '') AS sender_id, COALESCE(customer_id, '') AS customer_id, COALESCE(created_at::text, '') AS created_at FROM inbox_messages WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 50")
                 .bind(tenant_id)
                 .fetch_all(&db.pool)
                 .await.map(|rows| rows.into_iter().map(|row| serde_json::json!({
@@ -3164,11 +3165,12 @@ async fn load_ui_inbox_from_db(db: &crate::db::DB, tenant_id: &str) -> Result<Ve
                     "generated_response": row.get::<String, _>("draft_reply"),
                     "status": row.get::<String, _>("status"),
                     "sender_id": row.get::<String, _>("sender_id"),
+                    "customer_id": row.get::<String, _>("customer_id"),
                     "created_at": row.get::<String, _>("created_at")
                 })).collect())
         },
         crate::db::DbStore::Sqlite(pool) => {
-            sqlx::query("SELECT id, COALESCE(source, '') AS source, COALESCE(content, '') AS content, COALESCE(original_content, content, '') AS original_content, COALESCE(translated_from_language, '') AS translated_from_language, COALESCE(draft_reply, '') AS draft_reply, COALESCE(status, '') AS status, COALESCE(sender_id, '') AS sender_id, COALESCE(CAST(created_at AS TEXT), '') AS created_at FROM inbox_messages WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 50")
+            sqlx::query("SELECT id, COALESCE(source, '') AS source, COALESCE(content, '') AS content, COALESCE(original_content, content, '') AS original_content, COALESCE(translated_from_language, '') AS translated_from_language, COALESCE(draft_reply, '') AS draft_reply, COALESCE(status, '') AS status, COALESCE(sender_id, '') AS sender_id, COALESCE(customer_id, '') AS customer_id, COALESCE(CAST(created_at AS TEXT), '') AS created_at FROM inbox_messages WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 50")
                 .bind(tenant_id)
                 .fetch_all(pool)
                 .await.map(|rows| rows.into_iter().map(|row| serde_json::json!({
@@ -3180,6 +3182,7 @@ async fn load_ui_inbox_from_db(db: &crate::db::DB, tenant_id: &str) -> Result<Ve
                     "generated_response": row.get::<String, _>("draft_reply"),
                     "status": row.get::<String, _>("status"),
                     "sender_id": row.get::<String, _>("sender_id"),
+                    "customer_id": row.get::<String, _>("customer_id"),
                     "created_at": row.get::<String, _>("created_at")
                 })).collect())
         }
@@ -3929,6 +3932,7 @@ async fn list_ui_inbox_handler(
                         COALESCE(translated_from_language, '') AS translated_from_language,
                         COALESCE(draft_reply, '') AS draft_reply,
                         COALESCE(status, '') AS status,
+                        COALESCE(customer_id, '') AS customer_id,
                         COALESCE(created_at::text, '') AS created_at
                  FROM inbox_messages
                  WHERE tenant_id = $1
@@ -3956,6 +3960,7 @@ async fn list_ui_inbox_handler(
                                 "translated_from_language": row.get::<String, _>("translated_from_language"),
                                 "generated_response": row.get::<String, _>("draft_reply"),
                                 "status": row.get::<String, _>("status"),
+                                "customer_id": row.get::<String, _>("customer_id"),
                                 "created_at": row.get::<String, _>("created_at"),
                             })
                         }
@@ -3972,6 +3977,7 @@ async fn list_ui_inbox_handler(
                         COALESCE(translated_from_language, '') AS translated_from_language,
                         COALESCE(draft_reply, '') AS draft_reply,
                         COALESCE(status, '') AS status,
+                        COALESCE(customer_id, '') AS customer_id,
                         COALESCE(CAST(created_at AS TEXT), '') AS created_at
                  FROM inbox_messages
                  WHERE tenant_id = ?
@@ -3999,6 +4005,7 @@ async fn list_ui_inbox_handler(
                                 "translated_from_language": row.get::<String, _>("translated_from_language"),
                                 "generated_response": row.get::<String, _>("draft_reply"),
                                 "status": row.get::<String, _>("status"),
+                                "customer_id": row.get::<String, _>("customer_id"),
                                 "created_at": row.get::<String, _>("created_at"),
                             })
                         }
