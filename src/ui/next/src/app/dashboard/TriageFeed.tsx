@@ -95,7 +95,7 @@ export function TriageFeed({ tenantId }: { tenantId: string }) {
   return (
     <div className="mb-6">
       <div className="mb-4 p-6 rounded-[16px] glassmorphism border border-white/40 dark:border-white/10">
-        <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Needs Your Attention</h2>
+        <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Unified Agent Feed</h2>
         <p className="text-gray-600 dark:text-gray-400">Review AI-prepared actions and reply drafts across all channels.</p>
       </div>
 
@@ -116,8 +116,7 @@ export function TriageFeed({ tenantId }: { tenantId: string }) {
                 type="button"
                 data-testid={`triage-card-${item.id}`}
                 onClick={() => setSelectedId(item.id)}
-                className="app-list-item w-full text-left min-h-[44px]"
-                style={{ background: selected?.id === item.id ? "rgba(255, 255, 255, 0.1)" : "transparent" }}
+                className={`app-list-item w-full text-left min-h-[44px] ${selected?.id === item.id ? 'bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] saturate-[210%] border border-white/40 dark:border-white/10' : 'border border-transparent'}`}
               >
                 <div className="min-w-0">
                   <div className="app-list-title">{item.source || "Unknown Source"}</div>
@@ -176,7 +175,7 @@ export function TriageFeed({ tenantId }: { tenantId: string }) {
                   ✨ Approve &amp; Execute
                 </button>
                 <button
-                  className="px-4 py-2 rounded-md border border-gray-300 dark:border-white/20 text-[#1D1D1F] dark:text-[#F5F5F7] bg-white/50 dark:bg-black/20 hover:bg-white/80 dark:hover:bg-black/40 flex-1 min-h-[44px] font-medium transition-colors"
+                  className="px-4 py-2 rounded-[16px] border border-white/40 dark:border-white/20 text-[#1D1D1F] dark:text-[#F5F5F7] bg-white/50 dark:bg-black/20 hover:bg-white/80 dark:hover:bg-black/40 flex-1 min-h-[44px] font-medium transition-colors backdrop-blur-md"
                   data-testid="dismiss-btn"
                   onClick={() => handleDecision(selected.id, false)}
                 >

@@ -105,7 +105,7 @@ export default function TriagePage() {
       {actionStatus && <div className="mb-4 app-badge good" role="status">{actionStatus}</div>}
 
       <div className="mb-6 p-6 rounded-[16px] glassmorphism border border-white/40 dark:border-white/10">
-        <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Needs Your Attention</h2>
+        <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Unified Agent Feed</h2>
         <p className="text-gray-600 dark:text-gray-400">Review AI-prepared actions and reply drafts across all channels.</p>
       </div>
 
@@ -126,8 +126,7 @@ export default function TriagePage() {
                 type="button"
                 data-testid={`triage-card-${item.id}`}
                 onClick={() => setSelectedId(item.id)}
-                className="app-list-item w-full text-left min-h-[44px]"
-                style={{ background: selected?.id === item.id ? "#f8fafc" : "transparent" }}
+                className={`app-list-item w-full text-left min-h-[44px] ${selected?.id === item.id ? 'bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] saturate-[210%] border border-white/40 dark:border-white/10' : 'border border-transparent'}`}
               >
                 <div className="min-w-0">
                   <div className="app-list-title">{item.source || "Unknown Source"}</div>

@@ -356,13 +356,17 @@ COMMIT;
 INSERT INTO triage_items (id, tenant_id, source, priority, context, status)
 VALUES
   ('triage-test-1', 'e2e-tenant', 'Instagram DM', 'Urgent', 'Maya requested a custom cake for Friday', 'pending'),
-  ('triage-test-2', 'e2e-tenant', 'WhatsApp', 'Medium', 'Question about delivery times', 'pending')
+  ('triage-test-2', 'e2e-tenant', 'WhatsApp', 'Medium', 'Question about delivery times', 'pending'),
+  ('triage-test-3', 'e2e-tenant', 'Instagram DM', 'Urgent', 'Maya requested a custom cake for Friday', 'pending'),
+  ('triage-test-4', 'e2e-tenant', 'WhatsApp', 'Medium', 'Question about delivery times', 'pending')
 ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO triage_proposed_actions (id, triage_item_id, tenant_id, action_type, payload)
 VALUES
   ('action-test-1', 'triage-test-1', 'e2e-tenant', 'Draft Reply', 'Hi Maya! I can definitely help with the custom cake. It will be $50.'),
-  ('action-test-2', 'triage-test-2', 'e2e-tenant', 'Draft Reply', 'We deliver between 9 AM and 5 PM on weekdays.')
+  ('action-test-2', 'triage-test-2', 'e2e-tenant', 'Draft Reply', 'We deliver between 9 AM and 5 PM on weekdays.'),
+  ('action-test-3', 'triage-test-3', 'e2e-tenant', 'Draft Reply', 'Hi Maya! I can definitely help with the custom cake. It will be $50.'),
+  ('action-test-4', 'triage-test-4', 'e2e-tenant', 'Draft Reply', 'We deliver between 9 AM and 5 PM on weekdays.')
 ON CONFLICT (id) DO NOTHING;
 
 -- Seed 10th order milestone for e2e-tenant

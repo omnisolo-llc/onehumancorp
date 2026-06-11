@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Work Triage Agentic Inbox', () => {
-  const tenantId = 'test-tenant';
+  const tenantId = 'e2e-tenant';
 
   test('Owner reviews and approves a triage item', async ({ page }) => {
     // Log in with tenant
@@ -13,7 +13,7 @@ test.describe('Work Triage Agentic Inbox', () => {
     await page.goto('/dashboard');
 
     // Wait for the triage queue to load
-    await expect(page.locator('h2').filter({ hasText: 'Needs Your Attention' })).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('h2').filter({ hasText: 'Unified Agent Feed' })).toBeVisible({ timeout: 15000 });
 
     const triageCard = page.locator('[data-testid="triage-card-triage-test-1"]');
 
@@ -45,7 +45,7 @@ test.describe('Work Triage Agentic Inbox', () => {
 
     // Wait a bit to ensure it finished loading, then assert not visible
     await page.waitForTimeout(2000);
-    await expect(page.locator('h2').filter({ hasText: 'Needs Your Attention' })).not.toBeVisible();
+    await expect(page.locator('h2').filter({ hasText: 'Unified Agent Feed' })).not.toBeVisible();
   });
 
   test('Owner can dismiss a triage item', async ({ page }) => {
@@ -73,7 +73,7 @@ test.describe('Work Triage Agentic Inbox', () => {
 
     await page.goto('/dashboard');
 
-    const triageCard = page.locator('[data-testid="triage-card-triage-test-1"]');
+    const triageCard = page.locator('[data-testid="triage-card-triage-test-3"]');
     await expect(triageCard).toBeVisible({ timeout: 15000 });
     await expect(triageCard.locator('text=Instagram DM')).toBeVisible();
     await expect(triageCard.locator('text=Urgent')).toBeVisible();
@@ -86,11 +86,35 @@ test.describe('Work Triage Agentic Inbox', () => {
 
     await page.goto('/dashboard');
 
-    const triageCard = page.locator('[data-testid="triage-card-triage-test-2"]');
+    const triageCard = page.locator('[data-testid="triage-card-triage-test-4"]');
     await expect(triageCard).toBeVisible({ timeout: 15000 });
 
     await triageCard.click();
     await expect(page.locator('text=WhatsApp')).toBeVisible();
     await expect(page.locator('text=Question about delivery times')).toBeVisible();
+  });
+
+  test('Backend action executes correctly on Approve Draft', async ({ page }) => {
+    // This test verifies that the backend side effect (inserting into omni_inbox_messages) works.
+    await page.goto('/login');
+    await page.fill('input[type="text"]', 'e2e-tenant');
+    await page.click('button[type="submit"]');
+
+    await page.goto('/dashboard');
+    const triageCard = page.locator('[data-testid="triage-card-triage-test-1"]');
+
+    // Since previous test might have consumed it, let's just make sure we click approve if visible
+    if (await triageCard.isVisible()) {
+      const approveBtn = page.locator('[data-testid="approve-btn"]').first();
+      await approveBtn.click();
+      await expect(triageCard).not.toBeVisible({ timeout: 15000 });
+    }
+
+    // Wait for the action to be processed.
+    await page.waitForTimeout(2000);
+
+    // Actually, getting to the inbox messages API requires auth. We can verify it via UI if there's an inbox page.
+    await page.goto('/inbox');
+    await expect(page.locator('text=Hi Maya! I can definitely help with the custom cake. It will be $50.')).toBeVisible({ timeout: 15000 });
   });
 });
