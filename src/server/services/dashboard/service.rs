@@ -534,55 +534,29 @@ impl DashboardService for MyDashboardService {
         let org_id = std::sync::Arc::new(req.organization_id);
         let mobile_optimized = req.mobile_optimized;
 
+        let cost_summary_future = if mobile_optimized {
+            futures::future::Either::Left(async move { Ok::<(f64, i64, Vec<(String, f64, i64, f64, f64, i64)>), String>((0.0, 0, vec![])) })
+        } else {
+            futures::future::Either::Right(self.fetch_cost_summary(&org_id, mobile_optimized))
+        };
+
         let (agents_res, meetings_res, cost_res, products_res, orders_res, bookings_res, org_res) = tokio::join!(
-            {
-                let s = self.clone();
-                let o = org_id.clone();
-                tokio::spawn(async move { s.fetch_agents(&o, mobile_optimized).await })
-            },
-            {
-                let s = self.clone();
-                let o = org_id.clone();
-                tokio::spawn(async move { s.fetch_meetings(&o, mobile_optimized).await })
-            },
-            {
-                if mobile_optimized {
-                    tokio::spawn(async move { Ok::<(f64, i64, Vec<(String, f64, i64, f64, f64, i64)>), String>((0.0, 0, vec![])) })
-                } else {
-                    let s = self.clone();
-                    let o = org_id.clone();
-                    tokio::spawn(async move { s.fetch_cost_summary(&o, mobile_optimized).await })
-                }
-            },
-            {
-                let s = self.clone();
-                let o = org_id.clone();
-                tokio::spawn(async move { s.fetch_products(&o, mobile_optimized).await })
-            },
-            {
-                let s = self.clone();
-                let o = org_id.clone();
-                tokio::spawn(async move { s.fetch_orders(&o, mobile_optimized).await })
-            },
-            {
-                let s = self.clone();
-                let o = org_id.clone();
-                tokio::spawn(async move { s.fetch_bookings(&o, mobile_optimized).await })
-            },
-            {
-                let s = self.clone();
-                let o = org_id.clone();
-                tokio::spawn(async move { s.fetch_org(&o, mobile_optimized).await })
-            }
+            self.fetch_agents(&org_id, mobile_optimized),
+            self.fetch_meetings(&org_id, mobile_optimized),
+            cost_summary_future,
+            self.fetch_products(&org_id, mobile_optimized),
+            self.fetch_orders(&org_id, mobile_optimized),
+            self.fetch_bookings(&org_id, mobile_optimized),
+            self.fetch_org(&org_id, mobile_optimized)
         );
 
-        let agents = agents_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
-        let _meetings = meetings_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
-        let (total_cost, total_tokens, _agent_costs_data) = cost_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
-        let mut products = products_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
-        let mut orders = orders_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
-        let mut bookings = bookings_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
-        let org = org_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
+        let agents = agents_res.map_err(|e| Status::internal(e.to_string()))?;
+        let _meetings = meetings_res.map_err(|e| Status::internal(e.to_string()))?;
+        let (total_cost, total_tokens, _agent_costs_data) = cost_res.map_err(|e| Status::internal(e.to_string()))?;
+        let mut products = products_res.map_err(|e| Status::internal(e.to_string()))?;
+        let mut orders = orders_res.map_err(|e| Status::internal(e.to_string()))?;
+        let mut bookings = bookings_res.map_err(|e| Status::internal(e.to_string()))?;
+        let org = org_res.map_err(|e| Status::internal(e.to_string()))?;
 
         if req.mobile_optimized {
             for p in &mut products {
