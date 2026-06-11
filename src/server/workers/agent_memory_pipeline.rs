@@ -60,7 +60,7 @@ impl AgentMemoryPipeline {
                         }
                     };
 
-                    let emb_str = format!("[{}]", embedding.iter().map(|f| f.to_string()).collect::<Vec<_>>().join(","));
+                    let _emb_str = format!("[{}]", embedding.iter().map(|f| f.to_string()).collect::<Vec<_>>().join(","));
                     let mem_id = Uuid::new_v4();
 
                     sqlx::query("INSERT INTO consolidated_memory (id, tenant_id, agent_id, source_type, content, embedding) VALUES ($1, $2, $3, $4, $5, NULL)")
@@ -149,7 +149,7 @@ impl AgentMemoryPipeline {
 
                 match self.embedding_api.generate_embedding(&content).await {
                     Ok(embedding) => {
-                        let emb_str = format!("[{}]", embedding.iter().map(|f| f.to_string()).collect::<Vec<_>>().join(","));
+                        let _emb_str = format!("[{}]", embedding.iter().map(|f| f.to_string()).collect::<Vec<_>>().join(","));
                         let mem_id = Uuid::new_v4();
 
                         match &self.db.store {
@@ -164,13 +164,14 @@ impl AgentMemoryPipeline {
                                     .await?;
                             }
                             DbStore::Postgres => {
+                                let emb_str_pg = format!("[{}]", embedding.iter().map(|f| f.to_string()).collect::<Vec<_>>().join(","));
                                 sqlx::query("INSERT INTO consolidated_memory (id, tenant_id, agent_id, source_type, content, embedding) VALUES ($1, $2, $3, $4, $5, $6::vector)")
                                     .bind(mem_id.to_string())
                                     .bind("system")
                                     .bind("fs-agent")
                                     .bind("FS_MEMORY")
                                     .bind(&content)
-                                    .bind(&emb_str)
+                                    .bind(&emb_str_pg)
                                     .execute(&self.db.pool)
                                     .await?;
                             }
