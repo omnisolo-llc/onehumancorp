@@ -95,6 +95,7 @@ pub fn get_department_config(dep: Department) -> DepartmentConfig {
                 "write",
                 "sendmessage",
                 "conversational_checkout",
+                "generate_quote",
             ],
             confidence_threshold: 0.80,
         },
