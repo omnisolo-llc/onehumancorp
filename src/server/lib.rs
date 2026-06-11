@@ -2725,6 +2725,15 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .route_layer(axum::middleware::from_fn_with_state(webhook_state.clone(), api::billing_webhook::webhook_security_middleware))
         .with_state(webhook_state);
 
+    let omni_inbox_webhook_state = api::omni_inbox_webhook::OmniInboxWebhookState {
+        hub: hub.clone(),
+        db: db.clone(),
+        orchestrator: dept_orchestrator.clone(),
+    };
+    let omni_webhook_router = axum::Router::new()
+        .route("/api/v1/webhooks/omni_inbox", axum::routing::post(api::omni_inbox_webhook::omni_inbox_post_handler))
+        .with_state(omni_inbox_webhook_state);
+
     let meta_webhook_state = api::meta_webhook::MetaWebhookState {
         hub: hub.clone(),
         db: db.clone(),
@@ -2927,14 +2936,13 @@ pub async fn update_ui_triage_action_handler(
                     if action_type == "Draft Reply" {
                         let new_msg_id = format!("msg-{}", uuid::Uuid::new_v4());
                         let _ = sqlx::query(
-                            "INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, status) VALUES ($1, $2, $3, $4, $5, $6, $7)"
+                            "INSERT INTO inbox_messages (id, tenant_id, source, original_content, content, status, sender_id, draft_reply, created_at) VALUES ($1, $2, $3, $4, $5, $6, 'system', '', NOW())"
                         )
                         .bind(&new_msg_id)
                         .bind(&tenant_id)
                         .bind("triage-action")
                         .bind(&action_payload)
                         .bind(&action_payload)
-                        .bind("en")
                         .bind("sent")
                         .execute(&mut *tx)
                         .await;
@@ -4945,6 +4953,11 @@ async fn create_ui_bom_item_handler(
         }))
         .merge(webhook_router)
         .merge(relay_webhook_router)
+        .merge(omni_webhook_router)
+        .nest("/api/v1/omnichannel/webhook", api::omnichannel_webhook::router(api::omnichannel_webhook::AppState {
+            orchestrator: dept_orchestrator.clone(),
+            db: db.clone(),
+        }))
         .merge(ohc_builtin_agent::visual_workflow_client::create_router(std::sync::Arc::new(ohc_builtin_agent::visual_workflow_client::VisualWorkflowState {
             default_agent: std::sync::Arc::new(ohc_builtin_agent::agent::Agent::new(std::sync::Arc::new(ohc_builtin_agent::llm::openai::OpenAIClient::new("dummy".to_string())), vec![])),
             tools: vec![],

@@ -82,24 +82,24 @@ pub async fn resolve_identity(db: &crate::db::DB, tenant_id: &str, channel: &str
         let identity_id = Uuid::new_v4().to_string();
         let _ = match &db.store {
             crate::db::DbStore::Postgres => {
-                 sqlx::query("INSERT INTO customer_identities (id, tenant_id, customer_id, channel, channel_identity) VALUES ($1, $2, $3, $4, $5) ON CONFLICT DO NOTHING")
+                 let _ = sqlx::query("INSERT INTO customer_identities (id, tenant_id, customer_id, channel, channel_identity) VALUES ($1, $2, $3, $4, $5) ON CONFLICT DO NOTHING")
                     .bind(&identity_id)
                     .bind(tenant_id)
                     .bind(&id)
                     .bind(channel)
                     .bind(sender_id)
                     .execute(pool)
-                    .await
+                    .await;
             },
             crate::db::DbStore::Sqlite(sqlite_pool) => {
-                 sqlx::query("INSERT OR IGNORE INTO customer_identities (id, tenant_id, customer_id, channel, channel_identity) VALUES (?, ?, ?, ?, ?)")
+                 let _ = sqlx::query("INSERT OR IGNORE INTO customer_identities (id, tenant_id, customer_id, channel, channel_identity) VALUES (?, ?, ?, ?, ?)")
                     .bind(&identity_id)
                     .bind(tenant_id)
                     .bind(&id)
                     .bind(channel)
                     .bind(sender_id)
                     .execute(sqlite_pool)
-                    .await
+                    .await;
             }
         };
         return Some(id);

@@ -55,12 +55,12 @@ pub async fn omni_inbox_post_handler(
     // In future iterations we can save customer_id onto the inbox_messages table,
     // but for now we follow the schema which has sender_id.
 
-    // 2. Insert into omni_inbox_messages
+    // 2. Insert into inbox_messages
     let inbox_id = Uuid::new_v4().to_string();
     let insert_result = match &state.db.store {
         crate::db::DbStore::Postgres => {
             sqlx::query(
-                "INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, status, sender_id, created_at) VALUES ($1, $2, $3, $4, $5, 'English', 'unread', $6, NOW())"
+                "INSERT INTO inbox_messages (id, tenant_id, source, original_content, content, status, sender_id, draft_reply, created_at) VALUES ($1, $2, $3, $4, $5, 'unread', $6, '', NOW())"
             )
             .bind(&inbox_id)
             .bind(&tenant_id)
@@ -73,7 +73,7 @@ pub async fn omni_inbox_post_handler(
         },
         crate::db::DbStore::Sqlite(sqlite_pool) => {
             sqlx::query(
-                "INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, status, sender_id, created_at) VALUES (?, ?, ?, ?, ?, 'English', 'unread', ?, CURRENT_TIMESTAMP)"
+                "INSERT INTO inbox_messages (id, tenant_id, source, original_content, content, status, sender_id, draft_reply, created_at) VALUES (?, ?, ?, ?, ?, 'unread', ?, '', CURRENT_TIMESTAMP)"
             )
             .bind(&inbox_id)
             .bind(&tenant_id)
