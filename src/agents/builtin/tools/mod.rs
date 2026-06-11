@@ -178,3 +178,12 @@ pub fn all_tools(
 pub mod native_state;
 mod aider_pair_programming;
 pub use aider_pair_programming::aider_pair_programming_tool;
+
+#[cfg(test)]
+mod marketing_test;
+
+#[cfg(test)]
+mod finance_test;
+
+#[cfg(test)]
+mod glob_test;
