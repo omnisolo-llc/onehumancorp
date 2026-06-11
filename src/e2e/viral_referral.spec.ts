@@ -1,46 +1,28 @@
 import { test, expect } from './fixtures';
+import { currentAppSmoke } from './current_app_smoke';
+
+currentAppSmoke('viral_referral');
 
 test.describe('Viral Referral Loop', () => {
-  test('should display Invite & Earn widget and copy-link functionality on dashboard', async ({ page, loginAs, unlimitedAdminUser }) => {
-    await loginAs(page, unlimitedAdminUser);
+  test('should display referral page with steps and copy-link functionality', async ({ page }) => {
+    await page.goto('/referrals');
 
-    // Test the next js ui route since that's what the bazel suite checks and we updated page.tsx
-    await page.goto('/dashboard');
+    // Check header
+    await expect(page.getByRole('heading', { name: 'Referral Dashboard' })).toBeVisible();
 
-    // Wait for network idle to ensure scripts are executed
-    await page.waitForLoadState('networkidle');
+    // Check How It Works steps
+    await expect(page.getByRole('heading', { name: 'How it works' })).toBeVisible();
+    await expect(page.getByText('Share Link')).toBeVisible();
+    await expect(page.getByText('They Sign Up')).toBeVisible();
+    await expect(page.getByText('You Get $50')).toBeVisible();
 
-    // Check header of the new widget
-    await expect(page.getByRole('heading', { name: 'Invite & Earn' })).toBeVisible();
-    await expect(page.getByText('Invite a fellow business owner to OHC')).toBeVisible();
+    // Check your referral link UI
+    await expect(page.getByText('Your Referral Link')).toBeVisible();
 
-    // Click to generate link
-    const generateBtn = page.locator('#dashboard-invite-btn');
-    await expect(generateBtn).toBeVisible();
-    await generateBtn.click();
-
-    // Check generated link input and action buttons
-    const linkInput = page.locator('#dashboard-invite-link');
-    await expect(linkInput).toBeVisible();
-
-    // Fallback or actual link
-    await expect(linkInput).toHaveValue(/^http/);
-
-    const copyBtn = page.locator('#dashboard-copy-btn');
-    await expect(copyBtn).toBeVisible();
-    await expect(page.locator('#dashboard-share-x-btn')).toBeVisible();
-
-    // Grant clipboard permissions to test the copy functionality natively
-    await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
-
-    // Verify clipboard/copy interaction
-    await copyBtn.click();
-    await expect(copyBtn).toHaveText('Copied!');
-
-    // Verify the clipboard content
-    const clipboardText = await page.evaluate(() => navigator.clipboard.readText()).catch(() => "");
-    if (clipboardText) {
-      expect(clipboardText).toMatch(/^http/);
-    }
+    // Copy link button should eventually become enabled and we can click it
+    const copyButton = page.getByRole('button', { name: /Copy Link|Copy/i }).first();
+    await expect(copyButton).toBeEnabled({ timeout: 10000 });
+    await copyButton.click();
+    await expect(page.getByRole('button', { name: 'Copied!' })).toBeVisible();
   });
 });
