@@ -758,6 +758,7 @@ impl DepartmentOrchestrator {
             DbStore::Postgres => {
                 let row = if let Ok(mut tx) = self.db.pool.begin().await {
                     if ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await.is_ok() {
+                        let _ = sqlx::query("UPDATE agent_feed_items SET lifecycle_state = $1, updated_at = $2 WHERE id = $3 AND tenant_id = $4").bind(new_status).bind(now).bind(request_id).bind(tenant_id).execute(&mut *tx).await;
                         let updated = sqlx::query("UPDATE agent_approvals SET status = $1, updated_at = $2 WHERE id = $3 AND tenant_id = $4 RETURNING department, payload")
                             .bind(new_status)
                             .bind(now)
@@ -797,6 +798,7 @@ impl DepartmentOrchestrator {
                 }
             }
             DbStore::Sqlite(pool) => {
+                let _ = sqlx::query("UPDATE agent_feed_items SET lifecycle_state = ?, updated_at = ? WHERE id = ? AND tenant_id = ?").bind(new_status).bind(now).bind(request_id).bind(tenant_id).execute(pool).await;
                 let row = sqlx::query("UPDATE agent_approvals SET status = ?, updated_at = ? WHERE id = ? AND tenant_id = ? RETURNING department, payload")
                     .bind(new_status)
                     .bind(now)

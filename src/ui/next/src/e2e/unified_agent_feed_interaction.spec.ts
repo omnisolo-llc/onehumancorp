@@ -34,11 +34,47 @@ test.describe('Unified Agent Feed Interactive Flow', () => {
         await approveBtn.click();
 
         // The card should transition to green border and slightly scale down
-        await expect(cardParent).toHaveClass(/border-green-500/);
-        await expect(cardParent).toHaveClass(/scale-95/);
+        // The classes might be on the element during the 500ms timeout
+        await expect(cardParent).toHaveClass(/border-green-500/, { timeout: 1000 });
+        await expect(cardParent).toHaveClass(/scale-95/, { timeout: 1000 });
 
         // Card should disappear after 500ms
         await expect(cardParent).not.toBeVisible({ timeout: 2000 });
     }
   });
+
+  test('should handle offline mode gracefully and show Pending Sync pill', async ({ page, context }) => {
+    test.setTimeout(180000);
+
+    await page.goto('/dashboard');
+    await expect(page.locator('h1', { hasText: 'Dashboard' }).first()).toBeVisible({ timeout: 25000 });
+
+    const feedContainer = page.locator('div.glassmorphism', { hasText: 'Approval' }).first();
+    await expect(feedContainer).toBeVisible({ timeout: 15000 });
+
+    const approveBtn = page.getByTestId('approve-proposal').first();
+
+    if (await approveBtn.isVisible()) {
+      // Go offline
+      await context.setOffline(true);
+      // Wait for UI to catch up or just immediately click
+      await page.waitForTimeout(500);
+
+      const cardParent = approveBtn.locator('xpath=./../../..');
+      await approveBtn.click();
+
+      // Wait for the animation to complete and UI to update
+      await page.waitForTimeout(600);
+
+      // Should show 'Pending Sync'
+      const pendingSync = cardParent.locator('span', { hasText: 'Pending Sync' });
+      await expect(pendingSync).toBeVisible({ timeout: 2000 });
+
+      // Go back online
+      await context.setOffline(false);
+      // It should eventually sync and remove the pill (and card)
+      await expect(cardParent).not.toBeVisible({ timeout: 5000 });
+    }
+  });
+
 });

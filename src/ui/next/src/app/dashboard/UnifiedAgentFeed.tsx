@@ -49,6 +49,8 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
   const [activeTab, setActiveTab] = useState<"proposals" | "activity">("proposals");
   const [activities, setActivities] = useState<OHCLedgerEntry[]>([]);
   const [activityLoading, setActivityLoading] = useState(false);
+  const [animatingCards, setAnimatingCards] = useState<Record<string, boolean>>({});
+  const [offlineSyncQueue, setOfflineSyncQueue] = useState<string[]>([]);
 
   const tenantId = () => {
     if (typeof window === "undefined") return "default";
@@ -172,6 +174,71 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
     };
   }, [initialData]);
 
+    useEffect(() => {
+    // Initialize offline queue from localStorage
+    const savedQueue = localStorage.getItem("ohc_offline_approvals");
+    if (savedQueue) {
+      try {
+        setOfflineSyncQueue(JSON.parse(savedQueue).map((item: any) => item.id));
+      } catch (e) {}
+    }
+
+    const processQueue = async () => {
+      const q = localStorage.getItem("ohc_offline_approvals");
+      if (!q) return;
+      try {
+        const queue: { id: string; approved: boolean; tenant: string }[] = JSON.parse(q);
+        if (queue.length === 0) return;
+
+        const remainingQueue: any[] = [];
+
+        for (const req of queue) {
+          try {
+            const res = await fetch(`/api/agents/approvals/${req.id}`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "x-tenant-id": req.tenant,
+                "x-user-id": "default",
+              },
+              body: JSON.stringify({ approved: req.approved }),
+            });
+            if (!res.ok) {
+              remainingQueue.push(req);
+            }
+          } catch (e) {
+            remainingQueue.push(req);
+          }
+        }
+
+        const successfullySyncedIds = queue.map(i => i.id).filter(id => !remainingQueue.find(r => r.id === id));
+        if (successfullySyncedIds.length > 0) {
+            setItems(prev => prev.filter(app => !successfullySyncedIds.includes(app.id)));
+        }
+
+        if (remainingQueue.length > 0) {
+          localStorage.setItem("ohc_offline_approvals", JSON.stringify(remainingQueue));
+          setOfflineSyncQueue(remainingQueue.map(i => i.id));
+        } else {
+          localStorage.removeItem("ohc_offline_approvals");
+          setOfflineSyncQueue([]);
+        }
+      } catch (e) {}
+    };
+
+    const handleOnline = () => {
+      processQueue();
+    };
+
+    window.addEventListener("online", handleOnline);
+    // Try to process on initial load if online
+    if (navigator.onLine) {
+      processQueue();
+    }
+
+    return () => window.removeEventListener("online", handleOnline);
+  }, []);
+
   useEffect(() => {
     if (typeof EventSource === 'undefined') return;
     const events = new EventSource('/api/agents/events');
@@ -243,11 +310,61 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
   }, []);
 
   const handleDecision = async (id: string, approved: boolean) => {
-    // Optimistic UI update
-    setItems(prev => prev.filter(app => app.id !== id));
+    const tenant = tenantId();
+
+    if (!navigator.onLine) {
+      // Optimistic offline queueing
+      if (approved) {
+        setAnimatingCards(prev => ({ ...prev, [id]: true }));
+        setTimeout(() => {
+           // Instead of removing it completely when offline, maybe keep it but show a pending sync pill?
+           // Actually, the requirements say: "If offline, the action is queued locally (SQLite/CRDT) and a small 'Pending Sync' pill appears."
+           // So we should NOT filter it out of items, just mark it as syncing.
+           setOfflineSyncQueue(prev => [...prev, id]);
+
+           const existingQueue = localStorage.getItem("ohc_offline_approvals");
+           let queue = [];
+           if (existingQueue) {
+             try { queue = JSON.parse(existingQueue); } catch(e){}
+           }
+           queue.push({ id, approved, tenant });
+           localStorage.setItem("ohc_offline_approvals", JSON.stringify(queue));
+
+           setAnimatingCards(prev => {
+            const next = { ...prev };
+            delete next[id];
+            return next;
+          });
+        }, 500);
+      } else {
+        setOfflineSyncQueue(prev => [...prev, id]);
+        const existingQueue = localStorage.getItem("ohc_offline_approvals");
+        let queue = [];
+        if (existingQueue) {
+          try { queue = JSON.parse(existingQueue); } catch(e){}
+        }
+        queue.push({ id, approved, tenant });
+        localStorage.setItem("ohc_offline_approvals", JSON.stringify(queue));
+      }
+      return;
+    }
+
+    // Optimistic UI update with animation if approved (Online)
+    if (approved) {
+      setAnimatingCards(prev => ({ ...prev, [id]: true }));
+      setTimeout(() => {
+        setItems(prev => prev.filter(app => app.id !== id));
+        setAnimatingCards(prev => {
+          const next = { ...prev };
+          delete next[id];
+          return next;
+        });
+      }, 500);
+    } else {
+      setItems(prev => prev.filter(app => app.id !== id));
+    }
 
     try {
-      const tenant = tenantId();
       const res = await fetch(`/api/agents/approvals/${id}`, {
         method: "POST",
         headers: {
@@ -272,7 +389,27 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
         throw new Error("Failed to submit decision");
       }
     } catch (err: any) {
-      setError(err.message || "Action failed");
+      // Restore item if network fails
+      const refreshRes = await fetch(`/api/agent-feed?tenant_id=${tenant}`, {
+            headers: { "x-tenant-id": tenant, "x-user-id": "default" }
+      }).catch(() => null);
+      if (refreshRes && refreshRes.ok) {
+          const data: any = await refreshRes.json();
+          if (data.items) {
+             setItems(data.items.filter((i: any) => i.lifecycle_state !== "APPROVED" && i.lifecycle_state !== "DISMISSED"));
+          }
+      }
+
+      // If network fails during fetch, fallback to offline queue
+      setOfflineSyncQueue(prev => [...prev, id]);
+      const existingQueue = localStorage.getItem("ohc_offline_approvals");
+      let queue = [];
+      if (existingQueue) {
+        try { queue = JSON.parse(existingQueue); } catch(e){}
+      }
+      queue.push({ id, approved, tenant });
+      localStorage.setItem("ohc_offline_approvals", JSON.stringify(queue));
+      setError("Network error. Action queued for sync.");
     }
   };
 
@@ -375,14 +512,18 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
             {items.map((approval) => (
               <div
                 key={approval.id}
-                className="glassmorphism p-5 rounded-[16px] border border-white/40 dark:border-white/10 shadow-sm flex flex-col gap-4"
+                className={`glassmorphism p-5 rounded-[16px] shadow-sm flex flex-col gap-4 transition-all duration-500 ease-in-out ${animatingCards[approval.id] ? "border-green-500 border-2 scale-95 opacity-0" : "border border-white/40 dark:border-white/10 opacity-100"}`}
               >
                 <div className="flex flex-col gap-1">
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-1 rounded-md">
                       {approval.event_source.replace('_', ' ')}
                     </span>
-                    {(approval.lifecycle_state === 'PENDING_APPROVAL') && (
+                    {offlineSyncQueue.includes(approval.id) ? (
+                      <span className="text-xs font-bold uppercase tracking-wider text-yellow-600 bg-yellow-50 dark:bg-yellow-900/30 dark:text-yellow-400 px-2 py-1 rounded-md border border-yellow-200 dark:border-yellow-700">
+                        Pending Sync
+                      </span>
+                    ) : (approval.lifecycle_state === 'PENDING_APPROVAL') && (
                       <span className="text-xs font-bold uppercase tracking-wider text-red-600 bg-red-50 px-2 py-1 rounded-md">
                         Requires Review
                       </span>
@@ -391,7 +532,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                   <h3 className="text-lg font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] leading-snug mt-1">
                     {(approval.context_payload?.description || approval.proposed_action?.message || approval.proposed_action?.action_type || approval.event_source)}
                   </h3>
-                  {((approval.proposed_action || approval.context_payload)?.context || (approval.proposed_action || approval.context_payload)?.remaining_stock !== undefined || (approval.proposed_action || approval.context_payload)?.feature_type === "quote_draft" || (approval.proposed_action || approval.context_payload)?.feature_type === "social_post_draft") && (
+                  {offlineSyncQueue.includes(approval.id) ? null : ((approval.proposed_action || approval.context_payload)?.context || (approval.proposed_action || approval.context_payload)?.remaining_stock !== undefined || (approval.proposed_action || approval.context_payload)?.feature_type === "quote_draft" || (approval.proposed_action || approval.context_payload)?.feature_type === "social_post_draft") && (
                     <div className="mt-2 flex flex-col gap-1 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
                       {(approval.proposed_action || approval.context_payload)?.feature_type === "quote_draft" && (
                         <div className="mb-4 p-4 rounded-xl glassmorphism border border-white/40 dark:border-white/10 flex flex-col gap-3" data-testid="quote-draft-card">
