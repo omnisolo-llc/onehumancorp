@@ -1,59 +1,252 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OHC Changelog</title>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Release Notes & Changelog</title>
     <style>
-        body { font-family: "Outfit", sans-serif; background: #f5f5f7; margin: 0; padding: 40px; color: #1d1d1f; }
-        .container { max-width: 800px; margin: 0 auto; background: white; padding: 40px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); }
-        h1 { margin-top: 0; }
-        .release { margin-bottom: 40px; padding-bottom: 20px; border-bottom: 1px solid #eee; }
-        .version { font-size: 24px; font-weight: 700; margin-bottom: 10px; }
-        .date { color: #86868b; font-size: 14px; margin-bottom: 20px; }
-        a { color: #0066FF; text-decoration: none; }
-        @media (prefers-color-scheme: dark) {
-            body { background: #16161a; color: #f5f5f7; }
-            .container { background: #1c1c1e; }
-            .release { border-color: #333; }
+      body {
+        font-family: "Outfit", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        background-color: #f5f5f7;
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 40px 20px;
+        box-sizing: border-box;
+        min-height: 100vh;
+      }
+      .container {
+        max-width: 800px;
+        width: 100%;
+        box-sizing: border-box;
+      }
+      .back-link {
+        display: inline-flex;
+        align-items: center;
+        color: #0066FF;
+        text-decoration: none;
+        font-weight: 600;
+        margin-bottom: 20px;
+        font-size: 14px;
+        padding: 8px 0;
+        min-height: 44px;
+      }
+      .back-link svg {
+        width: 16px;
+        height: 16px;
+        margin-right: 5px;
+      }
+      .back-link:hover {
+        text-decoration: underline;
+      }
+      .header {
+        margin-bottom: 40px;
+        text-align: center;
+      }
+      h1 {
+        color: #1d1d1f;
+        font-size: 32px;
+        font-weight: 800;
+        margin: 0;
+        letter-spacing: -0.5px;
+      }
+      .changelog-card {
+        background: rgba(255, 255, 255, 0.65);
+        backdrop-filter: blur(30px) saturate(210%);
+        -webkit-backdrop-filter: blur(30px) saturate(210%);
+        border-radius: 16px;
+        padding: 40px;
+        border: 1px solid rgba(255, 255, 255, 0.6);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.04);
+        margin-bottom: 30px;
+      }
+      .version-title {
+        color: #0066FF;
+        font-size: 24px;
+        font-weight: 800;
+        margin-top: 0;
+        margin-bottom: 20px;
+      }
+      .content {
+        color: #333;
+        font-size: 16px;
+        line-height: 1.6;
+      }
+      .content h3 {
+        color: #1d1d1f;
+        font-size: 18px;
+        margin-top: 25px;
+        margin-bottom: 15px;
+      }
+      .screenshot {
+        width: 100%;
+        border-radius: 16px;
+        margin-bottom: 20px;
+        border: 1px solid rgba(0,0,0,0.1);
+      }
+      .loading {
+        text-align: center;
+        padding: 40px;
+        color: #888;
+        font-weight: 500;
+        animation: pulse 1.5s infinite ease-in-out;
+      }
+      @keyframes pulse {
+        0%, 100% { opacity: 0.5; }
+        50% { opacity: 1; }
+      }
+
+      @media (prefers-color-scheme: dark) {
+        body { background-color: #16161a; }
+        .changelog-card {
+          background: rgba(22, 22, 26, 0.7);
+          border-color: rgba(255, 255, 255, 0.1);
         }
+        h1, .content h3 { color: #f5f5f7; }
+        .content { color: #d1d1d6; }
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
     <div class="container">
-        <a href="dashboard.html">← Back to Dashboard</a>
-        <h1>What's New in OHC</h1>
-        <div id="releases-container">Loading...</div>
+      <a href="dashboard.html" class="back-link">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+        Back to Dashboard
+      </a>
+
+      <div class="header">
+        <h1>Release Notes & Changelog</h1>
+      </div>
+
+      <div id="changelog-container">
+        <div class="loading">Loading changelog...</div>
+      </div>
     </div>
+
     <script>
-        document.addEventListener('DOMContentLoaded', async () => {
-            try {
-                const fetchChangelog = window.__TAURI__ ? window.__TAURI__.core.invoke("get_changelog") : fetch('/api/changelog').then(r => r.json());
-                const releases = await fetchChangelog;
-
-                const container = document.getElementById('releases-container');
-                container.innerHTML = releases.map(r => `
-                    <div class="release">
-                        <div class="version">${r.version}</div>
-                        <div class="date">${r.date}</div>
-                        <div class="notes">
-                            <ul>
-                                ${r.changes.map(c => `<li>${c}</li>`).join('')}
-                            </ul>
-                        </div>
-                    </div>
-                `).join('');
-            } catch(e) {
-                document.getElementById('releases-container').textContent = "Failed to load changelog.";
-            }
-        });
-    </script>
-<script>
-
-// Global Help Agent Chat
 document.addEventListener('DOMContentLoaded', () => {
-    if (document.getElementById('ohc-help-btn')) return;
+    // Inject tooltip CSS
+    const style = document.createElement('style');
+    style.textContent = `
+        .ohc-tooltip {
+            position: fixed;
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(20px) saturate(210%);
+            -webkit-backdrop-filter: blur(20px) saturate(210%);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            border-radius: 16px;
+            padding: 12px 16px;
+            color: #1d1d1f;
+            font-family: "Outfit", -apple-system, BlinkMacSystemFont, sans-serif;
+            font-size: 14px;
+            line-height: 1.4;
+            max-width: 250px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            z-index: 10000;
+            pointer-events: none;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: opacity 0.2s ease, transform 0.2s ease;
+            text-align: center;
+        }
+        .ohc-tooltip.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        @media (prefers-color-scheme: dark) {
+            .ohc-tooltip {
+                background: rgba(22, 22, 26, 0.7);
+                border-color: rgba(255, 255, 255, 0.1);
+                color: #f5f5f7;
+            }
+        }
+    `;
+    document.head.appendChild(style);
 
+    if (!window.OHC_TOOLTIPS) {
+        window.OHC_TOOLTIPS = {};
+        fetch("/api/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(console.error);
+    }
+    const tooltipEl = document.createElement('div');
+    tooltipEl.className = 'ohc-tooltip';
+    document.body.appendChild(tooltipEl);
+
+    let hideTimeout;
+
+    function showTooltip(e, text) {
+        clearTimeout(hideTimeout);
+        tooltipEl.textContent = text;
+
+        const targetRect = e.target.getBoundingClientRect();
+
+        // Position below the element by default
+        let top = targetRect.bottom + 10;
+        let left = targetRect.left + (targetRect.width / 2) - (tooltipEl.offsetWidth / 2);
+
+        // Adjust if it goes off screen
+        if (left < 10) left = 10;
+        if (left + tooltipEl.offsetWidth > window.innerWidth - 10) {
+            left = window.innerWidth - tooltipEl.offsetWidth - 10;
+        }
+
+        if (top + tooltipEl.offsetHeight > window.innerHeight - 10) {
+            // Position above if it doesn't fit below
+            top = targetRect.top - tooltipEl.offsetHeight - 10;
+        }
+
+        tooltipEl.style.top = `${top}px`;
+        tooltipEl.style.left = `${left}px`;
+        tooltipEl.classList.add('visible');
+    }
+
+    function hideTooltip() {
+        hideTimeout = setTimeout(() => {
+            tooltipEl.classList.remove('visible');
+        }, 100); // slight delay to prevent flicker
+    }
+
+    // Desktop hover
+    document.addEventListener('mouseover', (e) => {
+        const t = e.target;
+        const target = t && typeof t.closest === 'function' ? t.closest('[data-tooltip]') : null;
+        if (target) {
+            showTooltip(e, (window.OHC_TOOLTIPS && window.OHC_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip'));
+        }
+    });
+
+    document.addEventListener('mouseout', (e) => {
+        const target = e.target; if (target && typeof target.closest === 'function' && target.closest('[data-tooltip]')) {
+            hideTooltip();
+        }
+    });
+
+    // Mobile long press (contextmenu) or touchstart
+    let touchTimeout;
+    document.addEventListener('touchstart', (e) => {
+        const t = e.target;
+        const target = t && typeof t.closest === 'function' ? t.closest('[data-tooltip]') : null;
+        if (target) {
+            touchTimeout = setTimeout(() => {
+                showTooltip(e, (window.OHC_TOOLTIPS && window.OHC_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip'));
+            }, 500); // 500ms long press
+        }
+    });
+
+    document.addEventListener('touchend', () => {
+        clearTimeout(touchTimeout);
+        hideTooltip();
+    });
+
+    document.addEventListener('touchmove', () => {
+        clearTimeout(touchTimeout);
+        hideTooltip();
+    });
+});
+
+</script>
+    <script>
+document.addEventListener('DOMContentLoaded', () => {
     // Inject chat CSS
     const style = document.createElement('style');
     style.textContent = `
@@ -75,9 +268,16 @@ document.addEventListener('DOMContentLoaded', () => {
             z-index: 9999;
             transition: transform 0.2s;
         }
-        #ohc-help-btn:hover { transform: scale(1.05); }
-        #ohc-help-btn svg { width: 28px; height: 28px; fill: none; stroke: currentColor; stroke-width: 2; }
-
+        #ohc-help-btn:hover {
+            transform: scale(1.05);
+        }
+        #ohc-help-btn svg {
+            width: 28px;
+            height: 28px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2;
+        }
         #ohc-help-chat-overlay {
             position: fixed;
             bottom: 90px;
@@ -104,105 +304,253 @@ document.addEventListener('DOMContentLoaded', () => {
             0% { transform: scale(0.5); opacity: 0; }
             100% { transform: scale(1); opacity: 1; }
         }
-        #ohc-help-chat-header { padding: 15px 20px; border-bottom: 1px solid rgba(0, 0, 0, 0.1); display: flex; justify-content: space-between; align-items: center; background: rgba(255, 255, 255, 0.5); }
-        #ohc-help-chat-header h3 { margin: 0; font-size: 16px; color: #1d1d1f; }
-        #ohc-help-close { background: none; border: none; color: #86868b; cursor: pointer; padding: 5px; }
-        #ohc-help-messages { flex-grow: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; }
-        .msg { max-width: 85%; padding: 12px 16px; border-radius: 16px; font-size: 14px; line-height: 1.4; }
-        .msg-user { align-self: flex-end; background: #0066FF; color: white; border-bottom-right-radius: 4px; }
-        .msg-ai { align-self: flex-start; background: rgba(0, 0, 0, 0.05); color: #1d1d1f; border-bottom-left-radius: 4px; }
-        #ohc-help-input-area { padding: 15px; border-top: 1px solid rgba(0, 0, 0, 0.1); display: flex; gap: 10px; background: rgba(255, 255, 255, 0.5); }
-        #ohc-help-input { flex-grow: 1; border: 1px solid #d2d2d7; border-radius: 20px; padding: 10px 15px; font-size: 14px; outline: none; font-family: "Outfit", sans-serif; }
-        #ohc-help-send { background: #0066FF; color: white; border: none; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
-        #ohc-help-send svg { width: 16px; height: 16px; fill: currentColor; }
+        #ohc-help-chat-header {
+            padding: 15px 20px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.5);
+        }
+        #ohc-help-chat-header h3 {
+            margin: 0;
+            font-size: 16px;
+            color: #1d1d1f;
+        }
+        #ohc-help-close {
+            background: none;
+            border: none;
+            color: #86868b;
+            cursor: pointer;
+            padding: 5px;
+        }
+        #ohc-help-close:hover { color: #1d1d1f; }
+        #ohc-help-messages {
+            flex-grow: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .msg {
+            max-width: 85%;
+            padding: 12px 16px;
+            border-radius: 16px;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+        .msg-user {
+            align-self: flex-end;
+            background: #0066FF;
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+        .msg-ai {
+            align-self: flex-start;
+            background: rgba(0, 0, 0, 0.05);
+            color: #1d1d1f;
+            border-bottom-left-radius: 4px;
+        }
+        .msg-ai a {
+            color: #0066FF;
+            font-weight: 600;
+            text-decoration: none;
+            display: block;
+            margin-top: 5px;
+        }
+        #ohc-help-input-area {
+            padding: 15px;
+            border-top: 1px solid rgba(0, 0, 0, 0.1);
+            display: flex;
+            gap: 10px;
+            background: rgba(255, 255, 255, 0.5);
+        }
+        #ohc-help-input {
+            flex-grow: 1;
+            border: 1px solid rgba(0, 0, 0, 0.2);
+            border-radius: 16px;
+            padding: 10px 15px;
+            outline: none;
+            background: rgba(255, 255, 255, 0.8);
+            font-size: 14px;
+        }
+        #ohc-help-input:focus { border-color: #0066FF; }
+        #ohc-help-send {
+            background: #0066FF;
+            color: white;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
 
         @media (prefers-color-scheme: dark) {
-            #ohc-help-chat-overlay { background: rgba(30, 30, 30, 0.85); border-color: rgba(255,255,255,0.1); }
-            #ohc-help-chat-header { background: rgba(0,0,0,0.2); }
+            #ohc-help-chat-overlay {
+                background: rgba(22, 22, 26, 0.7);
+                border-color: rgba(255, 255, 255, 0.1);
+            }
+            #ohc-help-chat-header, #ohc-help-input-area {
+                background: rgba(0, 0, 0, 0.2);
+                border-color: rgba(255, 255, 255, 0.1);
+            }
             #ohc-help-chat-header h3 { color: #f5f5f7; }
-            .msg-ai { background: rgba(255,255,255,0.1); color: #f5f5f7; }
-            #ohc-help-input-area { background: rgba(0,0,0,0.2); }
-            #ohc-help-input { background: rgba(0,0,0,0.2); color: #f5f5f7; border-color: #444; }
+            .msg-ai {
+                background: rgba(255, 255, 255, 0.1);
+                color: #f5f5f7;
+            }
+            #ohc-help-input {
+                background: rgba(0, 0, 0, 0.3);
+                border-color: rgba(255, 255, 255, 0.2);
+                color: white;
+            }
         }
     `;
     document.head.appendChild(style);
 
-    // Inject chat HTML
+    // Inject HTML
     const btn = document.createElement('button');
     btn.id = 'ohc-help-btn';
-    btn.setAttribute('aria-label', 'Help Chat');
-    btn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>';
+    btn.setAttribute('aria-label', 'Open help chat');
+    btn.innerHTML = `<svg viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
     document.body.appendChild(btn);
 
     const overlay = document.createElement('div');
     overlay.id = 'ohc-help-chat-overlay';
     overlay.innerHTML = `
         <div id="ohc-help-chat-header">
-            <h3>Ask anything</h3>
+            <h3>Ask AI Help</h3>
             <button id="ohc-help-close" aria-label="Close help chat">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path></svg>
             </button>
         </div>
         <div id="ohc-help-messages">
             <div class="msg msg-ai">Hi! I am your AI Help Agent! How can I assist you with OHC today?</div>
         </div>
         <div id="ohc-help-input-area">
-            <input type="text" id="ohc-help-input" placeholder="Ask about OHC features..." />
+            <input type="text" id="ohc-help-input" placeholder="Ask me anything..." />
             <button id="ohc-help-send" aria-label="Send message">
-                <svg viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
             </button>
         </div>
     `;
     document.body.appendChild(overlay);
 
-    const msgs = document.getElementById('ohc-help-messages');
+    const closeBtn = document.getElementById('ohc-help-close');
+    const messages = document.getElementById('ohc-help-messages');
     const input = document.getElementById('ohc-help-input');
+    const sendBtn = document.getElementById('ohc-help-send');
 
     btn.addEventListener('click', () => {
-        overlay.style.display = overlay.style.display === 'flex' ? 'none' : 'flex';
-        if (overlay.style.display === 'flex') input.focus();
+        overlay.style.display = 'flex';
+        input.focus();
     });
 
-    document.getElementById('ohc-help-close').addEventListener('click', () => {
+    closeBtn.addEventListener('click', () => {
         overlay.style.display = 'none';
     });
 
-    async function sendMessage() {
+        async function sendMessage() {
         const text = input.value.trim();
         if (!text) return;
 
+        // Add user msg
+        const uMsg = document.createElement('div');
+        uMsg.className = 'msg msg-user';
+        uMsg.textContent = text;
+        messages.appendChild(uMsg);
         input.value = '';
-        msgs.innerHTML += `<div class="msg msg-user">${text}</div>`;
-        msgs.scrollTop = msgs.scrollHeight;
+        messages.scrollTop = messages.scrollHeight;
 
         try {
-            const req = await fetch('/api/chat', {
+            let url = '/api/chat';
+            if (window.__TAURI__ && window.__TAURI__.core) {
+                url = 'http://127.0.0.1:18789/api/chat';
+            }
+            const response = await fetch(url, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message: text, provider: 'help-agent' })
+                body: JSON.stringify({ message: text })
             });
-            const res = await req.json();
+            const data = await response.json();
 
-            let replyText = res.response || "I couldn't find an answer. Please check our Help Center.";
-
-            // Link to full article if provided
-            if (res.article_id) {
-                replyText += `<br><br><a href="help_article.html?id=${res.article_id}" style="color: #0066FF; font-weight: bold; text-decoration: none;">Read the full article →</a>`;
+            const aiMsg = document.createElement('div');
+            aiMsg.className = 'msg msg-ai';
+            if (data.link && data.link.url) {
+                aiMsg.innerHTML = `${data.reply}<br/><a href="${data.link.url}">${data.link.title}</a>`;
+            } else {
+                aiMsg.textContent = data.reply;
             }
-
-            msgs.innerHTML += `<div class="msg msg-ai">${replyText}</div>`;
+            messages.appendChild(aiMsg);
+            messages.scrollTop = messages.scrollHeight;
         } catch (e) {
-            msgs.innerHTML += `<div class="msg msg-ai" style="color: red;">Failed to connect.</div>`;
+            console.error(e);
+            const aiMsg = document.createElement('div');
+            aiMsg.className = 'msg msg-ai';
+            aiMsg.textContent = 'Sorry, there was an error connecting to the help assistant.';
+            messages.appendChild(aiMsg);
+            messages.scrollTop = messages.scrollHeight;
         }
-        msgs.scrollTop = msgs.scrollHeight;
     }
 
-    document.getElementById('ohc-help-send').addEventListener('click', sendMessage);
-    input.addEventListener('keypress', (e) => {
+    sendBtn.addEventListener('click', sendMessage);
+    input.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') sendMessage();
     });
 });
 
 </script>
-</body>
+
+    <script>
+      const container = document.getElementById('changelog-container');
+
+      async function loadChangelog() {
+        try {
+          let data = null;
+          if (window.__TAURI__ && window.__TAURI__.core) {
+             data = await window.__TAURI__.core.invoke('get_changelog', {});
+          } else {
+             const res = await fetch(`/api/changelog`);
+             if (res.ok) data = await res.json();
+          }
+
+
+
+          let html = '';
+          data.forEach(item => {
+             let contentHtml = item.contentLines ? item.contentLines.map(line => {
+                if (line.startsWith('### ')) return `<h3>${line.substring(4)}</h3>`;
+                if (line.startsWith('- ')) return `<p>• ${line.substring(2)}</p>`;
+                return `<p>${line}</p>`;
+             }).join('') : (item.content_lines ? item.content_lines.map(line => {
+                if (line.startsWith('### ')) return `<h3>${line.substring(4)}</h3>`;
+                if (line.startsWith('- ')) return `<p>• ${line.substring(2)}</p>`;
+                return `<p>${line}</p>`;
+             }).join('') : '');
+
+             let imgHtml = item.screenshot_url ? `<img src="${item.screenshot_url}" class="screenshot" alt="Screenshot" onerror="this.style.display='none'"/>` : '';
+
+             html += `
+               <div class="changelog-card">
+                 <h2 class="version-title">${item.version}</h2>
+                 ${imgHtml}
+                 <div class="content">${contentHtml}</div>
+               </div>
+             `;
+          });
+          container.innerHTML = html;
+        } catch (e) {
+          console.error("Failed to load changelog", e);
+          container.innerHTML = `<div class="changelog-card"><p style="color:#FF3B30">Failed to load changelog.</p></div>`;
+        }
+      }
+
+      loadChangelog();
+    </script>
+
+  </body>
 </html>
