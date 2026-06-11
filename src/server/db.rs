@@ -508,7 +508,10 @@ impl DB {
     {
         let mut attempt = 0;
         let max_attempts = 10;
+        #[cfg(not(test))]
         let mut backoff = std::time::Duration::from_millis(50);
+        #[cfg(test)]
+        let mut backoff = std::time::Duration::from_millis(1);
 
         loop {
             match f().await {
