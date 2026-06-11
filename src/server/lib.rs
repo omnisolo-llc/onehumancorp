@@ -383,6 +383,7 @@ pub mod services {
     pub mod pos;
     pub mod collective;
     pub mod inventory_sync;
+    pub mod inventory;
 }
 
 use tonic::{transport::Server, Request, Response, Status};

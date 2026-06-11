@@ -24,4 +24,5 @@ pub mod campaign;
 pub mod ledger;
 pub mod quoting;
 pub mod inventory_sync;
+pub mod inventory;
 pub mod agent_memory;
