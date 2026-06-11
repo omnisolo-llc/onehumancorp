@@ -106,23 +106,41 @@ export default function WebsiteBuilderPage() {
         if (data.builderState.status) setStatus(data.builderState.status);
       }
       if (data && data.wizardState && Object.keys(data.wizardState).length > 0) {
-        if (data.wizardState.step !== undefined) setWizardStep(data.wizardState.step);
-        if (data.wizardState.wizardStep !== undefined) setWizardStep(data.wizardState.wizardStep);
-        if (data.wizardState.businessName !== undefined) setBusinessName(data.wizardState.businessName);
-        if (data.wizardState.businessType !== undefined) setBusinessType(data.wizardState.businessType);
-        if (data.wizardState.hasPhysicalProducts !== undefined) setHasPhysicalProducts(data.wizardState.hasPhysicalProducts);
-        if (data.wizardState.hasDigitalProducts !== undefined) setHasDigitalProducts(data.wizardState.hasDigitalProducts);
-        if (data.wizardState.productName !== undefined) setProductName(data.wizardState.productName);
-        if (data.wizardState.productPrice !== undefined) setProductPrice(data.wizardState.productPrice);
-        if (data.wizardState.paymentMethod !== undefined) setPaymentMethod(data.wizardState.paymentMethod);
-        if (data.wizardState.userName !== undefined) setUserName(data.wizardState.userName);
-        if (data.wizardState.userEmail !== undefined) setUserEmail(data.wizardState.userEmail);
-        if (data.wizardState.userPassword !== undefined) setUserPassword(data.wizardState.userPassword);
-        if (data.wizardState.template !== undefined) setTemplate(data.wizardState.template);
-        if (data.wizardState.bio !== undefined) setBio(data.wizardState.bio);
-        if (data.wizardState.domainChoice !== undefined) setDomainChoice(data.wizardState.domainChoice);
-        if (data.wizardState.aiAgents !== undefined) setAiAgents(data.wizardState.aiAgents);
-        if (data.wizardState.aiAutoRespond !== undefined) setAiAutoRespond(data.wizardState.aiAutoRespond);
+        let localState: any = null;
+        try {
+          const localStr = localStorage.getItem('website-builder-storage');
+          if (localStr) {
+            localState = JSON.parse(localStr).state;
+          }
+        } catch (e) {
+          console.error("Failed to parse local storage for comparison", e);
+        }
+
+        const localStep = typeof localState?.wizardStep === 'number' ? localState.wizardStep : 0;
+        const localName = typeof localState?.businessName === 'string' ? localState.businessName : '';
+
+        const backendStep = data.wizardState.step !== undefined ? data.wizardState.step : (data.wizardState.wizardStep !== undefined ? data.wizardState.wizardStep : 0);
+        const backendName = typeof data.wizardState.businessName === 'string' ? data.wizardState.businessName : '';
+
+        if (backendStep > localStep || (backendStep === localStep && backendName.length >= localName.length)) {
+          if (data.wizardState.step !== undefined) setWizardStep(data.wizardState.step);
+          if (data.wizardState.wizardStep !== undefined) setWizardStep(data.wizardState.wizardStep);
+          if (data.wizardState.businessName !== undefined) setBusinessName(data.wizardState.businessName);
+          if (data.wizardState.businessType !== undefined) setBusinessType(data.wizardState.businessType);
+          if (data.wizardState.hasPhysicalProducts !== undefined) setHasPhysicalProducts(data.wizardState.hasPhysicalProducts);
+          if (data.wizardState.hasDigitalProducts !== undefined) setHasDigitalProducts(data.wizardState.hasDigitalProducts);
+          if (data.wizardState.productName !== undefined) setProductName(data.wizardState.productName);
+          if (data.wizardState.productPrice !== undefined) setProductPrice(data.wizardState.productPrice);
+          if (data.wizardState.paymentMethod !== undefined) setPaymentMethod(data.wizardState.paymentMethod);
+          if (data.wizardState.userName !== undefined) setUserName(data.wizardState.userName);
+          if (data.wizardState.userEmail !== undefined) setUserEmail(data.wizardState.userEmail);
+          if (data.wizardState.userPassword !== undefined) setUserPassword(data.wizardState.userPassword);
+          if (data.wizardState.template !== undefined) setTemplate(data.wizardState.template);
+          if (data.wizardState.bio !== undefined) setBio(data.wizardState.bio);
+          if (data.wizardState.domainChoice !== undefined) setDomainChoice(data.wizardState.domainChoice);
+          if (data.wizardState.aiAgents !== undefined) setAiAgents(data.wizardState.aiAgents);
+          if (data.wizardState.aiAutoRespond !== undefined) setAiAutoRespond(data.wizardState.aiAutoRespond);
+        }
       }
     })
     .catch(err => console.error('Failed to load builder state', err))
