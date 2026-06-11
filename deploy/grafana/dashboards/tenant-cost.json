@@ -20,7 +20,7 @@
       },
       "options": {
         "mode": "html",
-        "content": "<div style=\"background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 12px; padding: 20px; font-family: 'Outfit', 'Inter', sans-serif; color: #000;\">\n<link rel=\"stylesheet\" href=\"/public/css/custom.css\">\n</div>"
+        "content": "<link rel=\"stylesheet\" href=\"/public/css/custom.css\">"
       },
       "transparent": true
     },
@@ -35,7 +35,7 @@
       },
       "options": {
         "mode": "html",
-        "content": "<div style=\"background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 12px; padding: 20px; font-family: 'Outfit', 'Inter', sans-serif; color: #000;\">\n<link rel=\"stylesheet\" href=\"/public/css/custom.css\">\n</div>"
+        "content": "<link rel=\"stylesheet\" href=\"/public/css/custom.css\">"
       },
       "transparent": true
     },
@@ -48,7 +48,7 @@
       },
       "id": 100,
       "options": {
-        "content": "<div style=\"background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 12px; padding: 20px; font-family: 'Outfit', 'Inter', sans-serif; color: #000;\">\n<link rel=\"stylesheet\" href=\"/public/css/custom.css\">\n\n  Tenant Cost Visibility Dashboard\n</div>",
+        "content": "<link rel=\"stylesheet\" href=\"/public/css/custom.css\">\nTenant Cost Visibility Dashboard",
         "mode": "html"
       },
       "title": "Aesthetic Mandate Injector",

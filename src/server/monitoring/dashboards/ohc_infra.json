@@ -54,7 +54,7 @@
       },
       "options": {
         "mode": "html",
-        "content": "<link rel=\"stylesheet\" href=\"/public/css/custom.css\">\n"
+        "content": "<link rel=\"stylesheet\" href=\"/public/css/custom.css\">"
       },
       "transparent": true
     },
@@ -71,7 +71,7 @@
       },
       "id": 1,
       "options": {
-        "content": "<link rel=\"stylesheet\" href=\"/public/css/custom.css\">\n<div class=\"panel-container\" style=\"font-size: 24px; font-weight: bold; text-align: center; color: white; padding: 10px;\">\n  <h1 style=\"margin: 0; color: #fff; font-size: 24px;\">OHC Infrastructure Dashboard</h1>\n  <p style=\"margin: 5px 0 0; color: #aaa; font-size: 14px;\">Uptime & Resource Observability</p>\n</div>",
+        "content": "<link rel=\"stylesheet\" href=\"/public/css/custom.css\">\n<h1 >OHC Infrastructure Dashboard</h1>\n  <p >Uptime & Resource Observability</p>",
         "mode": "html"
       },
       "pluginVersion": "10.0.0",
