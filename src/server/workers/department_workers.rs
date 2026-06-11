@@ -1049,6 +1049,7 @@ let db_for_products = self.db.clone();
 
                                 if let Some(obj) = parsed.as_object_mut() {
                                     obj.insert("feature_type".to_string(), serde_json::json!("social_post_draft"));
+                                    obj.insert("product_name".to_string(), serde_json::json!(product_name));
                                 }
 
                                 let task_id = Uuid::new_v4().to_string();
