@@ -41,6 +41,12 @@
     "vitest.config.ts",
     "vitest.setup.ts",
     "**/*.test.ts",
-    "**/*.test.tsx"
+    "**/*.test.tsx",
+    "../../e2e/**/*",
+    "../../e2e/*",
+    "src/e2e/**/*",
+    "src/e2e/*",
+    "e2e/**/*",
+    "e2e/*"
   ]
 }

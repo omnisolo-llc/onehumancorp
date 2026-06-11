@@ -119,7 +119,7 @@ export function MorningBriefingCard({ tenant }: { tenant: string }) {
             <button
               type="submit"
               disabled={isChatting || !chatMessage.trim()}
-              className="rounded-[8px] bg-[#0066FF] px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[#0052CC] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:opacity-50 transition-colors"
+              className="rounded-[8px] bg-[#0066FF] px-4 py-2.5 min-h-[44px] min-w-[44px] text-sm inline-flex items-center justify-center font-semibold text-white shadow-sm hover:bg-[#0052CC] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:opacity-50 transition-colors"
               data-testid="insight-chat-submit"
             >
               Ask
