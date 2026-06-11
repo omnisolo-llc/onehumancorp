@@ -49,6 +49,24 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
   const [activeTab, setActiveTab] = useState<"proposals" | "activity">("proposals");
   const [activities, setActivities] = useState<OHCLedgerEntry[]>([]);
   const [activityLoading, setActivityLoading] = useState(false);
+  const [queueLength, setQueueLength] = useState(0);
+
+  useEffect(() => {
+    let unsubscribe: (() => void) | undefined;
+    let mounted = true;
+    import("../../utils/OfflineQueueManager").then(({ offlineQueueManager }) => {
+      if (!mounted) return;
+      setQueueLength(offlineQueueManager.getQueueLength());
+      unsubscribe = offlineQueueManager.subscribe(() => {
+        setQueueLength(offlineQueueManager.getQueueLength());
+      });
+    });
+    return () => {
+      mounted = false;
+      if (unsubscribe) unsubscribe();
+    };
+  }, []);
+
 
   const tenantId = () => {
     if (typeof window === "undefined") return "default";
@@ -207,55 +225,41 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
     return () => events.close();
   }, []);
 
-  useEffect(() => {
-    if (typeof EventSource === 'undefined') return;
-    const events = new EventSource('/api/agents/events');
-    events.onmessage = (event) => {
-      try {
-        const item = JSON.parse(event.data);
-        if (!item?.id || !item?.description) return;
-
-        // If it's a DRAFT or PENDING, add to proposals
-        if (String(item.status || '').toUpperCase() === 'DRAFT' || String(item.status || '').toUpperCase() === 'PENDING') {
-          setItems((current) => [item, ...current.filter((existing) => existing.id !== item.id)]);
-        } else {
-          // It's an activity event (Approved, Rejected, etc.)
-          setActivities((current) => {
-            const mappedActivity = {
-              id: item.id,
-              tenant_id: item.tenant_id || "default",
-              event_type: item.status,
-              department: item.department,
-              payload: typeof item.payload === 'object' ? JSON.stringify({ original_payload: item.payload }) : item.payload,
-              created_at: new Date().toISOString()
-            };
-            return [mappedActivity, ...current.filter((existing) => existing.id !== item.id)];
-          });
-          // Also remove from approvals if it was there
-          setItems((current) => current.filter((existing) => existing.id !== item.id));
-        }
-      } catch (err) {
-        console.error('Failed to parse agent feed event:', err);
-      }
-    };
-    events.onerror = () => events.close();
-    return () => events.close();
-  }, []);
 
   const handleDecision = async (id: string, approved: boolean) => {
     // Optimistic UI update
     setItems(prev => prev.filter(app => app.id !== id));
+    const state = approved ? "APPROVED" : "DISMISSED";
 
     try {
       const tenant = tenantId();
-      const res = await fetch(`/api/agents/approvals/${id}`, {
-        method: "POST",
+
+      if (typeof window !== 'undefined' && !navigator.onLine) {
+        // Enqueue offline action
+        import("../../utils/OfflineQueueManager").then(({ offlineQueueManager }) => {
+          offlineQueueManager.enqueueAction({
+            id,
+            endpoint: `/api/agent-feed/${id}/state?tenant_id=${tenant}`,
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+              "x-tenant-id": tenant,
+              "x-user-id": "default",
+            },
+            body: JSON.stringify({ state }),
+          });
+        });
+        return;
+      }
+
+      const res = await fetch(`/api/agent-feed/${id}/state?tenant_id=${tenant}`, {
+        method: "PUT",
         headers: {
           "Content-Type": "application/json",
           "x-tenant-id": tenant,
           "x-user-id": "default",
         },
-        body: JSON.stringify({ approved }),
+        body: JSON.stringify({ state }),
       });
 
       if (!res.ok) {
@@ -278,6 +282,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
 
 
 
+
   if (error) {
     return (
       <div className="w-full mb-6 p-4 glassmorphism rounded-[16px] border border-red-500/50 bg-red-500/10 text-red-500 text-center">
@@ -288,6 +293,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
 
   return (
     <section className="mb-6 w-full" aria-label="Unified Agent Feed">
+
       <div className="mb-4 flex items-center border-b border-gray-200 dark:border-gray-700">
         <button
           onClick={() => setActiveTab("proposals")}
@@ -310,6 +316,15 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
           Activity Feed
         </button>
       </div>
+      {queueLength > 0 && (
+        <div className="mb-4 flex justify-end">
+          <div className="inline-flex items-center gap-2 bg-yellow-50 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-400 px-3 py-1.5 rounded-full text-xs font-semibold shadow-sm border border-yellow-200 dark:border-yellow-700">
+            <div className="w-2 h-2 rounded-full bg-yellow-400 animate-pulse"></div>
+            Pending Sync ({queueLength})
+          </div>
+        </div>
+      )}
+
 
       <div className="flex flex-col gap-4">
         {activeTab === "proposals" && (
