@@ -150,7 +150,7 @@ export default function StripeTerminalClient({ amount, productId, tenantId }: { 
           existingTxs.push(tx);
           localStorage.setItem('ohc_offline_pos_tx', JSON.stringify(existingTxs));
 
-          setStatus('Payment saved offline. Will sync when network is restored.');
+          setStatus('Payment Saved Offline');
           setReserving(false);
        }, 1500);
        return;
