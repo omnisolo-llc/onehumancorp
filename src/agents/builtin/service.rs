@@ -623,6 +623,7 @@ impl AgentServiceImpl {
             enable_lazy_tool_loading: false,
             enable_sona_patterns: false,
             agent_id: self.agent_id.clone(),
+            max_workflow_cycles: None,
             model,
             server_system_message,
             developer_instructions,
@@ -1111,6 +1112,7 @@ impl AgentService for AgentServiceImpl {
             enable_lazy_tool_loading: false,
             enable_sona_patterns: false,
                 agent_id: self.agent_id.clone(),
+                max_workflow_cycles: None,
                 model: if sub_req.model.is_empty() { self.cfg.model.clone() } else { sub_req.model.clone() },
                 server_system_message: self.cfg.system_prompt.clone(),
                 developer_instructions: "You are a highly capable AI assistant operating within the OneHumanCorp environment. Obey all security rules and always verify your actions.".to_string(),
@@ -1606,7 +1608,7 @@ mod memory_tests {
     #[tokio::test]
     async fn test_anthropic_memory_initialization_and_accessor() {
         unsafe {
-            std::env::set_var("OHC_ENABLE_ANTHROPIC_MEMORY", "true");
+            std::env::set_var("OHC_ENABLE_ANTHROPIC_MEMORY", "true"); std::env::set_var("OHC_ANTHROPIC_MEMORY_DIR", ".test-agent-memory"); std::fs::create_dir_all(".test-agent-memory").unwrap();
             std::env::set_var("OHC_ANTHROPIC_MEMORY_DIR", ".test-agent-memory");
         }
 

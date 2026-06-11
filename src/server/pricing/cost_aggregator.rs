@@ -9,6 +9,8 @@ pub struct DailyCost {
     pub storage_cost: i64,
     pub network_cost: i64,
     pub compute_cost: i64,
+    pub email_cost: i64,
+    pub api_cost: i64,
 }
 
 pub struct TelemetryRow {
@@ -31,6 +33,8 @@ pub fn process_telemetry_rows(rows: Vec<TelemetryRow>) -> Vec<DailyCost> {
                 storage_cost: 0,
                 network_cost: 0,
                 compute_cost: 0,
+                email_cost: 0,
+                api_cost: 0,
             });
         }
     }
@@ -45,11 +49,13 @@ pub fn process_telemetry_rows(rows: Vec<TelemetryRow>) -> Vec<DailyCost> {
                     "ohc_storage_rw_cost" => daily.storage_cost += val,
                     "ohc_network_cost_cents" => daily.network_cost += val,
                     "ohc_compute_cost_cents" => daily.compute_cost += val,
+                    "ohc_email_send_cost" => daily.email_cost += val,
+                    "ohc_outbound_api_cost" | "ohc_api_call_cost" => daily.api_cost += val,
                     _ => {
                         warn!("Unknown metric encountered during aggregation: {}", row.metric_name);
                     }
                 }
-                daily.total_cost = daily.llm_cost + daily.storage_cost + daily.network_cost + daily.compute_cost;
+                daily.total_cost = daily.llm_cost + daily.storage_cost + daily.network_cost + daily.compute_cost + daily.email_cost + daily.api_cost;
             }
         } else {
             warn!("TelemetryRow missing date for metric: {}", row.metric_name);
@@ -73,7 +79,7 @@ pub async fn aggregate_daily_costs(pool: &PgPool, tenant_id: &str) -> Vec<DailyC
             SUM(value)::FLOAT8 as total
         FROM telemetry_buffer
         WHERE (labels_json::jsonb)->>'tenant_id' = $1
-          AND metric_name IN ('ohc_mission_cost_cents', 'ohc_storage_rw_cost', 'ohc_network_cost_cents', 'ohc_compute_cost_cents')
+          AND metric_name IN ('ohc_mission_cost_cents', 'ohc_storage_rw_cost', 'ohc_network_cost_cents', 'ohc_compute_cost_cents', 'ohc_email_send_cost', 'ohc_outbound_api_cost', 'ohc_api_call_cost')
           AND timestamp >= CURRENT_DATE - INTERVAL '6 days'
         GROUP BY DATE(timestamp), metric_name
         ORDER BY DATE(timestamp) ASC
@@ -137,6 +143,16 @@ mod tests {
                 metric_name: "ohc_compute_cost_cents".to_string(),
                 total: Some(200.0),
             },
+            TelemetryRow {
+                date: Some(today),
+                metric_name: "ohc_email_send_cost".to_string(),
+                total: Some(50.0),
+            },
+            TelemetryRow {
+                date: Some(today),
+                metric_name: "ohc_api_call_cost".to_string(),
+                total: Some(100.0),
+            },
         ];
         let res = process_telemetry_rows(rows);
         assert_eq!(res.len(), 7);
@@ -144,7 +160,9 @@ mod tests {
         let today_data = res.iter().find(|r| r.date == today_str).unwrap();
         assert_eq!(today_data.llm_cost, 500);
         assert_eq!(today_data.compute_cost, 200);
-        assert_eq!(today_data.total_cost, 700);
+        assert_eq!(today_data.email_cost, 50);
+        assert_eq!(today_data.api_cost, 100);
+        assert_eq!(today_data.total_cost, 850);
     }
 
     #[test]

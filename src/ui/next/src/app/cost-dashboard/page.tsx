@@ -29,6 +29,8 @@ interface CostDashboardData {
   trend: DailyCost[];
   agent_costs?: { agent_id: string; cost_cents: number; }[];
   department_tier_usage?: DepartmentTierUsage;
+  email_cost: number;
+  api_cost: number;
 }
 
 interface DepartmentTierUsage {
@@ -242,7 +244,17 @@ export default function CostDashboardPage() {
 
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 app-card bg-white/70 backdrop-blur-xl saturate-200 border border-white/40 rounded-xl hover:-translate-y-1 hover:shadow-md transition-all duration-300">
                     <div>
-                        <span className="font-medium text-gray-900">LLM Usage</span>
+                        <span className="font-medium text-gray-900 flex items-center gap-2">
+                            LLM Usage
+                            {data?.department_tier_usage?.departments?.some(d => d.action_limit !== null && d.actions_used / d.action_limit >= 0.8) ? (
+                                <span id="budget-alert-badge" className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-50/70 backdrop-blur-xl border border-amber-200 text-amber-800">
+                                    <svg className="mr-1 h-3 w-3 text-amber-500" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+                                        <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                                    </svg>
+                                    Budget Alert
+                                </span>
+                            ) : null}
+                        </span>
                         <p className="text-sm text-gray-500 mt-1">Cost of AI agent actions and interactions.</p>
                     </div>
                     <div className="text-left sm:text-right w-full sm:w-auto">
@@ -298,6 +310,22 @@ export default function CostDashboardPage() {
                         <p className="text-sm text-gray-500 mt-1">Cost of CDN delivery and outbound traffic.</p>
                     </div>
                     <span id="cost-dashboard-network" className="text-lg font-semibold text-gray-900">{formatCurrency(data?.network_cost || 0)}</span>
+                </div>
+
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 app-card bg-white/70 backdrop-blur-xl saturate-200 border border-white/40 rounded-xl hover:-translate-y-1 hover:shadow-md transition-all duration-300">
+                    <div>
+                        <span className="font-medium text-gray-900">Email Sends</span>
+                        <p className="text-sm text-gray-500 mt-1">Cost of transactional and marketing email delivery.</p>
+                    </div>
+                    <span id="cost-dashboard-email" className="text-lg font-semibold text-gray-900">{formatCurrency(data?.email_cost || 0)}</span>
+                </div>
+
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 app-card bg-white/70 backdrop-blur-xl saturate-200 border border-white/40 rounded-xl hover:-translate-y-1 hover:shadow-md transition-all duration-300">
+                    <div>
+                        <span className="font-medium text-gray-900">Outbound API Calls</span>
+                        <p className="text-sm text-gray-500 mt-1">Cost of third-party integration usage.</p>
+                    </div>
+                    <span id="cost-dashboard-api" className="text-lg font-semibold text-gray-900">{formatCurrency(data?.api_cost || 0)}</span>
                 </div>
 
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 app-card bg-white/70 backdrop-blur-xl saturate-200 border border-white/40 rounded-xl hover:-translate-y-1 hover:shadow-md transition-all duration-300">

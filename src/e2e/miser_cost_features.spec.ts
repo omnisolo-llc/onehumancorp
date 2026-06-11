@@ -34,34 +34,36 @@ test.describe('Miser Cost Features E2E', () => {
 
   test('Pricing Page displays Free Tier details and "Current Plan" disabled button', async ({ page, adminUser, loginAs }) => {
     await loginAs(page, adminUser);
-    await page.goto('/pricing.html');
+    await page.goto('/pricing');
     await page.waitForLoadState('networkidle');
 
-    await expect(page.getByRole('heading', { name: 'Free' })).toBeVisible({ timeout: 15000 });
-    await expect(page.locator('text=$0')).toBeVisible();
-    await expect(page.locator('text=1 Agent Limit').first()).toBeVisible();
-    await expect(page.locator('text=100 AI actions / month')).toBeVisible();
-    await expect(page.locator('text=500MB Storage Quota')).toBeVisible();
-    await expect(page.locator('text=10 Products Limit')).toBeVisible();
+    const freeCard = page.locator('.app-card').filter({ has: page.getByRole('heading', { name: 'Free', exact: true }) });
+    await expect(freeCard).toBeVisible({ timeout: 15000 });
+    await expect(freeCard.locator('text=$0')).toBeVisible();
+    await expect(freeCard.locator('text=1 Agent Limit').first()).toBeVisible();
+    await expect(freeCard.locator('text=100 AI actions / month').first()).toBeVisible();
+    await expect(freeCard.locator('text=500MB Storage Quota').first()).toBeVisible();
+    await expect(freeCard.locator('text=10 Products Limit').first()).toBeVisible();
 
-    const currentPlanButton = page.locator('button', { hasText: 'Current Plan' });
+    const currentPlanButton = freeCard.locator('button', { hasText: 'Current Plan' });
     await expect(currentPlanButton).toBeVisible();
     await expect(currentPlanButton).toBeDisabled();
   });
 
   test('Pricing Page displays Starter Tier details and navigates to checkout', async ({ page, adminUser, loginAs }) => {
     await loginAs(page, adminUser);
-    await page.goto('/pricing.html');
+    await page.goto('/pricing');
     await page.waitForLoadState('networkidle');
 
-    await expect(page.getByRole('heading', { name: 'Starter' })).toBeVisible({ timeout: 15000 });
-    await expect(page.locator('text=$29').first()).toBeVisible();
-    await expect(page.locator('text=3 Agents Limit')).toBeVisible();
-    await expect(page.locator('text=1,000 AI actions / month')).toBeVisible();
-    await expect(page.locator('text=5GB Storage Quota')).toBeVisible();
-    await expect(page.locator('text=100 Products Limit')).toBeVisible();
+    const starterCard = page.locator('.app-card').filter({ has: page.getByRole('heading', { name: 'Starter', exact: true }) });
+    await expect(starterCard).toBeVisible({ timeout: 15000 });
+    await expect(starterCard.locator('text=$29').first()).toBeVisible();
+    await expect(starterCard.locator('text=3 Agents Limit').first()).toBeVisible();
+    await expect(starterCard.locator('text=1,000 AI actions / month').first()).toBeVisible();
+    await expect(starterCard.locator('text=5GB Storage Quota').first()).toBeVisible();
+    await expect(starterCard.locator('text=100 Products Limit').first()).toBeVisible();
 
-    const upgradeStarterButton = page.locator('button', { hasText: 'Upgrade to Starter via Stripe' });
+    const upgradeStarterButton = starterCard.locator('button', { hasText: 'Upgrade to Starter via Stripe' });
     await expect(upgradeStarterButton).toBeVisible();
 
     await upgradeStarterButton.click();
@@ -71,17 +73,18 @@ test.describe('Miser Cost Features E2E', () => {
 
   test('Pricing Page displays Pro Tier details and navigates to checkout', async ({ page, adminUser, loginAs }) => {
     await loginAs(page, adminUser);
-    await page.goto('/pricing.html');
+    await page.goto('/pricing');
     await page.waitForLoadState('networkidle');
 
-    await expect(page.getByRole('heading', { name: 'Pro' })).toBeVisible({ timeout: 15000 });
-    await expect(page.locator('text=$79').first()).toBeVisible();
-    await expect(page.locator('text=10 Agents Limit')).toBeVisible();
-    await expect(page.locator('text=Unlimited AI actions').first()).toBeVisible();
-    await expect(page.locator('text=50GB Storage Quota')).toBeVisible();
-    await expect(page.locator('text=Unlimited Products').first()).toBeVisible();
+    const proCard = page.locator('.app-card').filter({ has: page.getByRole('heading', { name: 'Pro', exact: true }) });
+    await expect(proCard).toBeVisible({ timeout: 15000 });
+    await expect(proCard.locator('text=$79').first()).toBeVisible();
+    await expect(proCard.locator('text=10 Agents Limit').first()).toBeVisible();
+    await expect(proCard.locator('text=Unlimited AI actions').first()).toBeVisible();
+    await expect(proCard.locator('text=50GB Storage Quota').first()).toBeVisible();
+    await expect(proCard.locator('text=Unlimited Products').first()).toBeVisible();
 
-    const upgradeProButton = page.locator('button', { hasText: 'Upgrade to Pro via Stripe' });
+    const upgradeProButton = proCard.locator('button', { hasText: 'Upgrade to Pro via Stripe' });
     await expect(upgradeProButton).toBeVisible();
 
     await upgradeProButton.click();
@@ -91,17 +94,17 @@ test.describe('Miser Cost Features E2E', () => {
 
   test('Pricing Page displays Business Tier details and navigates to checkout', async ({ page, adminUser, loginAs }) => {
     await loginAs(page, adminUser);
-    await page.goto('/pricing.html');
+    await page.goto('/pricing');
     await page.waitForLoadState('networkidle');
 
-    await expect(page.getByRole('heading', { name: 'Business' })).toBeVisible({ timeout: 15000 });
-    await expect(page.locator('text=$299').first()).toBeVisible();
-    await expect(page.locator('text=Unlimited Agents')).toBeVisible();
-    // Second 'Unlimited AI actions' will be Business Tier
-    // Use more specific locators if needed, but since we just want to verify it's there
-    await expect(page.locator('text=500GB Storage Quota')).toBeVisible();
+    const businessCard = page.locator('.app-card').filter({ has: page.getByRole('heading', { name: 'Business', exact: true }) });
+    await expect(businessCard).toBeVisible({ timeout: 15000 });
+    await expect(businessCard.locator('text=$299').first()).toBeVisible();
+    await expect(businessCard.locator('text=Unlimited Agents').first()).toBeVisible();
+    await expect(businessCard.locator('text=Unlimited AI actions').first()).toBeVisible();
+    await expect(businessCard.locator('text=500GB Storage Quota').first()).toBeVisible();
 
-    const upgradeBusinessButton = page.locator('button', { hasText: 'Upgrade to Business via Stripe' });
+    const upgradeBusinessButton = businessCard.locator('button', { hasText: 'Upgrade to Business via Stripe' });
     await expect(upgradeBusinessButton).toBeVisible();
 
     await upgradeBusinessButton.click();

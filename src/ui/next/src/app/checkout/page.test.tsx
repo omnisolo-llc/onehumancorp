@@ -96,7 +96,7 @@ beforeEach(() => {
     expect(screen.getByText('Secure Checkout')).toBeDefined();
     expect(screen.getByText('Service Deposit')).toBeDefined();
     expect(screen.getByText('Subscribe & Save 10%')).toBeDefined();
-    expect(screen.getByText('$45.00')).toBeDefined();
+    expect(screen.getAllByText('$45.00')[0]).toBeDefined();
 
     const payButton = screen.getByText('Pay');
     fireEvent.click(payButton);
@@ -141,12 +141,22 @@ beforeEach(() => {
       configurable: true,
       value: { assign },
     });
-    global.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve({
-        checkout_url: 'https://mercadopago.com/checkout/test',
-      }),
-    } as any);
+
+    // We must mock the /api/v1/payments/terminal/reserve call to succeed before it calls mercadopago
+    global.fetch = vi.fn().mockImplementation((url) => {
+      if (url === '/api/v1/payments/terminal/reserve') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ success: true, lock_id: 'test-lock' }),
+        });
+      }
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({
+          checkout_url: 'https://mercadopago.com/checkout/test',
+        }),
+      });
+    });
 
     render(<CheckoutPage />);
 

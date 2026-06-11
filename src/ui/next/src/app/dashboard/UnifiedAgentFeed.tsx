@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import GrowthReferralWidget from "../components/GrowthReferralWidget";
+import { enqueueAction, getActions, removeAction } from "../utils/offlineQueue";
 
 type AgentFeedItem = {
   id: string;
@@ -49,6 +50,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
   const [activeTab, setActiveTab] = useState<"proposals" | "activity">("proposals");
   const [activities, setActivities] = useState<OHCLedgerEntry[]>([]);
   const [activityLoading, setActivityLoading] = useState(false);
+  const [isOffline, setIsOffline] = useState(false);
 
   const tenantId = () => {
     if (typeof window === "undefined") return "default";
@@ -64,6 +66,38 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
     };
     window.addEventListener('voice-command-processed', handleVoiceCommandProcessed as EventListener);
     return () => window.removeEventListener('voice-command-processed', handleVoiceCommandProcessed as EventListener);
+  }, []);
+
+  useEffect(() => {
+    setIsOffline(!navigator.onLine);
+
+    const handleOnline = async () => {
+      setIsOffline(false);
+      // Sync queued offline actions
+      try {
+        const actions = await getActions();
+        for (const action of actions) {
+          if (action.type === 'approve_agent_feed') {
+            await submitDecision(action.id, action.payload.approved);
+            await removeAction(action.id);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to sync offline actions", err);
+      }
+    };
+
+    const handleOffline = () => {
+      setIsOffline(true);
+    };
+
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
   }, []);
 
   useEffect(() => {
@@ -242,24 +276,44 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
     return () => events.close();
   }, []);
 
+  const submitDecision = async (id: string, approved: boolean) => {
+    const tenant = tenantId();
+    const res = await fetch(`/api/agents/approvals/${id}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-tenant-id": tenant,
+        "x-user-id": "default",
+      },
+      body: JSON.stringify({ approved }),
+    });
+
+    if (!res.ok) {
+      throw new Error("Failed to submit decision");
+    }
+  };
+
   const handleDecision = async (id: string, approved: boolean) => {
     // Optimistic UI update
     setItems(prev => prev.filter(app => app.id !== id));
 
-    try {
-      const tenant = tenantId();
-      const res = await fetch(`/api/agents/approvals/${id}`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-tenant-id": tenant,
-          "x-user-id": "default",
-        },
-        body: JSON.stringify({ approved }),
+    if (isOffline) {
+      // Enqueue offline action
+      await enqueueAction({
+        id: crypto.randomUUID(),
+        type: 'approve_agent_feed',
+        payload: { id, approved },
+        timestamp: Date.now()
       });
+      return;
+    }
 
-      if (!res.ok) {
-        // If it fails, we might want to fetch again to restore state
+    try {
+      await submitDecision(id, approved);
+    } catch (err: any) {
+      // Revert optimistic update gracefully by refetching
+      const tenant = tenantId();
+      try {
         const refreshRes = await fetch(`/api/agent-feed?tenant_id=${tenant}`, {
             headers: { "x-tenant-id": tenant, "x-user-id": "default" }
         });
@@ -269,9 +323,9 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                setItems(data.items.filter((i: any) => i.lifecycle_state !== "APPROVED" && i.lifecycle_state !== "DISMISSED"));
             }
         }
-        throw new Error("Failed to submit decision");
+      } catch (e) {
+        console.error("Failed to restore state", e);
       }
-    } catch (err: any) {
       setError(err.message || "Action failed");
     }
   };
@@ -280,14 +334,19 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
 
   if (error) {
     return (
-      <div className="w-full mb-6 p-4 glassmorphism rounded-[16px] border border-red-500/50 bg-red-500/10 text-red-500 text-center">
+      <div className="w-full mb-6 p-4 glassmorphism rounded-[16px] border border-[#FF3B30]/50 bg-[#FF3B30]/10 text-[#FF3B30] text-center">
         {error}
       </div>
     );
   }
 
   return (
-    <section className="mb-6 w-full" aria-label="Unified Agent Feed">
+    <section className="mb-6 max-w-[375px] w-full mx-auto sm:max-w-none" aria-label="Unified Agent Feed">
+      {isOffline && (
+        <div className="mb-4 w-full p-2 glassmorphism rounded-[8px] bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 text-center text-sm font-semibold flex items-center justify-center gap-2">
+          <span>📡</span> You are offline. Actions will sync when online.
+        </div>
+      )}
       <div className="mb-4 flex items-center border-b border-gray-200 dark:border-gray-700">
         <button
           onClick={() => setActiveTab("proposals")}
@@ -557,7 +616,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                     <div className="flex flex-col sm:flex-row gap-3 w-full">
                       <button
                         onClick={() => handleDecision(approval.id, true)}
-                        className="flex-1 min-h-[44px] px-4 rounded-[8px] bg-gradient-to-r from-pink-500 to-indigo-500 text-white font-medium hover:from-pink-600 hover:to-indigo-600 transition-all duration-200 shadow-md flex items-center justify-center"
+                        className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-gradient-to-r from-pink-500 to-indigo-500 text-white font-medium hover:from-pink-600 hover:to-indigo-600 transition-all duration-200 shadow-md flex items-center justify-center"
                         aria-label="Approve & Schedule"
                         data-testid="approve-social-post"
                       >
@@ -565,7 +624,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                       </button>
                       <button
                         onClick={() => handleDecision(approval.id, false)}
-                        className="flex-1 min-h-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
+                        className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
                         aria-label="Dismiss proposal"
                         data-testid="dismiss-social-post"
                       >
@@ -576,7 +635,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                     <div className="flex flex-col sm:flex-row gap-3 w-full">
                       <button
                         onClick={() => handleDecision(approval.id, true)}
-                        className="flex-1 min-h-[44px] px-4 rounded-[8px] bg-green-600 text-white font-medium hover:bg-green-700 transition-all duration-200 shadow-md flex items-center justify-center"
+                        className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-green-600 text-white font-medium hover:bg-green-700 transition-all duration-200 shadow-md flex items-center justify-center"
                         aria-label="Approve"
                         data-testid="approve-stockout"
                       >
@@ -584,7 +643,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                       </button>
                       <button
                         onClick={() => handleDecision(approval.id, false)}
-                        className="flex-1 min-h-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
+                        className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
                         aria-label="Dismiss"
                         data-testid="dismiss-stockout"
                       >
@@ -595,7 +654,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                     <div className="flex flex-col sm:flex-row gap-3 w-full">
                       <button
                         onClick={() => handleDecision(approval.id, true)}
-                        className="flex-1 min-h-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center"
+                        className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center"
                         aria-label="Approve & Send Proposal"
                         data-testid="approve-quote-draft"
                       >
@@ -603,7 +662,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                       </button>
                       <a
                         href={`/quoting?id=${approval.id}`}
-                        className="flex-1 min-h-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
+                        className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
                         aria-label="Edit Draft"
                         data-testid="edit-quote-draft"
                       >
@@ -614,7 +673,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                     <div className="flex flex-col sm:flex-row gap-3 w-full">
                       <button
                         onClick={() => handleDecision(approval.id, true)}
-                        className="flex-1 min-h-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center"
+                        className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center"
                         aria-label="Approve & Run Sale"
                         data-testid="approve-run-sale"
                       >
@@ -622,7 +681,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                       </button>
                       <button
                         onClick={() => handleDecision(approval.id, false)}
-                        className="flex-1 min-h-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
+                        className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
                         aria-label="Dismiss proposal"
                         data-testid="dismiss-sale"
                       >
@@ -633,7 +692,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                     <div className="flex flex-col sm:flex-row gap-3 w-full">
                       <button
                         onClick={() => handleDecision(approval.id, true)}
-                        className="flex-1 min-h-[44px] px-4 rounded-[8px] bg-green-600 text-white font-medium hover:bg-green-700 transition-all duration-200 shadow-md flex items-center justify-center"
+                        className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-green-600 text-white font-medium hover:bg-green-700 transition-all duration-200 shadow-md flex items-center justify-center"
                         aria-label="Draft it"
                         data-testid="approve-draft"
                       >
@@ -641,7 +700,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                       </button>
                       <button
                         onClick={() => handleDecision(approval.id, false)}
-                        className="flex-1 min-h-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
+                        className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
                         aria-label="Dismiss proposal"
                         data-testid="dismiss-draft"
                       >
@@ -651,7 +710,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                     <div className="flex flex-col sm:flex-row gap-3 w-full">
                       <button
                         onClick={() => handleDecision(approval.id, true)}
-                        className="flex-1 min-h-[44px] px-4 rounded-[8px] bg-amber-500 text-white font-medium hover:bg-amber-600 transition-all duration-200 shadow-md flex items-center justify-center"
+                        className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-amber-500 text-white font-medium hover:bg-amber-600 transition-all duration-200 shadow-md flex items-center justify-center"
                         aria-label="Approve Restock"
                         data-testid="approve-restock"
                       >
@@ -659,7 +718,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                       </button>
                       <button
                         onClick={() => handleDecision(approval.id, false)}
-                        className="flex-1 min-h-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
+                        className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
                         aria-label="Dismiss restock"
                         data-testid="dismiss-restock"
                       >
@@ -670,7 +729,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                     <>
                       <button
                         onClick={() => handleDecision(approval.id, true)}
-                        className="w-full min-h-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center mb-3"
+                        className="w-full min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center mb-3"
                         aria-label="Approve & Send Proposal"
                         data-testid="approve-send-proposal"
                       >
@@ -679,7 +738,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                       <div className="flex flex-col sm:flex-row gap-3 w-full">
                         <a
                           href={`/quoting?id=${approval.id}`}
-                          className="flex-1 min-h-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
+                          className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
                           aria-label="Edit Draft"
                           data-testid="edit-proposal"
                         >
@@ -699,7 +758,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                     <>
                       <button
                         onClick={() => handleDecision(approval.id, true)}
-                        className="w-full min-h-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center mb-3"
+                        className="w-full min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center mb-3"
                         aria-label="Approve proposal"
                         data-testid="approve-proposal"
                       >
@@ -708,7 +767,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                       <div className="flex flex-col sm:flex-row gap-3 w-full">
                         <button
                           onClick={() => {}}
-                          className="flex-1 min-h-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
+                          className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
                           aria-label="Edit proposal"
                           data-testid="edit-proposal"
                         >
