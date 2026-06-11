@@ -217,9 +217,6 @@ importers:
       dompurify:
         specifier: ^3.0.6
         version: 3.0.6
-      framer-motion:
-        specifier: ^12.40.0
-        version: 12.40.0(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       next:
         specifier: ^14.2.35
         version: 14.2.35(@babel/core@7.29.7)(@playwright/test@1.50.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
