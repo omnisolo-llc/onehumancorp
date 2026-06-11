@@ -9,7 +9,7 @@ issue_description: |
 
   ## Research Report (Track 1 & 2)
   - **Market Landscape**: Leading POS systems (Square, Shopify POS) heavily rely on robust offline modes. Square allows taking offline payments (within risk limits) and Shopify POS maintains a local cache of the product catalog.
-  - **OHC Missing Capability**: While OHC supports mobile layouts (375px), it lacks a local-first SQLite/IndexedDB caching and mutation queue layer on the client side, coupled with a conflict-resolution sync mechanism on the Go backend.
+  - **OHC Missing Capability**: While OHC supports mobile layouts (375px), it lacks a local-first SQLite/IndexedDB caching and mutation queue layer on the client side, coupled with a conflict-resolution sync mechanism on the Rust backend.
   - **Competitive Advantage**: By integrating AI agents into the sync process, the Operations Agent can intelligently notify the owner when back-online syncs cause conflicts (e.g., "Two customers ordered the last vegan cake while you were offline. I've drafted an apology message and a refund link for the second customer.").
 
   ## Design Doc (Track 3)
@@ -24,7 +24,7 @@ issue_description: |
       participant Mobile as Flutter/PWA Client
       participant LocalStore as Client Local Store (Queue)
       participant Gateway as OHC Edge / Gateway
-      participant SyncAPI as Go Sync Engine (gRPC/REST)
+      participant SyncAPI as Rust Sync Engine (gRPC/REST)
       participant DB as Postgres (Row-Level Security)
       participant Agent as Operations Agent
 
@@ -43,19 +43,19 @@ issue_description: |
 
   ### Core Components & Multi-Tenancy
   - **Client-Side Sync Queue**: A durable local store that records actions with `idempotency_key`, `timestamp`, `tenant_id`, and `action_payload`.
-  - **Go Backend Sync Engine**: An endpoint `POST /api/v1/sync/mutate` that processes ordered mutations. Uses PostgreSQL row-level locks and version columns (`xmin` or explicit `version`) to detect stale writes.
+  - **Rust Backend Sync Engine**: An endpoint `POST /api/v1/sync/mutate` that processes ordered mutations. Uses PostgreSQL row-level locks and version columns (`xmin` or explicit `version`) to detect stale writes.
   - **Agent Hub Integration**: When standard conflict resolution fails, the system enqueues a job for the Operations Agent to review the business rules and draft a resolution for the owner.
 
   ## Implementation Prompt (Track 4)
   Implement the backend foundation for the Offline-First Sync Engine.
 
-  **Outcome**: A new Go service endpoint and database schema pattern capable of receiving, validating, and applying batched offline mutations for a tenant with conflict detection.
+  **Outcome**: A new Rust service endpoint and database schema pattern capable of receiving, validating, and applying batched offline mutations for a tenant with conflict detection.
 
   **CUJ**: As an owner (Fatima), I toggle "Vegan Cake" to "Sold Out" while my phone has no signal. Five minutes later, I get signal, and the app seamlessly synchronizes this change to the backend without showing me any technical error screens.
 
   **Acceptance Criteria**:
   - Add a `version` or `updated_at` optimistic concurrency control column to a core entity (e.g., `inventory_items`).
-  - Create a `POST /api/v1/sync/batch` endpoint in the Go server that accepts an array of mutation operations (each with an idempotency key and expected previous version).
+  - Create a `POST /api/v1/sync/batch` endpoint in the Rust server that accepts an array of mutation operations (each with an idempotency key and expected previous version).
   - Implement logic to apply mutations using Postgres transactions, ensuring tenant isolation (`tenant_id`).
   - Return a structured response detailing which mutations succeeded and which failed due to conflicts.
   - Add 100% unit test coverage for the batch sync logic and conflict scenarios.
