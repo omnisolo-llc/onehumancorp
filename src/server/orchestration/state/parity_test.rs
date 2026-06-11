@@ -558,7 +558,7 @@ mod parity_tests {
 
         // SQLite
         if let DbStore::Sqlite(pool) = &sqlite_db.store {
-            sqlx::query("INSERT INTO shared_tasks (id, organization_id, title) VALUES (?, ?, 'test_task')")
+            sqlx::query("INSERT INTO shared_tasks (id, tenant_id, title) VALUES (?, ?, 'test_task')")
                 .bind(&task_id)
                 .bind(org_id)
                 .execute(pool)
