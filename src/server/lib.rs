@@ -5091,6 +5091,125 @@ mod tests {
         assert_eq!(updated.voice_receptionist_number, None);
         assert_eq!(updated.voice_receptionist_persona, None);
     }
+
+    #[tokio::test]
+    async fn test_ui_triage_action_proposed_invoice_and_calendar_slot() {
+        let db = match crate::db::DB::new().await {
+            Ok(d) => std::sync::Arc::new(d),
+            Err(_) => return,
+        };
+
+        // Ensure tenant
+        let tenant_id = "test_tenant_triage_action".to_string();
+
+        if let crate::db::DbStore::Postgres = &db.store {
+            // Setup DB tables explicitly for test
+            let _ = sqlx::query("INSERT INTO tenants (id, name) VALUES ($1, $2) ON CONFLICT DO NOTHING")
+                .bind(&tenant_id)
+                .bind("Test Tenant")
+                .execute(&db.pool)
+                .await;
+
+            // 1. Proposed Invoice
+            let triage_item_id_inv = uuid::Uuid::new_v4().to_string();
+            let _ = sqlx::query("INSERT INTO triage_items (id, tenant_id, source, priority, context, status) VALUES ($1, $2, 'test', 'High', 'test context', 'pending') ON CONFLICT DO NOTHING")
+                .bind(&triage_item_id_inv)
+                .bind(&tenant_id)
+                .execute(&db.pool)
+                .await;
+
+            let invoice_payload = serde_json::json!({
+                "client_id": "test_client",
+                "client_name": "Test Client Name",
+                "total_amount": 1500.0,
+                "currency": "USD"
+            }).to_string();
+
+            let _ = sqlx::query("INSERT INTO triage_proposed_actions (id, triage_item_id, tenant_id, action_type, payload) VALUES ($1, $2, $3, $4, $5) ON CONFLICT DO NOTHING")
+                .bind(uuid::Uuid::new_v4().to_string())
+                .bind(&triage_item_id_inv)
+                .bind(&tenant_id)
+                .bind("ProposedInvoice")
+                .bind(&invoice_payload)
+                .execute(&db.pool)
+                .await;
+
+            let query = crate::UiTenantQuery {
+                tenant_id: Some(tenant_id.clone()),
+                tenant: None,
+                mobile_optimized: None,
+            };
+            let payload = crate::TriageActionPayload {
+                triage_item_id: triage_item_id_inv.clone(),
+                approved: true,
+            };
+
+            crate::update_ui_triage_action_handler(
+                axum::extract::State(db.clone()),
+                axum::extract::Query(query),
+                axum::extract::Json(payload)
+            ).await;
+
+            // Check if invoice was created
+            let (count,): (i64,) = sqlx::query_as("SELECT count(*) FROM invoices WHERE tenant_id = $1 AND client_id = $2")
+                .bind(&tenant_id)
+                .bind("test_client")
+                .fetch_one(&db.pool)
+                .await
+                .unwrap_or((0,));
+            assert!(count > 0, "ProposedInvoice should have been created");
+
+            // 2. Suggested Calendar Slot
+            let triage_item_id_cal = uuid::Uuid::new_v4().to_string();
+            let _ = sqlx::query("INSERT INTO triage_items (id, tenant_id, source, priority, context, status) VALUES ($1, $2, 'test', 'High', 'test context', 'pending') ON CONFLICT DO NOTHING")
+                .bind(&triage_item_id_cal)
+                .bind(&tenant_id)
+                .execute(&db.pool)
+                .await;
+
+            let calendar_payload = serde_json::json!({
+                "customer_id": "test_customer",
+                "service_id": "test_service",
+                "start_time": "2024-01-01T10:00:00Z",
+                "end_time": "2024-01-01T11:00:00Z"
+            }).to_string();
+
+            let _ = sqlx::query("INSERT INTO triage_proposed_actions (id, triage_item_id, tenant_id, action_type, payload) VALUES ($1, $2, $3, $4, $5) ON CONFLICT DO NOTHING")
+                .bind(uuid::Uuid::new_v4().to_string())
+                .bind(&triage_item_id_cal)
+                .bind(&tenant_id)
+                .bind("SuggestedCalendarSlot")
+                .bind(&calendar_payload)
+                .execute(&db.pool)
+                .await;
+
+            let query_cal = crate::UiTenantQuery {
+                tenant_id: Some(tenant_id.clone()),
+                tenant: None,
+                mobile_optimized: None,
+            };
+            let payload_cal = crate::TriageActionPayload {
+                triage_item_id: triage_item_id_cal.clone(),
+                approved: true,
+            };
+
+            crate::update_ui_triage_action_handler(
+                axum::extract::State(db.clone()),
+                axum::extract::Query(query_cal),
+                axum::extract::Json(payload_cal)
+            ).await;
+
+            // Check if booking was created
+            let (b_count,): (i64,) = sqlx::query_as("SELECT count(*) FROM bookings WHERE tenant_id = $1 AND customer_id = $2 AND service_id = $3")
+                .bind(&tenant_id)
+                .bind("test_customer")
+                .bind("test_service")
+                .fetch_one(&db.pool)
+                .await
+                .unwrap_or((0,));
+            assert!(b_count > 0, "SuggestedCalendarSlot should have created a booking");
+        }
+    }
 }
 // resolves #9690
 
