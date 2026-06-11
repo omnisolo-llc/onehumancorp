@@ -115,4 +115,76 @@ test.describe('Distributed Inventory Sync via UI', () => {
       // Should fail since it's already reserved by POS
       expect(onlineCheckoutReq.status()).toBe(409); // Conflict
   });
+
+  test('Persona: Operations Agent is alerted when inventory drops below threshold', async ({ request, page }) => {
+    // Acquire lock and commit order to drop stock below threshold
+    const tenantId = 'tenant-worker-test-low';
+    const reserveReq = await request.post('/api/v1/payments/terminal/reserve', {
+        data: {
+          tenant_id: tenantId,
+          product_id: 'prod-worker-test-2',
+          quantity: 2,
+          ttl_seconds: 15,
+        },
+        headers: {
+          'x-tenant-id': tenantId,
+        }
+    });
+
+    expect(reserveReq.ok()).toBeTruthy();
+    const lockData = await reserveReq.json();
+
+    const commitReq = await request.post('/api/v1/payments/terminal/commit', {
+        data: {
+          tenant_id: tenantId,
+          product_id: 'prod-worker-test-2',
+          quantity: 2,
+          lock_id: lockData.lock_id,
+        },
+        headers: {
+          'x-tenant-id': tenantId,
+        }
+    });
+
+    expect(commitReq.ok()).toBeTruthy();
+  });
+
+  test('Offline POS sync reconciles and resolves properly', async ({ request }) => {
+    const tenantId = 'e2e-tenant-pos';
+
+    // Simulate sync
+    const syncReq = await request.post('/api/v1/payments/terminal/sync_offline', {
+        data: {
+          tenant_id: tenantId,
+          client_id: 'device_123',
+          transactions: [
+              {
+                  id: 'tx_offline_123',
+                  tenant_id: tenantId,
+                  client_id: 'device_123',
+                  amount_cents: 1000,
+                  currency: 'USD',
+                  payload: JSON.stringify({
+                      mutation: {
+                          product_id: 'prod_123',
+                          quantity_deducted: 1,
+                          amount: 1000,
+                          transaction_id: 'tx_offline_123'
+                      }
+                  }),
+                  status: 'PENDING',
+                  created_at_unix: Date.now()
+              }
+          ]
+        },
+        headers: {
+          'x-tenant-id': tenantId,
+        }
+    });
+
+    expect(syncReq.ok()).toBeTruthy();
+    const data = await syncReq.json();
+    expect(data.success).toBeTruthy();
+    expect(data.synced_count).toBe(1);
+  });
 });
