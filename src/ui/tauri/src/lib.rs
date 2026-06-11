@@ -74,6 +74,22 @@ struct OnboardingState {
 
 #[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
+struct IntakeProductVariant {
+    name: String,
+    price_modifier: String,
+}
+
+#[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct IntakeProduct {
+    name: String,
+    price: String,
+    description: Option<String>,
+    variants: Option<Vec<IntakeProductVariant>>,
+}
+
+#[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
 struct StartOnboardingRequest {
     business_type: Option<String>,
     company_name: Option<String>,
@@ -90,6 +106,7 @@ struct StartOnboardingRequest {
     price_type: Option<String>,
     location: Option<String>,
     target_audience: Option<String>,
+    initial_products: Option<Vec<IntakeProduct>>,
 }
 
 fn onboarding_state_path() -> std::path::PathBuf {

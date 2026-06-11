@@ -988,7 +988,8 @@
                    domainChoice: "subdomain",
                    priceType: "fixed",
                    location: "Local",
-                   targetAudience: "General"
+                   targetAudience: "General",
+                   initialProducts: state.first_offer ? [{ name: state.first_offer, price: "0.00" }] : []
                };
 
                if (window.__TAURI__ && window.__TAURI__.core) {
