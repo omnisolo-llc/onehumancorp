@@ -11,6 +11,8 @@ type Message = {
   translated_from_language?: string;
   draft_reply?: string;
   status?: string;
+  sender_id?: string;
+  customer_id?: string;
   created_at?: string;
 };
 
@@ -164,9 +166,22 @@ export default function InboxPage() {
             <div className="app-empty">Select a database-backed message to inspect it.</div>
           ) : (
             <div className="app-panel-body">
-              <div className="mb-4">
-                <div className="app-metric-label">Source</div>
-                <div className="mt-1 text-sm font-semibold text-gray-900">{selected.source || "Unknown source"}</div>
+              <div className="mb-4 flex items-center justify-between">
+                <div>
+                  <div className="app-metric-label">Source</div>
+                  <div className="mt-1 text-sm font-semibold text-gray-900">{selected.source || "Unknown source"}</div>
+                </div>
+                {selected.sender_id && (
+                  <div className="text-right">
+                    <div className="app-metric-label">Sender</div>
+                    <div className="mt-1 flex items-center gap-2">
+                      <span className="text-sm font-semibold text-gray-900">{selected.sender_id}</span>
+                      {selected.customer_id && (
+                        <span className="app-badge good">Known Customer</span>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
               <div className="mb-4">
                 <div className="flex items-center justify-between gap-3">
