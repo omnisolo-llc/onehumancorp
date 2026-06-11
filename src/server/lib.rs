@@ -2662,6 +2662,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         rate_limiter: rate_limiter.clone(),
         db_pool: db.pool.clone(),
         db: db.clone(),
+        orchestrator: dept_orchestrator.clone(),
     };
 
     let reverse_tunnel_server = crate::agents::mcp::proxy::server::ReverseTunnelServer::new(std::sync::Arc::new(db.pool.clone()));
