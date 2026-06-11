@@ -140,6 +140,15 @@ pub struct AgentRunConfig {
     pub enable_lazy_tool_loading: bool,
     pub enable_langgraph_mechanic: bool,
     pub enable_3_stage_anthropic_tool_gating: bool,
+    pub enable_openai_guardrails: bool,
+    pub openai_input_max_length: usize,
+    pub openai_input_require_patterns: Vec<String>,
+    pub openai_input_deny_patterns: Vec<String>,
+    pub openai_output_min_length: usize,
+    pub openai_output_require_json: bool,
+    pub openai_output_deny_patterns: Vec<String>,
+    pub openai_tool_allowed_tools: Vec<String>,
+    pub openai_tool_block_args: Vec<String>,
     pub enable_actor_model_message_passing: bool,
     pub enable_tao_orchestration_loop: bool,
     pub enable_agent_curated_memory: bool,
@@ -174,6 +183,34 @@ impl AgentRunConfig {
             registry
                 .tool_guardrails
                 .push(std::sync::Arc::new(anthropic_gater));
+            self.guardrails = Some(registry);
+        }
+    }
+
+    pub fn apply_openai_guardrails(&mut self) {
+        if self.enable_openai_guardrails {
+            let mut registry = self.guardrails.take().unwrap_or_default();
+
+            let input_validator = crate::guardrails::openai_hooks::OpenAiInputValidator::new(
+                self.openai_input_max_length,
+                self.openai_input_require_patterns.clone(),
+                self.openai_input_deny_patterns.clone(),
+            );
+            registry.input_guardrails.push(std::sync::Arc::new(input_validator));
+
+            let output_auditor = crate::guardrails::openai_hooks::OpenAiOutputAuditor::new(
+                self.openai_output_min_length,
+                self.openai_output_require_json,
+                self.openai_output_deny_patterns.clone(),
+            );
+            registry.output_guardrails.push(std::sync::Arc::new(output_auditor));
+
+            let tool_enforcer = crate::guardrails::openai_hooks::OpenAiToolPolicyEnforcer::new(
+                self.openai_tool_allowed_tools.clone(),
+                self.openai_tool_block_args.clone(),
+            );
+            registry.tool_guardrails.push(std::sync::Arc::new(tool_enforcer));
+
             self.guardrails = Some(registry);
         }
     }
@@ -230,6 +267,15 @@ impl Default for AgentRunConfig {
             enable_lazy_tool_loading: false,
             enable_langgraph_mechanic: false,
             enable_3_stage_anthropic_tool_gating: false,
+            enable_openai_guardrails: false,
+            openai_input_max_length: 50000,
+            openai_input_require_patterns: vec![],
+            openai_input_deny_patterns: vec![],
+            openai_output_min_length: 0,
+            openai_output_require_json: false,
+            openai_output_deny_patterns: vec![],
+            openai_tool_allowed_tools: vec![],
+            openai_tool_block_args: vec![],
             enable_actor_model_message_passing: false,
             enable_tao_orchestration_loop: false,
             enable_agent_curated_memory: false,
@@ -415,6 +461,7 @@ impl Agent {
     {
         let mut active_cfg_cloned = cfg.clone();
         active_cfg_cloned.apply_anthropic_gating();
+        active_cfg_cloned.apply_openai_guardrails();
         let cfg = &active_cfg_cloned;
 
         on_event(AgentEvent::RunStarted { iteration: 0 });
@@ -733,6 +780,7 @@ impl Agent {
     {
         let mut active_cfg_cloned = cfg.clone();
         active_cfg_cloned.apply_anthropic_gating();
+        active_cfg_cloned.apply_openai_guardrails();
         let cfg = &active_cfg_cloned;
 
         // Guardrails & Safety: OpenAI Mechanic (Input Guardrail)
@@ -1185,6 +1233,7 @@ impl Agent {
     {
         let mut active_cfg_cloned = cfg.clone();
         active_cfg_cloned.apply_anthropic_gating();
+        active_cfg_cloned.apply_openai_guardrails();
         let cfg = &active_cfg_cloned;
 
         tracing::info!("Executing via Actor-model message passing");
@@ -1263,6 +1312,7 @@ impl Agent {
     {
         let mut active_cfg_cloned = cfg.clone();
         active_cfg_cloned.apply_anthropic_gating();
+        active_cfg_cloned.apply_openai_guardrails();
         let cfg = &active_cfg_cloned;
 
         // Architectural Decision 1: Single-agent vs Multi-agent: Maximize single-agent first.
@@ -1720,6 +1770,7 @@ impl Agent {
     {
         let mut active_cfg_cloned = cfg.clone();
         active_cfg_cloned.apply_anthropic_gating();
+        active_cfg_cloned.apply_openai_guardrails();
         let cfg = &active_cfg_cloned;
 
         on_event(AgentEvent::RunStarted { iteration: 0 });
@@ -1800,6 +1851,7 @@ impl Agent {
     {
         let mut active_cfg_cloned = cfg.clone();
         active_cfg_cloned.apply_anthropic_gating();
+        active_cfg_cloned.apply_openai_guardrails();
         let cfg = &active_cfg_cloned;
 
         let timeout_duration = agent_task_timeout();
@@ -2437,6 +2489,7 @@ impl Agent {
     {
         let mut active_cfg_cloned = cfg.clone();
         active_cfg_cloned.apply_anthropic_gating();
+        active_cfg_cloned.apply_openai_guardrails();
         let cfg = &active_cfg_cloned;
 
         let mut final_cfg = cfg.clone();
@@ -2625,6 +2678,7 @@ impl Agent {
     {
         let mut active_cfg_cloned = cfg.clone();
         active_cfg_cloned.apply_anthropic_gating();
+        active_cfg_cloned.apply_openai_guardrails();
         let cfg = &active_cfg_cloned;
 
         let mut self_with_memory = self;
@@ -9787,6 +9841,32 @@ mod guardrail_tests {
             }
             Ok(())
         }
+    }
+
+    #[tokio::test]
+    async fn test_openai_guardrails_integration() {
+        let llm = Arc::new(TestLlmClient {
+            responses: Mutex::new(vec![]),
+        });
+        let agent = Agent::new(llm, vec![]);
+
+        let mut cfg = AgentRunConfig::default();
+        cfg.enable_openai_guardrails = true;
+        cfg.openai_input_deny_patterns = vec!["blocked_input".to_string()];
+
+        let mut events = vec![];
+        let mut on_event = |e| {
+            events.push(e);
+        };
+
+        let result = agent
+            .run(&cfg, "This contains blocked_input text", &mut on_event)
+            .await;
+
+        assert!(result.is_err());
+        let err_str = result.unwrap_err().to_string();
+        assert!(err_str.contains("Input Guardrail tripwire fires") || err_str.contains("OpenAI Input Guardrail tripped"), "Expected tripwire fires, got: {}", err_str);
+        assert!(err_str.contains("contains denied pattern 'blocked_input'"));
     }
 
     #[tokio::test]
