@@ -1436,6 +1436,30 @@
             `;
           }
 
+          if (item.event_source === 'instagram_dm' || item.context_payload?.feature_type === 'instagram_dm') {
+            let parsedPayload = item.context_payload || {};
+            return `
+              <div class="triage-item" data-testid="triage-card-${item.id}" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.4); backdrop-filter: blur(20px); border-radius: 16px; padding: 16px; border: 1px solid rgba(255,255,255,0.6);">
+                <div class="triage-header" style="margin-bottom: 12px;">
+                  <div class="triage-source" style="display: flex; align-items: center; gap: 8px;">
+                    <span style="font-size: 18px;">💬</span> <strong>Instagram DM</strong>
+                  </div>
+                  <div class="triage-priority ${priorityClass}">${item.priority || 'Normal'}</div>
+                </div>
+                <div class="triage-context" style="font-weight: 600; margin-bottom: 12px; font-size: 15px;">
+                  ${parsedPayload.customer_message || 'New message'}
+                </div>
+                <div style="background: rgba(0,0,0,0.03); padding: 12px; border-radius: 12px; margin-bottom: 16px; font-size: 14px; color: #333; font-style: italic;">
+                  ${parsedPayload.draft_reply || ''}
+                </div>
+                <div class="triage-controls" style="display: flex; gap: 8px;">
+                  <button class="triage-btn-approve" data-testid="approve-instagram-dm" onclick="handleTriageAction('${item.id}', 'APPROVED')" style="flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 12px; font-weight: 600; border: none; cursor: pointer;">Approve Reply</button>
+                  <button class="triage-btn-dismiss" onclick="handleTriageAction('${item.id}', 'DISMISSED')" style="flex: 1; background: rgba(0,0,0,0.05); color: #1d1d1f; padding: 12px; border-radius: 12px; font-weight: 600; border: none; cursor: pointer;">Edit Draft</button>
+                </div>
+              </div>
+            `;
+          }
+
           if (item.action_type === 'SocialPostDraft') {
             let parsedPayload = {};
             try { parsedPayload = JSON.parse(item.action_payload || '{}'); } catch(e){}
