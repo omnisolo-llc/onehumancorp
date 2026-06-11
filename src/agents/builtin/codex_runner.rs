@@ -498,8 +498,8 @@ impl AppServer {
                 );
             }
 
-            if let Some(guardrail_cfg) = self.runner.core.runtime_config.guardrails.as_ref() {
-                if let Err(e) = guardrail_cfg.check_input(&ctx_message) {
+            if let Some(guardrail_cfg) = self.runner.core.runtime_config.guardrails.as_ref()
+                && let Err(e) = guardrail_cfg.check_input(&ctx_message) {
                     let resp = JsonRpcResponse {
                         jsonrpc: "2.0".to_string(),
                         id: req.id,
@@ -512,7 +512,6 @@ impl AppServer {
                     };
                     return serde_json::to_string(&resp).unwrap();
                 }
-            }
 
             match self
                 .runner

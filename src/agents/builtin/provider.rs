@@ -74,6 +74,12 @@ pub struct BaseProvider {
     cred: RwLock<Credentials>,
 }
 
+impl Default for BaseProvider {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl BaseProvider {
     pub fn new() -> Self {
         BaseProvider {
@@ -134,17 +140,16 @@ async fn execute_in_isolation(
     let strategy = crate::harness::AssistantClassIsolationStrategy::new();
 
     let mut actual_transport = transport;
-    if actual_transport.is_none() {
-        if let Ok(redis_url) = std::env::var("REDIS_URL") {
+    if actual_transport.is_none()
+        && let Ok(redis_url) = std::env::var("REDIS_URL") {
             let topic = format!("agent_harness_output:{}", agent_type);
             if let Ok(t) = RedisIsolationTransport::new(&redis_url, &topic).await {
                 actual_transport = Some(Arc::new(t));
             }
         }
-    }
 
     strategy
-        .run_in_isolation(&command, agent_type, worktree, actual_transport)
+        .run_in_isolation(command, agent_type, worktree, actual_transport)
         .await
 }
 
@@ -152,6 +157,12 @@ async fn execute_in_isolation(
 
 pub struct ClaudeProvider {
     base: BaseProvider,
+}
+
+impl Default for ClaudeProvider {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl ClaudeProvider {
@@ -210,6 +221,12 @@ impl Provider for ClaudeProvider {
 
 pub struct GeminiProvider {
     base: BaseProvider,
+}
+
+impl Default for GeminiProvider {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl GeminiProvider {
@@ -272,6 +289,12 @@ pub struct OpenCodeProvider {
     base: BaseProvider,
 }
 
+impl Default for OpenCodeProvider {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl OpenCodeProvider {
     pub fn new() -> Self {
         OpenCodeProvider {
@@ -326,6 +349,12 @@ impl Provider for OpenCodeProvider {
 
 pub struct OpenClawProvider {
     base: BaseProvider,
+}
+
+impl Default for OpenClawProvider {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl OpenClawProvider {
@@ -386,6 +415,12 @@ pub struct IronClawProvider {
     base: BaseProvider,
 }
 
+impl Default for IronClawProvider {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl IronClawProvider {
     pub fn new() -> Self {
         IronClawProvider {
@@ -441,6 +476,12 @@ impl Provider for IronClawProvider {
 
 pub struct MiniMaxiProvider {
     base: BaseProvider,
+}
+
+impl Default for MiniMaxiProvider {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl MiniMaxiProvider {
@@ -513,6 +554,12 @@ impl Provider for MiniMaxiProvider {
 
 pub struct BuiltinProvider {}
 
+impl Default for BuiltinProvider {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl BuiltinProvider {
     pub fn new() -> Self {
         BuiltinProvider {}
@@ -584,6 +631,12 @@ impl Provider for BuiltinProvider {
 
 pub struct ScoutProvider {
     base: BaseProvider,
+}
+
+impl Default for ScoutProvider {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl ScoutProvider {
