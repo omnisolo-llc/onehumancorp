@@ -5,6 +5,7 @@ pub struct BudgetManager {
     current: Mutex<f64>,
     pub telemetry_store: Option<std::sync::Arc<::server_harness::telemetry::ViolationStore>>,
     tenant_id: Option<String>,
+    pub alert_threshold_percent: f64,
 }
 
 impl BudgetManager {
@@ -14,7 +15,13 @@ impl BudgetManager {
             current: Mutex::new(0.0),
             telemetry_store: None,
             tenant_id: None,
+            alert_threshold_percent: 80.0,
         }
+    }
+
+    pub fn with_alert_threshold(mut self, threshold: f64) -> Self {
+        self.alert_threshold_percent = threshold;
+        self
     }
 
     pub fn with_telemetry(mut self, tenant_id: String, store: std::sync::Arc<::server_harness::telemetry::ViolationStore>) -> Self {
@@ -61,6 +68,15 @@ impl BudgetManager {
 
     pub fn record_spend_cents(&self, amount_cents: i64) -> Result<bool, String> {
         self.record_spend((amount_cents as f64) / 100.0)
+    }
+
+    pub fn check_alert_threshold(&self) -> bool {
+        if self.total_limit <= 0.0 {
+            return false;
+        }
+        let current = self.current.lock().unwrap();
+        let usage_percent = (*current / self.total_limit) * 100.0;
+        usage_percent >= self.alert_threshold_percent
     }
 }
 
@@ -126,5 +142,35 @@ mod tests {
         let manager = BudgetManager::new(100.0);
         assert!(manager.record_spend_cents(0).unwrap());
         assert_eq!(manager.get_remaining_cents(), 10000);
+    }
+
+    #[test]
+    fn test_check_alert_threshold() {
+        let manager = BudgetManager::new(100.0);
+
+        // Not over threshold initially
+        assert!(!manager.check_alert_threshold());
+
+        // Spend 50%
+        manager.record_spend(50.0).unwrap();
+        assert!(!manager.check_alert_threshold());
+
+        // Spend up to 80%
+        manager.record_spend(30.0).unwrap();
+        assert!(manager.check_alert_threshold()); // Default is 80.0
+
+        // Custom threshold
+        let custom_manager = BudgetManager::new(100.0).with_alert_threshold(90.0);
+        custom_manager.record_spend(85.0).unwrap();
+        assert!(!custom_manager.check_alert_threshold());
+
+        custom_manager.record_spend(10.0).unwrap(); // 95%
+        assert!(custom_manager.check_alert_threshold());
+    }
+
+    #[test]
+    fn test_check_alert_threshold_zero_limit() {
+        let manager = BudgetManager::new(0.0);
+        assert!(!manager.check_alert_threshold());
     }
 }

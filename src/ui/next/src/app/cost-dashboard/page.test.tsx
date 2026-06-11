@@ -131,6 +131,9 @@ describe('CostDashboardPage', () => {
     // total cost
     expect(screen.getByText('$510.00')).toBeDefined();
 
+    // Budget Alert
+    expect(screen.queryByText('Budget Alert')).toBeDefined(); // Operations department usage reaches 100%
+
     // projected monthly cost
     expect(screen.getByText('$2185.71')).toBeDefined();
 
@@ -184,6 +187,70 @@ describe('CostDashboardPage', () => {
     // Data is null, formatting should return $0.00
     const zeroElements = screen.getAllByText('$0.00');
     expect(zeroElements.length).toBeGreaterThan(0);
+  });
+
+  test('renders Budget Alert when threshold is crossed', async () => {
+    const mockCostData = {
+      total_revenue: 150000,
+      total_costs: 200000,
+      projected_monthly_cost: 200000,
+      llm_cost: 180000,
+      storage_cost: 0,
+      payment_fees: 0,
+      network_cost: 0,
+      bandwidth_savings: 0,
+      cache_hit_rate: 0,
+      cost_per_1k_tokens: 0,
+      period_start: "2023-10-01",
+      period_end: "2023-10-31",
+      trend: [],
+      agent_costs: [],
+      department_tier_usage: {
+        departments: [
+          {
+            id: "dept-ops",
+            department_type: "operations",
+            agent_id: "operations_agent",
+            actions_used: 16,
+            action_limit: 20, // 16 / 20 = 0.8 (>= 0.8 threshold)
+            usage_percent: 80,
+            soft_limit_reached: false,
+          }
+        ],
+      },
+    };
+
+    const mockPlanData = {
+      current_plan: "Starter",
+      ai_actions_used: 150,
+      ai_actions_limit: 1000,
+      storage_used_bytes: 0,
+      storage_limit_bytes: 0,
+      next_bill_estimated: 0,
+    };
+
+    global.fetch = vi.fn().mockImplementation((url: string) => {
+      if (url.includes('cost-dashboard')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve(mockCostData)
+        });
+      } else if (url.includes('my-plan')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve(mockPlanData)
+        });
+      }
+      return Promise.reject(new Error('not found'));
+    }) as any;
+
+    render(<CostDashboardPage />);
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('cost-dashboard-loading')).toBeNull();
+    });
+
+    expect(screen.getByText('Budget Alert')).toBeDefined();
   });
 
   test('renders 0 limits properly', async () => {
