@@ -7,10 +7,9 @@ describe('/api/videos GET', () => {
     vi.clearAllMocks();
   });
 
-  it('fetches videos from the backend and returns them', async () => {
+  it('fetches videos from backend and returns them', async () => {
     const mockVideos = [
-      { id: 1, title: 'How to add a product', duration: '1:20' },
-      { id: 2, title: 'Setting up payments', duration: '1:15' },
+      { id: 1, title: 'Test Video', duration: '1:00', video_url: '/test.mp4' }
     ];
 
     global.fetch = vi.fn().mockResolvedValue({
@@ -28,7 +27,7 @@ describe('/api/videos GET', () => {
     expect(data).toEqual(mockVideos);
   });
 
-  it('returns an empty array and correct status on backend error', async () => {
+  it('returns empty array and correct status on backend error', async () => {
     global.fetch = vi.fn().mockResolvedValue({
       ok: false,
       status: 404,

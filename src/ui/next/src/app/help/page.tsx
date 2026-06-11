@@ -32,7 +32,7 @@ export default function HelpCenterPage() {
   );
 
   return (
-    <div className="min-h-screen bg-[#F5F5F7] py-12 px-4 sm:px-6 lg:px-8 font-inter">
+    <div className="min-h-screen bg-[#F5F5F7] py-8 px-4 sm:px-8 font-inter">
       <div className="max-w-4xl mx-auto">
         <h1 className="text-3xl sm:text-4xl font-extrabold font-outfit text-[#1D1D1F] mb-8 text-center tracking-tight">Help Center</h1>
 
@@ -42,12 +42,12 @@ export default function HelpCenterPage() {
             placeholder="Search for help articles and videos..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full p-4 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-[0_8px_32px_rgba(0,0,0,0.05)] text-gray-900 glassmorphism hover:bg-white/75 min-h-[44px] text-base placeholder:text-gray-500 transition-all"
+            className="w-full p-4 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-xl border border-white/20 text-gray-900 glassmorphism hover:bg-white/75 min-h-[44px] text-base placeholder:text-gray-500 transition-all"
           />
         </div>
 
         {filteredArticles.length === 0 && filteredVideos.length === 0 ? (
-          <div className="flex flex-col items-center justify-center glassmorphism py-16 px-4 shadow-[0_4px_16px_rgba(0,0,0,0.02)]">
+          <div className="flex flex-col items-center justify-center glassmorphism py-16 px-4 shadow-xl border border-white/20">
             <svg className="w-16 h-16 text-gray-400 mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
@@ -82,7 +82,7 @@ export default function HelpCenterPage() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                       {filteredArticles.filter(a => (a.category || "General") === category).map((article, idx) => (
                         <Link key={idx} href={article.link} className="block group">
-                          <div className="glassmorphism p-6 shadow-[0_4px_16px_rgba(0,0,0,0.04)] group-hover:border-blue-300 group-hover:shadow-[0_0_15px_rgba(59,130,246,0.5)] group-hover:-translate-y-1 hover:bg-white/75 transition-all duration-300 cursor-pointer h-full flex flex-col min-h-[140px]">
+                          <div className="glassmorphism p-6 shadow-xl border border-white/20 group-hover:border-blue-300 group-hover:shadow-[0_0_15px_rgba(59,130,246,0.5)] group-hover:-translate-y-1 hover:bg-white/75 transition-all duration-300 cursor-pointer h-full flex flex-col min-h-[140px]">
                             <h3 className="text-xl font-bold font-outfit text-blue-600 mb-3 group-hover:text-blue-700">{article.title}</h3>
                             <p className="text-gray-600 leading-relaxed flex-grow">{article.desc}</p>
                           </div>
@@ -99,7 +99,7 @@ export default function HelpCenterPage() {
             )}
 
             <section className="mt-12 pt-8 border-t border-gray-200/50">
-              <div className="bg-yellow-50/50 glassmorphism p-6 border-yellow-200/50 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="bg-yellow-50/50 glassmorphism p-6 border-yellow-200/50 shadow-xl border border-white/20 flex flex-col sm:flex-row items-center justify-between gap-4">
                 <div>
                   <h3 className="text-lg font-bold font-outfit text-yellow-900">Advanced Users</h3>
                   <p className="text-yellow-800/80 text-sm mt-1">For users who want to use OHC's APIs directly (e.g., connect a custom checkout).</p>

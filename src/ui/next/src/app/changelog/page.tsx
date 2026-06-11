@@ -27,7 +27,7 @@ export default function ChangelogPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#F5F5F7]/80 py-12 px-4 sm:px-6 lg:px-8 font-inter backdrop-blur-[30px] saturate-[210%]">
+    <div className="min-h-screen bg-[#F5F5F7]/80 py-8 px-4 sm:px-8 font-inter backdrop-blur-[30px] saturate-[210%]">
       <div className="max-w-3xl mx-auto">
         <h1 className="text-3xl font-bold text-gray-900 mb-8 font-outfit text-center tracking-tight">
           Release Notes & Changelog
@@ -45,7 +45,7 @@ export default function ChangelogPage() {
             sections.map((section, idx) => (
               <div
                 key={idx}
-                className="glassmorphism p-6 shadow-[0_8px_32px_rgba(0,0,0,0.05)] transition-all"
+                className="glassmorphism p-6 shadow-xl border border-white/20 transition-all"
               >
                 <h2 className="text-xl font-bold text-blue-600 mb-4 font-outfit">
                   {section.version}

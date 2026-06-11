@@ -26,4 +26,29 @@ describe('/api/changelog GET', () => {
     expect(global.fetch).toHaveBeenCalledWith('http://127.0.0.1:18789/api/changelog');
     expect(data).toEqual(mockResults);
   });
+
+  it('returns empty array and correct status on backend error', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 500,
+    });
+
+    const request = new NextRequest('http://localhost:3000/api/changelog');
+    const response = await GET(request);
+
+    expect(response.status).toBe(500);
+    const data = await response.json();
+    expect(data).toEqual([]);
+  });
+
+  it('handles fetch exceptions gracefully', async () => {
+    global.fetch = vi.fn().mockRejectedValue(new Error('Network error'));
+
+    const request = new NextRequest('http://localhost:3000/api/changelog');
+    const response = await GET(request);
+
+    expect(response.status).toBe(500);
+    const data = await response.json();
+    expect(data).toEqual([]);
+  });
 });
