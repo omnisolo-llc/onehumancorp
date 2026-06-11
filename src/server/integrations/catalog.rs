@@ -10,7 +10,7 @@ pub fn get_catalog() -> Vec<IntegrationProvider> {
         ),
         metadata_provider(
             "twilio",
-            "Twilio SMS",
+            "Twilio WhatsApp",
             "sms",
             "https://api.twilio.com".to_string(),
         ),

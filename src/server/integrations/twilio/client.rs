@@ -28,9 +28,12 @@ impl TwilioClientWrapper for RealTwilioClient {
     async fn send_sms(&self, to: &str, from: &str, body: &str) -> Result<(), String> {
         let url = format!("https://api.twilio.com/2010-04-01/Accounts/{}/Messages.json", self.account_sid);
 
+        let to_whatsapp = if to.starts_with("whatsapp:") { to.to_string() } else { format!("whatsapp:{}", to) };
+        let from_whatsapp = if from.starts_with("whatsapp:") { from.to_string() } else { format!("whatsapp:{}", from) };
+
         let params = [
-            ("To", to),
-            ("From", from),
+            ("To", to_whatsapp.as_str()),
+            ("From", from_whatsapp.as_str()),
             ("Body", body),
         ];
 

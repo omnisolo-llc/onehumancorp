@@ -17,7 +17,7 @@ impl TwilioProvider {
             client: Arc::new(client),
             metadata: ProviderMetadata {
                 id: "twilio".to_string(),
-                name: "Twilio SMS".to_string(),
+                name: "Twilio WhatsApp".to_string(),
                 category: "sms".to_string(),
                 base_url: "https://api.twilio.com".to_string(),
             },
@@ -29,7 +29,7 @@ impl TwilioProvider {
             client,
             metadata: ProviderMetadata {
                 id: "twilio".to_string(),
-                name: "Twilio SMS".to_string(),
+                name: "Twilio WhatsApp".to_string(),
                 category: "sms".to_string(),
                 base_url: "https://api.twilio.com".to_string(),
             },
