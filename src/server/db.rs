@@ -721,6 +721,12 @@ impl DB {
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         PRIMARY KEY (tenant_id, year_month)
                     );
+                    CREATE TABLE IF NOT EXISTS settings (
+                        tenant_id TEXT PRIMARY KEY,
+                        sms_critical_phone TEXT,
+                        voice_receptionist_number TEXT,
+                        whatsapp_business_number TEXT
+                    );
                     CREATE TABLE IF NOT EXISTS onboarding_state (
                         tenant_id TEXT NOT NULL,
                         user_id TEXT NOT NULL,

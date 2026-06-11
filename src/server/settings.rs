@@ -32,6 +32,7 @@ pub struct AppSettings {
     pub voice_receptionist_enabled: bool,
     pub voice_receptionist_number: Option<String>,
     pub voice_receptionist_persona: Option<String>,
+    pub whatsapp_business_number: Option<String>,
 }
 
 impl AppSettings {
@@ -55,6 +56,7 @@ impl AppSettings {
             voice_receptionist_enabled: false,
             voice_receptionist_number: None,
             voice_receptionist_persona: Some("Friendly".to_string()),
+            whatsapp_business_number: None,
         }
     }
 }
@@ -138,6 +140,7 @@ impl Store {
         self.save()
     }
 
+
     pub fn set_voice_settings(&self, enabled: bool, number: Option<String>, persona: Option<String>) -> Result<(), String> {
         let mut data = self.data.write().unwrap();
         data.voice_receptionist_enabled = enabled;
@@ -146,6 +149,14 @@ impl Store {
         drop(data);
         self.save()
     }
+
+    pub fn set_whatsapp_settings(&self, number: Option<String>) -> Result<(), String> {
+        let mut data = self.data.write().unwrap();
+        data.whatsapp_business_number = number;
+        drop(data);
+        self.save()
+    }
+
 }
 
 impl Default for Store {

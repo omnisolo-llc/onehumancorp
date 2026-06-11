@@ -30,6 +30,9 @@ export default function SettingsPage() {
     voice_receptionist_persona: "Friendly",
   });
 
+  const [whatsappSettings, setWhatsappSettings] = useState({
+    whatsapp_business_number: "",
+  });
   const [isLoading, setIsLoading] = useState(true);
   const [agentName, setAgentName] = useState("Agent One");
 
@@ -55,6 +58,17 @@ export default function SettingsPage() {
           }
         })
         .catch(e => console.error("Failed to load assistant settings", e)),
+
+      fetch("/api/settings/whatsapp")
+        .then(res => res.json())
+        .then(data => {
+          if (data) {
+            setWhatsappSettings({
+              whatsapp_business_number: data.whatsapp_business_number || "",
+            });
+          }
+        })
+        .catch(e => console.error("Failed to load whatsapp settings", e)),
 
       fetch("/api/settings/voice")
         .then(res => res.json())
@@ -153,6 +167,21 @@ export default function SettingsPage() {
       });
     } catch (e) {
       console.error("Failed to save voice settings", e);
+    }
+  };
+
+  const handleWhatsappSettingChange = async (value: string) => {
+    const newSettings = { ...whatsappSettings, whatsapp_business_number: value };
+    setWhatsappSettings(newSettings);
+
+    try {
+      await fetch("/api/settings/whatsapp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newSettings),
+      });
+    } catch (e) {
+      console.error("Failed to save whatsapp settings", e);
     }
   };
 
@@ -403,6 +432,29 @@ export default function SettingsPage() {
               )}
             </div>
           </div>
+          </div>
+        </section>
+
+        <section className="app-panel">
+          <div className="app-panel-header">
+            <div>
+              <div className="app-panel-title">WhatsApp Business API</div>
+              <div className="app-list-subtitle">Connect your WhatsApp Business number to receive inquiries.</div>
+            </div>
+          </div>
+          <div className="app-panel-body">
+            <label className="block">
+              <span className="app-metric-label">WhatsApp Business Number</span>
+              <input
+                aria-label="WhatsApp Business Number"
+                type="text"
+                value={whatsappSettings.whatsapp_business_number}
+                onChange={(e) => handleWhatsappSettingChange(e.target.value)}
+                className="mt-2 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800"
+                placeholder="whatsapp:+1234567890"
+              />
+            </label>
+            <p className="mt-2 text-xs text-gray-500">Ensure the number is in E.164 format with 'whatsapp:' prefix, e.g., whatsapp:+15551234567</p>
           </div>
         </section>
 

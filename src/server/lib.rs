@@ -2725,6 +2725,15 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .route_layer(axum::middleware::from_fn_with_state(webhook_state.clone(), api::billing_webhook::webhook_security_middleware))
         .with_state(webhook_state);
 
+    let twilio_webhook_state = api::twilio_webhook::TwilioWebhookState {
+        hub: hub.clone(),
+        db: db.clone(),
+        orchestrator: dept_orchestrator.clone(),
+    };
+    let twilio_webhook_router = axum::Router::new()
+        .route("/api/v1/webhooks/twilio", axum::routing::post(api::twilio_webhook::twilio_webhook_post_handler))
+        .with_state(twilio_webhook_state);
+
     let meta_webhook_state = api::meta_webhook::MetaWebhookState {
         hub: hub.clone(),
         db: db.clone(),
@@ -4637,6 +4646,64 @@ async fn create_ui_bom_item_handler(
                 axum::response::Json(serde_json::json!({ "success": true }))
             }
         }))
+        .route("/api/settings/whatsapp", axum::routing::get({
+            let settings_store = settings_store.clone();
+            move |axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>| async move {
+                let settings = settings_store.get();
+                axum::response::Json(serde_json::json!({
+                    "whatsapp_business_number": settings.whatsapp_business_number,
+                }))
+            }
+        }))
+        .route("/api/settings/whatsapp", axum::routing::post({
+            let settings_store = settings_store.clone();
+            let db = db_for_login.clone();
+            move |axum::extract::Extension(user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
+                let current_settings = settings_store.get();
+
+                let number = if let Some(v) = req.get("whatsapp_business_number") {
+                    if v.is_null() { None } else { v.as_str().map(|s| s.to_string()) }
+                } else {
+                    current_settings.whatsapp_business_number
+                };
+
+                if let Err(e) = settings_store.set_whatsapp_settings(number.clone()) {
+                    ::server_telemetry::record_error_signal("Failed to save whatsapp settings locally");
+                    tracing::error!("Failed to save whatsapp settings: {}", e);
+                    return axum::response::Json(serde_json::json!({ "success": false, "error": "Internal error" }));
+                }
+
+                // Also update the database settings table for the tenant
+                if let Some(tenant_id) = user.organization_id {
+                    match &db.store {
+                        crate::db::DbStore::Postgres => {
+                            if let Err(e) = sqlx::query(
+                                "INSERT INTO settings (tenant_id, whatsapp_business_number) VALUES ($1, $2) ON CONFLICT (tenant_id) DO UPDATE SET whatsapp_business_number = EXCLUDED.whatsapp_business_number"
+                            )
+                            .bind(&tenant_id)
+                            .bind(&number)
+                            .execute(&db.pool)
+                            .await {
+                                tracing::error!("Failed to save whatsapp settings to Postgres DB: {}", e);
+                            }
+                        },
+                        crate::db::DbStore::Sqlite(sqlite_pool) => {
+                            if let Err(e) = sqlx::query(
+                                "INSERT INTO settings (tenant_id, whatsapp_business_number) VALUES (?, ?) ON CONFLICT (tenant_id) DO UPDATE SET whatsapp_business_number = EXCLUDED.whatsapp_business_number"
+                            )
+                            .bind(&tenant_id)
+                            .bind(&number)
+                            .execute(sqlite_pool)
+                            .await {
+                                tracing::error!("Failed to save whatsapp settings to Sqlite DB: {}", e);
+                            }
+                        }
+                    }
+                }
+
+                axum::response::Json(serde_json::json!({ "success": true }))
+            }
+        }))
         .route("/api/settings/voice/provision", axum::routing::post({
             let settings_store = settings_store.clone();
             move |axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>| async move {
@@ -5186,6 +5253,7 @@ async fn create_ui_bom_item_handler(
             default_config: ohc_builtin_agent::agent::AgentRunConfig::default(),
         })))
         .merge(meta_webhook_router)
+        .merge(twilio_webhook_router)
         .merge(health_router)
         .fallback(api_not_found_handler);
 

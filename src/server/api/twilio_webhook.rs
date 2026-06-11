@@ -48,7 +48,7 @@ pub async fn twilio_webhook_post_handler(
         let tenant_id = match &state.db.store {
             crate::db::DbStore::Postgres => {
                 match sqlx::query_scalar::<_, String>(
-                    "SELECT tenant_id FROM settings WHERE sms_critical_phone = $1 OR voice_receptionist_number = $1 LIMIT 1"
+                    "SELECT tenant_id FROM settings WHERE sms_critical_phone = $1 OR voice_receptionist_number = $1 OR whatsapp_business_number = $1 LIMIT 1"
                 )
                 .bind(&_to_number)
                 .fetch_optional(pool)
@@ -59,8 +59,9 @@ pub async fn twilio_webhook_post_handler(
             },
             crate::db::DbStore::Sqlite(sqlite_pool) => {
                 match sqlx::query_scalar::<_, String>(
-                    "SELECT tenant_id FROM settings WHERE sms_critical_phone = ? OR voice_receptionist_number = ? LIMIT 1"
+                    "SELECT tenant_id FROM settings WHERE sms_critical_phone = ? OR voice_receptionist_number = ? OR whatsapp_business_number = ? LIMIT 1"
                 )
+                .bind(&_to_number)
                 .bind(&_to_number)
                 .bind(&_to_number)
                 .fetch_optional(sqlite_pool)
