@@ -154,6 +154,7 @@ impl SubagentRegistry {
 }
 
 /// Build a task notification message.
+#[allow(clippy::too_many_arguments)]
 pub fn build_task_notification(
     task_id: &str,
     tool_use_id: &str,

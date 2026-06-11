@@ -67,13 +67,15 @@ impl<T: DeserializeOwned> OutputParser<T> for StructuredOutputParser<T> {
             }
         } else if let Some(start) = text_to_parse.find("{") {
             if let Some(end) = text_to_parse.rfind("}") {
-                if end > start {
+                let is_valid = end > start;
+                if is_valid {
                     text_to_parse = &text_to_parse[start..end + 1];
                 }
             }
-        } else if let Some(start) = text_to_parse.find("[") {
+        } else if let Some(start) = text_to_parse.find("[") { #[allow(clippy::collapsible_if)]
             if let Some(end) = text_to_parse.rfind("]") {
-                 if end > start {
+                 let is_valid = end > start;
+                 if is_valid {
                      text_to_parse = &text_to_parse[start..end + 1];
                  }
             }
@@ -86,6 +88,7 @@ impl<T: DeserializeOwned> OutputParser<T> for StructuredOutputParser<T> {
                 return Ok(parsed);
             }
             if let Ok(val) = serde_json::from_str::<serde_json::Value>(text_to_parse) {
+                #[allow(clippy::collapsible_if)]
                 if let Some(data) = val.get("data") {
                     if let Ok(parsed) = serde_json::from_value::<T>(data.clone()) {
                         return Ok(parsed);
@@ -241,6 +244,7 @@ impl<'a, T: DeserializeOwned> RetryWithErrorOutputParser<'a, T> {
 ///
 /// **Returns:**
 /// Returns the parsed strongly-typed output `T` on success, or a `ToolError` on failure (typically `ToolError::LlmRecoverable` or `ToolError::Transient`).
+    #[allow(clippy::empty_line_after_doc_comments)]
 pub async fn parse_structured_output<T: DeserializeOwned + Send + Sync>(
     llm: &Arc<dyn LlmClientForParser>,
     req: ChatRequest,
