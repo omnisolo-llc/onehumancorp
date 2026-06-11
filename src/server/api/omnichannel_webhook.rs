@@ -89,7 +89,7 @@ pub async fn resolve_identity(db: &crate::db::DB, tenant_id: &str, channel: &str
                     .bind(channel)
                     .bind(sender_id)
                     .execute(pool)
-                    .await
+                    .await.map(|_| ())
             },
             crate::db::DbStore::Sqlite(sqlite_pool) => {
                  sqlx::query("INSERT OR IGNORE INTO customer_identities (id, tenant_id, customer_id, channel, channel_identity) VALUES (?, ?, ?, ?, ?)")
@@ -99,7 +99,7 @@ pub async fn resolve_identity(db: &crate::db::DB, tenant_id: &str, channel: &str
                     .bind(channel)
                     .bind(sender_id)
                     .execute(sqlite_pool)
-                    .await
+                    .await.map(|_| ())
             }
         };
         return Some(id);

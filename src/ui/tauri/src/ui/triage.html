@@ -463,24 +463,45 @@
 
           let buttonsHtml = '';
           if (selected.status !== 'auto_replied') {
-             buttonsHtml = `
-              <div class="btn-group">
-                <button
-                  class="btn-primary"
-                  data-testid="approve-btn"
-                  onclick="handleDecision('${selected.id}', true)"
-                >
-                  ✨ Approve & Execute
-                </button>
-                <button
-                  class="btn-secondary"
-                  data-testid="dismiss-btn"
-                  onclick="handleDecision('${selected.id}', false)"
-                >
-                  Dismiss
-                </button>
-              </div>
-             `;
+             if (selected.action_type === 'Draft Reply') {
+                 buttonsHtml = `
+                  <div class="btn-group">
+                    <button
+                      class="btn-primary"
+                      data-testid="approve-btn"
+                      onclick="handleDecision('${selected.id}', true)"
+                    >
+                      Approve & Send
+                    </button>
+                    <button
+                      class="btn-secondary"
+                      data-testid="dismiss-btn"
+                      onclick="handleDecision('${selected.id}', false)"
+                    >
+                      Edit
+                    </button>
+                  </div>
+                 `;
+             } else {
+                 buttonsHtml = `
+                  <div class="btn-group">
+                    <button
+                      class="btn-primary"
+                      data-testid="approve-btn"
+                      onclick="handleDecision('${selected.id}', true)"
+                    >
+                      ✨ Approve & Execute
+                    </button>
+                    <button
+                      class="btn-secondary"
+                      data-testid="dismiss-btn"
+                      onclick="handleDecision('${selected.id}', false)"
+                    >
+                      Dismiss
+                    </button>
+                  </div>
+                 `;
+             }
           }
 
           detailEl.innerHTML = `

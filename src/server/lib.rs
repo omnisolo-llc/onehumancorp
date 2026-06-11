@@ -2678,6 +2678,14 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .route_layer(axum::middleware::from_fn_with_state(webhook_state.clone(), api::billing_webhook::webhook_security_middleware))
         .with_state(webhook_state);
 
+
+    let omnichannel_webhook_state = api::omnichannel_webhook::AppState {
+        orchestrator: dept_orchestrator.clone(),
+        db: db.clone(),
+    };
+    let omnichannel_webhook_router = axum::Router::new()
+        .nest("/api/v1/webhooks/omnichannel", api::omnichannel_webhook::router(omnichannel_webhook_state));
+
     let meta_webhook_state = api::meta_webhook::MetaWebhookState {
         hub: hub.clone(),
         db: db.clone(),
@@ -4644,6 +4652,7 @@ async fn create_ui_bom_item_handler(
             default_config: ohc_builtin_agent::agent::AgentRunConfig::default(),
         })))
         .merge(meta_webhook_router)
+        .merge(omnichannel_webhook_router)
         .merge(health_router)
         .fallback(api_not_found_handler);
 

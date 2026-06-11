@@ -27,12 +27,13 @@ test.describe('Ambassador Auto-Responder CUJ', () => {
     const tenantId = 'e2e-tenant';
     const webhookPayload = {
       tenant_id: tenantId,
+      channel: 'instagram',
+      sender_id: 'cust123',
       message: 'Do you have vegan chocolate cake available for Saturday?',
-      source: 'instagram'
     };
 
     const apiBase = process.env.OHC_API_URL || process.env.BACKEND_URL || process.env.BASE_URL || '';
-    const response = await request.post(`${apiBase}/api/agents/webhook`, {
+    const response = await request.post(`${apiBase}/api/v1/webhooks/omnichannel`, {
       data: webhookPayload,
     });
 

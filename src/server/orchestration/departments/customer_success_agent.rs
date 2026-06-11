@@ -33,6 +33,7 @@ impl Department for CustomerSuccessAgent {
         vec![
             "tenant.order.fulfillment_ready".to_string(),
             "tenant.message.received".to_string(),
+            "tenant.omnichannel.message.received".to_string(),
             "agent:customer_success:approved".to_string(),
         ]
     }
@@ -135,7 +136,7 @@ impl Department for CustomerSuccessAgent {
             return Ok(());
         }
 
-        if event.event_type == "tenant.message.received" {
+        if event.event_type == "tenant.message.received" || event.event_type == "tenant.omnichannel.message.received" {
             let message = event.payload.get("original_message")
                 .or_else(|| event.payload.get("message"))
                 .and_then(|v| v.as_str()).unwrap_or("");
@@ -217,6 +218,38 @@ impl Department for CustomerSuccessAgent {
                 risk.clone(),
                 action_payload.clone(),
             ).await.map_err(|e| e.to_string())?;
+
+            if event.event_type == "tenant.omnichannel.message.received" {
+                let db = crate::db::get_pool();
+                let triage_id = uuid::Uuid::new_v4().to_string();
+                let action_id = uuid::Uuid::new_v4().to_string();
+                let customer_id = event.payload.get("customer_id").and_then(|v| v.as_str()).unwrap_or("");
+
+                if let Err(e) = sqlx::query(
+                    "INSERT INTO triage_items (id, tenant_id, customer_id, source, priority, context, status) VALUES ($1, $2, $3, $4, 'High', $5, 'pending') ON CONFLICT DO NOTHING"
+                )
+                .bind(&triage_id)
+                .bind(&event.tenant_id)
+                .bind(customer_id)
+                .bind(source)
+                .bind(message)
+                .execute(&db)
+                .await {
+                    tracing::error!("Failed to insert triage item: {:?}", e);
+                }
+
+                if let Err(e) = sqlx::query(
+                    "INSERT INTO triage_proposed_actions (id, triage_item_id, tenant_id, action_type, payload) VALUES ($1, $2, $3, 'Draft Reply', $4) ON CONFLICT DO NOTHING"
+                )
+                .bind(&action_id)
+                .bind(&triage_id)
+                .bind(&event.tenant_id)
+                .bind(generated_response.clone())
+                .execute(&db)
+                .await {
+                    tracing::error!("Failed to insert triage proposed action: {:?}", e);
+                }
+            }
 
             if risk == ActionRisk::AutoExecute {
                 let approved_event = DepartmentEvent {
