@@ -593,6 +593,7 @@ async fn handle_create_lead_gen_campaign(
 
 async fn handle_send_campaign(
     Extension(state): Extension<GrowthState>,
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
     Json(req): Json<CampaignRequest>,
 ) -> impl IntoResponse {
     // In a real implementation we would:
@@ -601,8 +602,24 @@ async fn handle_send_campaign(
     // 3. Dispatch the emails.
     // 4. Record the campaign in DB.
 
-    // Simulate sending 12 emails (since the UI states "12 recent orders without reviews")
-    let target_emails = if req.target_segment == "recent_buyers_no_review" { 12 } else { 150 };
+    let target_emails: i64 = if req.target_segment == "abandoned_carts" {
+        match sqlx::query_scalar("SELECT COUNT(*) FROM orders WHERE status = 'abandoned' AND tenant_id = $1")
+            .bind(&auth_info.org_id)
+            .fetch_one(&state.pool)
+            .await
+        {
+            Ok(c) => c,
+            Err(e) => {
+                tracing::error!("Failed to fetch abandoned carts count for campaign: {}", e);
+                0
+            }
+        }
+    } else if req.target_segment == "recent_buyers_no_review" {
+        // Simulate sending 12 emails (since the UI states "12 recent orders without reviews")
+        12
+    } else {
+        150
+    };
 
     // We can emit an event here to the Hub to trigger any background tasks or metrics updates.
     let msg = state.hub.sanitize_hub_event(serde_json::json!({
@@ -614,7 +631,7 @@ async fn handle_send_campaign(
 
     Json(CampaignResponse {
         campaign_id: uuid::Uuid::new_v4().to_string(),
-        emails_sent: target_emails,
+        emails_sent: target_emails as i32,
     })
 }
 
@@ -1860,12 +1877,12 @@ async fn handle_aggregated_team_invites_metrics(
 
 async fn handle_abandoned_carts_count(
     Extension(state): Extension<GrowthState>,
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
 ) -> impl IntoResponse {
     let pool = &state.pool;
 
-    // Attempt to query orders with status = 'abandoned'.
-    // Note: We use COALESCE to return 0 if no results.
-    let count: i64 = match sqlx::query_scalar("SELECT COUNT(*) FROM orders WHERE status = 'abandoned'")
+    let count: i64 = match sqlx::query_scalar("SELECT COUNT(*) FROM orders WHERE status = 'abandoned' AND tenant_id = $1")
+        .bind(&auth_info.org_id)
         .fetch_one(pool)
         .await
     {

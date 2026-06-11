@@ -212,7 +212,8 @@ SET title = EXCLUDED.title,
 INSERT INTO orders (id, tenant_id, customer_id, total_amount, status)
 VALUES
   ('e2e-order-1', 'e2e-tenant', 'e2e-customer-ava', 39.99, 'ready'),
-  ('e2e-order-2', 'e2e-tenant', 'e2e-customer-ben', 75.00, 'pending')
+  ('e2e-order-2', 'e2e-tenant', 'e2e-customer-ben', 75.00, 'pending'),
+  ('e2e-order-abandoned-1', 'e2e-tenant', 'e2e-customer-ben', 100.00, 'abandoned')
 ON CONFLICT (id) DO UPDATE
 SET customer_id = EXCLUDED.customer_id,
     total_amount = EXCLUDED.total_amount,
