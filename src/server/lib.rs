@@ -2965,6 +2965,58 @@ pub async fn update_ui_triage_action_handler(
                         tracing::info!("Approved and scheduled SocialPostDraft for tenant: {}", tenant_id);
                         // In a real implementation we would send this to AYRSHARE or similar buffer here
                         // For MVP, we simply mark it resolved.
+                    } else if action_type == "ProcessReturn" {
+                        tracing::info!("Executing ProcessReturn: {}", action_payload);
+                        let json_payload: serde_json::Value = serde_json::from_str(&action_payload).unwrap_or(serde_json::json!({}));
+
+                        let order_id = json_payload.get("order_id").and_then(|v| v.as_str()).unwrap_or_default();
+                        let product_id = json_payload.get("product_id").and_then(|v| v.as_str()).unwrap_or_default();
+                        let amount_cents = json_payload.get("amount_cents").and_then(|v| v.as_i64()).unwrap_or(0);
+                        let return_type = json_payload.get("return_type").and_then(|v| v.as_str()).unwrap_or("Refund");
+
+                        // 1. Reconcile inventory
+                        let _ = sqlx::query("UPDATE products SET inventory_count = inventory_count + 1 WHERE id = $1 AND tenant_id = $2")
+                            .bind(product_id)
+                            .bind(&tenant_id)
+                            .execute(&mut *tx)
+                            .await;
+
+                        // 2. Stripe refund via Finance Agent
+                        let stripe_key = std::env::var("STRIPE_API_KEY").unwrap_or_default();
+                        if !stripe_key.is_empty() {
+                            let stripe_client = crate::integrations::stripe::client::StripeClient::new(stripe_key);
+                            let _ = stripe_client.create_refund(order_id, Some(amount_cents)).await;
+                        }
+
+                        // 3. Record in ledger
+                        let ledger_id = format!("ledger-{}", uuid::Uuid::new_v4());
+                        let ledger_payload = serde_json::json!({
+                            "order_id": order_id,
+                            "product_id": product_id,
+                            "amount_cents": amount_cents,
+                            "return_type": return_type
+                        }).to_string();
+
+                        let _ = sqlx::query("INSERT INTO ohc_universal_ledger (id, tenant_id, department, action_type, state_change) VALUES ($1, $2, 'Finance', 'REFUND_PROCESSED', $3::jsonb)")
+                            .bind(&ledger_id)
+                            .bind(&tenant_id)
+                            .bind(&ledger_payload)
+                            .execute(&mut *tx)
+                            .await;
+
+                        // 4. Draft confirmation reply
+                        let new_msg_id = format!("msg-{}", uuid::Uuid::new_v4());
+                        let confirmation_msg = format!("Your {} for order {} has been processed.", return_type, order_id);
+                        let _ = sqlx::query(
+                            "INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, status) VALUES ($1, $2, 'return-orchestrator', $3, $4, 'en', 'sent')"
+                        )
+                        .bind(&new_msg_id)
+                        .bind(&tenant_id)
+                        .bind(&confirmation_msg)
+                        .bind(&confirmation_msg)
+                        .execute(&mut *tx)
+                        .await;
+
                     } else if action_type == "ProposedInvoice" {
                         tracing::info!("Executing proposed action: ProposedInvoice, payload: {}", action_payload);
                         let json_payload: serde_json::Value = serde_json::from_str(&action_payload).unwrap_or(serde_json::json!({}));
@@ -4737,7 +4789,8 @@ async fn create_ui_bom_item_handler(
         .route("/api/ui/bookings", axum::routing::get(list_ui_bookings_handler).with_state(db.clone()))
         .route("/api/ui/inbox/messages", axum::routing::get(list_ui_inbox_handler).with_state(db.clone()))
         .route("/api/ui/triage", axum::routing::get(list_ui_triage_handler).with_state(db.clone()))
-        .route("/api/ui/triage/action", axum::routing::post(update_ui_triage_action_handler).with_state(db.clone()))
+                .nest("/api/returns", crate::api::returns::router(db.clone()))
+.route("/api/ui/triage/action", axum::routing::post(update_ui_triage_action_handler).with_state(db.clone()))
         .route("/api/ui/supply", axum::routing::get(list_ui_supply_handler).with_state(db.clone()))
         .route("/api/ui/supply/vendors", axum::routing::post(create_ui_supply_vendor_handler).with_state(db.clone()))
         .route("/api/ui/supply/raw-materials", axum::routing::post(create_ui_raw_material_handler).with_state(db.clone()))

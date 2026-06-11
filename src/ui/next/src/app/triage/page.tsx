@@ -157,14 +157,50 @@ export default function TriagePage() {
                   {selected.context || "No context"}
                 </div>
               </div>
-              {selected.action_type && (
+              {selected.action_type === 'ProcessReturn' ? (
+                <div className="mb-6">
+                  <div className="app-metric-label">Proposed Action: Process Return</div>
+                  <div className="mt-2 rounded-[8px] border border-[#0066FF]/20 bg-[#0066FF]/5 p-4">
+                    {(() => {
+                      try {
+                        const payload = JSON.parse(selected.action_payload || "{}");
+                        return (
+                          <div className="space-y-3">
+                            <div className="flex justify-between items-center pb-2 border-b border-[#0066FF]/10">
+                              <span className="text-sm text-gray-600 dark:text-gray-400">Order ID</span>
+                              <span className="font-semibold text-gray-900 dark:text-gray-100">{payload.order_id || 'Unknown'}</span>
+                            </div>
+                            <div className="flex justify-between items-center pb-2 border-b border-[#0066FF]/10">
+                              <span className="text-sm text-gray-600 dark:text-gray-400">Type</span>
+                              <span className="font-semibold text-gray-900 dark:text-gray-100">{payload.return_type || 'Refund'}</span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">Amount</span>
+                              <span className="text-lg font-bold text-green-600 dark:text-green-400">
+                                ${(payload.amount_cents / 100).toFixed(2)}
+                              </span>
+                            </div>
+                            <div className="mt-3 p-3 bg-white dark:bg-[#1D1D1F] rounded border border-gray-100 dark:border-gray-800 text-xs text-gray-600 dark:text-gray-400">
+                              <p>✓ Operations Agent will restock Product {payload.product_id}</p>
+                              <p>✓ Finance Agent will refund via Stripe</p>
+                              <p>✓ Automated confirmation will be sent to customer</p>
+                            </div>
+                          </div>
+                        );
+                      } catch {
+                        return <div className="text-sm text-gray-800">{selected.action_payload}</div>;
+                      }
+                    })()}
+                  </div>
+                </div>
+              ) : selected.action_type ? (
                 <div className="mb-6">
                   <div className="app-metric-label">Proposed Action: {selected.action_type}</div>
-                  <div className="mt-2 rounded-md border border-blue-200 bg-blue-50 p-4 text-sm leading-6 text-blue-900 font-medium">
+                  <div className="mt-2 rounded-[8px] border border-blue-200 bg-blue-50 p-4 text-sm leading-6 text-blue-900 font-medium">
                     {selected.action_payload || "No specific payload"}
                   </div>
                 </div>
-              )}
+              ) : null}
 
               <div className="grid grid-cols-2 gap-3 mb-6">
                 <div className="app-card glassmorphism">

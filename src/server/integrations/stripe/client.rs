@@ -133,6 +133,35 @@ impl StripeClient {
         Ok(url.to_string())
     }
 
+    pub async fn create_refund(&self, payment_intent_id: &str, amount_cents: Option<i64>) -> Result<String, String> {
+        let api_key = self.require_api_key()?;
+        let mut form = std::collections::HashMap::new();
+        form.insert("payment_intent".to_string(), payment_intent_id.to_string());
+        if let Some(amt) = amount_cents {
+            form.insert("amount".to_string(), amt.to_string());
+        }
+
+        let res = reqwest::Client::new()
+            .post(format!("{}/v1/refunds", Self::api_base()))
+            .basic_auth(api_key, Some(""))
+            .header("Idempotency-Key", format!("refund_{}_{}", payment_intent_id, amount_cents.unwrap_or(0)))
+            .form(&form)
+            .send()
+            .await
+            .map_err(|e| format!("Stripe refund request failed: {}", e))?;
+
+        if !res.status().is_success() {
+            let status = res.status();
+            let text = res.text().await.unwrap_or_default();
+            return Err(format!("Stripe API error ({}): {}", status, text));
+        }
+
+        let json: serde_json::Value = res.json().await.map_err(|e| format!("Failed to parse response: {}", e))?;
+        let refund_id = json["id"].as_str().ok_or_else(|| "Missing id in refund response".to_string())?;
+
+        Ok(refund_id.to_string())
+    }
+
     pub async fn create_terminal_connection_token(&self, _tenant_id: &str) -> Result<String, String> {
         let api_key = self.require_api_key()?;
         let res = reqwest::Client::new()

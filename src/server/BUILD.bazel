@@ -79,6 +79,7 @@ SERVER_RS_SRCS = [
     "//src/server/api/agents:translation.rs",
     "//src/server/api/agents:webhook.rs",
     "//src/server/api/onboarding:mod.rs",
+    "//src/server/api:returns.rs",
     "//src/server/autodream:mod.rs",
     "//src/server/autodream_pipeline:llm_client.rs",
     "//src/server/autodream_pipeline:mod.rs",
