@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { adminPage } from './fixtures';
+
 
 test.describe('Visual Workflow Builder', () => {
   test('should load workflow builder from dashboard', async ({ page }) => {

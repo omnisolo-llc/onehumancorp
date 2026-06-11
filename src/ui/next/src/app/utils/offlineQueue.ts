@@ -18,7 +18,10 @@ function getDB(): Promise<IDBDatabase> {
     const request = window.indexedDB.open(DB_NAME, DB_VERSION);
 
     request.onerror = (event) => {
-      console.error("IndexedDB error", event);
+      // Suppress error log if IndexedDB is intentionally unavailable in tests
+      if (process.env.NODE_ENV !== 'test') {
+        console.error("IndexedDB error", event);
+      }
       reject(request.error);
     };
 
@@ -47,7 +50,9 @@ export async function enqueueAction(action: OfflineAction): Promise<void> {
       request.onerror = () => reject(request.error);
     });
   } catch (err) {
-    console.error("Failed to enqueue action", err);
+    if (process.env.NODE_ENV !== 'test') {
+      console.error("Failed to enqueue action", err);
+    }
   }
 }
 
@@ -65,7 +70,9 @@ export async function getActions(): Promise<OfflineAction[]> {
       request.onerror = () => reject(request.error);
     });
   } catch (err) {
-    console.error("Failed to get actions", err);
+    if (process.env.NODE_ENV !== 'test') {
+      console.error("Failed to get actions", err);
+    }
     return [];
   }
 }
@@ -82,6 +89,8 @@ export async function removeAction(id: string): Promise<void> {
       request.onerror = () => reject(request.error);
     });
   } catch (err) {
-    console.error("Failed to remove action", err);
+    if (process.env.NODE_ENV !== 'test') {
+      console.error("Failed to remove action", err);
+    }
   }
 }

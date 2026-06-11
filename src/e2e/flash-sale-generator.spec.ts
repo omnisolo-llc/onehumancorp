@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { adminPage } from './fixtures';
+
 
 test.describe('Growth & Virality: Flash Sale Generator', () => {
   test('User can create and preview a flash sale widget', async ({ browser }) => {

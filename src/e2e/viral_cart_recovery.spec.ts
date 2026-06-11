@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { adminPage } from './fixtures';
+
 
 test.describe('Cart Recovery Feature', () => {
   test('should verify abandoned cart recovery flow', async ({ page, context }) => {
