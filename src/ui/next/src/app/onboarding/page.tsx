@@ -567,8 +567,8 @@ export default function OnboardingWizard() {
                             localStorage.setItem('tenant', startData.organization_id);
                         }
                         localStorage.setItem('has_onboarded', 'true');
-                        setStep(5);
-                        syncStateToBackend({ step: 5 });
+                        setStep(11);
+                        syncStateToBackend({ step: 11 });
                       } else {
                         throw new Error(data.error || data.message || 'Failed to analyze business details');
                       }
@@ -595,6 +595,36 @@ export default function OnboardingWizard() {
                       Generating...
                     </span>
                   ) : <IconLabel icon="launch">Generate Storefront</IconLabel>}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {step === 11 && (
+            <div className="flex flex-col flex-1 h-full w-full max-w-[375px] mx-auto animate-fade-in relative pt-4">
+              <h2 className="text-2xl font-bold font-outfit text-center mb-4 text-[#1D1D1F] dark:text-[#F5F5F7]">Live Preview</h2>
+
+              <div className="flex-1 w-full glassmorphism rounded-2xl overflow-hidden shadow-lg border border-white/50 dark:border-white/10 mb-2 relative">
+                  <iframe src="/builder" className="w-full h-full border-none" title="Storefront Preview" />
+              </div>
+
+              <div className="w-full glassmorphism p-3 rounded-xl shadow-lg border border-white/50 dark:border-white/10 flex gap-2 mb-20 relative z-10">
+                 <input
+                    type="text"
+                    placeholder="Chat to adjust (e.g. Make it dark)..."
+                    className="flex-1 bg-transparent border-none px-2 py-1 text-sm focus:outline-none text-[#1D1D1F] dark:text-[#F5F5F7] placeholder-gray-500"
+                 />
+                 <button className="bg-gray-100 dark:bg-gray-800 p-2 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
+                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
+                 </button>
+              </div>
+
+              <div className="absolute bottom-6 left-0 w-full z-50">
+                <button
+                  onClick={() => { setStep(5); syncStateToBackend({ step: 5 }); }}
+                  className="w-full bg-[#0066FF] text-white min-h-[44px] min-w-[44px] p-4 rounded-[8px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)]"
+                >
+                  <IconLabel icon="launch">Launch Now</IconLabel>
                 </button>
               </div>
             </div>

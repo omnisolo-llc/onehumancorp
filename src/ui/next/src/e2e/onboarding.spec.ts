@@ -273,8 +273,59 @@ test.describe('OnboardingWizard CUJ', () => {
 
     await page.getByRole('button', { name: 'Generate Storefront' }).click();
 
+    // Wait for the Live Preview screen
+    await expect(page.getByText("Live Preview")).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('iframe[title="Storefront Preview"]')).toBeVisible();
+
+    // Expect chat input
+    await expect(page.getByPlaceholder(/Chat to adjust/i)).toBeVisible();
+
+    // Click Launch Now
+    await page.getByRole('button', { name: 'Launch Now' }).click();
+
     // Expect it to eventually reach "You're Live!" screen
     await expect(page.getByText("You're Live!")).toBeVisible({ timeout: 15000 });
+  });
+
+  test('Instant Build chat to adjust input is present and functional', async ({ page }) => {
+    await page.goto('/onboarding');
+    await expect(page.getByText("10-Minute Setup Wizard")).toBeVisible();
+
+    await page.getByRole('button', { name: 'Instant Build' }).click();
+    await expect(page.getByText("Tell us about your business")).toBeVisible();
+
+    const bioInput = page.getByPlaceholder(/e.g. I run a local bakery/i);
+    await bioInput.fill('I am a baker.');
+
+    await page.getByRole('button', { name: 'Generate Storefront' }).click();
+
+    await expect(page.getByText("Live Preview")).toBeVisible({ timeout: 15000 });
+
+    const chatInput = page.getByPlaceholder(/Chat to adjust/i);
+    await chatInput.fill('Make it darker');
+    await expect(chatInput).toHaveValue('Make it darker');
+
+    // Hit enter or click send
+    await page.locator('button').filter({ has: page.locator('svg') }).last().click();
+
+    await page.getByRole('button', { name: 'Launch Now' }).click();
+    await expect(page.getByText("You're Live!")).toBeVisible({ timeout: 15000 });
+  });
+
+  test('Instant Build live preview iframe loads correctly', async ({ page }) => {
+    await page.goto('/onboarding');
+    await page.getByRole('button', { name: 'Instant Build' }).click();
+
+    const bioInput = page.getByPlaceholder(/e.g. I run a local bakery/i);
+    await bioInput.fill('I am a baker.');
+
+    await page.getByRole('button', { name: 'Generate Storefront' }).click();
+
+    await expect(page.getByText("Live Preview")).toBeVisible({ timeout: 15000 });
+
+    const iframe = page.locator('iframe[title="Storefront Preview"]');
+    await expect(iframe).toBeVisible();
+    await expect(iframe).toHaveAttribute('src', '/builder');
   });
 });
 
