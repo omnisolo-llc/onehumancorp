@@ -51,6 +51,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
   const [activities, setActivities] = useState<OHCLedgerEntry[]>([]);
   const [activityLoading, setActivityLoading] = useState(false);
   const [isOffline, setIsOffline] = useState(false);
+  const [pendingSyncCount, setPendingSyncCount] = useState(0);
 
   const tenantId = () => {
     if (typeof window === "undefined") return "default";
@@ -68,8 +69,18 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
     return () => window.removeEventListener('voice-command-processed', handleVoiceCommandProcessed as EventListener);
   }, []);
 
+  const updatePendingSyncCount = async () => {
+    try {
+      const actions = await getActions();
+      setPendingSyncCount(actions.length);
+    } catch (e) {
+      console.error("Failed to get pending sync count", e);
+    }
+  };
+
   useEffect(() => {
     setIsOffline(!navigator.onLine);
+    updatePendingSyncCount();
 
     const handleOnline = async () => {
       setIsOffline(false);
@@ -82,6 +93,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
             await removeAction(action.id);
           }
         }
+        updatePendingSyncCount();
       } catch (err) {
         console.error("Failed to sync offline actions", err);
       }
@@ -89,6 +101,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
 
     const handleOffline = () => {
       setIsOffline(true);
+      updatePendingSyncCount();
     };
 
     window.addEventListener("online", handleOnline);
@@ -305,6 +318,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
         payload: { id, approved },
         timestamp: Date.now()
       });
+      updatePendingSyncCount();
       return;
     }
 
@@ -344,8 +358,17 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
     <section className="mb-6 max-w-[375px] w-full mx-auto sm:max-w-none" aria-label="Unified Agent Feed">
       {isOffline && (
         <div className="mb-4 w-full p-2 glassmorphism rounded-[8px] bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 text-center text-sm font-semibold flex items-center justify-center gap-2">
-          <span>📡</span> You are offline. Actions will sync when online.
+          <span>📡</span> Working Offline. Changes will save automatically.
+          {pendingSyncCount > 0 && (
+             <span className="ml-2 text-xs font-bold uppercase tracking-wider bg-yellow-200 text-yellow-900 px-2 py-1 rounded-md">Pending Sync ({pendingSyncCount})</span>
+          )}
         </div>
+      )}
+      {!isOffline && pendingSyncCount > 0 && (
+         <div className="mb-4 w-full p-2 glassmorphism rounded-[8px] bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 text-center text-sm font-semibold flex items-center justify-center gap-2">
+            <span>🔄</span> Syncing {pendingSyncCount} changes...
+            <span className="ml-2 text-xs font-bold uppercase tracking-wider bg-blue-200 text-blue-900 px-2 py-1 rounded-md">Pending Sync ({pendingSyncCount})</span>
+         </div>
       )}
       <div className="mb-4 flex items-center border-b border-gray-200 dark:border-gray-700">
         <button
@@ -660,6 +683,11 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                   )}
                 </div>
 
+                {isOffline && (new Date().getTime() - new Date(approval.updated_at || approval.created_at || Date.now()).getTime()) > 24 * 60 * 60 * 1000 ? (
+                    <div className="mt-2 w-full p-3 glassmorphism rounded-[8px] bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200 text-center text-sm font-semibold flex items-center justify-center gap-2">
+                        <span>⚠️</span> Expired - Reconnect to refresh
+                    </div>
+                ) : (
                 <div className="flex flex-col gap-3 w-full mt-2">
                   {(approval.proposed_action || approval.context_payload)?.feature_type === 'instagram_dm' ? (
                     <div className="flex flex-col sm:flex-row gap-3 w-full">
@@ -872,6 +900,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                     </>
                   )}
                 </div>
+                )}
               </div>
             ))}
           </>
