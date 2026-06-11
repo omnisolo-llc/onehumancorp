@@ -2,8 +2,8 @@ import { test, expect } from '@playwright/test';
 
 test.describe('POS Inventory Sync - E2E Race Condition', () => {
   test('POS terminal applies lock and prevents double booking online', async ({ page }) => {
-    const tenantId = 'e2e-tenant-pos';
-    const productId = 'prod_123';
+    const tenantId = 'e2e-tenant';
+    const productId = 'e2e-product-cake';
 
     // Simulate POS (User B) acquiring lock
     const reserveRes = await page.request.post('/api/v1/payments/terminal/reserve', {
