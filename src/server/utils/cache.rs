@@ -14,7 +14,6 @@ struct CacheItem<T> {
 
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-static EVICTION_SEED: AtomicUsize = AtomicUsize::new(0);
 
 struct CacheValue<T> {
     val: T,
