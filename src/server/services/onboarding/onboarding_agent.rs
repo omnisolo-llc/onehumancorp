@@ -126,7 +126,8 @@ impl OnboardingAgent {
 
 
     pub async fn save_onboarding_state(&self, tenant_id: &str, user_id: &str, current_step: i32, state_json: &serde_json::Value) -> Result<(), String> {
-        tracing::debug!("Saving onboarding state for tenant: {}, user: {}", tenant_id, user_id);
+        tracing::debug!("Saving onboarding state for tenant: {}, user: {}, current_step: {}", tenant_id, user_id, current_step);
+        tracing::debug!("Payload to save: {:?}", state_json);
         let mut tx = self.hub.pool.begin().await.map_err(|e| e.to_string())?;
         crate::common::auth_utils::set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
 
@@ -168,10 +169,11 @@ impl OnboardingAgent {
         .map_err(|e| e.to_string())?;
 
         tx.commit().await.map_err(|e| e.to_string())?;
+        tracing::debug!("Successfully committed state to PostgreSQL for tenant: {}, user: {}", tenant_id, user_id);
 
         let cache_key = format!("agent_onboarding_state_{}_{}", tenant_id, user_id);
         let cache = ONBOARDING_STATE_AGENT_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(self.hub.redis_client.clone()));
-        tracing::debug!("Invalidating onboarding state cache for key: {}", cache_key);
+        tracing::debug!("Invalidating onboarding state cache for key: {} to ensure cross-device stepper synchronization", cache_key);
         cache.invalidate(&cache_key).await;
 
         Ok(())
@@ -180,11 +182,12 @@ impl OnboardingAgent {
     pub async fn get_onboarding_state(&self, tenant_id: &str, user_id: &str) -> Result<serde_json::Value, String> {
         let cache_key = format!("agent_onboarding_state_{}_{}", tenant_id, user_id);
         let cache = ONBOARDING_STATE_AGENT_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(self.hub.redis_client.clone()));
+        tracing::debug!("Attempting to fetch onboarding state for tenant_id: {}, user_id: {} with cache_key: {}", tenant_id, user_id, cache_key);
         if let Some(cached_state) = cache.get(&cache_key).await {
-            tracing::debug!("Cache hit for onboarding state key: {}", cache_key);
+            tracing::debug!("Cache hit for onboarding state key: {}. State: {:?}", cache_key, cached_state);
             return Ok(cached_state);
         }
-        tracing::debug!("Cache miss for onboarding state key: {}", cache_key);
+        tracing::debug!("Cache miss for onboarding state key: {}. Falling back to PostgreSQL database.", cache_key);
 
         let mut tx = self.hub.pool.begin().await.map_err(|e| e.to_string())?;
         crate::common::auth_utils::set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
