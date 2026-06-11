@@ -62,5 +62,6 @@ cd "$work_dir"
 
 export NODE_PATH="$PWD/node_modules"
 export NODE_OPTIONS="--experimental-vm-modules"
+export NODE_DISABLE_COMPILE_CACHE=1
 
 "$node_bin" node_modules/vitest/vitest.mjs run --passWithNoTests
