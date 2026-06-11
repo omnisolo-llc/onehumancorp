@@ -324,6 +324,10 @@ rust_library(
 rust_library(
     name = "server_lib",
     srcs = SERVER_RS_SRCS,
+    compile_data = [
+        "//src/ui/tauri/src/ui:all_files",
+        "//src/ui/next/public/api/ui:all_files",
+    ],
     data = ["//src/server/migrations"],
     edition = "2024",
     rustc_flags = ["--cfg=ohc_bazel"],
