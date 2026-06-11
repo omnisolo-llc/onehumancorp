@@ -597,11 +597,10 @@
       <h1 id="dashboard-title">Dashboard</h1>
       <div class="subtitle">Your private agentic workspace.</div>
 
-      <div class="assistant-entry-container" style="margin-bottom: 24px; display: flex; gap: 16px; justify-content: center;">
+      <div class="assistant-entry-container" style="margin-bottom: 24px; display: flex; flex-wrap: wrap; gap: 16px; justify-content: center;">
         <a href="assistant.html" class="btn-primary" style="width: auto; text-decoration: none;">Open WorkBuddy Assistant</a>
         <a href="pos.html" class="btn-outline" style="width: auto; text-decoration: none;">Quick Charge POS</a>
         <a href="cost-dashboard.html" class="btn-outline" style="width: auto; text-decoration: none;">My Plan</a>
-        <a href="trial-extension.html" class="btn-outline" style="width: auto; text-decoration: none;">Interactive Trial Extension</a>
       </div>
 
       <div class="ohc-growth-card" id="ai-savings-widget">
@@ -713,7 +712,7 @@
       <div class="ohc-growth-card">
         <h2>Viral Campaigns</h2>
         <p>Acquire new users and grow your audience through viral sharing.</p>
-        <a href="/giveaway" style="display: inline-block; background-color: #0066FF; color: white; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s;">Viral Giveaway Generator</a>
+        <a href="giveaway/index.html" style="display: inline-block; background-color: #0066FF; color: white; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s;">Viral Giveaway Generator</a>
       </div>
 
 
@@ -738,8 +737,11 @@
       </div>
     </div>
 
-    <footer style="margin-top: 40px; text-align: center; padding: 20px; font-size: 14px; font-weight: 600;">
-      <a href="#" id="dashboard-footer-viral-link" style="color: #6b7280; text-decoration: none;">⚡ Powered by OHC</a>
+    <footer style="margin-top: 40px; text-align: center; padding: 24px; font-size: 14px; font-weight: 600; background: rgba(255, 255, 255, 0.4); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-top: 1px solid rgba(255, 255, 255, 0.4); border-radius: 24px 24px 0 0; width: 100%; box-sizing: border-box;">
+      <a href="index.html" id="dashboard-footer-viral-link" style="color: #0066FF; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 8px;">
+        <span style="background: #0066FF; color: white; padding: 4px 8px; border-radius: 8px; font-size: 10px; font-weight: 800;">OHC</span>
+        Powered by OneHumanCorp
+      </a>
     </footer>
 
 
@@ -965,7 +967,7 @@
         const tenantIdForFooter = localStorage.getItem("tenant_id") || localStorage.getItem("tenant") || "default-team";
         const footerLink = document.getElementById("dashboard-footer-viral-link");
         if (footerLink) {
-          footerLink.href = `/onboarding?ref=${tenantIdForFooter}&source=footer_widget`;
+          footerLink.href = `index.html?ref=${encodeURIComponent(tenantIdForFooter)}&source=footer_widget`;
         }
         const tenant = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default-team';
         try {
