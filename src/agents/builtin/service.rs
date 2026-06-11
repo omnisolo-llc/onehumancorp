@@ -1606,7 +1606,7 @@ mod memory_tests {
     #[tokio::test]
     async fn test_anthropic_memory_initialization_and_accessor() {
         unsafe {
-            std::env::set_var("OHC_ENABLE_ANTHROPIC_MEMORY", "true");
+            std::env::set_var("OHC_ENABLE_ANTHROPIC_MEMORY", "true"); std::env::set_var("OHC_ANTHROPIC_MEMORY_DIR", ".test-agent-memory"); std::fs::create_dir_all(".test-agent-memory").unwrap();
             std::env::set_var("OHC_ANTHROPIC_MEMORY_DIR", ".test-agent-memory");
         }
 

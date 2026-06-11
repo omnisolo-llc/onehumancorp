@@ -1517,27 +1517,33 @@ impl DepartmentOrchestrator {
 
     pub async fn add_loyalty_points(&self, tenant_id: &str, customer_id: &str, points: i32) -> Result<(), String> {
         let now = chrono::Utc::now();
+        let total_points;
         match &self.db.store {
             crate::db::DbStore::Postgres => {
                 let id = uuid::Uuid::new_v4().to_string();
-                sqlx::query("INSERT INTO loyalty_ledger (id, tenant_id, customer_id, points_balance, last_updated) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (id) DO UPDATE SET points_balance = loyalty_ledger.points_balance + EXCLUDED.points_balance, last_updated = EXCLUDED.last_updated")
+                let row = sqlx::query("INSERT INTO loyalty_ledger (id, tenant_id, customer_id, points_balance, last_updated) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (tenant_id, customer_id) DO UPDATE SET points_balance = loyalty_ledger.points_balance + EXCLUDED.points_balance, last_updated = EXCLUDED.last_updated RETURNING points_balance")
                     .bind(&id)
                     .bind(tenant_id)
                     .bind(customer_id)
                     .bind(points)
                     .bind(&now)
-                    .execute(&self.db.pool)
+                    .fetch_one(&self.db.pool)
                     .await
                     .map_err(|e| e.to_string())?;
+                use sqlx::Row;
+                total_points = row.get::<i32, _>("points_balance");
             }
             crate::db::DbStore::Sqlite(pool) => {
-                let exists = sqlx::query("SELECT 1 FROM loyalty_ledger WHERE tenant_id = ? AND customer_id = ?")
+                let exists = sqlx::query("SELECT points_balance FROM loyalty_ledger WHERE tenant_id = ? AND customer_id = ?")
                     .bind(tenant_id)
                     .bind(customer_id)
                     .fetch_optional(pool)
                     .await
-                    .map_err(|e| e.to_string())?.is_some();
-                if exists {
+                    .map_err(|e| e.to_string())?;
+                if let Some(r) = exists {
+                    use sqlx::Row;
+                    let curr_points = r.get::<i32, _>("points_balance");
+                    total_points = curr_points + points;
                     sqlx::query("UPDATE loyalty_ledger SET points_balance = points_balance + ?, last_updated = ? WHERE tenant_id = ? AND customer_id = ?")
                         .bind(points)
                         .bind(&now)
@@ -1547,6 +1553,7 @@ impl DepartmentOrchestrator {
                         .await
                         .map_err(|e| e.to_string())?;
                 } else {
+                    total_points = points;
                     let id = uuid::Uuid::new_v4().to_string();
                     sqlx::query("INSERT INTO loyalty_ledger (id, tenant_id, customer_id, points_balance, last_updated) VALUES (?, ?, ?, ?, ?)")
                         .bind(&id)
@@ -1560,6 +1567,20 @@ impl DepartmentOrchestrator {
                 }
             }
         }
+
+        // Fire event to mesh so the Promoter Agent can pick it up
+        let event = crate::orchestration::departments::types::DepartmentEvent {
+            id: uuid::Uuid::new_v4().to_string(),
+            tenant_id: tenant_id.to_string(),
+            event_type: "loyalty.points_awarded".to_string(),
+            payload: serde_json::json!({
+                "customer_id": customer_id,
+                "points": points,
+                "total_points": total_points
+            })
+        };
+        let _ = self.dispatch_event(event).await;
+
         Ok(())
     }
 

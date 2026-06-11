@@ -1072,7 +1072,8 @@ impl DB {
                         customer_id TEXT NOT NULL,
                         points_balance INTEGER DEFAULT 0,
                         tier_name TEXT,
-                        last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                        last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        UNIQUE(tenant_id, customer_id)
                     );
                     CREATE INDEX IF NOT EXISTS idx_loyalty_ledger_tenant_customer ON loyalty_ledger(tenant_id, customer_id);
 "#;

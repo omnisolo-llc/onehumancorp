@@ -52,7 +52,7 @@
         min-height: 44px;
         margin-bottom: 20px;
         border: 1px solid rgba(255, 255, 255, 0.5);
-        border-radius: 8px;
+        border-radius: 16px;
         box-sizing: border-box;
         font-size: 16px;
         background: rgba(255, 255, 255, 0.5);
@@ -61,9 +61,12 @@
         transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
       }
       select.glassmorphism, textarea.glassmorphism {
-        border-radius: 8px;
+        border-radius: 16px;
       }
       input.glassmorphism {
+        border-radius: 16px;
+      }
+      select, textarea, input {
         border-radius: 8px;
       }
       select, textarea, input {
@@ -81,7 +84,7 @@
         border: none;
         padding: 14px 24px;
         min-height: 44px;
-        border-radius: 8px;
+        border-radius: 16px;
         font-size: 16px;
         font-weight: 600;
         cursor: pointer;
@@ -219,7 +222,7 @@
         min-height: 44px;
         margin-bottom: 20px;
         border: 1px solid rgba(255, 255, 255, 0.5);
-        border-radius: 8px;
+        border-radius: 16px;
         box-sizing: border-box;
         font-size: 16px;
         background: rgba(255, 255, 255, 0.5);
@@ -251,7 +254,7 @@
         border: 1px solid rgba(255, 255, 255, 0.5);
         padding: 12px 16px;
         min-height: 44px;
-        border-radius: 8px;
+        border-radius: 16px;
         cursor: pointer;
         transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
       }
@@ -492,7 +495,7 @@
         <input type="text" id="assistant-name" class="glassmorphism" placeholder="e.g. Jarvis" />
         <div id="assistant-name-error" class="error-msg">Please enter a name for your assistant.</div>
 
-        <select id="assistant-tone">
+        <select id="assistant-tone" class="glassmorphism">
           <option value="" disabled selected>Select a tone</option>
           <option value="Professional">Professional</option>
           <option value="Friendly">Friendly</option>
@@ -524,7 +527,7 @@
       <div class="step" id="step-template">
         <h1>Template Selection</h1>
         <p>Choose a look for your workspace</p>
-        <select id="template-selection">
+        <select id="template-selection" class="glassmorphism">
           <option value="" disabled selected>Select a template...</option>
           <option value="Modern">Modern</option>
           <option value="Classic">Classic</option>
@@ -1064,14 +1067,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Desktop hover
     document.addEventListener('mouseover', (e) => {
-        const target = e.target.closest('[data-tooltip]');
+        const t = e.target;
+        const target = t && typeof t.closest === 'function' ? t.closest('[data-tooltip]') : null;
         if (target) {
             showTooltip(e, (window.OHC_TOOLTIPS && window.OHC_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip'));
         }
     });
 
     document.addEventListener('mouseout', (e) => {
-        if (e.target.closest('[data-tooltip]')) {
+        const target = e.target; if (target && typeof target.closest === 'function' && target.closest('[data-tooltip]')) {
             hideTooltip();
         }
     });
@@ -1079,7 +1083,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // Mobile long press (contextmenu) or touchstart
     let touchTimeout;
     document.addEventListener('touchstart', (e) => {
-        const target = e.target.closest('[data-tooltip]');
+        const t = e.target;
+        const target = t && typeof t.closest === 'function' ? t.closest('[data-tooltip]') : null;
         if (target) {
             touchTimeout = setTimeout(() => {
                 showTooltip(e, (window.OHC_TOOLTIPS && window.OHC_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip'));

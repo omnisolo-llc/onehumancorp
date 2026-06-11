@@ -429,14 +429,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Desktop hover
     document.addEventListener('mouseover', (e) => {
-        const target = e.target.closest('[data-tooltip]');
+        const t = e.target;
+        const target = t && typeof t.closest === 'function' ? t.closest('[data-tooltip]') : null;
         if (target) {
             showTooltip(e, (window.OHC_TOOLTIPS && window.OHC_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip'));
         }
     });
 
     document.addEventListener('mouseout', (e) => {
-        if (e.target.closest('[data-tooltip]')) {
+        const target = e.target; if (target && typeof target.closest === 'function' && target.closest('[data-tooltip]')) {
             hideTooltip();
         }
     });
@@ -444,7 +445,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // Mobile long press (contextmenu) or touchstart
     let touchTimeout;
     document.addEventListener('touchstart', (e) => {
-        const target = e.target.closest('[data-tooltip]');
+        const t = e.target;
+        const target = t && typeof t.closest === 'function' ? t.closest('[data-tooltip]') : null;
         if (target) {
             touchTimeout = setTimeout(() => {
                 showTooltip(e, (window.OHC_TOOLTIPS && window.OHC_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip'));
@@ -803,7 +805,7 @@ document.addEventListener('DOMContentLoaded', () => {
             resultsContainer.innerHTML = `
               <div class="empty-state">
                  <p style="margin:0; font-size: 16px;">No results found matching <strong>"${query}"</strong></p>
-                 <p style="margin-top:10px; font-size: 14px; opacity: 0.7;">Try adjusting your search terms or ask our AI assistant for help.</p>
+                 <p style="margin-top:10px; font-size: 14px; opacity: 0.7;">Try adjusting your search terms or ask our AI assistant for help.</p><button style="margin-top: 15px; padding: 10px 20px; border-radius: 8px; background-color: #0066FF; color: white; border: none; cursor: pointer; font-family: Outfit;" onclick="document.getElementById('ohc-help-btn').click()">Ask AI Support Agent</button>
               </div>
             `;
             return;

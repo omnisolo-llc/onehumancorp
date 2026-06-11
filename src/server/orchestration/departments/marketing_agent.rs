@@ -235,6 +235,7 @@ impl Department for MarketingAgent {
             "tenant.product.created".to_string(),
             "tenant.inventory.updated".to_string(),
             "tenant.website.updated".to_string(),
+            "loyalty.points_awarded".to_string(),
         ]
     }
 
@@ -314,6 +315,38 @@ impl Department for MarketingAgent {
 
             let action_desc = format!("Draft Instagram post for {}", product_name);
             return self.orchestrator()?.execute_action(DepartmentType::Marketing, action_desc, event.tenant_id.clone(), risk, payload).await.map(|_| ());
+        }
+
+        if event.event_type == "loyalty.points_awarded" {
+            let customer_id = event.payload.get("customer_id").and_then(|v| v.as_str()).unwrap_or("Customer");
+            let points = event.payload.get("points").and_then(|v| v.as_i64()).unwrap_or(0);
+            let total_points = event.payload.get("total_points").and_then(|v| v.as_i64()).unwrap_or(0);
+
+            // Mock threshold logic: check if total points reached a certain tier (e.g. 50, 100)
+            if total_points >= 50 && total_points - points < 50 {
+                let draft_copy = format!("Hey {}! You just earned a free coffee (or equivalent reward)! Reply 'Claim' to use it on your next pre-order.", customer_id);
+
+                let payload = serde_json::json!({
+                    "feature_type": "loyalty_reward_notification",
+                    "customer_id": customer_id,
+                    "total_points": total_points,
+                    "draft_copy": draft_copy,
+                    "channel": "sms_or_dm"
+                });
+
+                let description = format!("Send reward notification to customer {}", customer_id);
+
+                // Auto execute the sending of the notification for zero-friction loyalty
+                return self.orchestrator()?.execute_action(
+                    DepartmentType::Marketing,
+                    description,
+                    event.tenant_id.clone(),
+                    ActionRisk::AutoExecute,
+                    payload,
+                ).await.map(|_| ());
+            }
+
+            return Ok(());
         }
 
         self.orchestrator()?.execute_action(

@@ -45,6 +45,8 @@ pub struct CostDashboardResponse {
     pub trend: Vec<crate::pricing::cost_aggregator::DailyCost>,
     pub agent_costs: Vec<AgentCostRow>,
     pub department_tier_usage: DepartmentTierUsageResponse,
+    pub email_cost: i64,
+    pub api_cost: i64,
 }
 #[derive(serde::Serialize, serde::Deserialize, Clone, Default)]
 pub struct DepartmentTierUsageResponse {
@@ -84,6 +86,9 @@ pub fn router<S: Clone + Send + Sync + 'static>(hub: Arc<Hub>) -> axum::Router<S
 pub struct CreateCheckoutSessionRequest {
     pub tier: String,
     pub is_subscription: Option<bool>,
+    pub product_id: Option<String>,
+    pub quantity: Option<i32>,
+    pub ttl_seconds: Option<i32>,
 }
 
 #[derive(serde::Serialize)]
@@ -112,11 +117,94 @@ pub async fn create_checkout_session_handler(
         _ => return Err(StatusCode::BAD_REQUEST),
     };
 
+    if let (Some(product_id), Some(quantity)) = (&req.product_id, req.quantity) {
+        if quantity > 0 {
+            let lock_id = uuid::Uuid::new_v4().to_string();
+            let lock_key = format!("ohc:lock:{}:inventory:{}", tenant_id, product_id);
+            let ttl = req.ttl_seconds.unwrap_or(300); // 5 minutes default for online checkout
+
+            if let Some(redis_client) = &hub.redis_client {
+                if let Ok(mut conn) = redis_client.get_multiplexed_async_connection().await {
+                    let acquired: bool = redis::cmd("SET")
+                        .arg(&lock_key).arg(&lock_id).arg("EX").arg(ttl).arg("NX")
+                        .query_async(&mut conn).await.unwrap_or(false);
+
+                    if !acquired {
+                        return Err(StatusCode::CONFLICT); // 409 Conflict if locked
+                    }
+
+                    // Verify database stock
+                    let pool = crate::db::get_pool();
+                    if let Ok(mut tx) = pool.begin().await {
+                        if let Ok(_) = crate::common::auth_utils::set_org_context(&mut *tx, &tenant_id).await {
+                            let current_stock: Option<i32> = sqlx::query_scalar("SELECT inventory_count FROM products WHERE id = $1 AND tenant_id = $2")
+                                .bind(product_id)
+                                .bind(&tenant_id)
+                                .fetch_optional(&mut *tx)
+                                .await
+                                .unwrap_or(None);
+
+                            if let Some(stock) = current_stock {
+                                if stock < quantity {
+                                    let _ = tx.rollback().await;
+                                    let _: () = redis::cmd("DEL").arg(&lock_key).query_async(&mut conn).await.unwrap_or(());
+                                    return Err(StatusCode::CONFLICT);
+                                }
+                            } else {
+                                let _ = tx.rollback().await;
+                                let _: () = redis::cmd("DEL").arg(&lock_key).query_async(&mut conn).await.unwrap_or(());
+                                return Err(StatusCode::NOT_FOUND);
+                            }
+                        }
+                        let _ = tx.commit().await;
+                    }
+                }
+            } else {
+                // Fallback without redis
+                let pool = crate::db::get_pool();
+                if let Ok(mut tx) = pool.begin().await {
+                    if let Ok(_) = crate::common::auth_utils::set_org_context(&mut *tx, &tenant_id).await {
+                        let current_stock: Option<i32> = sqlx::query_scalar("SELECT inventory_count FROM products WHERE id = $1 AND tenant_id = $2")
+                            .bind(product_id)
+                            .bind(&tenant_id)
+                            .fetch_optional(&mut *tx)
+                            .await
+                            .unwrap_or(None);
+
+                        if let Some(stock) = current_stock {
+                            if stock < quantity {
+                                let _ = tx.rollback().await;
+                                return Err(StatusCode::CONFLICT);
+                            }
+                        } else {
+                            let _ = tx.rollback().await;
+                            return Err(StatusCode::NOT_FOUND);
+                        }
+                    }
+                    let _ = tx.commit().await;
+                }
+            }
+        }
+    }
+
     if let Some(client) = &hub.tracker().stripe_client {
         // Assume price_id corresponds to the tier directly or is generated. We pass the tier name as the price_id for now.
         match client.create_checkout_session(&req.tier, &tenant_id, amount_usd, req.is_subscription.unwrap_or(false)).await {
             Ok(url) => Ok(Json(CreateCheckoutSessionResponse { checkout_url: url })),
-            Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
+            Err(_) => {
+                // Explicitly release the lock if the stripe session creation fails
+                if let (Some(product_id), Some(quantity)) = (&req.product_id, req.quantity) {
+                    if quantity > 0 {
+                        if let Some(redis_client) = &hub.redis_client {
+                            if let Ok(mut conn) = redis_client.get_multiplexed_async_connection().await {
+                                let lock_key = format!("ohc:lock:{}:inventory:{}", tenant_id, product_id);
+                                let _: () = redis::cmd("DEL").arg(&lock_key).query_async(&mut conn).await.unwrap_or(());
+                            }
+                        }
+                    }
+                }
+                Err(StatusCode::INTERNAL_SERVER_ERROR)
+            },
         }
     } else {
         // Fallback for tests / missing Stripe config
@@ -221,7 +309,7 @@ pub async fn cost_dashboard_handler(
                 auth.org_id.clone()
             }
         },
-        None => return Json(CostDashboardResponse { total_revenue: 0, total_costs: 0, projected_monthly_cost: 0, llm_cost: 0, storage_cost: 0, payment_fees: 0, network_cost: 0, compute_cost: 0, bandwidth_savings: 0, cache_hit_rate: 0.0, cost_per_1k_tokens: 0.0, period_start: "2024-05-01".to_string(), period_end: "2024-05-31".to_string(), trend: vec![], agent_costs: vec![], department_tier_usage: empty_department_tier_usage_response() })
+        None => return Json(CostDashboardResponse { total_revenue: 0, total_costs: 0, projected_monthly_cost: 0, llm_cost: 0, storage_cost: 0, payment_fees: 0, network_cost: 0, compute_cost: 0, bandwidth_savings: 0, cache_hit_rate: 0.0, cost_per_1k_tokens: 0.0, period_start: "2024-05-01".to_string(), period_end: "2024-05-31".to_string(), trend: vec![], agent_costs: vec![], department_tier_usage: empty_department_tier_usage_response(), email_cost: 0, api_cost: 0 })
     };
 
     let cache = COST_DASHBOARD_CACHE.get_or_init(|| HybridCache::new(None));
@@ -309,7 +397,12 @@ pub async fn cost_dashboard_handler(
     let cost_per_gb = auditor.get_cost_per_gb_month();
     let storage_cost_f64 = storage_gb * cost_per_gb;
 
-    let total_costs_f64 = llm_cost_f64 + storage_cost_f64 + payment_fees_f64 + compute_cost_f64 + network_cost_f64;
+    let email_cost_cents: i64 = trend.iter().map(|d| d.email_cost).sum();
+    let api_cost_cents: i64 = trend.iter().map(|d| d.api_cost).sum();
+    let email_cost_f64 = email_cost_cents as f64 / 100.0;
+    let api_cost_f64 = api_cost_cents as f64 / 100.0;
+
+    let total_costs_f64 = llm_cost_f64 + storage_cost_f64 + payment_fees_f64 + compute_cost_f64 + network_cost_f64 + email_cost_f64 + api_cost_f64;
     let department_tier_usage = department_res.unwrap_or_else(|_| empty_department_tier_usage_response());
 
     // For deterministic hermetic tests, if a specific test tenant is detected, force elapsed days to 7.
@@ -336,6 +429,8 @@ pub async fn cost_dashboard_handler(
         trend,
         agent_costs: agent_costs.into_iter().map(|r| AgentCostRow { agent_id: r.agent_id, cost_cents: r.cost_cents }).collect(),
         department_tier_usage,
+        email_cost: email_cost_cents,
+        api_cost: api_cost_cents,
     };
     cache.set(&tenant_id, resp.clone(), std::time::Duration::from_secs(60)).await;
     Json(resp)
@@ -575,6 +670,20 @@ mod department_tier_usage_tests {
         let cached = cache.get(&tenant_id).await;
         assert!(cached.is_some());
         assert_eq!(cached.unwrap().current_plan, mock_resp.current_plan);
+    }
+
+    #[tokio::test]
+    async fn test_create_checkout_session_inventory_lock() {
+        // Just verify struct layout and compile.
+        let req = CreateCheckoutSessionRequest {
+            tier: "starter".to_string(),
+            is_subscription: Some(false),
+            product_id: Some("prod_123".to_string()),
+            quantity: Some(1),
+            ttl_seconds: Some(300),
+        };
+        assert_eq!(req.tier, "starter");
+        assert_eq!(req.product_id.unwrap(), "prod_123");
     }
 
     #[test]
