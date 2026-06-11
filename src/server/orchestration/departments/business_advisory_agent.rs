@@ -74,7 +74,7 @@ impl Department for BusinessAdvisoryAgent {
             let mut drafted_msg = r#"{"summary": "Great job this week! You made a good amount of sales.", "actionable_suggestion": "Want me to draft a new promotional post for your website?"}"#.to_string();
 
             let mut attempts = 0;
-            let mut ai_call_succeeded = false;
+            let mut _ai_call_succeeded = false;
             while attempts < 3 {
                 let ai_op = async {
                     if let Ok(mut client) = ::server_ohc::orchestration::hub_service_client::HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:8081".to_string())).await {
@@ -92,7 +92,7 @@ impl Department for BusinessAdvisoryAgent {
                 match tokio::time::timeout(std::time::Duration::from_secs(60), ai_op).await {
                     Ok(Ok(content)) => {
                         drafted_msg = content;
-                        ai_call_succeeded = true;
+                        _ai_call_succeeded = true;
                         break;
                     },
                     _ => {
