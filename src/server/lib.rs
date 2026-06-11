@@ -5111,18 +5111,8 @@ async fn create_ui_bom_item_handler(
         .route("/api/help", axum::routing::get(crate::api::docs::list_articles))
         .route("/api/help/search", axum::routing::get(crate::api::docs::search_articles))
         .route("/api/help/{article_id}", axum::routing::get(crate::api::docs::get_article_handler))
-        .route("/api/tooltips", axum::routing::get(|| async {
-            let registry = get_tooltips_registry();
-            let m = registry.read().unwrap();
-            axum::Json(serde_json::to_value(&*m).unwrap())
-        }).post(|axum::Json(payload): axum::Json<HashMap<String, String>>| async {
-            let registry = get_tooltips_registry();
-            let mut m = registry.write().unwrap();
-            for (k, v) in payload {
-                m.insert(k, v);
-            }
-            axum::Json(serde_json::json!({"success": true}))
-        }))
+        .route("/api/tooltips", axum::routing::get(crate::api::docs::get_tooltips))
+        .route("/api/walkthrough/{page}", axum::routing::get(crate::api::docs::get_walkthrough))
         .route("/api/videos", axum::routing::get(crate::api::docs::list_videos))
         .route("/api/changelog", axum::routing::get(crate::api::docs::get_changelog))
         .route("/api/api-docs-spec", axum::routing::get(crate::api::docs::get_api_docs_spec))
