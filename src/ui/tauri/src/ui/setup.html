@@ -322,6 +322,9 @@
       .persona-chip {
         flex: 0 0 auto;
         padding: 8px 16px;
+        min-height: 44px;
+        display: flex;
+        align-items: center;
         border-radius: 20px;
         background: rgba(0, 102, 255, 0.1);
         color: #0066FF;
@@ -399,7 +402,7 @@
           width: 100%;
           border: none;
         }
-        input, select, textarea, button, .radio-option {
+        input, select, textarea, button, .radio-option, .persona-chip {
           min-height: 44px !important;
         }
       }
@@ -426,10 +429,10 @@
         <p>Choose a quick-start or select how you work.</p>
 
         <div class="persona-row">
-            <div class="persona-chip" onclick="applyPersona('Baker')">I'm a Baker</div>
-            <div class="persona-chip" onclick="applyPersona('Handyman')">I'm a Handyman</div>
-            <div class="persona-chip" onclick="applyPersona('Boutique')">I'm a Boutique Owner</div>
-            <div class="persona-chip" onclick="applyPersona('Tutor')">I'm a Tutor</div>
+            <div class="persona-chip" onclick="applyPersona('Baker', event)">I'm a Baker</div>
+            <div class="persona-chip" onclick="applyPersona('Handyman', event)">I'm a Handyman</div>
+            <div class="persona-chip" onclick="applyPersona('Boutique', event)">I'm a Boutique Owner</div>
+            <div class="persona-chip" onclick="applyPersona('Tutor', event)">I'm a Tutor</div>
         </div>
 
         <div class="radio-group" id="context-group">
@@ -582,7 +585,7 @@
     <script>
       const container = document.getElementById('form-container');
 
-      function applyPersona(persona) {
+      function applyPersona(persona, event) {
           document.querySelectorAll('.persona-chip').forEach(el => el.classList.remove('selected'));
           event.target.classList.add('selected');
 
