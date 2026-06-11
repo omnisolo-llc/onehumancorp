@@ -44,7 +44,7 @@ export async function currentAppSmoke(page: Page, request: APIRequestContext, la
 
     await page.goto('/cost-dashboard');
     await expect(page.locator('h1', { hasText: 'Business Advisory Dashboard' }).first()).toBeVisible({ timeout: 15000 });
-    await expect(page.locator('h2', { hasText: 'Cost Transparency' })).toBeVisible();
+    await expect(page.locator('h2', { hasText: 'Cost Transparency' }).first()).toBeVisible();
 
     const totalCosts = page.locator('#cost-dashboard-total');
     await expect(totalCosts).toBeVisible();
