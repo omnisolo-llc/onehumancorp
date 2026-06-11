@@ -121,6 +121,11 @@ fn get_tooltips_registry() -> &'static RwLock<HashMap<String, String>> {
     m.insert("pos-walkthrough-btn".to_string(), "Start an interactive guide to learn how to accept payments.".to_string());
     m.insert("assistant-walkthrough-btn".to_string(), "Start an interactive guide to learn how to chat with your AI agent.".to_string());
     m.insert("help-center-nav-btn".to_string(), "Access the Help Center and tutorials.".to_string());
+    m.insert("ask-ai-tooltip".to_string(), "Open AI Help Chat to get answers instantly.".to_string());
+    m.insert("dashboard-walkthrough-btn".to_string(), "Start an interactive guide to learn how to use your dashboard.".to_string());
+    m.insert("pos-walkthrough-btn".to_string(), "Start an interactive guide to learn how to accept payments.".to_string());
+    m.insert("assistant-walkthrough-btn".to_string(), "Start an interactive guide to learn how to chat with your AI agent.".to_string());
+    m.insert("help-center-nav-btn".to_string(), "Access the Help Center and tutorials.".to_string());
     m.insert("change-vibe-tooltip".to_string(), "Change the theme and colors of your website.".to_string());
     m.insert("help-center-nav-btn".to_string(), "Access the Help Center".to_string());
     m.insert("dashboard-walkthrough-btn".to_string(), "Take a tour of the dashboard".to_string());
