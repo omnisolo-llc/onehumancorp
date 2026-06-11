@@ -245,6 +245,9 @@ impl Department for SalesAgent {
                         let suggested_price = payload.get("suggested_price").and_then(|v| v.as_f64()).unwrap_or(0.0);
                         let customer_inquiry = payload.get("customer_inquiry").and_then(|v| v.as_str()).unwrap_or("Unknown");
                         let deposit_amount = suggested_price * 0.20; // 20% deposit
+                        let customer_id = payload.get("customer_id").and_then(|v| v.as_str()).unwrap_or("cus_dummy");
+                        let inbox_message_id = payload.get("inbox_message_id").and_then(|v| v.as_str()).unwrap_or("");
+                        let service_name = payload.get("service").and_then(|v| v.as_str()).unwrap_or("Unknown Service");
 
                         tracing::info!(
                             "Executing approved quote draft for inquiry: '{}'. Suggested price: ${}. Deposit: ${}",
@@ -253,19 +256,36 @@ impl Department for SalesAgent {
                             deposit_amount
                         );
 
-                        // Simulate creating a Stripe checkout session for the deposit
                         let stripe_client = crate::integrations::stripe::client::StripeClient::new(
                             std::env::var("STRIPE_API_KEY").unwrap_or_else(|_| "sk_test_123".to_string()),
                         );
 
-                        match stripe_client.create_checkout_session("price_dummy", "cus_dummy", deposit_amount, false).await {
+                        let mut payment_url = String::new();
+                        match stripe_client.create_checkout_session("price_dummy", customer_id, deposit_amount, false).await {
                             Ok(url) => {
                                 tracing::info!("Generated deposit link: {}", url);
-                                // Optional: Update timeline or send a message
+                                payment_url = url.clone();
                             }
                             Err(e) => {
                                 tracing::error!("Failed to create checkout session for quote deposit: {}", e);
                             }
+                        }
+
+                        // Send proposal back via inbox
+                        if !payment_url.is_empty() && !inbox_message_id.is_empty() {
+                            let message = format!("I can provide {} for ${}. Please pay the ${} deposit here to confirm: {}", service_name, suggested_price, deposit_amount, payment_url);
+                            let _ = self.orchestrator.execute_action(
+                                DepartmentType::Sales,
+                                format!("Send quote deposit link to customer"),
+                                event.tenant_id.clone(),
+                                ActionRisk::AutoExecute,
+                                serde_json::json!({
+                                    "inbox_message_id": inbox_message_id,
+                                    "message": message,
+                                    "payment_url": payment_url,
+                                    "deposit_amount": deposit_amount,
+                                }),
+                            ).await;
                         }
                     }
                 }
@@ -273,7 +293,7 @@ impl Department for SalesAgent {
             return Ok(());
         }
 
-                if event.event_type == "tenant.message.received" || event.event_type == "tenant.omnichannel.message.received" || event.event_type == "tenant.work_intake.received" {
+        if event.event_type == "tenant.message.received" || event.event_type == "tenant.omnichannel.message.received" || event.event_type == "tenant.work_intake.received" {
             let planned_intent = match self
                 .quote_intent_planner
                 .plan_quote_intent(&event.tenant_id, &event.payload)
@@ -356,6 +376,7 @@ impl Department for SalesAgent {
 
                 let action_payload = serde_json::json!({
                     "inbox_message_id": event.payload.get("inbox_message_id").and_then(|v| v.as_str()).unwrap_or(""),
+                    "customer_id": event.payload.get("customer_id").and_then(|v| v.as_str()).unwrap_or("cus_dummy"),
                     "feature_type": "quote_draft",
                     "customer_inquiry": intent.original_message,
                     "suggested_price": price,

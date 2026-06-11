@@ -60,7 +60,7 @@ impl AgentMemoryPipeline {
                         }
                     };
 
-                    let _emb_str = format!("[{}]", embedding.iter().map(|f| f.to_string()).collect::<Vec<_>>().join(","));
+                    let emb_str = format!("[{}]", embedding.iter().map(|f| f.to_string()).collect::<Vec<_>>().join(","));
                     let mem_id = Uuid::new_v4();
 
                     sqlx::query("INSERT INTO consolidated_memory (id, tenant_id, agent_id, source_type, content, embedding) VALUES ($1, $2, $3, $4, $5, $6)")
@@ -150,7 +150,7 @@ impl AgentMemoryPipeline {
 
                 match self.embedding_api.generate_embedding(&content).await {
                     Ok(embedding) => {
-                        let _emb_str = format!("[{}]", embedding.iter().map(|f| f.to_string()).collect::<Vec<_>>().join(","));
+                        let emb_str = format!("[{}]", embedding.iter().map(|f| f.to_string()).collect::<Vec<_>>().join(","));
                         let mem_id = Uuid::new_v4();
 
                         match &self.db.store {
@@ -172,7 +172,7 @@ impl AgentMemoryPipeline {
                                     .bind("fs-agent")
                                     .bind("FS_MEMORY")
                                     .bind(&content)
-                                    .bind(&_emb_str)
+                                    .bind(&emb_str)
                                     .execute(&self.db.pool)
                                     .await?;
                             }
