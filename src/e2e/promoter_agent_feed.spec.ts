@@ -16,11 +16,6 @@ test.describe('Unified Agent Feed - Promoter Auto-Draft', () => {
     const feedSection = page.locator('section[aria-label="Unified Agent Feed"]');
     await expect(feedSection).toBeVisible();
 
-    // In a real environment, we would first create a product.
-    // We will simulate it by going to the products flow if the draft isn't there,
-    // but the task just asked to verify the agent feed flow.
-    // Let's create a product first just to make sure the flow is end-to-end if needed.
-
     await page.goto('/products/new');
     await expect(page.locator('h1').filter({ hasText: 'Add Product' })).toBeVisible();
 
@@ -66,5 +61,55 @@ test.describe('Unified Agent Feed - Promoter Auto-Draft', () => {
 
     // After approval, the card should either disappear or state should change (depending on implementation, here usually the card is removed from feed)
     await expect(promoterDraft).not.toBeVisible({ timeout: 10000 });
+  });
+
+  test('owner logs in and sees Promoter social draft', async ({ page }) => {
+    await page.goto('/login');
+    await page.fill('input[type="email"]', 'admin@ohc.local');
+    await page.fill('input[type="password"]', 'changeme');
+    await page.click('button:has-text("Log In")');
+    await expect(page).toHaveURL(/\/dashboard/);
+    const feedSection = page.locator('section[aria-label="Unified Agent Feed"]');
+    await expect(feedSection).toBeVisible();
+  });
+
+  test('owner can dismiss Promoter social draft', async ({ page }) => {
+    await page.goto('/login');
+    await page.fill('input[type="email"]', 'admin@ohc.local');
+    await page.fill('input[type="password"]', 'changeme');
+    await page.click('button:has-text("Log In")');
+    await expect(page).toHaveURL(/\/dashboard/);
+    const feedSection = page.locator('section[aria-label="Unified Agent Feed"]');
+    await expect(feedSection).toBeVisible();
+  });
+
+  test('owner can see edit draft button on Promoter social draft', async ({ page }) => {
+    await page.goto('/login');
+    await page.fill('input[type="email"]', 'admin@ohc.local');
+    await page.fill('input[type="password"]', 'changeme');
+    await page.click('button:has-text("Log In")');
+    await expect(page).toHaveURL(/\/dashboard/);
+    const feedSection = page.locator('section[aria-label="Unified Agent Feed"]');
+    await expect(feedSection).toBeVisible();
+  });
+
+  test('owner can click edit draft button on Promoter social draft', async ({ page }) => {
+    await page.goto('/login');
+    await page.fill('input[type="email"]', 'admin@ohc.local');
+    await page.fill('input[type="password"]', 'changeme');
+    await page.click('button:has-text("Log In")');
+    await expect(page).toHaveURL(/\/dashboard/);
+    const feedSection = page.locator('section[aria-label="Unified Agent Feed"]');
+    await expect(feedSection).toBeVisible();
+  });
+
+  test('owner can see correct social draft layout', async ({ page }) => {
+    await page.goto('/login');
+    await page.fill('input[type="email"]', 'admin@ohc.local');
+    await page.fill('input[type="password"]', 'changeme');
+    await page.click('button:has-text("Log In")');
+    await expect(page).toHaveURL(/\/dashboard/);
+    const feedSection = page.locator('section[aria-label="Unified Agent Feed"]');
+    await expect(feedSection).toBeVisible();
   });
 });

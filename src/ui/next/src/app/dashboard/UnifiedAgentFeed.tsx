@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import GrowthReferralWidget from "../components/GrowthReferralWidget";
+import Link from "next/link";
 
 type AgentFeedItem = {
   id: string;
@@ -557,12 +558,20 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                     <div className="flex flex-col sm:flex-row gap-3 w-full">
                       <button
                         onClick={() => handleDecision(approval.id, true)}
-                        className="flex-1 min-h-[44px] px-4 rounded-[8px] bg-gradient-to-r from-pink-500 to-indigo-500 text-white font-medium hover:from-pink-600 hover:to-indigo-600 transition-all duration-200 shadow-md flex items-center justify-center"
+                        className="flex-[2] min-h-[44px] px-4 rounded-[8px] bg-gradient-to-r from-pink-500 to-indigo-500 text-white font-medium hover:from-pink-600 hover:to-indigo-600 transition-all duration-200 shadow-md flex items-center justify-center"
                         aria-label="Approve & Schedule"
                         data-testid="approve-social-post"
                       >
                         Approve & Schedule
                       </button>
+                      <Link
+                        href={`/promoter?id=${approval.id}`}
+                        className="flex-1 min-h-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
+                        aria-label="Edit Draft"
+                        data-testid="edit-social-post"
+                      >
+                        Edit Draft
+                      </Link>
                       <button
                         onClick={() => handleDecision(approval.id, false)}
                         className="flex-1 min-h-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"

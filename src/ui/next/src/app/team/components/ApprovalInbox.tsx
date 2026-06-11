@@ -594,7 +594,7 @@ export default function ApprovalInbox({
                   <div className="flex gap-3">
                     <button
                       onClick={() => {
-                        if (payload && (payload.original_message || payload.feature_type === "quote_draft")) {
+                        if (payload && (payload.original_message || payload.feature_type === "quote_draft" || payload.feature_type === "social_post_draft")) {
                           setSelectedReview(req);
                         } else {
                           onReject(req.id);
@@ -602,13 +602,13 @@ export default function ApprovalInbox({
                       }}
                       className="flex-1 py-3 px-4 rounded-xl font-semibold text-sm bg-gray-100 text-gray-700 hover:bg-gray-200 active:scale-[0.98] transition-all min-h-[44px] min-w-[44px]"
                     >
-                      {payload && (payload.original_message || payload.feature_type === "quote_draft")
-                        ? "Review"
+                      {payload && (payload.original_message || payload.feature_type === "quote_draft" || payload.feature_type === "social_post_draft")
+                        ? "Review / Edit"
                         : "Reject / Edit"}
                     </button>
                     <button
                       onClick={() => onApprove(req.id)}
-                      className="flex-1 py-3 px-4 rounded-xl font-bold text-sm bg-[#0066FF] text-white hover:bg-[#0052CC] shadow-md shadow-[#0066FF]/20 active:scale-[0.98] transition-all min-h-[44px] min-w-[44px]"
+                      className="flex-[2] py-3 px-4 rounded-xl font-bold text-sm bg-[#0066FF] text-white hover:bg-[#0052CC] shadow-md shadow-[#0066FF]/20 active:scale-[0.98] transition-all min-h-[44px] min-w-[44px]"
                     >
                       {req.payload?.feature_type === "case_study"
                         ? "Publish to Website"
