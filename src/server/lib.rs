@@ -2812,7 +2812,7 @@ pub async fn list_ui_triage_handler(
             }
 
             match sqlx::query(
-                "SELECT t.id, t.tenant_id, t.customer_id, t.source, t.priority, t.context, t.status, t.created_at, a.action_type, a.payload AS action_payload FROM triage_items t LEFT JOIN triage_proposed_actions a ON t.id = a.triage_item_id WHERE t.tenant_id = $1 AND t.status != 'resolved' ORDER BY t.created_at DESC"
+                "SELECT t.id, t.tenant_id, t.customer_id, t.source, t.priority, t.context, t.status, t.created_at, a.action_type, a.payload AS action_payload FROM triage_items t LEFT JOIN triage_proposed_actions a ON t.id = a.triage_item_id WHERE t.tenant_id = $1 AND t.status != 'resolved' AND t.status != 'dismissed' ORDER BY t.created_at DESC"
             )
             .bind(&tenant_id)
             .fetch_all(&mut *tx)
@@ -2864,6 +2864,40 @@ pub async fn update_ui_triage_action_handler(
             }
 
             let status = if payload.approved { "resolved" } else { "dismissed" };
+
+            if payload.approved {
+                use sqlx::Row;
+                // Check if there is a proposed action to execute
+                if let Ok(Some(row)) = sqlx::query("SELECT action_type, payload FROM triage_proposed_actions WHERE triage_item_id = $1 AND tenant_id = $2")
+                    .bind(&payload.triage_item_id)
+                    .bind(&tenant_id)
+                    .fetch_optional(&mut *tx)
+                    .await
+                {
+                    let action_type = row.try_get::<String, _>("action_type").unwrap_or_default();
+                    let action_payload = row.try_get::<String, _>("payload").unwrap_or_default();
+
+                    if action_type == "Draft Reply" {
+                        let new_msg_id = format!("msg-{}", uuid::Uuid::new_v4());
+                        let _ = sqlx::query(
+                            "INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, status) VALUES ($1, $2, $3, $4, $5, $6, $7)"
+                        )
+                        .bind(&new_msg_id)
+                        .bind(&tenant_id)
+                        .bind("triage-action")
+                        .bind(&action_payload)
+                        .bind(&action_payload)
+                        .bind("en")
+                        .bind("sent")
+                        .execute(&mut *tx)
+                        .await;
+                    } else if action_type == "ProposedInvoice" || action_type == "SuggestedCalendarSlot" {
+                        // TODO: Implement other action types like ProposedInvoice or SuggestedCalendarSlot as outlined in issue #26616
+                        tracing::info!("Executing proposed action: {}, payload: {}", action_type, action_payload);
+                    }
+                }
+            }
+
             match sqlx::query("UPDATE triage_items SET status = $1 WHERE id = $2 AND tenant_id = $3").bind(status).bind(&payload.triage_item_id).bind(&tenant_id).execute(&mut *tx).await {
                 Ok(_) => {
                     let _ = tx.commit().await;
