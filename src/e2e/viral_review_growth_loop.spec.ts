@@ -1,7 +1,10 @@
 import { test, expect } from './fixtures';
 import { currentAppSmoke } from './current_app_smoke';
 
-currentAppSmoke('viral_review_growth_loop');
+test('viral_review_growth_loop', async ({ page, request, loginAs, adminUser }) => {
+  await loginAs(page, adminUser);
+  await currentAppSmoke(page, request, 'viral_review_growth_loop');
+});
 
 test.describe('Viral Review Growth Loop', () => {
   test('submitting a 5-star review reveals the viral referral widget', async ({ page }) => {

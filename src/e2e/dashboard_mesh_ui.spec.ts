@@ -1,3 +1,7 @@
+import { test } from './fixtures';
 import { currentAppSmoke } from './current_app_smoke';
 
-currentAppSmoke('dashboard_mesh_ui');
+test('dashboard_mesh_ui', async ({ page, request, loginAs, adminUser }) => {
+  await loginAs(page, adminUser);
+  await currentAppSmoke(page, request, 'dashboard_mesh_ui');
+});

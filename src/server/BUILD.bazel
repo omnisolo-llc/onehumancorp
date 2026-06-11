@@ -3,6 +3,7 @@ load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library", "rust_test")
 load("//bazel/rules:rust_sharded_test.bzl", "rust_sharded_test")
 
 SERVER_RS_SRCS = [
+    "health_test.rs",
     "analytics.rs",
     "autodream_sync.rs",
     "billing.rs",
@@ -51,6 +52,7 @@ SERVER_RS_SRCS = [
     "//src/server/api:local_seo.rs",
     "//src/server/api:recovery.rs",
     "//src/server/api:agent_feed.rs",
+    "//src/server/api:incidents.rs",
     "//src/server/api:audio_command.rs",
     "//src/server/api:invoice.rs",
     "//src/server/api:oauth/mod.rs",
@@ -67,7 +69,6 @@ SERVER_RS_SRCS = [
     "//src/server/api:shipping.rs",
     "//src/server/api/booking:mod.rs",
     "//src/server/api/booking:request.rs",
-    "//src/server/api/booking:unified.rs",
     "//src/server/api/agents:approvals.rs",
     "//src/server/api/agents:chat.rs",
     "//src/server/api/agents:hire.rs",
@@ -324,6 +325,10 @@ rust_library(
 rust_library(
     name = "server_lib",
     srcs = SERVER_RS_SRCS,
+    compile_data = [
+        "//src/ui/tauri/src/ui:all_files",
+        "//src/ui/next/public/api/ui:all_files",
+    ],
     data = ["//src/server/migrations"],
     edition = "2024",
     rustc_flags = ["--cfg=ohc_bazel"],

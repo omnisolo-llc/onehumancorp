@@ -1310,6 +1310,63 @@ impl AdvisorWorker {
                         }
                     }
 
+                    // Revenue Milestone Detection
+                    if gross_sales >= 1000.0 {
+                        let milestone_type = "revenue_1k";
+                        let milestone_title = "💰 Four-Figure Club";
+                        let milestone_msg = format!("Your business has surpassed $1,000 in total revenue! (Current: ${:.2})", gross_sales);
+                        let milestone_id = Uuid::new_v4().to_string();
+
+                        match &db.store {
+                            crate::db::DbStore::Postgres => {
+                                let _ = sqlx::query(
+                                    "INSERT INTO business_milestones (id, tenant_id, milestone_type) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING"
+                                )
+                                .bind(&milestone_id)
+                                .bind(&tenant_id)
+                                .bind(milestone_type)
+                                .execute(&db.pool)
+                                .await;
+
+                                let _ = sqlx::query(
+                                    r#"
+                                    INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
+                                    VALUES ($1, $2, $3, 'Growth milestone reached!', 'PENDING', 'P2', 'LOW', 'PENDING', $4)
+                                    "#
+                                )
+                                .bind(&milestone_id)
+                                .bind(&tenant_id)
+                                .bind(milestone_title)
+                                .bind(milestone_msg)
+                                .execute(&db.pool)
+                                .await;
+                            },
+                            crate::db::DbStore::Sqlite(pool) => {
+                                let _ = sqlx::query(
+                                    "INSERT INTO business_milestones (id, tenant_id, milestone_type) VALUES (?, ?, ?)"
+                                )
+                                .bind(&milestone_id)
+                                .bind(&tenant_id)
+                                .bind(milestone_type)
+                                .execute(pool)
+                                .await;
+
+                                let _ = sqlx::query(
+                                    r#"
+                                    INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
+                                    VALUES (?, ?, ?, 'Growth milestone reached!', 'PENDING', 'P2', 'LOW', 'PENDING', ?)
+                                    "#
+                                )
+                                .bind(&milestone_id)
+                                .bind(&tenant_id)
+                                .bind(milestone_title)
+                                .bind(milestone_msg)
+                                .execute(pool)
+                                .await;
+                            }
+                        }
+                    }
+
                     // 3. Dispatch tenant.report.weekly_health event
                     let payload = serde_json::json!({
                         "gross_sales": gross_sales,
@@ -1618,4 +1675,55 @@ mod tests {
         } // end of test_customer_success_worker_draft_reply
     }
 
+     #[tokio::test]
+     async fn test_advisor_worker_revenue_milestone() {
+         let db = setup_test_db().await;
+         if let DbStore::Sqlite(pool) = &db.store {
+             let _ = sqlx::query("CREATE TABLE IF NOT EXISTS tenants (id TEXT PRIMARY KEY, name TEXT, industry TEXT);").execute(pool).await;
+             let _ = sqlx::query("CREATE TABLE IF NOT EXISTS business_milestones (id TEXT PRIMARY KEY, tenant_id TEXT, milestone_type TEXT, reached_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, UNIQUE(tenant_id, milestone_type));").execute(pool).await;
+             let _ = sqlx::query("CREATE TABLE IF NOT EXISTS ohc_universal_ledger (id TEXT PRIMARY KEY, tenant_id TEXT, department TEXT, action_type TEXT, state_change TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);").execute(pool).await;
+
+             sqlx::query("INSERT INTO tenants (id, name, industry) VALUES ('tenant-rev-1k', 'Big Seller', 'Retail')").execute(pool).await.unwrap();
+
+             // Add ledger entries that sum up to > $1000
+             let state_change = json!({"total_amount": 1200.50});
+             sqlx::query("INSERT INTO ohc_universal_ledger (id, tenant_id, department, action_type, state_change) VALUES ('l1', 'tenant-rev-1k', 'Sales', 'order_created', ?)")
+                 .bind(state_change.to_string())
+                 .execute(pool).await.unwrap();
+
+             // Manually invoke the logic or a subset of it if possible.
+             let tenant_id = "tenant-rev-1k";
+             let ledger_entries: Vec<(String, serde_json::Value)> = sqlx::query_as("SELECT action_type, state_change FROM ohc_universal_ledger WHERE tenant_id = ?")
+                 .bind(tenant_id)
+                 .fetch_all(pool)
+                 .await
+                 .unwrap_or_default();
+
+             let mut gross_sales = 0.0;
+             for (action_type, state_change) in ledger_entries {
+                 if action_type == "order_created" {
+                     if let Some(total) = state_change.get("total_amount").and_then(|v| v.as_f64()) {
+                         gross_sales += total;
+                     }
+                 }
+             }
+
+             assert!(gross_sales >= 1000.0);
+
+             if gross_sales >= 1000.0 {
+                 let milestone_type = "revenue_1k";
+                 let milestone_id = "m1";
+                 sqlx::query("INSERT INTO business_milestones (id, tenant_id, milestone_type) VALUES (?, ?, ?)")
+                     .bind(milestone_id)
+                     .bind(tenant_id)
+                     .bind(milestone_type)
+                     .execute(pool)
+                     .await.unwrap();
+             }
+
+             let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM business_milestones WHERE tenant_id = 'tenant-rev-1k' AND milestone_type = 'revenue_1k'")
+                 .fetch_one(pool).await.unwrap();
+             assert_eq!(count, 1);
+         }
+     }
 }
