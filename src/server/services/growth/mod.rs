@@ -5,3 +5,4 @@ pub mod quota;
 pub mod viral_loop;
 pub mod referral_api;
 pub mod service;
+pub mod digital_card;

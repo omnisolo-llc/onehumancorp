@@ -3,6 +3,9 @@
 
 use std::sync::OnceLock;
 use crate::utils::cache::HybridCache;
+use uuid::Uuid;
+use axum::extract::Path;
+use crate::services::growth::digital_card::{CreateDigitalCardRequest, DigitalCardService};
 
 pub static MILESTONES_CACHE: OnceLock<HybridCache<Vec<String>>> = OnceLock::new();
 pub static TEAM_INVITES_CACHE: OnceLock<HybridCache<TeamInvitesResponse>> = OnceLock::new();
@@ -164,6 +167,8 @@ where
         .route("/campaign/send-cart", post(handle_send_cart))
         .route("/campaign/abandoned-carts-count", get(handle_abandoned_carts_count))
         .route("/storefront/track", post(handle_track_visitor))
+        .route("/digital-card", post(create_digital_card))
+        .route("/digital-card/{id}", get(get_digital_card))
         .route("/storefront/embed", get(handle_storefront_embed))
                 .route("/storefront/og-card", get(handle_og_card))
         .route("/flash-sale/embed", get(handle_flash_sale_embed))
@@ -1845,6 +1850,48 @@ pub struct CloudBridgeInviteRequest {
 #[derive(Debug, Serialize)]
 pub struct CloudBridgeInviteResponse {
     pub invite_link: String,
+}
+
+async fn create_digital_card(
+    Extension(state): Extension<GrowthState>,
+    Json(req): Json<CreateDigitalCardRequest>,
+) -> Result<impl IntoResponse, StatusCode> {
+    let service = DigitalCardService::new(state.pool.clone());
+
+    // We assume the user has a tenant_id assigned in the db if this is a real product
+    let tenant_id = match sqlx::query_scalar::<_, Uuid>("SELECT id FROM tenants LIMIT 1")
+        .fetch_one(&state.pool)
+        .await
+    {
+        Ok(t) => t,
+        Err(_) => return Err(StatusCode::INTERNAL_SERVER_ERROR),
+    };
+
+    match service.create_card(tenant_id, req).await {
+        Ok(card) => Ok((StatusCode::CREATED, Json(card))),
+        Err(e) => {
+            tracing::error!("Failed to create digital card: {:?}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+async fn get_digital_card(
+    Extension(state): Extension<GrowthState>,
+    Path(id): Path<Uuid>,
+) -> Result<impl IntoResponse, StatusCode> {
+    let service = DigitalCardService::new(state.pool.clone());
+
+    match service.get_card(id).await {
+        Ok(card) => Ok((StatusCode::OK, Json(card))),
+        Err(e) => match e {
+            sqlx::Error::RowNotFound => Err(StatusCode::NOT_FOUND),
+            _ => {
+                tracing::error!("Failed to get digital card: {:?}", e);
+                Err(StatusCode::INTERNAL_SERVER_ERROR)
+            }
+        },
+    }
 }
 
 async fn handle_cloud_bridge_invite(

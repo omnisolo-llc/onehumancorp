@@ -414,6 +414,22 @@ export default function Dashboard() {
         </div>
       </section>
 
+      <section className="app-panel glassmorphism border border-white/40 dark:border-white/10 mb-6 bg-gradient-to-br from-blue-50/50 to-indigo-50/50 dark:from-blue-900/10 dark:to-indigo-900/10">
+        <div className="app-panel-header">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-[12px] bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center text-xl shadow-sm border border-blue-200 dark:border-blue-800">
+              📇
+            </div>
+            <h2 className="app-panel-title">Digital Business Card</h2>
+          </div>
+          <span className="app-badge good">Growth Tool</span>
+        </div>
+        <div className="app-panel-body">
+          <p className="app-list-subtitle mb-3">Create and share your professional digital business card to gather leads easily.</p>
+          <Link href="/digital-card" className="app-button">Create Digital Card</Link>
+        </div>
+      </section>
+
       {showMigration && (
         <section className="app-panel glassmorphism border border-white/40 dark:border-white/10 mb-6">
           <div className="app-panel-header">

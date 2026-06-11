@@ -49,6 +49,7 @@ rust_library(
         "//src/server/services/growth:experiments.rs",
         "//src/server/services/growth:invites.rs",
         "//src/server/services/growth:mod.rs",
+        "//src/server/services/growth:digital_card.rs",
         "//src/server/services/growth:quota.rs",
         "//src/server/services/growth:referral_api.rs",
         "//src/server/services/growth:referrals.rs",
