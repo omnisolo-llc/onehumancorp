@@ -1,4 +1,5 @@
 pub mod tasks;
+pub mod identity_resolution;
 pub mod shared_tasks;
 #[cfg(test)]
 pub mod shared_tasks_test;

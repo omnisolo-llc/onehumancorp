@@ -22,6 +22,7 @@ pub mod dynamic_workflows;
 pub mod catalog;
 pub mod shipping;
 pub mod meta_webhook;
+pub mod omni_inbox_webhook;
 pub mod docs;
 pub mod subscription;
 pub mod fulfillment;

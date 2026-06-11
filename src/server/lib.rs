@@ -2734,6 +2734,15 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .route("/api/v1/webhooks/meta", axum::routing::post(api::meta_webhook::meta_webhook_post_handler))
         .with_state(meta_webhook_state);
 
+    let omni_inbox_webhook_state = api::omni_inbox_webhook::OmniInboxWebhookState {
+        hub: hub.clone(),
+        db: db.clone(),
+        orchestrator: dept_orchestrator.clone(),
+    };
+    let omni_inbox_webhook_router = axum::Router::new()
+        .route("/api/v1/webhooks/omni_inbox", axum::routing::post(api::omni_inbox_webhook::omni_inbox_post_handler))
+        .with_state(omni_inbox_webhook_state);
+
     let health_router = axum::Router::new()
         .route("/api/v1/health", axum::routing::get(api::health::health_handler))
         .with_state(hub.clone());
@@ -4946,6 +4955,7 @@ async fn create_ui_bom_item_handler(
             default_config: ohc_builtin_agent::agent::AgentRunConfig::default(),
         })))
         .merge(meta_webhook_router)
+        .merge(omni_inbox_webhook_router)
         .merge(health_router)
         .fallback(api_not_found_handler);
 
