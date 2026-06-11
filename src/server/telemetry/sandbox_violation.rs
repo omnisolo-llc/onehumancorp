@@ -44,7 +44,8 @@ impl SandboxViolationStore {
             // In 002_missing_tables.sql it is `details TEXT NOT NULL`
             // Wait, the harness store uses `sqlx::types::Json`, but `002_missing_tables.sql` has `details TEXT NOT NULL`.
             // Let's just stringify details to be safe and compatible with TEXT.
-            let details_str = details.to_string();
+            let redacted_details = crate::redact_interface_pii(details);
+            let details_str = redacted_details.to_string();
 
             // Execute in an explicit transaction
             let mut tx = pool.begin().await?;
@@ -129,13 +130,16 @@ mod tests {
             "test-agent",
             "test-session",
             "sandbox_escape",
-            json!({"path": "/etc/shadow"}),
+            json!({
+                "path": "/etc/shadow",
+                "password": "supersecretpassword123!"
+            }),
         ).await;
 
         assert!(result.is_ok());
 
         use sqlx::Row;
-        let row = sqlx::query("SELECT tenant_id, agent_id, violation_type FROM agent_violations WHERE session_id = 'test-session' LIMIT 1")
+        let row = sqlx::query("SELECT tenant_id, agent_id, violation_type, details FROM agent_violations WHERE session_id = 'test-session' LIMIT 1")
             .fetch_one(&pool)
             .await;
 
@@ -146,9 +150,15 @@ mod tests {
         let fetched_agent_id: String = record.get("agent_id");
         let fetched_violation_type: String = record.get("violation_type");
 
+        let fetched_details: String = record.get("details");
+
         assert_eq!(fetched_tenant_id, "test-tenant");
         assert_eq!(fetched_agent_id, "test-agent");
         assert_eq!(fetched_violation_type, "sandbox_escape");
+
+        let details_json: Value = serde_json::from_str(&fetched_details).unwrap();
+        assert_eq!(details_json["path"], "/etc/shadow");
+        assert_eq!(details_json["password"], "[REDACTED]");
 
         // Clean up
         let _ = sqlx::query("DELETE FROM agent_violations WHERE session_id = 'test-session'").execute(&pool).await;

@@ -6,6 +6,7 @@ rust_library(
         "mod.rs",
         "forecaster.rs",
         "dashboard_test.rs",
+        "sandbox_violation.rs",
     ],
     crate_root = "mod.rs",
     edition = "2024",
@@ -20,6 +21,7 @@ rust_library(
         "@crates//:opentelemetry",
         "@crates//:tokio",
         "@crates//:regex",
+        "@crates//:uuid",
     ],
 )
 

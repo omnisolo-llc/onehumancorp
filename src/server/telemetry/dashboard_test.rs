@@ -9,10 +9,10 @@ fn test_hybrid_telemetry_drift() {
         "deploy/helm/ohc/dashboards/hybrid-telemetry.json"
     ];
 
-    let canonical_content = fs::read_to_string(source_path).expect("Failed to read canonical hybrid-telemetry.json");
+    let canonical_content = fs::read_to_string(source_path).or_else(|_| fs::read_to_string("../../".to_string() + source_path)).or_else(|_| fs::read_to_string("../../../".to_string() + source_path)).expect("Failed to read canonical hybrid-telemetry.json");
 
     for mirror in mirror_paths {
-        let mirror_content = fs::read_to_string(mirror).unwrap_or_else(|_| "".to_string());
+        let mirror_content = fs::read_to_string(mirror).or_else(|_| fs::read_to_string("../../".to_string() + mirror)).or_else(|_| fs::read_to_string("../../../".to_string() + mirror)).unwrap_or_else(|_| "".to_string());
         assert_eq!(
             canonical_content, mirror_content,
             "Drift detected in {}. Please synchronize it with the canonical source at {}.",
