@@ -10,6 +10,7 @@ import { MorningBriefingCard } from "./MorningBriefingCard";
 
 import { useEffect, useMemo, useState } from "react";
 import { TriageFeed } from "./TriageFeed";
+import { ProactiveInsightsFeed } from "./ProactiveInsightsFeed";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AppShell } from "../components/AppShell";
@@ -330,6 +331,7 @@ export default function Dashboard() {
         <p className="text-gray-600 dark:text-gray-400">Your agents are working on your behalf.</p>
       </div>
 
+      <ProactiveInsightsFeed />
       <TriageFeed tenantId={tenantId()} />
       <AiTimeSavingsWidget />
       <NeighborhoodPulseCard tenant={tenantId()} />

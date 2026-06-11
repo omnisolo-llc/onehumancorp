@@ -2352,6 +2352,8 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     competitor_audit_worker.start();
 
     let ops_worker = crate::workers::department_workers::OperationsWorker::new(db.clone());
+    let proactive_analysis_worker = crate::workers::proactive_analysis_worker::ProactiveAnalysisWorker::new(db.clone());
+    proactive_analysis_worker.start();
     let promoter_worker = crate::workers::department_workers::PromoterWorker::new(db.clone(), hub.clone());
     promoter_worker.start();
 
@@ -4282,6 +4284,50 @@ async fn create_ui_bom_item_handler(
                 let db = db.clone();
                 move |axum::Json(payload): axum::Json<serde_json::Value>| async move {
                     let scenario = payload.get("scenario").and_then(|v| v.as_str()).unwrap_or("");
+
+                    if scenario == "proactive-insight" {
+                        let tenant_id = payload.get("tenantId").and_then(|v| v.as_str()).unwrap_or("default");
+                        let item_id = "test-proactive-insight";
+                        let context_json = serde_json::json!({"triage_items": []});
+                        let action_json = serde_json::json!({"action_type": "SendReminder", "payload": {"message": "Test insight message"}});
+                        let result = db.execute_with_retry("seed_proactive", || async {
+                            match &db.store {
+                                crate::db::DbStore::Postgres => {
+                                    sqlx::query(
+                                        "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state) VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT DO NOTHING"
+                                    )
+                                    .bind(item_id)
+                                    .bind(tenant_id)
+                                    .bind("Proactive Context Agent")
+                                    .bind(sqlx::types::Json(&context_json))
+                                    .bind(sqlx::types::Json(&action_json))
+                                    .bind("PENDING_APPROVAL")
+                                    .execute(&db.pool)
+                                    .await
+                                    .map_err(|e| e.to_string())?;
+                                }
+                                crate::db::DbStore::Sqlite(pool) => {
+                                    sqlx::query(
+                                        "INSERT OR IGNORE INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state) VALUES (?, ?, ?, ?, ?, ?)"
+                                    )
+                                    .bind(item_id)
+                                    .bind(tenant_id)
+                                    .bind("Proactive Context Agent")
+                                    .bind(serde_json::to_string(&context_json).unwrap_or_default())
+                                    .bind(serde_json::to_string(&action_json).unwrap_or_default())
+                                    .bind("PENDING_APPROVAL")
+                                    .execute(pool)
+                                    .await
+                                    .map_err(|e| e.to_string())?;
+                                }
+                            }
+                            Ok::<(), String>(())
+                        }).await;
+                        if let Err(e) = result {
+                            return axum::Json(serde_json::json!({ "ok": false, "error": e }));
+                        }
+                        return axum::Json(serde_json::json!({ "ok": true }));
+                    }
 
                     if scenario == "launch-readiness" {
                         let tenant_id = "default";
