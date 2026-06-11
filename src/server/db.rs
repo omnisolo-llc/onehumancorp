@@ -149,7 +149,7 @@ impl DB {
                     if let Ok(file) = OpenOptions::new()
                         .read(true)
                         .write(true)
-                        .create(true)
+                        .create_new(true)
                         .mode(0o600)
                         .open(&db_path)
                     {
@@ -194,7 +194,7 @@ impl DB {
                          let file = std::fs::OpenOptions::new()
                             .read(true)
                             .write(true)
-                            .create(true)
+                            .create_new(true)
                             .mode(0o600)
                             .open(&db_path)?;
                          let mut perms = file.metadata()?.permissions();
