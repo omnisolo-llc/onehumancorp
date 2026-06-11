@@ -30,6 +30,13 @@ spec:
       ports:
         - protocol: TCP
           port: {{ .Values.backend.service.port }}
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: spiffe
+          podSelector:
+            matchLabels:
+              app: spire-agent
   egress:
     - to:
         - namespaceSelector:
@@ -133,6 +140,13 @@ spec:
       ports:
         - protocol: TCP
           port: {{ .Values.ohcCore.service.port }}
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: spiffe
+          podSelector:
+            matchLabels:
+              app: spire-agent
   egress:
     - to:
         - namespaceSelector:
@@ -194,6 +208,13 @@ spec:
       ports:
         - protocol: TCP
           port: {{ .Values.chatwoot.service.port }}
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: spiffe
+          podSelector:
+            matchLabels:
+              app: spire-agent
   egress:
     - to:
         - namespaceSelector:
@@ -255,6 +276,13 @@ spec:
       ports:
         - protocol: TCP
           port: {{ .Values.powersync.service.targetPort }}
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: spiffe
+          podSelector:
+            matchLabels:
+              app: spire-agent
   egress:
     - to:
         - namespaceSelector:
