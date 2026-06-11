@@ -98,6 +98,7 @@ pub fn is_standalone_runtime() -> bool {
     true
 }
 
+#[allow(dead_code)]
 fn get_tooltips_registry() -> &'static RwLock<HashMap<String, String>> {
     TOOLTIPS_REGISTRY.get_or_init(|| {
     let mut m = HashMap::new();

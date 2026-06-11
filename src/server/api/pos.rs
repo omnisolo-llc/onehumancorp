@@ -319,8 +319,8 @@ async fn get_inventory_handler(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use axum::http::StatusCode;
-    use serde_json::Value;
+    // use axum::http::StatusCode;
+    // use serde_json::Value;
     use crate::db::DbStore;
 
     #[tokio::test]
@@ -334,13 +334,8 @@ mod tests {
             store: DbStore::Postgres,
         });
 
-        let hub_mock = Arc::new(Hub {
-            db: db.clone(),
-            redis: None,
-            payment_gateway: None,
-            email_client: None,
-            sms_client: None,
-        });
+        let (tx, _) = tokio::sync::mpsc::channel(100);
+        let hub_mock = Arc::new(Hub::new(tx, db.pool.clone()));
 
         let state = axum::extract::State(hub_mock.clone());
 
