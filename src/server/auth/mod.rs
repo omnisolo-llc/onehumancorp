@@ -194,7 +194,7 @@ impl Store {
                     use std::io::Write;
                     if let Ok(mut file) = std::fs::OpenOptions::new()
                         .write(true)
-                        .create(true)
+                        .create_new(true)
                         .mode(0o600)
                         .open(&secret_path)
                     {
