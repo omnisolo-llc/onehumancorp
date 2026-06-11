@@ -194,6 +194,9 @@ message GetVideoTutorialsResponse {
   repeated VideoMetadata videos = 1;
 }
 service BookingEngineService {
+  rpc GetResources(GetResourcesRequest) returns (GetResourcesResponse);
+  rpc GetServices(GetServicesRequest) returns (GetServicesResponse);
+  rpc CreateUnifiedBooking(CreateUnifiedBookingRequest) returns (CreateUnifiedBookingResponse);
   rpc CheckAvailability(CheckAvailabilityRequest) returns (CheckAvailabilityResponse);
   rpc ReserveTimeSlot(ReserveTimeSlotRequest) returns (ReserveTimeSlotResponse);
   rpc CreateConversationalCheckout(CreateConversationalCheckoutRequest) returns (ConversationalCheckoutSession);
@@ -377,4 +380,64 @@ message QuoteResponse {
   int64 total_amount_cents = 4;
   int64 required_deposit = 5;
   repeated QuoteLineItem line_items = 6;
+}
+
+message BookingResource {
+    string id = 1;
+    string name = 2;
+    string resource_type = 3;
+    string availability_schedule = 4;
+}
+
+message ServiceResourceRequirement {
+    string resource_type = 1;
+    int32 quantity = 2;
+}
+
+message ServiceDefinition {
+    string id = 1;
+    string title = 2;
+    string description = 3;
+    int64 price_cents = 4;
+    repeated ServiceResourceRequirement resource_requirements = 5;
+}
+
+message UnifiedBooking {
+    string id = 1;
+    string customer_id = 2;
+    string service_id = 3;
+    string start_time = 4;
+    string end_time = 5;
+    string status = 6;
+    repeated string locked_resource_ids = 7;
+}
+
+message GetResourcesRequest {
+    string tenant_id = 1;
+}
+
+message GetResourcesResponse {
+    repeated BookingResource resources = 1;
+}
+
+message GetServicesRequest {
+    string tenant_id = 1;
+}
+
+message GetServicesResponse {
+    repeated ServiceDefinition services = 1;
+}
+
+message CreateUnifiedBookingRequest {
+    string tenant_id = 1;
+    string service_id = 2;
+    string start_time = 3;
+    string end_time = 4;
+    string customer_id = 5;
+}
+
+message CreateUnifiedBookingResponse {
+    bool success = 1;
+    UnifiedBooking booking = 2;
+    string error = 3;
 }
