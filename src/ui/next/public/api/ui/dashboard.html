@@ -936,13 +936,12 @@
             linkContainer.style.display = 'block';
           }).catch((err) => {
             console.error(err);
-            referralLink.value = "https://cloud.ohc.network/invite/fallback";
+            referralLink.value = "Failed to generate link.";
             generateBtn.style.display = 'none';
             linkContainer.style.display = 'block';
           });
         } else {
-          // Playwright mock environment fallback if Tauri API isn't injected
-          referralLink.value = "https://cloud.ohc.network/invite/test-" + Date.now();
+          referralLink.value = "Failed to generate link.";
           generateBtn.style.display = 'none';
           linkContainer.style.display = 'block';
         }

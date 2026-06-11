@@ -742,20 +742,6 @@ document.addEventListener('DOMContentLoaded', () => {
              allArticles = articlesRes || [];
              allVideos = videosRes || [];
 
-             // Mock data if API fails in isolated test
-             if (allArticles.length === 0) {
-                 allArticles = [
-                     { category: "Getting Started", title: "Getting Started", desc: "Learn how to easily set up your store and accept your first payment.", link: "/help/getting-started-1" },
-                     { category: "My Store", title: "My Store", desc: "Add products, track what's in stock, and change how your store looks.", link: "/help/my-store" },
-                     { category: "Payments", title: "Getting Paid", desc: "Set up how you get paid, view deposits, and handle simple taxes.", link: "/help/payments" }
-                 ];
-             }
-             if (allVideos.length === 0) {
-                 allVideos = [
-                     { id: 1, title: "How to set up your first store easily", duration: "1:20", video_url: "https://www.w3schools.com/html/mov_bbb.mp4" },
-                     { id: 2, title: "Accept your first payment", duration: "1:15", video_url: "https://www.w3schools.com/html/mov_bbb.mp4" }
-                 ];
-             }
           }
         } catch (e) {
           console.error("Failed to load help data", e);
