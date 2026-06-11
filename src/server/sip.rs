@@ -255,23 +255,35 @@ impl SipDB {
     pub async fn load_grounding_content(&self) -> Option<String> {
         if let Some(ref root) = self.context_root {
             let root_path = std::path::Path::new(root);
+            let mut current_dir = match tokio::fs::canonicalize(root_path).await {
+                Ok(p) => p,
+                Err(_) => root_path.to_path_buf(),
+            };
+            let mut max_depth = 50;
 
-            let agents_path = root_path.join("AGENTS.md");
-            match tokio::fs::read_to_string(&agents_path).await {
-                Ok(content) => return Some(content),
-                Err(e) if e.kind() != std::io::ErrorKind::NotFound => {
-                    tracing::warn!("Failed to read AGENTS.md: {}", e);
+            loop {
+                let agents_path = current_dir.join("AGENTS.md");
+                match tokio::fs::read_to_string(&agents_path).await {
+                    Ok(content) => return Some(content),
+                    Err(e) if e.kind() != std::io::ErrorKind::NotFound => {
+                        tracing::warn!("Failed to read AGENTS.md: {}", e);
+                    }
+                    _ => {}
                 }
-                _ => {}
-            }
 
-            let claude_path = root_path.join("CLAUDE.md");
-            match tokio::fs::read_to_string(&claude_path).await {
-                Ok(content) => return Some(content),
-                Err(e) if e.kind() != std::io::ErrorKind::NotFound => {
-                    tracing::warn!("Failed to read CLAUDE.md: {}", e);
+                let claude_path = current_dir.join("CLAUDE.md");
+                match tokio::fs::read_to_string(&claude_path).await {
+                    Ok(content) => return Some(content),
+                    Err(e) if e.kind() != std::io::ErrorKind::NotFound => {
+                        tracing::warn!("Failed to read CLAUDE.md: {}", e);
+                    }
+                    _ => {}
                 }
-                _ => {}
+
+                if !current_dir.pop() || max_depth == 0 {
+                    break;
+                }
+                max_depth -= 1;
             }
         }
         None
