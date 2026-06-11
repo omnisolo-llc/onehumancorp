@@ -2,1651 +2,370 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>OHC Setup</title>
     <style>
+      @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
+
       body {
         font-family: "Outfit", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
         background-color: #f5f5f7;
         margin: 0;
         display: flex;
-        align-items: center;
-        justify-content: center;
+        flex-direction: column;
         height: 100vh;
+        height: 100dvh;
+        overflow: hidden;
       }
-      .container {
-        background: rgba(255, 255, 255, 0.65);
-        backdrop-filter: blur(30px) saturate(210%);
-        -webkit-backdrop-filter: blur(30px) saturate(210%);
-        padding: 40px;
-        border-radius: 16px;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-        text-align: center;
-        max-width: 480px;
-        width: 100%;
-        border: 1px solid rgba(255, 255, 255, 0.4);
-        box-sizing: border-box;
-      }
+
       .glassmorphism {
         background: rgba(255, 255, 255, 0.65);
         backdrop-filter: blur(30px) saturate(210%);
         -webkit-backdrop-filter: blur(30px) saturate(210%);
         border: 1px solid rgba(255, 255, 255, 0.4);
-        border-radius: 16px;
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
       }
-      h1 {
-        margin-top: 0;
+
+      .header {
+        padding: 20px;
+        text-align: center;
+        background: rgba(255, 255, 255, 0.85);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+        z-index: 10;
+        flex-shrink: 0;
+      }
+
+      .header h1 {
+        margin: 0;
+        font-size: 18px;
         color: #1d1d1f;
-        font-size: 24px;
-        font-weight: 700;
-      }
-      p {
-        color: #555555;
-        font-size: 14px;
-        margin-bottom: 20px;
-      }
-      input {
-        width: 100%;
-        padding: 14px;
-        min-height: 44px;
-        margin-bottom: 20px;
-        border: 1px solid rgba(255, 255, 255, 0.5);
-        border-radius: 16px;
-        box-sizing: border-box;
-        font-size: 16px;
-        background: rgba(255, 255, 255, 0.5);
-        backdrop-filter: blur(10px) saturate(200%);
-        -webkit-backdrop-filter: blur(10px) saturate(200%);
-        transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
-      }
-      select.glassmorphism, textarea.glassmorphism {
-        border-radius: 16px;
-      }
-      input.glassmorphism {
-        border-radius: 16px;
-      }
-      select, textarea, input {
-        border-radius: 8px;
-      }
-      select, textarea, input {
-        border-radius: 8px;
-      }
-      input:focus {
-        outline: none;
-        border-color: #0066FF;
-        background: rgba(255, 255, 255, 0.8);
-        box-shadow: 0 0 0 3px rgba(0, 102, 255, 0.2);
-      }
-      button {
-        background-color: #0066FF;
-        color: white;
-        border: none;
-        padding: 14px 24px;
-        min-height: 44px;
-        border-radius: 16px;
-        font-size: 16px;
-        font-weight: 600;
-        cursor: pointer;
-        width: 100%;
-        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-        box-shadow: 0 4px 14px 0 rgba(0, 102, 255, 0.39);
-      }
-      button:hover {
-        background-color: #0052cc;
-      }
-      button:active {
-        transform: scale(0.98);
       }
 
-      .error-msg {
-        color: #FF3B30;
-        font-size: 12px;
-        margin-top: -15px;
-        margin-bottom: 15px;
-        display: none;
-        text-align: left;
-      }
-
-      @keyframes shake {
-        0%, 100% { transform: translateX(0); }
-        25% { transform: translateX(-5px); }
-        75% { transform: translateX(5px); }
-      }
-      .animate-shake {
-        animation: shake 0.2s ease-in-out 0s 2;
-      }
-
-      @media (prefers-color-scheme: dark) {
-        body {
-          background-color: #16161a;
-        }
-        .container {
-          background: rgba(22, 22, 26, 0.7);
-          backdrop-filter: blur(30px) saturate(210%);
-          -webkit-backdrop-filter: blur(30px) saturate(210%);
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          border-radius: 16px;
-          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-        }
-        .glassmorphism {
-          background: rgba(22, 22, 26, 0.7);
-          backdrop-filter: blur(30px) saturate(210%);
-          -webkit-backdrop-filter: blur(30px) saturate(210%);
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          border-radius: 16px;
-          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-        }
-        h1 {
-          color: #F5F5F7;
-        }
-        p {
-          color: #A1A1A6;
-        }
-        input {
-          background: rgba(255, 255, 255, 0.1);
-          border: 1px solid rgba(255, 255, 255, 0.2);
-          color: #F5F5F7;
-        }
-        input:focus {
-          border-color: #0066FF;
-          background: rgba(255, 255, 255, 0.15);
-        }
-      }
-
-
-      .stepper {
-        display: flex;
-        justify-content: space-between;
-        margin-bottom: 30px;
-        position: relative;
-      }
-      .stepper::before {
-        content: '';
-        position: absolute;
-        top: 50%;
-        left: 0;
-        right: 0;
-        height: 2px;
-        background: rgba(255, 255, 255, 0.3);
-        z-index: 1;
-        transform: translateY(-50%);
-      }
-      .step-indicator {
-        width: 12px;
-        height: 12px;
-        border-radius: 50%;
-        background: rgba(255, 255, 255, 0.5);
-        border: 2px solid rgba(255, 255, 255, 0.8);
-        z-index: 2;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      }
-      .step-indicator.active {
-        background: #0066FF;
-        border-color: #0066FF;
-        transform: scale(1.3);
-        box-shadow: 0 0 10px rgba(0, 102, 255, 0.5);
-      }
-      .step-indicator.completed {
-        background: #0066FF;
-        border-color: #0066FF;
-      }
-
-      @media (prefers-color-scheme: dark) {
-        .stepper::before {
-          background: rgba(255, 255, 255, 0.1);
-        }
-        .step-indicator {
-          background: rgba(255, 255, 255, 0.1);
-          border-color: rgba(255, 255, 255, 0.2);
-        }
-      }
-
-      /* Multi-step logic */
-      .step {
-        display: none;
-        animation: fadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-      }
-      .step.active {
-        display: block;
-      }
-      @keyframes fadeIn {
-        from { opacity: 0; transform: translateY(10px); }
-        to { opacity: 1; transform: translateY(0); }
-      }
-
-      select, textarea {
-        color: #1d1d1f;
-        width: 100%;
-        padding: 14px;
-        min-height: 44px;
-        margin-bottom: 20px;
-        border: 1px solid rgba(255, 255, 255, 0.5);
-        border-radius: 16px;
-        box-sizing: border-box;
-        font-size: 16px;
-        background: rgba(255, 255, 255, 0.5);
-        font-family: "Outfit", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-        backdrop-filter: blur(10px) saturate(200%);
-        -webkit-backdrop-filter: blur(10px) saturate(200%);
-        transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
-      }
-      select:focus, textarea:focus {
-        outline: none;
-        border-color: #0066FF;
-        background: rgba(255, 255, 255, 0.8);
-        box-shadow: 0 0 0 3px rgba(0, 102, 255, 0.2);
-      }
-      .radio-group {
+      .chat-container {
+        flex: 1;
+        overflow-y: auto;
+        padding: 20px;
         display: flex;
         flex-direction: column;
-        gap: 10px;
-        margin-bottom: 20px;
-        text-align: left;
-      }
-      .radio-option {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        background: rgba(255, 255, 255, 0.5);
-        backdrop-filter: blur(10px) saturate(200%);
-        -webkit-backdrop-filter: blur(10px) saturate(200%);
-        border: 1px solid rgba(255, 255, 255, 0.5);
-        padding: 12px 16px;
-        min-height: 44px;
-        border-radius: 16px;
-        cursor: pointer;
-        transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
-      }
-      .radio-option:hover {
-        background: rgba(255, 255, 255, 0.7);
-      }
-      .radio-option.selected {
-        border-color: #0066FF;
-        background: rgba(0, 102, 255, 0.1);
-      }
-      .radio-option input[type="radio"] {
-        display: none;
-      }
-      .radio-label {
-        font-weight: 500;
-        color: #1d1d1f;
-      }
-      .radio-desc {
-        font-size: 12px;
-        color: #555555;
-        margin-top: 2px;
-      }
-
-      .btn-secondary {
-        background-color: transparent;
-        color: #555555;
-        box-shadow: none;
-        border: 1px solid rgba(0, 0, 0, 0.1);
-        margin-top: 10px;
-      }
-      .btn-secondary:hover {
-        background-color: rgba(0, 0, 0, 0.05);
-        color: #1d1d1f;
-      }
-      .btn-group {
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-      }
-
-      .persona-row {
-        display: flex;
-        gap: 10px;
-        margin-bottom: 20px;
-        overflow-x: auto;
-        padding-bottom: 10px;
-        -webkit-overflow-scrolling: touch;
-      }
-      .persona-chip {
-        flex: 0 0 auto;
-        padding: 8px 16px;
-        border-radius: 20px;
-        background: rgba(0, 102, 255, 0.1);
-        color: #0066FF;
-        font-size: 13px;
-        font-weight: 600;
-        cursor: pointer;
-        border: 1px solid transparent;
-        transition: all 0.2s;
-      }
-      .persona-chip:hover {
-        background: rgba(0, 102, 255, 0.2);
-      }
-      .persona-chip.selected {
-        background: #0066FF;
-        color: white;
+        gap: 16px;
       }
 
       .chat-bubble {
+        max-width: 85%;
+        padding: 14px 18px;
+        border-radius: 20px;
+        font-size: 15px;
+        line-height: 1.5;
+        animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      }
+
+      @keyframes popIn {
+        0% { transform: scale(0.9); opacity: 0; }
+        100% { transform: scale(1); opacity: 1; }
+      }
+
+      .bubble-ai {
+        align-self: flex-start;
         background: rgba(255, 255, 255, 0.8);
         border: 1px solid rgba(0, 0, 0, 0.05);
-        padding: 12px 16px;
-        border-radius: 18px;
         border-bottom-left-radius: 4px;
-        font-size: 14px;
-        line-height: 1.4;
-        text-align: left;
-        margin-bottom: 20px;
         color: #1d1d1f;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+      }
+
+      .bubble-user {
+        align-self: flex-end;
+        background: #0066FF;
+        color: white;
+        border-bottom-right-radius: 4px;
+        box-shadow: 0 2px 8px rgba(0, 102, 255, 0.25);
+      }
+
+      .input-area {
+        padding: 16px;
+        background: rgba(255, 255, 255, 0.85);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border-top: 1px solid rgba(0, 0, 0, 0.05);
+        display: flex;
+        gap: 12px;
+        flex-shrink: 0;
+        padding-bottom: calc(16px + env(safe-area-inset-bottom));
+      }
+
+      .chat-input {
+        flex: 1;
+        padding: 14px 16px;
+        border: 1px solid rgba(0, 0, 0, 0.1);
+        border-radius: 24px;
+        font-size: 16px;
+        font-family: inherit;
+        background: white;
+        transition: border-color 0.2s, box-shadow 0.2s;
+        outline: none;
+      }
+
+      .chat-input:focus {
+        border-color: #0066FF;
+        box-shadow: 0 0 0 3px rgba(0, 102, 255, 0.15);
+      }
+
+      .send-btn {
+        width: 48px;
+        height: 48px;
+        border-radius: 24px;
+        background: #0066FF;
+        color: white;
+        border: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: transform 0.1s, background-color 0.2s;
+        flex-shrink: 0;
+      }
+
+      .send-btn:hover {
+        background: #0052cc;
+      }
+
+      .send-btn:active {
+        transform: scale(0.95);
+      }
+
+      .send-btn svg {
+        width: 20px;
+        height: 20px;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 2.5;
+        margin-left: 2px;
+      }
+
+      .loading-skeleton {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin-top: 8px;
+      }
+
+      .skeleton-text {
+        height: 12px;
+        background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+        background-size: 200% 100%;
+        animation: skeleton-loading 1.5s infinite;
+        border-radius: 4px;
+      }
+
+      @keyframes skeleton-loading {
+        0% { background-position: 200% 0; }
+        100% { background-position: -200% 0; }
+      }
+
+      .status-text {
+        font-size: 13px;
+        color: #888;
+        margin-top: 4px;
+        font-style: italic;
+      }
+
+      @media (max-width: 375px) {
+        .chat-bubble {
+          max-width: 90%;
+        }
       }
 
       @media (prefers-color-scheme: dark) {
-        select, textarea {
-          background: rgba(255, 255, 255, 0.1);
-          border: 1px solid rgba(255, 255, 255, 0.2);
-          color: #F5F5F7;
-        }
-        select:focus, textarea:focus {
-          border-color: #0066FF;
-          background: rgba(255, 255, 255, 0.15);
-        }
-        .radio-option {
-          background: rgba(255, 255, 255, 0.1);
-          border-color: rgba(255, 255, 255, 0.2);
-        }
-        .radio-option:hover {
-          background: rgba(255, 255, 255, 0.15);
-        }
-        .radio-option.selected {
-          border-color: #0066FF;
-          background: rgba(0, 102, 255, 0.2);
-        }
-        .radio-label {
-          color: #F5F5F7;
-        }
-        .btn-secondary {
-          border-color: rgba(255, 255, 255, 0.2);
-          color: #A1A1A6;
-        }
-        .btn-secondary:hover {
-          background-color: rgba(255, 255, 255, 0.1);
-          color: #F5F5F7;
-        }
-        .chat-bubble {
-          background: rgba(255, 255, 255, 0.1);
-          color: #F5F5F7;
+        body { background-color: #000; }
+        .header, .input-area {
+          background: rgba(28, 28, 30, 0.85);
           border-color: rgba(255, 255, 255, 0.1);
         }
-      }
-
-      @media (max-width: 768px) {
-        .container {
-          padding: 20px;
-          border-radius: 16px;
-          width: 100%;
-          border: none;
+        .header h1 { color: #f5f5f7; }
+        .bubble-ai {
+          background: rgba(44, 44, 46, 0.8);
+          color: #f5f5f7;
+          border-color: rgba(255, 255, 255, 0.05);
         }
-        input, select, textarea, button, .radio-option {
-          min-height: 44px !important;
+        .chat-input {
+          background: rgba(44, 44, 46, 0.8);
+          border-color: rgba(255, 255, 255, 0.1);
+          color: white;
+        }
+        .skeleton-text {
+          background: linear-gradient(90deg, #2c2c2e 25%, #3a3a3c 50%, #2c2c2e 75%);
+          background-size: 200% 100%;
         }
       }
-        </style>
+    </style>
   </head>
   <body>
-        <div class="container glassmorphism" id="form-container">
-
-
-      <div class="stepper" id="stepper-indicator">
-        <div class="step-indicator active" data-step="step-context"></div>
-        <div class="step-indicator" data-step="step-categories"></div>
-        <div class="step-indicator" data-step="step-name"></div>
-        <div class="step-indicator" data-step="step-assistant"></div>
-        <div class="step-indicator" data-step="step-admin"></div>
-        <div class="step-indicator" data-step="step-offer"></div>
-        <div class="step-indicator" data-step="step-template"></div>
-      </div>
-      <div id="draft-saved-msg" style="display: none; color: #34C759; font-weight: bold; margin-bottom: 15px;">Draft Saved!</div>
-
-      <!-- Step 1: Work Context -->
-      <div class="step active" id="step-context">
-        <h1>How do you work?</h1>
-        <p>Choose a quick-start or select how you work.</p>
-
-        <div class="persona-row">
-            <div class="persona-chip" onclick="applyPersona('Baker')">I'm a Baker</div>
-            <div class="persona-chip" onclick="applyPersona('Handyman')">I'm a Handyman</div>
-            <div class="persona-chip" onclick="applyPersona('Boutique')">I'm a Boutique Owner</div>
-            <div class="persona-chip" onclick="applyPersona('Tutor')">I'm a Tutor</div>
-        </div>
-
-        <div class="radio-group" id="context-group">
-          <label class="radio-option">
-            <input type="radio" name="work_context" value="Local Service" />
-            <div>
-              <div class="radio-label">Local Service</div>
-              <div class="radio-desc">Field work, repairs, home services</div>
-            </div>
-          </label>
-          <label class="radio-option">
-            <input type="radio" name="work_context" value="Storefront" />
-            <div>
-              <div class="radio-label">Storefront or Cafe</div>
-              <div class="radio-desc">Physical location with walk-ins</div>
-            </div>
-          </label>
-          <label class="radio-option">
-            <input type="radio" name="work_context" value="Online Creator" />
-            <div>
-              <div class="radio-label">Online Creator / Tutor</div>
-              <div class="radio-desc">Digital goods, lessons, coaching</div>
-            </div>
-          </label>
-          <label class="radio-option">
-            <input type="radio" name="work_context" value="Agency" />
-            <div>
-              <div class="radio-label">Agency or Studio</div>
-              <div class="radio-desc">Client projects, contractors</div>
-            </div>
-          </label>
-        </div>
-        <div id="context-error" class="error-msg">Please select an option.</div>
-        <div class="btn-group">
-          <button type="button" class="btn-secondary save-draft-btn">Save Draft</button>
-          <button class="next-step-btn" data-next="step-categories">Next</button>
-        </div>
-      </div>
-
-      <!-- Step 2: Categories -->
-      <div class="step" id="step-categories">
-        <h1>What's your category?</h1>
-        <p>e.g. Baking, Plumbing, Design</p>
-        <select id="business-categories" class="glassmorphism">
-          <option value="" disabled selected>Select a category...</option>
-        </select>
-        <div id="categories-error" class="error-msg">Please enter a category.</div>
-        <div class="btn-group">
-          <button type="button" class="btn-secondary save-draft-btn">Save Draft</button>
-          <button class="next-step-btn" data-next="step-name">Next</button>
-          <button class="btn-secondary prev-step-btn" data-prev="step-context">Back</button>
-        </div>
-      </div>
-
-      <!-- Step 3: Business Name and Tagline -->
-      <div class="step" id="step-name">
-        <h1>What's the name of your business?</h1>
-        <p>We'll use this to set up your workspace.</p>
-        <input type="text" id="business-name" class="glassmorphism" placeholder="e.g. Maya's Bakery" />
-        <div id="name-error" class="error-msg">Business Name must be at least 3 characters.</div>
-
-        <input type="text" id="business-tagline" class="glassmorphism" placeholder="Tagline (optional)" />
-
-        <div class="btn-group">
-          <button type="button" class="btn-secondary save-draft-btn">Save Draft</button>
-          <button class="next-step-btn" data-next="step-assistant">Next</button>
-          <button class="btn-secondary prev-step-btn" data-prev="step-categories">Back</button>
-        </div>
-      </div>
-
-      <!-- Step 4: Assistant Setup -->
-      <div class="step" id="step-assistant">
-        <h1>Set up your Assistant</h1>
-        <p>Give your AI assistant a name and tone.</p>
-
-        <div class="chat-bubble" id="assistant-intro">
-            "Hi! I'll be your partner in growing this business. What should I call myself, and how should we talk?"
-        </div>
-
-        <input type="text" id="assistant-name" class="glassmorphism" placeholder="e.g. Jarvis" />
-        <div id="assistant-name-error" class="error-msg">Please enter a name for your assistant.</div>
-
-        <select id="assistant-tone" class="glassmorphism">
-          <option value="" disabled selected>Select a tone</option>
-          <option value="Professional">Professional</option>
-          <option value="Friendly">Friendly</option>
-          <option value="Concise">Concise</option>
-        </select>
-        <div id="tone-error" class="error-msg">Please select a tone.</div>
-
-        <div class="btn-group">
-          <button type="button" class="btn-secondary save-draft-btn">Save Draft</button>
-          <button class="next-step-btn" data-next="step-admin">Next</button>
-          <button class="btn-secondary prev-step-btn" data-prev="step-name">Back</button>
-        </div>
-      </div>
-
-
-      <!-- Step 5: Admin Setup -->
-      <div class="step" id="step-admin">
-        <h1>Admin Credentials</h1>
-        <p>Set up your login details.</p>
-
-        <input type="email" id="admin-email" class="glassmorphism" placeholder="admin@mybusiness.com" />
-        <div id="email-error" class="error-msg">Please enter a valid email address.</div>
-
-        <input type="password" id="admin-password" class="glassmorphism" placeholder="Password (min 8 chars)" />
-        <div id="password-error" class="error-msg">Password must be at least 8 characters.</div>
-
-        <div class="btn-group">
-          <button type="button" class="btn-secondary save-draft-btn">Save Draft</button>
-          <button class="next-step-btn" data-next="step-offer">Next</button>
-          <button class="btn-secondary prev-step-btn" data-prev="step-assistant">Back</button>
-        </div>
-      </div>
-
-      <!-- Step 6: First Offer -->
-      <div class="step" id="step-offer">
-        <h1>Your First Offer</h1>
-        <p>What is the main thing you sell?</p>
-        <input type="text" id="first-offer" class="glassmorphism" placeholder="e.g. Custom Birthday Cake" />
-        <div id="offer-error" class="error-msg">Please enter an offer.</div>
-        <div class="btn-group">
-          <button type="button" class="btn-secondary save-draft-btn">Save Draft</button>
-          <button class="next-step-btn" data-next="step-template">Next</button>
-          <button class="btn-secondary prev-step-btn" data-prev="step-admin">Back</button>
-        </div>
-      </div>
-
-      <!-- Step 6: Template -->
-      <div class="step" id="step-template">
-        <h1>Template Selection</h1>
-        <p>Choose a look for your workspace</p>
-        <select id="template-selection" class="glassmorphism">
-          <option value="" disabled selected>Select a template...</option>
-          <option value="Modern">Modern</option>
-          <option value="Classic">Classic</option>
-          <option value="Playful">Playful</option>
-        </select>
-        <div id="template-error" class="error-msg">Please select a template.</div>
-
-        <div class="btn-group">
-          <button type="button" class="btn-secondary save-draft-btn">Save Draft</button>
-          <button id="finish-btn">Finish Setup</button>
-          <button class="btn-secondary prev-step-btn" data-prev="step-offer">Back</button>
-        </div>
-      </div>
-
+    <div class="header glassmorphism container">
+      <h1>OHC Agentic Onboarding</h1>
     </div>
+
+    <div class="chat-container" id="chat-container">
+      <div class="chat-bubble bubble-ai">
+        Hi there! I'm your OHC onboarding assistant. What do you do? (e.g., "I bake custom cakes in Austin. I need to take 50% deposits.")
+      </div>
+    </div>
+
+    <div class="input-area">
+      <input type="text" id="chat-input" class="chat-input" placeholder="Type your business description..." autocomplete="off" />
+      <button id="send-btn" class="send-btn" aria-label="Send message">
+        <svg viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
+      </button>
+    </div>
+
     <script>
-      const container = document.getElementById('form-container');
+      document.addEventListener('DOMContentLoaded', () => {
+        const chatContainer = document.getElementById('chat-container');
+        const chatInput = document.getElementById('chat-input');
+        const sendBtn = document.getElementById('send-btn');
 
-      function applyPersona(persona) {
-          document.querySelectorAll('.persona-chip').forEach(el => el.classList.remove('selected'));
-          event.target.classList.add('selected');
-
-          if (persona === 'Baker') {
-              state.work_context = 'Storefront';
-              state.categories = 'Bakery';
-              state.businessName = "Maya's Bakery";
-              state.assistantName = "Cookie";
-              state.assistantTone = "Friendly";
-              state.first_offer = "Custom Birthday Cake";
-          } else if (persona === 'Handyman') {
-              state.work_context = 'Local Service';
-              state.categories = 'Handyman';
-              state.businessName = "Carlos Repairs";
-              state.assistantName = "Tools";
-              state.assistantTone = "Concise";
-              state.first_offer = "Standard Repair Visit";
-          } else if (persona === 'Boutique') {
-              state.work_context = 'Storefront';
-              state.categories = 'Boutique';
-              state.businessName = "Priya's Boutique";
-              state.assistantName = "Style";
-              state.assistantTone = "Professional";
-              state.first_offer = "Signature Dress";
-          } else if (persona === 'Tutor') {
-              state.work_context = 'Online Creator';
-              state.categories = 'Tutoring';
-              state.businessName = "Leo's Music";
-              state.assistantName = "Melody";
-              state.assistantTone = "Friendly";
-              state.first_offer = "1-Hour Guitar Lesson";
-          }
-          populateForm();
-          saveCurrentState();
-
-          // Flash feedback
-          const chip = event.target;
-          const originalText = chip.innerText;
-          chip.innerText = "Applied!";
-          setTimeout(() => { chip.innerText = originalText; }, 1000);
-      }
-
-      const finishBtn = document.getElementById('finish-btn');
-
-      const inputs = {
-          context: document.querySelectorAll('input[name="work_context"]'),
-          categories: document.getElementById('business-categories'),
-          name: document.getElementById('business-name'),
-          tagline: document.getElementById('business-tagline'),
-          assistantName: document.getElementById('assistant-name'),
-          assistantTone: document.getElementById('assistant-tone'),
-          adminEmail: document.getElementById('admin-email'),
-          adminPassword: document.getElementById('admin-password'),
-          firstOffer: document.getElementById('first-offer'),
-          templateSelection: document.getElementById('template-selection')
-      };
-
-      const errors = {
-          context: document.getElementById('context-error'),
-          categories: document.getElementById('categories-error'),
-          name: document.getElementById('name-error'),
-          assistantName: document.getElementById('assistant-name-error'),
-          assistantTone: document.getElementById('tone-error'),
-          adminEmail: document.getElementById('email-error'),
-          adminPassword: document.getElementById('password-error'),
-          firstOffer: document.getElementById('offer-error'),
-          templateSelection: document.getElementById('template-error')
-      };
-
-      let state = {
-          businessName: '',
-          assistantName: '',
-          assistantTone: '',
-          work_context: '',
-          categories: '',
-          tagline: '',
-          first_offer: '',
-          templateSelection: ''
-      };
-
-      // Handle radio buttons selection visual state
-      inputs.context.forEach(radio => {
-          radio.addEventListener('change', (e) => {
-              document.querySelectorAll('.radio-option').forEach(el => el.classList.remove('selected'));
-              e.target.closest('.radio-option').classList.add('selected');
-              errors.context.style.display = 'none';
-          });
-      });
-
-      // Load existing state
-      if (window.__TAURI__ && window.__TAURI__.core) {
-        window.__TAURI__.core.invoke("get_onboarding_state").then((backendState) => {
-          if (backendState) {
-            state = { ...state, ...backendState };
-            populateForm();
-          }
-        }).catch(console.error);
-
-      } else {
-        const stored = localStorage.getItem('onboardingState');
-        if (stored) {
-          state = { ...state, ...JSON.parse(stored) };
-          populateForm();
+        let backendUrl = '/';
+        if (window.__TAURI__) {
+            backendUrl = 'http://127.0.0.1:18789/';
+        } else if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+            if (window.location.port !== '18789' && window.location.port !== '8080') {
+               backendUrl = 'http://127.0.0.1:18789/';
+            }
         }
 
-        // Fetch from API to support cross-device resume
-        const backendUrl = (window.location.origin.includes('localhost') || window.location.protocol === 'file:') ? 'http://127.0.0.1:18789' : '';
-        const tenantId = localStorage.getItem('tenant_id') || 'storefront';
-        const userId = localStorage.getItem('user_id') || 'test-user';
+        function addMessage(text, isUser = false) {
+          const div = document.createElement('div');
+          div.className = `chat-bubble ${isUser ? 'bubble-user' : 'bubble-ai'}`;
+          div.textContent = text;
+          chatContainer.appendChild(div);
+          scrollToBottom();
+          return div;
+        }
 
-        fetch(`${backendUrl}/api/onboarding/state`, {
-            method: 'GET',
-            headers: {
-                'X-Tenant-ID': tenantId,
-                'X-User-ID': userId
+        function addLoadingBubble() {
+          const div = document.createElement('div');
+          div.className = 'chat-bubble bubble-ai';
+          div.id = 'loading-bubble';
+          div.innerHTML = `
+            <div>Building your workspace...</div>
+            <div class="status-text" id="loading-status">Connecting payments...</div>
+            <div class="loading-skeleton">
+              <div class="skeleton-text" style="width: 100%;"></div>
+              <div class="skeleton-text" style="width: 80%;"></div>
+              <div class="skeleton-text" style="width: 60%;"></div>
+            </div>
+          `;
+          chatContainer.appendChild(div);
+          scrollToBottom();
+
+          // Cycle through statuses
+          const statuses = ['Drafting menu...', 'Configuring agents...', 'Setting up storefront...'];
+          let idx = 0;
+          const interval = setInterval(() => {
+            const el = document.getElementById('loading-status');
+            if (el) {
+              el.textContent = statuses[idx % statuses.length];
+              idx++;
+            } else {
+              clearInterval(interval);
             }
-        })
-        .then(res => res.json())
-        .then(apiState => {
-            if (apiState && Object.keys(apiState).length > 0) {
-                state = { ...state, ...apiState };
-                populateForm();
-            }
-        })
-        .catch(err => console.error('Failed to load cross-device state:', err));
-      }
+          }, 1500);
 
+          return div;
+        }
 
-      if (state.step === undefined || state.step === 0) {
-         updateStepper('step-context');
-      }
+        function removeLoadingBubble() {
+          const el = document.getElementById('loading-bubble');
+          if (el) el.remove();
+        }
 
-            // Clear name error on typing if valid
-      inputs.name.addEventListener('input', () => {
-          if (inputs.name.value.trim().length >= 3) {
-              errors.name.style.display = 'none';
-              inputs.name.style.borderColor = 'rgba(255, 255, 255, 0.5)';
-          }
-      });
+        function scrollToBottom() {
+          chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
 
-      function populateForm() {
-          if (state.businessName) inputs.name.value = state.businessName;
-          if (state.tagline) inputs.tagline.value = state.tagline;
+        async function handleSubmit() {
+          const text = chatInput.value.trim();
+          if (!text) return;
 
-          if (state.work_context) {
-              populateCategories();
-          }
-          if (state.categories) inputs.categories.value = state.categories;
+          chatInput.value = '';
+          chatInput.disabled = true;
+          sendBtn.disabled = true;
 
-          if (state.assistantName) inputs.assistantName.value = state.assistantName;
-          if (state.assistantTone) inputs.assistantTone.value = state.assistantTone;
-          if (state.adminEmail) inputs.adminEmail.value = state.adminEmail;
-          if (state.adminPassword) inputs.adminPassword.value = state.adminPassword;
-          if (state.first_offer) inputs.firstOffer.value = state.first_offer;
-          if (state.templateSelection) inputs.templateSelection.value = state.templateSelection;
+          addMessage(text, true);
+          addLoadingBubble();
 
-          const contextVal = state.work_context;
-          if (contextVal) {
-              inputs.context.forEach(r => {
-                  if (r.value === contextVal) {
-                      r.checked = true;
-                      document.querySelectorAll('.radio-option').forEach(el => el.classList.remove('selected'));
-                      r.closest('.radio-option').classList.add('selected');
-                  }
-              });
-          }
+          try {
+            // Step 1: Intake
+            const intakeRes = await fetch(`${backendUrl}api/onboarding/intake`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ description: text })
+            });
 
-          if (state.step !== undefined && state.step > 0) {
-              const steps = ['step-context', 'step-categories', 'step-name', 'step-assistant', 'step-admin', 'step-offer', 'step-template'];
-              if (state.step < steps.length) {
-                  goToStep(steps[state.step]);
-              }
-          }
-      }
+            if (!intakeRes.ok) throw new Error('Intake failed');
 
-            function saveCurrentState() {
-          state.categories = inputs.categories.value;
-          state.businessName = inputs.name.value;
-          state.tagline = inputs.tagline.value;
-          state.assistantName = inputs.assistantName.value;
-          state.assistantTone = inputs.assistantTone.value;
-          state.first_offer = inputs.firstOffer.value;
-          state.templateSelection = inputs.templateSelection.value;
+            const intakeData = await intakeRes.json();
 
-          let selectedContext = document.querySelector('input[name="work_context"]:checked');
-          if (selectedContext) {
-              state.work_context = selectedContext.value;
-          }
+            // Map to StartOnboardingRequest
+            const reqPayload = {
+                business_type: intakeData.business_type || 'Local Business',
+                company_name: intakeData.business_name || 'My Business',
+                company_description: text,
+                selling_categories: intakeData.categories || [],
+                payment_pref: "online",
+                admin_email: "admin@example.com",
+                admin_name: "Admin User",
+                admin_password: "password123",
+                website_template: "Modern",
+                first_product_name: intakeData.initial_products?.[0]?.name || "First Item",
+                first_product_price: intakeData.initial_products?.[0]?.price || "10.00",
+                domain_choice: "subdomain",
+                price_type: "fixed",
+                location: intakeData.location || "",
+                target_audience: intakeData.target_audience || "",
+                initial_products: intakeData.initial_products || []
+            };
 
-          // Increment step if we are moving forward
-
-          let stepNumber = 0;
-          const activeStep = document.querySelector('.step.active');
-          if (activeStep) {
-              if (activeStep.id === 'step-context') stepNumber = 0;
-              if (activeStep.id === 'step-categories') stepNumber = 1;
-              if (activeStep.id === 'step-name') stepNumber = 2;
-              if (activeStep.id === 'step-assistant') stepNumber = 3;
-              if (activeStep.id === 'step-admin') stepNumber = 4;
-              if (activeStep.id === 'step-offer') stepNumber = 5;
-              if (activeStep.id === 'step-template') stepNumber = 6;
-          }
-          state.step = stepNumber;
-
-          if (window.__TAURI__ && window.__TAURI__.core) {
-              window.__TAURI__.core.invoke("save_onboarding_state", { state }).catch(console.error);
-          } else {
-              localStorage.setItem('onboardingState', JSON.stringify(state));
-              const backendUrl = (window.location.origin.includes('localhost') || window.location.protocol === 'file:') ? 'http://127.0.0.1:18789' : '';
-              fetch(`${backendUrl}/api/onboarding/state`, {
+            // Step 2: Start Onboarding (Provision)
+            let startRes;
+            if (window.__TAURI__ && window.__TAURI__.core) {
+                await window.__TAURI__.core.invoke("start_onboarding", { req: reqPayload });
+                startRes = { ok: true };
+            } else {
+                startRes = await fetch(`${backendUrl}api/onboarding/start`, {
                   method: 'POST',
-                  headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': 'storefront', 'X-User-ID': 'test-user' },
-                  body: JSON.stringify({ wizardState: state })
-              }).catch(console.error);
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(reqPayload)
+                });
+            }
+
+            if (!startRes.ok && (!window.__TAURI__ || !window.__TAURI__.core)) {
+                 throw new Error('Provisioning failed');
+            }
+
+            removeLoadingBubble();
+            addMessage("Workspace ready! Redirecting you to your dashboard...");
+
+            setTimeout(() => {
+                window.location.href = '/dashboard.html';
+            }, 1000);
+
+          } catch (error) {
+            console.error(error);
+            removeLoadingBubble();
+            addMessage("Oops, something went wrong. Please try again.");
+            chatInput.disabled = false;
+            sendBtn.disabled = false;
+            chatInput.focus();
           }
-      }
+        }
 
-      function validateStep(stepId) {
-          let isValid = true;
-
-          if (stepId === 'step-context') {
-              const selected = document.querySelector('input[name="work_context"]:checked');
-              if (!selected) {
-                  errors.context.style.display = 'block';
-                  isValid = false;
-              } else {
-                  state.work_context = selected.value;
-              }
-          }
-          else if (stepId === 'step-categories') {
-              if (inputs.categories.value.trim() === '') {
-                  errors.categories.style.display = 'block';
-                  isValid = false;
-              } else {
-                  errors.categories.style.display = 'none';
-                  state.categories = inputs.categories.value.trim();
-              }
-          }
-          else if (stepId === 'step-name') {
-              if (inputs.name.value.trim().length < 3) {
-                  errors.name.style.display = 'block';
-                  inputs.name.style.borderColor = '#FF3B30';
-                  isValid = false;
-              } else {
-                  errors.name.style.display = 'none';
-                  inputs.name.style.borderColor = 'rgba(255, 255, 255, 0.5)';
-                  state.businessName = inputs.name.value.trim();
-                  state.tagline = inputs.tagline.value.trim();
-              }
-          }
-          else if (stepId === 'step-assistant') {
-              if (inputs.assistantName.value.trim() === '') {
-                  errors.assistantName.style.display = 'block'; inputs.assistantName.style.borderColor = '#FF3B30';
-                  isValid = false;
-              } else {
-                  errors.assistantName.style.display = 'none'; inputs.assistantName.style.borderColor = 'rgba(255, 255, 255, 0.5)';
-                  state.assistantName = inputs.assistantName.value.trim();
-              }
-
-              if (!inputs.assistantTone.value) {
-                  errors.assistantTone.style.display = 'block';
-                  isValid = false;
-              } else {
-                  errors.assistantTone.style.display = 'none';
-                  state.assistantTone = inputs.assistantTone.value;
-              }
-          }
-          else if (stepId === 'step-admin') {
-              const emailVal = inputs.adminEmail.value.trim();
-              const passVal = inputs.adminPassword.value.trim();
-              let stepValid = true;
-
-              if (emailVal === '' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal)) {
-                  errors.adminEmail.style.display = 'block';
-                  inputs.adminEmail.style.borderColor = '#FF3B30';
-                  stepValid = false;
-              } else {
-                  errors.adminEmail.style.display = 'none';
-                  inputs.adminEmail.style.borderColor = 'rgba(255, 255, 255, 0.5)';
-              }
-
-              if (passVal.length < 8) {
-                  errors.adminPassword.style.display = 'block';
-                  inputs.adminPassword.style.borderColor = '#FF3B30';
-                  stepValid = false;
-              } else {
-                  errors.adminPassword.style.display = 'none';
-                  inputs.adminPassword.style.borderColor = 'rgba(255, 255, 255, 0.5)';
-              }
-
-              if (stepValid) {
-                  state.adminEmail = emailVal;
-                  state.adminPassword = passVal;
-              } else {
-                  isValid = false;
-              }
-          }
-          else if (stepId === 'step-offer') {
-              if (inputs.firstOffer.value.trim() === '') {
-                  errors.firstOffer.style.display = 'block';
-                  isValid = false;
-              } else {
-                  errors.firstOffer.style.display = 'none';
-                  state.first_offer = inputs.firstOffer.value.trim();
-              }
-          }
-          else if (stepId === 'step-template') {
-              if (inputs.templateSelection.value === '') {
-                  errors.templateSelection.style.display = 'block';
-                  isValid = false;
-              } else {
-                  errors.templateSelection.style.display = 'none';
-                  state.templateSelection = inputs.templateSelection.value;
-              }
-          }
-
-          if (!isValid) {
-              container.classList.remove('animate-shake');
-              void container.offsetWidth; // trigger reflow
-              container.classList.add('animate-shake');
-          }
-
-          return isValid;
-      }
-
-
-      function updateStepper(stepId) {
-          const steps = ['step-context', 'step-categories', 'step-name', 'step-assistant', 'step-admin', 'step-offer', 'step-template'];
-          const currentIndex = steps.indexOf(stepId);
-
-          document.querySelectorAll('.step-indicator').forEach((indicator, index) => {
-              if (index < currentIndex) {
-                  indicator.classList.add('completed');
-                  indicator.classList.remove('active');
-              } else if (index === currentIndex) {
-                  indicator.classList.add('active');
-                  indicator.classList.remove('completed');
-              } else {
-                  indicator.classList.remove('active');
-                  indicator.classList.remove('completed');
-              }
-          });
-      }
-
-      const categoriesMap = {
-          'Local Service': ['Plumbing', 'Electrical', 'Cleaning', 'Landscaping', 'HVAC', 'Pest Control', 'Handyman', 'Other'],
-          'Storefront': ['Bakery', 'Cafe', 'Restaurant', 'Retail', 'Salon', 'Spa', 'Gym', 'Boutique', 'Other'],
-          'Online Creator': ['Tutoring', 'Consulting', 'Digital Art', 'Software', 'Writing', 'Video Creation', 'Music', 'Other'],
-          'Agency': ['Marketing', 'Design', 'Development', 'Consulting', 'Advertising', 'PR', 'Other']
-      };
-
-      function populateCategories() {
-          const context = state.work_context;
-          const cats = categoriesMap[context] || ['Other'];
-          inputs.categories.innerHTML = '<option value="" disabled selected>Select a category...</option>';
-          cats.forEach(c => {
-              const opt = document.createElement('option');
-              opt.value = c;
-              opt.textContent = c;
-              inputs.categories.appendChild(opt);
-          });
-          if (state.categories && cats.includes(state.categories)) {
-              inputs.categories.value = state.categories;
-          } else {
-              inputs.categories.value = "";
-          }
-      }
-
-      function goToStep(stepId) {
-          if (stepId === 'step-categories') {
-              populateCategories();
-          }
-          document.querySelectorAll('.step').forEach(el => el.classList.remove('active'));
-          document.getElementById(stepId).classList.add('active');
-          updateStepper(stepId);
-      }
-
-      document.querySelectorAll('.next-step-btn').forEach(btn => {
-          btn.addEventListener('click', (e) => {
-              const currentStep = e.target.closest('.step').id;
-              const nextStepId = e.target.getAttribute('data-next');
-              if (validateStep(currentStep)) {
-                  saveCurrentState();
-                  goToStep(nextStepId);
-              }
-          });
-      });
-
-      document.querySelectorAll('.prev-step-btn').forEach(btn => {
-          btn.addEventListener('click', (e) => {
-              const prevStepId = e.target.getAttribute('data-prev');
-              goToStep(prevStepId);
-          });
-      });
-
-      document.querySelectorAll('.save-draft-btn').forEach(btn => {
-          btn.addEventListener('click', async (e) => {
-              e.preventDefault();
-              const originalText = btn.innerText;
-              btn.innerText = "Saving...";
-              btn.disabled = true;
-
-              // Add a small delay to allow browser to render "Saving..."
-              await new Promise(r => setTimeout(r, 100));
-
-              saveCurrentState();
-
-              btn.innerText = "Saved!";
-              btn.style.backgroundColor = "#34C759";
-              btn.style.color = "white";
-              btn.style.borderColor = "#34C759";
-
-              const msg = document.getElementById('draft-saved-msg');
-              if (msg) msg.style.display = 'block';
-
-              setTimeout(() => {
-                  btn.innerText = originalText;
-                  btn.disabled = false;
-                  btn.style.backgroundColor = "";
-                  btn.style.color = "";
-                  btn.style.borderColor = "";
-                  if (msg) msg.style.display = 'none';
-              }, 2000);
-          });
-      });
-
-      if (finishBtn) {
-        finishBtn.addEventListener('click', () => {
-           if (validateStep('step-template')) {
-               const req = {
-                   businessType: state.workContext || state.work_context || "Local Service",
-                   companyName: state.businessName,
-                   companyDescription: state.tagline || "",
-                   sellingCategories: state.categories ? [state.categories] : [],
-                   paymentPref: "online",
-                   adminEmail: state.adminEmail || "admin@mybusiness.com",
-                   adminName: state.assistantName || "Admin",
-                   adminPassword: state.adminPassword || "password",
-                   websiteTemplate: state.templateSelection || "Modern",
-                   firstProductName: state.firstOffer || "First Offer",
-                   firstProductPrice: "0.00",
-                   domainChoice: "subdomain",
-                   priceType: "fixed",
-                   location: "Local",
-                   targetAudience: "General"
-               };
-
-               if (window.__TAURI__ && window.__TAURI__.core) {
-                 finishBtn.disabled = true;
-                 finishBtn.innerText = "Saving...";
-                 window.__TAURI__.core.invoke("start_onboarding", { req }).then(() => {
-                   window.location.href = "success.html";
-                 }).catch((err) => {
-                   console.error(err);
-                   finishBtn.disabled = false;
-                   finishBtn.innerText = "Finish Setup";
-                 });
-               } else {
-                 finishBtn.disabled = true;
-                 finishBtn.innerText = "Saving...";
-                 const backendUrl = (window.location.origin.includes('localhost') || window.location.protocol === 'file:') ? 'http://127.0.0.1:18789' : '';
-                 fetch(`${backendUrl}/api/onboarding/start`, {
-                     method: 'POST',
-                     headers: {
-                         'Content-Type': 'application/json'
-                     },
-                     body: JSON.stringify(req)
-                 }).then(response => {
-                     if (response.ok) {
-                         localStorage.setItem('onboardingState', JSON.stringify(state));
-                         window.location.href = "success.html";
-                     } else {
-                         throw new Error('Failed to start onboarding');
-                     }
-                 }).catch((err) => {
-                     console.error(err);
-                     finishBtn.disabled = false;
-                     finishBtn.innerText = "Finish Setup";
-                 });
-               }
-           }
+        sendBtn.addEventListener('click', handleSubmit);
+        chatInput.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') handleSubmit();
         });
-      }
-
-      // Enter key support for text inputs
-      document.querySelectorAll('input[type="text"]').forEach(input => {
-          input.addEventListener('keydown', (e) => {
-              if (e.key === 'Enter') {
-                  e.preventDefault();
-                  const step = e.target.closest('.step');
-                  const nextBtn = step.querySelector('.next-step-btn') || step.querySelector('#finish-btn');
-                  if (nextBtn) nextBtn.click();
-              }
-          });
       });
     </script>
-    <script>
-document.addEventListener('DOMContentLoaded', () => {
-    // Inject tooltip CSS
-    const style = document.createElement('style');
-    style.textContent = `
-        .ohc-tooltip {
-            position: fixed;
-            background: rgba(255, 255, 255, 0.85);
-            backdrop-filter: blur(20px) saturate(210%);
-            -webkit-backdrop-filter: blur(20px) saturate(210%);
-            border: 1px solid rgba(255, 255, 255, 0.6);
-            border-radius: 16px;
-            padding: 12px 16px;
-            color: #1d1d1f;
-            font-family: "Outfit", -apple-system, BlinkMacSystemFont, sans-serif;
-            font-size: 14px;
-            line-height: 1.4;
-            max-width: 250px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-            z-index: 10000;
-            pointer-events: none;
-            opacity: 0;
-            transform: translateY(10px);
-            transition: opacity 0.2s ease, transform 0.2s ease;
-            text-align: center;
-        }
-        .ohc-tooltip.visible {
-            opacity: 1;
-            transform: translateY(0);
-        }
-        @media (prefers-color-scheme: dark) {
-            .ohc-tooltip {
-                background: rgba(22, 22, 26, 0.7);
-                border-color: rgba(255, 255, 255, 0.1);
-                color: #f5f5f7;
-            }
-        }
-    `;
-    document.head.appendChild(style);
-
-    if (!window.OHC_TOOLTIPS) {
-        window.OHC_TOOLTIPS = {};
-        fetch("/api/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(e => {
-            // Fallback for playwright
-            window.OHC_TOOLTIPS = {
-                "nav-store": "Your Storefront. This is where you manage what you sell.",
-                "nav-agents": "AI Helpers. These are your digital employees.",
-                "ohc-help-btn": "Need help? Click here to access our Help Center and tutorials.",
-                "search-input": "Search our knowledge base for help articles.",
-            };
-        });
-    }
-    const tooltipEl = document.createElement('div');
-    tooltipEl.className = 'ohc-tooltip';
-    document.body.appendChild(tooltipEl);
-
-    let hideTimeout;
-
-    function showTooltip(e, text) {
-        clearTimeout(hideTimeout);
-        tooltipEl.textContent = text;
-
-        const targetRect = e.target.getBoundingClientRect();
-
-        // Position below the element by default
-        let top = targetRect.bottom + 10;
-        let left = targetRect.left + (targetRect.width / 2) - (tooltipEl.offsetWidth / 2);
-
-        // Adjust if it goes off screen
-        if (left < 10) left = 10;
-        if (left + tooltipEl.offsetWidth > window.innerWidth - 10) {
-            left = window.innerWidth - tooltipEl.offsetWidth - 10;
-        }
-
-        if (top + tooltipEl.offsetHeight > window.innerHeight - 10) {
-            // Position above if it doesn't fit below
-            top = targetRect.top - tooltipEl.offsetHeight - 10;
-        }
-
-        tooltipEl.style.top = `${top}px`;
-        tooltipEl.style.left = `${left}px`;
-        tooltipEl.classList.add('visible');
-    }
-
-    function hideTooltip() {
-        hideTimeout = setTimeout(() => {
-            tooltipEl.classList.remove('visible');
-        }, 100); // slight delay to prevent flicker
-    }
-
-    // Desktop hover
-    document.addEventListener('mouseover', (e) => {
-        const t = e.target;
-        const target = t && typeof t.closest === 'function' ? t.closest('[data-tooltip]') : null;
-        if (target) {
-            showTooltip(e, (window.OHC_TOOLTIPS && window.OHC_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip'));
-        }
-    });
-
-    document.addEventListener('mouseout', (e) => {
-        const target = e.target; if (target && typeof target.closest === 'function' && target.closest('[data-tooltip]')) {
-            hideTooltip();
-        }
-    });
-
-    // Mobile long press (contextmenu) or touchstart
-    let touchTimeout;
-    document.addEventListener('touchstart', (e) => {
-        const t = e.target;
-        const target = t && typeof t.closest === 'function' ? t.closest('[data-tooltip]') : null;
-        if (target) {
-            touchTimeout = setTimeout(() => {
-                showTooltip(e, (window.OHC_TOOLTIPS && window.OHC_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip'));
-            }, 500); // 500ms long press
-        }
-    });
-
-    document.addEventListener('touchend', () => {
-        clearTimeout(touchTimeout);
-        hideTooltip();
-    });
-
-    document.addEventListener('touchmove', () => {
-        clearTimeout(touchTimeout);
-        hideTooltip();
-    });
-});
-
-</script>
-    <script>
-document.addEventListener('DOMContentLoaded', () => {
-    // Inject chat CSS
-    const style = document.createElement('style');
-    style.textContent = `
-        #ohc-help-btn {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            width: 56px;
-            height: 56px;
-            border-radius: 16px;
-            background: #0066FF;
-            color: white;
-            border: none;
-            box-shadow: 0 4px 14px rgba(0, 102, 255, 0.4);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            z-index: 9999;
-            transition: transform 0.2s;
-        }
-        #ohc-help-btn:hover {
-            transform: scale(1.05);
-        }
-        #ohc-help-btn svg {
-            width: 28px;
-            height: 28px;
-            fill: none;
-            stroke: currentColor;
-            stroke-width: 2;
-        }
-        #ohc-help-chat-overlay {
-            position: fixed;
-            bottom: 90px;
-            right: 20px;
-            width: 350px;
-            height: 500px;
-            max-height: calc(100vh - 120px);
-            max-width: calc(100vw - 40px);
-            background: rgba(255, 255, 255, 0.85);
-            backdrop-filter: blur(30px) saturate(210%);
-            -webkit-backdrop-filter: blur(30px) saturate(210%);
-            border: 1px solid rgba(255, 255, 255, 0.6);
-            border-radius: 16px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
-            display: none;
-            flex-direction: column;
-            z-index: 9998;
-            overflow: hidden;
-            font-family: "Outfit", sans-serif;
-            transform-origin: bottom right;
-            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-        @keyframes popIn {
-            0% { transform: scale(0.5); opacity: 0; }
-            100% { transform: scale(1); opacity: 1; }
-        }
-        #ohc-help-chat-header {
-            padding: 15px 20px;
-            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: rgba(255, 255, 255, 0.5);
-        }
-        #ohc-help-chat-header h3 {
-            margin: 0;
-            font-size: 16px;
-            color: #1d1d1f;
-        }
-        #ohc-help-close {
-            background: none;
-            border: none;
-            color: #555555;
-            cursor: pointer;
-            padding: 5px;
-        }
-        #ohc-help-close:hover { color: #1d1d1f; }
-        #ohc-help-messages {
-            flex-grow: 1;
-            padding: 20px;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
-        .msg {
-            max-width: 85%;
-            padding: 12px 16px;
-            border-radius: 16px;
-            font-size: 14px;
-            line-height: 1.4;
-        }
-        .msg-user {
-            align-self: flex-end;
-            background: #0066FF;
-            color: white;
-            border-bottom-right-radius: 4px;
-        }
-        .msg-ai {
-            align-self: flex-start;
-            background: rgba(0, 0, 0, 0.05);
-            color: #1d1d1f;
-            border-bottom-left-radius: 4px;
-        }
-        .msg-ai a {
-            color: #0066FF;
-            font-weight: 600;
-            text-decoration: none;
-            display: block;
-            margin-top: 5px;
-        }
-        #ohc-help-input-area {
-            padding: 15px;
-            border-top: 1px solid rgba(0, 0, 0, 0.1);
-            display: flex;
-            gap: 10px;
-            background: rgba(255, 255, 255, 0.5);
-        }
-        #ohc-help-input {
-            flex-grow: 1;
-            border: 1px solid rgba(0, 0, 0, 0.2);
-            border-radius: 16px;
-            padding: 10px 15px;
-            outline: none;
-            background: rgba(255, 255, 255, 0.8);
-            font-size: 14px;
-        }
-        #ohc-help-input:focus { border-color: #0066FF; }
-        #ohc-help-send {
-            background: #0066FF;
-            color: white;
-            border: none;
-            width: 40px;
-            height: 40px;
-            border-radius: 16px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        @media (prefers-color-scheme: dark) {
-            #ohc-help-chat-overlay {
-                background: rgba(22, 22, 26, 0.7);
-                border-color: rgba(255, 255, 255, 0.1);
-            }
-            #ohc-help-chat-header, #ohc-help-input-area {
-                background: rgba(0, 0, 0, 0.2);
-                border-color: rgba(255, 255, 255, 0.1);
-            }
-            #ohc-help-chat-header h3 { color: #f5f5f7; }
-            .msg-ai {
-                background: rgba(255, 255, 255, 0.1);
-                color: #f5f5f7;
-            }
-            #ohc-help-input {
-                background: rgba(0, 0, 0, 0.3);
-                border-color: rgba(255, 255, 255, 0.2);
-                color: white;
-            }
-        }
-    `;
-    document.head.appendChild(style);
-
-    // Inject HTML
-    const btn = document.createElement('button');
-    btn.id = 'ohc-help-btn';
-    btn.setAttribute('aria-label', 'Open help chat');
-    btn.innerHTML = `<svg viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
-    document.body.appendChild(btn);
-
-    const overlay = document.createElement('div');
-    overlay.id = 'ohc-help-chat-overlay';
-    overlay.innerHTML = `
-        <div id="ohc-help-chat-header">
-            <h3>Ask AI Help</h3>
-            <button id="ohc-help-close" aria-label="Close help chat">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path></svg>
-            </button>
-        </div>
-        <div id="ohc-help-messages">
-            <div class="msg msg-ai">Hi! I am your AI Help Agent! How can I assist you with OHC today?</div>
-        </div>
-
-        <div id="ohc-help-walkthroughs" style="margin-top: 15px; border-top: 1px solid rgba(0,0,0,0.1); padding-top: 15px;">
-            <h4 style="margin: 0 0 10px 0; font-size: 14px;">Interactive Tours</h4>
-            <button onclick="window.startWalkthrough && window.startWalkthrough([{targetId: 'nav-store', title: 'Set up your store', content: 'Click here to go to your storefront builder.'}])" style="width: 100%; text-align: left; padding: 8px; border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; background: white; margin-bottom: 8px; cursor: pointer; font-size: 13px;">Tour: Set up your store</button>
-            <button onclick="window.startWalkthrough && window.startWalkthrough([{targetId: 'nav-agents', title: 'Activate your AI Support Agent', content: 'Activate your AI agent to help with tasks.'}])" style="width: 100%; text-align: left; padding: 8px; border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; background: white; margin-bottom: 8px; cursor: pointer; font-size: 13px;">Tour: Activate your AI Support Agent</button>
-        </div>
-
-<div id="ohc-help-input-area">
-            <input type="text" id="ohc-help-input" placeholder="Ask me anything..." />
-            <button id="ohc-help-send" aria-label="Send message">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
-            </button>
-        </div>
-    `;
-    document.body.appendChild(overlay);
-
-    const closeBtn = document.getElementById('ohc-help-close');
-    const messages = document.getElementById('ohc-help-messages');
-    const input = document.getElementById('ohc-help-input');
-    const sendBtn = document.getElementById('ohc-help-send');
-
-    btn.addEventListener('click', () => {
-        overlay.style.display = 'flex';
-        input.focus();
-    });
-
-    closeBtn.addEventListener('click', () => {
-        overlay.style.display = 'none';
-    });
-
-        async function sendMessage() {
-        const text = input.value.trim();
-        if (!text) return;
-
-        // Add user msg
-        const uMsg = document.createElement('div');
-        uMsg.className = 'msg msg-user';
-        uMsg.textContent = text;
-        messages.appendChild(uMsg);
-        input.value = '';
-        messages.scrollTop = messages.scrollHeight;
-
-        try {
-            let url = '/api/chat';
-            if (window.__TAURI__ && window.__TAURI__.core) {
-                url = 'http://127.0.0.1:18789/api/chat';
-            }
-            const response = await fetch(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message: text })
-            });
-            const data = await response.json();
-
-            const aiMsg = document.createElement('div');
-            aiMsg.className = 'msg msg-ai';
-            if (data.link && data.link.url) {
-                aiMsg.innerHTML = `${data.reply}<br/><a href="${data.link.url}">${data.link.title}</a>`;
-            } else {
-                aiMsg.textContent = data.reply;
-            }
-            messages.appendChild(aiMsg);
-            messages.scrollTop = messages.scrollHeight;
-        } catch (e) {
-            console.error(e);
-            const aiMsg = document.createElement('div');
-            aiMsg.className = 'msg msg-ai';
-            aiMsg.textContent = 'Sorry, there was an error connecting to the help assistant.';
-            messages.appendChild(aiMsg);
-            messages.scrollTop = messages.scrollHeight;
-        }
-    }
-
-    sendBtn.addEventListener('click', sendMessage);
-    input.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') sendMessage();
-    });
-});
-
-</script>
-
-
-
-
-
-
-
-
-
-
-<style>
-.ohc-tooltip {
-    position: fixed;
-    background: #333;
-    color: white;
-    padding: 8px 12px;
-    border-radius: 6px;
-    font-size: 13px;
-    font-family: Outfit, sans-serif;
-    z-index: 100000;
-    pointer-events: none;
-    opacity: 0;
-    transition: opacity 0.2s;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    max-width: 250px;
-    line-height: 1.4;
-}
-.ohc-tooltip.visible {
-    opacity: 1;
-}
-</style>
-<script>
-document.addEventListener('DOMContentLoaded', () => {
-    if (!window.OHC_TOOLTIPS) {
-        window.OHC_TOOLTIPS = {};
-        fetch("/api/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(e => {
-            // Fallback for playwright
-            window.OHC_TOOLTIPS = {
-                "nav-store": "Your Storefront. This is where you manage what you sell.",
-                "nav-agents": "AI Helpers. These are your digital employees.",
-                "ohc-help-btn": "Need help? Click here to access our Help Center and tutorials.",
-                "search-input": "Search our knowledge base for help articles.",
-            };
-        });
-    }
-    const tooltipEl = document.createElement('div');
-    tooltipEl.className = 'ohc-tooltip';
-    document.body.appendChild(tooltipEl);
-
-    function showTooltip(e, text) {
-        if (!text) return;
-        tooltipEl.textContent = text;
-        const targetRect = e.target.closest('[id]') ? e.target.closest('[id]').getBoundingClientRect() : e.target.getBoundingClientRect();
-
-        let left = targetRect.left + (targetRect.width / 2) - (tooltipEl.offsetWidth / 2);
-        let top = targetRect.bottom + 10;
-
-        if (left + tooltipEl.offsetWidth > window.innerWidth - 10) {
-            left = window.innerWidth - tooltipEl.offsetWidth - 10;
-        } else if (left < 10) {
-            left = 10;
-        }
-
-        if (top + tooltipEl.offsetHeight > window.innerHeight - 10) {
-            top = targetRect.top - tooltipEl.offsetHeight - 10;
-        }
-
-        tooltipEl.style.top = `${top}px`;
-        tooltipEl.style.left = `${left}px`;
-        tooltipEl.classList.add('visible');
-    }
-
-    function hideTooltip() {
-        tooltipEl.classList.remove('visible');
-    }
-
-    document.addEventListener('mouseover', (e) => {
-        const target = e.target.closest('[id]');
-        if (target && target.id && window.OHC_TOOLTIPS[target.id]) {
-            showTooltip(e, window.OHC_TOOLTIPS[target.id]);
-        }
-    });
-
-    document.addEventListener('mouseout', (e) => {
-        const target = e.target.closest('[id]');
-        if (target && target.id && window.OHC_TOOLTIPS[target.id]) {
-            hideTooltip();
-        }
-    });
-});
-</script>
-
-
-<script>
-function initWalkthrough() {
-    window.startWalkthrough = function(steps) {
-        if (!steps || steps.length === 0) return;
-
-        let currentStep = 0;
-
-        // Create overlay
-        const overlay = document.createElement('div');
-        overlay.id = 'walkthrough-overlay';
-        overlay.className = 'fixed z-[90]';
-        overlay.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 99998;';
-        document.body.appendChild(overlay);
-
-        // Create bubble
-        const bubble = document.createElement('div');
-        bubble.id = 'walkthrough-bubble';
-        bubble.setAttribute('role', 'dialog');
-        bubble.style.cssText = 'position: fixed; background: white; border-radius: 8px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif;';
-        document.body.appendChild(bubble);
-
-        function renderStep() {
-            const step = steps[currentStep];
-
-            // Clean up previous highlights
-            document.querySelectorAll('.walkthrough-highlight').forEach(el => {
-                el.classList.remove('walkthrough-highlight');
-                el.style.position = '';
-                el.style.zIndex = '';
-                el.style.background = '';
-            });
-
-            // Find target
-            const target = document.getElementById(step.targetId) || document.querySelector(step.targetId);
-
-            bubble.innerHTML = `
-                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 8px;">
-                    <h4 style="margin: 0; font-size: 16px; font-weight: bold;">${step.title || 'Tour'}</h4>
-                    <button id="wt-close" style="background: none; border: none; cursor: pointer; font-size: 18px;">&times;</button>
-                </div>
-                <p style="margin: 0; font-size: 14px; color: #333;">${step.content}</p>
-                <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;">
-                    ${currentStep > 0 ? '<button id="wt-prev" style="padding: 6px 12px; border: 1px solid #ccc; border-radius: 4px; background: white; cursor: pointer;">Back</button>' : ''}
-                    <button id="wt-next" style="padding: 6px 12px; border: none; border-radius: 4px; background: #0066FF; color: white; cursor: pointer;">${currentStep === steps.length - 1 ? 'Finish' : 'Next'}</button>
-                </div>
-            `;
-
-            document.getElementById('wt-close').onclick = closeWalkthrough;
-            if (document.getElementById('wt-prev')) document.getElementById('wt-prev').onclick = () => { currentStep--; renderStep(); };
-            document.getElementById('wt-next').onclick = () => {
-                if (currentStep === steps.length - 1) {
-                    closeWalkthrough();
-                } else {
-                    currentStep++;
-                    renderStep();
-                }
-            };
-
-            if (target) {
-                target.classList.add('walkthrough-highlight');
-                target.style.position = 'relative';
-                target.style.zIndex = '99999';
-                target.style.background = 'white'; // Make it pop
-
-                const rect = target.getBoundingClientRect();
-                // Position bubble below target if space permits, else above
-                if (rect.bottom + 200 < window.innerHeight) {
-                    bubble.style.top = (rect.bottom + 10) + 'px';
-                } else {
-                    bubble.style.top = (rect.top - bubble.offsetHeight - 10) + 'px';
-                }
-                bubble.style.left = Math.max(10, Math.min(rect.left, window.innerWidth - 320)) + 'px';
-            } else {
-                // Center if no target
-                bubble.style.top = '50%';
-                bubble.style.left = '50%';
-                bubble.style.transform = 'translate(-50%, -50%)';
-            }
-        }
-
-        function closeWalkthrough() {
-            document.querySelectorAll('.walkthrough-highlight').forEach(el => {
-                el.classList.remove('walkthrough-highlight');
-                el.style.position = '';
-                el.style.zIndex = '';
-                el.style.background = '';
-            });
-            if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
-            if (bubble.parentNode) bubble.parentNode.removeChild(bubble);
-        }
-
-        renderStep();
-    };
-}
-initWalkthrough();
-</script>
-
-</body>
+  </body>
 </html>
