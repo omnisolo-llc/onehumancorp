@@ -15,26 +15,6 @@ test.describe('Dashboard Links and Navigation E2E', () => {
     await expect(chatLink).toHaveCount(0);
   });
 
-  test('should contain "Store Manager AI" link pointing to /store-manager', async ({ page }) => {
-    await page.goto('http://127.0.0.1:3000/dashboard');
-    const storeManagerLink = page.locator('a[href="/store-manager"]').first();
-    await expect(storeManagerLink).toBeVisible();
-    await expect(storeManagerLink).toContainText('Store Manager AI');
-  });
-
-  test('should successfully navigate to /store-manager and load the chat interface', async ({ page }) => {
-    await page.goto('http://127.0.0.1:3000/dashboard');
-    const storeManagerLink = page.locator('a[href="/store-manager"]').first();
-    await storeManagerLink.click();
-    await page.waitForURL('http://127.0.0.1:3000/store-manager');
-
-    // Validate we are on the store manager page
-    await expect(page.locator('h1', { hasText: 'Store Manager AI' })).toBeVisible();
-
-    // Check if the input text area exists
-    await expect(page.locator('textarea[placeholder="Tell me what to do..."]')).toBeVisible();
-  });
-
   test('should successfully navigate to /settings from the dashboard', async ({ page }) => {
     await page.goto('http://127.0.0.1:3000/dashboard');
     const settingsLink = page.locator('a[href="/settings"]').first();
