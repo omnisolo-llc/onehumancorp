@@ -10,6 +10,8 @@ function CheckoutContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const tier = searchParams?.get("tier");
+  const productId = searchParams?.get("product_id") || "prod_123";
+  const quantity = parseInt(searchParams?.get("quantity") || "1", 10);
   const discountParam = searchParams?.get("discount");
   const [isProcessing, setIsProcessing] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -66,7 +68,14 @@ function CheckoutContent() {
           "Content-Type": "application/json",
           ...(typeof localStorage !== "undefined" && localStorage.getItem('token') ? { "Authorization": `Bearer ${localStorage.getItem('token')}` } : {})
         },
-        body: JSON.stringify({ tier, is_subscription: true }),
+        // We do not lock inventory for purely subscription/plan upgrades unless product_id is given.
+        // For standard item purchases via checkout, we pass product_id to ensure the lock.
+        body: JSON.stringify({
+          tier,
+          is_subscription: true,
+          product_id: tier ? undefined : productId,
+          quantity: tier ? undefined : quantity
+        }),
       });
       const data = await response.json();
       if (!response.ok || !data.checkout_url) {
@@ -93,6 +102,29 @@ function CheckoutContent() {
     }
 
     try {
+      // First, attempt to lock inventory via POS reserve to simulate the lock during redirect
+      if (!tier) {
+        setCheckoutStatus("Reserving inventory...");
+        const reserveRes = await fetch("/api/v1/payments/terminal/reserve", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "x-tenant-id": tenant },
+          body: JSON.stringify({
+            tenant_id: tenant,
+            product_id: productId,
+            quantity: quantity,
+            ttl_seconds: 300,
+          }),
+        });
+        const reserveData = await reserveRes.json();
+        if (!reserveData.success) {
+          setCheckoutStatus("Sorry, this item was just purchased in-store.");
+          setIsMercadoPagoProcessing(false);
+          return;
+        }
+      }
+
+      setCheckoutStatus("Redirecting to Mercado Pago...");
+
       const response = await fetch("/api/checkout/mercadopago", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -130,8 +162,8 @@ function CheckoutContent() {
         headers: { "Content-Type": "application/json", "x-tenant-id": tenant },
         body: JSON.stringify({
           tenant_id: tenant,
-          product_id: "prod_123", // Default product for checkout
-          quantity: 1,
+          product_id: productId,
+          quantity: quantity,
           ttl_seconds: 15,
         }),
       });
@@ -154,8 +186,8 @@ function CheckoutContent() {
           headers: { "Content-Type": "application/json", "x-tenant-id": tenant },
           body: JSON.stringify({
             tenant_id: tenant,
-            product_id: "prod_123",
-            quantity: 1,
+            product_id: productId,
+            quantity: quantity,
             lock_id: lockId,
           }),
         });
