@@ -1,60 +1,104 @@
 "use client";
 
-import React, { useState, Suspense } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { OneTapReferral } from "../components/OneTapReferral";
 
 function BookingForm() {
   const searchParams = useSearchParams();
   const tenant = searchParams?.get("tenant") || "default-store";
-  const [description, setDescription] = useState("");
-  const [file, setFile] = useState<File | null>(null);
-  const [submitted, setSubmitted] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const [services, setServices] = useState<any[]>([]);
+  const [selectedService, setSelectedService] = useState("");
+  const [selectedDate, setSelectedDate] = useState("");
+  const [selectedTime, setSelectedTime] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [checkoutUrl, setCheckoutUrl] = useState("");
 
-    // Simulating form submission
-    await fetch("/api/v1/booking/request", {
+  useEffect(() => {
+    // Fetch available services on mount
+    fetch("/api/v1/booking/services", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        description,
-        fileName: file?.name,
-        timestamp: new Date().toISOString()
-      }),
-    });
+      body: JSON.stringify({ tenant_id: tenant }),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data && data.services) {
+          setServices(data.services);
+          if (data.services.length > 0) {
+            setSelectedService(data.services[0].id);
+          }
+        }
+        setLoading(false);
+      })
+      .catch((e) => {
+        console.error("Failed to fetch services:", e);
+        setLoading(false);
+      });
+  }, [tenant]);
 
-    setSubmitted(true);
+  // Generate some dummy slots based on the date
+  const generateTimeSlots = () => {
+    if (!selectedDate) return [];
+    return ["09:00", "10:00", "11:00", "13:00", "14:00", "15:00", "16:00"];
   };
 
-  if (submitted) {
+  const handleBooking = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedService || !selectedDate || !selectedTime) return;
+
+    setSubmitting(true);
+    const start_time = `${selectedDate}T${selectedTime}:00Z`;
+    // For simplicity, assuming service duration is 1 hour
+    const endTimeObj = new Date(new Date(start_time).getTime() + 60 * 60 * 1000);
+    const end_time = endTimeObj.toISOString();
+
+    try {
+      const res = await fetch("/api/v1/booking/create_unified", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          tenant_id: tenant,
+          service_id: selectedService,
+          start_time,
+          end_time,
+          customer_id: "anonymous-customer-id", // typically from auth context
+        }),
+      });
+
+      const data = await res.json();
+      if (data.success && data.booking?.checkout_url) {
+        setCheckoutUrl(data.booking.checkout_url);
+      } else {
+        alert("Failed to book slot. " + (data.error || ""));
+        setSubmitting(false);
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error booking slot");
+      setSubmitting(false);
+    }
+  };
+
+  if (checkoutUrl) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 font-inter p-6">
         <div className="w-full max-w-[375px] bg-white/65 backdrop-blur-[30px] rounded-[24px] p-8 shadow-2xl text-center border border-white/40">
-          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center text-3xl mx-auto mb-6">✅</div>
-          <h1 className="text-2xl font-bold font-outfit text-gray-900 mb-2">Request Sent!</h1>
-          <p className="text-gray-600 text-sm leading-relaxed">
-            We've received your inquiry. We'll review it and send over a custom quote and available timeslots shortly.
+          <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center text-3xl mx-auto mb-6">🗓️</div>
+          <h1 className="text-2xl font-bold font-outfit text-gray-900 mb-2">Slot Reserved!</h1>
+          <p className="text-gray-600 text-sm leading-relaxed mb-6">
+            Your time slot is reserved. Please complete the deposit payment to confirm your booking.
           </p>
-          <button
-            onClick={() => setSubmitted(false)}
-            className="mt-8 w-full py-3 px-4 rounded-xl font-bold text-sm bg-gray-900 text-white hover:bg-black transition-all mb-6"
+          <a
+            href={checkoutUrl}
+            className="block w-full py-3 px-4 rounded-xl font-bold text-sm bg-blue-600 text-white hover:bg-blue-700 transition-all mb-6"
           >
-            Submit Another Request
-          </button>
+            Pay Deposit
+          </a>
 
-          <OneTapReferral tenantId={tenant} source="booking_success" />
-
-          <div className="mt-6 text-center" style={{ fontFamily: 'sans-serif', fontSize: '12px' }}>
-            <a
-              href={`/api/v1/growth/referrals/click?target=/onboarding&ref=${tenant}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{ color: '#6b7280', textDecoration: 'none', fontWeight: 600 }}>
-              ⚡ Powered by OHC
-            </a>
-          </div>
+          <OneTapReferral tenantId={tenant} source="booking_deposit" />
         </div>
       </div>
     );
@@ -66,51 +110,82 @@ function BookingForm() {
 
         {/* Header */}
         <div className="pt-12 pb-6 px-6 bg-white sticky top-0 z-10 border-b border-gray-100">
-          <h1 className="text-2xl font-bold font-outfit text-gray-900 tracking-tight">Request a Service</h1>
-          <p className="text-gray-500 text-sm mt-1">Tell us what you need, and we'll send a quote and available times.</p>
+          <h1 className="text-2xl font-bold font-outfit text-gray-900 tracking-tight">Book an Appointment</h1>
+          <p className="text-gray-500 text-sm mt-1">Select a service and time slot.</p>
         </div>
 
         {/* Form Content */}
-        <form onSubmit={handleSubmit} className="flex-1 px-6 py-6 overflow-y-auto hide-scrollbar space-y-6">
-
-          <div>
-            <label className="block text-sm font-semibold text-gray-900 mb-2 uppercase tracking-wider text-[10px]">What do you need help with?</label>
-            <textarea
-              required
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="e.g. I have a leaky faucet in the kitchen that needs fixing."
-              className="w-full min-h-[120px] bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-semibold text-gray-900 mb-2 uppercase tracking-wider text-[10px]">Attach a Photo (Optional)</label>
-            <div className="relative border-2 border-dashed border-gray-300 rounded-xl p-6 flex flex-col items-center justify-center text-center hover:bg-gray-50 transition-colors">
-              <input
-                aria-label="Attach a photo"
-                type="file"
-                accept="image/*"
-                onChange={(e) => setFile(e.target.files?.[0] || null)}
-                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-              />
-              <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-500 mb-2">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+        <form onSubmit={handleBooking} className="flex-1 px-6 py-6 overflow-y-auto hide-scrollbar space-y-6">
+          {loading ? (
+             <div className="text-sm text-gray-500 text-center py-10">Loading services...</div>
+          ) : (
+            <>
+              <div>
+                <label className="block text-sm font-semibold text-gray-900 mb-2 uppercase tracking-wider text-[10px]">Select Service</label>
+                <div className="space-y-3">
+                  {services.length === 0 ? (
+                    <div className="text-sm text-gray-500 p-4 border border-gray-100 rounded-xl text-center">No services available.</div>
+                  ) : (
+                    services.map((svc) => (
+                      <label key={svc.id} className={`flex items-center justify-between p-4 rounded-xl border cursor-pointer transition-all ${selectedService === svc.id ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'}`}>
+                        <div>
+                          <div className="font-semibold text-sm text-gray-900">{svc.title}</div>
+                          <div className="text-xs text-gray-500 mt-1">${(svc.priceCents || svc.price_cents || 0) / 100} deposit</div>
+                        </div>
+                        <input
+                          type="radio"
+                          name="service"
+                          value={svc.id}
+                          checked={selectedService === svc.id}
+                          onChange={() => setSelectedService(svc.id)}
+                          className="w-4 h-4 text-blue-600 focus:ring-blue-500"
+                        />
+                      </label>
+                    ))
+                  )}
+                </div>
               </div>
-              <span className="text-sm font-medium text-gray-700">
-                {file ? file.name : "Tap to upload a photo"}
-              </span>
-            </div>
-          </div>
 
-          <div className="pt-4">
-             <button
-              type="submit"
-              className="w-full py-4 px-4 rounded-xl font-bold text-[15px] bg-blue-600 text-white hover:bg-blue-700 shadow-md shadow-blue-500/20 active:scale-[0.98] transition-all"
-            >
-              Get a Quote
-            </button>
-          </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-900 mb-2 uppercase tracking-wider text-[10px]">Select Date</label>
+                <input
+                  type="date"
+                  required
+                  value={selectedDate}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                  className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+                />
+              </div>
+
+              {selectedDate && (
+                <div>
+                  <label className="block text-sm font-semibold text-gray-900 mb-2 uppercase tracking-wider text-[10px]">Select Time</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {generateTimeSlots().map((time) => (
+                      <button
+                        key={time}
+                        type="button"
+                        onClick={() => setSelectedTime(time)}
+                        className={`py-2 text-sm font-medium rounded-lg border transition-all ${selectedTime === time ? 'border-blue-600 bg-blue-600 text-white' : 'border-gray-200 text-gray-700 hover:border-gray-300'}`}
+                      >
+                        {time}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="pt-4">
+                <button
+                  type="submit"
+                  disabled={!selectedService || !selectedDate || !selectedTime || submitting}
+                  className="w-full py-4 px-4 rounded-xl font-bold text-[15px] bg-blue-600 text-white hover:bg-blue-700 shadow-md shadow-blue-500/20 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {submitting ? 'Processing...' : 'Continue to Deposit'}
+                </button>
+              </div>
+            </>
+          )}
         </form>
         <div className="py-4 text-center border-t border-gray-100 bg-gray-50" style={{ fontFamily: 'sans-serif', fontSize: '12px' }}>
           <a
@@ -133,7 +208,6 @@ function BookingForm() {
     </div>
   );
 }
-
 
 export default function Booking() {
   return (
