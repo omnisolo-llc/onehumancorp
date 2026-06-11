@@ -321,11 +321,9 @@ impl WorkflowExecutor {
                         .edges
                         .iter()
                         .find(|e| e.target == current_node_id)
-                    {
-                        if let Some(val) = state.get(&edge.source) {
+                        && let Some(val) = state.get(&edge.source) {
                             return Ok(val.clone());
                         }
-                    }
                     return Ok("Visual orchestration completed with no data".to_string());
                 }
             }

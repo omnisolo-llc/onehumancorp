@@ -99,7 +99,7 @@ impl GitCheckpointer {
         }
 
         let name_out = StdCommand::new("git")
-            .args(&["config", "user.name", "Agent"])
+            .args(["config", "user.name", "Agent"])
             .current_dir(&repo_path)
             .output()
             .expect("Failed to execute git config user.name");
@@ -111,7 +111,7 @@ impl GitCheckpointer {
         }
 
         let err_out = StdCommand::new("git")
-            .args(&["config", "user.email", "agent@ohc.local"])
+            .args(["config", "user.email", "agent@ohc.local"])
             .current_dir(&repo_path)
             .output()
             .expect("Failed to execute git config user.email");
@@ -535,7 +535,7 @@ fn decompress_data(data: &[u8]) -> Result<Vec<u8>, String> {
 
     let mut decoder = GzDecoder::new(&decoded[..]);
     let mut decompressed = Vec::new();
-    if let Err(_) = decoder.read_to_end(&mut decompressed) {
+    if decoder.read_to_end(&mut decompressed).is_err() {
         return Ok(data.to_vec()); // Fallback for valid base64 but not gzip
     }
 

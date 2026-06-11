@@ -1281,7 +1281,7 @@ impl HubService for MyHubService {
 
         let auditor_future = tokio::task::spawn_blocking(move || {
             (
-                auditor_clone.get_tenant_cost(&tenant_id_clone_2),
+                auditor_clone.get_tenant_cost_cents(&tenant_id_clone_2),
                 auditor_clone.get_tenant_revenue(&tenant_id_clone_2),
                 auditor_clone.get_tenant_payment_fees(&tenant_id_clone_2),
                 auditor_clone.get_tenant_compute_cost(&tenant_id_clone_2),
@@ -1300,7 +1300,8 @@ impl HubService for MyHubService {
         let (storage_res, auditor_res) = tokio::join!(storage_future, auditor_future);
 
         let storage_bytes = storage_res.unwrap_or(0);
-        let (llm_cost_f64, total_revenue_f64, payment_fees_f64, compute_cost_f64, network_cost_f64, bandwidth_savings_f64, total_tokens, cached_tokens) = auditor_res.unwrap_or((0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0, 0));
+        let (llm_cost_cents, total_revenue_f64, payment_fees_f64, compute_cost_f64, network_cost_f64, bandwidth_savings_f64, total_tokens, cached_tokens) = auditor_res.unwrap_or((0, 0.0, 0.0, 0.0, 0.0, 0.0, 0, 0));
+        let llm_cost_f64 = llm_cost_cents as f64 / 100.0;
 
         let cache_hit_rate = if total_tokens + cached_tokens > 0 {
             (cached_tokens as f64 / (total_tokens as f64 + cached_tokens as f64)) * 100.0
@@ -1337,7 +1338,7 @@ impl HubService for MyHubService {
             total_revenue: (total_revenue_f64 * 100.0).round() as i64,
             total_costs: (total_costs_f64 * 100.0).round() as i64,
             projected_monthly_cost: ::server_pricing::calculator::calculate_projected_monthly_cost_cents(total_costs_f64, elapsed_days, 30),
-            llm_cost: (llm_cost_f64 * 100.0).round() as i64,
+            llm_cost: llm_cost_cents,
             storage_cost: (storage_cost_f64 * 100.0).round() as i64,
             payment_fees: (payment_fees_f64 * 100.0).round() as i64,
             network_cost: (network_cost_f64 * 100.0).round() as i64,
@@ -2836,8 +2837,9 @@ pub async fn list_ui_triage_handler(
     use axum::response::IntoResponse;
     use sqlx::Row;
     let tenant_id = ui_tenant_id(&query);
+    let mobile_optimized = query.mobile_optimized.unwrap_or(false);
 
-    let cache_key = format!("ui_triage:{}", tenant_id);
+    let cache_key = format!("ui_triage:{}:mobile:{}", tenant_id, mobile_optimized);
     let cache = UI_TRIAGE_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
     if let Some(cached) = cache.get(&cache_key).await {
         return (axum::http::StatusCode::OK, axum::Json(cached)).into_response();
@@ -2865,18 +2867,31 @@ pub async fn list_ui_triage_handler(
             .await
             {
                 Ok(rows) => rows.into_iter().map(|row| {
-                    serde_json::json!({
-                        "id": row.get::<String, _>("id"),
-                        "tenant_id": row.get::<String, _>("tenant_id"),
-                        "customer_id": row.try_get::<String, _>("customer_id").unwrap_or_default(),
-                        "source": row.try_get::<String, _>("source").unwrap_or_default(),
-                        "priority": row.try_get::<String, _>("priority").unwrap_or_default(),
-                        "context": row.try_get::<String, _>("context").unwrap_or_default(),
-                        "status": row.try_get::<String, _>("status").unwrap_or_default(),
-                        "created_at": row.try_get::<chrono::DateTime<chrono::Utc>, _>("created_at").map(|dt| dt.to_rfc3339()).unwrap_or_default(),
-                        "action_type": row.try_get::<String, _>("action_type").unwrap_or_default(),
-                        "action_payload": row.try_get::<String, _>("action_payload").unwrap_or_default(),
-                    })
+                    if mobile_optimized {
+                        serde_json::json!({
+                            "id": row.get::<String, _>("id"),
+                            "tenant_id": row.get::<String, _>("tenant_id"),
+                            "customer_id": row.try_get::<String, _>("customer_id").unwrap_or_default(),
+                            "source": row.try_get::<String, _>("source").unwrap_or_default(),
+                            "priority": row.try_get::<String, _>("priority").unwrap_or_default(),
+                            "status": row.try_get::<String, _>("status").unwrap_or_default(),
+                            "created_at": row.try_get::<chrono::DateTime<chrono::Utc>, _>("created_at").map(|dt| dt.to_rfc3339()).unwrap_or_default(),
+                            "action_type": row.try_get::<String, _>("action_type").unwrap_or_default(),
+                        })
+                    } else {
+                        serde_json::json!({
+                            "id": row.get::<String, _>("id"),
+                            "tenant_id": row.get::<String, _>("tenant_id"),
+                            "customer_id": row.try_get::<String, _>("customer_id").unwrap_or_default(),
+                            "source": row.try_get::<String, _>("source").unwrap_or_default(),
+                            "priority": row.try_get::<String, _>("priority").unwrap_or_default(),
+                            "context": row.try_get::<String, _>("context").unwrap_or_default(),
+                            "status": row.try_get::<String, _>("status").unwrap_or_default(),
+                            "created_at": row.try_get::<chrono::DateTime<chrono::Utc>, _>("created_at").map(|dt| dt.to_rfc3339()).unwrap_or_default(),
+                            "action_type": row.try_get::<String, _>("action_type").unwrap_or_default(),
+                            "action_payload": row.try_get::<String, _>("action_payload").unwrap_or_default(),
+                        })
+                    }
                 }).collect::<Vec<_>>(),
                 Err(e) => { tracing::error!("Failed to fetch triage items: {:?}", e); vec![] }
             }
@@ -2941,9 +2956,119 @@ pub async fn update_ui_triage_action_handler(
                         tracing::info!("Approved and scheduled SocialPostDraft for tenant: {}", tenant_id);
                         // In a real implementation we would send this to AYRSHARE or similar buffer here
                         // For MVP, we simply mark it resolved.
-                    } else if action_type == "ProposedInvoice" || action_type == "SuggestedCalendarSlot" {
-                        // TODO: Implement other action types like ProposedInvoice or SuggestedCalendarSlot as outlined in issue #26616
-                        tracing::info!("Executing proposed action: {}, payload: {}", action_type, action_payload);
+                    } else if action_type == "ProposedInvoice" {
+                        tracing::info!("Executing proposed action: ProposedInvoice, payload: {}", action_payload);
+                        let json_payload: serde_json::Value = serde_json::from_str(&action_payload).unwrap_or(serde_json::json!({}));
+
+                        let triage_item = sqlx::query("SELECT customer_id FROM triage_items WHERE id = $1 AND tenant_id = $2")
+                            .bind(&payload.triage_item_id)
+                            .bind(&tenant_id)
+                            .fetch_optional(&mut *tx)
+                            .await
+                            .ok()
+                            .flatten();
+
+                        let triage_customer_id = triage_item.and_then(|r| r.try_get::<String, _>("customer_id").ok());
+
+                        let client_id = triage_customer_id.or_else(|| json_payload.get("client_id").and_then(|v| v.as_str()).map(|s| s.to_string()));
+
+                        if let Some(cid) = client_id {
+                            let client_name = json_payload.get("client_name").and_then(|v| v.as_str()).unwrap_or("Client").to_string();
+                            let total_amount = json_payload.get("total_amount").and_then(|v| v.as_f64()).unwrap_or(0.0);
+                            let due_date = json_payload.get("due_date").and_then(|v| v.as_i64()).unwrap_or_else(|| chrono::Utc::now().timestamp() + 30 * 24 * 3600);
+                            let currency = json_payload.get("currency").and_then(|v| v.as_str()).unwrap_or("USD").to_string();
+
+                            let invoice_id = format!("inv-{}", uuid::Uuid::new_v4());
+
+                            if let Err(e) = sqlx::query(
+                                "INSERT INTO invoices (id, tenant_id, client_id, client_name, status, due_date, currency, total_amount) VALUES ($1, $2, $3, $4, 'draft', $5, $6, $7)"
+                            )
+                            .bind(&invoice_id)
+                            .bind(&tenant_id)
+                            .bind(&cid)
+                            .bind(&client_name)
+                            .bind(due_date)
+                            .bind(&currency)
+                            .bind(total_amount)
+                            .execute(&mut *tx)
+                            .await {
+                                tracing::error!("Failed to insert proposed invoice for triage item {}: {:?}", payload.triage_item_id, e);
+                                // For now, we continue even if action fails to resolve the triage item.
+                            } else {
+                                if let Some(items) = json_payload.get("line_items").and_then(|v| v.as_array()) {
+                                    for item in items {
+                                        let desc = item.get("description").and_then(|v| v.as_str()).unwrap_or("Item");
+                                        let qty = item.get("quantity").and_then(|v| v.as_i64()).unwrap_or(1);
+                                        let unit_price = item.get("unit_price").and_then(|v| v.as_f64()).unwrap_or(0.0);
+                                        let amount = item.get("amount").and_then(|v| v.as_f64()).unwrap_or(qty as f64 * unit_price);
+
+                                        let item_id = format!("item-{}", uuid::Uuid::new_v4());
+                                        if let Err(e) = sqlx::query(
+                                            "INSERT INTO invoice_line_items (id, tenant_id, invoice_id, description, quantity, unit_price, amount) VALUES ($1, $2, $3, $4, $5, $6, $7)"
+                                        )
+                                        .bind(&item_id)
+                                        .bind(&tenant_id)
+                                        .bind(&invoice_id)
+                                        .bind(desc)
+                                        .bind(qty as i32)
+                                        .bind(unit_price)
+                                        .bind(amount)
+                                        .execute(&mut *tx)
+                                        .await {
+                                            tracing::error!("Failed to insert invoice line item for invoice {}: {:?}", invoice_id, e);
+                                        }
+                                    }
+                                }
+                            }
+                        } else {
+                            tracing::warn!("Could not extract a client_id for ProposedInvoice action payload: {}", action_payload);
+                        }
+                    } else if action_type == "SuggestedCalendarSlot" {
+                        tracing::info!("Executing proposed action: SuggestedCalendarSlot, payload: {}", action_payload);
+                        let json_payload: serde_json::Value = serde_json::from_str(&action_payload).unwrap_or(serde_json::json!({}));
+
+                        let triage_item = sqlx::query("SELECT customer_id FROM triage_items WHERE id = $1 AND tenant_id = $2")
+                            .bind(&payload.triage_item_id)
+                            .bind(&tenant_id)
+                            .fetch_optional(&mut *tx)
+                            .await
+                            .ok()
+                            .flatten();
+
+                        let customer_id = triage_item.and_then(|r| r.try_get::<String, _>("customer_id").ok()).or_else(|| json_payload.get("customer_id").and_then(|v| v.as_str()).map(|s| s.to_string()));
+
+                        if let Some(cid) = customer_id {
+                            let product_id = json_payload.get("product_id").and_then(|v| v.as_str()).unwrap_or("unknown_service").to_string();
+
+                            let start_time_str = json_payload.get("start_time").and_then(|v| v.as_str()).unwrap_or("");
+                            let end_time_str = json_payload.get("end_time").and_then(|v| v.as_str()).unwrap_or("");
+
+                            let start_time = chrono::DateTime::parse_from_rfc3339(start_time_str)
+                                .map(|dt| dt.with_timezone(&chrono::Utc))
+                                .unwrap_or_else(|_| chrono::Utc::now() + chrono::Duration::days(1));
+
+                            let end_time = chrono::DateTime::parse_from_rfc3339(end_time_str)
+                                .map(|dt| dt.with_timezone(&chrono::Utc))
+                                .unwrap_or_else(|_| start_time + chrono::Duration::hours(1));
+
+                            let booking_id = format!("booking-{}", uuid::Uuid::new_v4());
+
+                            if let Err(e) = sqlx::query(
+                                "INSERT INTO bookings (id, tenant_id, customer_id, product_id, start_time, end_time, status) VALUES ($1, $2, $3, $4, $5, $6, 'scheduled')"
+                            )
+                            .bind(&booking_id)
+                            .bind(&tenant_id)
+                            .bind(&cid)
+                            .bind(&product_id)
+                            .bind(start_time)
+                            .bind(end_time)
+                            .execute(&mut *tx)
+                            .await {
+                                tracing::error!("Failed to insert suggested calendar slot booking for triage item {}: {:?}", payload.triage_item_id, e);
+                            }
+                        } else {
+                            tracing::warn!("Could not extract a customer_id for SuggestedCalendarSlot action payload: {}", action_payload);
+                        }
                     }
                 }
             }
@@ -3108,8 +3233,13 @@ async fn ui_dashboard_analytics_chat_handler(
     let tenant_id = ui_tenant_id(&query);
     let text = payload.message.to_lowercase();
 
+    let (inbox_res, metrics_res) = tokio::join!(
+        load_ui_inbox_from_db(&db, &tenant_id),
+        load_ui_dashboard_metrics(&db, &tenant_id)
+    );
+
     let response_text = if text.contains("dm") || text.contains("message") {
-        let inbox_messages = load_ui_inbox_from_db(&db, &tenant_id).await.unwrap_or_default();
+        let inbox_messages = inbox_res.unwrap_or_default();
         let senders: Vec<String> = inbox_messages.iter().take(3).filter_map(|m| m.get("source").and_then(|s| s.as_str()).map(|s| s.to_string())).collect();
         if senders.is_empty() {
             "You have no recent messages.".to_string()
@@ -3117,7 +3247,7 @@ async fn ui_dashboard_analytics_chat_handler(
             format!("Your latest messages are from: {}.", senders.join(", "))
         }
     } else if text.contains("order") || text.contains("booking") || text.contains("revenue") || text.contains("sale") {
-        let metrics = load_ui_dashboard_metrics(&db, &tenant_id).await.unwrap_or(UiDashboardMetrics { active_customers: 0, pending_orders: 0, total_sales: 0.0, total_campaigns_sent: 0, auto_replied: 0 });
+        let metrics = metrics_res.unwrap_or(UiDashboardMetrics { active_customers: 0, pending_orders: 0, total_sales: 0.0, total_campaigns_sent: 0, auto_replied: 0 });
         format!("You currently have {} pending orders, with a total expected revenue of ${:.2}.", metrics.pending_orders, metrics.total_sales)
     } else {
         "I am your Decision Assistant. I can help you check orders, messages, and revenue.".to_string()
@@ -3379,29 +3509,28 @@ async fn ui_dashboard_unified_feed_handler(
 
     // Check cache
     if let Some((cached, is_stale)) = cache.get_with_swr(&cache_key).await {
-        // Supply should not be cached because it changes continuously (inventory counts),
-        // so we fetch supply and merge it.
-        let supply_res = load_ui_supply_from_db(&db, &tenant_id).await.unwrap_or_else(|_| serde_json::json!({}));
-        let mut final_cached = cached.clone();
-        if let Some(obj) = final_cached.as_object_mut() {
-            obj.insert("supply".to_string(), supply_res);
-        }
-
         if !is_stale {
+            // Supply should not be cached because it changes continuously (inventory counts),
+            // so we fetch supply and merge it on cache hit.
+            let supply_res = load_ui_supply_from_db(&db, &tenant_id).await.unwrap_or_else(|_| serde_json::json!({}));
+            let mut final_cached = cached.clone();
+            if let Some(obj) = final_cached.as_object_mut() {
+                obj.insert("supply".to_string(), supply_res);
+            }
             return (axum::http::StatusCode::OK, axum::Json(final_cached)).into_response();
         }
 
-        let db = db.clone();
-        let t = tenant_id.clone();
+        let db_bg = db.clone();
+        let t_bg = tenant_id.clone();
         let cache_key_bg = cache_key.clone();
         tokio::spawn(async move {
             let (metrics_res, orders_res, messages_res, triage_res, approvals_res, agent_feed_res) = tokio::join!(
-                tokio::spawn({ let db = db.clone(); let t = t.clone(); async move { load_ui_dashboard_metrics(&db, &t).await } }),
-                tokio::spawn({ let db = db.clone(); let t = t.clone(); async move { load_ui_orders_from_db(&db, &t).await } }),
-                tokio::spawn({ let db = db.clone(); let t = t.clone(); async move { load_ui_inbox_from_db(&db, &t).await } }),
-                tokio::spawn({ let db = db.clone(); let t = t.clone(); async move { load_ui_triage_from_db(&db, &t).await } }),
-                tokio::spawn({ let db = db.clone(); let t = t.clone(); async move { load_ui_agent_approvals_from_db(&db, &t).await } }),
-                tokio::spawn({ let db = db.clone(); let t = t.clone(); async move { load_ui_agent_feed_from_db(&db, &t).await } })
+                tokio::spawn({ let db = db_bg.clone(); let t = t_bg.clone(); async move { load_ui_dashboard_metrics(&db, &t).await } }),
+                tokio::spawn({ let db = db_bg.clone(); let t = t_bg.clone(); async move { load_ui_orders_from_db(&db, &t).await } }),
+                tokio::spawn({ let db = db_bg.clone(); let t = t_bg.clone(); async move { load_ui_inbox_from_db(&db, &t).await } }),
+                tokio::spawn({ let db = db_bg.clone(); let t = t_bg.clone(); async move { load_ui_triage_from_db(&db, &t).await } }),
+                tokio::spawn({ let db = db_bg.clone(); let t = t_bg.clone(); async move { load_ui_agent_approvals_from_db(&db, &t).await } }),
+                tokio::spawn({ let db = db_bg.clone(); let t = t_bg.clone(); async move { load_ui_agent_feed_from_db(&db, &t).await } })
             );
 
             let mut orders = orders_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
@@ -3452,6 +3581,12 @@ async fn ui_dashboard_unified_feed_handler(
                 c.set(&cache_key_bg, result, std::time::Duration::from_secs(10)).await;
             }
         });
+
+        let supply_res = load_ui_supply_from_db(&db, &tenant_id).await.unwrap_or_else(|_| serde_json::json!({}));
+        let mut final_cached = cached.clone();
+        if let Some(obj) = final_cached.as_object_mut() {
+            obj.insert("supply".to_string(), supply_res);
+        }
         return (axum::http::StatusCode::OK, axum::Json(final_cached)).into_response();
     }
 
@@ -3528,8 +3663,9 @@ async fn ui_dashboard_unified_agent_feed_handler(
 ) -> axum::response::Response {
     use axum::response::IntoResponse;
     let tenant_id = ui_tenant_id(&query);
+    let mobile_optimized = query.mobile_optimized.unwrap_or(false);
 
-    let cache_key = format!("ui_unified_agent_feed:{}", tenant_id);
+    let cache_key = format!("ui_unified_agent_feed:{}:mobile:{}", tenant_id, mobile_optimized);
     let cache = UI_UNIFIED_AGENT_FEED_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
     if let Some((cached, is_stale)) = cache.get_with_swr(&cache_key).await {
         if !is_stale {
@@ -3544,9 +3680,26 @@ async fn ui_dashboard_unified_agent_feed_handler(
                 tokio::spawn({ let db = db.clone(); let t = t.clone(); async move { load_ui_agent_approvals_from_db(&db, &t).await } }),
                 tokio::spawn({ let db = db.clone(); let t = t.clone(); async move { load_ui_ledger_from_db(&db, &t).await } })
             );
+
+            let mut pending_approvals = approvals_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
+            let mut entries = ledger_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
+
+            if mobile_optimized {
+                for item in pending_approvals.iter_mut() {
+                    if let Some(obj) = item.as_object_mut() {
+                        obj.remove("payload");
+                    }
+                }
+                for item in entries.iter_mut() {
+                    if let Some(obj) = item.as_object_mut() {
+                        obj.remove("payload");
+                    }
+                }
+            }
+
             let result = serde_json::json!({
-                "pending_approvals": approvals_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default(),
-                "entries": ledger_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default()
+                "pending_approvals": pending_approvals,
+                "entries": entries
             });
             if let Some(c) = UI_UNIFIED_AGENT_FEED_CACHE.get() {
                 c.set(&cache_key_bg, result, std::time::Duration::from_secs(10)).await;
@@ -3560,9 +3713,25 @@ async fn ui_dashboard_unified_agent_feed_handler(
         tokio::spawn({ let db = db.clone(); let t = tenant_id.clone(); async move { load_ui_ledger_from_db(&db, &t).await } })
     );
 
+    let mut pending_approvals = approvals_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
+    let mut entries = ledger_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
+
+    if mobile_optimized {
+        for item in pending_approvals.iter_mut() {
+            if let Some(obj) = item.as_object_mut() {
+                obj.remove("payload");
+            }
+        }
+        for item in entries.iter_mut() {
+            if let Some(obj) = item.as_object_mut() {
+                obj.remove("payload");
+            }
+        }
+    }
+
     let result = serde_json::json!({
-        "pending_approvals": approvals_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default(),
-        "entries": ledger_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default()
+        "pending_approvals": pending_approvals,
+        "entries": entries
     });
 
     let _ = cache.set(&cache_key, result.clone(), std::time::Duration::from_secs(10)).await;
@@ -4018,6 +4187,7 @@ async fn list_ui_supply_handler(
     use axum::response::IntoResponse;
     use sqlx::Row;
     let tenant_id = ui_tenant_id(&query);
+    let mobile_optimized = query.mobile_optimized.unwrap_or(false);
 
     let (vendors, raw_materials, bom_items) = match &db.store {
         crate::db::DbStore::Postgres => {
@@ -4035,31 +4205,60 @@ async fn list_ui_supply_handler(
 
             let vendors = v_res.unwrap_or_default()
                 .into_iter()
-                .map(|row| serde_json::json!({
-                    "id": row.get::<String, _>("id"),
-                    "name": row.get::<String, _>("name"),
-                    "contact_info": row.get::<String, _>("contact_info"),
-                }))
+                .map(|row| {
+                    if mobile_optimized {
+                        serde_json::json!({
+                            "id": row.get::<String, _>("id"),
+                            "name": row.get::<String, _>("name"),
+                        })
+                    } else {
+                        serde_json::json!({
+                            "id": row.get::<String, _>("id"),
+                            "name": row.get::<String, _>("name"),
+                            "contact_info": row.get::<String, _>("contact_info"),
+                        })
+                    }
+                })
                 .collect::<Vec<_>>();
 
             let raw_materials = rm_res.unwrap_or_default()
                 .into_iter()
-                .map(|row| serde_json::json!({
-                    "id": row.get::<String, _>("id"),
-                    "name": row.get::<String, _>("name"),
-                    "current_quantity": row.get::<i32, _>("current_quantity"),
-                    "reorder_threshold": row.get::<i32, _>("reorder_threshold"),
-                }))
+                .map(|row| {
+                    if mobile_optimized {
+                        serde_json::json!({
+                            "id": row.get::<String, _>("id"),
+                            "name": row.get::<String, _>("name"),
+                            "current_quantity": row.get::<i32, _>("current_quantity"),
+                        })
+                    } else {
+                        serde_json::json!({
+                            "id": row.get::<String, _>("id"),
+                            "name": row.get::<String, _>("name"),
+                            "current_quantity": row.get::<i32, _>("current_quantity"),
+                            "reorder_threshold": row.get::<i32, _>("reorder_threshold"),
+                        })
+                    }
+                })
                 .collect::<Vec<_>>();
 
             let bom_items = bi_res.unwrap_or_default()
                 .into_iter()
-                .map(|row| serde_json::json!({
-                    "id": row.get::<String, _>("id"),
-                    "finished_good_id": row.get::<String, _>("finished_good_id"),
-                    "raw_material_id": row.get::<String, _>("raw_material_id"),
-                    "quantity_required": row.get::<i32, _>("quantity_required"),
-                }))
+                .map(|row| {
+                    if mobile_optimized {
+                        serde_json::json!({
+                            "id": row.get::<String, _>("id"),
+                            "finished_good_id": row.get::<String, _>("finished_good_id"),
+                            "raw_material_id": row.get::<String, _>("raw_material_id"),
+                        })
+                    } else {
+                        serde_json::json!({
+                            "id": row.get::<String, _>("id"),
+                            "finished_good_id": row.get::<String, _>("finished_good_id"),
+                            "raw_material_id": row.get::<String, _>("raw_material_id"),
+                            "quantity_required": row.get::<i32, _>("quantity_required"),
+                        })
+                    }
+                })
                 .collect::<Vec<_>>();
 
             (vendors, raw_materials, bom_items)
@@ -4079,31 +4278,60 @@ async fn list_ui_supply_handler(
 
             let vendors = v_res.unwrap_or_default()
                 .into_iter()
-                .map(|row| serde_json::json!({
-                    "id": row.get::<String, _>("id"),
-                    "name": row.get::<String, _>("name"),
-                    "contact_info": row.get::<String, _>("contact_info"),
-                }))
+                .map(|row| {
+                    if mobile_optimized {
+                        serde_json::json!({
+                            "id": row.get::<String, _>("id"),
+                            "name": row.get::<String, _>("name"),
+                        })
+                    } else {
+                        serde_json::json!({
+                            "id": row.get::<String, _>("id"),
+                            "name": row.get::<String, _>("name"),
+                            "contact_info": row.get::<String, _>("contact_info"),
+                        })
+                    }
+                })
                 .collect::<Vec<_>>();
 
             let raw_materials = rm_res.unwrap_or_default()
                 .into_iter()
-                .map(|row| serde_json::json!({
-                    "id": row.get::<String, _>("id"),
-                    "name": row.get::<String, _>("name"),
-                    "current_quantity": row.get::<i32, _>("current_quantity"),
-                    "reorder_threshold": row.get::<i32, _>("reorder_threshold"),
-                }))
+                .map(|row| {
+                    if mobile_optimized {
+                        serde_json::json!({
+                            "id": row.get::<String, _>("id"),
+                            "name": row.get::<String, _>("name"),
+                            "current_quantity": row.get::<i32, _>("current_quantity"),
+                        })
+                    } else {
+                        serde_json::json!({
+                            "id": row.get::<String, _>("id"),
+                            "name": row.get::<String, _>("name"),
+                            "current_quantity": row.get::<i32, _>("current_quantity"),
+                            "reorder_threshold": row.get::<i32, _>("reorder_threshold"),
+                        })
+                    }
+                })
                 .collect::<Vec<_>>();
 
             let bom_items = bi_res.unwrap_or_default()
                 .into_iter()
-                .map(|row| serde_json::json!({
-                    "id": row.get::<String, _>("id"),
-                    "finished_good_id": row.get::<String, _>("finished_good_id"),
-                    "raw_material_id": row.get::<String, _>("raw_material_id"),
-                    "quantity_required": row.get::<i32, _>("quantity_required"),
-                }))
+                .map(|row| {
+                    if mobile_optimized {
+                        serde_json::json!({
+                            "id": row.get::<String, _>("id"),
+                            "finished_good_id": row.get::<String, _>("finished_good_id"),
+                            "raw_material_id": row.get::<String, _>("raw_material_id"),
+                        })
+                    } else {
+                        serde_json::json!({
+                            "id": row.get::<String, _>("id"),
+                            "finished_good_id": row.get::<String, _>("finished_good_id"),
+                            "raw_material_id": row.get::<String, _>("raw_material_id"),
+                            "quantity_required": row.get::<i32, _>("quantity_required"),
+                        })
+                    }
+                })
                 .collect::<Vec<_>>();
 
             (vendors, raw_materials, bom_items)

@@ -705,7 +705,7 @@ pub async fn razorpay_webhook_handler(
             // Dispatch payment.captured event to Finance agent for split tag evaluation
             let orch = webhook_state.orchestrator.clone();
             let payload_val = serde_json::to_value(&payload).unwrap_or(serde_json::Value::Null);
-            let order_id_val = order_id.clone();
+            let _order_id_val = order_id.clone();
             tokio::spawn(async move {
                 let evt = crate::orchestration::departments::types::DepartmentEvent {
                     id: uuid::Uuid::new_v4().to_string(),
