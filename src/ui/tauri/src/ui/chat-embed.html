@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Agent Chat</title>
+  <style>
+    :root {
+      --bg-color: #f5f5f7;
+      --text-color: #1d1d1f;
+      --primary: #0066FF;
+      --border: rgba(0, 0, 0, 0.1);
+      --msg-user-bg: #0066FF;
+      --msg-user-text: #ffffff;
+      --msg-ai-bg: #e5e5ea;
+      --msg-ai-text: #1d1d1f;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg-color: #16161a;
+        --text-color: #f5f5f7;
+        --border: rgba(255, 255, 255, 0.1);
+        --msg-ai-bg: #333336;
+        --msg-ai-text: #f5f5f7;
+      }
+    }
+
+    body, html {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: transparent;
+      overflow: hidden;
+    }
+
+    .chat-container {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      background-color: var(--bg-color);
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      overflow: hidden;
+    }
+
+    .chat-header {
+      padding: 16px;
+      background: rgba(255, 255, 255, 0.8);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      .chat-header {
+        background: rgba(0, 0, 0, 0.2);
+      }
+    }
+
+    .avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 16px;
+    }
+
+    .header-text {
+      flex: 1;
+    }
+
+    .header-text h3 {
+      margin: 0;
+      font-size: 16px;
+      color: var(--text-color);
+    }
+
+    .header-text p {
+      margin: 2px 0 0 0;
+      font-size: 12px;
+      color: #86868b;
+    }
+
+    .chat-messages {
+      flex: 1;
+      padding: 16px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .msg {
+      max-width: 80%;
+      padding: 12px 16px;
+      border-radius: 16px;
+      font-size: 14px;
+      line-height: 1.4;
+    }
+
+    .msg-ai {
+      align-self: flex-start;
+      background-color: var(--msg-ai-bg);
+      color: var(--msg-ai-text);
+      border-bottom-left-radius: 4px;
+    }
+
+    .msg-user {
+      align-self: flex-end;
+      background-color: var(--msg-user-bg);
+      color: var(--msg-user-text);
+      border-bottom-right-radius: 4px;
+    }
+
+    .chat-input-area {
+      padding: 12px;
+      background: rgba(255, 255, 255, 0.8);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border-top: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      .chat-input-area {
+        background: rgba(0, 0, 0, 0.2);
+      }
+    }
+
+    .input-row {
+      display: flex;
+      gap: 8px;
+    }
+
+    .chat-input {
+      flex: 1;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 10px 16px;
+      font-size: 14px;
+      background: var(--bg-color);
+      color: var(--text-color);
+      outline: none;
+    }
+
+    .chat-input:focus {
+      border-color: var(--primary);
+    }
+
+    .send-btn {
+      width: 40px;
+      height: 40px;
+      border-radius: 20px;
+      background: var(--primary);
+      color: white;
+      border: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+
+    .viral-footer {
+      text-align: center;
+      font-size: 12px;
+    }
+
+    .viral-footer a {
+      color: #86868b;
+      text-decoration: none;
+      font-weight: 500;
+      transition: color 0.2s;
+    }
+
+    .viral-footer a:hover {
+      color: var(--primary);
+    }
+  </style>
+</head>
+<body>
+  <div class="chat-container">
+    <div class="chat-header">
+      <div class="avatar" id="agent-avatar">🤖</div>
+      <div class="header-text">
+        <h3 id="agent-name">AI Assistant</h3>
+        <p>Typically replies instantly</p>
+      </div>
+    </div>
+
+    <div class="chat-messages" id="chat-messages">
+      <div class="msg msg-ai" id="welcome-message">Hello! How can I help you today?</div>
+    </div>
+
+    <div class="chat-input-area">
+      <div class="input-row">
+        <input type="text" class="chat-input" id="chat-input" placeholder="Type a message..." />
+        <button class="send-btn" id="send-btn" aria-label="Send">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+        </button>
+      </div>
+      <div class="viral-footer">
+        <a href="#" id="branding-link" target="_blank">⚡ Powered by OHC</a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const tenant = urlParams.get('tenant') || 'default-team';
+      const name = urlParams.get('name') || 'AI Assistant';
+      const welcome = urlParams.get('welcome') || 'Hello! How can I help you today?';
+
+      document.getElementById('agent-name').textContent = name;
+      document.getElementById('welcome-message').textContent = welcome;
+
+      const brandingLink = document.getElementById('branding-link');
+      brandingLink.href = `/api/v1/growth/referrals/click?target=/onboarding&ref=${encodeURIComponent(tenant)}`;
+
+      const input = document.getElementById('chat-input');
+      const sendBtn = document.getElementById('send-btn');
+      const messages = document.getElementById('chat-messages');
+
+      async function sendMessage() {
+        const text = input.value.trim();
+        if (!text) return;
+
+        const uMsg = document.createElement('div');
+        uMsg.className = 'msg msg-user';
+        uMsg.textContent = text;
+        messages.appendChild(uMsg);
+
+        input.value = '';
+        messages.scrollTop = messages.scrollHeight;
+
+        try {
+            // Fake delay for UI feedback
+            await new Promise(r => setTimeout(r, 600));
+
+            const aiMsg = document.createElement('div');
+            aiMsg.className = 'msg msg-ai';
+            aiMsg.textContent = "I'm a demo agent embedded from OHC! In a real environment, I would connect to the backend API to answer your request.";
+            messages.appendChild(aiMsg);
+            messages.scrollTop = messages.scrollHeight;
+        } catch(e) {
+            console.error(e);
+        }
+      }
+
+      sendBtn.addEventListener('click', sendMessage);
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') sendMessage();
+      });
+    });
+  </script>
+</body>
+</html>
