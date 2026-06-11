@@ -38,15 +38,15 @@ pub fn get_pool() -> PgPool {
 }
 
 #[derive(Clone)]
-pub enum DbStore {
+pub enum crate::db::DbStore {
     Postgres,
     Sqlite(SqlitePool),
 }
 
 #[derive(Clone)]
-pub struct DB {
+pub struct crate::db::DB {
     pub pool: PgPool,
-    pub store: DbStore,
+    pub store: crate::db::DbStore,
 }
 
 
@@ -60,11 +60,11 @@ pub struct SearchResult {
 }
 
 
-impl DB {
+impl crate::db::DB {
     pub fn is_sqlite(&self) -> bool {
         match &self.store {
-            DbStore::Sqlite(_) => true,
-            DbStore::Postgres => false,
+            crate::db::DbStore::Sqlite(_) => true,
+            crate::db::DbStore::Postgres => false,
         }
     }
 
@@ -274,9 +274,9 @@ impl DB {
                 .connect_with(conn_opts)
                 .await?;
 
-            Ok(DB {
+            Ok(crate::db::DB {
                 pool: dummy_pool,
-                store: DbStore::Sqlite(sqlite_pool),
+                store: crate::db::DbStore::Sqlite(sqlite_pool),
             })
         } else {
             let mut pg_url = database_url.clone();
@@ -331,9 +331,9 @@ impl DB {
             };
 
             let _ = GLOBAL_POOL.set(pool.clone());
-            Ok(DB {
+            Ok(crate::db::DB {
                 pool: pool.clone(),
-                store: DbStore::Postgres,
+                store: crate::db::DbStore::Postgres,
             })
         }
     }
@@ -348,7 +348,7 @@ impl DB {
         let mut results = Vec::new();
 
         match &self.store {
-            DbStore::Sqlite(sqlite_pool) => {
+            crate::db::DbStore::Sqlite(sqlite_pool) => {
                 // Search Customers
                 let customer_rows = sqlx::query("SELECT id, name, email FROM customers WHERE tenant_id = ? AND (LOWER(name) LIKE ? OR LOWER(email) LIKE ?) LIMIT 10")
                     .bind(tenant_id)
@@ -423,7 +423,7 @@ impl DB {
                     });
                 }
             }
-            DbStore::Postgres => {
+            crate::db::DbStore::Postgres => {
                 // Search Customers
                 let customer_rows = sqlx::query("SELECT id, name, email FROM customers WHERE tenant_id = $1 AND (name ILIKE $2 OR email ILIKE $2) LIMIT 10")
                     .bind(tenant_id)
@@ -558,7 +558,7 @@ impl DB {
         tracing::info!("Running migrations...");
 
         match &self.store {
-            DbStore::Postgres => {
+            crate::db::DbStore::Postgres => {
                 let mut migration_conn = self.pool.acquire().await?;
 
                 sqlx::query("SELECT pg_advisory_lock($1);")
@@ -582,7 +582,7 @@ impl DB {
                 migration_result?;
                 unlock_result?;
             }
-            DbStore::Sqlite(sqlite_pool) => {
+            crate::db::DbStore::Sqlite(sqlite_pool) => {
                 let schema = r#"
                     CREATE TABLE IF NOT EXISTS agent_session_data (
                         session_id TEXT PRIMARY KEY,
@@ -1088,7 +1088,7 @@ impl DB {
         let mut result = Vec::new();
 
         match &self.store {
-            DbStore::Sqlite(sqlite_pool) => {
+            crate::db::DbStore::Sqlite(sqlite_pool) => {
                 let rows = sqlx::query("DELETE FROM agent_session_data WHERE last_accessed < ? RETURNING session_id, context_data")
                     .bind(threshold)
                     .fetch_all(sqlite_pool)
@@ -1099,7 +1099,7 @@ impl DB {
                     result.push((id, data));
                 }
             }
-            DbStore::Postgres => {
+            crate::db::DbStore::Postgres => {
                 let tenants = sqlx::query("SELECT id FROM tenants").fetch_all(&self.pool).await?;
                 for tenant_row in tenants {
                     let tenant_id: String = tenant_row.get("id");
@@ -1131,10 +1131,10 @@ impl DB {
         embedding: &str,
     ) -> Result<(), Box<dyn std::error::Error>> {
         match &self.store {
-            DbStore::Sqlite(sqlite_pool) => {
+            crate::db::DbStore::Sqlite(sqlite_pool) => {
                 sqlx::query("INSERT INTO swarm_truth_embeddings (memory_id, context, embedding) VALUES (?, ?, ?) ON CONFLICT(memory_id) DO UPDATE SET context=EXCLUDED.context, embedding=EXCLUDED.embedding").bind(memory_id).bind(context).bind(embedding).execute(sqlite_pool).await?;
             }
-            DbStore::Postgres => {
+            crate::db::DbStore::Postgres => {
                 let mut tx = self.pool.begin().await?;
                 ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await?;
                 sqlx::query("INSERT INTO swarm_truth_embeddings (memory_id, context, embedding) VALUES ($1, $2, $3) ON CONFLICT(memory_id) DO UPDATE SET context=EXCLUDED.context, embedding=EXCLUDED.embedding")
@@ -1156,7 +1156,7 @@ impl DB {
         let mut result = Vec::new();
 
         match &self.store {
-            DbStore::Sqlite(sqlite_pool) => {
+            crate::db::DbStore::Sqlite(sqlite_pool) => {
                 let shared_rows = sqlx::query("SELECT id, tenant_id, payload FROM shared_tasks WHERE status = 'COMPLETED' AND auto_dreamed = 0 LIMIT 25").fetch_all(sqlite_pool).await?;
                 for row in shared_rows {
                     let id: String = row.get("id");
@@ -1173,7 +1173,7 @@ impl DB {
                     result.push((id, org_id, payload, "swarm_tasks".to_string()));
                 }
             }
-            DbStore::Postgres => {
+            crate::db::DbStore::Postgres => {
                 let tenants = sqlx::query("SELECT id FROM tenants").fetch_all(&self.pool).await?;
                 for tenant_row in tenants {
                     let tenant_id: String = tenant_row.get("id");
@@ -1211,10 +1211,10 @@ impl DB {
         embedding: &str,
     ) -> Result<(), Box<dyn std::error::Error>> {
         match &self.store {
-            DbStore::Sqlite(sqlite_pool) => {
+            crate::db::DbStore::Sqlite(sqlite_pool) => {
                 sqlx::query("INSERT INTO agent_memories (id, tenant_id, task_id, raw_content, summary_embedding) VALUES (?, ?, ?, ?, ?)").bind(id).bind(org_id).bind(task_id).bind(content).bind(embedding).execute(sqlite_pool).await?;
             }
-            DbStore::Postgres => {
+            crate::db::DbStore::Postgres => {
                 let mut tx = self.pool.begin().await?;
                 ::server_common::auth_utils::set_org_context(&mut *tx, org_id).await?;
                 sqlx::query("INSERT INTO agent_memories (id, tenant_id, task_id, raw_content, summary_embedding) VALUES ($1, $2, $3, $4, $5)")
@@ -1243,7 +1243,7 @@ impl DB {
         source_type: &str,
     ) -> Result<(), Box<dyn std::error::Error>> {
         match &self.store {
-            DbStore::Sqlite(sqlite_pool) => {
+            crate::db::DbStore::Sqlite(sqlite_pool) => {
                 sqlx::query("INSERT INTO autodream_memories (id, tenant_id, agent_id, task_id, content, embedding, source_type) VALUES (?, ?, ?, ?, ?, ?, ?)")
                     .bind(id)
                     .bind(org_id)
@@ -1255,7 +1255,7 @@ impl DB {
                     .execute(sqlite_pool)
                     .await?;
             }
-            DbStore::Postgres => {
+            crate::db::DbStore::Postgres => {
                 let mut tx = self.pool.begin().await?;
                 ::server_common::auth_utils::set_org_context(&mut *tx, org_id).await?;
                 sqlx::query("INSERT INTO autodream_memories (id, tenant_id, agent_id, task_id, content, embedding, source_type) VALUES ($1, $2, $3, $4, $5, $6::vector, $7)")
@@ -1285,7 +1285,7 @@ impl DB {
         source_type: &str,
     ) -> Result<(), Box<dyn std::error::Error>> {
         match &self.store {
-            DbStore::Sqlite(sqlite_pool) => {
+            crate::db::DbStore::Sqlite(sqlite_pool) => {
                 sqlx::query("INSERT INTO knowledge_embeddings (id, tenant_id, agent_id, task_id, content, embedding, source_type) VALUES (?, ?, ?, ?, ?, ?, ?)")
                     .bind(uuid::Uuid::parse_str(id).unwrap_or_else(|_| uuid::Uuid::new_v4()).to_string())
                     .bind(org_id)
@@ -1297,7 +1297,7 @@ impl DB {
                     .execute(sqlite_pool)
                     .await?;
             }
-            DbStore::Postgres => {
+            crate::db::DbStore::Postgres => {
                 let mut tx = self.pool.begin().await?;
                 ::server_common::auth_utils::set_org_context(&mut *tx, org_id).await?;
                 sqlx::query("INSERT INTO knowledge_embeddings (id, tenant_id, agent_id, task_id, content, embedding, source_type) VALUES ($1, $2, $3, $4, $5, $6::vector, $7)")
@@ -1323,7 +1323,7 @@ impl DB {
         blockers: &str,
     ) -> Result<(), Box<dyn std::error::Error>> {
         match &self.store {
-            DbStore::Sqlite(sqlite_pool) => {
+            crate::db::DbStore::Sqlite(sqlite_pool) => {
                 sqlx::query(
                     "UPDATE agent_missions
                      SET status = 'blocked',
@@ -1337,7 +1337,7 @@ impl DB {
                 .execute(sqlite_pool)
                 .await?;
             }
-            DbStore::Postgres => {
+            crate::db::DbStore::Postgres => {
                 let mut tx = self.pool.begin().await?;
                 ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await?;
                 sqlx::query(
@@ -1364,7 +1364,7 @@ impl DB {
         table: &str,
     ) -> Result<(), Box<dyn std::error::Error>> {
         match &self.store {
-            DbStore::Sqlite(sqlite_pool) => {
+            crate::db::DbStore::Sqlite(sqlite_pool) => {
                 let query = if table == "swarm_tasks" {
                     "UPDATE swarm_tasks SET auto_dreamed = 1 WHERE id = ? AND tenant_id = ?"
                 } else {
@@ -1376,7 +1376,7 @@ impl DB {
                     .execute(sqlite_pool)
                     .await?;
             }
-            DbStore::Postgres => {
+            crate::db::DbStore::Postgres => {
                 let query = if table == "swarm_tasks" {
                     // swarm_tasks uses UUID primary key
                     "UPDATE swarm_tasks SET auto_dreamed = TRUE WHERE id = $1::uuid"
@@ -1445,9 +1445,9 @@ mod autodream_db_tests {
             .connect_lazy(&database_url)
             .expect("Database URL or operation failed in test");
 
-        let db = DB {
+        let db = crate::db::DB {
             pool: pool.clone(),
-            store: DbStore::Postgres,
+            store: crate::db::DbStore::Postgres,
         };
 
         // This is primarily to ensure the code compiles and syntax is fundamentally sound
@@ -1475,9 +1475,9 @@ mod autodream_db_tests {
             .connect_lazy(&database_url)
             .expect("Database URL or operation failed in test");
 
-        let db = DB {
+        let db = crate::db::DB {
             pool: pool.clone(),
-            store: DbStore::Postgres,
+            store: crate::db::DbStore::Postgres,
         };
 
         let id = "a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d";
@@ -1538,9 +1538,9 @@ mod autodream_db_tests {
             .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
             .expect("Database URL or operation failed in test");
 
-        let db = DB {
+        let db = crate::db::DB {
             pool: pg_pool,
-            store: DbStore::Sqlite(pool.clone()),
+            store: crate::db::DbStore::Sqlite(pool.clone()),
         };
 
         let invalid_uuid_str = "invalid-uuid";
@@ -1711,7 +1711,7 @@ mod security_tests_final {
 
                         // Note: the file creation in test fails here randomly due to how sqlx initializes connection pools inside bazel sandboxes.
                         // Since we explicitly secure the parent_dir first anyway, we wrap DB::new to safely ignore parallel connection issues in this specific test.
-                        let _ = DB::new().await;
+                        let _ = crate::db::DB::new().await;
                         let parent_dir = db_path.parent().expect("Database URL or operation failed in test");
                         let _ = fs::create_dir_all(parent_dir);
 
