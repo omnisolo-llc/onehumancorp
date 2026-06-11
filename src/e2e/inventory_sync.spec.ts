@@ -39,7 +39,7 @@ test.describe('Low Stock Restock Action Card', () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-spiffe-id': 'spiffe://ohc/org/e2e/agent/browser'
+          'x-spiffe-id': 'spiffe://ohc/org/e2e-tenant/agent/browser'
         },
         body: JSON.stringify({
           id: 'test_restock_prod',
@@ -59,7 +59,7 @@ test.describe('Low Stock Restock Action Card', () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-spiffe-id': 'spiffe://ohc/org/e2e/agent/browser'
+          'x-spiffe-id': 'spiffe://ohc/org/e2e-tenant/agent/browser'
         },
         body: JSON.stringify({
           tenant_id: 'e2e-tenant',

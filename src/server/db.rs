@@ -764,6 +764,31 @@ impl DB {
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1
                     );
+                    CREATE TABLE IF NOT EXISTS pos_terminal_sessions (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        device_id TEXT NOT NULL,
+                        status TEXT NOT NULL DEFAULT 'ACTIVE',
+                        started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        last_synced_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        offline_changes_count INTEGER DEFAULT 0,
+                        UNIQUE(tenant_id, device_id)
+                    );
+
+                    CREATE TABLE IF NOT EXISTS pos_offline_transactions (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        client_id TEXT NOT NULL,
+                        status TEXT NOT NULL DEFAULT 'PENDING',
+                        amount_cents INTEGER NOT NULL,
+                        currency TEXT NOT NULL,
+                        payload TEXT NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        _sync_status TEXT DEFAULT 'pending',
+                        version INTEGER DEFAULT 1
+                    );
+
                     CREATE TABLE IF NOT EXISTS orders (
                         id TEXT PRIMARY KEY,
                         tenant_id TEXT,
