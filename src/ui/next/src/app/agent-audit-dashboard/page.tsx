@@ -80,6 +80,14 @@ export default function AgentAuditDashboard() {
  <div>Campaigns Sync: Active</div>
  </div>
  </section>
+
+ <section className="app-card">
+ <h2 className="text-xl font-bold font-outfit mb-4">Violation Feed</h2>
+ <div className="flex items-center gap-4">
+ <div className="w-3 h-3 rounded-full bg-green-500" ></div>
+ <div>No active violations</div>
+ </div>
+ </section>
  </div>
 
  <div className="md:col-span-1">
