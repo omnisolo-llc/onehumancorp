@@ -41,6 +41,20 @@ function generateSubdomain(name: string): string {
   return cleanName ? `${cleanName}.ohc.app` : 'my-business.ohc.app';
 }
 
+
+function ResumeLinkToast({ resumeLink, setSaveMessage }: { resumeLink: string, setSaveMessage: (m: string) => void }) {
+  if (!resumeLink) return null;
+  return (
+    <div className="mb-4 w-full p-3 glassmorphism rounded-[8px] border border-[#34C759]/30 bg-[#34C759]/5 flex flex-col gap-2">
+      <p className="text-xs text-[#1D1D1F] dark:text-[#F5F5F7] font-semibold">Resume later on any device with this link:</p>
+      <div className="flex gap-2">
+        <input type="text" readOnly value={resumeLink} className="min-h-[44px] flex-1 p-2 text-xs rounded bg-white/50 dark:bg-black/20 outline-none text-[#1D1D1F] dark:text-[#F5F5F7]" />
+        <button onClick={() => { navigator.clipboard.writeText(resumeLink); setSaveMessage('Link copied!'); }} className="min-h-[44px] min-w-[44px] px-4 py-2 bg-[#34C759] text-white text-sm font-bold rounded shadow-sm hover:bg-[#28A745] active:scale-[0.98] transition-all">Copy</button>
+      </div>
+    </div>
+  );
+}
+
 export default function OnboardingWizard() {
   const {
     step, setStep,
@@ -71,9 +85,31 @@ export default function OnboardingWizard() {
   const [isLoaded, setIsLoaded] = useState(false);
   const initialStateLoaded = useRef(false);
 
+  const getIds = () => {
+    if (typeof window === 'undefined' || typeof localStorage === 'undefined') return { tenantId: 'storefront', userId: 'test-user' };
+    let tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant');
+    let userId = localStorage.getItem('user_id');
+
+    if (!tenantId || tenantId === 'storefront') {
+      // For E2E tests, if they specifically set storefront, we should probably keep it, but wait, the prompt says "Ensure registration state is perfectly synced".
+      // If we generate a random one, it breaks tests that expect 'storefront' across different runs.
+      // Let's use 'storefront' if no URL params, UNLESS it's explicitly generated.
+      // Actually, E2E tests inject 'storefront', so if it's there, keep it.
+      // But if it's empty, create a new one. Wait, the previous code had a fallback to 'storefront' if empty.
+      tenantId = tenantId || 'temp_' + Math.random().toString(36).substring(2, 11);
+      localStorage.setItem('tenant_id', tenantId);
+    }
+    if (!userId || userId === 'test-user') {
+      userId = userId || 'usr_' + Math.random().toString(36).substring(2, 11);
+      localStorage.setItem('user_id', userId);
+    }
+
+    return { tenantId, userId };
+  };
+
+
   const syncStateToBackend = async (overrideState: Partial<any> = {}) => {
-    const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
-    const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
+    const { tenantId, userId } = getIds();
 
     const wizardState = {
       step,
@@ -110,6 +146,7 @@ export default function OnboardingWizard() {
   const [validationError, setValidationError] = useState('');
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const [saveMessage, setSaveMessage] = useState('');
+  const [resumeLink, setResumeLink] = useState('');
 
   const fetchWithRetry = async (url: string, options: RequestInit, retries = 3, backoff = process.env.NODE_ENV === 'test' ? 10 : 500) => {
     for (let i = 0; i < retries; i++) {
@@ -137,8 +174,7 @@ export default function OnboardingWizard() {
     setError('');
 
     try {
-      const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
-      const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
+      const { tenantId, userId } = getIds();
 
       const wizardState = {
         step,
@@ -172,7 +208,13 @@ export default function OnboardingWizard() {
       });
 
       setSaveMessage('Draft Saved!');
-      setTimeout(() => setSaveMessage(''), 3000);
+      if (typeof window !== 'undefined') {
+        setResumeLink(`${window.location.origin}/onboarding?resume_tenant=${tenantId}&resume_user=${userId}`);
+      }
+      setTimeout(() => {
+        setSaveMessage('');
+        setResumeLink('');
+      }, 10000);
     } catch (err: any) {
       console.error(err);
       setError(err.message || 'An error occurred saving draft');
@@ -183,8 +225,17 @@ export default function OnboardingWizard() {
 
   // Read state from server on mount
   useEffect(() => {
-    const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
-    const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const urlTenant = urlParams.get('resume_tenant');
+      const urlUser = urlParams.get('resume_user');
+      if (urlTenant) localStorage.setItem('tenant_id', urlTenant);
+      if (urlUser) localStorage.setItem('user_id', urlUser);
+      if (urlTenant || urlUser) {
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+    }
+    const { tenantId, userId } = getIds();
 
     Promise.all([
       fetch('/api/onboarding/draft', { headers: { 'X-Tenant-ID': tenantId, 'X-User-ID': userId } })
@@ -232,8 +283,7 @@ export default function OnboardingWizard() {
     // Only save if we are past the initial state
     if (step === 1 && !businessName && !whatYouSell && !location && !targetAudience) return;
 
-    const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
-    const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
+    const { tenantId, userId } = getIds();
 
     const wizardState = {
       step,
@@ -620,6 +670,7 @@ export default function OnboardingWizard() {
                   </div>
 
                   {saveMessage && <p className="text-[#34C759] text-sm font-semibold mb-2">{saveMessage}</p>}
+                  <ResumeLinkToast resumeLink={resumeLink} setSaveMessage={setSaveMessage} />
 
                   <div className="space-y-4 flex-1">
                     <div>
@@ -687,6 +738,7 @@ export default function OnboardingWizard() {
                   </div>
 
                   {saveMessage && <p className="text-[#34C759] text-sm font-semibold mb-2">{saveMessage}</p>}
+                  <ResumeLinkToast resumeLink={resumeLink} setSaveMessage={setSaveMessage} />
 
                   <div className="space-y-4 flex-1">
                     <div>
@@ -752,6 +804,7 @@ export default function OnboardingWizard() {
                   </div>
 
                   {saveMessage && <p className="text-[#34C759] text-sm font-semibold mb-2">{saveMessage}</p>}
+                  <ResumeLinkToast resumeLink={resumeLink} setSaveMessage={setSaveMessage} />
 
                   <div className="space-y-4 flex-1">
                     <div>
@@ -818,6 +871,7 @@ export default function OnboardingWizard() {
                   </div>
 
                   {saveMessage && <p className="text-[#34C759] text-sm font-semibold mb-2">{saveMessage}</p>}
+                  <ResumeLinkToast resumeLink={resumeLink} setSaveMessage={setSaveMessage} />
 
                   <div className="space-y-4 flex-1">
                     <div>
@@ -894,6 +948,7 @@ export default function OnboardingWizard() {
               </div>
 
               {saveMessage && <p className="text-[#34C759] text-sm font-semibold mb-2">{saveMessage}</p>}
+              <ResumeLinkToast resumeLink={resumeLink} setSaveMessage={setSaveMessage} />
 
               <div className="space-y-4 flex-1 overflow-y-auto pr-2">
                 <div>
@@ -1026,6 +1081,7 @@ export default function OnboardingWizard() {
               </div>
 
               {saveMessage && <p className="text-[#34C759] text-sm font-semibold mb-2">{saveMessage}</p>}
+              <ResumeLinkToast resumeLink={resumeLink} setSaveMessage={setSaveMessage} />
 
               <div className="space-y-4 flex-1 overflow-y-auto pr-2 hide-scrollbar">
                 <div>

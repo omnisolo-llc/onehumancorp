@@ -1,0 +1,11 @@
+--- src/ui/next/src/app/onboarding/page.tsx
++++ src/ui/next/src/app/onboarding/page.tsx
+@@ -107,7 +107,7 @@
+       <p className="text-xs text-[#1D1D1F] dark:text-[#F5F5F7] font-semibold">Resume later on any device with this link:</p>
+       <div className="flex gap-2">
+         <input type="text" readOnly value={resumeLink} className="flex-1 p-2 text-xs rounded bg-white/50 dark:bg-black/20 outline-none text-[#1D1D1F] dark:text-[#F5F5F7] min-h-[44px]" />
+-        <button onClick={() => { navigator.clipboard.writeText(resumeLink); setSaveMessage('Link copied!'); }} className="px-3 py-1 bg-[#34C759] text-white text-xs font-bold rounded shadow-sm hover:bg-[#28A745] active:scale-[0.98] transition-all">Copy</button>
++        <button onClick={() => { navigator.clipboard.writeText(resumeLink); setSaveMessage('Link copied!'); }} className="min-h-[44px] min-w-[44px] px-4 py-2 bg-[#34C759] text-white text-sm font-bold rounded shadow-sm hover:bg-[#28A745] active:scale-[0.98] transition-all">Copy</button>
+       </div>
+     </div>
+   );

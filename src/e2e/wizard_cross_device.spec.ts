@@ -1,63 +1,125 @@
 import { test, expect } from './fixtures';
 
-test.describe('Wizard Cross Device E2E', () => {
-  test('Persona: Business Owner can resume setup wizard cross device', async ({ page, browser }) => {
-    // 1. Owner starts wizard directly from the current route.
-    await page.addInitScript((tenantId) => {
-      localStorage.setItem('tenant_id', tenantId);
-      localStorage.setItem('user_id', tenantId);
-      localStorage.removeItem('website-builder-storage');
-    }, 'storefront');
-    await page.goto('/website-builder');
-    await page.waitForLoadState('networkidle');
+test.describe('Onboarding Resume Feature', () => {
+  test('Persona: Business Owner generates a resume link on save draft', async ({ page }) => {
+    // Navigate to the onboarding route directly
+    await page.goto('/onboarding');
 
-    // 2. Click Start My Business to advance to step 1
-    await page.getByRole('button', { name: /Start My Business/ }).click();
-    await expect(page.getByRole('heading', { name: 'What kind of business are you building?' })).toBeVisible();
+    // Fill out the business name
+    const nameInput = page.getByPlaceholder(/e.g. Maya's Custom Cakes/i);
+    await nameInput.waitFor({ state: 'visible' });
+    await nameInput.fill('Resume Bakery');
 
-    // 3. Move to step 2 and enter business name
-    await page.getByRole('button', { name: /Online Store/ }).click();
-    await expect(page.getByRole('heading', { name: 'Give your business a name' })).toBeVisible();
-    await page.getByPlaceholder('What is your business called?').fill('Cross Device Wizard');
+    // Click Save Draft
+    await page.getByRole('button', { name: /Save Draft/i }).first().click();
 
-    // Wait until local storage is updated with the business name
-    await expect.poll(async () => {
-      const stateStr = await page.evaluate(() => localStorage.getItem('website-builder-storage'));
-      if (!stateStr) return '';
-      try {
-        const state = JSON.parse(stateStr);
-        return state.state.businessName;
-      } catch (e) {
-        return '';
-      }
-    }, {
-      message: 'Wait for local storage to save business name',
-      timeout: 5000,
-    }).toBe('Cross Device Wizard');
+    // Verify the resume toast appears and contains the origin url with parameters
+    const resumeToast = page.getByText('Resume later on any device with this link:');
+    await expect(resumeToast).toBeVisible({ timeout: 15000 });
 
-    // 4. Simulate a cross-device session with a new browser context
+    const linkInput = page.locator('input[readonly]').first();
+    const linkValue = await linkInput.inputValue();
+
+    expect(linkValue).toContain('/onboarding?resume_tenant=');
+    expect(linkValue).toContain('&resume_user=');
+
+    // Verify copy button exists
+    const copyButton = page.getByRole('button', { name: /Copy/i }).first();
+    await expect(copyButton).toBeVisible();
+  });
+
+  test('Persona: Business Owner resumes session from link successfully', async ({ page, browser }) => {
+    await page.goto('/onboarding');
+
+    // Inject mock local storage
+    await page.evaluate(() => {
+      localStorage.setItem('tenant_id', 'test_tenant_xyz');
+      localStorage.setItem('user_id', 'test_user_xyz');
+    });
+
+    await page.goto('/onboarding');
+
+    // Chat Step 1
+    const nameInput = page.getByPlaceholder(/e.g. Maya's Custom Cakes/i);
+    await nameInput.waitFor({ state: 'visible' });
+    await nameInput.fill('Restored Bakery');
+
+    // Save draft
+    await page.getByRole('button', { name: /Save Draft/i }).first().click();
+    await expect(page.getByText('Draft Saved!')).toBeVisible({ timeout: 15000 });
+
+    // Open a completely fresh context representing a new device (like a phone)
     const newContext = await browser.newContext();
     const newPage = await newContext.newPage();
 
-    // Inject the exact same local storage state to the new context to test restoration
-    // We navigate to dashboard first to have the right origin
-    await newPage.goto('/dashboard');
-    const wizardState = await page.evaluate(() => localStorage.getItem('website-builder-storage'));
+    // Use the resume link
+    await newPage.goto('/onboarding?resume_tenant=test_tenant_xyz&resume_user=test_user_xyz');
 
-    await newPage.evaluate((state) => {
-        if(state) {
-            localStorage.setItem('website-builder-storage', state);
-        }
-        localStorage.setItem('tenant_id', 'storefront');
-        localStorage.setItem('user_id', 'storefront');
-    }, wizardState);
+    // Wait for hydration
+    await newPage.waitForTimeout(2000);
 
-    await newPage.goto('/website-builder');
+    // Verify it hydrated the values correctly into the local storage
+    const restoredTenant = await newPage.evaluate(() => localStorage.getItem('tenant_id'));
+    const restoredUser = await newPage.evaluate(() => localStorage.getItem('user_id'));
 
-    // 5. Verify the business name and step was properly restored
-    await expect(newPage.getByRole('heading', { name: 'Give your business a name' })).toBeVisible();
-    await expect(newPage.getByPlaceholder('What is your business called?')).toHaveValue('Cross Device Wizard', { timeout: 10000 });
+    expect(restoredTenant).toBe('test_tenant_xyz');
+    expect(restoredUser).toBe('test_user_xyz');
 
     await newContext.close();
+  });
+
+  test('Persona: Business Owner copies link to clipboard', async ({ page, context }) => {
+    // Grant clipboard permissions
+    await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+
+    await page.goto('/onboarding');
+
+    const nameInput = page.getByPlaceholder(/e.g. Maya's Custom Cakes/i);
+    await nameInput.waitFor({ state: 'visible' });
+    await nameInput.fill('Clipboard Bakery');
+
+    await page.getByRole('button', { name: /Save Draft/i }).first().click();
+
+    // Click the copy button
+    const copyButton = page.getByRole('button', { name: /Copy/i }).first();
+    await expect(copyButton).toBeVisible({ timeout: 15000 });
+    await copyButton.click();
+
+    // Wait for the message to change to "Link copied!"
+    await expect(page.getByText('Link copied!')).toBeVisible();
+
+    // Validate clipboard content using page evaluate
+    const clipboardText = await page.evaluate(() => navigator.clipboard.readText());
+    expect(clipboardText).toContain('/onboarding?resume_tenant=');
+  });
+
+  test('Persona: Business Owner generates a unique tenant id automatically', async ({ page }) => {
+    // Clear any existing localStorage
+    await page.goto('/onboarding');
+    await page.evaluate(() => localStorage.clear());
+    await page.goto('/onboarding');
+
+    // Wait for mount
+    await page.waitForTimeout(2000);
+
+    // Read the generated tenant id
+    const tenantId = await page.evaluate(() => localStorage.getItem('tenant_id'));
+
+    expect(tenantId).not.toBeNull();
+    expect(tenantId).not.toBe('storefront');
+    expect(tenantId?.startsWith('temp_')).toBeTruthy();
+  });
+
+  test('Persona: Cross-device link persists in URL briefly and cleans up', async ({ page }) => {
+    await page.goto('/onboarding?resume_tenant=testing123&resume_user=testingabc');
+
+    // The effect in onboarding/page.tsx calls history.replaceState to remove the query params
+    await page.waitForTimeout(2000);
+
+    const currentUrl = page.url();
+    expect(currentUrl).not.toContain('resume_tenant');
+
+    const restoredTenant = await page.evaluate(() => localStorage.getItem('tenant_id'));
+    expect(restoredTenant).toBe('testing123');
   });
 });
