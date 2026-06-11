@@ -133,6 +133,9 @@ export default function Dashboard() {
   const [isOffline, setIsOffline] = useState(false);
   const [offlineQueueCount, setOfflineQueueCount] = useState(0);
   const [isWalkthroughOpen, setIsWalkthroughOpen] = useState(false);
+  const [pendingApprovals, setPendingApprovals] = useState<any[]>([]);
+  const [activities, setActivities] = useState<any[]>([]);
+  const [initialTriage, setInitialTriage] = useState<any[]>([]);
   const [userName, setUserName] = useState("Human");
   const [showMigration, setShowMigration] = useState(false);
   const [migrationUrl, setMigrationUrl] = useState("");
@@ -222,11 +225,9 @@ export default function Dashboard() {
 
       try {
         const userId = localStorage.getItem("user_id") || "default";
-        const [unifiedRes, onboardingRes, approvalsRes, agentFeedRes] = await Promise.all([
-          fetch(`/api/ui/dashboard/unified-feed?tenant_id=${tenant}`),
+        const [unifiedRes, onboardingRes] = await Promise.all([
+          fetch(`/api/ui/dashboard/unified-feed?tenant_id=${tenant}&mobile_optimized=${window.innerWidth < 768}`),
           fetch(`/api/onboarding/state`, { headers: { 'X-Tenant-ID': tenant, 'X-User-ID': userId } }),
-          fetch(`/api/agents/approvals?tenant_id=${tenant}`),
-          fetch(`/api/agent-feed?tenant_id=${tenant}`, { headers: { 'X-Tenant-ID': tenant, 'X-User-ID': userId } })
         ]);
 
         if (!unifiedRes.ok) {
@@ -551,7 +552,7 @@ export default function Dashboard() {
              />
         ))}
 
-        <UnifiedAgentFeed initialData={dashboardData?.initialAgentFeed} />
+        <UnifiedAgentFeed initialData={{ proposals: pendingApprovals, activity: activities }} />
 
         <section>
           <div className="mb-6 p-6 rounded-[16px] bg-white/65 dark:bg-[#16161a]/70 border border-white/40 dark:border-white/10">

@@ -23,7 +23,7 @@ function badgeTone(priority?: string) {
   return "neutral";
 }
 
-export function TriageFeed({ tenantId }: { tenantId: string }) {
+export function TriageFeed({ tenantId, initialItems }: { tenantId: string, initialItems?: TriageItem[] }) {
   const [items, setItems] = useState<TriageItem[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -31,8 +31,14 @@ export function TriageFeed({ tenantId }: { tenantId: string }) {
   const [actionStatus, setActionStatus] = useState("");
 
   useEffect(() => {
-    loadItems();
-  }, [tenantId]);
+    if (initialItems && initialItems.length > 0) {
+      setItems(initialItems);
+      if (!selectedId) setSelectedId(initialItems[0].id);
+      setLoading(false);
+    } else {
+      loadItems();
+    }
+  }, [tenantId, initialItems]);
 
   async function loadItems() {
     setLoading(true);
