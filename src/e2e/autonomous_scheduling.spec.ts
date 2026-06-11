@@ -1,7 +1,9 @@
 import { test, expect } from './fixtures';
 import { currentAppSmoke } from './current_app_smoke';
 
-currentAppSmoke('autonomous_scheduling');
+test('currentAppSmoke_autonomous_scheduling', async ({ page, request }) => {
+  await currentAppSmoke(page, request, 'autonomous_scheduling');
+});
 
 test.describe('Autonomous Work Scheduling & Routing', () => {
   test('Carlos the Handyman checks his daily run and completes a job early', async ({ page }) => {
