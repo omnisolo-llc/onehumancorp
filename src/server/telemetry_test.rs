@@ -611,3 +611,33 @@ fn test_redact_interface_pii_with_empty_objects() {
     assert_eq!(redacted["nested"]["empty"], serde_json::json!({}));
     assert_eq!(redacted["nested"]["secret"], "[REDACTED]");
 }
+#[test]
+fn test_categorize_error_signal() {
+    assert_eq!(::server_telemetry::categorize_error_signal("this is a panic!"), "bug");
+    assert_eq!(::server_telemetry::categorize_error_signal("segfault occurred"), "bug");
+    assert_eq!(::server_telemetry::categorize_error_signal("fatal error"), "bug");
+
+    assert_eq!(::server_telemetry::categorize_error_signal("unimplemented code path"), "feature");
+    assert_eq!(::server_telemetry::categorize_error_signal("missing feature flag"), "feature");
+
+    assert_eq!(::server_telemetry::categorize_error_signal("this api is deprecated"), "refactor");
+
+    assert_eq!(::server_telemetry::categorize_error_signal("memory leak detected"), "cleanup");
+    assert_eq!(::server_telemetry::categorize_error_signal("needs cleanup"), "cleanup");
+
+    assert_eq!(::server_telemetry::categorize_error_signal("update the readme"), "docs");
+
+    assert_eq!(::server_telemetry::categorize_error_signal("cve-2023-1234"), "security");
+    assert_eq!(::server_telemetry::categorize_error_signal("sql injection detected"), "security");
+    assert_eq!(::server_telemetry::categorize_error_signal("permission denied"), "security");
+
+    assert_eq!(::server_telemetry::categorize_error_signal("something else random"), "bug");
+}
+
+#[test]
+fn test_record_error_signal() {
+    // It's hard to test the opentelemetry meter without mocking the provider,
+    // but we can at least test that `record_error_signal` executes without panicking
+    // and categorize correctly behind the scenes.
+    ::server_telemetry::record_error_signal("panic: test");
+}
