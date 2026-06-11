@@ -1,6 +1,6 @@
 CREATE TABLE IF NOT EXISTS growth_digital_cards (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+    tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
     name TEXT NOT NULL,
     title TEXT NOT NULL,
     company TEXT NOT NULL,
@@ -18,7 +18,7 @@ CREATE TABLE IF NOT EXISTS growth_digital_cards (
 ALTER TABLE growth_digital_cards ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY tenant_isolation_policy ON growth_digital_cards
-    USING (tenant_id = current_setting('app.current_tenant_id', true)::uuid);
+    USING (tenant_id = current_setting('app.current_tenant_id', true));
 
 CREATE POLICY public_read_policy ON growth_digital_cards
     FOR SELECT

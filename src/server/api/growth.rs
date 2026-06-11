@@ -1859,7 +1859,7 @@ async fn create_digital_card(
     let service = DigitalCardService::new(state.pool.clone());
 
     // We assume the user has a tenant_id assigned in the db if this is a real product
-    let tenant_id = match sqlx::query_scalar::<_, Uuid>("SELECT id FROM tenants LIMIT 1")
+    let tenant_id = match sqlx::query_scalar::<_, String>("SELECT id FROM tenants LIMIT 1")
         .fetch_one(&state.pool)
         .await
     {

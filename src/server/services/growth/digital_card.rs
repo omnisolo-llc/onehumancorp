@@ -17,7 +17,7 @@ pub struct CreateDigitalCardRequest {
 #[derive(Debug, Serialize, Deserialize, FromRow)]
 pub struct DigitalCard {
     pub id: Uuid,
-    pub tenant_id: Uuid,
+    pub tenant_id: String,
     pub name: String,
     pub title: String,
     pub company: String,
@@ -40,7 +40,7 @@ impl DigitalCardService {
         Self { pool }
     }
 
-    pub async fn create_card(&self, tenant_id: Uuid, req: CreateDigitalCardRequest) -> Result<DigitalCard, sqlx::Error> {
+    pub async fn create_card(&self, tenant_id: String, req: CreateDigitalCardRequest) -> Result<DigitalCard, sqlx::Error> {
         let card = sqlx::query_as::<_, DigitalCard>(
             r#"
             INSERT INTO growth_digital_cards (tenant_id, name, title, company, email, phone, bio, website, theme)
