@@ -2,7 +2,7 @@ use std::sync::Arc;
 use uuid::Uuid;
 
 pub struct InventoryService {
-    db: Arc<crate::db::DB>,
+    _db: Arc<crate::db::DB>,
     redis_client: Option<redis::Client>,
 }
 
@@ -26,8 +26,8 @@ pub struct CommitResult {
 }
 
 impl InventoryService {
-    pub fn new(db: Arc<crate::db::DB>, redis_client: Option<redis::Client>) -> Self {
-        Self { db, redis_client }
+    pub fn new(_db: Arc<crate::db::DB>, redis_client: Option<redis::Client>) -> Self {
+        Self { _db, redis_client }
     }
 
     pub async fn reserve_inventory(
