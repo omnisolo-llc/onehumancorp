@@ -201,6 +201,10 @@
                 <span style="color: #86868b;">Payment Fees</span>
                 <span id="payment-fees" style="font-weight: 500;">$0.00</span>
             </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                <span style="color: #86868b;">Bandwidth Savings</span>
+                <span id="bandwidth-savings" style="font-weight: 500; color: #34C759;">$0.00</span>
+            </div>
 
             <div style="margin-top: 24px; font-weight: 600; margin-bottom: 12px;">Agent & Feature Costs</div>
             <ul id="cost-dashboard-agent-costs" style="list-style: none; padding: 0; margin: 0;">
@@ -272,6 +276,7 @@
                 document.getElementById('storage-cost').innerText = formatCents(costData.storage_cost || 0);
                 document.getElementById('network-cost').innerText = formatCents(costData.network_cost || 0);
                 document.getElementById('payment-fees').innerText = formatCents(costData.payment_fees || 0);
+                document.getElementById('bandwidth-savings').innerText = formatCents(costData.bandwidth_savings || 0);
 
                 if (costData.agent_costs && costData.agent_costs.length > 0) {
                     const agentList = document.getElementById('cost-dashboard-agent-costs');
