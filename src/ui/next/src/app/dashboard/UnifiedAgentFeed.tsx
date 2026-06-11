@@ -450,8 +450,21 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                   <h3 className="text-lg font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] leading-snug mt-1">
                     {(approval.context_payload?.description || approval.proposed_action?.message || approval.proposed_action?.action_type || approval.event_source)}
                   </h3>
-                  {((approval.proposed_action || approval.context_payload)?.context || (approval.proposed_action || approval.context_payload)?.remaining_stock !== undefined || (approval.proposed_action || approval.context_payload)?.feature_type === "quote_draft" || (approval.proposed_action || approval.context_payload)?.feature_type === "social_post_draft" || (approval.proposed_action || approval.context_payload)?.feature_type === "ambassador_reply" || (approval.proposed_action || approval.context_payload)?.feature_type === "instagram_dm") && (
+                  {((approval.proposed_action || approval.context_payload)?.context || (approval.proposed_action || approval.context_payload)?.remaining_stock !== undefined || (approval.proposed_action || approval.context_payload)?.feature_type === "quote_draft" || (approval.proposed_action || approval.context_payload)?.feature_type === "social_post_draft" || (approval.proposed_action || approval.context_payload)?.feature_type === "ambassador_reply" || (approval.proposed_action || approval.context_payload)?.feature_type === "incident_resolution" || (approval.proposed_action || approval.context_payload)?.feature_type === "instagram_dm") && (
                     <div className="mt-2 flex flex-col gap-1 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+                      {(approval.proposed_action || approval.context_payload)?.feature_type === "incident_resolution" && (
+                        <div className="mb-4 p-4 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 flex flex-col gap-3" data-testid="incident-resolution-card">
+                          <div className="flex items-center gap-2 text-red-600 font-semibold text-sm">
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                            </svg>
+                            CRITICAL INCIDENT
+                          </div>
+                          <p className="text-gray-700 dark:text-gray-300 text-sm">
+                            {(approval.proposed_action || approval.context_payload)?.description || 'An operational issue requires immediate attention.'}
+                          </p>
+                        </div>
+                      )}
                       {(approval.proposed_action || approval.context_payload)?.feature_type === "instagram_dm" && (
                         <div className="mb-4 p-4 rounded-xl glassmorphism border border-white/40 dark:border-white/10 flex flex-col gap-3" data-testid="instagram-dm-card">
                           <div className="flex items-center gap-2 text-pink-600 font-semibold text-sm">
@@ -578,6 +591,26 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                             </span>
                           </div>
                         </>
+                      ) : (approval.proposed_action || approval.context_payload)?.feature_type === 'incident_resolution' ? (
+                        <div className="flex flex-col gap-2">
+                          <div className="flex justify-between items-center text-sm">
+                            <span className="text-gray-500 dark:text-gray-400">Proposed Actions:</span>
+                            <span className="font-semibold text-gray-900 dark:text-gray-100">
+                              {((approval.proposed_action || approval.context_payload).actions || []).length} steps
+                            </span>
+                          </div>
+                          <div className="w-full h-px bg-gray-200 dark:bg-gray-700 my-1"></div>
+                          {((approval.proposed_action || approval.context_payload).actions || []).map((action: any, idx: number) => (
+                            <div key={idx} className="flex flex-col mb-2">
+                              <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">
+                                {action.action}
+                              </span>
+                              <span className="text-xs text-gray-500">
+                                {action.details}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
                       ) : (approval.proposed_action || approval.context_payload)?.feature_type === 'ambassador_reply' ? (
                         <div className="flex flex-col gap-2">
                           <div className="flex justify-between items-center text-sm">
@@ -661,7 +694,26 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                 </div>
 
                 <div className="flex flex-col gap-3 w-full mt-2">
-                  {(approval.proposed_action || approval.context_payload)?.feature_type === 'instagram_dm' ? (
+                  {(approval.proposed_action || approval.context_payload)?.feature_type === 'incident_resolution' ? (
+                    <div className="flex flex-col sm:flex-row gap-3 w-full">
+                      <button
+                        onClick={() => handleDecision(approval.id, true)}
+                        className="flex-1 min-h-[44px] px-4 rounded-[8px] bg-red-600 text-white font-medium hover:bg-red-700 transition-all duration-200 shadow-md flex items-center justify-center"
+                        aria-label="Execute Plan"
+                        data-testid="approve-incident-resolution"
+                      >
+                        Execute Plan
+                      </button>
+                      <button
+                        onClick={() => handleDecision(approval.id, false)}
+                        className="flex-1 min-h-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
+                        aria-label="Dismiss Plan"
+                        data-testid="dismiss-incident-resolution"
+                      >
+                        Dismiss
+                      </button>
+                    </div>
+                  ) : (approval.proposed_action || approval.context_payload)?.feature_type === 'instagram_dm' ? (
                     <div className="flex flex-col sm:flex-row gap-3 w-full">
                       <button
                         onClick={() => handleDecision(approval.id, true)}

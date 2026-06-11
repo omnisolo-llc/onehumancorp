@@ -652,6 +652,17 @@ impl DB {
                         version INTEGER DEFAULT 1,
                         auto_dreamed BOOLEAN DEFAULT 0
                     );
+                    CREATE TABLE IF NOT EXISTS incidents (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        description TEXT NOT NULL,
+                        status TEXT NOT NULL DEFAULT 'OPEN',
+                        affected_orders JSONB DEFAULT '[]',
+                        affected_inventory JSONB DEFAULT '[]',
+                        resolution_plan JSONB DEFAULT '{}',
+                        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+                    );
                     CREATE TABLE IF NOT EXISTS customer_timeline (
                         id TEXT PRIMARY KEY,
                         tenant_id TEXT NOT NULL,
