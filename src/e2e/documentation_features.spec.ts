@@ -138,3 +138,40 @@ test.describe('AppShell Help Button', () => {
     await expect(page.getByPlaceholder('Search for help articles and videos...')).toBeVisible();
   });
 });
+
+test.describe('Walkthrough UX', () => {
+  test('should display walkthrough overlay and bubbles correctly', async ({ page, loginAs, unlimitedAdminUser }) => {
+    await loginAs(page, unlimitedAdminUser);
+    await page.goto('/dashboard');
+
+    // Click on "Start Walkthrough"
+    const walkthroughBtn = page.getByRole('button', { name: 'Start Walkthrough' });
+    await expect(walkthroughBtn).toBeVisible();
+    await walkthroughBtn.click();
+
+    // Verify Walkthrough Overlay and Bubble
+    const bubble = page.locator('#ohc-walkthrough-bubble');
+    await expect(bubble).toBeVisible();
+
+    // Check content of the first step
+    await expect(bubble.getByRole('heading', { name: 'Welcome' })).toBeVisible();
+    await expect(bubble.getByText('Welcome to your dashboard!')).toBeVisible();
+
+    // Click Next
+    const nextBtn = page.getByRole('button', { name: 'Next' });
+    await expect(nextBtn).toBeVisible();
+    await nextBtn.click();
+
+    // Check content of the second step
+    await expect(bubble.getByRole('heading', { name: 'Tasks' })).toBeVisible();
+    await expect(bubble.getByText('Here are your pending tasks.')).toBeVisible();
+
+    // Click Finish
+    const finishBtn = page.getByRole('button', { name: 'Finish' });
+    await expect(finishBtn).toBeVisible();
+    await finishBtn.click();
+
+    // Verify Walkthrough ends
+    await expect(bubble).not.toBeVisible();
+  });
+});
