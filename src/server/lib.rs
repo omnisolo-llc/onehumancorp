@@ -2363,6 +2363,8 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     // Start Booking Reengagement Worker
     let booking_reengagement_worker = crate::workers::booking_reengagement::BookingReengagementWorker::new(db.clone());
     booking_reengagement_worker.start();
+    let proactive_analysis_worker = crate::workers::proactive_analysis::ProactiveAnalysisWorker::new(db.clone());
+    proactive_analysis_worker.start();
 
     if matches!(&db.store, crate::db::DbStore::Postgres) {
         crate::cart_recovery::start_cart_recovery_background_workers(Arc::new(db.pool.clone()));
@@ -3149,11 +3151,11 @@ async fn load_ui_agent_approvals_from_db(db: &crate::db::DB, tenant_id: &str) ->
     let limit = 20i64;
     match &db.store {
         crate::db::DbStore::Postgres => {
-            sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = $1 AND status IN ('DRAFT', 'PAUSED') ORDER BY id ASC LIMIT $2")
+            let legacy_approvals = sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = $1 AND status IN ('DRAFT', 'PAUSED') ORDER BY id ASC LIMIT $2")
                 .bind(tenant_id)
                 .bind(limit)
                 .fetch_all(&db.pool)
-                .await.map(|rows| rows.into_iter().map(|row| serde_json::json!({
+                .await?.into_iter().map(|row| serde_json::json!({
                     "id": row.get::<String, _>("id"),
                     "tenant_id": row.get::<String, _>("tenant_id"),
                     "department": row.get::<String, _>("department"),
@@ -3161,14 +3163,31 @@ async fn load_ui_agent_approvals_from_db(db: &crate::db::DB, tenant_id: &str) ->
                     "status": row.get::<String, _>("status"),
                     "action_risk": row.get::<String, _>("action_risk"),
                     "payload": row.get::<Option<serde_json::Value>, _>("payload")
-                })).collect())
+                })).collect::<Vec<_>>();
+
+            let feed_items = sqlx::query("SELECT id, tenant_id, event_source, lifecycle_state, context_payload, proposed_action FROM agent_feed_items WHERE tenant_id = $1 AND lifecycle_state IN ('PENDING_APPROVAL', 'PENDING') ORDER BY created_at DESC LIMIT $2")
+                .bind(tenant_id)
+                .bind(limit)
+                .fetch_all(&db.pool)
+                .await?.into_iter().map(|row| serde_json::json!({
+                    "id": row.get::<String, _>("id"),
+                    "tenant_id": row.get::<String, _>("tenant_id"),
+                    "department": row.get::<String, _>("event_source"),
+                    "description": row.get::<Option<sqlx::types::Json<serde_json::Value>>, _>("context_payload").and_then(|p| p.get("description").and_then(|d| d.as_str()).map(|s| s.to_string())).unwrap_or_default(),
+                    "status": "DRAFT",
+                    "action_risk": "low",
+                    "payload": row.get::<Option<sqlx::types::Json<serde_json::Value>>, _>("context_payload").map(|p| p.0),
+                    "proposed_action": row.get::<Option<sqlx::types::Json<serde_json::Value>>, _>("proposed_action").map(|p| p.0)
+                })).collect::<Vec<_>>();
+
+            Ok(legacy_approvals.into_iter().chain(feed_items).collect())
         },
         crate::db::DbStore::Sqlite(pool) => {
-            sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = ? AND status IN ('DRAFT', 'PAUSED') ORDER BY id ASC LIMIT ?")
+            let legacy_approvals = sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = ? AND status IN ('DRAFT', 'PAUSED') ORDER BY id ASC LIMIT ?")
                 .bind(tenant_id)
                 .bind(limit)
                 .fetch_all(pool)
-                .await.map(|rows| rows.into_iter().map(|row| serde_json::json!({
+                .await?.into_iter().map(|row| serde_json::json!({
                     "id": row.get::<String, _>("id"),
                     "tenant_id": row.get::<String, _>("tenant_id"),
                     "department": row.get::<String, _>("department"),
@@ -3176,7 +3195,30 @@ async fn load_ui_agent_approvals_from_db(db: &crate::db::DB, tenant_id: &str) ->
                     "status": row.get::<String, _>("status"),
                     "action_risk": row.get::<String, _>("action_risk"),
                     "payload": row.get::<Option<String>, _>("payload").and_then(|s| serde_json::from_str::<serde_json::Value>(&s).ok())
-                })).collect())
+                })).collect::<Vec<_>>();
+
+            let feed_items = sqlx::query("SELECT id, tenant_id, event_source, lifecycle_state, context_payload, proposed_action FROM agent_feed_items WHERE tenant_id = ? AND lifecycle_state IN ('PENDING_APPROVAL', 'PENDING') ORDER BY created_at DESC LIMIT ?")
+                .bind(tenant_id)
+                .bind(limit)
+                .fetch_all(pool)
+                .await?.into_iter().map(|row| {
+                    let context_payload_str: Option<String> = row.get("context_payload");
+                    let proposed_action_str: Option<String> = row.get("proposed_action");
+                    let context_payload: Option<serde_json::Value> = context_payload_str.and_then(|s| serde_json::from_str(&s).ok());
+                    let proposed_action: Option<serde_json::Value> = proposed_action_str.and_then(|s| serde_json::from_str(&s).ok());
+
+                    serde_json::json!({
+                    "id": row.get::<String, _>("id"),
+                    "tenant_id": row.get::<String, _>("tenant_id"),
+                    "department": row.get::<String, _>("event_source"),
+                    "description": context_payload.as_ref().and_then(|p| p.get("description").and_then(|d| d.as_str()).map(|s| s.to_string())).unwrap_or_default(),
+                    "status": "DRAFT",
+                    "action_risk": "low",
+                    "payload": context_payload,
+                    "proposed_action": proposed_action
+                })}).collect::<Vec<_>>();
+
+            Ok(legacy_approvals.into_iter().chain(feed_items).collect())
         }
     }
 }

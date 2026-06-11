@@ -17,17 +17,19 @@ test.describe('Unified Agent Feed Interactive Flow', () => {
     const bodyWidth = await page.evaluate(() => document.body.scrollWidth);
     expect(bodyWidth).toBeLessThanOrEqual(375);
 
-    // Find the dynamic approval card (which we've mapped using data-testid or just looking for the buttons)
-    const approveBtn = page.getByTestId('approve-proposal').first();
+    // Find either the normal approval or the new proactive proactive insight
+    const approveBtn = page.locator('[data-testid="approve-proposal"], [data-testid="approve-restock"], [data-testid="approve-send-proposal"], [data-testid="approve-draft"]').first();
     const editBtn = page.getByTestId('edit-proposal').first();
 
     // In case there are no items to approve, we will skip the rest of the assertions safely.
     // In a real E2E environment we would seed this, but this guarantees the script runs.
     if (await approveBtn.isVisible()) {
         // 2. Expand card to see details
-        await editBtn.click();
-        const detailsPre = page.locator('pre').first();
-        await expect(detailsPre).toBeVisible();
+        if (await editBtn.isVisible()) {
+            await editBtn.click();
+            const detailsPre = page.locator('pre').first();
+            await expect(detailsPre).toBeVisible();
+        }
 
         // 3. Verify interaction states when "Approve" is clicked
         const cardParent = approveBtn.locator('xpath=./../../..'); // navigate up to the card container
@@ -50,7 +52,7 @@ test.describe('Unified Agent Feed Interactive Flow', () => {
     await expect(page.locator('h1', { hasText: 'Dashboard' }).first()).toBeVisible({ timeout: 25000 });
 
     // Ensure we have some items
-    const approveBtn = page.getByTestId('approve-proposal').first();
+    const approveBtn = page.locator('[data-testid="approve-proposal"], [data-testid="approve-restock"]').first();
     const isVisible = await approveBtn.isVisible({ timeout: 15000 }).catch(() => false);
 
     if (isVisible) {
