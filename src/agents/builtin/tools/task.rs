@@ -1,11 +1,11 @@
 use ohc_builtin_agent_core::types::ToolError;
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
+use serde_json::json;
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use super::{SharedTaskStore, Tool, ToolExecutor};
+use super::{SharedTaskStore, Tool, pydantic::{PydanticToolExecutor, PydanticAdapter}};
 
 /// A task in the task store.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -64,21 +64,23 @@ impl TaskStore {
 
 // ── TaskCreate ────────────────────────────────────────────────────────────────
 
+#[derive(Deserialize)]
+struct TaskCreateArgs {
+    title: String,
+    description: Option<String>,
+    assignee: Option<String>,
+}
+
 struct TaskCreateExecutor {
     store: SharedTaskStore,
 }
 
 #[async_trait::async_trait]
-impl ToolExecutor for TaskCreateExecutor {
-    async fn execute(
-        &self,
-        args: Value,
-    ) -> Result<String, ToolError> {
-        let title = args["title"]
-            .as_str()
-            .ok_or_else(|| ToolError::LlmRecoverable("task_create: title is required".to_string()))?;
-        let description = args["description"].as_str().unwrap_or("").to_string();
-        let assignee = args["assignee"].as_str().unwrap_or("").to_string();
+impl PydanticToolExecutor<TaskCreateArgs> for TaskCreateExecutor {
+    async fn execute_typed(&self, args: TaskCreateArgs) -> Result<String, ToolError> {
+        let title = args.title;
+        let description = args.description.unwrap_or("".to_string());
+        let assignee = args.assignee.unwrap_or("".to_string());
 
         let now = Utc::now().timestamp_millis();
         let id = format!("task-{}", uuid::Uuid::new_v4().simple());
@@ -100,17 +102,19 @@ impl ToolExecutor for TaskCreateExecutor {
 
 // ── TaskGet ───────────────────────────────────────────────────────────────────
 
+#[derive(Deserialize)]
+struct TaskGetArgs {
+    id: String,
+}
+
 struct TaskGetExecutor {
     store: SharedTaskStore,
 }
 
 #[async_trait::async_trait]
-impl ToolExecutor for TaskGetExecutor {
-    async fn execute(
-        &self,
-        args: Value,
-    ) -> Result<String, ToolError> {
-        let id = args["id"].as_str().ok_or_else(|| ToolError::LlmRecoverable("task_get: id is required".to_string()))?;
+impl PydanticToolExecutor<TaskGetArgs> for TaskGetExecutor {
+    async fn execute_typed(&self, args: TaskGetArgs) -> Result<String, ToolError> {
+        let id = &args.id;
         let store = self.store.read().await;
         if let Some(task) = store.get(id) {
             Ok(serde_json::to_string_pretty(task).unwrap_or_default())
@@ -122,16 +126,16 @@ impl ToolExecutor for TaskGetExecutor {
 
 // ── TaskList ──────────────────────────────────────────────────────────────────
 
+#[derive(Deserialize)]
+struct TaskListArgs {}
+
 struct TaskListExecutor {
     store: SharedTaskStore,
 }
 
 #[async_trait::async_trait]
-impl ToolExecutor for TaskListExecutor {
-    async fn execute(
-        &self,
-        _args: Value,
-    ) -> Result<String, ToolError> {
+impl PydanticToolExecutor<TaskListArgs> for TaskListExecutor {
+    async fn execute_typed(&self, _args: TaskListArgs) -> Result<String, ToolError> {
         let store = self.store.read().await;
         let tasks: Vec<&Task> = store.list();
         if tasks.is_empty() {
@@ -143,19 +147,23 @@ impl ToolExecutor for TaskListExecutor {
 
 // ── TaskUpdate ────────────────────────────────────────────────────────────────
 
+#[derive(Deserialize)]
+struct TaskUpdateArgs {
+    id: String,
+    status: Option<String>,
+    result: Option<String>,
+}
+
 struct TaskUpdateExecutor {
     store: SharedTaskStore,
 }
 
 #[async_trait::async_trait]
-impl ToolExecutor for TaskUpdateExecutor {
-    async fn execute(
-        &self,
-        args: Value,
-    ) -> Result<String, ToolError> {
-        let id = args["id"].as_str().ok_or_else(|| ToolError::LlmRecoverable("task_update: id is required".to_string()))?;
-        let status = args["status"].as_str().map(str::to_string);
-        let result = args["result"].as_str().map(str::to_string);
+impl PydanticToolExecutor<TaskUpdateArgs> for TaskUpdateExecutor {
+    async fn execute_typed(&self, args: TaskUpdateArgs) -> Result<String, ToolError> {
+        let id = &args.id;
+        let status = args.status;
+        let result = args.result;
 
         if self.store.write().await.update(id, status, result) {
             Ok(format!("Task updated: {}", id))
@@ -181,7 +189,7 @@ pub fn task_create_tool(store: SharedTaskStore) -> Tool {
             },
             "required": ["title"]
         }),
-        execute: Arc::new(TaskCreateExecutor { store }),
+        execute: Arc::new(PydanticAdapter::new(TaskCreateExecutor { store })),
     }
 }
 
@@ -197,7 +205,7 @@ pub fn task_get_tool(store: SharedTaskStore) -> Tool {
             },
             "required": ["id"]
         }),
-        execute: Arc::new(TaskGetExecutor { store }),
+        execute: Arc::new(PydanticAdapter::new(TaskGetExecutor { store })),
     }
 }
 
@@ -207,7 +215,7 @@ pub fn task_list_tool(store: SharedTaskStore) -> Tool {
         description: "List all tasks in the task tracker.".to_string(),
         is_read_only: true,
         parameters: json!({"type": "object", "properties": {}}),
-        execute: Arc::new(TaskListExecutor { store }),
+        execute: Arc::new(PydanticAdapter::new(TaskListExecutor { store })),
     }
 }
 
@@ -228,6 +236,6 @@ pub fn task_update_tool(store: SharedTaskStore) -> Tool {
             },
             "required": ["id"]
         }),
-        execute: Arc::new(TaskUpdateExecutor { store }),
+        execute: Arc::new(PydanticAdapter::new(TaskUpdateExecutor { store })),
     }
 }

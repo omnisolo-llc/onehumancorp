@@ -1,21 +1,22 @@
 use ohc_builtin_agent_core::types::ToolError;
-use serde_json::{json, Value};
+use serde_json::json;
+use serde::Deserialize;
 use std::sync::Arc;
 
-use super::{Tool, ToolExecutor};
+use super::{Tool, pydantic::{PydanticToolExecutor, PydanticAdapter}};
+
+#[derive(Deserialize)]
+struct ToolSearchArgs {
+    query: String,
+}
+
 
 struct ToolSearchExecutor;
 
 #[async_trait::async_trait]
-impl ToolExecutor for ToolSearchExecutor {
-    async fn execute(
-        &self,
-        args: Value,
-    ) -> Result<String, ToolError> {
-        let query = args["query"]
-            .as_str()
-            .ok_or_else(|| ToolError::LlmRecoverable("toolsearch: query is required".to_string()))?
-            .to_lowercase();
+impl PydanticToolExecutor<ToolSearchArgs> for ToolSearchExecutor {
+    async fn execute_typed(&self, args: ToolSearchArgs) -> Result<String, ToolError> {
+        let query = args.query.to_lowercase();
 
         let all_tools = &[
             ("Bash", "Execute shell commands"),
@@ -75,6 +76,6 @@ pub fn toolsearch_tool() -> Tool {
             },
             "required": ["query"]
         }),
-        execute: Arc::new(ToolSearchExecutor),
+        execute: Arc::new(PydanticAdapter::new(ToolSearchExecutor)),
     }
 }

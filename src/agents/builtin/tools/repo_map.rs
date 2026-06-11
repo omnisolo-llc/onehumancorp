@@ -1,12 +1,12 @@
 // SOTA Harness Pattern: Pydantic-first tool schema validation.
 use ohc_builtin_agent_core::types::ToolError;
-use serde_json::{json, Value};
+use serde_json::json;
 use std::sync::Arc;
 use std::path::PathBuf;
 use regex::Regex;
 use once_cell::sync::Lazy;
 
-use super::{Tool, ToolExecutor};
+use super::{Tool, pydantic::{PydanticToolExecutor, PydanticAdapter}};
 
 // Keep regexes as fallback
 static RS_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\s*(pub(?:\([a-z:]+\))?\s+)?(?:async\s+)?(fn|struct|enum|trait)\s+([a-zA-Z0-9_]+)").expect("should succeed in test"));
@@ -19,6 +19,12 @@ static RB_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\s*(class|module|def)\
 
 /// SOTA Harness Pattern: Aider: RepoMap for large codebases.
 /// Generates a compact summary of the repository's architecture including file structure and basic symbol signatures.
+#[derive(serde::Deserialize)]
+pub struct RepoMapArgs {
+    pub path: Option<String>,
+    pub max_depth: Option<u64>,
+}
+
 pub struct RepoMapExecutor {
     workspace_path: PathBuf,
 }
@@ -133,16 +139,15 @@ impl RepoMapExecutor {
 }
 
 #[async_trait::async_trait]
-impl ToolExecutor for RepoMapExecutor {
-    async fn execute(&self, args: Value) -> Result<String, ToolError> {
+impl PydanticToolExecutor<RepoMapArgs> for RepoMapExecutor {
+    async fn execute_typed(&self, args: RepoMapArgs) -> Result<String, ToolError> {
         let mut target_path = self.workspace_path.clone();
 
-        if let Some(path_val) = args.get("path")
-            && let Some(path_str) = path_val.as_str() {
-                target_path = self.workspace_path.join(path_str);
+        if let Some(path_str) = args.path {
+            target_path = self.workspace_path.join(path_str);
         }
 
-        let max_depth = args.get("max_depth").and_then(|v| v.as_u64()).unwrap_or(100) as usize;
+        let max_depth = args.max_depth.unwrap_or(100) as usize;
 
         // Fix path traversal: canonicalize both paths and verify target is within workspace
         let abs_workspace = std::fs::canonicalize(&self.workspace_path)
@@ -192,7 +197,7 @@ pub fn repomap_tool(workspace_path: PathBuf) -> Tool {
                 }
             }
         }),
-        execute: Arc::new(RepoMapExecutor::new(workspace_path)),
+        execute: Arc::new(PydanticAdapter::new(RepoMapExecutor::new(workspace_path))),
     }
 }
 
@@ -293,7 +298,8 @@ mod extra_tests {
         std::fs::write(&f, "pub fn hello() {}\nstruct Example {\n  field: i32\n}\n").expect("should succeed");
 
         let executor = RepoMapExecutor::new(root.to_path_buf());
-        let result = executor.execute(json!({})).await.expect("should succeed");
+        let adapter = PydanticAdapter::new(executor);
+        let result = adapter.execute(json!({})).await.expect("should succeed");
 
         assert!(result.contains("│ pub fn hello()"));
         assert!(result.contains("│ struct Example"));
