@@ -95,7 +95,12 @@ export function TriageFeed({ tenantId, initialItems }: { tenantId: string, initi
   }
 
   if (items.length === 0) {
-    return null;
+    return (
+      <div className="mb-6 p-6 rounded-[16px] glassmorphism border border-white/40 dark:border-white/10 flex flex-col items-center justify-center text-center">
+        <h2 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">You're all caught up!</h2>
+        <p className="text-gray-600 dark:text-gray-400">There are no pending triage items requiring your attention.</p>
+      </div>
+    );
   }
 
   const proactiveItems = items.filter(item => item.source === "Proactive Context Agent");
