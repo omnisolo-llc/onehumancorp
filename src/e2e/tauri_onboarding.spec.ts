@@ -4,28 +4,6 @@ import * as fs from 'fs';
 
 test.describe('Tauri Onboarding Wizard Flow', () => {
   test('Completes the onboarding flow, verifies validation, multi-step progression, and backend state resume', async ({ page, browser }) => {
-    // Serve the local files dynamically
-    const workspaceRoot = process.env.TEST_WORKSPACE
-        ? path.join(process.env.TEST_SRCDIR, process.env.TEST_WORKSPACE)
-        : process.cwd();
-
-    const tauriUiDir = path.join(workspaceRoot, 'src/ui/tauri/src/ui');
-
-    await page.route('/index.html', async route => {
-        const content = fs.readFileSync(path.join(tauriUiDir, 'index.html'), 'utf-8');
-        await route.fulfill({ contentType: 'text/html', body: content });
-    });
-
-    await page.route('/setup.html', async route => {
-        const content = fs.readFileSync(path.join(tauriUiDir, 'setup.html'), 'utf-8');
-        await route.fulfill({ contentType: 'text/html', body: content });
-    });
-
-    await page.route('/success.html', async route => {
-        const content = fs.readFileSync(path.join(tauriUiDir, 'success.html'), 'utf-8');
-        await route.fulfill({ contentType: 'text/html', body: content });
-    });
-
     // We mock the Tauri backend API to allow state save/resume
     const mockTauriBackend = () => {
       window.__TAURI__ = {
@@ -52,24 +30,11 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
     };
     await page.addInitScript(mockTauriBackend);
 
-    await page.route('http://mock/index.html', async route => {
-        const content = fs.readFileSync(path.join(tauriUiDir, 'index.html'), 'utf-8');
-        await route.fulfill({ contentType: 'text/html', body: content });
-    });
-    await page.route('http://mock/setup.html', async route => {
-        const content = fs.readFileSync(path.join(tauriUiDir, 'setup.html'), 'utf-8');
-        await route.fulfill({ contentType: 'text/html', body: content });
-    });
-    await page.route('http://mock/success.html', async route => {
-        const content = fs.readFileSync(path.join(tauriUiDir, 'success.html'), 'utf-8');
-        await route.fulfill({ contentType: 'text/html', body: content });
-    });
-
-    // Navigate to the mock index
-    await page.goto('http://mock/index.html');
+    // Navigate to the server-hosted onboarding
+    await page.goto('/api/ui/onboarding/index.html');
 
     await expect(page.getByRole('heading', { name: "Welcome to OHC" })).toBeVisible();
-    await page.getByRole('button', { name: 'Start Onboarding' }).click();
+    await page.getByRole('button', { name: 'Manual Setup' }).click();
 
     // Setup page (Step 1: Context)
     await expect(page.getByRole('heading', { name: "How do you work?" })).toBeVisible();
@@ -151,23 +116,8 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
     const newContext = await browser.newContext();
     const newPage = await newContext.newPage();
 
-    await newPage.route('http://mock/index.html', async route => {
-        const content = fs.readFileSync(path.join(tauriUiDir, 'index.html'), 'utf-8');
-        await route.fulfill({ contentType: 'text/html', body: content });
-    });
-
-    await newPage.route('http://mock/setup.html', async route => {
-        const content = fs.readFileSync(path.join(tauriUiDir, 'setup.html'), 'utf-8');
-        await route.fulfill({ contentType: 'text/html', body: content });
-    });
-
-    await newPage.route('http://mock/success.html', async route => {
-        const content = fs.readFileSync(path.join(tauriUiDir, 'success.html'), 'utf-8');
-        await route.fulfill({ contentType: 'text/html', body: content });
-    });
-
     await newPage.addInitScript(mockTauriBackend);
-    await newPage.goto('http://mock/index.html');
+    await newPage.goto('/api/ui/onboarding/index.html');
 
     await newPage.evaluate((stateStr) => {
         if (stateStr) {
@@ -176,7 +126,7 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
     }, savedStateStr);
 
     // Owner comes back to the app on another device
-    await newPage.goto('http://mock/setup.html');
+    await newPage.goto('/api/ui/onboarding/setup.html');
 
     // It should load the values, we can skip through
     await newPage.waitForTimeout(500);
@@ -227,22 +177,68 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
 
   });
 
-  test('Validates 44px touch targets on mobile sizes and layout rules', async ({ page }) => {
-    const workspaceRoot = process.env.TEST_WORKSPACE
-        ? path.join(process.env.TEST_SRCDIR, process.env.TEST_WORKSPACE)
-        : process.cwd();
-
-    const tauriUiDir = path.join(workspaceRoot, 'src/ui/tauri/src/ui');
-
-    await page.route('http://mock/setup.html', async route => {
-        const fs = require('fs');
-        const content = fs.readFileSync(path.join(tauriUiDir, 'setup.html'), 'utf-8');
-        await route.fulfill({ contentType: 'text/html', body: content });
+  test('Completes the Instant Build (AI) onboarding flow', async ({ page }) => {
+    // We mock only the AI response for determinism in E2E,
+    // but we let it hit the real server-hosted UI and state APIs
+    await page.route(url => url.pathname.includes('/api/onboarding/intake'), async route => {
+        await route.fulfill({
+            contentType: 'application/json',
+            body: JSON.stringify({
+                business_name: "AI Generated Bakery",
+                business_type: "Home Bakery",
+                categories: ["food", "physical"],
+                initial_products: [{ name: "AI Cupcake", price: "5.00" }]
+            })
+        });
     });
 
+    await page.addInitScript(() => {
+      window.__TAURI__ = {
+        core: {
+          invoke: async (cmd, args) => {
+            if (cmd === 'get_onboarding_state') return {};
+            if (cmd === 'save_onboarding_state') return null;
+            if (cmd === 'start_onboarding') return null;
+            throw new Error(`Unhandled command: ${cmd}`);
+          }
+        }
+      };
+    });
+
+    await page.goto('/api/ui/onboarding/index.html');
+    await page.getByRole('button', { name: 'Instant Build (AI)' }).click();
+
+    await expect(page.getByRole('heading', { name: "Describe your business" })).toBeVisible();
+    await page.locator('#ai-description').fill("I run a bakery that makes cupcakes.");
+    await page.getByRole('button', { name: 'Generate My Business' }).click();
+
+    // Should jump to Step 3: Name with AI data pre-filled
+    await expect(page.getByRole('heading', { name: "What's the name of your business?" })).toBeVisible();
+    await expect(page.locator('#business-name')).toHaveValue("AI Generated Bakery");
+
+    // Continue flow
+    await page.locator('#step-name').getByRole('button', { name: 'Next' }).click();
+    await page.getByPlaceholder("e.g. Jarvis").fill("AI Assistant");
+    await page.locator('#assistant-tone').selectOption('Friendly');
+    await page.locator('#step-assistant').getByRole('button', { name: 'Next' }).click();
+
+    await page.getByPlaceholder("admin@mybusiness.com").fill("ai@bakery.com");
+    await page.getByPlaceholder("Password (min 8 chars)").fill("aipassword");
+    await page.locator('#step-admin').getByRole('button', { name: 'Next' }).click();
+
+    await expect(page.locator('#first-offer')).toHaveValue("AI Cupcake");
+    await page.locator('#step-offer').getByRole('button', { name: 'Next' }).click();
+
+    await page.locator('#template-selection').selectOption('Modern');
+    await page.getByRole('button', { name: 'Finish Setup' }).click();
+
+    await expect(page.getByRole('heading', { name: "You're all set!" })).toBeVisible();
+  });
+
+  test('Validates 44px touch targets on mobile sizes and layout rules', async ({ page }) => {
     // Set a mobile viewport
     await page.setViewportSize({ width: 375, height: 667 });
-    await page.goto('http://mock/setup.html');
+    await page.goto('/api/ui/onboarding/setup.html');
 
     // Wait for the container to be visible
     const container = page.locator('.container');
@@ -264,18 +260,7 @@ test.describe('Tauri Dashboard UI and UX Improvements', () => {
 
 
   test('Setup UI should have glassmorphism aesthetics applied', async ({ page }) => {
-    const workspaceRoot = process.env.TEST_WORKSPACE
-        ? path.join(process.env.TEST_SRCDIR || process.cwd(), process.env.TEST_WORKSPACE)
-        : process.cwd();
-
-    const tauriUiDir = path.join(workspaceRoot, 'src/ui/tauri/src/ui');
-
-    await page.route('http://mock/setup.html', async route => {
-        const content = fs.readFileSync(path.join(tauriUiDir, 'setup.html'), 'utf-8');
-        await route.fulfill({ contentType: 'text/html', body: content });
-    });
-
-    await page.goto('http://mock/setup.html');
+    await page.goto('/api/ui/onboarding/setup.html');
 
     // Check that the container class has the updated glassmorphism properties
     const container = page.locator('.container');
@@ -286,17 +271,6 @@ test.describe('Tauri Dashboard UI and UX Improvements', () => {
   });
 
   test('Dashboard should have glassmorphism aesthetics applied', async ({ page }) => {
-    const workspaceRoot = process.env.TEST_WORKSPACE
-        ? path.join(process.env.TEST_SRCDIR, process.env.TEST_WORKSPACE)
-        : process.cwd();
-
-    const tauriUiDir = path.join(workspaceRoot, 'src/ui/tauri/src/ui');
-
-    await page.route('/dashboard.html', async route => {
-        const content = fs.readFileSync(path.join(tauriUiDir, 'dashboard.html'), 'utf-8');
-        await route.fulfill({ contentType: 'text/html', body: content });
-    });
-
     await page.addInitScript(() => {
       window.__TAURI__ = {
         core: {
@@ -313,7 +287,7 @@ test.describe('Tauri Dashboard UI and UX Improvements', () => {
       };
     });
 
-    await page.goto('/dashboard.html');
+    await page.goto('/api/ui/dashboard.html');
 
     // Check that the container class has the updated glassmorphism properties
     const container = page.locator('.container');
