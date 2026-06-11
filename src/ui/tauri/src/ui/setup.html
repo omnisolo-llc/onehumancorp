@@ -117,6 +117,22 @@
         animation: shake 0.2s ease-in-out 0s 2;
       }
 
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+      .spinner {
+        display: inline-block;
+        width: 16px;
+        height: 16px;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        border-radius: 50%;
+        border-top-color: #fff;
+        animation: spin 1s ease-in-out infinite;
+        vertical-align: middle;
+        margin-right: 8px;
+      }
+
       @media (prefers-color-scheme: dark) {
         body {
           background-color: #16161a;
@@ -448,8 +464,8 @@
         </div>
         <div id="context-error" class="error-msg">Please select an option.</div>
         <div class="btn-group">
-          <button type="button" class="btn-secondary save-draft-btn">Save Draft</button>
           <button class="next-step-btn" data-next="step-categories">Next</button>
+          <button type="button" class="btn-secondary save-draft-btn">Save Draft</button>
         </div>
       </div>
 
@@ -462,8 +478,8 @@
         </select>
         <div id="categories-error" class="error-msg">Please enter a category.</div>
         <div class="btn-group">
-          <button type="button" class="btn-secondary save-draft-btn">Save Draft</button>
           <button class="next-step-btn" data-next="step-name">Next</button>
+          <button type="button" class="btn-secondary save-draft-btn">Save Draft</button>
           <button class="btn-secondary prev-step-btn" data-prev="step-context">Back</button>
         </div>
       </div>
@@ -478,8 +494,8 @@
         <input type="text" id="business-tagline" class="glassmorphism" placeholder="Tagline (optional)" />
 
         <div class="btn-group">
-          <button type="button" class="btn-secondary save-draft-btn">Save Draft</button>
           <button class="next-step-btn" data-next="step-assistant">Next</button>
+          <button type="button" class="btn-secondary save-draft-btn">Save Draft</button>
           <button class="btn-secondary prev-step-btn" data-prev="step-categories">Back</button>
         </div>
       </div>
@@ -505,8 +521,8 @@
         <div id="tone-error" class="error-msg">Please select a tone.</div>
 
         <div class="btn-group">
-          <button type="button" class="btn-secondary save-draft-btn">Save Draft</button>
           <button class="next-step-btn" data-next="step-admin">Next</button>
+          <button type="button" class="btn-secondary save-draft-btn">Save Draft</button>
           <button class="btn-secondary prev-step-btn" data-prev="step-name">Back</button>
         </div>
       </div>
@@ -524,8 +540,8 @@
         <div id="password-error" class="error-msg">Password must be at least 8 characters.</div>
 
         <div class="btn-group">
-          <button type="button" class="btn-secondary save-draft-btn">Save Draft</button>
           <button class="next-step-btn" data-next="step-offer">Next</button>
+          <button type="button" class="btn-secondary save-draft-btn">Save Draft</button>
           <button class="btn-secondary prev-step-btn" data-prev="step-assistant">Back</button>
         </div>
       </div>
@@ -537,8 +553,8 @@
         <input type="text" id="first-offer" class="glassmorphism" placeholder="e.g. Custom Birthday Cake" />
         <div id="offer-error" class="error-msg">Please enter an offer.</div>
         <div class="btn-group">
-          <button type="button" class="btn-secondary save-draft-btn">Save Draft</button>
           <button class="next-step-btn" data-next="step-template">Next</button>
+          <button type="button" class="btn-secondary save-draft-btn">Save Draft</button>
           <button class="btn-secondary prev-step-btn" data-prev="step-admin">Back</button>
         </div>
       </div>
@@ -556,8 +572,8 @@
         <div id="template-error" class="error-msg">Please select a template.</div>
 
         <div class="btn-group">
-          <button type="button" class="btn-secondary save-draft-btn">Save Draft</button>
           <button id="finish-btn">Finish Setup</button>
+          <button type="button" class="btn-secondary save-draft-btn">Save Draft</button>
           <button class="btn-secondary prev-step-btn" data-prev="step-offer">Back</button>
         </div>
       </div>
@@ -1016,7 +1032,7 @@
 
                if (window.__TAURI__ && window.__TAURI__.core) {
                  finishBtn.disabled = true;
-                 finishBtn.innerText = "Saving...";
+                 finishBtn.innerHTML = '<div class="spinner"></div>Saving...';
                  window.__TAURI__.core.invoke("start_onboarding", { req }).then(() => {
                    window.location.href = "success.html";
                  }).catch((err) => {
@@ -1026,7 +1042,7 @@
                  });
                } else {
                  finishBtn.disabled = true;
-                 finishBtn.innerText = "Saving...";
+                 finishBtn.innerHTML = '<div class="spinner"></div>Saving...';
                  const backendUrl = (window.location.origin.includes('localhost') || window.location.protocol === 'file:') ? 'http://127.0.0.1:18789' : '';
                  fetch(`${backendUrl}/api/onboarding/start`, {
                      method: 'POST',

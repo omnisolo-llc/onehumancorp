@@ -47,14 +47,29 @@ pub async fn get_walkthrough(axum::extract::Path(page): axum::extract::Path<Stri
 }
 
 pub async fn get_tooltips() -> Json<std::collections::HashMap<String, String>> {
+    let registry = crate::get_tooltips_registry().read().unwrap();
     let mut tooltips = std::collections::HashMap::new();
-    tooltips.insert("dashboard-walkthrough-btn".to_string(), "Start an interactive tour of the dashboard".to_string());
-    tooltips.insert("pos-walkthrough-btn".to_string(), "Learn how to use the Point of Sale system".to_string());
-    tooltips.insert("assistant-walkthrough-btn".to_string(), "See how the AI Assistant can help you".to_string());
-    tooltips.insert("generate-link-btn".to_string(), "Generate a link to share with your team".to_string());
-    tooltips.insert("copy-btn".to_string(), "Copy the link to your clipboard".to_string());
-    tooltips.insert("help-center-nav-btn".to_string(), "Go to the Help Center".to_string());
+    for (k, v) in registry.iter() {
+        tooltips.insert(k.clone(), v.clone());
+    }
     Json(tooltips)
+}
+
+#[derive(Deserialize)]
+pub struct TooltipPayload {
+    pub id: String,
+    pub text: String,
+}
+
+#[derive(Serialize)]
+pub struct SuccessResponse {
+    pub success: bool,
+}
+
+pub async fn update_tooltip(axum::extract::Json(payload): axum::extract::Json<TooltipPayload>) -> Json<SuccessResponse> {
+    let mut registry = crate::get_tooltips_registry().write().unwrap();
+    registry.insert(payload.id, payload.text);
+    Json(SuccessResponse { success: true })
 }
 
 
