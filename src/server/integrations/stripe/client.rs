@@ -49,6 +49,43 @@ impl StripeClient {
         std::env::var("STRIPE_API_BASE").unwrap_or_else(|_| "https://api.stripe.com".to_string())
     }
 
+
+    pub async fn create_refund(
+        &self,
+        payment_intent_id: &str,
+        amount_cents: i64,
+        idempotency_key: Option<&str>,
+    ) -> Result<String, String> {
+        let api_key = self.require_api_key()?;
+        let mut form = std::collections::HashMap::new();
+        form.insert("payment_intent".to_string(), payment_intent_id.to_string());
+        if amount_cents > 0 {
+            form.insert("amount".to_string(), amount_cents.to_string());
+        }
+
+        let mut req = reqwest::Client::new()
+            .post(format!("{}/v1/refunds", Self::api_base()))
+            .basic_auth(api_key, Some(""))
+            .form(&form);
+
+        if let Some(key) = idempotency_key {
+            req = req.header("Idempotency-Key", key);
+        }
+
+        let res = req.send().await.map_err(|e| format!("Stripe API request failed: {}", e))?;
+
+        if !res.status().is_success() {
+            let status = res.status();
+            let text = res.text().await.unwrap_or_default();
+            return Err(format!("Stripe API error ({}): {}", status, text));
+        }
+
+        let json: serde_json::Value = res.json().await.map_err(|e| format!("Failed to parse response: {}", e))?;
+        let refund_id = json["id"].as_str().ok_or_else(|| "Missing refund id in response".to_string())?;
+
+        Ok(refund_id.to_string())
+    }
+
     pub async fn create_checkout_session(&self, _price_id: &str, customer_id: &str, amount_usd: f64, is_subscription: bool) -> Result<String, String> {
         let pm = PaymentRouter::optimize_payment_method(amount_usd);
         let savings = PaymentRouter::calculate_fee_savings(amount_usd);

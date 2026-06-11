@@ -70,7 +70,7 @@ export default function TriagePage() {
   async function handleDecision(id: string, approved: boolean) {
     try {
       setActionStatus(approved ? "Approving..." : "Dismissing...");
-      const res = await fetch(`/api/ui/triage/action?tenant_id=${encodeURIComponent(tenantId())}`, {
+      const res = await fetch(`/api/agents/approvals/${encodeURIComponent(id)}?tenant_id=${encodeURIComponent(tenantId())}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ triage_item_id: id, approved })
@@ -161,7 +161,37 @@ export default function TriagePage() {
                 <div className="mb-6">
                   <div className="app-metric-label">Proposed Action: {selected.action_type}</div>
                   <div className="mt-2 rounded-md border border-blue-200 bg-blue-50 p-4 text-sm leading-6 text-blue-900 font-medium">
-                    {selected.action_payload || "No specific payload"}
+
+                    {selected.action_payload && typeof selected.action_payload === 'string' && selected.action_payload.includes('amount_cents') ? (
+                      <div>
+                        {(() => {
+                          try {
+                            const parsed = JSON.parse(selected.action_payload);
+                            return (
+                              <div className="flex flex-col gap-2">
+                                <div className="flex justify-between items-center bg-white/50 p-3 rounded-lg border border-blue-100">
+                                  <span className="text-gray-600">Action</span>
+                                  <span className="font-semibold">{parsed.action || "Return & Refund"}</span>
+                                </div>
+                                <div className="flex justify-between items-center bg-white/50 p-3 rounded-lg border border-blue-100">
+                                  <span className="text-gray-600">Amount to Refund</span>
+                                  <span className="font-semibold text-green-700">${((parsed.amount_cents || 0) / 100).toFixed(2)}</span>
+                                </div>
+                                <div className="flex justify-between items-center bg-white/50 p-3 rounded-lg border border-blue-100">
+                                  <span className="text-gray-600">Product ID</span>
+                                  <span className="font-mono text-xs">{parsed.product_id || "N/A"}</span>
+                                </div>
+                              </div>
+                            );
+                          } catch (e) {
+                            return selected.action_payload;
+                          }
+                        })()}
+                      </div>
+                    ) : (
+                      selected.action_payload || "No specific payload"
+                    )}
+
                   </div>
                 </div>
               )}
