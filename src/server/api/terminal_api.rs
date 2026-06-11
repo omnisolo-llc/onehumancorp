@@ -21,6 +21,7 @@ pub struct PaymentIntentRequest {
 #[derive(serde::Serialize)]
 pub struct PaymentIntentResponse {
     pub client_secret: String,
+    pub lock_id: Option<String>,
 }
 
 pub fn router(hub: Arc<Hub>) -> axum::Router<Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport>> {
@@ -239,283 +240,29 @@ pub async fn reserve_inventory_handler(
         None => return (axum::http::StatusCode::UNAUTHORIZED, Json(serde_json::json!({ "error": "unauthenticated" }))).into_response()
     };
 
-    let lock_id = uuid::Uuid::new_v4().to_string();
-    let lock_key = format!("ohc:lock:{}:inventory:{}", tenant_id, req_data.product_id);
+    let service = crate::services::inventory::InventoryService::new(
+        Arc::new(crate::db::DB { pool: crate::db::get_pool(), store: crate::db::DbStore::Postgres }),
+        hub.redis_client.clone()
+    );
 
-    if let Some(client) = &hub.redis_client {
-        if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
-            let ttl = if req_data.ttl_seconds > 0 { req_data.ttl_seconds } else { 15 };
-            let acquired: bool = redis::cmd("SET")
-                .arg(&lock_key).arg(&lock_id).arg("EX").arg(ttl).arg("NX")
-                .query_async(&mut conn).await.unwrap_or(false);
-
-            if !acquired {
-                return (axum::http::StatusCode::OK, Json(serde_json::json!({
-                    "success": false,
-                    "lock_id": "",
-                    "error_message": "Item is currently being checked out by another customer"
-                }))).into_response();
-            }
-
-            // Verify capacity AFTER acquiring the lock within a transaction
-            let pool = crate::db::get_pool();
-            if let Ok(mut tx) = pool.begin().await {
-                if let Ok(_) = crate::common::auth_utils::set_org_context(&mut *tx, &tenant_id).await {
-                    let current_stock: Option<i32> = sqlx::query_scalar("SELECT inventory_count FROM products WHERE id = $1 AND tenant_id = $2")
-                        .bind(&req_data.product_id)
-                        .bind(&tenant_id)
-                        .fetch_optional(&mut *tx)
-                        .await
-                        .unwrap_or(None);
-
-                    if let Some(stock) = current_stock {
-                        if stock < req_data.quantity {
-                            let _ = tx.rollback().await;
-                            let _: () = redis::cmd("DEL").arg(&lock_key).query_async(&mut conn).await.unwrap_or(());
-                            return (axum::http::StatusCode::OK, Json(serde_json::json!({
-                                "success": false,
-                                "lock_id": "",
-                                "error_message": format!("Insufficient inventory. Available: {}", stock)
-                            }))).into_response();
-                        }
-                    } else {
-                        let _ = tx.rollback().await;
-                        let _: () = redis::cmd("DEL").arg(&lock_key).query_async(&mut conn).await.unwrap_or(());
-                        return (axum::http::StatusCode::OK, Json(serde_json::json!({
-                            "success": false,
-                            "lock_id": "",
-                            "error_message": "Product not found"
-                        }))).into_response();
-                    }
-                }
-                let _ = tx.commit().await;
-            }
-        }
-    } else {
-        // Fallback if no redis
-        let pool = crate::db::get_pool();
-        if let Ok(mut tx) = pool.begin().await {
-            if let Ok(_) = crate::common::auth_utils::set_org_context(&mut *tx, &tenant_id).await {
-                let current_stock: Option<i32> = sqlx::query_scalar("SELECT inventory_count FROM products WHERE id = $1 AND tenant_id = $2")
-                    .bind(&req_data.product_id)
-                    .bind(&tenant_id)
-                    .fetch_optional(&mut *tx)
-                    .await
-                    .unwrap_or(None);
-
-                if let Some(stock) = current_stock {
-                    if stock < req_data.quantity {
-                        let _ = tx.rollback().await;
-                        return (axum::http::StatusCode::OK, Json(serde_json::json!({
-                            "success": false,
-                            "lock_id": "",
-                            "error_message": format!("Insufficient inventory. Available: {}", stock)
-                        }))).into_response();
-                    }
-                } else {
-                    let _ = tx.rollback().await;
-                    return (axum::http::StatusCode::OK, Json(serde_json::json!({
-                        "success": false,
-                        "lock_id": "",
-                        "error_message": "Product not found"
-                    }))).into_response();
-                }
-            }
-            let _ = tx.commit().await;
-        }
-    }
-
-    (axum::http::StatusCode::OK, Json(serde_json::json!({
-        "success": true,
-        "lock_id": lock_id,
-        "error_message": ""
-    }))).into_response()
-}
-
-pub async fn commit_inventory_handler(
-    _headers: HeaderMap,
-    State(hub): State<Arc<Hub>>,
-    auth_info: Option<axum::extract::Extension<::server_auth::orchestration::AuthInfo>>,
-    req_data: axum::extract::Json<CommitInventoryRequest>,
-) -> axum::response::Response {
-    let tenant_id = match auth_info {
-        Some(info) => info.org_id.clone(),
-        None => return (axum::http::StatusCode::UNAUTHORIZED, Json(serde_json::json!({ "error": "unauthenticated" }))).into_response()
-    };
-
-    let lock_key = format!("ohc:lock:{}:inventory:{}", tenant_id, req_data.product_id);
-
-    if let Some(client) = &hub.redis_client {
-        if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
-            let current_lock_id: Option<String> = redis::cmd("GET").arg(&lock_key).query_async(&mut conn).await.unwrap_or(None);
-            if let Some(cid) = current_lock_id {
-                if cid != req_data.lock_id && !req_data.lock_id.is_empty() {
-                    return (axum::http::StatusCode::OK, Json(serde_json::json!({
-                        "success": false,
-                        "error_message": "Lock ID mismatch. Reservation may have expired."
-                    }))).into_response();
-                }
-            }
-            let _: () = redis::cmd("DEL").arg(&lock_key).query_async(&mut conn).await.unwrap_or(());
-        }
-    }
-
-    let pool = crate::db::get_pool();
-    if let Ok(mut tx) = pool.begin().await {
-        if let Ok(_) = crate::common::auth_utils::set_org_context(&mut *tx, &tenant_id).await {
-            let update_result: Option<i32> = sqlx::query_scalar("UPDATE products SET inventory_count = inventory_count - $1 WHERE id = $2 AND tenant_id = $3 AND inventory_count >= $1 RETURNING inventory_count")
-                .bind(req_data.quantity)
-                .bind(&req_data.product_id)
-                .bind(&tenant_id)
-                .fetch_optional(&mut *tx)
-                .await
-                .unwrap_or(None);
-
-            if let Some(new_stock) = update_result {
-                // Record the order
-                let order_id = uuid::Uuid::new_v4().to_string();
-                let total_amount = (req_data.amount_cents.unwrap_or(0) as f64) / 100.0;
-                let _ = sqlx::query("INSERT INTO orders (id, tenant_id, customer_id, total_amount, status) VALUES ($1, $2, $3, $4, 'completed')")
-                    .bind(&order_id).bind(&tenant_id).bind(&req_data.customer_id).bind(total_amount).execute(&mut *tx).await;
-
-                let item_id = uuid::Uuid::new_v4().to_string();
-                let _ = sqlx::query("INSERT INTO order_items (id, tenant_id, order_id, product_id, quantity, price) VALUES ($1, $2, $3, $4, $5, $6)")
-                    .bind(&item_id).bind(&tenant_id).bind(&order_id).bind(&req_data.product_id).bind(req_data.quantity).bind(total_amount).execute(&mut *tx).await;
-
-                // Trigger agentic post-sale workflow
-                let event_payload = serde_json::json!({
-                    "order_id": order_id,
-                    "tenant_id": tenant_id,
-                    "customer_id": req_data.customer_id,
-                    "amount": total_amount,
-                    "source": "in_person_pos",
-                });
-
-                let event = crate::orchestration::departments::types::DepartmentEvent {
-                    id: uuid::Uuid::new_v4().to_string(),
-                    tenant_id: tenant_id.clone(),
-                    event_type: "POS_SALE_COMPLETED".to_string(),
-                    payload: event_payload,
-                };
-                let _ = hub.publish_mesh_event(::server_ohc::orchestration::MeshEvent {
-                    event_id: uuid::Uuid::new_v4().to_string(),
-                    topic: "pos_sales".to_string(),
-                    payload: serde_json::to_vec(&event).unwrap_or_default(),
-                    timestamp: chrono::Utc::now().timestamp(),
-                });
-
-                let inv_event_payload = serde_json::json!({
-                    "product_id": req_data.product_id,
-                    "quantity_deducted": req_data.quantity,
-                    "remaining_stock": new_stock,
-                });
-                let inv_event = crate::orchestration::departments::types::DepartmentEvent {
-                    id: uuid::Uuid::new_v4().to_string(),
-                    tenant_id: tenant_id.clone(),
-                    event_type: "InventoryUpdated".to_string(),
-                    payload: inv_event_payload,
-                };
-                let _ = hub.publish_mesh_event(::server_ohc::orchestration::MeshEvent {
-                    event_id: uuid::Uuid::new_v4().to_string(),
-                    topic: "operations".to_string(),
-                    payload: serde_json::to_vec(&inv_event).unwrap_or_default(),
-                    timestamp: chrono::Utc::now().timestamp(),
-                });
-
-                if new_stock <= 5 {
-                    let job_id = uuid::Uuid::new_v4().to_string();
-                    let job_payload = serde_json::json!({
-                        "product_id": req_data.product_id,
-                        "remaining_stock": new_stock,
-                        "threshold": 5,
-                        "message": format!("Stock for product {} has dropped to {}.", req_data.product_id, new_stock)
-                    }).to_string();
-
-                    let _ = sqlx::query("INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status) VALUES ($1, $2, 'operations', 'LowStockAlert', $3::jsonb, 'PENDING')")
-                        .bind(job_id).bind(&tenant_id).bind(&job_payload).execute(&mut *tx).await;
-
-                    let action_request_id = uuid::Uuid::new_v4().to_string();
-                    let payload = serde_json::json!({
-                        "product_id": req_data.product_id,
-                        "remaining_stock": new_stock,
-                        "suggested_action": "Restock Item"
-                    }).to_string();
-                    let _ = sqlx::query("INSERT INTO agent_action_requests (id, tenant_id, action_type, status, confidence_score, product_id, payload, created_at, updated_at) VALUES ($1, $2, 'Reorder', 'Pending', 0.95, $3, $4::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
-                        .bind(&action_request_id).bind(&tenant_id).bind(&req_data.product_id).bind(&payload).execute(&mut *tx).await;
-                }
-
-                let _ = tx.commit().await;
-                return (axum::http::StatusCode::OK, Json(serde_json::json!({
-                    "success": true,
-                    "error_message": ""
-                }))).into_response();
-            } else {
-                let current_stock: Option<i32> = sqlx::query_scalar("SELECT inventory_count FROM products WHERE id = $1 AND tenant_id = $2")
-                    .bind(&req_data.product_id)
-                    .bind(&tenant_id)
-                    .fetch_optional(&mut *tx)
-                    .await
-                    .unwrap_or(None);
-
-                let _ = tx.rollback().await;
-
-                if let Some(stock) = current_stock {
-                    return (axum::http::StatusCode::OK, Json(serde_json::json!({
-                        "success": false,
-                        "error_message": format!("Insufficient inventory. Available: {}", stock)
-                    }))).into_response();
-                } else {
-                    return (axum::http::StatusCode::OK, Json(serde_json::json!({
-                        "success": false,
-                        "error_message": "Product not found"
-                    }))).into_response();
-                }
-            }
-        }
-        let _ = tx.rollback().await;
-    }
-
-    (axum::http::StatusCode::OK, Json(serde_json::json!({
-        "success": false,
-        "error_message": "Database error"
-    }))).into_response()
-}
-pub async fn get_terminal_connection_token_handler(
-    _headers: HeaderMap,
-    State(_hub): State<Arc<Hub>>,
-    auth_info: Option<axum::extract::Extension<::server_auth::orchestration::AuthInfo>>,
-) -> Json<Result<TerminalTokenResponse, String>> {
-    let tenant_id = match auth_info {
-        Some(auth) => {
-            if auth.org_id.is_empty() {
-                return Json(Err("Unauthenticated: Missing tenant ID".to_string()));
-            } else {
-                auth.org_id.clone()
-            }
+    match service.reserve_inventory(&tenant_id, &req_data.product_id, req_data.quantity, req_data.ttl_seconds).await {
+        Ok(result) => {
+            (axum::http::StatusCode::OK, Json(serde_json::json!({
+                "success": result.success,
+                "lock_id": result.lock_id,
+                "error_message": result.error_message
+            }))).into_response()
         },
-        None => return Json(Err("Unauthenticated".to_string()))
-    };
-
-    info!(tenant_id = %tenant_id, "Generating Stripe Terminal Connection Token");
-
-    let _ = ::server_telemetry::record_api_call_cost(
-        &crate::db::get_pool(),
-        &tenant_id,
-        "stripe_terminal_connection_token",
-        0.05
-    ).await;
-
-    let stripe_key = std::env::var("STRIPE_API_KEY").unwrap_or_default();
-
-    let client = crate::integrations::stripe::client::StripeClient::new(stripe_key);
-    match client.require_api_key() {
-        Ok(_) => match client.create_terminal_connection_token(&tenant_id).await {
-            Ok(token) => Json(Ok(TerminalTokenResponse { token })),
-            Err(e) => Json(Err(e)),
-        },
-        Err(e) => Json(Err(e)),
+        Err(e) => {
+            (axum::http::StatusCode::OK, Json(serde_json::json!({
+                "success": false,
+                "lock_id": "",
+                "error_message": e
+            }))).into_response()
+        }
     }
 }
+
 
 #[derive(serde::Deserialize)]
 pub struct PosOfflineTransaction {
@@ -694,9 +441,80 @@ pub async fn sync_offline_transactions_handler(
 
 
 
+
+pub async fn commit_inventory_handler(
+    _headers: HeaderMap,
+    State(hub): State<Arc<Hub>>,
+    auth_info: Option<axum::extract::Extension<::server_auth::orchestration::AuthInfo>>,
+    req_data: axum::extract::Json<CommitInventoryRequest>,
+) -> axum::response::Response {
+    let tenant_id = match auth_info {
+        Some(info) => info.org_id.clone(),
+        None => return (axum::http::StatusCode::UNAUTHORIZED, Json(serde_json::json!({ "error": "unauthenticated" }))).into_response()
+    };
+
+    let service = crate::services::inventory::InventoryService::new(
+        Arc::new(crate::db::DB { pool: crate::db::get_pool(), store: crate::db::DbStore::Postgres }),
+        hub.redis_client.clone()
+    );
+
+    match service.commit_inventory(&tenant_id, &req_data.product_id, req_data.quantity, &req_data.lock_id).await {
+        Ok(result) => {
+            if result.success {
+                let pool = crate::db::get_pool();
+                if let Ok(mut tx) = pool.begin().await {
+                    if let Ok(_) = crate::common::auth_utils::set_org_context(&mut *tx, &tenant_id).await {
+                        let order_id = uuid::Uuid::new_v4().to_string();
+                        let total_amount = (req_data.amount_cents.unwrap_or(0) as f64) / 100.0;
+                        let _ = sqlx::query("INSERT INTO orders (id, tenant_id, customer_id, total_amount, status) VALUES ($1, $2, $3, $4, 'completed')")
+                            .bind(&order_id).bind(&tenant_id).bind(&req_data.customer_id).bind(total_amount).execute(&mut *tx).await;
+
+                        let item_id = uuid::Uuid::new_v4().to_string();
+                        let _ = sqlx::query("INSERT INTO order_items (id, tenant_id, order_id, product_id, quantity, price) VALUES ($1, $2, $3, $4, $5, $6)")
+                            .bind(&item_id).bind(&tenant_id).bind(&order_id).bind(&req_data.product_id).bind(req_data.quantity).bind(total_amount).execute(&mut *tx).await;
+
+                        let event_payload = serde_json::json!({
+                            "order_id": order_id,
+                            "tenant_id": tenant_id,
+                            "customer_id": req_data.customer_id,
+                            "amount": total_amount,
+                            "source": "in_person_pos",
+                        });
+
+                        let event = crate::orchestration::departments::types::DepartmentEvent {
+                            id: uuid::Uuid::new_v4().to_string(),
+                            tenant_id: tenant_id.clone(),
+                            event_type: "POS_SALE_COMPLETED".to_string(),
+                            payload: event_payload,
+                        };
+                        let _ = hub.publish_mesh_event(::server_ohc::orchestration::MeshEvent {
+                            event_id: uuid::Uuid::new_v4().to_string(),
+                            topic: "pos_sales".to_string(),
+                            payload: serde_json::to_vec(&event).unwrap_or_default(),
+                            timestamp: chrono::Utc::now().timestamp(),
+                        });
+                    }
+                    let _ = tx.commit().await;
+                }
+            }
+
+            (axum::http::StatusCode::OK, Json(serde_json::json!({
+                "success": result.success,
+                "error_message": result.error_message
+            }))).into_response()
+        },
+        Err(e) => {
+            (axum::http::StatusCode::OK, Json(serde_json::json!({
+                "success": false,
+                "error_message": e
+            }))).into_response()
+        }
+    }
+}
+
 pub async fn create_payment_intent_handler(
     _headers: HeaderMap,
-    State(_hub): State<Arc<Hub>>,
+    State(hub): State<Arc<Hub>>,
     auth_info: Option<axum::extract::Extension<::server_auth::orchestration::AuthInfo>>,
     req_data: axum::extract::Json<PaymentIntentRequest>,
 ) -> Json<Result<PaymentIntentResponse, String>> {
@@ -710,6 +528,25 @@ pub async fn create_payment_intent_handler(
         },
         None => return Json(Err("Unauthenticated".to_string()))
     };
+
+    let mut lock_id_out = None;
+
+    if let Some(product_id) = &req_data.product_id {
+        let quantity = req_data.quantity.unwrap_or(1);
+        let service = crate::services::inventory::InventoryService::new(
+            Arc::new(crate::db::DB { pool: crate::db::get_pool(), store: crate::db::DbStore::Postgres }),
+            hub.redis_client.clone()
+        );
+        match service.reserve_inventory(&tenant_id, product_id, quantity, 15).await {
+            Ok(result) => {
+                if !result.success {
+                    return Json(Err(result.error_message));
+                }
+                lock_id_out = Some(result.lock_id);
+            },
+            Err(e) => return Json(Err(e))
+        }
+    }
 
     info!(tenant_id = %tenant_id, amount = req_data.amount_cents, currency = %req_data.currency, "Creating Stripe Terminal Payment Intent");
 
@@ -732,12 +569,33 @@ pub async fn create_payment_intent_handler(
             req_data.quantity,
             req_data.order_id.as_deref(),
         ).await {
-            Ok(client_secret) => Json(Ok(PaymentIntentResponse { client_secret })),
-            Err(e) => Json(Err(e)),
+            Ok(client_secret) => Json(Ok(PaymentIntentResponse { client_secret, lock_id: lock_id_out })),
+            Err(e) => {
+                if let (Some(lock_id), Some(product_id)) = (&lock_id_out, &req_data.product_id) {
+                    let quantity = req_data.quantity.unwrap_or(1);
+                    let service = crate::services::inventory::InventoryService::new(
+                        Arc::new(crate::db::DB { pool: crate::db::get_pool(), store: crate::db::DbStore::Postgres }),
+                        hub.redis_client.clone()
+                    );
+                    let _ = service.release_inventory(&tenant_id, product_id, quantity, lock_id).await;
+                }
+                Json(Err(e))
+            }
         },
-        Err(e) => Json(Err(e)),
+        Err(e) => {
+            if let (Some(lock_id), Some(product_id)) = (&lock_id_out, &req_data.product_id) {
+                let quantity = req_data.quantity.unwrap_or(1);
+                let service = crate::services::inventory::InventoryService::new(
+                    Arc::new(crate::db::DB { pool: crate::db::get_pool(), store: crate::db::DbStore::Postgres }),
+                    hub.redis_client.clone()
+                );
+                let _ = service.release_inventory(&tenant_id, product_id, quantity, lock_id).await;
+            }
+            Json(Err(e.to_string()))
+        }
     }
 }
+
 
 #[cfg(test)]
 mod tests {
@@ -831,5 +689,32 @@ mod tests {
             .bind(tenant_id)
             .fetch_one(&pool).await.unwrap();
         assert!(items_count.0 > 0);
+    }
+}
+
+pub async fn get_terminal_connection_token_handler(
+    _headers: HeaderMap,
+    State(_hub): State<Arc<Hub>>,
+    auth_info: Option<axum::extract::Extension<::server_auth::orchestration::AuthInfo>>,
+) -> axum::response::Response {
+    let tenant_id = match auth_info {
+        Some(auth) => {
+            if auth.org_id.is_empty() {
+                return (axum::http::StatusCode::OK, Json(serde_json::json!({ "error": "Unauthenticated: Missing tenant ID" }))).into_response();
+            } else {
+                auth.org_id.clone()
+            }
+        },
+        None => return (axum::http::StatusCode::OK, Json(serde_json::json!({ "error": "Unauthenticated" }))).into_response()
+    };
+
+    let stripe_key = std::env::var("STRIPE_API_KEY").unwrap_or_default();
+    let client = crate::integrations::stripe::client::StripeClient::new(stripe_key);
+    match client.require_api_key() {
+        Ok(_) => match client.create_terminal_connection_token(&tenant_id).await {
+            Ok(token) => (axum::http::StatusCode::OK, Json(serde_json::json!({ "secret": token }))).into_response(),
+            Err(e) => (axum::http::StatusCode::OK, Json(serde_json::json!({ "error": e }))).into_response(),
+        },
+        Err(e) => (axum::http::StatusCode::OK, Json(serde_json::json!({ "error": e.to_string() }))).into_response(),
     }
 }

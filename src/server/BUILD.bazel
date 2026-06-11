@@ -200,6 +200,8 @@ SERVER_RS_SRCS = [
     "//src/server/services:booking.rs",
     "//src/server/services:mod.rs",
     "//src/server/services:inventory_sync.rs",
+    "//src/server/services:inventory/mod.rs",
+    "//src/server/services:inventory/service.rs",
     "//src/server/services:wizard.rs",
     "//src/server/services/agent:department/mod.rs",
     "//src/server/services/agent:department/service.rs",
