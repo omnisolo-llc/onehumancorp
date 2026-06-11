@@ -288,7 +288,34 @@
         .btn-secondary:hover { background-color: #3a3a3c; }
         .app-badge.neutral { background-color: #333; color: #ddd; }
       }
-    </style>
+
+      /* Mobile responsiveness enhancements for 375px */
+      @media (max-width: 768px) {
+        .app-grid {
+          grid-template-columns: 1fr;
+          height: auto;
+        }
+        .app-panel {
+          min-height: 400px;
+        }
+        .container {
+          padding: 10px;
+          height: 100%;
+        }
+        #main-grid {
+          display: flex;
+          flex-direction: column;
+        }
+        .detail-group {
+          flex-direction: column;
+        }
+        .detail-value {
+          width: 100%;
+          margin-top: 4px;
+        }
+      }
+
+</style>
   </head>
   <body>
     <div class="container">

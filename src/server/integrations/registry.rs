@@ -124,11 +124,20 @@ impl IntegrationsRegistry {
                           tokio::spawn(send_discord_webhook(creds.webhook_url.clone(), from_agent.to_string(), content.to_string()));
                      }
                  }
-                 "twilio" => {
+                 "twilio" | "whatsapp" => {
                      if !creds.from_phone.is_empty() {
-                         let to = if !creds.chat_id.is_empty() { creds.chat_id.clone() } else { channel.to_string() };
-                         let from = creds.from_phone.clone();
+                         let mut to = if !creds.chat_id.is_empty() { creds.chat_id.clone() } else { channel.to_string() };
+                         let mut from = creds.from_phone.clone();
                          let text = content.to_string();
+
+                         if to.starts_with("whatsapp:") || from.starts_with("whatsapp:") || integration_id == "whatsapp" {
+                             if !to.starts_with("whatsapp:") {
+                                 to = format!("whatsapp:{}", to);
+                             }
+                             if !from.starts_with("whatsapp:") {
+                                 from = format!("whatsapp:{}", from);
+                             }
+                         }
 
                          let clients = self.twilio_clients.read().unwrap();
                          if let Some(client) = clients.get(integration_id) {
@@ -199,7 +208,7 @@ impl IntegrationsRegistry {
             api_token: creds.api_token.clone(),
             from_phone: creds.from_phone.clone(),
         });
-        if integration_id == "twilio" {
+        if integration_id == "twilio" || integration_id == "whatsapp" {
             let mut clients = self.twilio_clients.write().unwrap();
             clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::twilio::provider::TwilioProvider::new(creds.bot_token.clone(), creds.api_token.clone())));
         }
@@ -547,7 +556,7 @@ impl IntegrationsRegistry {
 
     pub async fn send_sms(&self, integration_id: &str, to: &str, from: &str, body: &str) -> Result<(), String> {
         let client = {
-            if integration_id == "twilio" {
+            if integration_id == "twilio" || integration_id == "whatsapp" {
                 let clients = self.twilio_clients.read().unwrap();
                 clients.get(integration_id).cloned()
             } else {
