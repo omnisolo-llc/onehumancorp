@@ -156,6 +156,23 @@ impl OpenAIClientConfig {
             timeout: request_timeout(),
         }
     }
+
+    pub fn openrouter(api_key: impl Into<String>, base_url: Option<String>) -> Self {
+        Self {
+            api_key: api_key.into(),
+            base_url: base_url.unwrap_or_else(|| "https://openrouter.ai/api/v1".to_string()),
+            default_model: Some(
+                std::env::var("OPENROUTER_MODEL").unwrap_or_else(|_| "openai/gpt-4o-mini".to_string()),
+            ),
+            embedding_model: std::env::var("OHC_OPENAI_COMPATIBLE_EMBEDDING_MODEL")
+                .or_else(|_| std::env::var("OHC_EMBEDDING_MODEL"))
+                .unwrap_or_else(|_| "text-embedding-3-small".to_string()),
+            embedding_format: EmbeddingRequestFormat::OpenAI,
+            organization: None,
+            project: None,
+            timeout: request_timeout(),
+        }
+    }
 }
 
 impl OpenAIClient {
@@ -190,6 +207,10 @@ impl OpenAIClient {
 
     pub fn minimax(api_key: impl Into<String>, base_url: Option<String>) -> Self {
         Self::from_config(OpenAIClientConfig::minimax(api_key, base_url))
+    }
+
+    pub fn openrouter(api_key: impl Into<String>, base_url: Option<String>) -> Self {
+        Self::from_config(OpenAIClientConfig::openrouter(api_key, base_url))
     }
 
     fn chat_completions_url(&self) -> String {
@@ -653,6 +674,15 @@ mod tests {
         assert_eq!(
             client.chat_completions_url(),
             "https://api.minimax.chat/v1/chat/completions"
+        );
+    }
+
+    #[test]
+    fn openrouter_uses_openai_compatible_api_root() {
+        let client = OpenAIClient::openrouter("key", None);
+        assert_eq!(
+            client.chat_completions_url(),
+            "https://openrouter.ai/api/v1/chat/completions"
         );
     }
 }

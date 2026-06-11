@@ -335,6 +335,9 @@ impl AgentServiceImpl {
             "minimax" => {
                 std::env::var("MINIMAX_MODEL").unwrap_or_else(|_| "MiniMax-M2.7".to_string())
             }
+            "openrouter" => {
+                std::env::var("OPENROUTER_MODEL").unwrap_or_else(|_| "openai/gpt-4o-mini".to_string())
+            }
             "openai" | "openai-compatible" | "openai_compatible" => {
                 Self::first_non_empty_env(&["OPENAI_MODEL", "OHC_OPENAI_MODEL", "OHC_LLM_MODEL"])
                     .unwrap_or_else(|| "gpt-4.1-mini".to_string())
@@ -422,6 +425,18 @@ impl AgentServiceImpl {
                 );
                 Arc::new(OpenAIClient::minimax(key, endpoint))
             }
+            "openrouter" => {
+                let key = self.configured_api_key(&["OPENROUTER_API_KEY", "OHC_LLM_API_KEY"]);
+                let endpoint = self.effective_endpoint(
+                    req_endpoint,
+                    &[
+                        "OPENROUTER_BASE_URL",
+                        "OHC_LLM_BASE_URL",
+                        "OHC_LLM_ENDPOINT",
+                    ],
+                );
+                Arc::new(OpenAIClient::openrouter(key, endpoint))
+            }
             "ollama" => {
                 let endpoint = if !req_endpoint.is_empty() {
                     req_endpoint.to_string()
@@ -454,6 +469,16 @@ impl AgentServiceImpl {
                             Self::first_non_empty_env(&[
                                 "MINIMAX_BASE_URL",
                                 "MINIMAX_API_BASE_URL",
+                            ]),
+                        ));
+                    }
+                }
+                if let Ok(key) = std::env::var("OPENROUTER_API_KEY") {
+                    if !key.is_empty() {
+                        return Arc::new(OpenAIClient::openrouter(
+                            key,
+                            Self::first_non_empty_env(&[
+                                "OPENROUTER_BASE_URL",
                             ]),
                         ));
                     }

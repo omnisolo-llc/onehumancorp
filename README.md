@@ -222,7 +222,8 @@ bazelisk run //src/server:server
 | `MINIMAX_API_KEY` | MiniMax API key used by real AI-generating E2E flows, AI judge scoring, and `OHC_LLM_PROVIDER=minimax` agent runs |
 | `ANTHROPIC_API_KEY` | Anthropic API key |
 | `OPENAI_API_KEY` | OpenAI API key |
-| `OHC_LLM_PROVIDER` | Builtin agent provider: `openai`, `openai-compatible`, `minimax`, `anthropic`, or `ollama` |
+| `OPENROUTER_API_KEY` | OpenRouter API key |
+| `OHC_LLM_PROVIDER` | Builtin agent provider: `openai`, `openai-compatible`, `minimax`, `openrouter`, `anthropic`, or `ollama` |
 | `OHC_LLM_MODEL` | Builtin agent model name. Defaults are provider-specific when unset |
 | `OHC_LLM_API_KEY` | Generic API key for `openai-compatible` providers, or fallback key for OpenAI/MiniMax |
 | `OHC_LLM_BASE_URL` | Generic OpenAI-compatible API root such as `https://api.example.com/v1`; endpoint URLs ending in `/chat/completions` are normalized |

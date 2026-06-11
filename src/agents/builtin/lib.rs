@@ -8,10 +8,11 @@ pub mod scalable_multi_agent;
 //   ANTHROPIC_API_KEY          enables Anthropic Claude backend
 //   OPENAI_API_KEY             enables OpenAI backend
 //   MINIMAX_API_KEY            enables MiniMax backend
+//   OPENROUTER_API_KEY         enables OpenRouter backend
 //   OHC_LLM_API_KEY            generic key for OpenAI-compatible backends
 //   OHC_LLM_BASE_URL           generic OpenAI-compatible /v1 API base URL
 //   OHC_LOCAL_LLM_ENDPOINT     Ollama endpoint
-//   OHC_LLM_PROVIDER           "anthropic" | "openai" | "openai-compatible" | "minimax" | "ollama"
+//   OHC_LLM_PROVIDER           "anthropic" | "openai" | "openai-compatible" | "minimax" | "openrouter" | "ollama"
 //   OHC_LLM_MODEL              LLM model name
 //   OHC_MAX_TOKENS             max tokens per LLM response (default 2048)
 //   OHC_MAX_ITERATIONS         max ReAct iterations (default 100)
