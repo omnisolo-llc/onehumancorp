@@ -447,7 +447,7 @@ impl DB {
                 }
 
                 // Search Orders
-                let order_rows = sqlx::query("SELECT id, status, total_amount FROM orders WHERE tenant_id = $1 AND (id ILIKE $2 OR status ILIKE $2) LIMIT 10")
+                let order_rows = sqlx::query("SELECT id, status, CAST(total_amount AS DOUBLE PRECISION) as total_amount FROM orders WHERE tenant_id = $1 AND (id ILIKE $2 OR status ILIKE $2) LIMIT 10")
                     .bind(tenant_id)
                     .bind(&query_lower)
                     .fetch_all(&self.pool)
@@ -1936,5 +1936,138 @@ mod e2e_tenant_isolation_swarm_tasks_tests {
             .await
             .expect("Database URL or operation failed in test");
         assert_eq!(count_t2.0, 0, "tenant_2 should NOT see tenant_1's task due to RLS");
+    }
+}
+
+#[cfg(test)]
+mod e2e_search_workspace_tests {
+    use super::*;
+    use std::env;
+
+    #[tokio::test]
+    async fn test_search_workspace_parity() {
+        if env::var("OHC_DATABASE_URL").is_err() {
+            return;
+        }
+
+        let database_url = env::var("OHC_DATABASE_URL").expect("Database URL or operation failed in test");
+
+        // Set up Postgres Pool
+        let pg_pool = sqlx::postgres::PgPoolOptions::new()
+            .after_release(|conn, _meta| {
+                Box::pin(async move {
+                    use sqlx::Executor;
+                    conn.execute("DISCARD ALL").await?;
+                    Ok(true)
+                })
+            })
+            .connect(&database_url)
+            .await
+            .expect("Database URL or operation failed in test");
+
+        let pg_db = DB {
+            pool: pg_pool.clone(),
+            store: DbStore::Postgres,
+        };
+
+        // Set up SQLite Pool
+        let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .connect("sqlite::memory:")
+            .await
+            .expect("Database URL or operation failed in test");
+
+        // Dummy PgPool for SQLite DB struct so we are absolutely certain SQLite is executing, not Postgres.
+        // We initialize a new distinct pool to another db (test schema vs ohc) to ensure no bleed.
+        // Or simply reuse pg_pool but we know `DbStore::Sqlite` pattern strictly matches sqlite.
+        let dummy_pg_pool = pg_pool.clone();
+
+        let sqlite_db = DB {
+            pool: dummy_pg_pool,
+            store: DbStore::Sqlite(sqlite_pool.clone()),
+        };
+
+        let unique_tenant = format!("tenant_{}", uuid::Uuid::new_v4());
+
+        // Setup SQLite Schema
+        sqlx::query("CREATE TABLE tenants (id TEXT PRIMARY KEY)")
+            .execute(&sqlite_pool)
+            .await
+            .expect("Database URL or operation failed in test");
+        sqlx::query("CREATE TABLE customers (id TEXT PRIMARY KEY, tenant_id TEXT, name TEXT, email TEXT)")
+            .execute(&sqlite_pool)
+            .await
+            .expect("Database URL or operation failed in test");
+        sqlx::query("CREATE TABLE orders (id TEXT PRIMARY KEY, tenant_id TEXT, customer_id TEXT, status TEXT, total_amount REAL)")
+            .execute(&sqlite_pool)
+            .await
+            .expect("Database URL or operation failed in test");
+        sqlx::query("CREATE TABLE inbox_messages (id TEXT PRIMARY KEY, tenant_id TEXT, source TEXT, content TEXT)")
+            .execute(&sqlite_pool)
+            .await
+            .expect("Database URL or operation failed in test");
+
+        // Insert into SQLite
+        sqlx::query("INSERT INTO customers (id, tenant_id, name, email) VALUES (?, ?, ?, ?)")
+            .bind("c1").bind(&unique_tenant).bind("John Doe").bind("john@example.com")
+            .execute(&sqlite_pool).await.expect("Database URL or operation failed in test");
+        sqlx::query("INSERT INTO customers (id, tenant_id, name, email) VALUES (?, ?, ?, ?)")
+            .bind("c2").bind(&unique_tenant).bind(None::<&str>).bind("john_null@example.com")
+            .execute(&sqlite_pool).await.expect("Database URL or operation failed in test");
+
+        sqlx::query("INSERT INTO orders (id, tenant_id, customer_id, status, total_amount) VALUES (?, ?, ?, ?, ?)")
+            .bind("o1").bind(&unique_tenant).bind("c1").bind("pending").bind(150.25)
+            .execute(&sqlite_pool).await.expect("Database URL or operation failed in test");
+        sqlx::query("INSERT INTO orders (id, tenant_id, customer_id, status, total_amount) VALUES (?, ?, ?, ?, ?)")
+            .bind("o2").bind(&unique_tenant).bind("c1").bind(None::<&str>).bind(None::<f64>)
+            .execute(&sqlite_pool).await.expect("Database URL or operation failed in test");
+
+        sqlx::query("INSERT INTO inbox_messages (id, tenant_id, source, content) VALUES (?, ?, ?, ?)")
+            .bind("m1").bind(&unique_tenant).bind("email").bind("Hello John, ...")
+            .execute(&sqlite_pool).await.expect("Database URL or operation failed in test");
+        sqlx::query("INSERT INTO inbox_messages (id, tenant_id, source, content) VALUES (?, ?, ?, ?)")
+            .bind("m2").bind(&unique_tenant).bind(None::<&str>).bind("Another message for john")
+            .execute(&sqlite_pool).await.expect("Database URL or operation failed in test");
+
+        // Insert into Postgres
+        sqlx::query("INSERT INTO tenants (id, name, ceo_name) VALUES ($1, $1, $1) ON CONFLICT DO NOTHING")
+            .bind(&unique_tenant)
+            .execute(&pg_pool).await.expect("Database URL or operation failed in test");
+
+        sqlx::query("INSERT INTO customers (id, tenant_id, name, email) VALUES ($1, $2, $3, $4)")
+            .bind("c1").bind(&unique_tenant).bind("John Doe").bind("john@example.com")
+            .execute(&pg_pool).await.expect("Database URL or operation failed in test");
+        sqlx::query("INSERT INTO customers (id, tenant_id, name, email) VALUES ($1, $2, $3, $4)")
+            .bind("c2").bind(&unique_tenant).bind(None::<&str>).bind("john_null@example.com")
+            .execute(&pg_pool).await.expect("Database URL or operation failed in test");
+
+        // Wait, for DECIMAL, sqlx handles it depending on Cargo.toml features, we might need a workaround for `rust_decimal` missing, but `total_amount` is `DECIMAL` in Postgres.
+        // As seen from previous error `use of unresolved module or unlinked crate rust_decimal`, we should insert using direct string casting or float casting.
+        sqlx::query("INSERT INTO orders (id, tenant_id, customer_id, status, total_amount) VALUES ($1, $2, $3, $4, $5::numeric)")
+            .bind("o1").bind(&unique_tenant).bind("c1").bind("pending").bind("150.25")
+            .execute(&pg_pool).await.expect("Database URL or operation failed in test");
+        sqlx::query("INSERT INTO orders (id, tenant_id, customer_id, status, total_amount) VALUES ($1, $2, $3, $4, $5::numeric)")
+            .bind("o2").bind(&unique_tenant).bind("c1").bind(None::<&str>).bind(None::<&str>)
+            .execute(&pg_pool).await.expect("Database URL or operation failed in test");
+
+        sqlx::query("INSERT INTO inbox_messages (id, tenant_id, source, content) VALUES ($1, $2, $3, $4)")
+            .bind("m1").bind(&unique_tenant).bind("email").bind("Hello John, ...")
+            .execute(&pg_pool).await.expect("Database URL or operation failed in test");
+        sqlx::query("INSERT INTO inbox_messages (id, tenant_id, source, content) VALUES ($1, $2, $3, $4)")
+            .bind("m2").bind(&unique_tenant).bind(None::<&str>).bind("Another message for john")
+            .execute(&pg_pool).await.expect("Database URL or operation failed in test");
+
+        // Query both and compare
+        let sqlite_results = sqlite_db.search_workspace(&unique_tenant, "john").await.expect("SQLite query failed");
+        let pg_results = pg_db.search_workspace(&unique_tenant, "john").await.expect("Postgres query failed");
+
+        assert_eq!(sqlite_results.len(), pg_results.len(), "Number of search results should match");
+
+        for (sqlite_res, pg_res) in sqlite_results.iter().zip(pg_results.iter()) {
+            assert_eq!(sqlite_res.id, pg_res.id, "ID parity failed");
+            assert_eq!(sqlite_res.entity_type, pg_res.entity_type, "Entity type parity failed");
+            assert_eq!(sqlite_res.title, pg_res.title, "Title parity failed");
+            assert_eq!(sqlite_res.subtitle, pg_res.subtitle, "Subtitle parity failed");
+            assert_eq!(sqlite_res.route, pg_res.route, "Route parity failed");
+        }
     }
 }
