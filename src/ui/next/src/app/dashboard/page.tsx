@@ -413,8 +413,15 @@ export default function Dashboard() {
         <AffiliateMarketingWidget />
       </div>
 
-      <div className="mb-6">
+      <div className="mb-6 flex flex-col md:flex-row justify-between items-center gap-4">
           <SmartBlock type="PoweredBy" props={{ tenantId: tenantId(), isPremium: false }} />
+          <button
+            onClick={() => router.push("/incidents")}
+            className="h-[44px] px-6 rounded-[8px] bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 font-medium hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors border border-red-200 dark:border-red-800/50"
+            data-testid="report-incident-btn"
+          >
+            Report Incident
+          </button>
       </div>
 
       <section className="app-panel glassmorphism border border-white/40 dark:border-white/10 mb-6">
