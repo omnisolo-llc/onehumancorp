@@ -2603,7 +2603,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
             monitor_mesh,
             monitor_hub,
             is_cloud,
-            std::time::Duration::from_secs(30),
+            if is_cloud { std::time::Duration::from_secs(30) } else { std::time::Duration::from_secs(300) },
         )
         .await;
     });

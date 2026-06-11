@@ -16,6 +16,7 @@ spec:
     containerPolicies:
       - containerName: backend
         controlledResources: ["cpu", "memory"]
+        controlledValues: RequestsAndLimits
 {{- end }}
 ---
 {{- if and .Values.ohcCore.enabled .Values.ohcCore.vpa.enabled }}
@@ -36,6 +37,7 @@ spec:
     containerPolicies:
       - containerName: ohc-core
         controlledResources: ["cpu", "memory"]
+        controlledValues: RequestsAndLimits
 {{- end }}
 ---
 {{- if and .Values.chatwoot.enabled .Values.chatwoot.vpa.enabled }}
@@ -56,6 +58,7 @@ spec:
     containerPolicies:
       - containerName: chatwoot
         controlledResources: ["cpu", "memory"]
+        controlledValues: RequestsAndLimits
 {{- end }}
 ---
 {{- if and .Values.powersync.enabled .Values.powersync.vpa.enabled }}
@@ -76,4 +79,5 @@ spec:
     containerPolicies:
       - containerName: powersync
         controlledResources: ["cpu", "memory"]
+        controlledValues: RequestsAndLimits
 {{- end }}
