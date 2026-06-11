@@ -67,7 +67,7 @@ pub fn get_sandbox_violation_total() -> &'static UpDownCounter<i64> {
     SANDBOX_VIOLATION_TOTAL.get_or_init(|| {
         let meter = global::meter("ohc.sandbox");
         meter
-            .i64_up_down_counter("ohc_sandbox_violations_total")
+            .i64_up_down_counter("ohc_agent_sandbox_violations_total")
             .with_description("Total number of LocalSandbox policy violations")
             .build()
     })
@@ -1542,7 +1542,7 @@ pub fn get_tasks_completed_total() -> &'static Counter<u64> {
     let meter = global::meter("orchestration_state_machine");
     TASKS_COMPLETED_TOTAL.get_or_init(|| {
         meter
-            .u64_counter("tasks_completed_total")
+            .u64_counter("ohc_task_completed_total")
             .with_description("Total number of successfully completed shared tasks")
             .build()
     })
@@ -1552,7 +1552,7 @@ pub fn get_tasks_failed_total() -> &'static Counter<u64> {
     let meter = global::meter("orchestration_state_machine");
     TASKS_FAILED_TOTAL.get_or_init(|| {
         meter
-            .u64_counter("tasks_failed_total")
+            .u64_counter("ohc_task_failed_total")
             .with_description("Total number of failed shared tasks")
             .build()
     })
@@ -1562,7 +1562,7 @@ pub fn get_tasks_transitions_total() -> &'static Counter<u64> {
     let meter = global::meter("orchestration_state_machine");
     TASKS_TRANSITIONS_TOTAL.get_or_init(|| {
         meter
-            .u64_counter("tasks_transitions_total")
+            .u64_counter("ohc_task_transitions_total")
             .with_description("Total number of task state transitions")
             .build()
     })

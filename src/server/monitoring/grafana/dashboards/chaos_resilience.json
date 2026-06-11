@@ -251,7 +251,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(rate(ohc_sandbox_violation_total[5m])) by (EnvMode)",
+          "expr": "sum(rate(ohc_agent_sandbox_violations_total[5m])) by (EnvMode)",
           "interval": "",
           "legendFormat": "{{EnvMode}} Violations",
           "refId": "A"
