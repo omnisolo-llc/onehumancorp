@@ -104,7 +104,7 @@ build --action_env=CI
 
 common:bes --bes_timeout=600s
 common:bes --bes_results_url=https://buildbuddy.phslc.com/invocation/
-# common:bes --bes_backend=grpcs://buildbuddy-grpc.phslc.com
+common:bes --bes_backend=grpcs://buildbuddy-grpc.phslc.com
 common:bes --bes_header=x-buildbuddy-api-key=GZRlHAyqIIcVJw9dJ9n9
 
 # ── BuildBuddy  ──────────────────────────────────────
