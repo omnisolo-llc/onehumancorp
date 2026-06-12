@@ -124,7 +124,27 @@ pub struct OnboardingMetricsResponse {
     pub metrics: Vec<OnboardingMetric>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PromoterGenerateRequest {
+    pub product_id: Option<String>,
+    pub name: String,
+    pub description: Option<String>,
+    pub theme: Option<String>,
+    pub tenant: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PromoterGenerateResponse {
+    pub variants: Vec<PromoterVariant>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PromoterVariant {
+    pub platform: String,
+    pub content: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct WaitlistRequest {
     pub email: String,
     pub tenant_id: String,
@@ -136,6 +156,37 @@ pub struct WaitlistResponse {
     pub success: bool,
     pub position: i32,
     pub referral_link: String,
+}
+
+async fn handle_promoter_generate(
+    Extension(_state): Extension<GrowthState>,
+    Json(req): Json<PromoterGenerateRequest>,
+) -> impl IntoResponse {
+    let name = req.name;
+    let desc = req.description.unwrap_or_else(|| "Check it out now!".to_string());
+    let store_link = req.tenant.map(|t| format!("/bio/{}", t)).unwrap_or_else(|| "/store".to_string());
+    let theme_text = req.theme.map(|t| format!(" We're running a {} special!", t)).unwrap_or_else(|| "".to_string());
+
+    let instagram = format!("✨ Introducing {}! ✨\n\n{}{}\n\nShop the collection at the link in our bio! 🛍️\n\n⚡ Powered by OHC", name, desc, theme_text);
+    let twitter = format!("🚨 NEW ARRIVAL 🚨\n\nGet your hands on {}. {}{}\n\nShop now: {}\n\n⚡ Powered by OHC", name, desc, theme_text, store_link);
+    let email = format!("Subject: You're going to love our new {}! 🎉\n\nHi there,\n\nWe're thrilled to introduce our newest addition: {}.\n\n{}{}\n\nWe think it's exactly what you've been looking for. Click below to shop before it sells out.\n\nShop now: {}\n\nWarmly,\nThe Team\n\n⚡ Powered by OHC", name, name, desc, theme_text, store_link);
+
+    let variants = vec![
+        PromoterVariant {
+            platform: "Instagram".to_string(),
+            content: instagram,
+        },
+        PromoterVariant {
+            platform: "Twitter".to_string(),
+            content: twitter,
+        },
+        PromoterVariant {
+            platform: "Email".to_string(),
+            content: email,
+        },
+    ];
+
+    Json(PromoterGenerateResponse { variants })
 }
 
 async fn handle_waitlist(
@@ -163,6 +214,7 @@ where
         .route("/campaign/generate-cart", post(handle_generate_cart))
         .route("/campaign/send-cart", post(handle_send_cart))
         .route("/campaign/abandoned-carts-count", get(handle_abandoned_carts_count))
+        .route("/promoter/generate", post(handle_promoter_generate))
         .route("/storefront/track", post(handle_track_visitor))
         .route("/storefront/embed", get(handle_storefront_embed))
         .route("/customer-referral/embed", get(handle_customer_referral_embed))
