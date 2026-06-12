@@ -16,7 +16,11 @@ test.describe('Help Components', () => {
 
     // Wait for at least one article title to appear
     await expect(page.locator('h1:has-text("Help Center")')).toBeVisible();
-    await expect(page.locator('text=Getting Started')).toBeVisible();
+    await expect(page.locator('h2:has-text("Getting Started")')).toBeVisible();
+    await expect(page.locator('h3:has-text("Getting Started with Your Store")')).toBeVisible();
+
+    // Check videos loaded from API fallback
+    await expect(page.locator('h3:has-text("Video Tutorials")')).toBeVisible();
   });
 
   test('Contextual Tooltip triggers correctly', async ({ page }) => {

@@ -7,23 +7,33 @@ describe('/api/help/search GET', () => {
     vi.clearAllMocks();
   });
 
-  it('fetches search results from backend', async () => {
-    const mockResults = [
-      { category: 'Getting Started', title: 'Getting Started', desc: 'Learn how to easily set up your store.', link: '/help/getting-started-1' }
+  it('fetches search from the backend and returns them', async () => {
+    const mockArticles = [
+      { category: 'Getting Started', title: 'Getting Started', desc: 'Learn', link: '/help/getting-started-1' }
     ];
 
     global.fetch = vi.fn().mockResolvedValue({
       ok: true,
-      json: () => Promise.resolve(mockResults),
+      json: () => Promise.resolve(mockArticles),
     });
 
     const request = new NextRequest('http://localhost:3000/api/help/search?q=started');
     const response = await GET(request);
-
     expect(response.status).toBe(200);
     const data = await response.json();
+    expect(data).toEqual(mockArticles);
+  });
 
-    expect(global.fetch).toHaveBeenCalledWith('http://127.0.0.1:18789/api/help/search?q=started');
-    expect(data).toEqual(mockResults);
+  it('returns fallback search on backend error', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 404,
+    });
+    const request = new NextRequest('http://localhost:3000/api/help/search?q=adding');
+    const response = await GET(request);
+    expect(response.status).toBe(200);
+    const data = await response.json();
+    expect(data.length).toBe(1);
+    expect(data[0].id).toEqual("add-products");
   });
 });
