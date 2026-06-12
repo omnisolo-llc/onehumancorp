@@ -236,8 +236,9 @@ impl HierarchicalPromptBuilder {
 
         // 1. Server-controlled System Message (Highest Priority)
         if !self.server_system_message.is_empty() {
-            combined_system.push_str("[Server System Message]\n");
+            combined_system.push_str("<server_system_message>\n");
             combined_system.push_str(&self.server_system_message);
+            combined_system.push_str("\n</server_system_message>");
         }
 
         // 2. Tool Definitions
@@ -245,8 +246,9 @@ impl HierarchicalPromptBuilder {
             if !combined_system.is_empty() {
                 combined_system.push_str("\n\n");
             }
-            combined_system.push_str("[Tool Definitions]\n");
+            combined_system.push_str("<tool_definitions>\n");
             combined_system.push_str(&self.tool_definitions);
+            combined_system.push_str("\n</tool_definitions>");
         }
 
         // 3. Developer Instructions
@@ -254,8 +256,9 @@ impl HierarchicalPromptBuilder {
             if !combined_system.is_empty() {
                 combined_system.push_str("\n\n");
             }
-            combined_system.push_str("[Developer Instructions]\n");
+            combined_system.push_str("<developer_instructions>\n");
             combined_system.push_str(&self.developer_instructions);
+            combined_system.push_str("\n</developer_instructions>");
         }
 
         // 4. User Instructions
@@ -263,20 +266,22 @@ impl HierarchicalPromptBuilder {
             if !combined_system.is_empty() {
                 combined_system.push_str("\n\n");
             }
-            combined_system.push_str("[User Instructions]\n");
+            combined_system.push_str("<user_instructions>\n");
             combined_system.push_str(&self.user_instructions);
+            combined_system.push_str("\n</user_instructions>");
         }
 
         // High-Signal Re-injection (System Anchor)
         // If the system prompt is long, re-inject critical instructions at the end.
         if combined_system.chars().count() > 4000 {
             let core_objective = PromptBuilder::extract_core_objective(&self.user_instructions);
-            combined_system.push_str("\n\n[System Anchor: High-Signal Context Re-injection]\n");
+            combined_system.push_str("\n\n<system_anchor_high_signal_context_reinjection>\n");
             combined_system.push_str("To maintain focus in this large context, remember your core objective and constraints:\n");
             combined_system.push_str(&format!("Core Objective: {}\n", core_objective));
             if !self.developer_instructions.is_empty() {
                 combined_system.push_str(&format!("Developer Instructions: {}\n", self.developer_instructions));
             }
+            combined_system.push_str("</system_anchor_high_signal_context_reinjection>");
         }
 
         // 5. Conversation History (happens at run loop outside this builder)
@@ -496,7 +501,7 @@ mod tests {
         let builder = HierarchicalPromptBuilder::new(&cfg, &tools);
         let built = builder.build();
 
-        assert!(built.contains("[System Anchor: High-Signal Context Re-injection]"));
+        assert!(built.contains("<system_anchor_high_signal_context_reinjection>"));
         assert!(built.contains("Core Objective: Objective: Build a skyscraper."));
         assert!(built.contains("Developer Instructions: Use steel beams."));
     }

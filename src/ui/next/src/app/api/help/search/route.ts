@@ -1,5 +1,5 @@
 import { NextResponse, NextRequest } from 'next/server';
-import { fallbackArticles } from '../route';
+import { fallbackArticles } from '../fallback';
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);

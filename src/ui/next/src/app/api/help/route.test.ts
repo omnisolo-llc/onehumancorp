@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { GET, fallbackArticles } from './route';
+import { GET } from './route';
+import { fallbackArticles } from './fallback';
 import { NextRequest } from 'next/server';
 
 describe('/api/help GET', () => {
