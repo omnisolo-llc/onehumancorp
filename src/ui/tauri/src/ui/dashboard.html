@@ -644,6 +644,18 @@
         <p id="advanced-automations-status" style="display: none; color: #34C759; font-weight: 600; margin-top: 12px;">✅ Enabled</p>
       </div>
 
+      <!-- Viral Brand Kit Loop -->
+      <div class="ohc-growth-card" style="margin-bottom: 20px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <h2 style="margin-bottom: 4px;">Brand Kit Generator</h2>
+            <p style="margin-top: 0; margin-bottom: 0;">Auto-generate logos, palettes, and typography for your storefront.</p>
+          </div>
+          <button id="enable-brand-kit-btn" style="background-color: #0066FF; color: white; border: none; padding: 10px 16px; border-radius: 16px; cursor: pointer; transition: transform 0.1s;">Enable</button>
+        </div>
+        <p id="brand-kit-status" style="display: none; color: #34C759; font-weight: 600; margin-top: 12px;">✅ Unlocked! Go to settings to view.</p>
+      </div>
+
       <!-- Soft Paywall Modal -->
       <div id="soft-paywall-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.4); z-index: 10000; align-items: center; justify-content: center; backdrop-filter: blur(5px);">
         <div style="background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.6); border-radius: 16px; padding: 32px; max-width: 400px; width: 90%; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15); text-align: center;">
@@ -1034,11 +1046,15 @@
 
         // Soft Paywall Logic
         const enableAutomationsBtn = document.getElementById('enable-advanced-automations-btn');
+        const enableBrandKitBtn = document.getElementById('enable-brand-kit-btn');
+        const brandKitStatus = document.getElementById('brand-kit-status');
         const softPaywallModal = document.getElementById('soft-paywall-modal');
         const softPaywallCloseBtn = document.getElementById('soft-paywall-close-btn');
         const softPaywallShareBtn = document.getElementById('soft-paywall-share-btn');
         const softPaywallStatus = document.getElementById('soft-paywall-status');
         const advancedAutomationsStatus = document.getElementById('advanced-automations-status');
+
+        let currentSoftPaywallTarget = null; // 'automations' or 'brand-kit'
 
         if (enableAutomationsBtn) {
           enableAutomationsBtn.addEventListener('click', async () => {
@@ -1050,6 +1066,20 @@
               enableAutomationsBtn.style.display = 'none';
               advancedAutomationsStatus.style.display = 'block';
             } else {
+              currentSoftPaywallTarget = 'automations';
+              softPaywallModal.style.display = 'flex';
+            }
+          });
+        }
+
+        if (enableBrandKitBtn) {
+          enableBrandKitBtn.addEventListener('click', async () => {
+            const isPro = localStorage.getItem('has_pro') === 'true';
+            if (isPro) {
+              enableBrandKitBtn.style.display = 'none';
+              brandKitStatus.style.display = 'block';
+            } else {
+              currentSoftPaywallTarget = 'brand-kit';
               softPaywallModal.style.display = 'flex';
             }
           });
@@ -1064,7 +1094,12 @@
         if (softPaywallShareBtn) {
           softPaywallShareBtn.addEventListener('click', async () => {
             const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'DEFAULT';
-            const message = `I just discovered Advanced AI Automations on OneHumanCorp! This is going to revolutionize how I work. 🚀 #OneHumanCorp #SmallBiz https://ohc.app/invite/${tenantId}`;
+            let message = '';
+            if (currentSoftPaywallTarget === 'brand-kit') {
+                message = `I'm using OneHumanCorp to auto-generate my Brand Kit! 🎨 #OneHumanCorp #SmallBiz https://ohc.app/invite/${tenantId}`;
+            } else {
+                message = `I just discovered Advanced AI Automations on OneHumanCorp! This is going to revolutionize how I work. 🚀 #OneHumanCorp #SmallBiz https://ohc.app/invite/${tenantId}`;
+            }
             const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(message)}`;
 
             // Open share dialog
@@ -1092,8 +1127,22 @@
                 localStorage.setItem('has_pro', 'true');
                 setTimeout(() => {
                   softPaywallModal.style.display = 'none';
-                  enableAutomationsBtn.style.display = 'none';
-                  advancedAutomationsStatus.style.display = 'block';
+                  if (currentSoftPaywallTarget === 'brand-kit') {
+                    if (enableBrandKitBtn && brandKitStatus) {
+                      enableBrandKitBtn.style.display = 'none';
+                      brandKitStatus.style.display = 'block';
+                    }
+                  } else {
+                    if (enableAutomationsBtn && advancedAutomationsStatus) {
+                      enableAutomationsBtn.style.display = 'none';
+                      advancedAutomationsStatus.style.display = 'block';
+                    }
+                  }
+
+                  // Reset state for next use
+                  softPaywallStatus.style.display = 'none';
+                  softPaywallStatus.innerText = 'Verifying...';
+                  softPaywallShareBtn.style.display = 'block';
                 }, 1500);
               } else {
                 softPaywallStatus.innerText = 'Failed to unlock features. Please try again.';
