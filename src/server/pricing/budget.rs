@@ -36,7 +36,7 @@ impl BudgetManager {
         }
 
         let mut current_bits = self.current.load(Ordering::Relaxed);
-        let mut final_current = f64::from_bits(current_bits);
+        let final_current;
         loop {
             let current = f64::from_bits(current_bits);
             let next = current + amount;
