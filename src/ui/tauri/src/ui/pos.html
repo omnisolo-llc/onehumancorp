@@ -586,6 +586,21 @@
         try {
           const tenantId = localStorage.getItem('tenant_id') || 'default';
 
+          // Request Terminal Token
+          const tokenRes = await fetch('/api/v1/payments/terminal/token', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+            }
+          });
+          if (!tokenRes.ok) {
+              console.warn("Terminal token API returned an error status");
+          } else {
+              const tokenData = await tokenRes.json();
+              console.log("Terminal connection token fetched successfully");
+          }
+
           // Request Payment Intent
           const res = await fetch('/api/v1/payments/terminal/intent', {
             method: 'POST',
@@ -605,7 +620,10 @@
           // Even if it fails (unauthorized in test), we allow simulation for UI testing purposes
           if (res.ok) {
               const data = await res.json();
-
+              if (data.client_secret && typeof window !== 'undefined' && window.Terminal) {
+                  console.log("Initializing Terminal SDK with intent:", data.client_secret);
+                  // Mock or real call for Terminal SDK would go here to set up the reader
+              }
           } else {
               console.warn("Payment intent API returned error");
           }
