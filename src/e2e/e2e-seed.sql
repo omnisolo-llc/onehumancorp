@@ -371,6 +371,11 @@ ON CONFLICT (id) DO NOTHING;
 INSERT INTO business_milestones (id, tenant_id, milestone_type, reached_at)
 VALUES ('ms_e2e_10th_order', 'e2e-tenant', '10th_order', NOW())
 ON CONFLICT (id) DO NOTHING;
+
+-- Seed 100th order milestone for e2e-tenant
+INSERT INTO business_milestones (id, tenant_id, milestone_type, reached_at)
+VALUES ('ms_e2e_100th_order', 'e2e-tenant', '100th_order', NOW())
+ON CONFLICT (id) DO NOTHING;
 -- Seed real data for Chaos Report
 INSERT INTO telemetry_buffer (tenant_id, metric_name, metric_type, value, labels_json, timestamp, sync_status) VALUES
 ('test_org', 'api_latency', 'histogram', 12.0, '{}', CURRENT_TIMESTAMP, 'PENDING');
