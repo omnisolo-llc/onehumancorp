@@ -701,13 +701,16 @@
 
         <div class="link-container" id="link-container">
           <input type="text" class="link-input" id="referral-link" readonly value="" />
-          <button class="btn-secondary" id="dashboard-walkthrough-btn" data-tooltip="dashboard-walkthrough-btn" onclick="window.startWalkthrough([{selector: '#dashboard-title', title: 'Welcome', text: 'Welcome to your dashboard! This is your control center.'}, {selector: '#ai-savings-widget', title: 'AI Savings', text: 'Here you can see the time and effort your agents have saved you.'}])">Start Walkthrough</button>
         <div class="action-buttons">
             <button class="btn-secondary" id="copy-btn" data-tooltip="Copy the referral link to your clipboard.">Copy</button>
             <button class="btn-secondary" id="share-whatsapp-btn">Share on WhatsApp</button>
             <button class="btn-secondary" id="share-x-btn" style="background-color: #1DA1F2; color: white;">Share on X (Twitter)</button>
           </div>
         </div>
+      </div>
+
+      <div style="margin-top: 24px; display: flex; justify-content: center;">
+          <button class="btn-secondary" id="dashboard-walkthrough-btn" data-tooltip="dashboard-walkthrough-btn" onclick="window.startWalkthrough([{selector: '#dashboard-title', title: 'Welcome', text: 'Welcome to your dashboard! This is your control center.'}, {selector: '#ai-savings-widget', title: 'AI Savings', text: 'Here you can see the time and effort your agents have saved you.'}])">Start Walkthrough</button>
       </div>
 
 
@@ -1718,6 +1721,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 "nav-agents": "AI Helpers. These are your digital employees.",
                 "ohc-help-btn": "Need help? Click here to access our Help Center and tutorials.",
                 "search-input": "Search our knowledge base for help articles.",
+                "dashboard-walkthrough-btn": "Take a tour of the dashboard",
             };
         });
     }
@@ -2156,6 +2160,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 "nav-agents": "AI Helpers. These are your digital employees.",
                 "ohc-help-btn": "Need help? Click here to access our Help Center and tutorials.",
                 "search-input": "Search our knowledge base for help articles.",
+                "dashboard-walkthrough-btn": "Take a tour of the dashboard",
             };
         });
     }
@@ -2217,13 +2222,14 @@ function initWalkthrough() {
         // Create overlay
         const overlay = document.createElement('div');
         overlay.id = 'walkthrough-overlay';
-        overlay.className = 'fixed z-[90]';
+        overlay.className = 'fixed z-[90] ohc-walkthrough-overlay';
         overlay.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 99998;';
         document.body.appendChild(overlay);
 
         // Create bubble
         const bubble = document.createElement('div');
         bubble.id = 'walkthrough-bubble';
+        bubble.className = 'ohc-walkthrough-bubble visible';
         bubble.setAttribute('role', 'dialog');
         bubble.style.cssText = 'position: fixed; background: white; border-radius: 8px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif;';
         document.body.appendChild(bubble);
@@ -2245,7 +2251,7 @@ function initWalkthrough() {
             bubble.innerHTML = `
                 <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 8px;">
                     <h4 style="margin: 0; font-size: 16px; font-weight: bold;">${step.title || 'Tour'}</h4>
-                    <button id="wt-close" style="background: none; border: none; cursor: pointer; font-size: 18px;">&times;</button>
+                    <button id="wt-close" class="ohc-walkthrough-close" style="background: none; border: none; cursor: pointer; font-size: 18px;">&times;</button>
                 </div>
                 <p style="margin: 0; font-size: 14px; color: #333;">${step.content}</p>
                 <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;">
@@ -2679,6 +2685,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 "nav-store": "Your Storefront. This is where you manage what you sell.",
                 "nav-agents": "AI Helpers. These are your digital employees.",
                 "ohc-floating-help-btn": "Need help? Click here to access our Help Center and tutorials.",
+                "dashboard-walkthrough-btn": "Take a tour of the dashboard",
             };
         });
     }
@@ -2736,11 +2743,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const overlay = document.createElement('div');
             overlay.id = 'walkthrough-overlay';
+            overlay.className = 'ohc-walkthrough-overlay';
             overlay.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 99998;';
             document.body.appendChild(overlay);
 
             const bubble = document.createElement('div');
             bubble.id = 'walkthrough-bubble';
+            bubble.className = 'ohc-walkthrough-bubble visible';
             bubble.setAttribute('role', 'dialog');
             bubble.style.cssText = 'position: fixed; background: white; border-radius: 8px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif;';
             document.body.appendChild(bubble);
@@ -2760,7 +2769,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 bubble.innerHTML = `
                     <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 8px;">
                         <h4 style="margin: 0; font-size: 16px; font-weight: bold;">${step.title || 'Tour'}</h4>
-                        <button id="wt-close" style="background: none; border: none; cursor: pointer; font-size: 18px;">&times;</button>
+                        <button id="wt-close" class="ohc-walkthrough-close" style="background: none; border: none; cursor: pointer; font-size: 18px;">&times;</button>
                     </div>
                     <p style="margin: 0; font-size: 14px; color: #333;">${step.content || step.text}</p>
                     <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;">
