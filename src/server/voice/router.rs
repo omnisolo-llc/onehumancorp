@@ -162,6 +162,11 @@ mod tests {
             self.sent_messages.fetch_add(1, Ordering::SeqCst);
             Ok(())
         }
+
+        async fn send_whatsapp(&self, _to: &str, _from: &str, _body: &str) -> Result<(), String> {
+            self.sent_messages.fetch_add(1, Ordering::SeqCst);
+            Ok(())
+        }
     }
 
     struct ScriptedVoiceTurnPlanner {

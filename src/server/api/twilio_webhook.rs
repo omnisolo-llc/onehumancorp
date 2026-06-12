@@ -37,9 +37,18 @@ pub async fn twilio_webhook_post_handler(
 
     let sender_id = params.get("From").cloned().unwrap_or_else(|| "unknown".to_string());
     let _to_number = params.get("To").cloned().unwrap_or_else(|| "unknown".to_string());
-    let text = params.get("Body").cloned().unwrap_or_else(|| "".to_string());
+    let mut text = params.get("Body").cloned().unwrap_or_else(|| "".to_string());
 
-    if !text.is_empty() {
+    let num_media: i32 = params.get("NumMedia").and_then(|v| v.parse().ok()).unwrap_or(0);
+    for i in 0..num_media {
+        if let Some(media_url) = params.get(&format!("MediaUrl{}", i)) {
+            let media_type = params.get(&format!("MediaContentType{}", i)).cloned().unwrap_or_default();
+            let attachment_text = format!("\n[Attachment: {}]({})", media_type, media_url);
+            text.push_str(&attachment_text);
+        }
+    }
+
+    if !text.is_empty() || num_media > 0 {
         tracing::info!("Received Twilio message from {}: {}", sender_id, text);
 
         let pool = &state.db.pool;
@@ -72,7 +81,11 @@ pub async fn twilio_webhook_post_handler(
         };
 
         let inbox_id = Uuid::new_v4().to_string();
-        let source = "whatsapp".to_string();
+        let source = if _to_number.starts_with("whatsapp:") || sender_id.starts_with("whatsapp:") {
+            "whatsapp".to_string()
+        } else {
+            "sms".to_string()
+        };
 
         let insert_result = match &state.db.store {
             crate::db::DbStore::Postgres => {

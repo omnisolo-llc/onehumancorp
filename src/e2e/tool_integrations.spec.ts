@@ -81,6 +81,14 @@ test.describe('Tool Integrations UI', () => {
     await expect(integrationCard(page, 'Whereby').getByText('connected')).toBeVisible();
   });
 
+  test('can connect WhatsApp via Twilio', async ({ page }) => {
+    await integrationCard(page, 'WhatsApp via Twilio').getByRole('button', { name: 'Connect' }).click();
+    await expect(page.getByRole('heading', { name: 'Connect WhatsApp via Twilio' })).toBeVisible();
+    await expect(page.getByText('Connect your WhatsApp Business number via your Twilio account')).toBeVisible();
+    await page.getByRole('button', { name: 'Save & Connect' }).click();
+    await expect(page).toHaveURL(/\/inbox$/);
+  });
+
   test('can connect Front', async ({ page }) => {
     page.on('dialog', dialog => dialog.accept());
     await integrationCard(page, 'Front').getByRole('button', { name: 'Connect' }).click();

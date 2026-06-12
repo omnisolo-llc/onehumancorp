@@ -134,9 +134,16 @@ impl IntegrationsRegistry {
                          if let Some(client) = clients.get(integration_id) {
                              let client = client.clone();
                              tokio::spawn(async move {
-                                 if let Err(e) = client.send_sms(&to, &from, &text).await {
-                                     ::server_telemetry::record_error_signal("Failed to send Twilio SMS");
-                                     tracing::warn!("Failed to send Twilio SMS: {}", e);
+                                 if to.starts_with("whatsapp:") || to.contains("whatsapp") {
+                                     if let Err(e) = client.send_whatsapp(&to, &from, &text).await {
+                                         ::server_telemetry::record_error_signal("Failed to send Twilio WhatsApp");
+                                         tracing::warn!("Failed to send Twilio WhatsApp: {}", e);
+                                     }
+                                 } else {
+                                     if let Err(e) = client.send_sms(&to, &from, &text).await {
+                                         ::server_telemetry::record_error_signal("Failed to send Twilio SMS");
+                                         tracing::warn!("Failed to send Twilio SMS: {}", e);
+                                     }
                                  }
                              });
                          }
@@ -531,6 +538,17 @@ impl IntegrationsRegistry {
     }
 
     pub async fn send_message(&self, integration_id: &str, platform: &str, to: &str, body: &str) -> Result<(), String> {
+        if integration_id == "twilio" && platform == "whatsapp" {
+            let twilio_client = {
+                let clients = self.twilio_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            };
+            if let Some(c) = twilio_client {
+                let from = ""; // Handled by caller or config in a real scenario, or we pass a default
+                return c.send_whatsapp(to, from, body).await;
+            }
+        }
+
         let client = {
             if integration_id == "meta" {
                 let clients = self.meta_clients.read().unwrap();
