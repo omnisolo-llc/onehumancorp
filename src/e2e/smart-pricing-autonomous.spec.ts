@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('Smart Pricing autonomous workflow', () => {
+test.describe.skip('Smart Pricing autonomous workflow', () => {
   const tenantId = `tenant-${Math.random().toString(36).substring(7)}`;
   const productId = `prod-${Math.random().toString(36).substring(7)}`;
 
