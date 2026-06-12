@@ -581,21 +581,7 @@ pub async fn create_payment_intent_handler(
             req_data.quantity,
             req_data.order_id.as_deref(),
         ).await {
-            Ok(client_secret) => {
-                let pool = crate::db::get_pool();
-                let device_id = "default_device"; // Fallback device id for web terminal intent creation without active explicit session.
-                let _ = sqlx::query(
-                    "INSERT INTO pos_terminal_sessions (id, tenant_id, device_id, status, started_at, last_synced_at, offline_changes_count)
-                     VALUES ($1, $2, $3, 'ACTIVE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 0)
-                     ON CONFLICT (tenant_id, device_id) DO UPDATE SET last_synced_at = CURRENT_TIMESTAMP, status = 'ACTIVE'"
-                )
-                .bind(uuid::Uuid::new_v4().to_string())
-                .bind(&tenant_id)
-                .bind(device_id)
-                .execute(&pool)
-                .await;
-                Json(Ok(PaymentIntentResponse { client_secret, lock_id: lock_id_out }))
-            },
+            Ok(client_secret) => Json(Ok(PaymentIntentResponse { client_secret, lock_id: lock_id_out })),
             Err(e) => {
                 if let (Some(lock_id), Some(product_id)) = (&lock_id_out, &req_data.product_id) {
                     let quantity = req_data.quantity.unwrap_or(1);
