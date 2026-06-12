@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>QR Code Toolkit - OHC</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Lightweight QR Code Library -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <style>
+    body {
+      font-family: 'Inter', -apple-system, sans-serif;
+      background-color: #f8f9fa;
+      color: #1d1d1f;
+    }
+    .font-outfit { font-family: 'Outfit', sans-serif; }
+
+    .glass {
+      background: rgba(255, 255, 255, 0.7);
+      backdrop-filter: blur(30px) saturate(210%);
+      border: 1px solid rgba(255, 255, 255, 0.4);
+    }
+
+    @media print {
+      body * { visibility: hidden; }
+      #printable-qr, #printable-qr * { visibility: visible; }
+      #printable-qr {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        width: 100% !important;
+        background: white !important;
+        border: none !important;
+        box-shadow: none !important;
+      }
+      .no-print { display: none !important; }
+    }
+
+    /* Custom Switch Style */
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 40px;
+      height: 20px;
+    }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: #e2e8f0;
+      transition: .4s;
+      border-radius: 20px;
+    }
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 14px; width: 14px;
+      left: 3px; bottom: 3px;
+      background-color: white;
+      transition: .4s;
+      border-radius: 50%;
+    }
+    input:checked + .slider { background-color: #0066FF; }
+    input:checked + .slider:before { transform: translateX(20px); }
+
+    .qr-container canvas, .qr-container img {
+      margin: 0 auto;
+    }
+  </style>
+</head>
+<body class="p-4 md:p-8 min-h-screen">
+  <div class="max-w-4xl mx-auto">
+    <!-- Header -->
+    <header class="flex items-center justify-between mb-8 no-print">
+      <div class="flex items-center gap-4">
+        <a href="dashboard.html" class="p-2 hover:bg-gray-200 rounded-full transition-colors">
+          <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        </a>
+        <h1 class="text-2xl font-bold font-outfit">QR Code Toolkit 📱</h1>
+      </div>
+      <a href="dashboard.html" class="px-4 py-2 bg-white border border-gray-200 rounded-lg font-medium shadow-sm hover:shadow-md transition-all">Dashboard</a>
+    </header>
+
+    <main class="grid grid-cols-1 md:grid-cols-2 gap-8">
+      <!-- Config -->
+      <div class="space-y-6 no-print">
+        <section class="glass p-6 rounded-2xl shadow-xl">
+          <h2 class="text-xl font-bold font-outfit mb-4 flex items-center gap-2 text-blue-600">
+            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+            Configuration
+          </h2>
+
+          <div class="space-y-4">
+            <div>
+              <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Target Action</label>
+              <div class="space-y-2" id="action-selector">
+                <button data-action="storefront" class="action-btn w-full flex items-center gap-3 p-3 rounded-xl border border-blue-500 bg-blue-50 ring-2 ring-blue-500/20 text-left transition-all">
+                  <div class="p-2 rounded-lg bg-blue-500 text-white"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3"/></svg></div>
+                  <div><div class="font-bold text-sm">Visit Storefront</div><div class="text-[10px] text-gray-500">Direct to your shop</div></div>
+                </button>
+                <button data-action="review" class="action-btn w-full flex items-center gap-3 p-3 rounded-xl border border-gray-200 hover:border-amber-300 text-left transition-all">
+                  <div class="p-2 rounded-lg bg-gray-100 text-gray-500"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg></div>
+                  <div><div class="font-bold text-sm">Leave a Review</div><div class="text-[10px] text-gray-500">Boost your ranking</div></div>
+                </button>
+                <button data-action="referral" class="action-btn w-full flex items-center gap-3 p-3 rounded-xl border border-gray-200 hover:border-emerald-300 text-left transition-all">
+                  <div class="p-2 rounded-lg bg-gray-100 text-gray-500"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="8.5" cy="7" r="4"/><path d="M20 8v6M23 11h-6"/></svg></div>
+                  <div><div class="font-bold text-sm">Refer a Friend</div><div class="text-[10px] text-gray-500">Grow via word-of-mouth</div></div>
+                </button>
+              </div>
+            </div>
+
+            <div class="pt-2">
+              <div class="flex justify-between items-center mb-2">
+                <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest">Premium Styling</label>
+                <span id="pro-badge" class="text-[9px] bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-2 py-0.5 rounded-full font-bold">PRO</span>
+              </div>
+              <div class="space-y-3">
+                <div class="flex items-center justify-between p-3 rounded-xl border border-gray-100 bg-white/50">
+                  <div class="flex items-center gap-3"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" class="text-gray-400"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/></svg><span class="text-sm font-medium">Branded Frame</span></div>
+                  <label class="switch"><input type="checkbox" id="frame-toggle"><span class="slider"></span></label>
+                </div>
+                <div class="flex items-center justify-between p-3 rounded-xl border border-gray-100 bg-white/50">
+                  <div class="flex items-center gap-3"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" class="text-gray-400"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg><span class="text-sm font-medium">Center Logo</span></div>
+                  <label class="switch"><input type="checkbox" id="logo-toggle"><span class="slider"></span></label>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Analytics -->
+        <section class="bg-gray-900 p-6 rounded-2xl text-white shadow-xl relative overflow-hidden">
+          <div class="absolute top-0 right-0 p-4 opacity-5"><svg width="80" height="80" fill="currentColor" viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg></div>
+          <h2 class="text-xl font-bold font-outfit mb-2 flex items-center gap-2">📊 QR Analytics</h2>
+          <p class="text-gray-400 text-xs mb-4">See which posters or cards drive the most sales. Track scans in real-time.</p>
+          <button onclick="showPaywall()" class="w-full py-2 bg-blue-600 hover:bg-blue-500 rounded-lg text-sm font-bold transition-all">Activate Tracking</button>
+        </section>
+      </div>
+
+      <!-- Preview -->
+      <div class="space-y-6">
+        <section class="bg-white p-8 rounded-3xl shadow-2xl flex flex-col items-center text-center">
+          <h2 class="text-2xl font-bold font-outfit mb-2">Live Preview</h2>
+          <p class="text-gray-400 text-xs mb-8">Scan to test the flow before printing.</p>
+
+          <div id="printable-qr" class="p-8 rounded-[40px] transition-all duration-500 bg-gray-50">
+            <div class="bg-white p-6 rounded-3xl shadow-lg relative">
+              <div id="qrcode" class="qr-container"></div>
+
+              <div id="center-logo-overlay" class="hidden absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-12 h-12 bg-white rounded-xl shadow-md flex items-center justify-center p-1">
+                <img src="/favicon.ico" class="w-full h-full object-contain" alt="logo">
+              </div>
+
+              <div id="branded-label" class="hidden mt-4 text-center">
+                <div class="text-[10px] font-black tracking-widest text-blue-600 uppercase mb-0.5">OneHumanCorp</div>
+                <div id="tenant-display" class="text-sm font-bold text-gray-900">Maya Cakes</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-8 flex gap-3 w-full no-print">
+            <button onclick="copyLink()" class="flex-1 py-3 bg-gray-100 hover:bg-gray-200 rounded-xl font-bold text-sm transition-all">Copy Link</button>
+            <button onclick="window.print()" class="flex-1 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-sm shadow-lg shadow-blue-500/20 transition-all flex items-center justify-center gap-2">
+              <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6z"/></svg>
+              Print QR
+            </button>
+          </div>
+        </section>
+
+        <p class="text-center text-[10px] text-gray-400 font-medium no-print">SVG Vector Format • High Resolution • Infinite Scans</p>
+      </div>
+    </main>
+  </div>
+
+  <!-- Paywall -->
+  <div id="paywall" class="hidden fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm no-print">
+    <div class="bg-white rounded-[32px] max-w-sm w-full p-8 shadow-2xl text-center relative overflow-hidden">
+      <div class="absolute -top-12 -right-12 w-32 h-32 bg-blue-50 rounded-full blur-3xl"></div>
+      <div class="relative">
+        <div class="w-16 h-16 bg-blue-600 text-white rounded-2xl flex items-center justify-center mb-6 mx-auto shadow-lg shadow-blue-500/30">
+          <svg width="32" height="32" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+        </div>
+        <h3 class="text-2xl font-bold font-outfit mb-2">Unlock Pro Tools</h3>
+        <p class="text-gray-500 text-sm mb-8">Upgrade to use branded frames, custom logos, and scan analytics.</p>
+
+        <div class="space-y-3" id="paywall-actions">
+          <button id="share-claim-btn" onclick="claimTrial()" class="w-full py-4 bg-gray-900 hover:bg-black text-white rounded-xl font-bold flex items-center justify-center gap-2 transition-all">
+            <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.008 5.94H5.078z"/></svg>
+            Share on X to Unlock 7 Days
+          </button>
+          <button class="w-full py-4 bg-white border border-gray-200 text-gray-900 rounded-xl font-bold hover:bg-gray-50 transition-all">Upgrade — $19/mo</button>
+          <button onclick="hidePaywall()" class="text-gray-400 text-xs font-medium hover:text-gray-600 transition-all">Maybe later</button>
+        </div>
+
+        <div id="claim-success" class="hidden bg-emerald-50 text-emerald-700 p-4 rounded-xl border border-emerald-100 animate-pulse">
+          <div class="font-bold">✨ Trial Extended!</div>
+          <div class="text-xs">Enjoy 7 days of Pro features.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let isPro = localStorage.getItem('ohc_pro_status') === 'true';
+    let targetAction = 'storefront';
+    let qrcode;
+
+    function init() {
+      if (isPro) {
+        document.getElementById('pro-badge').textContent = 'PRO ACTIVE';
+        document.getElementById('pro-badge').classList.replace('from-blue-600', 'from-emerald-600');
+      }
+
+      qrcode = new QRCode(document.getElementById("qrcode"), {
+        text: getQRValue(),
+        width: 200,
+        height: 200,
+        colorDark : "#000000",
+        colorLight : "#ffffff",
+        correctLevel : QRCode.CorrectLevel.H
+      });
+
+      // Actions
+      document.querySelectorAll('.action-btn').forEach(btn => {
+        btn.onclick = () => {
+          document.querySelectorAll('.action-btn').forEach(b => {
+            b.classList.remove('border-blue-500', 'bg-blue-50', 'ring-2', 'ring-blue-500/20');
+            b.classList.add('border-gray-200');
+            b.querySelector('div').classList.replace('bg-blue-500', 'bg-gray-100');
+            b.querySelector('div').classList.replace('text-white', 'text-gray-500');
+          });
+          btn.classList.add('border-blue-500', 'bg-blue-50', 'ring-2', 'ring-blue-500/20');
+          btn.querySelector('div').classList.replace('bg-gray-100', 'bg-blue-500');
+          btn.querySelector('div').classList.replace('text-gray-500', 'text-white');
+          targetAction = btn.dataset.action;
+          updateQR();
+        };
+      });
+
+      // Toggles
+      document.getElementById('frame-toggle').onchange = (e) => {
+        if (!isPro) { e.target.checked = false; showPaywall(); return; }
+        document.getElementById('printable-qr').classList.toggle('bg-gray-50', !e.target.checked);
+        document.getElementById('printable-qr').classList.toggle('bg-gradient-to-br', e.target.checked);
+        document.getElementById('printable-qr').classList.toggle('from-blue-600', e.target.checked);
+        document.getElementById('printable-qr').classList.toggle('to-indigo-700', e.target.checked);
+        document.getElementById('branded-label').classList.toggle('hidden', !e.target.checked);
+      };
+
+      document.getElementById('logo-toggle').onchange = (e) => {
+        if (!isPro) { e.target.checked = false; showPaywall(); return; }
+        document.getElementById('center-logo-overlay').classList.toggle('hidden', !e.target.checked);
+      };
+    }
+
+    function getQRValue() {
+      const base = 'https://ohc.app';
+      const tenant = (localStorage.getItem('ohc_tenant_id') || 'maya-cakes').toLowerCase().replace(/\s+/g, '-');
+      if (targetAction === 'review') return `${base}/review/${tenant}`;
+      if (targetAction === 'referral') return `${base}/ref/${tenant}`;
+      return `${base}/s/${tenant}`;
+    }
+
+    function updateQR() {
+      qrcode.clear();
+      qrcode.makeCode(getQRValue());
+    }
+
+    function showPaywall() { document.getElementById('paywall').classList.remove('hidden'); }
+    function hidePaywall() { document.getElementById('paywall').classList.add('hidden'); }
+
+    function copyLink() {
+      const val = getQRValue();
+      navigator.clipboard.writeText(val);
+      alert('Copied: ' + val);
+    }
+
+    async function claimTrial() {
+      const btn = document.getElementById('share-claim-btn');
+      window.open('https://twitter.com/intent/tweet?text=' + encodeURIComponent('Using @OneHumanCorp branded QR codes to grow my biz! 🚀'), '_blank');
+
+      btn.disabled = true;
+      btn.textContent = 'Verifying...';
+
+      try {
+        const url = (window.__TAURI__ ? 'http://127.0.0.1:18789' : '') + '/api/v1/growth/trial-extension/claim';
+        const res = await fetch(url, { method: 'POST' });
+
+        if (res.ok) {
+          isPro = true;
+          localStorage.setItem('ohc_pro_status', 'true');
+          document.getElementById('paywall-actions').classList.add('hidden');
+          document.getElementById('claim-success').classList.remove('hidden');
+          setTimeout(() => { hidePaywall(); location.reload(); }, 2000);
+        } else {
+           // Demo fallback
+           isPro = true;
+           localStorage.setItem('ohc_pro_status', 'true');
+           document.getElementById('paywall-actions').classList.add('hidden');
+           document.getElementById('claim-success').classList.remove('hidden');
+           setTimeout(() => { hidePaywall(); location.reload(); }, 2000);
+        }
+      } catch (e) {
+        // Demo fallback
+        isPro = true;
+        localStorage.setItem('ohc_pro_status', 'true');
+        document.getElementById('paywall-actions').classList.add('hidden');
+        document.getElementById('claim-success').classList.remove('hidden');
+        setTimeout(() => { hidePaywall(); location.reload(); }, 2000);
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>
