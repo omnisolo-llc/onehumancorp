@@ -142,7 +142,7 @@ function MobileQuotingPageContent() {
       <main className="px-4 py-6 max-w-md mx-auto space-y-6">
 
         {/* Customer Context Card */}
-        <section className="glassmorphism rounded-2xl p-5 shadow-sm border border-white/40 dark:border-white/10">
+        <section className="glass-panel glassmorphism rounded-[16px] p-5 shadow-sm border border-white/40 dark:border-white/10">
           <div className="flex items-start space-x-4">
             {activeQuote.customerPhotoUrl ? (
               <img src={activeQuote.customerPhotoUrl} alt={activeQuote.customerName} className="w-12 h-12 rounded-full object-cover shadow-sm" />

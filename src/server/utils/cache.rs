@@ -90,7 +90,7 @@ where
         }
 
         // Then Redis
-        if let Some(mut conn) = self.get_redis_conn().await {
+        if let Some(mut conn) = HybridCache::<T>::get_redis_conn(self).await {
             use redis::AsyncCommands;
             let res: Result<Option<String>, _> = conn.get(key).await;
             if let Ok(Some(data)) = res {
@@ -117,7 +117,7 @@ where
         self.set_local(key, value.clone(), &tags, ttl);
 
         // 2. Set Redis if available
-        if let Some(mut conn) = self.get_redis_conn().await {
+        if let Some(mut conn) = HybridCache::<T>::get_redis_conn(self).await {
             use redis::AsyncCommands;
             let item = CacheItem { value, tags: tags.clone() };
             if let Ok(data) = serde_json::to_string(&item) {
@@ -206,7 +206,7 @@ where
         }
         tags_map.retain(|_, keys| !keys.is_empty());
 
-        if let Some(mut conn) = self.get_redis_conn().await {
+        if let Some(mut conn) = HybridCache::<T>::get_redis_conn(self).await {
             use redis::AsyncCommands;
             let _: Result<(), _> = conn.del(key).await;
         }
@@ -218,13 +218,13 @@ where
 
         if let Some((_, keys)) = tags_map.remove(tag) {
             let local = self.get_local();
-            for key in keys.iter() {
-                local.remove(key.key());
-                keys_to_delete.push(key.key().clone());
+            for key in keys.into_iter() {
+                local.remove(&key);
+                keys_to_delete.push(key.clone());
             }
         }
 
-        if let Some(mut conn) = self.get_redis_conn().await {
+        if let Some(mut conn) = HybridCache::<T>::get_redis_conn(self).await {
             use redis::AsyncCommands;
             let tag_key = format!("tag:{}", tag);
             let redis_keys: Result<Vec<String>, _> = conn.smembers(&tag_key).await;
