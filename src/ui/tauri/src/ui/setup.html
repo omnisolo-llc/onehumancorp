@@ -1013,21 +1013,21 @@
         finishBtn.addEventListener('click', () => {
            if (validateStep('step-template')) {
                const req = {
-                   businessType: state.workContext || state.work_context || "Local Service",
-                   companyName: state.businessName,
-                   companyDescription: state.tagline || "",
-                   sellingCategories: state.categories ? [state.categories] : [],
-                   paymentPref: "online",
-                   adminEmail: state.adminEmail || "admin@mybusiness.com",
-                   adminName: state.assistantName || "Admin",
-                   adminPassword: state.adminPassword || "password",
-                   websiteTemplate: state.templateSelection || "Modern",
-                   firstProductName: state.firstOffer || "First Offer",
-                   firstProductPrice: "0.00",
-                   domainChoice: "subdomain",
-                   priceType: "fixed",
+                   business_type: state.workContext || state.work_context || "Local Service",
+                   company_name: state.businessName,
+                   company_description: state.tagline || "",
+                   selling_categories: state.categories ? [state.categories] : [],
+                   payment_pref: "online",
+                   admin_email: state.adminEmail || "admin@mybusiness.com",
+                   admin_name: state.assistantName || "Admin",
+                   admin_password: state.adminPassword || "password",
+                   website_template: state.templateSelection || "Modern",
+                   first_product_name: state.firstOffer || "First Offer",
+                   first_product_price: "0.00",
+                   domain_choice: "subdomain",
+                   price_type: "fixed",
                    location: "Local",
-                   targetAudience: "General"
+                   target_audience: "General"
                };
 
                if (window.__TAURI__ && window.__TAURI__.core) {
