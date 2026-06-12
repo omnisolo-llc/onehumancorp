@@ -1225,6 +1225,74 @@
               }
           });
       }
+      document.querySelectorAll(".save-draft-btn").forEach(btn => {
+        btn.addEventListener("click", (e) => {
+            const originalText = e.target.innerText;
+            e.target.innerText = "Saving...";
+            e.target.disabled = true;
+
+            const backendUrl = (window.location.origin.includes("localhost") || window.location.protocol === "file:") ? "http://127.0.0.1:18789" : "";
+            const tenantId = localStorage.getItem("tenant_id") || "storefront";
+            const userId = localStorage.getItem("user_id") || "test-user";
+
+            const currentStepEl = document.querySelector(".step.active");
+            let currentStepIdx = 0;
+            if (currentStepEl) {
+                const steps = Array.from(document.querySelectorAll(".step"));
+                currentStepIdx = steps.indexOf(currentStepEl);
+            }
+
+            const payload = {
+                wizardState: state,
+                step: currentStepIdx
+            };
+
+            if (window.__TAURI__ && window.__TAURI__.core) {
+                window.__TAURI__.core.invoke("save_onboarding_state", { state: payload }).then(() => {
+                    e.target.innerText = "Saved!";
+                    setTimeout(() => {
+                        e.target.innerText = originalText;
+                        e.target.disabled = false;
+                    }, 3000);
+                }).catch(err => {
+                    console.error("Failed to save draft", err);
+                    e.target.innerText = "Error!";
+                    setTimeout(() => {
+                        e.target.innerText = originalText;
+                        e.target.disabled = false;
+                    }, 3000);
+                });
+            } else {
+                fetch(`${backendUrl}/api/onboarding/state`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-Tenant-ID": tenantId,
+                        "X-User-ID": userId
+                    },
+                    body: JSON.stringify(payload)
+                }).then(res => {
+                    if (res.ok) {
+                        e.target.innerText = "Saved!";
+                        setTimeout(() => {
+                            e.target.innerText = originalText;
+                            e.target.disabled = false;
+                        }, 3000);
+                    } else {
+                        throw new Error("Failed to save");
+                    }
+                }).catch(err => {
+                    console.error("Failed to save draft", err);
+                    e.target.innerText = "Error!";
+                    setTimeout(() => {
+                        e.target.innerText = originalText;
+                        e.target.disabled = false;
+                    }, 3000);
+                });
+            }
+        });
+      });
+
 
       if (finishBtn) {
         finishBtn.addEventListener('click', () => {
