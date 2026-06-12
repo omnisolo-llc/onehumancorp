@@ -730,6 +730,7 @@
       <div class="ohc-growth-card">
         <h2>Viral Campaigns</h2>
         <p>Acquire new users and grow your audience through viral sharing.</p>
+        <a href="seasonal-promo.html" id="seasonal-promo-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Seasonal Promotion Generator ✨</a>
         <a href="giveaway/index.html" id="giveaway-link" style="display: inline-block; background-color: #0066FF; color: white; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Viral Giveaway Generator</a>
         <a href="share-cards.html" id="share-cards-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Social Share Cards ✨</a>
         <a href="work-intake-widget.html" id="work-intake-link" style="display: inline-block; background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s;">Work-Intake Widget 📋</a>
@@ -2063,9 +2064,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 linkInput.value = link;
                 btn.style.display = 'none';
                 container.style.display = 'block';
-              }).catch((err) => {
+              }).catch(async (err) => {
                 console.error(err);
-                linkInput.value = "https://cloud.ohc.network/invite/fallback";
+                try {
+                  const tenantId = localStorage.getItem("tenant_id") || localStorage.getItem("tenant") || "default";
+                  const res = await fetch("/api/v1/growth/cloud-bridge/invite", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ team_id: tenantId, inviter_id: "owner", invitee_id: "pending" })
+                  });
+                  const data = await res.json();
+                  linkInput.value = data.invite_link || "https://cloud.ohc.network/invite/fallback";
+                } catch(e) {
+                  console.error(e);
+                  linkInput.value = "https://cloud.ohc.network/invite/fallback";
+                }
                 btn.style.display = 'none';
                 container.style.display = 'block';
               });
