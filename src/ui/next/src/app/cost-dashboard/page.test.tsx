@@ -132,7 +132,7 @@ describe('CostDashboardPage', () => {
     expect(screen.getByText('$510.00')).toBeDefined();
 
     // Budget Alert
-    expect(screen.queryByText('Budget Alert')).toBeDefined(); // Operations department usage reaches 100%
+    expect(screen.queryAllByText('Budget Alert').length).toBeGreaterThan(0); // Operations department usage reaches 100%
 
     // projected monthly cost
     expect(screen.getByText('$2185.71')).toBeDefined();
@@ -214,7 +214,7 @@ describe('CostDashboardPage', () => {
             actions_used: 16,
             action_limit: 20, // 16 / 20 = 0.8 (>= 0.8 threshold)
             usage_percent: 80,
-            soft_limit_reached: false,
+            soft_limit_reached: true,
           }
         ],
       },
@@ -250,7 +250,7 @@ describe('CostDashboardPage', () => {
       expect(screen.queryByTestId('cost-dashboard-loading')).toBeNull();
     });
 
-    expect(screen.getByText('Budget Alert')).toBeDefined();
+    expect(screen.queryAllByText('Budget Alert').length).toBeGreaterThan(0);
   });
 
   test('renders 0 limits properly', async () => {

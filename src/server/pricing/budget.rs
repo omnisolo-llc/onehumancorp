@@ -36,7 +36,7 @@ impl BudgetManager {
         }
 
         let mut current_bits = self.current.load(Ordering::Relaxed);
-        let mut final_current = f64::from_bits(current_bits);
+        let final_current;
         loop {
             let current = f64::from_bits(current_bits);
             let next = current + amount;
@@ -108,14 +108,12 @@ mod tests {
         assert!(manager.record_spend(50.0).unwrap());
         assert_eq!(manager.get_remaining(), 50.0);
         
-        // Exceed budget, it's a soft limit so it returns false but updates current
         assert!(!(manager.record_spend(60.0).unwrap()));
         assert_eq!(manager.get_remaining(), -10.0);
         
         let err = manager.record_spend(-10.0).unwrap_err();
         assert_eq!(err, "spend amount cannot be negative");
 
-        // test cents (soft limit still applies)
         assert!(!(manager.record_spend_cents(1000).unwrap())); // spend $10
         assert_eq!(manager.get_remaining(), -20.0);
         assert_eq!(manager.get_remaining_cents(), -2000);
@@ -131,7 +129,7 @@ mod tests {
         assert_eq!(manager.get_remaining(), 0.0);
         assert_eq!(manager.get_remaining_cents(), 0);
 
-        // Even an epsilon more should be over the limit (soft limit handled as false)
+        // Even an epsilon more should be over the limit
         assert!(!(manager.record_spend(0.01).unwrap()));
         let rem = manager.get_remaining();
         assert!(rem < -0.009 && rem > -0.011);
