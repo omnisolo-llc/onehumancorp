@@ -1,5 +1,5 @@
 -- +goose Up
--- Migration 119: Omnichannel Cart Architecture
+-- Migration 120: Omnichannel Cart Architecture
 
 CREATE TABLE IF NOT EXISTS carts (
     id TEXT PRIMARY KEY,
