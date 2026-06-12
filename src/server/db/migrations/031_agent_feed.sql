@@ -21,11 +21,3 @@ BEGIN
 END
 $$;
 
--- +goose Down
-DO $$
-BEGIN
-    DROP POLICY IF EXISTS tenant_isolation_agent_feed_items ON agent_feed_items;
-END
-$$;
-
-DROP TABLE IF EXISTS agent_feed_items CASCADE;

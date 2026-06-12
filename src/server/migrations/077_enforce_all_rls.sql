@@ -68,5 +68,3 @@ BEGIN
 END
 $$;
 
--- +goose Down
--- We don't drop the policies globally here to avoid destructive rollback of previously enforced RLS

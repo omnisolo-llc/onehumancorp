@@ -86,19 +86,3 @@ BEGIN
 END
 $$;
 
--- +goose Down
-DO $$
-BEGIN
-    DROP POLICY IF EXISTS tenant_isolation_assistant_workspaces ON assistant_workspaces;
-    DROP POLICY IF EXISTS tenant_isolation_assistant_tasks ON assistant_tasks;
-    DROP POLICY IF EXISTS tenant_isolation_assistant_messages ON assistant_messages;
-    DROP POLICY IF EXISTS tenant_isolation_assistant_artifacts ON assistant_artifacts;
-    DROP POLICY IF EXISTS tenant_isolation_assistant_file_changes ON assistant_file_changes;
-END
-$$;
-
-DROP TABLE IF EXISTS assistant_file_changes CASCADE;
-DROP TABLE IF EXISTS assistant_artifacts CASCADE;
-DROP TABLE IF EXISTS assistant_messages CASCADE;
-DROP TABLE IF EXISTS assistant_tasks CASCADE;
-DROP TABLE IF EXISTS assistant_workspaces CASCADE;

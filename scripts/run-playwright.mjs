@@ -110,7 +110,7 @@ async function main() {
   } finally {
     server.kill();
     if (process.env.E2E_SKIP_DOCKER !== 'true') {
-      await runCommand('docker', ['compose', '-f', 'deploy/docker-compose.e2e.yml', 'down']);
+      await runCommand('docker', ['compose', '-f', 'deploy/docker-compose.e2e.yml', 'down', '-v']);
     }
   }
 

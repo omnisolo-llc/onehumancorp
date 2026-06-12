@@ -57,20 +57,3 @@ BEGIN
 END
 $$;
 
--- +goose Down
-DO $$
-BEGIN
-    IF to_regclass('agent_action_requests') IS NOT NULL THEN
-        DROP POLICY IF EXISTS tenant_isolation_agent_action_requests ON agent_action_requests;
-        ALTER TABLE agent_action_requests DISABLE ROW LEVEL SECURITY;
-    END IF;
-
-    IF to_regclass('inventory_levels') IS NOT NULL THEN
-        DROP POLICY IF EXISTS tenant_isolation_inventory_levels ON inventory_levels;
-        ALTER TABLE inventory_levels DISABLE ROW LEVEL SECURITY;
-    END IF;
-END
-$$;
-
-DROP TABLE IF EXISTS agent_action_requests CASCADE;
-DROP TABLE IF EXISTS inventory_levels CASCADE;

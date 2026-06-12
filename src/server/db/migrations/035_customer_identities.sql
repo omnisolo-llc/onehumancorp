@@ -20,11 +20,3 @@ BEGIN
 END
 $$;
 
--- +goose Down
-DO $$
-BEGIN
-    DROP POLICY IF EXISTS tenant_isolation_customer_identities ON customer_identities;
-END
-$$;
-
-DROP TABLE IF EXISTS customer_identities CASCADE;

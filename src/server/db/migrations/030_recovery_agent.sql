@@ -35,13 +35,3 @@ BEGIN
 END
 $$;
 
--- +goose Down
-DO $$
-BEGIN
-    DROP POLICY IF EXISTS tenant_isolation_recovery_campaigns ON recovery_campaigns;
-    DROP POLICY IF EXISTS tenant_isolation_recovery_attempts ON recovery_attempts;
-END
-$$;
-
-DROP TABLE IF EXISTS recovery_attempts CASCADE;
-DROP TABLE IF EXISTS recovery_campaigns CASCADE;

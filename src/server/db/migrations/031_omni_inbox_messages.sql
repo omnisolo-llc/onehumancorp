@@ -25,11 +25,3 @@ BEGIN
 END
 $$;
 
--- +goose Down
-DO $$
-BEGIN
-    DROP POLICY IF EXISTS tenant_isolation_omni_inbox_messages ON omni_inbox_messages;
-END
-$$;
-
-DROP TABLE IF EXISTS omni_inbox_messages CASCADE;
