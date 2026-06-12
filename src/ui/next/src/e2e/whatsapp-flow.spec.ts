@@ -13,16 +13,14 @@ test.describe('WhatsApp Flow CUJ', () => {
 
     await page.goto('/integrations');
 
-    const whatsappCard = page.locator('h3', { hasText: 'WhatsApp Business (Twilio)' }).locator('..');
+    const whatsappCard = page.locator('h3', { hasText: 'WhatsApp Cloud API' }).locator('..');
     await whatsappCard.getByRole('button', { name: /Connect/i }).click();
 
-    await expect(page.getByRole('heading', { name: /Connect Twilio WhatsApp/i })).toBeVisible();
-    await page.getByLabel(/Account SID/i).fill('AC1234567890');
-    await page.getByLabel(/Auth Token/i).fill('token123');
-    await page.getByLabel(/WhatsApp Number/i).fill('whatsapp:+14155238886');
-    await page.getByRole('button', { name: /Connect Twilio/i }).click();
+    await expect(page.getByRole('heading', { name: /Connect WhatsApp/i })).toBeVisible();
 
-    await expect(page.getByText(/Twilio WhatsApp connected/i)).toBeVisible();
+    await page.getByRole('button', { name: /Continue with Meta/i }).click();
+
+    await expect(page.getByText(/WhatsApp Cloud API connected./i)).toBeVisible();
 
     // 2. Trigger the Ambassador's draft reply via a real API call
     // We need to use the actual internal server URL

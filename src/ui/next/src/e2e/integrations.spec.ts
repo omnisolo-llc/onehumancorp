@@ -15,7 +15,16 @@ test.describe('Integrations Loop', () => {
         await expect(page.locator('h3:has-text("Resend")')).toBeVisible();
         await expect(page.locator('h3:has-text("Meta Graph API")')).toBeVisible();
         await expect(page.locator('h3:has-text("Front")')).toBeVisible();
+        await expect(page.locator('h3:has-text("WhatsApp Cloud API")')).toBeVisible();
         await expect(page.locator('h3:has-text("Zoom")')).toBeVisible();
+
+        // Let's connect Twilio Conversations
+        const twilioCard = page.locator('h3', { hasText: 'Twilio Conversations' }).locator('..');
+        const connectTwilioButton = twilioCard.getByRole('button', { name: 'Connect' });
+        await connectTwilioButton.click();
+        await expect(page.getByRole('heading', { name: /Connect Twilio Conversations/i })).toBeVisible();
+        await page.getByRole('button', { name: /Save & Connect/i }).click();
+        await expect(page.getByText(/Twilio Conversations connected./i)).toBeVisible();
 
         // Let's connect Mercado Pago
         const mercadoCard = page.locator('h3', { hasText: 'Mercado Pago' }).locator('..');
