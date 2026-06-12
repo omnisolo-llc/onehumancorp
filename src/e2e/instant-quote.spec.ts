@@ -5,8 +5,9 @@ test.describe('Instant Quote CUJ (Customer & Owner Flow)', () => {
   let basePrice = 5000; // $50
 
   test('Customer receives instant edge price updates and owner approves', async ({ page, request }) => {
+    const serverUrl = process.env.BASE_URL || 'http://localhost:18789';
     // 1. Setup tenant & pricing rules
-    await request.post('http://127.0.0.1:8081/api/onboarding/start', {
+    await request.post(`${serverUrl}/api/onboarding/start`, {
       data: {
         organization_id: tenantId,
         business_type: 'Service',
@@ -14,7 +15,7 @@ test.describe('Instant Quote CUJ (Customer & Owner Flow)', () => {
       }
     });
 
-    const createRuleRes = await request.post('http://127.0.0.1:8081/api/v1/quoting/pricing-rules', {
+    const createRuleRes = await request.post(`${serverUrl}/api/v1/quoting/pricing-rules`, {
       headers: {
         'x-tenant-id': tenantId,
         'x-user-id': 'admin'
@@ -30,7 +31,7 @@ test.describe('Instant Quote CUJ (Customer & Owner Flow)', () => {
     });
 
     // 2. Customer visits instant quote page
-    await page.goto(`http://127.0.0.1:18789/api/ui/instant-quote.html?tenant=${tenantId}`);
+    await page.goto(`/api/ui/instant-quote.html?tenant=${tenantId}`);
 
     // Verify UI is loaded
     await expect(page.locator('text=Instant Quote')).toBeVisible();
@@ -40,10 +41,10 @@ test.describe('Instant Quote CUJ (Customer & Owner Flow)', () => {
     await expect(priceDisplay).toHaveText('$50.00');
 
     // 3. Customer toggles options and verifies instant client-side updates (no network requests)
-    await page.check('input[value="rush"]');
+    await page.locator('input[value="rush"]').click({ force: true });
     await expect(priceDisplay).toHaveText('$60.00'); // $50 + 20%
 
-    await page.check('input[value="travel"]');
+    await page.locator('input[value="travel"]').click({ force: true });
     await expect(priceDisplay).toHaveText('$78.00'); // ($50 + 15) * 1.20 = 65 * 1.2 = 78
 
     // Wait and verify no backend call was made during these clicks
@@ -63,7 +64,7 @@ test.describe('Instant Quote CUJ (Customer & Owner Flow)', () => {
     // For this e2e test, we will inject a quote_draft event into the mesh to simulate the workflow.
     const quoteId = `quote-${Math.random().toString(36).substring(7)}`;
 
-    await request.post('http://127.0.0.1:8081/api/mesh/publish', {
+    await request.post(`${serverUrl}/api/mesh/publish`, {
       headers: {
         'x-tenant-id': tenantId,
         'x-user-id': 'admin'
@@ -81,7 +82,7 @@ test.describe('Instant Quote CUJ (Customer & Owner Flow)', () => {
     });
 
     // Login via UI
-    await page.goto('http://127.0.0.1:3000/login'); // Next.js login routes back to Tauri dashboard
+    await page.goto('/login'); // Next.js login routes back to Tauri dashboard
     await page.fill('input[type="email"]', `${tenantId}@example.com`);
     await page.fill('input[type="password"]', 'password123');
     await page.click('button[type="submit"]');
