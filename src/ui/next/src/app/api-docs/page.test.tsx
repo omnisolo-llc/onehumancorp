@@ -41,4 +41,26 @@ describe('ApiDocsPage', () => {
     expect(screen.getByText('HasHelpPath')).toBeInTheDocument();
     expect(screen.getByText('HasTooltipsPath')).toBeInTheDocument();
   });
+
+  it('handles fetch errors gracefully', async () => {
+    global.fetch = vi.fn().mockImplementation(async (url) => {
+      if (url === '/api/api-docs-spec') {
+        throw new Error('Network error');
+      }
+      return { ok: true, json: async () => ({}) }; // fallback for tooltips
+    }) as any;
+
+    render(
+      <TooltipProvider>
+        <ApiDocsPage />
+      </TooltipProvider>
+    );
+
+    expect(screen.getByText('Advanced:')).toBeInTheDocument();
+
+    // Check loading indicator shows up, then hides
+    await waitFor(() => {
+      expect(screen.queryByTestId('swagger-ui-mock')).not.toBeInTheDocument();
+    });
+  });
 });

@@ -51,9 +51,37 @@ test.describe('Dashboard', () => {
 });
 
 test.describe('Documentation Pages', () => {
-  test('should display Help Center main page', async ({ page }) => {
+  test('should display Help Center main page and perform search', async ({ page, memberPage }) => {
+    for (const testPage of [page, memberPage]) {
+      await testPage.goto('/help');
+      await expect(testPage.locator('h1', { hasText: 'Help Center' })).toBeVisible();
+
+      const searchInput = testPage.getByPlaceholder('Search for help articles and videos...');
+      await expect(searchInput).toBeVisible();
+      await searchInput.fill('store');
+
+      await expect(testPage.locator('text=Adding Products').first()).toBeVisible({ timeout: 10000 });
+
+      await searchInput.fill('nonexistentxyz123');
+      await expect(testPage.getByText(/No results found matching/)).toBeVisible();
+
+      const askAIBtn = testPage.getByRole('button', { name: 'Ask AI Support Agent' });
+      await expect(askAIBtn).toBeVisible();
+    }
+  });
+
+  test('should open a video tutorial', async ({ page }) => {
     await page.goto('/help');
-    await expect(page.locator('h1', { hasText: 'Help Center' })).toBeVisible();
+    await expect(page.getByText('Help Center')).toBeVisible();
+
+    const videoCard = page.locator('.app-card').first();
+    await expect(videoCard).toBeVisible();
+    await videoCard.click();
+
+    const closeBtn = page.getByRole('button', { name: 'Close video' });
+    await expect(closeBtn).toBeVisible();
+    await closeBtn.dispatchEvent('click');
+    await expect(closeBtn).not.toBeVisible();
   });
 
   test('should display Changelog page', async ({ page }) => {
