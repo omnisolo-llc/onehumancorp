@@ -449,9 +449,34 @@
         <p>Zero tech skills needed. We do the heavy lifting. Review and add any extra details to help our AI generate the perfect store.</p>
 
         <div class="btn-group" style="margin-top: 32px;">
-          <button class="next-step-btn" data-next="step-context">Start My Business</button>
-          <button type="button" class="btn-secondary" onclick="goToStep('step-instant')">Instant Build</button>
+          <button type="button" class="btn-primary" onclick="goToStep('step-chat-setup')">Chat Setup</button>
+          <button class="btn-secondary" data-next="step-context" style="margin-top: 12px;">Start My Business (Manual)</button>
+          <button type="button" class="btn-secondary" onclick="goToStep('step-instant')" style="margin-top: 12px;">Instant Build</button>
         </div>
+      <!-- Step Chat: Zero-Click Onboarding -->
+      <div class="step" id="step-chat-setup">
+        <button onclick="goToStep('step-initial')" style="background: none; border: none; color: #0066FF; padding: 0; box-shadow: none; width: auto; font-size: 14px; min-height: auto; margin-bottom: 16px; display: flex; align-items: center; gap: 4px; font-weight: 600;">
+          <svg style="width: 16px; height: 16px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg> Back
+        </button>
+        <h1>Hi! I'm your OHC assistant.</h1>
+        <p>Let's get your business online. What's the name of your business and what do you do?</p>
+
+        <textarea id="chat-input-bio" class="glassmorphism" placeholder="What's the name of your business..." rows="4" style="resize: none;"></textarea>
+
+        <div style="margin-top: 16px; margin-bottom: 16px;">
+            <p style="font-weight: 500; font-size: 14px; color: rgba(255, 255, 255, 0.8);">Great! Upload a couple of photos of your cakes.</p>
+            <div style="display: flex; align-items: center; justify-content: center; min-height: 44px; background: rgba(255, 255, 255, 0.05); border: 1px dashed rgba(255, 255, 255, 0.2); border-radius: 8px; cursor: pointer;">
+                <span style="color: #0066FF; font-weight: 600; font-size: 14px;">+ Upload Photos</span>
+            </div>
+        </div>
+
+        <div id="chat-error" class="error-msg" style="margin-bottom: 20px;"></div>
+
+        <div class="btn-group" style="margin-top: 24px;">
+          <button id="chat-generate-btn">Generate Storefront</button>
+        </div>
+      </div>
+
       </div>
 
       <!-- Step Instant: Instant Build -->
@@ -1086,7 +1111,116 @@
           });
       });
 
-      const generateStorefrontBtn = document.getElementById('generate-storefront-btn');
+
+      const chatGenerateBtn = document.getElementById('chat-generate-btn');
+      if (chatGenerateBtn) {
+          const chatInput = document.getElementById('chat-input-bio');
+
+          chatInput.addEventListener('keydown', (e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  chatGenerateBtn.click();
+              }
+          });
+
+          chatGenerateBtn.addEventListener('click', async () => {
+              const bioInput = chatInput.value;
+              if (!bioInput.trim()) {
+                  document.getElementById('chat-error').innerText = "Please tell us about your business.";
+                  document.getElementById('chat-error').style.display = 'block';
+                  return;
+              }
+
+              document.getElementById('chat-error').style.display = 'none';
+              chatGenerateBtn.disabled = true;
+              chatGenerateBtn.innerHTML = '<div class="spinner"></div>Analyzing photos... Drafting product descriptions...';
+
+              try {
+                  const backendUrl = (window.location.origin.includes('localhost') || window.location.protocol === 'file:') ? 'http://127.0.0.1:18789' : '';
+                  const tenantIdStr = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront';
+                  const userIdStr = localStorage.getItem('user_id') || 'test-user';
+
+                  let intakeData = null;
+
+                  if (window.__TAURI__ && window.__TAURI__.core) {
+                     intakeData = await window.__TAURI__.core.invoke("process_intake", { input: bioInput });
+                  } else {
+                     const res = await fetch(`${backendUrl}/api/onboarding/intake`, {
+                         method: 'POST',
+                         headers: {
+                             'Content-Type': 'application/json',
+                             'X-Tenant-ID': tenantIdStr,
+                             'X-User-ID': userIdStr
+                         },
+                         body: JSON.stringify({ description: bioInput })
+                     });
+                     if (!res.ok) {
+                         const errData = await res.json().catch(()=>({}));
+                         throw new Error(errData.error || errData.message || 'Failed to analyze business details');
+                     }
+                     intakeData = await res.json();
+                  }
+
+                  const req = {
+                      companyName: intakeData.business_name || "My Business",
+                      businessType: intakeData.business_type || "Business",
+                      sellingCategories: intakeData.categories || [],
+                      location: intakeData.location || "Online",
+                      targetAudience: intakeData.target_audience || "Everyone",
+                      initialProducts: (intakeData.initial_products || []).map(p => ({
+                          name: p.name,
+                          price: p.price,
+                          description: p.description,
+                          variants: p.variants || []
+                      })),
+                      companyDescription: bioInput,
+                      paymentPref: "online",
+                      adminName: "Owner",
+                      adminEmail: "admin@example.com",
+                      adminPassword: "password123",
+                      websiteTemplate: "Modern",
+                      firstProductName: "Sample Service",
+                      firstProductPrice: "100",
+                      domainChoice: "subdomain",
+                      priceType: "fixed"
+                  };
+
+                  if (window.__TAURI__ && window.__TAURI__.core) {
+                     await window.__TAURI__.core.invoke("start_onboarding", { req });
+                  } else {
+                     const startRes = await fetch(`${backendUrl}/api/onboarding/start`, {
+                         method: 'POST',
+                         headers: {
+                             'Content-Type': 'application/json',
+                             'X-Tenant-ID': tenantIdStr,
+                             'X-User-ID': userIdStr
+                         },
+                         body: JSON.stringify(req)
+                     });
+                     if (!startRes.ok) {
+                         const errData = await startRes.json().catch(()=>({}));
+                         throw new Error(errData.error || errData.message || 'Failed to start onboarding');
+                     }
+                     const startData = await startRes.json();
+                     if (startData.organization_id) {
+                         localStorage.setItem('tenant_id', startData.organization_id);
+                     }
+                  }
+
+                  // Go to success
+                  goToStep('step-success');
+
+              } catch (err) {
+                  console.error("Instant build error:", err);
+                  document.getElementById('chat-error').innerText = err.message || "Failed to analyze or launch.";
+                  document.getElementById('chat-error').style.display = 'block';
+                  chatGenerateBtn.disabled = false;
+                  chatGenerateBtn.innerText = "Generate Storefront";
+              }
+          });
+      }
+
+            const generateStorefrontBtn = document.getElementById('generate-storefront-btn');
       if (generateStorefrontBtn) {
           generateStorefrontBtn.addEventListener('click', async () => {
               const bioInput = document.getElementById('instant-bio').value;
