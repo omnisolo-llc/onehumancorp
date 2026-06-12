@@ -1,0 +1,66 @@
+-- +goose Up
+-- Migration 119: Omnichannel Cart Architecture
+
+CREATE TABLE IF NOT EXISTS carts (
+    id TEXT PRIMARY KEY,
+    tenant_id TEXT REFERENCES tenants(id) ON DELETE CASCADE,
+    channel TEXT NOT NULL DEFAULT 'online', -- 'online' | 'in_store'
+    status TEXT NOT NULL DEFAULT 'active', -- 'active' | 'pending_payment' | 'completed' | 'abandoned'
+    customer_id TEXT REFERENCES customers(id) ON DELETE SET NULL,
+    total_amount DECIMAL DEFAULT 0,
+    currency TEXT DEFAULT 'USD',
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS cart_items (
+    id TEXT PRIMARY KEY,
+    tenant_id TEXT REFERENCES tenants(id) ON DELETE CASCADE,
+    cart_id TEXT REFERENCES carts(id) ON DELETE CASCADE,
+    product_id TEXT REFERENCES products(id) ON DELETE CASCADE,
+    variant_id TEXT REFERENCES product_variants(id) ON DELETE CASCADE,
+    quantity INT NOT NULL DEFAULT 1,
+    price_at_addition DECIMAL DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+DO $$
+BEGIN
+    IF to_regclass('carts') IS NOT NULL THEN
+        ALTER TABLE carts ENABLE ROW LEVEL SECURITY;
+        IF NOT EXISTS (
+            SELECT 1 FROM pg_policies WHERE schemaname = current_schema() AND tablename = 'carts' AND policyname = 'tenant_isolation_carts'
+        ) THEN
+            CREATE POLICY tenant_isolation_carts ON carts USING (tenant_id::text = current_setting('app.current_tenant', true)) WITH CHECK (tenant_id::text = current_setting('app.current_tenant', true));
+        END IF;
+    END IF;
+
+    IF to_regclass('cart_items') IS NOT NULL THEN
+        ALTER TABLE cart_items ENABLE ROW LEVEL SECURITY;
+        IF NOT EXISTS (
+            SELECT 1 FROM pg_policies WHERE schemaname = current_schema() AND tablename = 'cart_items' AND policyname = 'tenant_isolation_cart_items'
+        ) THEN
+            CREATE POLICY tenant_isolation_cart_items ON cart_items USING (tenant_id::text = current_setting('app.current_tenant', true)) WITH CHECK (tenant_id::text = current_setting('app.current_tenant', true));
+        END IF;
+    END IF;
+END
+$$;
+
+-- +goose Down
+DO $$
+BEGIN
+    IF to_regclass('carts') IS NOT NULL THEN
+        DROP POLICY IF EXISTS tenant_isolation_carts ON carts;
+        ALTER TABLE carts DISABLE ROW LEVEL SECURITY;
+    END IF;
+
+    IF to_regclass('cart_items') IS NOT NULL THEN
+        DROP POLICY IF EXISTS tenant_isolation_cart_items ON cart_items;
+        ALTER TABLE cart_items DISABLE ROW LEVEL SECURITY;
+    END IF;
+END
+$$;
+
+DROP TABLE IF EXISTS cart_items CASCADE;
+DROP TABLE IF EXISTS carts CASCADE;
