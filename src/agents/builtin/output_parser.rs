@@ -217,6 +217,15 @@ impl<'a, T: DeserializeOwned> RetryWithErrorOutputParser<'a, T> {
                         );
                         current_req.messages.push(Message::user(error_context));
                     }
+
+                    // Apply Observation Masking before the next iteration to prevent context growth
+                    crate::observation_masking::apply_observation_masking(
+                        &mut current_req.messages,
+                        1,   // threshold
+                        100, // size_limit
+                        10   // element_limit
+                    );
+
                     attempt += 1;
                 }
             }
@@ -713,5 +722,69 @@ mod retry_tests {
             }
             _ => panic!("Expected Transient error for exhaustion"),
         }
+    }
+
+    #[tokio::test]
+    async fn test_retry_parser_context_masking_on_retries() {
+        // We will mock an LLM client that records all the requests it receives,
+        // and returns a failed tool call three times, and then a success.
+        struct RecordingLlmClient {
+            requests: tokio::sync::Mutex<Vec<ChatRequest>>,
+        }
+
+        #[async_trait::async_trait]
+        impl LlmClientForParser for RecordingLlmClient {
+            async fn chat(
+                &self,
+                req: ChatRequest,
+            ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+                let mut reqs = self.requests.lock().await;
+                reqs.push(req.clone());
+
+                let count = reqs.len();
+                if count <= 3 {
+                    // return malformed parsing error inducing response
+                    let large_string = "A".repeat(500); // Exceeds size_limit
+                    Ok(create_tool_call_resp(
+                        "structured_output",
+                        serde_json::json!({"data": {"wrong_field": large_string}}),
+                    ))
+                } else {
+                    Ok(create_tool_call_resp(
+                        "structured_output",
+                        serde_json::json!({"data": {"result": "success_after_masking"}}),
+                    ))
+                }
+            }
+        }
+
+        let recording_client = Arc::new(RecordingLlmClient {
+            requests: tokio::sync::Mutex::new(vec![]),
+        });
+
+        let req = create_test_req();
+        let parser: Box<dyn OutputParser<TestOutput> + Send + Sync> =
+            Box::new(StructuredOutputParser::new());
+        let retry_parser =
+            RetryWithErrorOutputParser::new(parser, recording_client.clone() as Arc<dyn LlmClientForParser>);
+        let result: Result<TestOutput, _> = retry_parser.parse_with_prompt(req, 5).await;
+
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap().result, "success_after_masking");
+
+        let reqs = recording_client.requests.lock().await;
+        assert_eq!(reqs.len(), 4);
+
+        // In the 4th request (index 3), we should see that the older tool results have been masked.
+        // Specifically, the large string of 'A's should have been replaced with a mask string.
+        let final_req = &reqs[3];
+
+        let stringified_req = serde_json::to_string(&final_req).unwrap();
+        // The first and second retry should have been masked because threshold is 1
+        assert!(stringified_req.contains("[Masked: content truncated due to size limit]"));
+        // Ensure that we don't have multiple copies of the 500 'A's
+        let occurrences = stringified_req.matches(&"A".repeat(500)).count();
+        // At most 1 occurrence (the most recent one, since threshold = 1 leaves the latest unmasked if we count threshold that way, but wait, if it's masked, it's masked).
+        assert!(occurrences <= 1, "Expected older large string arguments to be masked, but found {} occurrences", occurrences);
     }
 }

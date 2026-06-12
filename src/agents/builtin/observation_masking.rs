@@ -1,4 +1,4 @@
-use ohc_builtin_agent_core::types::{Message, Role};
+use crate::types::{Message, Role};
 use serde_json::Value;
 
 /// Applies JetBrains Observation Masking.
