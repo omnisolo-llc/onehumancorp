@@ -647,18 +647,41 @@ impl AppServer {
                 .unwrap_or(".ralph_progress.json")
                 .to_string();
 
-            let ralph = crate::ralph_loop::RalphLoop::new(
-                self.runner.core.agent.clone(),
-                self.runner.core.runtime_config.clone(),
-                &progress_file,
-            );
+            let agent = self.runner.core.agent.clone();
+            let config = self.runner.core.runtime_config.clone();
+            let pf_clone = progress_file.clone();
 
-            match ralph.run(&task).await {
-                Ok(_) => {
+            // Run in background for long-running task support
+            tokio::spawn(async move {
+                let ralph = crate::ralph_loop::RalphLoop::new(agent, config, &pf_clone);
+                if let Err(e) = ralph.run(&task).await {
+                    tracing::error!("Background Ralph Loop failed: {}", e);
+                }
+            });
+
+            let resp = JsonRpcResponse {
+                jsonrpc: "2.0".to_string(),
+                id: req.id,
+                result: Some(serde_json::json!({ "status": "started", "progress_file": progress_file })),
+                error: None,
+                meta: None,
+            };
+            serde_json::to_string(&resp).unwrap()
+        } else if req.method == "get_ralph_status" {
+            let progress_file = req
+                .params
+                .get("progress_file")
+                .and_then(|v| v.as_str())
+                .unwrap_or(".ralph_progress.json")
+                .to_string();
+
+            match tokio::fs::read_to_string(&progress_file).await {
+                Ok(content) => {
+                    let progress: serde_json::Value = serde_json::from_str(&content).unwrap_or(serde_json::json!({ "error": "Invalid progress file format" }));
                     let resp = JsonRpcResponse {
                         jsonrpc: "2.0".to_string(),
                         id: req.id,
-                        result: Some(serde_json::json!({ "status": "success" })),
+                        result: Some(progress),
                         error: None,
                         meta: None,
                     };
@@ -670,8 +693,8 @@ impl AppServer {
                         id: req.id,
                         result: None,
                         error: Some(JsonRpcError {
-                            code: -32000,
-                            message: e.to_string(),
+                            code: -32002,
+                            message: format!("Failed to read progress file: {}", e),
                         }),
                         meta: None,
                     };
@@ -1008,8 +1031,23 @@ mod tests {
                 .unwrap()
                 .as_str()
                 .unwrap(),
-            "success"
+            "started"
         );
+
+        // Test get_ralph_status method
+        // Wait a bit for background task to at least create the file
+        let mut attempts = 0;
+        while attempts < 20 {
+            let req_json_status = r#"{"jsonrpc": "2.0", "id": "4", "method": "get_ralph_status", "params": {"progress_file": ".test_ralph_progress.json"}}"#;
+            let resp_json_status = app_server.handle_request(req_json_status).await;
+            let resp_status: JsonRpcResponse = serde_json::from_str(&resp_json_status).unwrap();
+            if resp_status.error.is_none() {
+                assert!(resp_status.result.unwrap().get("task_description").is_some());
+                break;
+            }
+            tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+            attempts += 1;
+        }
 
         // Clean up test file if it exists
         let _ = std::fs::remove_file(".test_ralph_progress.json");

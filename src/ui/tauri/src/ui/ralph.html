@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OHC | Ralph Loop - Autonomous Agent</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #f5f5f7;
+            --card-bg: rgba(255, 255, 255, 0.7);
+            --text-main: #1d1d1f;
+            --text-secondary: #86868b;
+            --accent-blue: #0066cc;
+            --accent-green: #28cd41;
+            --accent-orange: #ff9500;
+            --glass-border: 1px solid rgba(255, 255, 255, 0.3);
+            --shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .sidebar {
+            width: 240px;
+            background: rgba(255, 255, 255, 0.5);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-right: var(--glass-border);
+            display: flex;
+            flex-direction: column;
+            padding: 24px 0;
+        }
+
+        .nav-item {
+            padding: 12px 24px;
+            text-decoration: none;
+            color: var(--text-secondary);
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: all 0.2s ease;
+        }
+
+        .nav-item:hover, .nav-item.active {
+            color: var(--text-main);
+            background: rgba(0, 0, 0, 0.05);
+        }
+
+        .nav-item.active {
+            color: var(--accent-blue);
+        }
+
+        .main-content {
+            flex: 1;
+            padding: 40px;
+            overflow-y: auto;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 40px;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        h1 { font-size: 32px; font-weight: 700; margin: 0; }
+
+        .status-badge {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .status-badge.idle { background: #e5e5ea; color: #3a3a3c; }
+        .status-badge.working { background: #d0ebff; color: #0066cc; animation: pulse 2s infinite; }
+        .status-badge.complete { background: #d2f9d8; color: #1e7e34; }
+
+        @keyframes pulse {
+            0% { opacity: 0.6; }
+            50% { opacity: 1; }
+            100% { opacity: 0.6; }
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 24px;
+        }
+
+        @media (max-width: 1024px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                display: none;
+            }
+            .main-content {
+                padding: 20px;
+            }
+        }
+
+        .glass-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border-radius: 18px;
+            border: var(--glass-border);
+            padding: 24px;
+            box-shadow: var(--shadow);
+            margin-bottom: 24px;
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .task-input-group {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.8);
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            border-radius: 12px;
+            padding: 12px 16px;
+            font-family: inherit;
+            font-size: 16px;
+            outline: none;
+            transition: border-color 0.2s;
+            min-width: 200px;
+        }
+
+        input[type="text"]:focus {
+            border-color: var(--accent-blue);
+        }
+
+        button.primary {
+            background: var(--accent-blue);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            padding: 12px 24px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.1s;
+            white-space: nowrap;
+        }
+
+        button.primary:active { transform: scale(0.98); }
+
+        .feature-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+        }
+
+        .feature-item:last-child { border-bottom: none; }
+
+        .feature-status {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .status-pending { border: 2px solid #e5e5ea; }
+        .status-in_progress { background: var(--accent-blue); box-shadow: 0 0 8px var(--accent-blue); }
+        .status-completed { background: var(--accent-green); }
+
+        .feature-name { font-weight: 500; flex: 1; }
+
+        #project-summary-text {
+            font-size: 15px;
+            line-height: 1.6;
+            color: #3a3a3c;
+            white-space: pre-wrap;
+        }
+
+        .log-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .log-item {
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.03);
+            display: flex;
+            gap: 8px;
+        }
+
+        .log-time { font-family: monospace; opacity: 0.7; flex-shrink: 0; }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <div style="padding: 0 24px 24px 24px; font-weight: 800; font-size: 20px; color: var(--accent-blue);">OHC</div>
+        <a href="dashboard.html" class="nav-item">
+            <span>Dashboard</span>
+        </a>
+        <a href="ralph.html" class="nav-item active">
+            <span>Ralph Loop</span>
+        </a>
+        <a href="api-docs.html" class="nav-item">
+            <span>API Docs</span>
+        </a>
+    </div>
+
+    <div class="main-content">
+        <header>
+            <div>
+                <h1>Ralph Loop</h1>
+                <p style="color: var(--text-secondary); margin-top: 4px;">Long-running autonomous objective engine.</p>
+            </div>
+            <div id="overall-status" class="status-badge idle">Idle</div>
+        </header>
+
+        <div class="glass-card">
+            <div class="section-title">New Objective</div>
+            <div class="task-input-group">
+                <input type="text" id="task-input" placeholder="What long-term goal should Ralph achieve? e.g. 'Build a secure authentication system with JWT'">
+                <button id="start-btn" class="primary">Initialize</button>
+            </div>
+        </div>
+
+        <div class="grid">
+            <div class="left-col">
+                <div class="glass-card">
+                    <div class="section-title">Execution Plan</div>
+                    <div id="feature-list">
+                        <div style="color: var(--text-secondary); font-style: italic; padding: 12px;">No active task. Initialize one above.</div>
+                    </div>
+                </div>
+
+                <div class="glass-card">
+                    <div class="section-title">Project Summary</div>
+                    <div id="project-summary-text">Ralph maintains a high-level state of the entire project here. This summary is updated after every successful task, ensuring continuity across context windows.</div>
+                </div>
+            </div>
+
+            <div class="right-col">
+                <div class="glass-card" style="height: 100%;">
+                    <div class="section-title">Autonomous Logs</div>
+                    <div id="log-container" class="log-list">
+                        <div class="log-item">
+                            <span class="log-time">[System]</span>
+                            <span>Awaiting initialization...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const taskInput = document.getElementById('task-input');
+        const startBtn = document.getElementById('start-btn');
+        const featureList = document.getElementById('feature-list');
+        const summaryText = document.getElementById('project-summary-text');
+        const logContainer = document.getElementById('log-container');
+        const statusBadge = document.getElementById('overall-status');
+
+        let currentProgressFile = ".ralph_progress.json";
+        let pollInterval = null;
+
+        function addLog(msg, type = "System") {
+            const item = document.createElement('div');
+            item.className = 'log-item';
+            const time = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'});
+            item.innerHTML = `<span class="log-time">[${time}]</span> <span>${msg}</span>`;
+            logContainer.prepend(item);
+        }
+
+        async function rpc(method, params = {}) {
+            try {
+                const response = await fetch('/api/rpc', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        jsonrpc: "2.0",
+                        id: Date.now(),
+                        method,
+                        params
+                    })
+                });
+                const data = await response.json();
+                if (data.error) throw data.error;
+                return data.result;
+            } catch (e) {
+                console.error("RPC Error:", e);
+                return null;
+            }
+        }
+
+        async function updateStatus() {
+            const status = await rpc("get_ralph_status", { progress_file: currentProgressFile });
+            if (!status) return;
+
+            if (status.is_complete) {
+                statusBadge.innerText = "Complete";
+                statusBadge.className = "status-badge complete";
+                if (pollInterval) clearInterval(pollInterval);
+            } else if (status.features && status.features.length > 0) {
+                statusBadge.innerText = "Working";
+                statusBadge.className = "status-badge working";
+            }
+
+            if (status.project_summary) {
+                summaryText.innerText = status.project_summary;
+            }
+
+            if (status.features) {
+                featureList.innerHTML = '';
+                status.features.forEach((f, idx) => {
+                    const item = document.createElement('div');
+                    item.className = 'feature-item';
+                    const isCurrent = idx === status.current_feature_index && !status.is_complete;
+                    const statusClass = isCurrent ? 'status-in_progress' : `status-${f.status}`;
+
+                    item.innerHTML = `
+                        <div class="feature-status ${statusClass}"></div>
+                        <div class="feature-name">${f.name}</div>
+                        <div style="font-size: 12px; color: var(--text-secondary)">${f.status}</div>
+                    `;
+                    featureList.appendChild(item);
+                });
+            }
+
+            if (status.notes && status.notes.length > 0) {
+                const latestNote = status.notes[status.notes.length - 1];
+                if (window.lastProcessedNote !== latestNote) {
+                    addLog(latestNote, "Ralph");
+                    window.lastProcessedNote = latestNote;
+                }
+            }
+        }
+
+        startBtn.addEventListener('click', async () => {
+            const task = taskInput.value.trim();
+            if (!task) return;
+
+            addLog(`Initializing objective: ${task}`);
+            const result = await rpc("run_ralph_loop", { task, progress_file: currentProgressFile });
+
+            if (result && result.status === "started") {
+                addLog("Ralph Loop background process started.");
+                statusBadge.innerText = "Working";
+                statusBadge.className = "status-badge working";
+
+                if (pollInterval) clearInterval(pollInterval);
+                pollInterval = setInterval(updateStatus, 3000);
+            }
+        });
+
+        updateStatus();
+    </script>
+</body>
+</html>

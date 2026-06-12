@@ -852,6 +852,7 @@ mod tests {
         let scratchpad_path = saver.scratchpad_file_path(thread_id);
         let initial_progress = crate::ralph_loop::RalphProgress {
             task_description: "Build a web server".to_string(),
+            project_summary: "Initial summary".to_string(),
             features: vec![
                 crate::ralph_loop::Feature {
                     name: "Step 1".to_string(),

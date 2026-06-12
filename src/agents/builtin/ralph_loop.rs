@@ -9,6 +9,7 @@ use tokio::fs;
 #[derive(Serialize, Deserialize, Default, Clone, Debug)]
 pub struct RalphProgress {
     pub task_description: String,
+    pub project_summary: String,
     pub features: Vec<Feature>,
     pub current_feature_index: usize,
     #[serde(default)]
@@ -88,10 +89,21 @@ impl RalphLoop {
                 .and_then(|out| String::from_utf8(out.stdout).ok())
                 .unwrap_or_else(|| "No git history available".to_string());
 
+            // SOTA Harness Patterns (2025-2026): Just-in-Time (JIT) Orientation via RepoMap
+            let repo_map = crate::aider_repomap::RepoMap::new(&self.repo_path)
+                .generate_map()
+                .unwrap_or_else(|_| "Unknown structure".to_string());
+
             // Execute the agent run for this specific feature
             let feature_prompt = format!(
-                "You are continuing a long-running task.\nOverall Task: {}\nRecent Git History:\n{}\nFeature to implement now: {}\nExecute steps to complete this feature, verify it, and then stop.",
-                progress.task_description, git_log_output, feature_name
+                "You are continuing a long-running task.\n\
+                 Overall Task: {}\n\
+                 Project Summary: {}\n\
+                 Recent Git History:\n{}\n\
+                 Codebase Structure:\n{}\n\
+                 Feature to implement now: {}\n\
+                 Execute steps to complete this feature, verify it, and then stop.",
+                progress.task_description, progress.project_summary, git_log_output, repo_map, feature_name
             );
 
             // We use a fresh config to keep the context window small (compaction/reset)
@@ -131,6 +143,24 @@ impl RalphLoop {
                     progress
                         .notes
                         .push(format!("Completed feature {}: {}", feature_name, result));
+                    // SOTA Harness Patterns (2025-2026): Autonomous Summary Updates
+                    let summary_prompt = format!(
+                        "Reflect on the completion of the feature: {}.\n\
+                         Recent Result: {}\n\
+                         Current Project Summary: {}\n\
+                         Please provide an updated, high-level, condensed project summary that incorporates these changes. Keep it under 2000 characters.",
+                        feature_name, result, progress.project_summary
+                    );
+                    let mut on_event_summary = |_| {};
+                    match self.agent.run(&self.config, &summary_prompt, &mut on_event_summary).await {
+                        Ok(new_summary) => {
+                            progress.project_summary = new_summary;
+                        }
+                        Err(e) => {
+                            tracing::warn!("Ralph Loop failed to update project summary: {}", e);
+                        }
+                    }
+
                     progress.current_feature_index += 1;
                     self.save_progress(&progress).await?;
 
@@ -242,6 +272,7 @@ impl RalphLoop {
 
         let progress = RalphProgress {
             task_description: task.to_string(),
+            project_summary: "Initial state: just started.".to_string(),
             features,
             current_feature_index: 0,
             notes: vec!["Initialized task and broken down into features.".to_string()],
@@ -401,6 +432,7 @@ mod tests {
 
         let initial_progress = RalphProgress {
             task_description: "Build a web server".to_string(),
+            project_summary: "Test summary".to_string(),
             features: vec![
                 Feature {
                     name: "Step 1".to_string(),
@@ -573,5 +605,74 @@ mod tests {
         let saved_progress_str = std::fs::read_to_string(&progress_file).unwrap();
         let saved_progress: RalphProgress = serde_json::from_str(&saved_progress_str).unwrap();
         assert!(saved_progress.is_complete);
+    }
+}
+
+#[cfg(test)]
+mod additional_ralph_tests {
+    use super::*;
+    use crate::agent::{Agent, AgentRunConfig};
+    use crate::llm::LlmClient;
+    use crate::types::{ChatRequest, ChatResponse, Message, Usage};
+    use std::sync::Arc;
+    use tempfile::tempdir;
+
+    struct SummaryLlmClient {
+        call_count: tokio::sync::Mutex<usize>,
+    }
+
+    #[async_trait::async_trait]
+    impl LlmClient for SummaryLlmClient {
+        async fn chat(&self, req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+            let mut count = self.call_count.lock().await;
+            *count += 1;
+
+            if req.messages.last().map(|m| m.content.contains("Break down the following task")).unwrap_or(false) {
+                Ok(ChatResponse {
+                    message: Message::assistant(r#"["Feat1"]"#),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                    response_id: Some("id1".to_string()),
+                })
+            } else if req.system.contains("expert summarizer") || req.messages.last().map(|m| m.content.contains("updated, high-level, condensed project summary")).unwrap_or(false) {
+                Ok(ChatResponse {
+                    message: Message::assistant("Updated Summary Alpha"),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                    response_id: Some("id2".to_string()),
+                })
+            } else {
+                Ok(ChatResponse {
+                    message: Message::assistant("Feature implemented"),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                    response_id: Some("id3".to_string()),
+                })
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_ralph_loop_summary_update() {
+        let dir = tempdir().unwrap();
+        let progress_file = dir.path().join("progress_summary.json");
+        let progress_file_str = progress_file.to_str().unwrap();
+
+        let llm = Arc::new(SummaryLlmClient {
+            call_count: tokio::sync::Mutex::new(0),
+        });
+        let agent = Arc::new(Agent::new(llm, vec![]));
+        let config = AgentRunConfig::default();
+
+        let ralph = RalphLoop::new(agent, config, progress_file_str);
+
+        let result = ralph.run("Build a thing").await;
+        assert!(result.is_ok());
+
+        let saved_progress_str = std::fs::read_to_string(&progress_file).unwrap();
+        let saved_progress: RalphProgress = serde_json::from_str(&saved_progress_str).unwrap();
+
+        // The project_summary should have been updated by the second LLM call in the loop
+        assert_eq!(saved_progress.project_summary, "Updated Summary Alpha");
     }
 }
