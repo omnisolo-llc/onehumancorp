@@ -1,10 +1,8 @@
-
-use std::sync::OnceLock;
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
-use std::time::Duration;
 use dashmap::DashMap;
 use dashmap::DashSet;
-
+use serde::{Deserialize, Serialize, de::DeserializeOwned};
+use std::sync::OnceLock;
+use std::time::Duration;
 
 #[derive(Clone, Serialize, Deserialize)]
 struct CacheItem<T> {
@@ -13,7 +11,6 @@ struct CacheItem<T> {
 }
 
 use std::sync::atomic::Ordering;
-
 
 struct CacheValue<T> {
     val: T,
@@ -31,7 +28,7 @@ pub struct HybridCache<T> {
 
 impl<T> HybridCache<T>
 where
-    T: Serialize + DeserializeOwned + Clone + Send + Sync + 'static
+    T: Serialize + DeserializeOwned + Clone + Send + Sync + 'static,
 {
     pub fn new(redis_client: Option<redis::Client>) -> Self {
         Self {
@@ -55,9 +52,11 @@ where
 
     async fn get_redis_conn(&self) -> Option<redis::aio::MultiplexedConnection> {
         if let Some(client) = &self.redis_client {
-            let conn = self.redis_conn.get_or_try_init(|| async {
-                client.get_multiplexed_tokio_connection().await
-            }).await.ok()?;
+            let conn = self
+                .redis_conn
+                .get_or_try_init(|| async { client.get_multiplexed_tokio_connection().await })
+                .await
+                .ok()?;
             Some(conn.clone())
         } else {
             None
@@ -119,7 +118,10 @@ where
         // 2. Set Redis if available
         if let Some(mut conn) = self.get_redis_conn().await {
             use redis::AsyncCommands;
-            let item = CacheItem { value, tags: tags.clone() };
+            let item = CacheItem {
+                value,
+                tags: tags.clone(),
+            };
             if let Ok(data) = serde_json::to_string(&item) {
                 let _: Result<(), _> = conn.set_ex(key, data, ttl.as_secs() as u64).await;
             }
@@ -146,7 +148,10 @@ where
                     removed_keys.push(item.key().clone());
                     has_expired = true;
                 } else {
-                    sampled_keys.push((item.key().clone(), item.access_count.load(Ordering::Relaxed)));
+                    sampled_keys.push((
+                        item.key().clone(),
+                        item.access_count.load(Ordering::Relaxed),
+                    ));
                 }
             }
 
@@ -157,7 +162,9 @@ where
             } else {
                 if local.len() >= self.max_local_capacity {
                     sampled_keys.truncate(5); // Only take 5 samples for LFU to avoid excessive work
-                    if let Some((least_accessed_key, _)) = sampled_keys.into_iter().min_by_key(|(_, count)| *count) {
+                    if let Some((least_accessed_key, _)) =
+                        sampled_keys.into_iter().min_by_key(|(_, count)| *count)
+                    {
                         local.remove(&least_accessed_key);
                         removed_keys.push(least_accessed_key);
                     }
@@ -168,12 +175,12 @@ where
             if !removed_keys.is_empty() {
                 let tags_map = self.get_local_tags();
                 for mut entry in tags_map.iter_mut() {
-                    let keys = entry.value_mut();
+                    let keys: &mut DashSet<String> = entry.value_mut();
                     for k in &removed_keys {
                         keys.remove(k);
                     }
                 }
-                tags_map.retain(|_, keys| !keys.is_empty());
+                tags_map.retain(|_, keys: &mut DashSet<String>| !keys.is_empty());
             }
         }
 
@@ -201,10 +208,10 @@ where
         self.get_local().remove(key);
         let tags_map = self.get_local_tags();
         for mut entry in tags_map.iter_mut() {
-            let keys = entry.value_mut();
+            let keys: &mut DashSet<String> = entry.value_mut();
             keys.remove(key);
         }
-        tags_map.retain(|_, keys| !keys.is_empty());
+        tags_map.retain(|_, keys: &mut DashSet<String>| !keys.is_empty());
 
         if let Some(mut conn) = self.get_redis_conn().await {
             use redis::AsyncCommands;
@@ -251,16 +258,22 @@ mod tests {
     #[tokio::test]
     async fn test_hybrid_cache_capacity_eviction() {
         let cache = HybridCache::<String>::with_capacity(None, 2);
-        cache.set("k1", "v1".to_string(), Duration::from_secs(60)).await;
+        cache
+            .set("k1", "v1".to_string(), Duration::from_secs(60))
+            .await;
         tokio::time::sleep(Duration::from_millis(5)).await;
-        cache.set("k2", "v2".to_string(), Duration::from_secs(60)).await;
+        cache
+            .set("k2", "v2".to_string(), Duration::from_secs(60))
+            .await;
         tokio::time::sleep(Duration::from_millis(5)).await;
 
         // Access k1 so k2 becomes the LRU
         let _ = cache.get("k1").await;
         tokio::time::sleep(Duration::from_millis(5)).await;
 
-        cache.set("k3", "v3".to_string(), Duration::from_secs(60)).await;
+        cache
+            .set("k3", "v3".to_string(), Duration::from_secs(60))
+            .await;
 
         let local = cache.get_local();
         assert_eq!(local.len(), 2);
@@ -271,8 +284,22 @@ mod tests {
     #[tokio::test]
     async fn test_hybrid_cache_tags() {
         let cache = HybridCache::<String>::with_capacity(None, 10);
-        cache.set_with_tags("k1", "v1".to_string(), vec!["tag1".to_string()], Duration::from_secs(60)).await;
-        cache.set_with_tags("k2", "v2".to_string(), vec!["tag1".to_string(), "tag2".to_string()], Duration::from_secs(60)).await;
+        cache
+            .set_with_tags(
+                "k1",
+                "v1".to_string(),
+                vec!["tag1".to_string()],
+                Duration::from_secs(60),
+            )
+            .await;
+        cache
+            .set_with_tags(
+                "k2",
+                "v2".to_string(),
+                vec!["tag1".to_string(), "tag2".to_string()],
+                Duration::from_secs(60),
+            )
+            .await;
 
         assert_eq!(cache.get("k1").await, Some("v1".to_string()));
         cache.invalidate_by_tag("tag1").await;

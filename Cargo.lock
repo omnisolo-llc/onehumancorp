@@ -9039,6 +9039,7 @@ version = "0.1.0"
 dependencies = [
  "axum 0.8.9",
  "chrono",
+ "dashmap 6.2.1",
  "flate2",
  "rand 0.8.6",
  "redis",

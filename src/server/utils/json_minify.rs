@@ -10,8 +10,9 @@ pub fn minify_json_string(input: &str) -> String {
     }
 
     // Quick check to see if it even looks like JSON
-    if !(trimmed.starts_with('{') && trimmed.ends_with('}')) &&
-       !(trimmed.starts_with('[') && trimmed.ends_with(']')) {
+    if !(trimmed.starts_with('{') && trimmed.ends_with('}'))
+        && !(trimmed.starts_with('[') && trimmed.ends_with(']'))
+    {
         return input.to_string();
     }
 
@@ -31,7 +32,11 @@ mod tests {
             ("Empty string", "", ""),
             ("Whitespace only", "   \n  \t ", "   \n  \t "),
             ("Not JSON", "Just a normal string", "Just a normal string"),
-            ("Not JSON with whitespace", "  Just a normal string  \n", "  Just a normal string  \n"),
+            (
+                "Not JSON with whitespace",
+                "  Just a normal string  \n",
+                "  Just a normal string  \n",
+            ),
             (
                 "Valid JSON Object",
                 r#"{
