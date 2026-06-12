@@ -157,6 +157,7 @@ where
         .route("/social/post", post(handle_social_post))
         .route("/campaign/send-receipt", post(handle_send_receipt))
         .route("/campaign/send", post(handle_send_campaign))
+        .route("/promoter/generate", post(handle_generate_promoter))
         .route("/campaign/lead-gen", post(handle_create_lead_gen_campaign))
         .route("/campaign/generate-review", post(handle_generate_review))
         .route("/campaign/generate-customer-referral", post(handle_generate_customer_referral))
@@ -406,6 +407,30 @@ pub struct SendCartRequest {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct GeneratePromoterRequest {
+    pub product_id: Option<String>,
+    pub product_name: Option<String>,
+    pub name: Option<String>,
+    pub description: Option<String>,
+    pub theme: Option<String>,
+    pub tenant: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PromoterVariant {
+    pub platform: String,
+    pub content: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct GeneratePromoterResponse {
+    pub instagram: String,
+    pub twitter: String,
+    pub email: String,
+    pub variants: Vec<PromoterVariant>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct SendCartResponse {
     pub success: bool,
     pub message: String,
@@ -517,6 +542,45 @@ async fn handle_generate_cart(
     );
     Json(GenerateCartResponse {
         message: generated,
+    })
+}
+
+async fn handle_generate_promoter(
+    Extension(_state): Extension<GrowthState>,
+    Json(req): Json<GeneratePromoterRequest>,
+) -> impl IntoResponse {
+    let name = req.product_name.or(req.name).unwrap_or_else(|| "our latest product".to_string());
+    let desc = req.description.unwrap_or_else(|| "Check it out now!".to_string());
+    let store_link = if let Some(t) = req.tenant { format!("/bio/{}", t) } else { "/store".to_string() };
+
+    let theme_text = if let Some(th) = req.theme {
+        if th.trim().is_empty() { "".to_string() } else { format!(" We're running a {} special!", th) }
+    } else { "".to_string() };
+
+    let instagram = format!("✨ Introducing {}! ✨\n\n{}{}\n\nShop the collection at the link in our bio! 🛍️\n\n⚡ Powered by OHC", name, desc, theme_text);
+    let twitter = format!("🚨 NEW ARRIVAL 🚨\n\nGet your hands on {}. {}{}\n\nShop now: {}\n\n⚡ Powered by OHC", name, desc, theme_text, store_link);
+    let email = format!("Subject: You're going to love our new {}! 🎉\n\nHi there,\n\nWe're thrilled to introduce our newest addition: {}.\n\n{}{}\n\nWe think it's exactly what you've been looking for. Click below to shop before it sells out.\n\nShop now: {}\n\nWarmly,\nThe Team\n\n⚡ Powered by OHC", name, name, desc, theme_text, store_link);
+
+    let variants = vec![
+        PromoterVariant {
+            platform: "Instagram".to_string(),
+            content: instagram.clone(),
+        },
+        PromoterVariant {
+            platform: "Twitter".to_string(),
+            content: twitter.clone(),
+        },
+        PromoterVariant {
+            platform: "Email".to_string(),
+            content: email.clone(),
+        },
+    ];
+
+    Json(GeneratePromoterResponse {
+        instagram,
+        twitter,
+        email,
+        variants,
     })
 }
 
