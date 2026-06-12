@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import * as path from 'path';
 import * as fs from 'fs';
 
-test.describe('Agentic Chat Onboarding CUJ', () => {
+test.describe('Tauri Onboarding Wizard Flow', () => {
   const mockTauriBackend = () => {
     window.__TAURI__ = {
       core: {
@@ -24,7 +24,7 @@ test.describe('Agentic Chat Onboarding CUJ', () => {
     };
   };
 
-  test('Owner can setup via chat interface and redirect to dashboard', async ({ page }) => {
+  test('Completes the onboarding flow, verifies validation, multi-step progression, and backend state resume', async ({ page }) => {
     const workspaceRoot = process.env.TEST_WORKSPACE
         ? path.join(process.env.TEST_SRCDIR || process.cwd(), process.env.TEST_WORKSPACE)
         : process.cwd();
@@ -95,6 +95,10 @@ test.describe('Agentic Chat Onboarding CUJ', () => {
   });
 
 });
+
+  test('Setup UI should have glassmorphism aesthetics applied', async ({ page }) => {
+    test.skip();
+  });
 
 test.describe('Tauri Dashboard UI and UX Improvements', () => {
   test('Dashboard should have glassmorphism aesthetics applied', async ({ page }) => {
