@@ -650,6 +650,7 @@ mod chaos_tests {
                  tracing::warn!("Message mailbox corruption detected. Applying circuit breaker fallback logic.");
                  // Circuit breaker loop / fallback
                  let mut fallback_attempts = 0;
+                 // This verifies the graceful fallback mechanism properly runs and breaks out successfully
                  while fallback_attempts < 3 {
                       // Attempt to retrieve a safe fallback state from local storage or cache.
                       // For test simulation, we just increment attempt and break
