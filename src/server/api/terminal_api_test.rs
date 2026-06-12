@@ -34,7 +34,7 @@ async fn test_get_terminal_connection_token_authenticated() {
     let hub = Arc::new(Hub::new());
 
     let app_with_auth = axum::Router::new()
-        .route("/token", axum::routing::get(crate::api::terminal_api::get_terminal_connection_token_handler))
+        .route("/token", axum::routing::post(crate::api::terminal_api::get_terminal_connection_token_handler))
         .with_state(hub)
         .layer(axum::extract::Extension(::server_auth::orchestration::AuthInfo {
             spiffe_id: "spiffe://test".to_string(),
