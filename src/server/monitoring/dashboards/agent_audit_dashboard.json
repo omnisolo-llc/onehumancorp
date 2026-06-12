@@ -63,7 +63,7 @@
       },
       "options": {
         "mode": "html",
-        "content": "<link rel=\"stylesheet\" href=\"/public/css/custom.css\">\n"
+        "content": "<link rel=\"stylesheet\" href=\"/public/css/custom.css\">"
       },
       "transparent": true
     },

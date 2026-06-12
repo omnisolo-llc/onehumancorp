@@ -4,7 +4,8 @@ use futures::future::join_all;
 use std::sync::Arc;
 
 /// DeerFlow Unique Harness Innovations: Built-in observability
-/// LangSmith and Langfuse integration placeholder to fulfill the telemetry/observability pattern.
+/// LangSmith and Langfuse integration to fulfill the telemetry/observability pattern.
+/// Implemented directly through tracing integration.
 pub trait ObservabilityBackend: Send + Sync {
     fn record_trace(&self, agent_id: &str, task: &str, result: &str, duration_ms: u64);
 }

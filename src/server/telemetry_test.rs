@@ -1,5 +1,9 @@
 #[cfg(test)]
 mod tests {
+    use serde_json;
+    use temp_env;
+    use tokio;
+
 
     #[test]
     fn test_analytics_pii_redaction() {
@@ -105,10 +109,10 @@ mod tests {
         };
 
         let labels = json!({"user_id": "123", "secret": "shh"});
-        let res = buffer_metric(&pool, "test_metric", "counter", 1.0, labels).await;
+        let res: Result<(), _> = buffer_metric(&pool, "test_metric", "counter", 1.0, labels).await;
         assert!(res.is_ok());
 
-        let row = sqlx::query("SELECT labels_json FROM telemetry_buffer WHERE metric_name = 'test_metric' ORDER BY timestamp DESC LIMIT 1")
+        let row: sqlx::postgres::PgRow = sqlx::query("SELECT labels_json FROM telemetry_buffer WHERE metric_name = 'test_metric' ORDER BY timestamp DESC LIMIT 1")
             .fetch_one(&pool)
             .await
             .unwrap();
@@ -116,7 +120,7 @@ mod tests {
         use sqlx::Row;
         let _ = pool;
         let labels_json: String = row.get("labels_json");
-        let redacted: Value = serde_json::from_str(&labels_json).unwrap();
+        let redacted: serde_json::Value = serde_json::from_str(&labels_json).unwrap();
 
         assert_eq!(redacted["user_id"], "123");
         assert_eq!(redacted["secret"], "[REDACTED]");
@@ -130,10 +134,10 @@ mod tests {
             _ => return, // Gracefully exit if DB is not available in sandbox or times out
         };
 
-        let res = ::server_telemetry::record_sqlite_lock_contention(&pool, "test_operation").await;
+        let res: Result<(), _> = ::server_telemetry::record_sqlite_lock_contention(&pool, "test_operation").await;
         assert!(res.is_ok());
 
-        let res = ::server_telemetry::record_sqlite_retry_exhausted(&pool, "test_operation").await;
+        let res: Result<(), _> = ::server_telemetry::record_sqlite_retry_exhausted(&pool, "test_operation").await;
         assert!(res.is_ok());
     }
 
@@ -145,10 +149,10 @@ mod tests {
             _ => return, // Gracefully exit if DB is not available in sandbox or times out
         };
 
-        let res = ::server_telemetry::record_token_burn_rate_predicted_24h(&pool, "org_test", 15000.0).await;
+        let res: Result<(), _> = ::server_telemetry::record_token_burn_rate_predicted_24h(&pool, "org_test", 15000.0).await;
         assert!(res.is_ok());
 
-        let row = sqlx::query("SELECT labels_json, value FROM telemetry_buffer WHERE metric_name = 'ohc_token_burn_rate_predicted_24h' ORDER BY timestamp DESC LIMIT 1")
+        let row: sqlx::postgres::PgRow = sqlx::query("SELECT labels_json, value FROM telemetry_buffer WHERE metric_name = 'ohc_token_burn_rate_predicted_24h' ORDER BY timestamp DESC LIMIT 1")
             .fetch_one(&pool)
             .await
             .unwrap();
@@ -159,7 +163,7 @@ mod tests {
         assert_eq!(value, 15000.0);
 
         let labels_json: String = row.get("labels_json");
-        let parsed: Value = serde_json::from_str(&labels_json).unwrap();
+        let parsed: serde_json::Value = serde_json::from_str(&labels_json).unwrap();
         assert_eq!(parsed["organization_id"], "[REDACTED]");
     }
 
@@ -171,10 +175,10 @@ mod tests {
             _ => return, // Gracefully exit if DB is not available in sandbox or times out
         };
 
-        let res = ::server_telemetry::record_agent_cost(&pool, "agent-123", "org-1", "test-role", "test-model", "test-entity", 1.5).await;
+        let res: Result<(), _> = ::server_telemetry::record_agent_cost(&pool, "agent-123", "org-1", "test-role", "test-model", "test-entity", 1.5).await;
         assert!(res.is_ok());
 
-        let row = sqlx::query("SELECT labels_json, value FROM telemetry_buffer WHERE metric_name = 'ohc_agent_cost' ORDER BY timestamp DESC LIMIT 1")
+        let row: sqlx::postgres::PgRow = sqlx::query("SELECT labels_json, value FROM telemetry_buffer WHERE metric_name = 'ohc_agent_cost' ORDER BY timestamp DESC LIMIT 1")
             .fetch_one(&pool)
             .await
             .unwrap();
@@ -185,7 +189,7 @@ mod tests {
         assert_eq!(value, 1.5);
 
         let labels_json: String = row.get("labels_json");
-        let parsed: Value = serde_json::from_str(&labels_json).unwrap();
+        let parsed: serde_json::Value = serde_json::from_str(&labels_json).unwrap();
         assert_eq!(parsed["agent_id"], "agent-123");
         assert_eq!(parsed["organization_id"], "[REDACTED]");
         assert_eq!(parsed["entity"], "test-entity");
@@ -199,10 +203,10 @@ mod tests {
             _ => return, // Gracefully exit if DB is not available in sandbox or times out
         };
 
-        let res = ::server_telemetry::record_api_call_cost(&pool, "org-2", "test-entity-2", 0.5).await;
+        let res: Result<(), _> = ::server_telemetry::record_api_call_cost(&pool, "org-2", "test-entity-2", 0.5).await;
         assert!(res.is_ok());
 
-        let row = sqlx::query("SELECT labels_json, value FROM telemetry_buffer WHERE metric_name = 'ohc_api_call_cost' ORDER BY timestamp DESC LIMIT 1")
+        let row: sqlx::postgres::PgRow = sqlx::query("SELECT labels_json, value FROM telemetry_buffer WHERE metric_name = 'ohc_api_call_cost' ORDER BY timestamp DESC LIMIT 1")
             .fetch_one(&pool)
             .await
             .unwrap();
@@ -213,7 +217,7 @@ mod tests {
         assert_eq!(value, 0.5);
 
         let labels_json: String = row.get("labels_json");
-        let parsed: Value = serde_json::from_str(&labels_json).unwrap();
+        let parsed: serde_json::Value = serde_json::from_str(&labels_json).unwrap();
         assert_eq!(parsed["organization_id"], "[REDACTED]");
         assert_eq!(parsed["entity"], "test-entity-2");
     }
@@ -226,10 +230,10 @@ mod tests {
             _ => return, // Gracefully exit if DB is not available in sandbox or times out
         };
 
-        let res = ::server_telemetry::record_swarm_job_latency_by_entity(&pool, "cloud", "test-entity-3", 125.0).await;
+        let res: Result<(), _> = ::server_telemetry::record_swarm_job_latency_by_entity(&pool, "cloud", "test-entity-3", 125.0).await;
         assert!(res.is_ok());
 
-        let row = sqlx::query("SELECT labels_json, value FROM telemetry_buffer WHERE metric_name = 'ohc_swarm_job_latency_by_entity_seconds' ORDER BY timestamp DESC LIMIT 1")
+        let row: sqlx::postgres::PgRow = sqlx::query("SELECT labels_json, value FROM telemetry_buffer WHERE metric_name = 'ohc_swarm_job_latency_by_entity_seconds' ORDER BY timestamp DESC LIMIT 1")
             .fetch_one(&pool)
             .await
             .unwrap();
@@ -240,7 +244,7 @@ mod tests {
         assert_eq!(value, 125.0);
 
         let labels_json: String = row.get("labels_json");
-        let parsed: Value = serde_json::from_str(&labels_json).unwrap();
+        let parsed: serde_json::Value = serde_json::from_str(&labels_json).unwrap();
         assert_eq!(parsed["mode"], "cloud");
         assert_eq!(parsed["entity"], "test-entity-3");
     }
@@ -258,10 +262,10 @@ mod tests {
         // Ensure OHC_STANDALONE_MODE is true. Telemetry should be ignored
 
         let labels = json!({"user_id": "standalone_test"});
-        let res = buffer_metric(&pool, "test_standalone", "counter", 1.0, labels).await;
+        let res: Result<(), _> = buffer_metric(&pool, "test_standalone", "counter", 1.0, labels).await;
         assert!(res.is_ok());
 
-        let row = sqlx::query("SELECT COUNT(*) FROM telemetry_buffer WHERE metric_name = 'test_standalone'")
+        let row: sqlx::postgres::PgRow = sqlx::query("SELECT COUNT(*) FROM telemetry_buffer WHERE metric_name = 'test_standalone'")
             .fetch_one(&pool)
             .await
             .unwrap();
@@ -336,10 +340,10 @@ async fn test_record_queue_length_with_deployment_mode() {
         _ => return, // Gracefully exit if DB is not available in sandbox or times out
     };
 
-    let res = ::server_telemetry::record_queue_length(&pool, 5).await;
+    let res: Result<(), _> = ::server_telemetry::record_queue_length(&pool, 5).await;
     assert!(res.is_ok());
 
-    let row = sqlx::query("SELECT labels_json, value FROM telemetry_buffer WHERE metric_name = 'ohc_sub_agent_queue_length' ORDER BY timestamp DESC LIMIT 1")
+    let row: sqlx::postgres::PgRow = sqlx::query("SELECT labels_json, value FROM telemetry_buffer WHERE metric_name = 'ohc_sub_agent_queue_length' ORDER BY timestamp DESC LIMIT 1")
         .fetch_one(&pool)
         .await
         .unwrap();
@@ -610,4 +614,34 @@ fn test_redact_interface_pii_with_empty_objects() {
     assert_eq!(redacted["empty_arr"], serde_json::json!([]));
     assert_eq!(redacted["nested"]["empty"], serde_json::json!({}));
     assert_eq!(redacted["nested"]["secret"], "[REDACTED]");
+}
+#[test]
+fn test_categorize_error_signal() {
+    assert_eq!(::server_telemetry::categorize_error_signal("this is a panic!"), "bug");
+    assert_eq!(::server_telemetry::categorize_error_signal("segfault occurred"), "bug");
+    assert_eq!(::server_telemetry::categorize_error_signal("fatal error"), "bug");
+
+    assert_eq!(::server_telemetry::categorize_error_signal("unimplemented code path"), "feature");
+    assert_eq!(::server_telemetry::categorize_error_signal("missing feature flag"), "feature");
+
+    assert_eq!(::server_telemetry::categorize_error_signal("this api is deprecated"), "refactor");
+
+    assert_eq!(::server_telemetry::categorize_error_signal("memory leak detected"), "cleanup");
+    assert_eq!(::server_telemetry::categorize_error_signal("needs cleanup"), "cleanup");
+
+    assert_eq!(::server_telemetry::categorize_error_signal("update the readme"), "docs");
+
+    assert_eq!(::server_telemetry::categorize_error_signal("cve-2023-1234"), "security");
+    assert_eq!(::server_telemetry::categorize_error_signal("sql injection detected"), "security");
+    assert_eq!(::server_telemetry::categorize_error_signal("permission denied"), "security");
+
+    assert_eq!(::server_telemetry::categorize_error_signal("something else random"), "bug");
+}
+
+#[test]
+fn test_record_error_signal() {
+    // It's hard to test the opentelemetry meter without mocking the provider,
+    // but we can at least test that `record_error_signal` executes without panicking
+    // and categorize correctly behind the scenes.
+    ::server_telemetry::record_error_signal("panic: test");
 }

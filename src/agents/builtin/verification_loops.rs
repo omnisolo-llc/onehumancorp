@@ -24,10 +24,10 @@ pub trait InferentialSensor: Send + Sync {
 }
 
 /// 10. Verification Loops (Quality x3): Giving the model ways to verify work.
-/// Mechanics: Computational/Guides (feedforward: linters, type-checkers, unit tests),
-/// Visual (screenshots via Playwright and/or Desktop/Mobile UI tests), and
-/// Inferential/Sensors (feedback: a separate LLM-as-judge subagent evaluates the output).
-/// A manager that coordinates the 3 distinct verification loops.
+///     Mechanics: Computational/Guides (feedforward: linters, type-checkers, unit tests),
+///     Visual (screenshots via Playwright and/or Desktop/Mobile UI tests), and
+///     Inferential/Sensors (feedback: a separate LLM-as-judge subagent evaluates the output).
+///     A manager that coordinates the 3 distinct verification loops.
 
 pub struct BashComputationalGuide {
     pub command: String,
@@ -111,6 +111,12 @@ pub struct VerificationManager {
     computational: Vec<Arc<dyn ComputationalGuide>>,
     visual: Vec<Arc<dyn VisualVerifier>>,
     inferential: Vec<Arc<dyn InferentialSensor>>,
+}
+
+impl Default for VerificationManager {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl VerificationManager {

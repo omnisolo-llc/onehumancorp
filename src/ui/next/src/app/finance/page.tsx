@@ -9,23 +9,20 @@ export default function FinancePage() {
     const [showDraftModal, setShowDraftModal] = useState(false);
 
     useEffect(() => {
-        // Mock data loading
-        setTimeout(() => {
-            setInvoices([
-                {
-                    id: "INV-1234",
-                    client_name: "Nora's Design Project",
-                    status: "draft",
-                    total_amount: 2500.00,
-                    due_date: Date.now() + 30 * 24 * 3600 * 1000,
-                    line_items: [
-                        { description: "Logo Design", quantity: 1, unit_price: 1500.00, amount: 1500.00 },
-                        { description: "Brand Guidelines", quantity: 1, unit_price: 1000.00, amount: 1000.00 }
-                    ]
+        async function fetchInvoices() {
+            try {
+                const res = await fetch('/api/v1/invoices');
+                if (res.ok) {
+                    const data = await res.json();
+                    setInvoices(data.invoices || []);
                 }
-            ]);
-            setLoading(false);
-        }, 500);
+            } catch (e) {
+                console.error("Failed to fetch invoices", e);
+            } finally {
+                setLoading(false);
+            }
+        }
+        fetchInvoices();
     }, []);
 
     const handleCreateInvoice = () => {

@@ -116,23 +116,57 @@ impl SipDB {
 
     pub async fn cleanup_stagnant_missions(&self, stagnant_threshold: chrono::Duration) -> Result<(), sqlx::Error> {
         let threshold_time = Utc::now() - stagnant_threshold;
-        let mut tx = self.pool.begin().await?;
-        ::server_common::auth_utils::set_system_context(&mut *tx).await?;
 
-        sqlx::query("INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message) SELECT gen_random_uuid()::text, tenant_id, 'mission_stagnant', 'agent_missions', payload, 'Mission became stagnant' FROM agent_missions WHERE (status = 'PENDING' OR status = 'BURSTING' OR status = 'STUCK' OR status = 'IN_PROGRESS' OR status = 'RUNNING') AND updated_at < $1 AND tenant_id = $2")
-            .bind(threshold_time)
-            .bind(&self.org_id)
-            .execute(&mut *tx)
-            .await?;
+        let mut attempt = 0;
+        let max_attempts = 10;
+        let mut backoff = std::time::Duration::from_millis(50);
 
-        sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE (status = 'PENDING' OR status = 'BURSTING' OR status = 'STUCK' OR status = 'IN_PROGRESS' OR status = 'RUNNING') AND updated_at < $1 AND tenant_id = $2")
-            .bind(threshold_time)
-            .bind(&self.org_id)
-            .execute(&mut *tx)
-            .await?;
+        loop {
+            let res = tokio::time::timeout(ohc_builtin_agent::agent::agent_task_timeout(), async {
+                let mut tx = self.pool.begin().await?;
 
-        tx.commit().await?;
-        Ok(())
+                ::server_common::auth_utils::set_system_context(&mut *tx).await?;
+
+                sqlx::query("INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message) SELECT gen_random_uuid()::text, tenant_id, 'mission_stagnant', 'agent_missions', payload, 'Mission became stagnant' FROM agent_missions WHERE (status = 'PENDING' OR status = 'BURSTING' OR status = 'STUCK' OR status = 'IN_PROGRESS' OR status = 'RUNNING') AND updated_at < $1 AND tenant_id = $2")
+                    .bind(threshold_time)
+                    .bind(&self.org_id)
+                    .execute(&mut *tx)
+                    .await?;
+
+                sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE (status = 'PENDING' OR status = 'BURSTING' OR status = 'STUCK' OR status = 'IN_PROGRESS' OR status = 'RUNNING') AND updated_at < $1 AND tenant_id = $2")
+                    .bind(threshold_time)
+                    .bind(&self.org_id)
+                    .execute(&mut *tx)
+                    .await?;
+
+                tx.commit().await?;
+                Ok::<(), sqlx::Error>(())
+            }).await;
+
+            match res {
+                Ok(Ok(_)) => return Ok(()),
+                Ok(Err(err)) => {
+                    let err_str = err.to_string().to_lowercase();
+                    let retry = err_str.contains("serialization failure") || err_str.contains("deadlock detected") || err_str.contains("database is locked") || err_str.contains("busy");
+
+                    if retry {
+                        attempt += 1;
+                        if attempt >= max_attempts {
+                            return Err(err);
+                        }
+                        tokio::time::sleep(backoff).await;
+                        backoff *= 2;
+                    } else if err_str.contains("connection refused") || err_str.contains("connection reset") {
+                        return Err(err);
+                    } else {
+                        return Err(err);
+                    }
+                },
+                Err(timeout_err) => {
+                    return Err(sqlx::Error::Io(std::io::Error::new(std::io::ErrorKind::TimedOut, timeout_err)));
+                }
+            }
+        }
     }
 
     pub async fn prune_stale_missions(&self, age_threshold: chrono::Duration) -> Result<(), sqlx::Error> {
@@ -163,7 +197,7 @@ impl SipDB {
                     .await?;
 
                 // Prioritize backlog by bumping updated_at for oldest pending missions
-                sqlx::query("UPDATE agent_missions SET updated_at = CURRENT_TIMESTAMP WHERE id IN (SELECT id FROM agent_missions WHERE status = 'PENDING' AND tenant_id = $1 ORDER BY created_at ASC LIMIT 10) RETURNING id")
+                sqlx::query("UPDATE agent_missions SET updated_at = CURRENT_TIMESTAMP WHERE id IN (SELECT id FROM agent_missions WHERE status = 'PENDING' AND tenant_id = $1 ORDER BY created_at ASC LIMIT 10 FOR UPDATE SKIP LOCKED) RETURNING id")
                     .bind(&self.org_id)
                     .execute(&mut *tx)
                     .await?;
@@ -273,23 +307,35 @@ impl SipDB {
     pub async fn load_grounding_content(&self) -> Option<String> {
         if let Some(ref root) = self.context_root {
             let root_path = std::path::Path::new(root);
+            let mut current_dir = match tokio::fs::canonicalize(root_path).await {
+                Ok(p) => p,
+                Err(_) => root_path.to_path_buf(),
+            };
+            let mut max_depth = 50;
 
-            let agents_path = root_path.join("AGENTS.md");
-            match tokio::fs::read_to_string(&agents_path).await {
-                Ok(content) => return Some(content),
-                Err(e) if e.kind() != std::io::ErrorKind::NotFound => {
-                    tracing::warn!("Failed to read AGENTS.md: {}", e);
+            loop {
+                let agents_path = current_dir.join("AGENTS.md");
+                match tokio::fs::read_to_string(&agents_path).await {
+                    Ok(content) => return Some(content),
+                    Err(e) if e.kind() != std::io::ErrorKind::NotFound => {
+                        tracing::warn!("Failed to read AGENTS.md: {}", e);
+                    }
+                    _ => {}
                 }
-                _ => {}
-            }
 
-            let claude_path = root_path.join("CLAUDE.md");
-            match tokio::fs::read_to_string(&claude_path).await {
-                Ok(content) => return Some(content),
-                Err(e) if e.kind() != std::io::ErrorKind::NotFound => {
-                    tracing::warn!("Failed to read CLAUDE.md: {}", e);
+                let claude_path = current_dir.join("CLAUDE.md");
+                match tokio::fs::read_to_string(&claude_path).await {
+                    Ok(content) => return Some(content),
+                    Err(e) if e.kind() != std::io::ErrorKind::NotFound => {
+                        tracing::warn!("Failed to read CLAUDE.md: {}", e);
+                    }
+                    _ => {}
                 }
-                _ => {}
+
+                if !current_dir.pop() || max_depth == 0 {
+                    break;
+                }
+                max_depth -= 1;
             }
         }
         None
@@ -304,6 +350,15 @@ impl SipDB {
     pub fn enrich_payload_with_grounding_content(&self, payload: &str, grounding_content: &Option<String>) -> String {
         let mut final_payload = payload.to_string();
         if let Some(content) = grounding_content {
+            if let Ok(mut json_val) = serde_json::from_str::<serde_json::Value>(payload) {
+                if let Some(task_val) = json_val.get("task") {
+                    if let Some(task) = task_val.as_str() {
+                        let new_task = format!("{}\n\n[SYSTEM GROUNDING]:\n{}", task, content);
+                        json_val["task"] = serde_json::Value::String(new_task);
+                        return json_val.to_string();
+                    }
+                }
+            }
             final_payload = format!("{}\n\n[SYSTEM GROUNDING]:\n{}", payload, content);
         }
         final_payload
@@ -527,7 +582,7 @@ mod tests {
 
         assert!(enriched.contains("[SYSTEM GROUNDING]"));
         assert!(enriched.contains("Resilient Omni-Context instructions"));
-        assert!(enriched.starts_with("{\"task\":\"Scale K8s HPA\"}"));
+        assert!(serde_json::from_str::<serde_json::Value>(&enriched).is_ok());
 
         std::fs::remove_dir_all(&dir_str).unwrap();
     }

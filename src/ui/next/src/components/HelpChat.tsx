@@ -158,7 +158,7 @@ export function HelpChat() {
         {!isOpen && (
           <button
             onClick={() => setIsOpen(true)}
-            className="bg-blue-600/95 text-white p-4 rounded-full shadow-2xl hover:shadow-xl hover:scale-105 transition-all flex items-center justify-center gap-2 group backdrop-blur-[30px] saturate-[210%]"
+            className="bg-blue-600/95 text-white p-4 min-h-[44px] rounded-full shadow-2xl hover:shadow-xl hover:scale-105 transition-all flex items-center justify-center gap-2 group backdrop-blur-[30px] saturate-[210%]"
             aria-label="Open help chat"
             aria-expanded={isOpen}
             aria-controls="ai-chat-interface"
@@ -173,7 +173,7 @@ export function HelpChat() {
 
       {/* Chat Interface */}
       {isOpen && (
-        <div id="ai-chat-interface" className="fixed bottom-24 right-6 z-[9999] w-[350px] max-w-[calc(100vw-32px)] bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] saturate-[210%] rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.1)] flex flex-col overflow-hidden border border-white/40 dark:border-white/10 animate-slide-up-chat text-gray-800 dark:text-gray-100">
+        <div id="ai-chat-interface" className="fixed bottom-24 right-6 z-[9999] w-[350px] max-w-[calc(100vw-32px)] bg-white/70 dark:bg-[#16161a]/70 backdrop-blur-xl saturate-[210%] rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] flex flex-col overflow-hidden border border-white/50 dark:border-white/20 animate-slide-up-chat text-gray-800 dark:text-gray-100">
           {/* Header */}
           <div
             id="ai-chat-header"
@@ -192,7 +192,7 @@ export function HelpChat() {
             </div>
             <button
               onClick={() => setIsOpen(false)}
-              className="text-blue-100 hover:text-white transition-colors bg-white/10 hover:bg-white/20 rounded-full p-1.5"
+              className="text-blue-100 hover:text-white transition-colors bg-white/10 hover:bg-white/20 rounded-full p-1.5 min-h-[44px]"
               aria-label="Close help chat"
               aria-expanded={isOpen}
               aria-controls="ai-chat-interface"
@@ -222,10 +222,10 @@ export function HelpChat() {
                 className={`flex flex-col ${msg.sender === "user" ? "items-end" : "items-start"}`}
               >
                 <div
-                  className={`px-4 py-3 rounded-2xl max-w-[85%] leading-relaxed shadow-[0_2px_10px_rgba(0,0,0,0.02)] ${
+                  className={`px-4 py-3 rounded-2xl max-w-[85%] leading-relaxed shadow-[0_4px_16px_rgba(0,0,0,0.04)] ${
                     msg.sender === "user"
-                      ? "bg-blue-600/95 backdrop-blur-[30px] saturate-[210%] text-white rounded-br-sm border border-blue-500/50"
-                      : "bg-white/65 dark:bg-white/10 backdrop-blur-[30px] saturate-[210%] border border-white/40 dark:border-white/10 text-gray-800 dark:text-gray-100 rounded-bl-sm"
+                      ? "bg-blue-600/95 backdrop-blur-xl saturate-[210%] text-white rounded-br-sm border border-blue-500/50"
+                      : "bg-white/70 dark:bg-white/10 backdrop-blur-xl saturate-[210%] border border-white/50 dark:border-white/20 text-gray-800 dark:text-gray-100 rounded-bl-sm"
                   }`}
                   dangerouslySetInnerHTML={{
                     __html: DOMPurify.sanitize(msg.text),
@@ -278,7 +278,7 @@ export function HelpChat() {
             <button
               type="submit"
               disabled={!inputValue.trim() || isLoading}
-              className="bg-blue-600/95 backdrop-blur-[30px] text-white p-2.5 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-700/95 transition-all shadow-[0_4px_12px_rgba(37,99,235,0.2)] active:scale-95"
+              className="bg-blue-600/95 backdrop-blur-[30px] text-white p-2.5 min-h-[44px] rounded-xl disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-700/95 transition-all shadow-[0_4px_12px_rgba(37,99,235,0.2)] active:scale-95"
               aria-label="Send message"
             >
               {isLoading ? (

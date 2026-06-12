@@ -5,6 +5,7 @@ use sqlx::PgPool;
 use chrono::{Utc, DateTime};
 use serde_json::Value;
 
+#[allow(clippy::type_complexity)]
 pub struct Forecaster {
     pool: PgPool,
     token_usage_samples: std::sync::RwLock<HashMap<String, Vec<(DateTime<Utc>, i64)>>>,
@@ -63,6 +64,7 @@ impl Forecaster {
             let labels_json: String = row.get("labels_json");
 
             if let Ok(parsed) = serde_json::from_str::<Value>(&labels_json) {
+        #[allow(clippy::collapsible_if)]
                 if let Some(org_id) = parsed.get("organization_id").and_then(|v| v.as_str()) {
                     *recent_usage.entry(org_id.to_string()).or_insert(0) += val as i64;
                 }
@@ -80,7 +82,7 @@ impl Forecaster {
 
             for org_id in all_orgs {
                 let tokens = recent_usage.get(&org_id).copied().unwrap_or(0);
-                let org_samples = samples.entry(org_id.clone()).or_insert_with(Vec::new);
+                let org_samples = samples.entry(org_id.clone()).or_default();
                 org_samples.push((now, tokens));
 
                 // Keep only last 1 hour of 5-minute samples for moving average (12 samples)

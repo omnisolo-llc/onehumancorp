@@ -7,7 +7,6 @@ import { Suspense } from 'react';
 import { motion, AnimatePresence } from "framer-motion";
 import { FiCheck, FiX, FiDollarSign, FiClock, FiPlus, FiMessageSquare } from "react-icons/fi";
 
-// Mock data type - In a real app this would come from an API
 interface QuoteItem {
   id: string;
   description: string;
@@ -58,7 +57,6 @@ function MobileQuotingPageContent() {
       } catch (err) {
         console.error("Failed to load quotes", err);
       }
-      // Fallback empty state
       setQuotes([]);
       setActiveQuoteId(null);
     }

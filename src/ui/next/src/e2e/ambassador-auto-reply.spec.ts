@@ -17,12 +17,13 @@ test.describe('Ambassador Auto-Responder CUJ', () => {
     // The CustomerSuccess agent listens for tenant.message.received, which is triggered via the webhook endpoint
     const webhookPayload = {
       tenant_id: tenantId,
+      sender_id: 'testuser',
       message: 'I would like to place an order.',
       source: 'instagram'
     };
 
     const apiBase = process.env.OHC_API_URL || process.env.BACKEND_URL || process.env.BASE_URL || '';
-    const response = await request.post(`${apiBase}/api/agents/webhook`, {
+    const response = await request.post(`${apiBase}/api/inbox/webhook`, {
       data: webhookPayload,
     });
 

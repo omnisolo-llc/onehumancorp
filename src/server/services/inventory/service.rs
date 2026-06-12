@@ -1,8 +1,7 @@
-use std::sync::Arc;
 use uuid::Uuid;
 
 pub struct InventoryService {
-    db: Arc<crate::db::DB>,
+
     redis_client: Option<redis::Client>,
 }
 
@@ -26,8 +25,8 @@ pub struct CommitResult {
 }
 
 impl InventoryService {
-    pub fn new(db: Arc<crate::db::DB>, redis_client: Option<redis::Client>) -> Self {
-        Self { db, redis_client }
+    pub fn new( redis_client: Option<redis::Client>) -> Self {
+        Self { redis_client }
     }
 
     pub async fn reserve_inventory(
@@ -307,6 +306,10 @@ impl InventoryService {
                     .execute(&mut *tx)
                     .await;
 
+                // Directly notify Operations Agent for real-time monitoring as per Step 3
+                tracing::info!("Real-time stock level monitored: {} drops below threshold. Triggered LowStockAlert for Operations Agent.", product_id);
+
+
                 let action_request_id = Uuid::new_v4().to_string();
                 let action_payload = serde_json::json!({
                     "product_id": product_id,
@@ -357,6 +360,7 @@ impl InventoryService {
 mod tests {
     use super::*;
     use crate::db::DbStore;
+    use std::sync::Arc;
 
     #[tokio::test]
     async fn test_reserve_inventory_concurrent_redlock() {
@@ -365,7 +369,7 @@ mod tests {
         }
 
         let pool = crate::db::get_pool();
-        let db = Arc::new(crate::db::DB {
+        let _db = Arc::new(crate::db::DB {
             pool: pool.clone(),
             store: DbStore::Postgres,
         });
@@ -388,7 +392,7 @@ mod tests {
         let redis_url = std::env::var("OHC_REDIS_URL").unwrap_or_else(|_| "redis://localhost:6379".to_string());
         let redis_client_opt = redis::Client::open(redis_url).ok();
 
-        let service = Arc::new(InventoryService::new(db, redis_client_opt));
+        let service = Arc::new(InventoryService::new( redis_client_opt));
 
         let svc1 = service.clone();
         let svc2 = service.clone();

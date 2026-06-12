@@ -71,6 +71,27 @@ export default function OnboardingWizard() {
   const [isLoaded, setIsLoaded] = useState(false);
   const initialStateLoaded = useRef(false);
 
+  const fetchWithRetry = async (url: string, options: RequestInit, retries = 3, backoff = process.env.NODE_ENV === 'test' ? 10 : 500) => {
+    for (let i = 0; i < retries; i++) {
+      try {
+        const response = await fetch(url, options);
+        if (!response.ok) {
+           let errMsg = `HTTP error! status: ${response.status}`;
+           try {
+              const result = await response.clone().json();
+              errMsg = result.error || result.message || errMsg;
+           } catch (e) {}
+           throw new Error(errMsg);
+        }
+        return response;
+      } catch (err: any) {
+        if (i === retries - 1) throw err;
+        await new Promise(res => setTimeout(res, backoff * Math.pow(2, i)));
+      }
+    }
+    throw new Error('Max retries reached');
+  };
+
   const syncStateToBackend = async (overrideState: Partial<any> = {}) => {
     const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
     const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
@@ -110,27 +131,6 @@ export default function OnboardingWizard() {
   const [validationError, setValidationError] = useState('');
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const [saveMessage, setSaveMessage] = useState('');
-
-  const fetchWithRetry = async (url: string, options: RequestInit, retries = 3, backoff = process.env.NODE_ENV === 'test' ? 10 : 500) => {
-    for (let i = 0; i < retries; i++) {
-      try {
-        const response = await fetch(url, options);
-        if (!response.ok) {
-           let errMsg = `HTTP error! status: ${response.status}`;
-           try {
-              const result = await response.clone().json();
-              errMsg = result.error || result.message || errMsg;
-           } catch (e) {}
-           throw new Error(errMsg);
-        }
-        return response;
-      } catch (err: any) {
-        if (i === retries - 1) throw err;
-        await new Promise(res => setTimeout(res, backoff * Math.pow(2, i)));
-      }
-    }
-    throw new Error('Max retries reached');
-  };
 
   const handleSaveDraft = async () => {
     setIsLoading(true);
@@ -376,7 +376,9 @@ export default function OnboardingWizard() {
           domain_choice: domainChoice || 'subdomain',
           price_type: 'fixed',
           location: location || '',
-          target_audience: targetAudience || ''
+          target_audience: targetAudience || '',
+          ai_agents: aiAgents,
+          ai_auto_respond: aiAutoRespond
         })
       });
 
@@ -492,8 +494,11 @@ export default function OnboardingWizard() {
               <div className="space-y-4 flex-1 w-full">
                 <textarea
                   value={bio}
-                  onChange={(e) => setBio(e.target.value)}
-                  className="w-full glassmorphism min-h-[44px] min-w-[44px] p-4 focus:ring-2 focus:ring-[#0066FF] focus:border-[#0066FF] outline-none transition-all resize-none text-gray-800 dark:text-[#f5f5f7] shadow-inner rounded-[8px]"
+                  onChange={(e) => {
+                    setBio(e.target.value);
+                    if (error) setError('');
+                  }}
+                  className={`w-full glassmorphism min-h-[44px] min-w-[44px] p-4 border outline-none transition-all resize-none text-gray-800 dark:text-[#f5f5f7] shadow-inner rounded-[8px] ${error ? 'border-[#FF3B30] focus:ring-2 focus:ring-[#FF3B30] focus:border-[#FF3B30]' : 'border-transparent focus:ring-2 focus:ring-[#0066FF] focus:border-[#0066FF]'}`}
                   placeholder="e.g. I run a local bakery that sells custom vegan cakes..."
                   rows={6}
                 />
@@ -541,13 +546,19 @@ export default function OnboardingWizard() {
                             admin_name: adminName || 'Admin',
                             admin_password: adminPassword || 'password123',
                             business_type: inferredBusinessType,
+                            company_description: bio,
+                            selling_categories: data.categories || ["physical"],
+                            payment_pref: 'online',
+                            website_template: 'auto',
+                            domain_choice: 'subdomain',
                             first_product_name: inferredProductName,
                             first_product_price: inferredProductPrice,
                             price_type: 'physical',
                             location: inferredLocation,
-                            ai_agents: ['Operations', 'Marketing', 'Finance', 'Legal', 'Advisory'],
-                            auto_respond: true,
-                            initial_products: data.initial_products || []
+                            target_audience: data.target_audience || '',
+                            initial_products: data.initial_products || [],
+                            ai_agents: aiAgents,
+                            ai_auto_respond: aiAutoRespond
                           })
                         });
 
@@ -643,7 +654,7 @@ export default function OnboardingWizard() {
                           }
                         }}
                         placeholder="e.g. Maya's Custom Cakes"
-                        className={`w-full p-3 sm:p-4 rounded-[8px] border outline-none glassmorphism min-h-[44px] min-w-[44px] text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner ${validationError === 'Business Name must be at least 3 characters.' ? 'border-[#FF3B30]' : 'border-transparent focus:border-[#0066FF]'}`}
+                        className={`w-full p-3 sm:p-4 rounded-[8px] border outline-none glassmorphism min-h-[44px] min-w-[44px] text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner ${validationError === 'Business Name must be at least 3 characters.' ? 'border-[#FF3B30]' : 'border-white/50 dark:border-white/10 focus:border-[#0066FF]'}`}
                       />
                     </div>
                   </div>
@@ -708,7 +719,7 @@ export default function OnboardingWizard() {
                           }
                         }}
                         placeholder="e.g. I bake custom vegan cakes for weddings and parties..."
-                        className={`w-full p-3 sm:p-4 rounded-[8px] border outline-none glassmorphism min-h-[44px] min-w-[44px] text-[#1D1D1F] dark:text-[#F5F5F7] h-32 resize-none transition-all shadow-inner ${validationError === 'Please tell us what you sell.' ? 'border-[#FF3B30]' : 'border-transparent focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30'}`}
+                        className={`w-full p-3 sm:p-4 rounded-[8px] border outline-none glassmorphism min-h-[44px] min-w-[44px] text-[#1D1D1F] dark:text-[#F5F5F7] h-32 resize-none transition-all shadow-inner ${validationError === 'Please tell us what you sell.' ? 'border-[#FF3B30]' : 'border-white/50 dark:border-white/10 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30'}`}
                       />
                     </div>
                   </div>
@@ -774,7 +785,7 @@ export default function OnboardingWizard() {
                           }
                         }}
                         placeholder="e.g. Portland, OR"
-                        className={`w-full p-3 sm:p-4 rounded-[8px] border outline-none glassmorphism min-h-[44px] min-w-[44px] text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner ${validationError === 'Please tell us your location.' ? 'border-[#FF3B30]' : 'border-transparent focus:border-[#0066FF]'}`}
+                        className={`w-full p-3 sm:p-4 rounded-[8px] border outline-none glassmorphism min-h-[44px] min-w-[44px] text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner ${validationError === 'Please tell us your location.' ? 'border-[#FF3B30]' : 'border-white/50 dark:border-white/10 focus:border-[#0066FF]'}`}
                       />
                     </div>
                   </div>
@@ -840,7 +851,7 @@ export default function OnboardingWizard() {
                           }
                         }}
                         placeholder="e.g. Local families, Tech startups"
-                        className="w-full p-3 sm:p-4 rounded-[8px] focus:border-[#0066FF] outline-none glassmorphism min-h-[44px] min-w-[44px] text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
+                        className={`w-full p-3 sm:p-4 rounded-[8px] border outline-none glassmorphism min-h-[44px] min-w-[44px] text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner ${validationError === 'Please tell us your target audience.' ? 'border-[#FF3B30]' : 'border-white/50 dark:border-white/10 focus:border-[#0066FF]'}`}
                       />
                     </div>
                   </div>

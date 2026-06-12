@@ -1,20 +1,27 @@
-use std::sync::Mutex;
+use std::sync::atomic::{AtomicU64, Ordering};
 
 pub struct BudgetManager {
     pub total_limit: f64,
-    current: Mutex<f64>,
+    current: AtomicU64,
     pub telemetry_store: Option<std::sync::Arc<::server_harness::telemetry::ViolationStore>>,
     tenant_id: Option<String>,
+    pub alert_threshold_percent: f64,
 }
 
 impl BudgetManager {
     pub fn new(limit: f64) -> Self {
         BudgetManager {
             total_limit: limit,
-            current: Mutex::new(0.0),
+            current: AtomicU64::new(0),
             telemetry_store: None,
             tenant_id: None,
+            alert_threshold_percent: 80.0,
         }
+    }
+
+    pub fn with_alert_threshold(mut self, threshold: f64) -> Self {
+        self.alert_threshold_percent = threshold;
+        self
     }
 
     pub fn with_telemetry(mut self, tenant_id: String, store: std::sync::Arc<::server_harness::telemetry::ViolationStore>) -> Self {
@@ -24,13 +31,28 @@ impl BudgetManager {
     }
 
     pub fn record_spend(&self, amount: f64) -> Result<bool, String> {
-        let mut current = self.current.lock().unwrap();
-
         if amount < 0.0 {
             return Err("spend amount cannot be negative".to_string());
         }
 
-        *current += amount;
+        let mut current_bits = self.current.load(Ordering::Relaxed);
+        let mut final_current = f64::from_bits(current_bits);
+        loop {
+            let current = f64::from_bits(current_bits);
+            let next = current + amount;
+            match self.current.compare_exchange_weak(
+                current_bits,
+                next.to_bits(),
+                Ordering::SeqCst,
+                Ordering::Relaxed,
+            ) {
+                Ok(_) => {
+                    final_current = next;
+                    break;
+                },
+                Err(b) => current_bits = b,
+            }
+        }
 
         if let (Some(store), Some(tid)) = (&self.telemetry_store, &self.tenant_id) {
             let cents = (amount * 100.0).round() as u64;
@@ -42,7 +64,7 @@ impl BudgetManager {
             }
         }
 
-        if *current > self.total_limit {
+        if final_current > self.total_limit {
             Ok(false)
         } else {
             Ok(true)
@@ -50,17 +72,26 @@ impl BudgetManager {
     }
 
     pub fn get_remaining(&self) -> f64 {
-        let current = self.current.lock().unwrap();
-        self.total_limit - *current
+        let current = f64::from_bits(self.current.load(Ordering::SeqCst));
+        self.total_limit - current
     }
 
     pub fn get_remaining_cents(&self) -> i64 {
-        let current = self.current.lock().unwrap();
-        ((self.total_limit - *current) * 100.0).round() as i64
+        let current = f64::from_bits(self.current.load(Ordering::SeqCst));
+        ((self.total_limit - current) * 100.0).round() as i64
     }
 
     pub fn record_spend_cents(&self, amount_cents: i64) -> Result<bool, String> {
         self.record_spend((amount_cents as f64) / 100.0)
+    }
+
+    pub fn check_alert_threshold(&self) -> bool {
+        if self.total_limit <= 0.0 {
+            return false;
+        }
+        let current = f64::from_bits(self.current.load(Ordering::SeqCst));
+        let usage_percent = (current / self.total_limit) * 100.0;
+        usage_percent >= self.alert_threshold_percent
     }
 }
 
@@ -126,5 +157,35 @@ mod tests {
         let manager = BudgetManager::new(100.0);
         assert!(manager.record_spend_cents(0).unwrap());
         assert_eq!(manager.get_remaining_cents(), 10000);
+    }
+
+    #[test]
+    fn test_check_alert_threshold() {
+        let manager = BudgetManager::new(100.0);
+
+        // Not over threshold initially
+        assert!(!manager.check_alert_threshold());
+
+        // Spend 50%
+        manager.record_spend(50.0).unwrap();
+        assert!(!manager.check_alert_threshold());
+
+        // Spend up to 80%
+        manager.record_spend(30.0).unwrap();
+        assert!(manager.check_alert_threshold()); // Default is 80.0
+
+        // Custom threshold
+        let custom_manager = BudgetManager::new(100.0).with_alert_threshold(90.0);
+        custom_manager.record_spend(85.0).unwrap();
+        assert!(!custom_manager.check_alert_threshold());
+
+        custom_manager.record_spend(10.0).unwrap(); // 95%
+        assert!(custom_manager.check_alert_threshold());
+    }
+
+    #[test]
+    fn test_check_alert_threshold_zero_limit() {
+        let manager = BudgetManager::new(0.0);
+        assert!(!manager.check_alert_threshold());
     }
 }

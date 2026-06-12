@@ -63,7 +63,7 @@
       },
       "options": {
         "mode": "html",
-        "content": "<div style=\"background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 12px; padding: 20px; font-family: 'Outfit', 'Inter', sans-serif; color: #000;\">\n<link rel=\"stylesheet\" href=\"/public/css/custom.css\">\n</div>"
+        "content": "<link rel=\"stylesheet\" href=\"/public/css/custom.css\">"
       },
       "transparent": true
     },
@@ -78,7 +78,7 @@
       },
       "options": {
         "mode": "html",
-        "content": "<div style=\"background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 12px; padding: 20px; font-family: 'Outfit', 'Inter', sans-serif; color: #000;\">\n<link rel=\"stylesheet\" href=\"/public/css/custom.css\">\n\n  <h1 style=\"margin: 0; color: #000; font-size: 24px;\">Agent Audit Dashboard</h1>\n  <p style=\"margin: 5px 0 0; color: #000; font-size: 14px;\">OHC Swarm Intelligence Protocol</p>\n</div>"
+        "content": "<link rel=\"stylesheet\" href=\"/public/css/custom.css\">\n<h1 >Agent Audit Dashboard</h1>\n  <p >OHC Swarm Intelligence Protocol</p>"
       },
       "pluginVersion": "10.0.0",
       "transparent": true

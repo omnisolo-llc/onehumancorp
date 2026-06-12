@@ -11,12 +11,14 @@ use serde_json::Value;
 
 use ::server_pricing::rate_limit::{PlanTier, RedisRateLimiter};
 use crate::db::DbStore;
+use crate::orchestration::departments::orchestrator::DepartmentOrchestrator;
 
 #[derive(Clone)]
 pub struct WebhookState {
     pub rate_limiter: Arc<RedisRateLimiter>,
     pub db_pool: sqlx::Pool<sqlx::Postgres>,
     pub db: std::sync::Arc<crate::db::DB>,
+    pub orchestrator: std::sync::Arc<DepartmentOrchestrator>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -465,6 +467,26 @@ pub async fn stripe_webhook_handler(
             let obj = &payload.data.object;
             if payload.r#type == "checkout.session.completed" {
                 release_inventory_locks_for_payment(&webhook_state, obj).await;
+
+                // Dispatch payment.captured event to Finance agent
+                let tenant_id_opt = obj.get("metadata")
+                    .and_then(|m| m.get("tenant_id"))
+                    .and_then(|id| id.as_str());
+
+                if let Some(tenant_id) = tenant_id_opt {
+                    let orch = webhook_state.orchestrator.clone();
+                    let payload_val = obj.clone();
+                    let tenant_id_val = tenant_id.to_string();
+                    tokio::spawn(async move {
+                        let evt = crate::orchestration::departments::types::DepartmentEvent {
+                            id: uuid::Uuid::new_v4().to_string(),
+                            tenant_id: tenant_id_val,
+                            event_type: "payment.captured".to_string(),
+                            payload: payload_val,
+                        };
+                        let _ = orch.dispatch_event(evt).await;
+                    });
+                }
             }
 
             // Extract tenant ID. Depending on your Stripe setup, this might be in metadata
@@ -643,23 +665,23 @@ pub async fn mercadopago_webhook_handler(
 }
 
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, serde::Serialize)]
 pub struct RazorpayEvent {
     pub event: String,
     pub payload: RazorpayPayload,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, serde::Serialize)]
 pub struct RazorpayPayload {
     pub payment: RazorpayPaymentEntity,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, serde::Serialize)]
 pub struct RazorpayPaymentEntity {
     pub entity: RazorpayEntity,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, serde::Serialize)]
 pub struct RazorpayEntity {
     pub id: String,
     pub status: String,
@@ -679,6 +701,20 @@ pub async fn razorpay_webhook_handler(
     match payload.event.as_str() {
         "payment.captured" => {
             let order_id = &payload.payload.payment.entity.order_id;
+
+            // Dispatch payment.captured event to Finance agent for split tag evaluation
+            let orch = webhook_state.orchestrator.clone();
+            let payload_val = serde_json::to_value(&payload).unwrap_or(serde_json::Value::Null);
+            let _order_id_val = order_id.clone();
+            tokio::spawn(async move {
+                let evt = crate::orchestration::departments::types::DepartmentEvent {
+                    id: uuid::Uuid::new_v4().to_string(),
+                    tenant_id: "unknown".to_string(), // In a real app, this would be extracted from the payload
+                    event_type: "payment.captured".to_string(),
+                    payload: payload_val,
+                };
+                let _ = orch.dispatch_event(evt).await;
+            });
 
             // In a real app, transition OHC orders from "Pending" to "Paid"
             let res = match &webhook_state.db.store {

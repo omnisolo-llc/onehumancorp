@@ -194,11 +194,20 @@ impl Store {
                     use std::io::Write;
                     if let Ok(mut file) = std::fs::OpenOptions::new()
                         .write(true)
-                        .create(true)
+                        .create_new(true)
                         .mode(0o600)
                         .open(&secret_path)
                     {
                         let _ = file.write_all(&new_secret);
+                    }
+
+                    // Ensure permissions are strictly 0o600
+                    use std::os::unix::fs::PermissionsExt;
+                    if let Ok(mut perms) = std::fs::metadata(&secret_path).map(|m| m.permissions()) {
+                        if perms.mode() & 0o777 != 0o600 {
+                            perms.set_mode(0o600);
+                            let _ = std::fs::set_permissions(&secret_path, perms);
+                        }
                     }
                 }
                 #[cfg(not(unix))]

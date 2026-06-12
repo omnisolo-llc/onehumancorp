@@ -94,11 +94,10 @@ impl PromptBuilder {
         for msg in messages.iter().rev().take(15) {
             if msg.role == crate::types::Role::Assistant {
                 for tc in msg.tool_calls.iter().rev() {
-                    if successful_ids.contains(&tc.id) {
-                        if !successes.contains(&tc.name) {
+                    if successful_ids.contains(&tc.id)
+                        && !successes.contains(&tc.name) {
                             successes.push(tc.name.clone());
                         }
-                    }
                     if successes.len() >= 3 {
                         break;
                     }
@@ -196,14 +195,27 @@ impl HierarchicalPromptBuilder {
         let mut tool_defs = String::new();
         if !tools.is_empty() {
             for tool in tools {
-                let _ = write!(tool_defs, "Tool: {}\n", tool.name);
-                let _ = write!(tool_defs, "Description: {}\n", tool.description);
-                let _ = write!(tool_defs, "Parameters: {}\n", tool.parameters);
+                let _ = writeln!(tool_defs, "Tool: {}", tool.name);
+                let _ = writeln!(tool_defs, "Description: {}", tool.description);
+                let _ = writeln!(tool_defs, "Parameters: {}", tool.parameters);
             }
             tool_defs.pop(); // Remove trailing newline
         }
 
         let mut user_instr = cfg.user_instructions.clone();
+
+        // OpenHands MicroAgents Injection
+        if let Ok(repo_dir) = std::env::current_dir() {
+            let microagents_dir = repo_dir.join(".openhands").join("microagents");
+            if microagents_dir.exists() {
+                let mut registry = crate::microagent::MicroAgentRegistry::new();
+                let _ = registry.load_from_dir(&microagents_dir);
+                let active_microagents = registry.get_active_instructions(&user_instr);
+                if !active_microagents.is_empty() {
+                    user_instr.push_str(&format!("\n\n[MicroAgent Instructions]:\n{}!", active_microagents));
+                }
+            }
+        }
         let limit = 32768;
 
         if user_instr.chars().count() > limit {

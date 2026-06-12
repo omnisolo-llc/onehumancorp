@@ -12,6 +12,12 @@ pub struct Registry {
     providers: RwLock<HashMap<ProviderType, Arc<dyn Provider>>>,
 }
 
+impl Default for Registry {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Registry {
     pub fn new() -> Self {
         Registry {

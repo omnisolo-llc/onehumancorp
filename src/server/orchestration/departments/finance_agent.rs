@@ -18,7 +18,10 @@ impl Department for FinanceAgent {
     }
 
     fn subscribed_events(&self) -> Vec<String> {
-        vec!["tenant.payment.received".to_string()]
+        vec![
+            "tenant.payment.received".to_string(),
+            "payment.captured".to_string()
+        ]
     }
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
@@ -33,9 +36,15 @@ impl Department for FinanceAgent {
             ActionRisk::DraftForReview
         };
 
+        let action_description = if event.event_type == "payment.captured" {
+            "Analyze transaction for split tags and record ledger split".to_string()
+        } else {
+            "Record deposit and track payment".to_string()
+        };
+
         self.orchestrator.execute_action(
             DepartmentType::Finance,
-            "Record deposit and track payment".to_string(),
+            action_description,
             event.tenant_id.clone(),
             risk,
             event.payload.clone(),

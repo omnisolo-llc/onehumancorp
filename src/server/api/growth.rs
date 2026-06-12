@@ -165,6 +165,7 @@ where
         .route("/campaign/abandoned-carts-count", get(handle_abandoned_carts_count))
         .route("/storefront/track", post(handle_track_visitor))
         .route("/storefront/embed", get(handle_storefront_embed))
+        .route("/customer-referral/embed", get(handle_customer_referral_embed))
                 .route("/storefront/og-card", get(handle_og_card))
         .route("/flash-sale/embed", get(handle_flash_sale_embed))
         .route("/milestones/check", get(handle_check_milestones))
@@ -177,8 +178,10 @@ where
         .route("/referrals/stats", get(handle_referral_stats))
         .route("/referrals/click", post(handle_referral_click))
         .route("/referrals/convert", post(handle_referral_convert))
+        .route("/referrals/tier", get(handle_referral_tier))
         .route("/team-invites/accept", post(handle_team_invite_accept))
         .route("/cloud-bridge/invite", post(handle_cloud_bridge_invite))
+        .route("/embed/widget", get(handle_embed_widget))
         .route("/referrals/generate", post(handle_referral_generate))
         .route("/onboarding-metrics", get(handle_onboarding_metrics))
         .route("/discount_share/generate", post(handle_generate_discount_share))
@@ -186,6 +189,49 @@ where
         .route("/trial-extension/claim", post(handle_trial_extension_claim))
         .route("/time-savings", get(handle_time_savings))
         .layer(Extension(GrowthState { pool, hub }))
+}
+
+#[derive(Debug, Serialize)]
+pub struct ReferralTierResponse {
+    pub current_tier: String,
+    pub next_tier: Option<String>,
+    pub referrals_needed_for_next: Option<i32>,
+    pub total_conversions: i64,
+}
+
+async fn handle_referral_tier(
+    Extension(state): Extension<GrowthState>,
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
+) -> Result<Json<ReferralTierResponse>, StatusCode> {
+    let row = sqlx::query("SELECT COALESCE(SUM(conversions), 0) FROM referrals WHERE tenant_id = $1")
+        .bind(&auth_info.org_id)
+        .fetch_one(&state.pool)
+        .await;
+
+    let mut conversions: i64 = 0;
+    if let Ok(r) = row {
+        use sqlx::Row;
+        conversions = r.get(0);
+    }
+
+    let (current_tier, next_tier, target) = if conversions >= 50 {
+        ("Platinum", None, None)
+    } else if conversions >= 20 {
+        ("Gold", Some("Platinum"), Some(50))
+    } else if conversions >= 5 {
+        ("Silver", Some("Gold"), Some(20))
+    } else {
+        ("Bronze", Some("Silver"), Some(5))
+    };
+
+    let needed = target.map(|t| t - conversions as i32);
+
+    Ok(Json(ReferralTierResponse {
+        current_tier: current_tier.to_string(),
+        next_tier: next_tier.map(|s| s.to_string()),
+        referrals_needed_for_next: needed,
+        total_conversions: conversions,
+    }))
 }
 
 #[derive(Debug, Serialize)]
@@ -209,33 +255,39 @@ async fn handle_time_savings(
     let tenant_id_str = auth_info.org_id;
 
     // Calculate aggregated time savings based on completed tasks
-    let inquiries_handled: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM tasks WHERE (tenant_id = $1 OR organization_id = $1) AND title ILIKE '%inquiry%' AND status = 'COMPLETED'")
-        .bind(parsed_uuid)
-        .fetch_optional(&state.pool)
-        .await
-        .unwrap_or(Some(0))
-        .unwrap_or(0);
+    let f1 = async {
+        sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM tasks WHERE (tenant_id = $1 OR organization_id = $1) AND title ILIKE '%inquiry%' AND status = 'COMPLETED'")
+            .bind(parsed_uuid)
+            .fetch_optional(&state.pool)
+            .await
+    };
 
-    let appointments_scheduled: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM tasks WHERE (tenant_id = $1 OR organization_id = $1) AND title ILIKE '%appointment%' AND status = 'COMPLETED'")
-        .bind(parsed_uuid)
-        .fetch_optional(&state.pool)
-        .await
-        .unwrap_or(Some(0))
-        .unwrap_or(0);
+    let f2 = async {
+        sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM tasks WHERE (tenant_id = $1 OR organization_id = $1) AND title ILIKE '%appointment%' AND status = 'COMPLETED'")
+            .bind(parsed_uuid)
+            .fetch_optional(&state.pool)
+            .await
+    };
 
-    let carts_recovered: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM tasks WHERE (tenant_id = $1 OR organization_id = $1) AND title ILIKE '%cart%' AND status = 'COMPLETED'")
-        .bind(parsed_uuid)
-        .fetch_optional(&state.pool)
-        .await
-        .unwrap_or(Some(0))
-        .unwrap_or(0);
+    let f3 = async {
+        sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM tasks WHERE (tenant_id = $1 OR organization_id = $1) AND title ILIKE '%cart%' AND status = 'COMPLETED'")
+            .bind(parsed_uuid)
+            .fetch_optional(&state.pool)
+            .await
+    };
 
-    let auto_replied: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM inbox_messages WHERE tenant_id = $1 AND status = 'auto_replied'")
-        .bind(&tenant_id_str)
-        .fetch_optional(&state.pool)
-        .await
-        .unwrap_or(Some(0))
-        .unwrap_or(0);
+    let f4 = async {
+        sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM inbox_messages WHERE tenant_id = $1 AND status = 'auto_replied'")
+            .bind(&tenant_id_str)
+            .fetch_optional(&state.pool)
+            .await
+    };
+
+    let (res1, res2, res3, res4) = tokio::join!(f1, f2, f3, f4);
+    let inquiries_handled = res1.unwrap_or(Some(0)).unwrap_or(0);
+    let appointments_scheduled = res2.unwrap_or(Some(0)).unwrap_or(0);
+    let carts_recovered = res3.unwrap_or(Some(0)).unwrap_or(0);
+    let auto_replied = res4.unwrap_or(Some(0)).unwrap_or(0);
 
     // Calculate total hours saved
     let base_hours = (inquiries_handled as f64 * 0.2) + (appointments_scheduled as f64 * 0.3) + (carts_recovered as f64 * 0.43) + (auto_replied as f64 * 0.1);
@@ -408,7 +460,7 @@ pub struct TeamInvitesResponse {
 }
 
 #[derive(Clone)]
-struct GrowthState {
+pub struct GrowthState {
     pool: PgPool,
     hub: Arc<Hub>,
 }
@@ -549,6 +601,7 @@ async fn handle_create_lead_gen_campaign(
 
 async fn handle_send_campaign(
     Extension(state): Extension<GrowthState>,
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
     Json(req): Json<CampaignRequest>,
 ) -> impl IntoResponse {
     // In a real implementation we would:
@@ -557,8 +610,24 @@ async fn handle_send_campaign(
     // 3. Dispatch the emails.
     // 4. Record the campaign in DB.
 
-    // Simulate sending 12 emails (since the UI states "12 recent orders without reviews")
-    let target_emails = if req.target_segment == "recent_buyers_no_review" { 12 } else { 150 };
+    let target_emails: i64 = if req.target_segment == "abandoned_carts" {
+        match sqlx::query_scalar("SELECT COUNT(*) FROM orders WHERE status = 'abandoned' AND tenant_id = $1")
+            .bind(&auth_info.org_id)
+            .fetch_one(&state.pool)
+            .await
+        {
+            Ok(c) => c,
+            Err(e) => {
+                tracing::error!("Failed to fetch abandoned carts count for campaign: {}", e);
+                0
+            }
+        }
+    } else if req.target_segment == "recent_buyers_no_review" {
+        // Simulate sending 12 emails (since the UI states "12 recent orders without reviews")
+        12
+    } else {
+        150
+    };
 
     // We can emit an event here to the Hub to trigger any background tasks or metrics updates.
     let msg = state.hub.sanitize_hub_event(serde_json::json!({
@@ -570,7 +639,7 @@ async fn handle_send_campaign(
 
     Json(CampaignResponse {
         campaign_id: uuid::Uuid::new_v4().to_string(),
-        emails_sent: target_emails,
+        emails_sent: target_emails as i32,
     })
 }
 
@@ -664,6 +733,108 @@ pub struct StorefrontEmbedQuery {
     pub product_name: Option<String>,
     pub price: Option<String>,
     pub theme: Option<String>,
+}
+
+
+#[derive(Deserialize)]
+pub struct CustomerReferralEmbedQuery {
+    pub tenant: Option<String>,
+    pub give: Option<String>,
+    pub get: Option<String>,
+    pub theme: Option<String>,
+}
+
+async fn handle_customer_referral_embed(
+    Extension(_state): Extension<GrowthState>,
+    axum::extract::Query(query): axum::extract::Query<CustomerReferralEmbedQuery>,
+) -> impl IntoResponse {
+    let escape_html = |s: &str| {
+        s.replace("&", "&amp;")
+         .replace("<", "&lt;")
+         .replace(">", "&gt;")
+         .replace("\"", "&quot;")
+         .replace("\'", "&#x27;")
+    };
+
+    let tenant = escape_html(query.tenant.as_deref().unwrap_or("embed"));
+    let give = escape_html(query.give.as_deref().unwrap_or("10"));
+    let get = escape_html(query.get.as_deref().unwrap_or("10"));
+    let bg_color = if query.theme.as_deref() == Some("dark") { "#111827" } else { "#ffffff" };
+    let text_color = if query.theme.as_deref() == Some("dark") { "#ffffff" } else { "#1f2937" };
+    let border_color = if query.theme.as_deref() == Some("dark") { "#374151" } else { "#e5e7eb" };
+
+    let html = format!(
+        r#"<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body {{
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: {bg_color};
+            color: {text_color};
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            box-sizing: border-box;
+        }}
+        .card {{
+            border: 1px solid {border_color};
+            border-radius: 16px;
+            padding: 24px;
+            text-align: center;
+            max-width: 400px;
+            width: 100%;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }}
+        .icon {{
+            font-size: 48px;
+            margin-bottom: 16px;
+        }}
+        h2 {{
+            margin: 0 0 8px 0;
+            font-size: 24px;
+        }}
+        p {{
+            margin: 0 0 24px 0;
+            color: #6b7280;
+            font-size: 14px;
+            line-height: 1.5;
+        }}
+        .button {{
+            background-color: #10b981;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            transition: background-color 0.2s;
+        }}
+        .button:hover {{
+            background-color: #059669;
+        }}
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="icon">🎁</div>
+        <h2>Give ${give}, Get ${get}</h2>
+        <p>Give your friends ${give} off their first order, and get ${get} when they purchase.</p>
+        <button class="button" onclick="window.open('https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref={tenant}', '_blank')">Share your link</button>
+        <div style="font-family: sans-serif; text-align: center; font-size: 12px; margin-top: 8px;"><a href="https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref={tenant}" target="_blank" style="color: #6b7280; text-decoration: none; font-weight: 600;">⚡ Powered by OHC</a></div>
+    </div>
+</body>
+</html>"#
+    );
+
+    axum::response::Html(html)
 }
 
 async fn handle_storefront_embed(
@@ -1031,14 +1202,15 @@ async fn handle_get_milestone_card(
         "10th_order" => ("10th Order!", "Business is booming", "📈", "#ff9a9e", "#fecfef"),
         "100_visitors" => ("100 Visitors!", "Traffic is soaring", "🚀", "#a1c4fd", "#c2e9fb"),
         "5_referrals" => ("High Connector!", "Referred 5 businesses", "🤝", "#f6d365", "#fda085"),
-        "revenue_1k" => ("Four-Figure Club", "Revenue > $1,000", "💰", "#84fab0", "#8fd3f4"),
+        "revenue_1k" => ("Four-Figure Club", "Crossed $1k in Revenue!", "💰", "#f43f5e", "#fb923c"),
         "100_orders" => ("Century of Orders", "100 sales fulfilled", "📦", "#ffecd2", "#fcb69f"),
         _ => ("Success Milestone!", "Built with OHC", "✨", "#667eea", "#764ba2"),
     };
 
     let branding = if !has_pro {
         format!(r##"<a href="/api/v1/growth/referrals/click?target=/onboarding&ref={}" target="_blank">
-    <text x="1100" y="590" font-family="sans-serif" font-size="24" font-weight="bold" text-anchor="end" fill="#ffffff" opacity="0.8">⚡ Powered by OHC</text>
+    <text x="1100" y="580" font-family="sans-serif" font-size="24" font-weight="bold" text-anchor="end" fill="#ffffff" opacity="0.8">⚡ Powered by OHC</text>
+    <text x="1100" y="605" font-family="sans-serif" font-size="18" font-weight="medium" text-anchor="end" fill="#ffffff" opacity="0.7">Join OHC & get 14 days of Pro free</text>
   </a>"##, tenant_id)
     } else {
         "".to_string()
@@ -1341,6 +1513,9 @@ async fn handle_team_invite_accept(
                 cache.invalidate(&format!("{}None", cache_key_prefix)).await;
             }
 
+            let metrics_cache = METRICS_CACHE.get_or_init(|| HybridCache::new(None));
+            metrics_cache.invalidate("aggregated_metrics").await;
+
             let msg = state.hub.sanitize_hub_event(serde_json::json!({ "type": "growth.team_invite_accepted", "id": req.id }));
             state.hub.append_recent_event(msg);
             Ok(Json(()))
@@ -1362,6 +1537,9 @@ async fn handle_create_team_invite(
             let cache_key_prefix = format!("team_invites:{}:", req.team_id);
             let cache = TEAM_INVITES_CACHE.get_or_init(|| HybridCache::new(None));
             cache.invalidate(&format!("{}None", cache_key_prefix)).await;
+
+            let metrics_cache = METRICS_CACHE.get_or_init(|| HybridCache::new(None));
+            metrics_cache.invalidate("aggregated_metrics").await;
 
             let msg = state.hub.sanitize_hub_event(serde_json::json!({ "type": "growth.team_invite_created", "team_id": req.team_id, "inviter_id": req.inviter_id, "invitee_id": req.invitee_id }));
             state.hub.append_recent_event(msg);
@@ -1816,12 +1994,12 @@ async fn handle_aggregated_team_invites_metrics(
 
 async fn handle_abandoned_carts_count(
     Extension(state): Extension<GrowthState>,
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
 ) -> impl IntoResponse {
     let pool = &state.pool;
 
-    // Attempt to query orders with status = 'abandoned'.
-    // Note: We use COALESCE to return 0 if no results.
-    let count: i64 = match sqlx::query_scalar("SELECT COUNT(*) FROM orders WHERE status = 'abandoned'")
+    let count: i64 = match sqlx::query_scalar("SELECT COUNT(*) FROM orders WHERE status = 'abandoned' AND tenant_id = $1")
+        .bind(&auth_info.org_id)
         .fetch_one(pool)
         .await
     {
@@ -1861,6 +2039,9 @@ async fn handle_cloud_bridge_invite(
             // Invalidate specifically the first page commonly fetched. For robust cache invalidation across all pages, consider tag-based invalidation or shorter TTLs. We will rely on the short 30s TTL for subsequent pages.
             cache.invalidate(&format!("{}None", cache_key_prefix)).await;
 
+            let metrics_cache = METRICS_CACHE.get_or_init(|| HybridCache::new(None));
+            metrics_cache.invalidate("aggregated_metrics").await;
+
             let msg = state.hub.sanitize_hub_event(serde_json::json!({ "type": "growth.cloud_bridge_invite_created", "team_id": req.team_id, "inviter_id": req.inviter_id, "invitee_id": req.invitee_id }));
             state.hub.append_recent_event(msg);
 
@@ -1873,6 +2054,29 @@ async fn handle_cloud_bridge_invite(
 
 #[cfg(test)]
 mod cloud_bridge_tests {
+
+    #[tokio::test]
+    async fn test_customer_referral_embed() {
+        let pool = setup_db().await;
+        if sqlx::query("SELECT 1").execute(&pool).await.is_err() {
+            return;
+        }
+        let (event_tx, _) = tokio::sync::mpsc::channel(100);
+        let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
+        let state = GrowthState { pool: pool.clone(), hub: hub.clone() };
+
+        let query = super::CustomerReferralEmbedQuery { tenant: Some("test-tenant".to_string()), give: Some("15".to_string()), get: Some("20".to_string()), theme: None };
+        let res = super::handle_customer_referral_embed(Extension(state.clone()), axum::extract::Query(query)).await.into_response();
+
+        let body_bytes = axum::body::to_bytes(res.into_body(), usize::MAX).await.unwrap();
+        let html = String::from_utf8(body_bytes.to_vec()).unwrap();
+
+        assert!(html.contains("Give $15, Get $20"));
+        assert!(html.contains("test-tenant"));
+        assert!(html.contains("Give your friends $15 off"));
+        assert!(html.contains("Powered by OHC"));
+    }
+
     use super::*;
     use super::tests::setup_db;
     use crate::hub::Hub;
@@ -1905,4 +2109,70 @@ mod cloud_bridge_tests {
         let recent_events = state.hub.recent_events(10);
         assert!(recent_events.iter().any(|e| e.r#type == "growth.cloud_bridge_invite_created"));
     }
+}
+
+#[derive(Deserialize, Debug)]
+pub struct EmbedWidgetQuery {
+    pub tenant_id: Option<String>,
+    pub r#type: Option<String>,
+    pub theme: Option<String>,
+}
+
+fn escape_html(s: &str) -> String {
+    let mut escaped = String::with_capacity(s.len());
+    for c in s.chars() {
+        match c {
+            '<' => escaped.push_str("&lt;"),
+            '>' => escaped.push_str("&gt;"),
+            '&' => escaped.push_str("&amp;"),
+            '"' => escaped.push_str("&quot;"),
+            '\'' => escaped.push_str("&#x27;"),
+            _ => escaped.push(c),
+        }
+    }
+    escaped
+}
+
+pub async fn handle_embed_widget(
+    axum::extract::Extension(_state): axum::extract::Extension<GrowthState>,
+    axum::extract::Query(query): axum::extract::Query<EmbedWidgetQuery>
+) -> axum::response::Html<String> {
+    let tenant = query.tenant_id.unwrap_or_else(|| "default-tenant".to_string());
+    let w_type = query.r#type.unwrap_or_else(|| "booking".to_string());
+    let theme = query.theme.unwrap_or_else(|| "light".to_string());
+
+    let bg_color = if theme == "dark" { "#1d1d1f" } else { "#ffffff" };
+    let text_color = if theme == "dark" { "#f5f5f7" } else { "#1d1d1f" };
+
+    let escaped_type = escape_html(&w_type);
+    let escaped_tenant = escape_html(&tenant);
+
+    let html = format!(
+        r#"<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body {{ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: {}; color: {}; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; box-sizing: border-box; }}
+    h2 {{ margin: 0 0 10px 0; font-size: 20px; }}
+    p {{ margin: 0 0 20px 0; font-size: 14px; opacity: 0.8; text-align: center; }}
+    button {{ background: #0066FF; color: white; border: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 16px; transition: background 0.2s; }}
+    button:hover {{ background: #0055DD; }}
+  </style>
+</head>
+<body>
+  <h2>Request a {}</h2>
+  <p>Workspace: {}</p>
+  <button id="start-btn" data-type="{}">Start {}</button>
+
+  <script>
+    document.getElementById('start-btn').addEventListener('click', function() {{
+      alert('Demand captured for ' + this.getAttribute('data-type'));
+    }});
+  </script>
+</body>
+</html>"#,
+        bg_color, text_color, escaped_type, escaped_tenant, escaped_type, escaped_type
+    );
+    axum::response::Html(html)
 }
