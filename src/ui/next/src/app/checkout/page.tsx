@@ -13,6 +13,8 @@ function CheckoutContent() {
   const productId = searchParams?.get("product_id") || "prod_123";
   const quantity = parseInt(searchParams?.get("quantity") || "1", 10);
   const discountParam = searchParams?.get("discount");
+  const successParam = searchParams?.get("success");
+  const sessionIdParam = searchParams?.get("session_id");
   const [isProcessing, setIsProcessing] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [tenant, setTenant] = useState("my-store");
@@ -22,8 +24,11 @@ function CheckoutContent() {
   useEffect(() => {
     if (typeof localStorage !== "undefined") {
       setTenant(localStorage.getItem("tenant") || "my-store");
+      if (successParam === "true" || sessionIdParam) {
+        setShowSuccessModal(true);
+      }
     }
-  }, []);
+  }, [successParam, sessionIdParam]);
 
   const [deliveryAddress, setDeliveryAddress] = useState("");
   const [deliveryFee, setDeliveryFee] = useState<number | null>(null);

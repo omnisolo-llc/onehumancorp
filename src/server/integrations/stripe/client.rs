@@ -97,8 +97,10 @@ impl StripeClient {
         let amount_cents = (amount_usd * 100.0).round() as i64;
 
         let mut form = std::collections::HashMap::new();
-        form.insert("success_url".to_string(), "https://example.com/success".to_string());
-        form.insert("cancel_url".to_string(), "https://example.com/cancel".to_string());
+        let success_url = std::env::var("OHC_FRONTEND_URL").unwrap_or_else(|_| "https://app.onehumancorp.com".to_string()) + "/checkout?success=true&session_id={CHECKOUT_SESSION_ID}";
+        form.insert("success_url".to_string(), success_url);
+        let cancel_url = std::env::var("OHC_FRONTEND_URL").unwrap_or_else(|_| "https://app.onehumancorp.com".to_string()) + "/checkout?canceled=true";
+        form.insert("cancel_url".to_string(), cancel_url);
         if is_subscription {
             form.insert("mode".to_string(), "subscription".to_string());
             form.insert("line_items[0][price_data][recurring][interval]".to_string(), "month".to_string());
