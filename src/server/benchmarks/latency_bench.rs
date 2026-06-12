@@ -693,9 +693,9 @@ pub async fn bench_dashboard_analytics_briefing_latency() {
         let start_sim = std::time::Instant::now();
         let pool1 = pg_pool.clone();
         let pool2 = pg_pool.clone();
-        let (_, _) = tokio::join!(
-            tokio::spawn(async move { sqlx::query("SELECT pg_sleep(0.015)").execute(&pool1).await }),
-            tokio::spawn(async move { sqlx::query("SELECT pg_sleep(0.015)").execute(&pool2).await })
+        let _ = tokio::join!(
+            sqlx::query("SELECT pg_sleep(0.015)").execute(&pool1),
+            sqlx::query("SELECT pg_sleep(0.015)").execute(&pool2)
         );
         let duration = start_sim.elapsed();
 
@@ -800,11 +800,11 @@ pub async fn bench_time_savings_latency() {
         let pool2 = pg_pool.clone();
         let pool3 = pg_pool.clone();
         let pool4 = pg_pool.clone();
-        let (_, _, _, _) = tokio::join!(
-            tokio::spawn(async move { sqlx::query("SELECT pg_sleep(0.015)").execute(&pool1).await }),
-            tokio::spawn(async move { sqlx::query("SELECT pg_sleep(0.015)").execute(&pool2).await }),
-            tokio::spawn(async move { sqlx::query("SELECT pg_sleep(0.015)").execute(&pool3).await }),
-            tokio::spawn(async move { sqlx::query("SELECT pg_sleep(0.015)").execute(&pool4).await })
+        let _ = tokio::join!(
+            sqlx::query("SELECT pg_sleep(0.015)").execute(&pool1),
+            sqlx::query("SELECT pg_sleep(0.015)").execute(&pool2),
+            sqlx::query("SELECT pg_sleep(0.015)").execute(&pool3),
+            sqlx::query("SELECT pg_sleep(0.015)").execute(&pool4)
         );
         let duration = start_sim.elapsed();
         println!("  - time_savings_handler (Postgres Parallel Execution): {:?}", duration);
@@ -862,11 +862,11 @@ pub async fn bench_dashboard_unified_feed_parallel_latency() {
         let pool2 = pg_pool.clone();
         let pool3 = pg_pool.clone();
         let pool4 = pg_pool.clone();
-        let (_, _, _, _) = tokio::join!(
-            tokio::spawn(async move { sqlx::query("SELECT pg_sleep(0.010)").execute(&pool1).await }),
-            tokio::spawn(async move { sqlx::query("SELECT pg_sleep(0.010)").execute(&pool2).await }),
-            tokio::spawn(async move { sqlx::query("SELECT pg_sleep(0.010)").execute(&pool3).await }),
-            tokio::spawn(async move { sqlx::query("SELECT pg_sleep(0.010)").execute(&pool4).await })
+        let _ = tokio::join!(
+            sqlx::query("SELECT pg_sleep(0.010)").execute(&pool1),
+            sqlx::query("SELECT pg_sleep(0.010)").execute(&pool2),
+            sqlx::query("SELECT pg_sleep(0.010)").execute(&pool3),
+            sqlx::query("SELECT pg_sleep(0.010)").execute(&pool4)
         );
         let duration_par = start_par.elapsed();
 
@@ -889,9 +889,9 @@ pub async fn bench_dashboard_analytics_chat_latency() {
         let start_sim = std::time::Instant::now();
         let pool1 = pg_pool.clone();
         let pool2 = pg_pool.clone();
-        let (_, _) = tokio::join!(
-            tokio::spawn(async move { sqlx::query("SELECT pg_sleep(0.015)").execute(&pool1).await }),
-            tokio::spawn(async move { sqlx::query("SELECT pg_sleep(0.015)").execute(&pool2).await })
+        let _ = tokio::join!(
+            sqlx::query("SELECT pg_sleep(0.015)").execute(&pool1),
+            sqlx::query("SELECT pg_sleep(0.015)").execute(&pool2)
         );
         let duration = start_sim.elapsed();
 
