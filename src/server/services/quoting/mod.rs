@@ -13,6 +13,8 @@ pub fn router(pool: PgPool) -> Router {
         .route("/quotes", post(create_quote))
         .route("/quotes/:id", get(get_quote))
         .route("/quotes/:id/approve", patch(approve_quote))
+        .route("/dynamic_pricing_rules", post(create_pricing_rules))
+        .route("/dynamic_pricing_rules/:product_id", get(get_pricing_rules))
         .with_state(pool)
 }
 
@@ -38,6 +40,89 @@ pub struct QuoteLineItemReq {
     pub unit_price_cents: i64,
     pub quantity: i32,
     pub is_optional: bool,
+}
+
+#[derive(Debug, Serialize, Deserialize, FromRow)]
+pub struct DynamicPricingRule {
+    pub id: Uuid,
+    pub tenant_id: String,
+    pub product_id: String,
+    pub base_price_cents: i64,
+    pub rules: sqlx::types::Json<serde_json::Value>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CreateDynamicPricingRuleReq {
+    pub product_id: String,
+    pub base_price_cents: i64,
+    pub rules: serde_json::Value,
+}
+
+async fn create_pricing_rules(
+    State(pool): State<PgPool>,
+    axum::extract::Extension(user): axum::extract::Extension<::server_common::Claims>,
+    Json(payload): Json<CreateDynamicPricingRuleReq>,
+) -> Result<Json<DynamicPricingRule>, axum::http::StatusCode> {
+    let tenant_id = user.organization_id.unwrap_or_else(|| "default".to_string());
+
+    // Set tenant context for RLS
+    let mut tx = pool.begin().await.map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
+    if let Err(_) = crate::common::auth_utils::set_org_context(&mut *tx, &tenant_id).await {
+        return Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR);
+    }
+
+    let rule_id = Uuid::new_v4();
+
+    let rule = sqlx::query_as::<_, DynamicPricingRule>(
+        "INSERT INTO dynamic_pricing_rules (id, tenant_id, product_id, base_price_cents, rules) VALUES ($1, $2, $3, $4, $5) RETURNING *"
+    )
+    .bind(rule_id)
+    .bind(&tenant_id)
+    .bind(&payload.product_id)
+    .bind(payload.base_price_cents)
+    .bind(sqlx::types::Json(payload.rules))
+    .fetch_one(&mut *tx)
+    .await
+    .map_err(|e| {
+        tracing::error!("Failed to create pricing rule: {}", e);
+        axum::http::StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    tx.commit().await.map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    Ok(Json(rule))
+}
+
+async fn get_pricing_rules(
+    State(pool): State<PgPool>,
+    axum::extract::Extension(user): axum::extract::Extension<::server_common::Claims>,
+    Path(product_id): Path<String>,
+) -> Result<Json<DynamicPricingRule>, axum::http::StatusCode> {
+    let tenant_id = user.organization_id.unwrap_or_else(|| "default".to_string());
+
+    // Set tenant context for RLS
+    let mut tx = pool.begin().await.map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
+    if let Err(_) = crate::common::auth_utils::set_org_context(&mut *tx, &tenant_id).await {
+        return Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR);
+    }
+
+    let rule = sqlx::query_as::<_, DynamicPricingRule>(
+        "SELECT * FROM dynamic_pricing_rules WHERE product_id = $1"
+    )
+    .bind(product_id)
+    .fetch_optional(&mut *tx)
+    .await
+    .map_err(|e| {
+        tracing::error!("Failed to get pricing rule: {}", e);
+        axum::http::StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    tx.commit().await.map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    match rule {
+        Some(r) => Ok(Json(r)),
+        None => Err(axum::http::StatusCode::NOT_FOUND),
+    }
 }
 
 async fn create_quote(
