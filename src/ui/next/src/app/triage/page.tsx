@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { AppShell } from "../components/AppShell";
+import { ActionCard } from "../components/ActionCard";
 
 type TriageItem = {
   id: string;
@@ -19,20 +20,12 @@ function tenantId() {
   return localStorage.getItem("tenant_id") || localStorage.getItem("tenant") || "default";
 }
 
-function badgeTone(priority?: string) {
-  const normalized = (priority || "").toLowerCase();
-  if (["urgent", "high"].includes(normalized)) return "bad";
-  if (["action needed", "medium"].includes(normalized)) return "warn";
-  if (["fyi", "low"].includes(normalized)) return "good";
-  return "neutral";
-}
-
 export default function TriagePage() {
   const [items, setItems] = useState<TriageItem[]>([]);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [actionStatus, setActionStatus] = useState("");
+  const [processingIds, setProcessingIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     loadItems();
@@ -47,9 +40,6 @@ export default function TriagePage() {
       const data = await res.json();
       const rows = Array.isArray(data?.items) ? data.items : [];
       setItems(rows);
-      if (!selectedId && rows.length > 0) {
-        setSelectedId(rows[0].id);
-      }
     } catch (e: any) {
       setError(e?.message || "Failed to load agent feed items");
     } finally {
@@ -57,17 +47,16 @@ export default function TriagePage() {
     }
   }
 
-  const selected = useMemo(
-    () => items.find((item) => item.id === selectedId) || items[0],
-    [items, selectedId],
-  );
-
   const activeCount = items.length;
   const urgentCount = items.filter(item => ["urgent", "high"].includes((item.context_payload?.priority || "").toLowerCase())).length;
 
   async function handleDecision(id: string, approved: boolean) {
+    if (processingIds.has(id)) return;
+
     try {
+      setProcessingIds(prev => new Set(prev).add(id));
       setActionStatus(approved ? "Approving..." : "Dismissing...");
+
       const res = await fetch(`/api/agent-feed/${id}/state`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -77,17 +66,19 @@ export default function TriagePage() {
 
       setActionStatus(approved ? "Approved!" : "Dismissed.");
 
-      // Optimistic UI update
-      const newItems = items.filter(i => i.id !== id);
-      setItems(newItems);
-      if (selectedId === id) {
-        setSelectedId(newItems.length > 0 ? newItems[0].id : null);
-      }
+      // Optimistic UI update - animate card out of feed
+      setItems(prevItems => prevItems.filter(i => i.id !== id));
 
       setTimeout(() => setActionStatus(""), 3000);
     } catch (e) {
       console.error(e);
       setActionStatus("Error updating action.");
+    } finally {
+      setProcessingIds(prev => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
     }
   }
 
@@ -100,100 +91,45 @@ export default function TriagePage() {
         { label: "Urgent", value: String(urgentCount), tone: urgentCount > 0 ? "bad" : "neutral" },
       ]}
     >
-      {actionStatus && <div className="mb-4 app-badge good" role="status">{actionStatus}</div>}
+      <div className="max-w-[600px] mx-auto w-full">
+        {actionStatus && <div className="mb-4 app-badge good w-full justify-center" role="status">{actionStatus}</div>}
 
-      <div className="mb-6 p-6 rounded-[16px] glassmorphism border border-white/40 dark:border-white/10">
-        <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Unified Agent Feed</h2>
-        <p className="text-gray-600 dark:text-gray-400">Review AI-prepared actions and reply drafts across all channels.</p>
-      </div>
+        <div className="mb-6 p-6 rounded-[16px] glassmorphism border border-white/40 dark:border-white/10 text-center">
+          <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Unified Agent Feed</h2>
+          <p className="text-gray-600 dark:text-gray-400">Review AI-prepared actions and reply drafts.</p>
+        </div>
 
-      <div className="app-grid two grid grid-cols-1 lg:grid-cols-[1.5fr_0.8fr] gap-6">
-        <section className="app-panel glassmorphism backdrop-blur-md bg-white/60 dark:bg-black/40 border border-white/20">
-          <div className="app-panel-header">
-            <div>
-              <div className="app-panel-title">Triage Queue</div>
-            </div>
-          </div>
-          <div id="triage-list" className="app-list">
-            {error && <div className="app-empty">{error}</div>}
-            {!error && items.length === 0 ? (
-              <div className="app-empty">{loading ? "Loading triage items..." : "No items need your attention right now. Great job!"}</div>
-            ) : items.map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                data-testid={`triage-card-${item.id}`}
-                onClick={() => setSelectedId(item.id)}
-                className="app-list-item w-full text-left min-h-[44px]"
-                style={{ background: selected?.id === item.id ? "rgba(255, 255, 255, 0.5)" : "transparent" }}
-              >
-                <div className="min-w-0">
-                  <div className="app-list-title">{item.event_source || "Unknown Source"}</div>
-                  <div className="app-list-subtitle truncate">{item.context_payload?.context || "No context provided"}</div>
-                </div>
-                <span className={`app-badge ${badgeTone(item.context_payload?.priority)}`}>{item.context_payload?.priority || "Normal"}</span>
-              </button>
-            ))}
-          </div>
-        </section>
+        <div className="flex flex-col w-full" id="triage-feed">
+          {error && <div className="app-empty w-full text-center">{error}</div>}
 
-        <section className="app-panel glassmorphism backdrop-blur-md bg-white/60 dark:bg-black/40 border border-white/20">
-          <div className="app-panel-header">
-            <div className="app-panel-title">Triage Detail</div>
-          </div>
-          {!selected ? (
-            <div className="app-empty">Select a triage item to review it.</div>
-          ) : (
-            <div className="app-panel-body">
-              <div className="mb-4">
-                <div className="app-metric-label">Source</div>
-                <div className="mt-1 text-sm font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">{selected.event_source || "Unknown source"}</div>
-              </div>
-              <div className="mb-4">
-                <div className="app-metric-label">Context</div>
-                <div className="mt-2 rounded-md border border-gray-200 dark:border-white/10 bg-white/50 dark:bg-black/20 p-3 text-sm leading-6 text-[#1D1D1F] dark:text-[#F5F5F7]">
-                  {selected.context_payload?.context || "No context"}
-                </div>
-              </div>
-              {selected.proposed_action?.action_type && (
-                <div className="mb-6">
-                  <div className="app-metric-label">Proposed Action: {selected.proposed_action.action_type}</div>
-                  <div className="mt-2 rounded-md border border-blue-200 dark:border-blue-900/30 bg-blue-50/50 dark:bg-blue-900/20 p-4 text-sm leading-6 text-blue-900 dark:text-blue-100 font-medium">
-                    {selected.proposed_action.payload || "No specific payload"}
-                  </div>
+          {!error && items.length === 0 ? (
+            <div className="app-empty w-full text-center glassmorphism rounded-[16px] py-12">
+              {loading ? (
+                <div className="animate-pulse">Loading triage items...</div>
+              ) : (
+                <div className="flex flex-col items-center gap-2">
+                  <span className="text-4xl">🎉</span>
+                  <p className="text-[#1D1D1F] dark:text-[#F5F5F7] font-medium">Inbox Zero!</p>
+                  <p className="text-sm text-gray-500">No items need your attention right now.</p>
                 </div>
               )}
-
-              <div className="grid grid-cols-2 gap-3 mb-6">
-                <div className="app-card glassmorphism backdrop-blur-md bg-white/30 dark:bg-black/30 border border-white/20">
-                  <div className="app-metric-label">Priority</div>
-                  <div className="mt-2"><span className={`app-badge ${badgeTone(selected.context_payload?.priority)}`}>{selected.context_payload?.priority || "Normal"}</span></div>
-                </div>
-                <div className="app-card glassmorphism backdrop-blur-md bg-white/30 dark:bg-black/30 border border-white/20">
-                  <div className="app-metric-label">Created</div>
-                  <div className="mt-2 text-sm font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">{new Date(selected.created_at || Date.now()).toLocaleString()}</div>
-                </div>
-              </div>
-
-              <div className="flex flex-col sm:flex-row gap-3">
-                <button
-                  className="app-btn-primary flex-1 min-h-[44px]"
-                  data-testid="approve-btn"
-                  onClick={() => handleDecision(selected.id, true)}
-                >
-                  ✨ Approve &amp; Execute
-                </button>
-                <button
-                  className="px-4 py-2 rounded-[16px] border border-white/40 dark:border-white/20 text-[#1D1D1F] dark:text-[#F5F5F7] bg-white/50 dark:bg-black/20 hover:bg-white/80 dark:hover:bg-black/40 flex-1 min-h-[44px] font-medium transition-colors backdrop-blur-md"
-                  data-testid="dismiss-btn"
-                  onClick={() => handleDecision(selected.id, false)}
-                >
-                  Dismiss
-                </button>
-              </div>
             </div>
+          ) : (
+            items.map((item) => (
+              <ActionCard
+                key={item.id}
+                id={item.id}
+                agentType={item.event_source || "Unknown Source"}
+                context={item.context_payload?.context || "No context provided"}
+                draftContent={item.proposed_action?.payload || item.proposed_action?.message}
+                priority={item.context_payload?.priority || "Normal"}
+                onApprove={(id) => handleDecision(id, true)}
+                onDismiss={(id) => handleDecision(id, false)}
+                isActionInProgress={processingIds.has(item.id)}
+              />
+            ))
           )}
-        </section>
+        </div>
       </div>
     </AppShell>
   );
