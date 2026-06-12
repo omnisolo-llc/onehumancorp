@@ -9,6 +9,8 @@ export default function Integrations() {
   const [statusMessage, setStatusMessage] = useState("");
 
   const [integrations, setIntegrations] = useState([
+
+    { id: "twilio_whatsapp", name: "WhatsApp Business (Twilio)", category: "operations", status: "disconnected", icon: "💬", description: "Central WhatsApp Inbox via Twilio for Work Triage and Customer Assistant." },
     { id: "ayrshare", name: "Ayrshare", category: "marketing", status: "disconnected", icon: "📱", description: "Single API for posting and retrieving messages across social networks." },
     { id: "cal_com", name: "Cal.com", category: "operations", status: "disconnected", icon: "📅", description: "Zero-Config Booking & Calendar Sync." },
     { id: "mailerlite", name: "MailerLite", category: "marketing", status: "disconnected", icon: "📨", description: "Embedded, No-Jargon Email Campaigns." },
@@ -27,6 +29,9 @@ export default function Integrations() {
 
   const [showTwilioModal, setShowTwilioModal] = useState(false);
   const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
+
+  const [showTwilioWhatsAppModal, setShowTwilioWhatsAppModal] = useState(false);
+
   const [twilioChannels, setTwilioChannels] = useState({
     whatsapp: true,
     instagram: false,
@@ -53,6 +58,13 @@ export default function Integrations() {
       setStatusMessage("Choose Twilio channels to finish connecting.");
       return;
     }
+
+    if (id === 'twilio_whatsapp') {
+      setShowTwilioWhatsAppModal(true);
+      setStatusMessage("Follow the setup flow to connect Twilio WhatsApp.");
+      return;
+    }
+
     if (id === 'whatsapp') {
       setShowWhatsAppModal(true);
       setStatusMessage("Follow the Embedded Signup flow to connect WhatsApp.");
@@ -98,8 +110,65 @@ export default function Integrations() {
     router.push('/inbox');
   };
 
+
+  const saveTwilioWhatsAppIntegration = () => {
+    setIntegrations(prev => prev.map(integration =>
+      integration.id === 'twilio_whatsapp' ? { ...integration, status: "connected" } : integration
+    ));
+    setShowTwilioWhatsAppModal(false);
+    setStatusMessage("Twilio WhatsApp connected.");
+    router.push('/inbox');
+  };
+
   return (
     <div className="flex flex-col min-h-screen font-inter" style={{ backgroundColor: '#F5F5F7' }}>
+
+
+      {/* Twilio WhatsApp Connect Modal */}
+      {showTwilioWhatsAppModal && (
+        <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="app-card w-full max-w-md rounded-2xl p-6 shadow-2xl relative overflow-hidden font-inter">
+            <div className="flex justify-between items-start mb-4">
+              <div className="w-12 h-12 bg-green-50 rounded-xl flex items-center justify-center text-2xl text-green-600 border border-green-100">
+                💬
+              </div>
+              <button
+                onClick={() => setShowTwilioWhatsAppModal(false)}
+                className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+
+            <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">Connect Twilio WhatsApp</h2>
+            <p className="text-gray-600 mb-6 text-sm leading-relaxed">
+              Connect your Twilio Account to route WhatsApp messages to your central inbox.
+            </p>
+
+            <div className="space-y-4 mb-6">
+              <div>
+                <label className="block text-sm font-semibold text-gray-800 mb-1">Account SID</label>
+                <input type="text" className="w-full p-3 rounded-xl border border-gray-200 focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] outline-none" placeholder="AC..." />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-800 mb-1">Auth Token</label>
+                <input type="password" className="w-full p-3 rounded-xl border border-gray-200 focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] outline-none" placeholder="••••••••••••••••" />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-800 mb-1">WhatsApp Number</label>
+                <input type="text" className="w-full p-3 rounded-xl border border-gray-200 focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] outline-none" placeholder="whatsapp:+1..." />
+              </div>
+            </div>
+
+            <button
+              onClick={saveTwilioWhatsAppIntegration}
+              className="w-full bg-[#0066FF] text-white py-3 rounded-xl font-bold text-sm shadow-sm hover:bg-[#005bb5] transition-colors"
+            >
+              Connect Twilio
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* WhatsApp Cloud API Connect Modal */}
       {showWhatsAppModal && (

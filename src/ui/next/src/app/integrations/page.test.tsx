@@ -32,7 +32,14 @@ describe("Integrations", () => {
     });
 
     render(<Integrations />);
-    fireEvent.click(screen.getAllByRole("button", { name: "Connect" })[4]);
+
+    // Find the Connect button specifically for Shippo
+    const shippoHeading = screen.getByText("Shippo");
+    const shippoCard = shippoHeading.closest("div.flex.flex-col");
+    const connectButton = shippoCard?.querySelector("button");
+    if (connectButton) {
+        fireEvent.click(connectButton);
+    }
 
     await waitFor(() => {
       expect(global.fetch).toHaveBeenCalledWith("/api/integrations/shippo/connect", {

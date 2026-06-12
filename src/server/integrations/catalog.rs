@@ -8,6 +8,12 @@ pub fn get_catalog() -> Vec<IntegrationProvider> {
             "event_mesh",
             "nats://localhost:4222".to_string(),
         ),
+                metadata_provider(
+            "twilio_whatsapp",
+            "WhatsApp Business (Twilio)",
+            "operations",
+            "https://api.twilio.com".to_string(),
+        ),
         metadata_provider(
             "twilio",
             "Twilio SMS",
