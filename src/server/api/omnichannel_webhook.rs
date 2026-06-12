@@ -219,8 +219,7 @@ pub async fn handle_omnichannel_webhook(
 mod tests {
     use super::*;
     use crate::db::DB;
-    use crate::db::get_pool;
-    use sqlx::SqlitePool;
+        use sqlx::SqlitePool;
 
     #[tokio::test]
     async fn test_resolve_identity() {
