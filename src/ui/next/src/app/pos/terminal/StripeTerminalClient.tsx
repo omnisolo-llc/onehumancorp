@@ -168,7 +168,7 @@ export default function StripeTerminalClient({ amount, productId, tenantId }: { 
       const reserveData = await reserveRes.json();
 
       if (!reserveData.success) {
-        setStatus('Item just sold out. Reservation failed: ' + (reserveData.error_message || 'Item is currently being purchased elsewhere'));
+        setStatus('Reservation failed: ' + (reserveData.error_message || 'Item is currently being purchased elsewhere'));
         setReserving(false);
         return;
       }

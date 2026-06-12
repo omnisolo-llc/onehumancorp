@@ -133,38 +133,17 @@ impl PosService for MyPosService {
 
         let results = futures::future::join_all(futures).await;
 
-        let mut pending_rec = Vec::new();
         for res in results {
             match res {
                 Ok(Ok(())) => {
                     synced_count += 1;
                 }
                 Ok(Err(id)) => {
-                    failed_ids.push(id.clone());
-                    pending_rec.push(id);
+                    failed_ids.push(id);
                 }
                 Err(e) => {
                     tracing::error!("Task failed to execute: {}", e);
                 }
-            }
-        }
-
-        if let Some(session_id) = &req.session_id {
-            if synced_count > 0 || !pending_rec.is_empty() {
-                let pending_json = serde_json::to_string(&pending_rec).unwrap_or_else(|_| "[]".to_string());
-                let _ = sqlx::query(
-                    "UPDATE pos_terminal_sessions
-                     SET pending_reconciliation = $1::jsonb,
-                         sync_status = 'SYNCING',
-                         offline_changes_count = offline_changes_count + $2
-                     WHERE id = $3 AND tenant_id = $4"
-                )
-                .bind(&pending_json)
-                .bind(synced_count)
-                .bind(session_id)
-                .bind(&tenant_id)
-                .execute(&pool)
-                .await;
             }
         }
 
