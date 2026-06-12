@@ -64,15 +64,6 @@
       select.glassmorphism, textarea.glassmorphism {
         border-radius: 8px;
       }
-      input.glassmorphism {
-        border-radius: 8px;
-      }
-      select, textarea, input {
-        border-radius: 8px;
-      }
-      select, textarea, input {
-        border-radius: 8px;
-      }
       input:focus {
         outline: none;
         border-color: #0066FF;
@@ -138,6 +129,41 @@
         margin-right: 8px;
       }
 
+      @media (max-width: 375px) {
+        .container {
+          padding: 20px;
+          border-radius: 0;
+          border: none;
+          box-shadow: none;
+          background: transparent;
+          backdrop-filter: none;
+          -webkit-backdrop-filter: none;
+        }
+        .container.glassmorphism {
+          border-radius: 0;
+          border: none;
+          box-shadow: none;
+          background: transparent;
+          backdrop-filter: none;
+          -webkit-backdrop-filter: none;
+        }
+        h1 {
+          font-size: 20px;
+        }
+        .persona-row {
+          flex-direction: column;
+          align-items: stretch;
+        }
+        .persona-chip {
+          justify-content: center;
+        }
+        body {
+          align-items: flex-start;
+          height: auto;
+          min-height: 100vh;
+        }
+      }
+
       @media (prefers-color-scheme: dark) {
         body {
           background-color: #16161a;
@@ -147,7 +173,6 @@
           backdrop-filter: blur(30px) saturate(210%);
           -webkit-backdrop-filter: blur(30px) saturate(210%);
           border: 1px solid rgba(255, 255, 255, 0.1);
-          border-radius: 16px;
           box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
         }
         .glassmorphism {
@@ -156,7 +181,6 @@
           backdrop-filter: blur(30px) saturate(210%);
           -webkit-backdrop-filter: blur(30px) saturate(210%);
           border: 1px solid rgba(255, 255, 255, 0.1);
-          border-radius: 16px;
           box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
         }
         h1 {
@@ -485,7 +509,7 @@
         <div class="step-indicator" data-step="step-offer"></div>
         <div class="step-indicator" data-step="step-template"></div>
       </div>
-      <div id="draft-saved-msg" style="display: none; color: #34C759; font-weight: bold; margin-bottom: 15px;">Draft Saved!</div>
+      <div id="draft-saved-msg" style="opacity: 0; color: #34C759; font-weight: bold; margin-bottom: 15px; transition: opacity 0.3s; position: absolute; top: 10px; right: 20px; pointer-events: none;">Draft Saved!</div>
 
       <!-- Step 1: Work Context -->
       <div class="step" id="step-context">
@@ -864,10 +888,13 @@
           } else {
               localStorage.setItem('onboardingState', JSON.stringify(state));
               const backendUrl = (window.location.origin.includes('localhost') || window.location.protocol === 'file:') ? 'http://127.0.0.1:18789' : '';
+              const tenantIdStr = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront';
+              const userIdStr = localStorage.getItem('user_id') || 'test-user';
+
               fetch(`${backendUrl}/api/onboarding/state`, {
                   method: 'POST',
-                  headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': 'storefront', 'X-User-ID': 'test-user' },
-                  body: JSON.stringify({ wizardState: state })
+                  headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': tenantIdStr, 'X-User-ID': userIdStr },
+                  body: JSON.stringify({ wizardState: state, step: stepNumber })
               }).catch(console.error);
           }
       }
@@ -1079,7 +1106,7 @@
               btn.style.borderColor = "#34C759";
 
               const msg = document.getElementById('draft-saved-msg');
-              if (msg) msg.style.display = 'block';
+              if (msg) msg.style.opacity = '1';
 
               setTimeout(() => {
                   btn.innerText = originalText;
@@ -1087,7 +1114,7 @@
                   btn.style.backgroundColor = "";
                   btn.style.color = "";
                   btn.style.borderColor = "";
-                  if (msg) msg.style.display = 'none';
+                  if (msg) msg.style.opacity = '0';
               }, 2000);
           });
       });
