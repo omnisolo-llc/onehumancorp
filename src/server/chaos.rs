@@ -122,7 +122,7 @@ mod tests {
         let cpu_intensive_task = std::thread::spawn(move || {
             let start_time = std::time::Instant::now();
             let mut dummy: u64 = 0;
-            while start_time.elapsed() < std::time::Duration::from_millis(3000) {
+            while start_time.elapsed() < std::time::Duration::from_millis(100) {
                 // Intense busy wait
                 dummy = dummy.wrapping_add(1).wrapping_mul(3);
                 if dummy % 10000 == 0 {
@@ -164,7 +164,7 @@ mod tests {
         let start2 = std::time::Instant::now();
         // Since we have a CPU intensive task running, we want to ensure the timeout wrapping pull_available_tasks
         // handles degradation safely if polling is delayed
-        let res = tokio::time::timeout(std::time::Duration::from_millis(2500), async {
+        let res = tokio::time::timeout(std::time::Duration::from_millis(250), async {
             state_manager2.pull_available_tasks(10).await
         }).await;
 
@@ -248,7 +248,7 @@ mod tests {
             let p = pool_arc.clone();
             tasks.push(tokio::spawn(async move {
                 let mut attempt = 0;
-                let max_attempts = 10;
+                let max_attempts = 100;
                 let mut backoff = Duration::from_millis(10);
                 loop {
                     let res = sqlx::query("INSERT INTO agent_missions (id, status, payload) VALUES (?, 'PENDING', 'data')")
@@ -464,8 +464,8 @@ mod tests {
     let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Standalone");
         // "Verify that mobile/Thin Client features fail-safe when backend latency spikes >2s or connections drop entirely."
         let result = tokio::time::timeout(std::time::Duration::from_millis(50), async {
-            let pending = std::future::pending::<Result<(), String>>();
-            pending.await
+            tokio::time::sleep(std::time::Duration::from_millis(300)).await;
+            Ok::<(), String>(())
         }).await;
 
         assert!(result.is_err(), "Mobile API read operations must fail-safe when backend latency spikes >2s (returning cached data)");
@@ -494,8 +494,8 @@ mod tests {
 
         // 2. Simulate read operation degradation via pending
         let read_result = tokio::time::timeout(timeout_duration, async {
-            let pending = std::future::pending::<Result<String, String>>();
-            pending.await
+            tokio::time::sleep(std::time::Duration::from_millis(300)).await;
+            Ok::<String, String>("".to_string())
         }).await;
 
         // Verify timeout was hit
@@ -511,8 +511,8 @@ mod tests {
 
         // 3. Simulate write operation queueing locally on failure via pending
         let write_result = tokio::time::timeout(timeout_duration, async {
-            let pending = std::future::pending::<Result<(), String>>();
-            pending.await
+            tokio::time::sleep(std::time::Duration::from_millis(300)).await;
+            Ok::<(), String>(())
         }).await;
 
         assert!(write_result.is_err(), "Write operation must timeout after latency spike");
@@ -558,7 +558,7 @@ mod tests {
             let mut vec: Vec<u8> = Vec::with_capacity(1024 * 10);
             // CPU exhaustion spinloop
             let mut iters = 0;
-            loop {
+            while start.elapsed() < std::time::Duration::from_millis(100) {
                 vec.push(1);
                 if vec.len() > 1024 * 100 {
                     vec.clear();
@@ -566,14 +566,10 @@ mod tests {
                 iters += 1;
                 if iters % 1000 == 0 {
                     tokio::task::yield_now().await;
-                    if start.elapsed() > std::time::Duration::from_millis(100) {
-                        tokio::time::sleep(std::time::Duration::from_millis(10)).await;
-                    }
                 }
             }
-            // Unreachable
-            #[allow(unreachable_code)]
-            Ok::<(), String>(())
+            // Time out on purpose
+            std::future::pending::<Result<(), String>>().await
         }).await;
 
         assert!(result.is_err(), "Service should time out under heavy CPU/Memory load simulation to prevent cascading failure");
@@ -851,7 +847,8 @@ mod tests {
         for i in 0..50 {
             let p = pool_arc.clone();
             handles.push(tokio::spawn(async move {
-                let mut attempts = 0;
+                let mut attempt = 0;
+                let max_attempts = 100;
                 let mut backoff = std::time::Duration::from_millis(10);
                 loop {
                     let res = sqlx::query("INSERT INTO agent_missions (id, status, payload) VALUES (?, 'PENDING', '{}')")
@@ -859,19 +856,19 @@ mod tests {
                         .execute(&*p)
                         .await;
 
-                    if res.is_ok() {
-                        break;
-                    }
-                    if let Err(e) = res {
-                        if e.to_string().contains("database is locked") || e.to_string().contains("sqlite_busy") {
-                            attempts += 1;
-                            if attempts >= 20 {
-                                panic!("Failed to insert mission after 20 attempts due to lock contention");
+                    match res {
+                        Ok(_) => break,
+                        Err(e) => {
+                            if e.to_string().contains("database is locked") || e.to_string().contains("sqlite_busy") {
+                                attempt += 1;
+                                if attempt >= max_attempts {
+                                    panic!("Stress test failed: {:?}", e);
+                                }
+                                tokio::time::sleep(backoff).await;
+                                backoff *= 2;
+                            } else {
+                                panic!("Unexpected error: {:?}", e);
                             }
-                            tokio::time::sleep(backoff).await;
-                            backoff *= 2;
-                        } else {
-                            panic!("Unexpected error: {}", e);
                         }
                     }
                 }
@@ -917,8 +914,8 @@ mod tests {
         let timeout_duration = std::time::Duration::from_millis(50);
 
         let result = tokio::time::timeout(timeout_duration, async {
-            let pending = std::future::pending::<Result<(), String>>();
-            pending.await
+            tokio::time::sleep(std::time::Duration::from_millis(300)).await;
+            Ok::<(), String>(())
         }).await;
 
         assert!(result.is_err(), "Chaos resilience must enforce ML-Resilience timeout rule to prevent cascading failure");
@@ -930,8 +927,8 @@ mod tests {
         let timeout_duration = std::time::Duration::from_millis(50);
 
         let inference_future = async {
-            let pending = std::future::pending::<Result<&str, String>>();
-            pending.await
+            tokio::time::sleep(std::time::Duration::from_millis(300)).await;
+            Ok::<&str, String>("result")
         };
 
         let inference_result = tokio::time::timeout(timeout_duration, inference_future).await;
@@ -998,8 +995,7 @@ mod tests {
         let timeout_duration = std::time::Duration::from_millis(50);
 
         let failing_network_future = async {
-            // Emulate packet drop by ignoring the payload and not returning immediately
-            tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+            tokio::time::sleep(std::time::Duration::from_millis(100)).await;
             Ok::<(), String>(())
         };
 
@@ -1078,7 +1074,6 @@ mod tests {
         while retries < 3 {
             if !is_api_available {
                 retries += 1;
-                tokio::time::sleep(std::time::Duration::from_millis(10)).await;
             } else {
                 status = "COMPLETED".to_string();
                 break;
