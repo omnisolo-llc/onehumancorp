@@ -1464,8 +1464,10 @@
             `;
           }
 
-          if (item.event_source === 'instagram_dm' || item.context_payload?.feature_type === 'instagram_dm') {
+          if (item.event_source === 'instagram_dm' || item.context_payload?.feature_type === 'instagram_dm' || item.source === 'Instagram DM') {
             let parsedPayload = item.context_payload || {};
+            if (!parsedPayload.customer_message) parsedPayload.customer_message = item.context;
+            if (!parsedPayload.draft_reply) parsedPayload.draft_reply = item.action_payload;
             return `
               <div class="triage-item" data-testid="triage-card-${item.id}" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.4); backdrop-filter: blur(20px); border-radius: 16px; padding: 16px; border: 1px solid rgba(255,255,255,0.6);">
                 <div class="triage-header" style="margin-bottom: 12px;">
@@ -1481,8 +1483,8 @@
                   ${parsedPayload.draft_reply || ''}
                 </div>
                 <div class="triage-controls" style="display: flex; gap: 8px;">
-                  <button class="triage-btn-approve" data-testid="approve-instagram-dm" onclick="handleTriageAction('${item.id}', 'APPROVED')" style="flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 12px; font-weight: 600; border: none; cursor: pointer;">Approve Reply</button>
-                  <button class="triage-btn-dismiss" onclick="handleTriageAction('${item.id}', 'DISMISSED')" style="flex: 1; background: rgba(0,0,0,0.05); color: #1d1d1f; padding: 12px; border-radius: 12px; font-weight: 600; border: none; cursor: pointer;">Edit Draft</button>
+                  <button class="triage-btn-approve" data-testid="approve-btn" onclick="handleTriageAction('${item.id}', 'APPROVED')" style="flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 12px; font-weight: 600; border: none; cursor: pointer;">Approve Reply</button>
+                  <button class="triage-btn-dismiss" data-testid="dismiss-btn" onclick="handleTriageAction('${item.id}', 'DISMISSED')" style="flex: 1; background: rgba(0,0,0,0.05); color: #1d1d1f; padding: 12px; border-radius: 12px; font-weight: 600; border: none; cursor: pointer;">Edit Draft</button>
                 </div>
               </div>
             `;
