@@ -911,28 +911,33 @@ pub async fn advisory_insights_handler(
     };
 
     // Gather context from DB and order counts concurrently
-    let (org_res, active_orders_res) = tokio::join!(
-        async {
-            let cache_key = format!("advisory:org:{}", tenant_id);
+    let db1 = db.clone();
+    let db2 = db.clone();
+    let tenant_id1 = tenant_id.clone();
+    let tenant_id2 = tenant_id.clone();
+
+    let (org_res_handle, active_orders_res_handle) = tokio::join!(
+        tokio::spawn(async move {
+            let cache_key = format!("advisory:org:{}", tenant_id1);
             let cache = ORG_CACHE_ADVISORY.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
             if let Some(org) = cache.get(&cache_key).await {
                 return Ok(org);
             }
 
-            let result = match &db.store {
+            let result = match &db1.store {
                 crate::db::DbStore::Postgres => {
                     sqlx::query_as::<_, (String, String)>(
                         "SELECT name, COALESCE(industry, '') FROM tenants WHERE id = $1"
                     )
-                    .bind(&tenant_id)
-                    .fetch_optional(&db.pool)
+                    .bind(&tenant_id1)
+                    .fetch_optional(&db1.pool)
                     .await
                 }
                 crate::db::DbStore::Sqlite(pool) => {
                     sqlx::query_as::<_, (String, String)>(
                         "SELECT name, COALESCE(industry, '') FROM tenants WHERE id = $1"
                     )
-                    .bind(&tenant_id)
+                    .bind(&tenant_id1)
                     .fetch_optional(pool)
                     .await
                 }
@@ -942,28 +947,28 @@ pub async fn advisory_insights_handler(
                 cache.set(&cache_key, org.clone(), std::time::Duration::from_secs(3600)).await;
             }
             result
-        },
-        async {
-            let cache_key = format!("advisory:orders:{}", tenant_id);
+        }),
+        tokio::spawn(async move {
+            let cache_key = format!("advisory:orders:{}", tenant_id2);
             let cache = ACTIVE_ORDERS_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
             if let Some(orders) = cache.get(&cache_key).await {
                 return Ok(orders);
             }
 
-            let result = match &db.store {
+            let result = match &db2.store {
                 crate::db::DbStore::Postgres => {
                     sqlx::query_scalar::<_, i64>(
                         "SELECT count(*) FROM orders WHERE tenant_id = $1 AND status != 'delivered'"
                     )
-                    .bind(&tenant_id)
-                    .fetch_one(&db.pool)
+                    .bind(&tenant_id2)
+                    .fetch_one(&db2.pool)
                     .await
                 }
                 crate::db::DbStore::Sqlite(pool) => {
                     sqlx::query_scalar::<_, i64>(
                         "SELECT count(*) FROM orders WHERE tenant_id = $1 AND status != 'delivered'"
                     )
-                    .bind(&tenant_id)
+                    .bind(&tenant_id2)
                     .fetch_one(pool)
                     .await
                 }
@@ -973,11 +978,11 @@ pub async fn advisory_insights_handler(
                 cache.set(&cache_key, orders, std::time::Duration::from_secs(5)).await;
             }
             result
-        }
+        })
     );
 
-    let org_data = org_res;
-    let orders_data = active_orders_res;
+    let org_data = org_res_handle.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound));
+    let orders_data = active_orders_res_handle.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound));
 
     let (business_name, industry) = org_data
         .unwrap_or(None)
@@ -3407,10 +3412,18 @@ async fn ui_dashboard_analytics_chat_handler(
     let tenant_id = ui_tenant_id(&query);
     let text = payload.message.to_lowercase();
 
-    let (inbox_res, metrics_res) = tokio::join!(
-        load_ui_inbox_from_db(&db, &tenant_id, false),
-        load_ui_dashboard_metrics(&db, &tenant_id)
+    let db1 = db.clone();
+    let db2 = db.clone();
+    let tenant_id1 = tenant_id.clone();
+    let tenant_id2 = tenant_id.clone();
+
+    let (inbox_res_handle, metrics_res_handle) = tokio::join!(
+        tokio::spawn(async move { load_ui_inbox_from_db(&db1, &tenant_id1, false).await }),
+        tokio::spawn(async move { load_ui_dashboard_metrics(&db2, &tenant_id2).await })
     );
+
+    let inbox_res = inbox_res_handle.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound));
+    let metrics_res = metrics_res_handle.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound));
 
     let response_text = if text.contains("dm") || text.contains("message") {
         let inbox_messages = inbox_res.unwrap_or_default();
