@@ -1,10 +1,12 @@
 "use client";
 
-import React, { useState, Suspense } from "react";
+import React, { useState, Suspense, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { OneTapReferral } from "../components/OneTapReferral";
+import { useQuery } from "@powersync/react";
+import { PowerSyncProvider } from "../../lib/powersync/PowerSyncProvider";
 
-function BookingForm() {
+function BookingFormContent() {
   const searchParams = useSearchParams();
   const tenant = searchParams?.get("tenant") || "default-store";
   const serviceId = searchParams?.get("service_id") || "service-1";
@@ -18,11 +20,33 @@ function BookingForm() {
   const [file, setFile] = useState<File | null>(null);
   const [submitted, setSubmitted] = useState(false);
   const [checkoutUrl, setCheckoutUrl] = useState("");
+  const [isRush, setIsRush] = useState(false);
 
   // Mock available slots
   const availableSlots = [
     "09:00 AM", "10:30 AM", "01:00 PM", "03:30 PM", "05:00 PM"
   ];
+
+  // Dynamic pricing via PowerSync cache
+  const { data: pricingRules } = useQuery("SELECT * FROM dynamic_pricing_rules");
+  const basePrice = 50.0;
+  const [estimatedPrice, setEstimatedPrice] = useState(basePrice);
+
+  useEffect(() => {
+    let price = basePrice;
+    if (pricingRules && pricingRules.length > 0) {
+      pricingRules.forEach((rule: any) => {
+        if (rule.condition_variable === "rush" && isRush) {
+          if (rule.adjustment_type === "flat") {
+            price += rule.adjustment_amount;
+          } else if (rule.adjustment_type === "percentage") {
+            price += (price * rule.adjustment_amount) / 100;
+          }
+        }
+      });
+    }
+    setEstimatedPrice(price);
+  }, [isRush, pricingRules]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -176,7 +200,32 @@ function BookingForm() {
             />
           </div>
 
-          <div className="pt-4">
+          <div className="flex items-center space-x-3 bg-gray-50 p-4 rounded-xl border border-gray-200">
+            <input
+              type="checkbox"
+              id="rushToggle"
+              checked={isRush}
+              onChange={(e) => setIsRush(e.target.checked)}
+              className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+            />
+            <label htmlFor="rushToggle" className="text-sm font-medium text-gray-900">
+              Need it faster? (Rush Service)
+            </label>
+          </div>
+
+          {/* Sticky Estimated Quote Bar */}
+          <div className="glassmorphism sticky bottom-0 left-0 right-0 z-20 mt-4 p-4 rounded-xl border border-white/40 shadow-lg bg-white/80 backdrop-blur-md flex justify-between items-center">
+            <div className="flex flex-col">
+              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Estimated Quote</span>
+              <span className="text-xl font-bold text-gray-900">${estimatedPrice.toFixed(2)}</span>
+            </div>
+            <div className="text-xs text-blue-600 flex items-center">
+              <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+              Calculated Instantly
+            </div>
+          </div>
+
+          <div className="pt-2">
              <button
               type="submit"
               className="w-full py-4 px-4 rounded-xl font-bold text-[15px] bg-blue-600 text-white hover:bg-blue-700 shadow-md shadow-blue-500/20 active:scale-[0.98] transition-all"
@@ -208,10 +257,16 @@ function BookingForm() {
 }
 
 
-export default function Booking() {
+function BookingForm() {
   return (
     <Suspense fallback={<div className="min-h-screen bg-gray-50 flex items-center justify-center">Loading...</div>}>
-      <BookingForm />
+      <PowerSyncProvider>
+        <BookingFormContent />
+      </PowerSyncProvider>
     </Suspense>
   );
+}
+
+export default function Booking() {
+  return <BookingForm />;
 }

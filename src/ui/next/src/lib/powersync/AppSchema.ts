@@ -25,7 +25,20 @@ const omniInboxMessages = new Table({
   updated_at: column.text
 });
 
+const dynamicPricingRules = new Table({
+  tenant_id: column.text,
+  rule_name: column.text,
+  condition_variable: column.text,
+  condition_operator: column.text,
+  condition_value: column.text,
+  adjustment_type: column.text,
+  adjustment_amount: column.real,
+  created_at: column.text,
+  updated_at: column.text
+});
+
 export const AppSchema = new Schema({
   agent_feed_items: agentFeedItems,
-  omni_inbox_messages: omniInboxMessages
+  omni_inbox_messages: omniInboxMessages,
+  dynamic_pricing_rules: dynamicPricingRules
 });
