@@ -492,6 +492,11 @@ export default function OnboardingWizard() {
               </div>
 
               <div className="space-y-4 flex-1 w-full">
+                {error && (
+                  <div className="p-3 mb-4 rounded-[8px] bg-[#FF3B30]/10 border border-[#FF3B30]/30 text-[#FF3B30] text-sm animate-fade-in flex items-center gap-2">
+                    {error}
+                  </div>
+                )}
                 <textarea
                   value={bio}
                   onChange={(e) => {
