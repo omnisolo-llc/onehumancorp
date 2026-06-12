@@ -467,7 +467,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
           </>
         )}
 
-        {activeTab === "activity" && (
+                {activeTab === "activity" && (
           <>
             {activityLoading && (
               <div className="w-full p-4 glassmorphism rounded-[16px] text-center text-gray-500">
