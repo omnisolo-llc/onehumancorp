@@ -2785,10 +2785,12 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let omnichannel_webhook_state = api::omnichannel_webhook::AppState {
         orchestrator: dept_orchestrator.clone(),
         db: db.clone(),
+        bus: bus.clone(),
     };
     let omnichannel_webhook_router = axum::Router::new()
         .route("/api/v1/omnichannel/webhook", axum::routing::post(api::omnichannel_webhook::handle_omnichannel_webhook))
         .route("/api/v1/webhooks/omnichannel", axum::routing::post(api::omnichannel_webhook::handle_omnichannel_webhook))
+        .route("/api/omnichannel/webhook", axum::routing::post(api::omnichannel_webhook::handle_omnichannel_webhook))
         .with_state(omnichannel_webhook_state);
 
     let health_router = axum::Router::new()

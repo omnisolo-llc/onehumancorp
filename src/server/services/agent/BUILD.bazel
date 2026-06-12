@@ -3,6 +3,8 @@ load("@rules_rust//rust:defs.bzl", "rust_library")
 exports_files(
     [
         "department/mod.rs",
+        "omnichannel/mod.rs",
+        "omnichannel/service.rs",
         "department/service.rs",
         "mod.rs",
         "service.rs",
@@ -15,6 +17,8 @@ rust_library(
     srcs = [
         "bazel_lib.rs",
         "department/mod.rs",
+        "omnichannel/mod.rs",
+        "omnichannel/service.rs",
         "department/service.rs",
         "mod.rs",
         "service.rs",

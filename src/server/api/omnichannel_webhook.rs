@@ -28,6 +28,7 @@ pub struct WebhookResponse {
 pub struct AppState {
     pub orchestrator: Arc<DepartmentOrchestrator>,
     pub db: Arc<crate::db::DB>,
+    pub bus: Arc<dyn crate::msgbus::Bus>,
 }
 
 pub async fn resolve_identity(db: &crate::db::DB, tenant_id: &str, channel: &str, sender_id: &str) -> Option<String> {
@@ -204,13 +205,27 @@ pub async fn handle_omnichannel_webhook(
         id: Uuid::new_v4().to_string(),
         tenant_id: tenant_id.clone(),
         event_type: "tenant.omnichannel.message.received".to_string(),
-        payload: payload_json,
+        payload: payload_json.clone(),
     };
 
     let orchestrator_clone = state.orchestrator.clone();
     tokio::spawn(async move {
         let _ = orchestrator_clone.dispatch_event(event).await;
     });
+
+    let interceptor_payload = serde_json::json!({
+        "message_id": inbox_id,
+        "tenant_id": tenant_id,
+        "channel": channel,
+        "from_user": sender_id,
+        "content": message,
+        "timestamp_unix": chrono::Utc::now().timestamp()
+    });
+
+    let _ = state.bus.publish(crate::msgbus::Message {
+        topic: "chat:inbound_message".to_string(),
+        payload: serde_json::to_vec(&interceptor_payload).unwrap_or_default(),
+    }).await;
 
     (StatusCode::OK, Json(WebhookResponse { success: true, message_id: Some(inbox_id) })).into_response()
 }
