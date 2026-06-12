@@ -52,6 +52,16 @@ source deploy/scripts/ohc-mode.sh cloud
 ```
 
 ### 4. Local Development with Docker Compose
+If you encounter Docker Hub unauthenticated pull rate limits or missing `onehumancorp/server:latest` images, use the **Local Build & Launch** flow instead:
+
+```bash
+# Build and load local OCI images
+npx @bazel/bazelisk run //deploy:load_all_images
+
+# Start the stack using the local images
+docker compose -f deploy/docker-compose.yml -f deploy/docker-compose.override.yml up -d --build
+```
+
 ```bash
 docker compose -f deploy/docker-compose.yml up --build
 ```
