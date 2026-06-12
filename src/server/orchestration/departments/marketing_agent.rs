@@ -5,18 +5,18 @@ use std::sync::Arc;
 #[async_trait::async_trait]
 pub trait MarketingCopyClient: Send + Sync {
     async fn draft_caption(&self, prompt: &str, fallback: &str) -> String;
-}
+
 
 #[async_trait::async_trait]
 pub trait MarketingImageOptimizer: Send + Sync {
     async fn optimize_product_image(&self, image_url: &str) -> Result<String, String>;
-}
+
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum MarketingCopyBackend {
     Local,
     Minimax { api_key: String },
-}
+
 
 impl MarketingCopyBackend {
     pub fn from_env() -> Self {
@@ -25,26 +25,26 @@ impl MarketingCopyBackend {
                 let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
                 if api_key.trim().is_empty() {
                     Self::Local
-                } else {
+             else {
                     Self::Minimax { api_key }
-                }
-            }
+
+
             _ => Self::Local,
-        }
-    }
-}
+
+
+
 
 struct RuntimeMarketingCopyClient {
     backend: MarketingCopyBackend,
-}
+
 
 impl RuntimeMarketingCopyClient {
     fn from_env() -> Self {
         Self {
             backend: MarketingCopyBackend::from_env(),
-        }
-    }
-}
+
+
+
 
 #[async_trait::async_trait]
 impl MarketingCopyClient for RuntimeMarketingCopyClient {
@@ -55,19 +55,19 @@ impl MarketingCopyClient for RuntimeMarketingCopyClient {
                     .reason(prompt)
                     .await
                     .unwrap_or_else(|_| fallback.to_string())
-            }
+
             MarketingCopyBackend::Local => crate::minimax::LocalLLMClient::new()
                 .reason(prompt)
                 .await
                 .unwrap_or_else(|_| fallback.to_string()),
-        }
-    }
-}
+
+
+
 
 struct RuntimeMarketingImageOptimizer {
     api_url: Option<String>,
     api_key: Option<String>,
-}
+
 
 impl RuntimeMarketingImageOptimizer {
     fn from_env() -> Self {
@@ -80,9 +80,9 @@ impl RuntimeMarketingImageOptimizer {
                 .ok()
                 .map(|value| value.trim().to_string())
                 .filter(|value| !value.is_empty()),
-        }
-    }
-}
+
+
+
 
 #[async_trait::async_trait]
 impl MarketingImageOptimizer for RuntimeMarketingImageOptimizer {
@@ -90,22 +90,22 @@ impl MarketingImageOptimizer for RuntimeMarketingImageOptimizer {
         let image_url = image_url.trim();
         if image_url.is_empty() {
             return Ok(String::new());
-        }
+
 
         let Some(api_url) = self.api_url.as_deref() else {
             return Ok(image_url.to_string());
-        };
+    ;
 
         let mut request = reqwest::Client::new()
             .post(format!("{api_url}/optimize-product-image"))
             .json(&serde_json::json!({
                 "image_url": image_url,
                 "purpose": "marketing_product_post",
-            }));
+        ));
 
         if let Some(api_key) = self.api_key.as_deref() {
             request = request.bearer_auth(api_key);
-        }
+
 
         let response = request
             .send()
@@ -119,7 +119,7 @@ impl MarketingImageOptimizer for RuntimeMarketingImageOptimizer {
 
         if !status.is_success() {
             return Err(format!("Vision image optimization API error {status}: {body}"));
-        }
+
 
         body.get("optimized_image_url")
             .or_else(|| body.get("cropped_image_url"))
@@ -129,8 +129,8 @@ impl MarketingImageOptimizer for RuntimeMarketingImageOptimizer {
             .filter(|value| !value.is_empty())
             .map(ToString::to_string)
             .ok_or_else(|| "Vision image optimization response missing optimized image URL".to_string())
-    }
-}
+
+
 
 #[cfg(test)]
 struct PassthroughImageOptimizer;
@@ -140,14 +140,14 @@ struct PassthroughImageOptimizer;
 impl MarketingImageOptimizer for PassthroughImageOptimizer {
     async fn optimize_product_image(&self, image_url: &str) -> Result<String, String> {
         Ok(image_url.to_string())
-    }
-}
+
+
 
 pub struct MarketingAgent {
     orchestrator: Option<Arc<DepartmentOrchestrator>>,
     copy_client: Arc<dyn MarketingCopyClient>,
     image_optimizer: Arc<dyn MarketingImageOptimizer>,
-}
+
 
 impl MarketingAgent {
     pub fn new(orchestrator: Arc<DepartmentOrchestrator>) -> Self {
@@ -156,7 +156,7 @@ impl MarketingAgent {
             Arc::new(RuntimeMarketingCopyClient::from_env()),
             Arc::new(RuntimeMarketingImageOptimizer::from_env()),
         )
-    }
+
 
     pub fn new_with_copy_client(
         orchestrator: Arc<DepartmentOrchestrator>,
@@ -167,7 +167,7 @@ impl MarketingAgent {
             copy_client,
             Arc::new(RuntimeMarketingImageOptimizer::from_env()),
         )
-    }
+
 
     pub fn new_with_clients(
         orchestrator: Arc<DepartmentOrchestrator>,
@@ -178,13 +178,13 @@ impl MarketingAgent {
             orchestrator: Some(orchestrator),
             copy_client,
             image_optimizer,
-        }
-    }
+
+
 
     #[cfg(test)]
     fn new_for_test(copy_client: Arc<dyn MarketingCopyClient>) -> Self {
         Self::new_for_test_with_optimizer(copy_client, Arc::new(PassthroughImageOptimizer))
-    }
+
 
     #[cfg(test)]
     fn new_for_test_with_optimizer(
@@ -195,20 +195,20 @@ impl MarketingAgent {
             orchestrator: None,
             copy_client,
             image_optimizer,
-        }
-    }
+
+
 
     fn orchestrator(&self) -> Result<&Arc<DepartmentOrchestrator>, String> {
         self.orchestrator
             .as_ref()
             .ok_or_else(|| "MarketingAgent orchestrator is not configured".to_string())
-    }
+
 
     pub async fn draft_product_caption(&self, product_name: &str, description: &str) -> String {
         let prompt = format!("Draft a short, engaging Instagram caption for a new or restocked product named '{}'. Description: '{}'. Keep it energetic and include 3 relevant hashtags.", product_name, description);
         let fallback = format!("Check out our new {}!", product_name);
         self.copy_client.draft_caption(&prompt, &fallback).await
-    }
+
 
     pub async fn optimize_product_image_url(&self, image_url: &str) -> String {
         match self.image_optimizer.optimize_product_image(image_url).await {
@@ -216,16 +216,16 @@ impl MarketingAgent {
             Err(err) => {
                 tracing::warn!("Marketing image optimization failed: {}", err);
                 image_url.to_string()
-            }
-        }
-    }
-}
+
+
+
+
 
 #[async_trait::async_trait]
 impl Department for MarketingAgent {
     fn department_type(&self) -> DepartmentType {
         DepartmentType::Marketing
-    }
+
 
     fn subscribed_events(&self) -> Vec<String> {
         vec![
@@ -237,14 +237,14 @@ impl Department for MarketingAgent {
             "tenant.website.updated".to_string(),
             "loyalty.points_awarded".to_string(),
         ]
-    }
+
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
         if event.event_type == "tenant.website.updated" || event.event_type == "tenant.product.created" || event.event_type == "tenant.product.updated" {
             let site_id = event.payload.get("site_id").and_then(|v| v.as_str()).unwrap_or("unknown");
             let payload = serde_json::json!({
                 "site_id": site_id,
-            });
+        );
             return self.orchestrator()?.execute_action(
                 DepartmentType::Marketing,
                 "Trigger Agentic SEO Pre-rendering".to_string(),
@@ -252,7 +252,7 @@ impl Department for MarketingAgent {
                 ActionRisk::AutoExecute,
                 payload,
             ).await.map(|_| ());
-        }
+
 
         let risk = ActionRisk::DraftForReview;
 
@@ -272,7 +272,7 @@ impl Department for MarketingAgent {
                         "service_name": service_name,
                         "media_url": media_url,
                         "draft_copy": draft_copy
-                    });
+                );
 
                     let description = format!("Draft portfolio case study for {}", service_name);
 
@@ -283,11 +283,18 @@ impl Department for MarketingAgent {
                         risk,
                         payload,
                     ).await.map(|_| ());
-                }
-            }
-        }
+
+
+
 
         if event.event_type == "tenant.inventory.updated" {
+            let product_id = event.payload.get("product_id").and_then(|v| v.as_str()).unwrap_or("");
+            let cache = crate::builder::edge::get_edge_cache();
+            cache.invalidate_by_tag(&format!("tenant-id:{}", event.tenant_id)).await;
+            if !product_id.is_empty() {
+                cache.invalidate_by_tag(&format!("entity:product:{}", product_id)).await;
+            }
+
             let product_name = event.payload.get("name").and_then(|v| v.as_str()).unwrap_or("New Product");
             let description = event.payload.get("description").and_then(|v| v.as_str()).unwrap_or("");
             let images = event.payload.get("images").and_then(|v| v.as_array());
@@ -295,12 +302,12 @@ impl Department for MarketingAgent {
             let image_url = if let Some(imgs) = images {
                 if !imgs.is_empty() {
                     imgs[0].as_str().unwrap_or("")
-                } else {
+             else {
                     ""
-                }
-            } else {
+
+         else {
                 ""
-            };
+        ;
 
             let optimized_image_url = self.optimize_product_image_url(image_url).await;
 
@@ -311,11 +318,11 @@ impl Department for MarketingAgent {
                 "product_name": product_name,
                 "image_url": optimized_image_url,
                 "draft_copy": draft_copy
-            });
+        );
 
             let action_desc = format!("Draft Instagram post for {}", product_name);
             return self.orchestrator()?.execute_action(DepartmentType::Marketing, action_desc, event.tenant_id.clone(), risk, payload).await.map(|_| ());
-        }
+
 
         if event.event_type == "loyalty.points_awarded" {
             let customer_id = event.payload.get("customer_id").and_then(|v| v.as_str()).unwrap_or("Customer");
@@ -332,7 +339,7 @@ impl Department for MarketingAgent {
                     "total_points": total_points,
                     "draft_copy": draft_copy,
                     "channel": "sms_or_dm"
-                });
+            );
 
                 let description = format!("Send reward notification to customer {}", customer_id);
 
@@ -344,10 +351,10 @@ impl Department for MarketingAgent {
                     ActionRisk::AutoExecute,
                     payload,
                 ).await.map(|_| ());
-            }
+
 
             return Ok(());
-        }
+
 
         self.orchestrator()?.execute_action(
             DepartmentType::Marketing,
@@ -356,33 +363,33 @@ impl Department for MarketingAgent {
             risk,
             event.payload.clone(),
         ).await.map(|_| ())
-    }
+
 
     fn get_config(&self, _tenant_id: &str) -> Option<DepartmentConfig> {
         None
-    }
+
 
 
     async fn query_memory(&self, _query: &str) -> Result<Vec<String>, String> {
         Ok(vec![])
-    }
+
 
     async fn request_approval(&self, description: String, tenant_id: String, risk: ActionRisk) -> Result<ApprovalRequest, String> {
         self.orchestrator()?.execute_action(self.department_type(), description.clone(), tenant_id.clone(), risk, serde_json::json!({})).await
-    }
-}
+
+
 
 #[async_trait::async_trait]
 impl BaseAgent for MarketingAgent {
     fn agent_id(&self) -> String {
         "marketing_agent".to_string()
-    }
+
 
     fn trigger_type(&self) -> AgentTriggerType {
         AgentTriggerType::EventDriven
-    }
 
-}
+
+
 
 #[cfg(test)]
 mod tests {
@@ -396,15 +403,15 @@ mod tests {
     impl MarketingCopyClient for FixedCopyClient {
         async fn draft_caption(&self, _prompt: &str, _fallback: &str) -> String {
             "Injected caption from test client".to_string()
-        }
-    }
+
+
 
     #[async_trait::async_trait]
     impl MarketingImageOptimizer for FixedImageOptimizer {
         async fn optimize_product_image(&self, image_url: &str) -> Result<String, String> {
             Ok(format!("{image_url}?vision=cropped"))
-        }
-    }
+
+
 
     #[tokio::test]
     async fn marketing_agent_uses_injected_copy_client_for_product_captions() {
@@ -415,7 +422,7 @@ mod tests {
             .await;
 
         assert_eq!(caption, "Injected caption from test client");
-    }
+
 
     #[tokio::test]
     async fn marketing_agent_uses_injected_vision_optimizer_for_product_images() {
@@ -429,7 +436,7 @@ mod tests {
             .await;
 
         assert_eq!(optimized, "https://cdn.example.test/mug.jpg?vision=cropped");
-    }
+
 
     #[test]
     fn marketing_copy_backend_falls_back_to_local_without_minimax_key() {
@@ -439,7 +446,7 @@ mod tests {
         unsafe {
             std::env::set_var("OHC_LLM_PROVIDER", "minimax");
             std::env::remove_var("MINIMAX_API_KEY");
-        }
+
 
         assert_eq!(MarketingCopyBackend::from_env(), MarketingCopyBackend::Local);
 
@@ -447,13 +454,13 @@ mod tests {
             match old_provider {
                 Some(value) => std::env::set_var("OHC_LLM_PROVIDER", value),
                 None => std::env::remove_var("OHC_LLM_PROVIDER"),
-            }
+
             match old_key {
                 Some(value) => std::env::set_var("MINIMAX_API_KEY", value),
                 None => std::env::remove_var("MINIMAX_API_KEY"),
-            }
-        }
-    }
+
+
+
 
     #[test]
     fn marketing_copy_backend_captures_minimax_key_at_construction() {
@@ -463,24 +470,84 @@ mod tests {
         unsafe {
             std::env::set_var("OHC_LLM_PROVIDER", "minimax");
             std::env::set_var("MINIMAX_API_KEY", "configured-key");
-        }
+
 
         assert_eq!(
             MarketingCopyBackend::from_env(),
             MarketingCopyBackend::Minimax {
                 api_key: "configured-key".to_string()
-            }
+
         );
 
         unsafe {
             match old_provider {
                 Some(value) => std::env::set_var("OHC_LLM_PROVIDER", value),
                 None => std::env::remove_var("OHC_LLM_PROVIDER"),
-            }
+
             match old_key {
                 Some(value) => std::env::set_var("MINIMAX_API_KEY", value),
                 None => std::env::remove_var("MINIMAX_API_KEY"),
+
+
+
+
+        let res = agent.handle_event(&event).await;
+        assert!(res.is_err());
+
+
+
+    #[tokio::test]
+    async fn test_marketing_agent_invalidates_cache_on_inventory_update() {
+        struct MockCopyClient;
+        #[async_trait::async_trait]
+        impl crate::orchestration::departments::marketing_agent::MarketingCopyClient for MockCopyClient {
+            async fn draft_caption(&self, _prompt: &str, _fallback: &str) -> String {
+                "Mock caption".to_string()
             }
         }
+
+        let agent = MarketingAgent::new_for_test(Arc::new(MockCopyClient));
+        let event = crate::orchestration::departments::types::DepartmentEvent {
+            id: "123".to_string(),
+            tenant_id: "test-tenant".to_string(),
+            event_type: "tenant.inventory.updated".to_string(),
+            payload: serde_json::json!({
+                "product_id": "prod-1",
+                "name": "Test Product",
+                "description": "Test Desc"
+            })
+        };
+
+        let res = agent.handle_event(&event).await;
+        assert!(res.is_err());
     }
+
+
+
+    #[tokio::test]
+    async fn test_marketing_agent_invalidates_cache_on_inventory_update() {
+        struct MockCopyClient;
+        #[async_trait::async_trait]
+        impl crate::orchestration::departments::marketing_agent::MarketingCopyClient for MockCopyClient {
+            async fn draft_caption(&self, _prompt: &str, _fallback: &str) -> String {
+                "Mock caption".to_string()
+            }
+        }
+
+        let agent = MarketingAgent::new_for_test(Arc::new(MockCopyClient));
+        let event = crate::orchestration::departments::types::DepartmentEvent {
+            id: "123".to_string(),
+            tenant_id: "test-tenant".to_string(),
+            event_type: "tenant.inventory.updated".to_string(),
+            payload: serde_json::json!({
+                "product_id": "prod-1",
+                "name": "Test Product",
+                "description": "Test Desc"
+            })
+        };
+
+        let res = agent.handle_event(&event).await;
+        assert!(res.is_err());
+    }
+
 }
