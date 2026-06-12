@@ -11,7 +11,10 @@ export async function GET(request: NextRequest) {
     "dashboard-tooltip": "View your daily sales and overall business health.",
     "inventory-tooltip": "Manage your inventory, prices, and stock levels.",
     "orders-tooltip": "See what customers bought and track order fulfillment.",
-    "help-btn-tooltip": "Need help? Click here to access our Help Center and tutorials."
+    "help-btn-tooltip": "Need help? Click here to access our Help Center and tutorials.",
+    "settings-delivery-tooltip": "Turn this on to offer local delivery to your customers.",
+    "settings-verify-tooltip": "Verify your number to receive critical notifications.",
+    "settings-otp-tooltip": "Click to confirm the code sent to your phone."
   };
 
   if (process.env.NODE_ENV === 'production' && !process.env.BACKEND_URL) {
