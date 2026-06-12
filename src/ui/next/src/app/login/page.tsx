@@ -18,7 +18,7 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 p-4 font-outfit">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#f8f9fa] to-[#e9ecef] dark:from-[#000000] dark:to-[#1a1a1a] p-4 font-outfit">
       <div className="w-full sm:max-w-md lg:max-w-lg xl:max-w-2xl mx-auto overflow-hidden flex flex-col p-8 sm:p-12 relative rounded-[24px] glassmorphism border border-white/20 shadow-2xl">
         <h1 className="text-3xl font-bold text-center text-[#1D1D1F] dark:text-[#F5F5F7] mb-8">Login</h1>
 
@@ -28,12 +28,20 @@ export default function Login() {
             placeholder="Email or Username"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
-            className="w-full p-4 rounded-[8px] focus:border-[#0066FF] outline-none glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
+            enterKeyHint="next"
+            autoCapitalize="none"
+            autoCorrect="off"
+            autoComplete="username"
+            className="w-full p-4 min-h-[44px] rounded-[8px] focus:border-[#0066FF] outline-none glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
           />
           <input
             type="password"
             placeholder="Password"
-            className="w-full p-4 rounded-[8px] focus:border-[#0066FF] outline-none glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
+            enterKeyHint="go"
+            autoCapitalize="none"
+            autoComplete="current-password"
+            onKeyDown={(e) => { if (e.key === 'Enter') goDashboard(); }}
+            className="w-full p-4 min-h-[44px] rounded-[8px] focus:border-[#0066FF] outline-none glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
           />
           <button
             onClick={goDashboard}
@@ -50,7 +58,7 @@ export default function Login() {
         </div>
 
         <button
-          onClick={() => router.push('/onboarding')}
+          onClick={() => router.push('/website-builder')}
           className="w-full bg-[#0066FF] text-white min-h-[54px] p-4 rounded-[8px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)]"
         >
           Start Business Setup

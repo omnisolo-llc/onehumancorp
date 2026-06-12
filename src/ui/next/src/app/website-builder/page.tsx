@@ -390,6 +390,8 @@ export default function WebsiteBuilderPage() {
                   <div id="step-3" className="mt-6 flex flex-col sm:flex-row gap-4 sm:gap-6">
                     <input
                       type="text"
+                      enterKeyHint="next"
+                      autoCapitalize="words"
                       className="w-full min-h-[54px] glassmorphism p-4 focus:ring-2 focus:ring-[#0066FF] focus:border-[#0066FF] outline-none transition-all text-[#1D1D1F] dark:text-[#F5F5F7] bg-white/60 dark:bg-black/60 shadow-inner border border-gray-300/50 dark:border-gray-600/50  rounded-[8px]"
                       placeholder="What is your business called?"
                       value={businessName}
@@ -397,6 +399,7 @@ export default function WebsiteBuilderPage() {
                     />
                     <input
                       type="text"
+                      enterKeyHint="done"
                       className="w-full min-h-[54px] glassmorphism p-4 focus:ring-2 focus:ring-[#0066FF] focus:border-[#0066FF] outline-none transition-all text-[#1D1D1F] dark:text-[#F5F5F7] bg-white/60 dark:bg-black/60 shadow-inner border border-gray-300/50 dark:border-gray-600/50  rounded-[8px]"
                       placeholder="e.g. Maya's Cakes"
                       value={bio}
@@ -451,6 +454,8 @@ export default function WebsiteBuilderPage() {
                   <div id="step-5" className="mt-6 flex flex-col sm:flex-row gap-4 sm:gap-6">
                     <input
                       type="text"
+                      enterKeyHint="next"
+                      autoCapitalize="words"
                       className="w-full min-h-[54px] glassmorphism p-4 focus:ring-2 focus:ring-[#0066FF] focus:border-[#0066FF] outline-none transition-all text-[#1D1D1F] dark:text-[#F5F5F7] bg-white/60 dark:bg-black/60 shadow-inner border border-gray-300/50 dark:border-gray-600/50  rounded-[8px]"
                       placeholder="What is the name of this product?"
                       value={productName}
@@ -458,6 +463,8 @@ export default function WebsiteBuilderPage() {
                     />
                     <input
                       type="text"
+                      enterKeyHint="done"
+                      inputMode="decimal"
                       className="w-full min-h-[54px] glassmorphism p-4 focus:ring-2 focus:ring-[#0066FF] focus:border-[#0066FF] outline-none transition-all text-[#1D1D1F] dark:text-[#F5F5F7] bg-white/60 dark:bg-black/60 shadow-inner border border-gray-300/50 dark:border-gray-600/50  rounded-[8px]"
                       placeholder="0.00"
                       value={productPrice}
@@ -500,6 +507,9 @@ export default function WebsiteBuilderPage() {
                   <div id="step-7" className="mt-6 flex flex-col sm:flex-row gap-4 sm:gap-6">
                     <input
                       type="text"
+                      enterKeyHint="next"
+                      autoCapitalize="words"
+                      autoComplete="name"
                       className="w-full min-h-[54px] glassmorphism p-4 focus:ring-2 focus:ring-[#0066FF] focus:border-[#0066FF] outline-none transition-all text-[#1D1D1F] dark:text-[#F5F5F7] bg-white/60 dark:bg-black/60 shadow-inner border border-gray-300/50 dark:border-gray-600/50  rounded-[8px]"
                       placeholder="e.g. Maya Smith"
                       value={userName}
@@ -507,6 +517,9 @@ export default function WebsiteBuilderPage() {
                     />
                     <input
                       type="email"
+                      enterKeyHint="next"
+                      autoCapitalize="none"
+                      autoComplete="email"
                       className="w-full min-h-[54px] glassmorphism p-4 focus:ring-2 focus:ring-[#0066FF] focus:border-[#0066FF] outline-none transition-all text-[#1D1D1F] dark:text-[#F5F5F7] bg-white/60 dark:bg-black/60 shadow-inner border border-gray-300/50 dark:border-gray-600/50  rounded-[8px]"
                       placeholder="you@email.com"
                       value={userEmail}
@@ -514,6 +527,8 @@ export default function WebsiteBuilderPage() {
                     />
                     <input
                       type="password"
+                      enterKeyHint="done"
+                      autoComplete="new-password"
                       className="w-full min-h-[54px] glassmorphism p-4 focus:ring-2 focus:ring-[#0066FF] focus:border-[#0066FF] outline-none transition-all text-[#1D1D1F] dark:text-[#F5F5F7] bg-white/60 dark:bg-black/60 shadow-inner border border-gray-300/50 dark:border-gray-600/50  rounded-[8px]"
                       placeholder="Password"
                       value={userPassword}
@@ -624,6 +639,7 @@ export default function WebsiteBuilderPage() {
                     <textarea
                       value={bio}
                       onChange={(e) => setBio(e.target.value)}
+                      enterKeyHint="done"
                       className="w-full min-h-[54px] glassmorphism p-4 focus:ring-2 focus:ring-[#0066FF] focus:border-[#0066FF] outline-none transition-all resize-none text-[#1D1D1F] dark:text-[#F5F5F7] bg-white/60 dark:bg-black/60 shadow-inner border border-gray-300/50 dark:border-gray-600/50  rounded-[8px]"
                       placeholder="e.g. I run a local bakery"
                       rows={4}

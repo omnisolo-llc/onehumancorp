@@ -634,6 +634,7 @@ export default function OnboardingWizard() {
                         autoCapitalize="words"
                         autoComplete="organization"
                         value={businessName}
+                        className="w-full p-4 min-h-[44px] rounded-[8px] focus:border-[#0066FF] outline-none glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
                         onChange={(e) => setBusinessName(e.target.value)}
                         onKeyDown={(e) => {
                           if (e.key === 'Enter') {
@@ -765,6 +766,7 @@ export default function OnboardingWizard() {
                         enterKeyHint="next"
                         autoCapitalize="words"
                         value={location}
+                        className="w-full p-4 min-h-[44px] rounded-[8px] focus:border-[#0066FF] outline-none glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
                         onChange={(e) => setLocation(e.target.value)}
                         onKeyDown={(e) => {
                           if (e.key === 'Enter') {
@@ -828,9 +830,10 @@ export default function OnboardingWizard() {
                       <input
                         type="text"
                         autoFocus
-                        enterKeyHint="next"
+                        enterKeyHint="done"
                         autoCapitalize="words"
                         value={targetAudience}
+                        className="w-full p-4 min-h-[44px] rounded-[8px] focus:border-[#0066FF] outline-none glassmorphism text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
                         onChange={(e) => setTargetAudience(e.target.value)}
                         onKeyDown={(e) => {
                           if (e.key === 'Enter') {

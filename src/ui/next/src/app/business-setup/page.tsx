@@ -9,7 +9,7 @@ export default function BusinessSetupCompatibilityPage() {
         <p className="text-gray-600 dark:text-[#A1A1A6] mb-6">
           Start the setup wizard to launch a database-backed OHC storefront and operations workspace.
         </p>
-        <Link href="/onboarding" className="inline-flex items-center justify-center rounded-[8px] bg-[#0066FF] px-4 py-3 font-semibold text-white">
+        <Link href="/website-builder" className="inline-flex min-h-[44px] items-center justify-center rounded-[8px] bg-[#0066FF] px-4 py-3 font-semibold text-white">
           Start Business Setup
         </Link>
       </section>

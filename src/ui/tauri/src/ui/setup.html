@@ -488,10 +488,10 @@
       <div class="step" id="step-name">
         <h1>What's the name of your business?</h1>
         <p>We'll use this to set up your workspace.</p>
-        <input type="text" id="business-name" class="glassmorphism" placeholder="e.g. Maya's Bakery" />
+        <input type="text" id="business-name" class="glassmorphism" enterkeyhint="next" autocapitalize="words" placeholder="e.g. Maya's Bakery" />
         <div id="name-error" class="error-msg">Business Name must be at least 3 characters.</div>
 
-        <input type="text" id="business-tagline" class="glassmorphism" placeholder="Tagline (optional)" />
+        <input type="text" id="business-tagline" class="glassmorphism" enterkeyhint="done" autocapitalize="sentences" placeholder="Tagline (optional)" />
 
         <div class="btn-group">
           <button class="next-step-btn" data-next="step-assistant">Next</button>
@@ -509,7 +509,7 @@
             "Hi! I'll be your partner in growing this business. What should I call myself, and how should we talk?"
         </div>
 
-        <input type="text" id="assistant-name" class="glassmorphism" placeholder="e.g. Jarvis" />
+        <input type="text" id="assistant-name" class="glassmorphism" enterkeyhint="done" autocapitalize="words" placeholder="e.g. Jarvis" />
         <div id="assistant-name-error" class="error-msg">Please enter a name for your assistant.</div>
 
         <select id="assistant-tone" class="glassmorphism">
@@ -533,10 +533,10 @@
         <h1>Admin Credentials</h1>
         <p>Set up your login details.</p>
 
-        <input type="email" id="admin-email" class="glassmorphism" placeholder="admin@mybusiness.com" />
+        <input type="email" id="admin-email" class="glassmorphism" enterkeyhint="next" autocapitalize="none" autocomplete="email" placeholder="admin@mybusiness.com" />
         <div id="email-error" class="error-msg">Please enter a valid email address.</div>
 
-        <input type="password" id="admin-password" class="glassmorphism" placeholder="Password (min 8 chars)" />
+        <input type="password" id="admin-password" class="glassmorphism" enterkeyhint="done" autocomplete="new-password" placeholder="Password (min 8 chars)" />
         <div id="password-error" class="error-msg">Password must be at least 8 characters.</div>
 
         <div class="btn-group">
@@ -550,7 +550,7 @@
       <div class="step" id="step-offer">
         <h1>Your First Offer</h1>
         <p>What is the main thing you sell?</p>
-        <input type="text" id="first-offer" class="glassmorphism" placeholder="e.g. Custom Birthday Cake" />
+        <input type="text" id="first-offer" class="glassmorphism" enterkeyhint="done" autocapitalize="words" placeholder="e.g. Custom Birthday Cake" />
         <div id="offer-error" class="error-msg">Please enter an offer.</div>
         <div class="btn-group">
           <button class="next-step-btn" data-next="step-template">Next</button>
