@@ -1115,49 +1115,62 @@
           const savingsResponse = await fetch('/api/v1/growth/time-savings');
           if (savingsResponse.ok) {
             const data = await savingsResponse.json();
-            currentHoursSaved = data.hours_saved;
-            aiSavingsTitle.innerText = `You saved ${data.hours_saved} hours this week`;
-            aiSavingsDesc.innerText = `Your AI agents handled ${data.inquiries_handled} customer inquiries, scheduled ${data.appointments_scheduled} appointments, and recovered ${data.carts_recovered} abandoned carts.`;
-          } else {
-            aiSavingsTitle.innerText = "You saved 0 hours this week";
-            aiSavingsDesc.innerText = "No tasks processed this week.";
+            currentHoursSaved = data.hours_saved || 0;
+            if (aiSavingsTitle) aiSavingsTitle.innerText = `You saved ${currentHoursSaved} hours this week`;
+            if (aiSavingsDesc) {
+              const items = [];
+              if (data.inquiries_handled) items.push(`${data.inquiries_handled} inquiries`);
+              if (data.appointments_scheduled) items.push(`${data.appointments_scheduled} appointments`);
+              if (data.carts_recovered) items.push(`${data.carts_recovered} carts`);
+              if (data.auto_replied) items.push(`${data.auto_replied} replies`);
+              aiSavingsDesc.innerText = items.length > 0 ? items.join(', ') : 'AI agents are monitoring your workspace.';
+            }
           }
         } catch (error) {
           console.error("Error fetching time savings data:", error);
-          aiSavingsTitle.innerText = "You saved 0 hours this week";
-          aiSavingsDesc.innerText = "No tasks processed this week.";
         }
 
         if (shareSavingsBtn) {
           shareSavingsBtn.addEventListener('click', async () => {
-            const message = `My AI agents on OneHumanCorp just saved me ${currentHoursSaved} hours this week! 🚀 #OneHumanCorp #SmallBiz #AI`;
-            const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(message)}`;
-            window.open(shareUrl, '_blank');
-
-            shareSavingsBtn.style.display = 'none';
             savingsStatus.style.display = 'block';
+            savingsStatus.innerText = 'Verifying Share...';
+            savingsStatus.style.color = '#86868b';
+
+            // Simulate opening Twitter intent window
+            const tweetText = encodeURIComponent(`OHC AI agents saved me ${currentHoursSaved} hours this week! Try it out https://ohc.app/invite/${tenantId}`);
+            window.open(`https://twitter.com/intent/tweet?text=${tweetText}`, '_blank');
 
             try {
               let url = '/api/v1/growth/trial-extension/claim';
-              if (window.__TAURI__ && window.__TAURI__.core) {
+              if (window.__TAURI__) {
                   url = 'http://127.0.0.1:18789/api/v1/growth/trial-extension/claim';
               }
               const response = await fetch(url, {
                 method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                }
+                headers: { 'Content-Type': 'application/json' }
               });
 
               if (response.ok) {
-                aiSavingsWidget.style.display = 'none';
-                aiSavingsSuccessWidget.style.display = 'block';
+                const result = await response.json();
+                if (result.success) {
+                  aiSavingsWidget.style.display = 'none';
+                  aiSavingsSuccessWidget.style.display = 'block';
+                } else {
+                  savingsStatus.style.color = 'red';
+                  savingsStatus.innerText = 'Failed to claim extension';
+                  // trigger alert per test expectation
+                  alert('Failed to claim trial extension');
+                }
               } else {
+                savingsStatus.style.color = 'red';
                 savingsStatus.innerText = 'Failed to claim extension';
+                // Trigger alert per test expectations
+                alert('Failed to claim trial extension');
               }
-            } catch (error) {
+            } catch (err) {
+              savingsStatus.style.color = 'red';
               savingsStatus.innerText = 'Error claiming extension';
-              console.error('Error:', error);
+              alert('Error claiming trial extension');
             }
           });
         }

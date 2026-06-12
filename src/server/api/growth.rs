@@ -256,28 +256,28 @@ async fn handle_time_savings(
 
     // Calculate aggregated time savings based on completed tasks
     let f1 = async {
-        sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM tasks WHERE (tenant_id = $1 OR organization_id = $1) AND title ILIKE '%inquiry%' AND status = 'COMPLETED'")
-            .bind(parsed_uuid)
+        sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM tasks WHERE tenant_id = $1::text AND title ILIKE '%inquiry%' AND status = 'COMPLETED'")
+            .bind(&tenant_id_str)
             .fetch_optional(&state.pool)
             .await
     };
 
     let f2 = async {
-        sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM tasks WHERE (tenant_id = $1 OR organization_id = $1) AND title ILIKE '%appointment%' AND status = 'COMPLETED'")
-            .bind(parsed_uuid)
+        sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM tasks WHERE tenant_id = $1::text AND title ILIKE '%appointment%' AND status = 'COMPLETED'")
+            .bind(&tenant_id_str)
             .fetch_optional(&state.pool)
             .await
     };
 
     let f3 = async {
-        sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM tasks WHERE (tenant_id = $1 OR organization_id = $1) AND title ILIKE '%cart%' AND status = 'COMPLETED'")
-            .bind(parsed_uuid)
+        sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM tasks WHERE tenant_id = $1::text AND title ILIKE '%cart%' AND status = 'COMPLETED'")
+            .bind(&tenant_id_str)
             .fetch_optional(&state.pool)
             .await
     };
 
     let f4 = async {
-        sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM inbox_messages WHERE tenant_id = $1 AND status = 'auto_replied'")
+        sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM inbox_messages WHERE tenant_id = $1::text AND status = 'auto_replied'")
             .bind(&tenant_id_str)
             .fetch_optional(&state.pool)
             .await
