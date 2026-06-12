@@ -178,12 +178,14 @@ impl KvMcpServer {
                                     .map_err(|e| tonic::Status::internal(format!("db error: {}", e)))?;
                             }
                             DbStore::Postgres => {
-                                sqlx::query("DELETE FROM agent_kv_store WHERE tenant_id = $1 AND kv_key = $2")
-                                    .bind(&tenant_id)
+                                let mut tx = self.db.pool.begin().await.map_err(|e| tonic::Status::internal(format!("db error: {}", e)))?;
+                                ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| tonic::Status::internal(format!("db error: {}", e)))?;
+                                sqlx::query("DELETE FROM agent_kv_store WHERE kv_key = $1")
                                     .bind(key)
-                                    .execute(&self.db.pool)
+                                    .execute(&mut *tx)
                                     .await
                                     .map_err(|e| tonic::Status::internal(format!("db error: {}", e)))?;
+                                tx.commit().await.map_err(|e| tonic::Status::internal(format!("db error: {}", e)))?;
                             }
                         }
                         let resp = serde_json::json!({"status": "success"});

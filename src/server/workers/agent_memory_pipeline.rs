@@ -73,8 +73,9 @@ impl AgentMemoryPipeline {
                         .execute(sqlite_pool)
                         .await?;
 
-                    sqlx::query("DELETE FROM agent_session_data WHERE session_id = $1")
+                    sqlx::query("DELETE FROM agent_session_data WHERE session_id = $1 AND tenant_id = $2")
                         .bind(&session_id)
+                        .bind(&tenant_id)
                         .execute(sqlite_pool)
                         .await?;
                 }
@@ -120,8 +121,9 @@ impl AgentMemoryPipeline {
                         .execute(&mut *tx)
                         .await?;
 
-                    sqlx::query("DELETE FROM agent_session_data WHERE session_id = $1")
+                    sqlx::query("DELETE FROM agent_session_data WHERE session_id = $1 AND tenant_id = $2")
                         .bind(&session_id)
+                        .bind(&tenant_id)
                         .execute(&mut *tx)
                         .await?;
 

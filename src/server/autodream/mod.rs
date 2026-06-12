@@ -312,10 +312,21 @@ impl AutoDreamWorker {
                     
                     db.insert_autodream_memory(&mem_id, "system", "system_agent", &session_id, &context_data, &emb_str, "SESSION_DATA").await?;
 
-                    sqlx::query("DELETE FROM agent_session_data WHERE session_id = $1")
-                        .bind(&session_id)
-                        .execute(&db.pool)
-                        .await?;
+                    let mut tx = db.pool.begin().await?;
+                    if !db.is_sqlite() {
+                        ::server_common::auth_utils::set_org_context(&mut *tx, "system").await?;
+                        sqlx::query("DELETE FROM agent_session_data WHERE session_id = $1 AND tenant_id = $2")
+                            .bind(&session_id)
+                            .bind("system")
+                            .execute(&mut *tx)
+                            .await?;
+                    } else {
+                        sqlx::query("DELETE FROM agent_session_data WHERE session_id = $1")
+                            .bind(&session_id)
+                            .execute(&mut *tx)
+                            .await?;
+                    }
+                    tx.commit().await?;
                 }
                 Err(e) => {
                     debug!("AutoDreamWorker: failed to embed session: {}", e);
