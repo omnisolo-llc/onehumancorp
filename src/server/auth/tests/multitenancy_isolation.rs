@@ -31,7 +31,7 @@ async fn test_multitenant_idor_system_bypass_prevention_regression() {
     let old_val = std::env::var("OHC_MULTITENANT").ok();
     unsafe { std::env::set_var("OHC_MULTITENANT", "true"); }
 
-    let res: Result<User, String> = repo.get_by_email("dummy_id", "system").await;
+    let res: Result<User, String> = repo.get_by_id("dummy_id", "system").await;
 
     if let Some(val) = old_val {
         unsafe { std::env::set_var("OHC_MULTITENANT", val); }
@@ -65,7 +65,7 @@ async fn test_standalone_mode_allows_system_org_id() {
     let old_val = std::env::var("OHC_MULTITENANT").ok();
     unsafe { std::env::set_var("OHC_MULTITENANT", "false"); }
 
-    let res: Result<User, String> = repo.get_by_email("dummy_id", "system").await;
+    let res: Result<User, String> = repo.get_by_id("dummy_id", "system").await;
 
     if let Some(val) = old_val {
         unsafe { std::env::set_var("OHC_MULTITENANT", val); }
