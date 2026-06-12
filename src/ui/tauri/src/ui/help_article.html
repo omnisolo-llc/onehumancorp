@@ -117,12 +117,12 @@ document.addEventListener('DOMContentLoaded', () => {
     // Inject tooltip CSS
     const style = document.createElement('style');
     style.textContent = `
-        .ohc-tooltip {
+                .ohc-tooltip {
             position: fixed;
-            background: rgba(255, 255, 255, 0.85);
+            background: rgba(255, 255, 255, 0.7);
             backdrop-filter: blur(20px) saturate(210%);
             -webkit-backdrop-filter: blur(20px) saturate(210%);
-            border: 1px solid rgba(255, 255, 255, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.5);
             border-radius: 16px;
             padding: 12px 16px;
             color: #1d1d1f;
@@ -159,7 +159,7 @@ document.addEventListener('DOMContentLoaded', () => {
             window.OHC_TOOLTIPS = {
                 "nav-store": "Your Storefront. This is where you manage what you sell.",
                 "nav-agents": "AI Helpers. These are your digital employees.",
-                "ohc-help-btn": "Need help? Click here to access our Help Center and tutorials.",
+                "ohc-floating-help-btn": "Need help? Click here to access our Help Center and tutorials.",
                 "search-input": "Search our knowledge base for help articles.",
             };
         });
@@ -560,22 +560,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 <style>
-.ohc-tooltip {
-    position: fixed;
-    background: #333;
-    color: white;
-    padding: 8px 12px;
-    border-radius: 6px;
-    font-size: 13px;
-    font-family: Outfit, sans-serif;
-    z-index: 100000;
-    pointer-events: none;
-    opacity: 0;
-    transition: opacity 0.2s;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    max-width: 250px;
-    line-height: 1.4;
-}
+        .ohc-tooltip {
+            position: fixed;
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(20px) saturate(210%);
+            -webkit-backdrop-filter: blur(20px) saturate(210%);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            border-radius: 16px;
+            padding: 12px 16px;
+            color: #1d1d1f;
+            font-family: "Outfit", -apple-system, BlinkMacSystemFont, sans-serif;
+            font-size: 14px;
+            line-height: 1.4;
+            max-width: 250px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            z-index: 10000;
+            pointer-events: none;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: opacity 0.2s ease, transform 0.2s ease;
+            text-align: center;
+        }
 .ohc-tooltip.visible {
     opacity: 1;
 }
@@ -589,7 +594,7 @@ document.addEventListener('DOMContentLoaded', () => {
             window.OHC_TOOLTIPS = {
                 "nav-store": "Your Storefront. This is where you manage what you sell.",
                 "nav-agents": "AI Helpers. These are your digital employees.",
-                "ohc-help-btn": "Need help? Click here to access our Help Center and tutorials.",
+                "ohc-floating-help-btn": "Need help? Click here to access our Help Center and tutorials.",
                 "search-input": "Search our knowledge base for help articles.",
             };
         });
@@ -940,21 +945,26 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         /* Tooltip Styles */
-        .ohc-tooltip {
+                .ohc-tooltip {
             position: fixed;
-            background: #333;
-            color: white;
-            padding: 8px 12px;
-            border-radius: 6px;
-            font-size: 13px;
-            font-family: Outfit, sans-serif;
-            z-index: 100000;
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(20px) saturate(210%);
+            -webkit-backdrop-filter: blur(20px) saturate(210%);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            border-radius: 16px;
+            padding: 12px 16px;
+            color: #1d1d1f;
+            font-family: "Outfit", -apple-system, BlinkMacSystemFont, sans-serif;
+            font-size: 14px;
+            line-height: 1.4;
+            max-width: 250px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            z-index: 10000;
             pointer-events: none;
             opacity: 0;
-            transition: opacity 0.2s;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            max-width: 250px;
-            line-height: 1.4;
+            transform: translateY(10px);
+            transition: opacity 0.2s ease, transform 0.2s ease;
+            text-align: center;
         }
         .ohc-tooltip.visible {
             opacity: 1;
