@@ -118,6 +118,9 @@ Because we use local images built from source instead of pulling from Docker Hub
     ```
 2.  Use Docker Compose to launch the stack with the locally built images:
     ```bash
+    # Note: If you encounter Docker Hub rate limits, run the Local Build & Launch flow first:
+    # npx @bazel/bazelisk run //deploy:load_all_images
+    # cd deploy && docker compose -f docker-compose.yml -f docker-compose.override.yml up -d
     cd deploy && docker compose -f docker-compose.yml up -d
     ```
 
