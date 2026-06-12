@@ -46,6 +46,7 @@ async fn test_get_terminal_connection_token_authenticated() {
         .oneshot(
             Request::builder()
                 .uri("/token")
+                .method("POST")
                 .body(Body::empty())
                 .unwrap(),
         )
