@@ -72,6 +72,40 @@ mod triage_cache_tests {
     }
 }
 
+#[cfg(test)]
+mod triage_create_tests {
+
+    #[test]
+    fn test_create_triage_payload_deserialization() {
+        let json_data = r#"
+        {
+            "source": "Instagram DM",
+            "priority": "Urgent",
+            "context": "Customer wants a cake",
+            "action_type": "Draft Reply",
+            "action_payload": "Yes, we can make it!"
+        }
+        "#;
+
+        let payload: super::CreateTriageItemPayload = serde_json::from_str(json_data).unwrap();
+        assert_eq!(payload.source, Some("Instagram DM".to_string()));
+        assert_eq!(payload.priority, Some("Urgent".to_string()));
+        assert_eq!(payload.context, Some("Customer wants a cake".to_string()));
+        assert_eq!(payload.action_type, Some("Draft Reply".to_string()));
+        assert_eq!(payload.action_payload, Some("Yes, we can make it!".to_string()));
+    }
+}
+
+#[derive(serde::Deserialize)]
+pub struct CreateTriageItemPayload {
+    pub source: Option<String>,
+    pub priority: Option<String>,
+    pub context: Option<String>,
+    pub customer_id: Option<String>,
+    pub action_type: Option<String>,
+    pub action_payload: Option<String>,
+}
+
 pub fn is_standalone_runtime() -> bool {
     fn parse_bool(value: &str) -> Option<bool> {
         match value.trim().to_ascii_lowercase().as_str() {
@@ -2839,6 +2873,76 @@ pub struct TriageActionPayload {
     pub approved: bool,
 }
 
+pub async fn create_ui_triage_item_handler(
+    axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
+    axum::extract::Query(query): axum::extract::Query<UiTenantQuery>,
+    axum::extract::Json(payload): axum::extract::Json<CreateTriageItemPayload>,
+) -> axum::response::Response {
+    use axum::response::IntoResponse;
+    let tenant_id = ui_tenant_id(&query);
+    match &db.store {
+        crate::db::DbStore::Postgres => {
+            let mut tx = match db.pool.begin().await {
+                Ok(tx) => tx,
+                Err(e) => {
+                    tracing::error!("Failed to begin transaction: {:?}", e);
+                    return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": e.to_string()}))).into_response();
+                }
+            };
+            if let Err(e) = ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await {
+                tracing::error!("Failed to set org context: {:?}", e);
+                return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": e.to_string()}))).into_response();
+            }
+
+            let new_id = format!("triage-{}", uuid::Uuid::new_v4());
+            let source = payload.source.unwrap_or_else(|| "Unknown".to_string());
+            let priority = payload.priority.unwrap_or_else(|| "normal".to_string());
+            let context = payload.context.unwrap_or_else(|| "".to_string());
+
+            if let Err(e) = sqlx::query(
+                "INSERT INTO triage_items (id, tenant_id, customer_id, source, priority, context, status) VALUES ($1, $2, $3, $4, $5, $6, 'pending')"
+            )
+            .bind(&new_id)
+            .bind(&tenant_id)
+            .bind(&payload.customer_id)
+            .bind(&source)
+            .bind(&priority)
+            .bind(&context)
+            .execute(&mut *tx).await {
+                tracing::error!("Failed to insert triage item: {:?}", e);
+                return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": e.to_string()}))).into_response();
+            }
+
+            if let Some(action_type) = payload.action_type {
+                let action_id = format!("act-{}", uuid::Uuid::new_v4());
+                let action_payload = payload.action_payload.unwrap_or_else(|| "".to_string());
+                if let Err(e) = sqlx::query(
+                    "INSERT INTO triage_proposed_actions (id, triage_item_id, tenant_id, action_type, payload) VALUES ($1, $2, $3, $4, $5)"
+                )
+                .bind(&action_id)
+                .bind(&new_id)
+                .bind(&tenant_id)
+                .bind(&action_type)
+                .bind(&action_payload)
+                .execute(&mut *tx).await {
+                    tracing::error!("Failed to insert triage action: {:?}", e);
+                    return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": e.to_string()}))).into_response();
+                }
+            }
+
+            if let Err(e) = tx.commit().await {
+                tracing::error!("Failed to commit transaction: {:?}", e);
+                return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": e.to_string()}))).into_response();
+            }
+
+            (axum::http::StatusCode::CREATED, axum::Json(serde_json::json!({"id": new_id, "status": "success"}))).into_response()
+        }
+        crate::db::DbStore::Sqlite(_) => {
+            (axum::http::StatusCode::NOT_IMPLEMENTED, axum::Json(serde_json::json!({"error": "Sqlite not supported"}))).into_response()
+        }
+    }
+}
+
 pub async fn list_ui_triage_handler(
     axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
     axum::extract::Query(query): axum::extract::Query<UiTenantQuery>,
@@ -4738,6 +4842,7 @@ async fn create_ui_bom_item_handler(
         .route("/api/ui/inbox/messages", axum::routing::get(list_ui_inbox_handler).with_state(db.clone()))
         .route("/api/ui/triage", axum::routing::get(list_ui_triage_handler).with_state(db.clone()))
         .route("/api/ui/triage/action", axum::routing::post(update_ui_triage_action_handler).with_state(db.clone()))
+        .route("/api/ui/triage/create", axum::routing::post(create_ui_triage_item_handler).with_state(db.clone()))
         .route("/api/ui/supply", axum::routing::get(list_ui_supply_handler).with_state(db.clone()))
         .route("/api/ui/supply/vendors", axum::routing::post(create_ui_supply_vendor_handler).with_state(db.clone()))
         .route("/api/ui/supply/raw-materials", axum::routing::post(create_ui_raw_material_handler).with_state(db.clone()))
