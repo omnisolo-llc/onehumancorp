@@ -106,7 +106,8 @@
         }
       ],
       "title": "OHC CPU Usage",
-      "type": "timeseries"
+      "type": "timeseries",
+      "transparent": true
     },
     {
       "type": "text",
@@ -121,7 +122,8 @@
       "options": {
         "content": "<link rel=\"stylesheet\" href=\"/public/css/custom.css\">\nOHC Premium Infrastructure Dashboard",
         "mode": "html"
-      }
+      },
+      "transparent": true
     }
   ],
   "refresh": false,
