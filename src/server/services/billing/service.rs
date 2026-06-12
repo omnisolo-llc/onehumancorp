@@ -6,13 +6,16 @@ use std::sync::Arc;
 
 pub struct MyBillingService {
     auditor: Arc<CostAuditor>,
+    cache: std::sync::Arc<crate::utils::cache::HybridCache<CostSummary>>,
 }
 
 impl MyBillingService {
-    pub fn new(auditor: Arc<CostAuditor>) -> Self {
-        Self { auditor }
+    pub fn new(auditor: Arc<CostAuditor>, redis_client: Option<redis::Client>) -> Self {
+        let cache = std::sync::Arc::new(crate::utils::cache::HybridCache::new(redis_client.clone()));
+        Self { auditor, cache }
     }
 }
+
 
 #[tonic::async_trait]
 impl BillingService for MyBillingService {
@@ -50,6 +53,45 @@ impl BillingService for MyBillingService {
         let req = request.into_inner();
         let org_id = req.organization_id;
 
+        let cache_key = format!("cost_summary:{}", org_id);
+
+        if let Some((cached, is_stale)) = self.cache.get_with_swr(&cache_key).await {
+            if is_stale {
+                let auditor = self.auditor.clone();
+                let cache_key_bg = cache_key.clone();
+                let org_id_bg = org_id.clone();
+                let cache = self.cache.clone();
+                tokio::spawn(async move {
+                    let total_cost = auditor.get_total_cost();
+                    let total_tokens = auditor.get_total_tokens();
+
+                    let mut agents = Vec::new();
+                    for (agent_id, cost, token_used, roi, eff, storage_bytes) in auditor.get_agent_costs_snapshot() {
+                        let pct = if total_cost > 0.0 { (cost / total_cost) as f32 } else { 0.0 };
+                        agents.push(AgentCostSummary {
+                            agent_id,
+                            cost_usd: cost,
+                            token_used,
+                            roi,
+                            efficiency: eff,
+                            pct,
+                            storage_usage_bytes: storage_bytes,
+                        });
+                    }
+
+                    let response = CostSummary {
+                        organization_id: org_id_bg,
+                        total_cost_usd: total_cost,
+                        total_tokens: total_tokens,
+                        projected_monthly_usd: total_cost * 30.0,
+                        agents,
+                    };
+                    cache.set(&cache_key_bg, response, std::time::Duration::from_secs(60)).await;
+                });
+            }
+            return Ok(Response::new(cached));
+        }
+
         let total_cost = self.auditor.get_total_cost();
         let total_tokens = self.auditor.get_total_tokens();
 
@@ -67,14 +109,19 @@ impl BillingService for MyBillingService {
             });
         }
 
-        Ok(Response::new(CostSummary {
+        let response = CostSummary {
             organization_id: org_id,
             total_cost_usd: total_cost,
             total_tokens,
             projected_monthly_usd: total_cost * 30.0, // Rough estimate
             agents,
-        }))
+        };
+
+        self.cache.set(&cache_key, response.clone(), std::time::Duration::from_secs(60)).await;
+
+        Ok(Response::new(response))
     }
+
 }
 
 #[cfg(test)]
@@ -90,7 +137,7 @@ mod tests {
             ..Default::default()
         };
         let auditor = Arc::new(CostAuditor::new(config));
-        let service = MyBillingService::new(auditor.clone());
+        let service = MyBillingService::new(auditor.clone(), None);
 
         let req = TokenUsage {
             agent_id: "agent_x".to_string(),
@@ -127,7 +174,7 @@ mod tests {
             ..Default::default()
         };
         let auditor = Arc::new(CostAuditor::new(config));
-        let service = MyBillingService::new(auditor.clone());
+        let service = MyBillingService::new(auditor.clone(), None);
 
         // Track some usage
         let req = TokenUsage {
@@ -173,5 +220,34 @@ mod tests {
         assert_eq!(agent_summary.cost_usd, 2.0);
         assert_eq!(agent_summary.token_used, 1500);
         assert_eq!(agent_summary.pct, 1.0);
+    }
+
+
+    #[tokio::test]
+    async fn test_get_cost_summary_cache() {
+        let config = CostConfig::default();
+        let auditor = Arc::new(CostAuditor::new(config));
+
+        let service = MyBillingService::new(auditor.clone(), None);
+
+        let req_summary = TokenUsage {
+            agent_id: "".to_string(),
+            organization_id: "org_y".to_string(),
+            model: "".to_string(),
+            prompt_tokens: 0,
+            completion_tokens: 0,
+            cost_usd: 0.0,
+            occurred_at_unix: 0,
+            cached_tokens: 0,
+        };
+
+        // First call should set cache
+        let _ = service.get_cost_summary(Request::new(req_summary.clone())).await;
+
+        let cache_key = format!("cost_summary:org_y");
+
+        let cached = service.cache.get(&cache_key).await;
+        assert!(cached.is_some(), "Cost summary should be cached");
+        assert_eq!(cached.unwrap().organization_id, "org_y");
     }
 }
