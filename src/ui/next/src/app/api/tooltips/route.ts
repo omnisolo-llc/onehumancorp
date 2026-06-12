@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
     "dashboard-tooltip": "View your daily sales and overall business health.",
     "inventory-tooltip": "Manage your inventory, prices, and stock levels.",
     "orders-tooltip": "See what customers bought and track order fulfillment.",
-    "help-btn-tooltip": "Need help? Click here to access our Help Center and tutorials.",
+    "help-btn-tooltip": "Need help? Click here to access our Help Center, Ask AI, Video Tutorials, and Release Notes.",
     "ask-ai-tooltip": "Open AI Help Chat to get answers instantly. It can guide you to the right article.",
     "pricing-tier-tooltip": "Select the plan that best fits your business needs."
   };
