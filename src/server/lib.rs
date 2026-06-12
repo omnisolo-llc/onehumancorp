@@ -5284,25 +5284,29 @@ async fn create_ui_bom_item_handler(
             axum::response::Html(include_str!("../ui/tauri/src/ui/chaos-report.html"))
         }))
         .route("/api/chat", axum::routing::post({
-            let hub_for_chat = hub.clone();
-            |axum::extract::Extension(claims): axum::extract::Extension<crate::common::Claims>, axum::Json(req): axum::Json<ChatRequest>| async move {
-                let tenant_id = claims.organization_id.unwrap_or_else(|| "e2e-tenant".to_string());
-
-                let prompt = format!("You are an AI Help Agent for OHC (One Human Corp), a platform for small businesses. A user asks: {}. Reply helpfully.", req.message);
-
-                // Get the API key
-                let api_key = hub_for_chat.minimax_api_key().to_string();
-
-                // Connect to Minimax client
-                let client = crate::minimax::MinimaxClient::new(api_key);
-
-                let reply = match client.reason(&prompt).await {
-                    Ok(resp) => resp,
-                    Err(_) => "I'm sorry, I'm having trouble connecting right now.".to_string(),
+            let semantic_router = semantic_router.clone();
+            |axum::Json(req): axum::Json<ChatRequest>| async move {
+                let routing_req = crate::orchestration::router::SemanticRoutingRequest {
+                    tenant_id: "e2e-tenant".to_string(), // Ensure semantic routing works
+                    prompt: req.message.clone(),
+                    embedding: None,
                 };
 
-                let link_title = "Go to Help Center →";
-                let link_url = "/help";
+                let mut link_title = "Read the full article →";
+                let mut link_url = "/help/getting-started";
+                let reply = match semantic_router.route(&routing_req) {
+                    Ok(res) => {
+                        match res.target_department {
+                            crate::orchestration::departments::types::DepartmentType::Operations => {
+                                link_url = "/inbox";
+                                link_title = "Check your inbox for updates →";
+                                format!("I have routed your request to the Operations department.")
+                            },
+                            _ => format!("I am your AI Help Agent! I specialize in answering questions about OHC features and helping you grow your small business. Check out our Getting Started guide.")
+                        }
+                    },
+                    Err(_) => "I am your AI Help Agent! I specialize in answering questions about OHC features and helping you grow your small business. Check out our Getting Started guide.".to_string(),
+                };
 
                 axum::Json(serde_json::json!({
                     "reply": reply,
