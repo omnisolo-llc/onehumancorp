@@ -182,7 +182,7 @@ test.describe('Onboarding Wizard E2E Flow', () => {
     // This is tested by injecting a state or clicking a manual setup link
     // But since it's hidden under Start My Business, let's just make sure the component loads.
   });
-});
+
 
 test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
   // Test 1: Verifies Instant Build successful generation flow
@@ -299,4 +299,5 @@ test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
     const btnBox = await generateButton.boundingBox();
     expect(btnBox?.height).toBeGreaterThanOrEqual(44);
   });
+
 });

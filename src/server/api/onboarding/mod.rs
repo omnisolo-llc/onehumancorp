@@ -34,7 +34,10 @@ async fn process_intake_handler(
         Ok(data) => Ok(Json(data)),
         Err(error) => {
             tracing::error!("onboarding intake agent error: {}", error);
+            {
+            tracing::error!("onboarding action failed");
             Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR)
+        }
         }
     }
 }
@@ -67,7 +70,10 @@ async fn save_draft(
 
     match agent.save_onboarding_state(&tenant_id, &user_id, step, &payload).await {
         Ok(_) => Ok(axum::http::StatusCode::OK),
-        Err(_) => Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR),
+        Err(_) => {
+            tracing::error!("onboarding action failed");
+            Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR)
+        },
     }
 }
 
@@ -77,7 +83,10 @@ async fn start_onboarding(
 ) -> Result<Json<StartOnboardingResponse>, axum::http::StatusCode> {
     match agent.start_onboarding(payload).await {
         Ok(res) => Ok(Json(res)),
-        Err(_) => Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR),
+        Err(_) => {
+            tracing::error!("onboarding action failed");
+            Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR)
+        },
     }
 }
 
@@ -94,7 +103,10 @@ async fn launch_onboarding(
     });
     match agent.save_onboarding_state(&tenant_id, &user_id, current_step, &state).await {
         Ok(_) => Ok(Json(state)),
-        Err(_) => Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR)
+        Err(_) => {
+            tracing::error!("onboarding action failed");
+            Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR)
+        }
     }
 }
 
@@ -116,7 +128,10 @@ async fn get_state(
         Ok(state) => Ok(Json(state)),
         Err(e) => {
             tracing::error!("Failed to get onboarding state: {}", e);
+            {
+            tracing::error!("onboarding action failed");
             Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR)
+        }
         },
     }
 }
@@ -145,7 +160,10 @@ async fn save_state(
         Ok(_) => Ok(axum::http::StatusCode::NO_CONTENT),
         Err(e) => {
             tracing::error!("Failed to save onboarding state: {}", e);
+            {
+            tracing::error!("onboarding action failed");
             Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR)
+        }
         },
     }
 }
