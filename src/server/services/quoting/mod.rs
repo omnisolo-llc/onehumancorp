@@ -40,7 +40,7 @@ pub struct QuoteLineItemReq {
     pub is_optional: bool,
 }
 
-async fn create_quote(
+pub async fn create_quote(
     State(pool): State<PgPool>,
     Json(payload): Json<CreateQuoteReq>,
 ) -> Result<Json<Quote>, axum::http::StatusCode> {
@@ -81,7 +81,7 @@ async fn create_quote(
     Ok(Json(quote))
 }
 
-async fn get_quote(
+pub async fn get_quote(
     State(pool): State<PgPool>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<Quote>, axum::http::StatusCode> {
@@ -97,7 +97,7 @@ async fn get_quote(
     }
 }
 
-async fn approve_quote(
+pub async fn approve_quote(
     State(pool): State<PgPool>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<Quote>, axum::http::StatusCode> {

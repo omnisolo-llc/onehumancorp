@@ -7,7 +7,7 @@ exports_files(
         "mod.rs",
         "cache_invalidator.rs",
         "wizard.rs",
-        "quoting/mod.rs",
+
         "inventory_sync.rs",
         "inventory/mod.rs",
         "inventory/service.rs",
@@ -23,7 +23,7 @@ rust_library(
         "mod.rs",
         "cache_invalidator.rs",
         "wizard.rs",
-        "quoting/mod.rs",
+
         "inventory_sync.rs",
         "inventory/mod.rs",
         "inventory/service.rs",

@@ -1,0 +1,18 @@
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+
+rust_library(
+    name = "server_services_quoting",
+    srcs = ["mod.rs"],
+    crate_name = "server_services_quoting",
+    edition = "2021",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@crates//:axum",
+        "@crates//:chrono",
+        "@crates//:serde",
+        "@crates//:sqlx",
+        "@crates//:uuid",
+    ],
+)
+
+exports_files(["mod.rs"], visibility = ["//visibility:public"])

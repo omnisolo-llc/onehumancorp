@@ -394,6 +394,7 @@ pub mod services {
     pub mod collective;
     pub mod inventory_sync;
     pub mod inventory;
+    pub mod quoting;
 }
 
 use tonic::{transport::Server, Request, Response, Status};
@@ -5080,6 +5081,7 @@ async fn create_ui_bom_item_handler(
         .nest("/api/v1/shipping", api::shipping::router())
         .nest("/api/v1/payments/terminal", api::terminal_api::router(hub.clone()))
         .nest("/api/pos", api::pos::pos_routes(hub.clone()))
+        .nest("/api/v1", crate::services::quoting::router(db.pool.clone()))
         .route("/api/v1/voice/command", axum::routing::post(api::audio_command::handle_voice_command).with_state(api::audio_command::VoiceCommandState {
             orchestrator: dept_orchestrator.clone(),
             semantic_router: semantic_router.clone(),
