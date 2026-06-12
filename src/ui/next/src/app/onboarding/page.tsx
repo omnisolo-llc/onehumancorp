@@ -426,8 +426,8 @@ export default function OnboardingWizard() {
   };
 
   return (
-    <div className="min-h-screen w-full bg-[#F5F5F7] dark:bg-[#16161a] flex items-center justify-center p-4">
-      <div id="setup-screen" className="w-full sm:max-w-md lg:max-w-lg xl:max-w-2xl mx-auto overflow-hidden flex flex-col min-h-[640px] sm:min-h-[812px] relative rounded-[16px] glassmorphism border border-white/20 shadow-2xl">
+    <div className="min-h-screen w-full bg-[#F5F5F7] dark:bg-[#16161a] flex items-center justify-center p-0 sm:p-4">
+      <div id="setup-screen" className="w-full sm:max-w-md lg:max-w-lg xl:max-w-2xl mx-auto overflow-hidden flex flex-col min-h-[100dvh] sm:min-h-[812px] relative rounded-none sm:rounded-[16px] glassmorphism border-none sm:border border-white/20 shadow-none sm:shadow-2xl">
         <div className="px-6 pt-5 text-center">
           <h1 className="text-xl font-bold text-[#1D1D1F] dark:text-[#F5F5F7]">Setup</h1>
           <p className="text-sm text-gray-500 dark:text-[#A1A1A6]">Your business, live in minutes.</p>
@@ -630,7 +630,12 @@ export default function OnboardingWizard() {
                         autoCapitalize="words"
                         autoComplete="organization"
                         value={businessName}
-                        onChange={(e) => setBusinessName(e.target.value)}
+                        onChange={(e) => {
+                          setBusinessName(e.target.value);
+                          if (e.target.value.trim().length >= 3 && validationError === 'Business Name must be at least 3 characters.') {
+                            setValidationError('');
+                          }
+                        }}
                         onKeyDown={(e) => {
                           if (e.key === 'Enter') {
                             e.preventDefault();
@@ -695,7 +700,12 @@ export default function OnboardingWizard() {
                         enterKeyHint="next"
                         autoCapitalize="sentences"
                         value={whatYouSell}
-                        onChange={(e) => setWhatYouSell(e.target.value)}
+                        onChange={(e) => {
+                          setWhatYouSell(e.target.value);
+                          if (e.target.value.trim().length > 0 && validationError === 'Please tell us what you sell.') {
+                            setValidationError('');
+                          }
+                        }}
                         onKeyDown={(e) => {
                           if (e.key === 'Enter' && !e.shiftKey) {
                             e.preventDefault();
@@ -761,7 +771,12 @@ export default function OnboardingWizard() {
                         enterKeyHint="next"
                         autoCapitalize="words"
                         value={location}
-                        onChange={(e) => setLocation(e.target.value)}
+                        onChange={(e) => {
+                          setLocation(e.target.value);
+                          if (e.target.value.trim().length > 0 && validationError === 'Please tell us your location.') {
+                            setValidationError('');
+                          }
+                        }}
                         onKeyDown={(e) => {
                           if (e.key === 'Enter') {
                             e.preventDefault();
@@ -827,7 +842,12 @@ export default function OnboardingWizard() {
                         enterKeyHint="next"
                         autoCapitalize="words"
                         value={targetAudience}
-                        onChange={(e) => setTargetAudience(e.target.value)}
+                        onChange={(e) => {
+                          setTargetAudience(e.target.value);
+                          if (e.target.value.trim().length > 0 && validationError === 'Please tell us your target audience.') {
+                            setValidationError('');
+                          }
+                        }}
                         onKeyDown={(e) => {
                           if (e.key === 'Enter') {
                             e.preventDefault();
