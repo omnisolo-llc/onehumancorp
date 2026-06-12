@@ -45,6 +45,17 @@ pub async fn offline_sync_handler(
     let cache = crate::builder::edge::get_edge_cache();
     cache.invalidate_by_tag(&format!("tenant-id:{}", tenant_id)).await;
 
+    let locker: Arc<Box<dyn crate::orchestration::locks::DistributedLock>> = if std::env::var("OHC_STANDALONE_MODE").unwrap_or_default() == "true" {
+        Arc::new(Box::new(crate::orchestration::locks::StandaloneLock::new()))
+    } else {
+        let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1:6379".to_string());
+        if let Ok(client) = redis::Client::open(redis_url) {
+            Arc::new(Box::new(crate::orchestration::locks::RedisLock::new(client)))
+        } else {
+            Arc::new(Box::new(crate::orchestration::locks::StandaloneLock::new()))
+        }
+    };
+
     let mut futures: Vec<std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>>> = Vec::new();
     for mutation in &payload.mutations {
         let mutation = mutation.clone();
@@ -73,7 +84,21 @@ pub async fn offline_sync_handler(
             continue;
         }
 
+        if mutation.product_id.is_empty() || mutation.quantity_deducted < 0 {
+            tracing::warn!("Invalid mutation skipped: {:?}", mutation);
+            continue;
+        }
+
+        let locker_clone = locker.clone();
         futures.push(Box::pin(async move {
+            let _lock_guard = match locker_clone.acquire_resource(&tenant_id_clone, "inventory", &mutation.product_id).await {
+                Ok(guard) => guard,
+                Err(_) => {
+                    tracing::warn!("Failed to acquire lock for inventory sync: {}", mutation.product_id);
+                    return;
+                }
+            };
+
             cache_clone.invalidate_by_tag(&format!("entity:product:{}", mutation.product_id)).await;
 
             let mut db_tx = db_clone.begin().await.unwrap();
@@ -119,6 +144,22 @@ pub async fn offline_sync_handler(
                         .bind(&ai_task_id)
                         .bind(&tenant_id_clone)
                         .bind(&ai_payload)
+                        .execute(&mut *db_tx)
+                        .await;
+
+                        let agent_payload = serde_json::json!({
+                            "workflow": "ohc_business_swarm",
+                            "task": "Handle offline POS sync failure",
+                            "context": format!("Transaction {} failed to sync offline due to inventory discrepancy or decline.", mutation.transaction_id),
+                            "action": "OperationsAgent: generate a plain-language alert for the business owner and draft a follow-up message to the customer regarding the declined offline transaction."
+                        }).to_string();
+
+                        let _ = sqlx::query(
+                            "INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload) VALUES ($1, $2, 'agent_task', $3::jsonb)"
+                        )
+                        .bind(uuid::Uuid::new_v4().to_string())
+                        .bind(&tenant_id_clone)
+                        .bind(agent_payload)
                         .execute(&mut *db_tx)
                         .await;
 

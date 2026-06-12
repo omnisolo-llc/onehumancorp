@@ -353,6 +353,13 @@ pub async fn sync_offline_transactions_handler(
     .await;
 
     for tx in &req_data.transactions {
+        if tx.amount_cents < 0 || tx.id.as_deref().unwrap_or("").is_empty() {
+            tracing::warn!("Invalid POS transaction skipped: {:?}", tx.id);
+            if let Some(id) = &tx.id {
+                failed_ids.push(id.clone());
+            }
+            continue;
+        }
 
         let pool_clone = pool.clone();
         let tenant_id_clone = tenant_id.clone();
