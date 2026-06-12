@@ -2791,6 +2791,9 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .route("/api/v1/webhooks/omnichannel", axum::routing::post(api::omnichannel_webhook::handle_omnichannel_webhook))
         .with_state(omnichannel_webhook_state);
 
+    let ambassador_webhook_router = axum::Router::new()
+        .nest("/api/v1/webhooks/ambassador", api::ambassador_webhook::router(dept_orchestrator.clone()));
+
     let health_router = axum::Router::new()
         .route("/api/v1/health", axum::routing::get(api::health::health_handler))
         .with_state(hub.clone());
@@ -5341,6 +5344,7 @@ async fn create_ui_bom_item_handler(
         })))
         .merge(meta_webhook_router)
         .merge(omnichannel_webhook_router)
+        .merge(ambassador_webhook_router)
         .merge(health_router)
         .fallback(api_not_found_handler);
 
