@@ -1,23 +1,6 @@
 -- +goose Up
 -- Migration 118: Update PowerSync Publication with Agent Feed and Omni Inbox
 
-DO $$
-BEGIN
-    -- We assume the publication 'powersync' already exists from init-multiple-databases.sh
-    -- We add agent_feed_items and omni_inbox_messages to the replication.
-
-    -- NOTE: In init-multiple-databases.sh, it creates publication 'powersync' FOR ALL TABLES.
-    -- We'll just make sure these tables have REPLICA IDENTITY FULL for PowerSync if required.
-    -- PowerSync requires either primary key or replica identity full.
-    -- Both tables have a primary key 'id', so we might not need to do anything specifically for publication
-    -- other than ensuring they are created.
-    -- We will create unified_messages and agent_action_cards if they are explicitly requested instead of omni_inbox_messages and agent_feed_items
-END
-$$;
-
--- Actually, the prompt says: "Define the SQL schema and replication rules (Sync Rules) required to synchronize the `unified_messages` and `agent_action_cards` tables to the mobile client securely, ensuring strict `tenant_id` isolation."
--- So I should CREATE `unified_messages` and `agent_action_cards`!
-
 CREATE TABLE IF NOT EXISTS unified_messages (
     id TEXT PRIMARY KEY,
     tenant_id TEXT NOT NULL,
@@ -55,7 +38,6 @@ BEGIN
     END IF;
 END
 $$;
-
 
 -- +goose Down
 DO $$
