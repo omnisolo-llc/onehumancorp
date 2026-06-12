@@ -220,11 +220,10 @@ impl PydanticToolExecutor<SubagentArgs> for SubagentExecutor {
             let output = self.runner.run("git", &["worktree", "add", "-b", &branch_name, &worktree_dir], None, vec![]).await;
             if let Err(e) = output {
                 return Err(ToolError::LlmRecoverable(format!("Failed to create git worktree: {}", e)));
-            } else if let Ok(out) = output {
-                if !out.status.success() {
+            } else if let Ok(out) = output
+                && !out.status.success() {
                     return Err(ToolError::LlmRecoverable(format!("git worktree add failed: {}", String::from_utf8_lossy(&out.stderr))));
                 }
-            }
 
             let worktree_task = format!(
                 "You are a subagent running in an isolated git worktree (branch: {}). Your task is: {}\n\nCRITICAL INSTRUCTION: You MUST return a 1k-2k token condensed summary of your findings and actions. Do not return your full context loop.",

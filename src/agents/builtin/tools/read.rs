@@ -45,8 +45,8 @@ impl PydanticToolExecutor<ReadArgs> for ReadExecutor {
         let mut result_lines = Vec::new();
         let mut line_count = 0;
 
-        let req_start = args.start_line.map(|n| n.saturating_sub(1) as usize);
-        let req_end = args.end_line.map(|n| n as usize);
+        let req_start = args.start_line.map(|n| n.saturating_sub(1));
+        let req_end = args.end_line.map(|n| n);
 
         if let (Some(s), Some(e)) = (req_start, req_end) {
             if s >= e {

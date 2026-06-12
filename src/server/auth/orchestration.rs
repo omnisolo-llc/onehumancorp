@@ -41,11 +41,10 @@ pub fn authorize_register_agent(auth: &AuthInfo, req: &RegisterAgentRequest) -> 
 }
 
 pub fn authorize_publish_message(auth: &AuthInfo, req: &PublishMessageRequest) -> Result<(), Status> {
-    if let Some(msg) = &req.message {
-        if auth.agent_id != msg.from_agent {
+    if let Some(msg) = &req.message
+        && auth.agent_id != msg.from_agent {
             return Err(Status::permission_denied(format!("SPIFFE ID {} cannot publish as agent {}", auth.spiffe_id, msg.from_agent)));
         }
-    }
     Ok(())
 }
 

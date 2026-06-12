@@ -56,12 +56,11 @@ pub enum AuthMode {
 ///   OHC_AGENT_TOKEN                – enables token mode
 ///   OHC_AGENT_SPIFFE_ID            – restricts SPIFFE ID (enables SPIFFE mode)
 pub fn auth_mode_from_env() -> AuthMode {
-    if let Ok(tok) = env::var("OHC_AGENT_TOKEN") {
-        if !tok.is_empty() {
+    if let Ok(tok) = env::var("OHC_AGENT_TOKEN")
+        && !tok.is_empty() {
             let hash = hmac_token(&tok);
             return AuthMode::Token { token_hash: hash };
         }
-    }
     AuthMode::Spiffe {
         allowed_id: env::var("OHC_AGENT_SPIFFE_ID").unwrap_or_default(),
     }
@@ -155,23 +154,19 @@ impl Store {
                 }
 
                 let secret_path = ::server_config::get_safe_user_dir().join(".ohc_jwt_secret");
-                if secret_path.exists() {
-                    if let Ok(bytes) = std::fs::read(&secret_path) {
-                        if bytes.len() >= 32 {
+                if secret_path.exists()
+                    && let Ok(bytes) = std::fs::read(&secret_path)
+                        && bytes.len() >= 32 {
                             return bytes;
                         }
-                    }
-                }
 
                 let sqlite_key_opt = std::env::var("OHC_SQLITE_KEY").ok().or_else(|| {
                     let secret_path = ::server_config::get_safe_user_dir().join(".ohc_sqlite_key");
-                    if secret_path.exists() {
-                        if let Ok(bytes) = std::fs::read_to_string(&secret_path) {
-                            if !bytes.trim().is_empty() {
+                    if secret_path.exists()
+                        && let Ok(bytes) = std::fs::read_to_string(&secret_path)
+                            && !bytes.trim().is_empty() {
                                 return Some(bytes.trim().to_string());
                             }
-                        }
-                    }
                     None
                 });
 
@@ -203,12 +198,11 @@ impl Store {
 
                     // Ensure permissions are strictly 0o600
                     use std::os::unix::fs::PermissionsExt;
-                    if let Ok(mut perms) = std::fs::metadata(&secret_path).map(|m| m.permissions()) {
-                        if perms.mode() & 0o777 != 0o600 {
+                    if let Ok(mut perms) = std::fs::metadata(&secret_path).map(|m| m.permissions())
+                        && perms.mode() & 0o777 != 0o600 {
                             perms.set_mode(0o600);
                             let _ = std::fs::set_permissions(&secret_path, perms);
                         }
-                    }
                 }
                 #[cfg(not(unix))]
                 {
@@ -366,11 +360,10 @@ impl Store {
             return Err("account disabled".to_string());
         }
 
-        if let Some(ref user_org) = user.organization_id {
-            if !org_id.is_empty() && user_org != org_id {
+        if let Some(ref user_org) = user.organization_id
+            && !org_id.is_empty() && user_org != org_id {
                 return Err("invalid credentials".to_string());
             }
-        }
 
         if verify(password, &user.password_hash).unwrap_or(false) {
             Ok(user.clone())
@@ -433,14 +426,13 @@ impl Store {
 
         let u = users.get_mut(id).ok_or_else(|| "user not found".to_string())?;
 
-        if !org_id.is_empty() {
-             if u.organization_id.as_deref() != Some(org_id) {
+        if !org_id.is_empty()
+             && u.organization_id.as_deref() != Some(org_id) {
                  return Err("user not found".to_string());
              }
-        }
 
-        if let Some(email) = email_ptr {
-            if email != u.email {
+        if let Some(email) = email_ptr
+            && email != u.email {
                 let org = u.organization_id.clone().unwrap_or_default();
                 let email_key = TenantKey { org_id: org, key: email.clone() };
                 if by_email.contains_key(&email_key) {
@@ -450,7 +442,6 @@ impl Store {
                 u.email = email;
                 by_email.insert(email_key, id.to_string());
             }
-        }
 
         if let Some(r) = roles {
             u.roles = r;
@@ -475,11 +466,10 @@ impl Store {
 
         let u = users.get(id).ok_or_else(|| "user not found".to_string())?;
 
-        if !org_id.is_empty() {
-             if u.organization_id.as_deref() != Some(org_id) {
+        if !org_id.is_empty()
+             && u.organization_id.as_deref() != Some(org_id) {
                  return Err("user not found".to_string());
              }
-        }
 
         let org = u.organization_id.clone().unwrap_or_default();
         by_name.remove(&TenantKey { org_id: org.clone(), key: u.username.clone() });
@@ -505,13 +495,12 @@ impl Store {
             let now = Utc::now();
             revoked.retain(|_, v| *v > now);
         }
-        if let Some(client) = &self.redis_client {
-            if let Ok(mut conn) = client.get_multiplexed_tokio_connection().await {
+        if let Some(client) = &self.redis_client
+            && let Ok(mut conn) = client.get_multiplexed_tokio_connection().await {
                 let ttl = (exp.timestamp() - Utc::now().timestamp()).max(1);
                 let redis_key = format!("revoked_token:{}", jti);
                 let _: redis::RedisResult<()> = redis::AsyncCommands::set_ex(&mut conn, &redis_key, "1", ttl as u64).await;
             }
-        }
     }
 
     pub async fn is_revoked(&self, jti: &str, org_id: &str) -> bool {
@@ -521,21 +510,19 @@ impl Store {
 
         {
             let revoked = self.revoked.read().unwrap();
-            if let Some(exp) = revoked.get(jti) {
-                 if *exp > Utc::now() {
+            if let Some(exp) = revoked.get(jti)
+                 && *exp > Utc::now() {
                      return true;
                  }
-            }
         }
-        if let Some(client) = &self.redis_client {
-            if let Ok(mut conn) = client.get_multiplexed_tokio_connection().await {
+        if let Some(client) = &self.redis_client
+            && let Ok(mut conn) = client.get_multiplexed_tokio_connection().await {
                 let redis_key = format!("revoked_token:{}", jti);
                 let exists: redis::RedisResult<bool> = redis::AsyncCommands::exists(&mut conn, &redis_key).await;
                 if let Ok(true) = exists {
                     return true;
                 }
             }
-        }
         false
     }
 
@@ -561,8 +548,8 @@ impl Store {
     }
 
     pub async fn validate_token(&self, _token: &str) -> Result<Claims, String> {
-        if let Ok(header) = jsonwebtoken::decode_header(_token) {
-            if header.alg == jsonwebtoken::Algorithm::RS256 {
+        if let Ok(header) = jsonwebtoken::decode_header(_token)
+            && header.alg == jsonwebtoken::Algorithm::RS256 {
                 let oidc_cfg_internal = self.oidc_cfg.read().unwrap().clone();
                 let oidc_cfg = crate::oidc::OIDCConfig {
                     issuer_url: oidc_cfg_internal.issuer_url,
@@ -583,7 +570,6 @@ impl Store {
                     return Ok(claims);
                 }
             }
-        }
 
         let validation = jsonwebtoken::Validation::new(jsonwebtoken::Algorithm::HS256);
             let token_data = jsonwebtoken::decode::<Claims>(
@@ -721,9 +707,9 @@ impl AuthService for AuthServiceServerImpl {
             req.password,
             vec![ROLE_VIEWER.to_string()],
             req.organization_id.clone(),
-        ).map_err(|e| Status::internal(e))?;
+        ).map_err(Status::internal)?;
 
-        let token = self.store.issue_token(&user).map_err(|e| Status::internal(e))?;
+        let token = self.store.issue_token(&user).map_err(Status::internal)?;
 
         Ok(Response::new(LoginResponse {
              token,
@@ -732,9 +718,9 @@ impl AuthService for AuthServiceServerImpl {
     }
 
     async fn logout(&self, request: Request<EmptyRequest>) -> Result<Response<EmptyResponse>, Status> {
-        if let Some(auth_info) = request.extensions().get::<AuthInfo>() {
-            if let Some(auth_header) = request.metadata().get("authorization") {
-                if let Ok(auth_str) = auth_header.to_str() {
+        if let Some(auth_info) = request.extensions().get::<AuthInfo>()
+            && let Some(auth_header) = request.metadata().get("authorization")
+                && let Ok(auth_str) = auth_header.to_str() {
                     let token = if auth_str.to_lowercase().starts_with("bearer ") {
                         &auth_str[7..]
                     } else {
@@ -747,8 +733,6 @@ impl AuthService for AuthServiceServerImpl {
                         self.store.revoke_token(claims.jti, exp, &auth_info.org_id).await;
                     }
                 }
-            }
-        }
         Ok(Response::new(EmptyResponse {}))
     }
 
@@ -799,7 +783,7 @@ impl AuthService for AuthServiceServerImpl {
             "temp".to_string(),
             vec![],
             req.organization_id.clone(),
-        ).map_err(|e| Status::internal(e))?;
+        ).map_err(Status::internal)?;
         Ok(Response::new(UserProto {
             id: user.id,
             username: user.username,
@@ -840,7 +824,7 @@ impl AuthService for AuthServiceServerImpl {
         let req = request.into_inner();
 
         let user = self.store.update_user(&req.id, req.email, Some(req.roles), req.active, &org_id)
-            .map_err(|e| Status::internal(e))?;
+            .map_err(Status::internal)?;
 
         Ok(Response::new(UserProto {
             id: user.id,
@@ -861,7 +845,7 @@ impl AuthService for AuthServiceServerImpl {
             .ok_or_else(|| Status::unauthenticated("Missing AuthInfo"))?;
 
         self.store.delete_user(&request.get_ref().id, &org_id)
-            .map_err(|e| Status::internal(e))?;
+            .map_err(Status::internal)?;
 
         Ok(Response::new(EmptyResponse {}))
     }

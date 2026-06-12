@@ -113,11 +113,10 @@ impl BlobManager for HybridBlobManager {
             let local_dir = self.local_dir.as_ref().ok_or("Local directory not configured")?;
             let path = local_dir.join(&safe_key);
 
-            if let Some(parent) = path.parent() {
-                if let Err(e) = fs::create_dir_all(parent).await {
+            if let Some(parent) = path.parent()
+                && let Err(e) = fs::create_dir_all(parent).await {
                     return Err(format!("Failed to create directories for blob: {}", e));
                 }
-            }
 
             let mut file = fs::File::create(&path).await.map_err(|e| format!("Failed to create file: {}", e))?;
             file.write_all(data).await.map_err(|e| format!("Failed to write data: {}", e))?;

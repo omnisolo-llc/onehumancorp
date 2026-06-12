@@ -82,11 +82,10 @@ impl FindExecutor {
 
             let mut include = true;
 
-            if let Some(f_name) = name_filter {
-                if !file_name.contains(f_name) && !glob_match(f_name, &file_name) {
+            if let Some(f_name) = name_filter
+                && !file_name.contains(f_name) && !glob_match(f_name, &file_name) {
                     include = false;
                 }
-            }
 
             if let Some(f_type) = type_filter {
                 if f_type == "f" && !metadata.is_file() {

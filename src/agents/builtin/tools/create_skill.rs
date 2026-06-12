@@ -25,7 +25,7 @@ impl PydanticToolExecutor<CreateSkillArgs> for CreateSkillExecutor {
         let instruction = args.instruction;
 
         let _content = format!("Skill: {}\nDescription: {}\nInstruction: {}", skill_name, description, instruction);
-        let _tags = vec!["skill".to_string(), "autonomous".to_string(), skill_name.clone()];
+        let _tags = ["skill".to_string(), "autonomous".to_string(), skill_name.clone()];
 
         if false {
             Ok(format!("Successfully created and saved curated skill '{}'. Description: {}. Instruction: {}", skill_name, description, instruction))

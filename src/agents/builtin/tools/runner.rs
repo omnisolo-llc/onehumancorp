@@ -216,8 +216,8 @@ impl CommandRunner for SandboxedCommandRunner {
         current_dir: Option<&Path>,
         envs: Vec<(String, String)>,
     ) -> io::Result<Output> {
-        if Self::should_use_container_backend() {
-            if let Some(runtime) = Self::find_container_runtime() {
+        if Self::should_use_container_backend()
+            && let Some(runtime) = Self::find_container_runtime() {
                 let container_args = Self::container_args(
                     program,
                     args,
@@ -230,7 +230,6 @@ impl CommandRunner for SandboxedCommandRunner {
                 cmd.args(&container_args);
                 return cmd.output().await;
             }
-        }
 
         static BWRAP_AVAILABLE: OnceLock<bool> = OnceLock::new();
         let is_bwrap_available = *BWRAP_AVAILABLE.get_or_init(|| {
