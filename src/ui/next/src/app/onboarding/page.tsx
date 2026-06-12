@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useRef } from 'react';
 import { useOnboardingStore } from './store';
+import { generateSubdomain } from './utils';
 type SetupIconName = 'dashboard' | 'eye' | 'launch' | 'next' | 'save' | 'sparkles';
 
 function SetupIcon({ name }: { name: SetupIconName }) {
@@ -30,15 +31,6 @@ function IconLabel({ icon, children }: { icon: SetupIconName; children: React.Re
       <span className="whitespace-nowrap">{children}</span>
     </span>
   );
-}
-
-function generateSubdomain(name: string): string {
-  if (!name || name.trim() === '') return 'my-business.ohc.app';
-  const cleanName = name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
-  return cleanName ? `${cleanName}.ohc.app` : 'my-business.ohc.app';
 }
 
 export default function OnboardingWizard() {
