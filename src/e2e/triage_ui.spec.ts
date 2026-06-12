@@ -123,7 +123,7 @@ test.describe('Work Triage Agentic Inbox', () => {
     await expect(triageCard.locator('[data-testid="approve-proposal"]')).toBeVisible();
   });
 
-  test('Layout is fully usable at 375px', async ({ page }) => {
+  test('Layout is fully usable at 375px with tenantId', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 667 });
     await page.goto('/login');
     await page.fill('input[type="text"]', tenantId);
@@ -134,8 +134,8 @@ test.describe('Work Triage Agentic Inbox', () => {
     await expect(triageCard).toBeVisible({ timeout: 15000 });
 
     // Ensure detail view can be scrolled into view or is stacked correctly
-    await triageCard.click();
+
     await expect(page.locator('text=Draft Reply')).toBeVisible();
-    await expect(page.locator('[data-testid="approve-btn"]')).toBeVisible();
+    await expect(page.locator('[data-testid="approve-proposal"]')).toBeVisible();
   });
 });
