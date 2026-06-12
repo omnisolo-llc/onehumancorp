@@ -1,6 +1,5 @@
 import { test, expect } from './fixtures';
 
-test.describe('Documentation', () => {
 test('Documentation, Tooltips and Help flows', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
 
@@ -35,5 +34,4 @@ test('Documentation, Tooltips and Help flows', async ({ page }) => {
   // 5. Release Notes & Changelog
   await page.goto('/changelog.html');
   await expect(page.getByRole('heading', { name: 'Release Notes & Changelog' }).first()).toBeVisible();
-});
 });
