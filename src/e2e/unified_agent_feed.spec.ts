@@ -13,11 +13,11 @@ test.describe("Unified Agent Feed Mobile UX", () => {
     await request.post("/api/e2e/setup", {
       data: {
         query: `
-          INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at)
+          INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, payload, created_at, updated_at)
           VALUES
-            ('e2e-feed-test-1', 'e2e-tenant', 'operations', '{"feature_type": "fulfillment_batch", "message": "3 new orders to fulfill", "description": "3 new orders to fulfill"}'::jsonb, null, 'PENDING_APPROVAL', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-            ('e2e-feed-test-2', 'e2e-tenant', 'marketing', '{"context": {"weekly_health_report": true}, "message": "Draft promo email?", "description": "Draft promo email?"}'::jsonb, null, 'PENDING_APPROVAL', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-          ON CONFLICT (id) DO UPDATE SET lifecycle_state = 'PENDING_APPROVAL', updated_at = CURRENT_TIMESTAMP;
+            ('e2e-feed-test-1', 'e2e-tenant', 'operations', '3 new orders to fulfill', 'DRAFT', 'LOW', '{"feature_type": "fulfillment_batch", "message": "3 new orders to fulfill"}'::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+            ('e2e-feed-test-2', 'e2e-tenant', 'marketing', 'Draft promo email?', 'DRAFT', 'LOW', '{"context": {"weekly_health_report": true}, "message": "Draft promo email?"}'::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+          ON CONFLICT (id) DO UPDATE SET status = 'DRAFT', updated_at = CURRENT_TIMESTAMP;
 
           INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at)
           VALUES
@@ -32,7 +32,6 @@ test.describe("Unified Agent Feed Mobile UX", () => {
 
     // 3. Ensure the unified feed tab is visible
     await expect(page.locator("text=Activity Feed").first()).toBeVisible({ timeout: 15000 });
-    await page.reload();
 
     // 4. Verify the seeded cards are rendered
     const opsCard = page.locator("text=3 new orders to fulfill").first();

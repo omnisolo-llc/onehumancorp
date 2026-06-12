@@ -245,7 +245,7 @@ export default function Dashboard() {
 
         setDashboardData((prev: any) => ({ ...prev, initialAgentFeed: agentFeedData }));
 
-        if (approvalsData && Array.isArray(approvalsData)) {
+        if (false && approvalsData && Array.isArray(approvalsData)) {
             setPendingApprovals(approvalsData.filter((i: any) => i.status !== "APPROVED" && i.status !== "REJECTED"));
             setActivities(approvalsData.filter((i: any) => i.status === "APPROVED" || i.status === "REJECTED"));
         } else if (agentFeedData && agentFeedData.items) {
