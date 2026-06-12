@@ -1,0 +1,36 @@
+--- src/server/services/quoting/mod.rs
++++ src/server/services/quoting/mod.rs
+@@ -14,14 +14,14 @@ pub fn router(pool: PgPool) -> Router<crate::AppState> {
+         .route("/:quote_id/accept", post(accept_quote))
+ }
+
+-async fn list_quotes(
++pub async fn list_quotes(
+     State(state): State<crate::AppState>,
+ ) -> Result<Json<Vec<Quote>>, (StatusCode, String)> {
+     // logic to list quotes
+     Ok(Json(vec![]))
+ }
+
+-async fn create_quote(
++pub async fn create_quote(
+     State(state): State<crate::AppState>,
+     Json(payload): Json<Quote>,
+ ) -> Result<Json<Quote>, (StatusCode, String)> {
+@@ -29,14 +29,14 @@ async fn create_quote(
+     Ok(Json(payload))
+ }
+
+-async fn get_quote(
++pub async fn get_quote(
+     State(state): State<crate::AppState>,
+     Path(quote_id): Path<Uuid>,
+ ) -> Result<Json<Quote>, (StatusCode, String)> {
+     Err((StatusCode::NOT_FOUND, "Quote not found".to_string()))
+ }
+
+-async fn accept_quote(
++pub async fn accept_quote(
+     State(state): State<crate::AppState>,
+     Path(quote_id): Path<Uuid>,
+ ) -> Result<StatusCode, (StatusCode, String)> {

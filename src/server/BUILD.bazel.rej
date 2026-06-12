@@ -1,0 +1,10 @@
+--- src/server/BUILD.bazel
++++ src/server/BUILD.bazel
+@@ -32,6 +32,7 @@ SERVER_RS_SRCS = [
+     "services/user/mod.rs",
+     "services/vendor/mod.rs",
+     "services/webhooks/mod.rs",
++    "//src/server/services/quoting:mod.rs",
+ ]
+
+ rust_library(
