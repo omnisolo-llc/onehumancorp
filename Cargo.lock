@@ -8898,6 +8898,7 @@ dependencies = [
  "server_common",
  "server_integrations_core",
  "server_integrations_mercadopago",
+ "server_integrations_razorpay",
  "sqlx",
  "tokio",
  "tracing",
