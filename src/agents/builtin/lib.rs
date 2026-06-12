@@ -28,6 +28,7 @@ pub mod agent;
 pub mod human_in_loop;
 pub mod observability;
 pub mod observation_masking;
+pub mod multi_backend_terminal;
 pub mod tools_gating;
 pub mod verification_loops;
 
