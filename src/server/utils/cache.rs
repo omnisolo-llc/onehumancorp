@@ -168,7 +168,7 @@ where
             if !removed_keys.is_empty() {
                 let tags_map = self.get_local_tags();
                 for mut entry in tags_map.iter_mut() {
-                    let keys = entry.value_mut();
+                    let keys: &mut dashmap::DashSet<String> = entry.value_mut();
                     for k in &removed_keys {
                         keys.remove(k);
                     }
