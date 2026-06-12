@@ -158,7 +158,7 @@ export function HelpChat() {
         {!isOpen && (
           <button
             onClick={() => setIsOpen(true)}
-            className="bg-blue-600/95 text-white p-4 rounded-full shadow-2xl hover:shadow-xl hover:scale-105 transition-all flex items-center justify-center gap-2 group backdrop-blur-[30px] saturate-[210%]"
+            className="bg-blue-600/95 text-white p-4 min-h-[44px] rounded-full shadow-2xl hover:shadow-xl hover:scale-105 transition-all flex items-center justify-center gap-2 group backdrop-blur-[30px] saturate-[210%]"
             aria-label="Open help chat"
             aria-expanded={isOpen}
             aria-controls="ai-chat-interface"
@@ -192,7 +192,7 @@ export function HelpChat() {
             </div>
             <button
               onClick={() => setIsOpen(false)}
-              className="text-blue-100 hover:text-white transition-colors bg-white/10 hover:bg-white/20 rounded-full p-1.5"
+              className="text-blue-100 hover:text-white transition-colors bg-white/10 hover:bg-white/20 rounded-full p-1.5 min-h-[44px]"
               aria-label="Close help chat"
               aria-expanded={isOpen}
               aria-controls="ai-chat-interface"
@@ -278,7 +278,7 @@ export function HelpChat() {
             <button
               type="submit"
               disabled={!inputValue.trim() || isLoading}
-              className="bg-blue-600/95 backdrop-blur-[30px] text-white p-2.5 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-700/95 transition-all shadow-[0_4px_12px_rgba(37,99,235,0.2)] active:scale-95"
+              className="bg-blue-600/95 backdrop-blur-[30px] text-white p-2.5 min-h-[44px] rounded-xl disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-700/95 transition-all shadow-[0_4px_12px_rgba(37,99,235,0.2)] active:scale-95"
               aria-label="Send message"
             >
               {isLoading ? (
