@@ -31,6 +31,8 @@ exports_files(
         "local_seo.rs",
         "recovery.rs",
         "cart.rs",
+        "twilio_webhook.rs",
+
         "pos.rs",
         "agent_feed.rs",
         "incidents.rs",
@@ -72,6 +74,8 @@ rust_library(
         "local_seo.rs",
         "recovery.rs",
         "cart.rs",
+        "twilio_webhook.rs",
+
         "pos.rs",
         "agent_feed.rs",
         "incidents.rs",

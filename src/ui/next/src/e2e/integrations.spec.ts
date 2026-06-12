@@ -10,7 +10,7 @@ test.describe('Integrations Loop', () => {
         await expect(page.locator('h3:has-text("MailerLite")')).toBeVisible();
         await expect(page.locator('h3:has-text("Mercado Pago")')).toBeVisible();
         await expect(page.locator('h3:has-text("Shippo")')).toBeVisible();
-        await expect(page.locator('h3:has-text("Twilio Conversations")')).toBeVisible();
+        await expect(page.locator('h3:has-text("WhatsApp Business (Twilio)")')).toBeVisible();
         await expect(page.locator('h3:has-text("Whereby")')).toBeVisible();
         await expect(page.locator('h3:has-text("Resend")')).toBeVisible();
         await expect(page.locator('h3:has-text("Meta Graph API")')).toBeVisible();
