@@ -305,3 +305,6 @@ default-features = false
 
 [lints.rust]
 unexpected_cfgs = { level = "allow", check-cfg = ['cfg(ohc_bazel)', 'cfg(ohc_bazel_package)'] }
+[dependencies.libsqlite3-sys]
+version = "0.30.1"
+features = ["bundled-sqlcipher", "unlock_notify"]
