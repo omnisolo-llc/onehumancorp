@@ -3599,7 +3599,7 @@ async fn load_ui_agent_approvals_from_db(db: &crate::db::DB, tenant_id: &str, mo
     }
 }
 
-async fn load_ui_ledger_from_db(db: &crate::db::DB, tenant_id: &str) -> Result<Vec<serde_json::Value>, sqlx::Error> {
+async fn load_ui_ledger_from_db(db: &crate::db::DB, tenant_id: &str, mobile_optimized: bool) -> Result<Vec<serde_json::Value>, sqlx::Error> {
     use sqlx::Row;
     let limit_ledger = 50i64;
     match &db.store {
@@ -3608,28 +3608,52 @@ async fn load_ui_ledger_from_db(db: &crate::db::DB, tenant_id: &str) -> Result<V
                 .bind(tenant_id)
                 .bind(limit_ledger)
                 .fetch_all(&db.pool)
-                .await.map(|rows| rows.into_iter().map(|row| serde_json::json!({
-                    "id": row.get::<String, _>("id"),
-                    "tenant_id": row.get::<String, _>("tenant_id"),
-                    "event_type": row.get::<String, _>("event_type"),
-                    "department": row.get::<String, _>("department"),
-                    "payload": row.get::<serde_json::Value, _>("payload"),
-                    "created_at": row.get::<chrono::DateTime<chrono::Utc>, _>("created_at").to_rfc3339()
-                })).collect())
+                .await.map(|rows| rows.into_iter().map(|row| {
+                    if mobile_optimized {
+                        serde_json::json!({
+                            "id": row.get::<String, _>("id"),
+                            "tenant_id": row.get::<String, _>("tenant_id"),
+                            "event_type": row.get::<String, _>("event_type"),
+                            "department": row.get::<String, _>("department"),
+                            "created_at": row.get::<chrono::DateTime<chrono::Utc>, _>("created_at").to_rfc3339()
+                        })
+                    } else {
+                        serde_json::json!({
+                            "id": row.get::<String, _>("id"),
+                            "tenant_id": row.get::<String, _>("tenant_id"),
+                            "event_type": row.get::<String, _>("event_type"),
+                            "department": row.get::<String, _>("department"),
+                            "payload": row.get::<serde_json::Value, _>("payload"),
+                            "created_at": row.get::<chrono::DateTime<chrono::Utc>, _>("created_at").to_rfc3339()
+                        })
+                    }
+                }).collect())
         },
         crate::db::DbStore::Sqlite(pool) => {
             sqlx::query("SELECT id, tenant_id, event_type, department, payload, created_at FROM ohc_universal_ledger WHERE tenant_id = ? ORDER BY created_at DESC LIMIT ?")
                 .bind(tenant_id)
                 .bind(limit_ledger)
                 .fetch_all(pool)
-                .await.map(|rows| rows.into_iter().map(|row| serde_json::json!({
-                    "id": row.get::<String, _>("id"),
-                    "tenant_id": row.get::<String, _>("tenant_id"),
-                    "event_type": row.get::<String, _>("event_type"),
-                    "department": row.get::<String, _>("department"),
-                    "payload": serde_json::from_str::<serde_json::Value>(&row.get::<String, _>("payload")).unwrap_or_else(|_| serde_json::json!({})),
-                    "created_at": row.get::<String, _>("created_at")
-                })).collect())
+                .await.map(|rows| rows.into_iter().map(|row| {
+                    if mobile_optimized {
+                        serde_json::json!({
+                            "id": row.get::<String, _>("id"),
+                            "tenant_id": row.get::<String, _>("tenant_id"),
+                            "event_type": row.get::<String, _>("event_type"),
+                            "department": row.get::<String, _>("department"),
+                            "created_at": row.get::<String, _>("created_at")
+                        })
+                    } else {
+                        serde_json::json!({
+                            "id": row.get::<String, _>("id"),
+                            "tenant_id": row.get::<String, _>("tenant_id"),
+                            "event_type": row.get::<String, _>("event_type"),
+                            "department": row.get::<String, _>("department"),
+                            "payload": serde_json::from_str::<serde_json::Value>(&row.get::<String, _>("payload")).unwrap_or_else(|_| serde_json::json!({})),
+                            "created_at": row.get::<String, _>("created_at")
+                        })
+                    }
+                }).collect())
         }
     }
 }
@@ -4018,20 +4042,11 @@ async fn ui_dashboard_unified_agent_feed_handler(
         tokio::spawn(async move {
             let (approvals_res, ledger_res) = tokio::join!(
                 tokio::spawn({ let db = db.clone(); let t = t.clone(); async move { load_ui_agent_approvals_from_db(&db, &t, mobile_optimized).await } }),
-                tokio::spawn({ let db = db.clone(); let t = t.clone(); async move { load_ui_ledger_from_db(&db, &t).await } })
+                tokio::spawn({ let db = db.clone(); let t = t.clone(); async move { load_ui_ledger_from_db(&db, &t, mobile_optimized).await } })
             );
 
             let pending_approvals = approvals_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
-            let mut entries = ledger_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
-
-            if mobile_optimized {
-                for item in entries.iter_mut() {
-                    if let Some(obj) = item.as_object_mut() {
-                        obj.remove("payload");
-                        obj.remove("context_payload");
-                    }
-                }
-            }
+            let entries = ledger_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
 
             let result = serde_json::json!({
                 "pending_approvals": pending_approvals,
@@ -4046,20 +4061,11 @@ async fn ui_dashboard_unified_agent_feed_handler(
 
     let (approvals_res, ledger_res) = tokio::join!(
         tokio::spawn({ let db = db.clone(); let t = tenant_id.clone(); async move { load_ui_agent_approvals_from_db(&db, &t, mobile_optimized).await } }),
-        tokio::spawn({ let db = db.clone(); let t = tenant_id.clone(); async move { load_ui_ledger_from_db(&db, &t).await } })
+        tokio::spawn({ let db = db.clone(); let t = tenant_id.clone(); async move { load_ui_ledger_from_db(&db, &t, mobile_optimized).await } })
     );
 
     let pending_approvals = approvals_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
-    let mut entries = ledger_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
-
-    if mobile_optimized {
-        for item in entries.iter_mut() {
-            if let Some(obj) = item.as_object_mut() {
-                obj.remove("payload");
-                obj.remove("context_payload");
-            }
-        }
-    }
+    let entries = ledger_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
 
     let result = serde_json::json!({
         "pending_approvals": pending_approvals,
