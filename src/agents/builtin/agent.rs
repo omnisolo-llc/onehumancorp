@@ -3392,7 +3392,6 @@ impl Agent {
                         }
                         let _retry_count = 0;
                         let _max_retries = std::cmp::min(cfg_max_retries, 2); // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
-                        loop {
                             match self
                                 .execute_tool(
                                     &tc_clone,
@@ -3418,7 +3417,6 @@ impl Agent {
                                     return (tc_clone, Err(e));
                                 }
                             }
-                        }
                     }
                     .instrument(tool_span),
                 );
