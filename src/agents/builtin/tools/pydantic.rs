@@ -41,22 +41,28 @@ impl<T: DeserializeOwned + Send + Sync, E: PydanticToolExecutor<T>> PydanticAdap
 }
 
 #[async_trait::async_trait]
-impl<T: DeserializeOwned + Send + Sync, E: PydanticToolExecutor<T>> ToolExecutor for PydanticAdapter<T, E> {
+impl<T: DeserializeOwned + Send + Sync + 'static, E: PydanticToolExecutor<T>> ToolExecutor for PydanticAdapter<T, E> {
     async fn execute(&self, args: Value) -> Result<String, ToolError> {
         // Validation Errors fed back to LLM for self-correction
-        let typed_args: T = match serde_json::from_value(args.clone()) {
-            Ok(v) => v,
-            Err(e) => {
-                // Add the original payload snippet for context
-                let args_str = match serde_json::to_string(&args) {
-                    Ok(s) => if s.len() > 100 { format!("{}...", &s[..100]) } else { s },
-                    Err(_) => "<unprintable>".to_string(),
-                };
+        // Optimize: use spawn_blocking for potentially large JSON parsing to avoid blocking the async executor
+        let args_clone = args.clone();
+        let custom_instruction_clone = self.custom_instruction.clone();
 
-                return Err(ToolError::LlmRecoverable(
-                    ohc_builtin_agent_core::types::format_pydantic_error(&e, Some(args_str.as_str()), self.custom_instruction.as_deref())
-                ));
+        let typed_args: T = match tokio::task::spawn_blocking(move || -> Result<T, String> {
+            match serde_json::from_value(args_clone.clone()) {
+                Ok(v) => Ok(v),
+                Err(e) => {
+                    let args_str = match serde_json::to_string(&args_clone) {
+                        Ok(s) => if s.len() > 100 { format!("{}...", &s[..100]) } else { s },
+                        Err(_) => "<unprintable>".to_string(),
+                    };
+                    Err(ohc_builtin_agent_core::types::format_pydantic_error(&e, Some(args_str.as_str()), custom_instruction_clone.as_deref()))
+                }
             }
+        }).await {
+            Ok(Ok(v)) => v,
+            Ok(Err(msg)) => return Err(ToolError::LlmRecoverable(msg)),
+            Err(e) => return Err(ToolError::Unexpected(format!("Task Join Error parsing arguments: {}", e))),
         };
 
         self.executor.execute_typed(typed_args).await

@@ -39,9 +39,13 @@ impl AconStrategy {
                             && !tr.content.starts_with("[ACON:")
                             && !tr.content.is_empty()
                         {
-                            tr.content =
-                                "[ACON: Tool output omitted to prioritize reasoning traces.]"
-                                    .to_string();
+                            let len = tr.content.len();
+                            // Optimization: Instead of just dropping everything, leave a length trace to aid the model's awareness
+                            // of how much information was actually omitted.
+                            tr.content = format!(
+                                "[ACON: Tool output ({} bytes) omitted to prioritize reasoning traces.]",
+                                len
+                            );
                         }
                     }
                 }
@@ -113,7 +117,7 @@ mod tests {
         // First tool message should be masked (it is outside the preserved count)
         assert_eq!(
             messages[0].tool_results[0].content,
-            "[ACON: Tool output omitted to prioritize reasoning traces.]"
+            "[ACON: Tool output (18 bytes) omitted to prioritize reasoning traces.]"
         );
 
         // Assistant message reasoning is preserved
