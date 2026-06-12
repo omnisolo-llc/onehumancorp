@@ -32,17 +32,7 @@ impl LocalEnvironment {
     pub fn dir_path(&self) -> &std::path::Path {
         self.dir.path()
     }
-}
 
-#[async_trait::async_trait]
-impl ExecutionEnvironment for LocalEnvironment {
-    async fn execute_context(&self, command: String, work_dir: String) -> SandboxResult<String> {
-        self.execute(&command, &work_dir, Duration::from_secs(30)).await
-            .map(|out| String::from_utf8_lossy(&out.stdout).to_string())
-    }
-}
-
-impl LocalEnvironment {
     pub async fn execute(&self, cmd: &str, work_dir: &str, timeout_dur: Duration) -> SandboxResult<Output> {
         // Wrap command for Bash execution to disable extended globs
         let wrapped_cmd = format!("shopt -u extglob 2>/dev/null || true; cd '{}'; {}", work_dir, cmd);
@@ -68,13 +58,12 @@ impl LocalEnvironment {
         command.env_remove("GITHUB_TOKEN");
         command.env_remove("OTEL_EXPORTER_OTLP_HEADERS");
 
-
         command.stdout(Stdio::piped());
         command.stderr(Stdio::piped());
 
         // Use spawn to get a handle for monitoring
-        let child = command.spawn().map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
-
+        let child_res = command.spawn().map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>);
+        let child = child_res?;
 
         let pid_opt = child.id();
         let stop_poller = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
@@ -147,6 +136,14 @@ impl LocalEnvironment {
     }
 }
 
+#[async_trait::async_trait]
+impl ExecutionEnvironment for LocalEnvironment {
+    async fn execute_context(&self, command: String, work_dir: String) -> SandboxResult<String> {
+        self.execute(&command, &work_dir, Duration::from_secs(30)).await
+            .map(|out| String::from_utf8_lossy(&out.stdout).to_string())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -167,7 +164,7 @@ mod tests {
         let work_dir = sm.dir_path().to_str().unwrap().to_string();
         let output = sm.execute_context("shopt | grep extglob".to_string(), work_dir).await.unwrap();
 
-        assert!(output.contains("extglob\toff") || output.contains("extglob        \toff") || output.contains("extglob\t off") || output.contains("extglob") && output.contains("off"));
+        assert!(output.contains("extglob	off") || output.contains("extglob        	off") || output.contains("extglob	 off") || output.contains("extglob") && output.contains("off"));
     }
 
     #[tokio::test]
