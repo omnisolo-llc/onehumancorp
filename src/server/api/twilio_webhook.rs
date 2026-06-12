@@ -72,7 +72,10 @@ pub async fn twilio_webhook_post_handler(
         };
 
         let inbox_id = Uuid::new_v4().to_string();
-        let source = "whatsapp".to_string();
+
+        // Twilio sends whatsapp messages with "whatsapp:" prefix in the From/To fields
+        // but we can also just hardcode the source to whatsapp for this specific webhook if it's meant exclusively for whatsapp
+        let source = if sender_id.starts_with("whatsapp:") { "whatsapp".to_string() } else { "sms".to_string() };
 
         let insert_result = match &state.db.store {
             crate::db::DbStore::Postgres => {
@@ -110,7 +113,7 @@ pub async fn twilio_webhook_post_handler(
             payload: serde_json::json!({
                 "source": source,
                 "message": text,
-                "sender_id": sender_id,
+                "sender_id": sender_id.replace("whatsapp:", ""),
                 "inbox_message_id": inbox_id,
             }),
         };
@@ -155,4 +158,16 @@ fn url_decode(input: &str) -> String {
         }
     }
     decoded
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_url_decode() {
+        assert_eq!(url_decode("Hello+World"), "Hello World");
+        assert_eq!(url_decode("Hello%20World"), "Hello World");
+        assert_eq!(url_decode("whatsapp%3A%2B1234567890"), "whatsapp:+1234567890");
+    }
 }

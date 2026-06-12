@@ -41,7 +41,7 @@ beforeEach(() => {
   });
 });
 
-  it('displays subscription UI when tier is provided and handles Stripe checkout', async () => {
+  it('displays subscription UI when tier is provided and handles checkout session', async () => {
     mockUseSearchParams.mockImplementation(() => new URLSearchParams('?tier=Starter'));
     const assign = vi.fn();
     Object.defineProperty(window, 'location', {
@@ -60,7 +60,7 @@ beforeEach(() => {
     expect(screen.getByText('Plan Upgrade')).toBeDefined();
     expect(screen.getByText('OHC Starter Plan')).toBeDefined();
 
-    const payButton = screen.getByText('Upgrade via Stripe');
+    const payButton = screen.getByText('Upgrade');
     fireEvent.click(payButton);
 
     await waitFor(() => {
@@ -74,18 +74,17 @@ beforeEach(() => {
     });
   });
 
-  it('handles regular checkout deposit flow correctly', async () => {
+  it('handles regular checkout session flow correctly', async () => {
+    const assign = vi.fn();
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: { assign },
+    });
     global.fetch = vi.fn().mockImplementation((url) => {
-      if (url === '/api/v1/payments/terminal/reserve') {
+      if (url === '/api/billing/create-checkout-session') {
         return Promise.resolve({
           ok: true,
-          json: () => Promise.resolve({ success: true, lock_id: 'test-lock' }),
-        });
-      }
-      if (url === '/api/v1/payments/terminal/commit') {
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve({ success: true }),
+          json: () => Promise.resolve({ checkout_url: 'https://checkout.stripe.com/pay/test-deposit' }),
         });
       }
       return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
@@ -102,10 +101,11 @@ beforeEach(() => {
     fireEvent.click(payButton);
 
     await waitFor(() => {
-      expect(screen.getByText('Payment Successful!')).toBeDefined();
-      expect(screen.getByTestId('one-tap-referral')).toBeDefined();
-      expect(screen.getByText(/Your order is confirmed/)).toBeDefined();
-    }, { timeout: 2000 });
+      expect(global.fetch).toHaveBeenCalledWith('/api/billing/create-checkout-session', expect.objectContaining({
+        method: 'POST'
+      }));
+      expect(assign).toHaveBeenCalledWith('https://checkout.stripe.com/pay/test-deposit');
+    });
   });
 
   it('handles delivery quote flow correctly', async () => {
@@ -135,68 +135,4 @@ beforeEach(() => {
     });
   });
 
-  it('handles Mercado Pago checkout correctly', async () => {
-    const assign = vi.fn();
-    Object.defineProperty(window, 'location', {
-      configurable: true,
-      value: { assign },
-    });
-
-    // We must mock the /api/v1/payments/terminal/reserve call to succeed before it calls mercadopago
-    global.fetch = vi.fn().mockImplementation((url) => {
-      if (url === '/api/v1/payments/terminal/reserve') {
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve({ success: true, lock_id: 'test-lock' }),
-        });
-      }
-      return Promise.resolve({
-        ok: true,
-        json: () => Promise.resolve({
-          checkout_url: 'https://mercadopago.com/checkout/test',
-        }),
-      });
-    });
-
-    render(<CheckoutPage />);
-
-    const payButton = screen.getByText('Pay with Mercado Pago');
-    fireEvent.click(payButton);
-
-    await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalledWith('/api/checkout/mercadopago', expect.objectContaining({
-        method: 'POST',
-        body: expect.stringContaining('"amount_cents":4500')
-      }));
-      expect(assign).toHaveBeenCalledWith('https://mercadopago.com/checkout/test');
-    });
-  });
-
-  it('handles Mercado Pago checkout correctly for subscription tier', async () => {
-    mockUseSearchParams.mockImplementation(() => new URLSearchParams('?tier=Pro'));
-    const assign = vi.fn();
-    Object.defineProperty(window, 'location', {
-      configurable: true,
-      value: { assign },
-    });
-    global.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve({
-        checkout_url: 'https://mercadopago.com/checkout/test_sub',
-      }),
-    } as any);
-
-    render(<CheckoutPage />);
-
-    const payButton = screen.getByText('Upgrade via Mercado Pago');
-    fireEvent.click(payButton);
-
-    await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalledWith('/api/checkout/mercadopago', expect.objectContaining({
-        method: 'POST',
-        body: expect.stringContaining('"amount_cents":7900')
-      }));
-      expect(assign).toHaveBeenCalledWith('https://mercadopago.com/checkout/test_sub');
-    });
-  });
 });
