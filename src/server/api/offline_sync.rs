@@ -1,6 +1,8 @@
 use axum::{Json, response::IntoResponse, http::StatusCode, extract::State};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
+use crate::orchestration::locks::{DistributedLock, StandaloneLock, RedisLock};
+
 
 #[derive(Deserialize, Debug, Clone, Serialize)]
 pub struct OfflineMutation {
@@ -41,7 +43,19 @@ pub async fn offline_sync_handler(
             Json(OfflineSyncResponse { success: false }),
         ).into_response();
     }
+    if payload.mutations.is_empty() {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(OfflineSyncResponse { success: false }),
+        ).into_response();
+    }
 
+
+    let lock_manager: Arc<dyn DistributedLock> = if let Some(client) = crate::get_redis_client() {
+        Arc::new(RedisLock::new(client))
+    } else {
+        Arc::new(StandaloneLock::new())
+    };
     let cache = crate::builder::edge::get_edge_cache();
     cache.invalidate_by_tag(&format!("tenant-id:{}", tenant_id)).await;
 
@@ -52,6 +66,7 @@ pub async fn offline_sync_handler(
         let tenant_id_clone = tenant_id.clone();
         let db_clone = db.clone();
         let mesh_clone = mesh.clone();
+        let lock_manager_clone = lock_manager.clone();
 
         if mutation.mutation_type.as_deref() == Some("draft_quote") {
             futures.push(Box::pin(async move {
@@ -74,6 +89,15 @@ pub async fn offline_sync_handler(
         }
 
         futures.push(Box::pin(async move {
+
+            let _lock = match lock_manager_clone.acquire_resource(&tenant_id_clone, "product", &mutation.product_id).await {
+                Ok(l) => l,
+                Err(e) => {
+                    tracing::error!("Failed to acquire lock for product {}: {}", mutation.product_id, e);
+                    return;
+                }
+            };
+
             cache_clone.invalidate_by_tag(&format!("entity:product:{}", mutation.product_id)).await;
 
             let mut db_tx = db_clone.begin().await.unwrap();
@@ -214,7 +238,21 @@ mod tests {
     use sqlx::postgres::PgPoolOptions;
 
 
+
     #[tokio::test]
+    async fn test_offline_sync_empty_mutations() {
+        let pool = PgPoolOptions::new().connect_lazy("postgres://localhost/dummy").unwrap();
+        let mesh: Arc<dyn MeshTransport> = Arc::new(InProcessTransport::new());
+        let state = State((pool, mesh));
+
+        let req = OfflineSyncRequest { mutations: vec![] };
+        let mut headers = HeaderMap::new();
+        headers.insert("x-spiffe-id", "spiffe://ohc/org/tenant-offline/agent/x".parse().unwrap());
+
+        let response = offline_sync_handler(state, headers, Json(req)).await.into_response();
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    }
+#[tokio::test]
     async fn test_offline_sync_unauthorized() {
         let pool = PgPoolOptions::new().connect_lazy("postgres://localhost/dummy").unwrap();
         let mesh: Arc<dyn MeshTransport> = Arc::new(InProcessTransport::new());
