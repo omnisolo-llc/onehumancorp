@@ -3,7 +3,7 @@ import * as path from 'path';
 
 test('Tauri Setup UI completes the flow and has domain choice/auto-respond', async ({ page }) => {
   // Load the tauri html file via file:// protocol
-  const filePath = path.resolve(__dirname, '../../ui/tauri/src/ui/setup.html');
+  const filePath = path.resolve(__dirname, '../../../ui/tauri/src/ui/setup.html');
   await page.goto(`file://${filePath}`);
 
   // It should show the initial step
