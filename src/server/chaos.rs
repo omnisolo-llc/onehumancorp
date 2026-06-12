@@ -1029,6 +1029,13 @@ mod tests {
         let result_val = parsed_result.unwrap();
         let arguments = result_val["tool_calls"][0].get("arguments");
         assert!(arguments.is_none(), "Agent runtime must safely handle missing fields in LLM tool_calls");
+
+        let empty_json = r#"{}"#;
+        // The structure parses but has no tools_calls array at all.
+        let parsed_result: Result<serde_json::Value, _> = serde_json::from_str(empty_json);
+        assert!(parsed_result.is_ok());
+        let result_val = parsed_result.unwrap();
+        assert!(result_val.get("tool_calls").is_none(), "Agent runtime must safely handle empty JSON with no tool_calls");
     }
 
     #[tokio::test]
