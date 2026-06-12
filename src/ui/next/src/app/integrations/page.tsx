@@ -4,61 +4,69 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 export default function Integrations() {
-  const [activeTab, setActiveTab] = useState("all");
   const router = useRouter();
+  const [activeTab, setActiveTab] = useState("all");
   const [statusMessage, setStatusMessage] = useState("");
-
-  const [integrations, setIntegrations] = useState([
-    { id: "ayrshare", name: "Ayrshare", category: "marketing", status: "disconnected", icon: "📱", description: "Single API for posting and retrieving messages across social networks." },
-    { id: "cal_com", name: "Cal.com", category: "operations", status: "disconnected", icon: "📅", description: "Zero-Config Booking & Calendar Sync." },
-    { id: "mailerlite", name: "MailerLite", category: "marketing", status: "disconnected", icon: "📨", description: "Embedded, No-Jargon Email Campaigns." },
-    { id: "mercadopago", name: "Mercado Pago", category: "finance", status: "disconnected", icon: "🌎", description: "Accept credit cards and local payment methods in Latin America." },
-    { id: "shippo", name: "Shippo", category: "operations", status: "disconnected", icon: "📦", description: "Painless Shipping Labels & Tracking." },
-    { id: "twilio", name: "Twilio Conversations", category: "operations", status: "disconnected", icon: "🔔", description: "Central omnichannel inbox via Twilio Conversations API for SMS, WhatsApp, and chat." },
-    { id: "whereby", name: "Whereby", category: "operations", status: "disconnected", icon: "📹", description: "Zero-Setup Online Lessons and video conferencing." },
-    { id: "resend", name: "Resend", category: "marketing", status: "disconnected", icon: "📧", description: "Transactional and Marketing Emails." },
-    { id: "whatsapp", name: "WhatsApp Cloud API", category: "social", status: "disconnected", icon: "💬", description: "Central WhatsApp Inbox for Work Triage and Customer Assistant." },
-    { id: "meta", name: "Meta Graph API", category: "social", status: "disconnected", icon: "💬", description: "Central Instagram and Facebook Inbox." },
-    { id: "front", name: "Front", category: "operations", status: "disconnected", icon: "📥", description: "Central omnichannel inbox aggregating messages across all channels." },
-    { id: "zoom", name: "Zoom", category: "operations", status: "disconnected", icon: "📹", description: "Automated Online Lesson Links." }
-  ]);
-
-  const filteredIntegrations = activeTab === "all" ? integrations : integrations.filter(i => i.category === activeTab);
-
   const [showTwilioModal, setShowTwilioModal] = useState(false);
   const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
-  const [twilioChannels, setTwilioChannels] = useState({
-    whatsapp: true,
-    instagram: false,
-    facebook: false,
-    sms: true,
+
+  const [twilioForm, setTwilioForm] = useState({
+    sid: "",
+    token: "",
+    number: ""
   });
 
+  const [integrations, setIntegrations] = useState([
+    { id: "stripe", name: "Stripe Advanced", category: "finance", status: "connected", icon: "💳", description: "Accept global payments and manage subscriptions seamlessly." },
+    { id: "quickbooks", name: "QuickBooks Online", category: "finance", status: "connected", icon: "📊", description: "Automatically sync sales data and expenses for easier accounting." },
+    { id: "mailchimp", name: "Mailchimp Automations", category: "marketing", status: "disconnected", icon: "📧", description: "Trigger email campaigns based on customer purchase behavior." },
+    { id: "shipstation", name: "ShipStation Sync", category: "operations", status: "disconnected", icon: "📦", description: "Sync orders with ShipStation for automated label printing." },
+    { id: "twilio", name: "WhatsApp Business (Twilio)", category: "operations", status: "disconnected", icon: "🔔", description: "Reliable SMS alerts for new orders and customer notifications." },
+    { id: "ayrshare", name: "Ayrshare", category: "marketing", status: "disconnected", icon: "📱", description: "Unified API for posting and retrieving messages across social networks." },
+    { id: "cal_com", name: "Cal.com", category: "operations", status: "disconnected", icon: "📅", description: "Zero-Config Booking & Calendar Sync." },
+    { id: "listmonk", name: "Listmonk", category: "marketing", status: "disconnected", icon: "📨", description: "Embedded, No-Jargon Email Campaigns." },
+    { id: "easypost", name: "EasyPost", category: "operations", status: "disconnected", icon: "📦", description: "Painless Shipping Labels & Tracking." },
+    { id: "jitsi", name: "Jitsi Meet", category: "operations", status: "disconnected", icon: "📹", description: "Zero-Setup Online Lessons and video conferencing." },
+    { id: "zendesk", name: "Zendesk Support", category: "operations", status: "disconnected", icon: "🎧", description: "Turn customer inquiries into support tickets automatically." },
+    { id: "manychat", name: "Manychat", category: "social", status: "disconnected", icon: "💬", description: "Unified inbox for Instagram, Messenger, and WhatsApp." },
+    { id: "mercadopago", name: "Mercado Pago", category: "finance", status: "disconnected", icon: "🌎", description: "Accept credit cards and local payment methods in Latin America." },
+    { id: "whatsapp", name: "Meta Graph API", category: "operations", status: "disconnected", icon: "💬", description: "Native Meta integration for WhatsApp Cloud API and Instagram Direct." },
+    { id: "front", name: "Front", category: "operations", status: "disconnected", icon: "📥", description: "Collaborative inbox for support and client communication." },
+    { id: "zoom", name: "Zoom", category: "operations", status: "disconnected", icon: "📹", description: "Automated meeting links for client consultations and lessons." },
+    { id: "shippo", name: "Shippo", category: "operations", status: "disconnected", icon: "📦", description: "Multi-carrier shipping and label generation." },
+    { id: "mailerlite", name: "MailerLite", category: "marketing", status: "disconnected", icon: "📧", description: "Simple email marketing and automation for creators." },
+    { id: "whereby", name: "Whereby", category: "operations", status: "disconnected", icon: "📹", description: "Browser-based video meetings with no downloads." },
+    { id: "resend", name: "Resend", category: "marketing", status: "disconnected", icon: "📨", description: "Developer-friendly email API for transactional messages." },
+  ]);
+
+  const filteredIntegrations = activeTab === "all"
+    ? integrations
+    : integrations.filter(i => i.category === activeTab);
+
   const handleConnect = async (id: string) => {
-    const integration = integrations.find((item) => item.id === id);
-    if (integration?.status === 'connected') {
-      setStatusMessage(`${integration.name} settings are ready to manage.`);
-      return;
-    }
-    if (id === 'ayrshare') {
-      setIntegrations(prev => prev.map(integration =>
-        integration.id === id ? { ...integration, status: "connected" } : integration
-      ));
-      setStatusMessage("Ayrshare connected. Opening the social inbox.");
-      router.push('/inbox');
-      return;
-    }
-    if (id === 'twilio') {
+    const integration = integrations.find(i => i.id === id);
+
+    if (id === 'twilio' && integration?.status === 'disconnected') {
       setShowTwilioModal(true);
-      setStatusMessage("Choose Twilio channels to finish connecting.");
+      setStatusMessage("Enter your Twilio credentials to finish connecting.");
       return;
     }
-    if (id === 'whatsapp') {
+
+    if (id === 'whatsapp' && integration?.status === 'disconnected') {
       setShowWhatsAppModal(true);
-      setStatusMessage("Follow the Embedded Signup flow to connect WhatsApp.");
+      setStatusMessage("Continue with Meta to connect your number.");
       return;
     }
-    setStatusMessage(`Connecting ${integration?.name || id}...`);
+
+    if (integration?.status === 'connected') {
+      setIntegrations(prev => prev.map(integration =>
+        integration.id === id ? { ...integration, status: "disconnected" } : integration
+      ));
+      setStatusMessage(`${integration?.name || id} disconnected.`);
+      return;
+    }
+
+    setStatusMessage(`Connecting to ${integration?.name || id}...`);
     try {
       const res = await fetch(`/api/integrations/${id}/connect`, { method: "POST" });
       if (!res.ok) {
@@ -85,7 +93,7 @@ export default function Integrations() {
       integration.id === 'twilio' ? { ...integration, status: "connected" } : integration
     ));
     setShowTwilioModal(false);
-    setStatusMessage("Twilio Conversations connected.");
+    setStatusMessage("WhatsApp Business (Twilio) connected.");
     router.push('/inbox');
   };
 
@@ -132,7 +140,7 @@ export default function Integrations() {
         </div>
       )}
 
-      {/* Twilio Conversations Connect Modal */}
+      {/* WhatsApp Business (Twilio) Connect Modal */}
       {showTwilioModal && (
         <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4 backdrop-blur-sm">
           <div className="app-card w-full max-w-md rounded-2xl p-6 shadow-2xl relative overflow-hidden font-inter">
@@ -148,30 +156,49 @@ export default function Integrations() {
               </button>
             </div>
 
-            <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">Connect Twilio Conversations</h2>
+            <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">Connect WhatsApp Business (Twilio)</h2>
             <p className="text-gray-600 mb-6 text-sm leading-relaxed">
-              Select the channels you want to route into your central inbox. You can update this later without losing message history.
+              Link your Twilio credentials to manage WhatsApp Business messages directly in your central inbox.
             </p>
 
             <div className="space-y-4 mb-6">
-              {Object.entries(twilioChannels).map(([key, value]) => (
-                <div key={key} className="flex items-center justify-between p-3 rounded-xl border border-gray-100 bg-gray-50">
-                  <span className="text-sm font-semibold text-gray-800 capitalize">{key}</span>
-                  <button
-                    onClick={() => setTwilioChannels(prev => ({ ...prev, [key]: !prev[key as keyof typeof twilioChannels] }))}
-                    className={`w-12 h-6 rounded-full transition-colors relative ${value ? 'bg-[#34C759]' : 'bg-gray-300'}`}
-                  >
-                    <div className={`w-5 h-5 bg-white rounded-full absolute top-0.5 transition-transform ${value ? 'translate-x-6' : 'translate-x-0.5'}`} />
-                  </button>
-                </div>
-              ))}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">Account SID</label>
+                <input
+                  type="text"
+                  placeholder="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                  value={twilioForm.sid}
+                  onChange={(e) => setTwilioForm(prev => ({...prev, sid: e.target.value}))}
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#0066FF] transition-all bg-gray-50 focus:bg-white text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">Auth Token</label>
+                <input
+                  type="password"
+                  placeholder="••••••••••••••••••••••••••••••••"
+                  value={twilioForm.token}
+                  onChange={(e) => setTwilioForm(prev => ({...prev, token: e.target.value}))}
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#0066FF] transition-all bg-gray-50 focus:bg-white text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">WhatsApp Number</label>
+                <input
+                  type="text"
+                  placeholder="+1234567890"
+                  value={twilioForm.number}
+                  onChange={(e) => setTwilioForm(prev => ({...prev, number: e.target.value}))}
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#0066FF] transition-all bg-gray-50 focus:bg-white text-sm"
+                />
+              </div>
             </div>
 
             <button
               onClick={saveTwilioIntegration}
               className="w-full bg-[#0066FF] text-white py-3 rounded-xl font-bold text-sm shadow-sm hover:bg-[#005bb5] transition-colors"
             >
-              Save & Connect
+              Connect Twilio
             </button>
           </div>
         </div>
