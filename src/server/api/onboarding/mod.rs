@@ -45,7 +45,7 @@ async fn get_draft(
 ) -> Result<Json<serde_json::Value>, axum::http::StatusCode> {
     let tenant_id = auth_info.org_id.clone();
     let user_id = auth_info.agent_id.clone(); // In this context agent_id refers to the user
-    match agent.get_onboarding_state(&tenant_id, &user_id).await {
+    match agent.get_onboarding_draft(&tenant_id, &user_id).await {
         Ok(state) => Ok(Json(state)),
         Err(_) => Ok(Json(serde_json::json!({}))), // fallback
     }
@@ -65,7 +65,7 @@ async fn save_draft(
         .and_then(|s| s.as_i64())
         .unwrap_or(0) as i32;
 
-    match agent.save_onboarding_state(&tenant_id, &user_id, step, &payload).await {
+    match agent.save_onboarding_draft(&tenant_id, &user_id, step, &payload).await {
         Ok(_) => Ok(axum::http::StatusCode::OK),
         Err(_) => Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR),
     }

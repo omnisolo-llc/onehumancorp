@@ -209,6 +209,17 @@ impl OnboardingAgent {
         Ok(())
     }
 
+
+    pub async fn get_onboarding_draft(&self, tenant_id: &str, user_id: &str) -> Result<serde_json::Value, String> {
+        let draft_user_id = format!("{}_draft", user_id);
+        self.get_onboarding_state(tenant_id, &draft_user_id).await
+    }
+
+    pub async fn save_onboarding_draft(&self, tenant_id: &str, user_id: &str, current_step: i32, draft_json: &serde_json::Value) -> Result<(), String> {
+        let draft_user_id = format!("{}_draft", user_id);
+        self.save_onboarding_state(tenant_id, &draft_user_id, current_step, draft_json).await
+    }
+
     pub async fn get_onboarding_state(&self, tenant_id: &str, user_id: &str) -> Result<serde_json::Value, String> {
         let cache_key = format!("agent_onboarding_state_{}_{}", tenant_id, user_id);
         let cache = ONBOARDING_STATE_AGENT_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(self.hub.redis_client.clone()));
