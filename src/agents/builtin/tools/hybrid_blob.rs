@@ -151,18 +151,25 @@ impl BlobManager for HybridBlobManager {
 }
 
 
+#[derive(serde::Deserialize)]
+struct HybridBlobArgs {
+    #[serde(rename = "Action")]
+    action: String,
+    #[serde(rename = "Key")]
+    key: String,
+    #[serde(rename = "Data")]
+    data: Option<String>,
+}
+
 struct HybridBlobExecutor {
     manager: Arc<dyn BlobManager>,
 }
 
 #[async_trait::async_trait]
-impl ToolExecutor for HybridBlobExecutor {
-    async fn execute(
-        &self,
-        args: Value,
-    ) -> Result<String, ToolError> {
-        let action = args["Action"].as_str().ok_or_else(|| ToolError::LlmRecoverable("hybrid_blob: Action is required".to_string()))?;
-        let key = args["Key"].as_str().ok_or_else(|| ToolError::LlmRecoverable("hybrid_blob: Key is required".to_string()))?;
+impl super::pydantic::PydanticToolExecutor<HybridBlobArgs> for HybridBlobExecutor {
+    async fn execute_typed(&self, args: HybridBlobArgs) -> Result<String, ToolError> {
+        let action = args.action.as_str();
+        let key = &args.key;
 
         match action {
             "read" => {
@@ -182,7 +189,7 @@ impl ToolExecutor for HybridBlobExecutor {
                 }).to_string())
             }
             "write" => {
-                let data_str = args["Data"].as_str().ok_or_else(|| ToolError::LlmRecoverable("hybrid_blob: Data is required for write".to_string()))?;
+                let data_str = args.data.ok_or_else(|| ToolError::LlmRecoverable("hybrid_blob: Data is required for write".to_string()))?;
                 let data_bytes = data_str.as_bytes();
 
                 self.manager.write_blob(key, data_bytes).await.map_err(ToolError::LlmRecoverable)?;
@@ -192,7 +199,7 @@ impl ToolExecutor for HybridBlobExecutor {
                     "key": key
                 }).to_string())
             }
-            _ => Err(ToolError::LlmRecoverable("invalid action".to_string())),
+            _ => Err(ToolError::LlmRecoverable(format!("invalid action: {}", action))),
         }
     }
 }
@@ -242,7 +249,7 @@ pub fn hybrid_blob_tool() -> Tool {
             },
             "required": ["Action", "Key"]
         }),
-        execute: Arc::new(HybridBlobExecutor { manager }),
+        execute: Arc::new(super::pydantic::PydanticAdapter::new(HybridBlobExecutor { manager })),
     }
 }
 
