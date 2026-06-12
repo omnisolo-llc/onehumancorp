@@ -11,6 +11,7 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 server_integrations_core = { path = "../core" }
 server_integrations_mercadopago = { path = "../mercadopago" }
+server_integrations_razorpay = { path = "../razorpay" }
 server_common = { path = "../../common" }
 tokio = { workspace = true }
 sqlx = { version = "0.8", features = ["postgres", "sqlite", "runtime-tokio-rustls", "chrono", "uuid", "macros"] }
