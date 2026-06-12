@@ -1,6 +1,6 @@
 # WorkBuddy Docs Gap Closure Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Close the official WorkBuddy docs-backed feature gaps that were not represented in the old 150-item parity registry.
 
@@ -17,7 +17,7 @@
 - Modify: `src/ui/next/src/app/api/assistant/store.ts`
 - Modify: `src/ui/next/src/app/api/assistant/share/route.ts`
 
-- [ ] **Step 1: Write failing API tests**
+- [x] **Step 1: Write failing API tests**
 
 Add expectations for:
 - default connector roster: GitHub, GitLab, Jira, Confluence, Google Drive, Gmail, Notion, Slack
@@ -32,11 +32,11 @@ Add expectations for:
 Run: `cd src/ui/next && npm test -- src/app/api/assistant/route.test.ts`
 Expected: FAIL because these fields/actions are missing.
 
-- [ ] **Step 2: Implement minimal API support**
+- [x] **Step 2: Implement minimal API support**
 
 Update assistant types, seeds, mutators, and routes so the new tests pass.
 
-- [ ] **Step 3: Verify API green**
+- [x] **Step 3: Verify API green**
 
 Run: `cd src/ui/next && npm test -- src/app/api/assistant/route.test.ts`
 Expected: PASS.
@@ -48,7 +48,7 @@ Expected: PASS.
 - Modify: `src/ui/next/src/app/assistant/page.tsx`
 - Modify: `src/ui/next/src/app/assistant/assistant.module.css`
 
-- [ ] **Step 1: Write failing UI tests**
+- [x] **Step 1: Write failing UI tests**
 
 Assert the assistant page renders:
 - full official connector roster
@@ -60,11 +60,11 @@ Assert the assistant page renders:
 Run: `cd src/ui/next && npm test -- src/app/assistant/page.test.tsx`
 Expected: FAIL because the UI still has static/partial cards.
 
-- [ ] **Step 2: Implement minimal UI support**
+- [x] **Step 2: Implement minimal UI support**
 
 Render missing WorkBuddy affordances through existing panels and wire buttons to the existing action dispatcher.
 
-- [ ] **Step 3: Verify UI green**
+- [x] **Step 3: Verify UI green**
 
 Run: `cd src/ui/next && npm test -- src/app/assistant/page.test.tsx`
 Expected: PASS.
@@ -76,12 +76,12 @@ Expected: PASS.
 - Verify: `src/ui/next/src/app/assistant/page.test.tsx`
 - Verify: `src/ui/next/src/app/agents/page.test.tsx`
 
-- [ ] **Step 1: Run focused assistant tests**
+- [x] **Step 1: Run focused assistant tests**
 
 Run: `cd src/ui/next && npm test -- src/app/api/assistant/route.test.ts src/app/assistant/page.test.tsx`
 Expected: PASS.
 
-- [ ] **Step 2: Run Expert Center regression tests**
+- [x] **Step 2: Run Expert Center regression tests**
 
 Run: `cd src/ui/next && npm test -- src/app/agents/page.test.tsx`
 Expected: PASS.

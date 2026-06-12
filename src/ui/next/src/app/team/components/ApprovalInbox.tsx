@@ -206,7 +206,7 @@ export default function ApprovalInbox({
                   )}
 
                   {req.payload?.feature_type === "legal_compliance" && (
-                    <div className="mb-6 p-4 rounded-xl bg-orange-50 border border-orange-100 flex flex-col gap-3">
+                    <div className="mb-6 p-4 rounded-xl flex flex-col gap-3" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)' }}>
                       <div className="flex items-center gap-2 text-orange-800 font-semibold text-sm">
                         <svg
                           className="w-5 h-5"
@@ -234,7 +234,7 @@ export default function ApprovalInbox({
                   )}
 
                   {req.payload?.feature_type === "global_localization" && (
-                    <div className="mb-6 p-4 rounded-xl bg-indigo-50 border border-indigo-100 flex flex-col gap-3">
+                    <div className="mb-6 p-4 rounded-xl flex flex-col gap-3" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)' }}>
                       <div className="flex items-center justify-between text-indigo-800 font-semibold text-sm">
                         <div className="flex items-center gap-2">
                           <svg
@@ -282,7 +282,7 @@ export default function ApprovalInbox({
                   )}
 
                   {req.payload?.feature_type === "ai_geo" && (
-                    <div className="mb-6 p-4 rounded-xl bg-emerald-50 border border-emerald-100 flex flex-col gap-3">
+                    <div className="mb-6 p-4 rounded-xl flex flex-col gap-3" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)' }}>
                       <div className="flex items-center gap-2 text-emerald-800 font-semibold text-sm">
                         <svg
                           className="w-5 h-5"
@@ -363,7 +363,7 @@ export default function ApprovalInbox({
                   )}
 
                   {req.payload?.feature_type === "social_calendar" && (
-                    <div className="mb-6 p-4 rounded-xl bg-purple-50 border border-purple-100 flex flex-col gap-3">
+                    <div className="mb-6 p-4 rounded-xl flex flex-col gap-3" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)' }}>
                       <div className="flex items-center gap-2 text-purple-800 font-semibold text-sm">
                         <svg
                           className="w-5 h-5"
@@ -423,7 +423,7 @@ export default function ApprovalInbox({
                   )}
 
                   {req.payload?.feature_type === "social_post_draft" && (
-                    <div className="mb-6 p-4 rounded-xl bg-pink-50 border border-pink-100 flex flex-col gap-3">
+                    <div className="mb-6 p-4 rounded-xl flex flex-col gap-3" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)' }}>
                       <div className="flex items-center gap-2 text-pink-800 font-semibold text-sm">
                         <svg
                           className="w-5 h-5"
@@ -544,7 +544,7 @@ export default function ApprovalInbox({
                   )}
 
                   {req.payload?.feature_type === "low_stock_restock" && (
-                    <div className="mb-6 p-4 rounded-xl bg-orange-50 border border-orange-100 flex flex-col gap-3">
+                    <div className="mb-6 p-4 rounded-xl flex flex-col gap-3" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)' }}>
                       <div className="flex items-center gap-2 text-orange-800 font-semibold text-sm">
                         <svg
                           className="w-5 h-5"
@@ -580,7 +580,7 @@ export default function ApprovalInbox({
                   )}
 
                   {req.payload?.feature_type === "abandoned_cart" && (
-                    <div className="mb-6 p-4 rounded-xl bg-rose-50 border border-rose-100 flex flex-col gap-3">
+                    <div className="mb-6 p-4 rounded-xl flex flex-col gap-3" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)' }}>
                       <div className="flex items-center gap-2 text-rose-800 font-semibold text-sm">
                         <svg
                           className="w-5 h-5"
@@ -676,7 +676,7 @@ export default function ApprovalInbox({
                 <p className="text-xs text-gray-500 font-medium uppercase tracking-wider mb-1">
                   Context
                 </p>
-                <div className="bg-gray-50 p-3 rounded-xl border border-gray-100 text-sm text-gray-700">
+                <div className="p-3 rounded-xl text-sm text-gray-700" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)' }}>
                   {extractPayload(selectedReview.description).payload
                     ?.original_message || extractPayload(selectedReview.description).payload?.customer_inquiry || "N/A"}
                 </div>
