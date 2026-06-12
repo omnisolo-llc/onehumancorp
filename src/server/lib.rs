@@ -5281,6 +5281,7 @@ async fn create_ui_bom_item_handler(
         }))
         .merge(webhook_router)
         .merge(relay_webhook_router)
+        .merge(ohc_builtin_agent::json_rpc_server::create_router(std::sync::Arc::new(ohc_builtin_agent::codex_runner::Runner::new(std::sync::Arc::new(ohc_builtin_agent::agent::Agent::new(std::sync::Arc::new(ohc_builtin_agent::llm::openai::OpenAIClient::new("dummy".to_string())), vec![]))))))
         .merge(ohc_builtin_agent::visual_workflow_client::create_router(std::sync::Arc::new(ohc_builtin_agent::visual_workflow_client::VisualWorkflowState {
             default_agent: std::sync::Arc::new(ohc_builtin_agent::agent::Agent::new(std::sync::Arc::new(ohc_builtin_agent::llm::openai::OpenAIClient::new("dummy".to_string())), vec![])),
             tools: vec![],

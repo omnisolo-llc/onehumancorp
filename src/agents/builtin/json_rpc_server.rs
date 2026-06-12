@@ -145,7 +145,7 @@ async fn handle_rpc(
 pub fn create_router(runner: Arc<Runner>) -> Router {
     let state = Arc::new(AppState { runner });
     Router::new()
-        .route("/rpc", post(handle_rpc))
+        .route("/json_rpc", post(handle_rpc))
         .with_state(state)
 }
 
@@ -217,7 +217,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method("POST")
-                    .uri("/rpc")
+                    .uri("/json_rpc")
                     .header("Content-Type", "application/json")
                     .body(Body::from(req_body.to_string()))
                     .unwrap(),
@@ -257,7 +257,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method("POST")
-                    .uri("/rpc")
+                    .uri("/json_rpc")
                     .header("Content-Type", "application/json")
                     .body(Body::from(req_body.to_string()))
                     .unwrap(),
@@ -297,7 +297,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method("POST")
-                    .uri("/rpc")
+                    .uri("/json_rpc")
                     .header("Content-Type", "application/json")
                     .body(Body::from(req_body.to_string()))
                     .unwrap(),
