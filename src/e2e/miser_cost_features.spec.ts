@@ -20,9 +20,9 @@ test.describe('Miser Cost Features E2E', () => {
     await expect(page.locator('text=Projected Monthly Cost')).toBeVisible();
 
     // Verify Budget Health Alert is rendered
-    const alertCount = await page.locator('#budget-health-alert').count();
-    if (alertCount > 0) {
-      await expect(page.locator('#budget-health-alert')).toBeVisible();
+    const alert = page.locator('#budget-health-alert');
+    if (await alert.count() > 0) {
+      await expect(alert).toBeVisible();
     }
 
     // Verify navigation back to My Plan works
