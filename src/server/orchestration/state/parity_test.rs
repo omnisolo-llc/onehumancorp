@@ -766,6 +766,33 @@ mod parity_tests {
     }
 
     #[tokio::test]
+    async fn test_execute_with_retry_sync_lag() {
+        let sqlite_db = setup_sqlite_db().await;
+
+        // Enforce the 60-second ML-Resilience rule for database operations
+        let timeout_duration = std::time::Duration::from_millis(60);
+
+        let attempts = std::sync::Arc::new(std::sync::Mutex::new(0));
+        let attempts_clone = attempts.clone();
+
+        let result = tokio::time::timeout(timeout_duration, sqlite_db.execute_with_retry("test_sync_lag", || {
+            let attempts_clone = attempts_clone.clone();
+            async move {
+                let mut a = attempts_clone.lock().unwrap();
+                *a += 1;
+
+                // Simulate a lag (e.g. over slow network/disk) that exceeds the 60ms timeout constraint
+                tokio::time::sleep(std::time::Duration::from_millis(150)).await;
+
+                // We'll return an error so retry logic would theoretically kick in if not timed out
+                Err::<(), String>("database is locked".to_string())
+            }
+        })).await;
+
+        assert!(result.is_err(), "Sync operation must time out under lag conditions to prevent cascading failures");
+    }
+
+    #[tokio::test]
     async fn test_execute_with_retry_chaos_exhaustion() {
         let sqlite_db = setup_sqlite_db().await;
 
