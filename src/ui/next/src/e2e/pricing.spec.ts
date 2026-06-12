@@ -15,9 +15,9 @@ test.describe('Pricing Page Loop', () => {
     await expect(page.locator('h3', { hasText: 'Business' })).toBeVisible();
 
     // Check that Upgrade buttons are present
-    await expect(page.locator('button', { hasText: 'Upgrade to Starter via Stripe' })).toBeVisible();
-    await expect(page.locator('button', { hasText: 'Upgrade to Pro via Stripe' })).toBeVisible();
-    await expect(page.locator('button', { hasText: 'Upgrade to Business via Stripe' })).toBeVisible();
+    await expect(page.locator('button', { hasText: 'Upgrade to Starter' })).toBeVisible();
+    await expect(page.locator('button', { hasText: 'Upgrade to Pro' })).toBeVisible();
+    await expect(page.locator('button', { hasText: 'Upgrade to Business' })).toBeVisible();
 
     // Check navigation works
     await page.locator('button', { hasText: 'Back' }).click();
