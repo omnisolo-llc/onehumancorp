@@ -23,7 +23,7 @@ export default function ExitIntentGeneratorPage() {
     const baseUrl = typeof window !== 'undefined' ? (window.location.origin.includes('localhost') ? window.location.origin : 'https://ohc.app') : 'https://ohc.app';
     return `<!-- Exit Intent Widget -->
 <div id="ohc-exit-intent" data-tenant="${tenant}" data-discount="${discount}" data-headline="${headline}" data-subheading="${subheading}" data-btn="${buttonText}" data-theme="${theme}" data-branding="${!removeBranding}"></div>
-<script src="${baseUrl}/api/widgets/exit-intent.js" async></script>
+<script src="${baseUrl}/api/widgets/exit-intent-js" async></script>
 ${!removeBranding ? `<!-- ⚡ Powered by OHC -->\n<div style="font-family: sans-serif; text-align: center; font-size: 12px; margin-top: 8px;"><a href="${baseUrl}/api/v1/growth/referrals/click?target=/onboarding&ref=${tenant}" target="_blank" style="color: #6b7280; text-decoration: none; font-weight: 600;">⚡ Powered by OHC</a></div>` : ''}`;
   };
 
