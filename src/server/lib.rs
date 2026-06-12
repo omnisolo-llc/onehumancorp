@@ -3614,70 +3614,100 @@ async fn load_ui_triage_from_db(db: &crate::db::DB, tenant_id: &str, mobile_opti
     match &db.store {
         crate::db::DbStore::Postgres => {
             sqlx::query(
-                "SELECT t.id, t.tenant_id, t.customer_id, t.source, t.priority, t.context, t.status, t.created_at, a.action_type, a.payload AS action_payload FROM triage_items t LEFT JOIN triage_proposed_actions a ON t.id = a.triage_item_id WHERE t.tenant_id = $1 AND t.status != 'resolved' AND t.status != 'dismissed' ORDER BY t.created_at DESC LIMIT 50"
+                "SELECT id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at FROM agent_feed_items WHERE tenant_id = $1 AND lifecycle_state = 'PENDING_APPROVAL' ORDER BY created_at DESC LIMIT 50"
             )
             .bind(tenant_id)
             .fetch_all(&db.pool)
             .await
             .map(|rows| rows.into_iter().map(|row| {
+                let context_payload_str = row.get::<Option<serde_json::Value>, _>("context_payload").unwrap_or(serde_json::json!({}));
+                let proposed_action_str = row.get::<Option<serde_json::Value>, _>("proposed_action").unwrap_or(serde_json::json!({}));
+
+                let context_payload = context_payload_str;
+                let proposed_action = proposed_action_str;
+
+                let event_source: String = row.get::<String, _>("event_source");
+                let customer_id = context_payload.get("customer_id").and_then(|v| v.as_str()).unwrap_or("");
+                let source = context_payload.get("source").and_then(|v| v.as_str()).unwrap_or(&event_source);
+                let priority = context_payload.get("priority").and_then(|v| v.as_str()).unwrap_or("Normal");
+                let context = context_payload.get("description").and_then(|v| v.as_str()).unwrap_or("");
+
+                let action_type = proposed_action.get("action_type").and_then(|v| v.as_str()).unwrap_or("");
+                let action_payload = proposed_action.get("action_payload").and_then(|v| v.as_str()).unwrap_or("");
+
                 if mobile_optimized {
                     serde_json::json!({
                         "id": row.get::<String, _>("id"),
                         "tenant_id": row.get::<String, _>("tenant_id"),
-                        "customer_id": row.try_get::<String, _>("customer_id").unwrap_or_default(),
-                        "source": row.try_get::<String, _>("source").unwrap_or_default(),
-                        "priority": row.try_get::<String, _>("priority").unwrap_or_default(),
-                        "status": row.try_get::<String, _>("status").unwrap_or_default(),
+                        "customer_id": customer_id,
+                        "source": source,
+                        "priority": priority,
+                        "status": "pending",
                         "created_at": row.try_get::<chrono::DateTime<chrono::Utc>, _>("created_at").map(|dt| dt.to_rfc3339()).unwrap_or_default(),
-                        "action_type": row.try_get::<String, _>("action_type").unwrap_or_default(),
+                        "action_type": action_type,
                     })
                 } else {
                     serde_json::json!({
                         "id": row.get::<String, _>("id"),
                         "tenant_id": row.get::<String, _>("tenant_id"),
-                        "customer_id": row.try_get::<String, _>("customer_id").unwrap_or_default(),
-                        "source": row.try_get::<String, _>("source").unwrap_or_default(),
-                        "priority": row.try_get::<String, _>("priority").unwrap_or_default(),
-                        "context": row.try_get::<String, _>("context").unwrap_or_default(),
-                        "status": row.try_get::<String, _>("status").unwrap_or_default(),
+                        "customer_id": customer_id,
+                        "source": source,
+                        "priority": priority,
+                        "context": context,
+                        "status": "pending",
                         "created_at": row.try_get::<chrono::DateTime<chrono::Utc>, _>("created_at").map(|dt| dt.to_rfc3339()).unwrap_or_default(),
-                        "action_type": row.try_get::<String, _>("action_type").unwrap_or_default(),
-                        "action_payload": row.try_get::<String, _>("action_payload").unwrap_or_default(),
+                        "action_type": action_type,
+                        "action_payload": action_payload,
                     })
                 }
             }).collect::<Vec<_>>())
         }
         crate::db::DbStore::Sqlite(pool) => {
             sqlx::query(
-                "SELECT t.id, t.tenant_id, t.customer_id, t.source, t.priority, t.context, t.status, t.created_at, a.action_type, a.payload AS action_payload FROM triage_items t LEFT JOIN triage_proposed_actions a ON t.id = a.triage_item_id WHERE t.tenant_id = ? AND t.status != 'resolved' AND t.status != 'dismissed' ORDER BY t.created_at DESC LIMIT 50"
+                "SELECT id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at FROM agent_feed_items WHERE tenant_id = ? AND lifecycle_state = 'PENDING_APPROVAL' ORDER BY created_at DESC LIMIT 50"
             )
             .bind(tenant_id)
             .fetch_all(pool)
             .await
             .map(|rows| rows.into_iter().map(|row| {
+                let context_payload_str = row.get::<Option<String>, _>("context_payload").unwrap_or_default();
+                let proposed_action_str = row.get::<Option<String>, _>("proposed_action").unwrap_or_default();
+
+                let context_payload: serde_json::Value = serde_json::from_str(&context_payload_str).unwrap_or(serde_json::json!({}));
+                let proposed_action: serde_json::Value = serde_json::from_str(&proposed_action_str).unwrap_or(serde_json::json!({}));
+
+                let event_source: String = row.get::<String, _>("event_source");
+                let customer_id = context_payload.get("customer_id").and_then(|v| v.as_str()).unwrap_or("");
+                let source = context_payload.get("source").and_then(|v| v.as_str()).unwrap_or(&event_source);
+                let priority = context_payload.get("priority").and_then(|v| v.as_str()).unwrap_or("Normal");
+                let context = context_payload.get("description").and_then(|v| v.as_str()).unwrap_or("");
+
+                let action_type = proposed_action.get("action_type").and_then(|v| v.as_str()).unwrap_or("");
+                let action_payload = proposed_action.get("action_payload").and_then(|v| v.as_str()).unwrap_or("");
+
                 if mobile_optimized {
                     serde_json::json!({
                         "id": row.get::<String, _>("id"),
                         "tenant_id": row.get::<String, _>("tenant_id"),
-                        "customer_id": row.try_get::<String, _>("customer_id").unwrap_or_default(),
-                        "source": row.try_get::<String, _>("source").unwrap_or_default(),
-                        "priority": row.try_get::<String, _>("priority").unwrap_or_default(),
-                        "status": row.try_get::<String, _>("status").unwrap_or_default(),
+                        "customer_id": customer_id,
+                        "source": source,
+                        "priority": priority,
+                        "status": "pending",
                         "created_at": row.try_get::<String, _>("created_at").unwrap_or_default(),
-                        "action_type": row.try_get::<String, _>("action_type").unwrap_or_default(),
+                        "action_type": action_type,
                     })
                 } else {
                     serde_json::json!({
                         "id": row.get::<String, _>("id"),
                         "tenant_id": row.get::<String, _>("tenant_id"),
-                        "customer_id": row.try_get::<String, _>("customer_id").unwrap_or_default(),
-                        "source": row.try_get::<String, _>("source").unwrap_or_default(),
-                        "priority": row.try_get::<String, _>("priority").unwrap_or_default(),
-                        "context": row.try_get::<String, _>("context").unwrap_or_default(),
-                        "status": row.try_get::<String, _>("status").unwrap_or_default(),
+                        "customer_id": customer_id,
+                        "source": source,
+                        "priority": priority,
+                        "context": context,
+                        "status": "pending",
                         "created_at": row.try_get::<String, _>("created_at").unwrap_or_default(),
-                        "action_type": row.try_get::<String, _>("action_type").unwrap_or_default(),
-                        "action_payload": row.try_get::<String, _>("action_payload").unwrap_or_default(),
+                        "action_type": action_type,
+                        "action_payload": action_payload,
                     })
                 }
             }).collect::<Vec<_>>())

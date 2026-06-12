@@ -1571,21 +1571,23 @@
 
       window.handleTriageAction = async function(id, state) {
         const itemEl = document.getElementById(`triage-${id}`);
-        if (itemEl) itemEl.style.opacity = '0.5';
+        if (itemEl) {
+            itemEl.style.transform = 'scale(0.95)';
+            itemEl.style.opacity = '0';
+        }
 
         try {
-          let url = `/api/ui/triage/action`;
+          let url = `/api/agent-feed/${id}/state`;
           const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default';
 
-          let bodyPayload;
-          let method = 'POST';
+          let method = 'PUT';
 
-          // Check if it's the old agent-feed enum format or boolean for triage action
+          let payloadState = state;
           if (typeof state === 'boolean') {
-             bodyPayload = { triage_item_id: id, approved: state };
-          } else {
-             bodyPayload = { triage_item_id: id, approved: state === 'APPROVED' };
+              payloadState = state ? 'APPROVED' : 'DISMISSED';
           }
+
+          const bodyPayload = { state: payloadState };
 
           const res = await fetch(`${url}?tenant_id=${encodeURIComponent(tenantId)}`, {
             method: method,
@@ -1596,11 +1598,17 @@
           if (!res.ok) throw new Error("Update failed");
 
           window.showStatus('Approving...', true);
-          window.showStatus((state === 'APPROVED' || state === true) ? 'Approved!' : 'Dismissed.', true);
-          loadTriage();
+          window.showStatus((payloadState === 'APPROVED') ? 'Approved!' : 'Dismissed.', true);
+          if (itemEl) {
+              setTimeout(() => itemEl.remove(), 300);
+          }
+          // Do not reload triage immediately to maintain optimistic UI
         } catch (err) {
           console.error(err);
-          if (itemEl) itemEl.style.opacity = '1';
+          if (itemEl) {
+              itemEl.style.transform = 'scale(1)';
+              itemEl.style.opacity = '1';
+          }
           alert('Failed to update agent feed action.');
         }
       };

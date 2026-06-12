@@ -367,6 +367,14 @@ VALUES
   ('action-test-2', 'triage-test-2', 'e2e-tenant', 'Draft Reply', 'We deliver between 9 AM and 5 PM on weekdays.')
 ON CONFLICT (id) DO NOTHING;
 
+INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at)
+VALUES
+  ('triage-test-1', 'e2e-tenant', 'Instagram DM', '{"description": "Maya requested a custom cake for Friday", "priority": "Urgent", "source": "Instagram DM"}'::jsonb, '{"action_type": "Draft Reply", "action_payload": "Hi Maya! I can definitely help with the custom cake. It will be $50.", "message": "Hi Maya! I can definitely help with the custom cake. It will be $50."}'::jsonb, 'PENDING_APPROVAL', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+  ('triage-test-2', 'e2e-tenant', 'WhatsApp', '{"description": "Question about delivery times", "priority": "Medium", "source": "WhatsApp"}'::jsonb, '{"action_type": "Draft Reply", "action_payload": "We deliver between 9 AM and 5 PM on weekdays.", "message": "We deliver between 9 AM and 5 PM on weekdays."}'::jsonb, 'PENDING_APPROVAL', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+ON CONFLICT (id) DO UPDATE
+SET lifecycle_state = EXCLUDED.lifecycle_state,
+    updated_at = CURRENT_TIMESTAMP;
+
 -- Seed 10th order milestone for e2e-tenant
 INSERT INTO business_milestones (id, tenant_id, milestone_type, reached_at)
 VALUES ('ms_e2e_10th_order', 'e2e-tenant', '10th_order', NOW())
