@@ -173,3 +173,82 @@ async fn test_create_payment_intent_authenticated_via_router() {
     let body_str = String::from_utf8(body.to_vec()).unwrap();
     assert!(body_str.contains("Stripe API key is required") || body_str.contains("Stripe API error") || body_str.contains("Stripe Terminal connection token request failed"));
 }
+
+#[tokio::test]
+async fn test_sync_offline_transactions_unauthenticated() {
+    let hub = Arc::new(Hub::new());
+    let app = crate::api::terminal_api::router(hub);
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .uri("/sync_offline")
+                .method("POST")
+                .header("Content-Type", "application/json")
+                .body(Body::from(r#"{"tenant_id": "test_tenant", "client_id": "client_1", "transactions": []}"#))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+
+    let body = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
+    let body_str = String::from_utf8(body.to_vec()).unwrap();
+    assert!(body_str.contains("Unauthenticated"));
+}
+
+#[tokio::test]
+async fn test_sync_offline_transactions_authenticated() {
+    let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
+    if !database_url.contains("test") {
+        return;
+    }
+
+    let pool = sqlx::postgres::PgPoolOptions::new().connect(&database_url).await.unwrap();
+
+    let hub = Arc::new(Hub::new());
+    let mut app = crate::api::terminal_api::router(hub);
+
+    let tenant_id = "test_tenant_sync";
+    let _ = sqlx::query("INSERT INTO tenants (id, name) VALUES ($1, 'Test Tenant') ON CONFLICT DO NOTHING")
+        .bind(tenant_id)
+        .execute(&pool)
+        .await;
+
+    let mut req = Request::builder()
+        .uri("/sync_offline")
+        .method("POST")
+        .header("Content-Type", "application/json")
+        .body(Body::from(r#"{"tenant_id": "test_tenant_sync", "client_id": "client_1", "transactions": [{"id": "tx_123", "tenant_id": "test_tenant_sync", "client_id": "client_1", "amount_cents": 1000, "currency": "usd", "payload": "{}", "status": "PENDING", "created_at_unix": 1234567890}]}"#))
+        .unwrap();
+
+    req.extensions_mut().insert(::server_auth::orchestration::AuthInfo {
+        spiffe_id: "spiffe://test".to_string(),
+        agent_id: "agent_1".to_string(),
+        org_id: tenant_id.to_string(),
+    });
+
+    let response = app
+        .oneshot(req)
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), StatusCode::OK);
+
+    let body = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
+    let body_str = String::from_utf8(body.to_vec()).unwrap();
+    assert!(body_str.contains(r#""success":true"#));
+
+    let tx_count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM pos_offline_transactions WHERE id = 'tx_123'")
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    assert_eq!(tx_count.0, 1);
+
+    let job_count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM ohc_job_queue WHERE job_type = 'offline_pos_sync' AND payload->>'pos_transaction_id' = 'tx_123'")
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    assert_eq!(job_count.0, 1);
+}
