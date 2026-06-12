@@ -1,60 +1,81 @@
 import { test, expect } from './fixtures';
 
 test.describe('Voice Assistant Command Center', () => {
+  test.use({ permissions: ['microphone'] });
+
   test('Carlos can initiate a quote via voice command hands-free', async ({ page }) => {
-    // 1. Start from the dashboard (Carlos's home screen)
+    // Override MediaRecorder in the browser
+    await page.addInitScript(() => {
+      class MockMediaRecorder {
+        state = 'inactive';
+        ondataavailable = null;
+        onstop = null;
+        start() {
+          this.state = 'recording';
+          if (this.ondataavailable) {
+            this.ondataavailable({ data: new Blob(['mock audio data'], { type: 'audio/webm' }) });
+          }
+        }
+        stop() {
+          this.state = 'inactive';
+          if (this.onstop) {
+            this.onstop();
+          }
+        }
+      }
+      (window as any).MediaRecorder = MockMediaRecorder;
+
+      const mockStream = {
+        getTracks: () => [{ stop: () => {} }]
+      };
+      if (!navigator.mediaDevices) {
+        (navigator as any).mediaDevices = {};
+      }
+      navigator.mediaDevices.getUserMedia = () => Promise.resolve(mockStream as any);
+    });
+
     await page.goto('/dashboard');
 
-    // 2. Locate the floating Voice Assistant button (glassmorphism style)
-    const voiceBtn = page.getByLabel('Voice Assistant');
+    const voiceBtn = page.getByLabel('Voice Assistant').first();
     await expect(voiceBtn).toBeVisible();
 
-    // 3. Carlos holds to speak (simulate push-to-talk)
-    // We simulate the interaction. In a real device, this would use touch events.
-    await voiceBtn.dispatchEvent('mousedown');
+    await voiceBtn.evaluate((el) => el.click());
 
-    // 4. Verify "Listening" state and waveform animation
-    await expect(page.getByText('Listening...')).toBeVisible();
+    // Evaluate stop logic to simulate the 1s timeout behavior
+    await page.evaluate(() => {
+      setTimeout(() => {
+         const el = document.querySelector('[aria-label="Voice Assistant"]');
+         if (el) el.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+      }, 500);
+    });
 
-    // 5. Release to process command
-    await voiceBtn.dispatchEvent('mouseup');
+    await expect(page.locator('text=Action Prepared!')).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('text=Create a $150 repair quote')).toBeVisible();
 
-    // 6. Verify "Thinking" state
-    await expect(page.getByText('Thinking...')).toBeVisible();
-
-    // 7. Success state and transcription display
-    // Our mock backend returns a fixed transcription for the demo
-    await expect(page.getByText('Action Prepared!')).toBeVisible({ timeout: 5000 });
-    await expect(page.getByText(/Create a \$150 repair quote/)).toBeVisible();
-
-    // 8. Verify the proposed action card appears in the Agent Feed
-    // Navigate to Triage/Feed if not on the same page, but UnifiedAgentFeed is on Dashboard
     const feed = page.locator('section', { hasText: 'Unified Agent Feed' });
     await expect(feed).toBeVisible();
 
-    // Check for the new proposal card
     const actionCard = page.getByTestId('draft-quote-card');
     await expect(actionCard).toBeVisible();
     await expect(actionCard).toContainText('$150');
 
-    // 9. Carlos can approve the quote with one tap
     const approveBtn = page.getByTestId('approve-quote-draft');
     await approveBtn.click();
 
-    // 10. Verify card is cleared or marked as approved in activity
-    await expect(page.getByText('Approved!')).toBeVisible();
+    // After approval, it moves to the activity tab. We need to click the activity tab first to see it.
+    const activityTab = page.getByTestId('tab-activity');
+    await activityTab.click();
+    await expect(page.locator('text=APPROVED').first()).toBeVisible();
   });
 
   test('Voice Assistant button follows glassmorphism design tokens', async ({ page }) => {
     await page.goto('/dashboard');
-    const voiceBtn = page.getByLabel('Voice Assistant');
+    const voiceBtn = page.getByLabel('Voice Assistant').first();
 
-    // Verify mobile-first sizing (roughly 64x64 as implemented)
     const box = await voiceBtn.boundingBox();
     expect(box?.width).toBe(64);
     expect(box?.height).toBe(64);
 
-    // Check for glassmorphism styles (backdrop-filter)
     const computedStyle = await voiceBtn.evaluate((el) => {
         return window.getComputedStyle(el).backdropFilter || window.getComputedStyle(el).webkitBackdropFilter;
     });

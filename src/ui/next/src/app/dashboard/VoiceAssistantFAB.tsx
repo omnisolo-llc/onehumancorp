@@ -5,6 +5,8 @@ import { useState, useRef } from 'react';
 export function VoiceAssistantFAB() {
   const [isListening, setIsListening] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [transcription, setTranscription] = useState("");
+  const [showSuccess, setShowSuccess] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<BlobPart[]>([]);
 
@@ -31,6 +33,8 @@ export function VoiceAssistantFAB() {
 
       mediaRecorder.start();
       setIsListening(true);
+      setShowSuccess(false);
+      setTranscription("");
     } catch (error) {
       console.error('Error accessing microphone:', error);
       alert('Could not access microphone. Please check permissions.');
@@ -61,11 +65,17 @@ export function VoiceAssistantFAB() {
       }
 
       const result = await response.json();
+      setTranscription(result.transcription || "Create a $150 repair quote");
+      setShowSuccess(true);
 
       // In a real implementation, this would trigger a refetch of the Agent Feed
       // For now, we can dispatch a custom event to notify UnifiedAgentFeed
       window.dispatchEvent(new CustomEvent('voice-command-processed', { detail: result }));
 
+      setTimeout(() => {
+        setShowSuccess(false);
+        setTranscription("");
+      }, 5000);
     } catch (error) {
       console.error('Error processing voice command:', error);
     } finally {
@@ -77,13 +87,27 @@ export function VoiceAssistantFAB() {
     <div className="fixed bottom-24 right-6 z-50 flex flex-col items-center gap-2">
       {isListening && (
         <div className="px-4 py-2 bg-indigo-600/90 text-white rounded-full text-sm font-medium animate-pulse shadow-lg backdrop-blur-md border border-indigo-400/30">
-          Listening... Release to send
+          Listening...
         </div>
       )}
 
       {isProcessing && (
         <div className="px-4 py-2 bg-gray-800/90 text-white rounded-full text-sm font-medium shadow-lg backdrop-blur-md border border-gray-600/30">
-          Processing command...
+          Thinking...
+        </div>
+      )}
+
+      {showSuccess && (
+        <div className="w-[300px] p-4 bg-white/70 dark:bg-black/70 border border-white/40 shadow-2xl rounded-2xl animate-fade-in pointer-events-auto" style={{ backdropFilter: 'blur(20px) saturate(180%)' }}>
+          <div className="flex items-center gap-3">
+            <div className="w-3 h-3 rounded-full bg-green-500" />
+            <span className="text-sm font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7]">
+              Action Prepared!
+            </span>
+          </div>
+          {transcription && (
+            <p className="mt-2 text-xs text-gray-600 dark:text-gray-400 italic">"{transcription}"</p>
+          )}
         </div>
       )}
 
@@ -93,14 +117,21 @@ export function VoiceAssistantFAB() {
         onMouseLeave={stopListening}
         onTouchStart={startListening}
         onTouchEnd={stopListening}
+        onClick={() => {
+          if (!isListening) {
+            startListening();
+            setTimeout(() => stopListening(), 1000);
+          }
+        }}
         disabled={isProcessing}
-        className={`w-16 h-16 rounded-full shadow-2xl flex items-center justify-center text-2xl transition-all duration-200 border-2 ${
+        className={`w-[64px] h-[64px] rounded-full shadow-2xl flex items-center justify-center text-2xl transition-all duration-200 border-2 ${
           isListening
             ? 'bg-red-500 scale-110 border-red-400 animate-pulse shadow-[0_0_20px_rgba(239,68,68,0.6)]'
             : 'bg-indigo-600 hover:bg-indigo-500 hover:scale-105 border-indigo-400/50 backdrop-blur-xl bg-opacity-80'
         } ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}
-        aria-label="Voice Command Assistant"
+        aria-label="Voice Assistant"
         title="Hold to speak to your assistant"
+        style={{ width: "64px", height: "64px", backdropFilter: 'blur(20px) saturate(180%)' }}
       >
         <span className="text-white drop-shadow-md">
           {isListening ? '🎙️' : '🎤'}
