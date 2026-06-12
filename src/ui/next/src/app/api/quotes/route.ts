@@ -53,7 +53,8 @@ export async function POST(req: Request) {
     });
 
     if (res.ok) {
-      return NextResponse.json(await res.json());
+      const respJson = await res.json();
+      return NextResponse.json(respJson);
     }
 
     return NextResponse.json({ error: 'Failed to create quote' }, { status: res.status });

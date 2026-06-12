@@ -8,11 +8,11 @@ use axum::{
 };
 use serde::{Deserialize, Serialize};
 
-pub fn router(pool: PgPool) -> Router {
+pub fn router<S: Clone + Send + Sync + 'static>(pool: PgPool) -> Router<S> {
     Router::new()
         .route("/quotes", post(create_quote))
-        .route("/quotes/:id", get(get_quote))
-        .route("/quotes/:id/approve", patch(approve_quote))
+        .route("/quotes/{id}", get(get_quote))
+        .route("/quotes/{id}/approve", patch(approve_quote))
         .route("/pricing-rules", get(get_pricing_rules))
         .route("/pricing-rules", post(create_pricing_rule))
         .with_state(pool)
@@ -173,15 +173,107 @@ async fn approve_quote(
     State(pool): State<PgPool>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<Quote>, axum::http::StatusCode> {
+    let mut tx = pool.begin().await.map_err(|e| {
+        tracing::error!("Failed to begin transaction: {}", e);
+        axum::http::StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
     let quote = sqlx::query_as::<_, Quote>(
         "UPDATE quotes SET status = 'ACCEPTED', updated_at = NOW() WHERE id = $1 RETURNING *"
     )
     .bind(id)
-    .fetch_optional(&pool)
+    .fetch_optional(&mut *tx)
     .await
-    .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
+    .map_err(|e| {
+        tracing::error!("Failed to update quote: {}", e);
+        axum::http::StatusCode::INTERNAL_SERVER_ERROR
+    })?;
 
-    // Integrate Stripe deposit logic here...
+    if let Some(ref q) = quote {
+        // 1. Calculate total amount for the invoice
+        let total_cents: i64 = sqlx::query_scalar(
+            "SELECT COALESCE(SUM(unit_price_cents * quantity), 0) FROM quote_line_items WHERE quote_id = $1"
+        )
+        .bind(id)
+        .fetch_one(&mut *tx)
+        .await
+        .unwrap_or(0);
+
+        // 2. Create the project
+        let project_id = format!("proj-{}", Uuid::new_v4());
+        sqlx::query(
+            "INSERT INTO projects (id, tenant_id, quote_id, customer_id, name) VALUES ($1, $2, $3, $4, $5)"
+        )
+        .bind(&project_id)
+        .bind(&q.tenant_id)
+        .bind(id)
+        .bind(q.customer_id)
+        .bind(format!("Project from Quote {}", id))
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| {
+            tracing::error!("Failed to create project: {}", e);
+            axum::http::StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+
+        // 3. Create a default task for the project
+        let task_id = format!("ptask-{}", Uuid::new_v4());
+        sqlx::query(
+            "INSERT INTO project_tasks (id, tenant_id, project_id, title) VALUES ($1, $2, $3, $4)"
+        )
+        .bind(&task_id)
+        .bind(&q.tenant_id)
+        .bind(&project_id)
+        .bind("Initial Project Review")
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| {
+            tracing::error!("Failed to create project task: {}", e);
+            axum::http::StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+
+        // 4. Create the deposit invoice (50%)
+        let invoice_id = format!("inv-{}", Uuid::new_v4());
+        let total_amount = (total_cents as f64) / 100.0;
+        let deposit_amount = total_amount * 0.5;
+
+        sqlx::query(
+            "INSERT INTO invoices (id, tenant_id, client_id, client_name, status, due_date, currency, total_amount) VALUES ($1, $2, $3, $4, 'pending', $5, 'USD', $6)"
+        )
+        .bind(&invoice_id)
+        .bind(&q.tenant_id)
+        .bind(q.customer_id.to_string())
+        .bind("Customer") // Real name would need a join
+        .bind(chrono::Utc::now().timestamp() + 86400 * 7) // Due in 7 days
+        .bind(deposit_amount)
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| {
+            tracing::error!("Failed to create invoice: {}", e);
+            axum::http::StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+
+        let line_item_id = format!("ili-{}", Uuid::new_v4());
+        sqlx::query(
+            "INSERT INTO invoice_line_items (id, tenant_id, invoice_id, description, quantity, unit_price, amount) VALUES ($1, $2, $3, $4, 1, $5, $5)"
+        )
+        .bind(&line_item_id)
+        .bind(&q.tenant_id)
+        .bind(&invoice_id)
+        .bind("50% Deposit")
+        .bind(deposit_amount)
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| {
+            tracing::error!("Failed to create invoice line item: {}", e);
+            axum::http::StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+    }
+
+    tx.commit().await.map_err(|e| {
+        tracing::error!("Failed to commit transaction: {}", e);
+        axum::http::StatusCode::INTERNAL_SERVER_ERROR
+    })?;
 
     match quote {
         Some(q) => Ok(Json(q)),
