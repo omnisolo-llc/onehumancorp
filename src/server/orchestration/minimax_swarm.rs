@@ -308,6 +308,18 @@ fn parse_json_object(raw: &str) -> Result<Value, String> {
         Ok(value) if value.is_object() => Ok(value),
         Ok(_) => Err("agent response was JSON but not an object".to_string()),
         Err(_) => {
+            let start = raw.find('{');
+            let end = raw.rfind('}');
+            if let (Some(s), Some(e)) = (start, end) {
+                if s <= e {
+                    if let Ok(value) = serde_json::from_str::<Value>(&raw[s..=e]) {
+                         if value.is_object() {
+                             return Ok(value);
+                         }
+                    }
+                }
+            }
+
             for (idx, ch) in raw.char_indices() {
                 if ch != '{' {
                     continue;
