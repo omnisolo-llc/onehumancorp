@@ -75,7 +75,7 @@ Call log:
   93  |     await page.getByRole('button', { name: 'Next' }).click();
   94  |
   95  |     await page.getByPlaceholder(/Local families, Tech startups/i).fill('Students');
-  96  |     await page.getByRole('button', { name: 'Generate My Business' }).click();
+  96  |     await page.getByRole('button', { name: 'Generate Storefront' }).click();
   97  |
   98  |     await expect(page.locator('input[value="Guitar tutoring online"]')).toBeVisible();
   99  |     // Removed product assertion since fallback logic doesn't generate products
@@ -109,7 +109,7 @@ Call log:
   127 |     await page.getByRole('button', { name: 'Next' }).click();
   128 |
   129 |     await page.getByPlaceholder(/Local families, Tech startups/i).fill('Professionals');
-  130 |     await page.getByRole('button', { name: 'Generate My Business' }).click();
+  130 |     await page.getByRole('button', { name: 'Generate Storefront' }).click();
   131 |
   132 |     await expect(page.locator('input[value="Halal food cart pickup orders"]')).toBeVisible();
   133 |     await page.getByRole('button', { name: 'Continue' }).click();
@@ -165,7 +165,7 @@ Call log:
   182 |     await page.getByRole('button', { name: 'Next' }).click();
   183 |
   184 |     await page.getByPlaceholder(/Local families, Tech startups/i).fill('Anyone');
-  185 |     await page.getByRole('button', { name: 'Generate My Business' }).click();
+  185 |     await page.getByRole('button', { name: 'Generate Storefront' }).click();
   186 |
   187 |     await page.getByRole('button', { name: 'Continue' }).click();
   188 |
@@ -237,7 +237,7 @@ Call log:
   254 |     // Step 4: Empty Target Audience
   255 |     await expect(page.getByText("Who is your target audience?")).toBeVisible();
   256 |     await page.getByPlaceholder(/Local families, Tech startups/i).fill('  ');
-  257 |     await page.getByRole('button', { name: 'Generate My Business' }).click();
+  257 |     await page.getByRole('button', { name: 'Generate Storefront' }).click();
   258 |
   259 |     const audienceInput = page.getByPlaceholder(/Local families, Tech startups/i);
   260 |     await expect(page.getByText('Please tell us your target audience.')).toBeVisible();

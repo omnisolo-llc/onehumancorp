@@ -22,20 +22,24 @@ Call log:
     - locator resolved to <button disabled class="w-full bg-[#0066FF] text-white min-h-[44px] min-w-[44px] p-4 rounded-[8px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] hover:shadow-[0_6px_20px_rgba(0,102,255,0.23)] active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed">…</button>
   - attempting click action
     - waiting for element to be visible, enabled and stable
-    - element is not stable
-  - retrying click action
-    - waiting for element to be visible, enabled and stable
     - element is not enabled
   - retrying click action
+    - waiting for element to be visible, enabled and stable
+    - element is not stable
+  - retrying click action
     - waiting 20ms
-    2 × waiting for element to be visible, enabled and stable
-      - element is not enabled
-    - retrying click action
+    - waiting for element to be visible, enabled and stable
+    - element is not stable
+  2 × retrying click action
       - waiting 100ms
-    53 × waiting for element to be visible, enabled and stable
-       - element is not enabled
-     - retrying click action
+      - waiting for element to be visible, enabled and stable
+      - element is not enabled
+  52 × retrying click action
        - waiting 500ms
+       - waiting for element to be visible, enabled and stable
+       - element is not enabled
+  - retrying click action
+    - waiting 500ms
 
 ```
 
@@ -84,7 +88,7 @@ Call log:
   127 |     await page.getByRole('button', { name: 'Next' }).click();
   128 |
   129 |     await page.getByPlaceholder(/Local families, Tech startups/i).fill('Professionals');
-  130 |     await page.getByRole('button', { name: 'Generate My Business' }).click();
+  130 |     await page.getByRole('button', { name: 'Generate Storefront' }).click();
   131 |
   132 |     await expect(page.locator('input[value="Halal food cart pickup orders"]')).toBeVisible();
   133 |     await page.getByRole('button', { name: 'Continue' }).click();
@@ -139,7 +143,7 @@ Call log:
   182 |     await page.getByRole('button', { name: 'Next' }).click();
   183 |
   184 |     await page.getByPlaceholder(/Local families, Tech startups/i).fill('Anyone');
-  185 |     await page.getByRole('button', { name: 'Generate My Business' }).click();
+  185 |     await page.getByRole('button', { name: 'Generate Storefront' }).click();
   186 |
   187 |     await page.getByRole('button', { name: 'Continue' }).click();
   188 |
@@ -212,7 +216,7 @@ Call log:
   254 |     // Step 4: Empty Target Audience
   255 |     await expect(page.getByText("Who is your target audience?")).toBeVisible();
   256 |     await page.getByPlaceholder(/Local families, Tech startups/i).fill('  ');
-  257 |     await page.getByRole('button', { name: 'Generate My Business' }).click();
+  257 |     await page.getByRole('button', { name: 'Generate Storefront' }).click();
   258 |
   259 |     const audienceInput = page.getByPlaceholder(/Local families, Tech startups/i);
   260 |     await expect(page.getByText('Please tell us your target audience.')).toBeVisible();
@@ -229,7 +233,7 @@ Call log:
   271 |     const bioInput = page.getByPlaceholder(/e.g. I run a local bakery/i);
   272 |     await bioInput.fill('I am Maya, I run a local bakery making custom vegan cakes in Portland, OR.');
   273 |
-  274 |     await page.getByRole('button', { name: 'Generate My Business' }).click();
+  274 |     await page.getByRole('button', { name: 'Generate Storefront' }).click();
   275 |
   276 |     // Expect it to eventually reach "You're Live!" screen
   277 |     await expect(page.getByText("You're Live!")).toBeVisible({ timeout: 15000 });
@@ -248,7 +252,7 @@ Call log:
   290 |     // Intercept the API route to fail
   291 |     await context.route('/api/onboarding/intake', route => route.abort('failed'));
   292 |
-  293 |     await page.getByRole('button', { name: 'Generate My Business' }).click();
+  293 |     await page.getByRole('button', { name: 'Generate Storefront' }).click();
   294 |
   295 |     // Should display a real error message, not mock data
   296 |     await expect(page.getByText(/Failed to launch. Please try again./i)).toBeVisible();
@@ -272,6 +276,6 @@ Call log:
   314 |     // Mock the backend responding with a 500 error
   315 |     await context.route('/api/onboarding/intake', route => route.fulfill({ status: 500, json: { error: 'Internal Server Error' } }));
   316 |
-  317 |     await page.getByRole('button', { name: 'Generate My Business' }).click();
+  317 |     await page.getByRole('button', { name: 'Generate Storefront' }).click();
   318 |     await expect(page.getByText(/Internal Server Error/i)).toBeVisible();
 ```

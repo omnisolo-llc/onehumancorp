@@ -12,41 +12,49 @@
 # Error details
 
 ```
-Error: expect(locator).toBeVisible() failed
+Test timeout of 30000ms exceeded.
+```
 
-Locator: getByText('You\'re Live!')
-Expected: visible
-Timeout: 15000ms
-Error: element(s) not found
-
+```
+Error: locator.click: Test timeout of 30000ms exceeded.
 Call log:
-  - Expect "toBeVisible" with timeout 15000ms
-  - waiting for getByText('You\'re Live!')
+  - waiting for getByRole('button', { name: 'Generate Storefront' })
 
 ```
 
+# Page snapshot
+
 ```yaml
-- heading "Setup" [level=1]
-- paragraph: Your business, live in minutes.
-- text: Backend connection failed
-- button "Back":
-  - img
-  - text: Back
-- heading "Tell us about your business" [level=2]
-- paragraph: Our AI will handle the rest in 30 seconds.
-- textbox "e.g. I run a local bakery that sells custom vegan cakes...": I am Maya, I run a local bakery making custom vegan cakes in Portland, OR.
-- button "Generate My Business"
-- button "Help":
-  - img
-- button "Open help chat": ✨ Ask anything
-- button "Voice Assistant":
-  - img
-- alert
+- generic [ref=e1]:
+  - generic [ref=e3]:
+    - generic [ref=e4]:
+      - heading "Setup" [level=1] [ref=e5]
+      - paragraph [ref=e6]: Your business, live in minutes.
+    - generic [ref=e8]:
+      - button "Back" [ref=e9]:
+        - img
+        - text: Back
+      - heading "Tell us about your business" [level=2] [ref=e11]
+      - paragraph [ref=e13]: Our AI will handle the rest in 30 seconds.
+      - textbox "e.g. I run a local bakery that sells custom vegan cakes..." [active] [ref=e15]: I am Maya, I run a local bakery making custom vegan cakes in Portland, OR.
+      - button "Generate My Business" [ref=e17]:
+        - generic [ref=e20]: Generate My Business
+  - button "Help" [ref=e23]:
+    - img [ref=e24]
+  - button "Open help chat" [ref=e27]:
+    - generic [ref=e28]: ✨
+    - generic [ref=e29]: Ask anything
+  - button "Voice Assistant" [ref=e30]:
+    - img
+  - alert [ref=e32]
 ```
 
 # Test source
 
 ```ts
+  174 |
+  175 |     await page.getByPlaceholder(/Maya's Custom Cake/i).fill('Test Business');
+  176 |     await page.getByRole('button', { name: 'Next' }).click();
   177 |
   178 |     await page.getByPlaceholder(/I bake custom vegan cakes/i).fill('Testing');
   179 |     await page.getByRole('button', { name: 'Next' }).click();
@@ -55,7 +63,7 @@ Call log:
   182 |     await page.getByRole('button', { name: 'Next' }).click();
   183 |
   184 |     await page.getByPlaceholder(/Local families, Tech startups/i).fill('Anyone');
-  185 |     await page.getByRole('button', { name: 'Generate My Business' }).click();
+  185 |     await page.getByRole('button', { name: 'Generate Storefront' }).click();
   186 |
   187 |     await page.getByRole('button', { name: 'Continue' }).click();
   188 |
@@ -127,7 +135,7 @@ Call log:
   254 |     // Step 4: Empty Target Audience
   255 |     await expect(page.getByText("Who is your target audience?")).toBeVisible();
   256 |     await page.getByPlaceholder(/Local families, Tech startups/i).fill('  ');
-  257 |     await page.getByRole('button', { name: 'Generate My Business' }).click();
+  257 |     await page.getByRole('button', { name: 'Generate Storefront' }).click();
   258 |
   259 |     const audienceInput = page.getByPlaceholder(/Local families, Tech startups/i);
   260 |     await expect(page.getByText('Please tell us your target audience.')).toBeVisible();
@@ -144,11 +152,11 @@ Call log:
   271 |     const bioInput = page.getByPlaceholder(/e.g. I run a local bakery/i);
   272 |     await bioInput.fill('I am Maya, I run a local bakery making custom vegan cakes in Portland, OR.');
   273 |
-  274 |     await page.getByRole('button', { name: 'Generate My Business' }).click();
+> 274 |     await page.getByRole('button', { name: 'Generate Storefront' }).click();
+      |                                                                     ^ Error: locator.click: Test timeout of 30000ms exceeded.
   275 |
   276 |     // Expect it to eventually reach "You're Live!" screen
-> 277 |     await expect(page.getByText("You're Live!")).toBeVisible({ timeout: 15000 });
-      |                                                  ^ Error: expect(locator).toBeVisible() failed
+  277 |     await expect(page.getByText("You're Live!")).toBeVisible({ timeout: 15000 });
   278 |   });
   279 | });
   280 |
@@ -164,7 +172,7 @@ Call log:
   290 |     // Intercept the API route to fail
   291 |     await context.route('/api/onboarding/intake', route => route.abort('failed'));
   292 |
-  293 |     await page.getByRole('button', { name: 'Generate My Business' }).click();
+  293 |     await page.getByRole('button', { name: 'Generate Storefront' }).click();
   294 |
   295 |     // Should display a real error message, not mock data
   296 |     await expect(page.getByText(/Failed to launch. Please try again./i)).toBeVisible();
@@ -188,7 +196,7 @@ Call log:
   314 |     // Mock the backend responding with a 500 error
   315 |     await context.route('/api/onboarding/intake', route => route.fulfill({ status: 500, json: { error: 'Internal Server Error' } }));
   316 |
-  317 |     await page.getByRole('button', { name: 'Generate My Business' }).click();
+  317 |     await page.getByRole('button', { name: 'Generate Storefront' }).click();
   318 |     await expect(page.getByText(/Internal Server Error/i)).toBeVisible();
   319 |
   320 |     await context.unroute('/api/onboarding/intake');
@@ -208,7 +216,7 @@ Call log:
   334 |
   335 |     // Normal intake response
   336 |     await context.route('/api/onboarding/intake', route => route.fulfill({ status: 200, json: { business_name: 'Test Business', business_type: 'Test', initial_products: [], categories: [] } }));
-  337 |     await page.getByRole('button', { name: 'Generate My Business' }).click();
+  337 |     await page.getByRole('button', { name: 'Generate Storefront' }).click();
   338 |     await expect(page.getByText('Review Details')).toBeVisible();
   339 |     await page.getByRole('button', { name: 'Continue' }).click();
   340 |

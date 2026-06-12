@@ -12,38 +12,47 @@
 # Error details
 
 ```
-Error: expect(locator).toBeVisible() failed
+Test timeout of 30000ms exceeded.
+```
 
-Locator: locator('input[value="I bake custom vegan cakes f..."]')
-Expected: visible
-Timeout: 5000ms
-Error: element(s) not found
-
+```
+Error: locator.click: Test timeout of 30000ms exceeded.
 Call log:
-  - Expect "toBeVisible" with timeout 5000ms
-  - waiting for locator('input[value="I bake custom vegan cakes f..."]')
+  - waiting for getByRole('button', { name: 'Generate Storefront' })
 
 ```
 
+# Page snapshot
+
 ```yaml
-- heading "Setup" [level=1]
-- paragraph: Your business, live in minutes.
-- text: Backend connection failed
-- img
-- button "Back":
-  - img
-  - text: Back
-- heading "Where are you located?" [level=2]
-- paragraph: This helps us set up your shipping and tax settings.
-- button "Save Draft"
-- textbox "e.g. Portland, OR": Seattle, WA
-- button "Next"
-- button "Help":
-  - img
-- button "Open help chat": ✨ Ask anything
-- button "Voice Assistant":
-  - img
-- alert
+- generic [ref=e1]:
+  - generic [ref=e3]:
+    - generic [ref=e4]:
+      - heading "Setup" [level=1] [ref=e5]
+      - paragraph [ref=e6]: Your business, live in minutes.
+    - generic [ref=e8]:
+      - generic:
+        - img
+      - generic [ref=e10]:
+        - button "Back" [ref=e11]:
+          - img
+          - text: Back
+        - heading "Who is your target audience?" [level=2] [ref=e13]
+        - generic [ref=e14]:
+          - paragraph [ref=e15]: This helps our AI generate the perfect storefront copy and select the best tools for your business.
+          - button "Save Draft" [ref=e16]:
+            - generic [ref=e20]: Save Draft
+        - textbox "e.g. Local families, Tech startups" [active] [ref=e23]: Everyone
+        - button "Generate My Business" [ref=e25]:
+          - generic [ref=e28]: Generate My Business
+  - button "Help" [ref=e31]:
+    - img [ref=e32]
+  - button "Open help chat" [ref=e35]:
+    - generic [ref=e36]: ✨
+    - generic [ref=e37]: Ask anything
+  - button "Voice Assistant" [ref=e38]:
+    - img
+  - alert [ref=e40]
 ```
 
 # Test source
@@ -78,10 +87,10 @@ Call log:
   27  |     await page.getByRole('button', { name: 'Next' }).click();
   28  |
   29  |     await page.getByPlaceholder(/Local families, Tech startups/i).fill('Everyone');
-  30  |     await page.getByRole('button', { name: 'Generate My Business' }).click();
+> 30  |     await page.getByRole('button', { name: 'Generate Storefront' }).click();
+      |                                                                     ^ Error: locator.click: Test timeout of 30000ms exceeded.
   31  |
-> 32  |     await expect(page.locator('input[value="I bake custom vegan cakes f..."]')).toBeVisible();
-      |                                                                                 ^ Error: expect(locator).toBeVisible() failed
+  32  |     await expect(page.locator('input[value="I bake custom vegan cakes f..."]')).toBeVisible();
   33  |     await page.getByRole('button', { name: 'Continue' }).click();
   34  |
   35  |     await page.getByText('Modern').click();
@@ -112,7 +121,7 @@ Call log:
   60  |     await page.getByRole('button', { name: 'Next' }).click();
   61  |
   62  |     await page.getByPlaceholder(/Local families, Tech startups/i).fill('Homeowners');
-  63  |     await page.getByRole('button', { name: 'Generate My Business' }).click();
+  63  |     await page.getByRole('button', { name: 'Generate Storefront' }).click();
   64  |
   65  |     await expect(page.locator('input[value="Plumbing and general repairs"]')).toBeVisible();
   66  |     await page.getByRole('button', { name: 'Continue' }).click();
@@ -145,7 +154,7 @@ Call log:
   93  |     await page.getByRole('button', { name: 'Next' }).click();
   94  |
   95  |     await page.getByPlaceholder(/Local families, Tech startups/i).fill('Students');
-  96  |     await page.getByRole('button', { name: 'Generate My Business' }).click();
+  96  |     await page.getByRole('button', { name: 'Generate Storefront' }).click();
   97  |
   98  |     await expect(page.locator('input[value="Guitar tutoring online"]')).toBeVisible();
   99  |     // Removed product assertion since fallback logic doesn't generate products
@@ -179,7 +188,5 @@ Call log:
   127 |     await page.getByRole('button', { name: 'Next' }).click();
   128 |
   129 |     await page.getByPlaceholder(/Local families, Tech startups/i).fill('Professionals');
-  130 |     await page.getByRole('button', { name: 'Generate My Business' }).click();
-  131 |
-  132 |     await expect(page.locator('input[value="Halal food cart pickup orders"]')).toBeVisible();
+  130 |     await page.getByRole('button', { name: 'Generate Storefront' }).click();
 ```

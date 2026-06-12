@@ -6,8 +6,8 @@
 
 # Test info
 
-- Name: onboarding.spec.ts >> Store launch correctly fails when start API is down
-- Location: src/e2e/onboarding.spec.ts:323:7
+- Name: onboarding.spec.ts >> Step-by-step intake handles backend processing errors correctly
+- Location: src/e2e/onboarding.spec.ts:302:7
 
 # Error details
 
@@ -58,6 +58,26 @@ Call log:
 # Test source
 
 ```ts
+  217 |     await page.getByPlaceholder(/Maya's Custom Cake/i).fill('  ');
+  218 |     await page.getByRole('button', { name: 'Next' }).click();
+  219 |
+  220 |     const businessNameInput = page.getByPlaceholder(/Maya's Custom Cake/i);
+  221 |     await expect(page.getByText('Business Name must be at least 3 characters.')).toBeVisible();
+  222 |     await expect(businessNameInput).toHaveClass(/border-\[#FF3B30\]/);
+  223 |
+  224 |     // Proceed to Step 2
+  225 |     await businessNameInput.fill('Valid Business Name');
+  226 |     await page.getByRole('button', { name: 'Next' }).click();
+  227 |
+  228 |     // Step 2: Empty What you sell
+  229 |     await expect(page.getByText("What do you sell?")).toBeVisible();
+  230 |     await page.getByPlaceholder(/I bake custom vegan cakes/i).fill('');
+  231 |     await page.getByRole('button', { name: 'Next' }).click();
+  232 |
+  233 |     const whatYouSellInput = page.getByPlaceholder(/I bake custom vegan cakes/i);
+  234 |     await expect(page.getByText('Please tell us what you sell.')).toBeVisible();
+  235 |     await expect(whatYouSellInput).toHaveClass(/border-\[#FF3B30\]/);
+  236 |
   237 |     // Proceed to Step 3
   238 |     await whatYouSellInput.fill('Valid products');
   239 |     await page.getByRole('button', { name: 'Next' }).click();
@@ -138,7 +158,8 @@ Call log:
   314 |     // Mock the backend responding with a 500 error
   315 |     await context.route('/api/onboarding/intake', route => route.fulfill({ status: 500, json: { error: 'Internal Server Error' } }));
   316 |
-  317 |     await page.getByRole('button', { name: 'Generate Storefront' }).click();
+> 317 |     await page.getByRole('button', { name: 'Generate Storefront' }).click();
+      |                                                                     ^ Error: locator.click: Test timeout of 30000ms exceeded.
   318 |     await expect(page.getByText(/Internal Server Error/i)).toBeVisible();
   319 |
   320 |     await context.unroute('/api/onboarding/intake');
@@ -158,8 +179,7 @@ Call log:
   334 |
   335 |     // Normal intake response
   336 |     await context.route('/api/onboarding/intake', route => route.fulfill({ status: 200, json: { business_name: 'Test Business', business_type: 'Test', initial_products: [], categories: [] } }));
-> 337 |     await page.getByRole('button', { name: 'Generate Storefront' }).click();
-      |                                                                     ^ Error: locator.click: Test timeout of 30000ms exceeded.
+  337 |     await page.getByRole('button', { name: 'Generate Storefront' }).click();
   338 |     await expect(page.getByText('Review Details')).toBeVisible();
   339 |     await page.getByRole('button', { name: 'Continue' }).click();
   340 |
