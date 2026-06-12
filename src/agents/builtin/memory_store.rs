@@ -847,8 +847,11 @@ impl VectorRepository {
                                 let distance = 1.0 - similarity;
 
                                 if distance < 0.05 {
-                                    let (id_a, id_b) =
-                                        if a.id < b.id { (a.id.clone(), b.id.clone()) } else { (b.id.clone(), a.id.clone()) };
+                                    let (id_a, id_b) = if a.id < b.id {
+                                        (a.id.clone(), b.id.clone())
+                                    } else {
+                                        (b.id.clone(), a.id.clone())
+                                    };
                                     conflicting_pairs_ids.push((id_a, id_b));
                                     match_count += 1;
                                     if match_count >= 10 {
@@ -1216,13 +1219,26 @@ impl Anthropic3TierMemoryStore {
 #[async_trait]
 impl crate::tools::anthropic_memory::MemoryAccessor for Anthropic3TierMemoryStore {
     async fn write_topic(&self, topic_name: &str, content: &str) -> Result<(), String> {
-        let safe_name = topic_name.replace(|c: char| !c.is_alphanumeric() && c != '_' && c != '-', "");
+        let safe_name =
+            topic_name.replace(|c: char| !c.is_alphanumeric() && c != '_' && c != '-', "");
         let path = self.topics_dir.join(format!("{}.md", safe_name));
-        tokio::fs::write(&path, content).await.map_err(|e| e.to_string())?;
+        tokio::fs::write(&path, content)
+            .await
+            .map_err(|e| e.to_string())?;
 
         let mut existing_index = self.get_lightweight_index().await?;
-        let truncated_content = if content.len() > 150 { format!("{}...", &content[..147]) } else { content.to_string() };
-        let new_entry = format!("- {}: {}\n", safe_name, truncated_content.replace(char::from(10), " "));
+        let char_count = content.chars().count();
+        let truncated_content = if char_count > 150 {
+            let truncated: String = content.chars().take(147).collect();
+            format!("{}...", truncated)
+        } else {
+            content.to_string()
+        };
+        let new_entry = format!(
+            "- {}: {}\n",
+            safe_name,
+            truncated_content.replace(char::from(10), " ")
+        );
         if !existing_index.contains(&safe_name) {
             existing_index.push_str(&new_entry);
             self.update_index(&existing_index).await?;
@@ -1267,12 +1283,23 @@ impl crate::tools::anthropic_memory::MemoryAccessor for Anthropic3TierMemoryStor
 
 #[async_trait]
 impl LongTermMemory for Anthropic3TierMemoryStore {
-    async fn store_session_message(&self, session_id: &str, role: &str, content: &str) -> Result<(), String> {
+    async fn store_session_message(
+        &self,
+        session_id: &str,
+        role: &str,
+        content: &str,
+    ) -> Result<(), String> {
         let turn = format!("{}: {}", role, content);
         self.append_transcript(session_id, &turn).await
     }
 
-    async fn search_session_messages(&self, _session_id: &str, query: &str, limit: usize, _summarize: bool) -> Result<Vec<String>, String> {
+    async fn search_session_messages(
+        &self,
+        _session_id: &str,
+        query: &str,
+        limit: usize,
+        _summarize: bool,
+    ) -> Result<Vec<String>, String> {
         crate::tools::anthropic_memory::MemoryAccessor::search_transcripts(self, query, limit).await
     }
 
@@ -1304,8 +1331,12 @@ impl LongTermMemory for Anthropic3TierMemoryStore {
     async fn store(&self, content: &str, tags: Vec<String>) -> Result<(), String> {
         let mut existing_index = self.get_lightweight_index().await?;
 
-        let truncated_content = if content.len() > 150 {
-            format!("{}...", &content[..147])
+        let char_count2 = content.chars().count();
+        let truncated_content = if char_count2 > 150 {
+            {
+                let truncated: String = content.chars().take(147).collect();
+                format!("{}...", truncated)
+            }
         } else {
             content.to_string()
         };
@@ -2791,43 +2822,93 @@ mod anthropic_memory_tests {
         let store = Anthropic3TierMemoryStore::new(dir.path()).unwrap();
 
         // Tier 1: Index
-        store.store("User likes chocolate cake", vec!["preference".to_string()]).await.unwrap();
+        store
+            .store("User likes chocolate cake", vec!["preference".to_string()])
+            .await
+            .unwrap();
         let index = store.get_lightweight_index().await.unwrap();
         assert!(index.contains("User likes chocolate cake"));
         assert!(index.contains("[preference]"));
 
         // Tier 2: Topics
         // Agent writes a topic
-        crate::tools::anthropic_memory::MemoryAccessor::write_topic(&store, "cake_preferences", "User likes chocolate cake with strawberry frosting.").await.unwrap();
+        crate::tools::anthropic_memory::MemoryAccessor::write_topic(
+            &store,
+            "cake_preferences",
+            "User likes chocolate cake with strawberry frosting.",
+        )
+        .await
+        .unwrap();
 
         // Agent retrieves the topic
-        let topic_content = crate::tools::anthropic_memory::MemoryAccessor::retrieve_topic(&store, "cake_preferences").await.unwrap();
-        assert_eq!(topic_content, "User likes chocolate cake with strawberry frosting.");
+        let topic_content = crate::tools::anthropic_memory::MemoryAccessor::retrieve_topic(
+            &store,
+            "cake_preferences",
+        )
+        .await
+        .unwrap();
+        assert_eq!(
+            topic_content,
+            "User likes chocolate cake with strawberry frosting."
+        );
 
         // Agent fails to retrieve non-existent topic
-        assert!(crate::tools::anthropic_memory::MemoryAccessor::retrieve_topic(&store, "non_existent").await.is_err());
+        assert!(
+            crate::tools::anthropic_memory::MemoryAccessor::retrieve_topic(&store, "non_existent")
+                .await
+                .is_err()
+        );
 
         // Tier 3: Transcripts
         // Core loop stores session messages
-        store.store_session_message("session_1", "user", "I would like to order a cake.").await.unwrap();
-        store.store_session_message("session_1", "agent", "Sure, what kind of cake?").await.unwrap();
-        store.store_session_message("session_1", "user", "Chocolate please!").await.unwrap();
+        store
+            .store_session_message("session_1", "user", "I would like to order a cake.")
+            .await
+            .unwrap();
+        store
+            .store_session_message("session_1", "agent", "Sure, what kind of cake?")
+            .await
+            .unwrap();
+        store
+            .store_session_message("session_1", "user", "Chocolate please!")
+            .await
+            .unwrap();
 
         // Agent searches transcripts
-        let results = crate::tools::anthropic_memory::MemoryAccessor::search_transcripts(&store, "order a cake", 5).await.unwrap();
+        let results = crate::tools::anthropic_memory::MemoryAccessor::search_transcripts(
+            &store,
+            "order a cake",
+            5,
+        )
+        .await
+        .unwrap();
         assert_eq!(results.len(), 1);
         assert!(results[0].contains("user: I would like to order a cake."));
 
-        let results_choc = crate::tools::anthropic_memory::MemoryAccessor::search_transcripts(&store, "Chocolate", 5).await.unwrap();
+        let results_choc = crate::tools::anthropic_memory::MemoryAccessor::search_transcripts(
+            &store,
+            "Chocolate",
+            5,
+        )
+        .await
+        .unwrap();
         assert_eq!(results_choc.len(), 1);
         assert!(results_choc[0].contains("user: Chocolate please!"));
 
         // Search should respect limit
-        store.store_session_message("session_2", "user", "Chocolate is good.").await.unwrap();
-        let results_limit = crate::tools::anthropic_memory::MemoryAccessor::search_transcripts(&store, "Chocolate", 1).await.unwrap();
+        store
+            .store_session_message("session_2", "user", "Chocolate is good.")
+            .await
+            .unwrap();
+        let results_limit = crate::tools::anthropic_memory::MemoryAccessor::search_transcripts(
+            &store,
+            "Chocolate",
+            1,
+        )
+        .await
+        .unwrap();
         assert_eq!(results_limit.len(), 1);
     }
-
 }
 
 #[cfg(test)]
