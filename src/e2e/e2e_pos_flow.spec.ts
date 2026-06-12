@@ -14,7 +14,7 @@ test.describe('In-Person Payment (POS) Flow', () => {
       localStorage.setItem('ohc_offline_events', JSON.stringify([]));
     });
 
-    // Navigate to the POS terminal page
+    // Navigate to the Next.js POS terminal page
     await page.goto('/pos/terminal');
 
     // Wait for the UI to load and auto-fetch the staff data
@@ -56,7 +56,6 @@ test.describe('In-Person Payment (POS) Flow', () => {
             quantity_deducted: 10 // Force a shortage to test pending_reconciliation
         }]));
     });
-
 
     // Set network to offline
     await context.setOffline(true);
