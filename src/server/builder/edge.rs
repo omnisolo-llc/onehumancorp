@@ -182,6 +182,37 @@ pub async fn regenerate_cache(
         .await
         .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
 
+    // Batch query inventory counts to avoid N+1 queries
+    let mut inventory_map: std::collections::HashMap<String, i32> = std::collections::HashMap::new();
+    let mut product_ids = Vec::new();
+    for block in &blocks {
+        if block.block_type == "ProductGridBlock" || block.block_type == "Catalog" {
+            if let Some(items) = block.content.get("items").and_then(|v| v.as_array()) {
+                for item in items {
+                    if let Some(pid) = item.get("product_id").and_then(|v| v.as_str()) {
+                        product_ids.push(pid.to_string());
+                    }
+                }
+            }
+        }
+    }
+
+    if !product_ids.is_empty() {
+        use sqlx::Row;
+        // In PostgreSQL we can use = ANY($1)
+        if let Ok(rows) = sqlx::query("SELECT id, inventory_count FROM products WHERE id = ANY($1)")
+            .bind(&product_ids)
+            .fetch_all(&pool)
+            .await
+        {
+            for row in rows {
+                if let (Ok(id), Ok(count)) = (row.try_get::<String, _>("id"), row.try_get::<i32, _>("inventory_count")) {
+                    inventory_map.insert(id, count);
+                }
+            }
+        }
+    }
+
     let mut tags = vec![format!("tenant-id:{}", tenant_id)];
     let mut html = String::new();
     html.push_str("<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n");
@@ -211,14 +242,22 @@ pub async fn regenerate_cache(
         .hero-subtitle { font-size: 16px; color: #666; margin: 0; }
         @media (prefers-color-scheme: dark) { .hero-subtitle { color: #aaa; } }
         .product-grid { display: flex; flex-direction: column; gap: 16px; margin-top: 16px; }
-        .product-card { background: rgba(255, 255, 255, 0.5); border-radius: 12px; padding: 16px; display: flex; justify-content: space-between; align-items: center; }
+        .product-card { background: rgba(255, 255, 255, 0.5); border-radius: 12px; display: flex; flex-direction: column; overflow: hidden; position: relative; }
         @media (prefers-color-scheme: dark) { .product-card { background: rgba(50, 50, 55, 0.5); } }
-        .product-name { font-weight: 600; font-size: 16px; margin: 0; }
-        .product-price { font-weight: 700; color: #0071E3; font-size: 16px; }
-        .product-desc { font-size: 14px; color: #555; margin-top: 4px; }
+        .product-image { width: 100%; height: 240px; object-fit: cover; background: #e0e0e0; }
+        .product-info { padding: 16px; padding-bottom: 76px; }
+        .product-name { font-weight: 600; font-size: 18px; margin: 0; }
+        .product-price { font-weight: 700; color: #0071E3; font-size: 18px; margin-top: 4px; }
+        .product-desc { font-size: 14px; color: #555; margin-top: 8px; line-height: 1.4; }
         @media (prefers-color-scheme: dark) { .product-desc { color: #999; } }
-        .btn { background: #0071E3; color: white; border: none; padding: 10px 16px; border-radius: 8px; font-weight: 600; font-size: 14px; cursor: pointer; transition: all 0.2s; }
-        .btn:active { transform: scale(0.96); }
+        .badge { position: absolute; top: 12px; right: 12px; padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+        .badge.sold-out { background: rgba(255,59,48,0.9); color: white; backdrop-filter: blur(4px); }
+        .badge.low-stock { background: rgba(255,149,0,0.9); color: white; backdrop-filter: blur(4px); }
+        .sticky-bottom-bar { position: absolute; bottom: 0; left: 0; right: 0; padding: 16px; background: rgba(255,255,255,0.85); backdrop-filter: blur(10px); border-top: 1px solid rgba(0,0,0,0.05); display: flex; align-items: center; }
+        @media (prefers-color-scheme: dark) { .sticky-bottom-bar { background: rgba(30,30,35,0.85); border-top: 1px solid rgba(255,255,255,0.05); } }
+        .btn { background: #0071E3; color: white; border: none; padding: 10px 16px; border-radius: 8px; font-weight: 600; font-size: 14px; cursor: pointer; transition: all 0.2s; min-height: 44px; display: flex; align-items: center; justify-content: center; width: 100%; }
+        .btn:disabled { background: #999; cursor: not-allowed; }
+        .btn:not(:disabled):active { transform: scale(0.96); }
         .service-block h3 { margin: 0 0 16px 0; }
         .testimonial { font-style: italic; color: #555; margin-bottom: 8px; }
         @media (prefers-color-scheme: dark) { .testimonial { color: #bbb; } }
@@ -246,12 +285,28 @@ pub async fn regenerate_cache(
                         let name = item.get("name").and_then(|v| v.as_str()).unwrap_or("Product");
                         let price = item.get("price").and_then(|v| v.as_str()).unwrap_or("$0.00");
                         let desc = item.get("description").and_then(|v| v.as_str()).unwrap_or("");
+                        let image_url = item.get("image").and_then(|v| v.as_str()).unwrap_or("https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=600&q=80"); // fallback placeholder
+
+                        let mut stock_badge = String::new();
+                        let mut btn_text = "Add to Cart";
+                        let mut btn_disabled = "";
+
                         if let Some(pid) = item.get("product_id").and_then(|v| v.as_str()) {
                             tags.push(format!("entity:product:{}", pid));
+
+                            if let Some(&inventory_count) = inventory_map.get(pid) {
+                                if inventory_count <= 0 {
+                                    stock_badge = "<div class=\"badge sold-out\">Sold Out</div>".to_string();
+                                    btn_text = "Sold Out";
+                                    btn_disabled = "disabled";
+                                } else if inventory_count <= 5 {
+                                    stock_badge = "<div class=\"badge low-stock\">Low Stock</div>".to_string();
+                                }
+                            }
                         }
                         html.push_str(&format!(
-                            "<div class=\"product-card\">\n<div><p class=\"product-name font-outfit\">{}</p><p class=\"product-desc\">{}</p></div><div class=\"product-price font-outfit\">{}</div>\n</div>\n",
-                            escape_html(name), escape_html(desc), escape_html(price)
+                            "<div class=\"product-card\">\n{}<img src=\"{}\" class=\"product-image\" alt=\"{}\" loading=\"lazy\" />\n<div class=\"product-info\">\n<p class=\"product-name font-outfit\">{}</p>\n<p class=\"product-price font-outfit\">{}</p>\n<p class=\"product-desc\">{}</p>\n</div>\n<div class=\"sticky-bottom-bar\">\n<button class=\"btn\" {}>{}</button>\n</div>\n</div>\n",
+                            stock_badge, escape_html(image_url), escape_html(name), escape_html(name), escape_html(price), escape_html(desc), btn_disabled, btn_text
                         ));
                     }
                 }

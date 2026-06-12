@@ -1100,6 +1100,22 @@ impl DepartmentOrchestrator {
     }
 
 
+    pub async fn reconcile_inventory_conflict(&self, tenant_id: &str, product_id: &str, new_stock: i32, source: &str) -> Result<(), String> {
+        let payload = serde_json::json!({
+            "product_id": product_id,
+            "new_stock": new_stock,
+            "source": source
+        });
+
+        self.execute_action(
+            DepartmentType::Operations,
+            format!("Reconcile inventory conflict from {}: product {}", source, product_id),
+            tenant_id.to_string(),
+            ActionRisk::DraftForReview,
+            payload
+        ).await.map(|_| ())
+    }
+
     pub async fn update_inbox_message_status(&self, message_id: &str, tenant_id: &str, new_status: &str) -> Result<(), String> {
         match &self.db.store {
             DbStore::Postgres => {
