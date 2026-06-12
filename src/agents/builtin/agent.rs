@@ -3631,9 +3631,11 @@ impl Agent {
                                             && let Ok(msgs) =
                                                 serde_json::from_value::<Vec<Message>>(cp.data)
                                             {
-                                                let _ =
-                                                    checkpointer.restore_checkpoint(&prev_id).await;
-                                                restored_msgs = Some(msgs);
+                                                if let Err(e) = checkpointer.restore_checkpoint(&prev_id).await {
+                                                    tracing::warn!("Failed to restore workspace to checkpoint {}: {}", prev_id, e);
+                                                } else {
+                                                    restored_msgs = Some(msgs);
+                                                }
                                             }
 
                                     // State Management: OpenAI uses lightweight previous_response_id chaining.
@@ -3911,10 +3913,11 @@ impl Agent {
                                                 && let Ok(msgs) =
                                                     serde_json::from_value::<Vec<Message>>(cp.data)
                                                 {
-                                                    let _ = checkpointer
-                                                        .restore_checkpoint(&prev_id)
-                                                        .await;
-                                                    restored_msgs = Some(msgs);
+                                                    if let Err(e) = checkpointer.restore_checkpoint(&prev_id).await {
+                                                        tracing::warn!("Failed to restore workspace to checkpoint {}: {}", prev_id, e);
+                                                    } else {
+                                                        restored_msgs = Some(msgs);
+                                                    }
                                                 }
 
                                         // State Management: OpenAI uses lightweight previous_response_id chaining.
@@ -7310,7 +7313,7 @@ mod tests {
         let prompt =
             crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg, &[tool]).build();
 
-        let expected = "[Server System Message]\nServer System Message\n\n[Tool Definitions]\nTool: test_tool\nDescription: A test tool\nParameters: {\"type\":\"object\"}\n\n[Developer Instructions]\nDeveloper Instructions\n\n[User Instructions]\nUser Instructions";
+        let expected = "<server_system_message>\nServer System Message\n</server_system_message>\n\n<tool_definitions>\nTool: test_tool\nDescription: A test tool\nParameters: {\"type\":\"object\"}\n</tool_definitions>\n\n<developer_instructions>\nDeveloper Instructions\n</developer_instructions>\n\n<user_instructions>\nUser Instructions\n</user_instructions>";
 
         assert_eq!(prompt, expected);
     }
@@ -7326,7 +7329,7 @@ mod tests {
         let prompt = crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg, &[]).build();
         assert_eq!(
             prompt,
-            "[Server System Message]\nServer System Message\n\n[Developer Instructions]\nDeveloper Instructions\n\n[User Instructions]\nUser Instructions"
+            "<server_system_message>\nServer System Message\n</server_system_message>\n\n<developer_instructions>\nDeveloper Instructions\n</developer_instructions>\n\n<user_instructions>\nUser Instructions\n</user_instructions>"
         );
     }
 
@@ -7341,7 +7344,7 @@ mod tests {
         let prompt = crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg, &[]).build();
         assert_eq!(
             prompt,
-            "[Server System Message]\nServer System Message\n\n[User Instructions]\nUser Instructions"
+            "<server_system_message>\nServer System Message\n</server_system_message>\n\n<user_instructions>\nUser Instructions\n</user_instructions>"
         );
 
         let mut cfg2 = AgentRunConfig::default();
@@ -7352,7 +7355,7 @@ mod tests {
             crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg2, &[]).build();
         assert_eq!(
             prompt2,
-            "[Developer Instructions]\nDev\n\n[User Instructions]\nUser"
+            "<developer_instructions>\nDev\n</developer_instructions>\n\n<user_instructions>\nUser\n</user_instructions>"
         );
     }
 
@@ -7365,7 +7368,7 @@ mod tests {
 
         // This should safely truncate without panicking using char counts
         let prompt = crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg, &[]).build();
-        assert!(prompt.contains("[User Instructions]\n"));
+        assert!(prompt.contains("<user_instructions>\n"));
         let notice = "\n... [User Instructions TRUNCATED TO 32KiB]";
 
         let user_part = prompt.replace(notice, "");
@@ -9390,7 +9393,7 @@ mod hierarchical_prompt_tests {
         let prompt = builder.build();
 
         assert!(
-            prompt.starts_with("[Server System Message]\nCRITICAL: Never delete the database.")
+            prompt.starts_with("<server_system_message>\nCRITICAL: Never delete the database.")
         );
         assert!(!prompt.contains("[CRITICAL REMINDER: High-Signal Context Repeated to prevent 'Lost in the Middle']\nCRITICAL: Never delete the database."));
     }
@@ -9408,7 +9411,7 @@ mod hierarchical_prompt_tests {
         let prompt = builder.build();
 
         assert!(
-            prompt.starts_with("[Server System Message]\nCRITICAL: Never delete the database.")
+            prompt.starts_with("<server_system_message>\nCRITICAL: Never delete the database.")
         );
         assert!(!prompt.contains(
             "[CRITICAL REMINDER: High-Signal Context Repeated to prevent 'Lost in the Middle']"

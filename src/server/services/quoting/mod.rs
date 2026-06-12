@@ -13,6 +13,8 @@ pub fn router(pool: PgPool) -> Router {
         .route("/quotes", post(create_quote))
         .route("/quotes/:id", get(get_quote))
         .route("/quotes/:id/approve", patch(approve_quote))
+        .route("/pricing-rules", get(get_pricing_rules))
+        .route("/pricing-rules", post(create_pricing_rule))
         .with_state(pool)
 }
 
@@ -40,13 +42,77 @@ pub struct QuoteLineItemReq {
     pub is_optional: bool,
 }
 
+#[derive(Debug, Serialize, Deserialize, FromRow)]
+pub struct PricingRule {
+    pub id: Uuid,
+    pub tenant_id: String,
+    pub name: String,
+    pub base_price_cents: i64,
+    pub rules_json: serde_json::Value,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CreatePricingRuleReq {
+    pub name: String,
+    pub base_price_cents: i64,
+    pub rules_json: serde_json::Value,
+}
+
+async fn get_pricing_rules(
+    State(pool): State<PgPool>,
+    axum::extract::Extension(claims): axum::extract::Extension<crate::common::Claims>,
+) -> Result<Json<Vec<PricingRule>>, axum::http::StatusCode> {
+    let tenant_id = claims.organization_id;
+
+    let rules = sqlx::query_as::<_, PricingRule>(
+        "SELECT id, tenant_id, name, base_price_cents, rules_json, created_at, updated_at FROM pricing_rules WHERE tenant_id = $1"
+    )
+    .bind(&tenant_id)
+    .fetch_all(&pool)
+    .await
+    .map_err(|e| {
+        tracing::error!("Failed to fetch pricing rules: {}", e);
+        axum::http::StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    Ok(Json(rules))
+}
+
+async fn create_pricing_rule(
+    State(pool): State<PgPool>,
+    axum::extract::Extension(claims): axum::extract::Extension<crate::common::Claims>,
+    Json(payload): Json<CreatePricingRuleReq>,
+) -> Result<Json<PricingRule>, axum::http::StatusCode> {
+    let rule_id = Uuid::new_v4();
+    let tenant_id = claims.organization_id;
+
+    let rule = sqlx::query_as::<_, PricingRule>(
+        "INSERT INTO pricing_rules (id, tenant_id, name, base_price_cents, rules_json) VALUES ($1, $2, $3, $4, $5) RETURNING *"
+    )
+    .bind(rule_id)
+    .bind(&tenant_id)
+    .bind(&payload.name)
+    .bind(payload.base_price_cents)
+    .bind(&payload.rules_json)
+    .fetch_one(&pool)
+    .await
+    .map_err(|e| {
+        tracing::error!("Failed to insert pricing rule: {}", e);
+        axum::http::StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    Ok(Json(rule))
+}
+
 async fn create_quote(
     State(pool): State<PgPool>,
+    axum::extract::Extension(claims): axum::extract::Extension<crate::common::Claims>,
     Json(payload): Json<CreateQuoteReq>,
 ) -> Result<Json<Quote>, axum::http::StatusCode> {
-    // Basic implementation
     let quote_id = Uuid::new_v4();
-    let tenant_id = "test_tenant".to_string(); // In reality, get from context
+    let tenant_id = claims.organization_id;
 
     let mut tx = pool.begin().await.map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
 
@@ -59,7 +125,10 @@ async fn create_quote(
     .bind(&payload.status)
     .fetch_one(&mut *tx)
     .await
-    .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
+    .map_err(|e| {
+        tracing::error!("Failed to create quote: {}", e);
+        axum::http::StatusCode::INTERNAL_SERVER_ERROR
+    })?;
 
     for item in payload.line_items {
         sqlx::query(
@@ -73,7 +142,10 @@ async fn create_quote(
         .bind(item.is_optional)
         .execute(&mut *tx)
         .await
-        .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
+        .map_err(|e| {
+            tracing::error!("Failed to create quote line item: {}", e);
+            axum::http::StatusCode::INTERNAL_SERVER_ERROR
+        })?;
     }
 
     tx.commit().await.map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;

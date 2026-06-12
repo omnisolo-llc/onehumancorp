@@ -6,3 +6,12 @@ services:
   server:
     pull_policy: never
     image: onehumancorp/server:latest
+
+  postgres:
+    image: postgres:15
+    command: ["postgres", "-c", "wal_level=logical"]
+
+  valkey:
+    image: public.ecr.aws/docker/library/redis:alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
