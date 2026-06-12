@@ -113,7 +113,7 @@ impl StripeClient {
             }
         }
 
-        let res = reqwest::Client::new()
+        let _res = reqwest::Client::new()
             .post(format!("{}/v1/checkout/sessions", Self::api_base()))
             .basic_auth(api_key, Some(""))
             .form(&form)
@@ -135,7 +135,7 @@ impl StripeClient {
 
     pub async fn create_terminal_connection_token(&self, _tenant_id: &str) -> Result<String, String> {
         let api_key = self.require_api_key()?;
-        let res = reqwest::Client::new()
+        let _res = reqwest::Client::new()
             .post(format!("{}/v1/terminal/connection_tokens", Self::api_base()))
             .basic_auth(api_key, Some(""))
             .form(&std::collections::HashMap::<String, String>::new())
@@ -191,7 +191,7 @@ impl StripeClient {
 
         let idempotency_key = format!("refund_{}_{}", payment_intent_id, amount_cents);
 
-        let res = reqwest::Client::new()
+        let _res = reqwest::Client::new()
             .post(format!("{}/v1/refunds", Self::api_base()))
             .basic_auth(api_key, Some(""))
             .header("Idempotency-Key", idempotency_key)
@@ -212,7 +212,7 @@ impl StripeClient {
 
         let idempotency_key = format!("refund_{}_{}", payment_intent_id, amount_cents);
 
-        let res = reqwest::Client::new()
+        let _res = reqwest::Client::new()
             .post(format!("{}/v1/refunds", Self::api_base()))
             .basic_auth(api_key, Some(""))
             .header("Idempotency-Key", idempotency_key)
@@ -231,7 +231,7 @@ impl StripeClient {
         form.insert("payment_intent".to_string(), payment_intent_id.to_string());
         form.insert("amount".to_string(), amount_cents.to_string());
 
-        let res = reqwest::Client::new()
+        let _res = reqwest::Client::new()
             .post(format!("{}/v1/refunds", Self::api_base()))
             .basic_auth(api_key, Some(""))
             .form(&form)
@@ -329,7 +329,7 @@ impl StripeClient {
             form.insert("metadata[order_id]".to_string(), oid.to_string());
         }
 
-        let res = reqwest::Client::new().post(format!("{}/v1/payment_intents", Self::api_base()))
+        let _res = reqwest::Client::new().post(format!("{}/v1/payment_intents", Self::api_base()))
             .basic_auth(api_key, Some(""))
             .form(&form)
             .send()

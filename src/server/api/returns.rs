@@ -1,6 +1,6 @@
-use axum::{extract::{State, Path}, Json};
+use axum::{extract::{Path}, Json};
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
+
 use uuid::Uuid;
 
 #[derive(Deserialize)]

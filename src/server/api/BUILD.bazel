@@ -31,6 +31,7 @@ exports_files(
         "local_seo.rs",
         "recovery.rs",
         "pos.rs",
+        "returns.rs",
         "agent_feed.rs",
         "audio_command.rs",
         "invoice.rs",
