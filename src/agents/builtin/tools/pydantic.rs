@@ -1,8 +1,8 @@
+use super::ToolExecutor;
 use ohc_builtin_agent_core::types::ToolError;
 use serde::de::DeserializeOwned;
 use serde_json::Value;
 use std::sync::Arc;
-use super::ToolExecutor;
 
 /// SOTA Harness Pattern: Pydantic-first tool schema validation.
 /// If validation fails, it generates a precise ToolError::LlmRecoverable containing the serde validation error
@@ -41,7 +41,9 @@ impl<T: DeserializeOwned + Send + Sync, E: PydanticToolExecutor<T>> PydanticAdap
 }
 
 #[async_trait::async_trait]
-impl<T: DeserializeOwned + Send + Sync, E: PydanticToolExecutor<T>> ToolExecutor for PydanticAdapter<T, E> {
+impl<T: DeserializeOwned + Send + Sync, E: PydanticToolExecutor<T>> ToolExecutor
+    for PydanticAdapter<T, E>
+{
     async fn execute(&self, args: Value) -> Result<String, ToolError> {
         // Validation Errors fed back to LLM for self-correction
         let typed_args: T = match serde_json::from_value(args.clone()) {
@@ -49,12 +51,24 @@ impl<T: DeserializeOwned + Send + Sync, E: PydanticToolExecutor<T>> ToolExecutor
             Err(e) => {
                 // Add the original payload snippet for context
                 let args_str = match serde_json::to_string(&args) {
-                    Ok(s) => if s.len() > 100 { format!("{}...", &s[..100]) } else { s },
+                    Ok(s) => {
+                        let char_count = s.chars().count();
+                        if char_count > 100 {
+                            let truncated: String = s.chars().take(100).collect();
+                            format!("{}...", truncated)
+                        } else {
+                            s
+                        }
+                    }
                     Err(_) => "<unprintable>".to_string(),
                 };
 
                 return Err(ToolError::LlmRecoverable(
-                    ohc_builtin_agent_core::types::format_pydantic_error(&e, Some(args_str.as_str()), self.custom_instruction.as_deref())
+                    ohc_builtin_agent_core::types::format_pydantic_error(
+                        &e,
+                        Some(args_str.as_str()),
+                        self.custom_instruction.as_deref(),
+                    ),
                 ));
             }
         };
@@ -86,14 +100,19 @@ mod tests {
     #[tokio::test]
     async fn test_pydantic_adapter_success() {
         let adapter = PydanticAdapter::new(MyExecutor);
-        let result = adapter.execute(serde_json::json!({ "foo": "test", "bar": 123 })).await.unwrap();
+        let result = adapter
+            .execute(serde_json::json!({ "foo": "test", "bar": 123 }))
+            .await
+            .unwrap();
         assert_eq!(result, "test-123");
     }
 
     #[tokio::test]
     async fn test_pydantic_adapter_failure_invalid_type() {
         let adapter = PydanticAdapter::new(MyExecutor);
-        let result = adapter.execute(serde_json::json!({ "foo": "test", "bar": "not a number" })).await;
+        let result = adapter
+            .execute(serde_json::json!({ "foo": "test", "bar": "not a number" }))
+            .await;
         assert!(result.is_err());
 
         if let Err(ToolError::LlmRecoverable(msg)) = result {
@@ -124,7 +143,9 @@ mod tests {
     async fn test_pydantic_adapter_failure_long_snippet() {
         let adapter = PydanticAdapter::new(MyExecutor);
         let long_string = "a".repeat(200);
-        let result = adapter.execute(serde_json::json!({ "foo": long_string, "bar": "not a number" })).await;
+        let result = adapter
+            .execute(serde_json::json!({ "foo": long_string, "bar": "not a number" }))
+            .await;
         assert!(result.is_err());
 
         if let Err(ToolError::LlmRecoverable(msg)) = result {
@@ -140,7 +161,10 @@ mod tests {
     #[tokio::test]
     async fn test_pydantic_adapter_new_arc() {
         let adapter = PydanticAdapter::new_arc(Arc::new(MyExecutor));
-        let result = adapter.execute(serde_json::json!({ "foo": "arc_test", "bar": 456 })).await.unwrap();
+        let result = adapter
+            .execute(serde_json::json!({ "foo": "arc_test", "bar": 456 }))
+            .await
+            .unwrap();
         assert_eq!(result, "arc_test-456");
     }
 }
@@ -167,8 +191,11 @@ mod tests_custom {
 
     #[tokio::test]
     async fn test_pydantic_adapter_with_custom_instruction() {
-        let adapter = PydanticAdapter::new(MyExecutor).with_custom_instruction("Please provide an integer for bar");
-        let result = adapter.execute(serde_json::json!({ "foo": "test", "bar": "not a number" })).await;
+        let adapter = PydanticAdapter::new(MyExecutor)
+            .with_custom_instruction("Please provide an integer for bar");
+        let result = adapter
+            .execute(serde_json::json!({ "foo": "test", "bar": "not a number" }))
+            .await;
         assert!(result.is_err());
 
         if let Err(ToolError::LlmRecoverable(msg)) = result {
