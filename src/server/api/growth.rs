@@ -255,35 +255,45 @@ async fn handle_time_savings(
     let tenant_id_str = auth_info.org_id;
 
     // Calculate aggregated time savings based on completed tasks
-    let f1 = async {
-        sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM tasks WHERE (tenant_id = $1 OR organization_id = $1) AND title ILIKE '%inquiry%' AND status = 'COMPLETED'")
-            .bind(parsed_uuid)
-            .fetch_optional(&state.pool)
-            .await
-    };
+    let pool1 = state.pool.clone();
+    let pool2 = state.pool.clone();
+    let pool3 = state.pool.clone();
+    let pool4 = state.pool.clone();
+    let parsed_uuid1 = parsed_uuid.clone();
+    let parsed_uuid2 = parsed_uuid.clone();
+    let parsed_uuid3 = parsed_uuid.clone();
+    let tenant_id_str4 = tenant_id_str.clone();
 
-    let f2 = async {
-        sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM tasks WHERE (tenant_id = $1 OR organization_id = $1) AND title ILIKE '%appointment%' AND status = 'COMPLETED'")
-            .bind(parsed_uuid)
-            .fetch_optional(&state.pool)
-            .await
-    };
-
-    let f3 = async {
-        sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM tasks WHERE (tenant_id = $1 OR organization_id = $1) AND title ILIKE '%cart%' AND status = 'COMPLETED'")
-            .bind(parsed_uuid)
-            .fetch_optional(&state.pool)
-            .await
-    };
-
-    let f4 = async {
-        sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM inbox_messages WHERE tenant_id = $1 AND status = 'auto_replied'")
-            .bind(&tenant_id_str)
-            .fetch_optional(&state.pool)
-            .await
-    };
-
-    let (res1, res2, res3, res4) = tokio::join!(f1, f2, f3, f4);
+    let (res1, res2, res3, res4) = tokio::join!(
+        tokio::spawn(async move {
+            sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM tasks WHERE (tenant_id = $1 OR organization_id = $1) AND title ILIKE '%inquiry%' AND status = 'COMPLETED'")
+                .bind(parsed_uuid1)
+                .fetch_optional(&pool1)
+                .await
+        }),
+        tokio::spawn(async move {
+            sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM tasks WHERE (tenant_id = $1 OR organization_id = $1) AND title ILIKE '%appointment%' AND status = 'COMPLETED'")
+                .bind(parsed_uuid2)
+                .fetch_optional(&pool2)
+                .await
+        }),
+        tokio::spawn(async move {
+            sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM tasks WHERE (tenant_id = $1 OR organization_id = $1) AND title ILIKE '%cart%' AND status = 'COMPLETED'")
+                .bind(parsed_uuid3)
+                .fetch_optional(&pool3)
+                .await
+        }),
+        tokio::spawn(async move {
+            sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM inbox_messages WHERE tenant_id = $1 AND status = 'auto_replied'")
+                .bind(&tenant_id_str4)
+                .fetch_optional(&pool4)
+                .await
+        })
+    );
+    let res1 = res1.unwrap_or(Ok(Some(0)));
+    let res2 = res2.unwrap_or(Ok(Some(0)));
+    let res3 = res3.unwrap_or(Ok(Some(0)));
+    let res4 = res4.unwrap_or(Ok(Some(0)));
     let inquiries_handled = res1.unwrap_or(Some(0)).unwrap_or(0);
     let appointments_scheduled = res2.unwrap_or(Some(0)).unwrap_or(0);
     let carts_recovered = res3.unwrap_or(Some(0)).unwrap_or(0);

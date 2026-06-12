@@ -427,6 +427,7 @@ pub async fn bench_dashboard_snapshot() {
 }
 
 pub async fn bench_queue(name: &str, queue: Arc<dyn TaskQueue>) {
+    let _ = queue.init().await;
     let mut enqueue_times = Vec::new();
     let mut dequeue_times = Vec::new();
     let iterations = std::env::var("BENCH_ITERATIONS").unwrap_or_else(|_| "10".to_string()).parse().unwrap_or(10);
