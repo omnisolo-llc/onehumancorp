@@ -45,7 +45,11 @@ async fn get_draft(
 ) -> Result<Json<serde_json::Value>, axum::http::StatusCode> {
     let tenant_id = auth_info.org_id.clone();
     let user_id = auth_info.agent_id.clone(); // In this context agent_id refers to the user
-    match agent.get_onboarding_state(&tenant_id, &user_id).await {
+
+    let tid = if tenant_id.is_empty() { "default".to_string() } else { tenant_id };
+    let uid = if user_id.is_empty() { "default".to_string() } else { user_id };
+
+    match agent.get_onboarding_state(&tid, &uid).await {
         Ok(state) => Ok(Json(state)),
         Err(_) => Ok(Json(serde_json::json!({}))), // fallback
     }
@@ -59,13 +63,16 @@ async fn save_draft(
     let tenant_id = auth_info.org_id.clone();
     let user_id = auth_info.agent_id.clone();
 
+    let tid = if tenant_id.is_empty() { "default".to_string() } else { tenant_id };
+    let uid = if user_id.is_empty() { "default".to_string() } else { user_id };
+
     let step = payload.get("wizardState")
         .and_then(|w| w.get("step"))
         .or_else(|| payload.get("step"))
         .and_then(|s| s.as_i64())
         .unwrap_or(0) as i32;
 
-    match agent.save_onboarding_state(&tenant_id, &user_id, step, &payload).await {
+    match agent.save_onboarding_state(&tid, &uid, step, &payload).await {
         Ok(_) => Ok(axum::http::StatusCode::OK),
         Err(_) => Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR),
     }
@@ -89,10 +96,13 @@ async fn launch_onboarding(
     let user_id = auth_info.agent_id.clone();
     let current_step = 5; // Launch step
 
+    let tid = if tenant_id.is_empty() { "default".to_string() } else { tenant_id };
+    let uid = if user_id.is_empty() { "default".to_string() } else { user_id };
+
     let state = serde_json::json!({
         "status": "launched"
     });
-    match agent.save_onboarding_state(&tenant_id, &user_id, current_step, &state).await {
+    match agent.save_onboarding_state(&tid, &uid, current_step, &state).await {
         Ok(_) => Ok(Json(state)),
         Err(_) => Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR)
     }
@@ -106,11 +116,8 @@ async fn get_state(
     let user_id = auth_info.agent_id.clone();
 
     // Support X- headers if auth_info is empty (for setup phase)
-    let (tid, uid) = if tenant_id.is_empty() {
-        ("default".to_string(), "default".to_string())
-    } else {
-        (tenant_id, user_id)
-    };
+    let tid = if tenant_id.is_empty() { "default".to_string() } else { tenant_id };
+    let uid = if user_id.is_empty() { "default".to_string() } else { user_id };
 
     match agent.get_onboarding_state(&tid, &uid).await {
         Ok(state) => Ok(Json(state)),
@@ -129,11 +136,8 @@ async fn save_state(
     let tenant_id = auth_info.org_id.clone();
     let user_id = auth_info.agent_id.clone();
 
-    let (tid, uid) = if tenant_id.is_empty() {
-        ("default".to_string(), "default".to_string())
-    } else {
-        (tenant_id, user_id)
-    };
+    let tid = if tenant_id.is_empty() { "default".to_string() } else { tenant_id };
+    let uid = if user_id.is_empty() { "default".to_string() } else { user_id };
 
     let step = payload.get("wizardState")
         .and_then(|w| w.get("step"))
