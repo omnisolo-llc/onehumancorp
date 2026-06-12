@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { adminPage } from './fixtures';
 
 
 test.describe('Hyperlocal Lead Gen CUJ', () => {
@@ -9,9 +10,13 @@ test.describe('Hyperlocal Lead Gen CUJ', () => {
     // The adminPage fixture logs in and defaults to /dashboard, but ensure we are there.
     await page.goto('/dashboard');
 
-    // 2. Locate the Lead Gen card.
-    const leadGenCard = page.locator('text=Hyperlocal Lead Gen').locator('..');
-    await expect(leadGenCard).toBeVisible();
+    // 2. Locate the Lead Gen card link and click it to navigate to the new Tauri page
+    const leadGenLink = page.locator('a#lead-gen-link');
+    await expect(leadGenLink).toBeVisible();
+    await leadGenLink.click();
+
+    // Wait for the new page to load
+    await expect(page.locator('h1', { hasText: 'Hyperlocal Lead Gen' })).toBeVisible();
 
     // 3. Fill in the budget and zip code.
     const budgetInput = page.getByTestId('lead-gen-budget');
