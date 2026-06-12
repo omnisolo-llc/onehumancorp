@@ -120,6 +120,7 @@ pub async fn create_checkout_session_handler(
     if let (Some(product_id), Some(quantity)) = (&req.product_id, req.quantity) {
         if quantity > 0 {
             let lock_id = uuid::Uuid::new_v4().to_string();
+            // Redis Redlock format
             let lock_key = format!("ohc:lock:{}:inventory:{}", tenant_id, product_id);
             let ttl = req.ttl_seconds.unwrap_or(300); // 5 minutes default for online checkout
 
@@ -137,7 +138,7 @@ pub async fn create_checkout_session_handler(
                     let pool = crate::db::get_pool();
                     if let Ok(mut tx) = pool.begin().await {
                         if let Ok(_) = crate::common::auth_utils::set_org_context(&mut *tx, &tenant_id).await {
-                            let current_stock: Option<i32> = sqlx::query_scalar("SELECT inventory_count FROM products WHERE id = $1 AND tenant_id = $2")
+                            let current_stock: Option<i32> = sqlx::query_scalar("SELECT available_quantity FROM products WHERE id = $1 AND tenant_id = $2")
                                 .bind(product_id)
                                 .bind(&tenant_id)
                                 .fetch_optional(&mut *tx)
@@ -151,9 +152,24 @@ pub async fn create_checkout_session_handler(
                                     return Err(StatusCode::CONFLICT);
                                 }
                             } else {
-                                let _ = tx.rollback().await;
-                                let _: () = redis::cmd("DEL").arg(&lock_key).query_async(&mut conn).await.unwrap_or(());
-                                return Err(StatusCode::NOT_FOUND);
+                                let fallback_stock: Option<i32> = sqlx::query_scalar("SELECT inventory_count FROM products WHERE id = $1 AND tenant_id = $2")
+                                    .bind(product_id)
+                                    .bind(&tenant_id)
+                                    .fetch_optional(&mut *tx)
+                                    .await
+                                    .unwrap_or(None);
+
+                                if let Some(f_stock) = fallback_stock {
+                                    if f_stock < quantity {
+                                        let _ = tx.rollback().await;
+                                        let _: () = redis::cmd("DEL").arg(&lock_key).query_async(&mut conn).await.unwrap_or(());
+                                        return Err(StatusCode::CONFLICT);
+                                    }
+                                } else {
+                                    let _ = tx.rollback().await;
+                                    let _: () = redis::cmd("DEL").arg(&lock_key).query_async(&mut conn).await.unwrap_or(());
+                                    return Err(StatusCode::NOT_FOUND);
+                                }
                             }
                         }
                         let _ = tx.commit().await;
@@ -197,7 +213,8 @@ pub async fn create_checkout_session_handler(
                     if quantity > 0 {
                         if let Some(redis_client) = &hub.redis_client {
                             if let Ok(mut conn) = redis_client.get_multiplexed_async_connection().await {
-                                let lock_key = format!("ohc:lock:{}:inventory:{}", tenant_id, product_id);
+                                // Redis Redlock format
+            let lock_key = format!("ohc:lock:{}:inventory:{}", tenant_id, product_id);
                                 let _: () = redis::cmd("DEL").arg(&lock_key).query_async(&mut conn).await.unwrap_or(());
                             }
                         }

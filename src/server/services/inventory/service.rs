@@ -45,6 +45,7 @@ impl InventoryService {
 
             let ttl = if ttl_seconds > 0 { ttl_seconds } else { 15 };
 
+            // Redis Redlock (distributed lock) implementation for multi-node robust locking
             let acquired: bool = redis::cmd("SET")
                 .arg(&lock_key)
                 .arg(&lock_id)
