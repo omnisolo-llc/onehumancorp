@@ -30,7 +30,7 @@ test.describe('Unified Agent Feed Interactive Flow', () => {
         await expect(detailsPre).toBeVisible();
 
         // 3. Verify interaction states when "Approve" is clicked
-        const cardParent = approveBtn.locator('xpath=./../../..'); // navigate up to the card container
+        const cardParent = approveBtn.locator('xpath=ancestor::div[contains(@class, "glassmorphism")][1]'); // navigate up to the card container
         await approveBtn.click();
 
         // The card should transition to green border and slightly scale down
@@ -61,7 +61,7 @@ test.describe('Unified Agent Feed Interactive Flow', () => {
       // Verify offline banner
       await expect(page.locator('text=You are offline. Actions will sync when online.')).toBeVisible();
 
-      const cardParent = approveBtn.locator('xpath=./../../..');
+      const cardParent = approveBtn.locator('xpath=ancestor::div[contains(@class, "glassmorphism")][1]');
 
       // 2. Tap approve
       await approveBtn.click();
