@@ -124,7 +124,7 @@ impl PosSyncWorker {
                     if let Ok(sites) = crate::builder::db::list_sites(&pool_clone, tenant_id_clone).await {
                         for site in sites {
                             let cache_key = format!("edge_site_{}_{}_en-US", tenant_id_clone, site.id);
-                            let _ = crate::builder::edge::regenerate_cache(pool_clone.clone(), tenant_id_clone, site.id, cache_key, crate::builder::edge::get_edge_cache()).await;
+                            let _ = crate::builder::edge::regenerate_cache(pool_clone.clone(), tenant_id_clone, site.id, cache_key, crate::builder::edge::get_edge_cache(), "en-US".to_string()).await;
                         }
                     }
                 });
@@ -259,7 +259,7 @@ impl PosSyncWorker {
                                 if let Ok(sites) = crate::builder::db::list_sites(&pool_clone, tenant_id_clone).await {
                                     for site in sites {
                                         let cache_key = format!("edge_site_{}_{}_en-US", tenant_id_clone, site.id);
-                                        let _ = crate::builder::edge::regenerate_cache(pool_clone.clone(), tenant_id_clone, site.id, cache_key, crate::builder::edge::get_edge_cache()).await;
+                                        let _ = crate::builder::edge::regenerate_cache(pool_clone.clone(), tenant_id_clone, site.id, cache_key, crate::builder::edge::get_edge_cache(), "en-US".to_string()).await;
                                     }
                                 }
                             });

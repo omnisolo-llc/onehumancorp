@@ -551,7 +551,7 @@ async fn create_block(
 
         if let Ok(Some(site_id)) = site_id_query {
             let cache_key = format!("edge_site_{}_{}_en-US", tenant_id, site_id);
-            let _ = crate::builder::edge::regenerate_cache(pool_clone.clone(), tenant_id, site_id, cache_key, cache.clone()).await;
+            let _ = crate::builder::edge::regenerate_cache(pool_clone.clone(), tenant_id, site_id, cache_key, cache.clone(), "en-US".to_string()).await;
         }
     });
 
@@ -599,7 +599,7 @@ async fn update_block(
 
         if let Ok(Some(site_id)) = site_id_query {
             let cache_key = format!("edge_site_{}_{}_en-US", tenant_id, site_id);
-            let _ = crate::builder::edge::regenerate_cache(pool_clone.clone(), tenant_id, site_id, cache_key, cache.clone()).await;
+            let _ = crate::builder::edge::regenerate_cache(pool_clone.clone(), tenant_id, site_id, cache_key, cache.clone(), "en-US".to_string()).await;
         }
     });
 

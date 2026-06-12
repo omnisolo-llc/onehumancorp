@@ -68,7 +68,7 @@ pub async fn handle_edge_request_impl(
     let tenant_id = Uuid::parse_str(&tenant_id_str).map_err(|_| axum::http::StatusCode::BAD_REQUEST)?;
     let site_id = Uuid::parse_str(&site_id_str).map_err(|_| axum::http::StatusCode::BAD_REQUEST)?;
 
-    let locale = headers.get("accept-language").and_then(|v| v.to_str().ok()).unwrap_or("en-US");
+    let locale = headers.get("accept-language").and_then(|v| v.to_str().ok()).unwrap_or("en-US").to_string();
     let cache_key = format!("edge_site_{}_{}_{}", tenant_id, site_id, locale);
     let cache = get_edge_cache();
 
@@ -90,8 +90,9 @@ pub async fn handle_edge_request_impl(
                 guard.insert(cache_key.clone());
                 let pool_clone = state.pool.clone();
                 let cache_key_clone = cache_key.clone();
+                let locale_clone = locale.clone();
                 tokio::spawn(async move {
-                    let _ = regenerate_cache(pool_clone, tenant_id, site_id, cache_key_clone.clone(), cache).await;
+                    let _ = regenerate_cache(pool_clone, tenant_id, site_id, cache_key_clone.clone(), cache, locale_clone).await;
                     let ongoing = get_ongoing_generation();
                     ongoing.lock().await.remove(&cache_key_clone);
                 });
@@ -130,7 +131,7 @@ pub async fn handle_edge_request_impl(
         }
     }
 
-    let result = regenerate_cache(state.pool.clone(), tenant_id, site_id, cache_key.clone(), cache).await;
+    let result = regenerate_cache(state.pool.clone(), tenant_id, site_id, cache_key.clone(), cache, locale).await;
 
     {
         let ongoing = get_ongoing_generation();
@@ -158,6 +159,7 @@ pub async fn regenerate_cache(
     site_id: Uuid,
     cache_key: String,
     cache: Arc<HybridCache<String>>,
+    locale: String,
 ) -> Result<(String, Vec<String>), axum::http::StatusCode> {
     let site = match super::db::list_sites(&pool, tenant_id).await {
         Ok(sites) => sites.into_iter().find(|s| s.id == site_id),
