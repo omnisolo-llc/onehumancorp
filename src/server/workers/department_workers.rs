@@ -14,19 +14,83 @@ const MAX_RETRIES: u32 = 3;
 pub struct OperationsWorker {
     pub db: Arc<DB>,
     pub poll_interval: Duration,
+    pub hub: Arc<crate::hub::Hub>,
 }
 
 impl OperationsWorker {
-    pub fn new(db: Arc<DB>) -> Self {
+    pub fn new(db: Arc<DB>, hub: Arc<crate::hub::Hub>) -> Self {
         Self {
             db,
             poll_interval: Duration::from_secs(5),
+            hub,
         }
     }
 
     pub fn start(&self) {
         let db = self.db.clone();
         let interval_duration = self.poll_interval;
+        let hub = self.hub.clone();
+        let mut tenant_rx = hub.subscribe_teammate_mesh("tenant_events".to_string());
+
+        let db_for_ops = self.db.clone();
+        tokio::spawn(async move {
+            while let Ok(event) = tenant_rx.recv().await {
+                if event.action == "TenantOnboardingCompleted" {
+                    if let Ok(payload_str) = String::from_utf8(event.payload.clone()) {
+                        if let Ok(payload_json) = serde_json::from_str::<serde_json::Value>(&payload_str) {
+                            let org_id = payload_json.get("organization_id").and_then(|o| o.as_str()).unwrap_or("system").to_string();
+
+                            let task_id = Uuid::new_v4().to_string();
+                            let description = "The Manager prepared standard operating hours and a suggested delivery/service radius based on your location. Please review and approve.";
+                            let parsed = serde_json::json!({
+                                "feature_type": "setup_ops",
+                                "delivery_radius": "10 miles",
+                                "operating_hours": {
+                                    "monday": "9:00 AM - 5:00 PM",
+                                    "tuesday": "9:00 AM - 5:00 PM",
+                                    "wednesday": "9:00 AM - 5:00 PM",
+                                    "thursday": "9:00 AM - 5:00 PM",
+                                    "friday": "9:00 AM - 5:00 PM",
+                                    "saturday": "10:00 AM - 2:00 PM",
+                                    "sunday": "Closed"
+                                }
+                            });
+
+                            match &db_for_ops.store {
+                                crate::db::DbStore::Postgres => {
+                                    let _ = sqlx::query(
+                                        "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state) VALUES ($1, $2, $3, $4, $5, $6)"
+                                    )
+                                    .bind(&task_id)
+                                    .bind(&org_id)
+                                    .bind("operations")
+                                    .bind(serde_json::json!({ "description": description, "feature_type": "setup_ops" }))
+                                    .bind(&parsed)
+                                    .bind("PENDING_APPROVAL")
+                                    .execute(&db_for_ops.pool)
+                                    .await;
+                                },
+                                crate::db::DbStore::Sqlite(pool) => {
+                                    let pool_clone = pool.clone();
+                                    let _ = sqlx::query(
+                                        "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state) VALUES (?, ?, ?, ?, ?, ?)"
+                                    )
+                                    .bind(&task_id)
+                                    .bind(&org_id)
+                                    .bind("operations")
+                                    .bind(serde_json::json!({ "description": description, "feature_type": "setup_ops" }))
+                                    .bind(&parsed)
+                                    .bind("PENDING_APPROVAL")
+                                    .execute(&pool_clone)
+                                    .await;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
         tokio::spawn(async move {
             let mut interval = tokio::time::interval(interval_duration);
             loop {
@@ -948,6 +1012,61 @@ impl PromoterWorker {
         let hub = self.hub.clone();
         let mut promoter_rx = hub.subscribe_teammate_mesh("promoter_inbox".to_string());
         let mut product_rx = hub.subscribe_teammate_mesh("products_inbox".to_string());
+        let mut tenant_rx = hub.subscribe_teammate_mesh("tenant_events".to_string());
+
+        let db_for_tenant = self.db.clone();
+        tokio::spawn(async move {
+            while let Ok(event) = tenant_rx.recv().await {
+                if event.action == "TenantOnboardingCompleted" {
+                    if let Ok(payload_str) = String::from_utf8(event.payload.clone()) {
+                        if let Ok(payload_json) = serde_json::from_str::<serde_json::Value>(&payload_str) {
+                            let org_id = payload_json.get("organization_id").and_then(|o| o.as_str()).unwrap_or("system").to_string();
+                            let company_name = payload_json.get("company_name").and_then(|o| o.as_str()).unwrap_or("").to_string();
+
+                            let task_id = Uuid::new_v4().to_string();
+                            let description = "The Promoter drafted a 'We are Open!' launch campaign for your new business. Please review and schedule.";
+                            let parsed = serde_json::json!({
+                                "feature_type": "social_post_draft",
+                                "company_name": company_name,
+                                "tiktok": format!("Welcome to {}! We are officially open and can't wait to serve you.", company_name),
+                                "instagram": format!("Exciting news! {} is now open. Come check us out!", company_name),
+                                "facebook": format!("We are thrilled to announce the grand opening of {}. Visit our new storefront today!", company_name)
+                            });
+
+                            match &db_for_tenant.store {
+                                crate::db::DbStore::Postgres => {
+                                    let _ = sqlx::query(
+                                        "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state) VALUES ($1, $2, $3, $4, $5, $6)"
+                                    )
+                                    .bind(&task_id)
+                                    .bind(&org_id)
+                                    .bind("marketing")
+                                    .bind(serde_json::json!({ "description": description, "feature_type": "social_post_draft" }))
+                                    .bind(&parsed)
+                                    .bind("PENDING_APPROVAL")
+                                    .execute(&db_for_tenant.pool)
+                                    .await;
+                                },
+                                crate::db::DbStore::Sqlite(pool) => {
+                                    let pool_clone = pool.clone();
+                                    let _ = sqlx::query(
+                                        "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state) VALUES (?, ?, ?, ?, ?, ?)"
+                                    )
+                                    .bind(&task_id)
+                                    .bind(&org_id)
+                                    .bind("marketing")
+                                    .bind(serde_json::json!({ "description": description, "feature_type": "social_post_draft" }))
+                                    .bind(&parsed)
+                                    .bind("PENDING_APPROVAL")
+                                    .execute(&pool_clone)
+                                    .await;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        });
 
         // Handle product creation for social auto-posting
 
@@ -1704,4 +1823,82 @@ mod tests {
              assert_eq!(count, 1);
          }
      }
+}
+
+
+pub struct ScoutWorker {
+    pub db: Arc<DB>,
+    pub poll_interval: Duration,
+    pub hub: Arc<crate::hub::Hub>,
+}
+
+impl ScoutWorker {
+    pub fn new(db: Arc<DB>, hub: Arc<crate::hub::Hub>) -> Self {
+        Self {
+            db,
+            poll_interval: Duration::from_secs(5),
+            hub,
+        }
+    }
+
+    pub fn start(&self) {
+        let _db = self.db.clone();
+        let hub = self.hub.clone();
+        let mut tenant_rx = hub.subscribe_teammate_mesh("tenant_events".to_string());
+
+        let db_for_scout = self.db.clone();
+        tokio::spawn(async move {
+            while let Ok(event) = tenant_rx.recv().await {
+                if event.action == "TenantOnboardingCompleted" {
+                    if let Ok(payload_str) = String::from_utf8(event.payload.clone()) {
+                        if let Ok(payload_json) = serde_json::from_str::<serde_json::Value>(&payload_str) {
+                            let org_id = payload_json.get("organization_id").and_then(|o| o.as_str()).unwrap_or("system").to_string();
+                            let company_name = payload_json.get("company_name").and_then(|o| o.as_str()).unwrap_or("").to_string();
+                            let location = payload_json.get("location").and_then(|o| o.as_str()).unwrap_or("").to_string();
+                            let business_type = payload_json.get("business_type").and_then(|o| o.as_str()).unwrap_or("").to_string();
+
+                            let task_id = Uuid::new_v4().to_string();
+                            let description = "The Scout researched your market and drafted SEO Meta Tags for your new business. Please review and approve.";
+                            let parsed = serde_json::json!({
+                                "feature_type": "seo_meta_tags",
+                                "seo_title": format!("{} - Top {} in {}", company_name, business_type, location),
+                                "seo_description": format!("Welcome to {}. We are your local {} experts in {}. Contact us today!", company_name, business_type, location),
+                                "keywords": format!("{}, {}, {}", company_name, business_type, location)
+                            });
+
+                            match &db_for_scout.store {
+                                crate::db::DbStore::Postgres => {
+                                    let _ = sqlx::query(
+                                        "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state) VALUES ($1, $2, $3, $4, $5, $6)"
+                                    )
+                                    .bind(&task_id)
+                                    .bind(&org_id)
+                                    .bind("discovery")
+                                    .bind(serde_json::json!({ "description": description, "feature_type": "seo_meta_tags" }))
+                                    .bind(&parsed)
+                                    .bind("PENDING_APPROVAL")
+                                    .execute(&db_for_scout.pool)
+                                    .await;
+                                },
+                                crate::db::DbStore::Sqlite(pool) => {
+                                    let pool_clone = pool.clone();
+                                    let _ = sqlx::query(
+                                        "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state) VALUES (?, ?, ?, ?, ?, ?)"
+                                    )
+                                    .bind(&task_id)
+                                    .bind(&org_id)
+                                    .bind("discovery")
+                                    .bind(serde_json::json!({ "description": description, "feature_type": "seo_meta_tags" }))
+                                    .bind(&parsed)
+                                    .bind("PENDING_APPROVAL")
+                                    .execute(&pool_clone)
+                                    .await;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
 }
