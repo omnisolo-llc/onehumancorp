@@ -10,9 +10,10 @@ use serde::{Deserialize, Serialize};
 
 pub fn router(pool: PgPool) -> Router {
     Router::new()
-        .route("/quotes", post(create_quote))
-        .route("/quotes/:id", get(get_quote))
-        .route("/quotes/:id/approve", patch(approve_quote))
+        .route("/v1/quotes", post(create_quote).get(list_quotes))
+        .route("/v1/quotes/:id", get(get_quote))
+        .route("/v1/quotes/:id/approve", patch(approve_quote))
+        .route("/v1/pricing-rules", get(get_pricing_rules).post(create_pricing_rule))
         .with_state(pool)
 }
 
@@ -38,6 +39,33 @@ pub struct QuoteLineItemReq {
     pub unit_price_cents: i64,
     pub quantity: i32,
     pub is_optional: bool,
+}
+
+#[derive(Debug, Serialize, Deserialize, FromRow)]
+pub struct PricingRule {
+    pub id: Uuid,
+    pub tenant_id: String,
+    pub name: String,
+    pub base_price_cents: i64,
+    pub rules_json: sqlx::types::Json<serde_json::Value>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CreatePricingRuleReq {
+    pub name: String,
+    pub base_price_cents: i64,
+    pub rules_json: serde_json::Value,
+}
+
+async fn list_quotes(
+    State(pool): State<PgPool>,
+) -> Result<Json<Vec<Quote>>, axum::http::StatusCode> {
+    let quotes = sqlx::query_as::<_, Quote>("SELECT * FROM quotes")
+        .fetch_all(&pool)
+        .await
+        .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    Ok(Json(quotes))
 }
 
 async fn create_quote(
@@ -115,4 +143,41 @@ async fn approve_quote(
         Some(q) => Ok(Json(q)),
         None => Err(axum::http::StatusCode::NOT_FOUND),
     }
+}
+
+async fn get_pricing_rules(
+    State(pool): State<PgPool>,
+    axum::extract::HeaderMap(headers): axum::extract::HeaderMap,
+) -> Result<Json<Vec<PricingRule>>, axum::http::StatusCode> {
+    let tenant_id = headers.get("x-tenant-id").and_then(|v| v.to_str().ok()).unwrap_or("test_tenant").to_string();
+    let rules = sqlx::query_as::<_, PricingRule>("SELECT id, tenant_id, name, base_price_cents, rules_json as \"rules_json: sqlx::types::Json<serde_json::Value>\" FROM pricing_rules WHERE tenant_id = $1")
+        .bind(tenant_id)
+        .fetch_all(&pool)
+        .await
+        .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    Ok(Json(rules))
+}
+
+async fn create_pricing_rule(
+    State(pool): State<PgPool>,
+    axum::extract::HeaderMap(headers): axum::extract::HeaderMap,
+    Json(payload): Json<CreatePricingRuleReq>,
+) -> Result<Json<PricingRule>, axum::http::StatusCode> {
+    let tenant_id = headers.get("x-tenant-id").and_then(|v| v.to_str().ok()).unwrap_or("test_tenant").to_string();
+    let id = Uuid::new_v4();
+
+    let rule = sqlx::query_as::<_, PricingRule>(
+        "INSERT INTO pricing_rules (id, tenant_id, name, base_price_cents, rules_json) VALUES ($1, $2, $3, $4, $5) RETURNING id, tenant_id, name, base_price_cents, rules_json as \"rules_json: sqlx::types::Json<serde_json::Value>\""
+    )
+    .bind(id)
+    .bind(tenant_id)
+    .bind(payload.name)
+    .bind(payload.base_price_cents)
+    .bind(sqlx::types::Json(payload.rules_json))
+    .fetch_one(&pool)
+    .await
+    .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    Ok(Json(rule))
 }

@@ -1,10 +1,30 @@
-#![allow(ambiguous_glob_reexports)]
-#![allow(unused_imports)]
+pub mod booking;
+pub mod cache_invalidator;
+pub mod inventory_sync;
+pub mod wizard;
 
-pub use ::server_lib::*;
+pub mod inventory;
+pub mod quoting;
 
-#[path = "mod.rs"]
-pub mod __bazel_package;
-
-#[allow(ambiguous_glob_reexports)]
-pub use __bazel_package::*;
+pub mod agent;
+pub mod agent_memory;
+pub mod autodream;
+pub mod b2b;
+pub mod billing;
+pub mod campaign;
+pub mod chat;
+pub mod collective;
+pub mod dashboard;
+pub mod docs;
+pub mod growth;
+pub mod integration;
+pub mod ledger;
+pub mod mcp;
+pub mod onboarding;
+pub mod ops;
+pub mod org;
+pub mod pos;
+pub mod scheduler;
+pub mod subscription;
+pub mod sync;
+pub mod syndication;
