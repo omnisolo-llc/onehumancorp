@@ -911,28 +911,33 @@ pub async fn advisory_insights_handler(
     };
 
     // Gather context from DB and order counts concurrently
-    let (org_res, active_orders_res) = tokio::join!(
-        async {
-            let cache_key = format!("advisory:org:{}", tenant_id);
+    let db1 = db.clone();
+    let db2 = db.clone();
+    let tenant_id1 = tenant_id.clone();
+    let tenant_id2 = tenant_id.clone();
+
+    let (org_res_handle, active_orders_res_handle) = tokio::join!(
+        tokio::spawn(async move {
+            let cache_key = format!("advisory:org:{}", tenant_id1);
             let cache = ORG_CACHE_ADVISORY.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
             if let Some(org) = cache.get(&cache_key).await {
                 return Ok(org);
             }
 
-            let result = match &db.store {
+            let result = match &db1.store {
                 crate::db::DbStore::Postgres => {
                     sqlx::query_as::<_, (String, String)>(
                         "SELECT name, COALESCE(industry, '') FROM tenants WHERE id = $1"
                     )
-                    .bind(&tenant_id)
-                    .fetch_optional(&db.pool)
+                    .bind(&tenant_id1)
+                    .fetch_optional(&db1.pool)
                     .await
                 }
                 crate::db::DbStore::Sqlite(pool) => {
                     sqlx::query_as::<_, (String, String)>(
                         "SELECT name, COALESCE(industry, '') FROM tenants WHERE id = $1"
                     )
-                    .bind(&tenant_id)
+                    .bind(&tenant_id1)
                     .fetch_optional(pool)
                     .await
                 }
@@ -942,28 +947,28 @@ pub async fn advisory_insights_handler(
                 cache.set(&cache_key, org.clone(), std::time::Duration::from_secs(3600)).await;
             }
             result
-        },
-        async {
-            let cache_key = format!("advisory:orders:{}", tenant_id);
+        }),
+        tokio::spawn(async move {
+            let cache_key = format!("advisory:orders:{}", tenant_id2);
             let cache = ACTIVE_ORDERS_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
             if let Some(orders) = cache.get(&cache_key).await {
                 return Ok(orders);
             }
 
-            let result = match &db.store {
+            let result = match &db2.store {
                 crate::db::DbStore::Postgres => {
                     sqlx::query_scalar::<_, i64>(
                         "SELECT count(*) FROM orders WHERE tenant_id = $1 AND status != 'delivered'"
                     )
-                    .bind(&tenant_id)
-                    .fetch_one(&db.pool)
+                    .bind(&tenant_id2)
+                    .fetch_one(&db2.pool)
                     .await
                 }
                 crate::db::DbStore::Sqlite(pool) => {
                     sqlx::query_scalar::<_, i64>(
                         "SELECT count(*) FROM orders WHERE tenant_id = $1 AND status != 'delivered'"
                     )
-                    .bind(&tenant_id)
+                    .bind(&tenant_id2)
                     .fetch_one(pool)
                     .await
                 }
@@ -973,11 +978,11 @@ pub async fn advisory_insights_handler(
                 cache.set(&cache_key, orders, std::time::Duration::from_secs(5)).await;
             }
             result
-        }
+        })
     );
 
-    let org_data = org_res;
-    let orders_data = active_orders_res;
+    let org_data = org_res_handle.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound));
+    let orders_data = active_orders_res_handle.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound));
 
     let (business_name, industry) = org_data
         .unwrap_or(None)
@@ -1280,7 +1285,10 @@ impl HubService for MyHubService {
         let ai_limit = tier.monthly_action_limit().map(|v| v as i32);
         let storage_limit = tier.storage_limit_mb().map(|v| (v as i64) * 1024 * 1024);
 
-        let next_bill_estimated = tier.base_price() as i64;
+        let base_bill = tier.base_price();
+        let llm_cost_cents = self.hub.tracker().get_tenant_cost_cents(tenant_id);
+        let total_cost_cents = (base_bill * 100.0).round() as i64 + llm_cost_cents;
+        let next_bill_estimated = total_cost_cents;
 
         Ok(tonic::Response::new(::server_ohc::orchestration::MyPlanResponse {
             current_plan: plan_name,
@@ -3259,38 +3267,44 @@ pub(crate) async fn load_ui_dashboard_metrics(
     db: &crate::db::DB,
     tenant_id: &str,
 ) -> Result<UiDashboardMetrics, sqlx::Error> {
-    let (active_customers, pending_orders, total_sales, total_campaigns_sent, auto_replied) = match &db.store {
-        crate::db::DbStore::Postgres => {
-            sqlx::query_as::<_, (i64, i64, f64, i64, i64)>(
-                "SELECT \
-                    (SELECT COUNT(*) FROM customers WHERE tenant_id = $1) AS active_customers, \
-                    (SELECT COUNT(*) FROM orders WHERE tenant_id = $1 AND status = 'pending') AS pending_orders, \
-                    (SELECT CAST(COALESCE(SUM(total_amount), 0.0) AS DOUBLE PRECISION) FROM orders WHERE tenant_id = $1) AS total_sales, \
-                    (SELECT COUNT(*) FROM agent_actions WHERE tenant_id = $1 AND action_type = 'growth.campaign_sent') AS total_campaigns_sent, \
-                    (SELECT COUNT(*) FROM inbox_messages WHERE tenant_id = $1 AND status = 'auto_replied') AS auto_replied"
-            )
-            .bind(tenant_id)
-            .fetch_one(&db.pool)
-            .await?
+    let (active_customers_res, pending_orders_res, sales_res, campaigns_res, auto_replied_res) = tokio::join!(
+        async {
+            match &db.store {
+                crate::db::DbStore::Postgres => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM customers WHERE tenant_id = $1").bind(tenant_id).fetch_one(&db.pool).await,
+                crate::db::DbStore::Sqlite(pool) => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM customers WHERE tenant_id = ?").bind(tenant_id).fetch_one(pool).await,
+            }
+        },
+        async {
+            match &db.store {
+                crate::db::DbStore::Postgres => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM orders WHERE tenant_id = $1 AND status = 'pending'").bind(tenant_id).fetch_one(&db.pool).await,
+                crate::db::DbStore::Sqlite(pool) => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM orders WHERE tenant_id = ? AND status = 'pending'").bind(tenant_id).fetch_one(pool).await,
+            }
+        },
+        async {
+            match &db.store {
+                crate::db::DbStore::Postgres => sqlx::query_scalar::<_, Option<f64>>("SELECT CAST(SUM(total_amount) AS DOUBLE PRECISION) FROM orders WHERE tenant_id = $1").bind(tenant_id).fetch_one(&db.pool).await,
+                crate::db::DbStore::Sqlite(pool) => sqlx::query_scalar::<_, Option<f64>>("SELECT CAST(SUM(total_amount) AS REAL) FROM orders WHERE tenant_id = ?").bind(tenant_id).fetch_one(pool).await,
+            }
+        },
+        async {
+            match &db.store {
+                crate::db::DbStore::Postgres => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM agent_actions WHERE tenant_id = $1 AND action_type = 'growth.campaign_sent'").bind(tenant_id).fetch_one(&db.pool).await,
+                crate::db::DbStore::Sqlite(pool) => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM agent_actions WHERE tenant_id = ? AND action_type = 'growth.campaign_sent'").bind(tenant_id).fetch_one(pool).await,
+            }
+        },
+        async {
+            match &db.store {
+                crate::db::DbStore::Postgres => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM inbox_messages WHERE tenant_id = $1 AND status = 'auto_replied'").bind(tenant_id).fetch_one(&db.pool).await,
+                crate::db::DbStore::Sqlite(pool) => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM inbox_messages WHERE tenant_id = ? AND status = 'auto_replied'").bind(tenant_id).fetch_one(pool).await,
+            }
         }
-        crate::db::DbStore::Sqlite(pool) => {
-            sqlx::query_as::<_, (i64, i64, f64, i64, i64)>(
-                "SELECT \
-                    (SELECT COUNT(*) FROM customers WHERE tenant_id = ?) AS active_customers, \
-                    (SELECT COUNT(*) FROM orders WHERE tenant_id = ? AND status = 'pending') AS pending_orders, \
-                    (SELECT CAST(COALESCE(SUM(total_amount), 0.0) AS REAL) FROM orders WHERE tenant_id = ?) AS total_sales, \
-                    (SELECT COUNT(*) FROM agent_actions WHERE tenant_id = ? AND action_type = 'growth.campaign_sent') AS total_campaigns_sent, \
-                    (SELECT COUNT(*) FROM inbox_messages WHERE tenant_id = ? AND status = 'auto_replied') AS auto_replied"
-            )
-            .bind(tenant_id)
-            .bind(tenant_id)
-            .bind(tenant_id)
-            .bind(tenant_id)
-            .bind(tenant_id)
-            .fetch_one(pool)
-            .await?
-        }
-    };
+    );
+
+    let active_customers = active_customers_res.unwrap_or(0);
+    let pending_orders = pending_orders_res.unwrap_or(0);
+    let total_sales = sales_res.unwrap_or(Some(0.0)).unwrap_or(0.0);
+    let total_campaigns_sent = campaigns_res.unwrap_or(0);
+    let auto_replied = auto_replied_res.unwrap_or(0);
 
     Ok(UiDashboardMetrics {
         active_customers,
@@ -3361,18 +3375,10 @@ async fn ui_dashboard_analytics_briefing_handler(
     use axum::response::IntoResponse;
     let tenant_id = ui_tenant_id(&query);
 
-    let db1 = db.clone();
-    let db2 = db.clone();
-    let tenant_id1 = tenant_id.clone();
-    let tenant_id2 = tenant_id.clone();
-
     let (metrics_res, inbox_res) = tokio::join!(
-        tokio::spawn(async move { load_ui_dashboard_metrics(&db1, &tenant_id1).await }),
-        tokio::spawn(async move { load_ui_inbox_from_db(&db2, &tenant_id2, false).await })
+        load_ui_dashboard_metrics(&db, &tenant_id),
+        load_ui_inbox_from_db(&db, &tenant_id, false)
     );
-
-    let metrics_res = metrics_res.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound));
-    let inbox_res = inbox_res.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound));
 
     let metrics = metrics_res.unwrap_or(UiDashboardMetrics {
         active_customers: 0,
@@ -3407,10 +3413,18 @@ async fn ui_dashboard_analytics_chat_handler(
     let tenant_id = ui_tenant_id(&query);
     let text = payload.message.to_lowercase();
 
-    let (inbox_res, metrics_res) = tokio::join!(
-        load_ui_inbox_from_db(&db, &tenant_id, false),
-        load_ui_dashboard_metrics(&db, &tenant_id)
+    let db1 = db.clone();
+    let db2 = db.clone();
+    let tenant_id1 = tenant_id.clone();
+    let tenant_id2 = tenant_id.clone();
+
+    let (inbox_res_handle, metrics_res_handle) = tokio::join!(
+        tokio::spawn(async move { load_ui_inbox_from_db(&db1, &tenant_id1, false).await }),
+        tokio::spawn(async move { load_ui_dashboard_metrics(&db2, &tenant_id2).await })
     );
+
+    let inbox_res = inbox_res_handle.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound));
+    let metrics_res = metrics_res_handle.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound));
 
     let response_text = if text.contains("dm") || text.contains("message") {
         let inbox_messages = inbox_res.unwrap_or_default();
