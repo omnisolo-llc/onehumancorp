@@ -447,4 +447,26 @@ mod tests {
         // 1 initial + 2 clamped retries = 3 calls
         assert_eq!(call_count.load(Ordering::SeqCst), 3);
     }
+
+    #[tokio::test]
+    async fn test_logging_contains_tool_name() {
+        let tool = Tool {
+            name: "test_tool_xyz".to_string(),
+            description: "dummy".to_string(),
+            parameters: serde_json::json!({}),
+            is_read_only: false,
+            execute: std::sync::Arc::new(DummyToolExecutor {
+                result: Err(ohc_builtin_agent_core::types::ToolError::LlmRecoverable("parse error".to_string())),
+            }),
+        };
+
+        let tc = ohc_builtin_agent_core::types::ToolCall {
+            id: "1".to_string(),
+            name: "test_tool_xyz".to_string(),
+            arguments: serde_json::json!({}),
+        };
+
+        let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2).await;
+        assert!(res.is_err());
+    }
 }

@@ -20,7 +20,7 @@ impl ToolExecutionEngine {
         loop {
             match tool.execute.execute(tc.arguments.clone()).await {
                 Ok(res) => {
-                    info!("Tool execution successful");
+                    info!("Tool execution successful for '{}'", tool.name);
                     return Ok(res);
                 }
                 Err(ToolError::Transient(msg)) => {
@@ -41,7 +41,7 @@ impl ToolExecutionEngine {
                         sleep(backoff).await;
                         continue;
                     } else {
-                        error!("Transient error retries exhausted: {}", msg);
+                        error!("Transient error retries exhausted for '{}': {}", tool.name, msg);
                         // After retries are exhausted, it becomes an Unexpected/Fatal error to the loop
                         return Err(ToolError::Unexpected(format!(
                             "Transient error after retries: {}",
@@ -51,25 +51,25 @@ impl ToolExecutionEngine {
                 }
                 Err(ToolError::LlmRecoverable(msg)) => {
                     // 2) LLM-recoverable: returned to the model so it can self-correct.
-                    info!("LLM-recoverable error encountered: {}", msg);
+                    info!("LLM-recoverable error encountered in '{}': {}", tool.name, msg);
                     return Err(ToolError::LlmRecoverable(msg));
                 }
                 Err(ToolError::UserFixable(msg)) => {
                     // 3) User-fixable: immediately bubble up to the orchestrator to request human-in-loop input.
-                    warn!("User-fixable error encountered, bubbling up: {}", msg);
+                    warn!("User-fixable error encountered in '{}', bubbling up: {}", tool.name, msg);
                     return Err(ToolError::UserFixable(msg));
                 }
                 Err(ToolError::Fatal(msg)) => {
                     // 4) Fatal: bubbles up to debug/halt immediately.
-                    error!("Fatal tool error encountered: {}", msg);
+                    error!("Fatal tool error encountered in '{}': {}", tool.name, msg);
                     return Err(ToolError::Fatal(msg));
                 }
                 Err(ToolError::Unexpected(msg)) => {
-                    error!("Unexpected tool error encountered: {}", msg);
+                    error!("Unexpected tool error encountered in '{}': {}", tool.name, msg);
                     return Err(ToolError::Unexpected(msg));
                 }
                 Err(ToolError::HandoffRequested(msg)) => {
-                    info!("Tool execution requested handoff to: {}", msg);
+                    info!("Tool execution requested handoff in '{}' to: {}", tool.name, msg);
                     return Err(ToolError::HandoffRequested(msg));
                 }
             }
