@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test.describe('Walkthrough and Tooltips features', () => {
   test('Dashboard walkthrough and help center elements are visible and work', async ({ page }) => {
@@ -83,6 +83,14 @@ test.describe('Walkthrough and Tooltips features', () => {
     const tooltips = await page.evaluate(() => window['OHC_TOOLTIPS']);
     expect(tooltips).toBeDefined();
     expect(tooltips['dashboard-walkthrough-btn']).toBe('Take a tour of the dashboard');
+
+    // Check mobile long press using touch event simulation
+    await page.locator('#dashboard-walkthrough-btn').dispatchEvent('touchstart');
+    await page.waitForTimeout(600); // Wait for long press timeout (500ms)
+
+    const tooltipEl = page.locator('.ohc-tooltip.visible');
+    await expect(tooltipEl).toBeVisible();
+    await expect(tooltipEl).toHaveText('Take a tour of the dashboard');
   });
 
   test('Help Center elements are visible', async ({ page }) => {

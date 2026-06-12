@@ -16,16 +16,32 @@ test('Documentation, Tooltips and Help flows', async ({ page }) => {
 
   // 3. AI-Powered Help Chat
   await page.goto('/help.html');
-  // It uses a window custom event to open the chat when clicking "Ask AI Support Agent" if no results found
-  // Let's search for garbage to show the empty state and the "Ask AI" button
-  await page.fill('input[placeholder="Search for help articles and videos..."]', 'xyznonexistent123');
-  const askAIBtn = page.getByRole('button', { name: 'Ask AI Support Agent' });
-  await expect(askAIBtn).toBeVisible();
+  // Wait for the scripts to load and attach
+  await page.waitForTimeout(500);
 
-  await askAIBtn.click();
+  // The chat widget floating button should be there
+  const chatBtn = page.locator('#ohc-help-btn');
+  await expect(chatBtn).toBeVisible();
+
+  // Open the help chat
+  await chatBtn.click();
   // We assume the Help Chat popups and gets focus
-  const chatInput = page.getByPlaceholder('Ask me anything...');
+  const chatInput = page.locator('#ohc-help-input');
   await expect(chatInput).toBeVisible();
+
+  // Send a message and wait for AI response
+  await chatInput.fill('How do I set up a store?');
+  const sendBtn = page.locator('#ohc-help-send');
+  await sendBtn.click();
+
+  const aiMessage = page.locator('.msg-ai').nth(1);
+  await expect(aiMessage).toBeVisible();
+  await expect(aiMessage).toContainText('store');
+
+  // Close the help chat
+  const closeBtn = page.locator('#ohc-help-close');
+  await closeBtn.click();
+  await expect(page.locator('#ohc-help-chat-overlay')).not.toBeVisible();
 
   // 4. Video Tutorials page
   await page.goto('/help.html');
