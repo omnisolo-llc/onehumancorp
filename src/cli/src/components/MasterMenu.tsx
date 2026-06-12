@@ -12,10 +12,15 @@ const options = [
   "Seed Database with Mock Data",
   "Check Swarm Status",
   "Verify Setup",
+  "Build Visual Workflow",
   "Exit"
 ];
 
-export const MasterMenu: React.FC = () => {
+export interface MasterMenuProps {
+  onSelect?: (option: string) => void;
+}
+
+export const MasterMenu: React.FC<MasterMenuProps> = ({ onSelect }) => {
   const [selectedIndex, setSelectedIndex] = useState(0);
 
   useInput((input, key) => {
@@ -29,7 +34,9 @@ export const MasterMenu: React.FC = () => {
       if (options[selectedIndex] === "Exit") {
         process.exit(0);
       } else {
-        // intentionally silence execution logs
+        if (onSelect) {
+          onSelect(options[selectedIndex]);
+        }
       }
     }
   });

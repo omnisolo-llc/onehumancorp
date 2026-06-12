@@ -78,4 +78,113 @@ describe('App', () => {
     // If it doesn't, we can skip the assert or assert what we can
     expect(output).toContain('Ask Agent >');
   });
+
+  it('navigates to visual workflow builder and back', async () => {
+    const { stdin, lastFrame } = render(<App />);
+
+    // Go down to "Build Visual Workflow" (index 10)
+    for (let i = 0; i < 15; i++) {
+        stdin.write('\u001B[B');
+        await new Promise(r => setTimeout(r, 20));
+    }
+    // Go up one to "Build Visual Workflow" (from Exit)
+    stdin.write('\u001B[A');
+    await new Promise(r => setTimeout(r, 20));
+
+    // Press enter
+    stdin.write('\r');
+    await new Promise(r => setTimeout(r, 20));
+
+    let output = lastFrame();
+    expect(output).toContain('Visual Workflow Builder (CLI Edition)');
+
+    // Go down to BACK button (index 9)
+    for (let i = 0; i < 15; i++) {
+        stdin.write('\u001B[B');
+        await new Promise(r => setTimeout(r, 20));
+    }
+
+    // Press enter
+    stdin.write('\r');
+    await new Promise(r => setTimeout(r, 20));
+
+    output = lastFrame();
+    expect(output).toContain('Select an action');
+  });
+
+  it('runs visual workflow and shows result', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ result: 'Mocked API response' })
+    });
+
+    const { stdin, lastFrame } = render(<App />);
+
+    // Go down to "Build Visual Workflow" (index 10)
+    for (let i = 0; i < 15; i++) {
+        stdin.write('\u001B[B');
+        await new Promise(r => setTimeout(r, 20));
+    }
+    stdin.write('\u001B[A');
+    await new Promise(r => setTimeout(r, 20));
+    stdin.write('\r');
+    await new Promise(r => setTimeout(r, 20));
+
+    let output = lastFrame();
+    expect(output).toContain('Visual Workflow Builder (CLI Edition)');
+
+    // Add one block
+    stdin.write('\r');
+    await new Promise(r => setTimeout(r, 20));
+
+    // Go down to RUN WORKFLOW button (index 8)
+    for (let i = 0; i < 8; i++) {
+        stdin.write('\u001B[B');
+        await new Promise(r => setTimeout(r, 20));
+    }
+
+    // Press enter
+    stdin.write('\r');
+    await new Promise(r => setTimeout(r, 20));
+    await new Promise(r => setTimeout(r, 50));
+
+    output = lastFrame();
+    expect(output).toContain('Workflow finished:');
+
+    // Test API error path
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 500
+    });
+
+    // Go down to "Build Visual Workflow" again
+    for (let i = 0; i < 15; i++) {
+        stdin.write('\u001B[B');
+        await new Promise(r => setTimeout(r, 20));
+    }
+    stdin.write('\u001B[A');
+    await new Promise(r => setTimeout(r, 20));
+    stdin.write('\r');
+    await new Promise(r => setTimeout(r, 20));
+
+    // Add one block
+    stdin.write('\r');
+    await new Promise(r => setTimeout(r, 20));
+
+    // Go down to RUN WORKFLOW button
+    for (let i = 0; i < 8; i++) {
+        stdin.write('\u001B[B');
+        await new Promise(r => setTimeout(r, 20));
+    }
+
+    // Press enter
+    stdin.write('\r');
+    await new Promise(r => setTimeout(r, 20));
+
+    // Let async state updates resolve
+    await new Promise(r => setTimeout(r, 50));
+
+    output = lastFrame();
+    expect(output).toContain('Workflow failed: API error: 500');
+  });
 });

@@ -68,12 +68,12 @@ describe('MasterMenu', () => {
     expect(lastFrame()).toBeDefined();
   });
 
-  test('handles keyboard interaction (return)', () => {
-    const logSpy = vi.spyOn(console, 'info').mockImplementation(() => {});
-    const { stdin } = render(<MasterMenu />);
+  test('handles keyboard interaction (return)', async () => {
+    const mockOnSelect = vi.fn();
+    const { stdin } = render(<MasterMenu onSelect={mockOnSelect} />);
     stdin.write('\r');
-    expect(logSpy).toHaveBeenCalledWith('Executing Run Developer Setup...');
-    logSpy.mockRestore();
+    await new Promise(r => setTimeout(r, 20));
+    expect(mockOnSelect).toHaveBeenCalledWith('Run Developer Setup');
   });
 
   test('handles keyboard interaction (exit option)', async () => {
@@ -81,7 +81,7 @@ describe('MasterMenu', () => {
     const { stdin, lastFrame } = render(<MasterMenu />);
 
     // Exit is the last option.
-    // MasterMenu has 11 options. index 10 is Exit.
+    // MasterMenu has 12 options.
     for (let i = 0; i < 15; i++) {
         stdin.write('\u001B[B');
         // Let React process the event
