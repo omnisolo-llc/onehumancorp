@@ -1,7 +1,7 @@
 import { test, expect } from './fixtures';
 import { pool } from './global-setup';
 
-test.describe('Tap to Pay / POS Checkout API Flow', () => {
+test('Tap to Pay / POS Checkout API Flow', () => {
   test('POS payment intent creation and webhook deducts inventory', async ({ adminPage }) => {
     // As per the constraints: real CUJ flow without mocking the network.
     // Given the task is mostly backend ("Mobile Implementation Deferred, but API must support it"),

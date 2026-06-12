@@ -585,13 +585,26 @@
         // For web and tests, we show a simulate button.
         try {
           const tenantId = localStorage.getItem('tenant_id') || 'default';
+          const token = localStorage.getItem('access_token');
 
-          // Request Payment Intent
+          // 1. Request Terminal Connection Token First
+          const tokenRes = await fetch('/api/v1/payments/terminal/token', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': token ? `Bearer ${token}` : ''
+            }
+          });
+          if (!tokenRes.ok) {
+            console.warn("Failed to get terminal connection token", await tokenRes.text());
+          }
+
+          // 2. Request Payment Intent
           const res = await fetch('/api/v1/payments/terminal/intent', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+              'Authorization': token ? `Bearer ${token}` : ''
             },
             body: JSON.stringify({
               amount_cents: currentAmountCents,
@@ -605,9 +618,11 @@
           // Even if it fails (unauthorized in test), we allow simulation for UI testing purposes
           if (res.ok) {
               const data = await res.json();
-
+              if (data && data.error_message) {
+                  console.warn("Payment intent API returned error from json:", data.error_message);
+              }
           } else {
-              console.warn("Payment intent API returned error");
+              console.warn("Payment intent API returned error status:", res.status);
           }
 
         } catch (e) {
@@ -620,7 +635,7 @@
           simulateTapBtn.style.backgroundColor = "#86868b";
 
           // Simulate SDK processing time
-          setTimeout(() => {
+          setTimeout(async () => {
               // Tap Success
               tapOverlay.style.display = 'none';
               posView.style.display = 'none';
@@ -629,20 +644,28 @@
               // In real flow, we'd confirm the intent and sync offline txs.
               // We simulate the offline sync for E2E validation:
               const tenantId = localStorage.getItem('tenant_id') || 'default';
-              fetch('/api/v1/payments/terminal/sync_offline', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                      session_id: 'web_session',
-                      transactions: [{
-                          id: 'tx_' + Date.now(),
-                          client_id: 'web_client',
-                          amount_cents: currentAmountCents,
-                          currency: 'usd',
-                          payload: '{}'
-                      }]
-                  })
-              }).catch(console.error);
+              const token = localStorage.getItem('access_token');
+              try {
+                  await fetch('/api/v1/payments/terminal/sync_offline', {
+                      method: 'POST',
+                      headers: {
+                          'Content-Type': 'application/json',
+                          'Authorization': token ? `Bearer ${token}` : ''
+                      },
+                      body: JSON.stringify({
+                          session_id: 'web_session',
+                          transactions: [{
+                              id: 'tx_' + Date.now(),
+                              client_id: 'web_client',
+                              amount_cents: currentAmountCents,
+                              currency: 'usd',
+                              payload: '{}'
+                          }]
+                      })
+                  });
+              } catch(e) {
+                  console.error(e);
+              }
 
           }, 800);
       });

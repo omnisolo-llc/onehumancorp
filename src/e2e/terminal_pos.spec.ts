@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('Terminal POS - Mobile First & Inventory Sync', () => {
+test('Terminal POS - Mobile First & Inventory Sync', () => {
   const TENANT_ID = 'terminal-test-tenant';
 
   test.beforeEach(async ({ page }) => {
