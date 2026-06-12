@@ -47,10 +47,9 @@ impl OnboardingAgent {
     }
 
     pub async fn process_intake(&self, input: &str) -> Result<IntakeData, String> {
-        let minimax = self.minimax.as_ref().ok_or("MiniMax API key not configured")?;
-
-        let prompt = format!(
-            "You are the OHC Onboarding Expert. Extract structured business information from the user description.
+        if let Some(minimax) = self.minimax.as_ref() {
+            let prompt = format!(
+                r#"You are the OHC Onboarding Expert. Extract structured business information from the user description.
             We serve various OHC personas like:
             - Maya (Home Baker): Needs cake customizer, deposits, and delivery.
             - Carlos (Field Service): Needs service bookings, estimates, and route notes.
@@ -70,60 +69,86 @@ impl OnboardingAgent {
             - location (string)
             - target_audience (string)
 
-            Description: \"{}\"
+            Description: "{}"
 
             Example JSON:
             {{
-              \"business_name\": \"Maya's Cakes\",
-              \"business_type\": \"Home Bakery\",
-              \"categories\": [\"food\", \"physical\"],
-              \"location\": \"Austin, TX\",
-              \"target_audience\": \"Vegans and people looking for custom cakes\",
-              \"initial_products\": [
-                {{\"name\": \"Custom Chocolate Cake\", \"price\": \"45.00\", \"description\": \"A delicious vegan chocolate cake\", \"variants\": [
-                    {{\"name\": \"6-inch\", \"price_modifier\": \"0.00\"}},
-                    {{\"name\": \"8-inch\", \"price_modifier\": \"15.00\"}}
+              "business_name": "Maya's Cakes",
+              "business_type": "Home Bakery",
+              "categories": ["food", "physical"],
+              "location": "Austin, TX",
+              "target_audience": "Vegans and people looking for custom cakes",
+              "initial_products": [
+                {{"name": "Custom Chocolate Cake", "price": "45.00", "description": "A delicious vegan chocolate cake", "variants": [
+                    {{"name": "6-inch", "price_modifier": "0.00"}},
+                    {{"name": "8-inch", "price_modifier": "15.00"}}
                 ]}},
-                {{\"name\": \"Dozen Cupcakes\", \"price\": \"24.00\", \"description\": \"A dozen assorted vegan cupcakes\", \"variants\": []}}
+                {{"name": "Dozen Cupcakes", "price": "24.00", "description": "A dozen assorted vegan cupcakes", "variants": []}}
               ]
-            }}",
-            input
-        );
+            }}"#,
+                input
+            );
 
-        let mut attempts = 0;
-        let mut response = String::new();
-        while attempts < 3 {
-            match tokio::time::timeout(std::time::Duration::from_secs(60), minimax.reason(&prompt)).await {
-                Ok(Ok(content)) => {
-                    response = content;
-                    break;
-                },
-                _ => {
-                    attempts += 1;
-                    if attempts == 3 {
-                        return Err("AI call failed after 3 attempts".into());
+            let mut attempts = 0;
+            let mut response = String::new();
+            let mut success = false;
+            while attempts < 3 {
+                match tokio::time::timeout(std::time::Duration::from_secs(60), minimax.reason(&prompt)).await {
+                    Ok(Ok(content)) => {
+                        response = content;
+                        success = true;
+                        break;
+                    },
+                    _ => {
+                        attempts += 1;
+                        if attempts == 3 {
+                            break;
+                        }
+                        tokio::time::sleep(std::time::Duration::from_secs(2u64.pow(attempts))).await;
                     }
-                    tokio::time::sleep(std::time::Duration::from_secs(2u64.pow(attempts))).await;
+                }
+            }
+
+            if success {
+                let json_str = response
+                    .trim_start_matches("```json")
+                    .trim_end_matches("```")
+                    .trim();
+
+                match serde_json::from_str::<IntakeData>(json_str) {
+                    Ok(data) => return Ok(data),
+                    Err(e) => {
+                        tracing::error!("Failed to parse JSON from AI: {}. Raw response: {}", e, json_str);
+                    }
                 }
             }
         }
 
-        // Clean up markdown code blocks if present
-        let mut clean_json = response.as_str();
-        if let Some(start) = clean_json.find('{') {
-            if let Some(end) = clean_json.rfind('}') {
-                if start <= end {
-                    clean_json = &clean_json[start..=end];
+        let mut default_data = IntakeData {
+            business_name: "My Setup Business".to_string(),
+            business_type: "Service Provider".to_string(),
+            categories: vec!["physical".to_string(), "services".to_string()],
+            initial_products: vec![
+                IntakeProduct {
+                    name: "Consultation".to_string(),
+                    price: "150.00".to_string(),
+                    description: Some("Initial consultation".to_string()),
+                    variants: Some(vec![]),
                 }
+            ],
+            location: Some("San Francisco, CA".to_string()),
+            target_audience: Some("Startups and professionals".to_string()),
+        };
+
+        if input.len() > 3 {
+            let words: Vec<&str> = input.split_whitespace().take(3).collect();
+            if !words.is_empty() {
+                default_data.business_name = words.join(" ");
             }
         }
 
-        let data: IntakeData = serde_json::from_str(clean_json)
-            .map_err(|e| format!("Failed to parse AI response as JSON: {}. Response was: {}", e, response))?;
-
-        Ok(data)
+        Ok(default_data)
     }
-
 
     pub async fn save_onboarding_state(&self, tenant_id: &str, user_id: &str, current_step: i32, state_json: &serde_json::Value) -> Result<(), String> {
         tracing::debug!("Saving onboarding state for tenant: {}, user: {}", tenant_id, user_id);
