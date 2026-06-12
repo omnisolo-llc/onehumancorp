@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "../components/AppShell";
+import { InstantQuoteCard } from "./components/InstantQuoteCard";
 
 type TriageItem = {
   id: string;
@@ -147,52 +148,62 @@ export default function TriagePage() {
             <div className="app-empty">Select a triage item to review it.</div>
           ) : (
             <div className="app-panel-body">
-              <div className="mb-4">
-                <div className="app-metric-label">Source</div>
-                <div className="mt-1 text-sm font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">{selected.source || "Unknown source"}</div>
-              </div>
-              <div className="mb-4">
-                <div className="app-metric-label">Context</div>
-                <div className="mt-2 rounded-md border border-gray-200 dark:border-white/10 bg-white/50 dark:bg-black/20 p-3 text-sm leading-6 text-[#1D1D1F] dark:text-[#F5F5F7]">
-                  {selected.context || "No context"}
-                </div>
-              </div>
-              {selected.action_type && (
-                <div className="mb-6">
-                  <div className="app-metric-label">Proposed Action: {selected.action_type}</div>
-                  <div className="mt-2 rounded-md border border-blue-200 dark:border-blue-900/30 bg-blue-50/50 dark:bg-blue-900/20 p-4 text-sm leading-6 text-blue-900 dark:text-blue-100 font-medium">
-                    {selected.action_payload || "No specific payload"}
+              {selected.action_type === 'APPROVE_QUOTE' ? (
+                <InstantQuoteCard
+                  quote={JSON.parse(selected.action_payload || "{}")}
+                  onApprove={(id) => handleDecision(selected.id, true)}
+                  onReject={(id) => handleDecision(selected.id, false)}
+                />
+              ) : (
+                <>
+                  <div className="mb-4">
+                    <div className="app-metric-label">Source</div>
+                    <div className="mt-1 text-sm font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">{selected.source || "Unknown source"}</div>
                   </div>
-                </div>
+                  <div className="mb-4">
+                    <div className="app-metric-label">Context</div>
+                    <div className="mt-2 rounded-md border border-gray-200 dark:border-white/10 bg-white/50 dark:bg-black/20 p-3 text-sm leading-6 text-[#1D1D1F] dark:text-[#F5F5F7]">
+                      {selected.context || "No context"}
+                    </div>
+                  </div>
+                  {selected.action_type && (
+                    <div className="mb-6">
+                      <div className="app-metric-label">Proposed Action: {selected.action_type}</div>
+                      <div className="mt-2 rounded-md border border-blue-200 dark:border-blue-900/30 bg-blue-50/50 dark:bg-blue-900/20 p-4 text-sm leading-6 text-blue-900 dark:text-blue-100 font-medium">
+                        {selected.action_payload || "No specific payload"}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-2 gap-3 mb-6">
+                    <div className="app-card glassmorphism backdrop-blur-md bg-white/30 dark:bg-black/30 border border-white/20">
+                      <div className="app-metric-label">Priority</div>
+                      <div className="mt-2"><span className={`app-badge ${badgeTone(selected.priority)}`}>{selected.priority || "Normal"}</span></div>
+                    </div>
+                    <div className="app-card glassmorphism backdrop-blur-md bg-white/30 dark:bg-black/30 border border-white/20">
+                      <div className="app-metric-label">Created</div>
+                      <div className="mt-2 text-sm font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">{new Date(selected.created_at || Date.now()).toLocaleString()}</div>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <button
+                      className="app-btn-primary flex-1 min-h-[44px]"
+                      data-testid="approve-btn"
+                      onClick={() => handleDecision(selected.id, true)}
+                    >
+                      ✨ Approve &amp; Execute
+                    </button>
+                    <button
+                      className="px-4 py-2 rounded-[16px] border border-white/40 dark:border-white/20 text-[#1D1D1F] dark:text-[#F5F5F7] bg-white/50 dark:bg-black/20 hover:bg-white/80 dark:hover:bg-black/40 flex-1 min-h-[44px] font-medium transition-colors backdrop-blur-md"
+                      data-testid="dismiss-btn"
+                      onClick={() => handleDecision(selected.id, false)}
+                    >
+                      Dismiss
+                    </button>
+                  </div>
+                </>
               )}
-
-              <div className="grid grid-cols-2 gap-3 mb-6">
-                <div className="app-card glassmorphism backdrop-blur-md bg-white/30 dark:bg-black/30 border border-white/20">
-                  <div className="app-metric-label">Priority</div>
-                  <div className="mt-2"><span className={`app-badge ${badgeTone(selected.priority)}`}>{selected.priority || "Normal"}</span></div>
-                </div>
-                <div className="app-card glassmorphism backdrop-blur-md bg-white/30 dark:bg-black/30 border border-white/20">
-                  <div className="app-metric-label">Created</div>
-                  <div className="mt-2 text-sm font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">{new Date(selected.created_at || Date.now()).toLocaleString()}</div>
-                </div>
-              </div>
-
-              <div className="flex flex-col sm:flex-row gap-3">
-                <button
-                  className="app-btn-primary flex-1 min-h-[44px]"
-                  data-testid="approve-btn"
-                  onClick={() => handleDecision(selected.id, true)}
-                >
-                  ✨ Approve &amp; Execute
-                </button>
-                <button
-                  className="px-4 py-2 rounded-[16px] border border-white/40 dark:border-white/20 text-[#1D1D1F] dark:text-[#F5F5F7] bg-white/50 dark:bg-black/20 hover:bg-white/80 dark:hover:bg-black/40 flex-1 min-h-[44px] font-medium transition-colors backdrop-blur-md"
-                  data-testid="dismiss-btn"
-                  onClick={() => handleDecision(selected.id, false)}
-                >
-                  Dismiss
-                </button>
-              </div>
             </div>
           )}
         </section>
