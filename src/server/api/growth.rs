@@ -247,7 +247,7 @@ async fn handle_time_savings(
     Extension(state): Extension<GrowthState>,
     axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
 ) -> Result<Json<TimeSavingsResponse>, StatusCode> {
-    let parsed_uuid = match uuid::Uuid::parse_str(&auth_info.org_id) {
+    let _parsed_uuid = match uuid::Uuid::parse_str(&auth_info.org_id) {
         Ok(u) => u,
         Err(_) => return Err(StatusCode::BAD_REQUEST),
     };
@@ -312,14 +312,14 @@ async fn handle_trial_extension_claim(
     Extension(state): Extension<GrowthState>,
     axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
 ) -> Result<Json<TrialExtensionClaimResponse>, StatusCode> {
-    let parsed_uuid = match uuid::Uuid::parse_str(&auth_info.org_id) {
+    let _parsed_uuid = match uuid::Uuid::parse_str(&auth_info.org_id) {
         Ok(u) => u,
         Err(_) => return Err(StatusCode::BAD_REQUEST),
     };
 
     // First check if already claimed
     let has_claimed: Option<bool> = match sqlx::query_scalar("SELECT has_claimed_trial_extension FROM tenants WHERE id = $1 OR tenant_id = $1")
-        .bind(parsed_uuid)
+        .bind(_parsed_uuid)
         .fetch_optional(&state.pool)
         .await
     {
@@ -339,7 +339,7 @@ async fn handle_trial_extension_claim(
     }
 
     match sqlx::query("UPDATE tenants SET plan_tier = 'pro', has_claimed_trial_extension = true WHERE id = $1 OR tenant_id = $1")
-        .bind(parsed_uuid)
+        .bind(_parsed_uuid)
         .execute(&state.pool)
         .await
     {
