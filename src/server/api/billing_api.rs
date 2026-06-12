@@ -146,16 +146,16 @@ pub async fn create_checkout_session_handler(
 
                             if let Some(stock) = current_stock {
                                 if stock < quantity {
-                                    let _ = tx.rollback().await.map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
+                                    let _ = tx.rollback().await;
                                     let _: () = redis::cmd("DEL").arg(&lock_key).query_async(&mut conn).await.unwrap_or(());
                                     return Err(StatusCode::CONFLICT);
                                 } else {
-                                    sqlx::query("UPDATE products SET locked_quantity = locked_quantity + $1, available_quantity = available_quantity - $1 WHERE id = $2 AND tenant_id = $3")
+                                    let _ = sqlx::query("UPDATE products SET locked_quantity = locked_quantity + $1, available_quantity = available_quantity - $1 WHERE id = $2 AND tenant_id = $3")
                                         .bind(quantity)
                                         .bind(product_id)
                                         .bind(&tenant_id)
                                         .execute(&mut *tx)
-                                        .await.map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
+                                        .await;
                                 }
                             } else {
                                 let fallback_stock: Option<i32> = sqlx::query_scalar("SELECT inventory_count FROM products WHERE id = $1 AND tenant_id = $2")
@@ -167,25 +167,25 @@ pub async fn create_checkout_session_handler(
 
                                 if let Some(f_stock) = fallback_stock {
                                     if f_stock < quantity {
-                                        let _ = tx.rollback().await.map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
+                                        let _ = tx.rollback().await;
                                         let _: () = redis::cmd("DEL").arg(&lock_key).query_async(&mut conn).await.unwrap_or(());
                                         return Err(StatusCode::CONFLICT);
                                     } else {
-                                        sqlx::query("UPDATE products SET locked_quantity = $1, available_quantity = inventory_count - $1 WHERE id = $2 AND tenant_id = $3")
+                                        let _ = sqlx::query("UPDATE products SET locked_quantity = $1, available_quantity = inventory_count - $1 WHERE id = $2 AND tenant_id = $3")
                                             .bind(quantity)
                                             .bind(product_id)
                                             .bind(&tenant_id)
                                             .execute(&mut *tx)
-                                            .await.map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
+                                            .await;
                                     }
                                 } else {
-                                    let _ = tx.rollback().await.map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
+                                    let _ = tx.rollback().await;
                                     let _: () = redis::cmd("DEL").arg(&lock_key).query_async(&mut conn).await.unwrap_or(());
                                     return Err(StatusCode::NOT_FOUND);
                                 }
                             }
                         }
-                        let _ = tx.commit().await.map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
+                        let _ = tx.commit().await;
                     }
                 }
             } else {
@@ -202,7 +202,7 @@ pub async fn create_checkout_session_handler(
 
                         if let Some(stock) = current_stock {
                             if stock < quantity {
-                                let _ = tx.rollback().await.map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
+                                let _ = tx.rollback().await;
                                 return Err(StatusCode::CONFLICT);
                             }
                         } else {
@@ -215,23 +215,23 @@ pub async fn create_checkout_session_handler(
 
                             if let Some(f_stock) = fallback_stock {
                                 if f_stock < quantity {
-                                    let _ = tx.rollback().await.map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
+                                    let _ = tx.rollback().await;
                                     return Err(StatusCode::CONFLICT);
                                 } else {
-                                    sqlx::query("UPDATE products SET locked_quantity = $1, available_quantity = inventory_count - $1 WHERE id = $2 AND tenant_id = $3")
+                                    let _ = sqlx::query("UPDATE products SET locked_quantity = $1, available_quantity = inventory_count - $1 WHERE id = $2 AND tenant_id = $3")
                                         .bind(quantity)
                                         .bind(product_id)
                                         .bind(&tenant_id)
                                         .execute(&mut *tx)
-                                        .await.map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
+                                        .await;
                                 }
                             } else {
-                                let _ = tx.rollback().await.map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
+                                let _ = tx.rollback().await;
                                 return Err(StatusCode::NOT_FOUND);
                             }
                         }
                     }
-                    let _ = tx.commit().await.map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
+                    let _ = tx.commit().await;
                 }
             }
         }
@@ -342,7 +342,7 @@ pub async fn my_plan_handler(
         storage_limit_bytes: storage_limit,
         next_bill_estimated,
     };
-    cache.set(&tenant_id, resp.clone(), std::time::Duration::from_secs(60)).await.map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
+    cache.set(&tenant_id, resp.clone(), std::time::Duration::from_secs(60)).await;
     Json(resp)
 }
 
@@ -483,7 +483,7 @@ pub async fn cost_dashboard_handler(
         email_cost: email_cost_cents,
         api_cost: api_cost_cents,
     };
-    cache.set(&tenant_id, resp.clone(), std::time::Duration::from_secs(60)).await.map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
+    cache.set(&tenant_id, resp.clone(), std::time::Duration::from_secs(60)).await;
     Json(resp)
 }
 
@@ -539,7 +539,7 @@ pub async fn department_tier_usage_for_tenant(hub: &Arc<Hub>, tenant_id: &str) -
     let resp = build_department_tier_usage_response(current_plan, tier, period, departments, |agent_id| {
         usage_by_key.get(agent_id).copied().unwrap_or(0)
     });
-    cache.set(tenant_id, resp.clone(), std::time::Duration::from_secs(60)).await.map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
+    cache.set(tenant_id, resp.clone(), std::time::Duration::from_secs(60)).await;
     resp
 }
 
@@ -651,7 +651,7 @@ mod department_tier_usage_tests {
         let pool = sqlx::postgres::PgPoolOptions::new()
             .acquire_timeout(std::time::Duration::from_millis(500))
             .connect(&database_url)
-            .await.map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
+            .await;
 
         let pool = match pool {
             Ok(p) => p,
@@ -689,7 +689,7 @@ mod department_tier_usage_tests {
         tx.commit().await.unwrap();
 
         let start = std::time::Instant::now();
-        let response = department_tier_usage_for_tenant(&hub, &tenant_id).await.map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
+        let response = department_tier_usage_for_tenant(&hub, &tenant_id).await;
         let elapsed = start.elapsed();
 
         // Assert concurrency latency (should be very fast since no actual usage)
@@ -714,10 +714,10 @@ mod department_tier_usage_tests {
         let mock_resp = empty_department_tier_usage_response();
 
         // Set it in the cache
-        cache.set(&tenant_id, mock_resp.clone(), std::time::Duration::from_secs(60)).await.map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
+        cache.set(&tenant_id, mock_resp.clone(), std::time::Duration::from_secs(60)).await;
 
         // Verify it was cached
-        let cached = cache.get(&tenant_id).await.map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
+        let cached = cache.get(&tenant_id).await;
         assert!(cached.is_some());
         assert_eq!(cached.unwrap().current_plan, mock_resp.current_plan);
     }

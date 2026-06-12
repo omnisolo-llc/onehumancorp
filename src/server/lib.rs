@@ -5248,7 +5248,6 @@ async fn create_ui_bom_item_handler(
         .nest("/api/agents/webhook", api::agents::webhook::router(dept_orchestrator.clone()))
         .route("/api/v1/feed/ws", axum::routing::get(api::agent_feed::ws_feed_handler))
         .nest("/api/agent-feed", api::agent_feed::router().with_state(db.pool.clone()))
-        .merge(api::triage_api::router())
         .nest("/api/v1/incidents", api::incidents::router().with_state(db.pool.clone()))
         .nest("/api/v1/invoices", api::invoice::router(hub.clone()))
         .nest("/api/v1/booking/request", api::booking::request::router(dept_orchestrator.clone()))

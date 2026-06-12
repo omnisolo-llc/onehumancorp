@@ -35,4 +35,3 @@ pub mod invoice;
 pub mod audio_command;
 pub mod incidents;
 pub mod cart;
-pub mod triage_api;
