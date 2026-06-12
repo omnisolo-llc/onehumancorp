@@ -61,7 +61,10 @@ export function VoiceAssistantFAB() {
       }
 
       const result = await response.json();
+<<<<<<< HEAD
+=======
       console.log('Voice command result:', result);
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
 
       // In a real implementation, this would trigger a refetch of the Agent Feed
       // For now, we can dispatch a custom event to notify UnifiedAgentFeed

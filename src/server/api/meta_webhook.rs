@@ -10,9 +10,12 @@ use sha2::Sha256;
 use std::sync::Arc;
 use crate::hub::Hub;
 use uuid::Uuid;
+<<<<<<< HEAD
+=======
 use crate::api::agents::translation::{translate_inbox_message_with_llm, generate_inbox_draft_reply, InboxTranslation};
 use crate::orchestration::departments::types::DepartmentType;
 use crate::orchestration::departments::types::ActionRisk;
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
 
 #[derive(Clone)]
 pub struct MetaWebhookState {
@@ -145,6 +148,8 @@ pub async fn meta_webhook_post_handler(
 }
 
 async fn process_omnichannel_message(state: &MetaWebhookState, tenant_id: String, source: String, sender_id: String, text: String) {
+<<<<<<< HEAD
+=======
     let target_language = "English";
 
     let translation = match translate_inbox_message_with_llm(&tenant_id, &source, &text, target_language).await {
@@ -168,36 +173,55 @@ async fn process_omnichannel_message(state: &MetaWebhookState, tenant_id: String
         }
     };
 
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
     let inbox_id = Uuid::new_v4().to_string();
     let pool = &state.db.pool;
 
     let insert_result = match &state.db.store {
         crate::db::DbStore::Postgres => {
             sqlx::query(
+<<<<<<< HEAD
+                "INSERT INTO inbox_messages (id, tenant_id, source, original_content, content, status, sender_id, created_at) VALUES ($1, $2, $3, $4, $5, 'unread', $6, NOW())"
+=======
                 "INSERT INTO inbox_messages (id, tenant_id, source, original_content, content, translated_from_language, draft_reply, status, sender_id, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, 'unread', $8, NOW())"
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
             )
             .bind(&inbox_id)
             .bind(&tenant_id)
             .bind(&source)
+<<<<<<< HEAD
+            .bind(&text)
+            .bind(&text)
+=======
             .bind(&translation.original_content)
             .bind(&translation.translated_content)
             .bind(&translation.source_language)
             .bind(&draft_reply)
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
             .bind(&sender_id)
             .execute(pool)
             .await.map(|_| ())
         },
         crate::db::DbStore::Sqlite(sqlite_pool) => {
             sqlx::query(
+<<<<<<< HEAD
+                "INSERT INTO inbox_messages (id, tenant_id, source, original_content, content, status, sender_id, created_at) VALUES (?, ?, ?, ?, ?, 'unread', ?, CURRENT_TIMESTAMP)"
+=======
                 "INSERT INTO inbox_messages (id, tenant_id, source, original_content, content, translated_from_language, draft_reply, status, sender_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, 'unread', ?, CURRENT_TIMESTAMP)"
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
             )
             .bind(&inbox_id)
             .bind(&tenant_id)
             .bind(&source)
+<<<<<<< HEAD
+            .bind(&text)
+            .bind(&text)
+=======
             .bind(&translation.original_content)
             .bind(&translation.translated_content)
             .bind(&translation.source_language)
             .bind(&draft_reply)
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
             .bind(&sender_id)
             .execute(sqlite_pool)
             .await.map(|_| ())
@@ -208,6 +232,41 @@ async fn process_omnichannel_message(state: &MetaWebhookState, tenant_id: String
         tracing::error!("Failed to insert inbox_messages: {}", e);
     }
 
+<<<<<<< HEAD
+    let job_id = Uuid::new_v4().to_string();
+    let payload = serde_json::json!({
+        "message_id": inbox_id,
+        "source": source,
+        "content": text,
+        "sender_id": sender_id
+    });
+    // In future iterations, customer_id can be looked up and included in payload
+
+    let enqueue_result = match &state.db.store {
+        crate::db::DbStore::Postgres => {
+            sqlx::query("INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload, status) VALUES ($1, $2, 'message_triage', $3, 'PENDING')")
+                .bind(&job_id)
+                .bind(&tenant_id)
+                .bind(payload.to_string())
+                .execute(pool)
+                .await
+                .map(|_| ())
+        },
+        crate::db::DbStore::Sqlite(sqlite_pool) => {
+            sqlx::query("INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload, status) VALUES (?, ?, 'message_triage', ?, 'PENDING')")
+                .bind(&job_id)
+                .bind(&tenant_id)
+                .bind(payload.to_string())
+                .execute(sqlite_pool)
+                .await
+                .map(|_| ())
+        }
+    };
+
+    if let Err(e) = enqueue_result {
+        tracing::error!("Failed to enqueue message_triage job: {}", e);
+    }
+=======
     let _ = state.orchestrator.execute_action(
         DepartmentType::CustomerSuccess,
         format!("New {} message from {} (Language: {:?})", source, tenant_id, translation.source_language),
@@ -223,11 +282,15 @@ async fn process_omnichannel_message(state: &MetaWebhookState, tenant_id: String
             "sender_id": sender_id.clone(),
         }),
     ).await;
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
 
     let event = crate::orchestration::departments::types::DepartmentEvent {
         id: Uuid::new_v4().to_string(),
         tenant_id: tenant_id.clone(),
         event_type: "tenant.omnichannel.message.received".to_string(),
+<<<<<<< HEAD
+        payload: payload.clone(),
+=======
         payload: serde_json::json!({
             "source": source,
             "message": translation.translated_content,
@@ -238,6 +301,7 @@ async fn process_omnichannel_message(state: &MetaWebhookState, tenant_id: String
             "sender_id": sender_id,
             "inbox_message_id": inbox_id,
         }),
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
     };
 
     let orchestrator_clone = state.orchestrator.clone();

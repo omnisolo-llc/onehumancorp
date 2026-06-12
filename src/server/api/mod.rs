@@ -1,6 +1,10 @@
 pub mod oauth;
 pub mod offline_sync;
 pub mod mesh_handler;
+<<<<<<< HEAD
+pub mod omnichannel_webhook;
+=======
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
 pub mod autodream;
 pub mod terminal_api;
 pub mod pos;
@@ -32,3 +36,7 @@ pub mod recovery;
 pub mod agent_feed;
 pub mod invoice;
 pub mod audio_command;
+<<<<<<< HEAD
+pub mod incidents;
+=======
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))

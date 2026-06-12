@@ -25,7 +25,11 @@ export default function HelpCenterPage() {
       .catch(console.error);
   }, []);
 
+<<<<<<< HEAD
+  const filteredArticles = articles.filter(a => a.category !== "Advanced");
+=======
   const filteredArticles = articles;
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
 
   const filteredVideos = videos.filter(video =>
     video.title.toLowerCase().includes(searchQuery.toLowerCase())

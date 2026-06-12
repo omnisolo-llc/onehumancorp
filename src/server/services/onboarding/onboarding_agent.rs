@@ -461,7 +461,11 @@ impl OnboardingAgent {
         };
 
         let id = format!("prod-{}", uuid::Uuid::new_v4());
+<<<<<<< HEAD
+        sqlx::query("INSERT INTO products (id, tenant_id, title, description, price_cents, type, metadata) VALUES ($1, $2, $3, $4, $5, $6, $7)")
+=======
         sqlx::query("INSERT INTO products (id, organization_id, name, description, price_cents, fulfillment_strategy, metadata) VALUES ($1, $2, $3, $4, $5, $6, $7)")
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
             .bind(&id)
             .bind(org_id)
             .bind(name)
@@ -2530,7 +2534,11 @@ impl OnboardingAgent {
 
             let hub = self.hub.clone();
             futures.push(tokio::spawn(async move {
+<<<<<<< HEAD
+                sqlx::query("INSERT INTO products (id, tenant_id, title, description, price_cents, type, metadata) VALUES ($1, $2, $3, $4, $5, $6, $7)")
+=======
                 sqlx::query("INSERT INTO products (id, organization_id, name, description, price_cents, fulfillment_strategy, metadata) VALUES ($1, $2, $3, $4, $5, $6, $7)")
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
                     .bind(&id)
                     .bind(&org_id)
                     .bind(&name)
@@ -2821,7 +2829,11 @@ mod tests {
         use sqlx::Row;
 
         // Verify products are added
+<<<<<<< HEAD
+        let products = sqlx::query("SELECT id, title as name FROM products WHERE tenant_id = $1")
+=======
         let products = sqlx::query("SELECT id, name FROM products WHERE organization_id = $1")
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
             .bind(&org_id)
             .fetch_all(&agent.db.pool)
             .await
@@ -3047,7 +3059,11 @@ mod tests {
 
         // Test Bakery
         agent.generate_initial_products(org_id, "Home Baker").await.unwrap();
+<<<<<<< HEAD
+        let products = sqlx::query("SELECT title as name FROM products WHERE tenant_id = $1")
+=======
         let products = sqlx::query("SELECT name FROM products WHERE organization_id = $1")
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
             .bind(org_id)
             .fetch_all(&db.pool).await.unwrap();
         assert!(products.iter().any(|p| p.get::<String, _>("name") == "Custom Celebration Cake"));
@@ -3055,7 +3071,11 @@ mod tests {
         // Test Handyman
         let org_id2 = "test-org-handyman";
         agent.generate_initial_products(org_id2, "Handyman").await.unwrap();
+<<<<<<< HEAD
+        let products2 = sqlx::query("SELECT title as name FROM products WHERE tenant_id = $1")
+=======
         let products2 = sqlx::query("SELECT name FROM products WHERE organization_id = $1")
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
             .bind(org_id2)
             .fetch_all(&db.pool).await.unwrap();
         assert!(products2.iter().any(|p| p.get::<String, _>("name") == "Standard Repair Visit"));

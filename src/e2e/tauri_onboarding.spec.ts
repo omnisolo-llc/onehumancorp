@@ -256,6 +256,20 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
     if (optionBox) {
         expect(optionBox.height).toBeGreaterThanOrEqual(44);
     }
+<<<<<<< HEAD
+
+    // Evaluate other interactive elements
+    const buttonBox = await page.locator('.next-step-btn').first().boundingBox();
+    if (buttonBox) {
+        expect(buttonBox.height).toBeGreaterThanOrEqual(44);
+    }
+
+    const chipBox = await page.locator('.persona-chip').first().boundingBox();
+    if (chipBox) {
+        expect(chipBox.height).toBeGreaterThanOrEqual(44);
+    }
+=======
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
   });
 
 });

@@ -37,7 +37,11 @@
       },
       "options": {
         "mode": "html",
+<<<<<<< HEAD
+        "content": "<link rel=\"stylesheet\" href=\"/public/css/custom.css\">"
+=======
         "content": "<link rel=\"stylesheet\" href=\"/public/css/custom.css\">\n"
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
       },
       "transparent": true
     },
@@ -135,7 +139,11 @@
       },
       "id": 3,
       "options": {
+<<<<<<< HEAD
+        "content": "<link rel=\"stylesheet\" href=\"/public/css/custom.css\">\nOHC Premium Infrastructure Dashboard",
+=======
         "content": "<div style=\"backdrop-filter: blur(30px) saturate(210%); font-family: Outfit, Inter; padding: 10px; border-radius: 8px; color: #fff; background: rgba(22, 22, 26, 0.7); border: 1px solid rgba(255, 255, 255, 0.1);\">OHC Premium Infrastructure Dashboard</div>",
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
         "mode": "html"
       }
     }

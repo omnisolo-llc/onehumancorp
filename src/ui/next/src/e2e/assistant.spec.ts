@@ -1,5 +1,9 @@
 import { test, expect } from '@playwright/test';
+<<<<<<< HEAD
+
+=======
 import { adminPage } from './fixtures';
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
 
 test.describe('Assistant Page', () => {
   test('navigates to assistant and verifies authentic state', async ({ page }) => {

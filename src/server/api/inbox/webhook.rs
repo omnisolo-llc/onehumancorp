@@ -97,10 +97,49 @@ pub async fn handle_omnichannel_webhook(
         return (StatusCode::INTERNAL_SERVER_ERROR, Json(WebhookResponse { success: false, message_id: None })).into_response();
     }
 
+<<<<<<< HEAD
+    let job_id = Uuid::new_v4().to_string();
+    let payload_json = serde_json::json!({
+        "message_id": id,
+        "source": payload.source,
+        "content": payload.message,
+        "sender_id": payload.sender_id
+    });
+
+    let enqueue_result = match &state.db.store {
+        crate::db::DbStore::Postgres => {
+            sqlx::query("INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload, status) VALUES ($1, $2, 'message_triage', $3, 'PENDING')")
+                .bind(&job_id)
+                .bind(&payload.tenant_id)
+                .bind(payload_json.to_string())
+                .execute(&state.db.pool)
+                .await
+                .map(|_| ())
+        },
+        crate::db::DbStore::Sqlite(sqlite_pool) => {
+            sqlx::query("INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload, status) VALUES (?, ?, 'message_triage', ?, 'PENDING')")
+                .bind(&job_id)
+                .bind(&payload.tenant_id)
+                .bind(payload_json.to_string())
+                .execute(sqlite_pool)
+                .await
+                .map(|_| ())
+        }
+    };
+
+    if let Err(e) = enqueue_result {
+        tracing::error!("Failed to enqueue message_triage job: {}", e);
+    }
+
+=======
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
     let event = DepartmentEvent {
         id: Uuid::new_v4().to_string(),
         tenant_id: payload.tenant_id.clone(),
         event_type: "tenant.omnichannel.message.received".to_string(),
+<<<<<<< HEAD
+        payload: payload_json.clone(),
+=======
         payload: serde_json::json!({
             "source": payload.source,
             "original_message": payload.message,
@@ -109,6 +148,7 @@ pub async fn handle_omnichannel_webhook(
             "sender_id": payload.sender_id,
             "customer_id": customer_id,
         }),
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
     };
 
     match state.orchestrator.dispatch_event(event).await {

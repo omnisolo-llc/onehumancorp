@@ -57,23 +57,39 @@ test.describe('Onboarding Wizard CUJ', () => {
     // 2. Owner enters business name
     const nameInput = page.getByPlaceholder(/e.g. Maya's Custom Cakes/i);
     await nameInput.fill('Maya Bakery');
+<<<<<<< HEAD
+    await page.getByRole('button', { name: 'Next', exact: true }).click();
+=======
     await page.getByRole('button', { name: /Next/i }).click();
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
 
     // 3. Owner enters what they sell
     const sellInput = page.getByPlaceholder(/I bake custom vegan cakes/i);
     await sellInput.fill('Cakes');
+<<<<<<< HEAD
+    await page.getByRole('button', { name: 'Next', exact: true }).click();
+=======
     await page.getByRole('button', { name: /Next/i }).click();
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
 
     // 4. Owner enters location
     const locInput = page.getByPlaceholder(/Portland, OR/i);
     await locInput.fill('NY');
 
+<<<<<<< HEAD
+    const generateBtn = page.getByRole('button', { name: 'Next', exact: true });
+=======
     const generateBtn = page.getByRole('button', { name: /Next/i });
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
     await generateBtn.click();
 
     const audienceInput = page.getByPlaceholder(/e.g. Local families, Tech startups/i);
     await audienceInput.fill('Tech enthusiasts and developers');
+<<<<<<< HEAD
+    await page.getByRole('button', { name: 'Next', exact: true }).click();
+=======
     await page.getByRole('button', { name: /Next/i }).click();
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
 
     // Depending on backend speed we may need to wait for the analysis overlay to disappear
     // 5. Verify it transitions to Step 2: Review Details
@@ -102,7 +118,11 @@ test.describe('Onboarding Wizard CUJ', () => {
     // Owner enters short business name
     const nameInput = page.getByPlaceholder(/e.g. Maya's Custom Cakes/i);
     await nameInput.fill('M');
+<<<<<<< HEAD
+    await page.getByRole('button', { name: 'Next', exact: true }).click();
+=======
     await page.getByRole('button', { name: /Next/i }).click();
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
 
     // Expect validation failure message immediately
     await expect(page.getByText('Business Name must be at least 3 characters.')).toBeVisible();
@@ -114,6 +134,16 @@ test.describe('Onboarding Wizard CUJ', () => {
 
     const nameInput = page.getByPlaceholder(/e.g. Maya's Custom Cakes/i);
     await nameInput.fill('Maya Bakery');
+<<<<<<< HEAD
+    await page.getByRole('button', { name: 'Next', exact: true }).click();
+
+    const sellInput = page.getByPlaceholder(/I bake custom vegan cakes/i);
+    await sellInput.fill('Cakes');
+    await page.getByRole('button', { name: 'Next', exact: true }).click();
+
+    // Keep location empty
+    const generateBtn = page.getByRole('button', { name: 'Next', exact: true });
+=======
     await page.getByRole('button', { name: /Next/i }).click();
 
     const sellInput = page.getByPlaceholder(/I bake custom vegan cakes/i);
@@ -122,6 +152,7 @@ test.describe('Onboarding Wizard CUJ', () => {
 
     // Keep location empty
     const generateBtn = page.getByRole('button', { name: /Next/i });
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
     await expect(generateBtn).toBeDisabled();
   });
 
@@ -131,7 +162,11 @@ test.describe('Onboarding Wizard CUJ', () => {
 
     const nameInput = page.getByPlaceholder(/e.g. Maya's Custom Cakes/i);
     await nameInput.fill('Maya Bakery');
+<<<<<<< HEAD
+    await page.getByRole('button', { name: 'Next', exact: true }).click();
+=======
     await page.getByRole('button', { name: /Next/i }).click();
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
     await expect(page.getByText('What do you sell?')).toBeVisible();
 
     const backBtn = page.getByRole('button', { name: /Back/i });
@@ -144,6 +179,16 @@ test.describe('Onboarding Wizard CUJ', () => {
     await startOnboarding(page);
 
     await page.getByPlaceholder(/e.g. Maya's Custom Cakes/i).fill('Maya Bakery');
+<<<<<<< HEAD
+    await page.getByRole('button', { name: 'Next', exact: true }).click();
+    await page.getByPlaceholder(/I bake custom vegan cakes/i).fill('Cakes');
+    await page.getByRole('button', { name: 'Next', exact: true }).click();
+    await page.getByPlaceholder(/Portland, OR/i).fill('NY');
+    await page.getByRole('button', { name: 'Next', exact: true }).click();
+    const audienceInput = page.getByPlaceholder(/e.g. Local families, Tech startups/i);
+    await audienceInput.fill('Tech enthusiasts and developers');
+    await page.getByRole('button', { name: 'Next', exact: true }).click();
+=======
     await page.getByRole('button', { name: /Next/i }).click();
     await page.getByPlaceholder(/I bake custom vegan cakes/i).fill('Cakes');
     await page.getByRole('button', { name: /Next/i }).click();
@@ -152,6 +197,7 @@ test.describe('Onboarding Wizard CUJ', () => {
     const audienceInput = page.getByPlaceholder(/e.g. Local families, Tech startups/i);
     await audienceInput.fill('Tech enthusiasts and developers');
     await page.getByRole('button', { name: /Next/i }).click();
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
 
     await expect(page.getByText('Review Details')).toBeVisible({ timeout: 15000 });
     await page.getByRole('button', { name: /Continue/i }).click();

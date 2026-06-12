@@ -198,9 +198,19 @@ where
         &self,
         payload: &Value,
     ) -> Result<RecoveryDeliveryReceipt, CartRecoveryError> {
+<<<<<<< HEAD
+        let payload_obj: CartRecoveryJobPayload = serde_json::from_value(payload.clone())
+            .map_err(|err| CartRecoveryError::Dispatch(format!("invalid cart recovery payload: {err}")))?;
+
+        let receipt = self.process_job(payload_obj).await?;
+
+        // Also queue up a 'Salesperson' agent feed item if not mocked for test
+        Ok(receipt)
+=======
         let payload: CartRecoveryJobPayload = serde_json::from_value(payload.clone())
             .map_err(|err| CartRecoveryError::Dispatch(format!("invalid cart recovery payload: {err}")))?;
         self.process_job(payload).await
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
     }
 
     pub async fn process_payload_str(
@@ -719,13 +729,21 @@ where
             SELECT id
             FROM ohc_job_queue
             WHERE status = 'PENDING'
+<<<<<<< HEAD
+              AND (job_type = $1 OR job_type = 'cart_recovery_agent')
+=======
               AND job_type = $1
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
               AND next_retry_at <= CURRENT_TIMESTAMP
             ORDER BY next_retry_at ASC, created_at ASC
             LIMIT 1
             FOR UPDATE SKIP LOCKED
         )
+<<<<<<< HEAD
+        RETURNING id, payload, job_type, tenant_id
+=======
         RETURNING id, payload
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
         "#,
     )
     .bind(CART_RECOVERY_JOB_TYPE)
@@ -742,10 +760,58 @@ where
 
     let job_id: String = row.try_get("id").map_err(row_error)?;
     let payload: Value = row.try_get("payload").map_err(row_error)?;
+<<<<<<< HEAD
+    let job_type: String = row.try_get("job_type").map_err(row_error)?;
+    let tenant_id: String = row.try_get("tenant_id").map_err(row_error)?;
+
+=======
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
     tx.commit()
         .await
         .map_err(|err| CartRecoveryError::Store(err.to_string()))?;
 
+<<<<<<< HEAD
+    if job_type == "cart_recovery_agent" {
+        let customer_name = payload.get("customer_name").and_then(|v| v.as_str()).unwrap_or("Customer").to_string();
+        let cart_value = payload.get("cart_value").and_then(|v| v.as_str()).unwrap_or("$0.00").to_string();
+        let id = uuid::Uuid::new_v4().to_string();
+        let proposed_action = serde_json::json!({
+            "description": format!("The Assistant recovered 1 abandoned cart this week, securing {} in revenue. The Salesperson drafted a recovery message for {}.", cart_value, customer_name)
+        });
+
+        let mut completion_tx = pool
+            .begin()
+            .await
+            .map_err(|err| CartRecoveryError::Store(err.to_string()))?;
+        ::server_common::auth_utils::set_system_context(&mut *completion_tx)
+            .await
+            .map_err(|err| CartRecoveryError::Store(err.to_string()))?;
+
+        let _ = sqlx::query(
+            "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at)
+             VALUES ($1, $2, 'sales', $3::jsonb, $4::jsonb, 'PENDING_APPROVAL', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+        )
+        .bind(&id)
+        .bind(&tenant_id)
+        .bind(&payload)
+        .bind(&proposed_action)
+        .execute(&mut *completion_tx)
+        .await;
+
+        sqlx::query("UPDATE ohc_job_queue SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = $1")
+            .bind(&job_id)
+            .execute(&mut *completion_tx)
+            .await
+            .map_err(|err| CartRecoveryError::Store(err.to_string()))?;
+        completion_tx
+            .commit()
+            .await
+            .map_err(|err| CartRecoveryError::Store(err.to_string()))?;
+        return Ok(true);
+    }
+
+=======
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
     let result = processor.process_payload(&payload).await;
     let mut completion_tx = pool
         .begin()

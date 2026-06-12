@@ -29,7 +29,11 @@ export const MasterMenu: React.FC = () => {
       if (options[selectedIndex] === "Exit") {
         process.exit(0);
       } else {
+<<<<<<< HEAD
+        // intentionally silence execution logs
+=======
         console.info(`Executing ${options[selectedIndex]}...`);
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
       }
     }
   });

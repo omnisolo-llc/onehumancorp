@@ -321,7 +321,11 @@ impl HybridSyncDaemon {
                 continue;
             }
 
+<<<<<<< HEAD
+            let res = sqlx::query("INSERT INTO sub_agent_queue (id, tenant_id, parent_task_id, payload, status, scheduled_at, created_at, updated_at) VALUES ($1, $4, NULL, $2::jsonb, 'QUEUED', $3, $3, $3) ON CONFLICT (id) DO NOTHING")
+=======
             let res = sqlx::query("INSERT INTO sub_agent_queue (id, tenant_id, parent_task_id, payload, status, scheduled_at, created_at, updated_at) VALUES ($1, $4, NULL, $2::jsonb, 'QUEUED', $3, $3, $3)")
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
                 .bind(&queue_id)
                 .bind(payload.to_string())
                 .bind(now)

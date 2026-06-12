@@ -1,5 +1,8 @@
+<<<<<<< HEAD
+=======
 use std::sync::Arc;
 
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
 use uuid::Uuid;
 
 pub struct InventoryService {
@@ -308,6 +311,13 @@ impl InventoryService {
                     .execute(&mut *tx)
                     .await;
 
+<<<<<<< HEAD
+                // Directly notify Operations Agent for real-time monitoring as per Step 3
+                tracing::info!("Real-time stock level monitored: {} drops below threshold. Triggered LowStockAlert for Operations Agent.", product_id);
+
+
+=======
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
                 let action_request_id = Uuid::new_v4().to_string();
                 let action_payload = serde_json::json!({
                     "product_id": product_id,
@@ -358,6 +368,10 @@ impl InventoryService {
 mod tests {
     use super::*;
     use crate::db::DbStore;
+<<<<<<< HEAD
+    use std::sync::Arc;
+=======
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
 
     #[tokio::test]
     async fn test_reserve_inventory_concurrent_redlock() {

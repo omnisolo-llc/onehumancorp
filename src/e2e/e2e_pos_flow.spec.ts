@@ -44,12 +44,33 @@ test.describe('In-Person Payment (POS) Flow', () => {
       });
     });
 
+<<<<<<< HEAD
+    // Test Centralized Inventory & Distributed POS Architecture
+    // Trigger offline conflict generation
+    await page.evaluate(() => {
+        localStorage.setItem('ohc_offline_pos_tx', JSON.stringify([{
+            id: 'tx_conflict',
+            client_id: 'device_1',
+            amount_cents: 5000,
+            currency: 'USD',
+            product_id: 'prod-conflict',
+            quantity_deducted: 10 // Force a shortage to test pending_reconciliation
+        }]));
+    });
+
+
+=======
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
     // Set network to offline
     await context.setOffline(true);
     await page.evaluate(() => window.dispatchEvent(new Event('offline')));
 
     // Trigger New Order
+<<<<<<< HEAD
+    await page.locator('text=Quick Charge').click();
+=======
     await page.locator('text=New Order').click();
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
     await expect(page.locator('text=Payment Saved Offline - 50 USD')).toBeVisible();
 
     // Perform an offline clock in
@@ -57,8 +78,11 @@ test.describe('In-Person Payment (POS) Flow', () => {
     await expect(page.locator('h2', { hasText: 'Clocked In' })).toBeVisible();
 
     // Test terminal offline payment queuing
+<<<<<<< HEAD
+=======
     await page.getByRole('button', { name: 'Discover Readers' }).click();
     await page.waitForTimeout(500);
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
     // As mock does not work fully offline, we only rely on the "New Order" test for POS Tx
 
     // Restore network

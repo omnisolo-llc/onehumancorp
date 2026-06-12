@@ -9,12 +9,20 @@ async fn test_glob_success() {
 
     let args = json!({
         "pattern": "**/*.rs",
+<<<<<<< HEAD
+        "path": "."
+=======
         "path": "src/agents/builtin/tools"
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
     });
 
     let result = tool.execute.execute(args).await.expect("Execution should succeed");
 
+<<<<<<< HEAD
+    assert!(result.contains("src/agents/builtin/tools/glob.rs") || result.contains("glob.rs"));
+=======
     assert!(result.contains("src/agents/builtin/tools/glob.rs"));
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
 }
 
 #[tokio::test]

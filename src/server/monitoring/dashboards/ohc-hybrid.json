@@ -20,7 +20,11 @@
       },
       "options": {
         "mode": "html",
+<<<<<<< HEAD
+        "content": "<link rel=\"stylesheet\" href=\"/public/css/custom.css\">"
+=======
         "content": "<link rel=\"stylesheet\" href=\"/public/css/custom.css\">\n"
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
       },
       "transparent": true
     },
@@ -33,7 +37,11 @@
       },
       "id": 100,
       "options": {
+<<<<<<< HEAD
+        "content": "<link rel=\"stylesheet\" href=\"/public/css/custom.css\">\nOHC Premium Telemetry",
+=======
         "content": "<link rel=\"stylesheet\" href=\"/public/css/custom.css\">\n<div class=\"panel-container\" style=\"font-size: 24px; font-weight: bold; text-align: center; color: white; padding: 10px;\">\n  OHC Premium Telemetry\n</div>",
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
         "mode": "html"
       },
       "title": "Aesthetic Mandate Injector",

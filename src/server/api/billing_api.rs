@@ -503,7 +503,11 @@ async fn load_department_records(pool: &sqlx::PgPool, tenant_id: &str) -> Result
         .await?;
 
     let rows = sqlx::query(
+<<<<<<< HEAD
+        "SELECT id, department_type FROM agent_departments WHERE tenant_id = $1 AND id IS NOT NULL AND id != '' AND department_type IS NOT NULL AND department_type != '' ORDER BY department_type",
+=======
         "SELECT id, department_type FROM agent_departments WHERE tenant_id = $1 ORDER BY department_type",
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
     )
     .bind(tenant_id)
     .fetch_all(&mut *tx)
@@ -513,10 +517,16 @@ async fn load_department_records(pool: &sqlx::PgPool, tenant_id: &str) -> Result
     Ok(rows
         .into_iter()
         .map(|row| DepartmentRecord {
+<<<<<<< HEAD
+            id: row.get("id"),
+            department_type: row.get("department_type"),
+        })
+=======
             id: row.try_get("id").unwrap_or_default(),
             department_type: row.try_get("department_type").unwrap_or_default(),
         })
         .filter(|row| !row.id.is_empty() && !row.department_type.is_empty())
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
         .collect())
 }
 

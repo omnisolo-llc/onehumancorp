@@ -81,6 +81,9 @@ test.describe('Onboarding Wizard E2E Flow', () => {
 
     // Step 5: Style & Team
     const styleHeading = page.getByRole('heading', { name: "Style & Team" });
+<<<<<<< HEAD
+    await expect(styleHeading).toBeVisible({ timeout: 30000 });
+=======
     try {
         await expect(styleHeading).toBeVisible({ timeout: 10000 });
     } catch {
@@ -89,6 +92,7 @@ test.describe('Onboarding Wizard E2E Flow', () => {
             return; // Exit test gracefully if backend is down in CI
         }
     }
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
 
     const nameInputAdmin = page.getByPlaceholder("e.g. Maya Smith");
     await expect(nameInputAdmin).toBeVisible();
@@ -192,8 +196,13 @@ test.describe('Onboarding Wizard E2E Flow', () => {
 });
 
 test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
+<<<<<<< HEAD
+  // Test 1: Verifies Instant Build successful generation flow
+  test('Instant Build successfully creates a fully populated storefront from a valid paragraph', async ({ page }) => {
+=======
   // Test 6: Verifies Instant Build successful generation flow
   test('Instant Build navigates to step 10 and generates successfully', async ({ page }) => {
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
     await page.goto('/onboarding');
     const setupScreen = page.locator('#setup-screen');
     await expect(setupScreen).toBeVisible({ timeout: 30000 });
@@ -202,13 +211,32 @@ test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
     await expect(instantBuildButton).toBeVisible();
     await instantBuildButton.click();
 
+<<<<<<< HEAD
+=======
     // Verify it navigates to step 10 (Tell us about your business)
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
     await expect(page.getByRole('heading', { name: "Tell us about your business" })).toBeVisible();
 
     const bioInput = page.getByPlaceholder("e.g. I run a local bakery that sells custom vegan cakes...");
     await expect(bioInput).toBeVisible();
     await expect(bioInput).toHaveClass(/glassmorphism/);
 
+<<<<<<< HEAD
+    await bioInput.fill("I run a high-end tech consultation firm specializing in AI in San Francisco.");
+
+    const generateButton = page.getByRole('button', { name: 'Generate Storefront' });
+    await expect(generateButton).toBeVisible();
+    await generateButton.click();
+
+    await expect(page.locator('#setup-screen')).toBeVisible();
+    const successHeading = page.getByRole('heading', { name: "You're Live!" });
+
+    await expect(successHeading).toBeVisible({ timeout: 30000 });
+  });
+
+  // Test 2: Verifies Instant Build handles network error gracefully
+  test('Instant Build gracefully displays an error state on a network failure with proper styling', async ({ page }) => {
+=======
     await bioInput.fill("I run a high-end tech consultation firm specializing in AI.");
 
     const generateButton = page.getByRole('button', { name: 'Generate Storefront' });
@@ -230,6 +258,7 @@ test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
 
   // Test 7: Verifies Instant Build handles network error gracefully
   test('Instant Build displays error state gracefully on network failure', async ({ page }) => {
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
     await page.goto('/onboarding');
     const setupScreen = page.locator('#setup-screen');
     await expect(setupScreen).toBeVisible({ timeout: 30000 });
@@ -243,6 +272,8 @@ test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
     const bioInput = page.getByPlaceholder("e.g. I run a local bakery that sells custom vegan cakes...");
     await bioInput.fill("Will fail network request");
 
+<<<<<<< HEAD
+=======
     // Intentionally omit filling out the form completely and bypass network mocked
     // Wait, without mock, we can cause an error by passing bad data. But to force a true network error,
     // the system prompts say "no mocking". We can intercept ONLY to abort for a failure simulation
@@ -250,6 +281,7 @@ test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
     // "For nondeterministic external vendors only, use official test-mode credentials or repository-provided local adapters; do not mock internal frontend, API, service, or database calls."
     // So I should NOT use page.route for ANY internal API.
     // Let's remove the mock and just see how the real API handles bad input, or we can use Playwright offline mode.
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
     await page.context().setOffline(true);
 
     const generateButton = page.getByRole('button', { name: 'Generate Storefront' });
@@ -262,9 +294,71 @@ test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
     await expect(errorBlock).toHaveClass(/border-\[#FF3B30\]\/30/);
 
     // Verify textarea has the red border
+<<<<<<< HEAD
+    await expect(bioInput).toHaveClass(/border-\[#FF3B30\]/);
+
+    // Typing clears the error border
+    await bioInput.fill("New text");
+    await expect(bioInput).not.toHaveClass(/border-\[#FF3B30\]/);
+
+    await page.context().setOffline(false);
+  });
+
+  // Test 3: Verifies empty input behavior
+  test('Instant Build prevents submission when the input is empty', async ({ page }) => {
+    await page.goto('/onboarding');
+    const instantBuildButton = page.locator('button', { hasText: 'Instant Build' });
+    await instantBuildButton.click();
+
+    const generateButton = page.getByRole('button', { name: 'Generate Storefront' });
+    await generateButton.click();
+
+    // Button click should do nothing if input is empty.
+    // We shouldn't see a loading state.
+    const loadingState = page.getByText('Generating...');
+    await expect(loadingState).not.toBeVisible();
+    await expect(page.getByRole('heading', { name: "Tell us about your business" })).toBeVisible();
+  });
+
+  // Test 4: Smart defaults fallback on partial info
+  test('Instant Build handles partial information appropriately by falling back to smart defaults', async ({ page }) => {
+    await page.goto('/onboarding');
+    const instantBuildButton = page.locator('button', { hasText: 'Instant Build' });
+    await instantBuildButton.click();
+
+    const bioInput = page.getByPlaceholder("e.g. I run a local bakery that sells custom vegan cakes...");
+    // Only provide a generic description
+    await bioInput.fill("I sell things online.");
+
+    const generateButton = page.getByRole('button', { name: 'Generate Storefront' });
+    await generateButton.click();
+
+    const successHeading = page.getByRole('heading', { name: "You're Live!" });
+    await expect(successHeading).toBeVisible({ timeout: 30000 });
+  });
+
+  // Test 5: Mobile responsiveness of the Instant Build component
+  test('Instant Build respects mobile viewport constraints (375px) with valid touch targets for the conversational flow', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 667 });
+    await page.goto('/onboarding');
+
+    const instantBuildButton = page.locator('button', { hasText: 'Instant Build' });
+    await instantBuildButton.click();
+
+    const bioInput = page.getByPlaceholder("e.g. I run a local bakery that sells custom vegan cakes...");
+    const box = await bioInput.boundingBox();
+    expect(box?.height).toBeGreaterThanOrEqual(44);
+    expect(box?.width).toBeLessThanOrEqual(375);
+
+    const generateButton = page.getByRole('button', { name: 'Generate Storefront' });
+    const btnBox = await generateButton.boundingBox();
+    expect(btnBox?.height).toBeGreaterThanOrEqual(44);
+  });
+=======
     await expect(bioInput).toHaveClass(/glassmorphism/);
 
     // Restore network
     await page.context().setOffline(false);
   });
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
 });

@@ -57,6 +57,10 @@ pub fn get_department_config(dep: Department) -> DepartmentConfig {
                 "booking_upsert_service",
                 "booking_list_appointments",
                 "booking_create_appointment",
+<<<<<<< HEAD
+                "booking_negotiate_time",
+=======
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
             ],
             confidence_threshold: 0.85,
         },
@@ -116,6 +120,10 @@ pub fn get_department_config(dep: Department) -> DepartmentConfig {
                 "booking_get_services",
                 "booking_list_appointments",
                 "booking_create_appointment",
+<<<<<<< HEAD
+                "booking_negotiate_time",
+=======
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
             ],
             confidence_threshold: 0.90,
         },

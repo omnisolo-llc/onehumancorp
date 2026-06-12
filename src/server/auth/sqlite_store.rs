@@ -282,6 +282,10 @@ impl UserRepository for SqliteUserRepository {
                 .bind(user.active)
                 .bind(&user.oidc_subject)
                 .bind(user.updated_at)
+<<<<<<< HEAD
+                .bind(org_id)
+=======
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
                 .fetch_optional(&self.pool)
                 .await
                 .map_err(|e| e.to_string())?

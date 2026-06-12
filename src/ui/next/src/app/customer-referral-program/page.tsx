@@ -56,10 +56,18 @@ export default function CustomerReferralProgramPage() {
 
               <div className="space-y-5">
                 <div>
+<<<<<<< HEAD
+                  <label htmlFor="give-amount" className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">They Give ($ Discount)</label>
+                  <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-semibold">$</span>
+                    <input
+                      id="give-amount"
+=======
                   <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">They Give ($ Discount)</label>
                   <div className="relative">
                     <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-semibold">$</span>
                     <input
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
                       type="number"
                       value={giveAmount}
                       onChange={(e) => setGiveAmount(e.target.value)}
@@ -69,10 +77,18 @@ export default function CustomerReferralProgramPage() {
                 </div>
 
                 <div>
+<<<<<<< HEAD
+                  <label htmlFor="get-amount" className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">They Get ($ Reward)</label>
+                  <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-semibold">$</span>
+                    <input
+                      id="get-amount"
+=======
                   <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">They Get ($ Reward)</label>
                   <div className="relative">
                     <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-semibold">$</span>
                     <input
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
                       type="number"
                       value={getAmount}
                       onChange={(e) => setGetAmount(e.target.value)}

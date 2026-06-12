@@ -194,7 +194,11 @@ impl Store {
                     use std::io::Write;
                     if let Ok(mut file) = std::fs::OpenOptions::new()
                         .write(true)
+<<<<<<< HEAD
+                        .create_new(true)
+=======
                         .create(true)
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
                         .mode(0o600)
                         .open(&secret_path)
                     {

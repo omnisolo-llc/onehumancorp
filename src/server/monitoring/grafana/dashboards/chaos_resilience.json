@@ -251,7 +251,11 @@
       "targets": [
         {
           "exemplar": true,
+<<<<<<< HEAD
+          "expr": "sum(rate(ohc_agent_sandbox_violations_total[5m])) by (EnvMode)",
+=======
           "expr": "sum(rate(ohc_sandbox_violation_total[5m])) by (EnvMode)",
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
           "interval": "",
           "legendFormat": "{{EnvMode}} Violations",
           "refId": "A"

@@ -39,7 +39,11 @@ test.describe('Low Stock Restock Action Card', () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+<<<<<<< HEAD
+          'x-spiffe-id': 'spiffe://ohc/org/e2e-tenant/agent/browser'
+=======
           'x-spiffe-id': 'spiffe://ohc/org/e2e/agent/browser'
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
         },
         body: JSON.stringify({
           id: 'test_restock_prod',
@@ -59,7 +63,11 @@ test.describe('Low Stock Restock Action Card', () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+<<<<<<< HEAD
+          'x-spiffe-id': 'spiffe://ohc/org/e2e-tenant/agent/browser'
+=======
           'x-spiffe-id': 'spiffe://ohc/org/e2e/agent/browser'
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
         },
         body: JSON.stringify({
           tenant_id: 'e2e-tenant',

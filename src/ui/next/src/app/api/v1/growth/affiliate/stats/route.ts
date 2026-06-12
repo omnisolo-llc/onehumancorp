@@ -1,6 +1,10 @@
-export const dynamic = "force-dynamic";
 import { NextResponse } from 'next/server';
 
+<<<<<<< HEAD
+export const dynamic = 'force-dynamic';
+
+=======
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
 export async function GET(request: Request) {
   try {
     const backendUrl = process.env.OHC_BACKEND_URL || 'http://127.0.0.1:18789';

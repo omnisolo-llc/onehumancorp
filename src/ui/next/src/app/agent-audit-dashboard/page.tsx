@@ -80,6 +80,17 @@ export default function AgentAuditDashboard() {
  <div>Campaigns Sync: Active</div>
  </div>
  </section>
+<<<<<<< HEAD
+
+ <section className="app-card">
+ <h2 className="text-xl font-bold font-outfit mb-4">Violation Feed</h2>
+ <div className="flex items-center gap-4">
+ <div className="w-3 h-3 rounded-full bg-green-500" ></div>
+ <div>No active violations</div>
+ </div>
+ </section>
+=======
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
  </div>
 
  <div className="md:col-span-1">

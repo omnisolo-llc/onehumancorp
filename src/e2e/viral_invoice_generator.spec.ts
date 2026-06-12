@@ -1,7 +1,14 @@
 import { test, expect } from './fixtures';
 import { currentAppSmoke } from './current_app_smoke';
 
+<<<<<<< HEAD
+test('viral_invoice_generator', async ({ page, request, loginAs, adminUser }) => {
+  await loginAs(page, adminUser);
+  await currentAppSmoke(page, request, 'viral_invoice_generator');
+});
+=======
 currentAppSmoke('viral_invoice_generator');
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
 
 test.describe('Viral Invoice Generator Loop', () => {
   test('should allow creating an invoice and viewing the viral loop', async ({ page }) => {
@@ -46,11 +53,19 @@ test.describe('Viral Invoice Generator Loop', () => {
     await expect(page.getByText('$2500.00')).toBeVisible();
 
     // Verify the viral loop footer
+<<<<<<< HEAD
+    const poweredByLink = page.locator('a', { hasText: 'Powered by OHC' }).last();
+=======
     const poweredByLink = page.getByRole('link', { name: /Powered by OHC/i });
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
     await expect(poweredByLink).toBeVisible();
 
     const onboardingHref = await poweredByLink.getAttribute('href');
     expect(onboardingHref).toContain('/onboarding?ref=');
+<<<<<<< HEAD
+    expect(onboardingHref).toContain('source=footer_widget');
+=======
     expect(onboardingHref).toContain('source=invoice_generator');
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
   });
 });

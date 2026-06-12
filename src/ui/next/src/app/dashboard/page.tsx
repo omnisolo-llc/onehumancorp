@@ -25,6 +25,10 @@ import { ReviewFeedCard } from './ReviewFeedCard';
 import { NeighborhoodPulseCard } from "./NeighborhoodPulseCard";
 import { PromoterCard } from "./PromoterCard";
 import { ViralLoopPerformanceWidget } from "./ViralLoopPerformanceWidget";
+<<<<<<< HEAD
+import { SuccessMilestoneWidget } from "./SuccessMilestoneWidget";
+=======
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
 import { SuccessMilestoneAlert } from "./SuccessMilestoneAlert";
 import AffiliateMarketingWidget from "./AffiliateMarketingWidget";
 import { CartRecoveryWidget } from "./CartRecoveryWidget";
@@ -96,6 +100,102 @@ function formatStatus(status?: string) {
   return status || "Open";
 }
 
+<<<<<<< HEAD
+
+function InviteAndEarnWidget() {
+  const [inviteLink, setInviteLink] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const handleGenerate = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      if ((window as any).__TAURI__ && (window as any).__TAURI__.core) {
+        const link = await (window as any).__TAURI__.core.invoke('generate_cloud_bridge_invite');
+        setInviteLink(link);
+      } else {
+        const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default';
+        const res = await fetch('/api/v1/growth/cloud-bridge/invite', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ team_id: tenantId, inviter_id: "owner", invitee_id: "pending" })
+        });
+        const data = await res.json();
+        setInviteLink(data.invite_link || 'https://cloud.ohc.network/invite/fallback');
+      }
+    } catch (err) {
+      console.error(err);
+      setInviteLink('https://cloud.ohc.network/invite/fallback');
+    }
+    setLoading(false);
+  };
+
+  const handleCopy = (e: React.MouseEvent) => {
+    e.preventDefault();
+    navigator.clipboard.writeText(inviteLink);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleShareX = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const text = `I manage my business with OHC! Join using my invite link and get 1 month free: ${inviteLink}\n\n⚡ Powered by OHC`;
+    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, '_blank');
+  };
+
+  return (
+    <div className="block glassmorphism p-6 rounded-[16px] border border-white/40 dark:border-white/10 mt-6 relative z-10">
+      <div className="flex flex-col gap-4">
+        <div>
+          <h2 className="text-2xl font-bold font-outfit text-gray-900 dark:text-white mb-2">Invite & Earn</h2>
+          <p className="text-gray-600 dark:text-gray-300 text-sm">
+            Invite a fellow business owner to OHC. They get 1 month free, you get $50 credit.
+          </p>
+        </div>
+        {!inviteLink ? (
+          <button
+            id="dashboard-invite-btn"
+            onClick={handleGenerate}
+            disabled={loading}
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-xl transition-colors"
+          >
+            {loading ? 'Generating...' : 'Get My Invite Link'}
+          </button>
+        ) : (
+          <div id="dashboard-invite-container" className="flex flex-col gap-3">
+            <input
+              id="dashboard-invite-link"
+              type="text"
+              readOnly
+              value={inviteLink}
+              className="w-full px-4 py-2 rounded-lg bg-white/50 dark:bg-black/20 border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-200"
+            />
+            <div className="flex gap-3">
+              <button
+                id="dashboard-copy-btn"
+                onClick={handleCopy}
+                className="flex-1 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200 font-medium py-2 px-4 rounded-lg transition-colors"
+              >
+                {copied ? 'Copied!' : 'Copy'}
+              </button>
+              <button
+                id="dashboard-share-x-btn"
+                onClick={handleShareX}
+                className="flex-1 bg-[#1DA1F2] hover:bg-[#1a91da] text-white font-medium py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
+              >
+                Share to X
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+=======
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
 export default function Dashboard() {
   const router = useRouter();
   const [metrics, setMetrics] = useState<DashboardMetrics>(emptyMetrics);
@@ -407,14 +507,30 @@ export default function Dashboard() {
       </div>
 
       <SuccessMilestoneAlert />
+<<<<<<< HEAD
+      <SuccessMilestoneWidget />
+=======
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
       <ViralLoopPerformanceWidget />
       <div className="mb-6">
         <div className="mb-4"><CartRecoveryWidget /></div>
         <AffiliateMarketingWidget />
       </div>
 
+<<<<<<< HEAD
+      <div className="mb-6 flex flex-col md:flex-row justify-between items-center gap-4">
+          <SmartBlock type="PoweredBy" props={{ tenantId: tenantId(), isPremium: false }} />
+          <button
+            onClick={() => router.push("/incidents")}
+            className="h-[44px] px-6 rounded-[8px] bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 font-medium hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors border border-red-200 dark:border-red-800/50"
+            data-testid="report-incident-btn"
+          >
+            Report Incident
+          </button>
+=======
       <div className="mb-6">
           <SmartBlock type="PoweredBy" props={{ tenantId: tenantId(), isPremium: false }} />
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
       </div>
 
       <section className="app-panel glassmorphism border border-white/40 dark:border-white/10 mb-6">
@@ -775,6 +891,11 @@ export default function Dashboard() {
           </div>
         </section>
 
+<<<<<<< HEAD
+        <InviteAndEarnWidget />
+
+=======
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
         <section className="mt-4">
           <div className="mb-3 flex items-center justify-between gap-3">
             <div>
@@ -828,6 +949,18 @@ export default function Dashboard() {
               <p className="text-sm text-gray-600 dark:text-gray-400">Generate professional, shareable invoices that bring new customers to OHC.</p>
             </Link>
 
+<<<<<<< HEAD
+            <Link href="/proposal-generator" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+              <div className="flex items-start justify-between mb-4">
+                <div className="w-12 h-12 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">📝</div>
+                <div className="text-blue-600 dark:text-blue-400 font-semibold text-sm bg-blue-50 dark:bg-blue-900/30 px-3 py-1 rounded-full">Sales</div>
+              </div>
+              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">AI Proposal Generator</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Create smart, shareable proposals with an interactive approval flow to win clients faster.</p>
+            </Link>
+
+=======
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
             <Link href="/milestones" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-purple-50 dark:bg-purple-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform" aria-hidden="true">🏆</div>

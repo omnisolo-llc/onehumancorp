@@ -118,6 +118,11 @@ impl UserRepository for PgUserRepository {
         let roles_json: String = row.get("roles");
         let roles: Vec<String> = serde_json::from_str(&roles_json).unwrap_or_default();
 
+<<<<<<< HEAD
+        tx.rollback().await.map_err(|e| e.to_string())?;
+
+=======
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
         Ok(User {
             id: row.get("id"),
             username: row.get("username"),
@@ -160,6 +165,11 @@ impl UserRepository for PgUserRepository {
         let roles_json: String = row.get("roles");
         let roles: Vec<String> = serde_json::from_str(&roles_json).unwrap_or_default();
 
+<<<<<<< HEAD
+        tx.rollback().await.map_err(|e| e.to_string())?;
+
+=======
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
         Ok(User {
             id: row.get("id"),
             username: row.get("username"),
@@ -202,6 +212,11 @@ impl UserRepository for PgUserRepository {
         let roles_json: String = row.get("roles");
         let roles: Vec<String> = serde_json::from_str(&roles_json).unwrap_or_default();
 
+<<<<<<< HEAD
+        tx.rollback().await.map_err(|e| e.to_string())?;
+
+=======
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
         Ok(User {
             id: row.get("id"),
             username: row.get("username"),
@@ -244,6 +259,11 @@ impl UserRepository for PgUserRepository {
         let roles_json: String = row.get("roles");
         let roles: Vec<String> = serde_json::from_str(&roles_json).unwrap_or_default();
 
+<<<<<<< HEAD
+        tx.rollback().await.map_err(|e| e.to_string())?;
+
+=======
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
         Ok(User {
             id: row.get("id"),
             username: row.get("username"),
@@ -298,6 +318,12 @@ impl UserRepository for PgUserRepository {
                 oidc_subject: row.get("oidc_subject"),
             });
         }
+<<<<<<< HEAD
+
+        tx.rollback().await.map_err(|e| e.to_string())?;
+
+=======
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
         Ok(users)
     }
 

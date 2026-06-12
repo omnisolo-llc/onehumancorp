@@ -91,7 +91,11 @@ test.describe('Cost Dashboard "My Plan" functionality', () => {
     await expect(page.locator('span', { hasText: 'LLM Usage' }).first()).toBeVisible();
     await expect(page.locator('span', { hasText: 'Storage' }).first()).toBeVisible();
     await expect(page.locator('span', { hasText: 'Payment Fees' }).first()).toBeVisible();
+<<<<<<< HEAD
+    await expect(page.locator('span', { hasText: 'Bandwidth Savings' }).first()).toBeVisible();
+=======
     await expect(page.locator('span', { hasText: 'Network Cost' }).first()).toBeVisible();
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
   });
 
   test('Billing checkout session and cancel subscription journey', async ({ page }) => {

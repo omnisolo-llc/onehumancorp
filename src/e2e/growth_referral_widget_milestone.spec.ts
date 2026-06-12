@@ -1,7 +1,14 @@
 import { test, expect } from './fixtures';
 import { currentAppSmoke } from './current_app_smoke';
 
+<<<<<<< HEAD
+test('growth_referral_widget_milestone', async ({ page, request, loginAs, adminUser }) => {
+  await loginAs(page, adminUser);
+  await currentAppSmoke(page, request, 'growth_referral_widget_milestone');
+});
+=======
 currentAppSmoke('growth_referral_widget_milestone');
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
 
 test.describe('Growth Referral Widget Milestone UI', () => {
   test('should display 10th order milestone alert and card on Team Page', async ({ page, loginAs, unlimitedAdminUser }) => {

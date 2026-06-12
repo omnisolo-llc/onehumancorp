@@ -14,7 +14,13 @@ export default function InvoiceGeneratorPage() {
   const [splitContact, setSplitContact] = useState('');
   const [splitPercentage, setSplitPercentage] = useState<number>(70);
 
+<<<<<<< HEAD
+=======
+  const [isSplitEnabled, setIsSplitEnabled] = useState(false);
+  const [splitContact, setSplitContact] = useState('');
+  const [splitPercentage, setSplitPercentage] = useState<number>(70);
 
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
 
   useEffect(() => {
     const tenant = localStorage.getItem('tenant') || 'my-store';

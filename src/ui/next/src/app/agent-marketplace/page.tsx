@@ -89,6 +89,17 @@ export default function AgentMarketplacePage() {
  <div className="mt-auto">
  <button
  onClick={() => {
+<<<<<<< HEAD
+   const isInstalled = installedAgents.includes(agent.id);
+   if (!isInstalled) {
+     // Create a basic alert dialog manually to avoid window.alert
+     const event = new CustomEvent('dialog', { detail: { message: `Successfully installed ${agent.name}!` } });
+     window.dispatchEvent(event);
+     // The Playwright test intercepts window.alert(), so we just use window.alert instead.
+     window.alert(`Successfully installed ${agent.name}!`);
+   }
+=======
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
  setInstalledAgents((current) => current.includes(agent.id) ? current : [...current, agent.id]);
  }}
  aria-pressed={installedAgents.includes(agent.id)}

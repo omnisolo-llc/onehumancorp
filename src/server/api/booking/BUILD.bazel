@@ -3,8 +3,12 @@ load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 exports_files(
     [
         "mod.rs",
+<<<<<<< HEAD
+        "request.rs"
+=======
         "request.rs",
         "unified.rs"
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
     ],
     visibility = ["//visibility:public"],
 )

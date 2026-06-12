@@ -1,7 +1,14 @@
 import { test, expect } from './fixtures';
 import { currentAppSmoke } from './current_app_smoke';
 
+<<<<<<< HEAD
+test('viral_ai_savings_widget', async ({ page, request, loginAs, adminUser }) => {
+  await loginAs(page, adminUser);
+  await currentAppSmoke(page, request, 'viral_ai_savings_widget');
+});
+=======
 currentAppSmoke('viral_ai_savings_widget');
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
 
 test.describe('Viral AI Time Savings Widget Growth Loop', () => {
   test('should display the widget on dashboard and handle the trial extension loop', async ({ page }) => {

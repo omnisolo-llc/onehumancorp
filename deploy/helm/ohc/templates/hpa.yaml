@@ -26,6 +26,15 @@ spec:
         target:
           type: Utilization
           averageUtilization: {{ .Values.backend.autoscaling.targetCPUUtilizationPercentage }}
+<<<<<<< HEAD
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.backend.autoscaling.targetMemoryUtilizationPercentage }}
+=======
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
 {{- end }}
 ---
 {{- if and .Values.ohcCore.enabled .Values.ohcCore.autoscaling.enabled }}
@@ -56,6 +65,15 @@ spec:
         target:
           type: Utilization
           averageUtilization: {{ .Values.ohcCore.autoscaling.targetCPUUtilizationPercentage }}
+<<<<<<< HEAD
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.ohcCore.autoscaling.targetMemoryUtilizationPercentage }}
+=======
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
 {{- end }}
 ---
 {{- if and .Values.chatwoot.enabled .Values.chatwoot.autoscaling.enabled }}
@@ -86,6 +104,15 @@ spec:
         target:
           type: Utilization
           averageUtilization: {{ .Values.chatwoot.autoscaling.targetCPUUtilizationPercentage }}
+<<<<<<< HEAD
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.chatwoot.autoscaling.targetMemoryUtilizationPercentage }}
+=======
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
 {{- end }}
 ---
 {{- if and .Values.powersync.enabled .Values.powersync.autoscaling.enabled }}
@@ -116,4 +143,14 @@ spec:
         target:
           type: Utilization
           averageUtilization: {{ .Values.powersync.autoscaling.targetCPUUtilizationPercentage }}
+<<<<<<< HEAD
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.powersync.autoscaling.targetMemoryUtilizationPercentage }}
 {{- end }}
+=======
+{{- end }}
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))

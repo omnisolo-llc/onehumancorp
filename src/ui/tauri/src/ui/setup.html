@@ -52,7 +52,11 @@
         min-height: 44px;
         margin-bottom: 20px;
         border: 1px solid rgba(255, 255, 255, 0.5);
+<<<<<<< HEAD
+        border-radius: 8px;
+=======
         border-radius: 16px;
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
         box-sizing: border-box;
         font-size: 16px;
         background: rgba(255, 255, 255, 0.5);
@@ -61,10 +65,17 @@
         transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
       }
       select.glassmorphism, textarea.glassmorphism {
+<<<<<<< HEAD
+        border-radius: 8px;
+      }
+      input.glassmorphism {
+        border-radius: 8px;
+=======
         border-radius: 16px;
       }
       input.glassmorphism {
         border-radius: 16px;
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
       }
       select, textarea, input {
         border-radius: 8px;
@@ -84,7 +95,11 @@
         border: none;
         padding: 14px 24px;
         min-height: 44px;
+<<<<<<< HEAD
+        border-radius: 8px;
+=======
         border-radius: 16px;
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
         font-size: 16px;
         font-weight: 600;
         cursor: pointer;
@@ -117,6 +132,25 @@
         animation: shake 0.2s ease-in-out 0s 2;
       }
 
+<<<<<<< HEAD
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+      .spinner {
+        display: inline-block;
+        width: 16px;
+        height: 16px;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        border-radius: 50%;
+        border-top-color: #fff;
+        animation: spin 1s ease-in-out infinite;
+        vertical-align: middle;
+        margin-right: 8px;
+      }
+
+=======
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
       @media (prefers-color-scheme: dark) {
         body {
           background-color: #16161a;
@@ -222,7 +256,11 @@
         min-height: 44px;
         margin-bottom: 20px;
         border: 1px solid rgba(255, 255, 255, 0.5);
+<<<<<<< HEAD
+        border-radius: 8px;
+=======
         border-radius: 16px;
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
         box-sizing: border-box;
         font-size: 16px;
         background: rgba(255, 255, 255, 0.5);
@@ -306,6 +344,12 @@
       .persona-chip {
         flex: 0 0 auto;
         padding: 8px 16px;
+<<<<<<< HEAD
+        min-height: 44px;
+        display: flex;
+        align-items: center;
+=======
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
         border-radius: 20px;
         background: rgba(0, 102, 255, 0.1);
         color: #0066FF;
@@ -383,17 +427,87 @@
           width: 100%;
           border: none;
         }
+<<<<<<< HEAD
+        input, select, textarea, button, .radio-option, .persona-chip {
+          min-height: 44px !important;
+        }
+      }
+
+      @media (max-width: 375px) {
+        .stepper {
+          gap: 4px;
+        }
+        .step-indicator {
+          width: 8px;
+          height: 8px;
+        }
+        .step-indicator.active {
+          transform: scale(1.2);
+        }
+        .container {
+          padding: 16px;
+        }
+        .radio-option {
+          padding: 8px 12px;
+        }
+      }
+
+
+      *:focus-visible {
+        outline: 3px solid #0066FF;
+        outline-offset: 2px;
+      }
+
+    </style>
+=======
         input, select, textarea, button, .radio-option {
           min-height: 44px !important;
         }
       }
         </style>
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
   </head>
   <body>
         <div class="container glassmorphism" id="form-container">
 
 
+<<<<<<< HEAD
+      <!-- Step 0: Initial Screen -->
+      <div class="step active" id="step-initial">
+        <div style="width: 64px; height: 64px; background: rgba(0, 102, 255, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 24px;">
+          <svg style="width: 32px; height: 32px; color: #0066FF;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+          </svg>
+        </div>
+        <h1>10-Minute Setup Wizard</h1>
+        <p>Zero tech skills needed. We do the heavy lifting. Review and add any extra details to help our AI generate the perfect store.</p>
+
+        <div class="btn-group" style="margin-top: 32px;">
+          <button class="next-step-btn" data-next="step-context">Start My Business</button>
+          <button type="button" class="btn-secondary" onclick="goToStep('step-instant')">Instant Build</button>
+        </div>
+      </div>
+
+      <!-- Step Instant: Instant Build -->
+      <div class="step" id="step-instant">
+        <button onclick="goToStep('step-initial')" style="background: none; border: none; color: #0066FF; padding: 0; box-shadow: none; width: auto; font-size: 14px; min-height: auto; margin-bottom: 16px; display: flex; align-items: center; gap: 4px; font-weight: 600;">
+          <svg style="width: 16px; height: 16px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg> Back
+        </button>
+        <h1>Tell us about your business</h1>
+        <p>Our AI will handle the rest in 30 seconds.</p>
+
+        <textarea id="instant-bio" class="glassmorphism" placeholder="e.g. I run a local bakery that sells custom vegan cakes..." rows="6" style="resize: none;"></textarea>
+        <div id="instant-error" class="error-msg" style="margin-bottom: 20px;"></div>
+
+        <div class="btn-group" style="margin-top: 24px;">
+          <button id="generate-storefront-btn">Generate Storefront</button>
+        </div>
+      </div>
+
+      <div class="stepper" id="stepper-indicator" style="display: none;">
+=======
       <div class="stepper" id="stepper-indicator">
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
         <div class="step-indicator active" data-step="step-context"></div>
         <div class="step-indicator" data-step="step-categories"></div>
         <div class="step-indicator" data-step="step-name"></div>
@@ -405,15 +519,26 @@
       <div id="draft-saved-msg" style="display: none; color: #34C759; font-weight: bold; margin-bottom: 15px;">Draft Saved!</div>
 
       <!-- Step 1: Work Context -->
+<<<<<<< HEAD
+      <div class="step" id="step-context">
+=======
       <div class="step active" id="step-context">
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
         <h1>How do you work?</h1>
         <p>Choose a quick-start or select how you work.</p>
 
         <div class="persona-row">
+<<<<<<< HEAD
+            <div class="persona-chip" onclick="applyPersona('Baker', event)">I'm a Baker</div>
+            <div class="persona-chip" onclick="applyPersona('Handyman', event)">I'm a Handyman</div>
+            <div class="persona-chip" onclick="applyPersona('Boutique', event)">I'm a Boutique Owner</div>
+            <div class="persona-chip" onclick="applyPersona('Tutor', event)">I'm a Tutor</div>
+=======
             <div class="persona-chip" onclick="applyPersona('Baker')">I'm a Baker</div>
             <div class="persona-chip" onclick="applyPersona('Handyman')">I'm a Handyman</div>
             <div class="persona-chip" onclick="applyPersona('Boutique')">I'm a Boutique Owner</div>
             <div class="persona-chip" onclick="applyPersona('Tutor')">I'm a Tutor</div>
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
         </div>
 
         <div class="radio-group" id="context-group">
@@ -448,8 +573,13 @@
         </div>
         <div id="context-error" class="error-msg">Please select an option.</div>
         <div class="btn-group">
+<<<<<<< HEAD
+          <button class="next-step-btn" data-next="step-categories">Next</button>
+          <button type="button" class="btn-secondary save-draft-btn">Save Draft</button>
+=======
           <button type="button" class="btn-secondary save-draft-btn">Save Draft</button>
           <button class="next-step-btn" data-next="step-categories">Next</button>
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
         </div>
       </div>
 
@@ -462,8 +592,13 @@
         </select>
         <div id="categories-error" class="error-msg">Please enter a category.</div>
         <div class="btn-group">
+<<<<<<< HEAD
+          <button class="next-step-btn" data-next="step-name">Next</button>
+          <button type="button" class="btn-secondary save-draft-btn">Save Draft</button>
+=======
           <button type="button" class="btn-secondary save-draft-btn">Save Draft</button>
           <button class="next-step-btn" data-next="step-name">Next</button>
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
           <button class="btn-secondary prev-step-btn" data-prev="step-context">Back</button>
         </div>
       </div>
@@ -478,8 +613,13 @@
         <input type="text" id="business-tagline" class="glassmorphism" placeholder="Tagline (optional)" />
 
         <div class="btn-group">
+<<<<<<< HEAD
+          <button class="next-step-btn" data-next="step-assistant">Next</button>
+          <button type="button" class="btn-secondary save-draft-btn">Save Draft</button>
+=======
           <button type="button" class="btn-secondary save-draft-btn">Save Draft</button>
           <button class="next-step-btn" data-next="step-assistant">Next</button>
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
           <button class="btn-secondary prev-step-btn" data-prev="step-categories">Back</button>
         </div>
       </div>
@@ -505,8 +645,13 @@
         <div id="tone-error" class="error-msg">Please select a tone.</div>
 
         <div class="btn-group">
+<<<<<<< HEAD
+          <button class="next-step-btn" data-next="step-admin">Next</button>
+          <button type="button" class="btn-secondary save-draft-btn">Save Draft</button>
+=======
           <button type="button" class="btn-secondary save-draft-btn">Save Draft</button>
           <button class="next-step-btn" data-next="step-admin">Next</button>
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
           <button class="btn-secondary prev-step-btn" data-prev="step-name">Back</button>
         </div>
       </div>
@@ -524,8 +669,13 @@
         <div id="password-error" class="error-msg">Password must be at least 8 characters.</div>
 
         <div class="btn-group">
+<<<<<<< HEAD
+          <button class="next-step-btn" data-next="step-offer">Next</button>
+          <button type="button" class="btn-secondary save-draft-btn">Save Draft</button>
+=======
           <button type="button" class="btn-secondary save-draft-btn">Save Draft</button>
           <button class="next-step-btn" data-next="step-offer">Next</button>
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
           <button class="btn-secondary prev-step-btn" data-prev="step-assistant">Back</button>
         </div>
       </div>
@@ -537,8 +687,13 @@
         <input type="text" id="first-offer" class="glassmorphism" placeholder="e.g. Custom Birthday Cake" />
         <div id="offer-error" class="error-msg">Please enter an offer.</div>
         <div class="btn-group">
+<<<<<<< HEAD
+          <button class="next-step-btn" data-next="step-template">Next</button>
+          <button type="button" class="btn-secondary save-draft-btn">Save Draft</button>
+=======
           <button type="button" class="btn-secondary save-draft-btn">Save Draft</button>
           <button class="next-step-btn" data-next="step-template">Next</button>
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
           <button class="btn-secondary prev-step-btn" data-prev="step-admin">Back</button>
         </div>
       </div>
@@ -556,8 +711,13 @@
         <div id="template-error" class="error-msg">Please select a template.</div>
 
         <div class="btn-group">
+<<<<<<< HEAD
+          <button id="finish-btn">Finish Setup</button>
+          <button type="button" class="btn-secondary save-draft-btn">Save Draft</button>
+=======
           <button type="button" class="btn-secondary save-draft-btn">Save Draft</button>
           <button id="finish-btn">Finish Setup</button>
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
           <button class="btn-secondary prev-step-btn" data-prev="step-offer">Back</button>
         </div>
       </div>
@@ -566,7 +726,11 @@
     <script>
       const container = document.getElementById('form-container');
 
+<<<<<<< HEAD
+      function applyPersona(persona, event) {
+=======
       function applyPersona(persona) {
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
           document.querySelectorAll('.persona-chip').forEach(el => el.classList.remove('selected'));
           event.target.classList.add('selected');
 
@@ -687,7 +851,11 @@
         .then(res => res.json())
         .then(apiState => {
             if (apiState && Object.keys(apiState).length > 0) {
+<<<<<<< HEAD
+                state = { ...state, ...(apiState.wizardState || apiState) };
+=======
                 state = { ...state, ...apiState };
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
                 populateForm();
             }
         })
@@ -696,7 +864,16 @@
 
 
       if (state.step === undefined || state.step === 0) {
+<<<<<<< HEAD
+         goToStep('step-initial');
+      } else {
+         const steps = ['step-context', 'step-categories', 'step-name', 'step-assistant', 'step-admin', 'step-offer', 'step-template'];
+         if (state.step < steps.length) {
+            goToStep(steps[state.step]);
+         }
+=======
          updateStepper('step-context');
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
       }
 
             // Clear name error on typing if valid
@@ -787,6 +964,13 @@
       function validateStep(stepId) {
           let isValid = true;
 
+<<<<<<< HEAD
+          if (stepId === 'step-initial' || stepId === 'step-instant') {
+              return true;
+          }
+
+=======
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
           if (stepId === 'step-context') {
               const selected = document.querySelector('input[name="work_context"]:checked');
               if (!selected) {
@@ -894,6 +1078,16 @@
 
 
       function updateStepper(stepId) {
+<<<<<<< HEAD
+          const stepperIndicator = document.getElementById('stepper-indicator');
+          if (stepId === 'step-initial' || stepId === 'step-instant') {
+              if (stepperIndicator) stepperIndicator.style.display = 'none';
+          } else {
+              if (stepperIndicator) stepperIndicator.style.display = 'flex';
+          }
+
+=======
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
           const steps = ['step-context', 'step-categories', 'step-name', 'step-assistant', 'step-admin', 'step-offer', 'step-template'];
           const currentIndex = steps.indexOf(stepId);
 
@@ -993,10 +1187,145 @@
           });
       });
 
+<<<<<<< HEAD
+      const generateStorefrontBtn = document.getElementById('generate-storefront-btn');
+      if (generateStorefrontBtn) {
+          generateStorefrontBtn.addEventListener('click', async () => {
+              const bioInput = document.getElementById('instant-bio').value;
+              if (!bioInput.trim()) {
+                  document.getElementById('instant-error').innerText = "Please tell us about your business.";
+                  document.getElementById('instant-error').style.display = 'block';
+                  return;
+              }
+
+              document.getElementById('instant-error').style.display = 'none';
+              generateStorefrontBtn.disabled = true;
+              generateStorefrontBtn.innerHTML = '<div class="spinner"></div>Generating...';
+
+              try {
+                  const backendUrl = (window.location.origin.includes('localhost') || window.location.protocol === 'file:') ? 'http://127.0.0.1:18789' : '';
+                  const tenantIdStr = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront';
+                  const userIdStr = localStorage.getItem('user_id') || 'test-user';
+
+                  let intakeData = null;
+
+                  if (window.__TAURI__ && window.__TAURI__.core) {
+                     intakeData = await window.__TAURI__.core.invoke("process_intake", { input: bioInput });
+                  } else {
+                     const res = await fetch(`${backendUrl}/api/onboarding/intake`, {
+                         method: 'POST',
+                         headers: {
+                             'Content-Type': 'application/json',
+                             'X-Tenant-ID': tenantIdStr,
+                             'X-User-ID': userIdStr
+                         },
+                         body: JSON.stringify({ description: bioInput })
+                     });
+                     if (!res.ok) {
+                         const errData = await res.json().catch(()=>({}));
+                         throw new Error(errData.error || errData.message || 'Failed to analyze business details');
+                     }
+                     intakeData = await res.json();
+                  }
+
+                  const req = {
+                      companyName: intakeData.business_name || "My Business",
+                      businessType: intakeData.business_type || "Online Store",
+                      companyDescription: bioInput,
+                      sellingCategories: intakeData.categories || ["physical"],
+                      paymentPref: "online",
+                      adminEmail: "admin@mybusiness.com",
+                      adminName: "Admin",
+                      adminPassword: "password",
+                      websiteTemplate: "auto",
+                      firstProductName: intakeData.initial_products?.[0]?.name || "First Product",
+                      firstProductPrice: intakeData.initial_products?.[0]?.price || "0.00",
+                      domainChoice: "subdomain",
+                      priceType: "fixed",
+                      location: intakeData.location || "Local",
+                      targetAudience: intakeData.target_audience || "General",
+                      initialProducts: intakeData.initial_products || []
+                  };
+
+                  if (window.__TAURI__ && window.__TAURI__.core) {
+                      await window.__TAURI__.core.invoke("start_onboarding", { req });
+                      localStorage.setItem('has_onboarded', 'true');
+                      window.location.href = "success.html";
+                  } else {
+                      const startRes = await fetch(`${backendUrl}/api/onboarding/start`, {
+                          method: 'POST',
+                          headers: {
+                              'Content-Type': 'application/json',
+                              'X-Tenant-ID': tenantIdStr,
+                              'X-User-ID': userIdStr
+                          },
+                          body: JSON.stringify({
+                              business_type: req.businessType,
+                              company_name: req.companyName,
+                              company_description: req.companyDescription,
+                              selling_categories: req.sellingCategories,
+                              payment_pref: req.paymentPref,
+                              admin_email: req.adminEmail,
+                              website_template: req.websiteTemplate,
+                              first_product_name: req.firstProductName,
+                              first_product_price: req.firstProductPrice,
+                              domain_choice: req.domainChoice,
+                              admin_name: req.adminName,
+                              admin_password: req.adminPassword,
+                              price_type: req.priceType,
+                              location: req.location,
+                              target_audience: req.targetAudience,
+                              initial_products: req.initialProducts
+                          })
+                      });
+
+                      if (!startRes.ok) {
+                          const errData = await startRes.json().catch(()=>({}));
+                          throw new Error(errData.error || errData.message || 'Failed to start onboarding');
+                      }
+
+                      const startData = await startRes.json();
+                      if (startData.organization_id) {
+                          localStorage.setItem('tenant_id', startData.organization_id);
+                          localStorage.setItem('tenant', startData.organization_id);
+                      }
+                      localStorage.setItem('has_onboarded', 'true');
+                      window.location.href = "success.html";
+                  }
+
+              } catch (err) {
+                  console.error(err);
+                  document.getElementById('instant-error').innerText = err.message || "Network Error: Failed to fetch";
+                  document.getElementById('instant-error').style.display = 'block';
+                  generateStorefrontBtn.disabled = false;
+                  generateStorefrontBtn.innerText = "Generate Storefront";
+              }
+          });
+      }
+
+=======
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
       if (finishBtn) {
         finishBtn.addEventListener('click', () => {
            if (validateStep('step-template')) {
                const req = {
+<<<<<<< HEAD
+                   business_type: state.workContext || state.work_context || "Local Service",
+                   company_name: state.businessName,
+                   company_description: state.tagline || "",
+                   selling_categories: state.categories ? [state.categories] : [],
+                   payment_pref: "online",
+                   admin_email: state.adminEmail || "admin@mybusiness.com",
+                   admin_name: state.assistantName || "Admin",
+                   admin_password: state.adminPassword || "password",
+                   website_template: state.templateSelection || "Modern",
+                   first_product_name: state.firstOffer || "First Offer",
+                   first_product_price: "0.00",
+                   domain_choice: "subdomain",
+                   price_type: "fixed",
+                   location: "Local",
+                   target_audience: "General"
+=======
                    businessType: state.workContext || state.work_context || "Local Service",
                    companyName: state.businessName,
                    companyDescription: state.tagline || "",
@@ -1012,11 +1341,16 @@
                    priceType: "fixed",
                    location: "Local",
                    targetAudience: "General"
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
                };
 
                if (window.__TAURI__ && window.__TAURI__.core) {
                  finishBtn.disabled = true;
+<<<<<<< HEAD
+                 finishBtn.innerHTML = '<div class="spinner"></div>Saving...';
+=======
                  finishBtn.innerText = "Saving...";
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
                  window.__TAURI__.core.invoke("start_onboarding", { req }).then(() => {
                    window.location.href = "success.html";
                  }).catch((err) => {
@@ -1026,7 +1360,11 @@
                  });
                } else {
                  finishBtn.disabled = true;
+<<<<<<< HEAD
+                 finishBtn.innerHTML = '<div class="spinner"></div>Saving...';
+=======
                  finishBtn.innerText = "Saving...";
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
                  const backendUrl = (window.location.origin.includes('localhost') || window.location.protocol === 'file:') ? 'http://127.0.0.1:18789' : '';
                  fetch(`${backendUrl}/api/onboarding/start`, {
                      method: 'POST',
@@ -1105,7 +1443,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (!window.OHC_TOOLTIPS) {
         window.OHC_TOOLTIPS = {};
+<<<<<<< HEAD
+        fetch("/api/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(e => {
+            // Fallback for playwright
+            window.OHC_TOOLTIPS = {
+                "nav-store": "Your Storefront. This is where you manage what you sell.",
+                "nav-agents": "AI Helpers. These are your digital employees.",
+                "ohc-help-btn": "Need help? Click here to access our Help Center and tutorials.",
+                "search-input": "Search our knowledge base for help articles.",
+            };
+        });
+=======
         fetch("/api/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(console.error);
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
     }
     const tooltipEl = document.createElement('div');
     tooltipEl.className = 'ohc-tooltip';
@@ -1370,7 +1720,18 @@ document.addEventListener('DOMContentLoaded', () => {
         <div id="ohc-help-messages">
             <div class="msg msg-ai">Hi! I am your AI Help Agent! How can I assist you with OHC today?</div>
         </div>
+<<<<<<< HEAD
+
+        <div id="ohc-help-walkthroughs" style="margin-top: 15px; border-top: 1px solid rgba(0,0,0,0.1); padding-top: 15px;">
+            <h4 style="margin: 0 0 10px 0; font-size: 14px;">Interactive Tours</h4>
+            <button onclick="window.startWalkthrough && window.startWalkthrough([{targetId: 'nav-store', title: 'Set up your store', content: 'Click here to go to your storefront builder.'}])" style="width: 100%; text-align: left; padding: 8px; border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; background: white; margin-bottom: 8px; cursor: pointer; font-size: 13px;">Tour: Set up your store</button>
+            <button onclick="window.startWalkthrough && window.startWalkthrough([{targetId: 'nav-agents', title: 'Activate your AI Support Agent', content: 'Activate your AI agent to help with tasks.'}])" style="width: 100%; text-align: left; padding: 8px; border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; background: white; margin-bottom: 8px; cursor: pointer; font-size: 13px;">Tour: Activate your AI Support Agent</button>
+        </div>
+
+<div id="ohc-help-input-area">
+=======
         <div id="ohc-help-input-area">
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
             <input type="text" id="ohc-help-input" placeholder="Ask me anything..." />
             <button id="ohc-help-send" aria-label="Send message">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
@@ -1446,5 +1807,196 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
+<<<<<<< HEAD
+
+
+
+
+
+
+
+<style>
+.ohc-tooltip {
+    position: fixed;
+    background: #333;
+    color: white;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-family: Outfit, sans-serif;
+    z-index: 100000;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    max-width: 250px;
+    line-height: 1.4;
+}
+.ohc-tooltip.visible {
+    opacity: 1;
+}
+</style>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    if (!window.OHC_TOOLTIPS) {
+        window.OHC_TOOLTIPS = {};
+        fetch("/api/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(e => {
+            // Fallback for playwright
+            window.OHC_TOOLTIPS = {
+                "nav-store": "Your Storefront. This is where you manage what you sell.",
+                "nav-agents": "AI Helpers. These are your digital employees.",
+                "ohc-help-btn": "Need help? Click here to access our Help Center and tutorials.",
+                "search-input": "Search our knowledge base for help articles.",
+            };
+        });
+    }
+    const tooltipEl = document.createElement('div');
+    tooltipEl.className = 'ohc-tooltip';
+    document.body.appendChild(tooltipEl);
+
+    function showTooltip(e, text) {
+        if (!text) return;
+        tooltipEl.textContent = text;
+        const targetRect = e.target.closest('[id]') ? e.target.closest('[id]').getBoundingClientRect() : e.target.getBoundingClientRect();
+
+        let left = targetRect.left + (targetRect.width / 2) - (tooltipEl.offsetWidth / 2);
+        let top = targetRect.bottom + 10;
+
+        if (left + tooltipEl.offsetWidth > window.innerWidth - 10) {
+            left = window.innerWidth - tooltipEl.offsetWidth - 10;
+        } else if (left < 10) {
+            left = 10;
+        }
+
+        if (top + tooltipEl.offsetHeight > window.innerHeight - 10) {
+            top = targetRect.top - tooltipEl.offsetHeight - 10;
+        }
+
+        tooltipEl.style.top = `${top}px`;
+        tooltipEl.style.left = `${left}px`;
+        tooltipEl.classList.add('visible');
+    }
+
+    function hideTooltip() {
+        tooltipEl.classList.remove('visible');
+    }
+
+    document.addEventListener('mouseover', (e) => {
+        const target = e.target.closest('[id]');
+        if (target && target.id && window.OHC_TOOLTIPS[target.id]) {
+            showTooltip(e, window.OHC_TOOLTIPS[target.id]);
+        }
+    });
+
+    document.addEventListener('mouseout', (e) => {
+        const target = e.target.closest('[id]');
+        if (target && target.id && window.OHC_TOOLTIPS[target.id]) {
+            hideTooltip();
+        }
+    });
+});
+</script>
+
+
+<script>
+function initWalkthrough() {
+    window.startWalkthrough = function(steps) {
+        if (!steps || steps.length === 0) return;
+
+        let currentStep = 0;
+
+        // Create overlay
+        const overlay = document.createElement('div');
+        overlay.id = 'walkthrough-overlay';
+        overlay.className = 'fixed z-[90]';
+        overlay.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 99998;';
+        document.body.appendChild(overlay);
+
+        // Create bubble
+        const bubble = document.createElement('div');
+        bubble.id = 'walkthrough-bubble';
+        bubble.setAttribute('role', 'dialog');
+        bubble.style.cssText = 'position: fixed; background: white; border-radius: 8px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif;';
+        document.body.appendChild(bubble);
+
+        function renderStep() {
+            const step = steps[currentStep];
+
+            // Clean up previous highlights
+            document.querySelectorAll('.walkthrough-highlight').forEach(el => {
+                el.classList.remove('walkthrough-highlight');
+                el.style.position = '';
+                el.style.zIndex = '';
+                el.style.background = '';
+            });
+
+            // Find target
+            const target = document.getElementById(step.targetId) || document.querySelector(step.targetId);
+
+            bubble.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 8px;">
+                    <h4 style="margin: 0; font-size: 16px; font-weight: bold;">${step.title || 'Tour'}</h4>
+                    <button id="wt-close" style="background: none; border: none; cursor: pointer; font-size: 18px;">&times;</button>
+                </div>
+                <p style="margin: 0; font-size: 14px; color: #333;">${step.content}</p>
+                <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;">
+                    ${currentStep > 0 ? '<button id="wt-prev" style="padding: 6px 12px; border: 1px solid #ccc; border-radius: 4px; background: white; cursor: pointer;">Back</button>' : ''}
+                    <button id="wt-next" style="padding: 6px 12px; border: none; border-radius: 4px; background: #0066FF; color: white; cursor: pointer;">${currentStep === steps.length - 1 ? 'Finish' : 'Next'}</button>
+                </div>
+            `;
+
+            document.getElementById('wt-close').onclick = closeWalkthrough;
+            if (document.getElementById('wt-prev')) document.getElementById('wt-prev').onclick = () => { currentStep--; renderStep(); };
+            document.getElementById('wt-next').onclick = () => {
+                if (currentStep === steps.length - 1) {
+                    closeWalkthrough();
+                } else {
+                    currentStep++;
+                    renderStep();
+                }
+            };
+
+            if (target) {
+                target.classList.add('walkthrough-highlight');
+                target.style.position = 'relative';
+                target.style.zIndex = '99999';
+                target.style.background = 'white'; // Make it pop
+
+                const rect = target.getBoundingClientRect();
+                // Position bubble below target if space permits, else above
+                if (rect.bottom + 200 < window.innerHeight) {
+                    bubble.style.top = (rect.bottom + 10) + 'px';
+                } else {
+                    bubble.style.top = (rect.top - bubble.offsetHeight - 10) + 'px';
+                }
+                bubble.style.left = Math.max(10, Math.min(rect.left, window.innerWidth - 320)) + 'px';
+            } else {
+                // Center if no target
+                bubble.style.top = '50%';
+                bubble.style.left = '50%';
+                bubble.style.transform = 'translate(-50%, -50%)';
+            }
+        }
+
+        function closeWalkthrough() {
+            document.querySelectorAll('.walkthrough-highlight').forEach(el => {
+                el.classList.remove('walkthrough-highlight');
+                el.style.position = '';
+                el.style.zIndex = '';
+                el.style.background = '';
+            });
+            if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+            if (bubble.parentNode) bubble.parentNode.removeChild(bubble);
+        }
+
+        renderStep();
+    };
+}
+initWalkthrough();
+</script>
+
+</body>
+=======
   </body>
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
 </html>

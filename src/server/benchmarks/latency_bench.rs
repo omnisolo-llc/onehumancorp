@@ -600,6 +600,10 @@ mod tests {
         bench_time_savings_latency().await;
     }
 
+<<<<<<< HEAD
+    #[tokio::test]
+=======
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
     async fn test_bench_billing_api_response_time() {
         bench_billing_api_response_time().await;
     }
@@ -860,10 +864,19 @@ pub async fn bench_dashboard_unified_feed_parallel_latency() {
         let pool1 = pg_pool.clone();
         let pool2 = pg_pool.clone();
         let pool3 = pg_pool.clone();
+<<<<<<< HEAD
+        let pool4 = pg_pool.clone();
+        let (_, _, _, _) = tokio::join!(
+            tokio::spawn(async move { sqlx::query("SELECT pg_sleep(0.010)").execute(&pool1).await }),
+            tokio::spawn(async move { sqlx::query("SELECT pg_sleep(0.010)").execute(&pool2).await }),
+            tokio::spawn(async move { sqlx::query("SELECT pg_sleep(0.010)").execute(&pool3).await }),
+            tokio::spawn(async move { sqlx::query("SELECT pg_sleep(0.010)").execute(&pool4).await })
+=======
         let (_, _, _) = tokio::join!(
             tokio::spawn(async move { sqlx::query("SELECT pg_sleep(0.010)").execute(&pool1).await }),
             tokio::spawn(async move { sqlx::query("SELECT pg_sleep(0.010)").execute(&pool2).await }),
             tokio::spawn(async move { sqlx::query("SELECT pg_sleep(0.010)").execute(&pool3).await })
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
         );
         let duration_par = start_par.elapsed();
 

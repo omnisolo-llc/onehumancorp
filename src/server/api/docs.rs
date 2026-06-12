@@ -22,6 +22,61 @@ pub struct SearchQuery {
     pub q: String,
 }
 
+<<<<<<< HEAD
+#[derive(Serialize, Clone)]
+pub struct WalkthroughStep {
+    pub selector: String,
+    pub title: String,
+    pub text: String,
+}
+
+pub async fn get_walkthrough(axum::extract::Path(page): axum::extract::Path<String>) -> Json<Vec<WalkthroughStep>> {
+    let steps = match page.as_str() {
+        "dashboard" => vec![
+            WalkthroughStep { selector: "#dashboard-title".to_string(), title: "Welcome".to_string(), text: "Welcome to your dashboard! This is your control center.".to_string() },
+            WalkthroughStep { selector: "#ai-savings-widget".to_string(), title: "AI Savings".to_string(), text: "Here you can see the time and effort your agents have saved you.".to_string() }
+        ],
+        "pos" => vec![
+            WalkthroughStep { selector: "#charge-btn".to_string(), title: "Accept Payment".to_string(), text: "Enter an amount and tap here to charge.".to_string() }
+        ],
+        "assistant" => vec![
+            WalkthroughStep { selector: "#ohc-help-input-area".to_string(), title: "Activate your AI Support Agent".to_string(), text: "Chat here to activate your AI agent.".to_string() }
+        ],
+        _ => vec![],
+    };
+    Json(steps)
+}
+
+pub async fn get_tooltips() -> Json<std::collections::HashMap<String, String>> {
+    let registry = crate::get_tooltips_registry().read().unwrap();
+    let mut tooltips = std::collections::HashMap::new();
+    for (k, v) in registry.iter() {
+        tooltips.insert(k.clone(), v.clone());
+    }
+    Json(tooltips)
+}
+
+#[derive(Deserialize)]
+pub struct TooltipPayload {
+    pub id: String,
+    pub text: String,
+}
+
+#[derive(Serialize)]
+pub struct SuccessResponse {
+    pub success: bool,
+}
+
+pub async fn update_tooltip(axum::extract::Json(payload): axum::extract::Json<TooltipPayload>) -> Json<SuccessResponse> {
+    let mut registry = crate::get_tooltips_registry().write().unwrap();
+    registry.insert(payload.id, payload.text);
+    Json(SuccessResponse { success: true })
+}
+
+
+
+=======
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
 pub fn get_articles() -> Vec<HelpArticle> {
     vec![
         HelpArticle { category: "Getting Started".to_string(), title: "Getting Started".to_string(), desc: "Learn how to easily set up your store and accept your first payment.".to_string(), link: "/help/getting-started-1".to_string() },

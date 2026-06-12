@@ -13,7 +13,11 @@ test.describe('Unified Agent Feed Offline Mode', () => {
     await page.goto('/dashboard');
 
     // Make sure we have the feed
+<<<<<<< HEAD
+    await expect(page.locator('text=Proposals').first()).toBeVisible();
+=======
     await expect(page.locator('text=Proposals')).toBeVisible();
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
 
     // Trigger an agent action via the backend webhook to generate a proposal
     const apiBase = process.env.OHC_API_URL || process.env.BACKEND_URL || process.env.BASE_URL || '';

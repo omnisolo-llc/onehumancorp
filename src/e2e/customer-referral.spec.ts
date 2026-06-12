@@ -1,7 +1,14 @@
 import { test, expect } from './fixtures';
 import { currentAppSmoke } from './current_app_smoke';
 
+<<<<<<< HEAD
+test('customer_referral_loop', async ({ page, request, loginAs, adminUser }) => {
+  await loginAs(page, adminUser);
+  await currentAppSmoke(page, request, 'customer_referral_loop');
+});
+=======
 currentAppSmoke('customer_referral_loop');
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
 
 test.describe('Customer Referral Program Growth Loop', () => {
     test('dashboard links to Customer Referral Program, which generates an embed with a viral footer', async ({ page, request }) => {

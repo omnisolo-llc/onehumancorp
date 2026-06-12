@@ -112,7 +112,11 @@ async fn test_revoke_token_tenant_isolation() {
 
     // Call revoke token on the CURRENT tenant
     let future_time = chrono::Utc::now() + chrono::Duration::hours(1);
+<<<<<<< HEAD
+    let res: Result<(), String> = repo.revoke_token("current_tenant_token".to_string(), future_time, current_tenant).await;
+=======
     let res = repo.revoke_token("current_tenant_token".to_string(), future_time, current_tenant).await;
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
     assert!(res.is_ok(), "revoke_token should succeed");
 
     // Ensure the other tenant's expired token still exists, proving GC only cleared current_tenant

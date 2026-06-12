@@ -1,4 +1,8 @@
+<<<<<<< HEAD
+import { test, expect } from '@playwright/test';
+=======
 import { test, expect } from './fixtures';
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
 
 test.describe('Regression Audit: Verify Mocks Removed and Features Rewired', () => {
 

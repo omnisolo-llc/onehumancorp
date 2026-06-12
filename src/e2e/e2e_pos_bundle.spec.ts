@@ -41,7 +41,11 @@ test.describe('In-Person Payment (POS) Flow - Offline Bundling', () => {
     await page.evaluate(() => window.dispatchEvent(new Event('offline')));
 
     // Trigger New Order
+<<<<<<< HEAD
+    await page.locator('text=Quick Charge').click();
+=======
     await page.getByRole('button', { name: 'New Order' }).click();
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
 
     // Verify Payment total and offline
     await expect(page.locator('text=Payment Saved Offline - 50 USD')).toBeVisible();

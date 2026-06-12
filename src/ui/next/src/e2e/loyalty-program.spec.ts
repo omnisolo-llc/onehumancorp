@@ -1,5 +1,9 @@
 import { test, expect } from '@playwright/test';
+<<<<<<< HEAD
+
+=======
 import { adminPage } from '../../e2e/fixtures';
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
 
 test.describe('Automated Loyalty Campaign Growth Loop', () => {
   test('should generate a loyalty program VIP email via AI', async ({ page }) => {

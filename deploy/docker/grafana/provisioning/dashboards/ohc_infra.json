@@ -54,7 +54,11 @@
       },
       "options": {
         "mode": "html",
+<<<<<<< HEAD
+        "content": "<link rel=\"stylesheet\" href=\"/public/css/custom.css\">"
+=======
         "content": "<div style=\"background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 12px; padding: 20px; font-family: 'Outfit', 'Inter', sans-serif; color: #000;\">\n<link rel=\"stylesheet\" href=\"/public/css/custom.css\">\n</div>"
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
       },
       "transparent": true
     },
@@ -71,7 +75,11 @@
       },
       "id": 1,
       "options": {
+<<<<<<< HEAD
+        "content": "<link rel=\"stylesheet\" href=\"/public/css/custom.css\">\n<h1 >OHC Infrastructure Dashboard</h1>\n  <p >Uptime & Resource Observability</p>",
+=======
         "content": "<div style=\"background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 12px; padding: 20px; font-family: 'Outfit', 'Inter', sans-serif; color: #000;\">\n<link rel=\"stylesheet\" href=\"/public/css/custom.css\">\n\n  <h1 style=\"margin: 0; color: #000; font-size: 24px;\">OHC Infrastructure Dashboard</h1>\n  <p style=\"margin: 5px 0 0; color: #000; font-size: 14px;\">Uptime & Resource Observability</p>\n</div>",
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
         "mode": "html"
       },
       "pluginVersion": "10.0.0",

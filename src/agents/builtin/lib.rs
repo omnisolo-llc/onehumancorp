@@ -385,3 +385,7 @@ pub async fn run_agent() -> Result<(), Box<dyn std::error::Error>> {
 }
 pub mod jit_retrieval;
 pub mod aider_repomap;
+<<<<<<< HEAD
+pub mod microagent;
+=======
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))

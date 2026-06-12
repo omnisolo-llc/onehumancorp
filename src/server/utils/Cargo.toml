@@ -5,6 +5,10 @@ edition = "2024"
 
 [dependencies]
 axum = { version = "0.8.1", features = ["ws"] }
+<<<<<<< HEAD
+dashmap = "5"
+=======
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
 flate2 = "1"
 rand = "0.8"
 redis = { version = "0.27.6", features = ["tokio-comp"] }

@@ -54,7 +54,11 @@ test.describe('Viral Giveaway Loop', () => {
     await expect(publicPage.getByText('Enter your email to win an iPad')).toBeVisible();
 
     // Verify "Powered by OHC" footer
+<<<<<<< HEAD
+    const footerLink = publicPage.locator('a', { hasText: 'Powered by OHC' }).first();
+=======
     const footerLink = publicPage.getByRole('link', { name: '⚡ Powered by OHC' });
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
     await expect(footerLink).toBeVisible();
     const footerHref = await footerLink.getAttribute('href');
     expect(footerHref).toContain('/onboarding?ref=');

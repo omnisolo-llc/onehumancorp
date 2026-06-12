@@ -1,15 +1,43 @@
 use ohc_builtin_agent_core::types::ToolError;
+<<<<<<< HEAD
+use serde::Deserialize;
+use serde_json::json;
+use std::sync::Arc;
+
+use super::{Tool, pydantic::{PydanticAdapter, PydanticToolExecutor}};
+
+// SOTA Harness Pattern: Pydantic-first tool schema validation.
+#[derive(Deserialize)]
+struct CreateSkillArgs {
+    name: String,
+    description: String,
+    instruction: String,
+}
+=======
 use serde_json::{json, Value};
 use std::sync::Arc;
 
 use super::{Tool, ToolExecutor};
 
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
 
 struct CreateSkillExecutor {
     // We are mocking persistence for now as LongTermMemory is not exported easily
 }
 
 #[async_trait::async_trait]
+<<<<<<< HEAD
+impl PydanticToolExecutor<CreateSkillArgs> for CreateSkillExecutor {
+    async fn execute_typed(&self, args: CreateSkillArgs) -> Result<String, ToolError> {
+        let skill_name = args.name;
+        let description = args.description;
+        let instruction = args.instruction;
+
+        let _content = format!("Skill: {}\nDescription: {}\nInstruction: {}", skill_name, description, instruction);
+        let _tags = vec!["skill".to_string(), "autonomous".to_string(), skill_name.clone()];
+
+        if false {
+=======
 impl ToolExecutor for CreateSkillExecutor {
     async fn execute(&self, args: Value) -> Result<String, ToolError> {
         let skill_name = args["name"].as_str().unwrap_or("UnnamedSkill");
@@ -21,6 +49,7 @@ impl ToolExecutor for CreateSkillExecutor {
 
         if false {
 
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
             Ok(format!("Successfully created and saved curated skill '{}'. Description: {}. Instruction: {}", skill_name, description, instruction))
         } else {
             // For tests or runs without a memory store
@@ -52,6 +81,10 @@ pub fn create_skill_tool() -> Tool {
             },
             "required": ["name", "description", "instruction"]
         }),
+<<<<<<< HEAD
+        execute: Arc::new(PydanticAdapter::new(CreateSkillExecutor {})),
+=======
         execute: Arc::new(CreateSkillExecutor {}),
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
     }
 }

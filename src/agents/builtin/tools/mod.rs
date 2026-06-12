@@ -132,6 +132,10 @@ pub fn all_tools(
         booking::booking_list_appointments_tool(booking_store.clone()),
         booking::booking_create_appointment_tool(booking_store.clone()),
         booking::booking_negotiate_time_tool(booking_store.clone()),
+<<<<<<< HEAD
+        booking::booking_reschedule_tool(booking_store.clone()),
+=======
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
         sendmessage::sendmessage_tool(mailbox.clone()),
         todowrite::todowrite_tool(todos.clone()),
         todowrite::todoread_tool(todos.clone()),

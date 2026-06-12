@@ -404,7 +404,11 @@ impl CostAuditor {
         let caching_savings = self.caching_savings.lock().unwrap();
         let storage_savings = self.storage_savings.lock().unwrap();
         let total_compute_cost = self.total_compute_cost.lock().unwrap();
+<<<<<<< HEAD
+        let total_bandwidth_savings = self.bandwidth_savings.lock().unwrap();
+=======
         let total_network_cost = self.total_network_cost.lock().unwrap();
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
         let agent_revenues = self.agent_revenues.lock().unwrap();
         let agent_tokens = self.agent_tokens.lock().unwrap();
 
@@ -412,7 +416,11 @@ impl CostAuditor {
         report += &format!("Total Savings via Caching: ${:.4}\n", *caching_savings);
         report += &format!("Total Savings via Storage Compression: ${:.4}\n", *storage_savings);
         report += &format!("Total Compute Cost: ${:.4}\n", *total_compute_cost);
+<<<<<<< HEAD
+        report += &format!("Total Bandwidth Savings: ${:.4}\n", *total_bandwidth_savings);
+=======
         report += &format!("Total Network Cost: ${:.4}\n", *total_network_cost);
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
         report += "Agent Costs:
 ";
 

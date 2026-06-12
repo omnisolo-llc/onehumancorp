@@ -54,7 +54,11 @@
       },
       "options": {
         "mode": "html",
+<<<<<<< HEAD
+        "content": "<link rel=\"stylesheet\" href=\"/public/css/custom.css\">"
+=======
         "content": "<link rel=\"stylesheet\" href=\"/public/css/custom.css\">\n"
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
       },
       "transparent": true
     },
@@ -71,7 +75,11 @@
       },
       "id": 1,
       "options": {
+<<<<<<< HEAD
+        "content": "<link rel=\"stylesheet\" href=\"/public/css/custom.css\">\n<h1 >OHC Infrastructure & Observability Dashboard</h1>\n  <p >Cloud & Standalone Core Metrics</p>",
+=======
         "content": "<link rel=\"stylesheet\" href=\"/public/css/custom.css\">\n<div class=\"panel-container\" style=\"font-size: 24px; font-weight: bold; text-align: center; color: white; padding: 10px;\">\n  <h1 style=\"margin: 0; color: #fff; font-size: 24px;\">OHC Infrastructure & Observability Dashboard</h1>\n  <p style=\"margin: 5px 0 0; color: #aaa; font-size: 14px;\">Cloud & Standalone Core Metrics</p>\n</div>",
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
         "mode": "html"
       },
       "pluginVersion": "10.0.0",

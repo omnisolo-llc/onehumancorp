@@ -22,7 +22,12 @@ test.describe('Business Manager UI', () => {
 
   test('should display business setup page', async ({ page }) => {
     await page.goto('/onboarding');
+<<<<<<< HEAD
+    await page.waitForLoadState('networkidle');
+    await expect(page.getByRole('heading', { name: '10-Minute Setup Wizard' })).toBeVisible();
+=======
     await expect(page.getByRole('heading', { name: 'Setup' })).toBeVisible();
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
     await expect(page.locator('#setup-screen')).toBeVisible();
   });
 });
@@ -30,7 +35,15 @@ test.describe('Business Manager UI', () => {
 test.describe('Navigation', () => {
   test('should have working nav links', async ({ page }) => {
     await page.goto('/dashboard');
+<<<<<<< HEAD
+    await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
+    const link = page.getByRole('link', { name: 'Agents', exact: true });
+    await expect(link).toBeVisible();
+    await link.click();
+    await page.waitForURL('**/agents**');
+=======
     await page.getByRole('link', { name: 'Agents' }).click();
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
     await expect(page.getByRole('heading', { name: 'AI Departments' })).toBeVisible();
   });
 

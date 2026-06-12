@@ -97,7 +97,11 @@ pub fn ollama_tool() -> Tool {
 #[cfg(test)]
 mod tests {
     use super::*;
+<<<<<<< HEAD
+    use crate::ToolExecutor;
+=======
     use crate::tools::ToolExecutor;
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
 
     #[tokio::test]
     async fn test_ollama_pydantic_adapter_missing_action() {

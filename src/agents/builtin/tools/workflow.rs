@@ -361,8 +361,13 @@ mod tests {
     async fn run_workflow_rejects_unknown_workflow() {
         let runner = Arc::new(crate::runner::mock::MockCommandRunner::new());
         let executor = WorkflowExecutor { runner };
+<<<<<<< HEAD
+
+        let result = executor.execute_typed(serde_json::from_value(json!({"workflow": "unknown"})).unwrap()).await;
+=======
         let adapter = PydanticAdapter::new(executor);
         let result = adapter.execute(json!({"workflow": "unknown"})).await;
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
 
         assert!(matches!(result, Err(ToolError::LlmRecoverable(_))));
     }
@@ -384,12 +389,21 @@ mod tests {
         }
 
         let executor = WorkflowExecutor { runner };
+<<<<<<< HEAD
+
+        let result = executor
+            .execute_typed(serde_json::from_value(json!({
+                "workflow": "ohc_review_branch",
+                "task": "review the branch"
+            })).unwrap())
+=======
         let adapter = PydanticAdapter::new(executor);
         let result = adapter
             .execute(json!({
                 "workflow": "ohc_review_branch",
                 "task": "review the branch"
             }))
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
             .await
             .unwrap();
 

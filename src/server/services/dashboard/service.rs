@@ -36,6 +36,10 @@ impl MyDashboardService {
         if mobile_optimized {
             for agent in agents.iter_mut() {
                 agent.name = String::new();
+<<<<<<< HEAD
+                agent.organization_id = String::new();
+=======
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
             }
         }
         Ok(agents)
@@ -275,10 +279,17 @@ impl MyDashboardService {
                         let amount_real: f64 = r.try_get("total_amount").unwrap_or(0.0);
                         let o = ::server_ohc::app::Order {
                             id: r.try_get("id").unwrap_or_default(),
+<<<<<<< HEAD
+                            organization_id: if mobile_optimized { String::new() } else { r.try_get("tenant_id").unwrap_or_default() },
+                            product_id: String::new(),
+                            amount_cents: (amount_real * 100.0) as i64,
+                            status: if mobile_optimized { String::new() } else { r.try_get("status").unwrap_or_default() },
+=======
                             organization_id: r.try_get("tenant_id").unwrap_or_default(),
                             product_id: String::new(),
                             amount_cents: (amount_real * 100.0) as i64,
                             status: r.try_get("status").unwrap_or_default(),
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
                             created_at_unix: 0,
                         };
                         results.push(o);
@@ -291,10 +302,17 @@ impl MyDashboardService {
                         let amount_real: f64 = r.try_get("total_amount").unwrap_or(0.0);
                         let o = ::server_ohc::app::Order {
                             id: r.try_get("id").unwrap_or_default(),
+<<<<<<< HEAD
+                            organization_id: if mobile_optimized { String::new() } else { r.try_get("tenant_id").unwrap_or_default() },
+                            product_id: String::new(),
+                            amount_cents: (amount_real * 100.0) as i64,
+                            status: if mobile_optimized { String::new() } else { r.try_get("status").unwrap_or_default() },
+=======
                             organization_id: r.try_get("tenant_id").unwrap_or_default(),
                             product_id: String::new(),
                             amount_cents: (amount_real * 100.0) as i64,
                             status: r.try_get("status").unwrap_or_default(),
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
                             created_at_unix: 0,
                         };
                         results.push(o);

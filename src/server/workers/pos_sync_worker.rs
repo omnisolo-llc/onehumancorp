@@ -309,6 +309,12 @@ mod tests {
             .execute(&pool).await.unwrap();
 
         let job_payload = serde_json::json!({
+<<<<<<< HEAD
+            "pos_transaction_id": "tx-test-worker",
+            "amount_cents": 5000,
+            "currency": "usd",
+            "payload": "[{\"product_id\": \"prod-worker-test-1\", \"quantity\": 2}]"
+=======
             "transaction_id": "tx-test-worker",
             "mutation": {
                 "product_id": "prod-worker-test-1",
@@ -316,6 +322,7 @@ mod tests {
                 "amount": 5000,
                 "transaction_id": "tx-test-worker"
             }
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
         });
 
         let job = crate::queue::Job {
@@ -375,6 +382,12 @@ mod tests {
             .execute(&pool).await.unwrap();
 
         let job_payload = serde_json::json!({
+<<<<<<< HEAD
+            "pos_transaction_id": "tx-test-worker-2",
+            "amount_cents": 5000,
+            "currency": "usd",
+            "payload": "[{\"product_id\": \"prod-worker-test-2\", \"quantity\": 2}]"
+=======
             "transaction_id": "tx-test-worker-2",
             "mutation": {
                 "product_id": "prod-worker-test-2",
@@ -382,6 +395,7 @@ mod tests {
                 "amount": 5000,
                 "transaction_id": "tx-test-worker-2"
             }
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
         });
 
         let job = crate::queue::Job {

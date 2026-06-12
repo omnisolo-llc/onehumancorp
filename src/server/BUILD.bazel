@@ -3,6 +3,10 @@ load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library", "rust_test")
 load("//bazel/rules:rust_sharded_test.bzl", "rust_sharded_test")
 
 SERVER_RS_SRCS = [
+<<<<<<< HEAD
+    "health_test.rs",
+=======
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
     "analytics.rs",
     "autodream_sync.rs",
     "billing.rs",
@@ -51,6 +55,10 @@ SERVER_RS_SRCS = [
     "//src/server/api:local_seo.rs",
     "//src/server/api:recovery.rs",
     "//src/server/api:agent_feed.rs",
+<<<<<<< HEAD
+    "//src/server/api:incidents.rs",
+=======
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
     "//src/server/api:audio_command.rs",
     "//src/server/api:invoice.rs",
     "//src/server/api:oauth/mod.rs",
@@ -67,7 +75,10 @@ SERVER_RS_SRCS = [
     "//src/server/api:shipping.rs",
     "//src/server/api/booking:mod.rs",
     "//src/server/api/booking:request.rs",
+<<<<<<< HEAD
+=======
     "//src/server/api/booking:unified.rs",
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
     "//src/server/api/agents:approvals.rs",
     "//src/server/api/agents:chat.rs",
     "//src/server/api/agents:hire.rs",
@@ -295,6 +306,10 @@ SERVER_RS_SRCS = [
     "//src/server/workers:pos_sync_worker.rs",
     "//src/server/workers:pos_conflict_worker.rs",
     "//src/server/workers:proactive_analysis_job.rs",
+<<<<<<< HEAD
+    "//src/server/workers:message_triage_worker.rs",
+=======
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
     "//src/server/workers:calendar_sync.rs",
     "//src/server/workers:booking_reengagement.rs",
     "//src/server/workers:mod.rs",
@@ -324,6 +339,13 @@ rust_library(
 rust_library(
     name = "server_lib",
     srcs = SERVER_RS_SRCS,
+<<<<<<< HEAD
+    compile_data = [
+        "//src/ui/tauri/src/ui:all_files",
+        "//src/ui/next/public/api/ui:all_files",
+    ],
+=======
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
     data = ["//src/server/migrations"],
     edition = "2024",
     rustc_flags = ["--cfg=ohc_bazel"],
@@ -509,6 +531,10 @@ SERVER_LIB_TEST_GROUPS = {
         "tasks::tests::test_get_pending_approvals",
         "tasks::tests::test_reject_task",
         "tasks::tests::test_review_task",
+<<<<<<< HEAD
+        "tasks::tests::test_task_manager_mesh_broadcast",
+=======
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
         "ultraplan::",
     ],
     "interop": [

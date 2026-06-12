@@ -110,7 +110,11 @@ export default function TriagePage() {
       </div>
 
       <div className="app-grid two grid grid-cols-1 lg:grid-cols-[1.5fr_0.8fr] gap-6">
+<<<<<<< HEAD
+        <section className="app-panel glassmorphism backdrop-blur-md bg-white/60 dark:bg-black/40 border border-white/20">
+=======
         <section className="app-panel glassmorphism">
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
           <div className="app-panel-header">
             <div>
               <div className="app-panel-title">Triage Queue</div>
@@ -127,7 +131,11 @@ export default function TriagePage() {
                 data-testid={`triage-card-${item.id}`}
                 onClick={() => setSelectedId(item.id)}
                 className="app-list-item w-full text-left min-h-[44px]"
+<<<<<<< HEAD
+                style={{ background: selected?.id === item.id ? "rgba(255, 255, 255, 0.5)" : "transparent" }}
+=======
                 style={{ background: selected?.id === item.id ? "#f8fafc" : "transparent" }}
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
               >
                 <div className="min-w-0">
                   <div className="app-list-title">{item.source || "Unknown Source"}</div>
@@ -139,7 +147,11 @@ export default function TriagePage() {
           </div>
         </section>
 
+<<<<<<< HEAD
+        <section className="app-panel glassmorphism backdrop-blur-md bg-white/60 dark:bg-black/40 border border-white/20">
+=======
         <section className="app-panel glassmorphism">
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
           <div className="app-panel-header">
             <div className="app-panel-title">Triage Detail</div>
           </div>
@@ -149,24 +161,45 @@ export default function TriagePage() {
             <div className="app-panel-body">
               <div className="mb-4">
                 <div className="app-metric-label">Source</div>
+<<<<<<< HEAD
+                <div className="mt-1 text-sm font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">{selected.source || "Unknown source"}</div>
+              </div>
+              <div className="mb-4">
+                <div className="app-metric-label">Context</div>
+                <div className="mt-2 rounded-md border border-gray-200 dark:border-white/10 bg-white/50 dark:bg-black/20 p-3 text-sm leading-6 text-[#1D1D1F] dark:text-[#F5F5F7]">
+=======
                 <div className="mt-1 text-sm font-semibold text-gray-900">{selected.source || "Unknown source"}</div>
               </div>
               <div className="mb-4">
                 <div className="app-metric-label">Context</div>
                 <div className="mt-2 rounded-md border border-gray-200 bg-gray-50 p-3 text-sm leading-6 text-gray-800">
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
                   {selected.context || "No context"}
                 </div>
               </div>
               {selected.action_type && (
                 <div className="mb-6">
                   <div className="app-metric-label">Proposed Action: {selected.action_type}</div>
+<<<<<<< HEAD
+                  <div className="mt-2 rounded-md border border-blue-200 dark:border-blue-900/30 bg-blue-50/50 dark:bg-blue-900/20 p-4 text-sm leading-6 text-blue-900 dark:text-blue-100 font-medium">
+=======
                   <div className="mt-2 rounded-md border border-blue-200 bg-blue-50 p-4 text-sm leading-6 text-blue-900 font-medium">
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
                     {selected.action_payload || "No specific payload"}
                   </div>
                 </div>
               )}
 
               <div className="grid grid-cols-2 gap-3 mb-6">
+<<<<<<< HEAD
+                <div className="app-card glassmorphism backdrop-blur-md bg-white/30 dark:bg-black/30 border border-white/20">
+                  <div className="app-metric-label">Priority</div>
+                  <div className="mt-2"><span className={`app-badge ${badgeTone(selected.priority)}`}>{selected.priority || "Normal"}</span></div>
+                </div>
+                <div className="app-card glassmorphism backdrop-blur-md bg-white/30 dark:bg-black/30 border border-white/20">
+                  <div className="app-metric-label">Created</div>
+                  <div className="mt-2 text-sm font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">{new Date(selected.created_at || Date.now()).toLocaleString()}</div>
+=======
                 <div className="app-card glassmorphism">
                   <div className="app-metric-label">Priority</div>
                   <div className="mt-2"><span className={`app-badge ${badgeTone(selected.priority)}`}>{selected.priority || "Normal"}</span></div>
@@ -174,6 +207,7 @@ export default function TriagePage() {
                 <div className="app-card glassmorphism">
                   <div className="app-metric-label">Created</div>
                   <div className="mt-2 text-sm font-semibold text-gray-900">{new Date(selected.created_at || Date.now()).toLocaleString()}</div>
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
                 </div>
               </div>
 
@@ -186,7 +220,11 @@ export default function TriagePage() {
                   ✨ Approve &amp; Execute
                 </button>
                 <button
+<<<<<<< HEAD
+                  className="px-4 py-2 rounded-[16px] border border-white/40 dark:border-white/20 text-[#1D1D1F] dark:text-[#F5F5F7] bg-white/50 dark:bg-black/20 hover:bg-white/80 dark:hover:bg-black/40 flex-1 min-h-[44px] font-medium transition-colors backdrop-blur-md"
+=======
                   className="px-4 py-2 rounded-md border border-gray-300 text-gray-700 bg-white hover:bg-gray-50 flex-1 min-h-[44px] font-medium transition-colors"
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
                   data-testid="dismiss-btn"
                   onClick={() => handleDecision(selected.id, false)}
                 >

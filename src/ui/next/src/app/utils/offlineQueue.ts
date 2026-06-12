@@ -11,14 +11,24 @@ const DB_VERSION = 1;
 
 function getDB(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
+<<<<<<< HEAD
+=======
     if (typeof window === "undefined" || !window.indexedDB) {
       return reject(new Error("IndexedDB not available"));
     }
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
 
     const request = window.indexedDB.open(DB_NAME, DB_VERSION);
 
     request.onerror = (event) => {
+<<<<<<< HEAD
+      // Suppress error log if IndexedDB is intentionally unavailable in tests
+      if (process.env.NODE_ENV !== 'test') {
+        console.error("IndexedDB error", event);
+      }
+=======
       console.error("IndexedDB error", event);
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
       reject(request.error);
     };
 
@@ -36,6 +46,10 @@ function getDB(): Promise<IDBDatabase> {
 }
 
 export async function enqueueAction(action: OfflineAction): Promise<void> {
+<<<<<<< HEAD
+  if (typeof window === "undefined" || !window.indexedDB) return;
+=======
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
   try {
     const db = await getDB();
     return new Promise((resolve, reject) => {
@@ -47,11 +61,21 @@ export async function enqueueAction(action: OfflineAction): Promise<void> {
       request.onerror = () => reject(request.error);
     });
   } catch (err) {
+<<<<<<< HEAD
+    if (process.env.NODE_ENV !== 'test') {
+      console.error("Failed to enqueue action", err);
+    }
+=======
     console.error("Failed to enqueue action", err);
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
   }
 }
 
 export async function getActions(): Promise<OfflineAction[]> {
+<<<<<<< HEAD
+  if (typeof window === "undefined" || !window.indexedDB) return [];
+=======
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
   try {
     const db = await getDB();
     return new Promise((resolve, reject) => {
@@ -65,12 +89,22 @@ export async function getActions(): Promise<OfflineAction[]> {
       request.onerror = () => reject(request.error);
     });
   } catch (err) {
+<<<<<<< HEAD
+    if (process.env.NODE_ENV !== 'test') {
+      console.error("Failed to get actions", err);
+    }
+=======
     console.error("Failed to get actions", err);
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
     return [];
   }
 }
 
 export async function removeAction(id: string): Promise<void> {
+<<<<<<< HEAD
+  if (typeof window === "undefined" || !window.indexedDB) return;
+=======
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
   try {
     const db = await getDB();
     return new Promise((resolve, reject) => {
@@ -82,6 +116,12 @@ export async function removeAction(id: string): Promise<void> {
       request.onerror = () => reject(request.error);
     });
   } catch (err) {
+<<<<<<< HEAD
+    if (process.env.NODE_ENV !== 'test') {
+      console.error("Failed to remove action", err);
+    }
+=======
     console.error("Failed to remove action", err);
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
   }
 }

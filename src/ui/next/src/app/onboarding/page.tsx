@@ -492,8 +492,16 @@ export default function OnboardingWizard() {
               <div className="space-y-4 flex-1 w-full">
                 <textarea
                   value={bio}
+<<<<<<< HEAD
+                  onChange={(e) => {
+                    setBio(e.target.value);
+                    if (error) setError('');
+                  }}
+                  className={`w-full glassmorphism min-h-[44px] min-w-[44px] p-4 border outline-none transition-all resize-none text-gray-800 dark:text-[#f5f5f7] shadow-inner rounded-[8px] ${error ? 'border-[#FF3B30] focus:ring-2 focus:ring-[#FF3B30] focus:border-[#FF3B30]' : 'border-transparent focus:ring-2 focus:ring-[#0066FF] focus:border-[#0066FF]'}`}
+=======
                   onChange={(e) => setBio(e.target.value)}
                   className="w-full glassmorphism min-h-[44px] min-w-[44px] p-4 focus:ring-2 focus:ring-[#0066FF] focus:border-[#0066FF] outline-none transition-all resize-none text-gray-800 dark:text-[#f5f5f7] shadow-inner rounded-[8px]"
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
                   placeholder="e.g. I run a local bakery that sells custom vegan cakes..."
                   rows={6}
                 />
@@ -647,7 +655,11 @@ export default function OnboardingWizard() {
                           }
                         }}
                         placeholder="e.g. Maya's Custom Cakes"
+<<<<<<< HEAD
+                        className={`w-full p-3 sm:p-4 rounded-[8px] border outline-none glassmorphism min-h-[44px] min-w-[44px] text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner ${validationError === 'Business Name must be at least 3 characters.' ? 'border-[#FF3B30]' : 'border-white/50 dark:border-white/10 focus:border-[#0066FF]'}`}
+=======
                         className={`w-full p-3 sm:p-4 rounded-[8px] border outline-none glassmorphism min-h-[44px] min-w-[44px] text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner ${validationError === 'Business Name must be at least 3 characters.' ? 'border-[#FF3B30]' : 'border-transparent focus:border-[#0066FF]'}`}
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
                       />
                     </div>
                   </div>
@@ -712,7 +724,11 @@ export default function OnboardingWizard() {
                           }
                         }}
                         placeholder="e.g. I bake custom vegan cakes for weddings and parties..."
+<<<<<<< HEAD
+                        className={`w-full p-3 sm:p-4 rounded-[8px] border outline-none glassmorphism min-h-[44px] min-w-[44px] text-[#1D1D1F] dark:text-[#F5F5F7] h-32 resize-none transition-all shadow-inner ${validationError === 'Please tell us what you sell.' ? 'border-[#FF3B30]' : 'border-white/50 dark:border-white/10 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30'}`}
+=======
                         className={`w-full p-3 sm:p-4 rounded-[8px] border outline-none glassmorphism min-h-[44px] min-w-[44px] text-[#1D1D1F] dark:text-[#F5F5F7] h-32 resize-none transition-all shadow-inner ${validationError === 'Please tell us what you sell.' ? 'border-[#FF3B30]' : 'border-transparent focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30'}`}
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
                       />
                     </div>
                   </div>
@@ -778,7 +794,11 @@ export default function OnboardingWizard() {
                           }
                         }}
                         placeholder="e.g. Portland, OR"
+<<<<<<< HEAD
+                        className={`w-full p-3 sm:p-4 rounded-[8px] border outline-none glassmorphism min-h-[44px] min-w-[44px] text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner ${validationError === 'Please tell us your location.' ? 'border-[#FF3B30]' : 'border-white/50 dark:border-white/10 focus:border-[#0066FF]'}`}
+=======
                         className={`w-full p-3 sm:p-4 rounded-[8px] border outline-none glassmorphism min-h-[44px] min-w-[44px] text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner ${validationError === 'Please tell us your location.' ? 'border-[#FF3B30]' : 'border-transparent focus:border-[#0066FF]'}`}
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
                       />
                     </div>
                   </div>
@@ -844,7 +864,11 @@ export default function OnboardingWizard() {
                           }
                         }}
                         placeholder="e.g. Local families, Tech startups"
+<<<<<<< HEAD
+                        className={`w-full p-3 sm:p-4 rounded-[8px] border outline-none glassmorphism min-h-[44px] min-w-[44px] text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner ${validationError === 'Please tell us your target audience.' ? 'border-[#FF3B30]' : 'border-white/50 dark:border-white/10 focus:border-[#0066FF]'}`}
+=======
                         className={`w-full p-3 sm:p-4 rounded-[8px] border outline-none glassmorphism min-h-[44px] min-w-[44px] text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner ${validationError === 'Please tell us your target audience.' ? 'border-[#FF3B30]' : 'border-transparent focus:border-[#0066FF]'}`}
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
                       />
                     </div>
                   </div>

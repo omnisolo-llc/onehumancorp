@@ -1,7 +1,14 @@
 import { test, expect } from './fixtures';
 import { currentAppSmoke } from './current_app_smoke';
 
+<<<<<<< HEAD
+test('ai_quoting_engine', async ({ page, request, loginAs, adminUser }) => {
+  await loginAs(page, adminUser);
+  await currentAppSmoke(page, request, 'ai_quoting_engine');
+});
+=======
 currentAppSmoke('ai_quoting_engine');
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
 
 test.describe('AI-Driven Dynamic Quoting & Proposal Engine', () => {
   test('Owner can receive a quote request, review the DraftQuoteCard, and approve it to generate a payment link', async ({ page }) => {

@@ -1,10 +1,18 @@
+<<<<<<< HEAD
+
+=======
 use std::collections::{HashMap, HashSet};
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
 use std::sync::OnceLock;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::time::Duration;
 use dashmap::DashMap;
 use dashmap::DashSet;
+<<<<<<< HEAD
+
+=======
 use std::hash::Hash;
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
 
 #[derive(Clone, Serialize, Deserialize)]
 struct CacheItem<T> {
@@ -12,7 +20,11 @@ struct CacheItem<T> {
     tags: Vec<String>,
 }
 
+<<<<<<< HEAD
+use std::sync::atomic::Ordering;
+=======
 use std::sync::atomic::{AtomicUsize, Ordering};
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
 
 
 struct CacheValue<T> {
@@ -168,7 +180,11 @@ where
             if !removed_keys.is_empty() {
                 let tags_map = self.get_local_tags();
                 for mut entry in tags_map.iter_mut() {
+<<<<<<< HEAD
+                    let keys: &mut dashmap::DashSet<String> = entry.value_mut();
+=======
                     let keys = entry.value_mut();
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
                     for k in &removed_keys {
                         keys.remove(k);
                     }

@@ -1,7 +1,14 @@
 import { test, expect } from './fixtures';
 import { currentAppSmoke } from './current_app_smoke';
 
+<<<<<<< HEAD
+test('viral_review_growth_loop', async ({ page, request, loginAs, adminUser }) => {
+  await loginAs(page, adminUser);
+  await currentAppSmoke(page, request, 'viral_review_growth_loop');
+});
+=======
 currentAppSmoke('viral_review_growth_loop');
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
 
 test.describe('Viral Review Growth Loop', () => {
   test('submitting a 5-star review reveals the viral referral widget', async ({ page }) => {

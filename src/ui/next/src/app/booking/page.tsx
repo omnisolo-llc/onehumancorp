@@ -7,24 +7,69 @@ import { OneTapReferral } from "../components/OneTapReferral";
 function BookingForm() {
   const searchParams = useSearchParams();
   const tenant = searchParams?.get("tenant") || "default-store";
+<<<<<<< HEAD
+  const serviceId = searchParams?.get("service_id") || "service-1";
+
+  const [description, setDescription] = useState("");
+  const [selectedDate, setSelectedDate] = useState("");
+  const [selectedSlot, setSelectedSlot] = useState("");
+  const [customerName, setCustomerName] = useState("");
+  const [customerEmail, setCustomerEmail] = useState("");
+
+  const [file, setFile] = useState<File | null>(null);
+  const [submitted, setSubmitted] = useState(false);
+  const [checkoutUrl, setCheckoutUrl] = useState("");
+
+  // Mock available slots
+  const availableSlots = [
+    "09:00 AM", "10:30 AM", "01:00 PM", "03:30 PM", "05:00 PM"
+  ];
+=======
   const [description, setDescription] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [submitted, setSubmitted] = useState(false);
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+<<<<<<< HEAD
+    // Make an API call to reserve the time slot
+    const response = await fetch("/api/v1/booking/reserve_time_slot", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        tenant_id: tenant,
+        product_id: serviceId,
+        customer_id: customerEmail,
+        start_time: `${selectedDate}T${selectedSlot}`,
+        end_time: `${selectedDate}T${selectedSlot}`,
+        requires_deposit: true,
+        timezone: "UTC",
+=======
     // Simulating form submission
     await fetch("/api/v1/booking/request", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
         description,
         fileName: file?.name,
         timestamp: new Date().toISOString()
       }),
     });
 
+<<<<<<< HEAD
+    if (response.ok) {
+      const data = await response.json();
+      if (data.deposit_stripe_link) {
+        setCheckoutUrl(data.deposit_stripe_link);
+      }
+    }
+
+    // In local dev/testing, we just simulate success if the fetch fails (due to no grpc backend in ui tests)
+=======
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
     setSubmitted(true);
   };
 
@@ -37,12 +82,30 @@ function BookingForm() {
           <p className="text-gray-600 text-sm leading-relaxed">
             We've received your inquiry. We'll review it and send over a custom quote and available timeslots shortly.
           </p>
+<<<<<<< HEAD
+          {checkoutUrl ? (
+            <a
+              href={checkoutUrl}
+              className="mt-8 w-full py-3 px-4 rounded-xl font-bold text-sm bg-blue-600 text-white hover:bg-blue-700 transition-all mb-6 block"
+            >
+              Pay Deposit to Confirm
+            </a>
+          ) : (
+            <button
+              onClick={() => setSubmitted(false)}
+              className="mt-8 w-full py-3 px-4 rounded-xl font-bold text-sm bg-gray-900 text-white hover:bg-black transition-all mb-6"
+            >
+              Submit Another Request
+            </button>
+          )}
+=======
           <button
             onClick={() => setSubmitted(false)}
             className="mt-8 w-full py-3 px-4 rounded-xl font-bold text-sm bg-gray-900 text-white hover:bg-black transition-all mb-6"
           >
             Submit Another Request
           </button>
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
 
           <OneTapReferral tenantId={tenant} source="booking_success" />
 
@@ -73,6 +136,74 @@ function BookingForm() {
         {/* Form Content */}
         <form onSubmit={handleSubmit} className="flex-1 px-6 py-6 overflow-y-auto hide-scrollbar space-y-6">
 
+<<<<<<< HEAD
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-semibold text-gray-900 mb-2 uppercase tracking-wider text-[10px]">Your Name</label>
+              <input
+                type="text"
+                required
+                value={customerName}
+                onChange={(e) => setCustomerName(e.target.value)}
+                placeholder="First Last"
+                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-900 mb-2 uppercase tracking-wider text-[10px]">Your Email</label>
+              <input
+                type="email"
+                required
+                value={customerEmail}
+                onChange={(e) => setCustomerEmail(e.target.value)}
+                placeholder="email@example.com"
+                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label htmlFor="selectDate" className="block text-sm font-semibold text-gray-900 mb-2 uppercase tracking-wider text-[10px]">Select a Date</label>
+            <input
+              id="selectDate"
+              type="date"
+              required
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+            />
+          </div>
+
+          {selectedDate && (
+            <div>
+              <label className="block text-sm font-semibold text-gray-900 mb-2 uppercase tracking-wider text-[10px]">Select a Time</label>
+              <div className="grid grid-cols-2 gap-3">
+                {availableSlots.map(slot => (
+                  <button
+                    key={slot}
+                    type="button"
+                    onClick={() => setSelectedSlot(slot)}
+                    className={`py-3 px-4 rounded-xl border text-sm font-medium transition-all ${selectedSlot === slot ? 'border-blue-600 bg-blue-50 text-blue-700' : 'border-gray-200 bg-white text-gray-700 hover:border-blue-300 hover:bg-blue-50/50'}`}
+                  >
+                    {slot}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div>
+            <label className="block text-sm font-semibold text-gray-900 mb-2 uppercase tracking-wider text-[10px]">Additional Notes (Optional)</label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Any details we should know before the appointment?"
+              className="w-full min-h-[100px] bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+            />
+          </div>
+
+=======
           <div>
             <label className="block text-sm font-semibold text-gray-900 mb-2 uppercase tracking-wider text-[10px]">What do you need help with?</label>
             <textarea
@@ -103,6 +234,7 @@ function BookingForm() {
             </div>
           </div>
 
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
           <div className="pt-4">
              <button
               type="submit"

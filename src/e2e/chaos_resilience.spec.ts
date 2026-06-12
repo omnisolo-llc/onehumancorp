@@ -2,7 +2,14 @@ import { test, expect } from './fixtures';
 import { currentAppSmoke } from './current_app_smoke';
 
 // Start base smoke validation as a baseline
+<<<<<<< HEAD
+test('chaos_resilience_baseline', async ({ page, request, loginAs, adminUser }) => {
+  await loginAs(page, adminUser);
+  await currentAppSmoke(page, request, 'chaos_resilience_baseline');
+});
+=======
 currentAppSmoke('chaos_resilience_baseline');
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
 
 test.describe("Chaos Engineering Validation - Backend/Host Stress Verification", () => {
   // Rather than front-end side-effects or network mocks, we interact with real

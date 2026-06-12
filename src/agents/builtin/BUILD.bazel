@@ -84,6 +84,10 @@ rust_library(
         "jit_retrieval.rs",
         "plugins.rs",
         "prompt_construction.rs",
+<<<<<<< HEAD
+        "microagent.rs",
+=======
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
         "progressive_skills.rs",
         "proto.rs",
         "provider.rs",

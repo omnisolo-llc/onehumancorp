@@ -107,11 +107,14 @@ impl MinimaxClient {
     }
 
     pub async fn reason(&self, prompt: &str) -> Result<String, String> {
+<<<<<<< HEAD
+=======
         let budget = ::server_pricing::budget::BudgetManager::new(10.0); // Simple default token budget for demonstration
         if !budget.record_spend_cents(1).unwrap_or(false) {
             return Err("Token budget exceeded".to_string());
         }
 
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
         let prompt_clone = prompt.to_string();
         let deduplicator = self.deduplicator.clone();
 
@@ -425,11 +428,14 @@ impl LocalLLMClient {
     }
 
     pub async fn reason(&self, prompt: &str) -> Result<String, String> {
+<<<<<<< HEAD
+=======
         let budget = ::server_pricing::budget::BudgetManager::new(10.0); // Simple default token budget for demonstration
         if !budget.record_spend_cents(1).unwrap_or(false) {
             return Err("Token budget exceeded".to_string());
         }
 
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
         let prompt_clone = prompt.to_string();
         let deduplicator = self.deduplicator.clone();
 

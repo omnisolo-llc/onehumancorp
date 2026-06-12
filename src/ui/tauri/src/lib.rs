@@ -70,6 +70,10 @@ struct OnboardingState {
     #[serde(rename = "adminPassword")]
     admin_password: Option<String>,
     first_offer: Option<String>,
+<<<<<<< HEAD
+    step: Option<i32>,
+=======
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
 }
 
 #[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
@@ -151,6 +155,48 @@ async fn get_onboarding_state(_app_handle: tauri::AppHandle) -> Result<Onboardin
     })
 }
 
+<<<<<<< HEAD
+#[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
+struct IntakeRequest {
+    input: String,
+}
+
+#[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
+struct IntakeData {
+    business_name: String,
+    business_type: String,
+    categories: Vec<String>,
+    location: Option<String>,
+    target_audience: Option<String>,
+    initial_products: Vec<serde_json::Value>,
+}
+
+#[tauri::command]
+async fn process_intake(input: String, _app_handle: tauri::AppHandle) -> Result<serde_json::Value, String> {
+    let backend_url = std::env::var("BACKEND_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string());
+    let url = format!("{}/api/onboarding/intake", backend_url);
+
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(60))
+        .build()
+        .map_err(|err| err.to_string())?;
+
+    let response = client.post(&url)
+        .header("Content-Type", "application/json")
+        .json(&serde_json::json!({ "description": input }))
+        .send().await
+        .map_err(|err| err.to_string())?;
+
+    if response.status().is_success() {
+        let text = response.text().await.map_err(|e| e.to_string())?;
+        serde_json::from_str(&text).map_err(|e| e.to_string())
+    } else {
+        Err(format!("Backend error: {}", response.status()))
+    }
+}
+
+=======
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
 #[tauri::command]
 async fn start_onboarding(req: StartOnboardingRequest, _app_handle: tauri::AppHandle) -> Result<(), String> {
     let backend_url = std::env::var("BACKEND_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string());
@@ -546,6 +592,10 @@ pub fn run() {
             get_onboarding_state,
             save_onboarding_state,
             start_onboarding,
+<<<<<<< HEAD
+            process_intake,
+=======
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
             get_help_articles,
             get_help_article,
             get_help_videos,

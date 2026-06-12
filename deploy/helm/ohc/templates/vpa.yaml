@@ -16,6 +16,10 @@ spec:
     containerPolicies:
       - containerName: backend
         controlledResources: ["cpu", "memory"]
+<<<<<<< HEAD
+        controlledValues: RequestsAndLimits
+=======
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
 {{- end }}
 ---
 {{- if and .Values.ohcCore.enabled .Values.ohcCore.vpa.enabled }}
@@ -36,6 +40,10 @@ spec:
     containerPolicies:
       - containerName: ohc-core
         controlledResources: ["cpu", "memory"]
+<<<<<<< HEAD
+        controlledValues: RequestsAndLimits
+=======
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
 {{- end }}
 ---
 {{- if and .Values.chatwoot.enabled .Values.chatwoot.vpa.enabled }}
@@ -56,6 +64,10 @@ spec:
     containerPolicies:
       - containerName: chatwoot
         controlledResources: ["cpu", "memory"]
+<<<<<<< HEAD
+        controlledValues: RequestsAndLimits
+=======
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
 {{- end }}
 ---
 {{- if and .Values.powersync.enabled .Values.powersync.vpa.enabled }}
@@ -76,4 +88,8 @@ spec:
     containerPolicies:
       - containerName: powersync
         controlledResources: ["cpu", "memory"]
+<<<<<<< HEAD
+        controlledValues: RequestsAndLimits
+=======
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
 {{- end }}

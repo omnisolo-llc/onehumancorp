@@ -9,11 +9,20 @@
     "test:ui": "vitest --ui"
   },
   "dependencies": {
+<<<<<<< HEAD
+    "@journeyapps/wa-sqlite": "^1.7.0",
+    "@powersync/react": "^1.10.0",
+    "@powersync/web": "^1.38.3",
+=======
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
     "@stripe/terminal-js": "^0.26.0",
     "@testing-library/dom": "^10.4.1",
     "@types/dompurify": "^3.0.5",
     "dompurify": "^3.0.6",
+<<<<<<< HEAD
     "framer-motion": "^12.40.0",
+=======
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
     "postcss-loader": "^8.2.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
@@ -23,7 +32,11 @@
     "zustand": "^5.0.14"
   },
   "devDependencies": {
+<<<<<<< HEAD
+    "@playwright/test": "^1.50.1",
+=======
     "@playwright/test": "1.50.1",
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
     "@tailwindcss/postcss": "^4.3.0",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",

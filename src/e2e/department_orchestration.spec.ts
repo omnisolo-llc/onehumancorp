@@ -1,3 +1,13 @@
+<<<<<<< HEAD
+import { test } from './fixtures';
+import { currentAppSmoke } from './current_app_smoke';
+
+test('department_orchestration', async ({ page, request, loginAs, adminUser }) => {
+  await loginAs(page, adminUser);
+  await currentAppSmoke(page, request, 'department_orchestration');
+});
+=======
 import { currentAppSmoke } from './current_app_smoke';
 
 currentAppSmoke('department_orchestration');
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))

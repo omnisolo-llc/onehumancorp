@@ -7,11 +7,25 @@ use std::sync::Arc;
 /// that allows tools to store and retrieve strongly-typed Rust objects (`std::any::Any`) across
 /// different context windows or steps, replacing the need to serialize everything to JSON strings.
 
+<<<<<<< HEAD
+pub struct SnapshotNode {
+    pub state: HashMap<String, Arc<dyn Any + Send + Sync>>,
+    pub parent_id: Option<usize>,
+}
+
+#[derive(Default)]
+pub struct RichExecutionEnvironment {
+    state: HashMap<String, Arc<dyn Any + Send + Sync>>,
+    snapshots: HashMap<usize, SnapshotNode>,
+    next_snapshot_id: usize,
+    current_snapshot_id: Option<usize>,
+=======
 #[derive(Default)]
 pub struct RichExecutionEnvironment {
     state: HashMap<String, Arc<dyn Any + Send + Sync>>,
     snapshots: HashMap<usize, HashMap<String, Arc<dyn Any + Send + Sync>>>,
     next_snapshot_id: usize,
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
 }
 
 impl RichExecutionEnvironment {
@@ -23,6 +37,29 @@ impl RichExecutionEnvironment {
     pub fn snapshot(&mut self) -> usize {
         let id = self.next_snapshot_id;
         self.next_snapshot_id += 1;
+<<<<<<< HEAD
+        self.snapshots.insert(id, SnapshotNode {
+            state: self.state.clone(),
+            parent_id: self.current_snapshot_id,
+        });
+        self.current_snapshot_id = Some(id);
+        id
+    }
+
+    /// Discards a snapshot without rolling back.
+    pub fn commit(&mut self, snapshot_id: usize) {
+        self.snapshots.remove(&snapshot_id);
+        if self.current_snapshot_id == Some(snapshot_id) {
+            self.current_snapshot_id = None;
+        }
+    }
+
+    /// Rolls back the state to the specified snapshot ID.
+    pub fn rollback(&mut self, snapshot_id: usize) -> Result<(), String> {
+        if let Some(snapshot) = self.snapshots.remove(&snapshot_id) {
+            self.state = snapshot.state;
+            self.current_snapshot_id = snapshot.parent_id;
+=======
         self.snapshots.insert(id, self.state.clone());
         id
     }
@@ -36,12 +73,27 @@ impl RichExecutionEnvironment {
     pub fn rollback(&mut self, snapshot_id: usize) -> Result<(), String> {
         if let Some(snapshot) = self.snapshots.remove(&snapshot_id) {
             self.state = snapshot;
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
             Ok(())
         } else {
             Err(format!("Snapshot ID {} not found", snapshot_id))
         }
     }
 
+<<<<<<< HEAD
+    /// Rolls back the state to the specified ancestor snapshot ID without removing intermediate snapshots.
+    pub fn rollback_to_ancestor(&mut self, snapshot_id: usize) -> Result<(), String> {
+        if let Some(snapshot) = self.snapshots.get(&snapshot_id) {
+            self.state = snapshot.state.clone();
+            self.current_snapshot_id = Some(snapshot_id);
+            Ok(())
+        } else {
+            Err(format!("Ancestor Snapshot ID {} not found", snapshot_id))
+        }
+    }
+
+=======
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
     /// Stores a typed variable in the execution environment.
     pub fn set_variable<T: Any + Send + Sync>(&mut self, name: &str, value: T) {
         self.state.insert(name.to_string(), Arc::new(value));
@@ -344,6 +396,87 @@ mod tests {
         assert!(!env.contains_variable("var1"));
     }
 
+<<<<<<< HEAD
+    #[test]
+    fn test_branching_snapshot_and_rollback_to_ancestor() {
+        let mut env = RichExecutionEnvironment::new();
+
+        // Ancestor State
+        env.set_variable("root", "initial".to_string());
+        let root_snap_id = env.snapshot();
+
+        // Branch A
+        env.set_variable("branch_a", "data_a".to_string());
+        let branch_a_snap_id = env.snapshot();
+
+        // Check we are in Branch A
+        assert!(env.contains_variable("root"));
+        assert!(env.contains_variable("branch_a"));
+
+        // Time travel back to Ancestor (without removing it like rollback does)
+        env.rollback_to_ancestor(root_snap_id).unwrap();
+
+        // Ensure we are back
+        assert!(env.contains_variable("root"));
+        assert!(!env.contains_variable("branch_a"));
+
+        // Branch B
+        env.set_variable("branch_b", "data_b".to_string());
+        let branch_b_snap_id = env.snapshot();
+
+        // Ensure Branch B state
+        assert!(env.contains_variable("root"));
+        assert!(!env.contains_variable("branch_a"));
+        assert!(env.contains_variable("branch_b"));
+
+        // Mutate state after snapshot B
+        env.set_variable("branch_b_post_snap", "data".to_string());
+        assert!(env.contains_variable("branch_b_post_snap"));
+
+        // Rollback branch B completely, restoring it to exactly `branch_b_snap_id`
+        env.rollback(branch_b_snap_id).unwrap();
+
+        assert!(env.contains_variable("root"));
+        assert!(env.contains_variable("branch_b"));
+        assert!(!env.contains_variable("branch_b_post_snap"));
+
+        // Rollback root completely
+        env.rollback(root_snap_id).unwrap();
+        assert!(env.contains_variable("root")); // root_snap_id had root
+        assert!(!env.contains_variable("branch_b")); // branch_b was not in root_snap_id
+
+        // Use the branch_a_snap_id to avoid unused variable warning and ensure it's still accessible
+        env.rollback_to_ancestor(branch_a_snap_id).unwrap();
+        assert!(env.contains_variable("branch_a"));
+
+        assert_eq!(env.get_snapshot_count(), 1); // Branch A snapshot is still orphaned in the tree if we didn't remove it
+    }
+
+    #[test]
+    fn test_commit_parent_and_rollback_child() {
+        let mut env = RichExecutionEnvironment::new();
+
+        env.set_variable("root", "1".to_string());
+        let root_id = env.snapshot();
+
+        env.set_variable("child", "2".to_string());
+        let child_id = env.snapshot();
+
+        // Commit root, removing it from snapshots but leaving child
+        env.commit(root_id);
+
+        assert_eq!(env.get_snapshot_count(), 1);
+
+        // Rollback child. It should restore child state, and parent pointer drops.
+        env.rollback(child_id).unwrap();
+
+        assert!(env.contains_variable("child"));
+        assert!(env.contains_variable("root"));
+        assert_eq!(env.current_snapshot_id, Some(root_id)); // Even if the snapshot object is gone from map, the ID pointer is retained
+    }
+
+=======
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
     #[tokio::test]
     async fn test_code_native_pipeline_integration() {
         let pipeline = CodeNativePipeline::new();

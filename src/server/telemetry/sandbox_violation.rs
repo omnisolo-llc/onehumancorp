@@ -13,7 +13,11 @@ pub struct SandboxViolationStore {
 impl SandboxViolationStore {
     pub fn new(pool: Option<PgPool>) -> Self {
         let meter = global::meter("ohc.telemetry");
+<<<<<<< HEAD
+        let violation_counter = meter.u64_counter("ohc_agent_sandbox_violations_total").build();
+=======
         let violation_counter = meter.u64_counter("ohc_sandbox_violation_total").build();
+>>>>>>> d1af2215 (Fix unhandled updates warning in ChaosReportPage tests (#26923))
 
         Self {
             pool,
