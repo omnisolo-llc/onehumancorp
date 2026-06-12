@@ -123,7 +123,7 @@ impl JetBrainsObservationMasker {
         modified
     }
 
-    pub fn apply_masking(&self, messages: &mut Vec<Message>) {
+    pub fn apply_masking(&self, messages: &mut [Message]) {
         let msg_count = messages.len();
         for i in 0..msg_count {
             if messages[i].role == Role::Tool {

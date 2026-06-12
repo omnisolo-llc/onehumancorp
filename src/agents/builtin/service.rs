@@ -242,6 +242,7 @@ impl AgentServiceImpl {
         self
     }
 
+    #[allow(clippy::result_large_err)]
     fn check_auth<T>(&self, req: &Request<T>) -> Result<(), Status> {
         match &self.auth {
             AuthMode::Disabled => Ok(()),

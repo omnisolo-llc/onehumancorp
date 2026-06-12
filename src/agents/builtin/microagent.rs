@@ -17,6 +17,12 @@ pub struct MicroAgentRegistry {
     pub agents: Vec<MicroAgent>,
 }
 
+impl Default for MicroAgentRegistry {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl MicroAgentRegistry {
     pub fn new() -> Self {
         Self { agents: Vec::new() }
