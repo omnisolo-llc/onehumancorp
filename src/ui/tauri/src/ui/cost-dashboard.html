@@ -277,42 +277,7 @@
             btn.disabled = false;
         }
       }
-
-      async function cancelSubscription() {
-        if (!confirm('Are you sure you want to cancel your subscription? You will lose access to premium features at the end of your billing cycle.')) {
-            return;
-        }
-
-        const btn = event.target;
-        btn.innerText = 'Canceling...';
-        btn.disabled = true;
-
-        try {
-          const tenant = localStorage.getItem('ohc_active_tenant_id') || localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default-team';
-          const headers = { 'Content-Type': 'application/json' };
-          if (tenant) headers['x-ohc-tenant-id'] = tenant;
-
-          const response = await fetch('/api/billing/cancel-subscription', {
-            method: 'POST',
-            headers: headers
-          });
-
-          if (response.ok) {
-            alert('Subscription canceled successfully.');
-            window.location.reload();
-          } else {
-            alert('Failed to cancel subscription. Please contact support.');
-          }
-        } catch (e) {
-            console.error(e);
-            alert('Network error. Please try again later.');
-        } finally {
-            btn.innerText = 'Cancel Subscription';
-            btn.disabled = false;
-        }
-      }
       function formatBytes(bytes) {
-
 
         if (bytes === 0) return '0 B';
         const k = 1024;
