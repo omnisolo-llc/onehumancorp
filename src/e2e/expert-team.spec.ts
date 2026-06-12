@@ -19,7 +19,9 @@ test.describe('Expert Team Feature CUJ', () => {
 
     // 4. Execute
     const button = page.getByRole('button', { name: /Execute Task/i });
-    await button.click();
+    const executePromise = button.click();
+    await expect(page.getByRole('button', { name: /Orchestrating Expert Team/i })).toBeDisabled();
+    await executePromise;
 
     // 5. Loading state is transient, we just wait for the result
 

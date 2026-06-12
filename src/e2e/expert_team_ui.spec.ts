@@ -24,10 +24,11 @@ test.describe('Expert Team Workflow UI (Tencent Workbuddy Feature)', () => {
     // Click to execute
     const executeButton = page.getByRole('button', { name: /Execute Task via Expert Team/ });
     await expect(executeButton).toBeEnabled();
-    await executeButton.click();
 
-    // Verify loading state
+    // Verify loading state concurrently with click, as the network is mocked and fast
+    const executePromise = executeButton.click();
     await expect(page.getByRole('button', { name: /Orchestrating Expert Team/ })).toBeDisabled();
+    await executePromise;
 
     // Verify final delivered output
     await expect(page.getByRole('heading', { name: 'Final Delivered Output' })).toBeVisible();
