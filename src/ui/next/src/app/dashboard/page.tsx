@@ -27,6 +27,7 @@ import { PromoterCard } from "./PromoterCard";
 import { ViralLoopPerformanceWidget } from "./ViralLoopPerformanceWidget";
 import { SuccessMilestoneWidget } from "./SuccessMilestoneWidget";
 import { SuccessMilestoneAlert } from "./SuccessMilestoneAlert";
+import { UpsellRecommendationWidget } from "./UpsellRecommendationWidget";
 import AffiliateMarketingWidget from "./AffiliateMarketingWidget";
 import { CartRecoveryWidget } from "./CartRecoveryWidget";
 
@@ -503,6 +504,7 @@ export default function Dashboard() {
       <SuccessMilestoneAlert />
       <SuccessMilestoneWidget />
       <ViralLoopPerformanceWidget />
+      <UpsellRecommendationWidget />
       <div className="mb-6">
         <div className="mb-4"><CartRecoveryWidget /></div>
         <AffiliateMarketingWidget />
