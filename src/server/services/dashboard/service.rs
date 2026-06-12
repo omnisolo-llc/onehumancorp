@@ -81,7 +81,7 @@ impl MyDashboardService {
             return Ok(org_meetings);
         }
 
-        let mut filtered = Vec::new();
+        let mut filtered = Vec::with_capacity(org_meetings.len());
         for m in org_meetings.iter() {
             let mut mtg = m.clone();
             mtg.transcript.clear();
@@ -326,7 +326,7 @@ impl MyDashboardService {
             tokio::spawn(async move {
                 if let Ok(orders) = s.fetch_orders_impl(&org_id_clone, mobile_optimized).await {
                     if let Some(c) = ORDERS_CACHE.get() {
-                        c.set(&cache_key_bg, orders, std::time::Duration::from_secs(5)).await;
+                        c.set(&cache_key_bg, orders, std::time::Duration::from_secs(0)).await;
                     }
                 }
             });
@@ -334,7 +334,7 @@ impl MyDashboardService {
         }
 
         let orders = self.fetch_orders_impl(org_id, mobile_optimized).await?;
-        cache.set(&cache_key, orders.clone(), std::time::Duration::from_secs(5)).await;
+        cache.set(&cache_key, orders.clone(), std::time::Duration::from_secs(0)).await;
         Ok(orders)
     }
 
@@ -416,7 +416,7 @@ impl MyDashboardService {
             tokio::spawn(async move {
                 if let Ok(bookings) = s.fetch_bookings_impl(&org_id_clone, mobile_optimized).await {
                     if let Some(c) = BOOKINGS_CACHE.get() {
-                        c.set(&cache_key_bg, bookings, std::time::Duration::from_secs(5)).await;
+                        c.set(&cache_key_bg, bookings, std::time::Duration::from_secs(0)).await;
                     }
                 }
             });
@@ -424,7 +424,7 @@ impl MyDashboardService {
         }
 
         let bookings = self.fetch_bookings_impl(org_id, mobile_optimized).await?;
-        cache.set(&cache_key, bookings.clone(), std::time::Duration::from_secs(5)).await;
+        cache.set(&cache_key, bookings.clone(), std::time::Duration::from_secs(0)).await;
         Ok(bookings)
     }
 
@@ -535,55 +535,31 @@ impl DashboardService for MyDashboardService {
         let org_id = std::sync::Arc::new(req.organization_id);
         let mobile_optimized = req.mobile_optimized;
 
-        let (agents_res, meetings_res, cost_res, products_res, orders_res, bookings_res, org_res) = tokio::join!(
-            {
-                let s = self.clone();
-                let o = org_id.clone();
-                tokio::spawn(async move { s.fetch_agents(&o, mobile_optimized).await })
-            },
-            {
-                let s = self.clone();
-                let o = org_id.clone();
-                tokio::spawn(async move { s.fetch_meetings(&o, mobile_optimized).await })
-            },
-            {
-                if mobile_optimized {
-                    tokio::spawn(async move { Ok::<(f64, i64, Vec<(String, f64, i64, f64, f64, i64)>), String>((0.0, 0, vec![])) })
-                } else {
-                    let s = self.clone();
-                    let o = org_id.clone();
-                    tokio::spawn(async move { s.fetch_cost_summary(&o, mobile_optimized).await })
-                }
-            },
-            {
-                let s = self.clone();
-                let o = org_id.clone();
-                tokio::spawn(async move { s.fetch_products(&o, mobile_optimized).await })
-            },
-            {
-                let s = self.clone();
-                let o = org_id.clone();
-                tokio::spawn(async move { s.fetch_orders(&o, mobile_optimized).await })
-            },
-            {
-                let s = self.clone();
-                let o = org_id.clone();
-                tokio::spawn(async move { s.fetch_bookings(&o, mobile_optimized).await })
-            },
-            {
-                let s = self.clone();
-                let o = org_id.clone();
-                tokio::spawn(async move { s.fetch_org(&o, mobile_optimized).await })
+        let fetch_cost_future = async {
+            if mobile_optimized {
+                Ok::<(f64, i64, Vec<(String, f64, i64, f64, f64, i64)>), String>((0.0, 0, vec![]))
+            } else {
+                self.fetch_cost_summary(&org_id, mobile_optimized).await
             }
+        };
+
+        let (agents_res, meetings_res, cost_res, products_res, orders_res, bookings_res, org_res) = tokio::join!(
+            self.fetch_agents(&org_id, mobile_optimized),
+            self.fetch_meetings(&org_id, mobile_optimized),
+            fetch_cost_future,
+            self.fetch_products(&org_id, mobile_optimized),
+            self.fetch_orders(&org_id, mobile_optimized),
+            self.fetch_bookings(&org_id, mobile_optimized),
+            self.fetch_org(&org_id, mobile_optimized)
         );
 
-        let agents = agents_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
-        let _meetings = meetings_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
-        let (total_cost, total_tokens, _agent_costs_data) = cost_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
-        let mut products = products_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
-        let mut orders = orders_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
-        let mut bookings = bookings_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
-        let org = org_res.map_err(|e| Status::internal(e.to_string()))?.map_err(|e| Status::internal(e.to_string()))?;
+        let agents = agents_res.map_err(|e| Status::internal(e.to_string()))?;
+        let _meetings = meetings_res.map_err(|e| Status::internal(e.to_string()))?;
+        let (total_cost, total_tokens, _agent_costs_data) = cost_res.map_err(|e| Status::internal(e.to_string()))?;
+        let mut products = products_res.map_err(|e| Status::internal(e.to_string()))?;
+        let mut orders = orders_res.map_err(|e| Status::internal(e.to_string()))?;
+        let mut bookings = bookings_res.map_err(|e| Status::internal(e.to_string()))?;
+        let org = org_res.map_err(|e| Status::internal(e.to_string()))?;
 
         if req.mobile_optimized {
             for p in &mut products {
@@ -604,10 +580,11 @@ impl DashboardService for MyDashboardService {
 
 
 
-        let mut out_meetings: Vec<::server_ohc::app::MeetingRoom> = Vec::new();
+        let mut final_meetings: Vec<::server_ohc::app::MeetingRoom> = Vec::with_capacity(_meetings.len());
         for m in _meetings.iter() {
             let mut transcript = Vec::new();
             if !req.mobile_optimized {
+                transcript.reserve(m.transcript.len());
                 for msg in &m.transcript {
                     transcript.push(::server_ohc::agent::AgentMessage {
                         id: msg.id.clone(),
@@ -620,14 +597,12 @@ impl DashboardService for MyDashboardService {
                     });
                 }
             }
-            out_meetings.push(::server_ohc::app::MeetingRoom {
+            final_meetings.push(::server_ohc::app::MeetingRoom {
                 id: m.id.clone(),
                 participants: m.participants.clone(),
                 transcript,
             });
         }
-
-        let final_meetings = if req.mobile_optimized { out_meetings.into_iter().map(|mut m| { m.transcript.clear(); m }).collect() } else { out_meetings };
         let mut final_cost_summary = None;
         let mut final_statuses = Vec::new();
         if req.mobile_optimized { final_statuses.clear(); }
