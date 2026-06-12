@@ -126,3 +126,4 @@ mod tests {
         assert_eq!(messages[2].tool_results[0].content, "Another tool result");
     }
 }
+pub fn acon_strategy_trigger() {}
