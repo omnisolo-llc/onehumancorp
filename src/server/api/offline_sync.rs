@@ -26,7 +26,7 @@ pub struct OfflineSyncResponse {
 }
 
 pub async fn offline_sync_handler(
-    State((db, mesh)): State<(sqlx::PgPool, Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport>)>,
+    State((db, mesh, redis_client)): State<(sqlx::PgPool, Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport>, Option<redis::Client>)>,
     headers: axum::http::HeaderMap,
     Json(payload): Json<OfflineSyncRequest>,
 ) -> impl IntoResponse {
@@ -52,6 +52,7 @@ pub async fn offline_sync_handler(
         let tenant_id_clone = tenant_id.clone();
         let db_clone = db.clone();
         let mesh_clone = mesh.clone();
+        let redis_client_clone = redis_client.clone();
 
         if mutation.mutation_type.as_deref() == Some("draft_quote") {
             futures.push(Box::pin(async move {
@@ -75,6 +76,24 @@ pub async fn offline_sync_handler(
 
         futures.push(Box::pin(async move {
             cache_clone.invalidate_by_tag(&format!("entity:product:{}", mutation.product_id)).await;
+
+            use crate::orchestration::locks::DistributedLock;
+            let locker: Box<dyn DistributedLock> = if std::env::var("OHC_STANDALONE_MODE").unwrap_or_default() == "true" {
+                Box::new(crate::orchestration::locks::StandaloneLock::new())
+            } else {
+                match redis_client_clone {
+                    Some(client) => Box::new(crate::orchestration::locks::RedisLock::new(client)),
+                    None => Box::new(crate::orchestration::locks::StandaloneLock::new()) // Fallback
+                }
+            };
+
+            let _lock_guard = match locker.acquire_resource(&tenant_id_clone, "inventory", &mutation.product_id).await {
+                Ok(guard) => guard,
+                Err(_) => {
+                    tracing::warn!("Failed to acquire lock for offline sync reconciliation: inventory:{}", mutation.product_id);
+                    return;
+                }
+            };
 
             let mut db_tx = db_clone.begin().await.unwrap();
 
@@ -101,6 +120,27 @@ pub async fn offline_sync_handler(
                         .bind(&tenant_id_clone)
                         .execute(&mut *db_tx)
                         .await;
+
+                    if new_stock <= 0 && !is_conflict {
+                        let action_request_id = uuid::Uuid::new_v4().to_string();
+                        let payload = serde_json::json!({
+                            "product_id": mutation.product_id,
+                            "remaining_stock": new_stock,
+                            "suggested_action": "Restock Item"
+                        }).to_string();
+                        let _ = sqlx::query("INSERT INTO agent_action_requests (id, tenant_id, action_type, status, confidence_score, product_id, payload, created_at, updated_at) VALUES ($1, $2, 'Reorder', 'Pending', 0.95, $3, $4::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
+                            .bind(&action_request_id).bind(&tenant_id_clone).bind(&mutation.product_id).bind(&payload).execute(&mut *db_tx).await;
+
+                        let job_id = uuid::Uuid::new_v4().to_string();
+                        let job_payload = serde_json::json!({
+                            "product_id": mutation.product_id,
+                            "remaining_stock": new_stock,
+                            "threshold": 0,
+                            "message": format!("Stock for product {} has dropped to {}.", mutation.product_id, new_stock)
+                        }).to_string();
+                        let _ = sqlx::query("INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status) VALUES ($1, $2, 'operations', 'LowStockAlert', $3::jsonb, 'PENDING')")
+                            .bind(job_id).bind(&tenant_id_clone).bind(&job_payload).execute(&mut *db_tx).await;
+                    }
 
                     if is_conflict {
                         let ai_task_id = uuid::Uuid::new_v4().to_string();
@@ -218,7 +258,7 @@ mod tests {
     async fn test_offline_sync_unauthorized() {
         let pool = PgPoolOptions::new().connect_lazy("postgres://localhost/dummy").unwrap();
         let mesh: Arc<dyn MeshTransport> = Arc::new(InProcessTransport::new());
-        let state = State((pool, mesh));
+        let state = State((pool, mesh, None));
 
         let req = OfflineSyncRequest { mutations: vec![] };
         let headers = HeaderMap::new();
@@ -243,7 +283,7 @@ mod tests {
             .execute(&pool).await.unwrap();
 
         let mesh: Arc<dyn MeshTransport> = Arc::new(InProcessTransport::new());
-        let state = State((pool.clone(), mesh.clone()));
+        let state = State((pool.clone(), mesh.clone(), None));
 
         let req = OfflineSyncRequest {
             mutations: vec![
