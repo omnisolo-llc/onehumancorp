@@ -29,7 +29,10 @@ import { SuccessMilestoneWidget } from "./SuccessMilestoneWidget";
 import { SuccessMilestoneAlert } from "./SuccessMilestoneAlert";
 import AffiliateMarketingWidget from "./AffiliateMarketingWidget";
 import { CartRecoveryWidget } from "./CartRecoveryWidget";
+<<<<<<< HEAD
+=======
 import { LeadMagnetWidget } from "./LeadMagnetWidget";
+>>>>>>> b998541c (docs(research): Centralized Inventory & Distributed POS Architecture (#27391))
 
 type DashboardMetrics = {
   active_customers: number;
@@ -504,7 +507,10 @@ export default function Dashboard() {
       <SuccessMilestoneAlert />
       <SuccessMilestoneWidget />
       <ViralLoopPerformanceWidget />
+<<<<<<< HEAD
+=======
       <LeadMagnetWidget />
+>>>>>>> b998541c (docs(research): Centralized Inventory & Distributed POS Architecture (#27391))
       <div className="mb-6">
         <div className="mb-4"><CartRecoveryWidget /></div>
         <AffiliateMarketingWidget />

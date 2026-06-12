@@ -168,7 +168,10 @@ where
         .route("/customer-referral/embed", get(handle_customer_referral_embed))
                 .route("/storefront/og-card", get(handle_og_card))
         .route("/flash-sale/embed", get(handle_flash_sale_embed))
+<<<<<<< HEAD
+=======
         .route("/lead-magnet/submit", post(handle_lead_magnet_submit))
+>>>>>>> b998541c (docs(research): Centralized Inventory & Distributed POS Architecture (#27391))
         .route("/milestones/check", get(handle_check_milestones))
         .route("/affiliate/generate-link", post(handle_affiliate_generate_link))
         .route("/affiliate/track", post(handle_affiliate_track))
@@ -925,6 +928,8 @@ pub struct FlashSaleEmbedQuery {
     pub theme: Option<String>,
 }
 
+<<<<<<< HEAD
+=======
 #[derive(Debug, Deserialize)]
 pub struct LeadMagnetSubmitRequest {
     pub tenant: Option<String>,
@@ -949,6 +954,7 @@ async fn handle_lead_magnet_submit(
     Json(serde_json::json!({ "success": true }))
 }
 
+>>>>>>> b998541c (docs(research): Centralized Inventory & Distributed POS Architecture (#27391))
 async fn handle_flash_sale_embed(
     Extension(_state): Extension<GrowthState>,
     axum::extract::Query(query): axum::extract::Query<FlashSaleEmbedQuery>,
