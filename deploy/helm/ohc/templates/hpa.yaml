@@ -11,6 +11,11 @@ spec:
     kind: Deployment
     name: {{ include "ohc.fullname" . }}-backend
   minReplicas: {{ .Values.backend.autoscaling.minReplicas }}
+{{- if .Values.backend.vpa.enabled }}
+  # When VPA is enabled, HPA should not scale on CPU/Memory,
+  # or VPA updateMode should be "Off" for CPU/Memory.
+  # As per K8s docs, mixing HPA on CPU/Memory with VPA on CPU/Memory is unsupported unless VPA is in Off mode or using custom metrics.
+{{- end }}
   maxReplicas: {{ .Values.backend.autoscaling.maxReplicas }}
   behavior:
     scaleDown:
