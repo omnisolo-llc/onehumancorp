@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('OnboardingWizard CUJ', () => {
+test.describe('Onboarding Wizard UI Flow', () => {
   test.beforeEach(async ({ page }) => {
     // Clear local storage to ensure fresh state
     await page.addInitScript(() => {
@@ -27,7 +27,7 @@ test.describe('OnboardingWizard CUJ', () => {
     await page.getByRole('button', { name: 'Next' }).click();
 
     await page.getByPlaceholder(/Local families, Tech startups/i).fill('Everyone');
-    await page.getByRole('button', { name: 'Generate My Business' }).click();
+    await page.getByRole('button', { name: 'Next' }).click();
 
     await expect(page.locator('input[value="I bake custom vegan cakes f..."]')).toBeVisible();
     await page.getByRole('button', { name: 'Continue' }).click();
@@ -60,7 +60,7 @@ test.describe('OnboardingWizard CUJ', () => {
     await page.getByRole('button', { name: 'Next' }).click();
 
     await page.getByPlaceholder(/Local families, Tech startups/i).fill('Homeowners');
-    await page.getByRole('button', { name: 'Generate My Business' }).click();
+    await page.getByRole('button', { name: 'Next' }).click();
 
     await expect(page.locator('input[value="Plumbing and general repairs"]')).toBeVisible();
     await page.getByRole('button', { name: 'Continue' }).click();
@@ -93,7 +93,7 @@ test.describe('OnboardingWizard CUJ', () => {
     await page.getByRole('button', { name: 'Next' }).click();
 
     await page.getByPlaceholder(/Local families, Tech startups/i).fill('Students');
-    await page.getByRole('button', { name: 'Generate My Business' }).click();
+    await page.getByRole('button', { name: 'Next' }).click();
 
     await expect(page.locator('input[value="Guitar tutoring online"]')).toBeVisible();
     // Removed product assertion since fallback logic doesn't generate products
@@ -127,7 +127,7 @@ test.describe('OnboardingWizard CUJ', () => {
     await page.getByRole('button', { name: 'Next' }).click();
 
     await page.getByPlaceholder(/Local families, Tech startups/i).fill('Professionals');
-    await page.getByRole('button', { name: 'Generate My Business' }).click();
+    await page.getByRole('button', { name: 'Next' }).click();
 
     await expect(page.locator('input[value="Halal food cart pickup orders"]')).toBeVisible();
     await page.getByRole('button', { name: 'Continue' }).click();
@@ -182,7 +182,7 @@ test.describe('OnboardingWizard CUJ', () => {
     await page.getByRole('button', { name: 'Next' }).click();
 
     await page.getByPlaceholder(/Local families, Tech startups/i).fill('Anyone');
-    await page.getByRole('button', { name: 'Generate My Business' }).click();
+    await page.getByRole('button', { name: 'Next' }).click();
 
     await page.getByRole('button', { name: 'Continue' }).click();
 
@@ -254,7 +254,7 @@ test.describe('OnboardingWizard CUJ', () => {
     // Step 4: Empty Target Audience
     await expect(page.getByText("Who is your target audience?")).toBeVisible();
     await page.getByPlaceholder(/Local families, Tech startups/i).fill('  ');
-    await page.getByRole('button', { name: 'Generate My Business' }).click();
+    await page.getByRole('button', { name: 'Next' }).click();
 
     const audienceInput = page.getByPlaceholder(/Local families, Tech startups/i);
     await expect(page.getByText('Please tell us your target audience.')).toBeVisible();
@@ -276,7 +276,7 @@ test.describe('OnboardingWizard CUJ', () => {
     // Expect it to eventually reach "You're Live!" screen
     await expect(page.getByText("You're Live!")).toBeVisible({ timeout: 15000 });
   });
-});
+
 
   test('Instant Build handles network failures gracefully without mock data', async ({ page, context }) => {
     await page.goto('/onboarding');
@@ -314,7 +314,7 @@ test.describe('OnboardingWizard CUJ', () => {
     // Mock the backend responding with a 500 error
     await context.route('/api/onboarding/intake', route => route.fulfill({ status: 500, json: { error: 'Internal Server Error' } }));
 
-    await page.getByRole('button', { name: 'Generate My Business' }).click();
+    await page.getByRole('button', { name: 'Next' }).click();
     await expect(page.getByText(/Internal Server Error/i)).toBeVisible();
 
     await context.unroute('/api/onboarding/intake');
@@ -334,7 +334,7 @@ test.describe('OnboardingWizard CUJ', () => {
 
     // Normal intake response
     await context.route('/api/onboarding/intake', route => route.fulfill({ status: 200, json: { business_name: 'Test Business', business_type: 'Test', initial_products: [], categories: [] } }));
-    await page.getByRole('button', { name: 'Generate My Business' }).click();
+    await page.getByRole('button', { name: 'Next' }).click();
     await expect(page.getByText('Review Details')).toBeVisible();
     await page.getByRole('button', { name: 'Continue' }).click();
 
@@ -351,3 +351,4 @@ test.describe('OnboardingWizard CUJ', () => {
     await context.unroute('/api/onboarding/start');
     await context.unroute('/api/onboarding/intake');
   });
+});
