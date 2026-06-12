@@ -224,7 +224,7 @@ pub async fn add_cart_item_handler(
 
     match reserve_result {
         Ok(res) if !res.success => {
-            return (axum::http::StatusCode::BAD_REQUEST, Json(serde_json::json!({ "error": "Insufficient inventory" }))).into_response();
+            return (axum::http::StatusCode::BAD_REQUEST, Json(serde_json::json!({ "error": res.error_message }))).into_response();
         },
         Err(e) => {
             tracing::error!("Inventory service error: {}", e);
