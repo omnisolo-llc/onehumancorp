@@ -194,6 +194,9 @@ impl HierarchicalPromptBuilder {
     pub fn new(cfg: &AgentRunConfig, tools: &[crate::tools::Tool]) -> Self {
         let mut tool_defs = String::new();
         if !tools.is_empty() {
+            // Optimization: Reserve capacity to avoid frequent reallocations during formatting
+            // Estimating ~256 bytes per tool definition as a baseline
+            tool_defs.reserve(tools.len() * 256);
             for tool in tools {
                 let _ = writeln!(tool_defs, "Tool: {}", tool.name);
                 let _ = writeln!(tool_defs, "Description: {}", tool.description);
