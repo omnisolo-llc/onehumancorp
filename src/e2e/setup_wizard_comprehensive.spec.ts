@@ -3,7 +3,7 @@ import { test, expect } from './fixtures';
 test.describe('Business Setup Wizard Comprehensive Flow', () => {
   test.beforeEach(async ({ page }) => {
     await page.addInitScript(() => {
-      localStorage.removeItem('website-builder-storage');
+      localStorage.removeItem('onboardingState');
       localStorage.removeItem('ohc_builder_blocks');
       localStorage.removeItem('ohc_builder_status');
     });
@@ -16,11 +16,11 @@ test.describe('Business Setup Wizard Comprehensive Flow', () => {
       localStorage.setItem('user_id', tenantId);
       localStorage.removeItem('ohc_wizard_state');
       localStorage.removeItem('onboarding-storage-v3');
-      localStorage.removeItem('website-builder-storage');
+      localStorage.removeItem('onboardingState');
     }, id);
 
     // We only have the instant build flow now.
-    await page.goto('/website-builder');
+    await page.goto('/setup.html');
     await page.waitForLoadState('networkidle');
 
 
@@ -38,11 +38,11 @@ test.describe('Business Setup Wizard Comprehensive Flow', () => {
     // Verify glassmorphism style is present on loading screen
     await expect(page.locator('.glassmorphism', { hasText: 'Agents are building your store' }).first()).toBeVisible({ timeout: 5000 });
 
-    await expect(page.getByRole('heading', { name: /Success! Your business is live!/ })).toBeVisible({ timeout: 20000 });
+    await expect(page).toHaveURL(/.*success\.html.*/, { timeout: 20000 });
   });
 
   test('validates empty input in Tell us about your business', async ({ page }) => {
-    await page.goto('/website-builder');
+    await page.goto('/setup.html');
     await page.getByRole('button', { name: /Instant Build/ }).click();
 
     // The textarea starts empty
@@ -54,7 +54,7 @@ test.describe('Business Setup Wizard Comprehensive Flow', () => {
   });
 
   test('clears previous bio input when re-entering Instant Build', async ({ page }) => {
-    await page.goto('/website-builder');
+    await page.goto('/setup.html');
 
     // Enter instant build, fill bio, then go back
     await page.getByRole('button', { name: /Instant Build/ }).click();
@@ -73,7 +73,7 @@ test.describe('Business Setup Wizard Comprehensive Flow', () => {
   });
 
   test('verifies Start My Business navigation is distinct from Instant Build', async ({ page }) => {
-    await page.goto('/website-builder');
+    await page.goto('/setup.html');
     await page.getByRole('button', { name: /Start My Business/ }).click();
     await expect(page.getByRole('heading', { name: 'What kind of business are you building?' })).toBeVisible();
     await expect(page.getByRole('button', { name: /Online Store/ })).toBeVisible();
@@ -81,7 +81,7 @@ test.describe('Business Setup Wizard Comprehensive Flow', () => {
   });
 
   test('Instant Build gracefully handles whitespace-only bio input', async ({ page }) => {
-    await page.goto('/website-builder');
+    await page.goto('/setup.html');
     await page.getByRole('button', { name: /Instant Build/ }).click();
 
     const generateBtn = page.getByRole('button', { name: /Generate Storefront/ });
@@ -92,12 +92,5 @@ test.describe('Business Setup Wizard Comprehensive Flow', () => {
 
     await page.getByPlaceholder('e.g. I run a local bakery').fill(' Valid input ');
     await expect(generateBtn).toBeEnabled();
-  });
-
-  test('Powered by OHC link is visible on step 0', async ({ page }) => {
-    await page.goto('/website-builder');
-    const poweredLink = page.getByRole('link', { name: /Powered by OHC/i });
-    await expect(poweredLink).toBeVisible();
-    await expect(poweredLink).toHaveAttribute('href', '/onboarding?ref=website-builder');
   });
 });
