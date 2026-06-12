@@ -15,13 +15,40 @@ export async function GET(req: Request) {
   }
 
   try {
-    const res = await fetch(`${backendUrl}/api/v1/quotes`, {
+    const res = await fetch(`${backendUrl}/api/agents/approvals`, {
       method: 'GET',
       headers,
     });
 
     if (res.ok) {
-      return NextResponse.json(await res.json());
+      const data = await res.json();
+      const approvals = data.pending_approvals || [];
+      const quoteDrafts = approvals.filter((a: any) => {
+        const payload = a.proposed_action || a.context_payload || a.payload?.original_payload;
+        return payload?.feature_type === 'quote_draft';
+      });
+
+      const quotes = quoteDrafts.map((draft: any) => {
+         const payload = draft.proposed_action || draft.context_payload || draft.payload?.original_payload;
+         return {
+           id: draft.id,
+           customerName: payload.client_name || 'Client',
+           requestText: payload.customer_inquiry || '',
+           status: draft.status === 'Approved' ? 'SENT' : 'DRAFT',
+           items: [
+             {
+               id: 'item-1',
+               description: payload.service || 'Service',
+               price: payload.suggested_price || payload.price || 0,
+               quantity: 1,
+               isOptional: false,
+               selected: true,
+             }
+           ]
+         };
+      });
+
+      return NextResponse.json(quotes);
     }
 
     return NextResponse.json({ error: 'Failed to fetch quotes' }, { status: res.status });

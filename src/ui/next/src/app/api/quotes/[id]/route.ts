@@ -16,13 +16,40 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   }
 
   try {
-    const res = await fetch(`${backendUrl}/api/v1/quotes/${resolvedParams.id}`, {
+    const res = await fetch(`${backendUrl}/api/agents/approvals`, {
       method: 'GET',
       headers,
     });
 
     if (res.ok) {
-      return NextResponse.json(await res.json());
+      const data = await res.json();
+      const approvals = data.pending_approvals || [];
+      const draft = approvals.find((a: any) => a.id === resolvedParams.id);
+
+      if (!draft) {
+         return NextResponse.json({ error: 'Quote not found' }, { status: 404 });
+      }
+
+      const payload = draft.proposed_action || draft.context_payload || draft.payload?.original_payload;
+
+      const quote = {
+        id: draft.id,
+        customerName: payload.client_name || 'Client',
+        requestText: payload.customer_inquiry || '',
+        status: draft.status === 'Approved' ? 'SENT' : 'DRAFT',
+        items: [
+          {
+            id: 'item-1',
+            description: payload.service || 'Service',
+            price: payload.suggested_price || payload.price || 0,
+            quantity: 1,
+            isOptional: false,
+            selected: true,
+          }
+        ]
+      };
+
+      return NextResponse.json(quote);
     }
 
     return NextResponse.json({ error: 'Failed to fetch quote' }, { status: res.status });

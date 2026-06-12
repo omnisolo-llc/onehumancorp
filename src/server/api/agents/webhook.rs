@@ -20,6 +20,10 @@ pub struct WebhookPayload {
     pub source: String,
     #[serde(default)]
     pub target_language: Option<String>,
+    #[serde(default)]
+    pub client_name: Option<String>,
+    #[serde(default)]
+    pub client_email: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -148,6 +152,8 @@ async fn handle_webhook(
         let action_payload = serde_json::json!({
             "feature_type": "quote_draft",
             "customer_inquiry": inquiry,
+            "client_name": payload.client_name.unwrap_or_else(|| "Unknown".to_string()),
+            "client_email": payload.client_email.unwrap_or_else(|| "Unknown".to_string()),
             "suggested_price": suggested_price,
             "scope": scope,
             "suggested_time": "Next Week",

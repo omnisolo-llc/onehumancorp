@@ -857,6 +857,14 @@ impl DepartmentOrchestrator {
                         }
                         let inbox_message_id = payload.get("inbox_message_id").and_then(|v| v.as_str()).unwrap_or("");
 
+                        let client_name = payload.get("client_name").and_then(|v| v.as_str()).unwrap_or("Unknown");
+                        let service_name = payload.get("service").and_then(|v| v.as_str()).unwrap_or("Project Task");
+                        let project_title = format!("Project: {} for {}", service_name, client_name);
+
+                        let task_id = uuid::Uuid::new_v4().to_string();
+                        let invoice_id = uuid::Uuid::new_v4().to_string();
+                        let due_date = now.timestamp() + (30 * 24 * 3600);
+
                         if let DbStore::Postgres = &self.db.store {
                             if let Err(e) = sqlx::query("INSERT INTO quotes (id, tenant_id, status, total_amount, required_deposit, expires_at, checkout_url) VALUES ($1, $2, $3, $4, $5, $6, $7)")
                                 .bind(&quote_id)
@@ -883,6 +891,24 @@ impl DepartmentOrchestrator {
                                     tracing::error!("Failed to update inbox_messages for quote draft: {}", e);
                                 }
                             }
+
+                            let _ = sqlx::query("INSERT INTO shared_tasks (id, organization_id, title, status, description) VALUES ($1, $2, $3, 'PENDING', $4)")
+                                .bind(&task_id)
+                                .bind(tenant_id)
+                                .bind(&project_title)
+                                .bind(payload.get("scope").and_then(|v| v.as_str()).unwrap_or(""))
+                                .execute(&self.db.pool)
+                                .await;
+
+                            let _ = sqlx::query("INSERT INTO invoices (id, tenant_id, client_id, client_name, status, due_date, currency, total_amount) VALUES ($1, $2, 'walk-in', $3, 'draft', $4, 'USD', $5)")
+                                .bind(&invoice_id)
+                                .bind(tenant_id)
+                                .bind(client_name)
+                                .bind(due_date)
+                                .bind(price)
+                                .execute(&self.db.pool)
+                                .await;
+
                         } else if let DbStore::Sqlite(pool) = &self.db.store {
                             if let Err(e) = sqlx::query("INSERT INTO quotes (id, tenant_id, status, total_amount, required_deposit, expires_at, checkout_url) VALUES (?, ?, ?, ?, ?, ?, ?)")
                                 .bind(&quote_id)
@@ -909,6 +935,23 @@ impl DepartmentOrchestrator {
                                     tracing::error!("Failed to update inbox_messages for quote draft: {}", e);
                                 }
                             }
+
+                            let _ = sqlx::query("INSERT INTO shared_tasks (id, organization_id, title, status, description) VALUES (?, ?, ?, 'PENDING', ?)")
+                                .bind(&task_id)
+                                .bind(tenant_id)
+                                .bind(&project_title)
+                                .bind(payload.get("scope").and_then(|v| v.as_str()).unwrap_or(""))
+                                .execute(pool)
+                                .await;
+
+                            let _ = sqlx::query("INSERT INTO invoices (id, tenant_id, client_id, client_name, status, due_date, currency, total_amount) VALUES (?, ?, 'walk-in', ?, 'draft', ?, 'USD', ?)")
+                                .bind(&invoice_id)
+                                .bind(tenant_id)
+                                .bind(client_name)
+                                .bind(due_date)
+                                .bind(price)
+                                .execute(pool)
+                                .await;
                         }
                     }
                 }

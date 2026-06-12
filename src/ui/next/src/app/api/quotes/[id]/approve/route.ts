@@ -16,13 +16,14 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   }
 
   try {
-    const res = await fetch(`${backendUrl}/api/v1/quotes/${resolvedParams.id}/approve`, {
-      method: 'PATCH',
+    const res = await fetch(`${backendUrl}/api/agents/approvals/${resolvedParams.id}`, {
+      method: 'POST',
       headers,
+      body: JSON.stringify({ approved: true })
     });
 
     if (res.ok) {
-      return NextResponse.json(await res.json());
+      return NextResponse.json({ success: true });
     }
 
     return NextResponse.json({ error: 'Failed to approve quote' }, { status: res.status });
