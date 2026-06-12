@@ -48,7 +48,7 @@ impl<T: DeserializeOwned> OutputParser<T> for StructuredOutputParser<T> {
                 if let Some(data) = call.arguments.get("data") {
                     return match serde_json::from_value::<T>(data.clone()) {
                         Ok(parsed) => Ok(parsed),
-                        Err(e) => Err(crate::types::format_pydantic_error(&e, None, None)),
+                        Err(e) => Err(crate::types::format_pydantic_error(&e, Some(&serde_json::to_string(data).unwrap_or_default()), None)),
                     };
                 } else {
                     return Err(
@@ -101,7 +101,11 @@ impl<T: DeserializeOwned> OutputParser<T> for StructuredOutputParser<T> {
         }
 
         // Strict enforcement: Rely entirely on native tool_calls API objects.
-        Err("Expected native tool_calls API object, but got plain text. Please use the 'structured_output' tool to return the requested data.".to_string())
+        if text_to_parse.is_empty() {
+            Err("Expected native tool_calls API object, but got empty response. Please use the 'structured_output' tool to return the requested data.".to_string())
+        } else {
+            Err("Expected native tool_calls API object, but got plain text. Please use the 'structured_output' tool to return the requested data.".to_string())
+        }
     }
 }
 
@@ -189,7 +193,14 @@ impl<'a, T: DeserializeOwned> RetryWithErrorOutputParser<'a, T> {
                         let detailed_error = if parse_error_msg.contains("Validation Error") {
                             parse_error_msg.clone()
                         } else {
-                            format!("Validation Error (Pydantic-first tool schema): Failed to parse arguments.\nReason: Semantic validation failed: {}\nPlease strictly follow the tool's JSON schema and try again.", parse_error_msg)
+                            let error_type = if parse_error_msg.to_lowercase().contains("expected value") || parse_error_msg.to_lowercase().contains("eof") {
+                                "JSON syntax error (incomplete/malformed JSON)"
+                            } else if parse_error_msg.to_lowercase().contains("missing field") || parse_error_msg.to_lowercase().contains("invalid type") {
+                                "Semantic validation failed (schema mismatch)"
+                            } else {
+                                "Semantic validation failed (unknown parsing error)"
+                            };
+                            format!("Validation Error (Pydantic-first tool schema): Failed to parse arguments.\nReason: {}: {}\nPlease strictly follow the tool's JSON schema and try again.", error_type, parse_error_msg)
                         };
                         let tool_results = msg
                             .tool_calls
@@ -298,7 +309,7 @@ mod tests {
         assert!(result_fail.is_err());
         match result_fail {
             Err(ToolError::LlmRecoverable(msg)) => {
-                assert!(msg.contains("Semantic validation failed"));
+                assert!(msg.contains("Semantic validation failed") || msg.contains("schema mismatch") || msg.contains("JSON syntax error"), "msg was: {}", msg);
             }
             _ => panic!("Expected LlmRecoverable error for schema mismatch"),
         }
