@@ -23,7 +23,7 @@ impl MessageTriageWorker {
                     }
                     Ok(false) => {
                         // No jobs, sleep
-                        tokio::time::sleep(Duration::from_millis(1000)).await;
+                        tokio::time::sleep(Duration::from_millis(5000)).await;
                     }
                     Err(e) => {
                         tracing::error!("MessageTriageWorker error: {}", e);

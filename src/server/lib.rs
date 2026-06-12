@@ -4606,8 +4606,9 @@ async fn create_ui_bom_item_handler(
             if let Ok(Some(job)) = sub_agent_queue_clone.dequeue(vec!["sub_agent".to_string(), "specialized_sub_agent".to_string(), "general_sub_agent".to_string()]).await {
                 tracing::info!("Processing sub-agent job: {}", job.id);
                 let _ = sub_agent_queue_clone.complete(&job.id, &job.tenant_id).await;
+                continue;
             }
-            tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+            tokio::time::sleep(tokio::time::Duration::from_millis(5000)).await;
         }
     });
 
