@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import GrowthReferralWidget from "../components/GrowthReferralWidget";
-import { ActionCard } from "../components/agent-feed/ActionCard";
+import { ActionCard } from "./ActionCard";
 import { enqueueAction, getActions, removeAction } from "../utils/offlineQueue";
 
 type AgentFeedItem = {
