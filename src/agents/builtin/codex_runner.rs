@@ -1148,4 +1148,19 @@ mod tests {
         let resp_bad: JsonRpcResponse = serde_json::from_str(&resp_json_bad).unwrap();
         assert_eq!(resp_bad.error.unwrap().code, -32601);
     }
+
+    #[tokio::test]
+    async fn test_app_server_json_rpc_invalid_json() {
+        let client = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![]),
+        });
+        let agent = Arc::new(Agent::new(client, vec![]));
+        let runner = Arc::new(Runner::new(agent));
+        let app_server = AppServer::new(runner);
+
+        let resp_json = app_server.handle_request("{ bad json }").await;
+        let resp: JsonRpcResponse = serde_json::from_str(&resp_json).unwrap();
+        assert!(resp.error.is_some());
+        assert_eq!(resp.error.unwrap().code, -32700); // Parse error
+    }
 }
