@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import * as path from 'path';
 import * as fs from 'fs';
 
-test.describe('Tauri Onboarding Wizard Flow', () => {
+test.describe('Agentic Chat Onboarding CUJ', () => {
   const mockTauriBackend = () => {
     window.__TAURI__ = {
       core: {
@@ -24,7 +24,7 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
     };
   };
 
-  test('Completes the onboarding flow, verifies validation, multi-step progression, and backend state resume', async ({ page }) => {
+  test('Owner can setup via chat interface and redirect to dashboard', async ({ page }) => {
     const workspaceRoot = process.env.TEST_WORKSPACE
         ? path.join(process.env.TEST_SRCDIR || process.cwd(), process.env.TEST_WORKSPACE)
         : process.cwd();
@@ -82,7 +82,7 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
     await page.setViewportSize({ width: 375, height: 667 });
     await page.goto('http://mock/setup.html');
 
-    const inputArea = page.locator('.input-area');
+    const inputArea = page.locator('#chat-container'); // there is no input area class in this version
     await expect(inputArea).toBeVisible();
 
     const sendBtn = page.locator('#send-btn');
@@ -95,10 +95,6 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
   });
 
 });
-
-  test('Setup UI should have glassmorphism aesthetics applied', async ({ page }) => {
-    test.skip();
-  });
 
 test.describe('Tauri Dashboard UI and UX Improvements', () => {
   test('Dashboard should have glassmorphism aesthetics applied', async ({ page }) => {
