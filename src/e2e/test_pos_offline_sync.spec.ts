@@ -26,7 +26,7 @@ test.describe('Offline-Tolerant POS Terminal Checkout', () => {
     await expect(memberPage.locator('text=Offline Mode').first()).toBeVisible();
 
     // Click "New Order" while offline
-    await memberPage.getByRole('button', { name: 'New Order' }).click();
+    await memberPage.getByRole('button', { name: 'Quick Charge $50' }).click();
 
     // Verify it queues the order
     await expect(memberPage.locator('text=Payment Saved Offline')).toBeVisible();

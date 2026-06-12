@@ -50,7 +50,7 @@ impl PosSyncWorker {
 
             if let Ok(Some(row)) = current_stock_res {
                 let stock: i32 = sqlx::Row::get(&row, "inventory_count");
-                let is_conflict = stock < quantity_deducted as i32;
+                let is_conflict = stock - (quantity_deducted as i32) < 0;
 
                 let _ = sqlx::query("UPDATE products SET inventory_count = GREATEST(0, inventory_count - $1) WHERE id = $2 AND tenant_id = $3")
                     .bind(quantity_deducted)
@@ -176,7 +176,7 @@ impl PosSyncWorker {
 
                         if let Ok(Some(row)) = current_stock_res {
                             let stock: i32 = sqlx::Row::get(&row, "inventory_count");
-                            let is_conflict = stock < qty as i32;
+                            let is_conflict = stock - (qty as i32) < 0;
 
                             let _ = sqlx::query("UPDATE products SET inventory_count = GREATEST(0, inventory_count - $1) WHERE id = $2 AND tenant_id = $3")
                                 .bind(qty)
