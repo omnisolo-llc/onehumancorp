@@ -24,6 +24,11 @@ test.describe('Unified Agent Feed Interactive Flow', () => {
     // In case there are no items to approve, we will skip the rest of the assertions safely.
     // In a real E2E environment we would seed this, but this guarantees the script runs.
     if (await approveBtn.isVisible()) {
+        const approveBtnBox = await approveBtn.boundingBox();
+        if (approveBtnBox) {
+           expect(approveBtnBox.height).toBeGreaterThanOrEqual(44);
+           expect(approveBtnBox.width).toBeGreaterThanOrEqual(44);
+        }
         // 2. Expand card to see details
         await editBtn.click();
         const detailsPre = page.locator('pre').first();
