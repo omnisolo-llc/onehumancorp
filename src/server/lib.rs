@@ -3976,18 +3976,19 @@ async fn ui_dashboard_unified_agent_feed_handler(
         let t = tenant_id.clone();
         let cache_key_bg = cache_key.clone();
         tokio::spawn(async move {
-            let (approvals_res, ledger_res) = tokio::join!(
-                tokio::spawn({ let db = db.clone(); let t = t.clone(); async move { load_ui_agent_approvals_from_db(&db, &t).await } }),
+            let (agent_feed_res, ledger_res) = tokio::join!(
+                tokio::spawn({ let db = db.clone(); let t = t.clone(); async move { load_ui_agent_feed_from_db(&db, &t).await } }),
                 tokio::spawn({ let db = db.clone(); let t = t.clone(); async move { load_ui_ledger_from_db(&db, &t).await } })
             );
 
-            let mut pending_approvals = approvals_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
+            let mut items = agent_feed_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
             let mut entries = ledger_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
 
             if mobile_optimized {
-                for item in pending_approvals.iter_mut() {
+                for item in items.iter_mut() {
                     if let Some(obj) = item.as_object_mut() {
-                        obj.remove("payload");
+                        obj.remove("context_payload");
+                        obj.remove("proposed_action");
                     }
                 }
                 for item in entries.iter_mut() {
@@ -3999,7 +4000,7 @@ async fn ui_dashboard_unified_agent_feed_handler(
             }
 
             let result = serde_json::json!({
-                "pending_approvals": pending_approvals,
+                "items": items,
                 "entries": entries
             });
             if let Some(c) = UI_UNIFIED_AGENT_FEED_CACHE.get() {
@@ -4009,18 +4010,19 @@ async fn ui_dashboard_unified_agent_feed_handler(
         return (axum::http::StatusCode::OK, axum::Json(cached)).into_response();
     }
 
-    let (approvals_res, ledger_res) = tokio::join!(
-        tokio::spawn({ let db = db.clone(); let t = tenant_id.clone(); async move { load_ui_agent_approvals_from_db(&db, &t).await } }),
+    let (agent_feed_res, ledger_res) = tokio::join!(
+        tokio::spawn({ let db = db.clone(); let t = tenant_id.clone(); async move { load_ui_agent_feed_from_db(&db, &t).await } }),
         tokio::spawn({ let db = db.clone(); let t = tenant_id.clone(); async move { load_ui_ledger_from_db(&db, &t).await } })
     );
 
-    let mut pending_approvals = approvals_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
+    let mut items = agent_feed_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
     let mut entries = ledger_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
 
     if mobile_optimized {
-        for item in pending_approvals.iter_mut() {
+        for item in items.iter_mut() {
             if let Some(obj) = item.as_object_mut() {
-                obj.remove("payload");
+                obj.remove("context_payload");
+                obj.remove("proposed_action");
             }
         }
         for item in entries.iter_mut() {
@@ -4032,7 +4034,7 @@ async fn ui_dashboard_unified_agent_feed_handler(
     }
 
     let result = serde_json::json!({
-        "pending_approvals": pending_approvals,
+        "items": items,
         "entries": entries
     });
 

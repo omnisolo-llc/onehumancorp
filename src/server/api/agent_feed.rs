@@ -305,6 +305,23 @@ async fn update_feed_item_state(
                             // Real implementation would buffer post here to AYRSHARE.
                         }
                     }
+
+                    // Enqueue into department_tasks for async execution via SKIP LOCKED
+                    let task_id = uuid::Uuid::new_v4().to_string();
+                    let payload_for_task = item.proposed_action.clone().or(item.context_payload.clone()).unwrap_or_else(|| sqlx::types::Json(serde_json::json!({})));
+                    let event_type = payload_for_task.get("feature_type")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or(&item.event_source)
+                        .to_string();
+
+                    let _ = sqlx::query("INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status) VALUES ($1, $2, $3, $4, $5, 'PENDING')")
+                        .bind(task_id)
+                        .bind(&tenant_id)
+                        .bind(&item.event_source)
+                        .bind(event_type)
+                        .bind(payload_for_task)
+                        .execute(&pool)
+                        .await;
                 }
             }
 
