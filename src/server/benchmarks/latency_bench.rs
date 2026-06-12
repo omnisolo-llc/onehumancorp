@@ -643,9 +643,10 @@ mod tests {
     async fn test_ml_resilience_60s_timeout_rule() {
         let start = std::time::Instant::now();
         let timeout_duration = std::time::Duration::from_millis(150);
+        let (_tx, rx) = tokio::sync::oneshot::channel::<()>();
 
         let result = tokio::time::timeout(timeout_duration, async {
-            tokio::time::sleep(std::time::Duration::from_millis(300)).await;
+            let _ = rx.await;
             Ok::<(), String>(())
         }).await;
 
@@ -656,12 +657,11 @@ mod tests {
     #[tokio::test]
     async fn test_chaos_degradation_network() {
         let start = std::time::Instant::now();
-        let slow_network = async {
-            tokio::task::yield_now().await;
-            tokio::time::sleep(std::time::Duration::from_millis(2050)).await;
+        let (_tx, rx) = tokio::sync::oneshot::channel::<()>();
+        let result = tokio::time::timeout(std::time::Duration::from_millis(2000), async {
+            let _ = rx.await;
             "data"
-        };
-        let result = tokio::time::timeout(std::time::Duration::from_millis(2000), slow_network).await;
+        }).await;
         assert!(result.is_err());
         assert!(start.elapsed() < std::time::Duration::from_millis(2500));
     }
