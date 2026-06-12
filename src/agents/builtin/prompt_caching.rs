@@ -53,10 +53,13 @@ impl PromptCache {
             tracing::info!("💰 Miser cost optimization: Prompt cache hit saved {} tokens", r.token_count);
 
             // Fast-path: Avoid taking OS environment locks on every cache hit
-            let model = std::env::var("OHC_LLM_MODEL").unwrap_or_else(|_| "gpt-4o".to_string());
+            static MODEL: std::sync::OnceLock<String> = std::sync::OnceLock::new();
+            let model = MODEL.get_or_init(|| {
+                std::env::var("OHC_LLM_MODEL").unwrap_or_else(|_| "gpt-4o".to_string())
+            });
 
 
-            let pricing = ::server_pricing::calculator::get_pricing(&model);
+            let pricing = ::server_pricing::calculator::get_pricing(model);
             let cost_dollars = (r.token_count as f64 / 1_000_000.0) * pricing.input_cost;
             (cost_dollars * 100.0).round() as i64
         } else {
