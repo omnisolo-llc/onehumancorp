@@ -1,3 +1,6 @@
+use axum::extract::ws::{WebSocket, WebSocketUpgrade, Message as WsMessage};
+use futures_util::StreamExt;
+use tokio::sync::broadcast;
 use axum::{
     extract::{Extension, Path, Query, State},
     http::StatusCode,
@@ -13,6 +16,16 @@ use crate::domain::repository::agent_feed_repo::{AgentFeedRepository, AgentFeedI
 use sqlx::PgPool;
 use crate::utils::cache::HybridCache;
 use std::sync::{Arc, OnceLock};
+
+
+pub static FEED_BROADCAST: OnceLock<broadcast::Sender<AgentFeedItem>> = OnceLock::new();
+
+pub fn get_feed_broadcast() -> broadcast::Sender<AgentFeedItem> {
+    FEED_BROADCAST.get_or_init(|| {
+        let (tx, _) = broadcast::channel(100);
+        tx
+    }).clone()
+}
 
 pub static AGENT_FEED_CACHE: OnceLock<Arc<HybridCache<AgentFeedListResponse>>> = OnceLock::new();
 
@@ -70,6 +83,88 @@ where
     Router::new()
         .route("/", get(list_feed_items).post(create_feed_item))
         .route("/{id}/state", put(update_feed_item_state))
+        .route("/ws", get(ws_handler))
+}
+
+
+#[derive(Deserialize)]
+pub struct WsQuery {
+    pub token: String,
+}
+
+async fn ws_handler(
+    ws: WebSocketUpgrade,
+    Query(query): Query<WsQuery>,
+) -> impl IntoResponse {
+    let auth_store = crate::auth::Store::new();
+    let claims = match auth_store.validate_token(&query.token).await {
+        Ok(c) => c,
+        Err(_) => return StatusCode::UNAUTHORIZED.into_response(),
+    };
+
+    let tenant_id = match claims.organization_id {
+        Some(org_id) => org_id,
+        None => return StatusCode::UNAUTHORIZED.into_response(),
+    };
+
+    ws.on_upgrade(move |socket| handle_socket(socket, tenant_id))
+}
+
+async fn handle_socket(mut socket: WebSocket, tenant_id: String) {
+    let mut rx = get_feed_broadcast().subscribe();
+
+    // Check if we can use Redis
+    let redis_client = crate::get_redis_client();
+    if let Some(client) = redis_client {
+        if let Ok(mut pubsub) = client.get_async_pubsub().await {
+            let topic = format!("ohc:feed:{}", tenant_id);
+            if pubsub.subscribe(&topic).await.is_ok() {
+                let mut stream = pubsub.on_message();
+                loop {
+                    tokio::select! {
+                        msg = stream.next() => {
+                            if let Some(msg) = msg {
+                                if let Ok(payload) = msg.get_payload::<String>() {
+                                    if socket.send(WsMessage::Text(payload.into())).await.is_err() {
+                                        break;
+                                    }
+                                }
+                            } else {
+                                break;
+                            }
+                        }
+                        // Also handle incoming to keep connection alive
+                        client_msg = socket.recv() => {
+                            if client_msg.is_none() {
+                                break;
+                            }
+                        }
+                    }
+                }
+                return;
+            }
+        }
+    }
+
+    // Fallback to memory broadcast
+    loop {
+        tokio::select! {
+            Ok(item) = rx.recv() => {
+                if item.tenant_id == tenant_id {
+                    if let Ok(payload) = serde_json::to_string(&item) {
+                        if socket.send(WsMessage::Text(payload.into())).await.is_err() {
+                            break;
+                        }
+                    }
+                }
+            }
+            client_msg = socket.recv() => {
+                if client_msg.is_none() {
+                    break;
+                }
+            }
+        }
+    }
 }
 
 async fn list_feed_items(
@@ -167,7 +262,25 @@ async fn create_feed_item(
             let cache = get_agent_feed_cache();
             let tag = format!("agent_feed_tenant:{}", tenant_id);
             cache.invalidate_by_tag(&tag).await;
+
+            // Publish to websocket
+            let _ = get_feed_broadcast().send(item.clone());
+
+            if let Some(client) = crate::get_redis_client() {
+                if let Ok(mut conn) = client.get_multiplexed_tokio_connection().await {
+                    let topic = format!("ohc:feed:{}", tenant_id);
+                    if let Ok(payload) = serde_json::to_string(&item) {
+                        let _ = redis::cmd("PUBLISH")
+                            .arg(&topic)
+                            .arg(&payload)
+                            .query_async::<()>(&mut conn)
+                            .await;
+                    }
+                }
+            }
+
             (StatusCode::CREATED, Json(item)).into_response()
+
         },
         Err(e) => {
             tracing::error!("Failed to create agent feed item: {}", e);
@@ -236,6 +349,35 @@ mod tests {
     use crate::api::agent_feed;
     use sqlx::PgPool;
     use super::{get_agent_feed_cache, AgentFeedListResponse};
+
+    #[tokio::test]
+    async fn test_agent_feed_websocket_push() {
+        use super::{get_feed_broadcast, AgentFeedItem};
+        let broadcast = get_feed_broadcast();
+        let mut rx = broadcast.subscribe();
+
+        let item = AgentFeedItem {
+            id: "test-id-123".to_string(),
+            tenant_id: "test-tenant-123".to_string(),
+            event_source: "test".to_string(),
+            context_payload: None,
+            proposed_action: None,
+            lifecycle_state: "PENDING_APPROVAL".to_string(),
+            created_at: None,
+            updated_at: None,
+        };
+
+        // Send an item to the broadcast
+        let _ = broadcast.send(item.clone());
+
+        // Wait for it on the receiver
+        if let Ok(received_item) = rx.recv().await {
+            assert_eq!(received_item.id, "test-id-123");
+            assert_eq!(received_item.tenant_id, "test-tenant-123");
+        } else {
+            panic!("Failed to receive broadcasted item");
+        }
+    }
 
     #[tokio::test]
     async fn test_agent_feed_router_compiles() {
