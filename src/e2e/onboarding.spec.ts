@@ -256,9 +256,10 @@ test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
     await instantBuildButton.click();
 
     const generateButton = page.getByRole('button', { name: 'Generate Storefront' });
-    await generateButton.click();
 
-    // Button click should do nothing if input is empty.
+    // Button should be disabled when input is empty.
+    await expect(generateButton).toBeDisabled();
+
     // We shouldn't see a loading state.
     const loadingState = page.getByText('Generating...');
     await expect(loadingState).not.toBeVisible();

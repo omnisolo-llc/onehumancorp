@@ -3,6 +3,10 @@ use serde::{Deserialize, Serialize};
 use crate::integrations::mercadopago::client::MercadoPagoClient;
 #[cfg(not(ohc_bazel))]
 use server_integrations_mercadopago::client::MercadoPagoClient;
+#[cfg(ohc_bazel)]
+use crate::integrations::razorpay::client::RazorpayClient;
+#[cfg(not(ohc_bazel))]
+use server_integrations_razorpay::client::RazorpayClient;
 
 use super::payout_batcher::PayoutBatcher;
 use super::routing::{PaymentMethod, PaymentRouter};
@@ -57,7 +61,10 @@ impl StripeClient {
         // For MercadoPago and others not routed to Stripe Checkout
         match pm {
             PaymentMethod::Razorpay => {
-                return Ok("https://checkout.razorpay.com/pay/cs_test_...".to_string());
+                let api_key = std::env::var("RAZORPAY_API_KEY").unwrap_or_default();
+                let api_secret = std::env::var("RAZORPAY_API_SECRET").unwrap_or_default();
+                let rzp_client = RazorpayClient::new(api_key, api_secret);
+                return rzp_client.create_checkout_preference(_price_id, customer_id).await;
             },
             PaymentMethod::MercadoPago => {
                 if let Ok(token) = std::env::var("MERCADOPAGO_ACCESS_TOKEN") {
