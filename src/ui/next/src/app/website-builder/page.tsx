@@ -693,7 +693,7 @@ export default function WebsiteBuilderPage() {
                                 price_type: 'physical',
                                 location: inferredLocation,
                                 ai_agents: ['Operations', 'Marketing', 'Finance', 'Legal', 'Advisory'],
-                                auto_respond: true,
+                                ai_auto_respond: true,
                                 initial_products: data.initial_products || []
                               })
                             });
