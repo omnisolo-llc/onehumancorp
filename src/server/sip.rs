@@ -146,8 +146,8 @@ impl SipDB {
             match res {
                 Ok(Ok(_)) => return Ok(()),
                 Ok(Err(err)) => {
+                    let retry = is_retryable_sqlx_error(&err);
                     let err_str = err.to_string().to_lowercase();
-                    let retry = err_str.contains("serialization failure") || err_str.contains("deadlock detected") || err_str.contains("database is locked") || err_str.contains("busy");
 
                     if retry {
                         attempt += 1;
@@ -161,9 +161,14 @@ impl SipDB {
                     } else {
                         return Err(err);
                     }
-                },
+                }
                 Err(timeout_err) => {
-                    return Err(sqlx::Error::Io(std::io::Error::new(std::io::ErrorKind::TimedOut, timeout_err)));
+                    attempt += 1;
+                    if attempt >= max_attempts {
+                        return Err(sqlx::Error::Io(std::io::Error::new(std::io::ErrorKind::TimedOut, timeout_err)));
+                    }
+                    tokio::time::sleep(backoff).await;
+                    backoff *= 2;
                 }
             }
         }
