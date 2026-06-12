@@ -353,6 +353,7 @@ mod tests {
         let req = UpdateTerminalSessionStatusRequest {
             session_id: "test_session_resolved".to_string(),
             status: "RESOLVED".to_string(),
+            tenant_id: "test_tenant".to_string(),
         };
 
         let mut request = Request::new(req);
