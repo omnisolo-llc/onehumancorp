@@ -158,6 +158,12 @@ export default function StripeTerminalClient({ amount, productId, tenantId }: { 
 
     setStatus('Reserving inventory...');
 
+    // Optimistic UI Update: Dispatch custom event to reduce inventory locally
+    const optimisticEvent = new CustomEvent('optimistic-inventory-update', {
+      detail: { productId, delta: -1 }
+    });
+    window.dispatchEvent(optimisticEvent);
+
     let lockId = '';
     try {
       const reserveRes = await fetch('/api/v1/payments/terminal/reserve', {
@@ -168,12 +174,24 @@ export default function StripeTerminalClient({ amount, productId, tenantId }: { 
       const reserveData = await reserveRes.json();
 
       if (!reserveData.success) {
+        // Rollback optimistic update
+        const rollbackEvent = new CustomEvent('optimistic-inventory-update', {
+          detail: { productId, delta: 1 }
+        });
+        window.dispatchEvent(rollbackEvent);
+
         setStatus('Reservation failed: ' + (reserveData.error_message || 'Item is currently being purchased elsewhere'));
         setReserving(false);
         return;
       }
       lockId = reserveData.lock_id;
     } catch (e: any) {
+      // Rollback optimistic update
+      const rollbackEvent = new CustomEvent('optimistic-inventory-update', {
+        detail: { productId, delta: 1 }
+      });
+      window.dispatchEvent(rollbackEvent);
+
       setStatus('Reservation error: ' + e.message);
       setReserving(false);
       return;

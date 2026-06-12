@@ -77,6 +77,22 @@ export default function TerminalPage() {
         })
         .catch(console.error);
     }
+
+    const handleOptimisticUpdate = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      const { productId, delta } = customEvent.detail;
+      setInventory(prev => prev.map(p => {
+        if (p.id === productId) {
+          return { ...p, inventory_count: p.inventory_count + delta };
+        }
+        return p;
+      }));
+    };
+    window.addEventListener('optimistic-inventory-update', handleOptimisticUpdate);
+
+    return () => {
+      window.removeEventListener('optimistic-inventory-update', handleOptimisticUpdate);
+    };
   }, []);
 
   // Network listener

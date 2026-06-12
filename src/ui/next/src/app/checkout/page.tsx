@@ -118,7 +118,7 @@ function CheckoutContent() {
       window.location.assign(data.checkout_url);
     } catch (e: any) {
       console.error("Failed to start checkout", e);
-      setCheckoutStatus("Checkout is temporarily unavailable.");
+      setCheckoutStatus(e.message || "Checkout is temporarily unavailable.");
       setIsProcessing(false);
     }
   };
