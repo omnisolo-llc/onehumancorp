@@ -35,7 +35,7 @@ describe('PricingPage', () => {
 
   it('navigates to checkout when upgrading to Starter', () => {
     render(<PricingPage />);
-    const upgradeButton = screen.getByText('Upgrade to Starter via Stripe');
+    const upgradeButton = screen.getByText('Upgrade to Starter');
     fireEvent.click(upgradeButton);
     expect(mockPush).toHaveBeenCalledWith('/checkout?tier=Starter');
   });
