@@ -25,6 +25,10 @@ vi.mock('../components/OneTapReferral', () => ({
   OneTapReferral: () => <div data-testid="one-tap-referral" />,
 }));
 
+vi.mock('../components/GrowthReferralWidget', () => ({
+  default: () => <div data-testid="growth-referral-widget" />,
+}));
+
 describe('CheckoutPage', () => {
   afterEach(() => {
     mockUseSearchParams.mockImplementation(() => new URLSearchParams(''));
@@ -104,6 +108,7 @@ beforeEach(() => {
     await waitFor(() => {
       expect(screen.getByText('Payment Successful!')).toBeDefined();
       expect(screen.getByTestId('one-tap-referral')).toBeDefined();
+      expect(screen.getByTestId('growth-referral-widget')).toBeDefined();
       expect(screen.getByText(/Your order is confirmed/)).toBeDefined();
     }, { timeout: 2000 });
   });

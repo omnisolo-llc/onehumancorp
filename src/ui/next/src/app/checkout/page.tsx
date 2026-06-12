@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { WithTooltip } from "../../components/TooltipRegistry";
 import { PoweredByOHC } from "../components/PoweredByOHC";
 import { OneTapReferral } from "../components/OneTapReferral";
+import GrowthReferralWidget from "../components/GrowthReferralWidget";
 
 function CheckoutContent() {
   const router = useRouter();
@@ -523,6 +524,10 @@ function CheckoutContent() {
             <div className="space-y-4">
               <div className="mb-6">
                 <OneTapReferral tenantId={tenant} source="checkout_affiliate" />
+              </div>
+
+              <div className="mb-6">
+                <GrowthReferralWidget />
               </div>
 
               <button
