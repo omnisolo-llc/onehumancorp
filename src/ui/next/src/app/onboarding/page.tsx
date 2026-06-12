@@ -601,7 +601,7 @@ export default function OnboardingWizard() {
                       </svg>
                       Generating...
                     </span>
-                  ) : <IconLabel icon="launch">Generate Storefront</IconLabel>}
+                  ) : <IconLabel icon="launch">Generate My Business</IconLabel>}
                 </button>
               </div>
             </div>
@@ -878,7 +878,7 @@ export default function OnboardingWizard() {
                           </svg>
                           Analyzing...
                         </span>
-                      ) : <IconLabel icon="launch">Next</IconLabel>}
+                      ) : <IconLabel icon="launch">Generate My Business</IconLabel>}
                     </button>
                   </div>
                 </div>
