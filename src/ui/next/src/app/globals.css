@@ -46,7 +46,7 @@ body {
 
 .app-brand-mark {
   width: 32px;
-  height: 32px;
+  height: 44px;
   border-radius: 8px;
   display: grid;
   place-items: center;
@@ -330,7 +330,7 @@ body {
 }
 
 .app-button {
-  height: 32px;
+  height: 44px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -508,7 +508,7 @@ body {
 
   .app-nav-marker {
     width: 32px;
-    height: 32px;
+    height: 44px;
   }
 
   .app-topbar {

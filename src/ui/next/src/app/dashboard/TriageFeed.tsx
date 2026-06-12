@@ -126,13 +126,13 @@ export function TriageFeed({ tenantId, initialItems }: { tenantId: string, initi
           <div className="flex gap-3 mt-2">
             <button
               onClick={() => handleDecision(item.id, true)}
-              className="px-6 py-2.5 rounded-[16px] bg-orange-500 hover:bg-orange-600 text-white font-medium shadow-sm transition-colors"
+              className="px-6 py-2.5 min-h-[44px] rounded-[16px] bg-orange-500 hover:bg-orange-600 text-white font-medium shadow-sm transition-colors"
             >
               Approve & Execute
             </button>
             <button
               onClick={() => handleDecision(item.id, false)}
-              className="px-6 py-2.5 rounded-[16px] bg-white/50 dark:bg-black/30 border border-orange-200 dark:border-orange-900/30 hover:bg-white/80 dark:hover:bg-black/50 text-orange-900 dark:text-orange-100 font-medium transition-colors"
+              className="px-6 py-2.5 min-h-[44px] rounded-[16px] bg-white/50 dark:bg-black/30 border border-orange-200 dark:border-orange-900/30 hover:bg-white/80 dark:hover:bg-black/50 text-orange-900 dark:text-orange-100 font-medium transition-colors"
             >
               Dismiss
             </button>
