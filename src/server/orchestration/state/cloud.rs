@@ -174,8 +174,11 @@ impl crate::orchestration::state::StateManager for CloudStateManager {
                 WHERE t.status = 'PENDING'
                   AND NOT EXISTS (
                       SELECT 1
-                      FROM json_array_elements_text(t.dependencies) as dep_id
-                      LEFT JOIN swarm_tasks dep ON dep.id::text = dep_id
+                      FROM (SELECT t.dependencies as d) sub
+                      CROSS JOIN LATERAL (
+                          SELECT json_array_elements_text(CASE WHEN (d::text LIKE '[%' AND d::text LIKE '%]') THEN d::json ELSE '[]'::json END) as dep_id
+                      ) elements
+                      LEFT JOIN swarm_tasks dep ON dep.id::text = elements.dep_id
                       WHERE dep.id IS NULL OR dep.status != 'COMPLETED'
                   )
                 LIMIT $1

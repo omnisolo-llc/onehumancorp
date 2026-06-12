@@ -212,6 +212,7 @@ impl StateManager for StandaloneStateManager {
                     SELECT t.id
                     FROM swarm_tasks t
                     WHERE t.status = 'PENDING'
+                    AND json_valid(t.dependencies)
                     AND NOT EXISTS (
                         SELECT 1
                         FROM json_each(t.dependencies) as dep_id
