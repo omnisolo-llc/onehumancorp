@@ -49,6 +49,11 @@ test.describe("Unified Agent Feed Mobile UX", () => {
     // 5. Verify touch targets on the Instagram DM specific button
     const approveIgButton = page.locator('button[data-testid="approve-instagram-dm"]').first();
     await expect(approveIgButton).toBeVisible();
+    const approveIgButtonBox = await approveIgButton.boundingBox();
+    if (approveIgButtonBox) {
+      expect(approveIgButtonBox.width).toBeGreaterThanOrEqual(44);
+      expect(approveIgButtonBox.height).toBeGreaterThanOrEqual(44);
+    }
     await approveIgButton.click();
 
     // The Instagram DM item should optimistically disappear
@@ -57,6 +62,11 @@ test.describe("Unified Agent Feed Mobile UX", () => {
     // Verify touch targets on the default Approve button
     const approveButton = page.locator('button[data-testid="approve-proposal"]').first();
     await expect(approveButton).toBeVisible();
+    const approveButtonBox = await approveButton.boundingBox();
+    if (approveButtonBox) {
+      expect(approveButtonBox.width).toBeGreaterThanOrEqual(44);
+      expect(approveButtonBox.height).toBeGreaterThanOrEqual(44);
+    }
     await approveButton.click();
 
     await expect(page.locator("text=3 new orders to fulfill").first()).not.toBeVisible();
@@ -64,6 +74,11 @@ test.describe("Unified Agent Feed Mobile UX", () => {
     // Test a specific payload button
     const draftButton = page.locator('button[data-testid="approve-draft"]').first();
     await expect(draftButton).toBeVisible();
+    const draftButtonBox = await draftButton.boundingBox();
+    if (draftButtonBox) {
+      expect(draftButtonBox.width).toBeGreaterThanOrEqual(44);
+      expect(draftButtonBox.height).toBeGreaterThanOrEqual(44);
+    }
     await draftButton.click();
 
     await expect(page.locator("text=Draft promo email?").first()).not.toBeVisible();

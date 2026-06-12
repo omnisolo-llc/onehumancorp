@@ -174,7 +174,7 @@
         justify-content: center;
         align-items: center;
         gap: 8px;
-        min-height: 44px;
+        min-height: 44px; min-width: 44px;
       }
       .btn-primary:hover {
         background-color: #0052cc;
@@ -197,7 +197,7 @@
         justify-content: center;
         align-items: center;
         gap: 8px;
-        min-height: 44px;
+        min-height: 44px; min-width: 44px;
       }
       @media (prefers-color-scheme: dark) {
         .btn-outline {
@@ -286,7 +286,7 @@
         display: flex;
         justify-content: center;
         align-items: center;
-        min-height: 44px; /* touch target size */
+        min-height: 44px; min-width: 44px; /* touch target size */
       }
       button:hover {
         background-color: #0052cc;
@@ -446,7 +446,7 @@
         background: #0066FF;
         font-size: 14px;
         padding: 10px;
-        min-height: 44px;
+        min-height: 44px; min-width: 44px;
       }
       .triage-btn-dismiss {
         flex: 1;
@@ -454,7 +454,7 @@
         color: #1d1d1f;
         font-size: 14px;
         padding: 10px;
-        min-height: 44px;
+        min-height: 44px; min-width: 44px;
         box-shadow: none;
       }
       .triage-btn-dismiss:hover { background: #d1d1d6; }
@@ -1457,8 +1457,8 @@
                   <strong style="margin-top: 8px; display: inline-block;">TikTok:</strong> ${parsedPayload.tiktok || ''}
                 </div>
                 <div class="triage-controls" style="display: flex; gap: 8px;">
-                  <button class="triage-btn-approve" data-testid="approve-btn" onclick="handleTriageAction('${item.id}', true)" style="flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 12px; font-weight: 600; border: none; cursor: pointer;">Approve & Schedule</button>
-                  <button class="triage-btn-dismiss" onclick="handleTriageAction('${item.id}', false)" style="flex: 1; background: rgba(0,0,0,0.05); color: #1d1d1f; padding: 12px; border-radius: 12px; font-weight: 600; border: none; cursor: pointer;">Edit Draft</button>
+                  <button class="triage-btn-approve" data-testid="approve-btn" onclick="handleTriageAction('${item.id}', true)" style="flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 12px; font-weight: 600; border: none; cursor: pointer; min-width: 44px; min-height: 44px;">Approve & Schedule</button>
+                  <button class="triage-btn-dismiss" onclick="handleTriageAction('${item.id}', false)" style="flex: 1; background: rgba(0,0,0,0.05); color: #1d1d1f; padding: 12px; border-radius: 12px; font-weight: 600; border: none; cursor: pointer; min-width: 44px; min-height: 44px;">Edit Draft</button>
                 </div>
               </div>
             `;
@@ -1481,8 +1481,8 @@
                   ${parsedPayload.draft_reply || ''}
                 </div>
                 <div class="triage-controls" style="display: flex; gap: 8px;">
-                  <button class="triage-btn-approve" data-testid="approve-instagram-dm" onclick="handleTriageAction('${item.id}', 'APPROVED')" style="flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 12px; font-weight: 600; border: none; cursor: pointer;">Approve Reply</button>
-                  <button class="triage-btn-dismiss" onclick="handleTriageAction('${item.id}', 'DISMISSED')" style="flex: 1; background: rgba(0,0,0,0.05); color: #1d1d1f; padding: 12px; border-radius: 12px; font-weight: 600; border: none; cursor: pointer;">Edit Draft</button>
+                  <button class="triage-btn-approve" data-testid="approve-instagram-dm" onclick="handleTriageAction('${item.id}', 'APPROVED')" style="flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 12px; font-weight: 600; border: none; cursor: pointer; min-width: 44px; min-height: 44px;">Approve Reply</button>
+                  <button class="triage-btn-dismiss" onclick="handleTriageAction('${item.id}', 'DISMISSED')" style="flex: 1; background: rgba(0,0,0,0.05); color: #1d1d1f; padding: 12px; border-radius: 12px; font-weight: 600; border: none; cursor: pointer; min-width: 44px; min-height: 44px;">Edit Draft</button>
                 </div>
               </div>
             `;
@@ -1507,8 +1507,8 @@
                   <strong style="margin-top: 8px; display: inline-block;">TikTok:</strong> ${parsedPayload.tiktok || ''}
                 </div>
                 <div class="triage-controls" style="display: flex; gap: 8px;">
-                  <button class="triage-btn-approve" data-testid="approve-btn" onclick="handleTriageAction('${item.id}', true)" style="flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 12px; font-weight: 600; border: none; cursor: pointer;">Approve & Schedule</button>
-                  <button class="triage-btn-dismiss" onclick="handleTriageAction('${item.id}', false)" style="flex: 1; background: rgba(0,0,0,0.05); color: #1d1d1f; padding: 12px; border-radius: 12px; font-weight: 600; border: none; cursor: pointer;">Edit Draft</button>
+                  <button class="triage-btn-approve" data-testid="approve-btn" onclick="handleTriageAction('${item.id}', true)" style="flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 12px; font-weight: 600; border: none; cursor: pointer; min-width: 44px; min-height: 44px;">Approve & Schedule</button>
+                  <button class="triage-btn-dismiss" onclick="handleTriageAction('${item.id}', false)" style="flex: 1; background: rgba(0,0,0,0.05); color: #1d1d1f; padding: 12px; border-radius: 12px; font-weight: 600; border: none; cursor: pointer; min-width: 44px; min-height: 44px;">Edit Draft</button>
                 </div>
               </div>
             `;
