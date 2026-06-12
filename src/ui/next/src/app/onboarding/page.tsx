@@ -490,6 +490,11 @@ export default function OnboardingWizard() {
                   Our AI will handle the rest in 30 seconds.
                 </p>
               </div>
+              {error && (
+                <div className="w-full text-[#FF3B30] text-sm p-3 glassmorphism border border-[#FF3B30]/30 rounded-[8px] bg-[#FF3B30]/10 mb-4 font-semibold text-center animate-fade-in">
+                  {error}
+                </div>
+              )}
 
               <div className="space-y-4 flex-1 w-full">
                 <textarea
