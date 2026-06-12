@@ -30,6 +30,9 @@ static MCP_TOOL_CALLS_TOTAL: OnceLock<Counter<u64>> = OnceLock::new();
 static POSTGRES_LOCK_CONTENTION: OnceLock<Counter<u64>> = OnceLock::new();
 static LLM_NETWORK_LATENCY: OnceLock<Histogram<f64>> = OnceLock::new();
 static AUTODREAM_SYNC_DURATION: OnceLock<Histogram<f64>> = OnceLock::new();
+static SANDBOX_CPU_USAGE: OnceLock<Gauge<f64>> = OnceLock::new();
+static SANDBOX_MEMORY_BYTES: OnceLock<Gauge<i64>> = OnceLock::new();
+static SANDBOX_NETWORK_IO: OnceLock<Gauge<i64>> = OnceLock::new();
 static TOKEN_USAGE_BY_OUTCOME: OnceLock<Counter<u64>> = OnceLock::new();
 
 static ERROR_SIGNAL_CATEGORIZED: OnceLock<Counter<u64>> = OnceLock::new();
@@ -1744,3 +1747,41 @@ mod harness_security_divergence_tests {
 }
 #[cfg(test)]
 mod dashboard_test;
+
+
+
+pub fn record_sandbox_cpu_usage(agent_id: &str, org_id: &str, task_id: &str, cpu_usage: f64) {
+    let gauge = SANDBOX_CPU_USAGE.get_or_init(|| {
+        let meter = opentelemetry::global::meter("ohc.server");
+        meter.f64_gauge("ohc_sandbox_cpu_usage").build()
+    });
+    gauge.record(cpu_usage, &[
+        opentelemetry::KeyValue::new("agent_id", agent_id.to_string()),
+        opentelemetry::KeyValue::new("organization_id", org_id.to_string()),
+        opentelemetry::KeyValue::new("task_id", task_id.to_string()),
+    ]);
+}
+
+pub fn record_sandbox_memory_bytes(agent_id: &str, org_id: &str, task_id: &str, memory_bytes: i64) {
+    let gauge = SANDBOX_MEMORY_BYTES.get_or_init(|| {
+        let meter = opentelemetry::global::meter("ohc.server");
+        meter.i64_gauge("ohc_sandbox_memory_bytes").build()
+    });
+    gauge.record(memory_bytes, &[
+        opentelemetry::KeyValue::new("agent_id", agent_id.to_string()),
+        opentelemetry::KeyValue::new("organization_id", org_id.to_string()),
+        opentelemetry::KeyValue::new("task_id", task_id.to_string()),
+    ]);
+}
+
+pub fn record_sandbox_network_io(agent_id: &str, org_id: &str, task_id: &str, bytes: i64) {
+    let gauge = SANDBOX_NETWORK_IO.get_or_init(|| {
+        let meter = opentelemetry::global::meter("ohc.server");
+        meter.i64_gauge("ohc_sandbox_network_io").build()
+    });
+    gauge.record(bytes, &[
+        opentelemetry::KeyValue::new("agent_id", agent_id.to_string()),
+        opentelemetry::KeyValue::new("organization_id", org_id.to_string()),
+        opentelemetry::KeyValue::new("task_id", task_id.to_string()),
+    ]);
+}
