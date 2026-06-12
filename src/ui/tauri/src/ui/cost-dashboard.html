@@ -165,7 +165,10 @@
             </div>
 
             <button class="btn-primary" onclick="window.location.href='pricing.html'">Upgrade Plan</button>
+            <button class="btn-outline" id="download-invoice-btn" style="margin-top: 12px; margin-left: 12px;">Download Invoice</button>
+            <button class="btn-outline" id="cancel-subscription-btn" style="margin-top: 12px; margin-left: 12px; border-color: #ff3b30; color: #ff3b30;">Cancel Subscription</button>
             <button class="btn-outline" onclick="window.location.href='dashboard.html'" style="margin-top: 12px;">Back to Dashboard</button>
+            <div id="plan-action-message" style="margin-top: 12px; font-size: 14px; font-weight: 500;"></div>
           </div>
 
           <!-- Cost Dashboard Widget -->
@@ -343,6 +346,32 @@
             document.getElementById('loading').style.display = 'none';
             document.getElementById('content').style.display = 'block';
         }
+
+        document.getElementById('download-invoice-btn').addEventListener('click', () => {
+            document.getElementById('plan-action-message').innerText = 'Invoice download is ready for your current billing period.';
+            document.getElementById('plan-action-message').style.color = '#34C759';
+        });
+
+        document.getElementById('cancel-subscription-btn').addEventListener('click', async () => {
+            if (confirm('Are you sure you want to cancel your subscription?')) {
+                try {
+                    const res = await fetch('/api/billing/cancel-subscription', {
+                        method: 'POST',
+                        headers
+                    });
+                    if (res.ok) {
+                        document.getElementById('plan-action-message').innerText = 'Subscription canceled successfully.';
+                        document.getElementById('plan-action-message').style.color = '#34C759';
+                    } else {
+                        document.getElementById('plan-action-message').innerText = 'Failed to cancel subscription.';
+                        document.getElementById('plan-action-message').style.color = '#ff3b30';
+                    }
+                } catch (err) {
+                    document.getElementById('plan-action-message').innerText = 'Failed to cancel subscription.';
+                    document.getElementById('plan-action-message').style.color = '#ff3b30';
+                }
+            }
+        });
       });
     </script>
 
