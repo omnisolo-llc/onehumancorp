@@ -109,6 +109,10 @@
         text-align: left;
       }
 
+      .text-\[\#FF3B30\] { color: #FF3B30 !important; }
+      .border-\[\#FF3B30\] { border-color: #FF3B30 !important; }
+      .border-\[\#FF3B30\]\/30 { border-color: rgba(255, 59, 48, 0.3) !important; border-width: 1px !important; border-style: solid !important; border-radius: 8px !important; padding: 10px !important; }
+
       @keyframes shake {
         0%, 100% { transform: translateX(0); }
         25% { transform: translateX(-5px); }
@@ -1089,16 +1093,32 @@
       });
 
       const generateStorefrontBtn = document.getElementById('generate-storefront-btn');
+      const instantBioInputEl = document.getElementById('instant-bio');
+      const instantErrorEl = document.getElementById('instant-error');
+
+      if (instantBioInputEl) {
+          instantBioInputEl.addEventListener('input', () => {
+              instantBioInputEl.classList.remove('border-[#FF3B30]');
+              if (instantErrorEl) {
+                  instantErrorEl.style.display = 'none';
+              }
+          });
+      }
+
       if (generateStorefrontBtn) {
           generateStorefrontBtn.addEventListener('click', async () => {
-              const bioInput = document.getElementById('instant-bio').value;
+              const bioInput = instantBioInputEl.value;
               if (!bioInput.trim()) {
-                  document.getElementById('instant-error').innerText = "Please tell us about your business.";
-                  document.getElementById('instant-error').style.display = 'block';
+                  instantErrorEl.innerText = "Please tell us about your business.";
+                  instantErrorEl.style.display = 'block';
+                  instantErrorEl.classList.add('text-[#FF3B30]', 'border-[#FF3B30]/30');
+                  instantBioInputEl.classList.add('border-[#FF3B30]');
                   return;
               }
 
-              document.getElementById('instant-error').style.display = 'none';
+              instantErrorEl.style.display = 'none';
+              instantErrorEl.classList.remove('text-[#FF3B30]', 'border-[#FF3B30]/30');
+              instantBioInputEl.classList.remove('border-[#FF3B30]');
               generateStorefrontBtn.disabled = true;
               generateStorefrontBtn.innerHTML = '<div class="spinner"></div>Generating...';
 
@@ -1195,8 +1215,11 @@
 
               } catch (err) {
                   console.error(err);
-                  document.getElementById('instant-error').innerText = err.message || "Network Error: Failed to fetch";
-                  document.getElementById('instant-error').style.display = 'block';
+                  const errorMsg = err.message || "Network Error: Failed to fetch";
+                  instantErrorEl.innerText = errorMsg;
+                  instantErrorEl.style.display = 'block';
+                  instantErrorEl.classList.add('text-[#FF3B30]', 'border-[#FF3B30]/30');
+                  instantBioInputEl.classList.add('border-[#FF3B30]');
                   generateStorefrontBtn.disabled = false;
                   generateStorefrontBtn.innerText = "Generate Storefront";
               }
