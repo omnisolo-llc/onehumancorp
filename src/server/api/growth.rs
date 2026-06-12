@@ -2133,7 +2133,7 @@ fn escape_html(s: &str) -> String {
     escaped
 }
 
-pub async fn handle_embed_widget(
+pub(crate) async fn handle_embed_widget(
     axum::extract::Extension(_state): axum::extract::Extension<GrowthState>,
     axum::extract::Query(query): axum::extract::Query<EmbedWidgetQuery>
 ) -> axum::response::Html<String> {

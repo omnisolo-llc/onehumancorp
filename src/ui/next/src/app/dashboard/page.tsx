@@ -791,6 +791,10 @@ export default function Dashboard() {
               <p className="app-list-subtitle">Unlock new customers and track milestones.</p>
             </div>
           </div>
+          <div className="mb-6">
+            <GoalTrackerWidgetInline />
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <Link href="/dashboard/campaigns" className="block glassmorphism p-6 rounded-[16px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
@@ -1041,5 +1045,102 @@ export default function Dashboard() {
       </main>
 
     </AppShell>
+  );
+}
+
+function GoalTrackerWidgetInline() {
+  const [goal, setGoal] = useState<{name: string, current: number, target: number} | null>(null);
+  const [tenantId, setTenantId] = useState('e2e-tenant');
+
+  useEffect(() => {
+    const tid = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'e2e-tenant';
+    setTenantId(tid);
+    const saved = localStorage.getItem(`ohc_goal_${tid}`);
+    if (saved) {
+      try {
+        setGoal(JSON.parse(saved));
+      } catch(e) {}
+    }
+  }, []);
+
+  const handleSave = (e: any) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    const name = formData.get('name') as string || 'My Goal';
+    const current = parseInt(formData.get('current') as string) || 0;
+    const target = parseInt(formData.get('target') as string) || 1;
+    const newGoal = { name, current, target };
+    setGoal(newGoal);
+    localStorage.setItem(`ohc_goal_${tenantId}`, JSON.stringify(newGoal));
+  };
+
+  const handleUpdate = () => {
+    if (!goal) return;
+    const newVal = prompt("Enter new current progress:", goal.current.toString());
+    if (newVal !== null) {
+      const parsed = parseInt(newVal);
+      if (!isNaN(parsed)) {
+        const newGoal = { ...goal, current: parsed };
+        setGoal(newGoal);
+        localStorage.setItem(`ohc_goal_${tenantId}`, JSON.stringify(newGoal));
+      }
+    }
+  };
+
+  const handleReset = () => {
+    setGoal(null);
+    localStorage.removeItem(`ohc_goal_${tenantId}`);
+  };
+
+  const handleShare = () => {
+    const link = `https://ohc.app/api/v1/growth/referrals/click?target=/onboarding&ref=${encodeURIComponent(tenantId)}`;
+    const text = `I just reached my business milestone: ${goal?.name}! 🚀 Building and growing with OHC has been amazing. Join me: ${link} #BuildInPublic #OHC`;
+    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, "_blank");
+  };
+
+  return (
+    <div id="goal-tracker-section" className="glassmorphism p-6 rounded-[16px] border border-white/40 dark:border-white/10 shadow-lg mb-6">
+      <h2 className="text-xl font-bold font-outfit text-gray-900 dark:text-white mb-2">Business Goal Tracker</h2>
+      <p className="text-gray-600 dark:text-gray-300 text-sm mb-4">Set a milestone and track your progress to unlock growth rewards.</p>
+
+      {!goal ? (
+        <form id="goal-tracker-setup" onSubmit={handleSave} className="flex flex-col gap-3">
+          <input name="name" type="text" id="goal-name" placeholder="Goal (e.g., 100 Customers)" className="w-full bg-white/50 dark:bg-black/20 p-2 rounded-lg border border-gray-200 dark:border-gray-700" />
+          <div className="flex gap-3">
+            <input name="current" type="number" id="goal-current" placeholder="Current (e.g., 50)" className="flex-1 bg-white/50 dark:bg-black/20 p-2 rounded-lg border border-gray-200 dark:border-gray-700" />
+            <input name="target" type="number" id="goal-target" placeholder="Target (e.g., 100)" className="flex-1 bg-white/50 dark:bg-black/20 p-2 rounded-lg border border-gray-200 dark:border-gray-700" />
+          </div>
+          <button type="submit" id="goal-save-btn" className="w-full app-button bg-indigo-600 hover:bg-indigo-700 text-white border-none py-2 px-4 rounded-lg">Save Goal</button>
+        </form>
+      ) : goal.current < goal.target ? (
+        <div id="goal-tracker-progress" className="flex flex-col gap-3">
+          <h3 id="goal-display-name" className="font-bold text-gray-900 dark:text-white">{goal.name}</h3>
+          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-4 overflow-hidden border border-gray-300 dark:border-gray-600">
+            <div id="goal-progress-bar" className="bg-indigo-600 h-4 transition-all duration-300" style={{ width: `${Math.min(100, Math.max(0, (goal.current / goal.target) * 100))}%` }}></div>
+          </div>
+          <div className="flex justify-between text-xs text-gray-500">
+            <span id="goal-display-current">{goal.current}</span>
+            <span id="goal-display-target">{goal.target}</span>
+          </div>
+          <div className="flex gap-3 mt-2">
+            <button id="goal-update-btn" onClick={handleUpdate} className="flex-1 px-4 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200 text-sm font-medium rounded-md transition-colors">Update Progress</button>
+            <button id="goal-reset-btn" onClick={handleReset} className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-800 dark:text-gray-200 text-sm font-medium rounded-md transition-colors">Reset</button>
+          </div>
+        </div>
+      ) : (
+        <div id="goal-tracker-success" className="text-center bg-green-50 dark:bg-green-900/20 p-6 rounded-xl border border-green-200 dark:border-green-800/30">
+          <div className="text-3xl mb-2">🎉</div>
+          <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Goal Reached!</h3>
+          <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">You did it! Share your milestone to inspire others.</p>
+          <button id="goal-share-btn" onClick={handleShare} className="w-full app-button bg-[#1DA1F2] hover:bg-[#1A91DA] text-white border-none py-2 px-4 rounded-lg flex items-center justify-center gap-2 mb-3">
+            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.008 5.94H5.078z"/></svg>
+            Share on X (Twitter)
+          </button>
+          <a id="goal-powered-by" href={`/api/v1/growth/referrals/click?target=/onboarding&ref=${encodeURIComponent(tenantId)}`} target="_blank" className="text-xs font-semibold text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+            ⚡ Powered by OHC
+          </a>
+        </div>
+      )}
+    </div>
   );
 }
