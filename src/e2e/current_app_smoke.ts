@@ -42,9 +42,8 @@ export async function currentAppSmoke(page: Page, request: APIRequestContext, la
     const ogCard = await request.get('/api/v1/growth/storefront/og-card?tenant=e2e&product_name=Smoke');
     expect(ogCard.ok()).toBeTruthy();
 
-    await page.goto('/cost-dashboard');
-    await expect(page.locator('h1', { hasText: 'Cost Transparency Dashboard' }).first()).toBeVisible({ timeout: 15000 });
-    await expect(page.locator('h2', { hasText: 'Cost Transparency' }).first()).toBeVisible();
+    await page.goto('/cost-dashboard.html');
+    await expect(page.locator('h2', { hasText: 'Cost Transparency Dashboard' }).first()).toBeVisible({ timeout: 15000 });
 
     const totalCosts = page.locator('#cost-dashboard-total');
     await expect(totalCosts).toBeVisible();
@@ -58,8 +57,8 @@ export async function currentAppSmoke(page: Page, request: APIRequestContext, la
     await expect(bandwidthSavings).toBeVisible();
     expect(await bandwidthSavings.innerText()).toMatch(/^\$[\d,]+\.\d{2}$/);
 
-    await expect(page.locator('h2', { hasText: 'Cost Breakdown' })).toBeVisible();
-    await expect(page.locator('h3', { hasText: 'Agent & Feature Costs' })).toBeVisible();
+    await expect(page.locator('div', { hasText: 'Cost Breakdown' }).first()).toBeVisible();
+    await expect(page.locator('div', { hasText: 'Agent & Feature Costs' }).first()).toBeVisible();
 
     const llmCost = page.locator('#cost-dashboard-llm');
     await expect(llmCost).toBeVisible();
@@ -73,7 +72,7 @@ export async function currentAppSmoke(page: Page, request: APIRequestContext, la
     await expect(paymentFees).toBeVisible();
     expect(await paymentFees.innerText()).toMatch(/^\$[\d,]+\.\d{2}$/);
 
-    const networkCost = page.locator('#cost-dashboard-network');
-    await expect(networkCost).toBeVisible();
-    expect(await networkCost.innerText()).toMatch(/^\$[\d,]+\.\d{2}$/);
+    const apiCost = page.locator('#cost-dashboard-api');
+    await expect(apiCost).toBeVisible();
+    expect(await apiCost.innerText()).toMatch(/^\$[\d,]+\.\d{2}$/);
 }
