@@ -44,6 +44,20 @@ test.describe('In-Person Payment (POS) Flow', () => {
       });
     });
 
+    // Test Centralized Inventory & Distributed POS Architecture
+    // Trigger offline conflict generation
+    await page.evaluate(() => {
+        localStorage.setItem('ohc_offline_pos_tx', JSON.stringify([{
+            id: 'tx_conflict',
+            client_id: 'device_1',
+            amount_cents: 5000,
+            currency: 'USD',
+            product_id: 'prod-conflict',
+            quantity_deducted: 10 // Force a shortage to test pending_reconciliation
+        }]));
+    });
+
+
     // Set network to offline
     await context.setOffline(true);
     await page.evaluate(() => window.dispatchEvent(new Event('offline')));

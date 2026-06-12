@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Share Cards Generator - OHC</title>
+  <style>
+    body {
+      font-family: "Outfit", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: #f5f5f7;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 20px;
+      box-sizing: border-box;
+      min-height: 100vh;
+    }
+    .container {
+      max-width: 600px;
+      width: 100%;
+      background: rgba(255, 255, 255, 0.65);
+      backdrop-filter: blur(30px) saturate(210%);
+      border-radius: 16px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+      padding: 30px;
+      border: 1px solid rgba(255, 255, 255, 0.4);
+    }
+    h1 {
+      color: #1d1d1f;
+      font-size: 24px;
+      font-weight: 700;
+      margin-top: 0;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    h2 {
+      color: #1d1d1f;
+      font-size: 18px;
+      margin-top: 0;
+      margin-bottom: 15px;
+    }
+    label {
+      display: block;
+      color: #1d1d1f;
+      font-weight: 600;
+      font-size: 14px;
+      margin-bottom: 8px;
+    }
+    input[type="text"], textarea, select {
+      width: 100%;
+      padding: 12px;
+      border-radius: 12px;
+      border: 1px solid #d2d2d7;
+      font-size: 14px;
+      margin-bottom: 20px;
+      box-sizing: border-box;
+      background-color: rgba(255, 255, 255, 0.8);
+      font-family: inherit;
+      transition: border-color 0.2s;
+    }
+    input[type="text"]:focus, textarea:focus, select:focus {
+      outline: none;
+      border-color: #0066FF;
+    }
+    .btn {
+      background-color: #0066FF;
+      color: white;
+      border: none;
+      padding: 14px 20px;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 600;
+      width: 100%;
+      cursor: pointer;
+      font-family: inherit;
+      transition: transform 0.1s, background-color 0.2s;
+      margin-bottom: 10px;
+    }
+    .btn:active {
+      transform: scale(0.98);
+    }
+    .btn-secondary {
+      background-color: #e5e5ea;
+      color: #1d1d1f;
+    }
+    .btn-secondary:hover {
+      background-color: #d1d1d6;
+    }
+    .preview-card {
+      background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+      border-radius: 16px;
+      padding: 30px;
+      margin-top: 30px;
+      margin-bottom: 30px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+      aspect-ratio: 1.91 / 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+    }
+    .preview-card.dark {
+        background: linear-gradient(135deg, #2c3e50 0%, #000000 100%);
+        color: white;
+    }
+    .preview-card h3 {
+        font-size: 32px;
+        margin-bottom: 10px;
+        z-index: 10;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .preview-card p {
+        font-size: 18px;
+        opacity: 0.9;
+        z-index: 10;
+    }
+    .powered-by {
+        position: absolute;
+        bottom: 15px;
+        left: 15px;
+        font-size: 12px;
+        font-weight: 600;
+        opacity: 0.7;
+        z-index: 10;
+    }
+    .link-preview {
+        position: absolute;
+        bottom: 15px;
+        right: 15px;
+        font-size: 12px;
+        opacity: 0.7;
+        z-index: 10;
+    }
+    .social-buttons {
+        display: flex;
+        gap: 10px;
+        margin-top: 20px;
+    }
+    .social-btn {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 10px;
+        border-radius: 10px;
+        color: white;
+        text-decoration: none;
+        font-size: 14px;
+        font-weight: 600;
+    }
+    .social-btn.twitter { background-color: #000000; }
+    .social-btn.whatsapp { background-color: #25D366; }
+    .social-btn.facebook { background-color: #1877F2; }
+
+    .soft-paywall-modal {
+        display: none;
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0,0,0,0.6);
+        z-index: 1000;
+        align-items: center;
+        justify-content: center;
+    }
+    .soft-paywall-content {
+        background: white;
+        padding: 40px;
+        border-radius: 20px;
+        max-width: 400px;
+        text-align: center;
+        position: relative;
+    }
+    .close-btn {
+        position: absolute;
+        top: 15px; right: 15px;
+        background: none;
+        border: none;
+        font-size: 24px;
+        cursor: pointer;
+        color: #888;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Viral Share Cards Generator</h1>
+    <p style="color: #86868b; text-align: center; margin-bottom: 30px; font-size: 14px;">Generate beautiful social preview cards for your OHC storefront to drive viral traffic.</p>
+
+    <div>
+      <label for="storeName">Store Name</label>
+      <input type="text" id="storeName" placeholder="E.g., Maya's Bakery" />
+
+      <label for="tagline">Tagline</label>
+      <input type="text" id="tagline" placeholder="E.g., The best custom cakes in town." />
+
+      <label for="theme">Card Theme</label>
+      <select id="theme">
+          <option value="light">Light & Elegant</option>
+          <option value="dark">Dark & Bold</option>
+      </select>
+
+      <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; margin-bottom: 20px;">
+          <input type="checkbox" id="removeBranding" style="width: 20px; height: 20px;" />
+          <div>
+              <span style="font-weight: 600; display: block;">Remove Branding</span>
+              <span style="font-size: 12px; color: #86868b;">Hide the "Powered by OHC" watermark.</span>
+          </div>
+      </label>
+    </div>
+
+    <h2>Live Preview</h2>
+    <div id="previewCard" class="preview-card">
+        <h3 id="previewTitle">Your Store Name</h3>
+        <p id="previewTagline">Your amazing tagline goes here.</p>
+        <div id="previewPoweredBy" class="powered-by">Powered by OHC</div>
+        <div id="previewLink" class="link-preview">ohc.app/your-store</div>
+    </div>
+
+    <div style="background: rgba(255,255,255,0.5); padding: 20px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.8); margin-bottom: 20px;">
+        <h2 style="font-size: 16px;">Share Your Card</h2>
+        <button class="btn btn-secondary" id="copyLinkBtn">Copy Store Link</button>
+        <div class="social-buttons">
+            <a href="#" id="shareX" class="social-btn twitter" target="_blank">Share on X</a>
+            <a href="#" id="shareWA" class="social-btn whatsapp" target="_blank">WhatsApp</a>
+            <a href="#" id="shareFB" class="social-btn facebook" target="_blank">Facebook</a>
+        </div>
+    </div>
+
+    <a href="dashboard.html" style="display: block; text-align: center; color: #0066FF; text-decoration: none; font-weight: 600; font-size: 14px; margin-top: 10px;">Back to Dashboard</a>
+  </div>
+
+  <div id="paywallModal" class="soft-paywall-modal">
+      <div class="soft-paywall-content">
+          <button class="close-btn" id="closePaywall">&times;</button>
+          <div style="font-size: 40px; margin-bottom: 10px;">✨</div>
+          <h2 style="font-size: 24px; margin-bottom: 10px;">Upgrade to Pro</h2>
+          <p style="color: #666; margin-bottom: 20px;">Make the Share Cards 100% yours. Upgrade to Pro to remove the "Powered by OHC" watermark and unlock custom themes.</p>
+          <button class="btn" onclick="window.location.href='pricing.html'">Upgrade Now</button>
+          <div style="margin: 15px 0; color: #888; font-size: 14px;">OR</div>
+          <button class="btn" style="background: white; color: #1DA1F2; border: 2px solid #1DA1F2;" onclick="claimTrial()">Share on X to get 7 Days Free</button>
+      </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const tenant = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'demo';
+
+        const storeNameInput = document.getElementById('storeName');
+        const taglineInput = document.getElementById('tagline');
+        const themeSelect = document.getElementById('theme');
+        const removeBrandingCheckbox = document.getElementById('removeBranding');
+
+        const previewCard = document.getElementById('previewCard');
+        const previewTitle = document.getElementById('previewTitle');
+        const previewTagline = document.getElementById('previewTagline');
+        const previewPoweredBy = document.getElementById('previewPoweredBy');
+        const previewLink = document.getElementById('previewLink');
+
+        const paywallModal = document.getElementById('paywallModal');
+        const closePaywall = document.getElementById('closePaywall');
+
+        const baseStoreLink = `https://ohc.app/store/${tenant}`;
+        previewLink.textContent = `ohc.app/store/${tenant}`;
+
+        function updatePreview() {
+            previewTitle.textContent = storeNameInput.value || "Your Store Name";
+            previewTagline.textContent = taglineInput.value || "Your amazing tagline goes here.";
+
+            if (themeSelect.value === 'dark') {
+                previewCard.classList.add('dark');
+            } else {
+                previewCard.classList.remove('dark');
+            }
+
+            const shareText = `Check out ${storeNameInput.value || 'my store'} on OHC! ${taglineInput.value || ''}\n\n${baseStoreLink}`;
+            document.getElementById('shareX').href = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`;
+            document.getElementById('shareWA').href = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
+            document.getElementById('shareFB').href = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(baseStoreLink)}&quote=${encodeURIComponent(shareText)}`;
+        }
+
+        storeNameInput.addEventListener('input', updatePreview);
+        taglineInput.addEventListener('input', updatePreview);
+        themeSelect.addEventListener('change', updatePreview);
+
+        removeBrandingCheckbox.addEventListener('change', (e) => {
+            if (e.target.checked) {
+                e.target.checked = false; // Revert immediately
+                paywallModal.style.display = 'flex';
+            }
+        });
+
+        closePaywall.addEventListener('click', () => {
+            paywallModal.style.display = 'none';
+        });
+
+        document.getElementById('copyLinkBtn').addEventListener('click', (e) => {
+            navigator.clipboard.writeText(baseStoreLink);
+            const originalText = e.target.textContent;
+            e.target.textContent = "Copied!";
+            setTimeout(() => { e.target.textContent = originalText; }, 2000);
+        });
+
+        window.claimTrial = async function() {
+            const text = `I just upgraded my store using @OneHumanCorp! Check it out: ${baseStoreLink}`;
+            window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, '_blank');
+            paywallModal.style.display = 'none';
+            removeBrandingCheckbox.checked = true;
+            previewPoweredBy.style.display = 'none';
+
+            try {
+                let url = '/api/v1/growth/trial-extension/claim';
+                if (window.__TAURI__) {
+                    url = 'http://127.0.0.1:18789/api/v1/growth/trial-extension/claim';
+                }
+                await fetch(url, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ tenant_id: tenant, source: "share_cards_paywall" })
+                });
+            } catch(e) {
+                console.error("Trial claim failed", e);
+            }
+        };
+
+        updatePreview();
+    });
+  </script>
+</body>
+</html>

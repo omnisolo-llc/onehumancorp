@@ -322,6 +322,9 @@
       .persona-chip {
         flex: 0 0 auto;
         padding: 8px 16px;
+        min-height: 44px;
+        display: flex;
+        align-items: center;
         border-radius: 20px;
         background: rgba(0, 102, 255, 0.1);
         color: #0066FF;
@@ -399,17 +402,75 @@
           width: 100%;
           border: none;
         }
-        input, select, textarea, button, .radio-option {
+        input, select, textarea, button, .radio-option, .persona-chip {
           min-height: 44px !important;
         }
       }
-        </style>
+
+      @media (max-width: 375px) {
+        .stepper {
+          gap: 4px;
+        }
+        .step-indicator {
+          width: 8px;
+          height: 8px;
+        }
+        .step-indicator.active {
+          transform: scale(1.2);
+        }
+        .container {
+          padding: 16px;
+        }
+        .radio-option {
+          padding: 8px 12px;
+        }
+      }
+
+
+      *:focus-visible {
+        outline: 3px solid #0066FF;
+        outline-offset: 2px;
+      }
+
+    </style>
   </head>
   <body>
         <div class="container glassmorphism" id="form-container">
 
 
-      <div class="stepper" id="stepper-indicator">
+      <!-- Step 0: Initial Screen -->
+      <div class="step active" id="step-initial">
+        <div style="width: 64px; height: 64px; background: rgba(0, 102, 255, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 24px;">
+          <svg style="width: 32px; height: 32px; color: #0066FF;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+          </svg>
+        </div>
+        <h1>10-Minute Setup Wizard</h1>
+        <p>Zero tech skills needed. We do the heavy lifting. Review and add any extra details to help our AI generate the perfect store.</p>
+
+        <div class="btn-group" style="margin-top: 32px;">
+          <button class="next-step-btn" data-next="step-context">Start My Business</button>
+          <button type="button" class="btn-secondary" onclick="goToStep('step-instant')">Instant Build</button>
+        </div>
+      </div>
+
+      <!-- Step Instant: Instant Build -->
+      <div class="step" id="step-instant">
+        <button onclick="goToStep('step-initial')" style="background: none; border: none; color: #0066FF; padding: 0; box-shadow: none; width: auto; font-size: 14px; min-height: auto; margin-bottom: 16px; display: flex; align-items: center; gap: 4px; font-weight: 600;">
+          <svg style="width: 16px; height: 16px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg> Back
+        </button>
+        <h1>Tell us about your business</h1>
+        <p>Our AI will handle the rest in 30 seconds.</p>
+
+        <textarea id="instant-bio" class="glassmorphism" placeholder="e.g. I run a local bakery that sells custom vegan cakes..." rows="6" style="resize: none;"></textarea>
+        <div id="instant-error" class="error-msg" style="margin-bottom: 20px;"></div>
+
+        <div class="btn-group" style="margin-top: 24px;">
+          <button id="generate-storefront-btn">Generate Storefront</button>
+        </div>
+      </div>
+
+      <div class="stepper" id="stepper-indicator" style="display: none;">
         <div class="step-indicator active" data-step="step-context"></div>
         <div class="step-indicator" data-step="step-categories"></div>
         <div class="step-indicator" data-step="step-name"></div>
@@ -421,15 +482,15 @@
       <div id="draft-saved-msg" style="display: none; color: #34C759; font-weight: bold; margin-bottom: 15px;">Draft Saved!</div>
 
       <!-- Step 1: Work Context -->
-      <div class="step active" id="step-context">
+      <div class="step" id="step-context">
         <h1>How do you work?</h1>
         <p>Choose a quick-start or select how you work.</p>
 
         <div class="persona-row">
-            <div class="persona-chip" onclick="applyPersona('Baker')">I'm a Baker</div>
-            <div class="persona-chip" onclick="applyPersona('Handyman')">I'm a Handyman</div>
-            <div class="persona-chip" onclick="applyPersona('Boutique')">I'm a Boutique Owner</div>
-            <div class="persona-chip" onclick="applyPersona('Tutor')">I'm a Tutor</div>
+            <div class="persona-chip" onclick="applyPersona('Baker', event)">I'm a Baker</div>
+            <div class="persona-chip" onclick="applyPersona('Handyman', event)">I'm a Handyman</div>
+            <div class="persona-chip" onclick="applyPersona('Boutique', event)">I'm a Boutique Owner</div>
+            <div class="persona-chip" onclick="applyPersona('Tutor', event)">I'm a Tutor</div>
         </div>
 
         <div class="radio-group" id="context-group">
@@ -582,7 +643,7 @@
     <script>
       const container = document.getElementById('form-container');
 
-      function applyPersona(persona) {
+      function applyPersona(persona, event) {
           document.querySelectorAll('.persona-chip').forEach(el => el.classList.remove('selected'));
           event.target.classList.add('selected');
 
@@ -703,7 +764,7 @@
         .then(res => res.json())
         .then(apiState => {
             if (apiState && Object.keys(apiState).length > 0) {
-                state = { ...state, ...apiState };
+                state = { ...state, ...(apiState.wizardState || apiState) };
                 populateForm();
             }
         })
@@ -712,7 +773,12 @@
 
 
       if (state.step === undefined || state.step === 0) {
-         updateStepper('step-context');
+         goToStep('step-initial');
+      } else {
+         const steps = ['step-context', 'step-categories', 'step-name', 'step-assistant', 'step-admin', 'step-offer', 'step-template'];
+         if (state.step < steps.length) {
+            goToStep(steps[state.step]);
+         }
       }
 
             // Clear name error on typing if valid
@@ -802,6 +868,10 @@
 
       function validateStep(stepId) {
           let isValid = true;
+
+          if (stepId === 'step-initial' || stepId === 'step-instant') {
+              return true;
+          }
 
           if (stepId === 'step-context') {
               const selected = document.querySelector('input[name="work_context"]:checked');
@@ -910,6 +980,13 @@
 
 
       function updateStepper(stepId) {
+          const stepperIndicator = document.getElementById('stepper-indicator');
+          if (stepId === 'step-initial' || stepId === 'step-instant') {
+              if (stepperIndicator) stepperIndicator.style.display = 'none';
+          } else {
+              if (stepperIndicator) stepperIndicator.style.display = 'flex';
+          }
+
           const steps = ['step-context', 'step-categories', 'step-name', 'step-assistant', 'step-admin', 'step-offer', 'step-template'];
           const currentIndex = steps.indexOf(stepId);
 
@@ -1008,6 +1085,121 @@
               }, 2000);
           });
       });
+
+      const generateStorefrontBtn = document.getElementById('generate-storefront-btn');
+      if (generateStorefrontBtn) {
+          generateStorefrontBtn.addEventListener('click', async () => {
+              const bioInput = document.getElementById('instant-bio').value;
+              if (!bioInput.trim()) {
+                  document.getElementById('instant-error').innerText = "Please tell us about your business.";
+                  document.getElementById('instant-error').style.display = 'block';
+                  return;
+              }
+
+              document.getElementById('instant-error').style.display = 'none';
+              generateStorefrontBtn.disabled = true;
+              generateStorefrontBtn.innerHTML = '<div class="spinner"></div>Generating...';
+
+              try {
+                  const backendUrl = (window.location.origin.includes('localhost') || window.location.protocol === 'file:') ? 'http://127.0.0.1:18789' : '';
+                  const tenantIdStr = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront';
+                  const userIdStr = localStorage.getItem('user_id') || 'test-user';
+
+                  let intakeData = null;
+
+                  if (window.__TAURI__ && window.__TAURI__.core) {
+                     intakeData = await window.__TAURI__.core.invoke("process_intake", { input: bioInput });
+                  } else {
+                     const res = await fetch(`${backendUrl}/api/onboarding/intake`, {
+                         method: 'POST',
+                         headers: {
+                             'Content-Type': 'application/json',
+                             'X-Tenant-ID': tenantIdStr,
+                             'X-User-ID': userIdStr
+                         },
+                         body: JSON.stringify({ description: bioInput })
+                     });
+                     if (!res.ok) {
+                         const errData = await res.json().catch(()=>({}));
+                         throw new Error(errData.error || errData.message || 'Failed to analyze business details');
+                     }
+                     intakeData = await res.json();
+                  }
+
+                  const req = {
+                      companyName: intakeData.business_name || "My Business",
+                      businessType: intakeData.business_type || "Online Store",
+                      companyDescription: bioInput,
+                      sellingCategories: intakeData.categories || ["physical"],
+                      paymentPref: "online",
+                      adminEmail: "admin@mybusiness.com",
+                      adminName: "Admin",
+                      adminPassword: "password",
+                      websiteTemplate: "auto",
+                      firstProductName: intakeData.initial_products?.[0]?.name || "First Product",
+                      firstProductPrice: intakeData.initial_products?.[0]?.price || "0.00",
+                      domainChoice: "subdomain",
+                      priceType: "fixed",
+                      location: intakeData.location || "Local",
+                      targetAudience: intakeData.target_audience || "General",
+                      initialProducts: intakeData.initial_products || []
+                  };
+
+                  if (window.__TAURI__ && window.__TAURI__.core) {
+                      await window.__TAURI__.core.invoke("start_onboarding", { req });
+                      localStorage.setItem('has_onboarded', 'true');
+                      window.location.href = "success.html";
+                  } else {
+                      const startRes = await fetch(`${backendUrl}/api/onboarding/start`, {
+                          method: 'POST',
+                          headers: {
+                              'Content-Type': 'application/json',
+                              'X-Tenant-ID': tenantIdStr,
+                              'X-User-ID': userIdStr
+                          },
+                          body: JSON.stringify({
+                              business_type: req.businessType,
+                              company_name: req.companyName,
+                              company_description: req.companyDescription,
+                              selling_categories: req.sellingCategories,
+                              payment_pref: req.paymentPref,
+                              admin_email: req.adminEmail,
+                              website_template: req.websiteTemplate,
+                              first_product_name: req.firstProductName,
+                              first_product_price: req.firstProductPrice,
+                              domain_choice: req.domainChoice,
+                              admin_name: req.adminName,
+                              admin_password: req.adminPassword,
+                              price_type: req.priceType,
+                              location: req.location,
+                              target_audience: req.targetAudience,
+                              initial_products: req.initialProducts
+                          })
+                      });
+
+                      if (!startRes.ok) {
+                          const errData = await startRes.json().catch(()=>({}));
+                          throw new Error(errData.error || errData.message || 'Failed to start onboarding');
+                      }
+
+                      const startData = await startRes.json();
+                      if (startData.organization_id) {
+                          localStorage.setItem('tenant_id', startData.organization_id);
+                          localStorage.setItem('tenant', startData.organization_id);
+                      }
+                      localStorage.setItem('has_onboarded', 'true');
+                      window.location.href = "success.html";
+                  }
+
+              } catch (err) {
+                  console.error(err);
+                  document.getElementById('instant-error').innerText = err.message || "Network Error: Failed to fetch";
+                  document.getElementById('instant-error').style.display = 'block';
+                  generateStorefrontBtn.disabled = false;
+                  generateStorefrontBtn.innerText = "Generate Storefront";
+              }
+          });
+      }
 
       if (finishBtn) {
         finishBtn.addEventListener('click', () => {
