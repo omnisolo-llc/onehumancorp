@@ -55,14 +55,18 @@ export default function CostDashboardPage() {
   const [myPlanData, setMyPlanData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
+  const currentMonth = new Date().toISOString().slice(0, 7);
+  const [selectedMonth, setSelectedMonth] = useState<string>(currentMonth);
+
   useEffect(() => {
     async function fetchCostData() {
+      setLoading(true);
       try {
         const token = localStorage.getItem('token');
         const headers = { 'Authorization': `Bearer ${token}` };
 
         const [costRes, planRes] = await Promise.all([
-          fetch('/api/billing/cost-dashboard', { headers }),
+          fetch(`/api/billing/cost-dashboard?month=${selectedMonth}`, { headers }),
           fetch('/api/billing/my-plan', { headers })
         ]);
 
@@ -86,7 +90,7 @@ export default function CostDashboardPage() {
       }
     }
     fetchCostData();
-  }, []);
+  }, [selectedMonth]);
 
   if (loading) {
       return (
@@ -115,7 +119,17 @@ export default function CostDashboardPage() {
     <div className="flex flex-col min-h-screen font-inter bg-gradient-to-br from-indigo-50 via-white to-purple-50 text-gray-900">
       <header className="px-4 md:px-6 py-4 flex flex-col md:flex-row items-center justify-between border-b gap-4 sticky top-0 z-50 bg-white/70 backdrop-blur-xl saturate-200 border-b-white/40 shadow-sm">
         <h1 className="text-2xl font-bold font-outfit text-center md:text-left text-gray-900 tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-gray-900 to-gray-600">Cost Transparency Dashboard</h1>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+                <label htmlFor="month-picker" className="text-sm font-medium text-gray-600 hidden sm:block">Month:</label>
+                <input
+                    type="month"
+                    id="month-picker"
+                    value={selectedMonth}
+                    onChange={(e) => setSelectedMonth(e.target.value)}
+                    className="min-h-[44px] px-3 py-2 bg-white border border-gray-200 rounded-xl text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 shadow-sm"
+                />
+            </div>
             <button onClick={() => router.push('/plan')} className="min-w-[44px] min-h-[44px] px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-xl text-sm font-medium transition-all active:scale-95 shadow-sm flex items-center justify-center">
             Back to My Plan
             </button>

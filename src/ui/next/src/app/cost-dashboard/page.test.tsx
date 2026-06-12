@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import React from 'react';
 import CostDashboardPage from './page';
 import { useRouter } from 'next/navigation';
@@ -109,6 +109,20 @@ describe('CostDashboardPage', () => {
 
     await waitFor(() => {
       expect(screen.queryByTestId('cost-dashboard-loading')).toBeNull();
+    });
+
+    // Check that month picker exists
+    expect(screen.getByLabelText('Month:')).toBeDefined();
+
+    // Test month change
+    const monthPicker = screen.getByLabelText('Month:');
+    fireEvent.change(monthPicker, { target: { value: '2023-11' } });
+
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith(
+        expect.stringContaining('cost-dashboard?month=2023-11'),
+        expect.any(Object)
+      );
     });
 
     // My Plan assertions
