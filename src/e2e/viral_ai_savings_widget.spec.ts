@@ -39,15 +39,9 @@ test.describe('Viral AI Time Savings Widget Growth Loop', () => {
     // 5. Verify the loading state
     await expect(page.getByText(/Verifying Share.../i)).toBeVisible();
 
-    try {
-        // 6. Verify the success state
-        const successHeading = page.getByRole('heading', { name: 'Trial Extended!' });
-        await expect(successHeading).toBeVisible({ timeout: 10000 });
-        await expect(page.getByText(/Your Pro trial has been successfully extended by 7 days/i)).toBeVisible();
-    } catch(e) {
-        if (!dialogMessage.includes('Failed to claim') && !dialogMessage.includes('Error claiming')) {
-            throw e;
-        }
-    }
+    // 6. Verify the success state
+    const successHeading = page.getByRole('heading', { name: 'Trial Extended!' });
+    await expect(successHeading).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText(/Your Pro trial has been successfully extended by 7 days/i)).toBeVisible();
   });
 });
