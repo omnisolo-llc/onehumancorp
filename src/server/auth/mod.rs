@@ -166,6 +166,18 @@ impl Store {
                 let sqlite_key_opt = std::env::var("OHC_SQLITE_KEY").ok().or_else(|| {
                     let secret_path = ::server_config::get_safe_user_dir().join(".ohc_sqlite_key");
                     if secret_path.exists() {
+                        #[cfg(unix)]
+                        {
+                            use std::os::unix::fs::PermissionsExt;
+                            if let Ok(mut perms) = std::fs::metadata(&secret_path).map(|m| m.permissions()) {
+                                if perms.mode() & 0o777 != 0o600 {
+                                    perms.set_mode(0o600);
+                                    if let Err(e) = std::fs::set_permissions(&secret_path, perms) {
+                                        tracing::warn!("Failed to set strict 0o600 permissions on .ohc_sqlite_key: {}", e);
+                                    }
+                                }
+                            }
+                        }
                         if let Ok(bytes) = std::fs::read_to_string(&secret_path) {
                             if !bytes.trim().is_empty() {
                                 return Some(bytes.trim().to_string());
@@ -206,7 +218,9 @@ impl Store {
                     if let Ok(mut perms) = std::fs::metadata(&secret_path).map(|m| m.permissions()) {
                         if perms.mode() & 0o777 != 0o600 {
                             perms.set_mode(0o600);
-                            let _ = std::fs::set_permissions(&secret_path, perms);
+                            if let Err(e) = std::fs::set_permissions(&secret_path, perms) {
+                                tracing::warn!("Failed to set strict 0o600 permissions on .ohc_jwt_secret: {}", e);
+                            }
                         }
                     }
                 }
@@ -508,7 +522,7 @@ impl Store {
         if let Some(client) = &self.redis_client {
             if let Ok(mut conn) = client.get_multiplexed_tokio_connection().await {
                 let ttl = (exp.timestamp() - Utc::now().timestamp()).max(1);
-                let redis_key = format!("revoked_token:{}", jti);
+                let redis_key = format!("revoked_token:{}:{}", org_id, jti);
                 let _: redis::RedisResult<()> = redis::AsyncCommands::set_ex(&mut conn, &redis_key, "1", ttl as u64).await;
             }
         }
@@ -529,7 +543,7 @@ impl Store {
         }
         if let Some(client) = &self.redis_client {
             if let Ok(mut conn) = client.get_multiplexed_tokio_connection().await {
-                let redis_key = format!("revoked_token:{}", jti);
+                let redis_key = format!("revoked_token:{}:{}", org_id, jti);
                 let exists: redis::RedisResult<bool> = redis::AsyncCommands::exists(&mut conn, &redis_key).await;
                 if let Ok(true) = exists {
                     return true;
