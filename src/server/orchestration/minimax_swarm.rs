@@ -12,10 +12,15 @@ pub struct AgentTemplate {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct AgentTurn {
+    #[serde(default)]
     pub agent_id: String,
+    #[serde(default)]
     pub role: String,
+    #[serde(default)]
     pub contribution: String,
+    #[serde(default)]
     pub handoff_to: Vec<String>,
+    #[serde(default)]
     pub confidence: f64,
 }
 
