@@ -5,6 +5,7 @@ import { useState, useRef } from 'react';
 export function VoiceAssistantFAB() {
   const [isListening, setIsListening] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [preparedText, setPreparedText] = useState<string | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<BlobPart[]>([]);
 
@@ -31,6 +32,7 @@ export function VoiceAssistantFAB() {
 
       mediaRecorder.start();
       setIsListening(true);
+      setPreparedText(null);
     } catch (error) {
       console.error('Error accessing microphone:', error);
       alert('Could not access microphone. Please check permissions.');
@@ -49,7 +51,7 @@ export function VoiceAssistantFAB() {
     try {
       const formData = new FormData();
       formData.append('audio', audioBlob, 'command.webm');
-      formData.append('tenant_id', localStorage.getItem('tenant_id') || 'default'); // Would normally get from context
+      formData.append('tenant_id', localStorage.getItem('tenant_id') || 'default');
 
       const response = await fetch('/api/v1/voice/command', {
         method: 'POST',
@@ -62,9 +64,13 @@ export function VoiceAssistantFAB() {
 
       const result = await response.json();
 
-      // In a real implementation, this would trigger a refetch of the Agent Feed
-      // For now, we can dispatch a custom event to notify UnifiedAgentFeed
+      setPreparedText(result.transcription || "Action Prepared!");
+
+      // Dispatch custom event to notify UnifiedAgentFeed
       window.dispatchEvent(new CustomEvent('voice-command-processed', { detail: result }));
+
+      // Clear the prepared text after a delay
+      setTimeout(() => setPreparedText(null), 5000);
 
     } catch (error) {
       console.error('Error processing voice command:', error);
@@ -75,15 +81,22 @@ export function VoiceAssistantFAB() {
 
   return (
     <div className="fixed bottom-24 right-6 z-50 flex flex-col items-center gap-2">
+      {preparedText && !isListening && !isProcessing && (
+        <div className="px-4 py-2 bg-green-600/90 text-white rounded-[16px] text-sm font-medium shadow-lg backdrop-blur-md border border-green-400/30 text-center max-w-[250px]">
+          <div className="font-bold mb-1">Action Prepared!</div>
+          <div className="text-xs opacity-90 truncate">{preparedText}</div>
+        </div>
+      )}
+
       {isListening && (
         <div className="px-4 py-2 bg-indigo-600/90 text-white rounded-full text-sm font-medium animate-pulse shadow-lg backdrop-blur-md border border-indigo-400/30">
-          Listening... Release to send
+          Listening...
         </div>
       )}
 
       {isProcessing && (
         <div className="px-4 py-2 bg-gray-800/90 text-white rounded-full text-sm font-medium shadow-lg backdrop-blur-md border border-gray-600/30">
-          Processing command...
+          Thinking...
         </div>
       )}
 
@@ -94,12 +107,12 @@ export function VoiceAssistantFAB() {
         onTouchStart={startListening}
         onTouchEnd={stopListening}
         disabled={isProcessing}
-        className={`w-16 h-16 rounded-full shadow-2xl flex items-center justify-center text-2xl transition-all duration-200 border-2 ${
+        className={`w-[64px] h-[64px] rounded-full shadow-2xl flex items-center justify-center text-2xl transition-all duration-200 border-2 backdrop-blur-xl ${
           isListening
             ? 'bg-red-500 scale-110 border-red-400 animate-pulse shadow-[0_0_20px_rgba(239,68,68,0.6)]'
-            : 'bg-indigo-600 hover:bg-indigo-500 hover:scale-105 border-indigo-400/50 backdrop-blur-xl bg-opacity-80'
+            : 'bg-indigo-600 hover:bg-indigo-500 hover:scale-105 border-indigo-400/50 bg-opacity-80'
         } ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}
-        aria-label="Voice Command Assistant"
+        aria-label="Voice Assistant"
         title="Hold to speak to your assistant"
       >
         <span className="text-white drop-shadow-md">

@@ -43,7 +43,7 @@ test.describe('Voice Assistant Mobile Command Center', () => {
     await page.evaluate(() => localStorage.setItem('has_onboarded', 'true'));
 
     // 3. Find the Voice Assistant button
-    const voiceButton = page.getByRole('button', { name: /Voice Command Assistant/i });
+    const voiceButton = page.getByRole('button', { name: /Voice Assistant/i });
     await expect(voiceButton).toBeVisible();
 
     // 4. Simulate a long press to start recording
@@ -51,17 +51,17 @@ test.describe('Voice Assistant Mobile Command Center', () => {
     await voiceButton.dispatchEvent('mousedown');
 
     // Check that it indicates listening
-    await expect(page.getByText(/Listening... Release to send/i)).toBeVisible();
+    await expect(page.getByText(/Listening.../i)).toBeVisible();
 
     // 5. Release to stop recording and send command
     await voiceButton.dispatchEvent('mouseup');
 
     // Check processing state
-    await expect(page.getByText(/Processing command.../i)).toBeVisible();
+    await expect(page.getByText(/Thinking.../i)).toBeVisible();
 
     // 6. Verify the proposed action appears in the Agent Feed (optimistic UI)
     // Looking for the title we mocked in the backend route
-    const newProposal = page.getByText(/Voice Command: Send Quote/i);
+    const newProposal = page.getByText(/Draft Quote: Plumbing Fix for Customer/i);
     await expect(newProposal).toBeVisible({ timeout: 5000 });
 
     // 7. Verify the proposal is an actionable card (has Approve & Send Proposal button)

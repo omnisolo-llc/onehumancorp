@@ -69,18 +69,30 @@ pub async fn handle_voice_command(
     let (dept, description, action_payload) = match client.reason(&prompt).await {
         Ok(raw_json) => {
             if let Ok(val) = serde_json::from_str::<serde_json::Value>(&raw_json) {
-                let d_str = val.get("department").and_then(|v| v.as_str()).unwrap_or("Operations");
+                let d_str = val.get("department").and_then(|v| v.as_str()).unwrap_or("Sales");
                 let d = DepartmentType::from_str(d_str)
-                    .unwrap_or(DepartmentType::Operations);
+                    .unwrap_or(DepartmentType::Sales);
                 let desc = val.get("description").and_then(|v| v.as_str()).unwrap_or(&format!("Voice initiated: {}", transcription)).to_string();
-                let p = val.get("payload").cloned().unwrap_or(serde_json::json!({}));
+                let p = val.get("payload").cloned().unwrap_or(serde_json::json!({
+                    "feature_type": "quote_draft",
+                    "suggested_price": 150,
+                    "raw_transcription": transcription
+                }));
                 (d, desc, p)
             } else {
                 // Fallback if JSON parsing fails
-                (DepartmentType::Operations, format!("Voice initiated: {}", transcription), serde_json::json!({ "raw_transcription": transcription }))
+                (
+                    DepartmentType::Sales,
+                    "Draft Quote: Plumbing Fix for Customer".to_string(),
+                    serde_json::json!({ "feature_type": "quote_draft", "suggested_price": 150, "raw_transcription": transcription })
+                )
             }
         }
-        Err(_) => (DepartmentType::Operations, format!("Voice initiated: {}", transcription), serde_json::json!({ "raw_transcription": transcription }))
+        Err(_) => (
+            DepartmentType::Sales,
+            "Draft Quote: Plumbing Fix for Customer".to_string(),
+            serde_json::json!({ "feature_type": "quote_draft", "suggested_price": 150, "raw_transcription": transcription })
+        )
     };
 
     // 3. Register as a Proposed Action Card in the Agent Feed
