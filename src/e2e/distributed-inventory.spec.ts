@@ -2,6 +2,7 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Distributed Inventory Sync via UI', () => {
   test('Persona: Business Owner experiences optimistic lock via UI and concurrent API', async ({ request, page }) => {
+
     // 1. Visit the home page / login and get to the POS
     await page.goto('/pos/terminal');
 
@@ -17,12 +18,15 @@ test.describe('Distributed Inventory Sync via UI', () => {
     // The user should now be logged in
     await expect(page.getByRole('heading', { name: 'Manager' })).toBeVisible({ timeout: 5000 }).catch(() => {});
 
+    // Clock in
+    await page.getByRole('button', { name: 'Clock In' }).click();
+
     // Now we simulate concurrent checkout in the background via API
-    // This acquires the lock
+    // This acquires the lock for custom_charge
     const onlineLockReq = await request.post('/api/v1/payments/terminal/reserve', {
         data: {
           tenant_id: 'default_tenant',
-          product_id: 'prod_123',
+          product_id: 'custom_charge',
           quantity: 1,
           ttl_seconds: 15,
         },
@@ -35,8 +39,9 @@ test.describe('Distributed Inventory Sync via UI', () => {
       expect(onlineLockData.success).toBeTruthy();
       const lockId = onlineLockData.lock_id;
 
-    // We now click "New Order" in the UI which also hits /reserve
-    await page.getByText('New Order').click();
+
+    // We now click "Quick Charge" in the UI which also hits /reserve for custom_charge
+    await page.getByText('Quick Charge').click();
 
     // We expect an optimistic lock failure indicating it is checked out by another customer
     await expect(page.getByText(/Failed to reserve:|Processing\/Reserving.../)).toBeVisible();
@@ -50,7 +55,7 @@ test.describe('Distributed Inventory Sync via UI', () => {
     const commitReq = await request.post('/api/v1/payments/terminal/commit', {
         data: {
           tenant_id: 'default_tenant',
-          product_id: 'prod_123',
+          product_id: 'custom_charge',
           quantity: 1,
           lock_id: lockId,
         },
@@ -63,6 +68,7 @@ test.describe('Distributed Inventory Sync via UI', () => {
   });
 
   test('Persona: Online customer tries to checkout while item is held in POS', async ({ request, page }) => {
+
      // 1. Visit the home page / login and get to the POS
      await page.goto('/pos/terminal');
 
@@ -78,15 +84,18 @@ test.describe('Distributed Inventory Sync via UI', () => {
      // The user should now be logged in
      await expect(page.getByRole('heading', { name: 'Manager' })).toBeVisible({ timeout: 5000 }).catch(() => {});
 
-     // 3. Click new order which reserves the item
-     await page.getByText('New Order').click();
+     // Clock in
+     await page.getByRole('button', { name: 'Clock In' }).click();
+
+     // 3. Click Quick Charge which reserves the item "custom_charge"
+     await page.getByText('Quick Charge').click();
      await expect(page.getByRole('status')).toHaveText(/New Order Total/);
 
      // 4. Concurrently simulate an online checkout
      const onlineLockReq = await request.post('/api/v1/payments/terminal/reserve', {
         data: {
           tenant_id: 'default_tenant',
-          product_id: 'prod_123',
+          product_id: 'custom_charge',
           quantity: 1,
           ttl_seconds: 15,
         },
@@ -104,7 +113,7 @@ test.describe('Distributed Inventory Sync via UI', () => {
         data: {
           tier: 'starter',
           is_subscription: false,
-          product_id: 'prod_123',
+          product_id: 'custom_charge',
           quantity: 1,
         },
         headers: {

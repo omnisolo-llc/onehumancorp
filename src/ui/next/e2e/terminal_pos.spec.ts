@@ -20,10 +20,10 @@ test.describe('Terminal POS - Mobile First & Inventory Sync', () => {
 
   test('Processes tap-to-pay and reserves inventory', async ({ page }) => {
     // Wait for the UI to be ready
-    await expect(page.getByRole('button', { name: 'New Order' })).toBeVisible();
+    await expect(page.getByRole('button', { name: /Quick Charge/i })).toBeVisible();
 
     // Click New Order
-    // await page.getByRole('button', { name: 'New Order' }).click();
+    await page.getByRole('button', { name: /Quick Charge/i }).click();
 
     // Discover Readers
     await page.getByRole('button', { name: 'Discover Readers' }).click();
