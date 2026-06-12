@@ -94,14 +94,14 @@ export default function Integrations() {
       integration.id === 'whatsapp' ? { ...integration, status: "connected" } : integration
     ));
     setShowWhatsAppModal(false);
-    setStatusMessage("WhatsApp Cloud API connected.");
+    setStatusMessage("WhatsApp via Twilio connected.");
     router.push('/inbox');
   };
 
   return (
     <div className="flex flex-col min-h-screen font-inter" style={{ backgroundColor: '#F5F5F7' }}>
 
-      {/* WhatsApp Cloud API Connect Modal */}
+      {/* WhatsApp via Twilio Connect Modal */}
       {showWhatsAppModal && (
         <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4 backdrop-blur-sm">
           <div className="app-card w-full max-w-md rounded-2xl p-6 shadow-2xl relative overflow-hidden font-inter">
@@ -117,17 +117,32 @@ export default function Integrations() {
               </button>
             </div>
 
-            <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">Connect WhatsApp</h2>
+            <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">Connect WhatsApp via Twilio</h2>
             <p className="text-gray-600 mb-6 text-sm leading-relaxed">
-              Connect your business number via the Meta Embedded Signup flow. Incoming messages will be automatically routed into Work Triage.
+              You will be guided through configuring Twilio to receive and send messages on your WhatsApp business number.
             </p>
 
-            <button
-              onClick={saveWhatsAppIntegration}
-              className="w-full bg-[#25D366] text-white py-3 rounded-xl font-bold text-sm shadow-sm hover:bg-[#1ebe57] transition-colors flex items-center justify-center gap-2"
-            >
-              Continue with Meta
-            </button>
+            <form className="w-full text-left space-y-4 mb-6" onSubmit={(e) => { e.preventDefault(); saveWhatsAppIntegration(); }}>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Twilio Account SID</label>
+                <input type="text" required placeholder="ACxxxxxxxxxxxxxxxxx" className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Twilio Auth Token</label>
+                <input type="password" required placeholder="••••••••••••••••" className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">WhatsApp Number</label>
+                <input type="text" required placeholder="+1234567890" className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all" />
+              </div>
+
+              <button
+                type="submit"
+                className="w-full bg-[#25D366] text-white py-3 rounded-xl font-bold text-sm shadow-sm hover:bg-[#1ebe57] transition-colors flex items-center justify-center gap-2 mt-4"
+              >
+                Save & Connect
+              </button>
+            </form>
           </div>
         </div>
       )}

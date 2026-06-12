@@ -134,9 +134,16 @@ impl IntegrationsRegistry {
                          if let Some(client) = clients.get(integration_id) {
                              let client = client.clone();
                              tokio::spawn(async move {
-                                 if let Err(e) = client.send_sms(&to, &from, &text).await {
-                                     ::server_telemetry::record_error_signal("Failed to send Twilio SMS");
-                                     tracing::warn!("Failed to send Twilio SMS: {}", e);
+                                 if to.starts_with("whatsapp:") || from.starts_with("whatsapp:") {
+                                     if let Err(e) = client.send_whatsapp(&to, &from, &text).await {
+                                         ::server_telemetry::record_error_signal("Failed to send Twilio WhatsApp");
+                                         tracing::warn!("Failed to send Twilio WhatsApp: {}", e);
+                                     }
+                                 } else {
+                                     if let Err(e) = client.send_sms(&to, &from, &text).await {
+                                         ::server_telemetry::record_error_signal("Failed to send Twilio SMS");
+                                         tracing::warn!("Failed to send Twilio SMS: {}", e);
+                                     }
                                  }
                              });
                          }

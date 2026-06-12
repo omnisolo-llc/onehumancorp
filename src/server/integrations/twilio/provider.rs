@@ -49,6 +49,14 @@ impl TwilioProvider {
         }
         self.client.send_sms(to, from, body).await
     }
+
+    pub async fn send_whatsapp(&self, to: &str, from: &str, body: &str) -> Result<(), String> {
+        // Mock checking opt-out status
+        if self.is_opted_out(to).await {
+            return Err("User opted out".to_string());
+        }
+        self.client.send_whatsapp(to, from, body).await
+    }
 }
 
 #[cfg(test)]
@@ -68,6 +76,10 @@ mod tests {
             self.sent_messages.fetch_add(1, Ordering::SeqCst);
             Ok(())
         }
+        async fn send_whatsapp(&self, _to: &str, _from: &str, _body: &str) -> Result<(), String> {
+            self.sent_messages.fetch_add(1, Ordering::SeqCst);
+            Ok(())
+        }
     }
 
     #[tokio::test]
@@ -78,6 +90,9 @@ mod tests {
 
         provider.send_sms("+1234567890", "+0987654321", "Test message").await.unwrap();
         assert_eq!(sent.load(Ordering::SeqCst), 1);
+
+        provider.send_whatsapp("+1234567890", "+0987654321", "Test whatsapp").await.unwrap();
+        assert_eq!(sent.load(Ordering::SeqCst), 2);
     }
 
     #[test]
