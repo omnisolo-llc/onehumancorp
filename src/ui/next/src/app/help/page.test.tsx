@@ -13,7 +13,7 @@ describe('HelpCenterPage', () => {
       if (url === '/api/help') {
         return Promise.resolve({
           json: () => Promise.resolve([
-            { title: "Getting Started", desc: "Learn how to easily set up your store and accept your first payment.", link: "/help/getting-started-1" },
+            { title: "Getting Started with Your Store", desc: "Welcome to OneHumanCorp! Let's get your business online in under 10 minutes.", link: "/help/getting-started-1" },
             { title: "Adding Products", desc: "Add products, track what's in stock, and change how your store looks.", link: "/help/my-store" }
           ])
         });
@@ -22,7 +22,7 @@ describe('HelpCenterPage', () => {
         const urlObj = new URL('http://localhost' + url);
         const q = urlObj.searchParams.get('q')?.toLowerCase() || '';
         const allArticles = [
-            { title: "Getting Started", desc: "Learn how to easily set up your store and accept your first payment.", link: "/help/getting-started-1" },
+            { title: "Getting Started with Your Store", desc: "Welcome to OneHumanCorp! Let's get your business online in under 10 minutes.", link: "/help/getting-started-1" },
             { title: "Adding Products", desc: "Add products, track what's in stock, and change how your store looks.", link: "/help/my-store" }
         ];
         const results = allArticles.filter(a =>
@@ -57,7 +57,7 @@ describe('HelpCenterPage', () => {
     expect(screen.getByText('Help Center')).toBeInTheDocument();
 
     await waitFor(() => {
-      expect(screen.getByText('Getting Started')).toBeInTheDocument();
+      expect(screen.getByText('Getting Started with Your Store')).toBeInTheDocument();
       expect(screen.getByText('Adding Products')).toBeInTheDocument();
     });
   });
@@ -67,14 +67,14 @@ describe('HelpCenterPage', () => {
     render(<TooltipProvider><HelpCenterPage /></TooltipProvider>);
 
     await waitFor(() => {
-      expect(screen.getByText('Getting Started')).toBeInTheDocument();
+      expect(screen.getByText('Getting Started with Your Store')).toBeInTheDocument();
     });
 
     const searchInput = screen.getByPlaceholderText('Search for help articles and videos...');
     await user.type(searchInput, 'products');
 
     await waitFor(() => {
-      expect(screen.queryByText('Getting Started')).not.toBeInTheDocument();
+      expect(screen.queryByText('Getting Started with Your Store')).not.toBeInTheDocument();
       expect(screen.getByText('Adding Products')).toBeInTheDocument();
     });
   });
@@ -84,7 +84,7 @@ describe('HelpCenterPage', () => {
     render(<TooltipProvider><HelpCenterPage /></TooltipProvider>);
 
     await waitFor(() => {
-      expect(screen.getByText('Getting Started')).toBeInTheDocument();
+      expect(screen.getByText('Getting Started with Your Store')).toBeInTheDocument();
     });
 
     const searchInput = screen.getByPlaceholderText('Search for help articles and videos...');
@@ -131,7 +131,7 @@ describe('HelpCenterPage', () => {
     const user = userEvent.setup();
     render(<TooltipProvider><HelpCenterPage /></TooltipProvider>);
     await waitFor(() => {
-      expect(screen.getByText('Getting Started')).toBeInTheDocument();
+      expect(screen.getByText('Getting Started with Your Store')).toBeInTheDocument();
     });
 
     const searchInput = screen.getByPlaceholderText('Search for help articles and videos...');
