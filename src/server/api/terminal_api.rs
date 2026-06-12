@@ -336,6 +336,19 @@ pub async fn sync_offline_transactions_handler(
 
     let mut futures = Vec::new();
 
+    // Validate payloads before enqueueing
+    for tx in &req_data.transactions {
+        let payload_str = &tx.payload;
+        let parsed_payload: Result<serde_json::Value, _> = serde_json::from_str(payload_str);
+        if parsed_payload.is_err() {
+            return (
+                axum::http::StatusCode::BAD_REQUEST,
+                Json(serde_json::json!({ "error": format!("Invalid JSON payload in transaction {}", tx.id.clone().unwrap_or_default()) })),
+            )
+                .into_response();
+        }
+    }
+
     let client_id = req_data.transactions.first().and_then(|tx| tx.client_id.clone()).unwrap_or_else(|| "unknown".to_string());
 
     // Update pos_terminal_sessions

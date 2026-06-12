@@ -143,7 +143,15 @@ impl PosSyncWorker {
                     let _ = sqlx::query("INSERT INTO orders (id, tenant_id, customer_id, total_amount, status) VALUES ($1, $2, $3, $4, 'completed') ON CONFLICT DO NOTHING")
                         .bind(&order_id).bind(&job.tenant_id).bind(customer_id).bind(total_amount).execute(&mut *tx).await;
 
-                    for item in items_array {
+                    // Sort items array by product_id to prevent deadlocks when acquiring multiple locks
+                    let mut sorted_items_array = items_array;
+                    sorted_items_array.sort_by(|a, b| {
+                        let a_id = a.get("product_id").and_then(|v| v.as_str()).unwrap_or("");
+                        let b_id = b.get("product_id").and_then(|v| v.as_str()).unwrap_or("");
+                        a_id.cmp(b_id)
+                    });
+
+                    for item in sorted_items_array {
                         let product_id = item.get("product_id").and_then(|v| v.as_str()).unwrap_or("");
                         let qty = item.get("quantity").and_then(|v| v.as_i64()).unwrap_or(1);
                         if product_id.is_empty() { continue; }
