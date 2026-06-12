@@ -26,11 +26,18 @@ test.describe('Distributed POS Sync Architecture', () => {
     // Setup online customer context
     const customerPage = await context.newPage();
 
-    // 2. Priya goes to POS terminal
-    // We can simulate the login/context directly by setting local storage if needed,
-    // but the issue was specifically about the backend lock coordination failing gracefully online.
-    // Let's use the UI for the POS if we can reach it:
+    // 2. Priya logs in and goes to POS terminal
+    await page.goto('/login');
+    await page.fill('input[type="email"]', 'admin@ohc.local');
+    await page.fill('input[type="password"]', 'changeme');
+    await page.click('button[type="submit"]');
+
     await page.goto('/pos/terminal');
+
+    // Wait for PIN terminal
+    await expect(page.locator('text=Terminal Locked')).toBeVisible();
+    await page.fill('input[type="password"]', '1234');
+    await page.click('button:has-text("Unlock")');
 
     // Wait for inventory to load
     await expect(page.locator('text=Product Catalog')).toBeVisible();
