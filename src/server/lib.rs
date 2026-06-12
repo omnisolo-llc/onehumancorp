@@ -3267,51 +3267,45 @@ pub(crate) async fn load_ui_dashboard_metrics(
     db: &crate::db::DB,
     tenant_id: &str,
 ) -> Result<UiDashboardMetrics, sqlx::Error> {
-    let (active_customers_res, pending_orders_res, sales_res, campaigns_res, auto_replied_res) = tokio::join!(
-        async {
-            match &db.store {
-                crate::db::DbStore::Postgres => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM customers WHERE tenant_id = $1").bind(tenant_id).fetch_one(&db.pool).await,
-                crate::db::DbStore::Sqlite(pool) => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM customers WHERE tenant_id = ?").bind(tenant_id).fetch_one(pool).await,
-            }
-        },
-        async {
-            match &db.store {
-                crate::db::DbStore::Postgres => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM orders WHERE tenant_id = $1 AND status = 'pending'").bind(tenant_id).fetch_one(&db.pool).await,
-                crate::db::DbStore::Sqlite(pool) => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM orders WHERE tenant_id = ? AND status = 'pending'").bind(tenant_id).fetch_one(pool).await,
-            }
-        },
-        async {
-            match &db.store {
-                crate::db::DbStore::Postgres => sqlx::query_scalar::<_, Option<f64>>("SELECT CAST(SUM(total_amount) AS DOUBLE PRECISION) FROM orders WHERE tenant_id = $1").bind(tenant_id).fetch_one(&db.pool).await,
-                crate::db::DbStore::Sqlite(pool) => sqlx::query_scalar::<_, Option<f64>>("SELECT CAST(SUM(total_amount) AS REAL) FROM orders WHERE tenant_id = ?").bind(tenant_id).fetch_one(pool).await,
-            }
-        },
-        async {
-            match &db.store {
-                crate::db::DbStore::Postgres => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM agent_actions WHERE tenant_id = $1 AND action_type = 'growth.campaign_sent'").bind(tenant_id).fetch_one(&db.pool).await,
-                crate::db::DbStore::Sqlite(pool) => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM agent_actions WHERE tenant_id = ? AND action_type = 'growth.campaign_sent'").bind(tenant_id).fetch_one(pool).await,
-            }
-        },
-        async {
-            match &db.store {
-                crate::db::DbStore::Postgres => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM inbox_messages WHERE tenant_id = $1 AND status = 'auto_replied'").bind(tenant_id).fetch_one(&db.pool).await,
-                crate::db::DbStore::Sqlite(pool) => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM inbox_messages WHERE tenant_id = ? AND status = 'auto_replied'").bind(tenant_id).fetch_one(pool).await,
-            }
+    let row: (i64, i64, Option<f64>, i64, i64) = match &db.store {
+        crate::db::DbStore::Postgres => {
+            sqlx::query_as(
+                "SELECT
+                    (SELECT COUNT(*) FROM customers WHERE tenant_id = $1) as active_customers,
+                    (SELECT COUNT(*) FROM orders WHERE tenant_id = $1 AND status = 'pending') as pending_orders,
+                    (SELECT CAST(SUM(total_amount) AS DOUBLE PRECISION) FROM orders WHERE tenant_id = $1) as total_sales,
+                    (SELECT COUNT(*) FROM agent_actions WHERE tenant_id = $1 AND action_type = 'growth.campaign_sent') as total_campaigns_sent,
+                    (SELECT COUNT(*) FROM inbox_messages WHERE tenant_id = $1 AND status = 'auto_replied') as auto_replied"
+            )
+            .bind(tenant_id)
+            .fetch_one(&db.pool)
+            .await?
         }
-    );
-
-    let active_customers = active_customers_res.unwrap_or(0);
-    let pending_orders = pending_orders_res.unwrap_or(0);
-    let total_sales = sales_res.unwrap_or(Some(0.0)).unwrap_or(0.0);
-    let total_campaigns_sent = campaigns_res.unwrap_or(0);
-    let auto_replied = auto_replied_res.unwrap_or(0);
+        crate::db::DbStore::Sqlite(pool) => {
+            sqlx::query_as(
+                "SELECT
+                    (SELECT COUNT(*) FROM customers WHERE tenant_id = ?) as active_customers,
+                    (SELECT COUNT(*) FROM orders WHERE tenant_id = ? AND status = 'pending') as pending_orders,
+                    (SELECT CAST(SUM(total_amount) AS REAL) FROM orders WHERE tenant_id = ?) as total_sales,
+                    (SELECT COUNT(*) FROM agent_actions WHERE tenant_id = ? AND action_type = 'growth.campaign_sent') as total_campaigns_sent,
+                    (SELECT COUNT(*) FROM inbox_messages WHERE tenant_id = ? AND status = 'auto_replied') as auto_replied"
+            )
+            .bind(tenant_id)
+            .bind(tenant_id)
+            .bind(tenant_id)
+            .bind(tenant_id)
+            .bind(tenant_id)
+            .fetch_one(pool)
+            .await?
+        }
+    };
 
     Ok(UiDashboardMetrics {
-        active_customers,
-        pending_orders,
-        total_sales,
-        total_campaigns_sent,
-        auto_replied,
+        active_customers: row.0,
+        pending_orders: row.1,
+        total_sales: row.2.unwrap_or(0.0),
+        total_campaigns_sent: row.3,
+        auto_replied: row.4,
     })
 }
 
