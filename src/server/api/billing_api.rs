@@ -72,6 +72,8 @@ struct DepartmentRecord {
     department_type: String,
 }
 
+
+
 pub fn router<S: Clone + Send + Sync + 'static>(hub: Arc<Hub>) -> axum::Router<S> {
     axum::Router::new()
         .route("/my-plan", axum::routing::get(my_plan_handler))

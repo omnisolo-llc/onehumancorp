@@ -4,6 +4,7 @@ test.describe('Pricing Page Loop', () => {
   test('Pricing page loads and displays tiers correctly', async ({ page }) => {
     // Navigate to the pricing page
     await page.goto('/pricing');
+    await page.waitForResponse(response => response.url().includes('/api/billing/pricing-plans') && response.status() === 200);
 
     // Wait for the main heading to appear, indicating successful load
     await expect(page.locator('h1', { hasText: 'Pricing Plans' })).toBeVisible({ timeout: 10000 });

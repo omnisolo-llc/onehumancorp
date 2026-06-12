@@ -1,12 +1,73 @@
 "use client";
 
 // Pricing Page Implementation
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { WithTooltip } from '../../components/TooltipRegistry';
 import { PoweredByOHC } from '../components/PoweredByOHC';
 
+
+interface PricingPlan {
+  id: string;
+  name: string;
+  price_cents: number;
+  ai_action_limit: number | null;
+  storage_limit_mb: number | null;
+  agent_limit: number | null;
+  product_limit: number | null;
+}
+
 export default function PricingPage() {
+  const [plans, setPlans] = useState<PricingPlan[]>([]);
+  const [currentPlan, setCurrentPlan] = useState<string>('Free');
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchPricingData() {
+      try {
+        const token = localStorage.getItem('token');
+        const headers = { 'Authorization': `Bearer ${token}` };
+
+        const [plansRes, myPlanRes] = await Promise.all([
+          fetch('/api/billing/pricing-plans', { headers }),
+          fetch('/api/billing/my-plan', { headers })
+        ]);
+
+        if (plansRes.ok) {
+            const result = await plansRes.json();
+            setPlans(result.plans || []);
+        }
+
+        if (myPlanRes.ok) {
+            const planResult = await myPlanRes.json();
+            setCurrentPlan(planResult.current_plan || 'Free');
+        }
+      } catch (err) {
+        console.error("Error fetching pricing data", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchPricingData();
+  }, []);
+
+  if (loading) {
+      return (
+          <div className="flex flex-col min-h-screen font-inter bg-gradient-to-br from-indigo-50 via-white to-purple-50 text-gray-900 w-full overflow-x-hidden p-4 md:p-8" data-testid="pricing-loading">
+              <div className="max-w-6xl mx-auto w-full flex flex-col gap-6 animate-pulse">
+                  <div className="h-10 bg-white/70 backdrop-blur-xl saturate-200 border border-white/40 rounded-xl w-1/4"></div>
+                  <div className="h-64 bg-white/70 backdrop-blur-xl saturate-200 border border-white/40 rounded-2xl w-full"></div>
+              </div>
+          </div>
+      );
+  }
+
+  const formatStorage = (mb: number | null) => {
+      if (mb === null) return "Unlimited";
+      if (mb >= 1024) return (mb / 1024).toFixed(0) + "GB";
+      return mb + "MB";
+  };
+
   const router = useRouter();
 
   const handleUpgrade = (tier: string) => {
@@ -30,75 +91,37 @@ export default function PricingPage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 w-full">
-          {/* Free Tier */}
-          <div className="p-6 flex flex-col justify-between app-card bg-white/70 backdrop-blur-xl saturate-200 border border-white/40 hover:shadow-xl transition-shadow duration-300 w-full rounded-2xl">
-            <div>
-              <h3 className="text-2xl font-bold font-outfit mb-2 text-gray-900">Free</h3>
-              <p className="text-xl font-semibold mb-4 text-gray-900">$0 <span className="text-sm font-normal text-gray-500">/ month</span></p>
-              <ul className="text-sm text-gray-700 space-y-3 mb-6">
-                <li className="flex items-center gap-2"><span>✓</span> 1 Agent Limit</li>
-                <li className="flex items-center gap-2"><span>✓</span> 100 AI actions / month</li>
-                <li className="flex items-center gap-2"><span>✓</span> 500MB Storage Quota</li>
-                <li className="flex items-center gap-2"><span>✓</span> 10 Products Limit</li>
-              </ul>
-            </div>
-            <button className="w-full min-h-[44px] px-4 py-2 bg-gray-200 text-gray-800 rounded-xl font-medium flex items-center justify-center cursor-not-allowed" disabled>
-              Current Plan
-            </button>
-          </div>
+          {plans.map((plan) => {
+            const isCurrent = currentPlan.toLowerCase() === plan.name.toLowerCase();
+            const isRecommended = plan.name.toLowerCase() === 'starter';
 
-          {/* Starter Tier */}
-          <div className="p-6 flex flex-col justify-between relative app-card bg-white/70 backdrop-blur-xl saturate-200 border border-indigo-200 shadow-xl hover:shadow-2xl transition-shadow duration-300 w-full rounded-2xl">
-            <div className="absolute top-0 right-0 bg-indigo-600 text-white text-xs font-bold px-3 py-1 rounded-bl-xl rounded-tr-2xl">Recommended</div>
-            <div>
-              <h3 className="text-2xl font-bold font-outfit mb-2 text-gray-900">Starter</h3>
-              <p className="text-xl font-semibold mb-2 text-gray-900">$29 <span className="text-sm font-normal text-gray-500">/ month</span></p>
-              <p className="text-xs text-indigo-600 font-medium mb-4">Suggested for growing stores</p>
-              <ul className="text-sm text-gray-700 space-y-3 mb-6">
-                <li className="flex items-center gap-2"><span>✓</span> 3 Agents Limit</li>
-                <li className="flex items-center gap-2"><span>✓</span> 1,000 AI actions / month</li>
-                <li className="flex items-center gap-2"><span>✓</span> 5GB Storage Quota</li>
-                <li className="flex items-center gap-2"><span>✓</span> 100 Products Limit</li>
-              </ul>
-            </div>
-            <button onClick={() => handleUpgrade('Starter')} className="w-full min-h-[44px] px-4 py-2 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 transition-colors shadow-sm flex items-center justify-center">
-              Upgrade to Starter
-            </button>
-          </div>
-
-          {/* Pro Tier */}
-          <div className="p-6 flex flex-col justify-between app-card bg-white/70 backdrop-blur-xl saturate-200 border border-white/40 hover:shadow-xl transition-shadow duration-300 w-full rounded-2xl">
-            <div>
-              <h3 className="text-2xl font-bold font-outfit mb-2 text-gray-900">Pro</h3>
-              <p className="text-xl font-semibold mb-4 text-gray-900">$79 <span className="text-sm font-normal text-gray-500">/ month</span></p>
-              <ul className="text-sm text-gray-700 space-y-3 mb-6">
-                <li className="flex items-center gap-2"><span>✓</span> 10 Agents Limit</li>
-                <li className="flex items-center gap-2"><span>✓</span> Unlimited AI actions</li>
-                <li className="flex items-center gap-2"><span>✓</span> 50GB Storage Quota</li>
-                <li className="flex items-center gap-2"><span>✓</span> Unlimited Products</li>
-              </ul>
-            </div>
-            <button onClick={() => handleUpgrade('Pro')} className="w-full min-h-[44px] px-4 py-2 bg-gray-900 text-white rounded-xl font-medium hover:bg-black transition-colors shadow-sm flex items-center justify-center">
-              Upgrade to Pro
-            </button>
-          </div>
-
-          {/* Business Tier */}
-          <div className="p-6 flex flex-col justify-between app-card bg-white/70 backdrop-blur-xl saturate-200 border border-white/40 hover:shadow-xl transition-shadow duration-300 w-full rounded-2xl">
-            <div>
-              <h3 className="text-2xl font-bold font-outfit mb-2 text-gray-900">Business</h3>
-              <p className="text-xl font-semibold mb-4 text-gray-900">$299 <span className="text-sm font-normal text-gray-500">/ month</span></p>
-              <ul className="text-sm text-gray-700 space-y-3 mb-6">
-                <li className="flex items-center gap-2"><span>✓</span> Unlimited Agents</li>
-                <li className="flex items-center gap-2"><span>✓</span> Unlimited AI actions</li>
-                <li className="flex items-center gap-2"><span>✓</span> 500GB Storage Quota</li>
-                <li className="flex items-center gap-2"><span>✓</span> Unlimited Products</li>
-              </ul>
-            </div>
-            <button onClick={() => handleUpgrade('Business')} className="w-full min-h-[44px] px-4 py-2 bg-gray-900 text-white rounded-xl font-medium hover:bg-black transition-colors shadow-sm flex items-center justify-center">
-              Upgrade to Business
-            </button>
-          </div>
+            return (
+              <div key={plan.id} className={`p-6 flex flex-col justify-between app-card bg-white/70 backdrop-blur-xl saturate-200 ${isRecommended ? 'border-indigo-200 shadow-xl hover:shadow-2xl' : 'border-white/40 hover:shadow-xl'} transition-shadow duration-300 w-full rounded-2xl relative`}>
+                {isRecommended && <div className="absolute top-0 right-0 bg-indigo-600 text-white text-xs font-bold px-3 py-1 rounded-bl-xl rounded-tr-2xl">Recommended</div>}
+                <div>
+                  <h3 className="text-2xl font-bold font-outfit mb-2 text-gray-900">{plan.name}</h3>
+                  <p className="text-xl font-semibold mb-2 text-gray-900">${plan.price_cents / 100} <span className="text-sm font-normal text-gray-500">/ month</span></p>
+                  {isRecommended && <p className="text-xs text-indigo-600 font-medium mb-4">Suggested for growing stores</p>}
+                  {!isRecommended && <div className="h-8"></div>}
+                  <ul className="text-sm text-gray-700 space-y-3 mb-6 mt-2">
+                    <li className="flex items-center gap-2"><span>✓</span> {plan.agent_limit === null ? 'Unlimited' : plan.agent_limit} Agent Limit</li>
+                    <li className="flex items-center gap-2"><span>✓</span> {plan.ai_action_limit === null ? 'Unlimited' : plan.ai_action_limit.toLocaleString()} AI actions / month</li>
+                    <li className="flex items-center gap-2"><span>✓</span> {formatStorage(plan.storage_limit_mb)} Storage Quota</li>
+                    <li className="flex items-center gap-2"><span>✓</span> {plan.product_limit === null ? 'Unlimited' : plan.product_limit} Products Limit</li>
+                  </ul>
+                </div>
+                {isCurrent ? (
+                  <button className="w-full min-h-[44px] px-4 py-2 bg-gray-200 text-gray-800 rounded-xl font-medium flex items-center justify-center cursor-not-allowed" disabled>
+                    Current Plan
+                  </button>
+                ) : (
+                  <button onClick={() => handleUpgrade(plan.name)} className={`w-full min-h-[44px] px-4 py-2 ${isRecommended ? 'bg-indigo-600 text-white hover:bg-indigo-700' : 'bg-gray-900 text-white hover:bg-black'} rounded-xl font-medium transition-colors shadow-sm flex items-center justify-center`}>
+                    Upgrade to {plan.name}
+                  </button>
+                )}
+              </div>
+            );
+          })}
         </div>
 
         <div className="text-center mt-4 mb-2">
