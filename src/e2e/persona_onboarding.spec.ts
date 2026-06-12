@@ -136,6 +136,54 @@ test.describe('Persona-Driven Onboarding E2E', () => {
     await expect(page.locator('#business-name')).toHaveValue("Leo's Music");
   });
 
+  test('Fatima the Food Cart Operator persona journey', async ({ page }) => {
+    const fs = require('fs');
+    const path = require('path');
+    await page.route('**/setup.html', async route => {
+        const fileContent = fs.readFileSync(path.join(process.cwd(), 'src/ui/tauri/src/ui/setup.html'), 'utf-8');
+        await route.fulfill({ contentType: 'text/html', body: fileContent });
+    });
+    await page.goto('http://mock/setup.html');
+
+    await page.getByText("I'm a Food Cart").click();
+    await page.getByText('Next').first().click();
+    await expect(page.locator('#business-categories')).toHaveValue('Restaurant / Food');
+    await page.getByRole('button', { name: 'Next' }).click();
+    await expect(page.locator('#business-name')).toHaveValue("Fatima Food Cart");
+  });
+
+  test('Nora the Agency Principal persona journey', async ({ page }) => {
+    const fs = require('fs');
+    const path = require('path');
+    await page.route('**/setup.html', async route => {
+        const fileContent = fs.readFileSync(path.join(process.cwd(), 'src/ui/tauri/src/ui/setup.html'), 'utf-8');
+        await route.fulfill({ contentType: 'text/html', body: fileContent });
+    });
+    await page.goto('http://mock/setup.html');
+
+    await page.getByText("I'm an Agency").click();
+    await page.getByText('Next').first().click();
+    await expect(page.locator('#business-categories')).toHaveValue('Design');
+    await page.getByRole('button', { name: 'Next' }).click();
+    await expect(page.locator('#business-name')).toHaveValue("Nora Studio");
+  });
+
+  test('Jun the Location Manager persona journey', async ({ page }) => {
+    const fs = require('fs');
+    const path = require('path');
+    await page.route('**/setup.html', async route => {
+        const fileContent = fs.readFileSync(path.join(process.cwd(), 'src/ui/tauri/src/ui/setup.html'), 'utf-8');
+        await route.fulfill({ contentType: 'text/html', body: fileContent });
+    });
+    await page.goto('http://mock/setup.html');
+
+    await page.getByText("I'm a Manager").click();
+    await page.getByText('Next').first().click();
+    await expect(page.locator('#business-categories')).toHaveValue('Retail');
+    await page.getByRole('button', { name: 'Next' }).click();
+    await expect(page.locator('#business-name')).toHaveValue("Jun Location");
+  });
+
   test.skip('Manual setup flow without persona', async ({ page }) => {
 
     const fs = require('fs');
