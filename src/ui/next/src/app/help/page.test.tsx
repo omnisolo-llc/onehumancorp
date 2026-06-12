@@ -139,7 +139,7 @@ describe('HelpCenterPage', () => {
 
     await waitFor(() => {
       expect(screen.getByText(/No results found matching/)).toBeInTheDocument();
-      expect(screen.queryByText('Video Tutorials')).not.toBeInTheDocument();
+      expect(screen.queryByText('Video Guides')).not.toBeInTheDocument();
     });
   });
 });
