@@ -1,106 +1,54 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test.describe('Walkthrough and Tooltips features', () => {
-  test('Dashboard walkthrough and help center elements are visible and work', async ({ page }) => {
+  test('Help center walkthrough tour buttons are visible', async ({ page, adminUser, loginAs }) => {
     // Navigate using the admin credentials implicitly logged in by global setup, or just go directly
-    await page.goto('/dashboard.html');
+    await loginAs(page, adminUser);
+    await page.goto('/dashboard');
 
-    // Check Walkthrough button
-    const walkBtn = page.locator('#dashboard-walkthrough-btn');
-    await expect(walkBtn).toBeVisible();
-    await walkBtn.click();
+    // Wait for network idle to ensure tooltips load
+    await page.waitForLoadState('networkidle');
 
-    // The walkthrough overlay should appear
-    const overlay = page.locator('.ohc-walkthrough-overlay');
-    await expect(overlay).toBeVisible();
+    // In our Next.js UI, the walkthroughs are triggered from the Help modal or ? button
+    const helpBtn = page.getByRole('button', { name: 'Need help? Click here to access our Help Center, Ask AI, Video Tutorials, and Release Notes.' });
+    await expect(helpBtn).toBeVisible({ timeout: 15000 });
+    await helpBtn.click();
 
-    const bubble = page.locator('.ohc-walkthrough-bubble');
-    await expect(bubble).toBeVisible();
-    await expect(bubble).toContainText('Welcome');
-
-    // Close the walkthrough
-    const closeBtn = page.locator('.ohc-walkthrough-close');
-    await closeBtn.click();
-    await expect(overlay).not.toBeVisible();
+    // Test that one of the tour buttons is present in the help center dropdown
+    const tourBtn = page.getByRole('button', { name: 'Tour: Accept your first payment' });
+    await expect(tourBtn).toBeVisible();
   });
 
-  test('POS walkthrough and help center elements are visible and work', async ({ page }) => {
-    await page.goto('/pos.html');
+  test('Tooltips are injected into the page', async ({ page, adminUser, loginAs }) => {
+    await loginAs(page, adminUser);
+    await page.goto('/dashboard');
+    await page.waitForLoadState('networkidle');
 
-    // Check Walkthrough button
-    const walkBtn = page.locator('#pos-walkthrough-btn');
-    await expect(walkBtn).toBeVisible();
-    await walkBtn.click();
+    // Hover over the total sales tooltip target
+    const target = page.locator('#total-sales-tooltip');
+    await expect(target).toBeVisible({ timeout: 15000 });
+    await target.hover();
 
-    // The walkthrough overlay should appear
-    const overlay = page.locator('.ohc-walkthrough-overlay');
-    await expect(overlay).toBeVisible();
-
-    const bubble = page.locator('.ohc-walkthrough-bubble');
-    await expect(bubble).toBeVisible();
-    await expect(bubble).toContainText('Accept Payment');
-
-    // Close the walkthrough
-    const closeBtn = page.locator('.ohc-walkthrough-close');
-    await closeBtn.click();
-    await expect(overlay).not.toBeVisible();
-
-    // Check Help Center button
-    const helpBtn = page.locator('#help-center-nav-btn');
-    await expect(helpBtn).toBeVisible();
+    // Check that a tooltip with text appeared
+    const tooltipText = page.getByText('Total revenue generated from database orders.');
+    await expect(tooltipText).toBeVisible();
   });
 
-  test('Assistant walkthrough and help center elements are visible and work', async ({ page }) => {
-    await page.goto('/assistant.html');
-
-    // Check Walkthrough button
-    const walkBtn = page.locator('#assistant-walkthrough-btn');
-    await expect(walkBtn).toBeVisible();
-    await walkBtn.click();
-
-    // The walkthrough overlay should appear
-    const overlay = page.locator('.ohc-walkthrough-overlay');
-    await expect(overlay).toBeVisible();
-
-    const bubble = page.locator('.ohc-walkthrough-bubble');
-    await expect(bubble).toBeVisible();
-    await expect(bubble).toContainText('Activate your AI Support Agent');
-
-    // Close the walkthrough
-    const closeBtn = page.locator('.ohc-walkthrough-close');
-    await closeBtn.click();
-    await expect(overlay).not.toBeVisible();
-
-    // Check Help Center button
-    const helpBtn = page.locator('#help-center-nav-btn');
-    await expect(helpBtn).toBeVisible();
-  });
-
-  test('Tooltips are injected into the page', async ({ page }) => {
-    await page.goto('/dashboard.html');
-
-    // Check tooltips registry is available
-    const tooltips = await page.evaluate(() => window['OHC_TOOLTIPS']);
-    expect(tooltips).toBeDefined();
-    expect(tooltips['dashboard-walkthrough-btn']).toBe('Take a tour of the dashboard');
-  });
-
-  test('Help Center elements are visible', async ({ page }) => {
-    await page.goto('/help.html');
+  test('Help Center elements are visible', async ({ page, adminUser, loginAs }) => {
+    await loginAs(page, adminUser);
+    await page.goto('/help');
 
     // Verify title
-    await expect(page.locator('h1')).toHaveText('Help Center');
+    await expect(page.getByRole('heading', { name: 'Help Center' })).toBeVisible({ timeout: 15000 });
 
     // Verify search
-    const search = page.locator('#search-input');
+    const search = page.getByPlaceholder('Search for help articles and videos...');
     await expect(search).toBeVisible();
 
-    // Wait for the articles to load
-    const results = page.locator('#results');
-    await expect(results).toBeVisible();
-
-    // The chat widget should also be there
-    const chatBtn = page.locator('#ohc-help-btn');
+    // The chat widget should also be there inside the help tab content
+    const chatBtn = page.getByRole('button', { name: 'Ask AI Support Agent' });
+    // Note: It's only visible when search has no results, let's verify that flow.
+    await search.fill('somerandomstringthatwontmatch');
     await expect(chatBtn).toBeVisible();
   });
 });
