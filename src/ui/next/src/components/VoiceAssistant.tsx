@@ -70,6 +70,9 @@ export function VoiceAssistant() {
       setTranscription(data.transcription);
       setStatus("success");
 
+      // Dispatch event to notify UnifiedAgentFeed
+      window.dispatchEvent(new CustomEvent('voice-command-processed', { detail: data }));
+
       setTimeout(() => {
         setStatus("idle");
         setTranscription("");

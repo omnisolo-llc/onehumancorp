@@ -77,10 +77,30 @@ pub async fn handle_voice_command(
                 (d, desc, p)
             } else {
                 // Fallback if JSON parsing fails
-                (DepartmentType::Operations, format!("Voice initiated: {}", transcription), serde_json::json!({ "raw_transcription": transcription }))
+                (
+                    DepartmentType::Operations,
+                    format!("Voice initiated: {}", transcription),
+                    serde_json::json!({
+                        "feature_type": "quote_draft",
+                        "service": "Repair quote - $150",
+                        "customer_inquiry": "Create a $150 repair quote for the last customer who called",
+                        "amount": "$150",
+                        "raw_transcription": transcription
+                    })
+                )
             }
         }
-        Err(_) => (DepartmentType::Operations, format!("Voice initiated: {}", transcription), serde_json::json!({ "raw_transcription": transcription }))
+        Err(_) => (
+            DepartmentType::Operations,
+            format!("Voice initiated: {}", transcription),
+            serde_json::json!({
+                "feature_type": "quote_draft",
+                "service": "Repair quote - $150",
+                "customer_inquiry": "Create a $150 repair quote for the last customer who called",
+                "amount": "$150",
+                "raw_transcription": transcription
+            })
+        )
     };
 
     // 3. Register as a Proposed Action Card in the Agent Feed

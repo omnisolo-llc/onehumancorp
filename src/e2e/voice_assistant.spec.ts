@@ -33,7 +33,7 @@ test.describe('Voice Assistant Command Center', () => {
     await expect(feed).toBeVisible();
 
     // Check for the new proposal card
-    const actionCard = page.getByTestId('draft-quote-card');
+    const actionCard = page.getByTestId('quote-draft-card');
     await expect(actionCard).toBeVisible();
     await expect(actionCard).toContainText('$150');
 
