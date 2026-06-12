@@ -6,6 +6,9 @@
     <title>Work Triage - Unified Agent Feed</title>
     <style>
       body {
+        max-width: 375px;
+        margin: 0 auto;
+        overflow-x: hidden;
         font-family: "Outfit", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
         background-color: #f5f5f7;
         margin: 0;
@@ -83,9 +86,10 @@
       }
 
       .app-grid {
-        display: grid;
-        grid-template-columns: 1fr;
-        gap: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        width: 100%;
       }
 
       @media (min-width: 768px) {
@@ -252,7 +256,10 @@
       }
 
       @media (prefers-color-scheme: dark) {
-        body { background-color: #16161a; }
+        body {
+        max-width: 375px;
+        margin: 0 auto;
+        overflow-x: hidden; background-color: #16161a; }
         .container {
           background: rgba(22, 22, 26, 0.7);
           border-color: rgba(255, 255, 255, 0.1);
@@ -306,20 +313,8 @@
 
       <div id="action-status" class="action-status"></div>
 
-      <div class="app-grid">
-        <section class="app-panel">
-          <div class="app-panel-header">Triage Queue</div>
-          <div id="triage-list" class="app-list">
-            <div class="app-empty">Loading triage items...</div>
-          </div>
-        </section>
-
-        <section class="app-panel">
-          <div class="app-panel-header">Triage Detail</div>
-          <div id="triage-detail">
-            <div class="app-empty">Select a triage item to review it.</div>
-          </div>
-        </section>
+      <div class="app-grid" id="triage-list">
+        <div class="app-empty">Loading triage items...</div>
       </div>
     </div>
 
@@ -342,7 +337,7 @@
       async function loadItems() {
         const listEl = document.getElementById("triage-list");
         try {
-          const res = await fetch(`/api/ui/triage?tenant_id=${encodeURIComponent(tenantId())}`);
+          const res = await fetch(`/api/ui/triage?tenant_id=${encodeURIComponent(tenantId())}&mobile_optimized=true`);
           if (!res.ok) throw new Error("Failed to load triage items from the database");
 
           const data = await res.json();
@@ -393,125 +388,50 @@
       }
 
       function renderUI() {
-        // Badges
         const activeCount = items.length;
-        const urgentCount = items.filter(item => ["urgent", "high"].includes((item.priority || "").toLowerCase())).length;
-
         document.getElementById("active-count-badge").textContent = `Active: ${activeCount}`;
         document.getElementById("active-count-badge").className = `app-badge ${activeCount > 0 ? 'warn' : 'good'}`;
 
-        const urgentBadge = document.getElementById("urgent-count-badge");
-        if (urgentCount > 0) {
-          urgentBadge.textContent = `Urgent: ${urgentCount}`;
-          urgentBadge.style.display = "inline-block";
-        } else {
-          urgentBadge.style.display = "none";
-        }
-
-        // List
         const listEl = document.getElementById("triage-list");
         if (items.length === 0) {
           listEl.innerHTML = `<div class="app-empty">No items need your attention right now. Great job!</div>`;
-        } else {
-          listEl.innerHTML = items.map(item => `
-            <button
-              type="button"
-              data-testid="triage-card-${item.id}"
-              class="app-list-item ${selectedId === item.id ? 'selected' : ''}"
-              onclick="selectItem('${item.id}')"
-            >
-              <div style="min-width: 0;">
-                <div class="app-list-title">${item.source || "Unknown Source"}</div>
-                <div class="app-list-subtitle">${item.context || item.original_message || "No context provided"}</div>
-              </div>
-              ${item.status === 'auto_replied' ? `<span class="app-badge good">AI Handled</span>` : `<span class="app-badge ${badgeTone(item.priority)}">${item.priority || "Normal"}</span>`}
-            </button>
-          `).join('');
+          return;
         }
 
-        // Detail
-        const detailEl = document.getElementById("triage-detail");
-        const selected = items.find(i => i.id === selectedId);
+        listEl.innerHTML = items.map(item => {
+          const actionType = item.action_type || item.proposed_action?.action_type || '';
+          const description = item.context || item.original_message || item.proposed_action?.message || actionType || item.context_payload?.description || 'Agent proposed an action.';
 
-        if (!selected) {
-          detailEl.innerHTML = `<div class="app-empty">Select a triage item to review it.</div>`;
-        } else {
-          const dateStr = selected.created_at
-            ? new Date(selected.created_at).toLocaleString()
-            : new Date().toLocaleString();
+          let draftReply = item.generated_response || item.draft_reply || item.action_payload || item.proposed_action?.action_payload || '';
+          if (typeof draftReply === 'object') draftReply = JSON.stringify(draftReply);
 
-          let actionHtml = '';
-          if (selected.status === 'auto_replied') {
-            actionHtml = `
-              <div class="detail-group">
-                <div class="app-metric-label">AI Handled Reply</div>
-                <div class="detail-value proposed-action">
-                  ${selected.generated_response || selected.draft_reply || "No reply generated."}
+          return `
+            <div class="triage-card" data-testid="triage-card-${item.id}" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; padding: 16px; display: flex; flex-direction: column; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05); gap: 12px;">
+              <div class="triage-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <div class="triage-source" style="font-weight: 700; font-size: 14px; color: #1d1d1f; display: flex; align-items: center; gap: 8px; text-transform: capitalize;">
+                  <span style="font-size: 16px;">✨</span> ${(item.source || item.event_source || 'Unknown').replace('_', ' ')}
+                </div>
+                <div class="triage-priority" style="font-size: 12px; font-weight: 600;">
+                  <span class="app-badge ${badgeTone(item.priority)}">${item.priority || "Normal"}</span>
                 </div>
               </div>
-            `;
-          } else if (selected.action_type) {
-            actionHtml = `
-              <div class="detail-group">
-                <div class="app-metric-label">Proposed Action: ${selected.action_type}</div>
-                <div class="detail-value proposed-action">
-                  ${selected.action_payload || "No specific payload"}
-                </div>
+
+              <div class="triage-context" style="font-size: 14px; color: #1d1d1f; font-weight: 500; margin-bottom: 8px;">
+                ${description}
               </div>
-            `;
-          }
 
-          let buttonsHtml = '';
-          if (selected.status !== 'auto_replied') {
-             buttonsHtml = `
-              <div class="btn-group">
-                <button
-                  class="btn-primary"
-                  data-testid="approve-btn"
-                  onclick="handleDecision('${selected.id}', true)"
-                >
-                  ✨ Approve & Send
-                </button>
-                <button
-                  class="btn-secondary"
-                  data-testid="dismiss-btn"
-                  onclick="handleDecision('${selected.id}', false)"
-                >
-                  Dismiss
-                </button>
-              </div>
-             `;
-          }
+              ${draftReply ? `
+              <div class="triage-reply" style="background: rgba(0, 0, 0, 0.03); padding: 12px; border-radius: 12px; font-size: 13px; color: #383d41; font-style: italic; margin-bottom: 12px; border: 1px solid rgba(0,0,0,0.05);">
+                ${draftReply}
+              </div>` : ''}
 
-          detailEl.innerHTML = `
-            <div class="detail-group">
-              <div class="app-metric-label">Source</div>
-              <div class="detail-value" style="font-weight: 600; background: transparent; border: none; padding: 4px 0;">${selected.source || "Unknown source"}</div>
-            </div>
-
-            <div class="detail-group">
-              <div class="app-metric-label">Context</div>
-              <div class="detail-value">
-                ${selected.context || selected.original_message || "No context"}
+              <div class="triage-controls" style="display: flex; gap: 8px; margin-top: auto;">
+                <button class="triage-btn-approve" data-testid="approve-proposal" onclick="handleDecision('${item.id}', true)" style="flex: 1; background: #0066FF; color: white; min-height: 44px; border-radius: 12px; font-weight: 600; border: none; cursor: pointer; box-shadow: 0 4px 14px 0 rgba(0, 102, 255, 0.39);">Approve & Send</button>
+                <button class="triage-btn-dismiss" data-testid="edit-proposal" onclick="handleDecision('${item.id}', false)" style="flex: 1; background: rgba(0,0,0,0.05); color: #1d1d1f; min-height: 44px; border-radius: 12px; font-weight: 600; border: 1px solid rgba(0,0,0,0.1); cursor: pointer;">Edit</button>
               </div>
             </div>
-
-            ${actionHtml}
-
-            <div style="display: flex; gap: 16px; margin-bottom: 16px;">
-              <div>
-                <div class="app-metric-label">Status</div>
-                <div style="margin-top: 8px;">${selected.status === 'auto_replied' ? `<span class="app-badge good">AI Handled</span>` : `<span class="app-badge ${badgeTone(selected.priority)}">${selected.priority || "Normal"}</span>`}</div>
-              </div>
-              <div>
-                <div class="app-metric-label">Created</div>
-                <div class="detail-value" style="font-weight: 600; background: transparent; border: none; padding: 4px 0;">${dateStr}</div>
-              </div>
-            </div>
-
-            ${buttonsHtml}
           `;
-        }
+        }).join('');
       }
 
       window.selectItem = function(id) {
