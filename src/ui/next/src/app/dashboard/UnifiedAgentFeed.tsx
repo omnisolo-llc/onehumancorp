@@ -302,7 +302,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
         "x-tenant-id": tenant,
         "x-user-id": "default",
       },
-      body: JSON.stringify({ state: approved ? "APPROVED" : "REJECTED" }),
+      body: JSON.stringify({ state: approved ? "APPROVED" : "DISMISSED" }),
     });
 
     if (!res.ok) {
