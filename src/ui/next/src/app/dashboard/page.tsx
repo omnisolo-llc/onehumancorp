@@ -29,6 +29,7 @@ import { SuccessMilestoneWidget } from "./SuccessMilestoneWidget";
 import { SuccessMilestoneAlert } from "./SuccessMilestoneAlert";
 import AffiliateMarketingWidget from "./AffiliateMarketingWidget";
 import { CartRecoveryWidget } from "./CartRecoveryWidget";
+import { LeadMagnetWidget } from "./LeadMagnetWidget";
 
 type DashboardMetrics = {
   active_customers: number;
@@ -503,6 +504,7 @@ export default function Dashboard() {
       <SuccessMilestoneAlert />
       <SuccessMilestoneWidget />
       <ViralLoopPerformanceWidget />
+      <LeadMagnetWidget />
       <div className="mb-6">
         <div className="mb-4"><CartRecoveryWidget /></div>
         <AffiliateMarketingWidget />

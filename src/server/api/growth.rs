@@ -168,6 +168,7 @@ where
         .route("/customer-referral/embed", get(handle_customer_referral_embed))
                 .route("/storefront/og-card", get(handle_og_card))
         .route("/flash-sale/embed", get(handle_flash_sale_embed))
+        .route("/lead-magnet/submit", post(handle_lead_magnet_submit))
         .route("/milestones/check", get(handle_check_milestones))
         .route("/affiliate/generate-link", post(handle_affiliate_generate_link))
         .route("/affiliate/track", post(handle_affiliate_track))
@@ -922,6 +923,30 @@ pub struct FlashSaleEmbedQuery {
     pub percent: Option<String>,
     pub end: Option<String>,
     pub theme: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct LeadMagnetSubmitRequest {
+    pub tenant: Option<String>,
+    pub email: String,
+}
+
+async fn handle_lead_magnet_submit(
+    Extension(state): Extension<GrowthState>,
+    Json(req): Json<LeadMagnetSubmitRequest>,
+) -> impl IntoResponse {
+    let tenant = req.tenant.unwrap_or_else(|| "default-team".to_string());
+
+    // In a real application, we would insert the email into the tenant's audience list here.
+    let msg = state.hub.sanitize_hub_event(serde_json::json!({
+        "type": "growth.lead_magnet_submit",
+        "tenant_id": tenant,
+        "customer_email": req.email,
+        "source": "lead_magnet_widget"
+    }));
+    state.hub.append_recent_event(msg);
+
+    Json(serde_json::json!({ "success": true }))
 }
 
 async fn handle_flash_sale_embed(
