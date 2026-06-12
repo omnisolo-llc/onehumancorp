@@ -10,6 +10,7 @@ import { MorningBriefingCard } from "./MorningBriefingCard";
 
 import { useEffect, useMemo, useState } from "react";
 import { TriageFeed } from "./TriageFeed";
+import { PendingQuotesFeed } from "./PendingQuotesFeed";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AppShell } from "../components/AppShell";
@@ -343,6 +344,7 @@ export default function Dashboard() {
         { label: "New Product", href: "/products/new", primary: true },
       ]}
     >
+      <PendingQuotesFeed tenantId={tenantId()} />
       <div className="mb-6 p-6 rounded-[16px] glassmorphism border border-white/40 dark:border-white/10">
         <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Welcome back, {userName}.</h2>
         <p className="text-gray-600 dark:text-gray-400">Your agents are working on your behalf.</p>

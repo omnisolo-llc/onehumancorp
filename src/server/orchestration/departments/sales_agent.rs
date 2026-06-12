@@ -253,18 +253,46 @@ impl Department for SalesAgent {
                             deposit_amount
                         );
 
-                        // Simulate creating a Stripe checkout session for the deposit
+                        // First, try to generate a real checkout link for the deposit
                         let stripe_client = crate::integrations::stripe::client::StripeClient::new(
                             std::env::var("STRIPE_API_KEY").unwrap_or_else(|_| "sk_test_123".to_string()),
                         );
 
-                        match stripe_client.create_checkout_session("price_dummy", "cus_dummy", deposit_amount, false).await {
+                        let checkout_url = match stripe_client.create_checkout_session("price_dummy", "cus_dummy", deposit_amount, false).await {
                             Ok(url) => {
                                 tracing::info!("Generated deposit link: {}", url);
-                                // Optional: Update timeline or send a message
+                                Some(url)
                             }
                             Err(e) => {
                                 tracing::error!("Failed to create checkout session for quote deposit: {}", e);
+                                None
+                            }
+                        };
+
+                        // Then use the generate_quote_tool (via executor) to store the real quote
+                        let executor = crate::agents::builtin::tools::quote::GenerateQuoteExecutor;
+                        use crate::agents::builtin::tools::pydantic::PydanticToolExecutor;
+
+                        let customer_id = payload.get("customer_id").and_then(|v| v.as_str()).unwrap_or("unknown_customer_from_omnichannel").to_string();
+
+                        let args = crate::agents::builtin::tools::quote::GenerateQuoteArgs {
+                            tenant_id: event.tenant_id.clone(),
+                            customer_id,
+                            total_amount_cents: (suggested_price * 100.0) as i64,
+                            required_deposit_cents: (deposit_amount * 100.0) as i64,
+                            checkout_url: checkout_url.clone(),
+                        };
+
+                        match executor.execute_typed(args).await {
+                            Ok(res) => {
+                                tracing::info!("Successfully stored quote via GenerateQuoteExecutor: {}", res);
+
+                                // Send the quote and deposit link back to the user via OmnichannelDispatcher (Simulated here)
+                                let inbox_message_id = payload.get("inbox_message_id").and_then(|v| v.as_str()).unwrap_or("");
+                                tracing::info!("OmnichannelDispatcher: Sending quote and checkout link ({:?}) back for message_id: {}", checkout_url, inbox_message_id);
+                            }
+                            Err(e) => {
+                                tracing::error!("Failed to generate quote: {:?}", e);
                             }
                         }
                     }
