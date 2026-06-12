@@ -1238,7 +1238,7 @@ impl MeshTransport for MeshOverlayTransport {
             });
         }
 
-        while let Some(_) = join_set.join_next().await {}
+        while join_set.join_next().await.is_some() {}
 
         Ok(())
     }

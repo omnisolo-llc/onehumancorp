@@ -122,4 +122,20 @@ test.describe('Work Triage Agentic Inbox', () => {
     await expect(page.locator('text=Mark requested to reschedule his 4 PM lesson')).toBeVisible();
     await expect(triageCard.locator('[data-testid="approve-proposal"]')).toBeVisible();
   });
+
+  test('Layout is fully usable at 375px', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 667 });
+    await page.goto('/login');
+    await page.fill('input[type="text"]', tenantId);
+    await page.click('button[type="submit"]');
+
+    await page.goto('/dashboard');
+    const triageCard = page.locator('[data-testid="triage-card-triage-test-1"]');
+    await expect(triageCard).toBeVisible({ timeout: 15000 });
+
+    // Ensure detail view can be scrolled into view or is stacked correctly
+    await triageCard.click();
+    await expect(page.locator('text=Draft Reply')).toBeVisible();
+    await expect(page.locator('[data-testid="approve-btn"]')).toBeVisible();
+  });
 });
