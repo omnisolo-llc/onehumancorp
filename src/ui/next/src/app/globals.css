@@ -582,6 +582,7 @@ body {
   -webkit-backdrop-filter: blur(30px) saturate(210%);
   backdrop-filter: blur(30px) saturate(210%);
   border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 16px;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -590,6 +591,7 @@ body {
     -webkit-backdrop-filter: blur(30px) saturate(210%);
   backdrop-filter: blur(30px) saturate(210%);
     border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
   }
 }
 

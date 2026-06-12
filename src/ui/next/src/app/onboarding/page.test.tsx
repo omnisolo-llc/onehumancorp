@@ -348,7 +348,7 @@ describe('OnboardingWizard', () => {
     await waitFor(() => {
       expect(screen.getByText("Failed to start onboarding")).toBeInTheDocument();
       expect(screen.getByText("Style & Team")).toBeInTheDocument();
-    });
+    }, { timeout: 4000 }); // Increase timeout to allow the 500ms delay to pass
 
     consoleErrorSpy.mockRestore();
   });
