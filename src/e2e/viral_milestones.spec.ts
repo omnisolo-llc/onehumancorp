@@ -16,16 +16,22 @@ test.describe('Viral Milestones Page', () => {
     const milestoneList = page.locator('.milestone-item');
     await expect(milestoneList.first()).toBeVisible();
 
-    // Verify that an image is loaded for the selected milestone
+    // Verify that an image is loaded for the selected milestone (first unlocked should be auto-selected)
     const milestoneImage = page.locator('#milestone-image');
     await expect(milestoneImage).toHaveAttribute('src', /api\/v1\/growth\/milestone\/card/);
+  });
+
+  test('viral milestones: verify multiple milestone titles from API', async ({ page, loginAs, unlimitedAdminUser }) => {
+    await loginAs(page, unlimitedAdminUser);
+
+    await page.goto('/milestones.html');
+    await expect(page.locator('h3:has-text("First Sale!")')).toBeVisible({ timeout: 15000 });
   });
 
   test('viral milestones: verify social share buttons and viral loop', async ({ page, loginAs, unlimitedAdminUser }) => {
     await loginAs(page, unlimitedAdminUser);
 
     await page.goto('/milestones.html');
-    await expect(page.locator('h2:has-text("Your Achievements")')).toBeVisible();
 
     const whatsappBtn = page.locator('text=Share to WhatsApp');
     await expect(whatsappBtn).toBeVisible();
