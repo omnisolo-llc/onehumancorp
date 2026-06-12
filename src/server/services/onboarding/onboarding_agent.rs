@@ -215,6 +215,18 @@ impl OnboardingAgent {
     }
 
     pub async fn start_onboarding(&self, req: StartOnboardingRequest) -> Result<StartOnboardingResponse, String> {
+        static EMAIL_REGEX: std::sync::OnceLock<regex::Regex> = std::sync::OnceLock::new();
+        let email_regex = EMAIL_REGEX.get_or_init(|| regex::Regex::new(r"^[^\s@]+@[^\s@]+\.[^\s@]+$").unwrap());
+
+        if req.admin_email.trim().is_empty() || !email_regex.is_match(&req.admin_email) {
+            return Err("Please enter a valid email address".to_string());
+        }
+
+        let has_number = req.admin_password.chars().any(|c| c.is_numeric());
+        if req.admin_password.trim().is_empty() || req.admin_password.len() < 8 || !has_number {
+            return Err("Password must be at least 8 characters and contain a number".to_string());
+        }
+
         let start_time = std::time::Instant::now();
         let org_id = format!("org-{}", uuid::Uuid::new_v4());
 
