@@ -16,6 +16,8 @@ server_config = { path = "../config" }
 server_pricing = { path = "../pricing" }
 tokio = { workspace = true }
 tracing = "0.1"
+dashmap = "5"
+
 
 [dev-dependencies]
 chrono = { workspace = true }
