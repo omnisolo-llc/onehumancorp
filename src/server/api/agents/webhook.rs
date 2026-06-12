@@ -12,6 +12,7 @@ use crate::orchestration::departments::types::{DepartmentType, ActionRisk};
 use uuid::Uuid;
 use crate::db::get_pool;
 use crate::minimax::{LocalLLMClient, MinimaxClient};
+use ::server_pricing::rate_limit::PlanTier;
 
 #[derive(Deserialize)]
 pub struct WebhookPayload {
@@ -37,7 +38,7 @@ where
         .with_state(orchestrator)
 }
 
-async fn analyze_intake_inquiry(inquiry: &str) -> Result<(f64, String, String), String> {
+async fn analyze_intake_inquiry(inquiry: &str, ttl: std::time::Duration) -> Result<(f64, String, String), String> {
     let prompt = format!(
         "Analyze the following client intake inquiry and extract the key project parameters. Provide a suggested price (as a number), a short service name (e.g., 'Logo Refresh'), and a brief scope description.\n\nInquiry: {}\n\nRespond with a JSON object containing keys: 'suggested_price' (number), 'service_name' (string), and 'scope' (string).",
         inquiry
@@ -47,12 +48,12 @@ async fn analyze_intake_inquiry(inquiry: &str) -> Result<(f64, String, String), 
         Ok("minimax") => {
             let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
             if api_key.trim().is_empty() {
-                LocalLLMClient::new().reason(&prompt).await
+                LocalLLMClient::new().with_ttl(ttl).reason(&prompt).await
             } else {
-                MinimaxClient::new(api_key).reason(&prompt).await
+                MinimaxClient::new(api_key).with_ttl(ttl).reason(&prompt).await
             }
         },
-        _ => LocalLLMClient::new().reason(&prompt).await,
+        _ => LocalLLMClient::new().with_ttl(ttl).reason(&prompt).await,
     }?;
 
     let parsed: serde_json::Value = serde_json::from_str(&raw_response).unwrap_or(serde_json::json!({}));
@@ -68,6 +69,22 @@ async fn handle_webhook(
     State(orchestrator): State<Arc<DepartmentOrchestrator>>,
     Json(payload): Json<WebhookPayload>,
 ) -> impl IntoResponse {
+    let pool = get_pool();
+    let tier_str = sqlx::query_scalar::<_, String>("SELECT plan_tier FROM tenants WHERE id = $1")
+        .bind(&payload.tenant_id)
+        .fetch_optional(&pool)
+        .await
+        .unwrap_or(None)
+        .unwrap_or_else(|| "Free".to_string());
+
+    let tier = match tier_str.as_str() {
+        "Business" => PlanTier::Business,
+        "Pro" => PlanTier::Pro,
+        "Starter" => PlanTier::Starter,
+        _ => PlanTier::Free,
+    };
+    let ttl = tier.get_prompt_cache_ttl();
+
     // For incoming Stripe webhooks for new orders, route to Operations to process the order
     if payload.source == "stripe" && payload.message == "order_placed" {
         // Trigger SMS notification for new orders
@@ -116,7 +133,7 @@ async fn handle_webhook(
         let tenant_id = payload.tenant_id.clone();
         let inquiry = payload.message.clone();
 
-        let (suggested_price, service_name, scope) = match analyze_intake_inquiry(&inquiry).await {
+        let (suggested_price, service_name, scope) = match analyze_intake_inquiry(&inquiry, ttl).await {
             Ok(res) => res,
             Err(_) => (1500.00, "Custom Project Scope".to_string(), "Custom requirements based on inquiry.".to_string()),
         };
@@ -127,12 +144,12 @@ async fn handle_webhook(
             Ok("minimax") => {
                 let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
                 if api_key.trim().is_empty() {
-                    LocalLLMClient::new().generate_embedding(&prompt_for_embedding).await
+                    LocalLLMClient::new().with_ttl(ttl).generate_embedding(&prompt_for_embedding).await
                 } else {
-                    MinimaxClient::new(api_key).generate_embedding(&prompt_for_embedding).await
+                    MinimaxClient::new(api_key).with_ttl(ttl).generate_embedding(&prompt_for_embedding).await
                 }
             },
-            _ => LocalLLMClient::new().generate_embedding(&prompt_for_embedding).await,
+            _ => LocalLLMClient::new().with_ttl(ttl).generate_embedding(&prompt_for_embedding).await,
         }.unwrap_or_else(|_| vec![0.0; 1536]);
 
         let context = match orchestrator.query_long_term_memory(&tenant_id, &query_embedding, 5).await {

@@ -60,11 +60,17 @@ fn get_circuit_breaker() -> &'static CircuitBreaker {
     GLOBAL_CIRCUIT_BREAKER.get_or_init(|| CircuitBreaker::new(3, Duration::from_secs(120)))
 }
 
+static GLOBAL_PROMPT_CACHE: OnceLock<PromptCache> = OnceLock::new();
+
+fn get_prompt_cache() -> &'static PromptCache {
+    GLOBAL_PROMPT_CACHE.get_or_init(|| PromptCache::new(Duration::from_secs(300)))
+}
+
 pub struct MinimaxClient {
     api_key: String,
     url: String,
-    cache: PromptCache,
     deduplicator: std::sync::Arc<RequestDeduplicator>,
+    ttl: Duration,
 }
 
 #[derive(Debug, Serialize)]
@@ -101,9 +107,14 @@ impl MinimaxClient {
         MinimaxClient {
             api_key,
             url: "https://api.minimax.chat/v1/chat/completions".to_string(),
-            cache: PromptCache::new(Duration::from_secs(300)),
             deduplicator: std::sync::Arc::new(RequestDeduplicator::new(Duration::from_secs(5))), // 5 minute TTL
+            ttl: Duration::from_secs(300),
         }
+    }
+
+    pub fn with_ttl(mut self, ttl: Duration) -> Self {
+        self.ttl = ttl;
+        self
     }
 
     pub async fn reason(&self, prompt: &str) -> Result<String, String> {
@@ -125,7 +136,7 @@ impl MinimaxClient {
         };
 
         // 1. Check Cache
-        if let (Some(cached), _cost_cents) = self.cache.get_with_cost_cents(&optimized_prompt) {
+        if let (Some(cached), _cost_cents) = get_prompt_cache().get_with_cost_cents(&optimized_prompt) {
             tracing::info!("Prompt cache hit (saved ~{} tokens)", cached.token_count);
             return Ok(cached.text);
         }
@@ -196,7 +207,7 @@ impl MinimaxClient {
                         if let Some(choice) = result.choices.first() {
                             let content = choice.message.content.clone();
                             // 3. Update Cache
-                            self.cache.set(&optimized_prompt, &content, optimized_prompt.len() / 4); // rough token estimate
+                            get_prompt_cache().set_with_ttl(&optimized_prompt, &content, optimized_prompt.len() / 4, self.ttl); // rough token estimate
                             return Ok(content);
                         } else {
                             last_err = "empty response from minimax".to_string();
@@ -242,7 +253,7 @@ impl MinimaxClient {
         let (tx, rx) = tokio::sync::mpsc::channel(100);
 
         // 1. Check Cache
-        if let (Some(cached), _cost_cents) = self.cache.get_with_cost_cents(&optimized_prompt) {
+        if let (Some(cached), _cost_cents) = get_prompt_cache().get_with_cost_cents(&optimized_prompt) {
             tracing::info!("Prompt cache hit in stream (saved ~{} tokens)", cached.token_count);
             let cached_text = cached.text.clone();
             tokio::spawn(async move {
@@ -403,8 +414,8 @@ pub struct LocalLLMClient {
     endpoint: String,
     embed_endpoint: String,
     model: String,
-    cache: PromptCache,
     deduplicator: std::sync::Arc<RequestDeduplicator>,
+    ttl: Duration,
 }
 
 impl LocalLLMClient {
@@ -416,7 +427,12 @@ impl LocalLLMClient {
         let model = std::env::var("OHC_LOCAL_MODEL_NAME")
             .unwrap_or_else(|_| "llama3".to_string());
             
-        LocalLLMClient { endpoint, embed_endpoint, model, cache: PromptCache::new(Duration::from_secs(300)), deduplicator: std::sync::Arc::new(RequestDeduplicator::new(Duration::from_secs(5))) }
+        LocalLLMClient { endpoint, embed_endpoint, model, deduplicator: std::sync::Arc::new(RequestDeduplicator::new(Duration::from_secs(5))), ttl: Duration::from_secs(300) }
+    }
+
+    pub fn with_ttl(mut self, ttl: Duration) -> Self {
+        self.ttl = ttl;
+        self
     }
 
     pub async fn reason(&self, prompt: &str) -> Result<String, String> {
@@ -442,7 +458,7 @@ impl LocalLLMClient {
             PromptCache::truncate_context(prompt, 2000)
         };
 
-        if let (Some(cached), _cost_cents) = self.cache.get_with_cost_cents(&optimized_prompt) {
+        if let (Some(cached), _cost_cents) = get_prompt_cache().get_with_cost_cents(&optimized_prompt) {
             tracing::info!("Prompt cache hit (saved ~{} tokens)", cached.token_count);
             return Ok(cached.text);
         }
@@ -466,7 +482,7 @@ impl LocalLLMClient {
                         if let Ok(result) = result_res {
                             if let Some(response) = result["response"].as_str() {
                                 cb.record_success();
-                                self.cache.set(&optimized_prompt, response, optimized_prompt.len() / 4);
+                                get_prompt_cache().set_with_ttl(&optimized_prompt, response, optimized_prompt.len() / 4, self.ttl);
                                 return Ok(response.to_string());
                             } else {
                                 last_err = "missing response field".to_string();
