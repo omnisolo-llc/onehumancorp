@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <title>Affiliate Partner Program - OHC Growth</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #f5f5f7;
+      color: #1d1d1f;
+      -webkit-font-smoothing: antialiased;
+    }
+    .header {
+      padding: 44px 20px 20px;
+      background: rgba(255, 255, 255, 0.85);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .back-btn {
+      text-decoration: none;
+      color: #0066FF;
+      font-weight: 600;
+      font-size: 16px;
+    }
+    .container {
+      padding: 24px 20px;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+    .card {
+      background: white;
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+      margin-bottom: 20px;
+    }
+    h1 {
+      font-size: 28px;
+      margin: 0 0 8px;
+      letter-spacing: -0.5px;
+    }
+    h2 {
+      font-size: 20px;
+      margin: 0 0 16px;
+    }
+    p {
+      color: #86868b;
+      line-height: 1.5;
+      margin: 0 0 20px;
+      font-size: 15px;
+    }
+    .input-group {
+      margin-bottom: 16px;
+    }
+    .input-group label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
+    input[type="text"], input[type="number"] {
+      width: 100%;
+      padding: 14px;
+      border-radius: 12px;
+      border: 1px solid #d2d2d7;
+      font-size: 16px;
+      box-sizing: border-box;
+      background: #fafafa;
+    }
+    button {
+      width: 100%;
+      padding: 16px;
+      border-radius: 12px;
+      border: none;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    .btn-primary {
+      background: #0066FF;
+      color: white;
+    }
+    .btn-secondary {
+      background: rgba(0, 102, 255, 0.1);
+      color: #0066FF;
+      margin-top: 12px;
+    }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-top: 20px;
+    }
+    .stat-box {
+      background: #f5f5f7;
+      padding: 16px;
+      border-radius: 12px;
+      text-align: center;
+    }
+    .stat-value {
+      font-size: 24px;
+      font-weight: 700;
+      color: #1d1d1f;
+    }
+    .stat-label {
+      font-size: 13px;
+      color: #86868b;
+      margin-top: 4px;
+    }
+    #result-section {
+      display: none;
+      margin-top: 24px;
+      padding-top: 24px;
+      border-top: 1px solid #eee;
+    }
+    .action-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .action-row button {
+      padding: 12px;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <a href="dashboard.html" class="back-btn">← Back</a>
+  <h1 style="font-size: 18px; margin: 0;">Growth</h1>
+</div>
+
+<div class="container">
+  <div class="card">
+    <h1>Affiliate Partner Program</h1>
+    <p>Turn your loyal customers into partners. Generate unique affiliate links offering discounts to new buyers, while earning you a commission.</p>
+
+    <div class="input-group">
+      <label>Customer Name/Email (optional tracking ID)</label>
+      <input type="text" id="customer-id" placeholder="e.g. VIP Customer">
+    </div>
+
+    <div class="stats-grid" style="margin-bottom: 24px;">
+      <div class="input-group" style="margin: 0;">
+        <label>Discount (%)</label>
+        <input type="number" id="discount-pct" value="10" min="1" max="50">
+      </div>
+      <div class="input-group" style="margin: 0;">
+        <label>Commission (%)</label>
+        <input type="number" id="commission-pct" value="10" min="1" max="50">
+      </div>
+    </div>
+
+    <button id="generate-btn" class="btn-primary">Generate Affiliate Link</button>
+
+    <div id="result-section">
+      <h2 style="font-size: 16px;">Your Link is Ready!</h2>
+      <input type="text" id="affiliate-link" readonly value="">
+
+      <div class="action-row">
+        <button id="copy-btn" class="btn-secondary" style="margin-top: 0;">Copy</button>
+        <button id="share-x-btn" style="margin-top: 0; background: #1DA1F2; color: white;">Share to X</button>
+        <button id="share-wa-btn" style="margin-top: 0; background: #25D366; color: white;">WhatsApp</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Program Statistics</h2>
+    <p>Track how your affiliate links are performing.</p>
+
+    <div class="stats-grid">
+      <div class="stat-box">
+        <div class="stat-value" id="stat-affiliates">0</div>
+        <div class="stat-label">Total Affiliate Links</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value" id="stat-commission">$0.00</div>
+        <div class="stat-label">Commissions Earned</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+    // 1. Fetch existing stats
+    try {
+        const res = await fetch('/api/v1/growth/affiliate/stats');
+        if (res.ok) {
+            const data = await res.json();
+            document.getElementById('stat-affiliates').innerText = data.total_affiliates;
+            document.getElementById('stat-commission').innerText = '$' + (data.total_commission_cents / 100).toFixed(2);
+        }
+    } catch(e) {
+        console.error("Failed to load stats", e);
+    }
+
+    // 2. Generate link flow
+    const generateBtn = document.getElementById('generate-btn');
+    const resultSection = document.getElementById('result-section');
+    const linkInput = document.getElementById('affiliate-link');
+
+    generateBtn.addEventListener('click', async () => {
+        generateBtn.innerText = "Generating...";
+        generateBtn.disabled = true;
+
+        const customerId = document.getElementById('customer-id').value || "anonymous";
+        const discount = parseInt(document.getElementById('discount-pct').value) || 10;
+        const commission = parseInt(document.getElementById('commission-pct').value) || 10;
+
+        try {
+            const res = await fetch('/api/v1/growth/affiliate/generate-link', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    customer_id: customerId,
+                    discount_percentage: discount,
+                    commission_percentage: commission
+                })
+            });
+
+            if (res.ok) {
+                const data = await res.json();
+                linkInput.value = data.affiliate_link;
+                resultSection.style.display = 'block';
+
+                // Refresh stats immediately
+                document.getElementById('stat-affiliates').innerText =
+                    parseInt(document.getElementById('stat-affiliates').innerText) + 1;
+            } else {
+                alert("Failed to generate link");
+            }
+        } catch(e) {
+            console.error("Generate error", e);
+            alert("Error generating link");
+        } finally {
+            generateBtn.innerText = "Generate Affiliate Link";
+            generateBtn.disabled = false;
+        }
+    });
+
+    // 3. Action buttons
+    document.getElementById('copy-btn').addEventListener('click', () => {
+        navigator.clipboard.writeText(linkInput.value);
+        const copyBtn = document.getElementById('copy-btn');
+        copyBtn.innerText = "Copied!";
+        setTimeout(() => copyBtn.innerText = "Copy", 2000);
+    });
+
+    document.getElementById('share-x-btn').addEventListener('click', () => {
+        const text = `Partner with us! Use my affiliate link to get a discount on OneHumanCorp products: ${linkInput.value}`;
+        window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, '_blank');
+    });
+
+    document.getElementById('share-wa-btn').addEventListener('click', () => {
+        const text = `Partner with us! Use my affiliate link to get a discount: ${linkInput.value}`;
+        window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+    });
+});
+</script>
+</body>
+</html>
