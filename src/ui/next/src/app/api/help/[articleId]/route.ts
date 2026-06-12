@@ -1,5 +1,5 @@
 import { NextResponse, NextRequest } from 'next/server';
-import { fallbackArticles } from '../route';
+import { fallbackArticles } from '../data/articles';
 
 export async function GET(
   request: NextRequest,
