@@ -1,5 +1,5 @@
 use axum::{
-    extract::{Extension, Path, Query, State},
+    extract::{Extension, Path, Query, State, ws::{Message as WsMessage, WebSocket, WebSocketUpgrade}},
     http::StatusCode,
     response::IntoResponse,
     routing::{get, put},
@@ -13,21 +13,28 @@ use crate::domain::repository::agent_feed_repo::{AgentFeedRepository, AgentFeedI
 use sqlx::PgPool;
 use crate::utils::cache::HybridCache;
 use std::sync::{Arc, OnceLock};
+use futures::{sink::SinkExt, stream::StreamExt};
+use redis::AsyncCommands;
 
 pub static AGENT_FEED_CACHE: OnceLock<Arc<HybridCache<AgentFeedListResponse>>> = OnceLock::new();
+pub static SHARED_REDIS_CLIENT: OnceLock<redis::Client> = OnceLock::new();
+
+pub fn get_redis_client() -> redis::Client {
+    SHARED_REDIS_CLIENT.get_or_init(|| {
+        let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1:6379".to_string());
+        redis::Client::open(redis_url).expect("Failed to initialize Redis client")
+    }).clone()
+}
 
 pub fn get_agent_feed_cache() -> Arc<HybridCache<AgentFeedListResponse>> {
     AGENT_FEED_CACHE.get_or_init(|| {
-        let redis_client = if let Ok(url) = std::env::var("REDIS_URL") {
-            match redis::Client::open(url.clone()) {
-                Ok(client) => Some(client),
-                Err(e) => {
-                    tracing::warn!("Failed to initialize Redis client for AGENT_FEED_CACHE: {}. Falling back to in-memory cache.", e);
-                    None
-                }
+        let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1:6379".to_string());
+        let redis_client = match redis::Client::open(redis_url) {
+            Ok(client) => Some(client),
+            Err(e) => {
+                tracing::warn!("Failed to initialize Redis client for AGENT_FEED_CACHE: {}. Falling back to in-memory cache.", e);
+                None
             }
-        } else {
-            None
         };
         Arc::new(HybridCache::new(redis_client))
     }).clone()
@@ -70,6 +77,68 @@ where
     Router::new()
         .route("/", get(list_feed_items).post(create_feed_item))
         .route("/{id}/state", put(update_feed_item_state))
+}
+
+pub async fn ws_feed_handler(
+    ws: WebSocketUpgrade,
+    Extension(claims): Extension<Claims>,
+) -> impl IntoResponse {
+    let tenant_id = match claims.organization_id.as_deref() {
+        Some(org_id) => org_id.to_string(),
+        None => return StatusCode::UNAUTHORIZED.into_response(),
+    };
+
+    ws.on_upgrade(move |socket| handle_feed_socket(socket, tenant_id))
+}
+
+async fn handle_feed_socket(socket: WebSocket, tenant_id: String) {
+    let (mut sender, mut receiver) = socket.split();
+
+    let client = get_redis_client();
+
+    let mut pubsub_conn = match client.get_async_pubsub().await {
+        Ok(conn) => conn,
+        Err(e) => {
+            tracing::error!("Failed to get async pubsub for ws: {}", e);
+            let _ = sender.send(WsMessage::Text("{\"error\":\"Failed to connect to pubsub\"}".into())).await;
+            return;
+        }
+    };
+
+    let topic = format!("ohc:feed:{}", tenant_id);
+    if let Err(e) = pubsub_conn.subscribe(&topic).await {
+        tracing::error!("Failed to subscribe to topic {}: {}", topic, e);
+        let _ = sender.send(WsMessage::Text("{\"error\":\"Failed to subscribe\"}".into())).await;
+        return;
+    }
+
+    let mut stream = pubsub_conn.into_on_message();
+
+    let mut send_task = tokio::spawn(async move {
+        while let Some(msg) = stream.next().await {
+            let payload: String = match msg.get_payload() {
+                Ok(p) => p,
+                Err(e) => {
+                    tracing::error!("Failed to get pubsub payload: {}", e);
+                    continue;
+                }
+            };
+            if sender.send(WsMessage::Text(payload.into())).await.is_err() {
+                break; // client disconnected
+            }
+        }
+    });
+
+    let mut recv_task = tokio::spawn(async move {
+        while let Some(Ok(_)) = receiver.next().await {
+            // Ignore messages from client for now
+        }
+    });
+
+    tokio::select! {
+        _ = (&mut send_task) => recv_task.abort(),
+        _ = (&mut recv_task) => send_task.abort(),
+    };
 }
 
 async fn list_feed_items(
@@ -167,6 +236,19 @@ async fn create_feed_item(
             let cache = get_agent_feed_cache();
             let tag = format!("agent_feed_tenant:{}", tenant_id);
             cache.invalidate_by_tag(&tag).await;
+
+            // Publish to Redis Pub/Sub
+            let client = get_redis_client();
+            let topic = format!("ohc:feed:{}", tenant_id);
+            if let Ok(payload_json) = serde_json::to_string(&item) {
+                // In background task, to not block response
+                tokio::spawn(async move {
+                    if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
+                        let _: Result<(), _> = conn.publish(topic, payload_json).await;
+                    }
+                });
+            }
+
             (StatusCode::CREATED, Json(item)).into_response()
         },
         Err(e) => {
@@ -206,7 +288,7 @@ async fn update_feed_item_state(
             if payload.state == "APPROVED" {
                 if let Ok(Some(item)) = repo.get(&tenant_id, &id).await {
                     if item.event_source == "incident_resolution" {
-                        if let Some(payload) = item.context_payload {
+                        if let Some(ref payload) = item.context_payload {
                             if let Some(incident_id) = payload.get("incident_id").and_then(|v| v.as_str()) {
                                 let _ = sqlx::query("UPDATE incidents SET status = 'RESOLVED', updated_at = NOW() WHERE id = $1 AND tenant_id = $2")
                                     .bind(incident_id)
@@ -214,6 +296,13 @@ async fn update_feed_item_state(
                                     .execute(&pool)
                                     .await;
                             }
+                        }
+                    }
+
+                    if let Some(payload) = item.proposed_action.clone().or(item.context_payload.clone()) {
+                        if payload.get("feature_type").and_then(|v| v.as_str()) == Some("social_post_draft") {
+                            tracing::info!("Approved and scheduled SocialPostDraft for tenant: {}", tenant_id);
+                            // Real implementation would buffer post here to AYRSHARE.
                         }
                     }
                 }
@@ -235,7 +324,13 @@ async fn update_feed_item_state(
 mod tests {
     use crate::api::agent_feed;
     use sqlx::PgPool;
-    use super::{get_agent_feed_cache, AgentFeedListResponse};
+    use super::{get_agent_feed_cache, AgentFeedListResponse, ws_feed_handler};
+    use axum::{Router, routing::get, extract::Extension};
+    use ::server_common::Claims;
+    use std::net::SocketAddr;
+    use tokio::net::TcpListener;
+    use tokio_tungstenite::connect_async;
+    use futures::StreamExt;
 
     #[tokio::test]
     async fn test_agent_feed_router_compiles() {
@@ -272,10 +367,65 @@ mod tests {
         // Invalidate by tag
         cache.invalidate_by_tag("agent_feed_tenant:test_tenant").await;
 
-        // Verify cache miss after invalidation
-        // NOTE: there might be a short delay needed for tags to be invalidated in HybridCache depending on implementation,
-        // but HybridCache tag invalidation is usually synchronous for local cache.
         let miss = cache.get(cache_key).await;
         assert!(miss.is_none());
+    }
+
+    #[tokio::test]
+    async fn test_websocket_feed() {
+        // Set up test server with a fake Claims
+        let mock_claims = Claims {
+            sub: "user-123".to_string(),
+            organization_id: Some("test_ws_tenant".to_string()),
+            roles: vec!["ADMIN".to_string()],
+            iat: 0,
+            username: "test".to_string(),
+            email: "test@test.com".to_string(),
+            exp: 9999999999,
+            jti: "test_jti".to_string(),
+            session_id: Some("test_session_id".to_string()),
+        };
+
+        let app = Router::new()
+            .route("/ws", get(ws_feed_handler))
+            .layer(Extension(mock_claims));
+
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+
+        tokio::spawn(async move {
+            axum::serve(
+                listener,
+                app.into_make_service_with_connect_info::<SocketAddr>(),
+            )
+            .await
+            .unwrap();
+        });
+
+        // Use standard redis logic locally to simulate pubsub
+        let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1:6379".to_string());
+        if let Ok(client) = redis::Client::open(redis_url) {
+            // Attempt to connect to local redis, if redis is unavailable (e.g. CI), skip the connection test
+            if client.get_connection().is_ok() {
+                let ws_url = format!("ws://{}/ws", addr);
+                let (mut ws_stream, _) = connect_async(ws_url).await.expect("Failed to connect");
+
+                // Publish mock message to redis channel
+                let mut conn = client.get_multiplexed_async_connection().await.unwrap();
+                let topic = "ohc:feed:test_ws_tenant";
+                let payload = "{\"mock\":\"data\"}";
+                let _: () = redis::cmd("PUBLISH").arg(topic).arg(payload).query_async(&mut conn).await.unwrap();
+
+                // Expect to receive the message over websocket
+                let msg = tokio::time::timeout(std::time::Duration::from_secs(2), ws_stream.next())
+                    .await
+                    .expect("Timeout waiting for websocket message")
+                    .expect("Stream closed early")
+                    .expect("Error receiving message");
+
+                assert!(msg.is_text());
+                assert_eq!(msg.to_text().unwrap(), payload);
+            }
+        }
     }
 }

@@ -130,7 +130,7 @@ impl JetBrainsObservationMasker {
                 let age = msg_count - i;
                 if age > self.threshold {
                     for tr in &mut messages[i].tool_results {
-                        if tr.error.is_empty() && !tr.content.starts_with("[Observation Masked") {
+                        if tr.error.is_empty() && (!tr.content.starts_with("{\"_masked_observation\"") && !tr.content.starts_with("{\"error\": \"[Observation Masked")) {
                             let bytes = tr.content.len();
                             if bytes > self.size_limit {
                                 // Try structural JSON masking first (fast path check for JSON structure)
@@ -170,15 +170,27 @@ impl JetBrainsObservationMasker {
                                         .chars()
                                         .skip(char_count - preview_chars)
                                         .collect();
-                                    format!(
+                                    let raw_msg = format!(
                                         "[Observation Masked to save context. Output was {} bytes. Preview: {}...{} The tool call itself remains visible. Use 'RecallObservation' with ID '{}' if you need the full output again.]",
                                         bytes, start_preview, end_preview, tr.tool_call_id
-                                    )
+                                    );
+                                    let content_trimmed = tr.content.trim();
+                                    if content_trimmed.starts_with('{') || content_trimmed.starts_with('[') {
+                                        serde_json::json!({ "error": raw_msg }).to_string()
+                                    } else {
+                                        raw_msg
+                                    }
                                 } else {
-                                    format!(
+                                    let raw_msg = format!(
                                         "[Observation Masked to save context. Output was {} bytes. The tool call itself remains visible. Use 'RecallObservation' with ID '{}' if you need the full output again.]",
                                         bytes, tr.tool_call_id
-                                    )
+                                    );
+                                    let content_trimmed = tr.content.trim();
+                                    if content_trimmed.starts_with('{') || content_trimmed.starts_with('[') {
+                                        serde_json::json!({ "error": raw_msg }).to_string()
+                                    } else {
+                                        raw_msg
+                                    }
                                 };
 
                                 // Return as valid JSON object containing the masked string.

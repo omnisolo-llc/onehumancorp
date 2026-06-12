@@ -1255,7 +1255,7 @@ pub fn is_sensitive_key(key: &str) -> bool {
         || k.contains("socialsecurity")
         || k.contains("ipaddress")
         || k.contains("macaddress")
-        || k.contains("creditcard")
+        || k.contains("creditcard") || k.contains("deviceid") || k.contains("gps") || k.contains("latitude") || k.contains("longitude")
 }
 
 pub fn is_email(s: &str) -> bool {

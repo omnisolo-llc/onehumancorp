@@ -464,9 +464,17 @@ impl AppServer {
                     );
 
                     // Gate 3: Pre-deliver
+                    let expected_roles = vec![
+                        "Industry Researcher".to_string(),
+                        "Financial Analyst".to_string(),
+                        "Strategic Analyst".to_string(),
+                        "Process Supervisor".to_string(),
+                        "Quality Auditor".to_string(),
+                    ];
                     if let Err(e) = ohc_builtin_agent_core::expert_team::QualityGates::pre_deliver(
                         &final_output,
                         &trace,
+                        &expected_roles,
                     ) {
                         let resp = JsonRpcResponse {
                             jsonrpc: "2.0".to_string(),

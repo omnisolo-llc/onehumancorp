@@ -460,7 +460,7 @@ pub struct TeamInvitesResponse {
 }
 
 #[derive(Clone)]
-struct GrowthState {
+pub struct GrowthState {
     pool: PgPool,
     hub: Arc<Hub>,
 }
