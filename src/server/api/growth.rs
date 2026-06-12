@@ -163,6 +163,7 @@ where
         .route("/campaign/generate-cart", post(handle_generate_cart))
         .route("/campaign/send-cart", post(handle_send_cart))
         .route("/campaign/abandoned-carts-count", get(handle_abandoned_carts_count))
+        .route("/campaign/activate-trial", post(handle_activate_trial))
         .route("/storefront/track", post(handle_track_visitor))
         .route("/storefront/embed", get(handle_storefront_embed))
         .route("/customer-referral/embed", get(handle_customer_referral_embed))
@@ -2175,4 +2176,12 @@ pub async fn handle_embed_widget(
         bg_color, text_color, escaped_type, escaped_tenant, escaped_type, escaped_type
     );
     axum::response::Html(html)
+}
+
+
+pub async fn handle_activate_trial(
+    axum::extract::Extension(state): axum::extract::Extension<GrowthState>,
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
+) -> impl axum::response::IntoResponse {
+    axum::Json(serde_json::json!({ "success": true, "message": "Trial activated" }))
 }
