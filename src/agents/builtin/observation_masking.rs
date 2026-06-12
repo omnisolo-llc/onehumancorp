@@ -130,7 +130,7 @@ impl JetBrainsObservationMasker {
                 let age = msg_count - i;
                 if age > self.threshold {
                     for tr in &mut messages[i].tool_results {
-                        if tr.error.is_empty() && !tr.content.starts_with("[Observation Masked") {
+                        if tr.error.is_empty() && (!tr.content.starts_with("{\"_masked_observation\"") && !tr.content.starts_with("{\"error\": \"[Observation Masked")) {
                             let bytes = tr.content.len();
                             if bytes > self.size_limit {
                                 // Try structural JSON masking first (fast path check for JSON structure)
