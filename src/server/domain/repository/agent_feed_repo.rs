@@ -58,9 +58,42 @@ impl AgentFeedRepository {
     }
 
     pub async fn list(&self, tenant_id: &str, limit: i64, offset: i64) -> Result<Vec<AgentFeedItem>, sqlx::Error> {
-        let items = sqlx::query_as::<_, AgentFeedItem>(
-            "SELECT * FROM agent_feed_items WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3"
-        )
+        let query = r#"
+            SELECT
+                id,
+                tenant_id,
+                event_source,
+                context_payload,
+                proposed_action,
+                lifecycle_state,
+                created_at,
+                updated_at
+            FROM agent_feed_items
+            WHERE tenant_id = $1
+
+            UNION ALL
+
+            SELECT
+                id,
+                tenant_id,
+                department as event_source,
+                jsonb_build_object('description', description) as context_payload,
+                payload as proposed_action,
+                CASE
+                    WHEN status = 'DRAFT' THEN 'PENDING_APPROVAL'
+                    WHEN status = 'REJECTED' THEN 'DISMISSED'
+                    ELSE status
+                END as lifecycle_state,
+                created_at,
+                updated_at
+            FROM agent_approvals
+            WHERE tenant_id = $1 AND status IN ('DRAFT', 'PAUSED', 'APPROVED', 'REJECTED', 'DISMISSED')
+
+            ORDER BY created_at DESC
+            LIMIT $2 OFFSET $3
+        "#;
+
+        let items = sqlx::query_as::<_, AgentFeedItem>(query)
         .bind(tenant_id)
         .bind(limit)
         .bind(offset)
