@@ -59,7 +59,7 @@ impl UserRepository for SqliteUserRepository {
         .bind(&user.password_hash)
         .bind(roles_json)
         .bind(user.active)
-        .bind(org_id)
+        .bind(if should_bypass { "system" } else { org_id })
         .bind(&user.oidc_subject)
         .bind(user.created_at)
         .bind(user.updated_at)
@@ -282,7 +282,7 @@ impl UserRepository for SqliteUserRepository {
                 .bind(user.active)
                 .bind(&user.oidc_subject)
                 .bind(user.updated_at)
-                .bind(org_id)
+                .bind(if should_bypass { "system" } else { org_id })
                 .fetch_optional(&self.pool)
                 .await
                 .map_err(|e| e.to_string())?
@@ -296,7 +296,7 @@ impl UserRepository for SqliteUserRepository {
                 .bind(user.active)
                 .bind(&user.oidc_subject)
                 .bind(user.updated_at)
-                .bind(org_id)
+                .bind(if should_bypass { "system" } else { org_id })
                 .fetch_optional(&self.pool)
                 .await
                 .map_err(|e| e.to_string())?
@@ -342,14 +342,14 @@ impl UserRepository for SqliteUserRepository {
         )
         .bind(jti)
         .bind(exp)
-        .bind(org_id)
+        .bind(if should_bypass { "system" } else { org_id })
         .execute(&self.pool)
         .await
         .map_err(|e: sqlx::Error| e.to_string())?;
 
         // GC expired entries
         let _ = sqlx::query("DELETE FROM revoked_tokens WHERE expires_at < CURRENT_TIMESTAMP AND tenant_id = $1")
-            .bind(org_id)
+            .bind(if should_bypass { "system" } else { org_id })
             .execute(&self.pool)
             .await;
 
@@ -360,7 +360,7 @@ impl UserRepository for SqliteUserRepository {
         validate_org_id!(org_id);
         let row = sqlx::query("SELECT COUNT(*) FROM revoked_tokens WHERE jti = $1 AND expires_at >= CURRENT_TIMESTAMP AND tenant_id = $2")
             .bind(jti)
-            .bind(org_id)
+            .bind(if should_bypass { "system" } else { org_id })
             .fetch_one(&self.pool)
             .await
             .map_err(|e: sqlx::Error| e.to_string())?;
