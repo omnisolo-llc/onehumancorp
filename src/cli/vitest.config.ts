@@ -1,3 +1,4 @@
+process.env.NODE_COMPILE_CACHE = 'disable';
 import { defineConfig } from 'vitest/config'
 
 export default defineConfig({

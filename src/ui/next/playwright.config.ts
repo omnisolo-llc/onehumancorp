@@ -1,3 +1,4 @@
+process.env.NODE_COMPILE_CACHE = 'disable';
 import { defineConfig, devices } from '@playwright/test';
 import path from 'path';
 

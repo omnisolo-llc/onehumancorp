@@ -292,10 +292,6 @@ jobs:
             build --verbose_failures
             test --test_output=errors
             test --test_summary=detailed
-            build --config=local
-            test --config=local
-            common --remote_upload_local_results=false
-            common --remote_cache=
 
       - name: Test fast targets
         run: |
@@ -369,10 +365,6 @@ jobs:
             build --verbose_failures
             test --test_output=errors
             test --test_summary=detailed
-            build --config=local
-            test --config=local
-            common --remote_upload_local_results=false
-            common --remote_cache=
 
       - name: Pull E2E Docker images
         run: |
@@ -485,10 +477,6 @@ jobs:
             build --verbose_failures
             test --test_output=errors
             test --test_summary=detailed
-            build --config=local
-            test --config=local
-            common --remote_upload_local_results=false
-            common --remote_cache=
 
       - name: Restore Docker image cache
         uses: actions/cache@v5
@@ -601,10 +589,6 @@ jobs:
             build --verbose_failures
             test --test_output=errors
             test --test_summary=detailed
-            build --config=local
-            test --config=local
-            common --remote_upload_local_results=false
-            common --remote_cache=
 
       - name: Run Docker Compose smoke test
         run: |

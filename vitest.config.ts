@@ -1,3 +1,4 @@
+process.env.NODE_COMPILE_CACHE = 'disable';
 import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 
