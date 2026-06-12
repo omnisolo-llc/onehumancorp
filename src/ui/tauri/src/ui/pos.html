@@ -585,13 +585,27 @@
         // For web and tests, we show a simulate button.
         try {
           const tenantId = localStorage.getItem('tenant_id') || 'default';
+          const accessToken = localStorage.getItem('access_token');
 
-          // Request Payment Intent
+          // 1. Fetch Terminal Connection Token
+          const tokenRes = await fetch('/api/v1/payments/terminal/token', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              ...(accessToken ? { 'Authorization': 'Bearer ' + accessToken } : {})
+            }
+          });
+
+          if (!tokenRes.ok) {
+             console.warn("Terminal connection token API returned error");
+          }
+
+          // 2. Request Payment Intent
           const res = await fetch('/api/v1/payments/terminal/intent', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+              ...(accessToken ? { 'Authorization': 'Bearer ' + accessToken } : {})
             },
             body: JSON.stringify({
               amount_cents: currentAmountCents,
@@ -629,17 +643,24 @@
               // In real flow, we'd confirm the intent and sync offline txs.
               // We simulate the offline sync for E2E validation:
               const tenantId = localStorage.getItem('tenant_id') || 'default';
+              const sessionId = localStorage.getItem('ohc_active_terminal_session_id') || 'web_session';
+              const accessToken = localStorage.getItem('access_token');
+
               fetch('/api/v1/payments/terminal/sync_offline', {
                   method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
+                  headers: {
+                    'Content-Type': 'application/json',
+                    ...(accessToken ? { 'Authorization': 'Bearer ' + accessToken } : {})
+                  },
                   body: JSON.stringify({
-                      session_id: 'web_session',
+                      session_id: sessionId,
                       transactions: [{
                           id: 'tx_' + Date.now(),
                           client_id: 'web_client',
                           amount_cents: currentAmountCents,
                           currency: 'usd',
-                          payload: '{}'
+                          payload: '{}',
+                          timestamp: new Date().toISOString()
                       }]
                   })
               }).catch(console.error);
