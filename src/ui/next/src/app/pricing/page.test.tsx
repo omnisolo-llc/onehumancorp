@@ -1,7 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import PricingPage from './page';
 import { TooltipProvider } from '../../components/TooltipRegistry';
-import { TooltipProvider } from '../../components/TooltipRegistry';
 import { vi, describe, test, expect, afterEach } from 'vitest';
 
 vi.mock('next/navigation', () => ({
