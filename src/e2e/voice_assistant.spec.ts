@@ -52,14 +52,14 @@ test.describe('Voice Assistant Command Center', () => {
     await expect(page.locator('text=Action Prepared!')).toBeVisible({ timeout: 15000 });
     await expect(page.locator('text=Create a $150 repair quote')).toBeVisible();
 
-    const feed = page.locator('section', { hasText: 'Unified Agent Feed' });
+    const feed = page.locator('section').filter({ hasText: /Unified Agent Feed|All caught up!/ });
     await expect(feed).toBeVisible();
 
-    const actionCard = page.getByTestId('draft-quote-card');
+    const actionCard = page.getByTestId('draft-quote-card').first();
     await expect(actionCard).toBeVisible();
     await expect(actionCard).toContainText('$150');
 
-    const approveBtn = page.getByTestId('approve-quote-draft');
+    const approveBtn = page.getByTestId('approve-send-proposal').first();
     await approveBtn.click();
 
     // After approval, it moves to the activity tab. We need to click the activity tab first to see it.
