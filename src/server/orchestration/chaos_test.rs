@@ -360,7 +360,8 @@ mod chaos_tests {
         // This attempts to acquire lock (takes 1.9s) and then query DB.
         // The DB query might be instantaneous, but we can configure `state_manager_timeout()` in our environment
         // We use temp_env to safely mock the environment variable without concurrent race conditions
-        temp_env::with_var("OHC_STATE_MANAGER_TIMEOUT_MS", Some("2000"), || async {
+        std::env::set_var("OHC_STATE_MANAGER_TIMEOUT_MS", "2000");
+
             let result = tokio::time::timeout(std::time::Duration::from_secs(5), state_manager.pull_available_tasks(10)).await.expect("Test hung");
             let elapsed = start.elapsed();
 
@@ -368,7 +369,8 @@ mod chaos_tests {
             // or safely timeout without panicking or cascading failure.
             assert!(elapsed < std::time::Duration::from_millis(3500));
             assert!(result.is_ok(), "Operation should complete or degrade gracefully");
-        }).await;
+
+            std::env::remove_var("OHC_STATE_MANAGER_TIMEOUT_MS");
     }
 
     #[tokio::test]
@@ -774,7 +776,8 @@ mod chaos_tests {
         use crate::workers::OperationsWorker;
 
         // Intentionally bad OHC_HUB_URL to simulate API failure
-        temp_env::with_var("OHC_HUB_URL", Some("http://127.0.0.1:1"), || async {
+        std::env::set_var("OHC_HUB_URL", "http://127.0.0.1:1");
+
             let dummy_sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
                 .connect("sqlite::memory:")
                 .await
@@ -809,7 +812,8 @@ mod chaos_tests {
 
             assert_eq!(row.0, "PAUSED");
             assert!(row.1.contains("System is paused"));
-        }).await;
+
+            std::env::remove_var("OHC_HUB_URL");
     }
 
     #[tokio::test]
