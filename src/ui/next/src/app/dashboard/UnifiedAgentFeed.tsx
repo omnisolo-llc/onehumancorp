@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import GrowthReferralWidget from "../components/GrowthReferralWidget";
+import GrowthReferralWidget from "../team/components/GrowthReferralWidget";
 import { enqueueAction, getActions, removeAction } from "../utils/offlineQueue";
 
 type AgentFeedItem = {

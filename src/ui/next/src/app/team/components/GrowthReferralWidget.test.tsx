@@ -1,6 +1,5 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { vi } from 'vitest';
-import '@testing-library/jest-dom';
+import { vi, describe, beforeEach, afterEach, it, expect } from 'vitest';
 import GrowthReferralWidget from './GrowthReferralWidget';
 
 describe('GrowthReferralWidget', () => {
@@ -19,8 +18,8 @@ describe('GrowthReferralWidget', () => {
 
   it('renders correctly', () => {
     render(<GrowthReferralWidget />);
-    expect(screen.getByText('Grow Your Team')).toBeInTheDocument();
-    expect(screen.getByText('Invite to Cloud Team')).toBeInTheDocument();
+    expect(screen.getByText('Grow Your Team')).toBeDefined();
+    expect(screen.getByText('Invite to Cloud Team')).toBeDefined();
   });
 
   it('generates a link successfully', async () => {
@@ -34,14 +33,14 @@ describe('GrowthReferralWidget', () => {
     const button = screen.getByText('Invite to Cloud Team');
     fireEvent.click(button);
 
-    expect(screen.getByText('Generating...')).toBeInTheDocument();
+    expect(screen.getByText('Generating...')).toBeDefined();
 
     await waitFor(() => {
-      expect(screen.getByDisplayValue('https://ohc.app/invite/123')).toBeInTheDocument();
+      expect((screen.getByRole('textbox') as HTMLInputElement).value).toBe('https://ohc.app/invite/123');
     });
 
-    expect(screen.getByText('Copy')).toBeInTheDocument();
-    expect(screen.getByText('Share on WhatsApp')).toBeInTheDocument();
+    expect(screen.getByText('Copy')).toBeDefined();
+    expect(screen.getByText('Share on WhatsApp')).toBeDefined();
   });
 
   it('handles error when generating link', async () => {
@@ -55,7 +54,7 @@ describe('GrowthReferralWidget', () => {
     fireEvent.click(button);
 
     await waitFor(() => {
-      expect(screen.getByText('Failed to generate invite')).toBeInTheDocument();
+      expect(screen.getByText('Failed to generate invite')).toBeDefined();
     });
   });
 
@@ -69,13 +68,13 @@ describe('GrowthReferralWidget', () => {
     fireEvent.click(screen.getByText('Invite to Cloud Team'));
 
     await waitFor(() => {
-      expect(screen.getByDisplayValue('https://ohc.app/invite/123')).toBeInTheDocument();
+      expect((screen.getByRole('textbox') as HTMLInputElement).value).toBe('https://ohc.app/invite/123');
     });
 
     const copyButton = screen.getByText('Copy');
     fireEvent.click(copyButton);
 
     expect(navigator.clipboard.writeText).toHaveBeenCalledWith('https://ohc.app/invite/123');
-    expect(screen.getByText('Copied!')).toBeInTheDocument();
+    expect(screen.getByText('Copied!')).toBeDefined();
   });
 });

@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import DepartmentCard from './components/DepartmentCard';
 import ApprovalInbox from './components/ApprovalInbox';
-import GrowthReferralWidget from '../components/GrowthReferralWidget';
+import GrowthReferralWidget from './components/GrowthReferralWidget';
 
 export type ApprovalRequest = {
   id: string;

@@ -15,7 +15,7 @@ import { useRouter } from "next/navigation";
 import { AppShell } from "../components/AppShell";
 import { InteractiveWalkthrough, WalkthroughTarget } from "../../components/Walkthrough";
 import { WithTooltip } from "../../components/TooltipRegistry";
-import GrowthReferralWidget from "../components/GrowthReferralWidget";
+import GrowthReferralWidget from "../team/components/GrowthReferralWidget";
 import AiTimeSavingsWidget from "../components/AiTimeSavingsWidget";
 
 import { SmartBlock } from "../builder/components";
