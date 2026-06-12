@@ -1280,7 +1280,9 @@ impl HubService for MyHubService {
         let ai_limit = tier.monthly_action_limit().map(|v| v as i32);
         let storage_limit = tier.storage_limit_mb().map(|v| (v as i64) * 1024 * 1024);
 
-        let next_bill_estimated = tier.base_price() as i64;
+        let base_bill = tier.base_price();
+        let llm_cost_cents = self.hub.get_cost_auditor().get_tenant_cost_cents(tenant_id);
+        let next_bill_estimated = (base_bill * 100.0).round() as i64 + llm_cost_cents;
 
         Ok(tonic::Response::new(::server_ohc::orchestration::MyPlanResponse {
             current_plan: plan_name,
