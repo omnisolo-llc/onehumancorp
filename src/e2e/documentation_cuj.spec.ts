@@ -4,7 +4,7 @@ test.describe('Documentation User Journey', () => {
   test('Maya navigates the Help Center and views the Changelog', async ({ page }) => {
     await page.goto('/changelog.html');
     await expect(page.locator('h1', { hasText: 'Release Notes & Changelog' })).toBeVisible();
-    await expect(page.locator('h2', { hasText: 'Version 1.0 (Latest)' })).toBeVisible();
+    await expect(page.locator('h2', { hasText: 'Version 1.1 (Latest)' })).toBeVisible();
 
     await page.goto('/help.html');
     await expect(page.locator('h1', { hasText: 'Help Center' })).toBeVisible();

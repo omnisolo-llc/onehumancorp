@@ -39,7 +39,7 @@ mod tests {
     }
 
 
-    use serde_json::{json, Value};
+    use serde_json::{json};
     use ::server_telemetry::{redact_interface_pii, buffer_metric};
 
     #[test]
