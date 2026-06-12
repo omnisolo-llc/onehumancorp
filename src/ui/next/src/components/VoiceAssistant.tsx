@@ -98,7 +98,7 @@ export function VoiceAssistant() {
       )}
 
       <button
-        className={`w-16 h-16 rounded-full flex items-center justify-center shadow-2xl transition-all duration-300 pointer-events-auto touch-none ${
+        className={`w-16 h-16 min-h-[44px] min-w-[44px] rounded-full flex items-center justify-center shadow-2xl transition-all duration-300 pointer-events-auto touch-none ${
           isRecording
             ? "bg-red-500 scale-110 ring-8 ring-red-500/20"
             : "glassmorphism border border-white/40 hover:scale-105 active:scale-95"

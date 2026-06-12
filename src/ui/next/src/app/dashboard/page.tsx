@@ -154,7 +154,7 @@ function InviteAndEarnWidget() {
             id="dashboard-invite-btn"
             onClick={handleGenerate}
             disabled={loading}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-xl transition-colors"
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-xl transition-colors min-h-[44px]"
           >
             {loading ? 'Generating...' : 'Get My Invite Link'}
           </button>

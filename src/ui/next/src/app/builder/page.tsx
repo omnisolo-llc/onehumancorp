@@ -257,7 +257,7 @@ export default function BuilderPage() {
                       setBusinessGoal(option.id as any);
                       setStatus("idle");
                     }}
-                    className="w-full p-6 bg-white/60 dark:bg-black/30 backdrop-blur-sm rounded-[16px] border border-white/50 dark:border-white/10 flex flex-col items-center gap-2 active:scale-[0.98] transition-all duration-200 group hover:bg-white/80 dark:hover:bg-black/50"
+                    className="w-full min-h-[44px] p-6 bg-white/60 dark:bg-black/30 backdrop-blur-sm rounded-[16px] border border-white/50 dark:border-white/10 flex flex-col items-center gap-2 active:scale-[0.98] transition-all duration-200 group hover:bg-white/80 dark:hover:bg-black/50"
                   >
                     <span className="text-3xl group-hover:scale-110 transition-transform">{option.icon}</span>
                     <span className="text-lg font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7]">{option.label}</span>

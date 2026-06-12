@@ -20,7 +20,7 @@ export function PromoterCard() {
           </div>
           <Link
             href="/promoter"
-            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition-colors"
+            className="px-4 py-2 min-h-[44px] bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition-colors"
           >
             Create Posts
           </Link>
