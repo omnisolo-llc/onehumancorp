@@ -755,3 +755,47 @@ pub async fn get_terminal_connection_token_handler(
         Err(e) => (axum::http::StatusCode::OK, Json(serde_json::json!({ "error": e.to_string() }))).into_response(),
     }
 }
+
+#[cfg(test)]
+mod lock_tests {
+    use super::*;
+    use sqlx::postgres::PgPoolOptions;
+    use axum::extract::State;
+
+    #[tokio::test]
+    async fn test_sync_offline_transactions_locks() {
+        let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
+        if !database_url.contains("test") {
+            return;
+        }
+
+        let pool = PgPoolOptions::new().connect(&database_url).await.unwrap();
+        let tenant_id = "tenant-terminal-test-lock-sync";
+        sqlx::query("INSERT INTO tenants (id, name) VALUES ($1, 'Terminal Test Lock Sync Tenant') ON CONFLICT DO NOTHING")
+            .bind(tenant_id).execute(&pool).await.unwrap();
+
+        let (tx, _rx) = tokio::sync::mpsc::channel(100);
+        let hub = Arc::new(Hub::new(tx, pool.clone()));
+
+        let req_data = axum::extract::Json(SyncOfflineTransactionsRequest {
+            session_id: Some("session-1".to_string()),
+            transactions: vec![PosOfflineTransaction {
+                id: Some("tx-1".to_string()),
+                client_id: Some("client-1".to_string()),
+                amount_cents: 1000,
+                currency: "USD".to_string(),
+                payload: "[{\"product_id\": \"prod-test-lock\", \"quantity\": 1}]".to_string(),
+                timestamp: None,
+            }],
+        });
+
+        let auth_info = Some(axum::extract::Extension(::server_auth::orchestration::AuthInfo {
+            org_id: tenant_id.to_string(),
+            spiffe_id: "test".to_string(),
+            agent_id: "test".to_string()
+        }));
+        let headers = axum::http::HeaderMap::new();
+
+        let _resp = sync_offline_transactions_handler(headers, State(hub), auth_info, req_data).await;
+    }
+}
