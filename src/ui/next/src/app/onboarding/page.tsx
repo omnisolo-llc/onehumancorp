@@ -281,7 +281,7 @@ export default function OnboardingWizard() {
 
       const combinedDescription = `Business Name: ${businessName}\nWhat we sell: ${whatYouSell}\nLocation: ${location}\nTarget Audience: ${targetAudience}`;
 
-      const intakeRes = await fetch('/api/onboarding/intake', {
+      const intakeRes = await fetchWithRetry('/api/onboarding/intake', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -519,7 +519,7 @@ export default function OnboardingWizard() {
                       const tenantIdStr = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
                       const userIdStr = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
 
-                      const res = await fetch('/api/onboarding/intake', {
+                      const res = await fetchWithRetry('/api/onboarding/intake', {
                         method: 'POST',
                         headers: {
                           'Content-Type': 'application/json',
@@ -542,7 +542,7 @@ export default function OnboardingWizard() {
                         setFirstProductName(inferredProductName);
                         setFirstProductPrice(inferredProductPrice);
 
-                        const startRes = await fetch('/api/onboarding/start', {
+                        const startRes = await fetchWithRetry('/api/onboarding/start', {
                           method: 'POST',
                           headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': tenantIdStr, 'X-User-ID': userIdStr },
                           body: JSON.stringify({
@@ -587,9 +587,9 @@ export default function OnboardingWizard() {
                     } catch (err: any) {
                       console.error(err);
                       if (err.message === 'Failed to fetch') {
-                          setError('Failed to launch. Please try again.');
+                          setError('Network Error');
                       } else {
-                          setError(err.message || 'Failed to launch. Please try again.');
+                          setError(err.message || 'Network Error');
                       }
                     } finally {
                       setIsLoading(false);
