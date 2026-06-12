@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { WithTooltip } from "../../components/TooltipRegistry";
 import { PoweredByOHC } from "../components/PoweredByOHC";
 import { OneTapReferral } from "../components/OneTapReferral";
+import { SocialProofNudge } from "../components/SocialProofNudge";
 
 function CheckoutContent() {
   const router = useRouter();
@@ -313,6 +314,7 @@ function CheckoutContent() {
             </button>
           </WithTooltip>
           <PoweredByOHC tenantId={tenant} />
+          <SocialProofNudge tenantId={tenant} />
         </div>
         </>
         )}
