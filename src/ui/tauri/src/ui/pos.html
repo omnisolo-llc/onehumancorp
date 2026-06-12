@@ -586,6 +586,22 @@
         try {
           const tenantId = localStorage.getItem('tenant_id') || 'default';
 
+          // Request Connection Token
+          const tokenRes = await fetch('/api/v1/payments/terminal/token', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+            }
+          });
+
+          if (tokenRes.ok) {
+            const tokenData = await tokenRes.json();
+            console.log("Got terminal connection token", tokenData);
+          } else {
+            console.warn("Failed to get terminal connection token");
+          }
+
           // Request Payment Intent
           const res = await fetch('/api/v1/payments/terminal/intent', {
             method: 'POST',
@@ -605,7 +621,7 @@
           // Even if it fails (unauthorized in test), we allow simulation for UI testing purposes
           if (res.ok) {
               const data = await res.json();
-
+              console.log("Got terminal payment intent", data);
           } else {
               console.warn("Payment intent API returned error");
           }
