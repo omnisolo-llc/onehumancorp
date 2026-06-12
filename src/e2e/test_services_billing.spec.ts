@@ -8,7 +8,7 @@ test.describe('Billing Services & Plan Limits E2E', () => {
     // Since we can't mock network requests, we navigate to the page and verify elements that indicate the page loaded
     // and correctly attempts to display usage limits.
 
-    await page.goto('/plan');
+    await page.goto('/cost-dashboard.html');
     await page.waitForLoadState('networkidle');
 
     // Wait for the specific usage component to render

@@ -26,7 +26,7 @@ test.describe('Help Components', () => {
   test('Contextual Tooltip triggers correctly', async ({ page }) => {
     // This requires a component that uses WithTooltip on the page.
     // We can test the /pricing page which has one.
-    await page.goto('/pricing');
+    await page.goto('/pricing.html');
 
     // Hover over the pricing tier heading to trigger the tooltip
     // In pricing/page.tsx: <WithTooltip id="pricing-tier-tooltip" defaultText="..."> <h1 ...>Pricing Plans</h1> </WithTooltip>

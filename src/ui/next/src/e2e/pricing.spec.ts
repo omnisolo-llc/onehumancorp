@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 test.describe('Pricing Page Loop', () => {
   test('Pricing page loads and displays tiers correctly', async ({ page }) => {
     // Navigate to the pricing page
-    await page.goto('/pricing');
+    await page.goto('/pricing.html');
 
     // Wait for the main heading to appear, indicating successful load
     await expect(page.locator('h1', { hasText: 'Pricing Plans' })).toBeVisible({ timeout: 10000 });

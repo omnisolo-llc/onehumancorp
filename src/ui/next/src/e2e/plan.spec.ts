@@ -5,7 +5,7 @@ import { test, expect } from '@playwright/test';
 test.describe('My Plan Page Loop', () => {
   test('My Plan page loads and displays user tier, usage data, and upgrade paths', async ({ page }) => {
     // Navigate to the plan page
-    await page.goto('/plan');
+    await page.goto('/cost-dashboard.html');
 
     // Wait for the main heading to appear, indicating successful load
     await expect(page.locator('h1', { hasText: 'My Plan' }).first()).toBeVisible({ timeout: 10000 });
