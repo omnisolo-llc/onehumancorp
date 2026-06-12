@@ -194,6 +194,7 @@ impl WorkflowExecutor {
                             merged_data.push(val.clone());
                         }
                     }
+                    merged_data.sort();
                     let merged_string =
                         serde_json::to_string(&merged_data).unwrap_or_else(|_| "[]".to_string());
                     state.insert(output_key.clone(), merged_string);
@@ -311,6 +312,7 @@ impl WorkflowExecutor {
                             merged_data.push(val.clone());
                         }
                     }
+                    merged_data.sort();
                     let merged_string =
                         serde_json::to_string(&merged_data).unwrap_or_else(|_| "[]".to_string());
                     state.insert(output_key.clone(), merged_string);
@@ -504,6 +506,7 @@ impl WorkflowExecutor {
                                 merged_data.push(val.clone());
                             }
                         }
+                        merged_data.sort();
                         let merged_string = serde_json::to_string(&merged_data)
                             .unwrap_or_else(|_| "[]".to_string());
                         state.insert(output_key.clone(), merged_string);
@@ -1241,8 +1244,7 @@ mod tests {
 
         let result = executor.execute(inputs).await.unwrap();
 
-        assert!(result.contains("Processed: Final: [\"Processed: A Processed: init_data\",\"Processed: B Processed: init_data\"]") ||
-                result.contains("Processed: Final: [\"Processed: B Processed: init_data\",\"Processed: A Processed: init_data\"]"),
+        assert!(result.contains("Processed: Final: [\"Processed: A Processed: init_data\",\"Processed: B Processed: init_data\"]"),
                 "Result was: {}", result);
     }
 
