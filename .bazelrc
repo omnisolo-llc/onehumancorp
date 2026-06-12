@@ -122,7 +122,6 @@ common:buildbuddy-readonly --remote_upload_local_results=false
 common:buildbuddy-readonly --remote_header=x-buildbuddy-api-key=GZRlHAyqIIcVJw9dJ9n9
 
 # ── Nativelink  ──────────────────────────────────────
-# Alternative self-hosted Nativelink cluster; use with --config=nativelink.
 common:nativelink --experimental_build_event_upload_strategy=local
 common:nativelink --remote_cache=grpcs://nativelink-grpc.phslc.com
 common:nativelink --remote_instance_name=main
@@ -135,7 +134,6 @@ common:nativelink --jobs=50
 common:nativelink --remote_upload_local_results=false
 common:nativelink --remote_header=x-nativelink-api-key=GZRlHAyqIIcVJw9dJ9n9
 
-common:remote-cache --config=nativelink
 common:remote-cache --remote_download_minimal
 common:remote-cache --remote_local_fallback
 common:remote-cache --remote_timeout=10m
