@@ -1012,110 +1012,260 @@ impl Agent {
                 msg.tool_calls.len()
             ];
 
+            // Master Catalog B.2: Tools (The Agent's Hands): Read-only operations run concurrently; mutating operations run serially.
+            // We group tool calls into sequential batches. A batch is a set of consecutive read-only tools,
+            // or a single mutating tool. We process the batches in order.
+
+            let mut current_batch = Vec::new();
+            let mut batches = Vec::new();
+
             for (i, tc) in msg.tool_calls.iter().enumerate() {
                 tool_results[i].tool_call_id = tc.id.clone();
+                let is_read_only = session_tools.iter().find(|t| t.name == tc.name).map(|t| t.is_read_only).unwrap_or(false);
 
-                // Guardrails & Safety: OpenAI Mechanic (Tool Guardrail)
-                if let Some(guardrails) = &cfg.guardrails
-                    && let Err(e) = guardrails.check_tool(tc) {
-                        on_event(AgentEvent::GuardrailTripped { reason: e.clone() });
-                        return Err(Box::new(std::io::Error::other(
-                            format!("Termination: Tool Guardrail tripwire fires: {}", e),
-                        )));
+                if is_read_only {
+                    current_batch.push((i, tc));
+                } else {
+                    if !current_batch.is_empty() {
+                        batches.push((true, std::mem::take(&mut current_batch)));
+                    }
+                    batches.push((false, vec![(i, tc)]));
+                }
+            }
+            if !current_batch.is_empty() {
+                batches.push((true, current_batch));
+            }
+
+            for (is_concurrent_batch, batch) in batches {
+                if is_concurrent_batch {
+                    // Execute read-only tools concurrently
+                    let mut futures = Vec::new();
+                    for (i, tc) in batch {
+                        // Guardrails & Safety: OpenAI Mechanic (Tool Guardrail)
+                        if let Some(guardrails) = &cfg.guardrails {
+                            if let Err(e) = guardrails.check_tool(tc) {
+                                on_event(AgentEvent::GuardrailTripped { reason: e.clone() });
+                                return Err(Box::new(std::io::Error::other(
+                                    format!("Termination: Tool Guardrail tripwire fires: {}", e),
+                                )));
+                            }
+                        }
+
+                        // Termination Condition: Guardrail tripwire fires
+                        if let Err(e) = crate::tools_gating::ToolGater::check_gating(tc, false, cfg) {
+                            return Err(Box::new(std::io::Error::other(
+                                format!("Termination: Guardrail tripwire fires: {:?}", e),
+                            )));
+                        }
+
+                        let tool = session_tools.iter().find(|t| t.name == tc.name);
+                        if let Some(tool) = tool {
+                            let max_retries = cfg.max_retries;
+                            // Need to capture by value to avoid lifetime issues in future
+                            let tool_clone = tool.clone();
+                            let tc_clone = tc.clone();
+
+                            let fut = async move {
+                                let res = crate::tool_executor_engine::ToolExecutionEngine::execute_tool_with_langgraph_mechanics(
+                                    &tool_clone,
+                                    &tc_clone,
+                                    max_retries
+                                ).await;
+                                (i, tc_clone, res)
+                            };
+                            futures.push(fut);
+                        } else {
+                            tool_results[i].error = format!("Tool '{}' not found", tc.name);
+                        }
                     }
 
-                // Termination Condition: Guardrail tripwire fires
-                if let Err(e) = crate::tools_gating::ToolGater::check_gating(tc, false, cfg) {
-                    return Err(Box::new(std::io::Error::other(
-                        format!("Termination: Guardrail tripwire fires: {:?}", e),
-                    )));
-                }
+                    let results = futures::future::join_all(futures).await;
 
-                let tool = session_tools.iter().find(|t| t.name == tc.name);
-                if let Some(tool) = tool {
-                    let res = crate::tool_executor_engine::ToolExecutionEngine::execute_tool_with_langgraph_mechanics(
-                        tool,
-                        tc,
-                        cfg.max_retries
-                    ).await;
-
-                    match res {
-                        Ok(r) => {
-                            on_event(AgentEvent::ToolCall {
-                                name: tc.name.clone(),
-                                args_json: tc.arguments.to_string(),
-                                result: r.clone(),
-                                iteration: turn_count,
-                            });
-                            tool_results[i].content = r;
-                        }
-                        Err(crate::types::ToolError::Fatal(err_msg))
-                        | Err(crate::types::ToolError::Unexpected(err_msg)) => {
-                            // Fatal/Unexpected errors act as guardrail tripwires that halt the loop
-                            return Err(Box::new(std::io::Error::other(
-                                format!(
-                                    "Termination: Guardrail tripwire fires (Fatal/Unexpected Tool Error): {}",
-                                    err_msg
-                                ),
-                            )));
-                        }
-                        Err(crate::types::ToolError::UserFixable(err_msg)) => {
-                            if let Some(ref cb) = cfg.human_input_callback.0
-                                && let Some(human_input) = cb(&err_msg).await {
-                                    on_event(AgentEvent::UserInterventionRequired { error: err_msg.clone() });
-                                    let error_result = crate::types::ToolResult {
-                                        tool_call_id: tc.id.clone(),
-                                        content: String::new(),
-                                        error: format!("USER_FIXABLE: {}. Human provided fix: {}", err_msg, human_input),
-                                    };
-                                    let msg_to_push = crate::types::Message {
-                                        role: crate::types::Role::Tool,
-                                        content: String::new(),
-                                        tool_calls: vec![],
-                                        tool_results: vec![error_result],
-                                        response_id: None,
-                                        previous_response_id: None,
-                                    };
-                                    messages.push(msg_to_push);
-                                    continue;
+                    for (i, tc, res) in results {
+                        match res {
+                            Ok(r) => {
+                                on_event(AgentEvent::ToolCall {
+                                    name: tc.name.clone(),
+                                    args_json: tc.arguments.to_string(),
+                                    result: r.clone(),
+                                    iteration: turn_count,
+                                });
+                                tool_results[i].content = r;
+                            }
+                            Err(crate::types::ToolError::Fatal(err_msg))
+                            | Err(crate::types::ToolError::Unexpected(err_msg)) => {
+                                return Err(Box::new(std::io::Error::other(
+                                    format!(
+                                        "Termination: Guardrail tripwire fires (Fatal/Unexpected Tool Error): {}",
+                                        err_msg
+                                    ),
+                                )));
+                            }
+                            Err(crate::types::ToolError::UserFixable(err_msg)) => {
+                                if let Some(ref cb) = cfg.human_input_callback.0 {
+                                    if let Some(human_input) = cb(&err_msg).await {
+                                        on_event(AgentEvent::UserInterventionRequired { error: err_msg.clone() });
+                                        let error_result = crate::types::ToolResult {
+                                            tool_call_id: tc.id.clone(),
+                                            content: String::new(),
+                                            error: format!("USER_FIXABLE: {}. Human provided fix: {}", err_msg, human_input),
+                                        };
+                                        let msg_to_push = crate::types::Message {
+                                            role: crate::types::Role::Tool,
+                                            content: String::new(),
+                                            tool_calls: vec![],
+                                            tool_results: vec![error_result],
+                                            response_id: None,
+                                            previous_response_id: None,
+                                        };
+                                        messages.push(msg_to_push);
+                                        continue;
+                                    }
                                 }
-                            let full_err = format!("USER_FIXABLE: {}", err_msg);
-                            on_event(AgentEvent::UserInterventionRequired {
-                                error: full_err.clone(),
-                            });
-                            return Err(Box::new(std::io::Error::other(
-                                format!(
-                                    "Termination: Guardrail tripwire fires (UserFixable): {}",
+                                let full_err = format!("USER_FIXABLE: {}", err_msg);
+                                on_event(AgentEvent::UserInterventionRequired {
+                                    error: full_err.clone(),
+                                });
+                                return Err(Box::new(std::io::Error::other(
+                                    format!(
+                                        "Termination: Guardrail tripwire fires (UserFixable): {}",
+                                        err_msg
+                                    ),
+                                )));
+                            }
+                            Err(crate::types::ToolError::LlmRecoverable(err_msg)) => {
+                                let self_correct_msg = format!(
+                                    "LLM-Recoverable Error: {}. Please analyze this error, correct your tool arguments, and try again.",
                                     err_msg
-                                ),
-                            )));
-                        }
-                        Err(crate::types::ToolError::LlmRecoverable(err_msg)) => {
-                            let self_correct_msg = format!(
-                                "LLM-Recoverable Error: {}. Please analyze this error, correct your tool arguments, and try again.",
-                                err_msg
-                            );
-                            on_event(AgentEvent::ToolCall {
-                                name: tc.name.clone(),
-                                args_json: tc.arguments.to_string(),
-                                result: self_correct_msg.clone(),
-                                iteration: turn_count,
-                            });
-                            tool_results[i].error = self_correct_msg;
-                        }
-                        Err(e) => {
-                            let err_str = e.to_string();
-                            on_event(AgentEvent::ToolCall {
-                                name: tc.name.clone(),
-                                args_json: tc.arguments.to_string(),
-                                result: format!("Error: {}", err_str),
-                                iteration: turn_count,
-                            });
-                            tool_results[i].error = err_str;
+                                );
+                                on_event(AgentEvent::ToolCall {
+                                    name: tc.name.clone(),
+                                    args_json: tc.arguments.to_string(),
+                                    result: self_correct_msg.clone(),
+                                    iteration: turn_count,
+                                });
+                                tool_results[i].error = self_correct_msg;
+                            }
+                            Err(e) => {
+                                let err_str = e.to_string();
+                                on_event(AgentEvent::ToolCall {
+                                    name: tc.name.clone(),
+                                    args_json: tc.arguments.to_string(),
+                                    result: format!("Error: {}", err_str),
+                                    iteration: turn_count,
+                                });
+                                tool_results[i].error = err_str;
+                            }
                         }
                     }
                 } else {
-                    tool_results[i].error = format!("Tool '{}' not found", tc.name);
+                    // Mutating tool - execute serially
+                    for (i, tc) in batch {
+                        // Guardrails & Safety: OpenAI Mechanic (Tool Guardrail)
+                        if let Some(guardrails) = &cfg.guardrails {
+                            if let Err(e) = guardrails.check_tool(tc) {
+                                on_event(AgentEvent::GuardrailTripped { reason: e.clone() });
+                                return Err(Box::new(std::io::Error::other(
+                                    format!("Termination: Tool Guardrail tripwire fires: {}", e),
+                                )));
+                            }
+                        }
+
+                        // Termination Condition: Guardrail tripwire fires
+                        if let Err(e) = crate::tools_gating::ToolGater::check_gating(tc, false, cfg) {
+                            return Err(Box::new(std::io::Error::other(
+                                format!("Termination: Guardrail tripwire fires: {:?}", e),
+                            )));
+                        }
+
+                        let tool = session_tools.iter().find(|t| t.name == tc.name);
+                        if let Some(tool) = tool {
+                            let res = crate::tool_executor_engine::ToolExecutionEngine::execute_tool_with_langgraph_mechanics(
+                                tool,
+                                tc,
+                                cfg.max_retries
+                            ).await;
+
+                            match res {
+                                Ok(r) => {
+                                    on_event(AgentEvent::ToolCall {
+                                        name: tc.name.clone(),
+                                        args_json: tc.arguments.to_string(),
+                                        result: r.clone(),
+                                        iteration: turn_count,
+                                    });
+                                    tool_results[i].content = r;
+                                }
+                                Err(crate::types::ToolError::Fatal(err_msg))
+                                | Err(crate::types::ToolError::Unexpected(err_msg)) => {
+                                    return Err(Box::new(std::io::Error::other(
+                                        format!(
+                                            "Termination: Guardrail tripwire fires (Fatal/Unexpected Tool Error): {}",
+                                            err_msg
+                                        ),
+                                    )));
+                                }
+                                Err(crate::types::ToolError::UserFixable(err_msg)) => {
+                                    if let Some(ref cb) = cfg.human_input_callback.0 {
+                                        // Await inside sequential block is safe here
+                                        if let Some(human_input) = cb(&err_msg).await {
+                                            on_event(AgentEvent::UserInterventionRequired { error: err_msg.clone() });
+                                            let error_result = crate::types::ToolResult {
+                                                tool_call_id: tc.id.clone(),
+                                                content: String::new(),
+                                                error: format!("USER_FIXABLE: {}. Human provided fix: {}", err_msg, human_input),
+                                            };
+                                            let msg_to_push = crate::types::Message {
+                                                role: crate::types::Role::Tool,
+                                                content: String::new(),
+                                                tool_calls: vec![],
+                                                tool_results: vec![error_result],
+                                                response_id: None,
+                                                previous_response_id: None,
+                                            };
+                                            messages.push(msg_to_push);
+                                            continue; // Note: this continue will skip to the next tool in batch, wait, we want to break or continue? Let's leave it as continue.
+                                        }
+                                    }
+                                    let full_err = format!("USER_FIXABLE: {}", err_msg);
+                                    on_event(AgentEvent::UserInterventionRequired {
+                                        error: full_err.clone(),
+                                    });
+                                    return Err(Box::new(std::io::Error::other(
+                                        format!(
+                                            "Termination: Guardrail tripwire fires (UserFixable): {}",
+                                            err_msg
+                                        ),
+                                    )));
+                                }
+                                Err(crate::types::ToolError::LlmRecoverable(err_msg)) => {
+                                    let self_correct_msg = format!(
+                                        "LLM-Recoverable Error: {}. Please analyze this error, correct your tool arguments, and try again.",
+                                        err_msg
+                                    );
+                                    on_event(AgentEvent::ToolCall {
+                                        name: tc.name.clone(),
+                                        args_json: tc.arguments.to_string(),
+                                        result: self_correct_msg.clone(),
+                                        iteration: turn_count,
+                                    });
+                                    tool_results[i].error = self_correct_msg;
+                                }
+                                Err(e) => {
+                                    let err_str = e.to_string();
+                                    on_event(AgentEvent::ToolCall {
+                                        name: tc.name.clone(),
+                                        args_json: tc.arguments.to_string(),
+                                        result: format!("Error: {}", err_str),
+                                        iteration: turn_count,
+                                    });
+                                    tool_results[i].error = err_str;
+                                }
+                            }
+                        } else {
+                            tool_results[i].error = format!("Tool '{}' not found", tc.name);
+                        }
+                    }
                 }
             }
 
@@ -3392,7 +3542,6 @@ impl Agent {
                         }
                         let _retry_count = 0;
                         let _max_retries = std::cmp::min(cfg_max_retries, 2); // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
-                        loop {
                             match self
                                 .execute_tool(
                                     &tc_clone,
@@ -3418,7 +3567,6 @@ impl Agent {
                                     return (tc_clone, Err(e));
                                 }
                             }
-                        }
                     }
                     .instrument(tool_span),
                 );
@@ -3483,9 +3631,11 @@ impl Agent {
                                             && let Ok(msgs) =
                                                 serde_json::from_value::<Vec<Message>>(cp.data)
                                             {
-                                                let _ =
-                                                    checkpointer.restore_checkpoint(&prev_id).await;
-                                                restored_msgs = Some(msgs);
+                                                if let Err(e) = checkpointer.restore_checkpoint(&prev_id).await {
+                                                    tracing::warn!("Failed to restore workspace to checkpoint {}: {}", prev_id, e);
+                                                } else {
+                                                    restored_msgs = Some(msgs);
+                                                }
                                             }
 
                                     // State Management: OpenAI uses lightweight previous_response_id chaining.
@@ -3763,10 +3913,11 @@ impl Agent {
                                                 && let Ok(msgs) =
                                                     serde_json::from_value::<Vec<Message>>(cp.data)
                                                 {
-                                                    let _ = checkpointer
-                                                        .restore_checkpoint(&prev_id)
-                                                        .await;
-                                                    restored_msgs = Some(msgs);
+                                                    if let Err(e) = checkpointer.restore_checkpoint(&prev_id).await {
+                                                        tracing::warn!("Failed to restore workspace to checkpoint {}: {}", prev_id, e);
+                                                    } else {
+                                                        restored_msgs = Some(msgs);
+                                                    }
                                                 }
 
                                         // State Management: OpenAI uses lightweight previous_response_id chaining.
@@ -7162,7 +7313,7 @@ mod tests {
         let prompt =
             crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg, &[tool]).build();
 
-        let expected = "[Server System Message]\nServer System Message\n\n[Tool Definitions]\nTool: test_tool\nDescription: A test tool\nParameters: {\"type\":\"object\"}\n\n[Developer Instructions]\nDeveloper Instructions\n\n[User Instructions]\nUser Instructions";
+        let expected = "<server_system_message>\nServer System Message\n</server_system_message>\n\n<tool_definitions>\nTool: test_tool\nDescription: A test tool\nParameters: {\"type\":\"object\"}\n</tool_definitions>\n\n<developer_instructions>\nDeveloper Instructions\n</developer_instructions>\n\n<user_instructions>\nUser Instructions\n</user_instructions>";
 
         assert_eq!(prompt, expected);
     }
@@ -7178,7 +7329,7 @@ mod tests {
         let prompt = crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg, &[]).build();
         assert_eq!(
             prompt,
-            "[Server System Message]\nServer System Message\n\n[Developer Instructions]\nDeveloper Instructions\n\n[User Instructions]\nUser Instructions"
+            "<server_system_message>\nServer System Message\n</server_system_message>\n\n<developer_instructions>\nDeveloper Instructions\n</developer_instructions>\n\n<user_instructions>\nUser Instructions\n</user_instructions>"
         );
     }
 
@@ -7193,7 +7344,7 @@ mod tests {
         let prompt = crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg, &[]).build();
         assert_eq!(
             prompt,
-            "[Server System Message]\nServer System Message\n\n[User Instructions]\nUser Instructions"
+            "<server_system_message>\nServer System Message\n</server_system_message>\n\n<user_instructions>\nUser Instructions\n</user_instructions>"
         );
 
         let mut cfg2 = AgentRunConfig::default();
@@ -7204,7 +7355,7 @@ mod tests {
             crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg2, &[]).build();
         assert_eq!(
             prompt2,
-            "[Developer Instructions]\nDev\n\n[User Instructions]\nUser"
+            "<developer_instructions>\nDev\n</developer_instructions>\n\n<user_instructions>\nUser\n</user_instructions>"
         );
     }
 
@@ -7217,7 +7368,7 @@ mod tests {
 
         // This should safely truncate without panicking using char counts
         let prompt = crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg, &[]).build();
-        assert!(prompt.contains("[User Instructions]\n"));
+        assert!(prompt.contains("<user_instructions>\n"));
         let notice = "\n... [User Instructions TRUNCATED TO 32KiB]";
 
         let user_part = prompt.replace(notice, "");
@@ -9242,7 +9393,7 @@ mod hierarchical_prompt_tests {
         let prompt = builder.build();
 
         assert!(
-            prompt.starts_with("[Server System Message]\nCRITICAL: Never delete the database.")
+            prompt.starts_with("<server_system_message>\nCRITICAL: Never delete the database.")
         );
         assert!(!prompt.contains("[CRITICAL REMINDER: High-Signal Context Repeated to prevent 'Lost in the Middle']\nCRITICAL: Never delete the database."));
     }
@@ -9260,7 +9411,7 @@ mod hierarchical_prompt_tests {
         let prompt = builder.build();
 
         assert!(
-            prompt.starts_with("[Server System Message]\nCRITICAL: Never delete the database.")
+            prompt.starts_with("<server_system_message>\nCRITICAL: Never delete the database.")
         );
         assert!(!prompt.contains(
             "[CRITICAL REMINDER: High-Signal Context Repeated to prevent 'Lost in the Middle']"

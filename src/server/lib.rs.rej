@@ -1,0 +1,10 @@
+--- src/server/lib.rs
++++ src/server/lib.rs
+@@ -107,6 +107,7 @@ pub mod user;
+ pub mod vendor;
+ pub mod webhooks;
+ pub mod workflows;
++pub mod quoting;
+
+ // Internal service components
+ mod services {
