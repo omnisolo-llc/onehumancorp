@@ -28,8 +28,8 @@ test.describe('Miser Cost Features E2E', () => {
 
     // Click the button and verify URL changes to /plan
     await myPlanButton.click();
-    await page.waitForURL('**/dashboard', { timeout: 10000 });
-    await expect(page.locator('text=AI actions used this month')).toBeVisible({ timeout: 15000 });
+    await page.waitForURL('**/plan', { timeout: 10000 });
+    await expect(page.locator('text=Your Current Usage')).toBeVisible({ timeout: 15000 });
   });
 
   test('Pricing Page displays Free Tier details and "Current Plan" disabled button', async ({ page, adminUser, loginAs }) => {
