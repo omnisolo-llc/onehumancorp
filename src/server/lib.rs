@@ -3110,6 +3110,65 @@ pub async fn update_ui_triage_action_handler(
                         tracing::info!("Approved and scheduled SocialPostDraft for tenant: {}", tenant_id);
                         // In a real implementation we would send this to AYRSHARE or similar buffer here
                         // For MVP, we simply mark it resolved.
+                    } else if action_type == "ProposedQuote" {
+                        tracing::info!("Executing proposed action: ProposedQuote, payload: {}", action_payload);
+                        let json_payload: serde_json::Value = serde_json::from_str(&action_payload).unwrap_or(serde_json::json!({}));
+
+                        let total_amount = json_payload.get("total_amount").and_then(|v| v.as_f64()).unwrap_or(0.0);
+                        let due_date = json_payload.get("due_date").and_then(|v| v.as_i64()).unwrap_or_else(|| chrono::Utc::now().timestamp() + 30 * 24 * 3600);
+                        let expires_at = chrono::DateTime::from_timestamp(due_date, 0).unwrap_or_else(chrono::Utc::now);
+
+                        let quote_id = format!("quote-{}", uuid::Uuid::new_v4());
+                        if let Err(e) = sqlx::query(
+                            "INSERT INTO quotes (id, tenant_id, status, total_amount, expires_at) VALUES ($1, $2, 'Draft', $3, $4)"
+                        )
+                        .bind(&quote_id)
+                        .bind(&tenant_id)
+                        .bind(total_amount as i64)
+                        .bind(expires_at)
+                        .execute(&mut *tx)
+                        .await {
+                            tracing::error!("Failed to insert proposed quote for triage item {}: {:?}", payload.triage_item_id, e);
+                        }
+                    } else if action_type == "ProposedBooking" {
+                        tracing::info!("Executing proposed action: ProposedBooking, payload: {}", action_payload);
+                        let json_payload: serde_json::Value = serde_json::from_str(&action_payload).unwrap_or(serde_json::json!({}));
+
+                        let start_time_str = json_payload.get("start_time").and_then(|v| v.as_str()).unwrap_or("");
+                        let end_time_str = json_payload.get("end_time").and_then(|v| v.as_str()).unwrap_or("");
+
+                        let start_time = chrono::DateTime::parse_from_rfc3339(start_time_str)
+                            .map(|d| d.with_timezone(&chrono::Utc))
+                            .unwrap_or_else(|_| chrono::Utc::now());
+
+                        let end_time = chrono::DateTime::parse_from_rfc3339(end_time_str)
+                            .map(|d| d.with_timezone(&chrono::Utc))
+                            .unwrap_or_else(|_| chrono::Utc::now() + chrono::Duration::hours(1));
+
+                        let triage_item = sqlx::query("SELECT customer_id FROM triage_items WHERE id = $1 AND tenant_id = $2")
+                            .bind(&payload.triage_item_id)
+                            .bind(&tenant_id)
+                            .fetch_optional(&mut *tx)
+                            .await
+                            .ok()
+                            .flatten();
+
+                        let customer_id = triage_item.and_then(|r| r.try_get::<String, _>("customer_id").ok())
+                            .or_else(|| json_payload.get("customer_id").and_then(|v| v.as_str()).map(|s| s.to_string()));
+
+                        let booking_id = format!("booking-{}", uuid::Uuid::new_v4());
+                        if let Err(e) = sqlx::query(
+                            "INSERT INTO bookings (id, tenant_id, customer_id, start_time, end_time, status) VALUES ($1, $2, $3, $4, $5, 'pending')"
+                        )
+                        .bind(&booking_id)
+                        .bind(&tenant_id)
+                        .bind(&customer_id)
+                        .bind(start_time)
+                        .bind(end_time)
+                        .execute(&mut *tx)
+                        .await {
+                            tracing::error!("Failed to insert proposed booking for triage item {}: {:?}", payload.triage_item_id, e);
+                        }
                     } else if action_type == "ProposedInvoice" {
                         tracing::info!("Executing proposed action: ProposedInvoice, payload: {}", action_payload);
                         let json_payload: serde_json::Value = serde_json::from_str(&action_payload).unwrap_or(serde_json::json!({}));

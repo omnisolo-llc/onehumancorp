@@ -116,12 +116,16 @@ Analyze the following incoming customer message.
 Message from {}: '{}'
 Source: {}
 
-Please extract the context, priority, and draft a response.
+Please extract the context, priority, and determine if the customer is requesting a quote, booking an appointment, or just asking a general question.
+If they are requesting a quote, the action_type should be \"ProposedQuote\" and action_payload should contain {{ \"total_amount\": 0.0, \"client_name\": \"...\", \"currency\": \"USD\" }}.
+If they are booking an appointment, the action_type should be \"ProposedBooking\" and action_payload should contain {{ \"start_time\": \"...\", \"end_time\": \"...\", \"customer_id\": \"...\" }}.
+Otherwise, the action_type should be \"Draft Reply\" and action_payload should contain {{ \"draft_reply\": \"...\" }}.
 Output JSON format:
 {{
     \"priority\": \"High\" or \"Medium\" or \"Low\",
     \"context_summary\": \"A short one sentence summary of the request.\",
-    \"draft_reply\": \"The draft reply to the user.\"
+    \"action_type\": \"Draft Reply\" or \"ProposedQuote\" or \"ProposedBooking\",
+    \"action_payload\": {{ ... }}
 }}",
                 sender_id, customer_message, source
             );
@@ -131,7 +135,10 @@ Output JSON format:
             let mut extracted = serde_json::json!({
                 "priority": "Medium",
                 "context_summary": "Customer inquiry",
-                "draft_reply": "Thanks for reaching out! We will review this and get back to you soon."
+                "action_type": "Draft Reply",
+                "action_payload": {
+                    "draft_reply": "Thanks for reaching out! We will review this and get back to you soon."
+                }
             });
 
             let llm_call = async {
@@ -161,7 +168,21 @@ Output JSON format:
 
             let priority = extracted.get("priority").and_then(|v| v.as_str()).unwrap_or("Medium");
             let context_summary = extracted.get("context_summary").and_then(|v| v.as_str()).unwrap_or("Customer inquiry");
-            let draft_reply = extracted.get("draft_reply").and_then(|v| v.as_str()).unwrap_or("Thanks for reaching out! We will review this and get back to you soon.");
+            let action_type = extracted.get("action_type").and_then(|v| v.as_str()).unwrap_or("Draft Reply");
+            let action_payload = extracted.get("action_payload").cloned().unwrap_or_else(|| serde_json::json!({
+                "draft_reply": "Thanks for reaching out! We will review this and get back to you soon."
+            }));
+            let payload_str = if action_type == "Draft Reply" {
+                action_payload.get("draft_reply").and_then(|v| v.as_str()).unwrap_or("").to_string()
+            } else {
+                action_payload.to_string()
+            };
+
+            let draft_reply = if action_type == "Draft Reply" {
+                payload_str.clone()
+            } else {
+                "".to_string()
+            };
 
             let triage_item_id = Uuid::new_v4().to_string();
             let action_id = Uuid::new_v4().to_string();
@@ -200,8 +221,8 @@ Output JSON format:
                     .bind(&action_id)
                     .bind(&triage_item_id)
                     .bind(&tenant_id)
-                    .bind("Draft Reply")
-                    .bind(&draft_reply)
+                    .bind(&action_type)
+                    .bind(&payload_str)
                     .execute(&self.db.pool).await {
                         tracing::error!("Failed to insert triage action: {}", e);
                         let _ = sqlx::query("UPDATE ohc_job_queue SET status = 'FAILED', updated_at = NOW() WHERE id = $1")
@@ -244,8 +265,8 @@ Output JSON format:
                     .bind(&action_id)
                     .bind(&triage_item_id)
                     .bind(&tenant_id)
-                    .bind("Draft Reply")
-                    .bind(&draft_reply)
+                    .bind(&action_type)
+                    .bind(&payload_str)
                     .execute(sqlite_pool).await {
                         tracing::error!("Failed to insert triage action (SQLite): {}", e);
                         let _ = sqlx::query("UPDATE ohc_job_queue SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP WHERE id = ?")

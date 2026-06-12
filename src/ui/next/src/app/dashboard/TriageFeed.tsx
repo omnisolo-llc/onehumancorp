@@ -145,7 +145,7 @@ export function TriageFeed({ tenantId, initialItems }: { tenantId: string, initi
 
       {actionStatus && <div className="mb-4 app-badge good" role="status">{actionStatus}</div>}
 
-      <div className="app-grid two" style={{ display: regularItems.length > 0 ? "grid" : "none" }}>
+      <div className="app-grid two grid grid-cols-1 lg:grid-cols-[1.5fr_0.8fr] gap-6 relative" style={{ display: regularItems.length > 0 ? "grid" : "none" }}>
         <section className="app-panel glassmorphism backdrop-blur-md bg-white/60 dark:bg-black/40 border border-white/20">
           <div className="app-panel-header">
             <div>
@@ -173,14 +173,18 @@ export function TriageFeed({ tenantId, initialItems }: { tenantId: string, initi
           </div>
         </section>
 
-        <section className="app-panel glassmorphism backdrop-blur-md bg-white/60 dark:bg-black/40 border border-white/20">
-          <div className="app-panel-header">
-            <div className="app-panel-title">Triage Detail</div>
+        <section className={`app-panel glassmorphism backdrop-blur-md bg-white/60 dark:bg-black/40 border border-white/20 fixed bottom-0 left-0 right-0 z-50 rounded-t-3xl shadow-2xl lg:relative lg:rounded-2xl lg:shadow-none transition-transform duration-300 transform ${selected ? 'translate-y-0' : 'translate-y-full lg:translate-y-0'}`}>
+          <div className="w-12 h-1.5 bg-gray-300 dark:bg-gray-600 rounded-full mx-auto my-3 lg:hidden"></div>
+          <div className="app-panel-header px-6 pt-2 pb-4">
+            <div className="app-panel-title">Needs Attention</div>
+            <button className="lg:hidden p-2 -mr-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200" onClick={() => setSelectedId(null)}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinelinejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+            </button>
           </div>
           {!selected ? (
             <div className="app-empty">Select a triage item to review it.</div>
           ) : (
-            <div className="app-panel-body">
+            <div className="app-panel-body px-6 pb-24 lg:pb-6 overflow-y-auto max-h-[60vh] lg:max-h-none">
               <div className="mb-4">
                 <div className="app-metric-label">Source</div>
                 <div className="mt-1 text-sm font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">{selected.event_source || "Unknown source"}</div>
@@ -194,7 +198,7 @@ export function TriageFeed({ tenantId, initialItems }: { tenantId: string, initi
               {selected.proposed_action?.action_type && (
                 <div className="mb-6">
                   <div className="app-metric-label">Proposed Action: {selected.proposed_action.action_type}</div>
-                  <div className="mt-2 rounded-md border border-blue-200 dark:border-blue-900/30 bg-blue-50/50 dark:bg-blue-900/20 p-4 text-sm leading-6 text-blue-900 dark:text-blue-100 font-medium">
+                  <div className="mt-2 rounded-md border border-blue-200 dark:border-blue-900/30 bg-blue-50/50 dark:bg-blue-900/20 p-4 text-sm leading-6 text-blue-900 dark:text-blue-100 font-medium whitespace-pre-wrap font-mono">
                     {selected.proposed_action.payload || "No specific payload"}
                   </div>
                 </div>
@@ -211,16 +215,16 @@ export function TriageFeed({ tenantId, initialItems }: { tenantId: string, initi
                 </div>
               </div>
 
-              <div className="flex flex-col sm:flex-row gap-3">
+              <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/80 dark:bg-black/80 backdrop-blur-lg border-t border-gray-200 dark:border-gray-800 lg:static lg:bg-transparent lg:border-t-0 lg:p-0 flex flex-col sm:flex-row gap-3 z-50">
                 <button
-                  className="app-btn-primary flex-1 min-h-[44px]"
+                  className="app-btn-primary flex-1 min-h-[52px] lg:min-h-[44px] text-lg lg:text-base font-bold shadow-lg"
                   data-testid="approve-btn"
                   onClick={() => handleDecision(selected.id, true)}
                 >
-                  ✨ Approve &amp; Execute
+                  ✨ Approve &amp; Send
                 </button>
                 <button
-                  className="px-4 py-2 rounded-[16px] border border-white/40 dark:border-white/20 text-[#1D1D1F] dark:text-[#F5F5F7] bg-white/50 dark:bg-black/20 hover:bg-white/80 dark:hover:bg-black/40 flex-1 min-h-[44px] font-medium transition-colors backdrop-blur-md"
+                  className="px-4 py-2 rounded-[16px] border border-gray-300 dark:border-white/20 text-[#1D1D1F] dark:text-[#F5F5F7] bg-white/90 dark:bg-black/40 hover:bg-gray-100 dark:hover:bg-black/60 flex-1 min-h-[52px] lg:min-h-[44px] font-medium transition-colors"
                   data-testid="dismiss-btn"
                   onClick={() => handleDecision(selected.id, false)}
                 >
