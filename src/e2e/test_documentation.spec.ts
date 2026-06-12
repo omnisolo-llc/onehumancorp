@@ -34,4 +34,14 @@ test('Documentation, Tooltips and Help flows', async ({ page }) => {
   // 5. Release Notes & Changelog
   await page.goto('/changelog.html');
   await expect(page.getByRole('heading', { name: 'Release Notes & Changelog' }).first()).toBeVisible();
+
+  // 6. Interactive Walkthroughs
+  await page.goto('/help.html');
+  const floatingBtn = page.locator('#ohc-floating-help-btn');
+  await expect(floatingBtn).toBeVisible();
+  await floatingBtn.click();
+  const toursTab = page.locator('button[data-target="tab-tours"]');
+  await expect(toursTab).toBeVisible();
+  await toursTab.click();
+  await expect(page.locator('.ohc-tour-card').first()).toBeVisible();
 });
