@@ -635,6 +635,47 @@ mod tests {
         // tests go here
     use sqlx::postgres::PgPoolOptions;
 
+
+    #[tokio::test]
+    async fn test_sync_offline_transactions_invalid() {
+        // Just verify we can call the handler with invalid payload and it ignores it
+        let (tx, _rx) = tokio::sync::mpsc::channel(100);
+        let pool = sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://localhost/dummy").unwrap();
+        let hub = Arc::new(Hub::new(tx, pool.clone()));
+
+        let req_data = axum::extract::Json(SyncOfflineTransactionsRequest {
+            session_id: None,
+            transactions: vec![
+                PosOfflineTransaction {
+                    id: Some("".to_string()),
+                    client_id: Some("client-1".to_string()),
+                    amount_cents: 1000,
+                    currency: "USD".to_string(),
+                    payload: "{}".to_string(),
+                    timestamp: None,
+                },
+                PosOfflineTransaction {
+                    id: Some("tx-invalid-amount".to_string()),
+                    client_id: Some("client-1".to_string()),
+                    amount_cents: -500,
+                    currency: "USD".to_string(),
+                    payload: "{}".to_string(),
+                    timestamp: None,
+                }
+            ],
+        });
+
+        let auth_info = Some(axum::extract::Extension(::server_auth::orchestration::AuthInfo {
+            org_id: "test_tenant".to_string(),
+            spiffe_id: "test".to_string(),
+            agent_id: "test".to_string()
+        }));
+        let headers = axum::http::HeaderMap::new();
+
+        let resp = sync_offline_transactions_handler(headers, axum::extract::State(hub), auth_info, req_data).await.into_response();
+        assert_eq!(resp.status(), axum::http::StatusCode::OK);
+    }
+
     #[tokio::test]
     async fn test_commit_inventory_low_stock() {
         let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());

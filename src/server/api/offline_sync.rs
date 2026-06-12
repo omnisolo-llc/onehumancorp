@@ -255,6 +255,43 @@ mod tests {
     use sqlx::postgres::PgPoolOptions;
 
 
+
+    #[tokio::test]
+    async fn test_offline_sync_invalid_payload() {
+        let pool = PgPoolOptions::new().connect_lazy("postgres://localhost/dummy").unwrap();
+        let mesh: Arc<dyn MeshTransport> = Arc::new(InProcessTransport::new());
+        let state = State((pool, mesh));
+
+        let req = OfflineSyncRequest {
+            mutations: vec![
+                OfflineMutation {
+                    transaction_id: "tx-invalid-1".to_string(),
+                    product_id: "".to_string(),
+                    quantity_deducted: 1,
+                    amount: None,
+                    payment_method: None,
+                    payment_intent_id: None,
+                    currency: None, mutation_type: None, payload: None,
+                },
+                OfflineMutation {
+                    transaction_id: "tx-invalid-2".to_string(),
+                    product_id: "prod-invalid-2".to_string(),
+                    quantity_deducted: -5,
+                    amount: None,
+                    payment_method: None,
+                    payment_intent_id: None,
+                    currency: None, mutation_type: None, payload: None,
+                },
+            ],
+        };
+
+        let mut headers = HeaderMap::new();
+        headers.insert("x-spiffe-id", "spiffe://ohc/org/tenant-offline/agent/x".parse().unwrap());
+
+        let response = offline_sync_handler(state.clone(), headers.clone(), Json(req)).await.into_response();
+        assert_eq!(response.status(), StatusCode::OK);
+    }
+
     #[tokio::test]
     async fn test_offline_sync_unauthorized() {
         let pool = PgPoolOptions::new().connect_lazy("postgres://localhost/dummy").unwrap();
