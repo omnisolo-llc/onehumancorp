@@ -38,6 +38,12 @@ export default defineConfig({
     screenshot: 'on',
     video: video as 'on' | 'off' | 'retain-on-failure' | 'on-first-retry',
   },
+  webServer: {
+    command: 'cd src/ui/next && pnpm run dev -p 3000',
+    url: 'http://localhost:3000',
+    reuseExistingServer: true,
+    timeout: 120 * 1000,
+  },
   projects: [
     {
       name: 'chromium',
