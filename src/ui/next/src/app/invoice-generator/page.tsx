@@ -13,6 +13,7 @@ export default function InvoiceGeneratorPage() {
   const [isSplitEnabled, setIsSplitEnabled] = useState(false);
   const [splitContact, setSplitContact] = useState('');
   const [splitPercentage, setSplitPercentage] = useState<number>(70);
+  const [removeBranding, setRemoveBranding] = useState(false);
 
 
   useEffect(() => {
@@ -32,7 +33,8 @@ export default function InvoiceGeneratorPage() {
       projectDetails,
       amount,
       splitPartnerId: isSplitEnabled ? splitContact : undefined,
-      splitPercentage: isSplitEnabled ? splitPercentage : undefined
+      splitPercentage: isSplitEnabled ? splitPercentage : undefined,
+      removeBranding
     };
 
     // Safely encode unicode string to base64url for URLs
@@ -67,6 +69,20 @@ export default function InvoiceGeneratorPage() {
           </p>
 
           <div className="flex flex-col gap-6">
+            <div>
+              <label className="flex items-center justify-between cursor-pointer border p-4 rounded-xl hover:bg-gray-50 transition-colors">
+                <div className="flex flex-col">
+                  <span className="text-sm font-medium text-gray-700">Remove "Powered by OHC" Badge (Pro)</span>
+                  <span className="text-xs text-gray-500">Hide the OHC watermark on your invoices</span>
+                </div>
+                <div className="relative">
+                  <input type="checkbox" className="sr-only" checked={removeBranding} onChange={(e) => setRemoveBranding(e.target.checked)} />
+                  <div className={`block w-10 h-6 rounded-full transition-colors ${removeBranding ? 'bg-indigo-600' : 'bg-gray-300'}`}></div>
+                  <div className={`dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${removeBranding ? 'transform translate-x-4' : ''}`}></div>
+                </div>
+              </label>
+            </div>
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Client Name</label>
               <input

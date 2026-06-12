@@ -12,6 +12,7 @@ function InvoiceContent() {
     clientName: string;
     projectDetails: string;
     amount: string;
+    removeBranding?: boolean;
   } | null>(null);
   const [error, setError] = useState(false);
 
@@ -109,18 +110,20 @@ function InvoiceContent() {
         </section>
 
         {/* Viral Growth Loop Footer */}
-        <div className="text-center pb-8 animate-fade-in flex flex-col items-center">
-          <PoweredByOHC tenantId={tenant} />
-          <Link
-            href={`/onboarding?ref=${tenant}&source=invoice_generator`}
-            target="_blank"
-            className="inline-flex flex-col items-center gap-1 group mt-2"
-          >
-            <span className="text-sm font-medium text-indigo-600 group-hover:text-indigo-700 transition-colors">
-              Create your own professional invoices for free
-            </span>
-          </Link>
-        </div>
+        {!invoiceData?.removeBranding && (
+          <div className="text-center pb-8 animate-fade-in flex flex-col items-center">
+            <PoweredByOHC tenantId={tenant} />
+            <Link
+              href={`/onboarding?ref=${tenant}&source=invoice_generator`}
+              target="_blank"
+              className="inline-flex flex-col items-center gap-1 group mt-2"
+            >
+              <span className="text-sm font-medium text-indigo-600 group-hover:text-indigo-700 transition-colors">
+                Create your own professional invoices for free
+              </span>
+            </Link>
+          </div>
+        )}
       </main>
 
       <style dangerouslySetInnerHTML={{__html: `

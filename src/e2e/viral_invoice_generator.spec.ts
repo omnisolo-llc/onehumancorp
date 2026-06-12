@@ -56,4 +56,41 @@ test.describe('Viral Invoice Generator Loop', () => {
     expect(onboardingHref).toContain('/onboarding?ref=');
     expect(onboardingHref).toContain('source=footer_widget');
   });
+
+  test('should allow creating an invoice and removing the branding', async ({ page }) => {
+    await page.goto('/invoice-generator');
+
+    // Fill out the form
+    await page.fill('input[placeholder="e.g. Acme Corp"]', 'Globex Corporation');
+    await page.fill('textarea[placeholder="e.g. Website Redesign and SEO Optimization"]', 'Consulting Services for Q3');
+    await page.fill('input[placeholder="e.g. 1500.00"]', '2500');
+
+    // Check remove branding
+    await page.click('text=Remove "Powered by OHC" Badge (Pro)');
+
+    // Click generate
+    const generateBtn = page.getByRole('button', { name: 'Generate Shareable Invoice' });
+    await generateBtn.click();
+
+    // Verify the invoice is ready
+    await expect(page.getByRole('heading', { name: 'Your Invoice is Ready!' })).toBeVisible();
+
+    // Click preview invoice
+    const previewLink = page.getByRole('link', { name: 'Preview Invoice' });
+    await expect(previewLink).toBeVisible();
+
+    const href = await previewLink.getAttribute('href');
+    await page.goto(href!);
+
+    // Verify the invoice view
+    await expect(page.getByRole('heading', { name: 'INVOICE' })).toBeVisible();
+    await expect(page.getByText('Globex Corporation')).toBeVisible();
+
+    // Verify the viral loop footer is NOT present
+    const poweredByLink = page.locator('a', { hasText: 'Powered by OHC' });
+    await expect(poweredByLink).not.toBeVisible();
+
+    const createOwnLink = page.locator('a', { hasText: 'Create your own professional invoices for free' });
+    await expect(createOwnLink).not.toBeVisible();
+  });
 });
