@@ -18,6 +18,17 @@ pub struct OmnichannelPayload {
     pub message: String,
 }
 
+#[derive(Deserialize, Debug, Clone)]
+pub struct OmnichannelReturnPayload {
+    pub tenant_id: String,
+    pub order_id: String,
+    pub product_id: String,
+    pub return_type: String, // "Refund" or "Exchange"
+    pub reason: String,
+    pub refund_amount: f64,
+    pub sender_id: String,
+}
+
 #[derive(Serialize)]
 pub struct WebhookResponse {
     pub success: bool,
@@ -111,7 +122,46 @@ pub async fn resolve_identity(db: &crate::db::DB, tenant_id: &str, channel: &str
 pub fn router(state: AppState) -> Router {
     Router::new()
         .route("/", post(handle_omnichannel_webhook))
+        .route("/return", post(handle_omnichannel_return))
         .with_state(state)
+}
+
+pub async fn handle_omnichannel_return(
+    State(state): State<AppState>,
+    Json(payload): Json<OmnichannelReturnPayload>,
+) -> impl IntoResponse {
+    let tenant_id = &payload.tenant_id;
+    let sender_id = &payload.sender_id;
+
+    // Resolve Identity (we can just use the provided sender_id directly if resolution fails)
+    let customer_id = resolve_identity(&state.db, tenant_id, "return_portal", sender_id).await;
+
+    let mut payload_json = serde_json::json!({
+        "order_id": payload.order_id,
+        "product_id": payload.product_id,
+        "return_type": payload.return_type,
+        "reason": payload.reason,
+        "refund_amount": payload.refund_amount,
+        "sender_id": payload.sender_id,
+    });
+
+    if let Some(c_id) = customer_id {
+        payload_json["customer_id"] = serde_json::json!(c_id);
+    }
+
+    let event = crate::orchestration::departments::types::DepartmentEvent {
+        id: Uuid::new_v4().to_string(),
+        tenant_id: tenant_id.clone(),
+        event_type: "tenant.omnichannel.return.requested".to_string(),
+        payload: payload_json,
+    };
+
+    let orchestrator_clone = state.orchestrator.clone();
+    tokio::spawn(async move {
+        let _ = orchestrator_clone.dispatch_event(event).await;
+    });
+
+    (StatusCode::OK, Json(WebhookResponse { success: true, message_id: None })).into_response()
 }
 
 pub async fn handle_omnichannel_webhook(

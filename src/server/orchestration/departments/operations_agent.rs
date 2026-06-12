@@ -25,6 +25,7 @@ impl Department for OperationsAgent {
             "LowStockAlert".to_string(),
             "InventoryConflictEvent".to_string(),
             "tenant.inventory.updated".to_string(),
+            "tenant.omnichannel.return.requested".to_string(),
         ]
     }
 
@@ -50,6 +51,12 @@ impl Department for OperationsAgent {
         };
 
         let action_description = match event.event_type.as_str() {
+            "tenant.omnichannel.return.requested" => {
+                let sender_id = event.payload.get("sender_id").and_then(|v| v.as_str()).unwrap_or("Customer");
+                let order_id = event.payload.get("order_id").and_then(|v| v.as_str()).unwrap_or("Unknown");
+                let refund_amount = event.payload.get("refund_amount").and_then(|v| v.as_f64()).unwrap_or(0.0);
+                format!("Return requested by {} for Order #{}. Operations Agent has generated a return label and prepared a ${:.2} refund. Tap 'Approve' to finalize.", sender_id, order_id, refund_amount)
+            },
             "tenant.order.created" => "Process Order & Update Inventory".to_string(),
             "LowStockAlert" => {
                 let product_id = event.payload.get("product_id").and_then(|v| v.as_str()).unwrap_or("unknown");

@@ -220,6 +220,50 @@ mod tests {
 }
 
 impl StripeClient {
+    pub async fn issue_refund(
+        &self,
+        tenant_id: &str,
+        order_id: &str,
+        amount_cents: i64,
+        idempotency_key: &str,
+    ) -> Result<String, String> {
+        let api_key = self.require_api_key()?;
+        if amount_cents <= 0 {
+            return Err("amount_cents must be positive".to_string());
+        }
+        if idempotency_key.is_empty() {
+            return Err("idempotency_key is required".to_string());
+        }
+
+        let mut form = std::collections::HashMap::new();
+        // Here we pass the original order_id as the payment intent or charge to refund.
+        // If order_id maps to a PaymentIntent id (e.g. pi_123), Stripe expects payment_intent.
+        form.insert("payment_intent".to_string(), order_id.to_string());
+        form.insert("amount".to_string(), amount_cents.to_string());
+        form.insert("metadata[tenant_id]".to_string(), tenant_id.to_string());
+        form.insert("metadata[order_id]".to_string(), order_id.to_string());
+
+        let res = reqwest::Client::new()
+            .post(format!("{}/v1/refunds", Self::api_base()))
+            .basic_auth(api_key, Some(""))
+            .header("Idempotency-Key", idempotency_key)
+            .form(&form)
+            .send()
+            .await
+            .map_err(|e| format!("Stripe Refund request failed: {}", e))?;
+
+        if !res.status().is_success() {
+            let status = res.status();
+            let text = res.text().await.unwrap_or_default();
+            return Err(format!("Stripe Refund API error ({}): {}", status, text));
+        }
+
+        let json: serde_json::Value = res.json().await.map_err(|e| format!("Failed to parse response: {}", e))?;
+        let refund_id = json["id"].as_str().ok_or_else(|| "Missing id in refund response".to_string())?;
+
+        Ok(refund_id.to_string())
+    }
+
     pub async fn create_terminal_payment_intent(
         &self,
         tenant_id: &str,

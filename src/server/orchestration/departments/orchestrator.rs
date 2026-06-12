@@ -913,6 +913,27 @@ impl DepartmentOrchestrator {
                     }
                 }
 
+                // Handle Omnichannel Returns
+                if let Some(payload) = &original_payload {
+                    if payload.get("return_type").is_some() {
+                        let product_id = payload.get("product_id").and_then(|v| v.as_str()).unwrap_or("");
+
+                        // Restock inventory
+                        let redis_client_opt = crate::get_redis_client();
+                        let inventory = crate::services::inventory::InventoryService::new(redis_client_opt);
+                        let _ = inventory.release_inventory(tenant_id, product_id, 1, "").await;
+
+                        // Emit event for Finance agent to refund
+                        let refund_event = crate::orchestration::departments::types::DepartmentEvent {
+                            id: uuid::Uuid::new_v4().to_string(),
+                            tenant_id: tenant_id.to_string(),
+                            event_type: "tenant.omnichannel.return.approved".to_string(),
+                            payload: payload.clone(),
+                        };
+                        let _ = self.dispatch_event(refund_event).await;
+                    }
+                }
+
                 // If this is a stockout restock and price approval, execute the price change and dispatch a job
                 if let Some(payload) = &original_payload {
                     if payload.get("feature_type").and_then(|v| v.as_str()) == Some("stockout_restock_and_price") {

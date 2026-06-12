@@ -20,11 +20,25 @@ impl Department for FinanceAgent {
     fn subscribed_events(&self) -> Vec<String> {
         vec![
             "tenant.payment.received".to_string(),
-            "payment.captured".to_string()
+            "payment.captured".to_string(),
+            "tenant.omnichannel.return.approved".to_string(),
         ]
     }
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
+        if event.event_type == "tenant.omnichannel.return.approved" {
+            let order_id = event.payload.get("order_id").and_then(|v| v.as_str()).unwrap_or("").to_string();
+            let refund_amount = event.payload.get("refund_amount").and_then(|v| v.as_f64()).unwrap_or(0.0);
+            let refund_amount_cents = (refund_amount * 100.0) as i64;
+            let idempotency_key = format!("refund_{}_{}", event.tenant_id, order_id);
+
+            let api_key = std::env::var("STRIPE_SECRET_KEY").unwrap_or_else(|_| "sk_test_123".to_string());
+            let stripe_client = crate::integrations::stripe::client::StripeClient::new(api_key);
+            let _ = stripe_client.issue_refund(&event.tenant_id, &order_id, refund_amount_cents, &idempotency_key).await;
+
+            return Ok(());
+        }
+
         let config = self.get_config(&event.tenant_id);
         let risk = if let Some(cfg) = config {
             if cfg.auto_approve_limits > 0.0 {
