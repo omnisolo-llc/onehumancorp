@@ -3631,9 +3631,11 @@ impl Agent {
                                             && let Ok(msgs) =
                                                 serde_json::from_value::<Vec<Message>>(cp.data)
                                             {
-                                                let _ =
-                                                    checkpointer.restore_checkpoint(&prev_id).await;
-                                                restored_msgs = Some(msgs);
+                                                if let Err(e) = checkpointer.restore_checkpoint(&prev_id).await {
+                                                    tracing::warn!("Failed to restore workspace to checkpoint {}: {}", prev_id, e);
+                                                } else {
+                                                    restored_msgs = Some(msgs);
+                                                }
                                             }
 
                                     // State Management: OpenAI uses lightweight previous_response_id chaining.
@@ -3911,10 +3913,11 @@ impl Agent {
                                                 && let Ok(msgs) =
                                                     serde_json::from_value::<Vec<Message>>(cp.data)
                                                 {
-                                                    let _ = checkpointer
-                                                        .restore_checkpoint(&prev_id)
-                                                        .await;
-                                                    restored_msgs = Some(msgs);
+                                                    if let Err(e) = checkpointer.restore_checkpoint(&prev_id).await {
+                                                        tracing::warn!("Failed to restore workspace to checkpoint {}: {}", prev_id, e);
+                                                    } else {
+                                                        restored_msgs = Some(msgs);
+                                                    }
                                                 }
 
                                         // State Management: OpenAI uses lightweight previous_response_id chaining.
