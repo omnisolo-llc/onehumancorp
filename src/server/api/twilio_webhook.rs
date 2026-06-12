@@ -36,13 +36,32 @@ pub async fn twilio_webhook_post_handler(
     }
 
     let sender_id = params.get("From").cloned().unwrap_or_else(|| "unknown".to_string());
-    let _to_number = params.get("To").cloned().unwrap_or_else(|| "unknown".to_string());
-    let text = params.get("Body").cloned().unwrap_or_else(|| "".to_string());
+    let to_number = params.get("To").cloned().unwrap_or_else(|| "unknown".to_string());
+    let mut text = params.get("Body").cloned().unwrap_or_else(|| "".to_string());
+
+    let num_media = params.get("NumMedia").and_then(|s| s.parse::<usize>().ok()).unwrap_or(0);
+    for i in 0..num_media {
+        let media_url_key = format!("MediaUrl{}", i);
+        if let Some(media_url) = params.get(&media_url_key) {
+            if !text.is_empty() {
+                text.push_str("\n");
+            }
+            text.push_str(&format!("[Image: {}]", media_url));
+        }
+    }
 
     if !text.is_empty() {
         tracing::info!("Received Twilio message from {}: {}", sender_id, text);
 
         let pool = &state.db.pool;
+
+        let source = if sender_id.starts_with("whatsapp:") || to_number.starts_with("whatsapp:") {
+            "whatsapp".to_string()
+        } else {
+            "sms".to_string()
+        };
+
+        let clean_to_number = to_number.strip_prefix("whatsapp:").unwrap_or(&to_number).to_string();
 
         // Find the correct tenant by mapping the `To` number
         let tenant_id = match &state.db.store {
@@ -50,7 +69,7 @@ pub async fn twilio_webhook_post_handler(
                 match sqlx::query_scalar::<_, String>(
                     "SELECT tenant_id FROM settings WHERE sms_critical_phone = $1 OR voice_receptionist_number = $1 LIMIT 1"
                 )
-                .bind(&_to_number)
+                .bind(&clean_to_number)
                 .fetch_optional(pool)
                 .await {
                     Ok(Some(id)) => id,
@@ -61,8 +80,8 @@ pub async fn twilio_webhook_post_handler(
                 match sqlx::query_scalar::<_, String>(
                     "SELECT tenant_id FROM settings WHERE sms_critical_phone = ? OR voice_receptionist_number = ? LIMIT 1"
                 )
-                .bind(&_to_number)
-                .bind(&_to_number)
+                .bind(&clean_to_number)
+                .bind(&clean_to_number)
                 .fetch_optional(sqlite_pool)
                 .await {
                     Ok(Some(id)) => id,
@@ -72,7 +91,6 @@ pub async fn twilio_webhook_post_handler(
         };
 
         let inbox_id = Uuid::new_v4().to_string();
-        let source = "whatsapp".to_string();
 
         let insert_result = match &state.db.store {
             crate::db::DbStore::Postgres => {
