@@ -2777,8 +2777,25 @@ mod tests {
         assert_eq!(req_categories.len(), 2);
         assert_eq!(req_categories[0], "physical");
 
+        let mut promoter_rx = hub.subscribe_teammate_mesh("promoter_inbox".to_string());
+        let mut scout_rx = hub.subscribe_teammate_mesh("scout_inbox".to_string());
+        let mut manager_rx = hub.subscribe_teammate_mesh("manager_inbox".to_string());
+
         let res = agent.start_onboarding(req).await;
         assert!(res.is_ok());
+
+        // Verify that the TenantOnboardingCompleted events were emitted
+        let promoter_msg = promoter_rx.try_recv();
+        assert!(promoter_msg.is_ok());
+        assert_eq!(promoter_msg.unwrap().action, "TenantOnboardingCompleted");
+
+        let scout_msg = scout_rx.try_recv();
+        assert!(scout_msg.is_ok());
+        assert_eq!(scout_msg.unwrap().action, "TenantOnboardingCompleted");
+
+        let manager_msg = manager_rx.try_recv();
+        assert!(manager_msg.is_ok());
+        assert_eq!(manager_msg.unwrap().action, "TenantOnboardingCompleted");
         let resp = res.unwrap();
         assert!(resp.success);
         assert!(!resp.organization_id.is_empty());

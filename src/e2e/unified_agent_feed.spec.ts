@@ -21,7 +21,10 @@ test.describe("Unified Agent Feed Mobile UX", () => {
 
           INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at)
           VALUES
-            ('e2e-feed-test-3', 'e2e-tenant', 'instagram_dm', '{"customer_message": "Do you make custom vegan cakes?", "feature_type": "instagram_dm", "draft_reply": "Yes we do! Here is a booking link: https://ohc.page/book"}'::jsonb, null, 'PENDING_APPROVAL', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            ('e2e-feed-test-3', 'e2e-tenant', 'instagram_dm', '{"customer_message": "Do you make custom vegan cakes?", "feature_type": "instagram_dm", "draft_reply": "Yes we do! Here is a booking link: https://ohc.page/book"}'::jsonb, null, 'PENDING_APPROVAL', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+            ('e2e-feed-test-4', 'e2e-tenant', 'marketing', '{"description": "The Promoter drafted a We are Open! social media campaign for your launch. Review and schedule.", "feature_type": "social_post_draft"}'::jsonb, '{"tiktok": "We are officially open! Come check us out.", "instagram": "We are officially open! Link in bio.", "facebook": "We are thrilled to announce that our business is now open!", "campaign_type": "launch"}'::jsonb, 'PENDING_APPROVAL', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+            ('e2e-feed-test-5', 'e2e-tenant', 'research', '{"description": "The Scout researched your market and drafted SEO meta tags. Review to optimize your discoverability.", "feature_type": "seo_meta_draft"}'::jsonb, '{"meta_title": "Your Business - Official Site", "meta_description": "Welcome to Your Business", "keywords": ["Business"], "competitor_insight": "Market is growing."}'::jsonb, 'PENDING_APPROVAL', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+            ('e2e-feed-test-6', 'e2e-tenant', 'operations', '{"description": "The Manager prepared your initial operational settings (hours & delivery zone). Review and confirm to activate.", "feature_type": "operations_setup_draft"}'::jsonb, '{"operating_hours": "Mon-Fri 9AM-5PM", "delivery_zone_radius_miles": 10, "ops_note": "Standard Business hours applied."}'::jsonb, 'PENDING_APPROVAL', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
           ON CONFLICT (id) DO UPDATE SET lifecycle_state = 'PENDING_APPROVAL', updated_at = CURRENT_TIMESTAMP;
         `,
       },
@@ -38,9 +41,17 @@ test.describe("Unified Agent Feed Mobile UX", () => {
     const marketingCard = page.locator("text=Draft promo email?").first();
     const igCard = page.locator("text=Do you make custom vegan cakes?").first();
 
+    const launchPostCard = page.locator("text=The Promoter drafted a We are Open! social media campaign").first();
+    const seoMetaCard = page.locator("text=The Scout researched your market and drafted SEO meta tags").first();
+    const opsSetupCard = page.locator("text=The Manager prepared your initial operational settings").first();
+
     await expect(opsCard).toBeVisible();
     await expect(marketingCard).toBeVisible();
     await expect(igCard).toBeVisible();
+
+    await expect(launchPostCard).toBeVisible();
+    await expect(seoMetaCard).toBeVisible();
+    await expect(opsSetupCard).toBeVisible();
 
     // Verify Instagram DM specific UI elements
     await expect(page.locator("text=Instagram DM").first()).toBeVisible();
