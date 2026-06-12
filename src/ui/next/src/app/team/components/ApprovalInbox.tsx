@@ -647,7 +647,7 @@ export default function ApprovalInbox({
                         : req.payload?.feature_type === "social_post_draft"
                         ? "Schedule Post"
                         : req.payload?.feature_type === "quote_draft"
-                        ? "Approve & Send"
+                        ? "Approve & Send Proposal"
                         : req.payload?.feature_type === "ambassador_reply"
                         ? "Send Draft"
                         : "Approve"}
