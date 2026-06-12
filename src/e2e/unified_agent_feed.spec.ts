@@ -46,6 +46,18 @@ test.describe("Unified Agent Feed Mobile UX", () => {
     await expect(page.locator("text=Instagram DM").first()).toBeVisible();
     await expect(page.locator("text=Yes we do! Here is a booking link").first()).toBeVisible();
 
+    // Verify the ActionCard components exist via data-testid
+    const actionCard1 = page.locator('[data-testid="action-card-e2e-feed-test-1"]').first();
+    await expect(actionCard1).toBeVisible();
+
+    const actionCard2 = page.locator('[data-testid="action-card-e2e-feed-test-3"]').first();
+    await expect(actionCard2).toBeVisible();
+
+    // Verify touch target sizing (min 44px)
+    const approveIgButton2 = actionCard2.locator('button[data-testid="approve-instagram-dm"]').first();
+    const box = await approveIgButton2.boundingBox();
+    expect(box?.height).toBeGreaterThanOrEqual(44);
+
     // 5. Verify touch targets on the Instagram DM specific button
     const approveIgButton = page.locator('button[data-testid="approve-instagram-dm"]').first();
     await expect(approveIgButton).toBeVisible();
