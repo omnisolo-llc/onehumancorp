@@ -53,6 +53,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
   const [isOffline, setIsOffline] = useState(false);
   const [offlineActionsCount, setOfflineActionsCount] = useState(0);
   const [queuedActionIds, setQueuedActionIds] = useState<Set<string>>(new Set());
+  const [actioningId, setActioningId] = useState<string | null>(null);
 
   const tenantId = () => {
     if (typeof window === "undefined") return "default";
@@ -324,29 +325,34 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
       return;
     }
 
-    // Optimistic UI update
-    setItems(prev => prev.filter(app => app.id !== id));
+    setActioningId(id);
 
-    try {
-      await submitDecision(id, approved);
-    } catch (err: any) {
-      // Revert optimistic update gracefully by refetching
-      const tenant = tenantId();
+    setTimeout(async () => {
+      setActioningId(null);
+      // Optimistic UI update
+      setItems(prev => prev.filter(app => app.id !== id));
+
       try {
-        const refreshRes = await fetch(`/api/agent-feed?tenant_id=${tenant}`, {
-            headers: { "x-tenant-id": tenant, "x-user-id": "default" }
-        });
-        if (refreshRes.ok) {
-            const data: any = await refreshRes.json();
-            if (data.items) {
-               setItems(data.items.filter((i: any) => i.lifecycle_state !== "APPROVED" && i.lifecycle_state !== "DISMISSED"));
-            }
+        await submitDecision(id, approved);
+      } catch (err: any) {
+        // Revert optimistic update gracefully by refetching
+        const tenant = tenantId();
+        try {
+          const refreshRes = await fetch(`/api/agent-feed?tenant_id=${tenant}`, {
+              headers: { "x-tenant-id": tenant, "x-user-id": "default" }
+          });
+          if (refreshRes.ok) {
+              const data: any = await refreshRes.json();
+              if (data.items) {
+                 setItems(data.items.filter((i: any) => i.lifecycle_state !== "APPROVED" && i.lifecycle_state !== "DISMISSED"));
+              }
+          }
+        } catch (e) {
+          console.error("Failed to restore state", e);
         }
-      } catch (e) {
-        console.error("Failed to restore state", e);
+        setError(err.message || "Action failed");
       }
-      setError(err.message || "Action failed");
-    }
+    }, 500);
   };
 
 
@@ -458,7 +464,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
             {items.map((approval) => (
               <div
                 key={approval.id}
-                className="glassmorphism p-5 rounded-[16px] border border-white/40 dark:border-white/10 shadow-sm flex flex-col gap-4"
+                className={`glassmorphism p-5 rounded-[16px] border shadow-sm flex flex-col gap-4 transition-all duration-500 ${actioningId === approval.id ? "border-green-500 scale-95 opacity-50" : "border-white/40 dark:border-white/10"}`}
               >
                 <div className="flex flex-col gap-1">
                   <div className="flex items-center gap-2">
