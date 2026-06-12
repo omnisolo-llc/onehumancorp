@@ -754,7 +754,7 @@ impl DB {
                     );
                     CREATE TABLE IF NOT EXISTS customers (
                         id TEXT PRIMARY KEY,
-                        tenant_id TEXT,
+                        tenant_id TEXT NOT NULL,
                         email TEXT,
                         phone TEXT,
                         name TEXT,
@@ -791,7 +791,7 @@ impl DB {
 
                     CREATE TABLE IF NOT EXISTS orders (
                         id TEXT PRIMARY KEY,
-                        tenant_id TEXT,
+                        tenant_id TEXT NOT NULL,
                         customer_id TEXT,
                         total_amount REAL,
                         status TEXT,
@@ -802,7 +802,7 @@ impl DB {
                     );
                     CREATE TABLE IF NOT EXISTS order_items (
                         id TEXT PRIMARY KEY,
-                        tenant_id TEXT,
+                        tenant_id TEXT NOT NULL,
                         order_id TEXT,
                         product_id TEXT,
                         quantity INTEGER,
@@ -814,7 +814,7 @@ impl DB {
                     );
                     CREATE TABLE IF NOT EXISTS bookings (
                         id TEXT PRIMARY KEY,
-                        tenant_id TEXT,
+                        tenant_id TEXT NOT NULL,
                         customer_id TEXT,
                         service_id TEXT,
                         start_time TEXT,
@@ -827,7 +827,7 @@ impl DB {
                     );
                     CREATE TABLE IF NOT EXISTS products (
                         id TEXT PRIMARY KEY,
-                        tenant_id TEXT,
+                        tenant_id TEXT NOT NULL,
                         name TEXT,
                         description TEXT,
                         price_cents INTEGER,
@@ -1035,7 +1035,7 @@ impl DB {
 
                     CREATE TABLE IF NOT EXISTS inbox_messages (
                         id TEXT PRIMARY KEY,
-                        tenant_id TEXT,
+                        tenant_id TEXT NOT NULL,
                         source TEXT,
                         content TEXT,
                         original_content TEXT,
