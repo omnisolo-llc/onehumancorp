@@ -38,10 +38,19 @@ impl MicroAgentRegistry {
         for entry in fs::read_dir(dir)? {
             let entry = entry?;
             let path = entry.path();
-            if path.is_file() && (path.extension().and_then(|e| e.to_str()) == Some("yaml") || path.extension().and_then(|e| e.to_str()) == Some("json")) {
-                let content = fs::read_to_string(&path)?;
-                if let Ok(agent) = serde_json::from_str::<MicroAgent>(&content) {
-                    self.agents.push(agent);
+            if path.is_file() {
+                let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("");
+                if ext == "yaml" || ext == "yml" || ext == "json" {
+                    let content = fs::read_to_string(&path)?;
+                    let result = if ext == "json" {
+                        serde_json::from_str::<MicroAgent>(&content).map_err(|e| e.to_string())
+                    } else {
+                        serde_yaml::from_str::<MicroAgent>(&content).map_err(|e| e.to_string())
+                    };
+
+                    if let Ok(agent) = result {
+                        self.agents.push(agent);
+                    }
                 }
             }
         }
@@ -60,5 +69,68 @@ impl MicroAgentRegistry {
         }
 
         active_instructions.join("\n\n")
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempfile::tempdir;
+
+    #[test]
+    fn test_load_microagents() {
+        let dir = tempdir().unwrap();
+        let agent_dir = dir.path().join("microagents");
+        fs::create_dir_all(&agent_dir).unwrap();
+
+        let yaml_content = r#"
+name: RustAgent
+description: Helper for Rust files
+triggers:
+  - ".rs"
+  - "Cargo.toml"
+instructions: "Always run cargo fmt."
+"#;
+        fs::write(agent_dir.join("rust.yaml"), yaml_content).unwrap();
+
+        let json_content = r#"
+{
+  "name": "PythonAgent",
+  "description": "Helper for Python",
+  "triggers": [".py"],
+  "instructions": "Use black formatter."
+}
+"#;
+        fs::write(agent_dir.join("python.json"), json_content).unwrap();
+
+        // Also test .yml extension
+        let yml_content = r#"
+name: JSAGENT
+description: Helper for JS files
+triggers:
+  - ".js"
+instructions: "Use eslint."
+"#;
+        fs::write(agent_dir.join("js.yml"), yml_content).unwrap();
+
+        let mut registry = MicroAgentRegistry::new();
+        registry.load_from_dir(&agent_dir).unwrap();
+
+        assert_eq!(registry.agents.len(), 3);
+
+        let rust_agent = registry.agents.iter().find(|a| a.name == "RustAgent").unwrap();
+        assert_eq!(rust_agent.triggers, vec![".rs", "Cargo.toml"]);
+        assert_eq!(rust_agent.instructions, "Always run cargo fmt.");
+
+        let py_agent = registry.agents.iter().find(|a| a.name == "PythonAgent").unwrap();
+        assert_eq!(py_agent.triggers, vec![".py"]);
+
+        let js_agent = registry.agents.iter().find(|a| a.name == "JSAGENT").unwrap();
+        assert_eq!(js_agent.triggers, vec![".js"]);
+
+        let active = registry.get_active_instructions("I need help with main.rs and Cargo.toml");
+        assert!(active.contains("RustAgent"));
+        assert!(!active.contains("PythonAgent"));
+        assert!(!active.contains("JSAGENT"));
     }
 }

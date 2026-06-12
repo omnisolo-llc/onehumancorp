@@ -156,6 +156,7 @@ rust_library(
         "@crates//:reqwest",
         "@crates//:serde",
         "@crates//:serde_json",
+        "@crates//:serde_yaml",
         "@crates//:sha2",
         "@crates//:sqlx",
         "@crates//:tempfile",

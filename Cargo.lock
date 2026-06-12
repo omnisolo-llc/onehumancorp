@@ -5674,6 +5674,7 @@ dependencies = [
  "reqwest 0.12.28",
  "serde",
  "serde_json",
+ "serde_yaml",
  "server_harness",
  "server_ohc",
  "server_pricing",
