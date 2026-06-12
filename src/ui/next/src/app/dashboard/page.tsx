@@ -670,7 +670,7 @@ export default function Dashboard() {
              />
         ))}
 
-        <UnifiedAgentFeed initialData={{ proposals: pendingApprovals, activity: activities }} />
+        <TriageFeed tenantId={tenantId()} initialItems={pendingApprovals} />
 
         <section>
           <div className="mb-6 p-6 rounded-[16px] bg-white/65 dark:bg-[#16161a]/70 border border-white/40 dark:border-white/10">
