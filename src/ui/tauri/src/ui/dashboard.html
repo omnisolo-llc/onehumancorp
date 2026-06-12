@@ -607,6 +607,7 @@
         <a href="assistant.html" class="btn-primary" style="width: auto; text-decoration: none;">Open WorkBuddy Assistant</a>
         <a href="pos.html" class="btn-outline" style="width: auto; text-decoration: none;">Quick Charge POS</a>
         <a href="cost-dashboard.html" class="btn-outline" style="width: auto; text-decoration: none;">My Plan</a>
+        <a href="triage.html" class="btn-outline" style="width: auto; text-decoration: none;">Unified Agent Feed</a>
       </div>
 
       <div class="ohc-growth-card" id="ai-savings-widget">
@@ -1390,7 +1391,7 @@
         triageSection.style.display = 'block';
         try {
           const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default';
-          const res = await fetch(`/api/ui/triage?tenant_id=${encodeURIComponent(tenantId)}&mobile_optimized=true`, {
+          const res = await fetch(`/api/ui/dashboard/unified-agent-feed?tenant_id=${encodeURIComponent(tenantId)}&mobile_optimized=true`, {
             headers: { 'X-Tenant-ID': tenantId, 'X-User-ID': 'default' }
           });
           if (!res.ok) throw new Error("Failed to load");
