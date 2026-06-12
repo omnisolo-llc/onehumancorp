@@ -7,12 +7,14 @@ import { ActionCard } from "../components/ActionCard";
 type TriageItem = {
   id: string;
   tenant_id: string;
-  event_source: string;
-  context_payload?: any;
-  proposed_action?: any;
-  lifecycle_state: string;
+  customer_id?: string;
+  source?: string;
+  priority?: string;
+  context?: string;
+  action_type?: string;
+  action_payload?: string;
+  status?: string;
   created_at: string;
-  updated_at: string;
 };
 
 function tenantId() {
@@ -34,28 +36,28 @@ export default function TriagePage() {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch(`/api/agent-feed?tenant_id=${encodeURIComponent(tenantId())}`);
-      if (!res.ok) throw new Error("Failed to load agent feed items from the database");
+      const res = await fetch(`/api/ui/triage?tenant_id=${encodeURIComponent(tenantId())}`);
+      if (!res.ok) throw new Error("Failed to load triage items from the database");
       const data = await res.json();
-      const rows = Array.isArray(data?.items) ? data.items : [];
+      const rows = Array.isArray(data) ? data : (Array.isArray(data?.items) ? data.items : []);
       setItems(rows);
     } catch (e: any) {
-      setError(e?.message || "Failed to load agent feed items");
+      setError(e?.message || "Failed to load triage items");
     } finally {
       setLoading(false);
     }
   }
 
   const activeCount = items.length;
-  const urgentCount = items.filter(item => ["urgent", "high"].includes((item.context_payload?.priority || "").toLowerCase())).length;
+  const urgentCount = items.filter(item => ["urgent", "high"].includes((item.priority || "").toLowerCase())).length;
 
   async function handleDecision(id: string, approved: boolean) {
     try {
       setActionStatus(approved ? "Approving..." : "Dismissing...");
-      const res = await fetch(`/api/agent-feed/${id}/state`, {
-        method: "PUT",
+      const res = await fetch(`/api/ui/triage/action?tenant_id=${encodeURIComponent(tenantId())}`, {
+        method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ state: approved ? "APPROVED" : "DISMISSED" })
+        body: JSON.stringify({ triage_item_id: id, approved })
       });
       if (!res.ok) throw new Error("Failed to update action");
 
@@ -96,10 +98,10 @@ export default function TriagePage() {
           <ActionCard
             key={item.id}
             id={item.id}
-            eventSource={item.event_source}
-            priority={item.context_payload?.priority || "Normal"}
-            context={item.context_payload?.context}
-            proposedAction={item.proposed_action}
+            eventSource={item.source || ""}
+            priority={item.priority || "Normal"}
+            context={item.context || ""}
+            proposedAction={{ action_type: item.action_type || "", payload: item.action_payload }}
             createdAt={item.created_at || Date.now().toString()}
             onDecision={handleDecision}
           />
