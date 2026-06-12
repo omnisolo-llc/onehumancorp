@@ -116,23 +116,57 @@ impl SipDB {
 
     pub async fn cleanup_stagnant_missions(&self, stagnant_threshold: chrono::Duration) -> Result<(), sqlx::Error> {
         let threshold_time = Utc::now() - stagnant_threshold;
-        let mut tx = self.pool.begin().await?;
-        ::server_common::auth_utils::set_system_context(&mut *tx).await?;
 
-        sqlx::query("INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message) SELECT gen_random_uuid()::text, tenant_id, 'mission_stagnant', 'agent_missions', payload, 'Mission became stagnant' FROM agent_missions WHERE (status = 'PENDING' OR status = 'BURSTING' OR status = 'STUCK' OR status = 'IN_PROGRESS' OR status = 'RUNNING') AND updated_at < $1 AND tenant_id = $2")
-            .bind(threshold_time)
-            .bind(&self.org_id)
-            .execute(&mut *tx)
-            .await?;
+        let mut attempt = 0;
+        let max_attempts = 10;
+        let mut backoff = std::time::Duration::from_millis(50);
 
-        sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE (status = 'PENDING' OR status = 'BURSTING' OR status = 'STUCK' OR status = 'IN_PROGRESS' OR status = 'RUNNING') AND updated_at < $1 AND tenant_id = $2")
-            .bind(threshold_time)
-            .bind(&self.org_id)
-            .execute(&mut *tx)
-            .await?;
+        loop {
+            let res = tokio::time::timeout(ohc_builtin_agent::agent::agent_task_timeout(), async {
+                let mut tx = self.pool.begin().await?;
 
-        tx.commit().await?;
-        Ok(())
+                ::server_common::auth_utils::set_system_context(&mut *tx).await?;
+
+                sqlx::query("INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message) SELECT gen_random_uuid()::text, tenant_id, 'mission_stagnant', 'agent_missions', payload, 'Mission became stagnant' FROM agent_missions WHERE (status = 'PENDING' OR status = 'BURSTING' OR status = 'STUCK' OR status = 'IN_PROGRESS' OR status = 'RUNNING') AND updated_at < $1 AND tenant_id = $2")
+                    .bind(threshold_time)
+                    .bind(&self.org_id)
+                    .execute(&mut *tx)
+                    .await?;
+
+                sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE (status = 'PENDING' OR status = 'BURSTING' OR status = 'STUCK' OR status = 'IN_PROGRESS' OR status = 'RUNNING') AND updated_at < $1 AND tenant_id = $2")
+                    .bind(threshold_time)
+                    .bind(&self.org_id)
+                    .execute(&mut *tx)
+                    .await?;
+
+                tx.commit().await?;
+                Ok::<(), sqlx::Error>(())
+            }).await;
+
+            match res {
+                Ok(Ok(_)) => return Ok(()),
+                Ok(Err(err)) => {
+                    let err_str = err.to_string().to_lowercase();
+                    let retry = err_str.contains("serialization failure") || err_str.contains("deadlock detected") || err_str.contains("database is locked") || err_str.contains("busy");
+
+                    if retry {
+                        attempt += 1;
+                        if attempt >= max_attempts {
+                            return Err(err);
+                        }
+                        tokio::time::sleep(backoff).await;
+                        backoff *= 2;
+                    } else if err_str.contains("connection refused") || err_str.contains("connection reset") {
+                        return Err(err);
+                    } else {
+                        return Err(err);
+                    }
+                },
+                Err(timeout_err) => {
+                    return Err(sqlx::Error::Io(std::io::Error::new(std::io::ErrorKind::TimedOut, timeout_err)));
+                }
+            }
+        }
     }
 
     pub async fn prune_stale_missions(&self, age_threshold: chrono::Duration) -> Result<(), sqlx::Error> {
