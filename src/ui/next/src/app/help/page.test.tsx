@@ -14,7 +14,7 @@ describe('HelpCenterPage', () => {
         return Promise.resolve({
           json: () => Promise.resolve([
             { title: "Getting Started", desc: "Learn how to easily set up your store and accept your first payment.", link: "/help/getting-started-1" },
-            { title: "My Store", desc: "Add products, track what's in stock, and change how your store looks.", link: "/help/my-store" }
+            { title: "Adding Products", desc: "Add products, track what's in stock, and change how your store looks.", link: "/help/my-store" }
           ])
         });
       }
@@ -23,7 +23,7 @@ describe('HelpCenterPage', () => {
         const q = urlObj.searchParams.get('q')?.toLowerCase() || '';
         const allArticles = [
             { title: "Getting Started", desc: "Learn how to easily set up your store and accept your first payment.", link: "/help/getting-started-1" },
-            { title: "My Store", desc: "Add products, track what's in stock, and change how your store looks.", link: "/help/my-store" }
+            { title: "Adding Products", desc: "Add products, track what's in stock, and change how your store looks.", link: "/help/my-store" }
         ];
         const results = allArticles.filter(a =>
           a.title.toLowerCase().includes(q) ||
@@ -58,7 +58,7 @@ describe('HelpCenterPage', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Getting Started')).toBeInTheDocument();
-      expect(screen.getByText('My Store')).toBeInTheDocument();
+      expect(screen.getByText('Adding Products')).toBeInTheDocument();
     });
   });
 
@@ -75,7 +75,7 @@ describe('HelpCenterPage', () => {
 
     await waitFor(() => {
       expect(screen.queryByText('Getting Started')).not.toBeInTheDocument();
-      expect(screen.getByText('My Store')).toBeInTheDocument();
+      expect(screen.getByText('Adding Products')).toBeInTheDocument();
     });
   });
 
