@@ -5283,53 +5283,32 @@ async fn create_ui_bom_item_handler(
         .route("/chaos-report", axum::routing::get(|| async {
             axum::response::Html(include_str!("../ui/tauri/src/ui/chaos-report.html"))
         }))
-        .route("/api/chat", axum::routing::post(|axum::Json(req): axum::Json<ChatRequest>| async move {
-            let help_articles = vec![
-                ("getting started", "Welcome to One Human Corp! This is a simple app that helps you manage your small business. You can set up your store, accept payments, and hire AI helpers."),
-                ("store", "To set up your storefront, go to the 'My Store' tab and add your products. It's easy! Just upload a photo, write a simple description, and set a price."),
-                ("payment", "When a customer buys something, the money goes straight to your account. We handle all the technical details so you can focus on your business."),
-                ("ai agent", "Need a hand? Your AI Support Agent can answer customer emails and chats for you while you sleep. Just turn it on in the 'AI Agents' tab."),
-                ("marketing", "Let our AI write your social media posts! Just tell it what you want to sell, and it will give you a catchy post to share with your customers."),
-                ("billing", "Your monthly invoice shows exactly what you paid for. We keep things simple with no hidden fees."),
-                ("api", "Interactive API reference for integrations."),
-            ];
+        .route("/api/chat", axum::routing::post({
+            let hub_for_chat = hub.clone();
+            |axum::extract::Extension(claims): axum::extract::Extension<crate::common::Claims>, axum::Json(req): axum::Json<ChatRequest>| async move {
+                let tenant_id = claims.organization_id.unwrap_or_else(|| "e2e-tenant".to_string());
 
-            let query = req.message.to_lowercase();
-            let mut reply = "I am your AI Help Agent! I specialize in answering questions about OHC features and helping you grow your small business. Check out our Getting Started guide.".to_string();
-            let mut link_title = "Read the full article →";
-            let mut link_url = "/help/getting-started";
+                let prompt = format!("You are an AI Help Agent for OHC (One Human Corp), a platform for small businesses. A user asks: {}. Reply helpfully.", req.message);
 
-            if query.contains("getting started") {
-                reply = format!("Based on our help center: {}", help_articles[0].1);
-                link_url = "/help/getting-started";
-            } else if query.contains("store") {
-                reply = format!("Based on our help center: {}", help_articles[1].1);
-                link_url = "/help/my-store";
-            } else if query.contains("payment") {
-                reply = format!("Based on our help center: {}", help_articles[2].1);
-                link_url = "/help/payments";
-            } else if query.contains("ai agent") {
-                reply = format!("Based on our help center: {}", help_articles[3].1);
-                link_url = "/help/ai-agents";
-            } else if query.contains("marketing") {
-                reply = format!("Based on our help center: {}", help_articles[4].1);
-                link_url = "/help/marketing";
-            } else if query.contains("billing") {
-                reply = format!("Based on our help center: {}", help_articles[5].1);
-                link_url = "/help/account-billing";
-            } else if query.contains("api") || query.contains("advanced") {
-                reply = format!("Based on our help center: {}", help_articles[6].1);
-                link_url = "/api-docs";
-            } else if query.contains("operations") {
-                reply = "I have routed your request to the Operations department.".to_string();
-                link_url = "/inbox";
-                link_title = "Check your inbox for updates →";
+                // Get the API key
+                let api_key = hub_for_chat.minimax_api_key().to_string();
+
+                // Connect to Minimax client
+                let client = crate::minimax::MinimaxClient::new(api_key);
+
+                let reply = match client.reason(&prompt).await {
+                    Ok(resp) => resp,
+                    Err(_) => "I'm sorry, I'm having trouble connecting right now.".to_string(),
+                };
+
+                let link_title = "Go to Help Center →";
+                let link_url = "/help";
+
+                axum::Json(serde_json::json!({
+                    "reply": reply,
+                    "link": { "url": link_url, "title": link_title }
+                }))
             }
-
-            axum::Json(serde_json::json!({
-                "reply": reply,
-                "link": { "url": link_url, "title": link_title }
-            }))
         }))
         .merge(webhook_router)
         .merge(relay_webhook_router)
