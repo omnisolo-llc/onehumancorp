@@ -365,7 +365,7 @@ impl DB {
         match &self.store {
             DbStore::Sqlite(sqlite_pool) => {
                 // Search Customers
-                let customer_rows = sqlx::query("SELECT id, name, email FROM customers WHERE tenant_id = ? AND (LOWER(name) LIKE ? OR LOWER(email) LIKE ?) LIMIT 10")
+                let customer_rows = sqlx::query("SELECT id, name, email FROM customers WHERE tenant_id = ? AND (name LIKE ? OR email LIKE ?) LIMIT 10")
                     .bind(tenant_id)
                     .bind(&query_lower)
                     .bind(&query_lower)
@@ -388,7 +388,7 @@ impl DB {
                 }
 
                 // Search Orders
-                let order_rows = sqlx::query("SELECT id, status, total_amount FROM orders WHERE tenant_id = ? AND (LOWER(id) LIKE ? OR LOWER(status) LIKE ?) LIMIT 10")
+                let order_rows = sqlx::query("SELECT id, status, CAST(total_amount AS REAL) as total_amount FROM orders WHERE tenant_id = ? AND (id LIKE ? OR status LIKE ?) LIMIT 10")
                     .bind(tenant_id)
                     .bind(&query_lower)
                     .bind(&query_lower)
@@ -411,7 +411,7 @@ impl DB {
                 }
 
                 // Search Messages
-                let message_rows = sqlx::query("SELECT id, source, content FROM inbox_messages WHERE tenant_id = ? AND (LOWER(content) LIKE ? OR LOWER(source) LIKE ?) LIMIT 10")
+                let message_rows = sqlx::query("SELECT id, source, content FROM inbox_messages WHERE tenant_id = ? AND (content LIKE ? OR source LIKE ?) LIMIT 10")
                     .bind(tenant_id)
                     .bind(&query_lower)
                     .bind(&query_lower)
