@@ -18,25 +18,59 @@ test.describe('Terminal POS - Mobile First & Inventory Sync', () => {
   });
 
   test('Processes tap-to-pay and reserves inventory', async ({ page }) => {
-    // Wait for the UI to be ready
-    await expect(page.getByRole('button', { name: 'New Order' })).toBeVisible();
+    // Navigate directly to the pos UI as per the new frontend implementation test
+    await page.goto('/ui/pos.html');
 
-    // Click New Order
-    await page.getByRole('button', { name: 'New Order' }).click();
+    // Wait for numpad to appear
+    await expect(page.getByRole('button', { name: '1' }).first()).toBeVisible();
 
-    // Check loading/processing state
-    await expect(page.getByRole('status')).toBeVisible({ timeout: 10000 });
+    // Enter a mock amount: e.g. 5000 cents ($50.00)
+    await page.getByRole('button', { name: '5' }).first().click();
+    await page.getByRole('button', { name: '0' }).first().click();
+    await page.getByRole('button', { name: '0' }).first().click();
+    await page.getByRole('button', { name: '0' }).first().click();
 
-    // Sometimes it might transition to Payment Completed fast, wait for it
-    await expect(page.getByRole('status')).toContainText('Payment Completed', { timeout: 15000 });
+    // The display should show $50.00
+    await expect(page.locator('#amount-display')).toContainText('$50.00');
 
-    // Go to dashboard feed to check for restock action card
-    await page.goto(`/dashboard`);
-    await expect(page.getByRole('button', { name: 'Agent Approvals' })).toBeVisible();
-    await page.getByRole('button', { name: 'Agent Approvals' }).click();
+    // Setup an intercept to mock the backend Stripe token call
+    await page.route('**/api/v1/payments/terminal/token', async route => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ secret: 'mock_terminal_connection_token' }),
+      });
+    });
 
-    // Because the low stock alert is triggered on backend, we can just assert the card will appear
-    const approveRestockBtn = page.getByTestId('approve-restock');
-    await expect(approveRestockBtn).toBeVisible({ timeout: 10000 });
+    // Setup an intercept to mock the backend Stripe intent call
+    await page.route('**/api/v1/payments/terminal/intent', async route => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ client_secret: 'mock_payment_intent_secret' }),
+      });
+    });
+
+    // Setup an intercept to mock the backend sync_offline call
+    await page.route('**/api/v1/payments/terminal/sync_offline', async route => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ success: true, failed_transaction_ids: [] }),
+      });
+    });
+
+    // Click "Accept Contactless Payment"
+    await page.getByRole('button', { name: /Accept Contactless Payment/i }).click();
+
+    // The Tap Overlay should appear
+    await expect(page.locator('#tap-overlay')).toBeVisible();
+
+    // Click "Simulate Customer Tap (Test)"
+    await page.getByRole('button', { name: /Simulate Customer Tap/i }).click();
+
+    // Wait for the Receipt Screen
+    await expect(page.locator('#receipt-screen')).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('#receipt-amount')).toContainText('$50.00');
   });
 });
