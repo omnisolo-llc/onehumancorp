@@ -46,7 +46,7 @@ body {
 
 .app-brand-mark {
   width: 32px;
-  height: 32px;
+  height: 44px;
   border-radius: 8px;
   display: grid;
   place-items: center;
@@ -195,8 +195,8 @@ body {
 
 .app-card {
   background: rgba(255, 255, 255, 0.65);
-  backdrop-filter: blur(30px) saturate(210%);
   -webkit-backdrop-filter: blur(30px) saturate(210%);
+  backdrop-filter: blur(30px) saturate(210%);
   border: 1px solid rgba(255, 255, 255, 0.4);
   border-radius: 16px;
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
@@ -205,16 +205,16 @@ body {
 @media (prefers-color-scheme: dark) {
   .app-card {
     background: rgba(22, 22, 26, 0.7);
-    backdrop-filter: blur(30px) saturate(210%);
     -webkit-backdrop-filter: blur(30px) saturate(210%);
+  backdrop-filter: blur(30px) saturate(210%);
     border: 1px solid rgba(255, 255, 255, 0.1);
   }
 }
 
 .app-panel {
   background: rgba(255, 255, 255, 0.65);
-  backdrop-filter: blur(30px) saturate(210%);
   -webkit-backdrop-filter: blur(30px) saturate(210%);
+  backdrop-filter: blur(30px) saturate(210%);
   border: 1px solid rgba(255, 255, 255, 0.4);
   border-radius: 16px;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
@@ -224,8 +224,8 @@ body {
 @media (prefers-color-scheme: dark) {
   .app-panel {
     background: rgba(22, 22, 26, 0.7);
-    backdrop-filter: blur(30px) saturate(210%);
     -webkit-backdrop-filter: blur(30px) saturate(210%);
+  backdrop-filter: blur(30px) saturate(210%);
     border: 1px solid rgba(255, 255, 255, 0.1);
   }
 }
@@ -264,9 +264,6 @@ body {
   padding: 14px;
 }
 
-.app-card {
-  padding: 14px;
-}
 
 .app-metric-label {
   font-size: 11px;
@@ -329,7 +326,7 @@ body {
 }
 
 .app-button {
-  height: 32px;
+  height: 44px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -507,7 +504,7 @@ body {
 
   .app-nav-marker {
     width: 32px;
-    height: 32px;
+    height: 44px;
   }
 
   .app-topbar {
@@ -582,18 +579,57 @@ body {
 
 .glassmorphism {
   background: rgba(255, 255, 255, 0.65);
-  backdrop-filter: blur(30px) saturate(210%);
   -webkit-backdrop-filter: blur(30px) saturate(210%);
+  backdrop-filter: blur(30px) saturate(210%);
   border: 1px solid rgba(255, 255, 255, 0.4);
-  border-radius: 16px;
 }
 
 @media (prefers-color-scheme: dark) {
   .glassmorphism {
     background: rgba(22, 22, 26, 0.7);
-    backdrop-filter: blur(30px) saturate(210%);
     -webkit-backdrop-filter: blur(30px) saturate(210%);
+  backdrop-filter: blur(30px) saturate(210%);
     border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 16px;
+  }
+}
+
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+input[type="tel"],
+input[type="url"],
+input[type="search"],
+textarea,
+select {
+  border-radius: 8px;
+}
+
+button {
+  border-radius: 8px;
+}
+
+.app-button {
+  border-radius: 8px;
+}
+
+.charge-btn {
+  border-radius: 8px;
+}
+
+.glass-panel {
+  background: rgba(255, 255, 255, 0.65);
+  -webkit-backdrop-filter: blur(30px) saturate(210%);
+  backdrop-filter: blur(30px) saturate(210%);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 16px;
+}
+
+@media (prefers-color-scheme: dark) {
+  .glass-panel {
+    background: rgba(22, 22, 26, 0.7);
+    -webkit-backdrop-filter: blur(30px) saturate(210%);
+    backdrop-filter: blur(30px) saturate(210%);
+    border: 1px solid rgba(255, 255, 255, 0.1);
   }
 }

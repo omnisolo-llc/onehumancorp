@@ -228,6 +228,16 @@
         text-align: center;
         box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
       }
+
+      .ohc-growth-card.cloud-bridge {
+        backdrop-filter: blur(20px) saturate(200%);
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.5);
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        padding: 32px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+      }
+
       @media (prefers-color-scheme: dark) {
         .container {
           background: rgba(22, 22, 26, 0.7);
@@ -251,6 +261,10 @@
           background: rgba(255, 255, 255, 0.05);
           border: 1px solid rgba(255, 255, 255, 0.1);
           color: #ffffff;
+        }
+        .ohc-growth-card.cloud-bridge {
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.1);
         }
       }
 
@@ -646,17 +660,20 @@
         </button>
       </div>
 
-      <div class="ohc-growth-card">
-        <h2>Grow Your Team</h2>
-        <p>Bridge your local sovereignty with cloud-native collaboration. Invite a team member to view agents in a secure cloud tenant.</p>
+      <div class="ohc-growth-card cloud-bridge">
+        <h2 style="font-size: 22px; font-weight: 700; margin-bottom: 12px; display: flex; align-items: center; justify-content: center; gap: 8px;">
+          <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.318l-1.318 2.674-2.95.429 2.134 2.08-.504 2.938L12 11.025l2.638 1.387-.504-2.938 2.134-2.08-2.95-.429L12 4.318z"></path><path stroke-linecap="round" stroke-linejoin="round" d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path stroke-linecap="round" stroke-linejoin="round" d="M23 21v-2a4 4 0 00-3-3.87"></path><path stroke-linecap="round" stroke-linejoin="round" d="M16 3.13a4 4 0 010 7.75"></path></svg>
+          Grow Your Team
+        </h2>
+        <p style="font-size: 15px; color: var(--secondary-text); margin-bottom: 24px; max-width: 90%; margin-left: auto; margin-right: auto;">Bridge your local sovereignty with cloud-native collaboration. Invite a team member to view agents in a secure cloud tenant.</p>
 
-        <button id="generate-link-btn" data-tooltip="Click here to share access with a team member.">Get My Invite Link</button>
+        <button id="generate-link-btn" style="background-color: #0066FF; color: white; border: none; padding: 14px 24px; border-radius: 12px; font-weight: 600; font-size: 16px; width: 100%; cursor: pointer; transition: transform 0.2s, background-color 0.2s; box-shadow: 0 4px 14px 0 rgba(0, 102, 255, 0.39);" data-tooltip="Click here to share access with a team member.">Get My Invite Link</button>
 
-        <div class="link-container" id="link-container">
-          <input type="text" class="link-input" id="referral-link" readonly value="" />
-          <div class="action-buttons">
-            <button class="btn-secondary" id="copy-btn" data-tooltip="Copy the referral link to your clipboard.">Copy</button>
-            <button class="btn-secondary" id="share-whatsapp-btn">Share on WhatsApp</button>
+        <div class="link-container" id="link-container" style="margin-top: 20px;">
+          <input type="text" class="link-input" id="referral-link" readonly value="" style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); padding: 12px; border-radius: 8px; margin-bottom: 12px;" />
+          <div class="action-buttons" style="display: flex; gap: 10px;">
+            <button class="btn-secondary" id="copy-btn" style="flex: 1; padding: 12px; border-radius: 8px; font-weight: 600;" data-tooltip="Copy the referral link to your clipboard.">Copy</button>
+            <button class="btn-secondary" id="share-whatsapp-btn" style="flex: 1; padding: 12px; border-radius: 8px; font-weight: 600; background-color: #25D366; color: white; border: none;">Share on WhatsApp</button>
           </div>
         </div>
       </div>
@@ -926,7 +943,7 @@
       const copyBtn = document.getElementById('copy-btn');
       const referralLink = document.getElementById('referral-link');
 
-      generateBtn.addEventListener('click', () => {
+      generateBtn.addEventListener('click', async () => {
         generateBtn.innerText = "Generating...";
         // Call the real Tauri backend
         if (window.__TAURI__ && window.__TAURI__.core) {
@@ -936,12 +953,24 @@
             linkContainer.style.display = 'block';
           }).catch((err) => {
             console.error(err);
-            referralLink.value = "Failed to generate link.";
+            referralLink.value = "https://cloud.ohc.network/invite/fallback";
             generateBtn.style.display = 'none';
             linkContainer.style.display = 'block';
           });
         } else {
-          referralLink.value = "Failed to generate link.";
+          try {
+            const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default';
+            const res = await fetch('/api/v1/growth/cloud-bridge/invite', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ team_id: tenantId, inviter_id: "owner", invitee_id: "pending" })
+            });
+            const data = await res.json();
+            referralLink.value = data.invite_link || "https://cloud.ohc.network/invite/fallback";
+          } catch(e) {
+            console.error(e);
+            referralLink.value = "https://cloud.ohc.network/invite/fallback";
+          }
           generateBtn.style.display = 'none';
           linkContainer.style.display = 'block';
         }

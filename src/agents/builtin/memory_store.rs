@@ -349,7 +349,7 @@ impl VectorRepository {
 
                     impl PartialOrd for HeapEntry {
                         fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-                            self.distance.partial_cmp(&other.distance)
+                            Some(self.cmp(other))
                         }
                     }
 
@@ -654,13 +654,21 @@ impl VectorRepository {
 
         match &self.store {
             VectorMemoryStore::Postgres(pool) => {
+                // LATERAL join allows index usage on the right side of the join based on the left side
+                // It prevents an O(N^2) cartesian product over the whole table.
                 let query = "
                     SELECT
                         a.id AS a_id, a.tenant_id AS a_tenant_id, a.agent_id AS a_agent_id, a.content AS a_content, a.embedding::text AS a_embedding, a.source_type AS a_source_type, a.created_at AS a_created_at, a.last_referenced_at AS a_last_referenced_at, a.reference_count AS a_reference_count, a.reliability_score AS a_reliability_score, a.owner_override AS a_owner_override, a.metadata AS a_metadata,
                         b.id AS b_id, b.tenant_id AS b_tenant_id, b.agent_id AS b_agent_id, b.content AS b_content, b.embedding::text AS b_embedding, b.source_type AS b_source_type, b.created_at AS b_created_at, b.last_referenced_at AS b_last_referenced_at, b.reference_count AS b_reference_count, b.reliability_score AS b_reliability_score, b.owner_override AS b_owner_override, b.metadata AS b_metadata
                     FROM consolidated_memory a
-                    JOIN consolidated_memory b ON a.tenant_id = b.tenant_id AND a.id < b.id
-                    WHERE a.embedding <=> b.embedding < 0.05
+                    JOIN LATERAL (
+                        SELECT id, tenant_id, agent_id, content, embedding, source_type, created_at, last_referenced_at, reference_count, reliability_score, owner_override, metadata
+                        FROM consolidated_memory b_inner
+                        WHERE b_inner.tenant_id = a.tenant_id
+                          AND b_inner.id > a.id
+                        ORDER BY b_inner.embedding <=> a.embedding
+                        LIMIT 1
+                    ) b ON a.embedding <=> b.embedding < 0.05
                     LIMIT 10
                 ";
                 let rows = sqlx::query(query)
@@ -682,12 +690,21 @@ impl VectorRepository {
                     .is_ok();
 
                 if has_vec_extension {
+                    // SQLite doesn't natively support LATERAL joins in the same way, but we can use a correlated subquery
+                    // or rely on its optimizer for a similar index-nested-loop join pattern by keeping the join condition tight.
+                    // This uses a correlated subquery to find the nearest neighbor efficiently for each row.
                     let query = "
                         SELECT
                             a.id AS a_id, a.tenant_id AS a_tenant_id, a.agent_id AS a_agent_id, a.content AS a_content, a.embedding AS a_embedding, a.source_type AS a_source_type, a.created_at AS a_created_at, a.last_referenced_at AS a_last_referenced_at, a.reference_count AS a_reference_count, a.reliability_score AS a_reliability_score, a.owner_override AS a_owner_override, a.metadata AS a_metadata,
                             b.id AS b_id, b.tenant_id AS b_tenant_id, b.agent_id AS b_agent_id, b.content AS b_content, b.embedding AS b_embedding, b.source_type AS b_source_type, b.created_at AS b_created_at, b.last_referenced_at AS b_last_referenced_at, b.reference_count AS b_reference_count, b.reliability_score AS b_reliability_score, b.owner_override AS b_owner_override, b.metadata AS b_metadata
                         FROM consolidated_memory a
-                        JOIN consolidated_memory b ON a.tenant_id = b.tenant_id AND a.id < b.id
+                        JOIN consolidated_memory b ON b.id = (
+                            SELECT id FROM consolidated_memory b_inner
+                            WHERE b_inner.tenant_id = a.tenant_id
+                              AND b_inner.id > a.id
+                            ORDER BY vec_distance_cosine(b_inner.embedding, a.embedding)
+                            LIMIT 1
+                        )
                         WHERE vec_distance_cosine(a.embedding, b.embedding) < 0.05
                         LIMIT 10
                     ";
@@ -830,8 +847,11 @@ impl VectorRepository {
                                 let distance = 1.0 - similarity;
 
                                 if distance < 0.05 {
-                                    let (id_a, id_b) =
-                                        if a.id < b.id { (a.id.clone(), b.id.clone()) } else { (b.id.clone(), a.id.clone()) };
+                                    let (id_a, id_b) = if a.id < b.id {
+                                        (a.id.clone(), b.id.clone())
+                                    } else {
+                                        (b.id.clone(), a.id.clone())
+                                    };
                                     conflicting_pairs_ids.push((id_a, id_b));
                                     match_count += 1;
                                     if match_count >= 10 {
@@ -1199,13 +1219,26 @@ impl Anthropic3TierMemoryStore {
 #[async_trait]
 impl crate::tools::anthropic_memory::MemoryAccessor for Anthropic3TierMemoryStore {
     async fn write_topic(&self, topic_name: &str, content: &str) -> Result<(), String> {
-        let safe_name = topic_name.replace(|c: char| !c.is_alphanumeric() && c != '_' && c != '-', "");
+        let safe_name =
+            topic_name.replace(|c: char| !c.is_alphanumeric() && c != '_' && c != '-', "");
         let path = self.topics_dir.join(format!("{}.md", safe_name));
-        tokio::fs::write(&path, content).await.map_err(|e| e.to_string())?;
+        tokio::fs::write(&path, content)
+            .await
+            .map_err(|e| e.to_string())?;
 
         let mut existing_index = self.get_lightweight_index().await?;
-        let truncated_content = if content.len() > 150 { format!("{}...", &content[..147]) } else { content.to_string() };
-        let new_entry = format!("- {}: {}\n", safe_name, truncated_content.replace(char::from(10), " "));
+        let char_count = content.chars().count();
+        let truncated_content = if char_count > 150 {
+            let truncated: String = content.chars().take(147).collect();
+            format!("{}...", truncated)
+        } else {
+            content.to_string()
+        };
+        let new_entry = format!(
+            "- {}: {}\n",
+            safe_name,
+            truncated_content.replace(char::from(10), " ")
+        );
         if !existing_index.contains(&safe_name) {
             existing_index.push_str(&new_entry);
             self.update_index(&existing_index).await?;
@@ -1250,12 +1283,23 @@ impl crate::tools::anthropic_memory::MemoryAccessor for Anthropic3TierMemoryStor
 
 #[async_trait]
 impl LongTermMemory for Anthropic3TierMemoryStore {
-    async fn store_session_message(&self, session_id: &str, role: &str, content: &str) -> Result<(), String> {
+    async fn store_session_message(
+        &self,
+        session_id: &str,
+        role: &str,
+        content: &str,
+    ) -> Result<(), String> {
         let turn = format!("{}: {}", role, content);
         self.append_transcript(session_id, &turn).await
     }
 
-    async fn search_session_messages(&self, _session_id: &str, query: &str, limit: usize, _summarize: bool) -> Result<Vec<String>, String> {
+    async fn search_session_messages(
+        &self,
+        _session_id: &str,
+        query: &str,
+        limit: usize,
+        _summarize: bool,
+    ) -> Result<Vec<String>, String> {
         crate::tools::anthropic_memory::MemoryAccessor::search_transcripts(self, query, limit).await
     }
 
@@ -1287,8 +1331,12 @@ impl LongTermMemory for Anthropic3TierMemoryStore {
     async fn store(&self, content: &str, tags: Vec<String>) -> Result<(), String> {
         let mut existing_index = self.get_lightweight_index().await?;
 
-        let truncated_content = if content.len() > 150 {
-            format!("{}...", &content[..147])
+        let char_count2 = content.chars().count();
+        let truncated_content = if char_count2 > 150 {
+            {
+                let truncated: String = content.chars().take(147).collect();
+                format!("{}...", truncated)
+            }
         } else {
             content.to_string()
         };
@@ -2774,43 +2822,93 @@ mod anthropic_memory_tests {
         let store = Anthropic3TierMemoryStore::new(dir.path()).unwrap();
 
         // Tier 1: Index
-        store.store("User likes chocolate cake", vec!["preference".to_string()]).await.unwrap();
+        store
+            .store("User likes chocolate cake", vec!["preference".to_string()])
+            .await
+            .unwrap();
         let index = store.get_lightweight_index().await.unwrap();
         assert!(index.contains("User likes chocolate cake"));
         assert!(index.contains("[preference]"));
 
         // Tier 2: Topics
         // Agent writes a topic
-        crate::tools::anthropic_memory::MemoryAccessor::write_topic(&store, "cake_preferences", "User likes chocolate cake with strawberry frosting.").await.unwrap();
+        crate::tools::anthropic_memory::MemoryAccessor::write_topic(
+            &store,
+            "cake_preferences",
+            "User likes chocolate cake with strawberry frosting.",
+        )
+        .await
+        .unwrap();
 
         // Agent retrieves the topic
-        let topic_content = crate::tools::anthropic_memory::MemoryAccessor::retrieve_topic(&store, "cake_preferences").await.unwrap();
-        assert_eq!(topic_content, "User likes chocolate cake with strawberry frosting.");
+        let topic_content = crate::tools::anthropic_memory::MemoryAccessor::retrieve_topic(
+            &store,
+            "cake_preferences",
+        )
+        .await
+        .unwrap();
+        assert_eq!(
+            topic_content,
+            "User likes chocolate cake with strawberry frosting."
+        );
 
         // Agent fails to retrieve non-existent topic
-        assert!(crate::tools::anthropic_memory::MemoryAccessor::retrieve_topic(&store, "non_existent").await.is_err());
+        assert!(
+            crate::tools::anthropic_memory::MemoryAccessor::retrieve_topic(&store, "non_existent")
+                .await
+                .is_err()
+        );
 
         // Tier 3: Transcripts
         // Core loop stores session messages
-        store.store_session_message("session_1", "user", "I would like to order a cake.").await.unwrap();
-        store.store_session_message("session_1", "agent", "Sure, what kind of cake?").await.unwrap();
-        store.store_session_message("session_1", "user", "Chocolate please!").await.unwrap();
+        store
+            .store_session_message("session_1", "user", "I would like to order a cake.")
+            .await
+            .unwrap();
+        store
+            .store_session_message("session_1", "agent", "Sure, what kind of cake?")
+            .await
+            .unwrap();
+        store
+            .store_session_message("session_1", "user", "Chocolate please!")
+            .await
+            .unwrap();
 
         // Agent searches transcripts
-        let results = crate::tools::anthropic_memory::MemoryAccessor::search_transcripts(&store, "order a cake", 5).await.unwrap();
+        let results = crate::tools::anthropic_memory::MemoryAccessor::search_transcripts(
+            &store,
+            "order a cake",
+            5,
+        )
+        .await
+        .unwrap();
         assert_eq!(results.len(), 1);
         assert!(results[0].contains("user: I would like to order a cake."));
 
-        let results_choc = crate::tools::anthropic_memory::MemoryAccessor::search_transcripts(&store, "Chocolate", 5).await.unwrap();
+        let results_choc = crate::tools::anthropic_memory::MemoryAccessor::search_transcripts(
+            &store,
+            "Chocolate",
+            5,
+        )
+        .await
+        .unwrap();
         assert_eq!(results_choc.len(), 1);
         assert!(results_choc[0].contains("user: Chocolate please!"));
 
         // Search should respect limit
-        store.store_session_message("session_2", "user", "Chocolate is good.").await.unwrap();
-        let results_limit = crate::tools::anthropic_memory::MemoryAccessor::search_transcripts(&store, "Chocolate", 1).await.unwrap();
+        store
+            .store_session_message("session_2", "user", "Chocolate is good.")
+            .await
+            .unwrap();
+        let results_limit = crate::tools::anthropic_memory::MemoryAccessor::search_transcripts(
+            &store,
+            "Chocolate",
+            1,
+        )
+        .await
+        .unwrap();
         assert_eq!(results_limit.len(), 1);
     }
-
 }
 
 #[cfg(test)]

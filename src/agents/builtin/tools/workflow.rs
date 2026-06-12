@@ -361,8 +361,8 @@ mod tests {
     async fn run_workflow_rejects_unknown_workflow() {
         let runner = Arc::new(crate::runner::mock::MockCommandRunner::new());
         let executor = WorkflowExecutor { runner };
-        let adapter = PydanticAdapter::new(executor);
-        let result = adapter.execute(json!({"workflow": "unknown"})).await;
+
+        let result = executor.execute_typed(serde_json::from_value(json!({"workflow": "unknown"})).unwrap()).await;
 
         assert!(matches!(result, Err(ToolError::LlmRecoverable(_))));
     }
@@ -384,12 +384,12 @@ mod tests {
         }
 
         let executor = WorkflowExecutor { runner };
-        let adapter = PydanticAdapter::new(executor);
-        let result = adapter
-            .execute(json!({
+
+        let result = executor
+            .execute_typed(serde_json::from_value(json!({
                 "workflow": "ohc_review_branch",
                 "task": "review the branch"
-            }))
+            })).unwrap())
             .await
             .unwrap();
 

@@ -14,10 +14,6 @@ export default function InvoiceGeneratorPage() {
   const [splitContact, setSplitContact] = useState('');
   const [splitPercentage, setSplitPercentage] = useState<number>(70);
 
-  const [isSplitEnabled, setIsSplitEnabled] = useState(false);
-  const [splitContact, setSplitContact] = useState('');
-  const [splitPercentage, setSplitPercentage] = useState<number>(70);
-
 
   useEffect(() => {
     const tenant = localStorage.getItem('tenant') || 'my-store';

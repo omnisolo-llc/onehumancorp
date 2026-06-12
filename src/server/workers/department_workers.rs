@@ -1013,28 +1013,28 @@ let db_for_products = self.db.clone();
                                                     crate::db::DbStore::Postgres => {
                                                         let task_id_fail = Uuid::new_v4().to_string();
                                                         let _ = sqlx::query(
-                                                            "INSERT INTO triage_items (id, tenant_id, source, priority, context, status) VALUES ($1, $2, $3, $4, $5, $6)"
+                                                            "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state) VALUES ($1, $2, $3, $4, $5, $6)"
                                                         )
                                                         .bind(&task_id_fail)
                                                         .bind(&org_id)
-                                                        .bind("The Promoter")
-                                                        .bind("Medium")
-                                                        .bind("Failed to generate social post draft.")
-                                                        .bind("pending")
+                                                        .bind("marketing")
+                                                        .bind(serde_json::json!({"description": "Failed to generate social post draft.", "feature_type": "social_post_draft"}))
+                                                        .bind(serde_json::json!({}))
+                                                        .bind("FAILED")
                                                         .execute(&db_for_products.pool)
                                                         .await;
                                                     },
                                                     crate::db::DbStore::Sqlite(pool) => {
                                                         let task_id_fail = Uuid::new_v4().to_string();
                                                         let _ = sqlx::query(
-                                                            "INSERT INTO triage_items (id, tenant_id, source, priority, context, status) VALUES (?, ?, ?, ?, ?, ?)"
+                                                            "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state) VALUES (?, ?, ?, ?, ?, ?)"
                                                         )
                                                         .bind(&task_id_fail)
                                                         .bind(&org_id)
-                                                        .bind("The Promoter")
-                                                        .bind("Medium")
-                                                        .bind("Failed to generate social post draft.")
-                                                        .bind("pending")
+                                                        .bind("marketing")
+                                                        .bind(serde_json::json!({"description": "Failed to generate social post draft.", "feature_type": "social_post_draft"}))
+                                                        .bind(serde_json::json!({}))
+                                                        .bind("FAILED")
                                                         .execute(pool)
                                                         .await;
                                                     }
@@ -1059,30 +1059,19 @@ let db_for_products = self.db.clone();
                                 let task_id = Uuid::new_v4().to_string();
                                 let _title = format!("Draft Social Post: {}", product_name);
                                 let description = "The Promoter generated social media captions for your new product. Review and schedule.";
-                                let proposed_content = serde_json::to_string(&parsed).unwrap_or_default();
+                                let _proposed_content = serde_json::to_string(&parsed).unwrap_or_default();
 
                                 match &db_for_products.store {
                                     crate::db::DbStore::Postgres => {
                                         let _ = sqlx::query(
-                                            "INSERT INTO triage_items (id, tenant_id, source, priority, context, status) VALUES ($1, $2, $3, $4, $5, $6)"
+                                            "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state) VALUES ($1, $2, $3, $4, $5, $6)"
                                         )
                                         .bind(&task_id)
                                         .bind(&org_id)
-                                        .bind("The Promoter")
-                                        .bind("High")
-                                        .bind(&description)
-                                        .bind("pending")
-                                        .execute(&db_for_products.pool)
-                                        .await;
-
-                                        let _ = sqlx::query(
-                                            "INSERT INTO triage_proposed_actions (id, triage_item_id, tenant_id, action_type, payload) VALUES ($1, $2, $3, $4, $5)"
-                                        )
-                                        .bind(Uuid::new_v4().to_string())
-                                        .bind(&task_id)
-                                        .bind(&org_id)
-                                        .bind("SocialPostDraft")
-                                        .bind(&proposed_content)
+                                        .bind("marketing")
+                                        .bind(serde_json::json!({ "description": description, "feature_type": "social_post_draft" }))
+                                        .bind(&parsed)
+                                        .bind("PENDING_APPROVAL")
                                         .execute(&db_for_products.pool)
                                         .await;
 
@@ -1109,25 +1098,14 @@ let db_for_products = self.db.clone();
                                     },
                                     crate::db::DbStore::Sqlite(pool) => {
                                         let _ = sqlx::query(
-                                            "INSERT INTO triage_items (id, tenant_id, source, priority, context, status) VALUES (?, ?, ?, ?, ?, ?)"
+                                            "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state) VALUES (?, ?, ?, ?, ?, ?)"
                                         )
                                         .bind(&task_id)
                                         .bind(&org_id)
-                                        .bind("The Promoter")
-                                        .bind("High")
-                                        .bind(&description)
-                                        .bind("pending")
-                                        .execute(pool)
-                                        .await;
-
-                                        let _ = sqlx::query(
-                                            "INSERT INTO triage_proposed_actions (id, triage_item_id, tenant_id, action_type, payload) VALUES (?, ?, ?, ?, ?)"
-                                        )
-                                        .bind(Uuid::new_v4().to_string())
-                                        .bind(&task_id)
-                                        .bind(&org_id)
-                                        .bind("SocialPostDraft")
-                                        .bind(&proposed_content)
+                                        .bind("marketing")
+                                        .bind(serde_json::json!({ "description": description, "feature_type": "social_post_draft" }))
+                                        .bind(&parsed)
+                                        .bind("PENDING_APPROVAL")
                                         .execute(pool)
                                         .await;
                                     }

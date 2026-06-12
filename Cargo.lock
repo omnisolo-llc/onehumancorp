@@ -8898,6 +8898,7 @@ dependencies = [
  "server_common",
  "server_integrations_core",
  "server_integrations_mercadopago",
+ "server_integrations_razorpay",
  "sqlx",
  "tokio",
  "tracing",
@@ -9039,6 +9040,7 @@ version = "0.1.0"
 dependencies = [
  "axum 0.8.9",
  "chrono",
+ "dashmap 5.5.3",
  "flate2",
  "rand 0.8.6",
  "redis",

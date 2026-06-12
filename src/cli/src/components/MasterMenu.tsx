@@ -29,7 +29,7 @@ export const MasterMenu: React.FC = () => {
       if (options[selectedIndex] === "Exit") {
         process.exit(0);
       } else {
-        console.info(`Executing ${options[selectedIndex]}...`);
+        // intentionally silence execution logs
       }
     }
   });

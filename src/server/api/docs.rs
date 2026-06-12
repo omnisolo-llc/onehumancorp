@@ -22,10 +22,65 @@ pub struct SearchQuery {
     pub q: String,
 }
 
+#[derive(Serialize, Clone)]
+pub struct WalkthroughStep {
+    pub selector: String,
+    pub title: String,
+    pub text: String,
+}
+
+pub async fn get_walkthrough(axum::extract::Path(page): axum::extract::Path<String>) -> Json<Vec<WalkthroughStep>> {
+    let steps = match page.as_str() {
+        "store-setup" => vec![
+            WalkthroughStep { selector: "#dashboard-title".to_string(), title: "Set up your store".to_string(), text: "Learn how to easily set up your store and accept your first payment.".to_string() }
+        ],
+        "dashboard" => vec![
+            WalkthroughStep { selector: "#dashboard-title".to_string(), title: "Welcome".to_string(), text: "Welcome to your dashboard! This is your control center.".to_string() },
+            WalkthroughStep { selector: "#ai-savings-widget".to_string(), title: "AI Savings".to_string(), text: "Here you can see the time and effort your agents have saved you.".to_string() }
+        ],
+        "pos" => vec![
+            WalkthroughStep { selector: "#charge-btn".to_string(), title: "Accept your first payment".to_string(), text: "Enter an amount and tap here to charge.".to_string() }
+        ],
+        "assistant" => vec![
+            WalkthroughStep { selector: "#ohc-help-input-area".to_string(), title: "Activate your AI Support Agent".to_string(), text: "Chat here to activate your AI agent.".to_string() }
+        ],
+        _ => vec![],
+    };
+    Json(steps)
+}
+
+pub async fn get_tooltips() -> Json<std::collections::HashMap<String, String>> {
+    let registry = crate::get_tooltips_registry().read().unwrap();
+    let mut tooltips = std::collections::HashMap::new();
+    for (k, v) in registry.iter() {
+        tooltips.insert(k.clone(), v.clone());
+    }
+    Json(tooltips)
+}
+
+#[derive(Deserialize)]
+pub struct TooltipPayload {
+    pub id: String,
+    pub text: String,
+}
+
+#[derive(Serialize)]
+pub struct SuccessResponse {
+    pub success: bool,
+}
+
+pub async fn update_tooltip(axum::extract::Json(payload): axum::extract::Json<TooltipPayload>) -> Json<SuccessResponse> {
+    let mut registry = crate::get_tooltips_registry().write().unwrap();
+    registry.insert(payload.id, payload.text);
+    Json(SuccessResponse { success: true })
+}
+
+
+
 pub fn get_articles() -> Vec<HelpArticle> {
     vec![
         HelpArticle { category: "Getting Started".to_string(), title: "Getting Started".to_string(), desc: "Learn how to easily set up your store and accept your first payment.".to_string(), link: "/help/getting-started-1".to_string() },
-        HelpArticle { category: "My Store".to_string(), title: "My Store".to_string(), desc: "Add products, track what's in stock, and change how your store looks.".to_string(), link: "/help/my-store".to_string() },
+        HelpArticle { category: "My Store".to_string(), title: "Adding Products".to_string(), desc: "Add products, track what's in stock, and change how your store looks.".to_string(), link: "/help/my-store".to_string() },
         HelpArticle { category: "Payments".to_string(), title: "Getting Paid".to_string(), desc: "Set up how you get paid, view deposits, and handle simple taxes.".to_string(), link: "/help/payments".to_string() },
         HelpArticle { category: "AI Agents".to_string(), title: "Your AI Helpers".to_string(), desc: "Learn how to hire AI helpers and give them tasks to do.".to_string(), link: "/help/ai-agents".to_string() },
         HelpArticle { category: "Marketing".to_string(), title: "Finding Customers".to_string(), desc: "Send emails to customers and grow your business easily.".to_string(), link: "/help/marketing".to_string() },
@@ -46,6 +101,7 @@ pub fn get_videos() -> Vec<VideoTutorial> {
         VideoTutorial { id: 7, title: "Connect Stripe".to_string(), duration: "1:30".to_string(), video_url: "/videos/7.mp4".to_string() },
         VideoTutorial { id: 8, title: "Manage inventory".to_string(), duration: "1:00".to_string(), video_url: "/videos/8.mp4".to_string() },
         VideoTutorial { id: 9, title: "How to use the OpenAPI spec".to_string(), duration: "3:45".to_string(), video_url: "/videos/9.mp4".to_string() },
+        VideoTutorial { id: 10, title: "View analytics and reports".to_string(), duration: "1:20".to_string(), video_url: "/videos/10.mp4".to_string() },
     ]
 }
 

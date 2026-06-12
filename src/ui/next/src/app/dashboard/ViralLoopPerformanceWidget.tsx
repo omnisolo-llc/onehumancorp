@@ -64,7 +64,7 @@ export function ViralLoopPerformanceWidget() {
           </div>
         </div>
         <div className="mt-4">
-            <Link href="/referrals" className="app-button inline-flex">View Referral Details</Link>
+            <Link href="/referrals" className="app-button inline-flex min-h-[44px]">View Referral Details</Link>
         </div>
       </div>
     </section>

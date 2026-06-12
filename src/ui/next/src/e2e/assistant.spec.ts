@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { adminPage } from './fixtures';
+
 
 test.describe('Assistant Page', () => {
   test('navigates to assistant and verifies authentic state', async ({ page }) => {

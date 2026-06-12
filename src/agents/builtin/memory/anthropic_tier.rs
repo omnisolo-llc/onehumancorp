@@ -34,8 +34,10 @@ impl Anthropic3TierMemory {
 
     /// Appends a new entry to the lightweight index.
     pub async fn append_to_index(&self, summary: &str, tags: &[String]) -> std::io::Result<()> {
-        let truncated_summary = if summary.len() > 150 {
-            format!("{}...", &summary[..147])
+        let char_count = summary.chars().count();
+        let truncated_summary = if char_count > 150 {
+            let truncated: String = summary.chars().take(147).collect();
+            format!("{}...", truncated)
         } else {
             summary.to_string()
         };

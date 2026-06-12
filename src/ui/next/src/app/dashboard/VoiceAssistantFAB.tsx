@@ -61,7 +61,6 @@ export function VoiceAssistantFAB() {
       }
 
       const result = await response.json();
-      console.log('Voice command result:', result);
 
       // In a real implementation, this would trigger a refetch of the Agent Feed
       // For now, we can dispatch a custom event to notify UnifiedAgentFeed

@@ -8,15 +8,15 @@ test.describe('Pricing Page', () => {
 
   test('should display all four pricing tiers', async ({ page }) => {
     await page.goto('/pricing.html');
-    await expect(page.locator('h3', { hasText: 'Free' })).toBeVisible();
-    await expect(page.locator('h3', { hasText: 'Starter' })).toBeVisible();
-    await expect(page.locator('h3', { hasText: 'Pro' })).toBeVisible();
-    await expect(page.locator('h3', { hasText: 'Business' })).toBeVisible();
+    await expect(page.locator('.plan-name', { hasText: 'Free' })).toBeVisible();
+    await expect(page.locator('.plan-name', { hasText: 'Starter' })).toBeVisible();
+    await expect(page.locator('.plan-name', { hasText: 'Pro' })).toBeVisible();
+    await expect(page.locator('.plan-name', { hasText: 'Business' })).toBeVisible();
   });
 
   test('should verify Back button functions', async ({ page }) => {
     await page.goto('/pricing.html');
-    const backButton = page.locator('button', { hasText: 'Back' });
+    const backButton = page.locator('a', { hasText: 'Back to Dashboard' });
     await expect(backButton).toBeVisible();
     await backButton.click();
     await expect(page.url()).toContain('/dashboard.html');
@@ -24,25 +24,25 @@ test.describe('Pricing Page', () => {
 
   test('should verify upgrade button routes to checkout', async ({ page }) => {
     await page.goto('/pricing.html');
-    const upgradeButton = page.locator('button', { hasText: 'Upgrade to Starter via Stripe' });
+    const upgradeButton = page.locator('button', { hasText: 'Upgrade to Starter' });
     await expect(upgradeButton).toBeVisible();
     await upgradeButton.click();
-    await expect(page.url()).toContain('/checkout?tier=Starter');
+    await expect(page.url()).toContain('checkout.stripe.com');
   });
 
   test('should verify upgrade to Pro button routes to checkout', async ({ page }) => {
     await page.goto('/pricing.html');
-    const upgradeButton = page.locator('button', { hasText: 'Upgrade to Pro via Stripe' });
+    const upgradeButton = page.locator('button', { hasText: 'Upgrade to Pro' });
     await expect(upgradeButton).toBeVisible();
     await upgradeButton.click();
-    await expect(page.url()).toContain('/checkout?tier=Pro');
+    await expect(page.url()).toContain('checkout.stripe.com');
   });
 
   test('should verify upgrade to Business button routes to checkout', async ({ page }) => {
     await page.goto('/pricing.html');
-    const upgradeButton = page.locator('button', { hasText: 'Upgrade to Business via Stripe' });
+    const upgradeButton = page.locator('button', { hasText: 'Upgrade to Business' });
     await expect(upgradeButton).toBeVisible();
     await upgradeButton.click();
-    await expect(page.url()).toContain('/checkout?tier=Business');
+    await expect(page.url()).toContain('checkout.stripe.com');
   });
 });
