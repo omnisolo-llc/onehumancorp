@@ -76,6 +76,7 @@ export function VoiceAssistantFAB() {
         setShowSuccess(false);
         setTranscription("");
       }, 5000);
+
     } catch (error) {
       console.error('Error processing voice command:', error);
     } finally {
