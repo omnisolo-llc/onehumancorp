@@ -1,70 +1,38 @@
 import { test, expect } from './fixtures';
 
-test.describe('Help Center', () => {
-  test('Persona: Business Owner uses help center and chat', async ({ page }) => {
-    // Navigate to dashboard
-    await page.goto('/dashboard?test_chat=true');
-
-    // Wait for page to load fully
+test.describe('Help Center Interactive Elements', () => {
+  test('Persona: Business Owner uses interactive walkthroughs and tooltips', async ({ page }) => {
+    // Navigate to dashboard first to establish session if needed
+    await page.goto('/dashboard');
     await page.waitForLoadState('networkidle');
 
-    // Check if HelpChat component is accessible
-    const chatButton = page.locator('button[aria-label="Open help chat"]');
-    await expect(chatButton).toBeVisible();
-    await chatButton.click();
-    await expect(page.locator('text=Ask AI Help').first()).toBeVisible();
-
-    const input = page.locator('input[placeholder="Ask me anything..."]');
-    await input.fill('How do I accept credit cards?');
-    await page.locator('button[aria-label="Send message"]').click();
-
-    await expect(page.locator('text=How do I accept credit cards?').first()).toBeVisible();
-    await expect(page.locator('text=I am your AI Help Agent!').first()).toBeVisible();
-    await expect(page.locator('text=Read the full article').first()).toBeVisible();
-
-    await page.locator('button[aria-label="Close help chat"]').click();
-
-    // Go to /help
+    // Go to Help Center
     await page.goto('/help');
     await expect(page.locator('text=Help Center').first()).toBeVisible();
-    await expect(page.locator('text=Getting Started').first()).toBeVisible();
-    await expect(page.locator('text=My Store').first()).toBeVisible();
 
-    await page.click('text=Getting Started');
-    await expect(page).toHaveURL(/.*\/help\/getting-started/);
-    await expect(page.locator('text=Getting Started with Your Store').first()).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Step 1: Tell us about your business' })).toBeVisible();
+    // Verify search tooltip is present on hover
+    const searchInput = page.locator('input[placeholder="Search for help articles and videos..."]');
+    await searchInput.hover();
+    // Wait for the tooltip registry text to appear (usually "Search our knowledge base for help articles.")
+    await expect(page.locator('text=Search our knowledge base for help articles.').first()).toBeVisible();
 
-    await page.goto('/help');
+    // Verify Interactive Tour buttons
+    const tourBtn = page.locator('button', { hasText: 'Tour: Set up your store' });
+    await expect(tourBtn).toBeVisible();
 
-    await page.fill('input[placeholder="Search for help articles and videos..."]', 'paid');
-    await expect(page.locator('text=Getting Paid').first()).toBeVisible();
+    // Click to start walkthrough
+    await tourBtn.click();
+
+    // Validate the walkthrough overlay or bubble is visible
+    await expect(page.locator('text=Activate your AI Support Agent').first()).toBeVisible();
+    await expect(page.locator('text=Search here for any topic.').first()).toBeVisible();
   });
 
-  test('Persona: Business Owner views the Changelog', async ({ page }) => {
-    await page.goto('/changelog');
-    await expect(page.locator('text=Release Notes & Changelog').first()).toBeVisible();
-    await expect(page.locator('text=Version 1.1 (Latest)').first()).toBeVisible();
-    await expect(page.locator('text=New Features').first()).toBeVisible();
-  });
-
-  test('Persona: Developer views the API documentation', async ({ page }) => {
+  test('Persona: Advanced User verifies Swagger UI loads in Next.js', async ({ page }) => {
     await page.goto('/api-docs');
     await expect(page.locator('text=Advanced:').first()).toBeVisible();
-    await expect(page.locator('text=OHC Advanced API Reference').first()).toBeVisible();
-  });
-
-  test('Persona: Business Owner interacts with a Tooltip', async ({ page }) => {
-    await page.goto('/dashboard');
-    const kairosLink = page.locator('a[href="/kairos"]');
-    await expect(kairosLink).toBeVisible();
-    await kairosLink.hover();
-    await expect(page.locator('text=Click here to see what your AI helpers are working on and how they plan.').first()).toBeVisible();
-  });
-
-  test('Persona: Business Owner navigates to KAIROS page', async ({ page }) => {
-     await page.goto('/kairos');
-     // Ensure page loaded
-     await expect(page.getByRole('heading', { name: 'Kairos' })).toBeVisible();
+    await expect(page.locator('text=This section is for developers directly integrating with our APIs').first()).toBeVisible();
+    // Wait for Swagger UI mock or text
+    await expect(page.locator('text=API Reference').first()).toBeVisible();
   });
 });

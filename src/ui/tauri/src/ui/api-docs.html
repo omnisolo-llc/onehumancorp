@@ -149,13 +149,21 @@
     <script>
       document.addEventListener("DOMContentLoaded", () => {
         if (window.SwaggerUIBundle) {
-          const swaggerUI = window.SwaggerUIBundle({
-            url: "/api/api-docs-spec",
-            dom_id: "#swagger-ui",
-            deepLinking: true,
-            presets: [window.SwaggerUIBundle.presets.apis, window.SwaggerUIBundle.SwaggerUIStandalonePreset],
-            layout: "BaseLayout",
-          });
+          fetch("/api/api-docs-spec")
+            .then(res => res.json())
+            .then(specData => {
+              window.SwaggerUIBundle({
+                spec: specData,
+                dom_id: "#swagger-ui",
+                deepLinking: true,
+                presets: [window.SwaggerUIBundle.presets.apis, window.SwaggerUIBundle.SwaggerUIStandalonePreset],
+                layout: "BaseLayout",
+              });
+            })
+            .catch(err => {
+              console.error("Failed to load API spec", err);
+              document.getElementById("swagger-ui").innerHTML = '<div style="padding:20px; text-align:center; color:red;">Failed to load API spec</div>';
+            });
         }
       });
     </script>

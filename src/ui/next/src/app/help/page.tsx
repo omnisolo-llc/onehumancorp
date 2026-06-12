@@ -4,11 +4,13 @@ import React, { useEffect, useState } from 'react';
 import { WithTooltip } from '../../components/TooltipRegistry';
 import Link from 'next/link';
 import { VideoTutorialList } from '../../components/VideoTutorialList';
+import { useWalkthrough, WalkthroughProvider } from '../../components/help';
 
-export default function HelpCenterPage() {
+function HelpCenterContent() {
   const [articles, setArticles] = useState<{category: string, title: string, desc: string, link: string}[]>([]);
   const [videos, setVideos] = useState<{id: number, title: string, duration: string, video_url: string}[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const { startWalkthrough } = useWalkthrough();
 
   useEffect(() => {
     const url = searchQuery.trim() ? `/api/help/search?q=${encodeURIComponent(searchQuery.trim())}` : '/api/help';
@@ -36,14 +38,39 @@ export default function HelpCenterPage() {
       <div className="max-w-4xl mx-auto">
         <h1 className="text-3xl sm:text-4xl font-extrabold font-outfit text-[#1D1D1F] mb-8 text-center tracking-tight">Help Center</h1>
 
-        <div className="mb-10 w-full sm:w-3/4 mx-auto">
-          <input
-            type="text"
-            placeholder="Search for help articles and videos..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full p-4 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-[0_8px_32px_rgba(0,0,0,0.05)] text-gray-900 glassmorphism hover:bg-white/75 min-h-[44px] text-base placeholder:text-gray-500 transition-all"
-          />
+        <div className="mb-10 w-full sm:w-3/4 mx-auto" id="search-container">
+          <WithTooltip id="search-input" defaultText="Search our knowledge base for help articles.">
+            <input
+              type="text"
+              id="search-input"
+              placeholder="Search for help articles and videos..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full p-4 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-[0_8px_32px_rgba(0,0,0,0.05)] text-gray-900 glassmorphism hover:bg-white/75 min-h-[44px] text-base placeholder:text-gray-500 transition-all"
+            />
+          </WithTooltip>
+        </div>
+
+        <div className="mb-10 flex flex-col gap-2">
+          <h2 className="text-xl font-bold font-outfit text-gray-900 mb-2">Interactive Tours</h2>
+          <button
+            onClick={() => startWalkthrough([{ targetId: "search-input", content: "Search here for any topic." }])}
+            className="w-full text-left p-4 rounded-xl shadow-sm border border-gray-200 bg-white hover:bg-gray-50 transition-all text-sm"
+          >
+            Tour: Set up your store
+          </button>
+          <button
+            onClick={() => startWalkthrough([{ targetId: "search-input", content: "You can find topics on payments here." }])}
+            className="w-full text-left p-4 rounded-xl shadow-sm border border-gray-200 bg-white hover:bg-gray-50 transition-all text-sm"
+          >
+            Tour: Accept your first payment
+          </button>
+          <button
+            onClick={() => startWalkthrough([{ targetId: "search-input", content: "Ask the AI assistant for any quick help." }])}
+            className="w-full text-left p-4 rounded-xl shadow-sm border border-gray-200 bg-white hover:bg-gray-50 transition-all text-sm"
+          >
+            Tour: Activate your AI Support Agent
+          </button>
         </div>
 
         {filteredArticles.length === 0 && filteredVideos.length === 0 ? (
@@ -113,5 +140,13 @@ export default function HelpCenterPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function HelpCenterPage() {
+  return (
+    <WalkthroughProvider>
+      <HelpCenterContent />
+    </WalkthroughProvider>
   );
 }

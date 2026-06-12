@@ -143,3 +143,10 @@ describe('HelpCenterPage', () => {
     });
   });
 });
+
+  it('renders interactive walkthrough buttons', async () => {
+    render(<TooltipProvider><HelpCenterPage /></TooltipProvider>);
+    expect(screen.getByText('Tour: Set up your store')).toBeInTheDocument();
+    expect(screen.getByText('Tour: Accept your first payment')).toBeInTheDocument();
+    expect(screen.getByText('Tour: Activate your AI Support Agent')).toBeInTheDocument();
+  });
