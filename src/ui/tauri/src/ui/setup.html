@@ -438,6 +438,63 @@
         outline-offset: 2px;
       }
 
+
+      .toggle-switch {
+        position: relative;
+        display: inline-block;
+        width: 50px;
+        height: 24px;
+        margin-bottom: 20px;
+      }
+      .toggle-switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+      }
+      .slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(255, 255, 255, 0.5);
+        border: 1px solid rgba(255, 255, 255, 0.5);
+        transition: .4s;
+        border-radius: 24px;
+      }
+      .slider:before {
+        position: absolute;
+        content: "";
+        height: 18px;
+        width: 18px;
+        left: 3px;
+        bottom: 2px;
+        background-color: #1d1d1f;
+        transition: .4s;
+        border-radius: 50%;
+      }
+      input:checked + .slider {
+        background-color: #34C759;
+        border-color: #34C759;
+      }
+      input:checked + .slider:before {
+        transform: translateX(24px);
+        background-color: white;
+      }
+      .toggle-label-container {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 20px;
+        padding: 14px;
+      }
+      .toggle-label {
+        font-size: 14px;
+        color: #1d1d1f;
+        font-weight: 500;
+      }
+
     </style>
   </head>
   <body>
@@ -597,14 +654,27 @@
 
       <!-- Step 5: Admin Setup -->
       <div class="step" id="step-admin">
-        <h1>Admin Credentials</h1>
-        <p>Set up your login details.</p>
+        <h1>Admin Setup</h1>
+        <p>Set up your login and options.</p>
 
         <input type="email" id="admin-email" class="glassmorphism" placeholder="admin@mybusiness.com" />
         <div id="email-error" class="error-msg">Please enter a valid email address.</div>
 
         <input type="password" id="admin-password" class="glassmorphism" placeholder="Password (min 8 chars)" />
         <div id="password-error" class="error-msg">Password must be at least 8 characters.</div>
+
+        <select id="domain-choice" class="glassmorphism">
+          <option value="subdomain" selected>Use Free OHC Subdomain</option>
+          <option value="custom">Connect Custom Domain</option>
+        </select>
+
+        <div class="glassmorphism toggle-label-container">
+          <span class="toggle-label">Enable AI Auto-Respond</span>
+          <label class="toggle-switch">
+            <input type="checkbox" id="ai-auto-respond" checked>
+            <span class="slider"></span>
+          </label>
+        </div>
 
         <div class="btn-group">
           <button class="next-step-btn" data-next="step-offer">Next</button>
@@ -703,6 +773,8 @@
           assistantTone: document.getElementById('assistant-tone'),
           adminEmail: document.getElementById('admin-email'),
           adminPassword: document.getElementById('admin-password'),
+          domainChoice: document.getElementById('domain-choice'),
+          aiAutoRespond: document.getElementById('ai-auto-respond'),
           firstOffer: document.getElementById('first-offer'),
           templateSelection: document.getElementById('template-selection')
       };
@@ -727,7 +799,9 @@
           categories: '',
           tagline: '',
           first_offer: '',
-          templateSelection: ''
+          templateSelection: '',
+          domainChoice: 'subdomain',
+          aiAutoRespond: true
       };
 
       // Handle radio buttons selection visual state
@@ -808,6 +882,8 @@
           if (state.assistantTone) inputs.assistantTone.value = state.assistantTone;
           if (state.adminEmail) inputs.adminEmail.value = state.adminEmail;
           if (state.adminPassword) inputs.adminPassword.value = state.adminPassword;
+          if (state.domainChoice) inputs.domainChoice.value = state.domainChoice;
+          if (state.aiAutoRespond !== undefined) inputs.aiAutoRespond.checked = state.aiAutoRespond;
           if (state.first_offer) inputs.firstOffer.value = state.first_offer;
           if (state.templateSelection) inputs.templateSelection.value = state.templateSelection;
 
@@ -838,6 +914,8 @@
           state.assistantTone = inputs.assistantTone.value;
           state.first_offer = inputs.firstOffer.value;
           state.templateSelection = inputs.templateSelection.value;
+          state.domainChoice = inputs.domainChoice.value;
+          state.aiAutoRespond = inputs.aiAutoRespond.checked;
 
           let selectedContext = document.querySelector('input[name="work_context"]:checked');
           if (selectedContext) {
@@ -952,6 +1030,8 @@
               if (stepValid) {
                   state.adminEmail = emailVal;
                   state.adminPassword = passVal;
+                  state.domainChoice = inputs.domainChoice.value;
+                  state.aiAutoRespond = inputs.aiAutoRespond.checked;
               } else {
                   isValid = false;
               }
@@ -1241,7 +1321,8 @@
                    website_template: state.templateSelection || "Modern",
                    first_product_name: state.firstOffer || "First Offer",
                    first_product_price: "0.00",
-                   domain_choice: "subdomain",
+                   domain_choice: state.domainChoice || "subdomain",
+                   auto_respond: state.aiAutoRespond !== undefined ? state.aiAutoRespond : true,
                    price_type: "fixed",
                    location: "Local",
                    target_audience: "General"
@@ -1721,6 +1802,8 @@ document.addEventListener('DOMContentLoaded', () => {
 .ohc-tooltip.visible {
     opacity: 1;
 }
+
+
 </style>
 <script>
 document.addEventListener('DOMContentLoaded', () => {
