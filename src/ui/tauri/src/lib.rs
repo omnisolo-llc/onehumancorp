@@ -70,7 +70,6 @@ struct OnboardingState {
     #[serde(rename = "adminPassword")]
     admin_password: Option<String>,
     first_offer: Option<String>,
-    step: Option<i32>,
 }
 
 #[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]

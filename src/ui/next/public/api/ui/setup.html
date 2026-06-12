@@ -469,6 +469,39 @@
           state = { ...state, ...JSON.parse(stored) };
           populateForm();
         }
+
+        // Fetch from API to support cross-device resume
+        const backendUrl = (window.location.origin.includes('localhost') || window.location.protocol === 'file:') ? 'http://127.0.0.1:18789' : '';
+        const tenantId = localStorage.getItem('tenant_id') || 'storefront';
+        const userId = localStorage.getItem('user_id') || 'test-user';
+
+        fetch(`${backendUrl}/api/onboarding/state`, {
+            headers: {
+                'X-Tenant-ID': tenantId,
+                'X-User-ID': userId
+            }
+        })
+        .then(res => {
+            if (res.ok) return res.json();
+            throw new Error('No state found');
+        })
+        .then(backendState => {
+            if (backendState && backendState.state_json) {
+                let parsed = {};
+                try {
+                    parsed = JSON.parse(backendState.state_json);
+                } catch (e) {
+                    console.error("Failed to parse state_json", e);
+                }
+                state = { ...state, ...parsed };
+                state.step = backendState.current_step;
+                populateForm();
+            }
+        })
+        .catch(err => {
+            console.log("No cross-device state found", err);
+        });
+
       }
 
             // Clear name error on typing if valid
@@ -482,12 +515,20 @@
       function populateForm() {
           if (state.businessName) inputs.name.value = state.businessName;
           if (state.tagline) inputs.tagline.value = state.tagline;
+
+          if (state.work_context) {
+              populateCategories();
+          }
           if (state.categories) inputs.categories.value = state.categories;
+
           if (state.assistantName) inputs.assistantName.value = state.assistantName;
           if (state.assistantTone) inputs.assistantTone.value = state.assistantTone;
-          if (state.firstOffer) inputs.firstOffer.value = state.firstOffer;
+          if (state.adminEmail) inputs.adminEmail.value = state.adminEmail;
+          if (state.adminPassword) inputs.adminPassword.value = state.adminPassword;
+          if (state.first_offer) inputs.firstOffer.value = state.first_offer;
+          if (state.templateSelection) inputs.templateSelection.value = state.templateSelection;
 
-          const contextVal = state.workContext || state.work_context;
+          const contextVal = state.work_context || state.workContext;
           if (contextVal) {
               inputs.context.forEach(r => {
                   if (r.value === contextVal) {
@@ -497,13 +538,37 @@
                   }
               });
           }
+
+          if (state.step !== undefined && state.step > 0) {
+              const steps = ['step-context', 'step-categories', 'step-name', 'step-assistant', 'step-offer'];
+              if (state.step < steps.length) {
+                  goToStep(steps[state.step]);
+              }
+          }
       }
 
             function saveCurrentState() {
+          let stepNumber = null;
+          const activeStep = document.querySelector('.step.active');
+          if (activeStep) {
+              if (activeStep.id === 'step-context') stepNumber = 0;
+              if (activeStep.id === 'step-categories') stepNumber = 1;
+              if (activeStep.id === 'step-name') stepNumber = 2;
+              if (activeStep.id === 'step-assistant') stepNumber = 3;
+              if (activeStep.id === 'step-offer') stepNumber = 4;
+          }
+          state.step = stepNumber;
+
           if (window.__TAURI__ && window.__TAURI__.core) {
               window.__TAURI__.core.invoke("save_onboarding_state", { state }).catch(console.error);
           } else {
               localStorage.setItem('onboardingState', JSON.stringify(state));
+              const backendUrl = (window.location.origin.includes('localhost') || window.location.protocol === 'file:') ? 'http://127.0.0.1:18789' : '';
+              fetch(`${backendUrl}/api/onboarding/state`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': localStorage.getItem('tenant_id') || 'storefront', 'X-User-ID': localStorage.getItem('user_id') || 'test-user' },
+                  body: JSON.stringify(state)
+              }).catch(console.error);
           }
       }
 
