@@ -394,6 +394,8 @@ pub mod services {
     pub mod collective;
     pub mod inventory_sync;
     pub mod inventory;
+    #[path = "../services/quoting/mod.rs"]
+    pub mod quoting;
 }
 
 use tonic::{transport::Server, Request, Response, Status};
@@ -4625,6 +4627,8 @@ async fn create_ui_bom_item_handler(
         ),
     );
     let app = axum::Router::new()
+        .nest("/api/v1/pricing", api::pricing_rules::router(db.pool.clone()))
+        .nest("/api/v1", crate::services::quoting::router(db.pool.clone()))
         .nest("/oauth", crate::api::oauth::proxy::router())
         .route("/api/settings/sms-verify", axum::routing::post(|axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
             use axum::response::IntoResponse;
