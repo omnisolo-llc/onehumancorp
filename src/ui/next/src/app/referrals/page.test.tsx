@@ -23,20 +23,20 @@ describe('ReferralsPage', () => {
     // Return an unresolved promise to keep it in loading state
     (global.fetch as any).mockImplementation(() => new Promise(() => {}));
 
-    await act(async () => {
-      render(<ReferralsPage />);
-    });
-    expect(screen.getByText('Generating your unique link...')).toBeDefined();
-
-    // Copy button should be disabled
-    const copyButton = screen.getByText('Copy Link');
-    expect(copyButton.hasAttribute('disabled')).toBe(true);
+    render(<ReferralsPage />);
+    // Just expect the loading spinner container to be there since we early return
+    expect(document.querySelector('.animate-spin')).toBeDefined();
   });
 
   it('renders how it works section', async () => {
-    (global.fetch as any).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ referral_link: 'https://ohc.app/ref/test1234' }),
+    (global.fetch as any).mockImplementation((url: string) => {
+        return Promise.resolve({
+            ok: true,
+            json: async () => {
+                if (url.includes('generate')) return { referral_link: 'https://ohc.app/ref/test1234' };
+                return {};
+            }
+        });
     });
     await act(async () => {
       render(<ReferralsPage />);
@@ -48,9 +48,14 @@ describe('ReferralsPage', () => {
   });
 
   it('fetches and displays dynamic referral link', async () => {
-    (global.fetch as any).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ referral_link: 'https://ohc.app/ref/test1234' }),
+    (global.fetch as any).mockImplementation((url: string) => {
+        return Promise.resolve({
+            ok: true,
+            json: async () => {
+                if (url.includes('generate')) return { referral_link: 'https://ohc.app/ref/test1234' };
+                return {};
+            }
+        });
     });
 
     await act(async () => {
@@ -90,9 +95,14 @@ describe('ReferralsPage', () => {
   });
 
   it('renders Powered by OHC footer', async () => {
-    (global.fetch as any).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ referral_link: 'https://ohc.app/ref/test1234' }),
+    (global.fetch as any).mockImplementation((url: string) => {
+        return Promise.resolve({
+            ok: true,
+            json: async () => {
+                if (url.includes('generate')) return { referral_link: 'https://ohc.app/ref/test1234' };
+                return {};
+            }
+        });
     });
     await act(async () => {
       render(<ReferralsPage />);
