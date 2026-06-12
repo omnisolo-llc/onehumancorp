@@ -27,10 +27,7 @@ impl ToolExecutionEngine {
                     // 1) Transient errors: orchestrator should retry with backoff.
                     if retry_count < max_retries {
                         retry_count += 1;
-                        let base_backoff = 500 * (1 << retry_count);
-                        use rand::Rng;
-                        let jitter = rand::thread_rng().gen_range(0..100);
-                        let backoff = Duration::from_millis((base_backoff as u64) + jitter);
+                        let backoff = Self::calculate_backoff(retry_count);
                         warn!(
                             "Transient error executing '{}', retrying {}/{} after {}ms...",
                             tool.name,
@@ -73,6 +70,30 @@ impl ToolExecutionEngine {
                     return Err(ToolError::HandoffRequested(msg));
                 }
             }
+        }
+    }
+
+    /// Calculates exponential backoff with jitter for transient errors.
+    /// This improves readability and allows for deterministic testing of the backoff logic.
+    pub fn calculate_backoff(retry_count: usize) -> Duration {
+        let base_backoff = 500 * (1 << retry_count);
+        use rand::Rng;
+        let jitter = rand::thread_rng().gen_range(0..100);
+        Duration::from_millis((base_backoff as u64) + jitter)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_calculate_backoff_bounds() {
+        for retry_count in 1..=3 {
+            let backoff = ToolExecutionEngine::calculate_backoff(retry_count);
+            let base = 500 * (1 << retry_count) as u64;
+            assert!(backoff.as_millis() as u64 >= base);
+            assert!((backoff.as_millis() as u64) < base + 100);
         }
     }
 }
