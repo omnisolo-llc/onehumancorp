@@ -8,6 +8,7 @@ pub static MILESTONES_CACHE: OnceLock<HybridCache<Vec<String>>> = OnceLock::new(
 pub static TEAM_INVITES_CACHE: OnceLock<HybridCache<TeamInvitesResponse>> = OnceLock::new();
 pub static METRICS_CACHE: OnceLock<HybridCache<TeamInvitesMetricsResponse>> = OnceLock::new();
 pub static ONBOARDING_METRICS_CACHE: OnceLock<HybridCache<OnboardingMetricsResponse>> = OnceLock::new();
+pub static TIME_SAVINGS_CACHE: OnceLock<HybridCache<TimeSavingsResponse>> = OnceLock::new();
 use axum::{
     http::StatusCode,
     response::IntoResponse,
@@ -234,7 +235,7 @@ async fn handle_referral_tier(
     }))
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct TimeSavingsResponse {
     pub hours_saved: f64,
     pub inquiries_handled: i64,
@@ -247,39 +248,76 @@ async fn handle_time_savings(
     Extension(state): Extension<GrowthState>,
     axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
 ) -> Result<Json<TimeSavingsResponse>, StatusCode> {
-    let parsed_uuid = match uuid::Uuid::parse_str(&auth_info.org_id) {
+    let cache_key = format!("time_savings:{}", auth_info.org_id);
+    let cache = TIME_SAVINGS_CACHE.get_or_init(|| HybridCache::new(crate::get_redis_client()));
+
+    if let Some((cached, is_stale)) = cache.get_with_swr(&cache_key).await {
+        if !is_stale {
+            return Ok(Json(cached));
+        }
+
+        let state_clone = state.clone();
+        let org_id_clone = auth_info.org_id.clone();
+        let cache_key_bg = cache_key.clone();
+
+        tokio::spawn(async move {
+            if let Ok(resp) = calculate_time_savings(&state_clone, &org_id_clone).await {
+                if let Some(c) = TIME_SAVINGS_CACHE.get() {
+                    c.set(&cache_key_bg, resp, std::time::Duration::from_secs(60)).await;
+                }
+            }
+        });
+
+        return Ok(Json(cached));
+    }
+
+    match calculate_time_savings(&state, &auth_info.org_id).await {
+        Ok(resp) => {
+            cache.set(&cache_key, resp.clone(), std::time::Duration::from_secs(60)).await;
+            Ok(Json(resp))
+        }
+        Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR)
+    }
+}
+
+async fn calculate_time_savings(state: &GrowthState, org_id: &str) -> Result<TimeSavingsResponse, ()> {
+    let parsed_uuid = match uuid::Uuid::parse_str(org_id) {
         Ok(u) => u,
-        Err(_) => return Err(StatusCode::BAD_REQUEST),
+        Err(_) => return Err(()),
     };
 
-    let tenant_id_str = auth_info.org_id;
+    let tenant_id_str = org_id.to_string();
 
-    // Calculate aggregated time savings based on completed tasks
+    let pool1 = state.pool.clone();
+    let pool2 = state.pool.clone();
+    let pool3 = state.pool.clone();
+    let pool4 = state.pool.clone();
+
     let f1 = async {
         sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM tasks WHERE (tenant_id = $1 OR organization_id = $1) AND title ILIKE '%inquiry%' AND status = 'COMPLETED'")
             .bind(parsed_uuid)
-            .fetch_optional(&state.pool)
+            .fetch_optional(&pool1)
             .await
     };
 
     let f2 = async {
         sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM tasks WHERE (tenant_id = $1 OR organization_id = $1) AND title ILIKE '%appointment%' AND status = 'COMPLETED'")
             .bind(parsed_uuid)
-            .fetch_optional(&state.pool)
+            .fetch_optional(&pool2)
             .await
     };
 
     let f3 = async {
         sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM tasks WHERE (tenant_id = $1 OR organization_id = $1) AND title ILIKE '%cart%' AND status = 'COMPLETED'")
             .bind(parsed_uuid)
-            .fetch_optional(&state.pool)
+            .fetch_optional(&pool3)
             .await
     };
 
     let f4 = async {
         sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM inbox_messages WHERE tenant_id = $1 AND status = 'auto_replied'")
             .bind(&tenant_id_str)
-            .fetch_optional(&state.pool)
+            .fetch_optional(&pool4)
             .await
     };
 
@@ -289,17 +327,16 @@ async fn handle_time_savings(
     let carts_recovered = res3.unwrap_or(Some(0)).unwrap_or(0);
     let auto_replied = res4.unwrap_or(Some(0)).unwrap_or(0);
 
-    // Calculate total hours saved
     let base_hours = (inquiries_handled as f64 * 0.2) + (appointments_scheduled as f64 * 0.3) + (carts_recovered as f64 * 0.43) + (auto_replied as f64 * 0.1);
-    let hours_saved = (base_hours * 10.0).round() / 10.0; // round to 1 decimal place
+    let hours_saved = (base_hours * 10.0).round() / 10.0;
 
-    Ok(Json(TimeSavingsResponse {
+    Ok(TimeSavingsResponse {
         hours_saved,
         inquiries_handled,
         appointments_scheduled,
         carts_recovered,
         auto_replied,
-    }))
+    })
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -2175,4 +2212,26 @@ pub async fn handle_embed_widget(
         bg_color, text_color, escaped_type, escaped_tenant, escaped_type, escaped_type
     );
     axum::response::Html(html)
+}
+
+#[cfg(test)]
+mod time_savings_tests {
+    use super::*;
+
+    #[test]
+    fn test_time_savings_response_serialization() {
+        let resp = TimeSavingsResponse {
+            hours_saved: 12.5,
+            inquiries_handled: 5,
+            appointments_scheduled: 2,
+            carts_recovered: 1,
+            auto_replied: 3,
+        };
+
+        let json = serde_json::to_string(&resp).unwrap();
+        assert!(json.contains("12.5"));
+
+        let deserialized: TimeSavingsResponse = serde_json::from_str(&json).unwrap();
+        assert_eq!(deserialized.hours_saved, 12.5);
+    }
 }
