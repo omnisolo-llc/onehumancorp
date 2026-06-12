@@ -1,4 +1,4 @@
-import { test, expect } from './fixtures';
+import { test, expect } from '@playwright/test';
 
 test.describe('Regression Audit: Verify Mocks Removed and Features Rewired', () => {
 

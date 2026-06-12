@@ -52,8 +52,11 @@ source deploy/scripts/ohc-mode.sh cloud
 ```
 
 ### 4. Local Development with Docker Compose
+> **Note:** For local development, the local-first Bazel build flow is the required primary path if you encounter Docker Hub rate limits.
+
 ```bash
-docker compose -f deploy/docker-compose.yml up --build
+npx @bazel/bazelisk run //deploy:load_all_images
+docker compose -f deploy/docker-compose.yml -f deploy/docker-compose.override.yml up -d
 ```
 Navigate to `http://localhost:8080` to use the integrated API and UI stack. Set `OHC_HEADLESS=true` if you want the backend to run without serving the web client.
 
@@ -181,8 +184,11 @@ Docker Compose is the fastest way to stand up the full stack for local testing.
 
 ### 1 — Build and start
 
+> **Note:** If you encounter Docker Hub rate limits (`error from registry: You have reached your unauthenticated pull rate limit.`) or missing images for `onehumancorp/server:latest` or `valkey/pgvector`, the local-first Bazel build flow is the required primary path. Run `npx @bazel/bazelisk run //deploy:load_all_images` first to build local images, then include the override file when running compose manually.
+
 ```bash
-docker compose -f deploy/docker-compose.yml up --build
+npx @bazel/bazelisk run //deploy:load_all_images
+docker compose -f deploy/docker-compose.yml -f deploy/docker-compose.override.yml up -d
 ```
 
 Services:
