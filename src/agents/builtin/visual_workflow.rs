@@ -14,6 +14,9 @@ pub enum NodeType {
     Llm {
         prompt_template: String,
     },
+    LlmChat {
+        system_prompt: String,
+    },
     Tool {
         tool_name: String,
         args_template: String,
@@ -216,6 +219,28 @@ impl WorkflowExecutor {
 
                     state.insert(node.id.clone(), result);
                 }
+                NodeType::LlmChat { system_prompt } => {
+                    let mut prompt = system_prompt.clone();
+                    for (k, v) in &state {
+                        prompt = prompt.replace(&format!("{{{{{}}}}}", k), v);
+                    }
+
+                    let mut messages = vec![];
+                    if let Some(history) = state.get("chat_history") {
+                        messages.push(crate::types::Message::user(history.clone()));
+                    } else {
+                        messages.push(crate::types::Message::user("Hello".to_string()));
+                    }
+
+                    let mut on_event = |_| {};
+                    let result = self
+                            .agent
+                            .run(&self.config, &prompt, &mut on_event)
+                            .await
+                            .map_err(|e| format!("LLM node {} failed: {}", node.id, e))?;
+
+                    state.insert(current_node_id.clone(), result);
+                }
                 NodeType::Tool {
                     tool_name,
                     args_template,
@@ -393,6 +418,9 @@ impl WorkflowExecutor {
                         return Ok((state, Some(current_node_id)));
                     }
                     NodeType::Output => {
+                        return Ok((state, Some(current_node_id)));
+                    }
+                    NodeType::LlmChat { .. } => {
                         return Ok((state, Some(current_node_id)));
                     }
                     NodeType::Input { name: _ } => {}
