@@ -80,21 +80,10 @@ test.describe('Offline-First Edge Sync & Real-Time Push Architecture', () => {
 
     await page.evaluate(() => {
         window.dispatchEvent(new Event('online'));
-
-        // Mock a successful sync if the backend isn't there, or dispatch a storage event
-        // The dashboard listens to storage events to update the queue count if updated from another tab
-        localStorage.setItem('ohc_offline_queue', '[]');
-        window.dispatchEvent(new Event('storage'));
-
-        // Ensure state updates in the UI by emitting an event or waiting
-        let q = document.getElementById('queue-dashboard');
-        if (q) {
-            q.classList.remove('block', 'app-badge', 'warn');
-            q.classList.add('hidden');
-        }
     });
 
     // Wait for the sync to complete and the queue to hide.
+    // This assertion requires the backend to be running to successfully process the offline mutations.
     await expect(page.locator('#queue-dashboard')).toHaveClass(/hidden/, { timeout: 15000 });
 
     // Push notification (simulate receiving push msg via service worker/FCM)
