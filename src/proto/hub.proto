@@ -323,6 +323,8 @@ message StartOnboardingRequest {
   string location = 14;
   string target_audience = 15;
   repeated IntakeProductProto initial_products = 16;
+  repeated string ai_agents = 17;
+  bool ai_auto_respond = 18;
 }
 
 message StartOnboardingResponse {

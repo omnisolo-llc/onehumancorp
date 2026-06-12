@@ -286,8 +286,10 @@ impl OnboardingAgent {
         });
 
         let agent_clone_seed = self.clone();
+        let req_ai_agents = req.ai_agents.clone();
+        let req_ai_auto_respond = req.ai_auto_respond;
         let seed_future = tokio::task::spawn(async move {
-            agent_clone_seed.seed_default_agents(&org_id_clone2).await
+            agent_clone_seed.seed_default_agents(&org_id_clone2, &req_ai_agents, req_ai_auto_respond).await
         });
 
         let org_id_clone3 = org_id.clone();
@@ -2567,7 +2569,7 @@ impl OnboardingAgent {
         Ok(())
     }
 
-    async fn seed_default_agents(&self, org_id: &str) -> Result<(), String> {
+    async fn seed_default_agents(&self, org_id: &str, ai_agents: &[String], ai_auto_respond: bool) -> Result<(), String> {
         let default_agents = vec![
             ("Operations", "The Manager", "Operations"),
             ("Marketing & Advertising", "The Promoter", "Marketing"),
@@ -2582,13 +2584,19 @@ impl OnboardingAgent {
         let start_seed = std::time::Instant::now();
         let mut futures = vec![];
         for (name, role, role_id) in default_agents {
+            // Only add agents requested by the user, unless the array is empty (add all)
+            if !ai_agents.is_empty() && !ai_agents.contains(&name.to_string()) {
+                continue;
+            }
+
             let id = format!("{}-{}", org_id, role_id.to_lowercase());
+            let status = if ai_auto_respond { "ACTIVE" } else { "IDLE" };
             let query = sqlx::query("INSERT INTO agents (id, name, role, organization_id, status, provider_type, is_default) VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, role = EXCLUDED.role, status = EXCLUDED.status")
                 .bind(id)
                 .bind(name)
                 .bind(role)
                 .bind(org_id.to_string())
-                .bind("IDLE")
+                .bind(status)
                 .bind("builtin")
                 .bind(true);
 
@@ -2717,6 +2725,8 @@ mod tests {
             location: "New York, USA".to_string(),
             target_audience: "Anyone".to_string(),
             initial_products: vec![],
+            ai_agents: vec![],
+            ai_auto_respond: false,
         };
 
         let req_categories = req.selling_categories.clone();
@@ -2809,6 +2819,8 @@ mod tests {
                     }).collect(),
                 }
             }).collect(),
+            ai_agents: vec![],
+            ai_auto_respond: false,
         };
 
         let start_res = agent.start_onboarding(req).await;
@@ -2887,6 +2899,8 @@ mod tests {
             location: "Oakland, CA".to_string(),
             target_audience: "Anyone".to_string(),
             initial_products: vec![],
+            ai_agents: vec![],
+            ai_auto_respond: false,
         };
 
         let state = onboarding_feature_state(&req, "Maya Studio", &req.business_type, &req.location);
@@ -2930,6 +2944,8 @@ mod tests {
             location: "London, UK".to_string(),
             target_audience: "Anyone".to_string(),
             initial_products: vec![],
+            ai_agents: vec![],
+            ai_auto_respond: false,
         };
 
         let res_service = agent.start_onboarding(req_service).await.unwrap();
@@ -2970,6 +2986,8 @@ mod tests {
             location: "Austin, TX".to_string(),
             target_audience: "Anyone".to_string(),
             initial_products: vec![],
+            ai_agents: vec![],
+            ai_auto_respond: false,
         };
 
         let res_food = agent.start_onboarding(req_food).await.unwrap();
