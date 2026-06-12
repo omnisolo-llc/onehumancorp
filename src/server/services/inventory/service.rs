@@ -253,13 +253,27 @@ impl InventoryService {
             .await
             .map_err(|e| e.to_string())?;
 
-        let update_result: Option<i32> = sqlx::query_scalar("UPDATE products SET inventory_count = inventory_count - $1, locked_quantity = locked_quantity - $1 WHERE id = $2 AND tenant_id = $3 AND inventory_count >= $1 RETURNING inventory_count")
+        // Try to commit from locked quantity first
+        let update_result: Option<i32> = sqlx::query_scalar("UPDATE products SET inventory_count = inventory_count - $1, locked_quantity = locked_quantity - $1 WHERE id = $2 AND tenant_id = $3 AND inventory_count >= $1 AND locked_quantity >= $1 RETURNING inventory_count")
             .bind(quantity)
             .bind(product_id)
             .bind(tenant_id)
             .fetch_optional(&mut *tx)
             .await
-            .map_err(|e| e.to_string())?;
+            .unwrap_or(None);
+
+        let update_result = if update_result.is_none() {
+            // Fallback: If not enough locked quantity, deduct from available quantity directly (e.g. offline POS sync or direct commit without reserve)
+            sqlx::query_scalar("UPDATE products SET inventory_count = inventory_count - $1, available_quantity = available_quantity - $1 WHERE id = $2 AND tenant_id = $3 AND inventory_count >= $1 AND available_quantity >= $1 RETURNING inventory_count")
+            .bind(quantity)
+            .bind(product_id)
+            .bind(tenant_id)
+            .fetch_optional(&mut *tx)
+            .await
+            .map_err(|e| e.to_string())?
+        } else {
+            update_result
+        };
 
         if let Some(new_stock) = update_result {
             let event_id = Uuid::new_v4().to_string();
