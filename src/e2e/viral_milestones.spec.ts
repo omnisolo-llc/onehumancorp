@@ -1,55 +1,51 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
-test('viral milestones: verify dynamic loading and card generation', async ({ page }) => {
-  // We skip login and use local storage to simulate a tenant session if needed,
-  // but since we updated the UI to use 'DEFAULT' fallback, it should work.
+test.describe('Viral Milestones Page', () => {
 
-  await page.goto('/milestones');
+  test('viral milestones: verify dynamic loading and card generation', async ({ page, loginAs, unlimitedAdminUser }) => {
+    // E2E test data must be seeded into DB! Our fixture loginAs seeds the basic tenant.
+    // The e2e-seed.sql injects 'first_sale' and '10th_order'
+    await loginAs(page, unlimitedAdminUser);
 
-  // Wait for milestones to load
-  await expect(page.locator('h2:has-text("Your Achievements")')).toBeVisible();
+    // Navigate to the tauri UI
+    await page.goto('/milestones.html');
 
-  // By default, backend returns 'first_sale' as one of the milestones.
-  // Check if it exists in the list.
-  const milestoneList = page.locator('div.glassmorphism');
-  await expect(milestoneList.first()).toBeVisible();
+    // Wait for milestones to load
+    await expect(page.locator('h2:has-text("Your Achievements")')).toBeVisible();
 
-  // Verify that an image is loaded for the selected milestone (first unlocked should be auto-selected)
-  const milestoneImage = page.locator('img[alt*="Milestone"]');
-  // In our DEFAULT case, first_sale is not reached yet in DB, but let's see what is returned.
-  // If no milestone is reached, auto-selection won't happen.
+    const milestoneList = page.locator('.milestone-item');
+    await expect(milestoneList.first()).toBeVisible();
 
-  // Verify icons for the new milestones by explicitly mocking the API to ensure they are present and stable.
-});
-
-test('viral milestones: verify multiple milestone titles from API', async ({ page }) => {
-  await page.route('**/api/v1/growth/milestones/check*', async route => {
-    const json = {
-      milestones: [
-        { id: '5_referrals', title: 'High Connector!', description: 'Great job!', reached: false },
-        { id: 'revenue_1k', title: 'Four-Figure Club', description: 'Incredible!', reached: false }
-      ]
-    };
-    await route.fulfill({ json });
+    // Verify that an image is loaded for the selected milestone
+    const milestoneImage = page.locator('#milestone-image');
+    await expect(milestoneImage).toHaveAttribute('src', /api\/v1\/growth\/milestone\/card/);
   });
 
-  await page.goto('/milestones');
-  await expect(page.locator('h3:has-text("High Connector!")')).toBeVisible({ timeout: 15000 });
-  await expect(page.locator('h3:has-text("Four-Figure Club")')).toBeVisible({ timeout: 15000 });
-});
+  test('viral milestones: verify social share buttons and viral loop', async ({ page, loginAs, unlimitedAdminUser }) => {
+    await loginAs(page, unlimitedAdminUser);
 
-test('viral milestones: verify social share buttons', async ({ page }) => {
-  await page.route('**/api/v1/growth/milestones/check*', async route => {
-    const json = {
-      milestones: [
-        { id: 'first_sale', title: 'First Sale!', description: 'Congrats!', reached: true }
-      ]
-    };
-    await route.fulfill({ json });
+    await page.goto('/milestones.html');
+    await expect(page.locator('h2:has-text("Your Achievements")')).toBeVisible();
+
+    const whatsappBtn = page.locator('text=Share to WhatsApp');
+    await expect(whatsappBtn).toBeVisible();
+    const fbBtn = page.locator('text=Share on Facebook');
+    await expect(fbBtn).toBeVisible();
+    const xBtn = page.locator('text=Share on X');
+    await expect(xBtn).toBeVisible();
+
+    // Check href values
+    const waHref = await whatsappBtn.getAttribute('href');
+    expect(waHref).toContain('wa.me/?text=');
+    expect(waHref).toContain(encodeURIComponent('Powered by OHC'));
+
+    const xHref = await xBtn.getAttribute('href');
+    expect(xHref).toContain('twitter.com/intent/tweet?text=');
+    expect(xHref).toContain(encodeURIComponent('Powered by OHC'));
+
+    const fbHref = await fbBtn.getAttribute('href');
+    expect(fbHref).toContain('facebook.com/sharer/sharer.php');
+    expect(fbHref).toContain('quote=');
+    expect(fbHref).toContain(encodeURIComponent('Powered by OHC'));
   });
-
-  await page.goto('/milestones');
-
-  await expect(page.locator('text=Share to WhatsApp')).toBeVisible();
-  await expect(page.locator('text=Share on Facebook')).toBeVisible();
 });
