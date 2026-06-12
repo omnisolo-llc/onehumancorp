@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 export const runtime = 'nodejs';
 
 async function proxyToAgent(method: string, params: any) {
-  const agentUrl = process.env.OHC_AGENT_URL || 'http://127.0.0.1:18789';
+  const agentUrl = process.env.OHC_AGENT_URL || 'http://127.0.0.1:8080/api/agents';
 
   try {
     const res = await fetch(`${agentUrl}/json_rpc`, {
@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
   try {
     if (method === 'fetch') {
       const agent_id = request.nextUrl.searchParams.get('agent_id');
-      const result = await proxyToAgent('am_fetch_agent', { agent_id });
+      const result = await proxyToAgent('am_search_agents', { agent_id });
       return NextResponse.json(result);
     } else {
       const q = request.nextUrl.searchParams.get('q') || '';
