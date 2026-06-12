@@ -108,7 +108,7 @@ test.describe('Work Triage Agentic Inbox', () => {
   });
 
   test('Layout is fully usable at 375px', async ({ page }) => {
-    await page.setViewportSize({ width: 375, height: 667 });
+    await page.setViewportSize({ width: 375, height: 812 });
     await page.goto('/login');
     await page.fill('input[type="email"]', 'admin@ohc.local');
     await page.fill('input[type="password"]', 'changeme');
@@ -123,8 +123,8 @@ test.describe('Work Triage Agentic Inbox', () => {
     await expect(triageCard.locator('[data-testid="approve-proposal"]')).toBeVisible();
   });
 
-  test('Layout is fully usable at 375px', async ({ page }) => {
-    await page.setViewportSize({ width: 375, height: 667 });
+  test('Layout is fully usable at 375px (tenant login)', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 812 });
     await page.goto('/login');
     await page.fill('input[type="text"]', tenantId);
     await page.click('button[type="submit"]');
