@@ -90,9 +90,11 @@ function CheckoutContent() {
   const [isSubscription, setIsSubscription] = useState(false);
 
 
-  const handlePlanUpgrade = async () => {
+  const handlePayment = async (isSub = false) => {
     setIsProcessing(true);
-    setCheckoutStatus("Preparing Stripe Checkout...");
+    setCheckoutStatus("Preparing Checkout...");
+    setIsSubscription(isSub);
+
     try {
       const response = await fetch("/api/billing/create-checkout-session", {
         method: "POST",
@@ -100,136 +102,23 @@ function CheckoutContent() {
           "Content-Type": "application/json",
           ...(typeof localStorage !== "undefined" && localStorage.getItem('token') ? { "Authorization": `Bearer ${localStorage.getItem('token')}` } : {})
         },
-        // We do not lock inventory for purely subscription/plan upgrades unless product_id is given.
-        // For standard item purchases via checkout, we pass product_id to ensure the lock.
         body: JSON.stringify({
           tier,
-          is_subscription: true,
+          is_subscription: tier ? true : isSub,
           product_id: tier ? undefined : productId,
           quantity: tier ? undefined : quantity
         }),
       });
       const data = await response.json();
       if (!response.ok || !data.checkout_url) {
-        throw new Error(data.message || "Failed to create checkout session");
+        throw new Error(data.message || data.error || "Failed to create checkout session");
       }
+
+      setCheckoutStatus("Redirecting to checkout...");
       window.location.assign(data.checkout_url);
-    } catch (e) {
-      console.error("Failed to start checkout", e);
-      setCheckoutStatus("Stripe Checkout is temporarily unavailable.");
-      setIsProcessing(false);
-    }
-  };
-
-  const startMercadoPagoCheckout = async () => {
-
-    setIsMercadoPagoProcessing(true);
-    setCheckoutStatus("Preparing Mercado Pago checkout...");
-
-    let amount_cents = 4500;
-    if (tier) {
-        if (tier.toLowerCase() === 'starter') amount_cents = 2900;
-        else if (tier.toLowerCase() === 'pro') amount_cents = 7900;
-        else if (tier.toLowerCase() === 'business') amount_cents = 29900;
-    }
-
-    try {
-      // First, attempt to lock inventory via POS reserve to simulate the lock during redirect
-      if (!tier) {
-        setCheckoutStatus("Reserving inventory...");
-        const reserveRes = await fetch("/api/v1/payments/terminal/reserve", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "x-tenant-id": tenant },
-          body: JSON.stringify({
-            tenant_id: tenant,
-            product_id: productId,
-            quantity: quantity,
-            ttl_seconds: 300,
-          }),
-        });
-        const reserveData = await reserveRes.json();
-        if (!reserveData.success) {
-          setCheckoutStatus("Sorry, this item was just purchased in-store.");
-          setIsMercadoPagoProcessing(false);
-          return;
-        }
-      }
-
-      setCheckoutStatus("Redirecting to Mercado Pago...");
-
-      const response = await fetch("/api/checkout/mercadopago", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          tenant_id: tenant,
-          amount_cents: amount_cents,
-          currency: "MXN",
-          is_subscription: tier ? true : isSubscription,
-        }),
-      });
-      const data = await response.json();
-      if (!response.ok || !data.checkout_url) {
-        throw new Error(data.error || "Mercado Pago checkout unavailable.");
-      }
-
-      setCheckoutStatus("Redirecting to Mercado Pago...");
-      window.location.assign(data.checkout_url);
-    } catch (e) {
-      console.error("Failed to start Mercado Pago checkout", e);
-      setCheckoutStatus("Mercado Pago checkout is temporarily unavailable.");
-    } finally {
-      setIsMercadoPagoProcessing(false);
-    }
-  };
-
-  const handlePayment = async (isSub = false) => {
-    setIsProcessing(true);
-    setCheckoutStatus("Reserving inventory...");
-    setIsSubscription(isSub);
-
-    // Attempt to reserve inventory
-    try {
-      const reserveRes = await fetch("/api/v1/payments/terminal/reserve", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "x-tenant-id": tenant },
-        body: JSON.stringify({
-          tenant_id: tenant,
-          product_id: productId,
-          quantity: quantity,
-          ttl_seconds: 15,
-        }),
-      });
-      const reserveData = await reserveRes.json();
-
-      if (!reserveData.success) {
-        setCheckoutStatus("Sorry, this item was just purchased in-store.");
-        setIsProcessing(false);
-        return;
-      }
-
-      const lockId = reserveData.lock_id;
-      setCheckoutStatus("Simulating local POS / Tap to Pay processing...");
-
-      // Simulate API delay for tap to pay
-      setTimeout(async () => {
-        // Commit inventory after payment success
-        await fetch("/api/v1/payments/terminal/commit", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "x-tenant-id": tenant },
-          body: JSON.stringify({
-            tenant_id: tenant,
-            product_id: productId,
-            quantity: quantity,
-            lock_id: lockId,
-          }),
-        });
-        setShowSuccessModal(true);
-        setIsProcessing(false);
-        setCheckoutStatus("");
-      }, 1500);
-
     } catch (e: any) {
-      setCheckoutStatus("Failed to process payment: " + e.message);
+      console.error("Failed to start checkout", e);
+      setCheckoutStatus("Checkout is temporarily unavailable.");
       setIsProcessing(false);
     }
   };
@@ -266,21 +155,11 @@ function CheckoutContent() {
 
               <WithTooltip id="checkout-plan-upgrade-tooltip" defaultText={"Click here to securely subscribe to the " + tier + " plan."}>
                 <button
-                  onClick={handlePlanUpgrade}
-                  disabled={isProcessing || isMercadoPagoProcessing}
+                  onClick={() => handlePayment(true)}
+                  disabled={isProcessing}
                   className={"w-full mb-3 px-4 py-3 text-white rounded-lg font-medium transition-colors shadow-sm " + (isProcessing ? 'bg-indigo-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700')}
                 >
-                  {isProcessing ? 'Processing...' : 'Upgrade via Stripe'}
-                </button>
-              </WithTooltip>
-
-              <WithTooltip id="checkout-mercadopago-plan-upgrade-tooltip" defaultText={"Click here to securely subscribe to the " + tier + " plan via Mercado Pago."}>
-                <button
-                  onClick={startMercadoPagoCheckout}
-                  disabled={isProcessing || isMercadoPagoProcessing}
-                  className={"w-full mb-4 px-4 py-3 bg-[#009EE3] text-white rounded-lg font-medium hover:bg-[#007ebd] transition-colors shadow-sm flex items-center justify-center gap-2 " + (isMercadoPagoProcessing ? 'opacity-70 cursor-not-allowed' : '')}
-                >
-                  {isMercadoPagoProcessing ? 'Preparing Mercado Pago...' : 'Upgrade via Mercado Pago'}
+                  {isProcessing ? 'Processing...' : 'Upgrade'}
                 </button>
               </WithTooltip>
 
@@ -404,46 +283,15 @@ function CheckoutContent() {
           )}
 
           <WithTooltip
-            id="checkout-apple-pay-tooltip"
-            defaultText="Tap to quickly and securely pay using Apple Pay."
+            id="checkout-pay-tooltip"
+            defaultText="Tap to quickly and securely pay for your order."
           >
             <button
               onClick={() => handlePayment(isSubscription)}
               disabled={isProcessing}
               className="w-full px-4 py-3 bg-black text-white rounded-lg font-medium hover:bg-gray-900 transition-colors shadow-sm flex items-center justify-center gap-2"
             >
-              <svg className="w-5 h-5" viewBox="0 0 384 512" fill="white">
-                <path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z" />
-              </svg>
               {isProcessing ? "Processing..." : "Pay"}
-            </button>
-          </WithTooltip>
-
-          <WithTooltip
-            id="checkout-tap-to-pay-tooltip"
-            defaultText="Use your mobile device as a terminal to accept contactless payments."
-          >
-            <button
-              onClick={() => handlePayment(isSubscription)}
-              disabled={isProcessing}
-              className="w-full px-4 py-3 bg-indigo-50 text-indigo-700 rounded-lg font-medium hover:bg-indigo-100 transition-colors border border-indigo-100 shadow-sm flex items-center justify-center gap-2"
-            >
-              Pay with Stripe
-            </button>
-          </WithTooltip>
-
-          <WithTooltip
-            id="checkout-mercadopago-tooltip"
-            defaultText="Pay securely using Mercado Pago."
-          >
-            <button
-              onClick={startMercadoPagoCheckout}
-              disabled={isMercadoPagoProcessing}
-              className="w-full px-4 py-3 bg-[#009EE3] text-white rounded-lg font-medium hover:bg-[#007ebd] transition-colors shadow-sm flex items-center justify-center gap-2"
-            >
-              {isMercadoPagoProcessing
-                ? "Preparing Mercado Pago..."
-                : "Pay with Mercado Pago"}
             </button>
           </WithTooltip>
 

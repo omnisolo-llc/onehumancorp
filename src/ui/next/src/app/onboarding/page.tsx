@@ -376,7 +376,9 @@ export default function OnboardingWizard() {
           domain_choice: domainChoice || 'subdomain',
           price_type: 'fixed',
           location: location || '',
-          target_audience: targetAudience || ''
+          target_audience: targetAudience || '',
+          ai_agents: aiAgents,
+          ai_auto_respond: aiAutoRespond
         })
       });
 
@@ -554,7 +556,9 @@ export default function OnboardingWizard() {
                             price_type: 'physical',
                             location: inferredLocation,
                             target_audience: data.target_audience || '',
-                            initial_products: data.initial_products || []
+                            initial_products: data.initial_products || [],
+                            ai_agents: aiAgents,
+                            ai_auto_respond: aiAutoRespond
                           })
                         });
 

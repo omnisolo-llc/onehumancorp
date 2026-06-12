@@ -30,18 +30,15 @@ mod tests {
 
         // Simulate lag / timeout -> wait for TTL to pass. Poll to avoid
         // scheduler jitter making a loaded test run land on the expiry boundary.
-        tokio::task::yield_now().await;
-        let deadline = tokio::time::Instant::now() + Duration::from_secs(6);
-        let mut acquired2_retry = false;
-        while tokio::time::Instant::now() < deadline {
-            if transport.acquire_lock(&resource, "agent_2", 2).await.unwrap() {
-                acquired2_retry = true;
-                break;
+        let acquired2_retry = tokio::time::timeout(tokio::time::Duration::from_secs(6), async {
+            loop {
+                if transport.acquire_lock(&resource, "agent_2", 2).await.unwrap_or(false) {
+                    return true;
+                }
+                tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
             }
-            // sleep(Duration::from_millis(100)).await;
-            tokio::time::sleep(Duration::from_millis(100)).await;
-        }
-        assert!(acquired2_retry);
+        }).await.unwrap_or(false);
+        assert!(acquired2_retry, "Agent 2 failed to acquire lock after wait");
 
         transport.release_lock(&resource, "agent_2").await.unwrap();
     }
@@ -132,12 +129,11 @@ mod tests {
         // This benchmark asserts that the fundamental timeout utility function
         // guarantees the underlying bounded logic without network drift.
         let start = std::time::Instant::now();
-        let slow_operation = async {
-            tokio::task::yield_now().await; sleep(Duration::from_millis(3000)).await;
+        let (_tx, rx) = tokio::sync::oneshot::channel::<()>();
+        let result = timeout(Duration::from_millis(500), async {
+            let _ = rx.await;
             "ok"
-        };
-
-        let result = timeout(Duration::from_millis(500), slow_operation).await;
+        }).await;
         assert!(result.is_err()); // Timeout triggers
         assert!(start.elapsed() < Duration::from_millis(2500));
     }

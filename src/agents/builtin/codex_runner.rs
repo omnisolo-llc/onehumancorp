@@ -308,20 +308,15 @@ impl AppServer {
             // SOTA Harness Patterns (2025-2026): Verification Loops
             let result = match verification_type.as_str() {
                 "computational" => {
-                    // Safe execution placeholder for computational guide (e.g., passing output_text to a linter instead of bash directly)
-                    if output_text.contains("exit 1") {
-                        Err("Computational guide verification failed".to_string())
-                    } else {
-                        Ok(())
-                    }
+                    verification_manager.add_computational(std::sync::Arc::new(crate::verification_loops::BashComputationalGuide {
+                        command: output_text.clone(),
+                        workspace_path: None,
+                    }));
+                    verification_manager.run_computational_guides(&output_text, &task_context).await
                 }
                 "visual" => {
-                    // Safe execution placeholder for visual verifier
-                    if output_text.contains("error") {
-                        Err("Visual verification failed".to_string())
-                    } else {
-                        Ok(())
-                    }
+                    verification_manager.add_visual(std::sync::Arc::new(crate::verification_loops::PlaywrightVisualVerifier));
+                    verification_manager.run_visual_verifiers(&output_text).await
                 }
                 "inferential" => {
                     verification_manager.add_inferential(std::sync::Arc::new(crate::verification_loops::LlmJudgeSensor {
@@ -464,9 +459,17 @@ impl AppServer {
                     );
 
                     // Gate 3: Pre-deliver
+                    let expected_roles = vec![
+                        "Industry Researcher".to_string(),
+                        "Financial Analyst".to_string(),
+                        "Strategic Analyst".to_string(),
+                        "Process Supervisor".to_string(),
+                        "Quality Auditor".to_string(),
+                    ];
                     if let Err(e) = ohc_builtin_agent_core::expert_team::QualityGates::pre_deliver(
                         &final_output,
                         &trace,
+                        &expected_roles,
                     ) {
                         let resp = JsonRpcResponse {
                             jsonrpc: "2.0".to_string(),

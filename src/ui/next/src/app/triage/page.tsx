@@ -10,10 +10,10 @@ type TriageItem = {
   source?: string;
   priority?: string;
   context?: string;
-  status?: string;
-  created_at?: string;
   action_type?: string;
   action_payload?: string;
+  status?: string;
+  created_at: string;
 };
 
 function tenantId() {
@@ -47,7 +47,7 @@ export default function TriagePage() {
       const res = await fetch(`/api/ui/triage?tenant_id=${encodeURIComponent(tenantId())}`);
       if (!res.ok) throw new Error("Failed to load triage items from the database");
       const data = await res.json();
-      const rows = Array.isArray(data) ? data : [];
+      const rows = Array.isArray(data) ? data : (Array.isArray(data?.items) ? data.items : []);
       setItems(rows);
       if (!selectedId && rows.length > 0) {
         setSelectedId(rows[0].id);
@@ -160,7 +160,7 @@ export default function TriagePage() {
               {selected.action_type && (
                 <div className="mb-6">
                   <div className="app-metric-label">Proposed Action: {selected.action_type}</div>
-                  <div className="mt-2 rounded-md border border-blue-200 dark:border-blue-900/30 bg-blue-50/50 dark:bg-blue-900/20 p-4 text-sm leading-6 text-blue-900 dark:text-blue-100 font-medium">
+                  <div className="mt-2 rounded-md border border-blue-200 dark:border-blue-900/30 bg-blue-50/50 dark:bg-blue-900/20 p-4 text-sm leading-6 text-blue-900 dark:text-blue-100 font-medium whitespace-pre-wrap">
                     {selected.action_payload || "No specific payload"}
                   </div>
                 </div>
