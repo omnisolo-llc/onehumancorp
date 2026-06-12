@@ -5,7 +5,6 @@ export const runtime = 'nodejs';
 export async function POST(request: NextRequest) {
   try {
     const payload = await request.json();
-    console.log("Visual workflow api received:", payload);
 
     let graphNodes: any[] = [];
     let graphEdges: any[] = [];

@@ -1130,7 +1130,6 @@ function WorkflowsPanel({ workflows, setWorkflows }: { workflows: WorkflowRecord
 
         if (wfRes.ok) {
            const wfData = await wfRes.json();
-           console.log("Visual workflow result:", wfData);
            setWorkflows(current => [{
                id: Date.now().toString(),
                name,
