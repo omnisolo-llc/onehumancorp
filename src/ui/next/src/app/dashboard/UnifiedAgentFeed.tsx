@@ -439,8 +439,10 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
             </div>
 
             {loading && (
-              <div className="w-full p-4 glassmorphism rounded-[16px] text-center text-gray-500">
-                Loading Agent Proposals...
+              <div className="flex flex-col gap-4">
+                {[...Array(3)].map((_, i) => (
+                  <div key={`skel-prop-${i}`} className="w-full h-32 rounded-xl bg-gray-200 dark:bg-gray-800 animate-pulse"></div>
+                ))}
               </div>
             )}
             {!loading && items.length === 0 && (
@@ -961,8 +963,10 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
         {activeTab === "activity" && (
           <>
             {activityLoading && (
-              <div className="w-full p-4 glassmorphism rounded-[16px] text-center text-gray-500">
-                Loading Activity Feed...
+              <div className="flex flex-col gap-4">
+                {[...Array(3)].map((_, i) => (
+                  <div key={`skel-act-${i}`} className="w-full h-24 rounded-xl bg-gray-200 dark:bg-gray-800 animate-pulse"></div>
+                ))}
               </div>
             )}
             {!activityLoading && activities.length === 0 && (

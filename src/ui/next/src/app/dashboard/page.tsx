@@ -617,22 +617,38 @@ export default function Dashboard() {
                 <WithTooltip id="total-sales-tooltip" defaultText="Total revenue generated from database orders.">
                   <div className="app-metric-label">Total Sales</div>
                 </WithTooltip>
-                <div className="app-metric-value">{money(metrics.total_sales)}</div>
+                {loading ? (
+                  <div className="h-8 w-24 bg-gray-200 dark:bg-gray-700 animate-pulse rounded mt-2"></div>
+                ) : (
+                  <div className="app-metric-value">{money(metrics.total_sales)}</div>
+                )}
                 <div className="app-metric-note">{loading ? "Loading database rows" : "All recorded orders"}</div>
               </WalkthroughTarget>
               <div className="app-card">
                 <div className="app-metric-label">Customers</div>
-                <div className="app-metric-value">{metrics.active_customers}</div>
+                {loading ? (
+                  <div className="h-8 w-16 bg-gray-200 dark:bg-gray-700 animate-pulse rounded mt-2"></div>
+                ) : (
+                  <div className="app-metric-value">{metrics.active_customers}</div>
+                )}
                 <div className="app-metric-note">Database customer records</div>
               </div>
               <div className="app-card">
                 <div className="app-metric-label">Pending Orders</div>
-                <div className="app-metric-value">{metrics.pending_orders}</div>
+                {loading ? (
+                  <div className="h-8 w-16 bg-gray-200 dark:bg-gray-700 animate-pulse rounded mt-2"></div>
+                ) : (
+                  <div className="app-metric-value">{metrics.pending_orders}</div>
+                )}
                 <div className="app-metric-note">Open fulfillment workload</div>
               </div>
               <div className="app-card">
                 <div className="app-metric-label">Low Stock</div>
-                <div className="app-metric-value">{lowStockCount}</div>
+                {loading ? (
+                  <div className="h-8 w-16 bg-gray-200 dark:bg-gray-700 animate-pulse rounded mt-2"></div>
+                ) : (
+                  <div className="app-metric-value">{lowStockCount}</div>
+                )}
                 <div className="app-metric-note">Materials below threshold</div>
               </div>
             </div>
@@ -654,17 +670,29 @@ export default function Dashboard() {
               <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
                 <div className="app-card">
                   <div className="app-metric-label">Orders</div>
-                  <div className="app-metric-value">{orders.length}</div>
+                  {loading ? (
+                    <div className="h-8 w-16 bg-gray-200 dark:bg-gray-700 animate-pulse rounded mt-2"></div>
+                  ) : (
+                    <div className="app-metric-value">{orders.length}</div>
+                  )}
                   <div className="app-metric-note">Rows returned</div>
                 </div>
                 <div className="app-card">
                   <div className="app-metric-label">Inbox</div>
-                  <div className="app-metric-value">{messages.length}</div>
+                  {loading ? (
+                    <div className="h-8 w-16 bg-gray-200 dark:bg-gray-700 animate-pulse rounded mt-2"></div>
+                  ) : (
+                    <div className="app-metric-value">{messages.length}</div>
+                  )}
                   <div className="app-metric-note">Messages returned</div>
                 </div>
                 <div className="app-card">
                   <div className="app-metric-label">Vendors</div>
-                  <div className="app-metric-value">{supply.vendors.length}</div>
+                  {loading ? (
+                    <div className="h-8 w-16 bg-gray-200 dark:bg-gray-700 animate-pulse rounded mt-2"></div>
+                  ) : (
+                    <div className="app-metric-value">{supply.vendors.length}</div>
+                  )}
                   <div className="app-metric-note">Supply partners</div>
                 </div>
               </div>
