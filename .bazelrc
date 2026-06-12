@@ -1,7 +1,7 @@
 # Bazel configuration for MCP Any
 
 build --color=yes
-build
+build --config=remote-cache
 build --config=bes
 
 # ── Default: local builds/tests ───────────────────────────────────────────────
