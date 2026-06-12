@@ -97,6 +97,99 @@ function formatStatus(status?: string) {
   return status || "Open";
 }
 
+
+function InviteAndEarnWidget() {
+  const [inviteLink, setInviteLink] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const handleGenerate = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      if ((window as any).__TAURI__ && (window as any).__TAURI__.core) {
+        const link = await (window as any).__TAURI__.core.invoke('generate_cloud_bridge_invite');
+        setInviteLink(link);
+      } else {
+        const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default';
+        const res = await fetch('/api/v1/growth/cloud-bridge/invite', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ team_id: tenantId, inviter_id: "owner", invitee_id: "pending" })
+        });
+        const data = await res.json();
+        setInviteLink(data.invite_link || 'https://cloud.ohc.network/invite/fallback');
+      }
+    } catch (err) {
+      console.error(err);
+      setInviteLink('https://cloud.ohc.network/invite/fallback');
+    }
+    setLoading(false);
+  };
+
+  const handleCopy = (e: React.MouseEvent) => {
+    e.preventDefault();
+    navigator.clipboard.writeText(inviteLink);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleShareX = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const text = `I manage my business with OHC! Join using my invite link and get 1 month free: ${inviteLink}\n\n⚡ Powered by OHC`;
+    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, '_blank');
+  };
+
+  return (
+    <div className="block glassmorphism p-6 rounded-[16px] border border-white/40 dark:border-white/10 mt-6 relative z-10">
+      <div className="flex flex-col gap-4">
+        <div>
+          <h2 className="text-2xl font-bold font-outfit text-gray-900 dark:text-white mb-2">Invite & Earn</h2>
+          <p className="text-gray-600 dark:text-gray-300 text-sm">
+            Invite a fellow business owner to OHC. They get 1 month free, you get $50 credit.
+          </p>
+        </div>
+        {!inviteLink ? (
+          <button
+            id="dashboard-invite-btn"
+            onClick={handleGenerate}
+            disabled={loading}
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-xl transition-colors"
+          >
+            {loading ? 'Generating...' : 'Get My Invite Link'}
+          </button>
+        ) : (
+          <div id="dashboard-invite-container" className="flex flex-col gap-3">
+            <input
+              id="dashboard-invite-link"
+              type="text"
+              readOnly
+              value={inviteLink}
+              className="w-full px-4 py-2 rounded-lg bg-white/50 dark:bg-black/20 border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-200"
+            />
+            <div className="flex gap-3">
+              <button
+                id="dashboard-copy-btn"
+                onClick={handleCopy}
+                className="flex-1 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200 font-medium py-2 px-4 rounded-lg transition-colors"
+              >
+                {copied ? 'Copied!' : 'Copy'}
+              </button>
+              <button
+                id="dashboard-share-x-btn"
+                onClick={handleShareX}
+                className="flex-1 bg-[#1DA1F2] hover:bg-[#1a91da] text-white font-medium py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
+              >
+                Share to X
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function Dashboard() {
   const router = useRouter();
   const [metrics, setMetrics] = useState<DashboardMetrics>(emptyMetrics);
@@ -783,6 +876,8 @@ export default function Dashboard() {
             </div>
           </div>
         </section>
+
+        <InviteAndEarnWidget />
 
         <section className="mt-4">
           <div className="mb-3 flex items-center justify-between gap-3">
