@@ -27,6 +27,8 @@ test.describe('Cross Device Onboarding CUJ', () => {
     });
     await page.reload();
 
+    await expect(page.getByText('10-Minute Setup Wizard')).toBeVisible();
+    await page.getByText('Start My Business').click();
     await expect(page.getByText('How do you work?')).toBeVisible();
     await page.getByText("I'm a Baker").click();
     await page.getByText('Next').first().click();

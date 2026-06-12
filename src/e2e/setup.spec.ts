@@ -23,7 +23,9 @@ test.describe('OHC Setup Wizard Flow', () => {
     // Check initial UI loading
     await expect(page.locator('h1').first()).toBeVisible();
     // Start My Business
-    await page.locator('.next-step-btn[data-next="step-context"]').click();
+    await expect(page.getByText('10-Minute Setup Wizard')).toBeVisible();
+    await page.getByText('Start My Business').click();
+    await expect(page.getByRole('heading', { name: "How do you work?" })).toBeVisible();
     await expect(page.getByText('How do you work?')).toBeVisible();
 
     // Context step
@@ -110,7 +112,9 @@ test.describe('OHC Setup Wizard Flow', () => {
     const btnBox = await page.locator('.next-step-btn').first().boundingBox();
     expect(btnBox?.height).toBeGreaterThanOrEqual(44);
 
-    await page.locator('.next-step-btn[data-next="step-context"]').click();
+    await expect(page.getByText('10-Minute Setup Wizard')).toBeVisible();
+    await page.getByText('Start My Business').click();
+    await expect(page.getByRole('heading', { name: "How do you work?" })).toBeVisible();
     const inputbox = await page.locator('.radio-option').first().boundingBox();
     expect(inputbox?.height).toBeGreaterThanOrEqual(44);
   });

@@ -12,6 +12,9 @@ test.describe('Persona-Driven Onboarding E2E', () => {
         await route.fulfill({ contentType: 'text/html', body: fileContent });
     });
     await page.goto('http://mock/setup.html');
+    await expect(page.getByText('10-Minute Setup Wizard')).toBeVisible();
+    await page.getByText('Start My Business').click();
+    await expect(page.getByRole('heading', { name: "How do you work?" })).toBeVisible();
 
 
     // Step 1: Work Context & Persona Quick-Start
@@ -76,6 +79,9 @@ test.describe('Persona-Driven Onboarding E2E', () => {
         await route.fulfill({ contentType: 'text/html', body: fileContent });
     });
     await page.goto('http://mock/setup.html');
+    await expect(page.getByText('10-Minute Setup Wizard')).toBeVisible();
+    await page.getByText('Start My Business').click();
+    await expect(page.getByRole('heading', { name: "How do you work?" })).toBeVisible();
 
     await page.getByText("I'm a Handyman").click();
     await expect(page.getByText("Applied!")).toBeVisible();
@@ -111,6 +117,9 @@ test.describe('Persona-Driven Onboarding E2E', () => {
         await route.fulfill({ contentType: 'text/html', body: fileContent });
     });
     await page.goto('http://mock/setup.html');
+    await expect(page.getByText('10-Minute Setup Wizard')).toBeVisible();
+    await page.getByText('Start My Business').click();
+    await expect(page.getByRole('heading', { name: "How do you work?" })).toBeVisible();
 
     await page.getByText("I'm a Boutique Owner").click();
     await page.getByText('Next').first().click();
@@ -128,6 +137,9 @@ test.describe('Persona-Driven Onboarding E2E', () => {
         await route.fulfill({ contentType: 'text/html', body: fileContent });
     });
     await page.goto('http://mock/setup.html');
+    await expect(page.getByText('10-Minute Setup Wizard')).toBeVisible();
+    await page.getByText('Start My Business').click();
+    await expect(page.getByRole('heading', { name: "How do you work?" })).toBeVisible();
 
     await page.getByText("I'm a Tutor").click();
     await page.getByText('Next').first().click();
@@ -145,6 +157,9 @@ test.describe('Persona-Driven Onboarding E2E', () => {
         await route.fulfill({ contentType: 'text/html', body: fileContent });
     });
     await page.goto('http://mock/setup.html');
+    await expect(page.getByText('10-Minute Setup Wizard')).toBeVisible();
+    await page.getByText('Start My Business').click();
+    await expect(page.getByRole('heading', { name: "How do you work?" })).toBeVisible();
 
     await page.getByText('Agency or Studio').click();
     await page.getByText('Next').first().click();
