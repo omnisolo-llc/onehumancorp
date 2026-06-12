@@ -238,7 +238,9 @@ export default function CostDashboardPage() {
                             })}
                         </div>
                     ) : (
-                        <p className="text-sm text-gray-500">No trend data yet.</p>
+                        <div className="p-6 text-center bg-white/70 backdrop-blur-xl saturate-200 border border-white/40 rounded-xl">
+                            <p className="text-sm text-gray-500">No trend data yet.</p>
+                        </div>
                     )}
                 </div>
 
