@@ -32,7 +32,7 @@ describe('HelpChat Component', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Open help chat' }));
 
     expect(screen.getByRole('heading', { name: 'Ask AI Help' })).toBeInTheDocument();
-    expect(screen.getByPlaceholderText('Ask me anything...')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('Ask anything...')).toBeInTheDocument();
   });
 
   it('closes the chat when the close button is clicked', () => {
@@ -53,7 +53,7 @@ describe('HelpChat Component', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Open help chat' }));
 
     // Type and submit message
-    const input = screen.getByPlaceholderText('Ask me anything...');
+    const input = screen.getByPlaceholderText('Ask anything...');
     const submitBtn = screen.getByRole('button', { name: 'Send message' });
 
     await user.type(input, 'Test message');
@@ -87,7 +87,7 @@ describe('HelpChat Component', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Open help chat' }));
 
-    const input = screen.getByPlaceholderText('Ask me anything...');
+    const input = screen.getByPlaceholderText('Ask anything...');
     const submitBtn = screen.getByRole('button', { name: 'Send message' });
 
     await user.type(input, 'Error msg');
@@ -111,7 +111,7 @@ describe('HelpChat Component', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Open help chat' }));
 
-    const input = screen.getByPlaceholderText('Ask me anything...');
+    const input = screen.getByPlaceholderText('Ask anything...');
     const submitBtn = screen.getByRole('button', { name: 'Send message' });
 
     await user.type(input, 'Timeout msg');
