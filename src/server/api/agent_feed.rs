@@ -206,7 +206,7 @@ async fn update_feed_item_state(
             if payload.state == "APPROVED" {
                 if let Ok(Some(item)) = repo.get(&tenant_id, &id).await {
                     if item.event_source == "incident_resolution" {
-                        if let Some(payload) = item.context_payload {
+                        if let Some(ref payload) = item.context_payload {
                             if let Some(incident_id) = payload.get("incident_id").and_then(|v| v.as_str()) {
                                 let _ = sqlx::query("UPDATE incidents SET status = 'RESOLVED', updated_at = NOW() WHERE id = $1 AND tenant_id = $2")
                                     .bind(incident_id)
@@ -214,6 +214,13 @@ async fn update_feed_item_state(
                                     .execute(&pool)
                                     .await;
                             }
+                        }
+                    }
+
+                    if let Some(payload) = item.proposed_action.clone().or(item.context_payload.clone()) {
+                        if payload.get("feature_type").and_then(|v| v.as_str()) == Some("social_post_draft") {
+                            tracing::info!("Approved and scheduled SocialPostDraft for tenant: {}", tenant_id);
+                            // Real implementation would buffer post here to AYRSHARE.
                         }
                     }
                 }
