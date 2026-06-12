@@ -9,7 +9,7 @@ test.describe('Documentation Flows', () => {
     await expect(page.locator('h1:has-text("Help Center")')).toBeVisible();
 
     await expect(page.getByPlaceholder('Search for help articles and videos...')).toBeVisible();
-    await expect(page.getByText('Articles').or(page.getByText('Video Tutorials')).first()).toBeVisible();
+    await expect(page.getByText('Articles').or(page.getByText('Tutorials')).first()).toBeVisible();
   });
 
   test('Tooltips load and display properly', async ({ page }) => {
@@ -24,7 +24,7 @@ test.describe('Documentation Flows', () => {
     await helpBtn.hover();
 
     // Verify the tooltip loads with expected content
-    // We expect the tooltip to fetch from the API which defaults to "Need help? Click here for guides, videos, and to ask our AI." or the defaultText "Need help? Click here to access our Help Center, Ask AI, Video Tutorials, and Release Notes."
+    // We expect the tooltip to fetch from the API which defaults to "Need help? Click here for guides, videos, and to ask our AI." or the defaultText "Need help? Click here to access our Help Center, Ask AI, Tutorials, and Release Notes."
     // Because the rust backend returns: "Need help? Click here to access our Help Center and tutorials."
     const tooltipText = page.getByText(/Need help\? Click here/i).last();
     await expect(tooltipText).toBeVisible();
