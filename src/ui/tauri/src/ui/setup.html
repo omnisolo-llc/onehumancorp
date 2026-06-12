@@ -1251,6 +1251,7 @@
                  finishBtn.disabled = true;
                  finishBtn.innerHTML = '<div class="spinner"></div>Saving...';
                  window.__TAURI__.core.invoke("start_onboarding", { req }).then(() => {
+                   localStorage.setItem('has_onboarded', 'true');
                    window.location.href = "success.html";
                  }).catch((err) => {
                    console.error(err);

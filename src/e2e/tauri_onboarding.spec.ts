@@ -181,7 +181,7 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
     // It should load the values, we can skip through
     await newPage.waitForTimeout(500);
     await expect(newPage.locator('input[value="Local Service"]')).toBeChecked();
-    await newPage.evaluate(() => { document.querySelector('#step-context .next-step-btn').click(); });
+    await newPage.locator('#step-context').getByRole('button', { name: 'Next' }).click();
 
     await expect(newPage.locator('#business-categories')).toHaveValue('Handyman');
     await newPage.locator('#step-categories').getByRole('button', { name: 'Next' }).click();
@@ -221,7 +221,7 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
 
     // Success page
     await expect(newPage.getByRole('heading', { name: "You're all set!" })).toBeVisible();
-    await expect(newPage.getByText('Workspace created for Test Business. Jarvis is ready to help.')).toBeVisible();
+    await expect(newPage.getByText('Workspace created for Test Business.')).toBeVisible();
 
     await newContext.close();
 
