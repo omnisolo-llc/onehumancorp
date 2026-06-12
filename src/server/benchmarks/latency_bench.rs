@@ -690,12 +690,15 @@ pub async fn bench_dashboard_analytics_briefing_latency() {
     if database_url.starts_with("postgres") {
         let pg_pool = sqlx::postgres::PgPoolOptions::new().connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
 
+        let tenant_id = "test_tenant".to_string();
         let start_sim = std::time::Instant::now();
         let pool1 = pg_pool.clone();
         let pool2 = pg_pool.clone();
+        let t1 = tenant_id.clone();
+        let t2 = tenant_id.clone();
         let _ = tokio::join!(
-            sqlx::query("SELECT pg_sleep(0.015)").execute(&pool1),
-            sqlx::query("SELECT pg_sleep(0.015)").execute(&pool2)
+            tokio::spawn(async move { sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM customers WHERE tenant_id = $1").bind(&t1).fetch_one(&pool1).await }),
+            tokio::spawn(async move { sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM orders WHERE tenant_id = $1").bind(&t2).fetch_one(&pool2).await })
         );
         let duration = start_sim.elapsed();
 
@@ -798,16 +801,21 @@ pub async fn bench_time_savings_latency() {
     let database_url = std::env::var("OHC_DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
     if database_url.starts_with("postgres") {
         let pg_pool = sqlx::postgres::PgPoolOptions::new().connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
+        let tenant_id = "test_tenant".to_string();
         let start_sim = std::time::Instant::now();
         let pool1 = pg_pool.clone();
         let pool2 = pg_pool.clone();
         let pool3 = pg_pool.clone();
         let pool4 = pg_pool.clone();
+        let t1 = tenant_id.clone();
+        let t2 = tenant_id.clone();
+        let t3 = tenant_id.clone();
+        let t4 = tenant_id.clone();
         let _ = tokio::join!(
-            sqlx::query("SELECT pg_sleep(0.015)").execute(&pool1),
-            sqlx::query("SELECT pg_sleep(0.015)").execute(&pool2),
-            sqlx::query("SELECT pg_sleep(0.015)").execute(&pool3),
-            sqlx::query("SELECT pg_sleep(0.015)").execute(&pool4)
+            tokio::spawn(async move { sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM customers WHERE tenant_id = $1").bind(&t1).fetch_one(&pool1).await }),
+            tokio::spawn(async move { sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM orders WHERE tenant_id = $1").bind(&t2).fetch_one(&pool2).await }),
+            tokio::spawn(async move { sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM agent_actions WHERE tenant_id = $1").bind(&t3).fetch_one(&pool3).await }),
+            tokio::spawn(async move { sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM inbox_messages WHERE tenant_id = $1").bind(&t4).fetch_one(&pool4).await })
         );
         let duration = start_sim.elapsed();
         println!("  - time_savings_handler (Postgres Parallel Execution): {:?}", duration);
@@ -880,23 +888,25 @@ pub async fn bench_dashboard_unified_feed_parallel_latency() {
     if database_url.starts_with("postgres") {
         let pg_pool = sqlx::postgres::PgPoolOptions::new().connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
 
-        // Setup some mock data or simply test parallel sleep or actual basic queries
+        let tenant_id = "test_tenant".to_string();
+
         let start_seq = std::time::Instant::now();
-        let _ = sqlx::query("SELECT pg_sleep(0.010)").execute(&pg_pool).await;
-        let _ = sqlx::query("SELECT pg_sleep(0.010)").execute(&pg_pool).await;
-        let _ = sqlx::query("SELECT pg_sleep(0.010)").execute(&pg_pool).await;
+        let _ = sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM customers WHERE tenant_id = $1").bind(&tenant_id).fetch_one(&pg_pool).await;
+        let _ = sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM orders WHERE tenant_id = $1 AND status = 'pending'").bind(&tenant_id).fetch_one(&pg_pool).await;
+        let _ = sqlx::query_scalar::<_, f64>("SELECT COALESCE(SUM(total_amount), 0.0)::DOUBLE PRECISION FROM orders WHERE tenant_id = $1").bind(&tenant_id).fetch_one(&pg_pool).await;
         let duration_seq = start_seq.elapsed();
 
         let start_par = std::time::Instant::now();
         let pool1 = pg_pool.clone();
         let pool2 = pg_pool.clone();
         let pool3 = pg_pool.clone();
-        let pool4 = pg_pool.clone();
+        let t1 = tenant_id.clone();
+        let t2 = tenant_id.clone();
+        let t3 = tenant_id.clone();
         let _ = tokio::join!(
-            sqlx::query("SELECT pg_sleep(0.010)").execute(&pool1),
-            sqlx::query("SELECT pg_sleep(0.010)").execute(&pool2),
-            sqlx::query("SELECT pg_sleep(0.010)").execute(&pool3),
-            sqlx::query("SELECT pg_sleep(0.010)").execute(&pool4)
+            tokio::spawn(async move { sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM customers WHERE tenant_id = $1").bind(&t1).fetch_one(&pool1).await }),
+            tokio::spawn(async move { sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM orders WHERE tenant_id = $1 AND status = 'pending'").bind(&t2).fetch_one(&pool2).await }),
+            tokio::spawn(async move { sqlx::query_scalar::<_, f64>("SELECT COALESCE(SUM(total_amount), 0.0)::DOUBLE PRECISION FROM orders WHERE tenant_id = $1").bind(&t3).fetch_one(&pool3).await })
         );
         let duration_par = start_par.elapsed();
 
@@ -916,9 +926,10 @@ pub async fn bench_ui_triage_mobile_payload() {
     if database_url.starts_with("postgres") {
         let pg_pool = sqlx::postgres::PgPoolOptions::new().connect(&database_url).await.unwrap_or_else(|e| panic!("Failed to connect to DB at {}: {}", database_url, e));
 
+        let tenant_id = "test_tenant".to_string();
         let start_sim = std::time::Instant::now();
         let pool1 = pg_pool.clone();
-        let _ = tokio::spawn(async move { sqlx::query("SELECT pg_sleep(0.010)").execute(&pool1).await }).await;
+        let _ = tokio::spawn(async move { sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM customers WHERE tenant_id = $1").bind(&tenant_id).fetch_one(&pool1).await }).await;
         let duration = start_sim.elapsed();
 
         println!("  - Mobile Payload Optimization Simulation (Postgres): {:?}", duration);
