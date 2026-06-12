@@ -35,6 +35,7 @@ exports_files(
         "incidents.rs",
         "audio_command.rs",
         "invoice.rs",
+        "dynamic_pricing.rs",
     ],
     visibility = ["//visibility:public"],
 )
@@ -75,6 +76,7 @@ rust_library(
         "incidents.rs",
         "audio_command.rs",
         "invoice.rs",
+        "dynamic_pricing.rs",
         "//src/server/api/agents:approvals.rs",
         "//src/server/api/agents:client_intake.rs",
         "//src/server/api/agents:hire.rs",
