@@ -47,6 +47,21 @@ describe('useOnboardingStore', () => {
     expect(useOnboardingStore.getState().startResult).toEqual({ result: 'test' });
   });
 
+  it('should update whatYouSell', () => {
+    useOnboardingStore.getState().setWhatYouSell('Custom Cakes');
+    expect(useOnboardingStore.getState().whatYouSell).toBe('Custom Cakes');
+  });
+
+  it('should update chatStep', () => {
+    useOnboardingStore.getState().setChatStep(3);
+    expect(useOnboardingStore.getState().chatStep).toBe(3);
+  });
+
+  it('should update bio', () => {
+    useOnboardingStore.getState().setBio('My awesome bakery');
+    expect(useOnboardingStore.getState().bio).toBe('My awesome bakery');
+  });
+
   it('should update new state keys correctly', () => {
     useOnboardingStore.getState().setBusinessName('Test Business');
     useOnboardingStore.getState().setBusinessType('Cafe');
