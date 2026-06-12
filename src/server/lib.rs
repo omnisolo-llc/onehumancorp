@@ -3835,14 +3835,15 @@ async fn ui_dashboard_unified_feed_handler(
         let t_bg = tenant_id.clone();
         let cache_key_bg = cache_key.clone();
         tokio::spawn(async move {
-            let (metrics_res, orders_res, messages_res, triage_res, approvals_res, agent_feed_res, priority_tasks_res) = tokio::join!(
+            let (metrics_res, orders_res, messages_res, triage_res, approvals_res, agent_feed_res, priority_tasks_res, supply_res) = tokio::join!(
                 tokio::spawn({ let db = db_bg.clone(); let t = t_bg.clone(); async move { load_ui_dashboard_metrics(&db, &t).await } }),
                 tokio::spawn({ let db = db_bg.clone(); let t = t_bg.clone(); async move { load_ui_orders_from_db(&db, &t, mobile_optimized).await } }),
                 tokio::spawn({ let db = db_bg.clone(); let t = t_bg.clone(); async move { load_ui_inbox_from_db(&db, &t, mobile_optimized).await } }),
                 tokio::spawn({ let db = db_bg.clone(); let t = t_bg.clone(); async move { load_ui_triage_from_db(&db, &t, mobile_optimized).await } }),
                 tokio::spawn({ let db = db_bg.clone(); let t = t_bg.clone(); async move { load_ui_agent_approvals_from_db(&db, &t, mobile_optimized).await } }),
                 tokio::spawn({ let db = db_bg.clone(); let t = t_bg.clone(); async move { load_ui_agent_feed_from_db(&db, &t, mobile_optimized).await } }),
-                tokio::spawn({ let db = db_bg.clone(); let t = t_bg.clone(); async move { load_ui_priority_tasks_from_db(&db, &t, mobile_optimized).await } })
+                tokio::spawn({ let db = db_bg.clone(); let t = t_bg.clone(); async move { load_ui_priority_tasks_from_db(&db, &t, mobile_optimized).await } }),
+                tokio::spawn({ let db = db_bg.clone(); let t = t_bg.clone(); async move { load_ui_supply_from_db(&db, &t, mobile_optimized).await } })
             );
 
             let mut orders = orders_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
@@ -3851,6 +3852,7 @@ async fn ui_dashboard_unified_feed_handler(
             let mut approvals = approvals_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
             let mut agent_feed = agent_feed_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
             let mut priority_tasks = priority_tasks_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
+    let supply = supply_res.unwrap_or_else(|_| Ok(serde_json::json!({}))).unwrap_or_else(|_| serde_json::json!({}));
 
             if mobile_optimized {
                 for order in orders.iter_mut() {
@@ -3895,17 +3897,14 @@ async fn ui_dashboard_unified_feed_handler(
                 "pending_approvals": approvals,
                 "agent_feed": agent_feed,
                 "priority_tasks": priority_tasks,
+                "supply": supply
             });
             if let Some(c) = UI_UNIFIED_FEED_CACHE.get() {
                 c.set(&cache_key_bg, result, std::time::Duration::from_secs(10)).await;
             }
         });
 
-        let supply_res = load_ui_supply_from_db(&db, &tenant_id, mobile_optimized).await.unwrap_or_else(|_| serde_json::json!({}));
         let mut final_cached = cached.clone();
-        if let Some(obj) = final_cached.as_object_mut() {
-            obj.insert("supply".to_string(), supply_res);
-        }
         return (axum::http::StatusCode::OK, axum::Json(final_cached)).into_response();
     }
 
@@ -3963,7 +3962,7 @@ async fn ui_dashboard_unified_feed_handler(
         }
     }
 
-    let cacheable_result = serde_json::json!({
+    let result = serde_json::json!({
         "metrics": metrics_res.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound)).map(|m| serde_json::to_value(m).unwrap_or_default()).unwrap_or_default(),
         "orders": orders,
         "inbox": inbox,
@@ -3971,17 +3970,12 @@ async fn ui_dashboard_unified_feed_handler(
         "pending_approvals": approvals,
         "agent_feed": agent_feed,
         "priority_tasks": priority_tasks,
+        "supply": supply
     });
 
-    let _ = cache.set(&cache_key, cacheable_result.clone(), std::time::Duration::from_secs(10)).await;
+    let _ = cache.set(&cache_key, result.clone(), std::time::Duration::from_secs(10)).await;
 
-    // Add supply to the final result
-    let mut final_result = cacheable_result;
-    if let Some(obj) = final_result.as_object_mut() {
-        obj.insert("supply".to_string(), supply);
-    }
-
-    (axum::http::StatusCode::OK, axum::Json(final_result)).into_response()
+    (axum::http::StatusCode::OK, axum::Json(result)).into_response()
 }
 
 async fn ui_dashboard_unified_agent_feed_handler(
