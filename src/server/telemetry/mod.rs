@@ -30,6 +30,7 @@ static MCP_TOOL_CALLS_TOTAL: OnceLock<Counter<u64>> = OnceLock::new();
 static POSTGRES_LOCK_CONTENTION: OnceLock<Counter<u64>> = OnceLock::new();
 static LLM_NETWORK_LATENCY: OnceLock<Histogram<f64>> = OnceLock::new();
 static AUTODREAM_SYNC_DURATION: OnceLock<Histogram<f64>> = OnceLock::new();
+static MISSION_COST_CENTS: OnceLock<Counter<u64>> = OnceLock::new();
 static TOKEN_USAGE_BY_OUTCOME: OnceLock<Counter<u64>> = OnceLock::new();
 
 static ERROR_SIGNAL_CATEGORIZED: OnceLock<Counter<u64>> = OnceLock::new();
@@ -137,6 +138,23 @@ pub fn get_agent_efficiency_score_gauge() -> &'static Gauge<f64> {
     })
 }
 
+pub fn get_mission_cost_cents_counter() -> &'static Counter<u64> {
+    MISSION_COST_CENTS.get_or_init(|| {
+        let meter = global::meter("ohc.telemetry");
+        meter.u64_counter("ohc_mission_cost_cents").build()
+    })
+}
+
+pub fn record_mission_cost_cents(count: u64, agent_id: &str, organization_id: &str) {
+    let counter = get_mission_cost_cents_counter();
+    counter.add(
+        count,
+        &[
+            opentelemetry::KeyValue::new("agent_id", agent_id.to_string()),
+            opentelemetry::KeyValue::new("organization_id", organization_id.to_string()),
+        ],
+    );
+}
 
 pub fn get_agent_api_call_counter() -> &'static Counter<u64> {
     AGENT_API_CALL.get_or_init(|| {

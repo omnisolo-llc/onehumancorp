@@ -91,6 +91,7 @@ impl Hub {
                 let mut labels_cents = labels.clone();
                 labels_cents["cost_cents"] = serde_json::json!(cost_cents);
                 let _ = ::server_telemetry::buffer_metric_i64(&pool_clone, "ohc_mission_cost_cents", "counter", cost_cents, labels_cents).await;
+                ::server_telemetry::record_mission_cost_cents(cost_cents as u64, &event.agent_id, &event.tenant_id);
             }
         });
 

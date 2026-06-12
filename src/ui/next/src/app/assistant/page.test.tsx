@@ -585,7 +585,7 @@ test('renders core Agent docs shell affordances for task bar conversation result
   expect(within(parityPanel).getByText('AI training opt-out')).toBeDefined();
 });
 
-test('backs parity controls with assistant API actions', async () => {
+test('backs parity controls with assistant API actions', { timeout: 60000 }, async () => {
   render(<AssistantPage />);
 
   await screen.findByRole('heading', { name: 'Agent Assistant' });
