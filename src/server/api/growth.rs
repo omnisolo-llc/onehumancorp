@@ -185,6 +185,7 @@ where
         .route("/referrals/generate", post(handle_referral_generate))
         .route("/onboarding-metrics", get(handle_onboarding_metrics))
         .route("/discount_share/generate", post(handle_generate_discount_share))
+        .route("/promoter/generate", post(handle_promoter_generate))
         .route("/milestone/card", get(handle_get_milestone_card))
         .route("/trial-extension/claim", post(handle_trial_extension_claim))
         .route("/time-savings", get(handle_time_savings))
@@ -363,6 +364,25 @@ async fn handle_trial_extension_claim(
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ReferralIdRequest {
     pub id: String,
+}
+
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct PromoterGenerateRequest {
+    pub product_id: String,
+    pub name: String,
+    pub description: Option<String>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct PromoterGenerateVariant {
+    pub platform: String,
+    pub content: String,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct PromoterGenerateResponse {
+    pub variants: Vec<PromoterGenerateVariant>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -2175,4 +2195,80 @@ pub async fn handle_embed_widget(
         bg_color, text_color, escaped_type, escaped_tenant, escaped_type, escaped_type
     );
     axum::response::Html(html)
+}
+
+
+
+async fn handle_promoter_generate(
+    Extension(_state): Extension<GrowthState>,
+    Json(req): Json<PromoterGenerateRequest>,
+) -> Result<Json<PromoterGenerateResponse>, StatusCode> {
+    let mut prompt = format!(
+        "You are The Promoter, an AI social media manager. Generate 3 variant captions (TikTok, Instagram, Facebook) to promote the new product '{}'.",
+        req.name
+    );
+    if let Some(desc) = &req.description {
+        prompt.push_str(&format!(" Product description: '{}'.", desc));
+    }
+    prompt.push_str(" Format the output STRICTLY as a JSON object with keys 'tiktok', 'instagram', 'facebook'. Example: {\"tiktok\": \"caption 1\", \"instagram\": \"caption 2\", \"facebook\": \"caption 3\"}");
+
+    let drafted_msg = {
+        let minimax_api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
+        if !minimax_api_key.is_empty() {
+            let client = crate::minimax::MinimaxClient::new(minimax_api_key);
+            match client.reason(&prompt).await {
+                Ok(content) => content,
+                Err(e) => {
+                    tracing::error!("Failed to generate promoter copy via minimax: {}", e);
+                    r#"{"tiktok": "Check out our new product!", "instagram": "New arrival! Link in bio.", "facebook": "We just added a new product to our store."}"#.to_string()
+                }
+            }
+        } else {
+             // Fallback
+             r#"{"tiktok": "Check out our new product!", "instagram": "New arrival! Link in bio.", "facebook": "We just added a new product to our store."}"#.to_string()
+        }
+    };
+
+    let parsed: serde_json::Value = serde_json::from_str(&drafted_msg).unwrap_or(serde_json::json!({
+        "tiktok": "Check out our new product!",
+        "instagram": "New arrival! Link in bio.",
+        "facebook": "We just added a new product to our store."
+    }));
+
+    let mut variants = Vec::new();
+    if let Some(obj) = parsed.as_object() {
+        if let Some(tiktok) = obj.get("tiktok").and_then(|v| v.as_str()) {
+            variants.push(PromoterGenerateVariant { platform: "TikTok".to_string(), content: tiktok.to_string() });
+        }
+        if let Some(instagram) = obj.get("instagram").and_then(|v| v.as_str()) {
+            variants.push(PromoterGenerateVariant { platform: "Instagram".to_string(), content: instagram.to_string() });
+        }
+        if let Some(facebook) = obj.get("facebook").and_then(|v| v.as_str()) {
+            variants.push(PromoterGenerateVariant { platform: "Facebook".to_string(), content: facebook.to_string() });
+        }
+    }
+
+    if variants.is_empty() {
+        variants.push(PromoterGenerateVariant { platform: "TikTok".to_string(), content: "Check out our new product!".to_string() });
+        variants.push(PromoterGenerateVariant { platform: "Instagram".to_string(), content: "New arrival! Link in bio.".to_string() });
+        variants.push(PromoterGenerateVariant { platform: "Facebook".to_string(), content: "We just added a new product to our store.".to_string() });
+    }
+
+    Ok(Json(PromoterGenerateResponse { variants }))
+}
+
+#[cfg(test)]
+mod promoter_tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_promoter_generate() {
+        let req = PromoterGenerateRequest {
+            product_id: "test1".to_string(),
+            name: "Vegan Chocolate Cake".to_string(),
+            description: None,
+        };
+
+        assert_eq!(req.name, "Vegan Chocolate Cake");
+    }
 }
