@@ -102,6 +102,11 @@ pub async fn offline_sync_handler(
                         .execute(&mut *db_tx)
                         .await;
 
+                    crate::api::catalog::CATALOG_CACHE.get_or_init(|| crate::utils::cache::HybridCache::new(None)).invalidate(&tenant_id_clone).await;
+                    let cache = crate::builder::edge::get_edge_cache();
+                    let cache_key = format!("ohc:cache:{}:storefront:product:{}", tenant_id_clone, mutation.product_id);
+                    cache.invalidate_by_tag(&cache_key).await;
+
                     if is_conflict {
                         let ai_task_id = uuid::Uuid::new_v4().to_string();
                         let ai_payload = serde_json::json!({

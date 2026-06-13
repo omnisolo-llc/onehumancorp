@@ -4,7 +4,8 @@ use axum::{
     routing::{get, post},
     Json, Router,
 };
-use http::StatusCode;
+use axum::http::StatusCode;
+use axum::http;
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use uuid::Uuid;
@@ -45,14 +46,14 @@ async fn get_storefront_product(
     let product_id = Uuid::parse_str(&product_id_str).map_err(|_| StatusCode::BAD_REQUEST)?;
 
     let cache = get_edge_cache();
-    let cache_key = format!("storefront:product:{}:{}", tenant_id, product_id);
+    let cache_key = format!("ohc:cache:{}:storefront:product:{}", tenant_id, product_id);
 
     if let Some((cached_html, is_stale)) = cache.get_with_swr(&cache_key).await {
         if !is_stale {
             let mut response = Html(cached_html).into_response();
             response.headers_mut().insert(
                 http::header::CACHE_CONTROL,
-                "public, s-maxage=60, stale-while-revalidate=86400".parse().unwrap(),
+                "public, s-maxage=3600, stale-while-revalidate=86400".parse().unwrap(),
             );
             return Ok(response);
         }
@@ -79,7 +80,7 @@ async fn get_storefront_product(
             }
             response.headers_mut().insert(
                 http::header::CACHE_CONTROL,
-                "public, s-maxage=60, stale-while-revalidate=86400".parse().unwrap(),
+                "public, s-maxage=3600, stale-while-revalidate=86400".parse().unwrap(),
             );
             return Ok(response);
         }

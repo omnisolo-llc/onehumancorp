@@ -233,9 +233,11 @@ impl OperationsWorker {
                                     .execute(&db.pool)
                                     .await;
 
+                                crate::api::catalog::CATALOG_CACHE.get_or_init(|| crate::utils::cache::HybridCache::new(None)).invalidate(&tenant_id).await;
                                 let cache = crate::builder::edge::get_edge_cache();
                                 cache.invalidate_by_tag(&format!("entity:product:{}", product_id)).await;
                                 cache.invalidate_by_tag(&format!("tenant-id:{}", tenant_id)).await;
+                                cache.invalidate_by_tag(&format!("ohc:cache:{}:storefront:product:{}", tenant_id, product_id)).await;
 
                                 let pool_clone = db.pool.clone();
                                 let tenant_id_clone = uuid::Uuid::parse_str(&tenant_id).unwrap_or_default();
@@ -274,9 +276,11 @@ impl OperationsWorker {
                                     .execute(pool)
                                     .await;
 
+                                crate::api::catalog::CATALOG_CACHE.get_or_init(|| crate::utils::cache::HybridCache::new(None)).invalidate(&tenant_id).await;
                                 let cache = crate::builder::edge::get_edge_cache();
                                 cache.invalidate_by_tag(&format!("entity:product:{}", product_id)).await;
                                 cache.invalidate_by_tag(&format!("tenant-id:{}", tenant_id)).await;
+                                cache.invalidate_by_tag(&format!("ohc:cache:{}:storefront:product:{}", tenant_id, product_id)).await;
 
                                 let pool_clone = db.pool.clone();
                                 let tenant_id_clone = uuid::Uuid::parse_str(&tenant_id).unwrap_or_default();

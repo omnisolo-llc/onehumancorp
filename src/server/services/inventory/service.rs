@@ -363,6 +363,12 @@ impl InventoryService {
 
         tx.commit().await.map_err(|e| e.to_string())?;
 
+        crate::api::catalog::CATALOG_CACHE.get_or_init(|| crate::utils::cache::HybridCache::new(None)).invalidate(tenant_id).await;
+        let cache = crate::builder::edge::get_edge_cache();
+        let cache_key = format!("ohc:cache:{}:storefront:product:{}", tenant_id, product_id);
+        cache.invalidate_by_tag(&cache_key).await;
+
+
         Ok(CommitResult {
             success: true,
             error_message: "".to_string(),

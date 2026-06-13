@@ -1035,6 +1035,11 @@ impl DepartmentOrchestrator {
                                     .execute(&self.db.pool)
                                     .await;
 
+                                crate::api::catalog::CATALOG_CACHE.get_or_init(|| crate::utils::cache::HybridCache::new(None)).invalidate(tenant_id).await;
+                                let cache = crate::builder::edge::get_edge_cache();
+                                let cache_key = format!("ohc:cache:{}:storefront:product:{}", tenant_id, product_id);
+                                cache.invalidate_by_tag(&cache_key).await;
+
                                 // Dispatch simulated reorder to job queue
                                 let job_id = uuid::Uuid::new_v4().to_string();
                                 let reorder_quantity = payload.get("suggested_reorder_quantity").and_then(|v| v.as_i64()).unwrap_or(50);
@@ -1057,6 +1062,11 @@ impl DepartmentOrchestrator {
                                     .bind(tenant_id)
                                     .execute(pool)
                                     .await;
+
+                                crate::api::catalog::CATALOG_CACHE.get_or_init(|| crate::utils::cache::HybridCache::new(None)).invalidate(tenant_id).await;
+                                let cache = crate::builder::edge::get_edge_cache();
+                                let cache_key = format!("ohc:cache:{}:storefront:product:{}", tenant_id, product_id);
+                                cache.invalidate_by_tag(&cache_key).await;
                             }
                         }
                     }

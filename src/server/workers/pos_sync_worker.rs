@@ -59,6 +59,11 @@ impl PosSyncWorker {
                     .execute(&mut *tx)
                     .await;
 
+                crate::api::catalog::CATALOG_CACHE.get_or_init(|| crate::utils::cache::HybridCache::new(None)).invalidate(&job.tenant_id).await;
+                let cache = crate::builder::edge::get_edge_cache();
+                let cache_key = format!("ohc:cache:{}:storefront:product:{}", job.tenant_id, product_id);
+                cache.invalidate_by_tag(&cache_key).await;
+
                 // Record order for offline sync
                 let order_id = uuid::Uuid::new_v4().to_string();
                 let total_amount = (amount_cents as f64) / 100.0;
@@ -184,6 +189,11 @@ impl PosSyncWorker {
                                 .bind(&job.tenant_id)
                                 .execute(&mut *tx)
                                 .await;
+
+                            crate::api::catalog::CATALOG_CACHE.get_or_init(|| crate::utils::cache::HybridCache::new(None)).invalidate(&job.tenant_id).await;
+                            let cache = crate::builder::edge::get_edge_cache();
+                            let cache_key = format!("ohc:cache:{}:storefront:product:{}", job.tenant_id, product_id);
+                            cache.invalidate_by_tag(&cache_key).await;
 
                             let new_stock = std::cmp::max(0, stock - qty as i32);
                             if new_stock <= 5 && !is_conflict {

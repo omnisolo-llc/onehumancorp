@@ -47,6 +47,13 @@ impl CRDTOfflineSynchronizer {
                 .fetch_optional(&mut *tx)
                 .await;
 
+            if result.is_ok() {
+                crate::api::catalog::CATALOG_CACHE.get_or_init(|| crate::utils::cache::HybridCache::new(None)).invalidate(tenant_id).await;
+                let cache = crate::builder::edge::get_edge_cache();
+                let cache_key = format!("ohc:cache:{}:storefront:product:{}", tenant_id, mutation.product_id);
+                cache.invalidate_by_tag(&cache_key).await;
+            }
+
             match result {
                 Ok(Some(_)) => {
                     // Record successful pos offline transaction
