@@ -742,7 +742,7 @@ impl DepartmentOrchestrator {
         results
     }
 
-    pub async fn decide_approval(&self, request_id: &str, tenant_id: &str, approved: bool) -> Result<(), String> {
+    pub async fn decide_approval(&self, request_id: &str, tenant_id: &str, approved: bool, edited_payload: Option<serde_json::Value>) -> Result<(), String> {
         let lock_key = format!("ohc:lock:agent_approval:{}", request_id);
 
         let lock_acquired = self.mesh.acquire_lock(&lock_key, "orchestrator", 60).await;
@@ -762,13 +762,24 @@ impl DepartmentOrchestrator {
             DbStore::Postgres => {
                 let row = if let Ok(mut tx) = self.db.pool.begin().await {
                     if ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await.is_ok() {
-                        let updated = sqlx::query("UPDATE agent_approvals SET status = $1, updated_at = $2 WHERE id = $3 AND tenant_id = $4 RETURNING department, payload")
-                            .bind(new_status)
-                            .bind(now)
-                            .bind(request_id)
-                            .bind(tenant_id)
-                            .fetch_optional(&mut *tx)
-                            .await;
+                        let updated = if let Some(ref ep) = edited_payload {
+                            sqlx::query("UPDATE agent_approvals SET status = $1, updated_at = $2, payload = $3 WHERE id = $4 AND tenant_id = $5 RETURNING department, payload")
+                                .bind(new_status)
+                                .bind(now)
+                                .bind(ep)
+                                .bind(request_id)
+                                .bind(tenant_id)
+                                .fetch_optional(&mut *tx)
+                                .await
+                        } else {
+                            sqlx::query("UPDATE agent_approvals SET status = $1, updated_at = $2 WHERE id = $3 AND tenant_id = $4 RETURNING department, payload")
+                                .bind(new_status)
+                                .bind(now)
+                                .bind(request_id)
+                                .bind(tenant_id)
+                                .fetch_optional(&mut *tx)
+                                .await
+                        };
                         let _ = tx.commit().await;
                         updated
                     } else {
@@ -801,13 +812,25 @@ impl DepartmentOrchestrator {
                 }
             }
             DbStore::Sqlite(pool) => {
-                let row = sqlx::query("UPDATE agent_approvals SET status = ?, updated_at = ? WHERE id = ? AND tenant_id = ? RETURNING department, payload")
-                    .bind(new_status)
-                    .bind(now)
-                    .bind(request_id)
-                    .bind(tenant_id)
-                    .fetch_optional(pool)
-                    .await;
+                let row = if let Some(ref ep) = edited_payload {
+                    let ep_str = serde_json::to_string(ep).unwrap_or_default();
+                    sqlx::query("UPDATE agent_approvals SET status = ?, updated_at = ?, payload = ? WHERE id = ? AND tenant_id = ? RETURNING department, payload")
+                        .bind(new_status)
+                        .bind(now)
+                        .bind(ep_str)
+                        .bind(request_id)
+                        .bind(tenant_id)
+                        .fetch_optional(pool)
+                        .await
+                } else {
+                    sqlx::query("UPDATE agent_approvals SET status = ?, updated_at = ? WHERE id = ? AND tenant_id = ? RETURNING department, payload")
+                        .bind(new_status)
+                        .bind(now)
+                        .bind(request_id)
+                        .bind(tenant_id)
+                        .fetch_optional(pool)
+                        .await
+                };
                 match row {
                     Ok(Some(r)) => {
                         use sqlx::Row;
@@ -842,7 +865,9 @@ impl DepartmentOrchestrator {
             ]);
 
             if approved {
-                if let Some(payload) = &original_payload {
+                let payload_to_use = edited_payload.as_ref().or(original_payload.as_ref());
+
+                if let Some(payload) = payload_to_use {
                     if payload.get("feature_type").and_then(|v| v.as_str()) == Some("quote_draft") {
                         let price = payload.get("suggested_price").and_then(|v| v.as_f64()).unwrap_or(0.0);
                         let deposit_amount = (price * 0.20) as i64 * 100;
@@ -1020,7 +1045,7 @@ impl DepartmentOrchestrator {
                 }
 
                 // If this is a stockout restock and price approval, execute the price change and dispatch a job
-                if let Some(payload) = &original_payload {
+                if let Some(payload) = payload_to_use {
                     if payload.get("feature_type").and_then(|v| v.as_str()) == Some("stockout_restock_and_price") {
                         if let Some(product_id) = payload.get("product_id").and_then(|v| v.as_str()) {
                             let new_price = payload.get("new_price").and_then(|v| v.as_f64()).unwrap_or(0.0);
@@ -1063,7 +1088,7 @@ impl DepartmentOrchestrator {
                 }
 
                 // If this is a Smart Pricing approval, execute the price change in the database directly.
-                if let Some(payload) = &original_payload {
+                if let Some(payload) = payload_to_use {
                     if payload.get("context").and_then(|c| c.get("smart_pricing")).and_then(|v| v.as_bool()).unwrap_or(false) {
                         if let Some(product_id) = payload.get("context").and_then(|c| c.get("product_id")).and_then(|v| v.as_str()) {
                             let _discount_amount = payload.get("context").and_then(|c| c.get("discount_amount")).and_then(|v| v.as_f64()).unwrap_or(0.0);
