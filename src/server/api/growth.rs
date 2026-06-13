@@ -182,41 +182,87 @@ async fn handle_waitlist(
     }))
 }
 
-pub async fn handle_conversational_chat(Json(req): Json<ChatReq>) -> impl IntoResponse {
+pub async fn handle_conversational_chat(
+    Extension(state): Extension<GrowthState>,
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
+    Json(req): Json<ChatReq>
+) -> impl IntoResponse {
     let lower = req.message.to_lowercase();
-    let draft_action = if lower.contains("hours") {
-        Some(ChatDraftAction {
+    let tenant_id = auth_info.org_id.clone();
+
+    let mut response_text = String::new();
+    let mut draft_action = None;
+
+    if lower.contains("hours") {
+        draft_action = Some(ChatDraftAction {
             id: "act_hours_123".to_string(),
             title: "Update Business Hours".to_string(),
             description: "Change Saturday hours to 10AM - 2PM".to_string(),
             action_type: "update_hours".to_string(),
             payload: serde_json::json!({"day": "Saturday", "open": "10:00", "close": "14:00"}),
-        })
+        });
     } else if lower.contains("inventory") || lower.contains("stock") {
-        Some(ChatDraftAction {
+        draft_action = Some(ChatDraftAction {
             id: "act_inv_456".to_string(),
             title: "Update Inventory".to_string(),
             description: "Increase 'Custom Vegan Cake' stock by 5".to_string(),
             action_type: "update_inventory".to_string(),
             payload: serde_json::json!({"product": "Custom Vegan Cake", "amount": 5}),
-        })
+        });
     } else if lower.contains("discount") || lower.contains("promo") {
-         Some(ChatDraftAction {
+         draft_action = Some(ChatDraftAction {
             id: "act_promo_789".to_string(),
             title: "Create Discount Code".to_string(),
             description: "Create WEEKEND10 for 10% off".to_string(),
             action_type: "create_discount".to_string(),
             payload: serde_json::json!({"code": "WEEKEND10", "discount_percentage": 10}),
-        })
-    } else {
-        None
-    };
+        });
+    } else if lower.contains("growth") || lower.contains("grow") || lower.contains("abandoned") || lower.contains("performance") {
+        // Query real metrics for growth advice
+        let abandoned_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM carts WHERE status = 'abandoned' AND tenant_id = $1")
+            .bind(&tenant_id)
+            .fetch_one(&state.pool)
+            .await
+            .unwrap_or(0);
 
-    let response_text = if let Some(ref action) = draft_action {
-        format!("I've drafted an action for you: {}. Please approve it to apply the changes.", action.title)
-    } else {
-        "I didn't quite catch that. Try asking me to update your hours, adjust inventory, or create a discount code.".to_string()
-    };
+        if abandoned_count > 0 {
+            response_text = format!("I noticed you have {} abandoned carts. Recovering them could boost your revenue significantly. Would you like me to start an automated recovery campaign?", abandoned_count);
+            draft_action = Some(ChatDraftAction {
+                id: "recover_abandoned_carts_action".to_string(),
+                title: "Recover Abandoned Carts".to_string(),
+                description: format!("Send personalized recovery emails for {} abandoned carts.", abandoned_count),
+                action_type: "recover_abandoned_carts".to_string(),
+                payload: serde_json::json!({"count": abandoned_count}),
+            });
+        } else {
+            response_text = "Your business is performing well! You have no abandoned carts at the moment. We could look into starting a new referral program to reach more customers.".to_string();
+        }
+    } else if lower.contains("rating") || lower.contains("reputation") || lower.contains("review") {
+        let rating: f64 = sqlx::query_scalar("SELECT average_rating FROM reputation_profiles WHERE tenant_id = $1")
+            .bind(&tenant_id)
+            .fetch_one(&state.pool)
+            .await
+            .unwrap_or(0.0);
+
+        response_text = format!("Your current average rating is {:.1}. Engaging with customers through a review campaign could help improve your visibility.", rating);
+        if rating < 4.5 {
+             draft_action = Some(ChatDraftAction {
+                id: "start_review_campaign_action".to_string(),
+                title: "Start Review Campaign".to_string(),
+                description: "Invite recent customers to share their feedback.".to_string(),
+                action_type: "start_review_campaign".to_string(),
+                payload: serde_json::json!({}),
+            });
+        }
+    }
+
+    if response_text.is_empty() {
+        response_text = if let Some(ref action) = draft_action {
+            format!("I've drafted an action for you: {}. Please approve it to apply the changes.", action.title)
+        } else {
+            "I didn't quite catch that. Try asking me about your business growth, abandoned carts, or update your hours and inventory.".to_string()
+        };
+    }
 
     (StatusCode::OK, Json(ChatRes {
         response: response_text,
@@ -224,12 +270,36 @@ pub async fn handle_conversational_chat(Json(req): Json<ChatReq>) -> impl IntoRe
     }))
 }
 
-pub async fn handle_conversational_execute(Json(req): Json<ExecuteReq>) -> impl IntoResponse {
-    // In a real app we'd dispatch to the appropriate backend service.
-    // Here we just acknowledge it.
+pub async fn handle_conversational_execute(
+    Extension(state): Extension<GrowthState>,
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
+    Json(req): Json<ExecuteReq>
+) -> impl IntoResponse {
+    let mut message = format!("Successfully executed action: {}", req.action_id);
+
+    if req.action_id == "recover_abandoned_carts_action" {
+        // Emit event to trigger background recovery
+        let msg = state.hub.sanitize_hub_event(serde_json::json!({
+            "type": "growth.campaign_sent",
+            "segment": "abandoned_carts",
+            "source": "conversational_manager",
+            "tenant_id": auth_info.org_id
+        }));
+        state.hub.append_recent_event(msg);
+        message = "Recovery campaign started successfully! I'll notify you as soon as we see results.".to_string();
+    } else if req.action_id == "start_review_campaign_action" {
+        let msg = state.hub.sanitize_hub_event(serde_json::json!({
+            "type": "growth.review_campaign_started",
+            "tenant_id": auth_info.org_id,
+            "source": "conversational_manager"
+        }));
+        state.hub.append_recent_event(msg);
+        message = "Review campaign is now active. We're reaching out to your recent customers.".to_string();
+    }
+
     (StatusCode::OK, Json(ExecuteRes {
         success: true,
-        message: format!("Successfully executed action: {}", req.action_id),
+        message,
     }))
 }
 
@@ -238,8 +308,8 @@ where
     S: Clone + Send + Sync + 'static,
 {
     Router::new()
-        .route("/conversational-manager/chat", post(handle_conversational_chat))
-        .route("/conversational-manager/execute", post(handle_conversational_execute))
+        .route("/conversational-manager/chat", post(handle_conversational_chat).layer(axum::middleware::from_fn(::server_auth::guest_auth_middleware)))
+        .route("/conversational-manager/execute", post(handle_conversational_execute).layer(axum::middleware::from_fn(::server_auth::guest_auth_middleware)))
         .route("/waitlist", post(handle_waitlist))
         .route("/social/post", post(handle_social_post))
         .route("/campaign/send-receipt", post(handle_send_receipt))
@@ -2012,6 +2082,47 @@ mod tests {
         assert_eq!(conversions, 1);
     }
 
+
+    #[tokio::test]
+    async fn test_handle_conversational_chat_growth() {
+        let pool = setup_db().await;
+        if sqlx::query("SELECT 1").execute(&pool).await.is_err() {
+            return;
+        }
+
+        let (event_tx, _) = tokio::sync::mpsc::channel(100);
+        let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
+        let state = GrowthState { pool: pool.clone(), hub };
+
+        let test_tenant = format!("test-org-{}", uuid::Uuid::new_v4());
+        let auth_info = ::server_auth::orchestration::AuthInfo {
+            spiffe_id: format!("spiffe://ohc.app/{}/agent1", test_tenant),
+            org_id: test_tenant.clone(),
+            agent_id: "test-agent".to_string(),
+        };
+
+        // Case 1: No abandoned carts
+        let req = ChatReq { message: "How can I grow my business?".to_string(), tenant_id: None };
+        let res = handle_conversational_chat(Extension(state.clone()), axum::extract::Extension(auth_info.clone()), Json(req)).await;
+        let body_bytes = axum::body::to_bytes(res.into_response().into_body(), usize::MAX).await.unwrap();
+        let res_json: ChatRes = serde_json::from_slice(&body_bytes).unwrap();
+        assert!(res_json.response.contains("performing well") || res_json.response.contains("no abandoned carts"));
+
+        // Case 2: Abandoned carts present
+        let cart_id = format!("cart-{}", uuid::Uuid::new_v4());
+        sqlx::query("INSERT INTO carts (id, tenant_id, status) VALUES ($1, $2, 'abandoned')")
+            .bind(&cart_id)
+            .bind(&test_tenant)
+            .execute(&pool).await.expect("Failed to insert test cart");
+
+        let req2 = ChatReq { message: "Check my abandoned carts".to_string(), tenant_id: None };
+        let res2 = handle_conversational_chat(Extension(state.clone()), axum::extract::Extension(auth_info.clone()), Json(req2)).await;
+        let body_bytes2 = axum::body::to_bytes(res2.into_response().into_body(), usize::MAX).await.unwrap();
+        let res_json2: ChatRes = serde_json::from_slice(&body_bytes2).unwrap();
+
+        assert!(res_json2.response.contains("noticed you have"), "Response should contain 'noticed you have', but was: {}", res_json2.response);
+        assert_eq!(res_json2.draft_action.unwrap().action_type, "recover_abandoned_carts");
+    }
 
     #[tokio::test]
     async fn test_waitlist() {
