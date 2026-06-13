@@ -15,7 +15,7 @@ import { useRouter } from "next/navigation";
 import { AppShell } from "../components/AppShell";
 import { InteractiveWalkthrough, WalkthroughTarget } from "../../components/Walkthrough";
 import { WithTooltip } from "../../components/TooltipRegistry";
-import GrowthReferralWidget from "../components/GrowthReferralWidget";
+import { DashboardViralInviteWidget } from "./DashboardViralInviteWidget";
 import AiTimeSavingsWidget from "../components/AiTimeSavingsWidget";
 
 import { SmartBlock } from "../builder/components";
@@ -440,6 +440,8 @@ export default function Dashboard() {
         <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Welcome back, {userName}.</h2>
         <p className="text-gray-600 dark:text-gray-400">Your agents are working on your behalf.</p>
       </div>
+
+      <DashboardViralInviteWidget />
 
       <TriageFeed tenantId={tenantId()} />
       <AiTimeSavingsWidget />

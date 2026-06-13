@@ -1,7 +1,8 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../../../../e2e/fixtures';
 
 test.describe('Automated Client Intake to Proposal Generation Pipeline', () => {
-  test('New lead submits a request and owner approves the AI drafted proposal', async ({ page, request }) => {
+  test('New lead submits a request and owner approves the AI drafted proposal', async ({ page, request, loginAs, adminUser }) => {
+    await loginAs(page, adminUser);
 
     // Step 1: Simulate the form intake API submission
     // This directly calls the endpoint that our widget or webhook would hit.
@@ -43,7 +44,7 @@ test.describe('Automated Client Intake to Proposal Generation Pipeline', () => {
     await expect(page.getByText('Scope of Work:')).toBeVisible();
     await expect(page.getByText('Suggested Time:')).toBeVisible();
 
-    // Step 3: Owner taps "Approve & Send Proposal"
+    // Step 3: Owner taps "Approve & Send"
     const approveBtn = page.getByTestId('approve-quote-draft').first();
     await approveBtn.waitFor({ state: 'visible' });
     await approveBtn.click();
