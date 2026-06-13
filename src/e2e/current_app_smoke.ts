@@ -76,4 +76,12 @@ export async function currentAppSmoke(page: Page, request: APIRequestContext, la
     const networkCost = page.locator('#cost-dashboard-network');
     await expect(networkCost).toBeVisible();
     expect(await networkCost.innerText()).toMatch(/^\$[\d,]+\.\d{2}$/);
+
+    const emailCost = page.locator('#cost-dashboard-email');
+    await expect(emailCost).toBeVisible();
+    expect(await emailCost.innerText()).toMatch(/^\$[\d,]+\.\d{2}$/);
+
+    const apiCost = page.locator('#cost-dashboard-api');
+    await expect(apiCost).toBeVisible();
+    expect(await apiCost.innerText()).toMatch(/^\$[\d,]+\.\d{2}$/);
 }
