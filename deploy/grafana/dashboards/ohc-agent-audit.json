@@ -54,7 +54,7 @@
   "panels": [
     {
       "type": "text",
-      "title": "OHC Aesthetic Injector",
+      "title": "OHC Aesthetics",
       "gridPos": {
         "h": 2,
         "w": 24,
@@ -65,22 +65,6 @@
         "mode": "html",
         "content": "<link rel=\"stylesheet\" href=\"/public/css/custom.css\">"
       },
-      "transparent": true
-    },
-    {
-      "type": "text",
-      "title": "OHC Aesthetics",
-      "gridPos": {
-        "h": 2,
-        "w": 24,
-        "x": 0,
-        "y": 0
-      },
-      "options": {
-        "mode": "html",
-        "content": "<link rel=\"stylesheet\" href=\"/public/css/custom.css\">\n<h1 >Agent Audit Dashboard</h1>\n  <p >OHC Swarm Intelligence Protocol</p>"
-      },
-      "pluginVersion": "10.0.0",
       "transparent": true
     },
     {
@@ -243,7 +227,8 @@
         }
       ],
       "title": "Mission Cost per Tenant (Cents/sec)",
-      "type": "timeseries"
+      "type": "timeseries",
+      "transparent": true
     },
     {
       "datasource": {
@@ -337,7 +322,8 @@
         }
       ],
       "title": "RAG Escalation Rate",
-      "type": "timeseries"
+      "type": "timeseries",
+      "transparent": true
     },
     {
       "datasource": {
@@ -431,7 +417,8 @@
         }
       ],
       "title": "Token Budget Alerts (last 1h)",
-      "type": "timeseries"
+      "type": "timeseries",
+      "transparent": true
     }
   ],
   "refresh": "5s",

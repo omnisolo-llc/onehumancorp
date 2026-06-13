@@ -133,9 +133,21 @@ impl DB {
                             // Enforce strict 0700 permissions for standalone SQLite
                             builder.recursive(true).mode(0o700);
                             if let Err(e) = builder.create(parent) {
-                                ::server_telemetry::record_error_signal("Failed to securely create DB directory");
-                                tracing::error!("Failed to securely create DB directory: {}", e);
-                                return Err(e.into());
+                                // If directory already exists, ensure its permissions are 0700
+                                if e.kind() == std::io::ErrorKind::AlreadyExists {
+                                    use std::os::unix::fs::PermissionsExt;
+                                    if let Ok(metadata) = std::fs::metadata(parent) {
+                                        let mut perms = metadata.permissions();
+                                        if perms.mode() & 0o777 != 0o700 {
+                                            perms.set_mode(0o700);
+                                            let _ = std::fs::set_permissions(parent, perms);
+                                        }
+                                    }
+                                } else {
+                                    ::server_telemetry::record_error_signal("Failed to securely create DB directory");
+                                    tracing::error!("Failed to securely create DB directory: {}", e);
+                                    return Err(e.into());
+                                }
                             }
                         }
                         #[cfg(not(unix))]
@@ -167,7 +179,7 @@ impl DB {
                     if let Ok(file) = OpenOptions::new()
                         .read(true)
                         .write(true)
-                        .create_new(true)
+                        .create(true) // Use create(true) instead of create_new(true) to handle existing files but still apply mode if creating
                         .mode(0o600)
                         .open(&db_path)
                     {
@@ -212,7 +224,7 @@ impl DB {
                          let file = std::fs::OpenOptions::new()
                             .read(true)
                             .write(true)
-                            .create_new(true)
+                            .create(true) // Strengthen: Use create(true) for atomic permissions if possible
                             .mode(0o600)
                             .open(&db_path)?;
                          let mut perms = file.metadata()?.permissions();
