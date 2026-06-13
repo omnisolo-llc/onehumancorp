@@ -2,7 +2,7 @@
 mod tests {
     use std::sync::Arc;
     use std::sync::atomic::Ordering;
-    use tokio::time::{Duration, timeout};
+    use tokio::time::{sleep, Duration, timeout};
 
     // Note: this represents Chaos tests focusing on parity constraints.
     // They don't test actual network unreliability, but rather
