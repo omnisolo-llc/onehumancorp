@@ -120,3 +120,75 @@ async fn test_pg_fail_max_retries_dead_letter() {
     assert_eq!(dl_payload, "{\"test\":\"payload\"}");
     assert_eq!(dl_error_message, "test reason");
 }
+
+#[tokio::test]
+async fn test_pg_queue_concurrent_workers() {
+    use std::sync::atomic::{AtomicUsize, Ordering};
+
+    if std::env::var("OHC_DATABASE_URL").is_err() {
+        return;
+    }
+
+    let database_url = std::env::var("OHC_DATABASE_URL").unwrap();
+    let pool = PgPoolOptions::new()
+        .max_connections(20)
+        .connect(&database_url)
+        .await
+        .unwrap();
+
+    let queue = Arc::new(PgTaskQueue::new(Arc::new(pool.clone())));
+
+    // Clean queue
+    sqlx::query("DELETE FROM ohc_job_queue").execute(&pool).await.unwrap();
+
+    // Enqueue 100 jobs
+    let mut jobs = Vec::new();
+    for i in 0..100 {
+        jobs.push(Job {
+            id: format!("job-concurrent-{}", i),
+            tenant_id: "concurrent_tenant".to_string(),
+            parent_task_id: "parent-1".to_string(),
+            job_type: "concurrent-role".to_string(),
+            payload: "{}".to_string(),
+            status: "PENDING".to_string(),
+            retry_count: 0,
+            max_retries: 3,
+            next_retry_at: Utc::now(),
+            locked_until: None,
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+        });
+    }
+    queue.enqueue_batch(jobs).await.unwrap();
+
+    let processed_count = Arc::new(AtomicUsize::new(0));
+    let mut workers = Vec::new();
+
+    for _ in 0..5 {
+        let q = queue.clone();
+        let count = processed_count.clone();
+        workers.push(tokio::spawn(async move {
+            loop {
+                let job = q.dequeue(vec!["concurrent-role".to_string()], 0, 0).await.unwrap();
+                match job {
+                    Some(j) => {
+                        q.complete(&j.id).await.unwrap();
+                        count.fetch_add(1, Ordering::SeqCst);
+                    }
+                    None => break, // No more jobs
+                }
+            }
+        }));
+    }
+
+    for w in workers {
+        w.await.unwrap();
+    }
+
+    assert_eq!(processed_count.load(Ordering::SeqCst), 100, "Exactly 100 jobs should be executed");
+
+    // Verify 0 duplicates or pending jobs
+    let remaining: (i64,) = sqlx::query_as("SELECT count(*) FROM ohc_job_queue WHERE status = 'PENDING'")
+        .fetch_one(&pool).await.unwrap();
+    assert_eq!(remaining.0, 0, "There should be no pending jobs left");
+}
