@@ -2,12 +2,27 @@ import { test, expect } from '@playwright/test';
 import * as path from 'path';
 import * as fs from 'fs';
 
+function getSetupHtmlContent() {
+  const possiblePaths = [
+    'src/ui/tauri/src/ui/setup.html',
+    path.join(process.env.SOURCE_REPO_ROOT || '', 'src/ui/tauri/src/ui/setup.html'),
+    path.join(process.env.RUNFILES_DIR || '', 'mono/src/ui/tauri/src/ui/setup.html'),
+    path.join(__dirname, '../../ui/tauri/src/ui/setup.html')
+  ];
+
+  for (const p of possiblePaths) {
+    if (p && fs.existsSync(p)) {
+      return fs.readFileSync(p, 'utf-8');
+    }
+  }
+  throw new Error(`Could not find setup.html. Tried: \n${possiblePaths.join('\n')}\nCWD: ${process.cwd()}\nENV: ${Object.keys(process.env).join(',')}`);
+}
+
 test.describe('OHC Setup Wizard Flow', () => {
 
   test.beforeEach(async ({ page }) => {
-      const tauriUiDir = path.join(process.cwd(), 'src/ui/tauri/src/ui');
       await page.route('**/setup.html', async route => {
-          const content = fs.readFileSync(path.join(tauriUiDir, 'setup.html'), 'utf-8');
+          const content = getSetupHtmlContent();
           await route.fulfill({ contentType: 'text/html', body: content });
       });
   });
@@ -119,9 +134,8 @@ test.describe('OHC Setup Wizard Flow', () => {
 test.describe('OHC Setup Wizard Form Configuration', () => {
 
   test.beforeEach(async ({ page }) => {
-      const tauriUiDir = require('path').join(process.cwd(), 'src/ui/tauri/src/ui');
       await page.route('**/setup.html', async route => {
-          const content = require('fs').readFileSync(require('path').join(tauriUiDir, 'setup.html'), 'utf-8');
+          const content = getSetupHtmlContent();
           await route.fulfill({ contentType: 'text/html', body: content });
       });
   });
