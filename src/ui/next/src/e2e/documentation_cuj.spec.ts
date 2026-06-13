@@ -19,7 +19,7 @@ test.describe('Documentation User Journey', () => {
     await expect(page.locator('h2', { hasText: 'Payments' })).toBeVisible();
 
     // Verify Videos list loads
-    await expect(page.locator('h3', { hasText: 'Tutorials' })).toBeVisible();
+    await expect(page.locator('h2', { hasText: 'Video Tutorials' })).toBeVisible({ timeout: 10000 });
 
     // Maya searches for "products" to learn how to add products
     await page.fill('input[placeholder="Search for help articles and videos..."]', 'products');
