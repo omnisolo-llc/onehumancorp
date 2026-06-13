@@ -37,6 +37,39 @@ pub struct SocialPostResponse {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct ChatReq {
+    pub message: String,
+    pub tenant_id: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ChatDraftAction {
+    pub id: String,
+    pub title: String,
+    pub description: String,
+    pub action_type: String,
+    pub payload: serde_json::Value,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ChatRes {
+    pub response: String,
+    pub draft_action: Option<ChatDraftAction>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ExecuteReq {
+    pub action_id: String,
+    pub tenant_id: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ExecuteRes {
+    pub success: bool,
+    pub message: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct SendReceiptRequest {
     pub customer_email: Option<String>,
     pub order_id: Option<String>,
@@ -148,11 +181,64 @@ async fn handle_waitlist(
     }))
 }
 
+pub async fn handle_conversational_chat(Json(req): Json<ChatReq>) -> impl IntoResponse {
+    let lower = req.message.to_lowercase();
+    let draft_action = if lower.contains("hours") {
+        Some(ChatDraftAction {
+            id: "act_hours_123".to_string(),
+            title: "Update Business Hours".to_string(),
+            description: "Change Saturday hours to 10AM - 2PM".to_string(),
+            action_type: "update_hours".to_string(),
+            payload: serde_json::json!({"day": "Saturday", "open": "10:00", "close": "14:00"}),
+        })
+    } else if lower.contains("inventory") || lower.contains("stock") {
+        Some(ChatDraftAction {
+            id: "act_inv_456".to_string(),
+            title: "Update Inventory".to_string(),
+            description: "Increase 'Custom Vegan Cake' stock by 5".to_string(),
+            action_type: "update_inventory".to_string(),
+            payload: serde_json::json!({"product": "Custom Vegan Cake", "amount": 5}),
+        })
+    } else if lower.contains("discount") || lower.contains("promo") {
+         Some(ChatDraftAction {
+            id: "act_promo_789".to_string(),
+            title: "Create Discount Code".to_string(),
+            description: "Create WEEKEND10 for 10% off".to_string(),
+            action_type: "create_discount".to_string(),
+            payload: serde_json::json!({"code": "WEEKEND10", "discount_percentage": 10}),
+        })
+    } else {
+        None
+    };
+
+    let response_text = if let Some(ref action) = draft_action {
+        format!("I've drafted an action for you: {}. Please approve it to apply the changes.", action.title)
+    } else {
+        "I didn't quite catch that. Try asking me to update your hours, adjust inventory, or create a discount code.".to_string()
+    };
+
+    (StatusCode::OK, Json(ChatRes {
+        response: response_text,
+        draft_action,
+    }))
+}
+
+pub async fn handle_conversational_execute(Json(req): Json<ExecuteReq>) -> impl IntoResponse {
+    // In a real app we'd dispatch to the appropriate backend service.
+    // Here we just acknowledge it.
+    (StatusCode::OK, Json(ExecuteRes {
+        success: true,
+        message: format!("Successfully executed action: {}", req.action_id),
+    }))
+}
+
 pub fn router<S>(pool: PgPool, hub: Arc<Hub>) -> Router<S>
 where
     S: Clone + Send + Sync + 'static,
 {
     Router::new()
+        .route("/conversational-manager/chat", post(handle_conversational_chat))
+        .route("/conversational-manager/execute", post(handle_conversational_execute))
         .route("/waitlist", post(handle_waitlist))
         .route("/social/post", post(handle_social_post))
         .route("/campaign/send-receipt", post(handle_send_receipt))
