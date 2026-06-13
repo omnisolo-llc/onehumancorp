@@ -146,3 +146,5 @@ rust_test(
         "@crates//:async-trait",
     ],
 )
+
+exports_files(["Cargo.toml"])

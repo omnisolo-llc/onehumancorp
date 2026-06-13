@@ -22,3 +22,5 @@ rust_test(
         "@crates//:temp-env",
     ],
 )
+
+exports_files(["Cargo.toml"])

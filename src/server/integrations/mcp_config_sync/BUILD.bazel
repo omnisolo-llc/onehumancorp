@@ -43,3 +43,5 @@ rust_test(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
 )
+
+exports_files(["Cargo.toml"])

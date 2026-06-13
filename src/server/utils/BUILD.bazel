@@ -51,3 +51,5 @@ rust_test(
         "@crates//:reqwest",
     ],
 )
+
+exports_files(["Cargo.toml"])

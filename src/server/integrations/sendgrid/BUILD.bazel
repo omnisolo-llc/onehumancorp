@@ -23,3 +23,5 @@ rust_test(
     crate = ":server_integrations_sendgrid",
     edition = "2024",
 )
+
+exports_files(["Cargo.toml"])

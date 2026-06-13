@@ -393,3 +393,5 @@ rust_test(
         "@crates//:serde_json",
     ],
 )
+
+exports_files(["Cargo.toml"])

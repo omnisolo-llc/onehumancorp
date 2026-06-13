@@ -26,3 +26,5 @@ rust_test(
         "@crates//:tokio",
     ],
 )
+
+exports_files(["Cargo.toml"])
