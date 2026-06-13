@@ -1,0 +1,11 @@
+--- deploy/docker-compose.override.yml
++++ deploy/docker-compose.override.yml
+@@ -6,7 +6,7 @@
+     image: onehumancorp/server:latest
+
+   postgres:
+-    image: ankane/pgvector:v0.5.1
++    image: timescale/timescaledb-ha:pg15
+     command: ["postgres", "-c", "wal_level=logical"]
+
+   valkey:

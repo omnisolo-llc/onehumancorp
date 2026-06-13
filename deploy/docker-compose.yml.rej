@@ -1,0 +1,11 @@
+--- deploy/docker-compose.yml
++++ deploy/docker-compose.yml
+@@ -126,7 +126,7 @@
+       options:
+         max-size: "10m"
+         max-file: "3"
+-    image: pgvector/pgvector:pg15
++    image: timescale/timescaledb-ha:pg15
+     pull_policy: missing
+     command: ["postgres", "-c", "wal_level=logical"]
+     environment:

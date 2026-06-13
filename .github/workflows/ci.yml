@@ -77,13 +77,13 @@ jobs:
       matrix:
         include:
           - name: linux-x86_64
-            runner: ubuntu-22.04
+            runner: ubuntu-latest
             bazel_config: linux_x86_64
           - name: windows-x86_64
-            runner: ubuntu-22.04
+            runner: ubuntu-latest
             bazel_config: windows_x86_64
           - name: android
-            runner: ubuntu-22.04
+            runner: ubuntu-latest
             bazel_config: linux_x86_64
           # - name: windows-arm64
           #  runner: windows-11-arm
@@ -242,7 +242,7 @@ jobs:
     needs:
       - check-changes
     if: ${{ needs.check-changes.outputs.markdown-only == 'false' }}
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     timeout-minutes: 120
     steps:
       - uses: actions/checkout@v6
@@ -305,7 +305,7 @@ jobs:
     needs:
       - check-changes
     if: ${{ needs.check-changes.outputs.markdown-only == 'false' }}
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     timeout-minutes: 120
     strategy:
       fail-fast: false
@@ -383,7 +383,7 @@ jobs:
     needs:
       - check-changes
     if: ${{ needs.check-changes.outputs.markdown-only == 'false' }}
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     timeout-minutes: 45
     env:
       KIND_VERSION: "v0.31.0"
@@ -520,7 +520,7 @@ jobs:
     needs:
       - check-changes
     if: ${{ needs.check-changes.outputs.markdown-only == 'false' }}
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
       MINIMAX_API_KEY: ${{ secrets.MINIMAX_API_KEY }}
