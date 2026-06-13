@@ -436,6 +436,8 @@ export default function Dashboard() {
         { label: "New Product", href: "/products/new", primary: true },
       ]}
     >
+      <UnifiedAgentFeed initialData={{ proposals: pendingApprovals, activity: activities, pendingReviews: dashboardData?.pendingReviews }} />
+
       <div className="mb-6 p-6 rounded-[16px] glassmorphism border border-white/40 dark:border-white/10">
         <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Welcome back, {userName}.</h2>
         <p className="text-gray-600 dark:text-gray-400">Your agents are working on your behalf.</p>
@@ -617,61 +619,6 @@ export default function Dashboard() {
 
         <PromoterCard />
 
-        {dashboardData?.pendingReviews?.map((item: any, idx: number) => (
-             <ReviewFeedCard
-               key={idx}
-               review={{
-                 id: item.review?.id || "",
-                 rating: item.review?.rating || 5,
-                 content: item.review?.content || '',
-                 source: item.review?.source || 'sms',
-                 createdAtUnix: item.review?.createdAtUnix || Date.now() / 1000
-               }}
-               response={{
-                 id: item.response?.id || "",
-                 draftedContent: item.response?.draftedContent || "",
-                 status: item.response?.status || "draft"
-               }}
-               onApprove={async (id, content) => {
-                 try {
-                     // Optimistic update
-                     setDashboardData((prev: any) => ({
-                         ...prev,
-                         pendingReviews: prev.pendingReviews.filter((r: any) => r?.response?.id !== id)
-                     }));
-                     const res = await fetch('/api/reviews/action', {
-                         method: 'POST',
-                         headers: { 'Content-Type': 'application/json' },
-                         body: JSON.stringify({ action: 'approve', responseId: id, content })
-                     });
-                     if (!res.ok) {
-                         // Rollback if needed
-                         console.error("Failed to approve");
-                     }
-                 } catch (e) { console.error(e); }
-               }}
-               onDismiss={async (id) => {
-                 try {
-                     // Optimistic update
-                     setDashboardData((prev: any) => ({
-                         ...prev,
-                         pendingReviews: prev.pendingReviews.filter((r: any) => r?.response?.id !== id)
-                     }));
-                     const res = await fetch('/api/reviews/action', {
-                         method: 'POST',
-                         headers: { 'Content-Type': 'application/json' },
-                         body: JSON.stringify({ action: 'dismiss', responseId: id })
-                     });
-                     if (!res.ok) {
-                         console.error("Failed to dismiss");
-                     }
-                 } catch (e) { console.error(e); }
-               }}
-             />
-        ))}
-
-        <UnifiedAgentFeed initialData={{ proposals: pendingApprovals, activity: activities }} />
-
         <section>
           <div className="mb-6 p-6 rounded-[16px] bg-white/65 dark:bg-[#16161a]/70 border border-white/40 dark:border-white/10">
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -734,148 +681,6 @@ export default function Dashboard() {
           </div>
         </section>
 
-        <section className="app-grid two">
-          <WalkthroughTarget id="operations-map-target" className="app-panel glassmorphism border border-white/40 dark:border-white/10">
-            <div className="app-panel-header">
-              <div>
-                <div className="app-panel-title">Operations Map</div>
-                <div className="app-list-subtitle">Live database state across the store workflow.</div>
-              </div>
-              <Link href="/orders" className="app-button min-h-[44px]">Open Orders</Link>
-            </div>
-            <div className="app-panel-body">
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-                <div className="app-card">
-                  <div className="app-metric-label">Orders</div>
-                  <div className="app-metric-value">{orders.length}</div>
-                  <div className="app-metric-note">Rows returned</div>
-                </div>
-                <div className="app-card">
-                  <div className="app-metric-label">Inbox</div>
-                  <div className="app-metric-value">{messages.length}</div>
-                  <div className="app-metric-note">Messages returned</div>
-                </div>
-                <div className="app-card">
-                  <div className="app-metric-label">Vendors</div>
-                  <div className="app-metric-value">{supply.vendors.length}</div>
-                  <div className="app-metric-note">Supply partners</div>
-                </div>
-              </div>
-            </div>
-          </WalkthroughTarget>
-
-          <div className="app-panel glassmorphism border border-white/40 dark:border-white/10">
-            <div className="app-panel-header">
-              <div className="app-panel-title">Action Required</div>
-              <Link href="/inventory" className="app-button min-h-[44px]">Inventory</Link>
-            </div>
-            <div className="app-list">
-                            {(dashboardData?.pendingReviews || []).filter((a: any) => a.payload?.feature_type === 'ambassador_reply').map(approval => (
-                <div key={approval.id} className="app-list-item flex flex-col items-start gap-3">
-                  <div className="w-full">
-                    <div className="app-list-title">Action Required: Approve Reply</div>
-                    <div className="app-list-subtitle font-semibold text-gray-900 mt-1">1 New Message from {approval.payload?.source || "Instagram DM"}</div>
-                    <div className="app-list-subtitle mt-2 bg-gray-50 p-2 rounded border border-gray-100 text-xs italic">"{approval.payload?.original_message || approval.payload?.message || "Customer message"}"</div>
-                    <div className="app-list-subtitle mt-2 p-2 rounded bg-blue-50 border border-blue-100 text-blue-900 text-sm">
-                      <span className="font-semibold text-blue-800 text-xs uppercase mb-1 block">AI Draft</span>
-                      {approval.payload?.generated_response || approval.payload?.draft_reply || "Ready to send."}
-                    </div>
-                  </div>
-                  <div className="flex gap-2 w-full mt-1">
-                    <button type="button" className="app-btn-primary flex-1 min-h-[44px] py-2" onClick={() => handleApproveDraft(approval.id)}>✨ 1-Tap Approve</button>
-                    <Link href="/inbox" className="app-button flex-1 min-h-[44px] py-2 text-center bg-gray-100">Edit</Link>
-                  </div>
-                </div>
-              ))}
-              {metrics.pending_orders > 0 && (
-                <div className="app-list-item">
-                  <div>
-                    <div className="app-list-title">Pending fulfillment</div>
-                    <div className="app-list-subtitle">{metrics.pending_orders} order records need attention.</div>
-                  </div>
-                  <span className="app-badge warn">Orders</span>
-                </div>
-              )}
-              {lowStockCount > 0 && (
-                <div className="app-list-item">
-                  <div>
-                    <div className="app-list-title">Low stock</div>
-                    <div className="app-list-subtitle">{lowStockCount} material records are below reorder threshold.</div>
-                  </div>
-                  <span className="app-badge warn">Supply</span>
-                </div>
-              )}
-              {messages.some((message) => (message.status || "").toLowerCase() !== "closed") && (
-                <div className="app-list-item">
-                  <div>
-                    <div className="app-list-title">Inbox messages</div>
-                    <div className="app-list-subtitle">Open customer conversations are waiting in the database.</div>
-                  </div>
-                  <span className="app-badge">Inbox</span>
-                </div>
-              )}
-              {!loading && metrics.pending_orders === 0 && lowStockCount === 0 && messages.length === 0 && (dashboardData?.pendingReviews || []).filter((a: any) => a.payload?.feature_type === "ambassador_reply").length === 0 && (
-                <div className="app-empty">No database-backed actions are currently open.</div>
-              )}
-            </div>
-          </div>
-        </section>
-
-
-        <section className="app-grid two">
-          <div className="app-panel glassmorphism border border-white/40 dark:border-white/10">
-            <div className="app-panel-header">
-              <WithTooltip id="recent-orders-tooltip" defaultText="View the latest orders placed by your customers."><div className="app-panel-title">Recent Orders</div></WithTooltip>
-              <Link href="/orders" className="app-button min-h-[44px]">View All</Link>
-            </div>
-            {orders.length === 0 ? (
-              <div className="app-empty">{loading ? "Loading orders from the database..." : "No order rows found for this tenant."}</div>
-            ) : (
-              <div className="app-table-wrap">
-                <table className="app-table">
-                  <thead>
-                    <tr>
-                      <th>Order</th>
-                      <th>Customer</th>
-                      <th>Total</th>
-                      <th>Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {orders.slice(0, 8).map((order) => (
-                      <tr key={order.id}>
-                        <td><Link href={`/orders/${order.id}`} className="font-semibold text-blue-700">{order.id}</Link></td>
-                        <td>{order.customer_name || "Unknown"}</td>
-                        <td>{money(order.total_amount)}</td>
-                        <td><span className={`app-badge ${statusTone(order.status)}`}>{order.status || "Unknown"}</span></td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-
-          <div className="app-panel glassmorphism border border-white/40 dark:border-white/10">
-            <div className="app-panel-header">
-              <WithTooltip id="inbox-activity-tooltip" defaultText="Keep track of recent customer messages."><div className="app-panel-title">Inbox Activity</div></WithTooltip>
-              <Link href="/inbox" className="app-button min-h-[44px]">Open Inbox</Link>
-            </div>
-            <div className="app-list">
-              {messages.length === 0 ? (
-                <div className="app-empty">{loading ? "Loading inbox from the database..." : "No inbox message rows found for this tenant."}</div>
-              ) : messages.slice(0, 6).map((message) => (
-                <div key={message.id} className="app-list-item">
-                  <div>
-                    <div className="app-list-title">{message.source || "Unknown source"}</div>
-                    <div className="app-list-subtitle">{message.content || "Empty message"}</div>
-                  </div>
-                  <span className={`app-badge ${statusTone(message.status)}`}>{formatStatus(message.status)}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
 
         <InviteAndEarnWidget />
 

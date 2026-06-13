@@ -91,7 +91,11 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
         const actions = await getActions();
         for (const action of actions) {
           if (action.type === 'approve_agent_feed') {
-            await submitDecision(action.payload.id, action.payload.approved);
+            // Note: Optimistic offline sync doesn't have full item, re-fetch or bypass if needed
+            // For now, we wrap in try/catch if item is missing
+            try {
+               await submitDecision(action.payload.item || { id: action.payload.id, event_source: 'general' }, action.payload.approved);
+            } catch (e) {}
             await removeAction(action.id);
             setOfflineActionsCount(prev => Math.max(0, prev - 1));
             setQueuedActionIds(prev => {
@@ -157,6 +161,43 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
               created_at: a.updated_at || a.created_at || new Date().toISOString()
             }));
             setActivities(mappedActivities);
+          } else if (unifiedData?.proposals || unifiedData?.activity || unifiedData?.pendingReviews) {
+            // Support legacy unifiedData shape where proposals and activity are passed directly
+            const mappedProposals = (unifiedData?.proposals || []).map((p: any) => ({
+              id: p.id,
+              tenant_id: p.tenant_id || tenantId(),
+              event_source: p.department || 'general',
+              lifecycle_state: p.status || 'PENDING_APPROVAL',
+              context_payload: p.payload,
+              proposed_action: p.payload,
+              created_at: p.created_at || new Date().toISOString(),
+              updated_at: p.updated_at || new Date().toISOString(),
+            }));
+
+            // Map pending reviews to proposals
+            const mappedReviews = (unifiedData?.pendingReviews || []).map((p: any) => ({
+              id: p.response?.id || p.id,
+              tenant_id: tenantId(),
+              event_source: 'ambassador',
+              lifecycle_state: 'PENDING_APPROVAL',
+              context_payload: {
+                 feature_type: 'ambassador_reply',
+                 source: p.review?.source || p.payload?.source || 'sms',
+                 original_message: p.review?.content || p.payload?.original_message || p.payload?.message || '',
+                 generated_response: p.response?.draftedContent || p.payload?.generated_response || p.payload?.draft_reply || ''
+              },
+              proposed_action: {
+                 feature_type: 'ambassador_reply',
+                 source: p.review?.source || p.payload?.source || 'sms',
+                 original_message: p.review?.content || p.payload?.original_message || p.payload?.message || '',
+                 generated_response: p.response?.draftedContent || p.payload?.generated_response || p.payload?.draft_reply || ''
+              },
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            }));
+
+            setItems([...mappedProposals, ...mappedReviews]);
+            setActivities(unifiedData?.activity || []);
           }
         }
 
@@ -293,9 +334,27 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
     return () => events.close();
   }, []);
 
-  const submitDecision = async (id: string, approved: boolean) => {
+  const submitDecision = async (item: AgentFeedItem, approved: boolean) => {
     const tenant = tenantId();
-    const res = await fetch(`/api/agent-feed/${id}/state`, {
+
+    // Check if this is an ambassador review ID vs standard feed item
+    if (item.event_source === 'ambassador') {
+      try {
+        const content = item.context_payload?.generated_response || "";
+        const reviewRes = await fetch('/api/reviews/action', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: approved ? 'approve' : 'dismiss', responseId: item.id, content })
+        });
+        if (reviewRes.ok) {
+          return; // Handled successfully by review API
+        }
+      } catch (e) {
+        console.error("Failed review API", e);
+      }
+    }
+
+    const res = await fetch(`/api/agent-feed/${item.id}/state`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
@@ -311,12 +370,15 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
   };
 
   const handleDecision = async (id: string, approved: boolean) => {
+    const itemToSubmit = items.find(app => app.id === id);
+    if (!itemToSubmit) return;
+
     if (isOffline) {
       // Enqueue offline action
       await enqueueAction({
         id: crypto.randomUUID(),
         type: 'approve_agent_feed',
-        payload: { id, approved },
+        payload: { id, approved, item: itemToSubmit },
         timestamp: Date.now()
       });
       setOfflineActionsCount(prev => prev + 1);
@@ -328,7 +390,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
     setItems(prev => prev.filter(app => app.id !== id));
 
     try {
-      await submitDecision(id, approved);
+      await submitDecision(itemToSubmit, approved);
     } catch (err: any) {
       // Revert optimistic update gracefully by refetching
       const tenant = tenantId();
@@ -397,47 +459,6 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
       <div className="flex flex-col gap-4">
         {activeTab === "proposals" && (
           <>
-            <div className="glassmorphism p-5 rounded-[16px] border border-white/40 dark:border-white/10 shadow-sm flex flex-col gap-4">
-              <div className="flex flex-col gap-1">
-                <div className="flex justify-between items-start">
-                  <span className="text-xs font-bold uppercase tracking-wider text-green-600 bg-green-100 dark:bg-green-900 dark:text-green-300 px-2 py-1 rounded">Action Needed</span>
-                  <span className="text-xs text-gray-500 font-inter">Just now</span>
-                </div>
-                <h3 className="text-[17px] font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] font-outfit mt-2 leading-tight">
-                  Agent tentatively booked a roof repair estimate for Sarah on Tuesday 2 PM. Pending $50 deposit. No action needed.
-                </h3>
-              </div>
-            </div>
-
-            <div className="glassmorphism p-5 rounded-[16px] border border-white/40 dark:border-white/10 shadow-sm flex flex-col gap-4">
-              <div className="flex flex-col gap-1">
-                <div className="flex justify-between items-start">
-                  <span className="text-xs font-bold uppercase tracking-wider text-[#0066FF] bg-[#0066FF]/10 dark:bg-[#3388FF]/20 dark:text-[#3388FF] px-2 py-1 rounded">Approval</span>
-                  <span className="text-xs text-gray-500 font-inter">5 min ago</span>
-                </div>
-                <h3 className="text-[17px] font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] font-outfit mt-2 leading-tight">
-                  Mark requested to reschedule his 4 PM lesson to 5 PM today. You have a conflict. Suggest tomorrow at 4 PM?
-                </h3>
-              </div>
-              <div className="flex flex-col sm:flex-row gap-3 w-full mt-2">
-                <button
-                  className="flex-1 min-h-[44px] rounded-lg font-bold text-sm bg-green-500 hover:bg-green-600 text-white shadow-sm transition-transform active:scale-[0.98]"
-                >
-                  Approve
-                </button>
-                <button
-                  className="flex-1 min-h-[44px] rounded-lg font-bold text-sm bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 text-[#1D1D1F] dark:text-[#F5F5F7] transition-transform active:scale-[0.98]"
-                >
-                  Edit
-                </button>
-                <button
-                  className="flex-1 min-h-[44px] rounded-lg font-bold text-sm bg-red-100 hover:bg-red-200 text-red-600 dark:bg-red-900/30 dark:hover:bg-red-900/50 dark:text-red-400 transition-transform active:scale-[0.98]"
-                >
-                  Deny
-                </button>
-              </div>
-            </div>
-
             {loading && (
               <div className="w-full p-4 glassmorphism rounded-[16px] text-center text-gray-500">
                 Loading Agent Proposals...
