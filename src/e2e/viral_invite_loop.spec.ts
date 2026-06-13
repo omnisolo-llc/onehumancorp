@@ -15,12 +15,12 @@ test.describe('Viral Invite Loop on Team Page', () => {
     await expect(page.getByText(/Bridge your local sovereignty with cloud-native collaboration/)).toBeVisible();
 
     // Click the invite button
-    await page.getByRole('button', { name: 'Get My Invite Link' }).click();
+    await page.getByRole('button', { name: 'Invite to Cloud Team' }).click();
 
     // Wait for the link to be generated (input appears)
     const linkInput = page.locator('input[readonly]').first();
     await expect(linkInput).toBeVisible();
-    await expect(linkInput).toHaveValue(/^http/);
+    await expect(linkInput).toHaveValue(/^https:\/\/ohc\.app\/invite\/.+/);
 
     // Test copy button interaction
     await page.getByRole('button', { name: 'Copy' }).first().click();
