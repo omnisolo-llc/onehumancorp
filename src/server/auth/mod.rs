@@ -5,6 +5,7 @@ pub use ::server_oidc as oidc;
 pub mod orchestration;
 pub mod postgres_store;
 pub mod sqlite_store;
+pub mod grpc;
 
 use std::collections::HashMap;
 
@@ -937,6 +938,4 @@ mod store_tests {
 }
 
 #[cfg(test)]
-mod tests {
-    pub mod multitenancy_isolation;
-}
+mod multitenancy_isolation;

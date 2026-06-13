@@ -9,7 +9,7 @@ import { InteractiveWalkthrough, Step } from './Walkthrough';
 
 // --- Walkthrough System ---
 
-type HelpArticle = { title: string; desc: string; link?: string };
+type HelpArticle = { title: string; desc: string; link?: string; category?: string };
 type HelpVideo = { id: number; title: string; duration: string; video_url?: string; };
 type HelpTab = "center" | "chat" | "videos" | "whatsnew";
 type ChatMessage = { id: string; role: "bot" | "user"; text: string; linkUrl?: string; linkTitle?: string };
@@ -250,15 +250,29 @@ export function HelpWidget() {
               <div>
                 <h3 className="font-bold font-outfit text-gray-900 mb-4 text-xl">Help Center</h3>
                 <input type="text" placeholder="Search for help..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full p-4 border border-white/50 rounded-2xl mb-6 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm bg-white/60 backdrop-blur-[20px] saturate-200 min-h-[44px]" />
-                <div className="space-y-3 mb-8">
-                  {filteredArticles.map((a, idx) => (
-                    <div key={idx} className="bg-white/70 backdrop-blur-[20px] saturate-200 p-5 rounded-2xl shadow-sm border border-white/50 cursor-pointer hover:border-blue-300 hover:shadow-md transition-all">
-                      {a.link ? (
-                        <a href={a.link} className="block min-h-[44px]"><h4 className="font-bold font-outfit text-blue-700 text-base hover:underline">{a.title}</h4></a>
-                      ) : (
-                        <h4 className="font-bold font-outfit text-gray-800 text-base">{a.title}</h4>
-                      )}
-                      <p className="text-sm text-gray-600 mt-2 leading-relaxed">{a.desc}</p>
+                <div className="space-y-6 mb-8">
+                  {Array.from(
+                    filteredArticles.reduce((acc, article) => {
+                      const cat = article.category || "Other";
+                      if (!acc.has(cat)) acc.set(cat, []);
+                      acc.get(cat)!.push(article);
+                      return acc;
+                    }, new Map<string, HelpArticle[]>())
+                  ).map(([category, articles], cIdx) => (
+                    <div key={cIdx}>
+                      <h4 className="font-bold font-outfit text-gray-800 mb-3 text-lg">{category}</h4>
+                      <div className="space-y-3">
+                        {articles.map((a, aIdx) => (
+                          <div key={aIdx} className="bg-white/70 backdrop-blur-[20px] saturate-200 p-5 rounded-2xl shadow-sm border border-white/50 cursor-pointer hover:border-blue-300 hover:shadow-md transition-all">
+                            {a.link ? (
+                              <a href={a.link} className="block min-h-[44px]"><h4 className="font-bold font-outfit text-blue-700 text-base hover:underline">{a.title}</h4></a>
+                            ) : (
+                              <h4 className="font-bold font-outfit text-gray-800 text-base">{a.title}</h4>
+                            )}
+                            <p className="text-sm text-gray-600 mt-2 leading-relaxed">{a.desc}</p>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   ))}
                 </div>

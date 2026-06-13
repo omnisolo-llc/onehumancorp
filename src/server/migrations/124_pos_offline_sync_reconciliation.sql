@@ -4,10 +4,9 @@
 DO $$
 BEGIN
     IF to_regclass('pos_terminal_sessions') IS NOT NULL THEN
-        ALTER TABLE pos_terminal_sessions
-        ADD COLUMN IF NOT EXISTS pending_reconciliation JSONB DEFAULT '[]'::jsonb,
-        ADD COLUMN IF NOT EXISTS last_conflict_resolved_at TIMESTAMPTZ,
-        ADD COLUMN IF NOT EXISTS sync_status TEXT DEFAULT 'SYNCED';
+        ALTER TABLE pos_terminal_sessions ADD COLUMN IF NOT EXISTS pending_reconciliation JSONB DEFAULT '[]'::jsonb;
+        ALTER TABLE pos_terminal_sessions ADD COLUMN IF NOT EXISTS last_conflict_resolved_at TIMESTAMPTZ;
+        ALTER TABLE pos_terminal_sessions ADD COLUMN IF NOT EXISTS sync_status TEXT DEFAULT 'SYNCED';
     END IF;
 END
 $$;
@@ -16,10 +15,9 @@ $$;
 DO $$
 BEGIN
     IF to_regclass('pos_terminal_sessions') IS NOT NULL THEN
-        ALTER TABLE pos_terminal_sessions
-        DROP COLUMN IF NOT EXISTS pending_reconciliation,
-        DROP COLUMN IF NOT EXISTS last_conflict_resolved_at,
-        DROP COLUMN IF NOT EXISTS sync_status;
+        ALTER TABLE pos_terminal_sessions DROP COLUMN IF NOT EXISTS pending_reconciliation;
+        ALTER TABLE pos_terminal_sessions DROP COLUMN IF NOT EXISTS last_conflict_resolved_at;
+        ALTER TABLE pos_terminal_sessions DROP COLUMN IF NOT EXISTS sync_status;
     END IF;
 END
 $$;

@@ -2,7 +2,7 @@
 mod tests {
     use std::sync::Arc;
     use std::sync::atomic::Ordering;
-    use tokio::time::{sleep, Duration, timeout};
+    use tokio::time::{Duration, timeout};
 
     // Note: this represents Chaos tests focusing on parity constraints.
     // They don't test actual network unreliability, but rather
@@ -131,7 +131,7 @@ mod tests {
         let start = std::time::Instant::now();
         let (_tx, rx) = tokio::sync::oneshot::channel::<()>();
         let result = timeout(Duration::from_millis(500), async {
-            let _ = rx.await;
+            tokio::time::sleep(std::time::Duration::from_millis(2500)).await;
             "ok"
         }).await;
         assert!(result.is_err()); // Timeout triggers

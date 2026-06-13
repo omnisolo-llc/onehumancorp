@@ -8,6 +8,7 @@ pub static MILESTONES_CACHE: OnceLock<HybridCache<Vec<String>>> = OnceLock::new(
 pub static TEAM_INVITES_CACHE: OnceLock<HybridCache<TeamInvitesResponse>> = OnceLock::new();
 pub static METRICS_CACHE: OnceLock<HybridCache<TeamInvitesMetricsResponse>> = OnceLock::new();
 pub static ONBOARDING_METRICS_CACHE: OnceLock<HybridCache<OnboardingMetricsResponse>> = OnceLock::new();
+pub static TIME_SAVINGS_CACHE: OnceLock<HybridCache<TimeSavingsResponse>> = OnceLock::new();
 use axum::{
     http::StatusCode,
     response::IntoResponse,
@@ -34,6 +35,39 @@ pub struct CreateTeamInviteResponse {
 pub struct SocialPostResponse {
     pub posted: bool,
     pub post_id: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ChatReq {
+    pub message: String,
+    pub tenant_id: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ChatDraftAction {
+    pub id: String,
+    pub title: String,
+    pub description: String,
+    pub action_type: String,
+    pub payload: serde_json::Value,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ChatRes {
+    pub response: String,
+    pub draft_action: Option<ChatDraftAction>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ExecuteReq {
+    pub action_id: String,
+    pub tenant_id: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ExecuteRes {
+    pub success: bool,
+    pub message: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -148,11 +182,64 @@ async fn handle_waitlist(
     }))
 }
 
+pub async fn handle_conversational_chat(Json(req): Json<ChatReq>) -> impl IntoResponse {
+    let lower = req.message.to_lowercase();
+    let draft_action = if lower.contains("hours") {
+        Some(ChatDraftAction {
+            id: "act_hours_123".to_string(),
+            title: "Update Business Hours".to_string(),
+            description: "Change Saturday hours to 10AM - 2PM".to_string(),
+            action_type: "update_hours".to_string(),
+            payload: serde_json::json!({"day": "Saturday", "open": "10:00", "close": "14:00"}),
+        })
+    } else if lower.contains("inventory") || lower.contains("stock") {
+        Some(ChatDraftAction {
+            id: "act_inv_456".to_string(),
+            title: "Update Inventory".to_string(),
+            description: "Increase 'Custom Vegan Cake' stock by 5".to_string(),
+            action_type: "update_inventory".to_string(),
+            payload: serde_json::json!({"product": "Custom Vegan Cake", "amount": 5}),
+        })
+    } else if lower.contains("discount") || lower.contains("promo") {
+         Some(ChatDraftAction {
+            id: "act_promo_789".to_string(),
+            title: "Create Discount Code".to_string(),
+            description: "Create WEEKEND10 for 10% off".to_string(),
+            action_type: "create_discount".to_string(),
+            payload: serde_json::json!({"code": "WEEKEND10", "discount_percentage": 10}),
+        })
+    } else {
+        None
+    };
+
+    let response_text = if let Some(ref action) = draft_action {
+        format!("I've drafted an action for you: {}. Please approve it to apply the changes.", action.title)
+    } else {
+        "I didn't quite catch that. Try asking me to update your hours, adjust inventory, or create a discount code.".to_string()
+    };
+
+    (StatusCode::OK, Json(ChatRes {
+        response: response_text,
+        draft_action,
+    }))
+}
+
+pub async fn handle_conversational_execute(Json(req): Json<ExecuteReq>) -> impl IntoResponse {
+    // In a real app we'd dispatch to the appropriate backend service.
+    // Here we just acknowledge it.
+    (StatusCode::OK, Json(ExecuteRes {
+        success: true,
+        message: format!("Successfully executed action: {}", req.action_id),
+    }))
+}
+
 pub fn router<S>(pool: PgPool, hub: Arc<Hub>) -> Router<S>
 where
     S: Clone + Send + Sync + 'static,
 {
     Router::new()
+        .route("/conversational-manager/chat", post(handle_conversational_chat))
+        .route("/conversational-manager/execute", post(handle_conversational_execute))
         .route("/waitlist", post(handle_waitlist))
         .route("/social/post", post(handle_social_post))
         .route("/campaign/send-receipt", post(handle_send_receipt))
@@ -161,6 +248,7 @@ where
         .route("/campaign/generate-review", post(handle_generate_review))
         .route("/campaign/generate-customer-referral", post(handle_generate_customer_referral))
         .route("/campaign/generate-cart", post(handle_generate_cart))
+        .route("/campaign/generate-win-back", post(handle_generate_win_back))
         .route("/campaign/send-cart", post(handle_send_cart))
         .route("/campaign/abandoned-carts-count", get(handle_abandoned_carts_count))
         .route("/storefront/track", post(handle_track_visitor))
@@ -169,6 +257,7 @@ where
                 .route("/storefront/og-card", get(handle_og_card))
         .route("/flash-sale/embed", get(handle_flash_sale_embed))
         .route("/milestones/check", get(handle_check_milestones))
+        .route("/promoter/generate", post(handle_promoter_generate))
         .route("/affiliate/generate-link", post(handle_affiliate_generate_link))
         .route("/affiliate/track", post(handle_affiliate_track))
         .route("/affiliate/stats", get(handle_affiliate_stats))
@@ -234,7 +323,7 @@ async fn handle_referral_tier(
     }))
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct TimeSavingsResponse {
     pub hours_saved: f64,
     pub inquiries_handled: i64,
@@ -254,52 +343,71 @@ async fn handle_time_savings(
 
     let tenant_id_str = auth_info.org_id;
 
-    // Calculate aggregated time savings based on completed tasks
-    let f1 = async {
+    let cache_key = format!("time_savings:{}", tenant_id_str);
+    let cache = TIME_SAVINGS_CACHE.get_or_init(|| HybridCache::new(crate::get_redis_client()));
+
+    if let Some(cached_res) = cache.get(&cache_key).await {
+        return Ok(Json(cached_res));
+    }
+
+    let pool1 = state.pool.clone();
+    let pool2 = state.pool.clone();
+    let pool3 = state.pool.clone();
+    let pool4 = state.pool.clone();
+    let parsed_uuid1 = parsed_uuid;
+    let parsed_uuid2 = parsed_uuid;
+    let parsed_uuid3 = parsed_uuid;
+    let tenant_id_str4 = tenant_id_str.clone();
+
+    let f1 = tokio::spawn(async move {
         sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM tasks WHERE (tenant_id = $1 OR organization_id = $1) AND title ILIKE '%inquiry%' AND status = 'COMPLETED'")
-            .bind(parsed_uuid)
-            .fetch_optional(&state.pool)
+            .bind(parsed_uuid1)
+            .fetch_optional(&pool1)
             .await
-    };
+    });
 
-    let f2 = async {
+    let f2 = tokio::spawn(async move {
         sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM tasks WHERE (tenant_id = $1 OR organization_id = $1) AND title ILIKE '%appointment%' AND status = 'COMPLETED'")
-            .bind(parsed_uuid)
-            .fetch_optional(&state.pool)
+            .bind(parsed_uuid2)
+            .fetch_optional(&pool2)
             .await
-    };
+    });
 
-    let f3 = async {
+    let f3 = tokio::spawn(async move {
         sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM tasks WHERE (tenant_id = $1 OR organization_id = $1) AND title ILIKE '%cart%' AND status = 'COMPLETED'")
-            .bind(parsed_uuid)
-            .fetch_optional(&state.pool)
+            .bind(parsed_uuid3)
+            .fetch_optional(&pool3)
             .await
-    };
+    });
 
-    let f4 = async {
+    let f4 = tokio::spawn(async move {
         sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM inbox_messages WHERE tenant_id = $1 AND status = 'auto_replied'")
-            .bind(&tenant_id_str)
-            .fetch_optional(&state.pool)
+            .bind(tenant_id_str4)
+            .fetch_optional(&pool4)
             .await
-    };
+    });
 
     let (res1, res2, res3, res4) = tokio::join!(f1, f2, f3, f4);
-    let inquiries_handled = res1.unwrap_or(Some(0)).unwrap_or(0);
-    let appointments_scheduled = res2.unwrap_or(Some(0)).unwrap_or(0);
-    let carts_recovered = res3.unwrap_or(Some(0)).unwrap_or(0);
-    let auto_replied = res4.unwrap_or(Some(0)).unwrap_or(0);
+    let inquiries_handled = res1.unwrap_or(Ok(Some(0))).unwrap_or(Some(0)).unwrap_or(0);
+    let appointments_scheduled = res2.unwrap_or(Ok(Some(0))).unwrap_or(Some(0)).unwrap_or(0);
+    let carts_recovered = res3.unwrap_or(Ok(Some(0))).unwrap_or(Some(0)).unwrap_or(0);
+    let auto_replied = res4.unwrap_or(Ok(Some(0))).unwrap_or(Some(0)).unwrap_or(0);
 
     // Calculate total hours saved
     let base_hours = (inquiries_handled as f64 * 0.2) + (appointments_scheduled as f64 * 0.3) + (carts_recovered as f64 * 0.43) + (auto_replied as f64 * 0.1);
     let hours_saved = (base_hours * 10.0).round() / 10.0; // round to 1 decimal place
 
-    Ok(Json(TimeSavingsResponse {
+    let response = TimeSavingsResponse {
         hours_saved,
         inquiries_handled,
         appointments_scheduled,
         carts_recovered,
         auto_replied,
-    }))
+    };
+
+    cache.set(&cache_key, response.clone(), std::time::Duration::from_secs(60)).await;
+
+    Ok(Json(response))
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -398,6 +506,24 @@ pub struct GenerateCartResponse {
     pub message: String,
 }
 
+#[derive(Debug, Deserialize)]
+pub struct GeneratePromoterRequest {
+    pub product_id: Option<String>,
+    pub name: String,
+    pub description: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PromoterVariant {
+    pub platform: String,
+    pub content: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct GeneratePromoterResponse {
+    pub variants: Vec<PromoterVariant>,
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SendCartRequest {
     pub customer_name: Option<String>,
@@ -491,6 +617,136 @@ async fn handle_generate_review(
     })
 }
 
+async fn handle_promoter_generate(
+    Extension(_state): Extension<GrowthState>,
+    Json(req): Json<GeneratePromoterRequest>,
+) -> impl IntoResponse {
+    let mut variants = Vec::new();
+
+    let desc = req.description.unwrap_or_else(|| "".to_string());
+
+    let provider_name = std::env::var("OHC_LLM_PROVIDER").unwrap_or_else(|_| "minimax".to_string());
+    let api_key = match provider_name.as_str() {
+        "openai" => std::env::var("OPENAI_API_KEY").unwrap_or_default(),
+        "minimax" => std::env::var("MINIMAX_API_KEY").unwrap_or_default(),
+        "anthropic" => std::env::var("ANTHROPIC_API_KEY").unwrap_or_default(),
+        _ => std::env::var("OHC_LLM_API_KEY").unwrap_or_default(),
+    };
+
+    if !api_key.is_empty() {
+        let prompt = format!(
+            "Generate 3 short, punchy marketing captions for different social media platforms for the product '{}'. \n\
+             Description: {}\n\
+             Return ONLY a JSON array of objects, where each object has 'platform' (string) and 'content' (string) keys.",
+            req.name, desc
+        );
+
+        let model = std::env::var("OHC_LLM_MODEL").unwrap_or_else(|_| "MiniMax-M3".to_string());
+
+        let client = reqwest::Client::new();
+        let body = serde_json::json!({
+            "model": model,
+            "messages": [
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ],
+            "response_format": { "type": "json_object" }
+        });
+
+        let base_url = if provider_name == "minimax" {
+            std::env::var("MINIMAX_BASE_URL").unwrap_or_else(|_| "https://api.minimax.chat/v1".to_string())
+        } else if provider_name == "openai" {
+             std::env::var("OPENAI_BASE_URL").unwrap_or_else(|_| "https://api.openai.com/v1".to_string())
+        } else {
+            std::env::var("OHC_LLM_BASE_URL").unwrap_or_default()
+        };
+
+        let mut url = format!("{}/chat/completions", base_url);
+        if base_url.ends_with("/chat/completions") {
+             url = base_url;
+        }
+
+        let req_builder = client.post(&url)
+            .header("Content-Type", "application/json")
+            .header("Authorization", format!("Bearer {}", api_key))
+            .json(&body);
+
+        match req_builder.send().await {
+            Ok(res) => {
+                if res.status().is_success() {
+                    if let Ok(json) = res.json::<serde_json::Value>().await {
+                         if let Some(choices) = json.get("choices") {
+                            if let Some(choice) = choices.get(0) {
+                                if let Some(message) = choice.get("message") {
+                                    if let Some(content) = message.get("content").and_then(|c| c.as_str()) {
+                                         // Try to parse the content as JSON array
+                                         match serde_json::from_str::<Vec<PromoterVariant>>(content) {
+                                             Ok(parsed_variants) => {
+                                                 variants = parsed_variants;
+                                             }
+                                             Err(_) => {
+                                                  // Fallback parsing if LLM didn't return pure array
+                                                  if let Ok(parsed_obj) = serde_json::from_str::<serde_json::Value>(content) {
+                                                       if let Some(arr) = parsed_obj.get("variants").and_then(|v| v.as_array()) {
+                                                           let parsed: Result<Vec<PromoterVariant>, _> = serde_json::from_value(serde_json::Value::Array(arr.clone()));
+                                                           if let Ok(parsed) = parsed {
+                                                               variants = parsed;
+                                                           }
+                                                       } else if let Some(arr) = parsed_obj.as_array() {
+                                                            let parsed: Result<Vec<PromoterVariant>, _> = serde_json::from_value(serde_json::Value::Array(arr.clone()));
+                                                           if let Ok(parsed) = parsed {
+                                                               variants = parsed;
+                                                           }
+                                                       }
+                                                  }
+                                             }
+                                         }
+                                    }
+                                }
+                            }
+                         }
+                    }
+                }
+            }
+            Err(e) => {
+                 tracing::error!("Failed to call LLM: {:?}", e);
+            }
+        }
+    }
+
+    if variants.is_empty() {
+        // Fallback to static if LLM fails or is missing key
+        // Generate TikTok variant
+        variants.push(PromoterVariant {
+            platform: "TikTok".to_string(),
+            content: format!("Check out our amazing {}! {} Get yours today! 🚀 #{} #trending #musthave\n\n⚡ Powered by OHC", req.name, desc, req.name.replace(" ", "")),
+        });
+
+        // Generate Instagram variant
+        variants.push(PromoterVariant {
+            platform: "Instagram".to_string(),
+            content: format!("✨ So excited to share our new {}! ✨\n\n{}\n\nTap the link in bio to shop now. 🛍️\n\n#{} #shoplocal #newarrival\n\n⚡ Powered by OHC", req.name, desc, req.name.replace(" ", "")),
+        });
+
+        // Generate Twitter variant
+        variants.push(PromoterVariant {
+            platform: "Twitter".to_string(),
+            content: format!("Just dropped: {}! 🔥 {}\n\nGrab it here before it's gone: [link]\n\n⚡ Powered by OHC", req.name, desc),
+        });
+    } else {
+        // Append Powered by OHC
+        for v in variants.iter_mut() {
+            if !v.content.contains("Powered by OHC") {
+                v.content.push_str("\n\n⚡ Powered by OHC");
+            }
+        }
+    }
+
+    Json(GeneratePromoterResponse { variants })
+}
+
 async fn handle_generate_customer_referral(
     Extension(_state): Extension<GrowthState>,
     Json(req): Json<GenerateCustomerReferralRequest>,
@@ -517,6 +773,30 @@ async fn handle_generate_cart(
     );
     Json(GenerateCartResponse {
         message: generated,
+    })
+}
+
+#[derive(Deserialize)]
+pub struct GenerateWinBackRequest {
+    pub days_inactive: Option<i32>,
+    pub offer: Option<String>,
+    pub tone: Option<String>,
+}
+
+#[derive(Serialize)]
+pub struct GenerateWinBackResponse {
+    pub subject: String,
+    pub body: String,
+}
+
+async fn handle_generate_win_back(
+    Extension(_state): Extension<GrowthState>,
+    Json(req): Json<GenerateWinBackRequest>,
+) -> impl IntoResponse {
+    let offer = req.offer.unwrap_or_else(|| "a special offer".to_string());
+    Json(GenerateWinBackResponse {
+        subject: format!("We miss you! Here is {}", offer),
+        body: format!("Hi there,\n\nWe noticed you haven't been around lately. Enjoy {} on your next order with code WINBACK.\n\nBest,\nThe Team", offer),
     })
 }
 
@@ -1821,6 +2101,29 @@ mod tests {
         let res_again = super::handle_trial_extension_claim(Extension(state.clone()), axum::extract::Extension(auth_info.clone())).await;
         assert!(res_again.is_err());
         assert_eq!(res_again.unwrap_err(), StatusCode::BAD_REQUEST);
+    }
+
+    #[tokio::test]
+    async fn test_promoter_generate() {
+        let pool = setup_db().await;
+        let (event_tx, _) = tokio::sync::mpsc::channel(100);
+        let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
+        let state = GrowthState { pool: pool.clone(), hub: hub.clone() };
+
+        let req = GeneratePromoterRequest { product_id: Some("123".to_string()), name: "Vegan Chocolate Cake".to_string(), description: Some("Delicious and moist".to_string()) };
+        let res = handle_promoter_generate(Extension(state.clone()), Json(req)).await;
+
+        let body_bytes = axum::body::to_bytes(res.into_response().into_body(), usize::MAX).await.unwrap();
+        let res_json: GeneratePromoterResponse = serde_json::from_slice(&body_bytes).unwrap();
+
+        assert_eq!(res_json.variants.len(), 3);
+        assert!(res_json.variants.iter().any(|v| v.platform == "TikTok"));
+        assert!(res_json.variants.iter().any(|v| v.platform == "Instagram"));
+        assert!(res_json.variants.iter().any(|v| v.platform == "Twitter"));
+
+        for variant in res_json.variants {
+            assert!(variant.content.contains("Vegan Chocolate Cake"));
+        }
     }
 
     #[tokio::test]

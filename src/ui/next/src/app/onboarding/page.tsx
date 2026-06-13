@@ -197,23 +197,23 @@ export default function OnboardingWizard() {
     .then(([draftData, stateData]) => {
       const data = (draftData && draftData.wizardState) ? draftData : stateData;
       if (data && data.wizardState) {
-        if (data.wizardState.step) setStep(data.wizardState.step === 4 ? 3 : data.wizardState.step);
-        if (data.wizardState.chatStep) setChatStep(data.wizardState.chatStep);
-        if (data.wizardState.businessDescription) setBusinessDescription(data.wizardState.businessDescription);
-        if (data.wizardState.businessName) setBusinessName(data.wizardState.businessName);
-        if (data.wizardState.whatYouSell) setWhatYouSell(data.wizardState.whatYouSell);
-        if (data.wizardState.location) setLocation(data.wizardState.location);
-        if (data.wizardState.targetAudience) setTargetAudience(data.wizardState.targetAudience);
-        if (data.wizardState.businessType) setBusinessType(data.wizardState.businessType);
-        if (data.wizardState.categories) setCategories(data.wizardState.categories);
-        if (data.wizardState.websiteTemplate) setWebsiteTemplate(data.wizardState.websiteTemplate);
-        if (data.wizardState.firstProductName) setFirstProductName(data.wizardState.firstProductName);
-        if (data.wizardState.firstProductPrice) setFirstProductPrice(data.wizardState.firstProductPrice);
-        if (data.wizardState.adminName) setAdminName(data.wizardState.adminName);
-        if (data.wizardState.adminEmail) setAdminEmail(data.wizardState.adminEmail);
-        if (data.wizardState.adminPassword) setAdminPassword(data.wizardState.adminPassword);
-        if (data.wizardState.domainChoice) setDomainChoice(data.wizardState.domainChoice);
-        if (data.wizardState.aiAgents) setAiAgents(data.wizardState.aiAgents);
+        if (data.wizardState.step !== undefined) setStep(data.wizardState.step === 4 ? 3 : data.wizardState.step);
+        if (data.wizardState.chatStep !== undefined) setChatStep(data.wizardState.chatStep);
+        if (data.wizardState.businessDescription !== undefined) setBusinessDescription(data.wizardState.businessDescription);
+        if (data.wizardState.businessName !== undefined) setBusinessName(data.wizardState.businessName);
+        if (data.wizardState.whatYouSell !== undefined) setWhatYouSell(data.wizardState.whatYouSell);
+        if (data.wizardState.location !== undefined) setLocation(data.wizardState.location);
+        if (data.wizardState.targetAudience !== undefined) setTargetAudience(data.wizardState.targetAudience);
+        if (data.wizardState.businessType !== undefined) setBusinessType(data.wizardState.businessType);
+        if (data.wizardState.categories !== undefined) setCategories(data.wizardState.categories);
+        if (data.wizardState.websiteTemplate !== undefined) setWebsiteTemplate(data.wizardState.websiteTemplate);
+        if (data.wizardState.firstProductName !== undefined) setFirstProductName(data.wizardState.firstProductName);
+        if (data.wizardState.firstProductPrice !== undefined) setFirstProductPrice(data.wizardState.firstProductPrice);
+        if (data.wizardState.adminName !== undefined) setAdminName(data.wizardState.adminName);
+        if (data.wizardState.adminEmail !== undefined) setAdminEmail(data.wizardState.adminEmail);
+        if (data.wizardState.adminPassword !== undefined) setAdminPassword(data.wizardState.adminPassword);
+        if (data.wizardState.domainChoice !== undefined) setDomainChoice(data.wizardState.domainChoice);
+        if (data.wizardState.aiAgents !== undefined) setAiAgents(data.wizardState.aiAgents);
         if (data.wizardState.aiAutoRespond !== undefined) setAiAutoRespond(data.wizardState.aiAutoRespond);
         initialStateLoaded.current = true;
       }
@@ -396,7 +396,7 @@ export default function OnboardingWizard() {
         localStorage.setItem('tenant_id', result.organization_id);
         localStorage.setItem('tenant', result.organization_id);
       }
-      setTimeout(() => { setStep(5); syncStateToBackend({ step: 5 }); }, 100); // Go to "You're Live" screen
+      setStep(5); syncStateToBackend({ step: 5 }); // Go to "You're Live" screen
       fetch('/api/onboarding/launch', { method: 'POST', headers: { 'X-Tenant-ID': tenantId, 'X-User-ID': userId } }).catch(console.error);
 
     } catch (err: any) {
@@ -437,7 +437,7 @@ export default function OnboardingWizard() {
         {/* Progress Bar */}
         <div className="h-1.5 w-full bg-gray-200 overflow-hidden">
           <div
-            className="h-full bg-[#0066FF] transition-all duration-700 ease-out shadow-[0_0_10px_rgba(0,102,255,0.5)]"
+            className="h-full bg-[#0066FF] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] shadow-[0_0_10px_rgba(0,102,255,0.5)]"
             style={{ width: `${getProgress()}%` }}
           ></div>
         </div>
@@ -463,14 +463,14 @@ export default function OnboardingWizard() {
 
               <div className="flex flex-col gap-4 w-full">
                 <button
-                  className="w-full bg-[#0066FF] text-white p-4 font-bold rounded-[8px] shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#005bb5] transition-all"
+                  className="w-full bg-[#0066FF] text-white p-4 font-bold rounded-[8px] shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#005bb5] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)]"
                   onClick={() => { setStep(1); syncStateToBackend({ step: 1 }); }}
                 >
                   Start My Business
                 </button>
 
                 <button
-                  className="w-full glassmorphism text-[#0066FF] border border-[#0066FF] p-4 font-bold rounded-[8px] shadow-sm hover:bg-blue-50 transition-all"
+                  className="w-full glassmorphism text-[#0066FF] border border-[#0066FF] p-4 font-bold rounded-[8px] shadow-sm hover:bg-blue-50 transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)]"
                   onClick={() => { setStep(10); syncStateToBackend({ step: 10 }); }}
                 >
                   Instant Build
@@ -498,14 +498,21 @@ export default function OnboardingWizard() {
                     setBio(e.target.value);
                     if (error) setError('');
                   }}
-                  className={`w-full glassmorphism min-h-[44px] min-w-[44px] p-4 border outline-none transition-all resize-none text-gray-800 dark:text-[#f5f5f7] shadow-inner rounded-[8px] ${error ? 'border-[#FF3B30] focus:ring-2 focus:ring-[#FF3B30] focus:border-[#FF3B30]' : 'border-transparent focus:ring-2 focus:ring-[#0066FF] focus:border-[#0066FF]'}`}
+                  className={`w-full glassmorphism min-h-[44px] min-w-[44px] p-4 border outline-none transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] resize-none text-gray-800 dark:text-[#f5f5f7] shadow-inner rounded-[8px] ${error ? 'border-[#FF3B30] focus:ring-2 focus:ring-[#FF3B30] focus:border-[#FF3B30]' : 'border-transparent focus:ring-2 focus:ring-[#0066FF] focus:border-[#0066FF]'}`}
                   placeholder="e.g. I run a local bakery that sells custom vegan cakes..."
                   rows={6}
                 />
+                {error && (
+                  <div className="animate-shake text-[#FF3B30] text-sm border border-[#FF3B30]/30 rounded p-2 bg-[#FF3B30]/10 mt-2">
+                    {error}
+                  </div>
+                )}
               </div>
 
               <div className="mt-auto pt-6 w-full">
                 <button
+                  disabled={!bio.trim()}
+                  className="w-full bg-[#0066FF] text-white min-h-[44px] min-w-[44px] p-4 rounded-[8px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] hover:shadow-[0_6px_20px_rgba(0,102,255,0.23)] active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
                   onClick={async () => {
                     if (!bio.trim()) return;
                     setIsLoading(true);
@@ -574,17 +581,16 @@ export default function OnboardingWizard() {
                             localStorage.setItem('tenant', startData.organization_id);
                         }
                         localStorage.setItem('has_onboarded', 'true');
-                        setStep(5);
-                        syncStateToBackend({ step: 5 });
+                        setStep(5); syncStateToBackend({ step: 5 });
                       } else {
                         throw new Error(data.error || data.message || 'Failed to analyze business details');
                       }
                     } catch (err: any) {
                       console.error(err);
-                      if (err.message === 'Failed to fetch') {
+                      if (err.message?.includes('fetch')) {
                           setError('Failed to launch. Please try again.');
                       } else {
-                          setError(err.message || 'Failed to launch. Please try again.');
+                          setError(err.message || 'Network Error. Failed to launch.');
                       }
                     } finally {
                       setIsLoading(false);
@@ -601,7 +607,7 @@ export default function OnboardingWizard() {
                       </svg>
                       Generating...
                     </span>
-                  ) : <IconLabel icon="launch">Generate Storefront</IconLabel>}
+                  ) : <IconLabel icon="launch">Next</IconLabel>}
                 </button>
               </div>
             </div>
@@ -637,7 +643,7 @@ export default function OnboardingWizard() {
                       <input
                         type="text"
                         autoFocus
-                        enterKeyHint="next"
+
                         autoCapitalize="words"
                         autoComplete="organization"
                         value={businessName}
@@ -654,7 +660,7 @@ export default function OnboardingWizard() {
                           }
                         }}
                         placeholder="e.g. Maya's Custom Cakes"
-                        className={`w-full p-3 sm:p-4 rounded-[8px] border outline-none glassmorphism min-h-[44px] min-w-[44px] text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner ${validationError === 'Business Name must be at least 3 characters.' ? 'border-[#FF3B30]' : 'border-white/50 dark:border-white/10 focus:border-[#0066FF]'}`}
+                        className={`w-full p-3 sm:p-4 rounded-[8px] border outline-none glassmorphism min-h-[44px] min-w-[44px] text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] shadow-inner ${validationError === 'Business Name must be at least 3 characters.' ? 'border-[#FF3B30]' : 'border-white/50 dark:border-white/10 focus:border-[#0066FF]'}`}
                       />
                     </div>
                   </div>
@@ -703,7 +709,7 @@ export default function OnboardingWizard() {
                     <div>
                       <textarea
                         autoFocus
-                        enterKeyHint="next"
+
                         autoCapitalize="sentences"
                         value={whatYouSell}
                         onChange={(e) => setWhatYouSell(e.target.value)}
@@ -719,7 +725,7 @@ export default function OnboardingWizard() {
                           }
                         }}
                         placeholder="e.g. I bake custom vegan cakes for weddings and parties..."
-                        className={`w-full p-3 sm:p-4 rounded-[8px] border outline-none glassmorphism min-h-[44px] min-w-[44px] text-[#1D1D1F] dark:text-[#F5F5F7] h-32 resize-none transition-all shadow-inner ${validationError === 'Please tell us what you sell.' ? 'border-[#FF3B30]' : 'border-white/50 dark:border-white/10 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30'}`}
+                        className={`w-full p-3 sm:p-4 rounded-[8px] border outline-none glassmorphism min-h-[44px] min-w-[44px] text-[#1D1D1F] dark:text-[#F5F5F7] h-32 resize-none transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] shadow-inner ${validationError === 'Please tell us what you sell.' ? 'border-[#FF3B30]' : 'border-white/50 dark:border-white/10 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30'}`}
                       />
                     </div>
                   </div>
@@ -769,7 +775,7 @@ export default function OnboardingWizard() {
                       <input
                         type="text"
                         autoFocus
-                        enterKeyHint="next"
+
                         autoCapitalize="words"
                         value={location}
                         onChange={(e) => setLocation(e.target.value)}
@@ -785,7 +791,7 @@ export default function OnboardingWizard() {
                           }
                         }}
                         placeholder="e.g. Portland, OR"
-                        className={`w-full p-3 sm:p-4 rounded-[8px] border outline-none glassmorphism min-h-[44px] min-w-[44px] text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner ${validationError === 'Please tell us your location.' ? 'border-[#FF3B30]' : 'border-white/50 dark:border-white/10 focus:border-[#0066FF]'}`}
+                        className={`w-full p-3 sm:p-4 rounded-[8px] border outline-none glassmorphism min-h-[44px] min-w-[44px] text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] shadow-inner ${validationError === 'Please tell us your location.' ? 'border-[#FF3B30]' : 'border-white/50 dark:border-white/10 focus:border-[#0066FF]'}`}
                       />
                     </div>
                   </div>
@@ -835,7 +841,7 @@ export default function OnboardingWizard() {
                       <input
                         type="text"
                         autoFocus
-                        enterKeyHint="next"
+
                         autoCapitalize="words"
                         value={targetAudience}
                         onChange={(e) => setTargetAudience(e.target.value)}
@@ -851,7 +857,7 @@ export default function OnboardingWizard() {
                           }
                         }}
                         placeholder="e.g. Local families, Tech startups"
-                        className={`w-full p-3 sm:p-4 rounded-[8px] border outline-none glassmorphism min-h-[44px] min-w-[44px] text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner ${validationError === 'Please tell us your target audience.' ? 'border-[#FF3B30]' : 'border-white/50 dark:border-white/10 focus:border-[#0066FF]'}`}
+                        className={`w-full p-3 sm:p-4 rounded-[8px] border outline-none glassmorphism min-h-[44px] min-w-[44px] text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] shadow-inner ${validationError === 'Please tell us your target audience.' ? 'border-[#FF3B30]' : 'border-white/50 dark:border-white/10 focus:border-[#0066FF]'}`}
                       />
                     </div>
                   </div>
@@ -912,7 +918,7 @@ export default function OnboardingWizard() {
                   <input
                     type="text"
                     autoFocus
-                    enterKeyHint="next"
+
                     autoCapitalize="words"
                     value={businessName}
                     onChange={(e) => {
@@ -927,7 +933,7 @@ export default function OnboardingWizard() {
                   <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">Business Type</label>
                   <input
                     type="text"
-                    enterKeyHint="next"
+
                     autoCapitalize="words"
                     value={businessType}
                     onChange={(e) => {
@@ -942,7 +948,7 @@ export default function OnboardingWizard() {
                   <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">Categories (Comma separated)</label>
                   <input
                     type="text"
-                    enterKeyHint="next"
+
                     autoCapitalize="words"
                     value={categories.join(', ')}
                     onChange={(e) => setCategories(e.target.value.split(',').map(c => c.trim()))}
@@ -954,7 +960,7 @@ export default function OnboardingWizard() {
                       <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">First Product</label>
                       <input
                         type="text"
-                        enterKeyHint="next"
+
                         autoCapitalize="words"
                         value={firstProductName}
                         onChange={(e) => setFirstProductName(e.target.value)}
@@ -1046,7 +1052,7 @@ export default function OnboardingWizard() {
                       <div
                         key={template}
                         onClick={() => setWebsiteTemplate(template)}
-                        className={`p-3 rounded-[8px] border cursor-pointer transition-all ${websiteTemplate === template ? 'border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]' : 'border-white/50 dark:border-white/10 glassmorphism hover:border-gray-400 dark:hover:border-gray-500 text-[#1D1D1F] dark:text-white'}`}
+                        className={`p-3 rounded-[8px] border cursor-pointer transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] ${websiteTemplate === template ? 'border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]' : 'border-white/50 dark:border-white/10 glassmorphism hover:border-gray-400 dark:hover:border-gray-500 text-[#1D1D1F] dark:text-white'}`}
                       >
                         <div className="font-semibold text-sm">{template}</div>
                       </div>
@@ -1059,14 +1065,14 @@ export default function OnboardingWizard() {
                   <div className="grid grid-cols-2 gap-3 mb-2">
                     <div
                       onClick={() => setDomainChoice('subdomain')}
-                      className={`p-3 rounded-[8px] border cursor-pointer transition-all flex flex-col items-center justify-center text-center ${domainChoice === 'subdomain' ? 'border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]' : 'border-white/50 dark:border-white/10 glassmorphism text-[#1D1D1F] dark:text-white hover:border-gray-400 dark:hover:border-gray-500'}`}
+                      className={`p-3 rounded-[8px] border cursor-pointer transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] flex flex-col items-center justify-center text-center ${domainChoice === 'subdomain' ? 'border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]' : 'border-white/50 dark:border-white/10 glassmorphism text-[#1D1D1F] dark:text-white hover:border-gray-400 dark:hover:border-gray-500'}`}
                     >
                       <span className="font-semibold text-sm mb-1">Free Subdomain</span>
                       <span className="text-[10px] opacity-70">your-name.ohc.app</span>
                     </div>
                     <div
                       onClick={() => setDomainChoice('custom')}
-                      className={`p-3 rounded-[8px] border cursor-pointer transition-all flex flex-col items-center justify-center text-center ${domainChoice === 'custom' ? 'border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]' : 'border-white/50 dark:border-white/10 glassmorphism text-[#1D1D1F] dark:text-white hover:border-gray-400 dark:hover:border-gray-500'}`}
+                      className={`p-3 rounded-[8px] border cursor-pointer transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] flex flex-col items-center justify-center text-center ${domainChoice === 'custom' ? 'border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]' : 'border-white/50 dark:border-white/10 glassmorphism text-[#1D1D1F] dark:text-white hover:border-gray-400 dark:hover:border-gray-500'}`}
                     >
                       <span className="font-semibold text-sm mb-1">Custom Domain</span>
                       <span className="text-[10px] opacity-70">your-name.com</span>
@@ -1081,7 +1087,7 @@ export default function OnboardingWizard() {
                       <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Admin Name</label>
                       <input
                         type="text"
-                        enterKeyHint="next"
+
                         autoCapitalize="words"
                         autoComplete="name"
                         value={adminName}
@@ -1103,9 +1109,9 @@ export default function OnboardingWizard() {
                       <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Admin Email</label>
                       <input
                         type="email"
-                        enterKeyHint="next"
+
                         autoCapitalize="none"
-                        inputMode="email"
+
                         autoComplete="email"
                         value={adminEmail}
                         onChange={(e) => {
@@ -1120,6 +1126,8 @@ export default function OnboardingWizard() {
                           }
                         }}
                         placeholder="you@example.com"
+
+
                         className={`w-full p-3 sm:p-4 rounded-[8px] border ${validationErrors.adminEmail ? "border-[#FF3B30]" : "border-white/50 dark:border-white/10 focus:border-[#0066FF]"} outline-none glassmorphism min-h-[44px] min-w-[44px] text-[#1D1D1F] dark:text-[#F5F5F7]`}
                       />
                       {validationErrors.adminEmail && <p className="text-[#FF3B30] text-xs mt-1">{validationErrors.adminEmail}</p>}
@@ -1159,7 +1167,7 @@ export default function OnboardingWizard() {
                     {aiAgents.map(agent => (
                       <div
                         key={agent}
-                        className="px-3 py-1.5 rounded-full border border-[#34C759] bg-[#34C759]/10 text-[#34C759] flex items-center gap-1.5 text-sm font-semibold transition-all"
+                        className="px-3 py-1.5 rounded-full border border-[#34C759] bg-[#34C759]/10 text-[#34C759] flex items-center gap-1.5 text-sm font-semibold transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)]"
                       >
                         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
                         {agent}
@@ -1205,7 +1213,7 @@ export default function OnboardingWizard() {
           )}
 
           {step === 4 && (
-             <div aria-live="polite" className="flex flex-col flex-1 justify-center items-center text-center animate-fade-in glassmorphism shadow-2xl p-8">
+             <div aria-live="polite" className="flex flex-col flex-1 justify-center items-center text-center animate-fade-in glassmorphism rounded-[16px] shadow-2xl p-8">
                <div className="w-24 h-24 relative mb-8">
                  <div className="absolute inset-0 border-4 border-[#0066FF]/20 rounded-full"></div>
                  <div className="absolute inset-0 border-4 border-[#0066FF] rounded-full border-t-transparent animate-spin"></div>

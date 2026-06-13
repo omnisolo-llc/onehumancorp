@@ -135,6 +135,10 @@ pub struct DepartmentOrchestrator {
 }
 
 impl DepartmentOrchestrator {
+    pub fn db(&self) -> Arc<crate::db::DB> {
+        self.db.clone()
+    }
+
     pub fn new(db: Arc<crate::db::DB>, mesh: Arc<dyn TeammateMesh>) -> Self {
         let memory_repo = match &db.store {
             DbStore::Postgres => Arc::new(VectorRepository::new(db.pool.clone())),
@@ -914,7 +918,7 @@ impl DepartmentOrchestrator {
                             }
 
                             let invoice_id = uuid::Uuid::new_v4().to_string();
-                            if let Err(e) = sqlx::query("INSERT INTO invoices (id, tenant_id, customer_id, type, amount, status, due_date, total_amount, currency) VALUES ($1, $2, $3, 'Deposit', $4, 'Draft', $5, $6, 'USD')")
+                            if let Err(e) = sqlx::query("INSERT INTO invoices (id, tenant_id, client_id, client_name, status, due_date, currency, total_amount, total_amount_cents, payment_status, view_count, amount_paid_cents) VALUES ($1, $2, $3, 'Client', 'draft', $5, 'USD', $6, 0, 'draft', 0, 0)")
                                 .bind(&invoice_id)
                                 .bind(tenant_id)
                                 .bind(&customer_id_to_use)
@@ -987,7 +991,7 @@ impl DepartmentOrchestrator {
                             }
 
                             let invoice_id = uuid::Uuid::new_v4().to_string();
-                            if let Err(e) = sqlx::query("INSERT INTO invoices (id, tenant_id, customer_id, type, amount, status, due_date, total_amount, currency) VALUES (?, ?, ?, 'Deposit', ?, 'Draft', ?, ?, 'USD')")
+                            if let Err(e) = sqlx::query("INSERT INTO invoices (id, tenant_id, client_id, client_name, status, due_date, currency, total_amount, total_amount_cents, payment_status, view_count, amount_paid_cents) VALUES (?, ?, ?, 'Client', 'draft', ?, 'USD', ?, 0, 'draft', 0, 0)")
                                 .bind(&invoice_id)
                                 .bind(tenant_id)
                                 .bind(&customer_id_to_use)
@@ -1099,38 +1103,20 @@ impl DepartmentOrchestrator {
                                 }
                             }
 
-                            // Dispatch simulated reorder to job queue
-                            let reorder_payload = serde_json::json!({
-                                "items": [{"product_id": product_id, "quantity": 50}]
+                            let product_name = payload.get("context").and_then(|c| c.get("product_name")).and_then(|v| v.as_str()).unwrap_or("Item");
+                            let draft_desc = format!("Draft promotional email for {}", product_name);
+                            let draft_payload = serde_json::json!({
+                                "feature_type": "promotional_email_draft",
+                                "product_name": product_name,
+                                "new_price": new_price
                             });
-
-                            if let DbStore::Postgres = &self.db.store {
-                                let task_id = uuid::Uuid::new_v4().to_string();
-                                if let Err(e) = sqlx::query("INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status) VALUES ($1, $2, $3, $4, $5, $6)")
-                                    .bind(&task_id)
-                                    .bind(tenant_id)
-                                    .bind("operations")
-                                    .bind("OrderPlaced")
-                                    .bind(serde_json::to_string(&reorder_payload).unwrap_or_default())
-                                    .bind("PENDING")
-                                    .execute(&self.db.pool)
-                                    .await
-                                {
-                                    tracing::error!("Failed to dispatch reorder task: {}", e);
-                                }
-                            } else if let DbStore::Sqlite(pool) = &self.db.store {
-                                let task_id = uuid::Uuid::new_v4().to_string();
-                                // Ignore sqlite error if table not exists in tests
-                                let _ = sqlx::query("INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status) VALUES (?, ?, ?, ?, ?, ?)")
-                                    .bind(&task_id)
-                                    .bind(tenant_id)
-                                    .bind("operations")
-                                    .bind("OrderPlaced")
-                                    .bind(serde_json::to_string(&reorder_payload).unwrap_or_default())
-                                    .bind("PENDING")
-                                    .execute(pool)
-                                    .await;
-                            }
+                            let _ = self.execute_action(
+                                DepartmentType::Marketing,
+                                draft_desc,
+                                tenant_id.to_string(),
+                                ActionRisk::DraftForReview,
+                                draft_payload
+                            ).await;
                         }
                     }
                 }

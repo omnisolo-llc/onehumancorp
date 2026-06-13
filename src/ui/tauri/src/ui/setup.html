@@ -16,8 +16,8 @@
       }
       .container {
         background: rgba(255, 255, 255, 0.65);
-        backdrop-filter: blur(30px) saturate(210%);
-        -webkit-backdrop-filter: blur(30px) saturate(210%);
+        backdrop-filter: blur(30px) saturate(2.1);
+        -webkit-backdrop-filter: blur(30px) saturate(2.1);
         padding: 40px;
         border-radius: 16px;
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
@@ -30,10 +30,9 @@
       .glassmorphism {
         border-radius: 16px;
         background: rgba(255, 255, 255, 0.65);
-        backdrop-filter: blur(30px) saturate(210%);
-        -webkit-backdrop-filter: blur(30px) saturate(210%);
+        backdrop-filter: blur(30px) saturate(2.1);
+        -webkit-backdrop-filter: blur(30px) saturate(2.1);
         border: 1px solid rgba(255, 255, 255, 0.4);
-        border-radius: 16px;
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
       }
       h1 {
@@ -50,7 +49,7 @@
       input {
         width: 100%;
         padding: 14px;
-        min-height: 44px;
+        min-height: 44px !important;
         margin-bottom: 20px;
         border: 1px solid rgba(255, 255, 255, 0.5);
         border-radius: 8px;
@@ -84,7 +83,7 @@
         color: white;
         border: none;
         padding: 14px 24px;
-        min-height: 44px;
+        min-height: 44px !important;
         border-radius: 8px;
         font-size: 16px;
         font-weight: 600;
@@ -129,7 +128,7 @@
       .spinner {
         display: inline-block;
         width: 16px;
-        height: 16px;
+        min-height: 44px; height: auto;
         border: 2px solid rgba(255, 255, 255, 0.3);
         border-radius: 50%;
         border-top-color: #fff;
@@ -144,8 +143,8 @@
         }
         .container {
           background: rgba(22, 22, 26, 0.7);
-          backdrop-filter: blur(30px) saturate(210%);
-          -webkit-backdrop-filter: blur(30px) saturate(210%);
+          backdrop-filter: blur(30px) saturate(2.1);
+          -webkit-backdrop-filter: blur(30px) saturate(2.1);
           border: 1px solid rgba(255, 255, 255, 0.1);
           border-radius: 16px;
           box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
@@ -153,10 +152,9 @@
         .glassmorphism {
           border-radius: 16px;
           background: rgba(22, 22, 26, 0.7);
-          backdrop-filter: blur(30px) saturate(210%);
-          -webkit-backdrop-filter: blur(30px) saturate(210%);
+          backdrop-filter: blur(30px) saturate(2.1);
+          -webkit-backdrop-filter: blur(30px) saturate(2.1);
           border: 1px solid rgba(255, 255, 255, 0.1);
-          border-radius: 16px;
           box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
         }
         h1 {
@@ -196,13 +194,22 @@
       }
       .step-indicator {
         width: 12px;
-        height: 12px;
+        min-height: 44px; height: auto;
         border-radius: 50%;
         background: rgba(255, 255, 255, 0.5);
         border: 2px solid rgba(255, 255, 255, 0.8);
         z-index: 2;
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       }
+
+      /* Chat Step Styles */
+      #chat-messages {
+        height: 300px;
+        overflow-y: auto;
+        padding: 10px;
+        margin-bottom: 20px;
+      }
+
       .step-indicator.active {
         background: #0066FF;
         border-color: #0066FF;
@@ -241,7 +248,7 @@
         color: #1d1d1f;
         width: 100%;
         padding: 14px;
-        min-height: 44px;
+        min-height: 44px !important;
         margin-bottom: 20px;
         border: 1px solid rgba(255, 255, 255, 0.5);
         border-radius: 8px;
@@ -275,7 +282,7 @@
         -webkit-backdrop-filter: blur(10px) saturate(200%);
         border: 1px solid rgba(255, 255, 255, 0.5);
         padding: 12px 16px;
-        min-height: 44px;
+        min-height: 44px !important;
         border-radius: 16px;
         cursor: pointer;
         transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
@@ -328,7 +335,7 @@
       .persona-chip {
         flex: 0 0 auto;
         padding: 8px 16px;
-        min-height: 44px;
+        min-height: 44px !important;
         display: flex;
         align-items: center;
         border-radius: 20px;
@@ -413,22 +420,43 @@
         }
       }
 
-      @media (max-width: 375px) {
+            @media (max-width: 375px) {
         .stepper {
           gap: 4px;
         }
         .step-indicator {
           width: 8px;
-          height: 8px;
+          min-height: 44px; height: auto;
         }
         .step-indicator.active {
           transform: scale(1.2);
         }
         .container {
-          padding: 16px;
-        }
+        background: rgba(255, 255, 255, 0.65);
+        backdrop-filter: blur(30px) saturate(210%);
+        -webkit-backdrop-filter: blur(30px) saturate(210%);
+        padding: 40px;
+        border-radius: 16px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        text-align: center;
+        max-width: 480px;
+        width: 100%;
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        box-sizing: border-box;
+      }
         .radio-option {
           padding: 8px 12px;
+          font-size: 14px;
+        }
+        h1 {
+          font-size: 20px;
+        }
+        p {
+          font-size: 13px;
+        }
+        .persona-chip {
+          padding: 6px 12px;
+          font-size: 12px;
         }
       }
 
@@ -455,28 +483,55 @@
         <p>Zero tech skills needed. We do the heavy lifting. Review and add any extra details to help our AI generate the perfect store.</p>
 
         <div class="btn-group" style="margin-top: 32px;">
-          <button class="next-step-btn" data-next="step-context">Start My Business</button>
+          <button class="next-step-btn" data-testid="next-step-btn" data-next="step-context">Start My Business</button>
           <button type="button" class="btn-secondary" onclick="goToStep('step-instant')">Instant Build</button>
+          <button type="button" class="btn-secondary" onclick="goToStep('step-chat')" style="margin-top: 10px;">Conversational Setup</button>
         </div>
       </div>
 
       <!-- Step Instant: Instant Build -->
       <div class="step" id="step-instant">
         <button onclick="goToStep('step-initial')" style="background: none; border: none; color: #0066FF; padding: 0; box-shadow: none; width: auto; font-size: 14px; min-height: auto; margin-bottom: 16px; display: flex; align-items: center; gap: 4px; font-weight: 600;">
-          <svg style="width: 16px; height: 16px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg> Back
+          <svg style="width: 16px; min-height: 44px; height: auto;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg> Back
         </button>
         <h1>Tell us about your business</h1>
         <p>Our AI will handle the rest in 30 seconds.</p>
 
-        <textarea id="instant-bio" class="glassmorphism" placeholder="e.g. I run a local bakery that sells custom vegan cakes..." rows="6" style="resize: none;"></textarea>
-        <div id="instant-error" class="error-msg" style="margin-bottom: 20px;"></div>
+        <textarea id="instant-bio" data-testid="instant-bio" class="glassmorphism" placeholder="e.g. I run a local bakery that sells custom vegan cakes..." rows="6" style="resize: none;"></textarea>
+        <div id="instant-error" class="error-msg" aria-live="polite" style="margin-bottom: 20px;"></div>
 
         <div class="btn-group" style="margin-top: 24px;">
-          <button id="generate-storefront-btn">Generate Storefront</button>
+          <button id="generate-storefront-btn" data-testid="generate-storefront-btn">Next</button>
         </div>
       </div>
 
-      <div class="stepper" id="stepper-indicator" style="display: none;">
+
+
+      <div class="step" id="step-loading">
+        <h1>Building Your Business...</h1>
+        <p>Please wait while we set up your workspace.</p>
+        <div class="spinner" style="margin: 0 auto; width: 40px; height: 40px;"></div>
+      </div>
+
+      <!-- Step Chat: Conversational Build -->
+      <div class="step" id="step-chat">
+        <button onclick="goToStep('step-initial')" style="background: none; border: none; color: #0066FF; padding: 0; box-shadow: none; width: auto; font-size: 14px; min-height: auto; margin-bottom: 16px; display: flex; align-items: center; gap: 4px; font-weight: 600;">
+          <svg style="width: 16px; min-height: 44px; height: auto;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg> Back
+        </button>
+        <h1>Setup Assistant</h1>
+        <p>Talk to our AI to build your business.</p>
+
+        <div id="chat-messages" class="glassmorphism" style="text-align: left;">
+            <div style="margin-bottom: 10px; color: #333;"><strong>Assistant:</strong> What do you do? (e.g. I make custom vegan cakes in Austin)</div>
+        </div>
+
+        <div style="display: flex; gap: 10px;">
+            <input type="text" id="chat-input" data-testid="chat-input" class="glassmorphism" placeholder="Type a message..." style="margin-bottom: 0; flex-grow: 1; min-height: 44px; border-radius: 8px;">
+            <button id="chat-send-btn" data-testid="chat-send-btn" style="width: auto; min-height: 44px; min-width: 44px; border-radius: 8px;">Send</button>
+        </div>
+      </div>
+
+      <div class="stepper" id="stepper-indicator" style="display: none;" role="progressbar" aria-label="Setup progress" aria-valuemin="0" aria-valuemax="7">
         <div class="step-indicator active" data-step="step-context"></div>
         <div class="step-indicator" data-step="step-categories"></div>
         <div class="step-indicator" data-step="step-name"></div>
@@ -493,10 +548,10 @@
         <p>Choose a quick-start or select how you work.</p>
 
         <div class="persona-row">
-            <div class="persona-chip" onclick="applyPersona('Baker', event)">I'm a Baker</div>
-            <div class="persona-chip" onclick="applyPersona('Handyman', event)">I'm a Handyman</div>
-            <div class="persona-chip" onclick="applyPersona('Boutique', event)">I'm a Boutique Owner</div>
-            <div class="persona-chip" onclick="applyPersona('Tutor', event)">I'm a Tutor</div>
+            <div class="persona-chip" onclick="applyPersona('Baker', event)" data-testid="persona-baker">I'm a Baker</div>
+            <div class="persona-chip" onclick="applyPersona('Handyman', event)" data-testid="persona-handyman">I'm a Handyman</div>
+            <div class="persona-chip" onclick="applyPersona('Boutique', event)" data-testid="persona-boutique">I'm a Boutique Owner</div>
+            <div class="persona-chip" onclick="applyPersona('Tutor', event)" data-testid="persona-tutor">I'm a Tutor</div>
         </div>
 
         <div class="radio-group" id="context-group">
@@ -529,10 +584,10 @@
             </div>
           </label>
         </div>
-        <div id="context-error" class="error-msg">Please select an option.</div>
+        <div id="context-error" class="error-msg" aria-live="polite">Please select an option.</div>
         <div class="btn-group">
-          <button class="next-step-btn" data-next="step-categories">Next</button>
-          <button type="button" class="btn-secondary save-draft-btn">Save Draft</button>
+          <button class="next-step-btn" data-testid="next-step-btn" data-next="step-categories">Next</button>
+          <button type="button" class="btn-secondary save-draft-btn" data-testid="save-draft-btn">Save Draft</button>
         </div>
       </div>
 
@@ -540,14 +595,14 @@
       <div class="step" id="step-categories">
         <h1>What's your category?</h1>
         <p>e.g. Baking, Plumbing, Design</p>
-        <select id="business-categories" class="glassmorphism">
+        <select id="business-categories" data-testid="business-categories" class="glassmorphism">
           <option value="" disabled selected>Select a category...</option>
         </select>
-        <div id="categories-error" class="error-msg">Please enter a category.</div>
+        <div id="categories-error" class="error-msg" aria-live="polite">Please enter a category.</div>
         <div class="btn-group">
-          <button class="next-step-btn" data-next="step-name">Next</button>
-          <button type="button" class="btn-secondary save-draft-btn">Save Draft</button>
-          <button class="btn-secondary prev-step-btn" data-prev="step-context">Back</button>
+          <button class="next-step-btn" data-testid="next-step-btn" data-next="step-name">Next</button>
+          <button type="button" class="btn-secondary save-draft-btn" data-testid="save-draft-btn">Save Draft</button>
+          <button class="btn-secondary prev-step-btn" data-testid="prev-step-btn" data-prev="step-context">Back</button>
         </div>
       </div>
 
@@ -555,15 +610,15 @@
       <div class="step" id="step-name">
         <h1>What's the name of your business?</h1>
         <p>We'll use this to set up your workspace.</p>
-        <input type="text" id="business-name" class="glassmorphism" placeholder="e.g. Maya's Bakery" />
-        <div id="name-error" class="error-msg">Business Name must be at least 3 characters.</div>
+        <input type="text" id="business-name" data-testid="business-name" class="glassmorphism" placeholder="e.g. Maya's Bakery" autocomplete="organization" />
+        <div id="name-error" class="error-msg" aria-live="polite">Business Name must be at least 3 characters.</div>
 
-        <input type="text" id="business-tagline" class="glassmorphism" placeholder="Tagline (optional)" />
+        <input type="text" id="business-tagline" data-testid="business-tagline" class="glassmorphism" placeholder="Tagline (optional)" />
 
         <div class="btn-group">
-          <button class="next-step-btn" data-next="step-assistant">Next</button>
-          <button type="button" class="btn-secondary save-draft-btn">Save Draft</button>
-          <button class="btn-secondary prev-step-btn" data-prev="step-categories">Back</button>
+          <button class="next-step-btn" data-testid="next-step-btn" data-next="step-assistant">Next</button>
+          <button type="button" class="btn-secondary save-draft-btn" data-testid="save-draft-btn">Save Draft</button>
+          <button class="btn-secondary prev-step-btn" data-testid="prev-step-btn" data-prev="step-categories">Back</button>
         </div>
       </div>
 
@@ -576,21 +631,21 @@
             "Hi! I'll be your partner in growing this business. What should I call myself, and how should we talk?"
         </div>
 
-        <input type="text" id="assistant-name" class="glassmorphism" placeholder="e.g. Jarvis" />
-        <div id="assistant-name-error" class="error-msg">Please enter a name for your assistant.</div>
+        <input type="text" id="assistant-name" data-testid="assistant-name" class="glassmorphism" placeholder="e.g. Jarvis" />
+        <div id="assistant-name-error" class="error-msg" aria-live="polite">Please enter a name for your assistant.</div>
 
-        <select id="assistant-tone" class="glassmorphism">
+        <select id="assistant-tone" data-testid="assistant-tone" class="glassmorphism">
           <option value="" disabled selected>Select a tone</option>
           <option value="Professional">Professional</option>
           <option value="Friendly">Friendly</option>
           <option value="Concise">Concise</option>
         </select>
-        <div id="tone-error" class="error-msg">Please select a tone.</div>
+        <div id="tone-error" class="error-msg" aria-live="polite">Please select a tone.</div>
 
         <div class="btn-group">
-          <button class="next-step-btn" data-next="step-admin">Next</button>
-          <button type="button" class="btn-secondary save-draft-btn">Save Draft</button>
-          <button class="btn-secondary prev-step-btn" data-prev="step-name">Back</button>
+          <button class="next-step-btn" data-testid="next-step-btn" data-next="step-admin">Next</button>
+          <button type="button" class="btn-secondary save-draft-btn" data-testid="save-draft-btn">Save Draft</button>
+          <button class="btn-secondary prev-step-btn" data-testid="prev-step-btn" data-prev="step-name">Back</button>
         </div>
       </div>
 
@@ -600,16 +655,16 @@
         <h1>Admin Credentials</h1>
         <p>Set up your login details.</p>
 
-        <input type="email" id="admin-email" class="glassmorphism" placeholder="admin@mybusiness.com" />
-        <div id="email-error" class="error-msg">Please enter a valid email address.</div>
+        <input type="email" id="admin-email" data-testid="admin-email" class="glassmorphism" placeholder="admin@mybusiness.com" inputmode="email" autocomplete="email" />
+        <div id="email-error" class="error-msg" aria-live="polite">Please enter a valid email address.</div>
 
-        <input type="password" id="admin-password" class="glassmorphism" placeholder="Password (min 8 chars)" />
-        <div id="password-error" class="error-msg">Password must be at least 8 characters.</div>
+        <input type="password" id="admin-password" data-testid="admin-password" class="glassmorphism" placeholder="Password (min 8 chars)" autocomplete="new-password" />
+        <div id="password-error" class="error-msg" aria-live="polite">Password must be at least 8 characters.</div>
 
         <div class="btn-group">
-          <button class="next-step-btn" data-next="step-offer">Next</button>
-          <button type="button" class="btn-secondary save-draft-btn">Save Draft</button>
-          <button class="btn-secondary prev-step-btn" data-prev="step-assistant">Back</button>
+          <button class="next-step-btn" data-testid="next-step-btn" data-next="step-offer">Next</button>
+          <button type="button" class="btn-secondary save-draft-btn" data-testid="save-draft-btn">Save Draft</button>
+          <button class="btn-secondary prev-step-btn" data-testid="prev-step-btn" data-prev="step-assistant">Back</button>
         </div>
       </div>
 
@@ -617,12 +672,12 @@
       <div class="step" id="step-offer">
         <h1>Your First Offer</h1>
         <p>What is the main thing you sell?</p>
-        <input type="text" id="first-offer" class="glassmorphism" placeholder="e.g. Custom Birthday Cake" />
-        <div id="offer-error" class="error-msg">Please enter an offer.</div>
+        <input type="text" id="first-offer" data-testid="first-offer" class="glassmorphism" placeholder="e.g. Custom Birthday Cake" />
+        <div id="offer-error" class="error-msg" aria-live="polite">Please enter an offer.</div>
         <div class="btn-group">
-          <button class="next-step-btn" data-next="step-template">Next</button>
-          <button type="button" class="btn-secondary save-draft-btn">Save Draft</button>
-          <button class="btn-secondary prev-step-btn" data-prev="step-admin">Back</button>
+          <button class="next-step-btn" data-testid="next-step-btn" data-next="step-template">Next</button>
+          <button type="button" class="btn-secondary save-draft-btn" data-testid="save-draft-btn">Save Draft</button>
+          <button class="btn-secondary prev-step-btn" data-testid="prev-step-btn" data-prev="step-admin">Back</button>
         </div>
       </div>
 
@@ -630,18 +685,18 @@
       <div class="step" id="step-template">
         <h1>Template Selection</h1>
         <p>Choose a look for your workspace</p>
-        <select id="template-selection" class="glassmorphism">
+        <select id="template-selection" data-testid="template-selection" class="glassmorphism">
           <option value="" disabled selected>Select a template...</option>
           <option value="Modern">Modern</option>
           <option value="Classic">Classic</option>
           <option value="Playful">Playful</option>
         </select>
-        <div id="template-error" class="error-msg">Please select a template.</div>
+        <div id="template-error" class="error-msg" aria-live="polite">Please select a template.</div>
 
         <div class="btn-group">
-          <button id="finish-btn">Finish Setup</button>
-          <button type="button" class="btn-secondary save-draft-btn">Save Draft</button>
-          <button class="btn-secondary prev-step-btn" data-prev="step-offer">Back</button>
+          <button id="finish-btn" data-testid="finish-btn">Launch Store</button>
+          <button type="button" class="btn-secondary save-draft-btn" data-testid="save-draft-btn">Save Draft</button>
+          <button class="btn-secondary prev-step-btn" data-testid="prev-step-btn" data-prev="step-offer">Back</button>
         </div>
       </div>
 
@@ -771,6 +826,7 @@
         .then(apiState => {
             if (apiState && Object.keys(apiState).length > 0) {
                 state = { ...state, ...(apiState.wizardState || apiState) };
+                localStorage.setItem('onboardingState', JSON.stringify(state)); // Sync cross-device state down to local
                 populateForm();
             }
         })
@@ -794,6 +850,35 @@
               inputs.name.style.borderColor = 'rgba(255, 255, 255, 0.5)';
           }
       });
+
+      inputs.adminEmail.addEventListener('input', () => {
+          if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(inputs.adminEmail.value.trim())) {
+              errors.adminEmail.style.display = 'none';
+              inputs.adminEmail.style.borderColor = 'rgba(255, 255, 255, 0.5)';
+          }
+      });
+
+      inputs.adminPassword.addEventListener('input', () => {
+          if (inputs.adminPassword.value.trim().length >= 8) {
+              errors.adminPassword.style.display = 'none';
+              inputs.adminPassword.style.borderColor = 'rgba(255, 255, 255, 0.5)';
+          }
+      });
+
+      inputs.assistantName.addEventListener('input', () => {
+          if (inputs.assistantName.value.trim().length > 0) {
+              errors.assistantName.style.display = 'none';
+              inputs.assistantName.style.borderColor = 'rgba(255, 255, 255, 0.5)';
+          }
+      });
+
+      inputs.firstOffer.addEventListener('input', () => {
+          if (inputs.firstOffer.value.trim().length > 0) {
+              errors.firstOffer.style.display = 'none';
+              inputs.firstOffer.style.borderColor = 'rgba(255, 255, 255, 0.5)';
+          }
+      });
+
 
       function populateForm() {
           if (state.businessName) inputs.name.value = state.businessName;
@@ -864,9 +949,11 @@
           } else {
               localStorage.setItem('onboardingState', JSON.stringify(state));
               const backendUrl = (window.location.origin.includes('localhost') || window.location.protocol === 'file:') ? 'http://127.0.0.1:18789' : '';
+              const tenantId = localStorage.getItem('tenant_id') || 'storefront';
+              const userId = localStorage.getItem('user_id') || 'test-user';
               fetch(`${backendUrl}/api/onboarding/state`, {
                   method: 'POST',
-                  headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': 'storefront', 'X-User-ID': 'test-user' },
+                  headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': tenantId, 'X-User-ID': userId },
                   body: JSON.stringify({ wizardState: state })
               }).catch(console.error);
           }
@@ -875,7 +962,7 @@
       function validateStep(stepId) {
           let isValid = true;
 
-          if (stepId === 'step-initial' || stepId === 'step-instant') {
+          if (stepId === 'step-initial' || stepId === 'step-instant' || stepId === 'step-chat') {
               return true;
           }
 
@@ -987,7 +1074,7 @@
 
       function updateStepper(stepId) {
           const stepperIndicator = document.getElementById('stepper-indicator');
-          if (stepId === 'step-initial' || stepId === 'step-instant') {
+          if (stepId === 'step-initial' || stepId === 'step-instant' || stepId === 'step-chat') {
               if (stepperIndicator) stepperIndicator.style.display = 'none';
           } else {
               if (stepperIndicator) stepperIndicator.style.display = 'flex';
@@ -995,6 +1082,7 @@
 
           const steps = ['step-context', 'step-categories', 'step-name', 'step-assistant', 'step-admin', 'step-offer', 'step-template'];
           const currentIndex = steps.indexOf(stepId);
+          if (stepperIndicator) stepperIndicator.setAttribute('aria-valuenow', currentIndex + 1);
 
           document.querySelectorAll('.step-indicator').forEach((indicator, index) => {
               if (index < currentIndex) {
@@ -1048,8 +1136,8 @@
               const currentStep = e.target.closest('.step').id;
               const nextStepId = e.target.getAttribute('data-next');
               if (validateStep(currentStep)) {
-                  saveCurrentState();
                   goToStep(nextStepId);
+                  saveCurrentState();
               }
           });
       });
@@ -1058,6 +1146,7 @@
           btn.addEventListener('click', (e) => {
               const prevStepId = e.target.getAttribute('data-prev');
               goToStep(prevStepId);
+              saveCurrentState();
           });
       });
 
@@ -1097,13 +1186,129 @@
       const instantErrorEl = document.getElementById('instant-error');
 
       if (instantBioInputEl) {
+          // Initialize disabled state
+          if (generateStorefrontBtn && !instantBioInputEl.value.trim()) {
+              generateStorefrontBtn.disabled = true;
+          }
           instantBioInputEl.addEventListener('input', () => {
               instantBioInputEl.classList.remove('border-[#FF3B30]');
               if (instantErrorEl) {
                   instantErrorEl.style.display = 'none';
+                  instantErrorEl.classList.remove('text-[#FF3B30]', 'border-[#FF3B30]/30', 'animate-shake');
+              }
+              if (generateStorefrontBtn) {
+                  generateStorefrontBtn.disabled = !instantBioInputEl.value.trim();
               }
           });
       }
+
+
+      // Chat logic
+      const chatInputEl = document.getElementById('chat-input');
+      const chatSendBtn = document.getElementById('chat-send-btn');
+      const chatMessagesEl = document.getElementById('chat-messages');
+      let chatHistory = [];
+
+      async function sendChatMessage() {
+          const text = chatInputEl.value.trim();
+          if (!text) return;
+
+          // Append user message
+          chatMessagesEl.innerHTML += `<div style="margin-bottom: 10px; color: #0066FF;"><strong>You:</strong> ${text}</div>`;
+          chatInputEl.value = '';
+          chatHistory.push({ role: 'user', content: text });
+          chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
+
+          chatSendBtn.disabled = true;
+
+          try {
+              const backendUrl = (window.location.origin.includes('localhost') || window.location.protocol === 'file:') ? 'http://127.0.0.1:18789' : '';
+              const res = await fetch(`${backendUrl}/api/onboarding/chat`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ messages: chatHistory })
+              });
+
+              if (!res.ok) throw new Error('Chat request failed');
+              const data = await res.json();
+
+              chatMessagesEl.innerHTML += `<div style="margin-bottom: 10px; color: #333;"><strong>Assistant:</strong> ${data.reply}</div>`;
+              chatHistory.push({ role: 'assistant', content: data.reply });
+              chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
+
+              if (data.is_complete && data.intake_data) {
+                  const intakeData = data.intake_data;
+                  const req = {
+                      companyName: intakeData.business_name || "My Business",
+                      businessType: intakeData.business_type || "Online Store",
+                      companyDescription: chatHistory.map(m => m.content).join(" "),
+                      sellingCategories: intakeData.categories || ["physical"],
+                      paymentPref: "online",
+                      adminEmail: "admin@mybusiness.com",
+                      adminName: "Admin",
+                      adminPassword: "password",
+                      websiteTemplate: "auto",
+                      firstProductName: intakeData.initial_products?.[0]?.name || "First Product",
+                      firstProductPrice: intakeData.initial_products?.[0]?.price || "0.00",
+                      domainChoice: "subdomain",
+                      priceType: "fixed",
+                      location: intakeData.location || "Local",
+                      targetAudience: intakeData.target_audience || "General",
+                      initialProducts: intakeData.initial_products || []
+                  };
+
+                  if (window.__TAURI__ && window.__TAURI__.core) {
+                      await goToStep('step-loading'); window.__TAURI__.core.invoke("start_onboarding", { req });
+                      localStorage.setItem('has_onboarded', 'true');
+                      window.location.href = "success.html";
+                      return;
+                  }
+
+                  const tenantIdStr = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront';
+                  const userIdStr = localStorage.getItem('user_id') || 'test-user';
+
+                  const startRes = await fetch(`${backendUrl}/api/onboarding/start`, {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                          business_type: req.businessType,
+                          company_name: req.companyName,
+                          company_description: req.companyDescription,
+                          selling_categories: req.sellingCategories,
+                          payment_pref: req.paymentPref,
+                          admin_email: req.adminEmail,
+                          website_template: req.websiteTemplate,
+                          first_product_name: req.firstProductName,
+                          first_product_price: req.firstProductPrice,
+                          domain_choice: req.domainChoice,
+                          admin_name: req.adminName,
+                          admin_password: req.adminPassword,
+                          price_type: req.priceType,
+                          location: req.location,
+                          target_audience: req.targetAudience,
+                          initial_products: req.initialProducts
+                      })
+                  });
+
+                  if (startRes.ok) {
+                      const startData = await startRes.json();
+                      if (startData.organization_id) {
+                          localStorage.setItem('tenant_id', startData.organization_id);
+                          localStorage.setItem('tenant', startData.organization_id);
+                      }
+                      localStorage.setItem('has_onboarded', 'true');
+                      window.location.href = "success.html";
+                  }
+              }
+          } catch (e) {
+              chatMessagesEl.innerHTML += `<div style="margin-bottom: 10px; color: #FF3B30;"><strong>Error:</strong> Failed to connect.</div>`;
+          } finally {
+              chatSendBtn.disabled = false;
+          }
+      }
+
+      if (chatSendBtn) { chatSendBtn.addEventListener('click', sendChatMessage); }
+      if (chatInputEl) { chatInputEl.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendChatMessage(); }); }
 
       if (generateStorefrontBtn) {
           generateStorefrontBtn.addEventListener('click', async () => {
@@ -1111,16 +1316,16 @@
               if (!bioInput.trim()) {
                   instantErrorEl.innerText = "Please tell us about your business.";
                   instantErrorEl.style.display = 'block';
-                  instantErrorEl.classList.add('text-[#FF3B30]', 'border-[#FF3B30]/30');
+                  instantErrorEl.classList.add('text-[#FF3B30]', 'border-[#FF3B30]/30', 'animate-shake');
                   instantBioInputEl.classList.add('border-[#FF3B30]');
                   return;
               }
 
               instantErrorEl.style.display = 'none';
-              instantErrorEl.classList.remove('text-[#FF3B30]', 'border-[#FF3B30]/30');
+              instantErrorEl.classList.remove('text-[#FF3B30]', 'border-[#FF3B30]/30', 'animate-shake');
               instantBioInputEl.classList.remove('border-[#FF3B30]');
               generateStorefrontBtn.disabled = true;
-              generateStorefrontBtn.innerHTML = '<div class="spinner"></div>Generating...';
+              generateStorefrontBtn.innerHTML = '<div class="spinner"></div>Building Your Business...';
 
               try {
                   const backendUrl = (window.location.origin.includes('localhost') || window.location.protocol === 'file:') ? 'http://127.0.0.1:18789' : '';
@@ -1221,10 +1426,78 @@
                   instantErrorEl.classList.add('text-[#FF3B30]', 'border-[#FF3B30]/30');
                   instantBioInputEl.classList.add('border-[#FF3B30]');
                   generateStorefrontBtn.disabled = false;
-                  generateStorefrontBtn.innerText = "Generate Storefront";
+                  generateStorefrontBtn.innerText = "Next";
               }
           });
       }
+      document.querySelectorAll(".save-draft-btn").forEach(btn => {
+        btn.addEventListener("click", (e) => {
+            const originalText = e.target.innerText;
+            e.target.innerText = "Saving...";
+            e.target.disabled = true;
+
+            const backendUrl = (window.location.origin.includes("localhost") || window.location.protocol === "file:") ? "http://127.0.0.1:18789" : "";
+            const tenantId = localStorage.getItem("tenant_id") || "storefront";
+            const userId = localStorage.getItem("user_id") || "test-user";
+
+            const currentStepEl = document.querySelector(".step.active");
+            let currentStepIdx = 0;
+            if (currentStepEl) {
+                const steps = Array.from(document.querySelectorAll(".step"));
+                currentStepIdx = steps.indexOf(currentStepEl);
+            }
+
+            const payload = {
+                wizardState: state,
+                step: currentStepIdx
+            };
+
+            if (window.__TAURI__ && window.__TAURI__.core) {
+                window.__TAURI__.core.invoke("save_onboarding_state", { state: payload }).then(() => {
+                    e.target.innerText = "Saved!";
+                    setTimeout(() => {
+                        e.target.innerText = originalText;
+                        e.target.disabled = false;
+                    }, 3000);
+                }).catch(err => {
+                    console.error("Failed to save draft", err);
+                    e.target.innerText = "Error!";
+                    setTimeout(() => {
+                        e.target.innerText = originalText;
+                        e.target.disabled = false;
+                    }, 3000);
+                });
+            } else {
+                fetch(`${backendUrl}/api/onboarding/state`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-Tenant-ID": tenantId,
+                        "X-User-ID": userId
+                    },
+                    body: JSON.stringify(payload)
+                }).then(res => {
+                    if (res.ok) {
+                        e.target.innerText = "Saved!";
+                        setTimeout(() => {
+                            e.target.innerText = originalText;
+                            e.target.disabled = false;
+                        }, 3000);
+                    } else {
+                        throw new Error("Failed to save");
+                    }
+                }).catch(err => {
+                    console.error("Failed to save draft", err);
+                    e.target.innerText = "Error!";
+                    setTimeout(() => {
+                        e.target.innerText = originalText;
+                        e.target.disabled = false;
+                    }, 3000);
+                });
+            }
+        });
+      });
+
 
       if (finishBtn) {
         finishBtn.addEventListener('click', () => {
@@ -1249,13 +1522,14 @@
 
                if (window.__TAURI__ && window.__TAURI__.core) {
                  finishBtn.disabled = true;
-                 finishBtn.innerHTML = '<div class="spinner"></div>Saving...';
+                 goToStep('step-loading');
                  window.__TAURI__.core.invoke("start_onboarding", { req }).then(() => {
                    window.location.href = "success.html";
                  }).catch((err) => {
                    console.error(err);
+                   goToStep('step-template');
                    finishBtn.disabled = false;
-                   finishBtn.innerText = "Finish Setup";
+                   finishBtn.innerText = "Launch Store";
                  });
                } else {
                  finishBtn.disabled = true;
@@ -1276,8 +1550,9 @@
                      }
                  }).catch((err) => {
                      console.error(err);
+                     goToStep('step-template');
                      finishBtn.disabled = false;
-                     finishBtn.innerText = "Finish Setup";
+                     finishBtn.innerText = "Launch Store";
                  });
                }
            }
@@ -1304,8 +1579,8 @@ document.addEventListener('DOMContentLoaded', () => {
         .ohc-tooltip {
             position: fixed;
             background: rgba(255, 255, 255, 0.85);
-            backdrop-filter: blur(20px) saturate(210%);
-            -webkit-backdrop-filter: blur(20px) saturate(210%);
+            backdrop-filter: blur(20px) saturate(2.1);
+            -webkit-backdrop-filter: blur(20px) saturate(2.1);
             border: 1px solid rgba(255, 255, 255, 0.6);
             border-radius: 16px;
             padding: 12px 16px;
@@ -1467,8 +1742,8 @@ document.addEventListener('DOMContentLoaded', () => {
             max-height: calc(100vh - 120px);
             max-width: calc(100vw - 40px);
             background: rgba(255, 255, 255, 0.85);
-            backdrop-filter: blur(30px) saturate(210%);
-            -webkit-backdrop-filter: blur(30px) saturate(210%);
+            backdrop-filter: blur(30px) saturate(2.1);
+            -webkit-backdrop-filter: blur(30px) saturate(2.1);
             border: 1px solid rgba(255, 255, 255, 0.6);
             border-radius: 16px;
             box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);

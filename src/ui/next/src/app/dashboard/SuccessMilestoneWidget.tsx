@@ -37,7 +37,7 @@ export function SuccessMilestoneWidget() {
   };
 
   return (
-    <section className="app-panel mb-6 border-2 border-indigo-200 bg-gradient-to-br from-indigo-50 to-white shadow-lg transform transition-all hover:scale-[1.01]">
+    <section className="glassmorphism app-panel mb-6 border-2 border-indigo-200 bg-gradient-to-br from-indigo-50 to-white shadow-lg transform transition-all hover:scale-[1.01]">
       <div className="app-panel-header border-b border-indigo-100 pb-4">
         <div>
           <h2 className="app-panel-title text-indigo-900 flex items-center gap-2">
@@ -57,7 +57,7 @@ export function SuccessMilestoneWidget() {
         <div className="flex flex-col sm:flex-row gap-3">
           <button
             onClick={handleShare}
-            className={`flex-1 py-3 px-4 rounded-xl font-bold font-outfit text-sm transition-all flex items-center justify-center gap-2 ${
+            className={`flex-1 min-h-[44px] min-w-[44px] py-3 px-4 rounded-xl font-bold font-outfit text-sm transition-all flex items-center justify-center gap-2 ${
               isShared
                 ? "bg-green-500 text-white shadow-md shadow-green-200"
                 : "bg-indigo-600 text-white hover:bg-indigo-700 shadow-md shadow-indigo-200"
@@ -74,7 +74,7 @@ export function SuccessMilestoneWidget() {
             href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(fullShareText)}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex-1 py-3 px-4 rounded-xl font-bold font-outfit text-sm bg-[#1DA1F2] text-white hover:bg-[#1a91da] shadow-md shadow-blue-200 transition-all flex items-center justify-center gap-2"
+            className="flex-1 min-h-[44px] min-w-[44px] py-3 px-4 rounded-xl font-bold font-outfit text-sm bg-[#1DA1F2] text-white hover:bg-[#1a91da] shadow-md shadow-blue-200 transition-all flex items-center justify-center gap-2"
           >
             🐦 Share on X
           </a>
