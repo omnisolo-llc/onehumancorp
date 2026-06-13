@@ -492,6 +492,22 @@ impl OnboardingAgent {
         .map_err(|e| e.to_string())?;
 
         crate::telemetry::track_onboarding_step(&org_id, "start_onboarding", start_time.elapsed().as_millis() as u64);
+
+        let completion_event = ::server_ohc::orchestration::TeammateMeshEvent {
+            agent_id: "system".to_string(),
+            action: "TenantOnboardingCompleted".to_string(),
+            status: "completed".to_string(),
+            payload: serde_json::to_vec(&serde_json::json!({
+                "organization_id": org_id,
+                "company_name": company_name,
+                "business_type": business_type,
+                "location": location,
+                "domain_choice": domain_choice,
+            })).unwrap_or_default(),
+            msg_id: uuid::Uuid::new_v4().to_string(),
+        };
+        let _ = self.hub.publish_teammate_event("onboarding_completed_inbox".to_string(), completion_event);
+
         Ok(StartOnboardingResponse {
             success: true,
             message: format!("Successfully onboarded {} as a {}!", company_name, business_type),

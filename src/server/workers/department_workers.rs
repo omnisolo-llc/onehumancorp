@@ -1117,6 +1117,96 @@ let db_for_products = self.db.clone();
             }
         });
 
+        let db_for_onboarding_completed = self.db.clone();
+        let mut completed_rx = hub.subscribe_teammate_mesh("onboarding_completed_inbox".to_string());
+        tokio::spawn(async move {
+            while let Ok(event) = completed_rx.recv().await {
+                if event.action == "TenantOnboardingCompleted" {
+                    if let Ok(payload_str) = String::from_utf8(event.payload.clone()) {
+                        if let Ok(payload_json) = serde_json::from_str::<serde_json::Value>(&payload_str) {
+                            let tenant_id = payload_json.get("organization_id").and_then(|o| o.as_str()).unwrap_or("system").to_string();
+                            let company_name = payload_json.get("company_name").and_then(|o| o.as_str()).unwrap_or("").to_string();
+                            let business_type = payload_json.get("business_type").and_then(|o| o.as_str()).unwrap_or("").to_string();
+                            let location = payload_json.get("location").and_then(|o| o.as_str()).unwrap_or("").to_string();
+
+                            let prompt = format!("You are The Promoter, an AI marketing expert. Draft a \"We are Open!\" launch campaign for '{}' (Type: {}, Location: {}). Generate 3 social media posts (TikTok, Instagram, Facebook). Format the output as JSON with keys 'tiktok', 'instagram', 'facebook'.", company_name, business_type, location);
+
+                            let mut drafted_msg = r#"{"tiktok": "We are officially open! Come check us out.", "instagram": "We are open for business! Visit us today.", "facebook": "Excited to announce we are officially open!"}"#.to_string();
+
+                            let mut attempts = 0;
+                            while attempts < MAX_RETRIES {
+                                let ai_op = async {
+                                    if let Ok(mut client) = ::server_ohc::orchestration::hub_service_client::HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:8081".to_string())).await {
+                                        let reason_req = ::server_ohc::orchestration::ReasonRequest {
+                                            prompt: prompt.clone(),
+                                            from_agent_id: "The Promoter".into(),
+                                        };
+                                        if let Ok(res) = client.reason(tonic::Request::new(reason_req)).await {
+                                            return Ok(res.into_inner().content);
+                                        }
+                                    }
+                                    Err("AI call failed".to_string())
+                                };
+
+                                match tokio::time::timeout(AI_AGENT_TIMEOUT, ai_op).await {
+                                    Ok(Ok(content)) => {
+                                        drafted_msg = content;
+                                        break;
+                                    },
+                                    _ => {
+                                        attempts += 1;
+                                        tokio::time::sleep(std::time::Duration::from_secs(2u64.pow(attempts))).await;
+                                    }
+                                }
+                            }
+
+                            let mut parsed: serde_json::Value = serde_json::from_str(&drafted_msg).unwrap_or(serde_json::json!({
+                                "tiktok": "We are officially open! Come check us out.",
+                                "instagram": "We are open for business! Visit us today.",
+                                "facebook": "Excited to announce we are officially open!"
+                            }));
+
+                            if let Some(obj) = parsed.as_object_mut() {
+                                obj.insert("feature_type".to_string(), serde_json::json!("social_post_draft"));
+                            }
+
+                            let task_id = Uuid::new_v4().to_string();
+                            let description = "The Promoter drafted a 3-post \"We are Open!\" launch campaign for your business. Review and schedule.";
+
+                            match &db_for_onboarding_completed.store {
+                                crate::db::DbStore::Postgres => {
+                                    let _ = sqlx::query(
+                                        "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state) VALUES (, , , , , )"
+                                    )
+                                    .bind(&task_id)
+                                    .bind(&tenant_id)
+                                    .bind("marketing")
+                                    .bind(serde_json::json!({ "description": description, "feature_type": "social_post_draft" }))
+                                    .bind(&parsed)
+                                    .bind("PENDING_APPROVAL")
+                                    .execute(&db_for_onboarding_completed.pool)
+                                    .await;
+                                },
+                                crate::db::DbStore::Sqlite(pool) => {
+                                    let _ = sqlx::query(
+                                        "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state) VALUES (?, ?, ?, ?, ?, ?)"
+                                    )
+                                    .bind(&task_id)
+                                    .bind(&tenant_id)
+                                    .bind("marketing")
+                                    .bind(serde_json::json!({ "description": description, "feature_type": "social_post_draft" }))
+                                    .bind(&parsed)
+                                    .bind("PENDING_APPROVAL")
+                                    .execute(pool)
+                                    .await;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
         let db_for_onboarding = self.db.clone();
         tokio::spawn(async move {
             while let Ok(event) = promoter_rx.recv().await {
@@ -1704,4 +1794,212 @@ mod tests {
              assert_eq!(count, 1);
          }
      }
+}
+
+pub struct ScoutWorker {
+    pub db: Arc<DB>,
+    pub hub: Arc<crate::hub::Hub>,
+}
+
+impl ScoutWorker {
+    pub fn new(db: Arc<DB>, hub: Arc<crate::hub::Hub>) -> Self {
+        Self { db, hub }
+    }
+
+    pub fn start(&self) {
+        let db = self.db.clone();
+        let hub = self.hub.clone();
+        let mut rx = hub.subscribe_teammate_mesh("onboarding_completed_inbox".to_string());
+
+        tokio::spawn(async move {
+            while let Ok(event) = rx.recv().await {
+                if event.action == "TenantOnboardingCompleted" {
+                    if let Ok(payload_str) = String::from_utf8(event.payload.clone()) {
+                        if let Ok(payload_json) = serde_json::from_str::<serde_json::Value>(&payload_str) {
+                            let tenant_id = payload_json.get("organization_id").and_then(|o| o.as_str()).unwrap_or("system").to_string();
+                            let company_name = payload_json.get("company_name").and_then(|o| o.as_str()).unwrap_or("").to_string();
+                            let business_type = payload_json.get("business_type").and_then(|o| o.as_str()).unwrap_or("").to_string();
+                            let location = payload_json.get("location").and_then(|o| o.as_str()).unwrap_or("").to_string();
+
+                            let prompt = format!("You are The Scout, an AI SEO expert. Do a mock search for the business '{}' (Type: {}, Location: {}) and draft an SEO meta description (max 160 characters) and a title tag for their new website. Format the output as JSON with keys 'title' and 'description'.", company_name, business_type, location);
+
+                            let mut drafted_msg = r#"{"title": "Awesome Business", "description": "The best business in town."}"#.to_string();
+
+                            let mut attempts = 0;
+                            while attempts < MAX_RETRIES {
+                                let ai_op = async {
+                                    if let Ok(mut client) = ::server_ohc::orchestration::hub_service_client::HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:8081".to_string())).await {
+                                        let reason_req = ::server_ohc::orchestration::ReasonRequest {
+                                            prompt: prompt.clone(),
+                                            from_agent_id: "The Scout".into(),
+                                        };
+                                        if let Ok(res) = client.reason(tonic::Request::new(reason_req)).await {
+                                            return Ok(res.into_inner().content);
+                                        }
+                                    }
+                                    Err("AI call failed".to_string())
+                                };
+
+                                match tokio::time::timeout(AI_AGENT_TIMEOUT, ai_op).await {
+                                    Ok(Ok(content)) => {
+                                        drafted_msg = content;
+                                        break;
+                                    },
+                                    _ => {
+                                        attempts += 1;
+                                        tokio::time::sleep(std::time::Duration::from_secs(2u64.pow(attempts))).await;
+                                    }
+                                }
+                            }
+
+                            let mut parsed: serde_json::Value = serde_json::from_str(&drafted_msg).unwrap_or(serde_json::json!({
+                                "title": format!("{} - {}", company_name, business_type),
+                                "description": format!("Welcome to {} in {}. We are a {}.", company_name, location, business_type)
+                            }));
+
+                            if let Some(obj) = parsed.as_object_mut() {
+                                obj.insert("feature_type".to_string(), serde_json::json!("seo_meta_draft"));
+                            }
+
+                            let task_id = Uuid::new_v4().to_string();
+                            let description = "The Scout researched your market and drafted initial SEO meta tags for your website. Review and approve to publish.";
+
+                            match &db.store {
+                                crate::db::DbStore::Postgres => {
+                                    let _ = sqlx::query(
+                                        "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state) VALUES ($1, $2, $3, $4, $5, $6)"
+                                    )
+                                    .bind(&task_id)
+                                    .bind(&tenant_id)
+                                    .bind("discovery")
+                                    .bind(serde_json::json!({ "description": description, "feature_type": "seo_meta_draft" }))
+                                    .bind(&parsed)
+                                    .bind("PENDING_APPROVAL")
+                                    .execute(&db.pool)
+                                    .await;
+                                },
+                                crate::db::DbStore::Sqlite(pool) => {
+                                    let _ = sqlx::query(
+                                        "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state) VALUES (?, ?, ?, ?, ?, ?)"
+                                    )
+                                    .bind(&task_id)
+                                    .bind(&tenant_id)
+                                    .bind("discovery")
+                                    .bind(serde_json::json!({ "description": description, "feature_type": "seo_meta_draft" }))
+                                    .bind(&parsed)
+                                    .bind("PENDING_APPROVAL")
+                                    .execute(pool)
+                                    .await;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+}
+
+pub struct ManagerWorker {
+    pub db: Arc<DB>,
+    pub hub: Arc<crate::hub::Hub>,
+}
+
+impl ManagerWorker {
+    pub fn new(db: Arc<DB>, hub: Arc<crate::hub::Hub>) -> Self {
+        Self { db, hub }
+    }
+
+    pub fn start(&self) {
+        let db = self.db.clone();
+        let hub = self.hub.clone();
+        let mut rx = hub.subscribe_teammate_mesh("onboarding_completed_inbox".to_string());
+
+        tokio::spawn(async move {
+            while let Ok(event) = rx.recv().await {
+                if event.action == "TenantOnboardingCompleted" {
+                    if let Ok(payload_str) = String::from_utf8(event.payload.clone()) {
+                        if let Ok(payload_json) = serde_json::from_str::<serde_json::Value>(&payload_str) {
+                            let tenant_id = payload_json.get("organization_id").and_then(|o| o.as_str()).unwrap_or("system").to_string();
+                            let company_name = payload_json.get("company_name").and_then(|o| o.as_str()).unwrap_or("").to_string();
+                            let business_type = payload_json.get("business_type").and_then(|o| o.as_str()).unwrap_or("").to_string();
+                            let location = payload_json.get("location").and_then(|o| o.as_str()).unwrap_or("").to_string();
+
+                            let prompt = format!("You are The Manager, an AI operations expert. Draft a standard set of operating hours (e.g. 9am-5pm) and a delivery or service radius (e.g. 10 miles) for '{}' (Type: {}, Location: {}). Format the output as JSON with keys 'operating_hours' (string) and 'service_radius' (string).", company_name, business_type, location);
+
+                            let mut drafted_msg = r#"{"operating_hours": "9am - 5pm, Mon-Fri", "service_radius": "15 miles"}"#.to_string();
+
+                            let mut attempts = 0;
+                            while attempts < MAX_RETRIES {
+                                let ai_op = async {
+                                    if let Ok(mut client) = ::server_ohc::orchestration::hub_service_client::HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:8081".to_string())).await {
+                                        let reason_req = ::server_ohc::orchestration::ReasonRequest {
+                                            prompt: prompt.clone(),
+                                            from_agent_id: "The Manager".into(),
+                                        };
+                                        if let Ok(res) = client.reason(tonic::Request::new(reason_req)).await {
+                                            return Ok(res.into_inner().content);
+                                        }
+                                    }
+                                    Err("AI call failed".to_string())
+                                };
+
+                                match tokio::time::timeout(AI_AGENT_TIMEOUT, ai_op).await {
+                                    Ok(Ok(content)) => {
+                                        drafted_msg = content;
+                                        break;
+                                    },
+                                    _ => {
+                                        attempts += 1;
+                                        tokio::time::sleep(std::time::Duration::from_secs(2u64.pow(attempts))).await;
+                                    }
+                                }
+                            }
+
+                            let mut parsed: serde_json::Value = serde_json::from_str(&drafted_msg).unwrap_or(serde_json::json!({
+                                "operating_hours": "9am - 5pm, Mon-Fri",
+                                "service_radius": "10 miles"
+                            }));
+
+                            if let Some(obj) = parsed.as_object_mut() {
+                                obj.insert("feature_type".to_string(), serde_json::json!("ops_settings_draft"));
+                            }
+
+                            let task_id = Uuid::new_v4().to_string();
+                            let description = "The Manager has drafted suggested operating hours and service radius based on your location and business type. Review and approve to apply.";
+
+                            match &db.store {
+                                crate::db::DbStore::Postgres => {
+                                    let _ = sqlx::query(
+                                        "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state) VALUES ($1, $2, $3, $4, $5, $6)"
+                                    )
+                                    .bind(&task_id)
+                                    .bind(&tenant_id)
+                                    .bind("operations")
+                                    .bind(serde_json::json!({ "description": description, "feature_type": "ops_settings_draft" }))
+                                    .bind(&parsed)
+                                    .bind("PENDING_APPROVAL")
+                                    .execute(&db.pool)
+                                    .await;
+                                },
+                                crate::db::DbStore::Sqlite(pool) => {
+                                    let _ = sqlx::query(
+                                        "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state) VALUES (?, ?, ?, ?, ?, ?)"
+                                    )
+                                    .bind(&task_id)
+                                    .bind(&tenant_id)
+                                    .bind("operations")
+                                    .bind(serde_json::json!({ "description": description, "feature_type": "ops_settings_draft" }))
+                                    .bind(&parsed)
+                                    .bind("PENDING_APPROVAL")
+                                    .execute(pool)
+                                    .await;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
 }
