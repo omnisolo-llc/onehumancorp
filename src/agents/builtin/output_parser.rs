@@ -215,7 +215,9 @@ impl<'a, T: DeserializeOwned> RetryWithErrorOutputParser<'a, T> {
                             "Your previous completion failed to parse.\nFailed completion: {}\nParsing error: {}\nPlease strictly use the 'structured_output' tool to return the requested data.",
                             msg.content, parse_error_msg
                         );
-                        current_req.messages.push(Message::user(error_context));
+                        let mut error_msg = Message::user(error_context);
+                        error_msg.previous_response_id = msg.response_id.clone();
+                        current_req.messages.push(error_msg);
                     }
                     attempt += 1;
                 }
