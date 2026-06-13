@@ -187,7 +187,7 @@ impl AppServer {
             let resp = JsonRpcResponse {
                 jsonrpc: "2.0".to_string(),
                 id: req.id,
-                result: serde_json::from_str(&result).ok(),
+                result: Some(result),
                 error: None,
                 meta: None,
             };
@@ -203,7 +203,7 @@ impl AppServer {
             let resp = JsonRpcResponse {
                 jsonrpc: "2.0".to_string(),
                 id: req.id,
-                result: serde_json::from_str(&result).ok(),
+                result: Some(result),
                 error: None,
                 meta: None,
             };
@@ -214,7 +214,7 @@ impl AppServer {
             let resp = JsonRpcResponse {
                 jsonrpc: "2.0".to_string(),
                 id: req.id,
-                result: serde_json::from_str(&result).ok(),
+                result: Some(result),
                 error: None,
                 meta: None,
             };
@@ -230,7 +230,7 @@ impl AppServer {
             let resp = JsonRpcResponse {
                 jsonrpc: "2.0".to_string(),
                 id: req.id,
-                result: serde_json::from_str(&result).ok(),
+                result: Some(result),
                 error: None,
                 meta: None,
             };
@@ -284,7 +284,7 @@ impl AppServer {
             let resp = JsonRpcResponse {
                 jsonrpc: "2.0".to_string(),
                 id: req.id,
-                result: serde_json::from_str(&result).ok(),
+                result: Some(result),
                 error: None,
                 meta: None,
             };
