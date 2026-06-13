@@ -80,11 +80,11 @@ pub async fn update_tooltip(axum::extract::Json(payload): axum::extract::Json<To
 pub fn get_articles() -> Vec<HelpArticle> {
     vec![
         HelpArticle { category: "Getting Started".to_string(), title: "Getting Started".to_string(), desc: "Learn how to easily set up your store and accept your first payment.".to_string(), link: "/help/getting-started-1".to_string() },
-        HelpArticle { category: "My Store".to_string(), title: "Adding Products".to_string(), desc: "Add products, track what's in stock, and change how your store looks.".to_string(), link: "/help/my-store".to_string() },
-        HelpArticle { category: "Payments".to_string(), title: "Getting Paid".to_string(), desc: "Set up how you get paid, view deposits, and handle simple taxes.".to_string(), link: "/help/payments".to_string() },
-        HelpArticle { category: "AI Agents".to_string(), title: "Your AI Helpers".to_string(), desc: "Learn how to hire AI helpers and give them tasks to do.".to_string(), link: "/help/ai-agents".to_string() },
-        HelpArticle { category: "Marketing".to_string(), title: "Finding Customers".to_string(), desc: "Send emails to customers and grow your business easily.".to_string(), link: "/help/marketing".to_string() },
-        HelpArticle { category: "Account & Billing".to_string(), title: "Account & Billing".to_string(), desc: "View your bills, manage your plan, and invite team members.".to_string(), link: "/help/account-billing".to_string() },
+        HelpArticle { category: "My Store".to_string(), title: "Adding Products".to_string(), desc: "Add products, track what's in stock, and change how your store looks.".to_string(), link: "/help/add-products".to_string() },
+        HelpArticle { category: "Payments".to_string(), title: "Getting Paid".to_string(), desc: "Set up how you get paid, view deposits, and handle simple taxes.".to_string(), link: "/help/accept-payments".to_string() },
+        HelpArticle { category: "AI Agents".to_string(), title: "Your AI Helpers".to_string(), desc: "Learn how to hire AI helpers and give them tasks to do.".to_string(), link: "/help/ai-support".to_string() },
+        HelpArticle { category: "Marketing".to_string(), title: "Finding Customers".to_string(), desc: "Send emails to customers and grow your business easily.".to_string(), link: "/help/marketing-tools".to_string() },
+        HelpArticle { category: "Account & Billing".to_string(), title: "Account & Billing".to_string(), desc: "View your bills, manage your plan, and invite team members.".to_string(), link: "/help/billing-settings".to_string() },
         HelpArticle { category: "Advanced".to_string(), title: "API Reference".to_string(), desc: "Use our OpenAPI specs to integrate with OHC.".to_string(), link: "/api-docs".to_string() },
         HelpArticle { category: "Advanced".to_string(), title: "Webhooks".to_string(), desc: "Listen to real-time events.".to_string(), link: "/help/webhooks".to_string() }
     ]
@@ -156,7 +156,7 @@ pub fn get_article(id: &str) -> Option<HelpArticleDetail> {
       </div>
             "#.to_string()
         }),
-        "my-store" => Some(HelpArticleDetail {
+        "add-products" => Some(HelpArticleDetail {
             title: "Managing My Store".to_string(),
             content_html: r#"
       <p class="text-gray-700 mb-4 leading-relaxed text-lg">
@@ -176,7 +176,7 @@ pub fn get_article(id: &str) -> Option<HelpArticleDetail> {
       </p>
             "#.to_string()
         }),
-        "marketing" => Some(HelpArticleDetail {
+        "marketing-tools" => Some(HelpArticleDetail {
             title: "Finding Customers".to_string(),
             content_html: r#"
       <p class="text-gray-700 mb-4 leading-relaxed text-lg">
@@ -196,7 +196,7 @@ pub fn get_article(id: &str) -> Option<HelpArticleDetail> {
       </p>
             "#.to_string()
         }),
-        "account-billing" => Some(HelpArticleDetail {
+        "billing-settings" => Some(HelpArticleDetail {
             title: "Account & Billing".to_string(),
             content_html: r#"
       <p class="text-gray-700 mb-4 leading-relaxed text-lg">
@@ -216,7 +216,7 @@ pub fn get_article(id: &str) -> Option<HelpArticleDetail> {
       </p>
             "#.to_string()
         }),
-        "payments" => Some(HelpArticleDetail {
+        "accept-payments" => Some(HelpArticleDetail {
             title: "Getting Paid".to_string(),
             content_html: r#"
       <p class="text-gray-700 mb-4 leading-relaxed text-lg">
@@ -236,7 +236,7 @@ pub fn get_article(id: &str) -> Option<HelpArticleDetail> {
       </p>
             "#.to_string()
         }),
-        "ai-agents" => Some(HelpArticleDetail {
+        "ai-support" => Some(HelpArticleDetail {
             title: "Your AI Helpers".to_string(),
             content_html: r#"
       <p class="text-gray-700 mb-4 leading-relaxed text-lg">

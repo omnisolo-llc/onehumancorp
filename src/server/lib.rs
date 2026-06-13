@@ -5239,26 +5239,26 @@ async fn create_ui_bom_item_handler(
             let query = req.message.to_lowercase();
             let mut reply = "I am your AI Help Agent! I specialize in answering questions about OHC features and helping you grow your small business. Check out our Getting Started guide.".to_string();
             let mut link_title = "Read the full article →";
-            let mut link_url = "/help/getting-started";
+            let mut link_url = "/help/getting-started-1";
 
             if query.contains("getting started") {
                 reply = format!("Based on our help center: {}", help_articles[0].1);
-                link_url = "/help/getting-started";
+                link_url = "/help/getting-started-1";
             } else if query.contains("store") {
                 reply = format!("Based on our help center: {}", help_articles[1].1);
-                link_url = "/help/my-store";
+                link_url = "/help/add-products";
             } else if query.contains("payment") {
                 reply = format!("Based on our help center: {}", help_articles[2].1);
-                link_url = "/help/payments";
+                link_url = "/help/accept-payments";
             } else if query.contains("ai agent") {
                 reply = format!("Based on our help center: {}", help_articles[3].1);
-                link_url = "/help/ai-agents";
+                link_url = "/help/ai-support";
             } else if query.contains("marketing") {
                 reply = format!("Based on our help center: {}", help_articles[4].1);
-                link_url = "/help/marketing";
+                link_url = "/help/marketing-tools";
             } else if query.contains("billing") {
                 reply = format!("Based on our help center: {}", help_articles[5].1);
-                link_url = "/help/account-billing";
+                link_url = "/help/billing-settings";
             } else if query.contains("api") || query.contains("advanced") {
                 reply = format!("Based on our help center: {}", help_articles[6].1);
                 link_url = "/api-docs";
