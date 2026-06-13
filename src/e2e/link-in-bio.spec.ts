@@ -9,13 +9,13 @@ test.describe('Link-in-Bio Generator Growth Loop', () => {
         });
 
         // 2. Go to the Link-in-Bio Generator page
-        await page.goto('/link-in-bio-generator');
+        await page.goto('/link-in-bio-generator.html');
 
         // Check the page header
         await expect(page.locator('h1', { hasText: 'Link-in-Bio Generator' })).toBeVisible();
 
         // 3. Configure the bio page
-        const businessNameInputs = page.locator('input');
+        const businessNameInputs = page.locator('input[id="store-name"]');
         // The first input is usually the store name based on layout
         await businessNameInputs.first().fill('Awesome E2E Bakery');
 
@@ -35,7 +35,7 @@ test.describe('Link-in-Bio Generator Growth Loop', () => {
         await page.waitForTimeout(500);
 
         // 5. Navigate to the generated public page
-        await page.goto('/bio/e2e-bakery');
+        await page.goto('/bio.html?tenant=e2e-bakery');
 
         // Verify the public page loaded the saved data
         await expect(page.locator('h1', { hasText: 'Awesome E2E Bakery' })).toBeVisible();
@@ -48,10 +48,10 @@ test.describe('Link-in-Bio Generator Growth Loop', () => {
     });
 
     test('Dashboard contains link to Link-in-Bio generator', async ({ page }) => {
-        await page.goto('/dashboard');
+        await page.goto('/dashboard.html');
 
         // Find the link to create a link in bio page
-        const linkInBioButton = page.locator('a[href="/link-in-bio-generator"]');
+        const linkInBioButton = page.locator('a[href="link-in-bio-generator.html"]');
         await expect(linkInBioButton).toBeVisible();
         await expect(linkInBioButton).toContainText('Create Link-in-Bio Page');
     });

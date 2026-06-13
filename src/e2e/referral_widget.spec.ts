@@ -6,7 +6,7 @@ test.describe('Referral Widget Growth Loop', () => {
         await page.setViewportSize({ width: 1440, height: 900 });
 
         // Navigate directly to referral widget builder
-        await page.goto('/referral-widget');
+        await page.goto('/referral-widget.html');
 
         // Verify page loads with the builder
         await expect(page.getByRole('heading', { name: 'Referral Widget Builder' })).toBeVisible();
@@ -15,7 +15,7 @@ test.describe('Referral Widget Growth Loop', () => {
         await expect(page.getByRole('link', { name: /Powered by OHC/i })).toBeVisible();
 
         // Try to toggle "Remove Branding"
-        await page.getByLabel(/Remove "Powered by OHC"/).click();
+        await page.locator('label', { hasText: 'Remove "Powered by OHC" Badge (Pro)' }).click();
 
         // Verify soft paywall pops up
         await expect(page.getByRole('heading', { name: 'Upgrade to Pro' })).toBeVisible();
@@ -25,7 +25,7 @@ test.describe('Referral Widget Growth Loop', () => {
         await page.evaluate(() => { const btn = Array.from(document.querySelectorAll('button')).find(el => el.textContent === 'Upgrade to Pro'); if(btn) btn.click(); });
 
         // Wait for navigation
-        await page.waitForURL('**/pricing*');
+        await page.waitForURL('**/pricing.html*');
 
         // Verify we are on pricing page
         await expect(page.getByRole('heading', { name: 'Pricing Plans' })).toBeVisible();

@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Referral Widget Builder</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap');
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Inter', sans-serif;
+      background: #F5F5F7;
+      color: #1D1D1F;
+    }
+    .font-outfit { font-family: 'Outfit', sans-serif; }
+
+    .container {
+      padding: 24px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    header {
+      margin-bottom: 40px;
+    }
+
+    h1 {
+      font-size: 36px;
+      margin-bottom: 12px;
+      letter-spacing: -0.02em;
+    }
+
+    p.subtitle {
+      color: #666;
+      font-size: 18px;
+      max-width: 600px;
+      line-height: 1.5;
+    }
+
+    .main-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 32px;
+    }
+    @media(min-width: 768px) {
+      .main-grid {
+        flex-direction: row;
+      }
+    }
+
+    .config-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    .glassmorphism {
+      background: rgba(255, 255, 255, 0.65);
+      backdrop-filter: blur(30px) saturate(210%);
+      -webkit-backdrop-filter: blur(30px) saturate(210%);
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      border-radius: 24px;
+      padding: 32px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    }
+
+    .form-group {
+      margin-bottom: 24px;
+    }
+
+    label {
+      display: block;
+      font-size: 14px;
+      font-weight: 500;
+      margin-bottom: 8px;
+      color: #374151;
+    }
+
+    .flex-row {
+      display: flex;
+      gap: 8px;
+    }
+
+    input[type="number"], select {
+      padding: 8px 12px;
+      border: 1px solid #D1D5DB;
+      border-radius: 6px;
+      font-size: 14px;
+      outline: none;
+    }
+    input[type="number"]:focus, select:focus {
+      border-color: #6366F1;
+      box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+    }
+
+    .theme-toggle {
+      display: flex;
+      gap: 4px;
+      background: #F3F4F6;
+      padding: 4px;
+      border-radius: 8px;
+    }
+    .theme-btn {
+      flex: 1;
+      padding: 8px;
+      border: none;
+      background: transparent;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      color: #6B7280;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .theme-btn.active {
+      background: white;
+      color: #111827;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    }
+
+    .checkbox-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+    }
+    .checkbox-group input {
+      width: 16px;
+      height: 16px;
+      accent-color: #6366F1;
+    }
+
+    .primary-btn {
+      width: 100%;
+      padding: 12px;
+      background: #4F46E5;
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-weight: 500;
+      font-size: 16px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .primary-btn:hover {
+      background: #4338CA;
+    }
+
+    .preview-panel {
+      flex: 2;
+      background: linear-gradient(135deg, #EEF2FF 0%, #FAF5FF 100%);
+      border-radius: 24px;
+      padding: 32px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      border: 1px solid rgba(255,255,255,0.5);
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
+    }
+
+    .preview-label {
+      position: absolute;
+      top: 16px;
+      left: 16px;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      color: #9CA3AF;
+      letter-spacing: 0.05em;
+    }
+
+    .widget-preview {
+      width: 100%;
+      max-width: 400px;
+      border-radius: 16px;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+      overflow: hidden;
+      transition: all 0.3s ease;
+    }
+    .widget-preview.light {
+      background: white;
+      color: #111827;
+      border: 1px solid #F3F4F6;
+    }
+    .widget-preview.dark {
+      background: #1F2937;
+      color: #F9FAFB;
+      border: 1px solid #374151;
+    }
+
+    .widget-content {
+      padding: 24px;
+      text-align: center;
+    }
+
+    .widget-icon {
+      width: 64px;
+      height: 64px;
+      margin: 0 auto 16px;
+      background: #E0E7FF;
+      color: #4F46E5;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+    }
+
+    .widget-title {
+      font-size: 20px;
+      font-weight: 700;
+      margin: 0 0 8px 0;
+    }
+
+    .widget-desc {
+      font-size: 14px;
+      line-height: 1.5;
+      margin: 0 0 24px 0;
+      opacity: 0.8;
+    }
+
+    .widget-link-box {
+      display: flex;
+      background: #F3F4F6;
+      border-radius: 8px;
+      padding: 4px;
+      margin-bottom: 16px;
+    }
+    .widget-preview.dark .widget-link-box {
+      background: #374151;
+    }
+    .widget-link-box input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      padding: 0 8px;
+      font-size: 12px;
+      color: #6B7280;
+    }
+    .widget-preview.dark .widget-link-box input {
+      color: #D1D5DB;
+    }
+    .widget-link-box button {
+      background: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 700;
+      color: #4F46E5;
+      cursor: pointer;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    }
+    .widget-preview.dark .widget-link-box button {
+      background: #4B5563;
+      color: #E0E7FF;
+    }
+
+    .widget-footer {
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid;
+      font-size: 12px;
+    }
+    .widget-preview.light .widget-footer {
+      border-color: #F3F4F6;
+    }
+    .widget-preview.dark .widget-footer {
+      border-color: #374151;
+    }
+    .widget-footer a {
+      color: #6B7280;
+      font-weight: 700;
+      text-decoration: none;
+    }
+    .widget-footer a:hover {
+      text-decoration: underline;
+    }
+
+    /* Modals */
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.5);
+      backdrop-filter: blur(4px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+    }
+    .modal-content {
+      background: white;
+      border-radius: 24px;
+      padding: 32px;
+      width: 100%;
+      max-width: 500px;
+      position: relative;
+      box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
+    }
+    .modal-close {
+      position: absolute;
+      top: 24px;
+      right: 24px;
+      background: transparent;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+      color: #9CA3AF;
+    }
+
+    .code-area {
+      width: 100%;
+      height: 120px;
+      padding: 16px;
+      background: #F9FAFB;
+      border: 1px solid #E5E7EB;
+      border-radius: 12px;
+      font-family: monospace;
+      font-size: 14px;
+      resize: none;
+      margin-bottom: 24px;
+      box-sizing: border-box;
+    }
+
+    .paywall-modal {
+      text-align: center;
+    }
+    .paywall-icon {
+      width: 64px;
+      height: 64px;
+      margin: 0 auto 24px;
+      background: #E0E7FF;
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 32px;
+    }
+
+    /* Back button */
+    .back-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: #6B7280;
+      text-decoration: none;
+      font-weight: 500;
+      margin-bottom: 24px;
+      transition: color 0.2s;
+    }
+    .back-btn:hover {
+      color: #111827;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <a href="dashboard.html" class="back-btn">← Back to Dashboard</a>
+
+    <header>
+      <h1 class="font-outfit">Referral Widget Builder</h1>
+      <p class="subtitle">Turn your best customers into your marketing team. Embed this one-tap referral widget anywhere to acquire new customers.</p>
+    </header>
+
+    <div class="main-grid">
+      <div class="config-panel">
+        <div class="glassmorphism">
+          <h2 class="font-outfit" style="margin-top:0; margin-bottom:24px; font-size:20px; display:flex; align-items:center; gap:8px;">
+            <span style="color:#6366F1">⚙️</span> Configuration
+          </h2>
+
+          <div class="form-group">
+            <label>Offer</label>
+            <div class="flex-row">
+              <input type="number" id="discount-amount" value="10" style="width: 80px;">
+              <select id="discount-type" style="flex:1;">
+                <option value="%">% Off</option>
+                <option value="$">$ Off</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Theme</label>
+            <div class="theme-toggle">
+              <button class="theme-btn active" id="theme-light">Light</button>
+              <button class="theme-btn" id="theme-dark">Dark</button>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="checkbox-group">
+              <input type="checkbox" id="remove-branding">
+              <span>Remove "Powered by OHC" Badge (Pro)</span>
+            </label>
+          </div>
+
+          <button class="primary-btn" id="get-code-btn">Get Widget Code</button>
+        </div>
+
+        <div class="glassmorphism" style="padding: 24px;">
+          <h3 class="font-outfit" style="margin-top:0; margin-bottom:8px; font-size:16px;">🚀 Viral Growth</h3>
+          <p style="margin:0; font-size:14px; color:#4B5563; line-height:1.5;">Referral loops lower your Customer Acquisition Cost. Add this widget to your post-checkout page to turn successful orders into new leads instantly.</p>
+        </div>
+      </div>
+
+      <div class="preview-panel">
+        <div class="preview-label">Live Preview</div>
+        <div class="widget-preview light" id="widget-preview">
+          <div class="widget-content">
+            <div class="widget-icon">🎁</div>
+            <h3 class="widget-title font-outfit" id="preview-title">Give 10%, Get 10%</h3>
+            <p class="widget-desc" id="preview-desc">Share your link with friends. They get 10% off their first order, and you get 10% off your next!</p>
+
+            <div class="widget-link-box">
+              <input type="text" readonly id="preview-link" value="https://app.onehumancorp.com/onboarding?ref=my-store&promo=ref123">
+              <button>Copy Link</button>
+            </div>
+
+            <div class="widget-footer" id="preview-footer">
+              <a href="https://ohc.store" target="_blank">⚡ Powered by OHC</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Embed Code Modal -->
+  <div class="modal-overlay" id="embed-modal">
+    <div class="modal-content">
+      <button class="modal-close" onclick="document.getElementById('embed-modal').style.display='none'">&times;</button>
+      <h2 class="font-outfit" style="margin-top:0; margin-bottom:8px;">Embed Referral Widget</h2>
+      <p style="color:#6B7280; margin-bottom:24px; font-size:14px;">Copy and paste this HTML snippet into your post-checkout page.</p>
+
+      <textarea class="code-area" id="embed-code" readonly></textarea>
+
+      <div style="display:flex; gap:12px;">
+        <button class="primary-btn" id="copy-code-btn" style="flex:1;">Copy Code</button>
+        <button class="primary-btn" onclick="document.getElementById('embed-modal').style.display='none'" style="flex:1; background:#F3F4F6; color:#111827;">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Soft Paywall Modal -->
+  <div class="modal-overlay" id="paywall-modal">
+    <div class="modal-content paywall-modal">
+      <button class="modal-close" onclick="document.getElementById('paywall-modal').style.display='none'; document.getElementById('remove-branding').checked=false;">&times;</button>
+      <div class="paywall-icon">✨</div>
+      <h2 class="font-outfit" style="margin-top:0; margin-bottom:12px;">Upgrade to Pro</h2>
+      <p style="color:#6B7280; margin-bottom:24px; line-height:1.5;">Make the Referral Widget 100% yours. Upgrade to Pro to remove the "Powered by OHC" watermark.</p>
+
+      <button class="primary-btn" onclick="window.location.href='pricing.html'">Upgrade to Pro</button>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const tenant = localStorage.getItem('tenant') || 'my-store';
+      const hasPro = localStorage.getItem('has_pro') === 'true';
+
+      const amountInput = document.getElementById('discount-amount');
+      const typeInput = document.getElementById('discount-type');
+      const themeLightBtn = document.getElementById('theme-light');
+      const themeDarkBtn = document.getElementById('theme-dark');
+      const brandingCheckbox = document.getElementById('remove-branding');
+
+      const previewTitle = document.getElementById('preview-title');
+      const previewDesc = document.getElementById('preview-desc');
+      const previewLink = document.getElementById('preview-link');
+      const previewFooter = document.getElementById('preview-footer');
+      const widgetPreview = document.getElementById('widget-preview');
+
+      let currentTheme = 'light';
+
+      previewLink.value = `https://app.onehumancorp.com/onboarding?ref=${tenant}&promo=ref123`;
+
+      function updatePreview() {
+        const amt = amountInput.value;
+        const type = typeInput.value;
+
+        const format = type === '$' ? `$${amt}` : `${amt}%`;
+
+        previewTitle.textContent = `Give ${format}, Get ${format}`;
+        previewDesc.textContent = `Share your link with friends. They get ${format} off their first order, and you get ${format} off your next!`;
+
+        widgetPreview.className = `widget-preview ${currentTheme}`;
+
+        if (brandingCheckbox.checked) {
+          previewFooter.style.display = 'none';
+        } else {
+          previewFooter.style.display = 'block';
+        }
+      }
+
+      function updateEmbedCode() {
+        const origin = window.location.origin.includes('localhost') ? 'https://app.onehumancorp.com' : window.location.origin;
+        const typeStr = typeInput.value === '%' ? 'pct' : 'flat';
+        const hideBranding = brandingCheckbox.checked;
+        const code = `<iframe src="${origin}/embed/referral?tenant=${tenant}&theme=${currentTheme}&discount=${amountInput.value}${typeStr}&hideBranding=${hideBranding}" width="100%" height="200" style="border:none;border-radius:16px;overflow:hidden;" title="OHC Referral Widget"></iframe>`;
+        document.getElementById('embed-code').value = code;
+      }
+
+      amountInput.addEventListener('input', () => { updatePreview(); updateEmbedCode(); });
+      typeInput.addEventListener('change', () => { updatePreview(); updateEmbedCode(); });
+
+      themeLightBtn.addEventListener('click', () => {
+        currentTheme = 'light';
+        themeLightBtn.classList.add('active');
+        themeDarkBtn.classList.remove('active');
+        updatePreview();
+        updateEmbedCode();
+      });
+
+      themeDarkBtn.addEventListener('click', () => {
+        currentTheme = 'dark';
+        themeDarkBtn.classList.add('active');
+        themeLightBtn.classList.remove('active');
+        updatePreview();
+        updateEmbedCode();
+      });
+
+      brandingCheckbox.addEventListener('change', (e) => {
+        if (e.target.checked && !hasPro) {
+          e.target.checked = false;
+          document.getElementById('paywall-modal').style.display = 'flex';
+          return;
+        }
+        updatePreview();
+        updateEmbedCode();
+      });
+
+      document.getElementById('get-code-btn').addEventListener('click', () => {
+        updateEmbedCode();
+        document.getElementById('embed-modal').style.display = 'flex';
+      });
+
+      document.getElementById('copy-code-btn').addEventListener('click', () => {
+        const codeArea = document.getElementById('embed-code');
+        codeArea.select();
+        document.execCommand('copy');
+
+        const btn = document.getElementById('copy-code-btn');
+        const origText = btn.textContent;
+        btn.textContent = 'Copied!';
+        btn.style.background = '#10B981'; // green
+        setTimeout(() => {
+          btn.textContent = origText;
+          btn.style.background = '#4F46E5';
+        }, 2000);
+      });
+
+      updatePreview();
+      updateEmbedCode();
+    });
+  </script>
+</body>
+</html>
