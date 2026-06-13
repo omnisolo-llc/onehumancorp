@@ -1,21 +1,6 @@
 import { NextResponse, NextRequest } from 'next/server';
 
 export async function GET(request: NextRequest) {
-  const fallbackTooltips = {
-    "changelog-nav-tooltip": "See what's new in the latest updates.",
-    "api-docs-tooltip": "Direct API access is only for custom integrations.",
-    "inbox-activity-tooltip": "Keep track of recent customer messages. Reply or assign them to an AI agent.",
-    "recent-orders-tooltip": "View the latest orders placed by your customers.",
-    "total-sales-tooltip": "Total revenue generated from all your orders.",
-    "kairos-nav-link-tooltip": "Click here to see what your AI helpers are working on and how they plan.",
-    "dashboard-tooltip": "View your daily sales and overall business health.",
-    "inventory-tooltip": "Manage your inventory, prices, and stock levels.",
-    "orders-tooltip": "See what customers bought and track order fulfillment.",
-    "help-btn-tooltip": "Need help? Click here to access our Help Center and tutorials.",
-    "ask-ai-tooltip": "Open AI Help Chat to get answers instantly. It can guide you to the right article.",
-    "pricing-tier-tooltip": "Select the plan that best fits your business needs."
-  };
-
   const backendUrl = process.env.BACKEND_URL || 'http://127.0.0.1:18789';
 
   try {
@@ -28,9 +13,9 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    return NextResponse.json(fallbackTooltips, { status: 200 });
+    return NextResponse.json({ error: 'Backend failed' }, { status: 500 });
   } catch (e) {
     if (process.env.NODE_ENV !== "test") console.error("Failed to fetch tooltips from backend:", e);
-    return NextResponse.json(fallbackTooltips, { status: 200 });
+    return NextResponse.json({ error: 'Backend failed' }, { status: 500 });
   }
 }
