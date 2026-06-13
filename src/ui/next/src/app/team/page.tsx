@@ -54,17 +54,23 @@ export default function TeamPage() {
     fetchApprovals();
   }, []);
 
-  const handleApprove = async (id: string) => {
+  const handleApprove = async (id: string, editedPayload?: any) => {
     try {
       const token = typeof window !== 'undefined' ? localStorage.getItem('token') || '' : '';
       setApprovals(prev => prev.filter(a => a.id !== id));
+
+      const payload: any = { approved: true };
+      if (editedPayload) {
+        payload.edited_payload = editedPayload;
+      }
+
       const response = await fetch(`/api/agents/approvals/${id}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ approved: true })
+        body: JSON.stringify(payload)
       });
       if (!response.ok) fetchApprovals();
     } catch (error) {
