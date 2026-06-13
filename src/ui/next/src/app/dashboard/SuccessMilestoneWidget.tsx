@@ -37,7 +37,7 @@ export function SuccessMilestoneWidget() {
   };
 
   return (
-    <section className="app-panel mb-6 border-2 border-indigo-200 bg-gradient-to-br from-indigo-50 to-white shadow-lg transform transition-all hover:scale-[1.01]">
+    <section className="glassmorphism app-panel mb-6 border-2 border-indigo-200 bg-gradient-to-br from-indigo-50 to-white shadow-lg transform transition-all hover:scale-[1.01]">
       <div className="app-panel-header border-b border-indigo-100 pb-4">
         <div>
           <h2 className="app-panel-title text-indigo-900 flex items-center gap-2">
