@@ -911,7 +911,7 @@ mod tests {
         assert!(result.is_ok(), "Daemon should not panic when reading corrupted offline memory files.");
     }
 
-    #[tokio::test]
+    #[tokio::test(start_paused = true)]
     async fn test_ml_resilience_60s_timeout_rule() {
     let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Cloud");
         let timeout_duration = std::time::Duration::from_millis(50);
@@ -924,7 +924,7 @@ mod tests {
         assert!(result.is_err(), "Chaos resilience must enforce ML-Resilience timeout rule to prevent cascading failure");
     }
 }
-    #[tokio::test]
+    #[tokio::test(start_paused = true)]
     async fn test_ml_resilience_inference_timeout_with_db_lag() {
         let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Cloud");
         let timeout_duration = std::time::Duration::from_millis(50);
