@@ -337,8 +337,33 @@ pub struct PaymentEvent {
     pub completed_at: Option<DateTime<Utc>>,
 }
 
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct Quote {
+    pub id: String,
+    pub tenant_id: String,
+    pub customer_id: String,
+    pub status: String,
+    pub valid_until: Option<DateTime<Utc>>,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct QuoteLineItem {
+    pub id: String,
+    pub quote_id: String,
+    pub description: String,
+    pub unit_price_cents: i64,
+    pub quantity: i32,
+    pub is_optional: bool,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct LedgerEntry {
+
     pub id: String,
     pub tenant_id: String,
     pub account_id: String,

@@ -20,6 +20,8 @@ pub struct WebhookPayload {
     pub source: String,
     #[serde(default)]
     pub target_language: Option<String>,
+    pub customer_name: Option<String>,
+    pub customer_email: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -145,6 +147,45 @@ async fn handle_webhook(
             inquiry, suggested_price
         );
 
+        // Create customer record
+        let pool = crate::db::get_pool();
+        let customer_id = uuid::Uuid::new_v4().to_string();
+        if let Some(name) = &payload.customer_name {
+            let _ = sqlx::query(
+                "INSERT INTO customers (id, tenant_id, name, email, created_at, updated_at) VALUES ($1, $2, $3, $4, NOW(), NOW()) ON CONFLICT DO NOTHING"
+            )
+            .bind(uuid::Uuid::parse_str(&customer_id).unwrap_or_default())
+            .bind(&tenant_id)
+            .bind(name)
+            .bind(&payload.customer_email)
+            .execute(&pool)
+            .await;
+        }
+
+        let quote_id = uuid::Uuid::new_v4().to_string();
+        let quote_line_item_id = uuid::Uuid::new_v4().to_string();
+
+        let price_cents = (suggested_price * 100.0) as i64;
+
+        let _ = sqlx::query(
+            "INSERT INTO quotes (id, tenant_id, customer_id, status, created_at, updated_at) VALUES ($1, $2, $3, 'DRAFT', NOW(), NOW())"
+        )
+        .bind(uuid::Uuid::parse_str(&quote_id).unwrap_or_default())
+        .bind(&tenant_id)
+        .bind(uuid::Uuid::parse_str(&customer_id).unwrap_or_default())
+        .execute(&pool)
+        .await;
+
+        let _ = sqlx::query(
+            "INSERT INTO quote_line_items (id, quote_id, description, unit_price_cents, quantity, is_optional, created_at, updated_at) VALUES ($1, $2, $3, $4, 1, false, NOW(), NOW())"
+        )
+        .bind(uuid::Uuid::parse_str(&quote_line_item_id).unwrap_or_default())
+        .bind(uuid::Uuid::parse_str(&quote_id).unwrap_or_default())
+        .bind(&scope)
+        .bind(price_cents)
+        .execute(&pool)
+        .await;
+
         let action_payload = serde_json::json!({
             "feature_type": "quote_draft",
             "customer_inquiry": inquiry,
@@ -155,6 +196,8 @@ async fn handle_webhook(
             "service": service_name,
             "price": suggested_price,
             "context": context,
+            "quote_id": quote_id,
+            "customer_name": payload.customer_name.unwrap_or_else(|| "Unknown".to_string()),
         });
 
         match orchestrator.execute_action(

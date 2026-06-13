@@ -15,7 +15,12 @@ export async function GET(req: Request) {
   }
 
   try {
-    const res = await fetch(`${backendUrl}/api/v1/quotes`, {
+
+  const { searchParams } = new URL(req.url);
+  const id = searchParams.get('id');
+
+  try {
+    const res = await fetch(`${backendUrl}/api/v1/quotes${id ? `/${id}` : ''}`, {
       method: 'GET',
       headers,
     });
@@ -46,7 +51,12 @@ export async function POST(req: Request) {
 
   try {
     const body = await req.json();
-    const res = await fetch(`${backendUrl}/api/v1/quotes`, {
+
+  const { searchParams } = new URL(req.url);
+  const id = searchParams.get('id');
+
+  try {
+    const res = await fetch(`${backendUrl}/api/v1/quotes${id ? `/${id}` : ''}`, {
       method: 'POST',
       headers,
       body: JSON.stringify(body),

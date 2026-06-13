@@ -22,6 +22,8 @@ export async function POST(request: Request) {
           tenant_id: tenant,
           source: 'work_intake',
           message: details,
+          customer_name: name,
+          customer_email: email,
         }),
       });
     } catch (e) {

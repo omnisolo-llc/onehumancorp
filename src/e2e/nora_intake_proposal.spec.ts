@@ -1,10 +1,11 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test.describe('Nora Intake Proposal Flow (375px viewport)', () => {
   // Mobile first viewport
   test.use({ viewport: { width: 375, height: 667 } });
 
-  test('generates and displays proposal draft on agent feed', async ({ page, request }) => {
+  test('generates and displays proposal draft on agent feed', async ({ page, request, loginAs, adminUser }) => {
+    await loginAs(page, adminUser);
     // We expect the UnifiedAgentFeed to be visible
     await page.goto('/dashboard');
 

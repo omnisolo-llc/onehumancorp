@@ -304,6 +304,17 @@ async fn update_feed_item_state(
                             tracing::info!("Approved and scheduled SocialPostDraft for tenant: {}", tenant_id);
                             // Real implementation would buffer post here to AYRSHARE.
                         }
+
+                        if payload.get("feature_type").and_then(|v| v.as_str()) == Some("quote_draft") {
+                            if let Some(quote_id) = payload.get("quote_id").and_then(|v| v.as_str()) {
+                                tracing::info!("Approved quote draft: {}", quote_id);
+                                let _ = sqlx::query("UPDATE quotes SET status = 'SENT', updated_at = NOW() WHERE id = $1 AND tenant_id = $2")
+                                    .bind(uuid::Uuid::parse_str(quote_id).unwrap_or_default())
+                                    .bind(&tenant_id)
+                                    .execute(&pool)
+                                    .await;
+                            }
+                        }
                     }
                 }
             }
