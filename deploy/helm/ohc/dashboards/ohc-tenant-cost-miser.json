@@ -38,7 +38,7 @@
       },
       "targets": [
         {
-          "expr": "sum(rate(ohc_llm_call_cost_total[5m])) by (organization_id)",
+          "expr": "sum(rate(ohc_llm_call_cost[5m])) by (organization_id)",
           "refId": "A"
         }
       ],
@@ -75,8 +75,12 @@
       },
       "targets": [
         {
-          "expr": "sum(rate(ohc_outbound_api_cost_total[5m])) by (organization_id)",
+          "expr": "sum(rate(ohc_outbound_api_cost[5m])) by (organization_id)",
           "refId": "A"
+        },
+        {
+          "expr": "sum(rate(ohc_api_call_cost[5m])) by (organization_id)",
+          "refId": "B"
         }
       ],
       "title": "Outbound API Cost by Tenant",
@@ -112,7 +116,7 @@
       },
       "targets": [
         {
-          "expr": "sum(rate(ohc_storage_rw_cost_total[5m])) by (organization_id)",
+          "expr": "sum(rate(ohc_storage_rw_cost[5m])) by (organization_id)",
           "refId": "A"
         }
       ],
@@ -149,7 +153,7 @@
       },
       "targets": [
         {
-          "expr": "sum(rate(ohc_email_send_cost_total[5m])) by (organization_id)",
+          "expr": "sum(rate(ohc_email_send_cost[5m])) by (organization_id)",
           "refId": "A"
         }
       ],

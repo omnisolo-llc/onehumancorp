@@ -3,29 +3,44 @@
     "list": [
       {
         "builtIn": 1,
-        "datasource": "-- Grafana --",
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
         "enable": true,
         "hide": true,
         "iconColor": "rgba(0, 211, 255, 1)",
         "name": "Annotations & Alerts",
+        "target": {
+          "limit": 100,
+          "matchAny": false,
+          "tags": [],
+          "type": "dashboard"
+        },
         "type": "dashboard"
       }
     ]
   },
   "editable": true,
-  "gnetId": null,
+  "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
-  "id": 2,
   "links": [],
+  "liveNow": false,
   "panels": [
     {
-      "datasource": "Prometheus",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -45,7 +60,13 @@
             },
             "showPoints": "auto",
             "spanNulls": false,
-            "stashMixin": false
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
           },
           "mappings": [],
           "thresholds": {
@@ -68,6 +89,99 @@
         "h": 8,
         "w": 12,
         "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "rate(ohc_sqlite_lock_contention_total[5m])",
+          "legendFormat": "SQLite Lock Contention Rate",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "SQLite Lock Contention (Standalone)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
         "y": 0
       },
       "id": 2,
@@ -75,32 +189,44 @@
         "legend": {
           "calcs": [],
           "displayMode": "list",
-          "placement": "bottom"
+          "placement": "bottom",
+          "showLegend": true
         },
         "tooltip": {
-          "mode": "single"
+          "mode": "single",
+          "sort": "none"
         }
       },
       "targets": [
         {
-          "exemplar": true,
-          "expr": "sum(rate(ohc_tenant_llm_cost_cents{organization_id=\"$tenant\"}[5m])) by (agent_id)",
-          "interval": "",
-          "legendFormat": "{{agent_id}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "ohc_task_queue_length",
+          "legendFormat": "Task Queue Length",
+          "range": true,
           "refId": "A"
         }
       ],
-      "title": "LLM Cost by Agent (USD/sec)",
+      "title": "Task Queue Length",
       "type": "timeseries"
     },
     {
-      "datasource": "Prometheus",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -120,7 +246,13 @@
             },
             "showPoints": "auto",
             "spanNulls": false,
-            "stashMixin": false
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
           },
           "mappings": [],
           "thresholds": {
@@ -141,41 +273,53 @@
       },
       "gridPos": {
         "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 0
+        "w": 8,
+        "x": 0,
+        "y": 8
       },
       "id": 3,
       "options": {
         "legend": {
           "calcs": [],
           "displayMode": "list",
-          "placement": "bottom"
+          "placement": "bottom",
+          "showLegend": true
         },
         "tooltip": {
-          "mode": "single"
+          "mode": "single",
+          "sort": "none"
         }
       },
       "targets": [
         {
-          "exemplar": true,
-          "expr": "sum(rate(ohc_api_call_cost{organization_id=\"$tenant\"}[5m])) by (entity)",
-          "interval": "",
-          "legendFormat": "{{entity}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "rate(ohc_task_failed_total[5m])",
+          "legendFormat": "Task Failure Rate",
+          "range": true,
           "refId": "A"
         }
       ],
-      "title": "API Cost by Integration (USD/sec)",
+      "title": "Task Failures",
       "type": "timeseries"
     },
     {
-      "datasource": "Prometheus",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -195,7 +339,13 @@
             },
             "showPoints": "auto",
             "spanNulls": false,
-            "stashMixin": false
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
           },
           "mappings": [],
           "thresholds": {
@@ -216,8 +366,8 @@
       },
       "gridPos": {
         "h": 8,
-        "w": 12,
-        "x": 0,
+        "w": 8,
+        "x": 8,
         "y": 8
       },
       "id": 4,
@@ -225,32 +375,44 @@
         "legend": {
           "calcs": [],
           "displayMode": "list",
-          "placement": "bottom"
+          "placement": "bottom",
+          "showLegend": true
         },
         "tooltip": {
-          "mode": "single"
+          "mode": "single",
+          "sort": "none"
         }
       },
       "targets": [
         {
-          "exemplar": true,
-          "expr": "sum(rate(ohc_storage_bytes_total{organization_id=\"$tenant\"}[5m])) by (operation)",
-          "interval": "",
-          "legendFormat": "{{operation}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "rate(ohc_sqlite_retry_exhausted_total[5m])",
+          "legendFormat": "SQLite Retry Exhausted Rate",
+          "range": true,
           "refId": "A"
         }
       ],
-      "title": "Storage Cost (Bytes/sec)",
+      "title": "SQLite Retry Exhausted",
       "type": "timeseries"
     },
     {
-      "datasource": "Prometheus",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
@@ -270,7 +432,13 @@
             },
             "showPoints": "auto",
             "spanNulls": false,
-            "stashMixin": false
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
           },
           "mappings": [],
           "thresholds": {
@@ -291,8 +459,8 @@
       },
       "gridPos": {
         "h": 8,
-        "w": 12,
-        "x": 12,
+        "w": 8,
+        "x": 16,
         "y": 8
       },
       "id": 5,
@@ -300,59 +468,37 @@
         "legend": {
           "calcs": [],
           "displayMode": "list",
-          "placement": "bottom"
+          "placement": "bottom",
+          "showLegend": true
         },
         "tooltip": {
-          "mode": "single"
+          "mode": "single",
+          "sort": "none"
         }
       },
       "targets": [
         {
-          "exemplar": true,
-          "expr": "sum(rate(ohc_email_send_cost{organization_id=\"$tenant\"}[5m]))",
-          "interval": "",
-          "legendFormat": "Emails",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "rate(ohc_sqlite_throttled_requests_total[5m])",
+          "legendFormat": "SQLite Throttled Requests",
+          "range": true,
           "refId": "A"
         }
       ],
-      "title": "Email Send Cost (Count/sec)",
+      "title": "SQLite Throttled Requests",
       "type": "timeseries"
     }
   ],
-  "refresh": false,
-  "schemaVersion": 30,
+  "refresh": "",
+  "schemaVersion": 38,
   "style": "dark",
   "tags": [],
   "templating": {
-    "list": [
-      {
-        "allValue": null,
-        "current": {
-          "selected": false,
-          "text": "All",
-          "value": "$__all"
-        },
-        "datasource": "Prometheus",
-        "definition": "label_values(ohc_tenant_llm_cost_cents, organization_id)",
-        "description": null,
-        "error": null,
-        "hide": 0,
-        "includeAll": true,
-        "label": "Tenant ID",
-        "multi": false,
-        "name": "tenant",
-        "options": [],
-        "query": {
-          "query": "label_values(ohc_tenant_llm_cost_cents, organization_id)",
-          "refId": "StandardVariableQuery"
-        },
-        "refresh": 1,
-        "regex": "",
-        "skipUrlSync": false,
-        "sort": 0,
-        "type": "query"
-      }
-    ]
+    "list": []
   },
   "time": {
     "from": "now-6h",
@@ -360,7 +506,8 @@
   },
   "timepicker": {},
   "timezone": "",
-  "title": "Infrastructure Cost Metering",
-  "uid": "infra-cost-metering",
-  "version": 2
+  "title": "Standalone Swarm Health",
+  "uid": "standalone_swarm_health",
+  "version": 1,
+  "weekStart": ""
 }
