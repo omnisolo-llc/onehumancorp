@@ -3589,81 +3589,189 @@ async fn load_ui_ledger_from_db(db: &crate::db::DB, tenant_id: &str) -> Result<V
 }
 
 
+
+
+
+
 async fn load_ui_triage_from_db(db: &crate::db::DB, tenant_id: &str, mobile_optimized: bool) -> Result<Vec<serde_json::Value>, sqlx::Error> {
     use sqlx::Row;
+    let mut results = Vec::new();
+
+    // Legacy triage items
+    let mut legacy_rows_json = Vec::new();
     match &db.store {
         crate::db::DbStore::Postgres => {
-            sqlx::query(
+            if let Ok(rows) = sqlx::query(
                 "SELECT t.id, t.tenant_id, t.customer_id, t.source, t.priority, t.context, t.status, t.created_at, a.action_type, a.payload AS action_payload FROM triage_items t LEFT JOIN triage_proposed_actions a ON t.id = a.triage_item_id WHERE t.tenant_id = $1 AND t.status != 'resolved' AND t.status != 'dismissed' ORDER BY t.created_at DESC LIMIT 50"
             )
             .bind(tenant_id)
             .fetch_all(&db.pool)
-            .await
-            .map(|rows| rows.into_iter().map(|row| {
-                if mobile_optimized {
-                    serde_json::json!({
-                        "id": row.get::<String, _>("id"),
-                        "tenant_id": row.get::<String, _>("tenant_id"),
-                        "customer_id": row.try_get::<String, _>("customer_id").unwrap_or_default(),
-                        "source": row.try_get::<String, _>("source").unwrap_or_default(),
-                        "priority": row.try_get::<String, _>("priority").unwrap_or_default(),
-                        "status": row.try_get::<String, _>("status").unwrap_or_default(),
-                        "created_at": row.try_get::<chrono::DateTime<chrono::Utc>, _>("created_at").map(|dt| dt.to_rfc3339()).unwrap_or_default(),
-                        "action_type": row.try_get::<String, _>("action_type").unwrap_or_default(),
-                    })
-                } else {
-                    serde_json::json!({
-                        "id": row.get::<String, _>("id"),
-                        "tenant_id": row.get::<String, _>("tenant_id"),
-                        "customer_id": row.try_get::<String, _>("customer_id").unwrap_or_default(),
-                        "source": row.try_get::<String, _>("source").unwrap_or_default(),
-                        "priority": row.try_get::<String, _>("priority").unwrap_or_default(),
-                        "context": row.try_get::<String, _>("context").unwrap_or_default(),
-                        "status": row.try_get::<String, _>("status").unwrap_or_default(),
-                        "created_at": row.try_get::<chrono::DateTime<chrono::Utc>, _>("created_at").map(|dt| dt.to_rfc3339()).unwrap_or_default(),
-                        "action_type": row.try_get::<String, _>("action_type").unwrap_or_default(),
-                        "action_payload": row.try_get::<String, _>("action_payload").unwrap_or_default(),
-                    })
+            .await {
+                for row in rows {
+                     let item = if mobile_optimized {
+                            serde_json::json!({
+                                "id": row.get::<String, _>("id"),
+                                "tenant_id": row.get::<String, _>("tenant_id"),
+                                "customer_id": row.try_get::<String, _>("customer_id").unwrap_or_default(),
+                                "source": row.try_get::<String, _>("source").unwrap_or_default(),
+                                "priority": row.try_get::<String, _>("priority").unwrap_or_default(),
+                                "status": row.try_get::<String, _>("status").unwrap_or_default(),
+                                "created_at": match row.try_get::<chrono::DateTime<chrono::Utc>, _>("created_at") { Ok(dt) => dt.to_rfc3339(), Err(_) => "".to_string() },
+                                "action_type": row.try_get::<String, _>("action_type").unwrap_or_default(),
+                            })
+                     } else {
+                         serde_json::json!({
+                                "id": row.get::<String, _>("id"),
+                                "tenant_id": row.get::<String, _>("tenant_id"),
+                                "customer_id": row.try_get::<String, _>("customer_id").unwrap_or_default(),
+                                "source": row.try_get::<String, _>("source").unwrap_or_default(),
+                                "priority": row.try_get::<String, _>("priority").unwrap_or_default(),
+                                "context": row.try_get::<String, _>("context").unwrap_or_default(),
+                                "status": row.try_get::<String, _>("status").unwrap_or_default(),
+                                "created_at": match row.try_get::<chrono::DateTime<chrono::Utc>, _>("created_at") { Ok(dt) => dt.to_rfc3339(), Err(_) => "".to_string() },
+                                "action_type": row.try_get::<String, _>("action_type").unwrap_or_default(),
+                                "action_payload": row.try_get::<String, _>("action_payload").unwrap_or_default(),
+                            })
+                     };
+                     legacy_rows_json.push(item);
                 }
-            }).collect::<Vec<_>>())
+            }
         }
         crate::db::DbStore::Sqlite(pool) => {
-            sqlx::query(
+            if let Ok(rows) = sqlx::query(
                 "SELECT t.id, t.tenant_id, t.customer_id, t.source, t.priority, t.context, t.status, t.created_at, a.action_type, a.payload AS action_payload FROM triage_items t LEFT JOIN triage_proposed_actions a ON t.id = a.triage_item_id WHERE t.tenant_id = ? AND t.status != 'resolved' AND t.status != 'dismissed' ORDER BY t.created_at DESC LIMIT 50"
             )
             .bind(tenant_id)
             .fetch_all(pool)
-            .await
-            .map(|rows| rows.into_iter().map(|row| {
-                if mobile_optimized {
-                    serde_json::json!({
-                        "id": row.get::<String, _>("id"),
-                        "tenant_id": row.get::<String, _>("tenant_id"),
-                        "customer_id": row.try_get::<String, _>("customer_id").unwrap_or_default(),
-                        "source": row.try_get::<String, _>("source").unwrap_or_default(),
-                        "priority": row.try_get::<String, _>("priority").unwrap_or_default(),
-                        "status": row.try_get::<String, _>("status").unwrap_or_default(),
-                        "created_at": row.try_get::<String, _>("created_at").unwrap_or_default(),
-                        "action_type": row.try_get::<String, _>("action_type").unwrap_or_default(),
-                    })
-                } else {
-                    serde_json::json!({
-                        "id": row.get::<String, _>("id"),
-                        "tenant_id": row.get::<String, _>("tenant_id"),
-                        "customer_id": row.try_get::<String, _>("customer_id").unwrap_or_default(),
-                        "source": row.try_get::<String, _>("source").unwrap_or_default(),
-                        "priority": row.try_get::<String, _>("priority").unwrap_or_default(),
-                        "context": row.try_get::<String, _>("context").unwrap_or_default(),
-                        "status": row.try_get::<String, _>("status").unwrap_or_default(),
-                        "created_at": row.try_get::<String, _>("created_at").unwrap_or_default(),
-                        "action_type": row.try_get::<String, _>("action_type").unwrap_or_default(),
-                        "action_payload": row.try_get::<String, _>("action_payload").unwrap_or_default(),
-                    })
+            .await {
+                for row in rows {
+                     let item = if mobile_optimized {
+                            serde_json::json!({
+                                "id": row.get::<String, _>("id"),
+                                "tenant_id": row.get::<String, _>("tenant_id"),
+                                "customer_id": row.try_get::<String, _>("customer_id").unwrap_or_default(),
+                                "source": row.try_get::<String, _>("source").unwrap_or_default(),
+                                "priority": row.try_get::<String, _>("priority").unwrap_or_default(),
+                                "status": row.try_get::<String, _>("status").unwrap_or_default(),
+                                "created_at": match row.try_get::<String, _>("created_at") { Ok(s) => s, Err(_) => "".to_string() },
+                                "action_type": row.try_get::<String, _>("action_type").unwrap_or_default(),
+                            })
+                     } else {
+                         serde_json::json!({
+                                "id": row.get::<String, _>("id"),
+                                "tenant_id": row.get::<String, _>("tenant_id"),
+                                "customer_id": row.try_get::<String, _>("customer_id").unwrap_or_default(),
+                                "source": row.try_get::<String, _>("source").unwrap_or_default(),
+                                "priority": row.try_get::<String, _>("priority").unwrap_or_default(),
+                                "context": row.try_get::<String, _>("context").unwrap_or_default(),
+                                "status": row.try_get::<String, _>("status").unwrap_or_default(),
+                                "created_at": match row.try_get::<String, _>("created_at") { Ok(s) => s, Err(_) => "".to_string() },
+                                "action_type": row.try_get::<String, _>("action_type").unwrap_or_default(),
+                                "action_payload": row.try_get::<String, _>("action_payload").unwrap_or_default(),
+                            })
+                     };
+                     legacy_rows_json.push(item);
                 }
-            }).collect::<Vec<_>>())
+            }
         }
     }
+
+    results.extend(legacy_rows_json);
+
+    // Modern agent feed items
+    let mut feed_rows_json = Vec::new();
+    match &db.store {
+        crate::db::DbStore::Postgres => {
+            if let Ok(rows) = sqlx::query(
+                "SELECT * FROM agent_feed_items WHERE tenant_id = $1 AND lifecycle_state = 'PENDING_APPROVAL' ORDER BY created_at DESC LIMIT 50"
+            )
+            .bind(tenant_id)
+            .fetch_all(&db.pool)
+            .await {
+                for row in rows {
+                    let context_payload: Option<serde_json::Value> = match row.try_get::<sqlx::types::Json<serde_json::Value>, _>("context_payload") {
+                        Ok(j) => Some(j.0),
+                        Err(_) => match row.try_get::<String, _>("context_payload") {
+                            Ok(s) => serde_json::from_str(&s).ok(),
+                            Err(_) => None
+                        }
+                    };
+                    let proposed_action: Option<serde_json::Value> = match row.try_get::<sqlx::types::Json<serde_json::Value>, _>("proposed_action") {
+                        Ok(j) => Some(j.0),
+                        Err(_) => match row.try_get::<String, _>("proposed_action") {
+                            Ok(s) => serde_json::from_str(&s).ok(),
+                            Err(_) => None
+                        }
+                    };
+
+                    let item = serde_json::json!({
+                        "id": row.get::<String, _>("id"),
+                        "tenant_id": row.get::<String, _>("tenant_id"),
+                        "event_source": row.get::<String, _>("event_source"),
+                        "context_payload": context_payload,
+                        "proposed_action": proposed_action,
+                        "lifecycle_state": row.get::<String, _>("lifecycle_state"),
+                        "created_at": match row.try_get::<chrono::DateTime<chrono::Utc>, _>("created_at") { Ok(dt) => dt.to_rfc3339(), Err(_) => "".to_string() },
+                        "updated_at": match row.try_get::<chrono::DateTime<chrono::Utc>, _>("updated_at") { Ok(dt) => dt.to_rfc3339(), Err(_) => "".to_string() },
+                    });
+                    feed_rows_json.push(item);
+                }
+            }
+        }
+        crate::db::DbStore::Sqlite(pool) => {
+            if let Ok(rows) = sqlx::query(
+                "SELECT * FROM agent_feed_items WHERE tenant_id = ? AND lifecycle_state = 'PENDING_APPROVAL' ORDER BY created_at DESC LIMIT 50"
+            )
+            .bind(tenant_id)
+            .fetch_all(pool)
+            .await {
+                for row in rows {
+                    let context_payload: Option<serde_json::Value> = match row.try_get::<sqlx::types::Json<serde_json::Value>, _>("context_payload") {
+                        Ok(j) => Some(j.0),
+                        Err(_) => match row.try_get::<String, _>("context_payload") {
+                            Ok(s) => serde_json::from_str(&s).ok(),
+                            Err(_) => None
+                        }
+                    };
+                    let proposed_action: Option<serde_json::Value> = match row.try_get::<sqlx::types::Json<serde_json::Value>, _>("proposed_action") {
+                        Ok(j) => Some(j.0),
+                        Err(_) => match row.try_get::<String, _>("proposed_action") {
+                            Ok(s) => serde_json::from_str(&s).ok(),
+                            Err(_) => None
+                        }
+                    };
+
+                    let item = serde_json::json!({
+                        "id": row.get::<String, _>("id"),
+                        "tenant_id": row.get::<String, _>("tenant_id"),
+                        "event_source": row.get::<String, _>("event_source"),
+                        "context_payload": context_payload,
+                        "proposed_action": proposed_action,
+                        "lifecycle_state": row.get::<String, _>("lifecycle_state"),
+                        "created_at": match row.try_get::<String, _>("created_at") { Ok(s) => s, Err(_) => "".to_string() },
+                        "updated_at": match row.try_get::<String, _>("updated_at") { Ok(s) => s, Err(_) => "".to_string() },
+                    });
+                    feed_rows_json.push(item);
+                }
+            }
+        }
+    }
+
+    results.extend(feed_rows_json);
+
+    // Sort combined results by created_at DESC
+    results.sort_by(|a, b| {
+        let a_time = a.get("created_at").and_then(|t| t.as_str()).unwrap_or("");
+        let b_time = b.get("created_at").and_then(|t| t.as_str()).unwrap_or("");
+        b_time.cmp(a_time)
+    });
+
+    Ok(results)
 }
+
+
+
+
 
 async fn load_ui_priority_tasks_from_db(db: &crate::db::DB, tenant_id: &str, mobile_optimized: bool) -> Result<Vec<serde_json::Value>, sqlx::Error> {
     use sqlx::Row;
