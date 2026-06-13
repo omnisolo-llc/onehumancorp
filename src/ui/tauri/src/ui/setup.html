@@ -6,13 +6,17 @@
     <title>OHC Setup</title>
     <style>
       body {
-        font-family: "Outfit", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        font-family: "Inter", "San Francisco", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
         background-color: #f5f5f7;
         margin: 0;
         display: flex;
         align-items: center;
         justify-content: center;
         height: 100vh;
+        -webkit-font-smoothing: antialiased;
+      }
+      h1, h2, h3 {
+        font-family: "Outfit", sans-serif;
       }
       .container {
         background: rgba(255, 255, 255, 0.65);
@@ -23,7 +27,7 @@
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
         text-align: center;
         max-width: 480px;
-        width: 100%;
+        width: 90%;
         border: 1px solid rgba(255, 255, 255, 0.4);
         box-sizing: border-box;
       }
@@ -39,8 +43,9 @@
       h1 {
         margin-top: 0;
         color: #1d1d1f;
-        font-size: 24px;
+        font-size: 26px;
         font-weight: 700;
+        letter-spacing: -0.02em;
       }
       p {
         color: #555555;
@@ -278,16 +283,17 @@
       .radio-option {
         display: flex;
         align-items: center;
-        gap: 10px;
-        background: rgba(255, 255, 255, 0.5);
-        backdrop-filter: blur(10px) saturate(200%);
-        -webkit-backdrop-filter: blur(10px) saturate(200%);
-        border: 1px solid rgba(255, 255, 255, 0.5);
-        padding: 12px 16px;
+        gap: 12px;
+        background: rgba(255, 255, 255, 0.65);
+        backdrop-filter: blur(30px) saturate(210%);
+        -webkit-backdrop-filter: blur(30px) saturate(210%);
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        padding: 14px 18px;
         min-height: 44px;
         border-radius: 16px;
         cursor: pointer;
-        transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        text-align: left;
       }
       .radio-option:hover {
         background: rgba(255, 255, 255, 0.7);
@@ -296,8 +302,28 @@
         border-color: #0066FF;
         background: rgba(0, 102, 255, 0.1);
       }
-      .radio-option input[type="radio"] {
+      .radio-option input[type="radio"], .radio-option input[type="checkbox"] {
         display: none;
+      }
+      .radio-option::before {
+        content: "";
+        width: 20px;
+        height: 20px;
+        border: 2px solid rgba(0, 0, 0, 0.1);
+        border-radius: 50%;
+        flex-shrink: 0;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .radio-option.selected::before {
+        border-color: #0066FF;
+        background: #0066FF;
+        content: "✓";
+        color: white;
+        font-size: 12px;
+        font-weight: bold;
       }
       .radio-label {
         font-weight: 500;
@@ -449,7 +475,7 @@
 
     </style>
   </head>
-  <body>
+  <body style="opacity: 0; transition: opacity 0.3s ease;">
         <div class="container glassmorphism" id="form-container">
 
 
@@ -517,11 +543,22 @@
         <div class="step-indicator" data-step="step-categories"></div>
         <div class="step-indicator" data-step="step-name"></div>
         <div class="step-indicator" data-step="step-assistant"></div>
+        <div class="step-indicator" data-step="step-team"></div>
         <div class="step-indicator" data-step="step-admin"></div>
         <div class="step-indicator" data-step="step-offer"></div>
         <div class="step-indicator" data-step="step-template"></div>
       </div>
       <div id="draft-saved-msg" style="display: none; color: #34C759; font-weight: bold; margin-bottom: 15px;">Draft Saved!</div>
+      <div id="resume-msg" class="glassmorphism" style="display: none; position: fixed; top: 20px; right: 20px; z-index: 1000; padding: 12px 20px; color: #1d1d1f; border: 1px solid #0066FF; font-size: 14px; font-weight: 500; text-align: left; animation: slideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1); transition: opacity 0.5s ease;">
+          🚀 Resume from where you left off
+      </div>
+
+      <style>
+          @keyframes slideIn {
+              from { transform: translateX(100%); opacity: 0; }
+              to { transform: translateX(0); opacity: 1; }
+          }
+      </style>
 
       <!-- Step 1: Work Context -->
       <div class="step" id="step-context">
@@ -624,9 +661,80 @@
         <div id="tone-error" class="error-msg">Please select a tone.</div>
 
         <div class="btn-group">
-          <button class="next-step-btn" data-next="step-admin">Next</button>
+          <button class="next-step-btn" data-next="step-team">Next</button>
           <button type="button" class="btn-secondary save-draft-btn">Save Draft</button>
           <button class="btn-secondary prev-step-btn" data-prev="step-name">Back</button>
+        </div>
+      </div>
+
+      <!-- Step Team: AI Team Selection -->
+      <div class="step" id="step-team">
+        <h1>Hire Your AI Team</h1>
+        <p>Your digital workforce. Select who joins you today.</p>
+
+        <div class="radio-group" id="team-selection-group">
+            <label class="radio-option selected">
+              <input type="checkbox" name="ai_agents" value="Operations" checked />
+              <div style="flex-grow: 1;">
+                <div class="radio-label">The Manager</div>
+                <div class="radio-desc">Operations, bookings, and order tracking.</div>
+              </div>
+            </label>
+            <label class="radio-option selected">
+              <input type="checkbox" name="ai_agents" value="Marketing & Advertising" checked />
+              <div style="flex-grow: 1;">
+                <div class="radio-label">The Promoter</div>
+                <div class="radio-desc">Social media, SEO, and storefront growth.</div>
+              </div>
+            </label>
+            <label class="radio-option selected">
+              <input type="checkbox" name="ai_agents" value="Sales & Acquisition" checked />
+              <div style="flex-grow: 1;">
+                <div class="radio-label">The Salesperson</div>
+                <div class="radio-desc">Converting leads and following up with customers.</div>
+              </div>
+            </label>
+            <label class="radio-option selected">
+              <input type="checkbox" name="ai_agents" value="Customer Success" checked />
+              <div style="flex-grow: 1;">
+                <div class="radio-label">The Ambassador</div>
+                <div class="radio-desc">Replying to messages and handling support.</div>
+              </div>
+            </label>
+            <label class="radio-option">
+              <input type="checkbox" name="ai_agents" value="Finance & Payments" />
+              <div style="flex-grow: 1;">
+                <div class="radio-label">The Accountant</div>
+                <div class="radio-desc">Tracking revenue, costs, and payment health.</div>
+              </div>
+            </label>
+            <label class="radio-option">
+              <input type="checkbox" name="ai_agents" value="Legal & Compliance" />
+              <div style="flex-grow: 1;">
+                <div class="radio-label">The Protector</div>
+                <div class="radio-desc">Policies, contracts, and legal safety.</div>
+              </div>
+            </label>
+            <label class="radio-option">
+              <input type="checkbox" name="ai_agents" value="Business Advisory" />
+              <div style="flex-grow: 1;">
+                <div class="radio-label">The Advisor</div>
+                <div class="radio-desc">Daily summaries and strategic recommendations.</div>
+              </div>
+            </label>
+            <label class="radio-option">
+              <input type="checkbox" name="ai_agents" value="Discovery & SEO" />
+              <div style="flex-grow: 1;">
+                <div class="radio-label">The Scout</div>
+                <div class="radio-desc">Finding market gaps and local SEO opportunities.</div>
+              </div>
+            </label>
+        </div>
+
+        <div class="btn-group">
+          <button class="next-step-btn" data-next="step-admin">Next</button>
+          <button type="button" class="btn-secondary save-draft-btn">Save Draft</button>
+          <button class="btn-secondary prev-step-btn" data-prev="step-assistant">Back</button>
         </div>
       </div>
 
@@ -639,13 +747,13 @@
         <input type="email" id="admin-email" class="glassmorphism" placeholder="admin@mybusiness.com" inputmode="email" autocomplete="email" />
         <div id="email-error" class="error-msg">Please enter a valid email address.</div>
 
-        <input type="password" id="admin-password" class="glassmorphism" placeholder="Password (min 8 chars)" autocomplete="new-password" />
-        <div id="password-error" class="error-msg">Password must be at least 8 characters.</div>
+        <input type="password" id="admin-password" class="glassmorphism" placeholder="Password (min 8 chars + number)" autocomplete="new-password" />
+        <div id="password-error" class="error-msg">Password must be at least 8 characters and contain a number.</div>
 
         <div class="btn-group">
           <button class="next-step-btn" data-next="step-offer">Next</button>
           <button type="button" class="btn-secondary save-draft-btn">Save Draft</button>
-          <button class="btn-secondary prev-step-btn" data-prev="step-assistant">Back</button>
+          <button class="btn-secondary prev-step-btn" data-prev="step-team">Back</button>
         </div>
       </div>
 
@@ -763,8 +871,20 @@
           categories: '',
           tagline: '',
           first_offer: '',
-          templateSelection: ''
+          templateSelection: '',
+          ai_agents: ['Operations', 'Marketing & Advertising', 'Sales & Acquisition', 'Customer Success']
       };
+
+      // Handle checkbox selection visual state
+      document.querySelectorAll('input[type="checkbox"][name="ai_agents"]').forEach(cb => {
+          cb.addEventListener('change', (e) => {
+              if (e.target.checked) {
+                  e.target.closest('.radio-option').classList.add('selected');
+              } else {
+                  e.target.closest('.radio-option').classList.remove('selected');
+              }
+          });
+      });
 
       // Handle radio buttons selection visual state
       inputs.context.forEach(radio => {
@@ -775,49 +895,82 @@
           });
       });
 
-      // Load existing state
-      if (window.__TAURI__ && window.__TAURI__.core) {
-        window.__TAURI__.core.invoke("get_onboarding_state").then((backendState) => {
-          if (backendState) {
-            state = { ...state, ...backendState };
-            populateForm();
+      async function loadInitialState() {
+          let mergedState = { ...state };
+          let foundExisting = false;
+
+          // 1. Try Local Storage
+          const stored = localStorage.getItem('onboardingState');
+          if (stored) {
+              const localState = JSON.parse(stored);
+              mergedState = { ...mergedState, ...localState };
+              if (localState.step !== undefined && localState.step > 0) foundExisting = true;
           }
-        }).catch(console.error);
 
-      } else {
-        const stored = localStorage.getItem('onboardingState');
-        if (stored) {
-          state = { ...state, ...JSON.parse(stored) };
+          // 2. Try Backend (Tauri or REST)
+          try {
+              let backendState = null;
+              if (window.__TAURI__ && window.__TAURI__.core) {
+                  backendState = await window.__TAURI__.core.invoke("get_onboarding_state");
+              } else {
+                  const backendUrl = (window.location.origin.includes('localhost') || window.location.protocol === 'file:') ? 'http://127.0.0.1:18789' : '';
+                  const tenantId = localStorage.getItem('tenant_id') || 'storefront';
+                  const userId = localStorage.getItem('user_id') || 'test-user';
+
+                  const res = await fetch(`${backendUrl}/api/onboarding/state`, {
+                      method: 'GET',
+                      headers: { 'X-Tenant-ID': tenantId, 'X-User-ID': userId }
+                  });
+                  if (res.ok) {
+                      const apiData = await res.json();
+                      backendState = apiData.wizardState || apiData;
+                  }
+              }
+
+              if (backendState && Object.keys(backendState).length > 0) {
+                  mergedState = { ...mergedState, ...backendState };
+                  if (backendState.step !== undefined && backendState.step > 0) foundExisting = true;
+              }
+          } catch (err) {
+              console.error('Failed to load backend state:', err);
+          }
+
+          state = mergedState;
+
+          if (state.step !== undefined && state.step > 0) {
+              const stepMap = ['step-initial', 'step-context', 'step-categories', 'step-name', 'step-assistant', 'step-team', 'step-admin', 'step-offer', 'step-template'];
+              const targetStepId = stepMap[state.step] || 'step-initial';
+
+              document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+              const target = document.getElementById(targetStepId);
+              if (target) target.classList.add('active');
+
+              if (targetStepId !== 'step-initial' && targetStepId !== 'step-loading' && targetStepId !== 'step-chat' && targetStepId !== 'step-instant') {
+                  document.getElementById('stepper-indicator').style.display = 'flex';
+                  updateStepper(targetStepId);
+              }
+          } else {
+              goToStep('step-initial');
+          }
+
           populateForm();
-        }
 
-        // Fetch from API to support cross-device resume
-        const backendUrl = (window.location.origin.includes('localhost') || window.location.protocol === 'file:') ? 'http://127.0.0.1:18789' : '';
-        const tenantId = localStorage.getItem('tenant_id') || 'storefront';
-        const userId = localStorage.getItem('user_id') || 'test-user';
-
-        fetch(`${backendUrl}/api/onboarding/state`, {
-            method: 'GET',
-            headers: {
-                'X-Tenant-ID': tenantId,
-                'X-User-ID': userId
-            }
-        })
-        .then(res => res.json())
-        .then(apiState => {
-            if (apiState && Object.keys(apiState).length > 0) {
-                state = { ...state, ...(apiState.wizardState || apiState) };
-                populateForm();
-            }
-        })
-        .catch(err => console.error('Failed to load cross-device state:', err));
+          if (foundExisting) {
+              const toast = document.getElementById('resume-msg');
+              if (toast) {
+                  toast.style.display = 'block';
+                  setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.style.display = 'none', 500); }, 4000);
+              }
+          }
       }
+
+      loadInitialState();
 
 
       if (state.step === undefined || state.step === 0) {
          goToStep('step-initial');
       } else {
-         const steps = ['step-context', 'step-categories', 'step-name', 'step-assistant', 'step-admin', 'step-offer', 'step-template'];
+         const steps = ['step-context', 'step-categories', 'step-name', 'step-assistant', 'step-team', 'step-admin', 'step-offer', 'step-template'];
          if (state.step < steps.length) {
             goToStep(steps[state.step]);
          }
@@ -858,8 +1011,19 @@
               });
           }
 
+          if (state.ai_agents) {
+              document.querySelectorAll('input[name="ai_agents"]').forEach(cb => {
+                  cb.checked = state.ai_agents.includes(cb.value);
+                  if (cb.checked) {
+                      cb.closest('.radio-option').classList.add('selected');
+                  } else {
+                      cb.closest('.radio-option').classList.remove('selected');
+                  }
+              });
+          }
+
           if (state.step !== undefined && state.step > 0) {
-              const steps = ['step-context', 'step-categories', 'step-name', 'step-assistant', 'step-admin', 'step-offer', 'step-template'];
+              const steps = ['step-context', 'step-categories', 'step-name', 'step-assistant', 'step-team', 'step-admin', 'step-offer', 'step-template'];
               if (state.step < steps.length) {
                   goToStep(steps[state.step]);
               }
@@ -889,9 +1053,10 @@
               if (activeStep.id === 'step-categories') stepNumber = 1;
               if (activeStep.id === 'step-name') stepNumber = 2;
               if (activeStep.id === 'step-assistant') stepNumber = 3;
-              if (activeStep.id === 'step-admin') stepNumber = 4;
-              if (activeStep.id === 'step-offer') stepNumber = 5;
-              if (activeStep.id === 'step-template') stepNumber = 6;
+              if (activeStep.id === 'step-team') stepNumber = 4;
+              if (activeStep.id === 'step-admin') stepNumber = 5;
+              if (activeStep.id === 'step-offer') stepNumber = 6;
+              if (activeStep.id === 'step-template') stepNumber = 7;
           }
           state.step = stepNumber;
 
@@ -912,6 +1077,12 @@
 
       function validateStep(stepId) {
           let isValid = true;
+
+          if (stepId === 'step-team') {
+              const selected = Array.from(document.querySelectorAll('input[name="ai_agents"]:checked')).map(cb => cb.value);
+              state.ai_agents = selected;
+              return true;
+          }
 
           if (stepId === 'step-initial' || stepId === 'step-instant' || stepId === 'step-chat') {
               return true;
@@ -978,7 +1149,8 @@
                   inputs.adminEmail.style.borderColor = 'rgba(255, 255, 255, 0.5)';
               }
 
-              if (passVal.length < 8) {
+              const hasNumber = /\d/.test(passVal);
+              if (passVal.length < 8 || !hasNumber) {
                   errors.adminPassword.style.display = 'block';
                   inputs.adminPassword.style.borderColor = '#FF3B30';
                   stepValid = false;
@@ -1031,7 +1203,7 @@
               if (stepperIndicator) stepperIndicator.style.display = 'flex';
           }
 
-          const steps = ['step-context', 'step-categories', 'step-name', 'step-assistant', 'step-admin', 'step-offer', 'step-template'];
+          const steps = ['step-context', 'step-categories', 'step-name', 'step-assistant', 'step-team', 'step-admin', 'step-offer', 'step-template'];
           const currentIndex = steps.indexOf(stepId);
 
           document.querySelectorAll('.step-indicator').forEach((indicator, index) => {
@@ -1189,22 +1361,24 @@
               if (data.is_complete && data.intake_data) {
                   const intakeData = data.intake_data;
                   const req = {
-                      companyName: intakeData.business_name || "My Business",
-                      businessType: intakeData.business_type || "Online Store",
-                      companyDescription: chatHistory.map(m => m.content).join(" "),
-                      sellingCategories: intakeData.categories || ["physical"],
-                      paymentPref: "online",
-                      adminEmail: "admin@mybusiness.com",
-                      adminName: "Admin",
-                      adminPassword: "password",
-                      websiteTemplate: "auto",
-                      firstProductName: intakeData.initial_products?.[0]?.name || "First Product",
-                      firstProductPrice: intakeData.initial_products?.[0]?.price || "0.00",
-                      domainChoice: "subdomain",
-                      priceType: "fixed",
+                      company_name: intakeData.business_name || "My Business",
+                      business_type: intakeData.business_type || "Online Store",
+                      company_description: chatHistory.map(m => m.content).join(" "),
+                      selling_categories: intakeData.categories || ["physical"],
+                      payment_pref: "online",
+                      admin_email: "admin@mybusiness.com",
+                      admin_name: "Admin",
+                      admin_password: "password",
+                      website_template: "auto",
+                      first_product_name: intakeData.initial_products?.[0]?.name || "First Product",
+                      first_product_price: intakeData.initial_products?.[0]?.price || "0.00",
+                      domain_choice: "subdomain",
+                      price_type: "fixed",
                       location: intakeData.location || "Local",
-                      targetAudience: intakeData.target_audience || "General",
-                      initialProducts: intakeData.initial_products || []
+                      target_audience: intakeData.target_audience || "General",
+                      initial_products: intakeData.initial_products || [],
+                      ai_agents: state.ai_agents || [],
+                      ai_auto_respond: true
                   };
 
                   if (window.__TAURI__ && window.__TAURI__.core) {
@@ -1219,25 +1393,12 @@
 
                   const startRes = await fetch(`${backendUrl}/api/onboarding/start`, {
                       method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({
-                          business_type: req.businessType,
-                          company_name: req.companyName,
-                          company_description: req.companyDescription,
-                          selling_categories: req.sellingCategories,
-                          payment_pref: req.paymentPref,
-                          admin_email: req.adminEmail,
-                          website_template: req.websiteTemplate,
-                          first_product_name: req.firstProductName,
-                          first_product_price: req.firstProductPrice,
-                          domain_choice: req.domainChoice,
-                          admin_name: req.adminName,
-                          admin_password: req.adminPassword,
-                          price_type: req.priceType,
-                          location: req.location,
-                          target_audience: req.targetAudience,
-                          initial_products: req.initialProducts
-                      })
+                      headers: {
+                          'Content-Type': 'application/json',
+                          'X-Tenant-ID': tenantIdStr,
+                          'X-User-ID': userIdStr
+                      },
+                      body: JSON.stringify(req)
                   });
 
                   if (startRes.ok) {
@@ -1304,22 +1465,24 @@
                   }
 
                   const req = {
-                      companyName: intakeData.business_name || "My Business",
-                      businessType: intakeData.business_type || "Online Store",
-                      companyDescription: bioInput,
-                      sellingCategories: intakeData.categories || ["physical"],
-                      paymentPref: "online",
-                      adminEmail: "admin@mybusiness.com",
-                      adminName: "Admin",
-                      adminPassword: "password",
-                      websiteTemplate: "auto",
-                      firstProductName: intakeData.initial_products?.[0]?.name || "First Product",
-                      firstProductPrice: intakeData.initial_products?.[0]?.price || "0.00",
-                      domainChoice: "subdomain",
-                      priceType: "fixed",
+                      company_name: intakeData.business_name || "My Business",
+                      business_type: intakeData.business_type || "Online Store",
+                      company_description: bioInput,
+                      selling_categories: intakeData.categories || ["physical"],
+                      payment_pref: "online",
+                      admin_email: "admin@mybusiness.com",
+                      admin_name: "Admin",
+                      admin_password: "password",
+                      website_template: "auto",
+                      first_product_name: intakeData.initial_products?.[0]?.name || "First Product",
+                      first_product_price: intakeData.initial_products?.[0]?.price || "0.00",
+                      domain_choice: "subdomain",
+                      price_type: "fixed",
                       location: intakeData.location || "Local",
-                      targetAudience: intakeData.target_audience || "General",
-                      initialProducts: intakeData.initial_products || []
+                      target_audience: intakeData.target_audience || "General",
+                      initial_products: intakeData.initial_products || [],
+                      ai_agents: state.ai_agents || [],
+                      ai_auto_respond: true
                   };
 
                   if (window.__TAURI__ && window.__TAURI__.core) {
@@ -1334,24 +1497,7 @@
                               'X-Tenant-ID': tenantIdStr,
                               'X-User-ID': userIdStr
                           },
-                          body: JSON.stringify({
-                              business_type: req.businessType,
-                              company_name: req.companyName,
-                              company_description: req.companyDescription,
-                              selling_categories: req.sellingCategories,
-                              payment_pref: req.paymentPref,
-                              admin_email: req.adminEmail,
-                              website_template: req.websiteTemplate,
-                              first_product_name: req.firstProductName,
-                              first_product_price: req.firstProductPrice,
-                              domain_choice: req.domainChoice,
-                              admin_name: req.adminName,
-                              admin_password: req.adminPassword,
-                              price_type: req.priceType,
-                              location: req.location,
-                              target_audience: req.targetAudience,
-                              initial_products: req.initialProducts
-                          })
+                          body: JSON.stringify(req)
                       });
 
                       if (!startRes.ok) {
@@ -1462,12 +1608,14 @@
                    admin_name: state.assistantName || "Admin",
                    admin_password: state.adminPassword || "password",
                    website_template: state.templateSelection || "Modern",
-                   first_product_name: state.firstOffer || "First Offer",
+                   first_product_name: state.first_offer || "First Offer",
                    first_product_price: "0.00",
                    domain_choice: "subdomain",
                    price_type: "fixed",
                    location: "Local",
-                   target_audience: "General"
+                   target_audience: "General",
+                   ai_agents: state.ai_agents || [],
+                   ai_auto_respond: true
                };
 
                if (window.__TAURI__ && window.__TAURI__.core) {
