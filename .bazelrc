@@ -135,7 +135,7 @@ common:nativelink --jobs=50
 common:nativelink --remote_upload_local_results=false
 common:nativelink --remote_header=x-nativelink-api-key=GZRlHAyqIIcVJw9dJ9n9
 
-common:remote-cache --config=local
+common:remote-cache --config=nativelink
 common:remote-cache --remote_download_minimal
 common:remote-cache --remote_local_fallback
 common:remote-cache --remote_timeout=10m
@@ -181,5 +181,3 @@ build:wasm32 --platforms=//bazel/platforms:wasm32
 build:windows --config=windows_x86_64
 # Workaround to fix bazel analysis failure on Windows CI
 build:windows --build_tag_filters=-requires_x11,-requires_wayland,-e2e
-build --define allow_nonstandard_protoc=true
-test --define allow_nonstandard_protoc=true
