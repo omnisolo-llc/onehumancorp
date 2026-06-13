@@ -1423,15 +1423,20 @@
 
             if (item.proposed_action?.feature_type === 'quote_draft' || item.context_payload?.feature_type === 'quote_draft') {
               return `
-                <div class="triage-item" data-testid="triage-card-${item.id}" id="triage-${item.id}">
-                  <div class="triage-header">
-                    <div class="triage-source" style="text-transform: uppercase; font-size: 10px; background: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 4px 8px; border-radius: 4px;">${(item.event_source || 'Unknown').replace('_', ' ')}</div>
-                    <div class="triage-priority" style="font-size: 12px; color: #6b7280;">Action Needed</div>
+                <div class="triage-item" data-testid="triage-card-${item.id}" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.4); backdrop-filter: blur(20px); border-radius: 16px; padding: 16px; border: 1px solid rgba(255,255,255,0.6); cursor: pointer;" onclick="document.getElementById('triage-detail-${item.id}') ? document.getElementById('triage-detail-${item.id}').style.display='block' : null">
+                  <div class="triage-header" style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+                    <div class="triage-source" style="display: flex; align-items: center; gap: 8px;">
+                      <span style="font-size: 18px;">💡</span> <strong>${(item.source || item.event_source || 'Unknown').replace('_', ' ')}</strong>
+                    </div>
+                    <div class="triage-priority" style="font-size: 12px; color: #6b7280; text-transform: uppercase; padding: 4px 8px; border-radius: 4px; background: rgba(0,0,0,0.05);">Action Needed</div>
                   </div>
-                  <div class="triage-context" style="font-size: 16px; font-weight: 600; margin-top: 8px;">${description}</div>
-                  <div class="triage-controls" style="margin-top: 12px;">
-                    <button class="triage-btn-approve" data-testid="edit-quote-draft" onclick="window.location.href='quote.html?id=${item.id}'">Review Quote</button>
-                    <button class="triage-btn-dismiss" data-testid="reject-proposal" onclick="handleTriageAction('${item.id}', 'DISMISSED')">Dismiss</button>
+                  <div class="triage-context" style="font-size: 15px; font-weight: 600; margin-bottom: 12px; color: #1d1d1f;">${item.context || description}</div>
+                  <div id="triage-detail-${item.id}" style="background: rgba(255,255,255,0.5); padding: 12px; border-radius: 12px; margin-bottom: 16px; font-size: 14px; color: #333; font-style: italic; border: 1px solid rgba(255,255,255,0.6);">
+                      ${item.action_payload || item.proposed_action?.payload || 'No specific payload'}
+                  </div>
+                  <div class="triage-controls" style="display: flex; gap: 8px;">
+                    <button class="triage-btn-approve" data-testid="edit-quote-draft" onclick="event.stopPropagation(); window.location.href='quote.html?id=${item.id}'" style="flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 12px; font-weight: 600; border: none; cursor: pointer;">Review Quote</button>
+                    <button class="triage-btn-dismiss" data-testid="reject-proposal" onclick="event.stopPropagation(); handleTriageAction('${item.id}', 'DISMISSED')" style="flex: 1; background: rgba(0,0,0,0.05); color: #1d1d1f; padding: 12px; border-radius: 12px; font-weight: 600; border: none; cursor: pointer;">Dismiss</button>
                   </div>
                 </div>
               `;
@@ -1467,7 +1472,7 @@
           if (item.event_source === 'instagram_dm' || item.context_payload?.feature_type === 'instagram_dm') {
             let parsedPayload = item.context_payload || {};
             return `
-              <div class="triage-item" data-testid="triage-card-${item.id}" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.4); backdrop-filter: blur(20px); border-radius: 16px; padding: 16px; border: 1px solid rgba(255,255,255,0.6);">
+              <div class="triage-item" data-testid="triage-card-${item.id}" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.4); backdrop-filter: blur(20px); border-radius: 16px; padding: 16px; border: 1px solid rgba(255,255,255,0.6); cursor: pointer;" onclick="document.getElementById('triage-detail-${item.id}') ? document.getElementById('triage-detail-${item.id}').style.display='block' : null">
                 <div class="triage-header" style="margin-bottom: 12px;">
                   <div class="triage-source" style="display: flex; align-items: center; gap: 8px;">
                     <span style="font-size: 18px;">💬</span> <strong>Instagram DM</strong>
@@ -1475,14 +1480,14 @@
                   <div class="triage-priority ${priorityClass}">${item.priority || 'Normal'}</div>
                 </div>
                 <div class="triage-context" style="font-weight: 600; margin-bottom: 12px; font-size: 15px;">
-                  ${parsedPayload.customer_message || 'New message'}
+                  ${item.context || parsedPayload.customer_message || 'New message'}
                 </div>
-                <div style="background: rgba(0,0,0,0.03); padding: 12px; border-radius: 12px; margin-bottom: 16px; font-size: 14px; color: #333; font-style: italic;">
-                  ${parsedPayload.draft_reply || ''}
+                <div id="triage-detail-${item.id}" style="display: none; background: rgba(255,255,255,0.5); padding: 12px; border-radius: 12px; margin-bottom: 16px; font-size: 14px; color: #333; font-style: italic; border: 1px solid rgba(255,255,255,0.6);">
+                  ${item.action_payload || parsedPayload.draft_reply || ''}
                 </div>
                 <div class="triage-controls" style="display: flex; gap: 8px;">
-                  <button class="triage-btn-approve" data-testid="approve-instagram-dm" onclick="handleTriageAction('${item.id}', 'APPROVED')" style="flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 12px; font-weight: 600; border: none; cursor: pointer;">Approve Reply</button>
-                  <button class="triage-btn-dismiss" onclick="handleTriageAction('${item.id}', 'DISMISSED')" style="flex: 1; background: rgba(0,0,0,0.05); color: #1d1d1f; padding: 12px; border-radius: 12px; font-weight: 600; border: none; cursor: pointer;">Edit Draft</button>
+                  <button class="triage-btn-approve" data-testid="approve-btn" onclick="event.stopPropagation(); handleTriageAction('${item.id}', 'APPROVED')" style="flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 12px; font-weight: 600; border: none; cursor: pointer;">Approve Reply</button>
+                  <button class="triage-btn-dismiss" data-testid="dismiss-btn" onclick="event.stopPropagation(); handleTriageAction('${item.id}', 'DISMISSED')" style="flex: 1; background: rgba(0,0,0,0.05); color: #1d1d1f; padding: 12px; border-radius: 12px; font-weight: 600; border: none; cursor: pointer;">Dismiss</button>
                 </div>
               </div>
             `;
@@ -1515,20 +1520,25 @@
           }
 
           return `
-            <div class="triage-item" data-testid="triage-card-${item.id}" id="triage-${item.id}">
-              <div class="triage-header">
-                <div class="triage-source" style="text-transform: uppercase; font-size: 10px; background: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 4px 8px; border-radius: 4px;">${(item.source || item.event_source || 'Unknown').replace('_', ' ')}</div>
-                <div class="triage-priority" style="font-size: 12px; color: #6b7280;">Action Needed</div>
+            <div class="triage-item" data-testid="triage-card-${item.id}" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.4); backdrop-filter: blur(20px); border-radius: 16px; padding: 16px; border: 1px solid rgba(255,255,255,0.6); cursor: pointer;" onclick="document.getElementById('triage-detail-${item.id}') ? document.getElementById('triage-detail-${item.id}').style.display='block' : null">
+              <div class="triage-header" style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+                <div class="triage-source" style="display: flex; align-items: center; gap: 8px;">
+                    <span style="font-size: 18px;">💡</span> <strong>${(item.source || item.event_source || 'Unknown').replace('_', ' ')}</strong>
+                </div>
+                <div class="triage-priority" style="font-size: 12px; color: #6b7280; text-transform: uppercase; padding: 4px 8px; border-radius: 4px; background: rgba(0,0,0,0.05);">Action Needed</div>
               </div>
-              <div class="triage-context" style="font-size: 16px; font-weight: 600; margin-top: 8px;">${description}</div>
-              <div class="triage-controls" style="margin-top: 12px;">
-                <button class="triage-btn-approve" data-testid="${approveTestId}" onclick="handleTriageAction('${item.id}', true)">${approveText}</button>
-                <button class="triage-btn-dismiss" data-testid="reject-proposal" onclick="handleTriageAction('${item.id}', false)">Dismiss</button>
+              <div class="triage-context" style="font-size: 15px; font-weight: 600; margin-bottom: 12px; color: #1d1d1f;">${item.context || description}</div>
+
+              <div id="triage-detail-${item.id}" style="background: rgba(255,255,255,0.5); padding: 12px; border-radius: 12px; margin-bottom: 16px; font-size: 14px; color: #333; font-style: italic; border: 1px solid rgba(255,255,255,0.6);">
+                  ${item.action_payload || item.proposed_action?.payload || 'No specific payload'}
               </div>
 
-                </div>
+              <div class="triage-controls" style="display: flex; gap: 8px;">
+                <button class="triage-btn-approve" data-testid="approve-btn" onclick="event.stopPropagation(); handleTriageAction('${item.id}', true)" style="flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 12px; font-weight: 600; border: none; cursor: pointer; box-shadow: 0 4px 12px rgba(0,102,255,0.2);">Approve & Execute</button>
+                <button class="triage-btn-dismiss" data-testid="dismiss-btn" onclick="event.stopPropagation(); handleTriageAction('${item.id}', false)" style="flex: 1; background: rgba(0,0,0,0.05); color: #1d1d1f; padding: 12px; border-radius: 12px; font-weight: 600; border: none; cursor: pointer; transition: background 0.2s;">Dismiss</button>
               </div>
-            `;
+            </div>
+          `;
           }).join('');
         } else {
 

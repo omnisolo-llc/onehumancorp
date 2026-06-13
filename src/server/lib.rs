@@ -3000,9 +3000,11 @@ pub async fn list_ui_triage_handler(
                             "customer_id": row.try_get::<String, _>("customer_id").unwrap_or_default(),
                             "source": row.try_get::<String, _>("source").unwrap_or_default(),
                             "priority": row.try_get::<String, _>("priority").unwrap_or_default(),
+                            "context": row.try_get::<String, _>("context").unwrap_or_default(),
                             "status": row.try_get::<String, _>("status").unwrap_or_default(),
                             "created_at": row.try_get::<chrono::DateTime<chrono::Utc>, _>("created_at").map(|dt| dt.to_rfc3339()).unwrap_or_default(),
                             "action_type": row.try_get::<String, _>("action_type").unwrap_or_default(),
+                            "action_payload": row.try_get::<String, _>("action_payload").unwrap_or_default(),
                         })
                     } else {
                         serde_json::json!({
@@ -3038,9 +3040,11 @@ pub async fn list_ui_triage_handler(
                             "customer_id": row.try_get::<String, _>("customer_id").unwrap_or_default(),
                             "source": row.try_get::<String, _>("source").unwrap_or_default(),
                             "priority": row.try_get::<String, _>("priority").unwrap_or_default(),
+                            "context": row.try_get::<String, _>("context").unwrap_or_default(),
                             "status": row.try_get::<String, _>("status").unwrap_or_default(),
                             "created_at": row.try_get::<String, _>("created_at").unwrap_or_default(),
                             "action_type": row.try_get::<String, _>("action_type").unwrap_or_default(),
+                            "action_payload": row.try_get::<String, _>("action_payload").unwrap_or_default(),
                         })
                     } else {
                         serde_json::json!({
@@ -3627,9 +3631,11 @@ async fn load_ui_triage_from_db(db: &crate::db::DB, tenant_id: &str, mobile_opti
                         "customer_id": row.try_get::<String, _>("customer_id").unwrap_or_default(),
                         "source": row.try_get::<String, _>("source").unwrap_or_default(),
                         "priority": row.try_get::<String, _>("priority").unwrap_or_default(),
+                        "context": row.try_get::<String, _>("context").unwrap_or_default(),
                         "status": row.try_get::<String, _>("status").unwrap_or_default(),
                         "created_at": row.try_get::<chrono::DateTime<chrono::Utc>, _>("created_at").map(|dt| dt.to_rfc3339()).unwrap_or_default(),
                         "action_type": row.try_get::<String, _>("action_type").unwrap_or_default(),
+                        "action_payload": row.try_get::<String, _>("action_payload").unwrap_or_default(),
                     })
                 } else {
                     serde_json::json!({
@@ -3662,9 +3668,11 @@ async fn load_ui_triage_from_db(db: &crate::db::DB, tenant_id: &str, mobile_opti
                         "customer_id": row.try_get::<String, _>("customer_id").unwrap_or_default(),
                         "source": row.try_get::<String, _>("source").unwrap_or_default(),
                         "priority": row.try_get::<String, _>("priority").unwrap_or_default(),
+                        "context": row.try_get::<String, _>("context").unwrap_or_default(),
                         "status": row.try_get::<String, _>("status").unwrap_or_default(),
                         "created_at": row.try_get::<String, _>("created_at").unwrap_or_default(),
                         "action_type": row.try_get::<String, _>("action_type").unwrap_or_default(),
+                        "action_payload": row.try_get::<String, _>("action_payload").unwrap_or_default(),
                     })
                 } else {
                     serde_json::json!({
@@ -3837,11 +3845,8 @@ async fn ui_dashboard_unified_feed_handler(
                         obj.remove("original_message");
                     }
                 }
-                for item in triage.iter_mut() {
-                    if let Some(obj) = item.as_object_mut() {
-                        obj.remove("context");
-                        obj.remove("action_payload");
-                    }
+                for _item in triage.iter_mut() {
+                    // retained context and action_payload for mobile view
                 }
                 for item in approvals.iter_mut() {
                     if let Some(obj) = item.as_object_mut() {
@@ -3913,11 +3918,8 @@ async fn ui_dashboard_unified_feed_handler(
                 obj.remove("original_message");
             }
         }
-        for item in triage.iter_mut() {
-            if let Some(obj) = item.as_object_mut() {
-                obj.remove("context");
-                obj.remove("action_payload");
-            }
+        for _item in triage.iter_mut() {
+            // retained context and action_payload for mobile view
         }
         for item in approvals.iter_mut() {
             if let Some(obj) = item.as_object_mut() {
