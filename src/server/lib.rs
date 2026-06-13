@@ -3887,9 +3887,9 @@ async fn ui_dashboard_unified_feed_handler(
             let mut orders = orders_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
             let mut inbox = messages_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
             let mut triage = triage_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
-            let mut approvals = approvals_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
-            let mut agent_feed = agent_feed_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
-            let mut priority_tasks = priority_tasks_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
+            let approvals = approvals_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
+            let agent_feed = agent_feed_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
+            let priority_tasks = priority_tasks_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
 
             if mobile_optimized {
                 for order in orders.iter_mut() {
@@ -3947,9 +3947,9 @@ async fn ui_dashboard_unified_feed_handler(
     let mut orders = orders_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
     let mut inbox = messages_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
     let mut triage = triage_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
-    let mut approvals = approvals_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
-    let mut agent_feed = agent_feed_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
-    let mut priority_tasks = priority_tasks_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
+    let approvals = approvals_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
+    let agent_feed = agent_feed_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
+    let priority_tasks = priority_tasks_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
     let supply = supply_res.unwrap_or_else(|_| Ok(serde_json::json!({}))).unwrap_or_default();
 
     if mobile_optimized {
