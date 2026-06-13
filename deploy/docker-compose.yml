@@ -126,12 +126,12 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
-    image: valkey/valkey:8-alpine
+    image: public.ecr.aws/docker/library/redis:7
     pull_policy: missing
     ports:
       - "${OHC_DOCKER_VALKEY_PORT:-6379}:6379"
     healthcheck:
-      test: ["CMD", "valkey-cli", "ping"]
+      test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       timeout: 3s
       retries: 10
