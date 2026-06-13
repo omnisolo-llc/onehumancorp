@@ -1,0 +1,5 @@
+ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS product_id TEXT REFERENCES products(id) ON DELETE CASCADE;
+ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS interval TEXT;
+ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS interval_count INTEGER NOT NULL DEFAULT 1;
+ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'active';
+ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS discount_percentage INTEGER DEFAULT 0;

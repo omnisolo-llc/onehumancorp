@@ -247,6 +247,7 @@ where
         .route("/campaign/generate-review", post(handle_generate_review))
         .route("/campaign/generate-customer-referral", post(handle_generate_customer_referral))
         .route("/campaign/generate-cart", post(handle_generate_cart))
+        .route("/campaign/generate-win-back", post(handle_generate_win_back))
         .route("/campaign/send-cart", post(handle_send_cart))
         .route("/campaign/abandoned-carts-count", get(handle_abandoned_carts_count))
         .route("/storefront/track", post(handle_track_visitor))
@@ -760,6 +761,30 @@ async fn handle_generate_cart(
     );
     Json(GenerateCartResponse {
         message: generated,
+    })
+}
+
+#[derive(Deserialize)]
+pub struct GenerateWinBackRequest {
+    pub days_inactive: Option<i32>,
+    pub offer: Option<String>,
+    pub tone: Option<String>,
+}
+
+#[derive(Serialize)]
+pub struct GenerateWinBackResponse {
+    pub subject: String,
+    pub body: String,
+}
+
+async fn handle_generate_win_back(
+    Extension(_state): Extension<GrowthState>,
+    Json(req): Json<GenerateWinBackRequest>,
+) -> impl IntoResponse {
+    let offer = req.offer.unwrap_or_else(|| "a special offer".to_string());
+    Json(GenerateWinBackResponse {
+        subject: format!("We miss you! Here is {}", offer),
+        body: format!("Hi there,\n\nWe noticed you haven't been around lately. Enjoy {} on your next order with code WINBACK.\n\nBest,\nThe Team", offer),
     })
 }
 

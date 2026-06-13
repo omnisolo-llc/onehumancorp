@@ -129,6 +129,9 @@
         <button type="submit" class="btn btn-primary" id="btn-submit">Get a Quote</button>
       </form>
     </div>
+    <div style="text-align: center; margin-top: 12px; font-family: sans-serif; font-size: 12px;">
+      <a href="#" id="branding-link" target="_blank" style="color: #86868b; text-decoration: none; font-weight: 600;">⚡ Powered by OHC</a>
+    </div>
   </div>
 
   <div class="mobile-container" id="success-view" style="display: none; align-items: center; justify-content: center; text-align: center;">
@@ -143,6 +146,11 @@
     document.addEventListener('DOMContentLoaded', () => {
       const urlParams = new URLSearchParams(window.location.search);
       const tenantId = urlParams.get('tenant') || 'demo-tenant';
+
+      const brandingLink = document.getElementById('branding-link');
+      if (brandingLink) {
+        brandingLink.href = `/api/v1/growth/referrals/click?target=/onboarding&ref=${encodeURIComponent(tenantId)}`;
+      }
 
 
       // Fetch actual business profile
