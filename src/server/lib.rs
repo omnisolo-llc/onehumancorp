@@ -3085,7 +3085,7 @@ pub async fn update_ui_triage_action_handler(
                             let invoice_id = format!("inv-{}", uuid::Uuid::new_v4());
 
                             if let Err(e) = sqlx::query(
-                                "INSERT INTO invoices (id, tenant_id, client_id, client_name, status, due_date, currency, total_amount) VALUES ($1, $2, $3, $4, 'draft', $5, $6, $7)"
+                                "INSERT INTO invoices (id, tenant_id, client_id, client_name, status, due_date, currency, total_amount, total_amount_cents, payment_status, view_count, amount_paid_cents) VALUES ($1, $2, $3, $4, 'draft', $5, $6, $7, 0, 'draft', 0, 0)"
                             )
                             .bind(&invoice_id)
                             .bind(&tenant_id)
@@ -4040,6 +4040,7 @@ async fn list_ui_orders_handler(
                             "status": row.get::<String, _>("status"),
                         })
                     } else {
+                        use sqlx::Row;
                         serde_json::json!({
                             "id": row.get::<String, _>("id"),
                             "customer_name": row.get::<String, _>("customer_name"),
@@ -4070,6 +4071,7 @@ async fn list_ui_orders_handler(
                             "status": row.get::<String, _>("status"),
                         })
                     } else {
+                        use sqlx::Row;
                         serde_json::json!({
                             "id": row.get::<String, _>("id"),
                             "customer_name": row.get::<String, _>("customer_name"),
@@ -4190,6 +4192,7 @@ async fn list_ui_bookings_handler(
             .fetch_all(&db.pool)
             .await {
                 Ok(rows) => Ok(rows.into_iter().map(|row| {
+                    use sqlx::Row;
                     if query.mobile_optimized.unwrap_or(false) {
                         serde_json::json!({
                             "id": row.get::<String, _>("id"),
@@ -4223,6 +4226,7 @@ async fn list_ui_bookings_handler(
             .fetch_all(pool)
             .await {
                 Ok(rows) => Ok(rows.into_iter().map(|row| {
+                    use sqlx::Row;
                     if query.mobile_optimized.unwrap_or(false) {
                         serde_json::json!({
                             "id": row.get::<String, _>("id"),
