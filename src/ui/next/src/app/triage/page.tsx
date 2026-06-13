@@ -119,7 +119,11 @@ export default function TriagePage() {
           <div id="triage-list" className="app-list">
             {error && <div className="app-empty">{error}</div>}
             {!error && items.length === 0 ? (
-              <div className="app-empty">{loading ? "Loading triage items..." : "No items need your attention right now. Great job!"}</div>
+              <div className="app-empty flex flex-col items-center justify-center py-12">
+                <div className="text-4xl mb-4">✨</div>
+                <div className="text-lg font-medium text-gray-900 dark:text-white">All caught up!</div>
+                <div className="text-sm text-gray-500 mt-2">{loading ? "Loading triage items..." : "No triage items need your attention right now. Great job!"}</div>
+              </div>
             ) : items.map((item) => (
               <button
                 key={item.id}
@@ -179,7 +183,7 @@ export default function TriagePage() {
 
               <div className="flex flex-col sm:flex-row gap-3">
                 <button
-                  className="app-btn-primary flex-1 min-h-[44px]"
+                  className="app-btn-primary flex-1 min-h-[44px] backdrop-blur-md hover:opacity-90 transition-opacity"
                   data-testid="approve-btn"
                   onClick={() => handleDecision(selected.id, true)}
                 >
