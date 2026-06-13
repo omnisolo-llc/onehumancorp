@@ -77,3 +77,14 @@ export const test = base.extend<{
 });
 
 export { expect };
+
+export async function adminPage(browserOrPage: any, context?: any) {
+  let page;
+  if (browserOrPage.newPage) {
+      page = await browserOrPage.newPage();
+  } else {
+      page = browserOrPage;
+  }
+  await loginAs(page, E2E_ADMIN_USER);
+  return page;
+}
