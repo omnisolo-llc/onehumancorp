@@ -254,7 +254,7 @@ mod tests {
         assert!(result.contains("│ fn helper()"));
 
         assert!(result.contains("📄 utils.py"));
-        println!("RESULT: {}", result); assert!(result.contains("│ def do_something()"));
+        assert!(result.contains("│ def do_something()"));
         assert!(result.contains("│ class Data"));
 
         assert!(result.contains("📄 app.ts"));
