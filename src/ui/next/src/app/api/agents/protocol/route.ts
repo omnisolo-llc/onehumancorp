@@ -3,10 +3,10 @@ import { NextRequest, NextResponse } from 'next/server';
 export const runtime = 'nodejs';
 
 async function proxyToAgent(method: string, params: any) {
-  const agentUrl = process.env.OHC_AGENT_URL || 'http://127.0.0.1:18789';
+  const agentUrl = process.env.OHC_API_URL || process.env.OHC_BACKEND_URL || process.env.BACKEND_URL || process.env.OHC_AGENT_URL || 'http://127.0.0.1:18789';
 
   try {
-    const res = await fetch(`${agentUrl}/json_rpc`, {
+    const res = await fetch(`${agentUrl}/rpc`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

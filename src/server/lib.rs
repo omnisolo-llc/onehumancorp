@@ -5293,6 +5293,9 @@ async fn create_ui_bom_item_handler(
             sub_agents: std::collections::HashMap::new(),
             default_config: ohc_builtin_agent::agent::AgentRunConfig::default(),
         })))
+        .merge(ohc_builtin_agent::json_rpc_server::create_router(std::sync::Arc::new(ohc_builtin_agent::codex_runner::Runner::new(
+            std::sync::Arc::new(ohc_builtin_agent::agent::Agent::new(std::sync::Arc::new(ohc_builtin_agent::llm::openai::OpenAIClient::new("dummy".to_string())), vec![]))
+        ))))
         .merge(meta_webhook_router)
         .merge(omnichannel_webhook_router)
         .merge(health_router)
