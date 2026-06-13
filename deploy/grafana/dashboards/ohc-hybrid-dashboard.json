@@ -11,21 +11,6 @@
   "panels": [
     {
       "type": "text",
-      "title": "OHC Aesthetic Injector",
-      "gridPos": {
-        "h": 2,
-        "w": 24,
-        "x": 0,
-        "y": 0
-      },
-      "options": {
-        "mode": "html",
-        "content": "<link rel=\"stylesheet\" href=\"/public/css/custom.css\">"
-      },
-      "transparent": true
-    },
-    {
-      "type": "text",
       "title": "OHC Aesthetics",
       "gridPos": {
         "h": 2,
@@ -252,7 +237,8 @@
           "range": true,
           "refId": "A"
         }
-      ]
+      ],
+      "transparent": true
     }
   ],
   "schemaVersion": 38,

@@ -63,9 +63,8 @@
       },
       "options": {
         "mode": "html",
-        "content": "<link rel=\"stylesheet\" href=\"/public/css/custom.css\">\n<h1 >Agent Audit Dashboard</h1>\n  <p >OHC Swarm Intelligence Protocol</p>"
+        "content": "<link rel=\"stylesheet\" href=\"/public/css/custom.css\">"
       },
-      "pluginVersion": "10.0.0",
       "transparent": true
     },
     {
