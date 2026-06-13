@@ -45,7 +45,7 @@ export default function ApiDocsPage() {
         </div>
       )}
       {mounted && !loading && spec && (
-        <div className="flex flex-col h-full bg-white/30 backdrop-blur-[20px] saturate-200 rounded-xl p-2 sm:p-6 overflow-x-hidden shadow-[0_8px_32px_rgba(0,0,0,0.05)] border border-gray-100/50">
+        <div className="flex flex-col h-full bg-white/60 backdrop-blur-[30px] saturate-[210%] rounded-2xl p-4 sm:p-6 overflow-x-hidden shadow-[0_8px_32px_rgba(0,0,0,0.12)] border border-white/40">
           <div className="overflow-x-auto w-full max-w-[calc(100vw-32px)]">
             <SwaggerUI spec={spec} />
           </div>
