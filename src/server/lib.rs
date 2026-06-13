@@ -3536,74 +3536,114 @@ async fn load_ui_supply_from_db(db: &crate::db::DB, tenant_id: &str, mobile_opti
     }
 }
 
-async fn load_ui_agent_approvals_from_db(db: &crate::db::DB, tenant_id: &str) -> Result<Vec<serde_json::Value>, sqlx::Error> {
+async fn load_ui_agent_approvals_from_db(db: &crate::db::DB, tenant_id: &str, mobile_optimized: bool) -> Result<Vec<serde_json::Value>, sqlx::Error> {
     use sqlx::Row;
     let limit = 20i64;
+    let query_str = if mobile_optimized {
+        "SELECT id, tenant_id, department, description, status, action_risk FROM agent_approvals WHERE tenant_id = $1 AND status IN ('DRAFT', 'PAUSED') ORDER BY id ASC LIMIT $2"
+    } else {
+        "SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = $1 AND status IN ('DRAFT', 'PAUSED') ORDER BY id ASC LIMIT $2"
+    };
+    let query_str_sqlite = if mobile_optimized {
+        "SELECT id, tenant_id, department, description, status, action_risk FROM agent_approvals WHERE tenant_id = ? AND status IN ('DRAFT', 'PAUSED') ORDER BY id ASC LIMIT ?"
+    } else {
+        "SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = ? AND status IN ('DRAFT', 'PAUSED') ORDER BY id ASC LIMIT ?"
+    };
     match &db.store {
         crate::db::DbStore::Postgres => {
-            sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = $1 AND status IN ('DRAFT', 'PAUSED') ORDER BY id ASC LIMIT $2")
+            sqlx::query(query_str)
                 .bind(tenant_id)
                 .bind(limit)
                 .fetch_all(&db.pool)
-                .await.map(|rows| rows.into_iter().map(|row| serde_json::json!({
-                    "id": row.get::<String, _>("id"),
-                    "tenant_id": row.get::<String, _>("tenant_id"),
-                    "department": row.get::<String, _>("department"),
-                    "description": row.get::<String, _>("description"),
-                    "status": row.get::<String, _>("status"),
-                    "action_risk": row.get::<String, _>("action_risk"),
-                    "payload": row.get::<Option<serde_json::Value>, _>("payload")
-                })).collect())
+                .await.map(|rows| rows.into_iter().map(|row| {
+                    let mut obj = serde_json::json!({
+                        "id": row.get::<String, _>("id"),
+                        "tenant_id": row.get::<String, _>("tenant_id"),
+                        "department": row.get::<String, _>("department"),
+                        "description": row.get::<String, _>("description"),
+                        "status": row.get::<String, _>("status"),
+                        "action_risk": row.get::<String, _>("action_risk")
+                    });
+                    if !mobile_optimized {
+                        obj.as_object_mut().unwrap().insert("payload".to_string(), serde_json::to_value(row.get::<Option<serde_json::Value>, _>("payload")).unwrap_or_default());
+                    }
+                    obj
+                }).collect())
         },
         crate::db::DbStore::Sqlite(pool) => {
-            sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = ? AND status IN ('DRAFT', 'PAUSED') ORDER BY id ASC LIMIT ?")
+            sqlx::query(query_str_sqlite)
                 .bind(tenant_id)
                 .bind(limit)
                 .fetch_all(pool)
-                .await.map(|rows| rows.into_iter().map(|row| serde_json::json!({
-                    "id": row.get::<String, _>("id"),
-                    "tenant_id": row.get::<String, _>("tenant_id"),
-                    "department": row.get::<String, _>("department"),
-                    "description": row.get::<String, _>("description"),
-                    "status": row.get::<String, _>("status"),
-                    "action_risk": row.get::<String, _>("action_risk"),
-                    "payload": row.get::<Option<String>, _>("payload").and_then(|s| serde_json::from_str::<serde_json::Value>(&s).ok())
-                })).collect())
+                .await.map(|rows| rows.into_iter().map(|row| {
+                    let mut obj = serde_json::json!({
+                        "id": row.get::<String, _>("id"),
+                        "tenant_id": row.get::<String, _>("tenant_id"),
+                        "department": row.get::<String, _>("department"),
+                        "description": row.get::<String, _>("description"),
+                        "status": row.get::<String, _>("status"),
+                        "action_risk": row.get::<String, _>("action_risk")
+                    });
+                    if !mobile_optimized {
+                        obj.as_object_mut().unwrap().insert("payload".to_string(), row.try_get::<String, _>("payload").map(|s| serde_json::from_str::<serde_json::Value>(&s).unwrap_or_default()).unwrap_or_default());
+                    }
+                    obj
+                }).collect())
         }
     }
 }
 
-async fn load_ui_ledger_from_db(db: &crate::db::DB, tenant_id: &str) -> Result<Vec<serde_json::Value>, sqlx::Error> {
+async fn load_ui_ledger_from_db(db: &crate::db::DB, tenant_id: &str, mobile_optimized: bool) -> Result<Vec<serde_json::Value>, sqlx::Error> {
     use sqlx::Row;
     let limit_ledger = 50i64;
+    let query_str = if mobile_optimized {
+        "SELECT id, tenant_id, event_type, department, created_at FROM ohc_universal_ledger WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT $2"
+    } else {
+        "SELECT id, tenant_id, event_type, department, payload, created_at FROM ohc_universal_ledger WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT $2"
+    };
+    let query_str_sqlite = if mobile_optimized {
+        "SELECT id, tenant_id, event_type, department, created_at FROM ohc_universal_ledger WHERE tenant_id = ? ORDER BY created_at DESC LIMIT ?"
+    } else {
+        "SELECT id, tenant_id, event_type, department, payload, created_at FROM ohc_universal_ledger WHERE tenant_id = ? ORDER BY created_at DESC LIMIT ?"
+    };
     match &db.store {
         crate::db::DbStore::Postgres => {
-            sqlx::query("SELECT id, tenant_id, event_type, department, payload, created_at FROM ohc_universal_ledger WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT $2")
+            sqlx::query(query_str)
                 .bind(tenant_id)
                 .bind(limit_ledger)
                 .fetch_all(&db.pool)
-                .await.map(|rows| rows.into_iter().map(|row| serde_json::json!({
-                    "id": row.get::<String, _>("id"),
-                    "tenant_id": row.get::<String, _>("tenant_id"),
-                    "event_type": row.get::<String, _>("event_type"),
-                    "department": row.get::<String, _>("department"),
-                    "payload": row.get::<serde_json::Value, _>("payload"),
-                    "created_at": row.get::<chrono::DateTime<chrono::Utc>, _>("created_at").to_rfc3339()
-                })).collect())
+                .await.map(|rows| rows.into_iter().map(|row| {
+                    let mut obj = serde_json::json!({
+                        "id": row.get::<String, _>("id"),
+                        "tenant_id": row.get::<String, _>("tenant_id"),
+                        "event_type": row.get::<String, _>("event_type"),
+                        "department": row.get::<String, _>("department"),
+                        "created_at": row.get::<chrono::DateTime<chrono::Utc>, _>("created_at").to_rfc3339()
+                    });
+                    if !mobile_optimized {
+                        obj.as_object_mut().unwrap().insert("payload".to_string(), serde_json::to_value(row.get::<serde_json::Value, _>("payload")).unwrap_or_default());
+                    }
+                    obj
+                }).collect())
         },
         crate::db::DbStore::Sqlite(pool) => {
-            sqlx::query("SELECT id, tenant_id, event_type, department, payload, created_at FROM ohc_universal_ledger WHERE tenant_id = ? ORDER BY created_at DESC LIMIT ?")
+            sqlx::query(query_str_sqlite)
                 .bind(tenant_id)
                 .bind(limit_ledger)
                 .fetch_all(pool)
-                .await.map(|rows| rows.into_iter().map(|row| serde_json::json!({
-                    "id": row.get::<String, _>("id"),
-                    "tenant_id": row.get::<String, _>("tenant_id"),
-                    "event_type": row.get::<String, _>("event_type"),
-                    "department": row.get::<String, _>("department"),
-                    "payload": serde_json::from_str::<serde_json::Value>(&row.get::<String, _>("payload")).unwrap_or_else(|_| serde_json::json!({})),
-                    "created_at": row.get::<String, _>("created_at")
-                })).collect())
+                .await.map(|rows| rows.into_iter().map(|row| {
+                    let mut obj = serde_json::json!({
+                        "id": row.get::<String, _>("id"),
+                        "tenant_id": row.get::<String, _>("tenant_id"),
+                        "event_type": row.get::<String, _>("event_type"),
+                        "department": row.get::<String, _>("department"),
+                        "created_at": row.get::<String, _>("created_at")
+                    });
+                    if !mobile_optimized {
+                        obj.as_object_mut().unwrap().insert("payload".to_string(), serde_json::from_str::<serde_json::Value>(&row.get::<String, _>("payload")).unwrap_or_else(|_| serde_json::json!({})));
+                    }
+                    obj
+                }).collect())
         }
     }
 }
@@ -3685,31 +3725,42 @@ async fn load_ui_triage_from_db(db: &crate::db::DB, tenant_id: &str, mobile_opti
     }
 }
 
-async fn load_ui_priority_tasks_from_db(db: &crate::db::DB, tenant_id: &str) -> Result<Vec<serde_json::Value>, sqlx::Error> {
+async fn load_ui_priority_tasks_from_db(db: &crate::db::DB, tenant_id: &str, mobile_optimized: bool) -> Result<Vec<serde_json::Value>, sqlx::Error> {
     use sqlx::Row;
     let limit = 20i64;
+    let query_str = if mobile_optimized {
+        "SELECT id, title, status, created_at, updated_at FROM shared_tasks WHERE (organization_id = $1) AND status IN ('PENDING', 'IN_PROGRESS') ORDER BY created_at DESC LIMIT $2"
+    } else {
+        "SELECT id, title, description, status, created_at, updated_at FROM shared_tasks WHERE (organization_id = $1) AND status IN ('PENDING', 'IN_PROGRESS') ORDER BY created_at DESC LIMIT $2"
+    };
+    let query_str_sqlite = if mobile_optimized {
+        "SELECT id, tenant_id, organization_id, title, status, created_at, updated_at FROM shared_tasks WHERE status IN ('PENDING', 'IN_PROGRESS') ORDER BY created_at DESC LIMIT ?"
+    } else {
+        "SELECT id, tenant_id, organization_id, title, description, status, created_at, updated_at FROM shared_tasks WHERE status IN ('PENDING', 'IN_PROGRESS') ORDER BY created_at DESC LIMIT ?"
+    };
     match &db.store {
         crate::db::DbStore::Postgres => {
-            sqlx::query(
-                "SELECT id, title, description, status, created_at, updated_at FROM shared_tasks WHERE (organization_id = $1) AND status IN ('PENDING', 'IN_PROGRESS') ORDER BY created_at DESC LIMIT $2"
-            )
+            sqlx::query(query_str)
             .bind(tenant_id)
             .bind(limit)
             .fetch_all(&db.pool)
             .await
             .map(|rows| rows.into_iter().map(|row| {
-                serde_json::json!({
+                let mut obj = serde_json::json!({
                     "id": row.get::<String, _>("id"),
                     "title": row.try_get::<String, _>("title").unwrap_or_default(),
-                    "description": row.try_get::<String, _>("description").unwrap_or_default(),
                     "status": row.try_get::<String, _>("status").unwrap_or_default(),
                     "created_at": row.try_get::<chrono::DateTime<chrono::Utc>, _>("created_at").map(|dt| dt.to_rfc3339()).unwrap_or_default(),
                     "updated_at": row.try_get::<chrono::DateTime<chrono::Utc>, _>("updated_at").map(|dt| dt.to_rfc3339()).unwrap_or_default(),
-                })
+                });
+                if !mobile_optimized {
+                    obj.as_object_mut().unwrap().insert("description".to_string(), serde_json::to_value(row.try_get::<String, _>("description").unwrap_or_default()).unwrap_or_default());
+                }
+                obj
             }).collect::<Vec<_>>())
         }
         crate::db::DbStore::Sqlite(pool) => {
-            let rows_res = sqlx::query("SELECT * FROM shared_tasks WHERE status IN ('PENDING', 'IN_PROGRESS') ORDER BY created_at DESC LIMIT ?")
+            let rows_res = sqlx::query(query_str_sqlite)
                 .bind(limit)
                 .fetch_all(pool)
                 .await;
@@ -3717,64 +3768,79 @@ async fn load_ui_priority_tasks_from_db(db: &crate::db::DB, tenant_id: &str) -> 
             rows_res.map(|rows| rows.into_iter().filter_map(|row| {
                 let t_id = row.try_get::<String, _>("tenant_id").or_else(|_| row.try_get::<String, _>("organization_id")).unwrap_or_default();
                 if t_id == tenant_id {
-                    Some(serde_json::json!({
+                    let mut obj = serde_json::json!({
                         "id": row.get::<String, _>("id"),
                         "title": row.try_get::<String, _>("title").unwrap_or_default(),
-                        "description": row.try_get::<String, _>("description").unwrap_or_default(),
                         "status": row.try_get::<String, _>("status").unwrap_or_default(),
                         "created_at": row.try_get::<String, _>("created_at").unwrap_or_default(),
                         "updated_at": row.try_get::<String, _>("updated_at").unwrap_or_default(),
-                    }))
+                    });
+                    if !mobile_optimized {
+                        obj.as_object_mut().unwrap().insert("description".to_string(), serde_json::to_value(row.try_get::<String, _>("description").unwrap_or_default()).unwrap_or_default());
+                    }
+                    Some(obj)
                 } else { None }
             }).collect::<Vec<_>>())
         }
     }
 }
 
-async fn load_ui_agent_feed_from_db(db: &crate::db::DB, tenant_id: &str) -> Result<Vec<serde_json::Value>, sqlx::Error> {
+async fn load_ui_agent_feed_from_db(db: &crate::db::DB, tenant_id: &str, mobile_optimized: bool) -> Result<Vec<serde_json::Value>, sqlx::Error> {
     use sqlx::Row;
     let limit = 20i64;
+    let query_str = if mobile_optimized {
+        "SELECT id, tenant_id, event_source, proposed_action, lifecycle_state, created_at, updated_at FROM agent_feed_items WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT $2"
+    } else {
+        "SELECT id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at FROM agent_feed_items WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT $2"
+    };
+    let query_str_sqlite = if mobile_optimized {
+        "SELECT id, tenant_id, event_source, proposed_action, lifecycle_state, created_at, updated_at FROM agent_feed_items WHERE tenant_id = ? ORDER BY created_at DESC LIMIT ?"
+    } else {
+        "SELECT id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at FROM agent_feed_items WHERE tenant_id = ? ORDER BY created_at DESC LIMIT ?"
+    };
     match &db.store {
         crate::db::DbStore::Postgres => {
-            sqlx::query(
-                "SELECT * FROM agent_feed_items WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT $2"
-            )
+            sqlx::query(query_str)
             .bind(tenant_id)
             .bind(limit)
             .fetch_all(&db.pool)
             .await
             .map(|rows| rows.into_iter().map(|row| {
-                serde_json::json!({
+                let mut obj = serde_json::json!({
                     "id": row.get::<String, _>("id"),
                     "tenant_id": row.get::<String, _>("tenant_id"),
                     "event_source": row.get::<String, _>("event_source"),
-                    "context_payload": row.get::<Option<String>, _>("context_payload"),
                     "proposed_action": row.get::<Option<String>, _>("proposed_action"),
                     "lifecycle_state": row.get::<String, _>("lifecycle_state"),
                     "created_at": row.try_get::<chrono::DateTime<chrono::Utc>, _>("created_at").map(|dt| dt.to_rfc3339()).unwrap_or_default(),
                     "updated_at": row.try_get::<chrono::DateTime<chrono::Utc>, _>("updated_at").map(|dt| dt.to_rfc3339()).unwrap_or_default(),
-                })
+                });
+                if !mobile_optimized {
+                    obj.as_object_mut().unwrap().insert("context_payload".to_string(), serde_json::to_value(row.get::<Option<String>, _>("context_payload")).unwrap_or_default());
+                }
+                obj
             }).collect::<Vec<_>>())
         }
         crate::db::DbStore::Sqlite(pool) => {
-            sqlx::query(
-                "SELECT * FROM agent_feed_items WHERE tenant_id = ? ORDER BY created_at DESC LIMIT ?"
-            )
+            sqlx::query(query_str_sqlite)
             .bind(tenant_id)
             .bind(limit)
             .fetch_all(pool)
             .await
             .map(|rows| rows.into_iter().map(|row| {
-                serde_json::json!({
+                let mut obj = serde_json::json!({
                     "id": row.get::<String, _>("id"),
                     "tenant_id": row.get::<String, _>("tenant_id"),
                     "event_source": row.get::<String, _>("event_source"),
-                    "context_payload": row.get::<Option<String>, _>("context_payload"),
                     "proposed_action": row.get::<Option<String>, _>("proposed_action"),
                     "lifecycle_state": row.get::<String, _>("lifecycle_state"),
                     "created_at": row.try_get::<String, _>("created_at").unwrap_or_default(),
                     "updated_at": row.try_get::<String, _>("updated_at").unwrap_or_default(),
-                })
+                });
+                if !mobile_optimized {
+                    obj.as_object_mut().unwrap().insert("context_payload".to_string(), serde_json::to_value(row.get::<Option<String>, _>("context_payload")).unwrap_or_default());
+                }
+                obj
             }).collect::<Vec<_>>())
         }
     }
@@ -3813,9 +3879,9 @@ async fn ui_dashboard_unified_feed_handler(
                 tokio::spawn({ let db = db_bg.clone(); let t = t_bg.clone(); async move { load_ui_orders_from_db(&db, &t, mobile_optimized).await } }),
                 tokio::spawn({ let db = db_bg.clone(); let t = t_bg.clone(); async move { load_ui_inbox_from_db(&db, &t, mobile_optimized).await } }),
                 tokio::spawn({ let db = db_bg.clone(); let t = t_bg.clone(); async move { load_ui_triage_from_db(&db, &t, mobile_optimized).await } }),
-                tokio::spawn({ let db = db_bg.clone(); let t = t_bg.clone(); async move { load_ui_agent_approvals_from_db(&db, &t).await } }),
-                tokio::spawn({ let db = db_bg.clone(); let t = t_bg.clone(); async move { load_ui_agent_feed_from_db(&db, &t).await } }),
-                tokio::spawn({ let db = db_bg.clone(); let t = t_bg.clone(); async move { load_ui_priority_tasks_from_db(&db, &t).await } })
+                tokio::spawn({ let db = db_bg.clone(); let t = t_bg.clone(); async move { load_ui_agent_approvals_from_db(&db, &t, mobile_optimized).await } }),
+                tokio::spawn({ let db = db_bg.clone(); let t = t_bg.clone(); async move { load_ui_agent_feed_from_db(&db, &t, mobile_optimized).await } }),
+                tokio::spawn({ let db = db_bg.clone(); let t = t_bg.clone(); async move { load_ui_priority_tasks_from_db(&db, &t, mobile_optimized).await } })
             );
 
             let mut orders = orders_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
@@ -3841,21 +3907,6 @@ async fn ui_dashboard_unified_feed_handler(
                     if let Some(obj) = item.as_object_mut() {
                         obj.remove("context");
                         obj.remove("action_payload");
-                    }
-                }
-                for item in approvals.iter_mut() {
-                    if let Some(obj) = item.as_object_mut() {
-                        obj.remove("payload");
-                    }
-                }
-                for item in agent_feed.iter_mut() {
-                    if let Some(obj) = item.as_object_mut() {
-                        obj.remove("context_payload");
-                    }
-                }
-                for item in priority_tasks.iter_mut() {
-                    if let Some(obj) = item.as_object_mut() {
-                        obj.remove("description");
                     }
                 }
             }
@@ -3888,9 +3939,9 @@ async fn ui_dashboard_unified_feed_handler(
         tokio::spawn({ let db = db.clone(); let t = tenant_id.clone(); async move { load_ui_inbox_from_db(&db, &t, mobile_optimized).await } }),
         tokio::spawn({ let db = db.clone(); let t = tenant_id.clone(); async move { load_ui_supply_from_db(&db, &t, mobile_optimized).await } }),
         tokio::spawn({ let db = db.clone(); let t = tenant_id.clone(); async move { load_ui_triage_from_db(&db, &t, mobile_optimized).await } }),
-        tokio::spawn({ let db = db.clone(); let t = tenant_id.clone(); async move { load_ui_agent_approvals_from_db(&db, &t).await } }),
-        tokio::spawn({ let db = db.clone(); let t = tenant_id.clone(); async move { load_ui_agent_feed_from_db(&db, &t).await } }),
-        tokio::spawn({ let db = db.clone(); let t = tenant_id.clone(); async move { load_ui_priority_tasks_from_db(&db, &t).await } })
+        tokio::spawn({ let db = db.clone(); let t = tenant_id.clone(); async move { load_ui_agent_approvals_from_db(&db, &t, mobile_optimized).await } }),
+        tokio::spawn({ let db = db.clone(); let t = tenant_id.clone(); async move { load_ui_agent_feed_from_db(&db, &t, mobile_optimized).await } }),
+        tokio::spawn({ let db = db.clone(); let t = tenant_id.clone(); async move { load_ui_priority_tasks_from_db(&db, &t, mobile_optimized).await } })
     );
 
     let mut orders = orders_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
@@ -3917,21 +3968,6 @@ async fn ui_dashboard_unified_feed_handler(
             if let Some(obj) = item.as_object_mut() {
                 obj.remove("context");
                 obj.remove("action_payload");
-            }
-        }
-        for item in approvals.iter_mut() {
-            if let Some(obj) = item.as_object_mut() {
-                obj.remove("payload");
-            }
-        }
-        for item in agent_feed.iter_mut() {
-            if let Some(obj) = item.as_object_mut() {
-                obj.remove("context_payload");
-            }
-        }
-        for item in priority_tasks.iter_mut() {
-            if let Some(obj) = item.as_object_mut() {
-                obj.remove("description");
             }
         }
     }
@@ -3977,26 +4013,12 @@ async fn ui_dashboard_unified_agent_feed_handler(
         let cache_key_bg = cache_key.clone();
         tokio::spawn(async move {
             let (approvals_res, ledger_res) = tokio::join!(
-                tokio::spawn({ let db = db.clone(); let t = t.clone(); async move { load_ui_agent_approvals_from_db(&db, &t).await } }),
-                tokio::spawn({ let db = db.clone(); let t = t.clone(); async move { load_ui_ledger_from_db(&db, &t).await } })
+                tokio::spawn({ let db = db.clone(); let t = t.clone(); async move { load_ui_agent_approvals_from_db(&db, &t, mobile_optimized).await } }),
+                tokio::spawn({ let db = db.clone(); let t = t.clone(); async move { load_ui_ledger_from_db(&db, &t, mobile_optimized).await } })
             );
 
-            let mut pending_approvals = approvals_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
-            let mut entries = ledger_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
-
-            if mobile_optimized {
-                for item in pending_approvals.iter_mut() {
-                    if let Some(obj) = item.as_object_mut() {
-                        obj.remove("payload");
-                    }
-                }
-                for item in entries.iter_mut() {
-                    if let Some(obj) = item.as_object_mut() {
-                        obj.remove("payload");
-                        obj.remove("context_payload");
-                    }
-                }
-            }
+            let pending_approvals = approvals_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
+            let entries = ledger_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
 
             let result = serde_json::json!({
                 "pending_approvals": pending_approvals,
@@ -4010,26 +4032,12 @@ async fn ui_dashboard_unified_agent_feed_handler(
     }
 
     let (approvals_res, ledger_res) = tokio::join!(
-        tokio::spawn({ let db = db.clone(); let t = tenant_id.clone(); async move { load_ui_agent_approvals_from_db(&db, &t).await } }),
-        tokio::spawn({ let db = db.clone(); let t = tenant_id.clone(); async move { load_ui_ledger_from_db(&db, &t).await } })
+        tokio::spawn({ let db = db.clone(); let t = tenant_id.clone(); async move { load_ui_agent_approvals_from_db(&db, &t, mobile_optimized).await } }),
+        tokio::spawn({ let db = db.clone(); let t = tenant_id.clone(); async move { load_ui_ledger_from_db(&db, &t, mobile_optimized).await } })
     );
 
-    let mut pending_approvals = approvals_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
-    let mut entries = ledger_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
-
-    if mobile_optimized {
-        for item in pending_approvals.iter_mut() {
-            if let Some(obj) = item.as_object_mut() {
-                obj.remove("payload");
-            }
-        }
-        for item in entries.iter_mut() {
-            if let Some(obj) = item.as_object_mut() {
-                obj.remove("payload");
-                obj.remove("context_payload");
-            }
-        }
-    }
+    let pending_approvals = approvals_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
+    let entries = ledger_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
 
     let result = serde_json::json!({
         "pending_approvals": pending_approvals,
