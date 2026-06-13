@@ -465,11 +465,16 @@ impl OnboardingAgent {
             }
         });
 
-        let (product_res_res, seed_res_res, _events_res_res, hash_res_res) = tokio::join!(product_future, seed_future, publish_events_future, hash_future);
+        let (product_res_res, seed_res_res, events_res_res, hash_res_res) = tokio::join!(product_future, seed_future, publish_events_future, hash_future);
 
         let product_res = product_res_res.unwrap_or_else(|e| Err(e.to_string()));
         let seed_res = seed_res_res.unwrap_or_else(|e| Err(e.to_string()));
         let hash_res = hash_res_res.unwrap_or_else(|e| Err(e.to_string()));
+
+        let events_res = events_res_res.unwrap_or_else(|e| Err(e.to_string()));
+        if let Err(e) = events_res {
+            tracing::warn!("Failed to publish onboarding events (non-fatal): {}", e);
+        }
 
         product_res?;
         seed_res?;

@@ -93,7 +93,10 @@ async fn save_draft(
 
     match agent.save_onboarding_state(&tid, &uid, step, &payload).await {
         Ok(_) => Ok(axum::http::StatusCode::OK),
-        Err(_) => Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR),
+        Err(e) => {
+            tracing::error!("Failed to save onboarding draft: {}", e);
+            Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR)
+        },
     }
 }
 
@@ -103,7 +106,10 @@ async fn start_onboarding(
 ) -> Result<Json<StartOnboardingResponse>, axum::http::StatusCode> {
     match agent.start_onboarding(payload).await {
         Ok(res) => Ok(Json(res)),
-        Err(_) => Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR),
+        Err(e) => {
+            tracing::error!("Failed to start onboarding: {}", e);
+            Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR)
+        },
     }
 }
 
