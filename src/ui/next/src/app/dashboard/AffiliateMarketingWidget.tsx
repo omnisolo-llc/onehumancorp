@@ -60,6 +60,9 @@ export default function AffiliateMarketingWidget() {
           <Link href="/referrals" className="block w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-center rounded-lg text-sm font-semibold transition-colors">
             Manage Affiliates
           </Link>
+          <Link href="/affiliate-badge-builder" className="block w-full mt-2 py-2.5 bg-indigo-50 border border-indigo-100 hover:bg-indigo-100 text-indigo-700 text-center rounded-lg text-sm font-semibold transition-colors">
+            Create Affiliate Badge
+          </Link>
         </>
       )}
     </div>
