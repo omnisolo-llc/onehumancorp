@@ -169,6 +169,7 @@ where
                 .route("/storefront/og-card", get(handle_og_card))
         .route("/flash-sale/embed", get(handle_flash_sale_embed))
         .route("/milestones/check", get(handle_check_milestones))
+        .route("/promoter/generate", post(handle_promoter_generate))
         .route("/affiliate/generate-link", post(handle_affiliate_generate_link))
         .route("/affiliate/track", post(handle_affiliate_track))
         .route("/affiliate/stats", get(handle_affiliate_stats))
@@ -398,6 +399,24 @@ pub struct GenerateCartResponse {
     pub message: String,
 }
 
+#[derive(Debug, Deserialize)]
+pub struct GeneratePromoterRequest {
+    pub product_id: Option<String>,
+    pub name: String,
+    pub description: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PromoterVariant {
+    pub platform: String,
+    pub content: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct GeneratePromoterResponse {
+    pub variants: Vec<PromoterVariant>,
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SendCartRequest {
     pub customer_name: Option<String>,
@@ -489,6 +508,136 @@ async fn handle_generate_review(
     Json(GenerateReviewResponse {
         message: generated,
     })
+}
+
+async fn handle_promoter_generate(
+    Extension(_state): Extension<GrowthState>,
+    Json(req): Json<GeneratePromoterRequest>,
+) -> impl IntoResponse {
+    let mut variants = Vec::new();
+
+    let desc = req.description.unwrap_or_else(|| "".to_string());
+
+    let provider_name = std::env::var("OHC_LLM_PROVIDER").unwrap_or_else(|_| "minimax".to_string());
+    let api_key = match provider_name.as_str() {
+        "openai" => std::env::var("OPENAI_API_KEY").unwrap_or_default(),
+        "minimax" => std::env::var("MINIMAX_API_KEY").unwrap_or_default(),
+        "anthropic" => std::env::var("ANTHROPIC_API_KEY").unwrap_or_default(),
+        _ => std::env::var("OHC_LLM_API_KEY").unwrap_or_default(),
+    };
+
+    if !api_key.is_empty() {
+        let prompt = format!(
+            "Generate 3 short, punchy marketing captions for different social media platforms for the product '{}'. \n\
+             Description: {}\n\
+             Return ONLY a JSON array of objects, where each object has 'platform' (string) and 'content' (string) keys.",
+            req.name, desc
+        );
+
+        let model = std::env::var("OHC_LLM_MODEL").unwrap_or_else(|_| "MiniMax-M3".to_string());
+
+        let client = reqwest::Client::new();
+        let body = serde_json::json!({
+            "model": model,
+            "messages": [
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ],
+            "response_format": { "type": "json_object" }
+        });
+
+        let base_url = if provider_name == "minimax" {
+            std::env::var("MINIMAX_BASE_URL").unwrap_or_else(|_| "https://api.minimax.chat/v1".to_string())
+        } else if provider_name == "openai" {
+             std::env::var("OPENAI_BASE_URL").unwrap_or_else(|_| "https://api.openai.com/v1".to_string())
+        } else {
+            std::env::var("OHC_LLM_BASE_URL").unwrap_or_default()
+        };
+
+        let mut url = format!("{}/chat/completions", base_url);
+        if base_url.ends_with("/chat/completions") {
+             url = base_url;
+        }
+
+        let req_builder = client.post(&url)
+            .header("Content-Type", "application/json")
+            .header("Authorization", format!("Bearer {}", api_key))
+            .json(&body);
+
+        match req_builder.send().await {
+            Ok(res) => {
+                if res.status().is_success() {
+                    if let Ok(json) = res.json::<serde_json::Value>().await {
+                         if let Some(choices) = json.get("choices") {
+                            if let Some(choice) = choices.get(0) {
+                                if let Some(message) = choice.get("message") {
+                                    if let Some(content) = message.get("content").and_then(|c| c.as_str()) {
+                                         // Try to parse the content as JSON array
+                                         match serde_json::from_str::<Vec<PromoterVariant>>(content) {
+                                             Ok(parsed_variants) => {
+                                                 variants = parsed_variants;
+                                             }
+                                             Err(_) => {
+                                                  // Fallback parsing if LLM didn't return pure array
+                                                  if let Ok(parsed_obj) = serde_json::from_str::<serde_json::Value>(content) {
+                                                       if let Some(arr) = parsed_obj.get("variants").and_then(|v| v.as_array()) {
+                                                           let parsed: Result<Vec<PromoterVariant>, _> = serde_json::from_value(serde_json::Value::Array(arr.clone()));
+                                                           if let Ok(parsed) = parsed {
+                                                               variants = parsed;
+                                                           }
+                                                       } else if let Some(arr) = parsed_obj.as_array() {
+                                                            let parsed: Result<Vec<PromoterVariant>, _> = serde_json::from_value(serde_json::Value::Array(arr.clone()));
+                                                           if let Ok(parsed) = parsed {
+                                                               variants = parsed;
+                                                           }
+                                                       }
+                                                  }
+                                             }
+                                         }
+                                    }
+                                }
+                            }
+                         }
+                    }
+                }
+            }
+            Err(e) => {
+                 tracing::error!("Failed to call LLM: {:?}", e);
+            }
+        }
+    }
+
+    if variants.is_empty() {
+        // Fallback to static if LLM fails or is missing key
+        // Generate TikTok variant
+        variants.push(PromoterVariant {
+            platform: "TikTok".to_string(),
+            content: format!("Check out our amazing {}! {} Get yours today! 🚀 #{} #trending #musthave\n\n⚡ Powered by OHC", req.name, desc, req.name.replace(" ", "")),
+        });
+
+        // Generate Instagram variant
+        variants.push(PromoterVariant {
+            platform: "Instagram".to_string(),
+            content: format!("✨ So excited to share our new {}! ✨\n\n{}\n\nTap the link in bio to shop now. 🛍️\n\n#{} #shoplocal #newarrival\n\n⚡ Powered by OHC", req.name, desc, req.name.replace(" ", "")),
+        });
+
+        // Generate Twitter variant
+        variants.push(PromoterVariant {
+            platform: "Twitter".to_string(),
+            content: format!("Just dropped: {}! 🔥 {}\n\nGrab it here before it's gone: [link]\n\n⚡ Powered by OHC", req.name, desc),
+        });
+    } else {
+        // Append Powered by OHC
+        for v in variants.iter_mut() {
+            if !v.content.contains("Powered by OHC") {
+                v.content.push_str("\n\n⚡ Powered by OHC");
+            }
+        }
+    }
+
+    Json(GeneratePromoterResponse { variants })
 }
 
 async fn handle_generate_customer_referral(
@@ -1821,6 +1970,29 @@ mod tests {
         let res_again = super::handle_trial_extension_claim(Extension(state.clone()), axum::extract::Extension(auth_info.clone())).await;
         assert!(res_again.is_err());
         assert_eq!(res_again.unwrap_err(), StatusCode::BAD_REQUEST);
+    }
+
+    #[tokio::test]
+    async fn test_promoter_generate() {
+        let pool = setup_db().await;
+        let (event_tx, _) = tokio::sync::mpsc::channel(100);
+        let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
+        let state = GrowthState { pool: pool.clone(), hub: hub.clone() };
+
+        let req = GeneratePromoterRequest { product_id: Some("123".to_string()), name: "Vegan Chocolate Cake".to_string(), description: Some("Delicious and moist".to_string()) };
+        let res = handle_promoter_generate(Extension(state.clone()), Json(req)).await;
+
+        let body_bytes = axum::body::to_bytes(res.into_response().into_body(), usize::MAX).await.unwrap();
+        let res_json: GeneratePromoterResponse = serde_json::from_slice(&body_bytes).unwrap();
+
+        assert_eq!(res_json.variants.len(), 3);
+        assert!(res_json.variants.iter().any(|v| v.platform == "TikTok"));
+        assert!(res_json.variants.iter().any(|v| v.platform == "Instagram"));
+        assert!(res_json.variants.iter().any(|v| v.platform == "Twitter"));
+
+        for variant in res_json.variants {
+            assert!(variant.content.contains("Vegan Chocolate Cake"));
+        }
     }
 
     #[tokio::test]
