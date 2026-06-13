@@ -142,7 +142,7 @@ export default function CostDashboardPage() {
              <button
                onClick={() => router.push('/pricing')}
                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-medium transition-all shadow-sm">
-               Upgrade Plan
+               Upgrade
              </button>
           </div>
           <div className="app-panel-body">
