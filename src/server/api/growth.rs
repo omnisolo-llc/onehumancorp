@@ -342,39 +342,39 @@ async fn handle_time_savings(
     let tenant_id_str = auth_info.org_id;
 
     // Calculate aggregated time savings based on completed tasks
-    let f1 = async {
+    let f1 = tokio::spawn({ let pool = state.pool.clone(); async move {
         sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM tasks WHERE (tenant_id = $1 OR organization_id = $1) AND title ILIKE '%inquiry%' AND status = 'COMPLETED'")
             .bind(parsed_uuid)
-            .fetch_optional(&state.pool)
+            .fetch_optional(&pool)
             .await
-    };
+    }});
 
-    let f2 = async {
+    let f2 = tokio::spawn({ let pool = state.pool.clone(); async move {
         sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM tasks WHERE (tenant_id = $1 OR organization_id = $1) AND title ILIKE '%appointment%' AND status = 'COMPLETED'")
             .bind(parsed_uuid)
-            .fetch_optional(&state.pool)
+            .fetch_optional(&pool)
             .await
-    };
+    }});
 
-    let f3 = async {
+    let f3 = tokio::spawn({ let pool = state.pool.clone(); async move {
         sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM tasks WHERE (tenant_id = $1 OR organization_id = $1) AND title ILIKE '%cart%' AND status = 'COMPLETED'")
             .bind(parsed_uuid)
-            .fetch_optional(&state.pool)
+            .fetch_optional(&pool)
             .await
-    };
+    }});
 
-    let f4 = async {
+    let f4 = tokio::spawn({ let pool = state.pool.clone(); let t = tenant_id_str.clone(); async move {
         sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM inbox_messages WHERE tenant_id = $1 AND status = 'auto_replied'")
-            .bind(&tenant_id_str)
-            .fetch_optional(&state.pool)
+            .bind(&t)
+            .fetch_optional(&pool)
             .await
-    };
+    }});
 
     let (res1, res2, res3, res4) = tokio::join!(f1, f2, f3, f4);
-    let inquiries_handled = res1.unwrap_or(Some(0)).unwrap_or(0);
-    let appointments_scheduled = res2.unwrap_or(Some(0)).unwrap_or(0);
-    let carts_recovered = res3.unwrap_or(Some(0)).unwrap_or(0);
-    let auto_replied = res4.unwrap_or(Some(0)).unwrap_or(0);
+    let inquiries_handled = res1.unwrap_or(Ok(None)).unwrap_or(None).unwrap_or(0);
+    let appointments_scheduled = res2.unwrap_or(Ok(None)).unwrap_or(None).unwrap_or(0);
+    let carts_recovered = res3.unwrap_or(Ok(None)).unwrap_or(None).unwrap_or(0);
+    let auto_replied = res4.unwrap_or(Ok(None)).unwrap_or(None).unwrap_or(0);
 
     // Calculate total hours saved
     let base_hours = (inquiries_handled as f64 * 0.2) + (appointments_scheduled as f64 * 0.3) + (carts_recovered as f64 * 0.43) + (auto_replied as f64 * 0.1);
