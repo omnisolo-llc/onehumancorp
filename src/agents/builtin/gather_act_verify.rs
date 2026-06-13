@@ -209,11 +209,7 @@ impl GatherActVerifyHarness {
                                             content: res.clone(),
                                             error: String::new(),
                                         },
-                                        Err(ohc_builtin_agent_core::types::ToolError::LlmRecoverable(msg)) => ohc_builtin_agent_core::types::ToolResult {
-                                            tool_call_id: tc.id.clone(),
-                                            content: String::new(),
-                                            error: format!("LLM-Recoverable Error: {}. Please analyze this error, correct your tool arguments, and try again.", msg),
-                                        },
+                                        Err(ohc_builtin_agent_core::types::ToolError::LlmRecoverable(msg)) => ohc_builtin_agent_core::types::ToolResult::new_llm_recoverable(tc.id.clone(), &msg),
                                         Err(e) => ohc_builtin_agent_core::types::ToolResult {
                                             tool_call_id: tc.id.clone(),
                                             content: String::new(),
@@ -254,11 +250,7 @@ impl GatherActVerifyHarness {
                                         content: res.clone(),
                                         error: String::new(),
                                     },
-                                    Err(ohc_builtin_agent_core::types::ToolError::LlmRecoverable(msg)) => ohc_builtin_agent_core::types::ToolResult {
-                                        tool_call_id: tc.id.clone(),
-                                        content: String::new(),
-                                        error: format!("LLM-Recoverable Error: {}. Please analyze this error, correct your tool arguments, and try again.", msg),
-                                    },
+                                    Err(ohc_builtin_agent_core::types::ToolError::LlmRecoverable(msg)) => ohc_builtin_agent_core::types::ToolResult::new_llm_recoverable(tc.id.clone(), &msg),
                                     Err(e) => ohc_builtin_agent_core::types::ToolResult {
                                         tool_call_id: tc.id.clone(),
                                         content: String::new(),
