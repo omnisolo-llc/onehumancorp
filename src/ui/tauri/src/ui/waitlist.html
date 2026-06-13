@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OneHumanCorp Waitlist</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap');
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: #F5F5F7;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      color: #1d1d1f;
+    }
+    header {
+      padding: 16px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(255, 255, 255, 0.65);
+      backdrop-filter: blur(30px) saturate(210%);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.4);
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+    h1 {
+      font-family: 'Outfit', sans-serif;
+      margin: 0;
+      font-size: 20px;
+    }
+    .back-btn {
+      background: #e5e5ea;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-weight: 500;
+      cursor: pointer;
+    }
+    main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      text-align: center;
+    }
+    .container {
+      background: rgba(255, 255, 255, 0.65);
+      backdrop-filter: blur(30px) saturate(210%);
+      padding: 32px;
+      border-radius: 16px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      width: 100%;
+      max-width: 400px;
+      box-sizing: border-box;
+    }
+    .hero-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 36px;
+      font-weight: 700;
+      margin-bottom: 16px;
+      line-height: 1.1;
+    }
+    .hero-subtitle {
+      color: #86868b;
+      font-size: 16px;
+      margin-bottom: 32px;
+    }
+    input[type="email"], input[type="text"] {
+      width: 100%;
+      padding: 12px 16px;
+      border-radius: 8px;
+      border: 1px solid #d1d1d6;
+      font-size: 16px;
+      box-sizing: border-box;
+      margin-bottom: 16px;
+      outline: none;
+      font-family: 'Inter', sans-serif;
+    }
+    input[type="email"]:focus {
+      border-color: #0066FF;
+      box-shadow: 0 0 0 3px rgba(0, 102, 255, 0.2);
+    }
+    button[type="submit"] {
+      background-color: #0066FF;
+      color: white;
+      border: none;
+      padding: 14px 24px;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      width: 100%;
+      min-height: 44px;
+      transition: background-color 0.2s;
+    }
+    button[type="submit"]:hover {
+      background-color: #005ce6;
+    }
+    button[type="submit"]:disabled {
+      background-color: #a0c2ff;
+      cursor: not-allowed;
+    }
+
+    .success-icon {
+      width: 64px;
+      height: 64px;
+      background: #e4f8ec;
+      color: #34C759;
+      border-radius: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 32px;
+      margin: 0 auto 16px;
+    }
+    .share-input-group {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 24px;
+      background: white;
+      padding: 8px;
+      border-radius: 8px;
+      border: 1px solid #d1d1d6;
+    }
+    .share-input-group input {
+      margin-bottom: 0;
+      border: none;
+      background: transparent;
+      padding: 8px;
+      flex: 1;
+    }
+    .share-input-group button {
+      background: #0066FF;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      padding: 8px 16px;
+      font-weight: 600;
+      cursor: pointer;
+      min-height: 44px;
+    }
+    .social-buttons {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .social-btn {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-decoration: none;
+      padding: 12px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 14px;
+      border: 1px solid #d1d1d6;
+      color: #1d1d1f;
+      min-height: 44px;
+      box-sizing: border-box;
+    }
+    .social-btn.whatsapp {
+      background: #e4f8ec;
+      border-color: #34C759;
+      color: #128c7e;
+    }
+    .reset-btn {
+      background: none;
+      border: none;
+      color: #86868b;
+      cursor: pointer;
+      font-weight: 500;
+    }
+    footer {
+      padding: 24px;
+      text-align: center;
+    }
+    footer a {
+      color: #86868b;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 14px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>OneHumanCorp</h1>
+    <button class="back-btn" onclick="window.location.href='/'">Back Home</button>
+  </header>
+
+  <main>
+    <div id="join-state" class="container">
+      <h2 class="hero-title">The AI platform for <br /> small business.</h2>
+      <p class="hero-subtitle">Join the waitlist to be among the first to experience radical simplicity and invisible AI agents.</p>
+
+      <form id="waitlist-form">
+        <input type="email" id="email" placeholder="Enter your email address" required />
+        <button type="submit" id="submit-btn">Join the Waitlist</button>
+      </form>
+      <p id="error-msg" style="color: #FF3B30; margin-top: 12px; display: none; font-size: 14px;"></p>
+    </div>
+
+    <div id="success-state" class="container" style="display: none;">
+      <div class="success-icon">✓</div>
+      <h2 class="hero-title" style="font-size: 24px;">You're on the list!</h2>
+      <p style="font-weight: 600; margin-bottom: 8px;">You are #<span id="pos-num">42</span> in line.</p>
+      <p class="hero-subtitle" style="margin-bottom: 24px; font-size: 14px;">Invite friends to move up the list.</p>
+
+      <div class="share-input-group">
+        <input type="text" id="share-link" readonly />
+        <button type="button" id="copy-btn">Copy Link</button>
+      </div>
+
+      <div class="social-buttons">
+        <a href="#" id="share-x" target="_blank" class="social-btn">Share on X</a>
+        <a href="#" id="share-wa" target="_blank" class="social-btn whatsapp">Share to WhatsApp</a>
+      </div>
+
+      <button class="reset-btn" onclick="resetForm()">Sign up another email</button>
+    </div>
+  </main>
+
+  <footer>
+    <a href="/onboarding?ref=waitlist_footer" target="_blank">⚡ Powered by OHC</a>
+  </footer>
+
+  <script>
+    const joinState = document.getElementById('join-state');
+    const successState = document.getElementById('success-state');
+    const form = document.getElementById('waitlist-form');
+    const emailInput = document.getElementById('email');
+    const submitBtn = document.getElementById('submit-btn');
+    const errorMsg = document.getElementById('error-msg');
+
+    const posNum = document.getElementById('pos-num');
+    const shareLink = document.getElementById('share-link');
+    const copyBtn = document.getElementById('copy-btn');
+    const shareX = document.getElementById('share-x');
+    const shareWa = document.getElementById('share-wa');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = emailInput.value.trim();
+      if (!email) return;
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Joining...';
+      errorMsg.style.display = 'none';
+
+      try {
+        const res = await fetch('/api/v1/growth/waitlist', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email })
+        });
+
+        if (!res.ok) throw new Error('Failed to join waitlist');
+
+        const data = await res.json();
+        const link = data.referral_link || `https://ohc.app/waitlist?ref=user`;
+        const pos = data.position || 42;
+
+        posNum.textContent = pos;
+        shareLink.value = link;
+
+        const text = encodeURIComponent(`I just joined the waitlist for OneHumanCorp. Join me to get early access!`);
+        shareX.href = `https://twitter.com/intent/tweet?text=${text}&url=${encodeURIComponent(link)}`;
+        shareWa.href = `https://wa.me/?text=${text} ${encodeURIComponent(link)}`;
+
+        joinState.style.display = 'none';
+        successState.style.display = 'block';
+
+      } catch (err) {
+        errorMsg.textContent = err.message || 'An error occurred. Please try again.';
+        errorMsg.style.display = 'block';
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Join the Waitlist';
+      }
+    });
+
+    copyBtn.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(shareLink.value);
+        copyBtn.textContent = 'Copied!';
+        setTimeout(() => copyBtn.textContent = 'Copy Link', 2000);
+      } catch (e) {
+        console.error('Failed to copy', e);
+      }
+    });
+
+    window.resetForm = () => {
+      emailInput.value = '';
+      successState.style.display = 'none';
+      joinState.style.display = 'block';
+    };
+  </script>
+</body>
+</html>

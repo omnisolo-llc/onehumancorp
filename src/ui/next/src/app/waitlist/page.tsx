@@ -9,6 +9,21 @@ export default function WaitlistPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [referralLink, setReferralLink] = useState('');
+  const [position, setPosition] = useState(0);
+  const [isCopied, setIsCopied] = useState(false);
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(referralLink);
+      setIsCopied(true);
+      setTimeout(() => setIsCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy', err);
+    }
+  };
+
+  const shareText = encodeURIComponent(`I just joined the waitlist for OneHumanCorp. Join me to get early access!`);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,6 +42,10 @@ export default function WaitlistPage() {
       if (!response.ok) {
         throw new Error('Failed to join waitlist. Please try again.');
       }
+
+      const data = await response.json();
+      setReferralLink(data.referral_link || `https://ohc.app/waitlist?ref=user`);
+      setPosition(data.position || 42);
 
       setIsSuccess(true);
     } catch (error: any) {
@@ -50,17 +69,55 @@ export default function WaitlistPage() {
 
       <main className="flex-1 flex flex-col items-center justify-center p-6 md:p-12 text-center w-full max-w-2xl mx-auto">
         {isSuccess ? (
-          <div className="w-full bg-white/65 backdrop-blur-md rounded-2xl shadow-sm border border-white/40 p-8 flex flex-col items-center">
+          <div className="w-full max-w-lg bg-white/65 backdrop-blur-md rounded-2xl shadow-sm border border-white/40 p-8 flex flex-col items-center">
             <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center text-3xl mb-4 text-green-600">
               ✓
             </div>
             <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">You're on the list!</h2>
-            <p className="text-gray-600 mb-6">
-              Thanks for joining. We'll let you know as soon as OneHumanCorp is ready for you.
+            <p className="text-gray-600 font-medium mb-2">
+              You are #{position} in line.
             </p>
+            <p className="text-gray-600 mb-8 text-sm">
+              Invite friends to move up the list.
+            </p>
+
+            <div className="w-full bg-white rounded-xl border border-gray-200 p-2 flex items-center mb-6 shadow-inner">
+              <input
+                type="text"
+                readOnly
+                value={referralLink}
+                className="flex-1 bg-transparent text-sm text-gray-600 px-3 outline-none"
+              />
+              <button
+                onClick={handleCopy}
+                className="px-4 py-2 bg-[#0066FF] hover:bg-blue-700 active:scale-95 text-white text-sm font-semibold rounded-lg transition-all"
+              >
+                {isCopied ? 'Copied!' : 'Copy Link'}
+              </button>
+            </div>
+
+            <div className="flex gap-4 mb-8 w-full">
+              <a
+                href={`https://twitter.com/intent/tweet?text=${shareText}&url=${encodeURIComponent(referralLink)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors font-medium text-gray-700 text-sm"
+              >
+                Share on X
+              </a>
+              <a
+                href={`https://wa.me/?text=${shareText} ${encodeURIComponent(referralLink)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl border border-green-200 bg-green-50 hover:bg-green-100 transition-colors font-medium text-green-700 text-sm"
+              >
+                Share to WhatsApp
+              </a>
+            </div>
+
             <button
               onClick={() => setIsSuccess(false)}
-              className="px-6 py-2.5 bg-gray-900 text-white font-medium rounded-xl hover:bg-black transition-colors"
+              className="text-sm text-gray-500 hover:text-gray-900 transition-colors mb-6"
             >
               Sign up another email
             </button>
@@ -107,6 +164,17 @@ export default function WaitlistPage() {
           </>
         )}
       </main>
+
+      <footer className="w-full p-6 text-center">
+        <a
+          href="/onboarding?ref=waitlist_footer"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-gray-500 hover:text-gray-900 text-sm font-semibold transition-colors flex items-center justify-center gap-2"
+        >
+          ⚡ Powered by OHC
+        </a>
+      </footer>
     </div>
   );
 }
