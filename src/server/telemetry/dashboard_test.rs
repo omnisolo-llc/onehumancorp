@@ -8,11 +8,11 @@ fn test_hybrid_telemetry_drift() {
         root = root.parent().unwrap().to_path_buf();
     }
 
-    let source_path = root.join("src/server/monitoring/dashboards/hybrid-telemetry.json");
+    let source_path = root.join("src/server/monitoring/dashboards/ohc-hybrid-telemetry.json");
     let mirror_paths = vec![
-        root.join("deploy/grafana/dashboards/hybrid-telemetry.json"),
-        root.join("deploy/docker/grafana/provisioning/dashboards/hybrid-telemetry.json"),
-        root.join("deploy/helm/ohc/dashboards/hybrid-telemetry.json")
+        root.join("deploy/grafana/dashboards/ohc-hybrid-telemetry.json"),
+        root.join("deploy/docker/grafana/provisioning/dashboards/ohc-hybrid-telemetry.json"),
+        root.join("deploy/helm/ohc/dashboards/ohc-hybrid-telemetry.json")
     ];
 
     let canonical_content = fs::read_to_string(&source_path).expect(&format!("Failed to read canonical {:?}", source_path));
