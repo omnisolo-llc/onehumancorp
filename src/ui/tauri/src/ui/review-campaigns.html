@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Review Campaigns - OHC</title>
+  <style>
+    body {
+      font-family: "Outfit", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: #f5f5f7;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 20px;
+      box-sizing: border-box;
+      min-height: 100vh;
+    }
+    .container {
+      max-width: 500px;
+      width: 100%;
+      background: rgba(255, 255, 255, 0.65);
+      backdrop-filter: blur(30px) saturate(210%);
+      border-radius: 16px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+      padding: 30px;
+      border: 1px solid rgba(255, 255, 255, 0.4);
+    }
+    h1 {
+      color: #1d1d1f;
+      font-size: 24px;
+      font-weight: 700;
+      margin-top: 0;
+      margin-bottom: 8px;
+    }
+    p.subtitle {
+      color: #6b7280;
+      margin-top: 0;
+      margin-bottom: 24px;
+      font-size: 15px;
+    }
+    label {
+      display: block;
+      color: #1d1d1f;
+      font-weight: 600;
+      font-size: 14px;
+      margin-bottom: 8px;
+    }
+    input[type="text"] {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid rgba(0, 0, 0, 0.2);
+      border-radius: 8px;
+      font-size: 14px;
+      box-sizing: border-box;
+      margin-bottom: 20px;
+      background: rgba(255, 255, 255, 0.8);
+      font-family: inherit;
+    }
+    button {
+      background-color: #0066FF;
+      color: white;
+      border: none;
+      padding: 14px 24px;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      width: 100%;
+      transition: background-color 0.2s, transform 0.1s;
+      box-shadow: 0 4px 14px 0 rgba(0, 102, 255, 0.39);
+    }
+    button:hover { background-color: #0052cc; }
+    button:active { transform: scale(0.98); }
+    button:disabled { background-color: #ccc; cursor: not-allowed; box-shadow: none; }
+
+    #result-area {
+      display: none;
+      margin-top: 24px;
+      padding-top: 24px;
+      border-top: 1px solid rgba(0,0,0,0.1);
+    }
+    #result-area h2 {
+      font-size: 18px;
+      margin-top: 0;
+      margin-bottom: 12px;
+      color: #1d1d1f;
+    }
+    .draft-content {
+      background: rgba(255,255,255,0.8);
+      padding: 16px;
+      border-radius: 8px;
+      border: 1px solid rgba(0,0,0,0.1);
+      font-size: 14px;
+      line-height: 1.5;
+      color: #333;
+      white-space: pre-wrap;
+      margin-bottom: 16px;
+    }
+    .back-link {
+      display: inline-block;
+      margin-top: 20px;
+      color: #0066FF;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 14px;
+    }
+    .action-row {
+      display: flex;
+      gap: 12px;
+    }
+    .btn-secondary {
+      background: white;
+      color: #1d1d1f;
+      border: 1px solid #d2d2d7;
+      box-shadow: none;
+    }
+    .btn-secondary:hover {
+      background: #f5f5f7;
+    }
+  </style>
+  <style>
+  @media (prefers-color-scheme: dark) {
+      body {
+          background-color: #16161a;
+          color: #f5f5f7;
+      }
+      .container {
+          background: rgba(22, 22, 26, 0.7) !important;
+          backdrop-filter: blur(30px) saturate(210%);
+          border: 1px solid rgba(255, 255, 255, 0.1) !important;
+      }
+      h1, h2, label, p.subtitle, .draft-content {
+          color: #f5f5f7;
+      }
+      .draft-content {
+          background: rgba(32, 32, 36, 0.8) !important;
+          border: 1px solid rgba(255, 255, 255, 0.2);
+      }
+      input[type="text"] {
+          background: rgba(32, 32, 36, 0.8) !important;
+          color: #f5f5f7;
+          border: 1px solid rgba(255, 255, 255, 0.2);
+      }
+      .btn-secondary {
+          background: rgba(255,255,255,0.1);
+          color: #f5f5f7;
+          border: 1px solid rgba(255,255,255,0.2);
+      }
+      .btn-secondary:hover {
+          background: rgba(255,255,255,0.15);
+      }
+  }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Viral Review Campaigns</h1>
+    <p class="subtitle">Generate an AI-drafted email or SMS to ask a customer for a review. Five-star reviews will automatically be prompted to share your store with their network!</p>
+
+    <div>
+      <label for="customerName">Customer Name</label>
+      <input type="text" id="customerName" placeholder="e.g. John Doe" />
+    </div>
+
+    <div>
+      <label for="productName">Product or Service</label>
+      <input type="text" id="productName" placeholder="e.g. Premium Chocolate Cake" />
+    </div>
+
+    <div>
+      <label for="orderId">Order ID</label>
+      <input type="text" id="orderId" placeholder="e.g. ORD-1234" />
+    </div>
+
+    <button id="generateBtn">Generate Request</button>
+
+    <div id="result-area">
+      <h2>AI Generated Draft</h2>
+      <div id="draftContent" class="draft-content">Loading...</div>
+
+      <div class="action-row">
+        <button id="copyBtn" class="btn-secondary">Copy Draft</button>
+        <button id="sendBtn">Send Request</button>
+      </div>
+      <p id="send-status" style="display: none; text-align: center; color: #34C759; margin-top: 12px; font-weight: 600;">Request Sent!</p>
+    </div>
+  </div>
+
+  <a href="dashboard.html" class="back-link">&larr; Back to Dashboard</a>
+
+  <script>
+    document.getElementById('generateBtn').addEventListener('click', async () => {
+      const customerName = document.getElementById('customerName').value.trim() || 'Valued Customer';
+      const productName = document.getElementById('productName').value.trim() || 'recent purchase';
+      const orderId = document.getElementById('orderId').value.trim() || `ORD-${Math.floor(Math.random() * 10000)}`;
+
+      const btn = document.getElementById('generateBtn');
+      btn.disabled = true;
+      btn.innerText = "Generating...";
+
+      try {
+        const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'e2e-tenant';
+
+        const response = await fetch('/api/v1/growth/campaign/generate-review', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-spiffe-id': `spiffe://onehumancorp.io/${tenantId}/agent1`
+          },
+          body: JSON.stringify({
+            customer_name: customerName,
+            product_name: productName,
+            order_id: orderId
+          })
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          let draft = data.message || '';
+
+          draft = draft.replace(/https:\/\/ohc\.store\/review\/\S+/g, `${window.location.origin}/leave-review.html?tenant=${encodeURIComponent(tenantId)}&order=${encodeURIComponent(orderId)}`);
+
+          document.getElementById('draftContent').innerText = draft;
+          document.getElementById('result-area').style.display = 'block';
+          document.getElementById('send-status').style.display = 'none';
+        } else {
+          alert('Failed to generate review request.');
+        }
+      } catch (err) {
+        console.error(err);
+        alert('An error occurred while generating the request.');
+      } finally {
+        btn.disabled = false;
+        btn.innerText = "Generate Request";
+      }
+    });
+
+    document.getElementById('copyBtn').addEventListener('click', () => {
+      const content = document.getElementById('draftContent').innerText;
+      navigator.clipboard.writeText(content).then(() => {
+        const btn = document.getElementById('copyBtn');
+        btn.innerText = "Copied!";
+        setTimeout(() => { btn.innerText = "Copy Draft"; }, 2000);
+      });
+    });
+
+    document.getElementById('sendBtn').addEventListener('click', () => {
+      const btn = document.getElementById('sendBtn');
+      btn.disabled = true;
+      btn.innerText = "Sending...";
+      setTimeout(() => {
+        btn.disabled = false;
+        btn.innerText = "Send Request";
+        document.getElementById('send-status').style.display = 'block';
+      }, 1000);
+    });
+  </script>
+</body>
+</html>

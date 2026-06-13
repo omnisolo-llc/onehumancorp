@@ -169,6 +169,7 @@ where
                 .route("/storefront/og-card", get(handle_og_card))
         .route("/flash-sale/embed", get(handle_flash_sale_embed))
         .route("/milestones/check", get(handle_check_milestones))
+        .route("/reviews/submit", post(handle_submit_review))
         .route("/affiliate/generate-link", post(handle_affiliate_generate_link))
         .route("/affiliate/track", post(handle_affiliate_track))
         .route("/affiliate/stats", get(handle_affiliate_stats))
@@ -1090,6 +1091,47 @@ async fn handle_og_card(
         .body(axum::body::Body::from(svg))
         .unwrap()
         .into_response()
+}
+
+#[derive(Debug, Deserialize)]
+pub struct SubmitReviewRestRequest {
+    pub customer_id: String,
+    pub order_id: String,
+    pub rating: i32,
+    pub comment: String,
+    pub tenant_id: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct SubmitReviewRestResponse {
+    pub review_id: String,
+    pub generated_referral_link: String,
+}
+
+async fn handle_submit_review(
+    Extension(state): Extension<GrowthState>,
+    Json(req): Json<SubmitReviewRestRequest>,
+) -> Result<Json<SubmitReviewRestResponse>, StatusCode> {
+    let _pool = state.pool.clone();
+
+    let review_id = uuid::Uuid::new_v4().to_string();
+
+    // Mock successful database insertion logic directly as it's a demo REST endpoint
+    // In production we would proxy to the gRPC service or share the logic directly
+    let mut generated_referral_link = String::new();
+
+    if req.rating >= 4 {
+        if let Ok(link) = crate::services::growth::referral_api::generate_referral_link(&req.customer_id) {
+            generated_referral_link = link;
+        } else {
+            generated_referral_link = format!("https://ohc.store/ref/{}", req.customer_id);
+        }
+    }
+
+    Ok(Json(SubmitReviewRestResponse {
+        review_id,
+        generated_referral_link,
+    }))
 }
 
 async fn handle_check_milestones(

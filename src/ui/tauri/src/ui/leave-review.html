@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Leave a Review</title>
+  <style>
+    body {
+      font-family: "Outfit", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: #f5f5f7;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+    .container {
+      max-width: 400px;
+      width: 100%;
+      background: rgba(255, 255, 255, 0.65);
+      backdrop-filter: blur(30px) saturate(210%);
+      border-radius: 16px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+      padding: 30px;
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      text-align: center;
+    }
+    h1 {
+      color: #1d1d1f;
+      font-size: 24px;
+      font-weight: 700;
+      margin-top: 0;
+      margin-bottom: 10px;
+    }
+    p {
+      color: #86868b;
+      font-size: 15px;
+      margin-bottom: 25px;
+      line-height: 1.4;
+    }
+    .stars {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: 20px;
+      font-size: 32px;
+      color: #d2d2d7;
+      cursor: pointer;
+    }
+    .stars span {
+      transition: color 0.2s;
+    }
+    .stars span.active {
+      color: #FF9500;
+    }
+    textarea {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid rgba(0, 0, 0, 0.2);
+      border-radius: 8px;
+      font-size: 14px;
+      box-sizing: border-box;
+      margin-bottom: 20px;
+      background: rgba(255, 255, 255, 0.8);
+      font-family: inherit;
+      resize: vertical;
+    }
+    button {
+      background-color: #0066FF;
+      color: white;
+      border: none;
+      padding: 14px 24px;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      width: 100%;
+      transition: background-color 0.2s, transform 0.1s;
+      box-shadow: 0 4px 14px 0 rgba(0, 102, 255, 0.39);
+    }
+    button:hover { background-color: #0052cc; }
+    button:active { transform: scale(0.98); }
+    button:disabled { background-color: #ccc; cursor: not-allowed; box-shadow: none; }
+
+    #success-area {
+      display: none;
+      margin-top: 20px;
+    }
+    #success-area h2 {
+      color: #34C759;
+      font-size: 20px;
+      margin-bottom: 10px;
+    }
+    #referral-widget {
+      display: none;
+      margin-top: 24px;
+      background: rgba(0, 102, 255, 0.05);
+      border: 1px solid rgba(0, 102, 255, 0.2);
+      border-radius: 12px;
+      padding: 20px;
+    }
+    #referral-widget h3 {
+      font-size: 16px;
+      margin-top: 0;
+      margin-bottom: 8px;
+      color: #1d1d1f;
+    }
+    #referral-widget p {
+      font-size: 13px;
+      margin-bottom: 16px;
+    }
+    input[type="text"] {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid rgba(0, 102, 255, 0.3);
+      border-radius: 8px;
+      font-size: 14px;
+      box-sizing: border-box;
+      margin-bottom: 16px;
+      background: white;
+      color: #0066FF;
+      font-weight: 600;
+      text-align: center;
+    }
+    .btn-secondary {
+      background-color: #25D366;
+      box-shadow: none;
+    }
+    .btn-secondary:hover { background-color: #1ebe57; }
+
+    footer {
+      margin-top: 30px;
+      text-align: center;
+    }
+    footer a {
+      color: #86868b;
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 600;
+      transition: color 0.2s;
+    }
+    footer a:hover {
+      color: #1d1d1f;
+    }
+  </style>
+  <style>
+  @media (prefers-color-scheme: dark) {
+      body {
+          background-color: #16161a;
+          color: #f5f5f7;
+      }
+      .container {
+          background: rgba(22, 22, 26, 0.7) !important;
+          backdrop-filter: blur(30px) saturate(210%);
+          border: 1px solid rgba(255, 255, 255, 0.1) !important;
+      }
+      h1, h2, h3, p {
+          color: #f5f5f7 !important;
+      }
+      textarea {
+          background: rgba(32, 32, 36, 0.8) !important;
+          color: #f5f5f7;
+          border: 1px solid rgba(255, 255, 255, 0.2);
+      }
+      #referral-widget {
+          background: rgba(0, 102, 255, 0.1);
+          border: 1px solid rgba(0, 102, 255, 0.3);
+      }
+      input[type="text"] {
+          background: rgba(22, 22, 26, 0.8) !important;
+      }
+  }
+  </style>
+</head>
+<body>
+  <div class="container" id="review-form-container">
+    <h1>How did we do?</h1>
+    <p>Your feedback helps us improve and grow.</p>
+
+    <div class="stars" id="star-rating">
+      <span data-value="1">★</span>
+      <span data-value="2">★</span>
+      <span data-value="3">★</span>
+      <span data-value="4">★</span>
+      <span data-value="5">★</span>
+    </div>
+
+    <textarea id="review-comment" rows="4" placeholder="Tell us about your experience..."></textarea>
+    <button id="submitBtn">Submit Review</button>
+  </div>
+
+  <div class="container" id="success-area">
+    <h2>Thank You!</h2>
+    <p>We appreciate you taking the time to share your feedback.</p>
+
+    <div id="referral-widget">
+      <h3>Love our product? Share & Save!</h3>
+      <p>Give your friends $10 off their first order, and you'll get $10 when they buy.</p>
+      <input type="text" id="share-link" readonly value="" />
+      <button class="btn-secondary" id="share-whatsapp-btn">Share on WhatsApp</button>
+    </div>
+  </div>
+
+  <footer>
+    <a href="/onboarding?ref=review_footer" id="powered-by-link" target="_blank">⚡ Powered by OHC</a>
+  </footer>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const tenant = urlParams.get('tenant') || 'e2e-tenant';
+      const orderId = urlParams.get('order') || `ORD-${Math.floor(Math.random() * 1000)}`;
+
+      document.getElementById('powered-by-link').href = `/api/v1/growth/referrals/click?target=/onboarding&ref=${encodeURIComponent(tenant)}`;
+
+      let currentRating = 0;
+      const stars = document.querySelectorAll('#star-rating span');
+
+      stars.forEach(star => {
+        star.addEventListener('click', () => {
+          currentRating = parseInt(star.getAttribute('data-value'));
+          stars.forEach(s => {
+            if (parseInt(s.getAttribute('data-value')) <= currentRating) {
+              s.classList.add('active');
+            } else {
+              s.classList.remove('active');
+            }
+          });
+        });
+      });
+
+      document.getElementById('submitBtn').addEventListener('click', async () => {
+        if (currentRating === 0) {
+          alert('Please select a star rating.');
+          return;
+        }
+
+        const comment = document.getElementById('review-comment').value.trim();
+        const btn = document.getElementById('submitBtn');
+        btn.disabled = true;
+        btn.innerText = 'Submitting...';
+
+        try {
+          const response = await fetch('/api/v1/growth/reviews/submit', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-spiffe-id': `spiffe://onehumancorp.io/${tenant}/customer`
+            },
+            body: JSON.stringify({
+              customer_id: 'cust_123',
+              order_id: orderId,
+              rating: currentRating,
+              comment: comment,
+              tenant_id: tenant
+            })
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            document.getElementById('review-form-container').style.display = 'none';
+            document.getElementById('success-area').style.display = 'block';
+
+            if (currentRating >= 4 && data.generated_referral_link) {
+              document.getElementById('referral-widget').style.display = 'block';
+              const shareLink = document.getElementById('share-link');
+              shareLink.value = data.generated_referral_link;
+
+              document.getElementById('share-whatsapp-btn').addEventListener('click', () => {
+                const text = `Hey! I just got this awesome product and loved it. Use my link to get $10 off your first order: ${data.generated_referral_link} ⚡ Powered by OHC`;
+                window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+              });
+            }
+          } else {
+            alert('Failed to submit review.');
+            btn.disabled = false;
+            btn.innerText = 'Submit Review';
+          }
+        } catch (e) {
+          console.error(e);
+          alert('An error occurred.');
+          btn.disabled = false;
+          btn.innerText = 'Submit Review';
+        }
+      });
+    });
+  </script>
+</body>
+</html>
