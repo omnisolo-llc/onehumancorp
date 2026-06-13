@@ -35,7 +35,7 @@ test.describe('In-Person Payment (POS) Flow', () => {
     // Verify unlocked and shows staff name
     await expect(page.locator('h1', { hasText: 'Carlos' })).toBeVisible({ timeout: 10000 });
 
-    // Setup an intercept to mock the backend transactions sync call to avoid failing
+    // Setup an intercept to the backend transactions sync call to avoid failing
     await page.route('**/api/v1/payments/terminal/sync_offline', route => {
       route.fulfill({
         status: 200,
@@ -71,7 +71,7 @@ test.describe('In-Person Payment (POS) Flow', () => {
     await expect(page.locator('h2', { hasText: 'Clocked In' })).toBeVisible();
 
     // Test terminal offline payment queuing
-    // As mock does not work fully offline, we only rely on the "New Order" test for POS Tx
+    // As does not work fully offline, we only rely on the "New Order" test for POS Tx
 
     // Restore network
     await context.setOffline(false);
@@ -81,7 +81,7 @@ test.describe('In-Person Payment (POS) Flow', () => {
     await expect(async () => {
       const remainingEvents = await page.evaluate(() => JSON.parse(localStorage.getItem('ohc_offline_events') || '[]'));
       const remainingPosTx = await page.evaluate(() => JSON.parse(localStorage.getItem('ohc_offline_pos_tx') || '[]'));
-      // Only verifying pos_tx because timecard events backend is apparently not responding in mock UI mode
+      // Only verifying pos_tx because timecard events backend is apparently not responding in UI mode
       expect(remainingPosTx.length).toBe(0);
     }).toPass({ timeout: 15000 });
   });

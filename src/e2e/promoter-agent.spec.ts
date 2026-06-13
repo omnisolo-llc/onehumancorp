@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-test.skip('Promoter Agent Flow navigates from dashboard and generates posts', async ({ page }) => {
+test('Promoter Agent Flow navigates from dashboard and generates posts', async ({ page }) => {
     // 1. Start by logging in via UI (mandatory for owner E2E flow)
     // By design, tests are pre-authenticated, so we can go straight to the dashboard or skip filling credentials
     await page.goto('/dashboard');
