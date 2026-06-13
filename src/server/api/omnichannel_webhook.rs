@@ -41,76 +41,82 @@ pub async fn resolve_identity(db: &crate::db::DB, tenant_id: &str, channel: &str
                 .bind(channel)
                 .bind(sender_id)
                 .fetch_optional(pool)
-                .await.ok().flatten()
+                .await
+                .unwrap_or(None)
         },
-        crate::db::DbStore::Sqlite(sqlite_pool) => {
+        crate::db::DbStore::Sqlite(_) => {
             sqlx::query_scalar("SELECT customer_id FROM customer_identities WHERE tenant_id = ? AND channel = ? AND channel_identity = ?")
                 .bind(tenant_id)
                 .bind(channel)
                 .bind(sender_id)
-                .fetch_optional(sqlite_pool)
-                .await.ok().flatten()
-        }
-    };
-
-    if let Some(id) = existing_identity {
-        return Some(id);
-    }
-
-    // 2. If not found, try to resolve by phone or email in customers table (basic resolution)
-    // Assume sender_id might be a phone number or email depending on channel
-    let potential_customer_id: Option<String> = match &db.store {
-        crate::db::DbStore::Postgres => {
-             sqlx::query_scalar("SELECT id FROM customers WHERE tenant_id = $1 AND (phone = $2 OR email = $2) LIMIT 1")
-                .bind(tenant_id)
-                .bind(sender_id)
                 .fetch_optional(pool)
-                .await.ok().flatten()
-        },
-        crate::db::DbStore::Sqlite(sqlite_pool) => {
-             sqlx::query_scalar("SELECT id FROM customers WHERE tenant_id = ? AND (phone = ? OR email = ?) LIMIT 1")
-                .bind(tenant_id)
-                .bind(sender_id)
-                .bind(sender_id)
-                .fetch_optional(sqlite_pool)
-                .await.ok().flatten()
+                .await
+                .unwrap_or(None)
         }
     };
 
-    if let Some(id) = potential_customer_id {
-        // Cache this new identity link
-        let identity_id = Uuid::new_v4().to_string();
-        match &db.store {
-            crate::db::DbStore::Postgres => {
-                let _ = sqlx::query("INSERT INTO customer_identities (id, tenant_id, customer_id, channel, channel_identity) VALUES ($1, $2, $3, $4, $5) ON CONFLICT DO NOTHING")
-                    .bind(&identity_id)
-                    .bind(tenant_id)
-                    .bind(&id)
-                    .bind(channel)
-                    .bind(sender_id)
-                    .execute(pool)
-                    .await;
-            },
-            crate::db::DbStore::Sqlite(sqlite_pool) => {
-                let _ = sqlx::query("INSERT OR IGNORE INTO customer_identities (id, tenant_id, customer_id, channel, channel_identity) VALUES (?, ?, ?, ?, ?)")
-                    .bind(&identity_id)
-                    .bind(tenant_id)
-                    .bind(&id)
-                    .bind(channel)
-                    .bind(sender_id)
-                    .execute(sqlite_pool)
-                    .await;
-            }
-        };
-        return Some(id);
+    if let Some(customer_id) = existing_identity {
+        return Some(customer_id);
     }
 
-    None
+    // 2. Otherwise create a new anonymous customer
+    let new_customer_id = Uuid::new_v4().to_string();
+    let display_name = format!("Anonymous ({} {})", channel, &sender_id[0..std::cmp::min(4, sender_id.len())]);
+    let new_identity_id = Uuid::new_v4().to_string();
+
+    let res = match &db.store {
+        crate::db::DbStore::Postgres => {
+            let mut tx = pool.begin().await.ok()?;
+            let _ = sqlx::query("INSERT INTO customers (id, tenant_id, name) VALUES ($1, $2, $3)")
+                .bind(&new_customer_id)
+                .bind(tenant_id)
+                .bind(&display_name)
+                .execute(&mut *tx)
+                .await;
+
+            let _ = sqlx::query("INSERT INTO customer_identities (id, tenant_id, customer_id, channel, channel_identity) VALUES ($1, $2, $3, $4, $5)")
+                .bind(&new_identity_id)
+                .bind(tenant_id)
+                .bind(&new_customer_id)
+                .bind(channel)
+                .bind(sender_id)
+                .execute(&mut *tx)
+                .await;
+
+            tx.commit().await
+        },
+        crate::db::DbStore::Sqlite(_) => {
+            let mut tx = pool.begin().await.ok()?;
+            let _ = sqlx::query("INSERT INTO customers (id, tenant_id, name) VALUES (?, ?, ?)")
+                .bind(&new_customer_id)
+                .bind(tenant_id)
+                .bind(&display_name)
+                .execute(&mut *tx)
+                .await;
+
+            let _ = sqlx::query("INSERT INTO customer_identities (id, tenant_id, customer_id, channel, channel_identity) VALUES (?, ?, ?, ?, ?)")
+                .bind(&new_identity_id)
+                .bind(tenant_id)
+                .bind(&new_customer_id)
+                .bind(channel)
+                .bind(sender_id)
+                .execute(&mut *tx)
+                .await;
+
+            tx.commit().await
+        }
+    };
+
+    if res.is_ok() {
+        Some(new_customer_id)
+    } else {
+        None
+    }
 }
 
 pub fn router(state: AppState) -> Router {
     Router::new()
-        .route("/", post(handle_omnichannel_webhook))
+        .route("/api/v1/omnichannel/webhook", post(handle_omnichannel_webhook))
         .with_state(state)
 }
 
@@ -118,85 +124,73 @@ pub async fn handle_omnichannel_webhook(
     State(state): State<AppState>,
     Json(payload): Json<OmnichannelPayload>,
 ) -> impl IntoResponse {
-    let tenant_id = &payload.tenant_id;
-    let channel = &payload.channel;
-    let sender_id = &payload.sender_id;
-    let message = &payload.message;
 
-    // 1. Resolve Identity
-    let customer_id = resolve_identity(&state.db, tenant_id, channel, sender_id).await;
+    // Resolve identity
+    let customer_id_opt = resolve_identity(&state.db, &payload.tenant_id, &payload.channel, &payload.sender_id).await;
 
-    // 2. Persist Message into inbox_messages
+    let customer_id = customer_id_opt.unwrap_or_else(|| "unknown".to_string());
+
     let inbox_id = Uuid::new_v4().to_string();
-    let insert_result = match &state.db.store {
+    let tenant_id = payload.tenant_id.clone();
+
+    // Save to inbox_messages
+    let mut payload_json = serde_json::to_value(&payload).unwrap_or(serde_json::json!({}));
+    if let Some(obj) = payload_json.as_object_mut() {
+        obj.insert("customer_id".to_string(), serde_json::Value::String(customer_id.clone()));
+    }
+
+    let insert_res = match &state.db.store {
         crate::db::DbStore::Postgres => {
-            sqlx::query(
-                "INSERT INTO inbox_messages (id, tenant_id, source, original_content, content, draft_reply, status, sender_id, created_at) VALUES ($1, $2, $3, $4, $5, '', 'unread', $6, NOW())"
-            )
-            .bind(&inbox_id)
-            .bind(tenant_id)
-            .bind(channel)
-            .bind(message)
-            .bind(message)
-            .bind(sender_id)
-            .execute(&state.db.pool)
-            .await.map(|_| ())
+            sqlx::query("INSERT INTO inbox_messages (id, tenant_id, customer_id, channel, message, payload, status) VALUES ($1, $2, $3, $4, $5, $6, 'NEW')")
+                .bind(&inbox_id)
+                .bind(&tenant_id)
+                .bind(&customer_id)
+                .bind(&payload.channel)
+                .bind(&payload.message)
+                .bind(&payload_json)
+                .execute(&state.db.pool)
+                .await
         },
-        crate::db::DbStore::Sqlite(sqlite_pool) => {
-            sqlx::query(
-                "INSERT INTO inbox_messages (id, tenant_id, source, original_content, content, draft_reply, status, sender_id, created_at) VALUES (?, ?, ?, ?, ?, '', 'unread', ?, CURRENT_TIMESTAMP)"
-            )
-            .bind(&inbox_id)
-            .bind(tenant_id)
-            .bind(channel)
-            .bind(message)
-            .bind(message)
-            .bind(sender_id)
-            .execute(sqlite_pool)
-            .await.map(|_| ())
+        crate::db::DbStore::Sqlite(_) => {
+            sqlx::query("INSERT INTO inbox_messages (id, tenant_id, customer_id, channel, message, payload, status) VALUES (?, ?, ?, ?, ?, ?, 'NEW')")
+                .bind(&inbox_id)
+                .bind(&tenant_id)
+                .bind(&customer_id)
+                .bind(&payload.channel)
+                .bind(&payload.message)
+                .bind(&payload_json)
+                .execute(&state.db.pool)
+                .await
         }
     };
 
-    if let Err(e) = insert_result {
-        tracing::error!("Failed to insert omnichannel inbox message: {}", e);
+    if let Err(e) = insert_res {
+        tracing::error!("Failed to persist omnichannel message: {}", e);
         return (StatusCode::INTERNAL_SERVER_ERROR, Json(WebhookResponse { success: false, message_id: None })).into_response();
     }
 
-    // 3. Enqueue message_triage job
-    let job_id = Uuid::new_v4().to_string();
-    let mut payload_json = serde_json::json!({
-        "message_id": inbox_id,
-        "source": channel,
-        "content": message,
-        "sender_id": sender_id
-    });
-
-    if let Some(c_id) = &customer_id {
-        payload_json["customer_id"] = serde_json::json!(c_id);
-    }
-
-    let enqueue_result = match &state.db.store {
+    // Trigger triage evaluation via queue to offload heavy sync
+    let triage_job_id = Uuid::new_v4().to_string();
+    let enqueue_res = match &state.db.store {
         crate::db::DbStore::Postgres => {
             sqlx::query("INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload, status) VALUES ($1, $2, 'message_triage', $3, 'PENDING')")
-                .bind(&job_id)
-                .bind(tenant_id)
-                .bind(payload_json.to_string())
+                .bind(&triage_job_id)
+                .bind(&tenant_id)
+                .bind(serde_json::json!({ "message_id": inbox_id }))
                 .execute(&state.db.pool)
                 .await
-                .map(|_| ())
         },
-        crate::db::DbStore::Sqlite(sqlite_pool) => {
+        crate::db::DbStore::Sqlite(_) => {
             sqlx::query("INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload, status) VALUES (?, ?, 'message_triage', ?, 'PENDING')")
-                .bind(&job_id)
-                .bind(tenant_id)
-                .bind(payload_json.to_string())
-                .execute(sqlite_pool)
+                .bind(&triage_job_id)
+                .bind(&tenant_id)
+                .bind(serde_json::json!({ "message_id": inbox_id }))
+                .execute(&state.db.pool)
                 .await
-                .map(|_| ())
         }
     };
 
-    if let Err(e) = enqueue_result {
+    if let Err(e) = enqueue_res {
         tracing::error!("Failed to enqueue message_triage job: {}", e);
     }
 
@@ -239,44 +233,31 @@ mod tests {
                 tenant_id TEXT NOT NULL,
                 customer_id TEXT NOT NULL,
                 channel TEXT NOT NULL,
-                channel_identity TEXT NOT NULL,
-                UNIQUE(tenant_id, channel, channel_identity)
+                channel_identity TEXT NOT NULL
             );
         "#;
+
         sqlx::query(schema).execute(&pool).await.unwrap();
 
         let db = DB {
-            pool: sqlx::PgPool::connect_lazy("postgres://dummy").unwrap(), // Dummy pg pool, won't be used since store is Sqlite
+            pool: pool.clone(),
             store: crate::db::DbStore::Sqlite(pool.clone()),
         };
 
-        // 1. Insert a test customer
-        sqlx::query("INSERT INTO customers (id, tenant_id, name, email, phone) VALUES ('cust-1', 'tenant-1', 'Test User', 'test@example.com', '+1234567890')")
-            .execute(&pool)
-            .await
-            .unwrap();
+        // 1. Resolve unknown identity (should create new)
+        let cust1 = resolve_identity(&db, "t1", "ig_dm", "user123").await;
+        assert!(cust1.is_some());
+        let c1_id = cust1.unwrap();
 
-        // 2. Test resolution by email
-        let resolved_id = resolve_identity(&db, "tenant-1", "email", "test@example.com").await;
-        assert_eq!(resolved_id, Some("cust-1".to_string()));
+        // Verify inserted
+        let count: i32 = sqlx::query_scalar("SELECT count(*) FROM customers").fetch_one(&pool).await.unwrap();
+        assert_eq!(count, 1);
 
-        // 3. Test that it was cached in customer_identities
-        let cached_id: String = sqlx::query_scalar("SELECT customer_id FROM customer_identities WHERE tenant_id = 'tenant-1' AND channel = 'email' AND channel_identity = 'test@example.com'")
-            .fetch_one(&pool)
-            .await
-            .unwrap();
-        assert_eq!(cached_id, "cust-1");
+        // 2. Resolve same identity (should return existing)
+        let cust2 = resolve_identity(&db, "t1", "ig_dm", "user123").await;
+        assert_eq!(cust2.unwrap(), c1_id);
 
-        // 4. Test resolution by phone
-        let resolved_id2 = resolve_identity(&db, "tenant-1", "whatsapp", "+1234567890").await;
-        assert_eq!(resolved_id2, Some("cust-1".to_string()));
-
-        // 5. Test resolution from cache directly (another call to same email)
-        let resolved_id3 = resolve_identity(&db, "tenant-1", "email", "test@example.com").await;
-        assert_eq!(resolved_id3, Some("cust-1".to_string()));
-
-        // 6. Test unknown identity
-        let resolved_id4 = resolve_identity(&db, "tenant-1", "instagram", "unknown_handle").await;
-        assert_eq!(resolved_id4, None);
+        let count2: i32 = sqlx::query_scalar("SELECT count(*) FROM customers").fetch_one(&pool).await.unwrap();
+        assert_eq!(count2, 1);
     }
 }
