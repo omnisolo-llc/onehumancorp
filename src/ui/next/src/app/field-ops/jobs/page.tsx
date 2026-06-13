@@ -65,6 +65,17 @@ export default function FieldOpsJobsPage() {
       })
     );
 
+    // Persist state change to database
+    fetch(`/api/v1/field-ops/appointments/${jobId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        status: newStatus,
+        actual_start_time: newStatus === 'In-Progress' ? now : undefined,
+        actual_end_time: newStatus === 'Completed' ? now : undefined,
+      })
+    }).catch(err => console.error("Failed to update status", err));
+
     // Call optimize route endpoint after state change to simulate Operations Agent logic
     const updatedJobs = jobs.map(j => {
       if (j.id === jobId) {
@@ -101,6 +112,12 @@ export default function FieldOpsJobsPage() {
 
   const handleNotesChange = (jobId: string, notes: string) => {
     setJobs(jobs.map(j => j.id === jobId ? { ...j, notes } : j));
+    // Persist notes
+    fetch(`/api/v1/field-ops/appointments/${jobId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: jobs.find(j => j.id === jobId)?.status || 'Scheduled', notes })
+    }).catch(err => console.error("Failed to update notes", err));
   };
 
   const handleComplete = (jobId: string) => {

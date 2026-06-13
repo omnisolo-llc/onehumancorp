@@ -58,5 +58,11 @@ test.describe('Autonomous Work Scheduling & Routing', () => {
     // 8. Dismiss the suggestion
     await agentSuggestionCard.getByRole('button', { name: 'No, stick to schedule' }).click();
     await expect(agentSuggestionCard).not.toBeVisible();
+
+    // 9. Verify state persistence
+    await page.reload();
+    await expect(page.locator('h1', { hasText: "Today's Route" }).first()).toBeVisible({ timeout: 15000 });
+    const refreshedCard = page.locator('.bg-white.rounded-xl.shadow-sm').filter({ hasText: 'Alice Smith' });
+    await expect(refreshedCard.locator('span.bg-green-100')).toContainText('COMPLETED');
   });
 });

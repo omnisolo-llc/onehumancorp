@@ -3,6 +3,11 @@ const nextConfig = {
   async rewrites() {
     return [
       {
+        source: '/api/v1/field-ops/:path*',
+        destination: process.env.BACKEND_URL ? `${process.env.BACKEND_URL}/api/v1/field-ops/:path*` : 'http://localhost:8080/api/v1/field-ops/:path*',
+      },
+
+      {
         source: '/api/settings/:path*',
         destination: process.env.BACKEND_URL ? `${process.env.BACKEND_URL}/api/settings/:path*` : 'http://localhost:8080/api/settings/:path*',
       },

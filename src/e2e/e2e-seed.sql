@@ -526,3 +526,26 @@ ALTER TABLE IF EXISTS triage_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS triage_proposed_actions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS vendors ENABLE ROW LEVEL SECURITY;
+
+-- Field Ops Setup
+INSERT INTO customers (id, tenant_id, name, email, phone)
+VALUES
+  ('cust-alice', 'e2e-tenant', 'Alice Smith', 'alice@example.com', '555-0101'),
+  ('cust-bob', 'e2e-tenant', 'Bob Jones', 'bob@example.com', '555-0102')
+ON CONFLICT DO NOTHING;
+
+INSERT INTO job_templates (id, tenant_id, name, estimated_duration_mins, base_price_cents)
+VALUES
+  ('job-plumbing', 'e2e-tenant', 'Plumbing Repair', 120, 15000),
+  ('job-elec', 'e2e-tenant', 'Electrical Inspection', 60, 9000)
+ON CONFLICT DO NOTHING;
+
+INSERT INTO staff_profiles (id, tenant_id, name)
+VALUES ('staff-carlos', 'e2e-tenant', 'Carlos')
+ON CONFLICT DO NOTHING;
+
+INSERT INTO appointments (id, tenant_id, customer_id, job_template_id, staff_profile_id, status, scheduled_start_time, scheduled_end_time, location_address)
+VALUES
+  ('appt-1', 'e2e-tenant', 'cust-alice', 'job-plumbing', 'staff-carlos', 'Scheduled', CURRENT_TIMESTAMP + INTERVAL '1 hour', CURRENT_TIMESTAMP + INTERVAL '2 hours', '123 Main St'),
+  ('appt-2', 'e2e-tenant', 'cust-bob', 'job-elec', 'staff-carlos', 'Requested', CURRENT_TIMESTAMP + INTERVAL '3 hours', CURRENT_TIMESTAMP + INTERVAL '4 hours', '456 Oak Ave')
+ON CONFLICT DO NOTHING;
