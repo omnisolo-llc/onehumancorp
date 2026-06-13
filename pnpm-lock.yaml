@@ -49,13 +49,10 @@ importers:
         version: 3.21.4
       next:
         specifier: ^16.2.7
-        version: 16.2.7(@playwright/test@1.60.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+        version: 16.2.7(@playwright/test@1.50.1)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       pg:
         specifier: ^8.21.0
         version: 8.21.0
-      playwright:
-        specifier: ^1.50.1
-        version: 1.50.1
       react:
         specifier: ^19.2.5
         version: 19.2.7
@@ -76,8 +73,8 @@ importers:
         specifier: ^1.28.1
         version: 1.28.1
       '@playwright/test':
-        specifier: ^1.60.0
-        version: 1.60.0
+        specifier: 1.50.1
+        version: 1.50.1
       '@tailwindcss/postcss':
         specifier: ^4.3.0
         version: 4.3.0
@@ -131,7 +128,10 @@ importers:
         version: 29.1.1
       next-router-mock:
         specifier: ^1.0.5
-        version: 1.0.5(next@16.2.7(@playwright/test@1.60.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)
+        version: 1.0.5(next@16.2.7(@playwright/test@1.50.1)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)
+      playwright:
+        specifier: 1.50.1
+        version: 1.50.1
       postcss:
         specifier: ^8.5.15
         version: 8.5.15
@@ -220,6 +220,15 @@ importers:
 
   src/ui/next:
     dependencies:
+      '@journeyapps/wa-sqlite':
+        specifier: ^1.7.0
+        version: 1.7.0
+      '@powersync/react':
+        specifier: ^1.10.0
+        version: 1.10.0(@powersync/common@1.54.0)(react@18.3.1)
+      '@powersync/web':
+        specifier: ^1.38.3
+        version: 1.38.3(@journeyapps/wa-sqlite@1.7.0)(@powersync/common@1.54.0)
       '@stripe/terminal-js':
         specifier: ^0.26.0
         version: 0.26.0
@@ -231,10 +240,10 @@ importers:
         version: 3.0.5
       dompurify:
         specifier: ^3.0.6
-        version: 3.0.6
-      next:
-        specifier: ^14.2.35
-        version: 14.2.35(@babel/core@7.29.7)(@playwright/test@1.50.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+        version: 3.4.8
+      framer-motion:
+        specifier: ^12.40.0
+        version: 12.40.0(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       postcss-loader:
         specifier: ^8.2.1
         version: 8.2.1(postcss@8.5.15)(typescript@5.9.3)
@@ -293,6 +302,9 @@ importers:
       jsdom:
         specifier: ^29.1.1
         version: 29.1.1
+      next:
+        specifier: ^14.2.35
+        version: 14.2.35(@babel/core@7.29.7)(@playwright/test@1.50.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       postcss:
         specifier: ^8.5.15
         version: 8.5.15
@@ -1003,8 +1015,8 @@ packages:
     deprecated: Package no longer supported. Contact Support at https://www.npmjs.com/support for more info.
     hasBin: true
 
-  '@napi-rs/wasm-runtime@1.1.4':
-    resolution: {integrity: sha512-3NQNNgA1YSlJb/kMH1ildASP9HW7/7kYnRI2szWJaofaS1hWmbGI4H+d3+22aGzXXN9IJ+n+GiFVcGipJP18ow==}
+  '@napi-rs/wasm-runtime@1.1.5':
+    resolution: {integrity: sha512-AWPoBRJ9tsnVhor4sjO7rkni+7p+2IAEFj6cx06UgP10jkQHqay/36uRV/bFkgrh18D9vb4cr8Q0Pthskgzy+Q==}
     peerDependencies:
       '@emnapi/core': ^1.7.1
       '@emnapi/runtime': ^1.7.1
@@ -1142,11 +1154,6 @@ packages:
 
   '@playwright/test@1.50.1':
     resolution: {integrity: sha512-Jii3aBg+CEDpgnuDxEp/h7BimHcUTDlpEtce89xEumlJ5ef2hqepZ+PWp1DDpYC/VO9fmWVI1IlEaoI5fK9FXQ==}
-    engines: {node: '>=18'}
-    hasBin: true
-
-  '@playwright/test@1.60.0':
-    resolution: {integrity: sha512-O71yZIbAh/PxDMNGns37GHBIfrVkEVyn+AXyIa5dOTfb4/xNvRWV+Vv/NMbNCtODB/pO7vLlF2OTmMVLhmr7Ag==}
     engines: {node: '>=18'}
     hasBin: true
 
@@ -3211,18 +3218,8 @@ packages:
     engines: {node: '>=18'}
     hasBin: true
 
-  playwright-core@1.60.0:
-    resolution: {integrity: sha512-9bW6zvX/m0lEbgTKJ6YppOKx8H3VOPBMOCFh2irXFOT4BbHgrx5hPjwJYLT40Lu+4qtD36qKc/Hn56StUW57IA==}
-    engines: {node: '>=18'}
-    hasBin: true
-
   playwright@1.50.1:
     resolution: {integrity: sha512-G8rwsOQJ63XG6BbKj2w5rHeavFjy5zynBA9zsJMMtBoe/Uf757oG12NXz6e6OirF7RCrTVAKFXbLmn1RbL7Qaw==}
-    engines: {node: '>=18'}
-    hasBin: true
-
-  playwright@1.60.0:
-    resolution: {integrity: sha512-hheHdokM8cdqCb0lcE3s+zT4t4W+vvjpGxsZlDnikarzx8tSzMebh3UiFtgqwFwnTnjYQcsyMF8ei2mCO/tpeA==}
     engines: {node: '>=18'}
     hasBin: true
 
@@ -3279,8 +3276,8 @@ packages:
     peerDependencies:
       postcss: ^8.2.14
 
-  postcss-selector-parser@6.1.2:
-    resolution: {integrity: sha512-Q8qQfPiZ+THO/3ZrOrO0cJJKfpYCagtMUkXbnEfmgUjwXg6z/WBeOyS9APBBPCTSiDV+s4SwQGu8yFsiMRIudg==}
+  postcss-selector-parser@6.1.4:
+    resolution: {integrity: sha512-bIoJLOmjCO1S9XdY/DcnR5hJxvrDir1PbGChrzXG3vw0/FOliy/fA3dmdhQ441kah4gKv+TwckGzex6wNS5cnQ==}
     engines: {node: '>=4'}
 
   postcss-value-parser@4.2.0:
@@ -4772,7 +4769,7 @@ snapshots:
     transitivePeerDependencies:
       - zod
 
-  '@napi-rs/wasm-runtime@1.1.4(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)':
+  '@napi-rs/wasm-runtime@1.1.5(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)':
     dependencies:
       '@emnapi/core': 1.10.0
       '@emnapi/runtime': 1.10.0
@@ -4852,14 +4849,15 @@ snapshots:
     dependencies:
       playwright: 1.50.1
 
-  '@playwright/test@1.60.0':
-    dependencies:
-      playwright: 1.60.0
-
   '@powersync/common@1.54.0':
     dependencies:
       event-iterator: 2.0.0
       js-logger: 1.6.1
+
+  '@powersync/react@1.10.0(@powersync/common@1.54.0)(react@18.3.1)':
+    dependencies:
+      '@powersync/common': 1.54.0
+      react: 18.3.1
 
   '@powersync/react@1.10.0(@powersync/common@1.54.0)(react@19.2.7)':
     dependencies:
@@ -4913,7 +4911,7 @@ snapshots:
     dependencies:
       '@emnapi/core': 1.10.0
       '@emnapi/runtime': 1.10.0
-      '@napi-rs/wasm-runtime': 1.1.4(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)
+      '@napi-rs/wasm-runtime': 1.1.5(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)
     optional: true
 
   '@rolldown/binding-win32-arm64-msvc@1.0.3':
@@ -6395,6 +6393,15 @@ snapshots:
 
   fraction.js@5.3.4: {}
 
+  framer-motion@12.40.0(react-dom@18.3.1(react@18.3.1))(react@18.3.1):
+    dependencies:
+      motion-dom: 12.40.0
+      motion-utils: 12.39.0
+      tslib: 2.8.1
+    optionalDependencies:
+      react: 18.3.1
+      react-dom: 18.3.1(react@18.3.1)
+
   framer-motion@12.40.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7):
     dependencies:
       motion-dom: 12.40.0
@@ -6902,9 +6909,9 @@ snapshots:
 
   neotraverse@0.6.18: {}
 
-  next-router-mock@1.0.5(next@16.2.7(@playwright/test@1.60.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7):
+  next-router-mock@1.0.5(next@16.2.7(@playwright/test@1.50.1)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7):
     dependencies:
-      next: 16.2.7(@playwright/test@1.60.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+      next: 16.2.7(@playwright/test@1.50.1)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       react: 19.2.7
 
   next@14.2.35(@babel/core@7.29.7)(@playwright/test@1.50.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1):
@@ -6933,7 +6940,7 @@ snapshots:
       - '@babel/core'
       - babel-plugin-macros
 
-  next@16.2.7(@playwright/test@1.60.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7):
+  next@16.2.7(@playwright/test@1.50.1)(react-dom@19.2.7(react@19.2.7))(react@19.2.7):
     dependencies:
       '@next/env': 16.2.7
       '@swc/helpers': 0.5.15
@@ -6952,7 +6959,7 @@ snapshots:
       '@next/swc-linux-x64-musl': 16.2.7
       '@next/swc-win32-arm64-msvc': 16.2.7
       '@next/swc-win32-x64-msvc': 16.2.7
-      '@playwright/test': 1.60.0
+      '@playwright/test': 1.50.1
       sharp: 0.34.5
     transitivePeerDependencies:
       - '@babel/core'
@@ -7123,17 +7130,9 @@ snapshots:
 
   playwright-core@1.50.1: {}
 
-  playwright-core@1.60.0: {}
-
   playwright@1.50.1:
     dependencies:
       playwright-core: 1.50.1
-    optionalDependencies:
-      fsevents: 2.3.2
-
-  playwright@1.60.0:
-    dependencies:
-      playwright-core: 1.60.0
     optionalDependencies:
       fsevents: 2.3.2
 
@@ -7171,9 +7170,9 @@ snapshots:
   postcss-nested@6.2.0(postcss@8.5.15):
     dependencies:
       postcss: 8.5.15
-      postcss-selector-parser: 6.1.2
+      postcss-selector-parser: 6.1.4
 
-  postcss-selector-parser@6.1.2:
+  postcss-selector-parser@6.1.4:
     dependencies:
       cssesc: 3.0.0
       util-deprecate: 1.0.2
@@ -7835,7 +7834,7 @@ snapshots:
       postcss-js: 4.1.0(postcss@8.5.15)
       postcss-load-config: 6.0.1(jiti@1.21.7)(postcss@8.5.15)(tsx@4.22.4)
       postcss-nested: 6.2.0(postcss@8.5.15)
-      postcss-selector-parser: 6.1.2
+      postcss-selector-parser: 6.1.4
       resolve: 1.22.12
       sucrase: 3.35.1
     transitivePeerDependencies:
