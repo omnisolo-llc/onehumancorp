@@ -373,9 +373,9 @@ async fn test_builder_generate_and_publish_draft() {
 
 #[tokio::test]
 async fn test_tenant_isolation_in_db_operations() {
-    let pool = match crate::db::DB::new().await {
-        Ok(db) => db.pool,
-        Err(_) => return,
+    let pool = match setup_db().await {
+        Some(v) => v.0,
+        None => return,
     };
 
     let tenant_id_1 = Uuid::new_v4();
