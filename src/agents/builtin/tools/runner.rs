@@ -34,49 +34,38 @@ impl SandboxedCommandRunner {
     }
 
     // Hermes Agent Unique Harness Innovations: Multi-backend terminal: local, Docker, SSH, Singularity, Modal, Daytona, Vercal Sandbox
-    fn should_use_container_backend() -> bool {
-        let backend = std::env::var("OHC_AGENT_COMMAND_BACKEND")
-            .unwrap_or_default()
-            .to_lowercase();
-
+    pub(crate) fn should_use_container_backend(backend_env: &str, execution_mode: &str) -> bool {
         matches!(
-            backend.as_str(),
+            backend_env,
             "container" | "docker" | "podman" | "ssh" | "singularity" | "modal" | "daytona" | "vercal"
-        ) || matches!(Self::execution_mode().as_str(), "cluster" | "cloud")
+        ) || matches!(execution_mode, "cluster" | "cloud")
     }
 
-    fn find_container_runtime() -> Option<String> {
-        static RUNTIME: OnceLock<Option<String>> = OnceLock::new();
-        RUNTIME
-            .get_or_init(|| {
-                let backend_env = std::env::var("OHC_AGENT_COMMAND_BACKEND").unwrap_or_default().to_lowercase();
+    pub(crate) fn find_container_runtime(backend_env: &str) -> Option<String> {
+        // If a specific multi-backend is requested, try to use it if available
+        let candidates = match backend_env {
+            "ssh" => vec!["ssh"],
+            "singularity" => vec!["singularity"],
+            "modal" => vec!["modal"],
+            "daytona" => vec!["daytona"],
+            "vercal" => vec!["vercal"],
+            _ => vec!["docker", "podman"],
+        };
 
-                // If a specific multi-backend is requested, try to use it if available
-                let candidates = match backend_env.as_str() {
-                    "ssh" => vec!["ssh"],
-                    "singularity" => vec!["singularity"],
-                    "modal" => vec!["modal"],
-                    "daytona" => vec!["daytona"],
-                    "vercal" => vec!["vercal"],
-                    _ => vec!["docker", "podman"],
-                };
-
-                for candidate in candidates {
-                    let mut cmd = std::process::Command::new(candidate);
-                    let arg = if candidate == "ssh" { "-V" } else { "--version" };
-                    let available = cmd.arg(arg)
-                        .stdout(std::process::Stdio::null())
-                        .stderr(std::process::Stdio::null())
-                        .status()
-                        .map(|s| s.success())
-                        .unwrap_or(false);
-                    if available {
-                        return Some(candidate.to_string());
-                    }
-                }
-                None
-            })
-            .clone()
+        for candidate in candidates {
+            let mut cmd = std::process::Command::new(candidate);
+            let arg = if candidate == "ssh" { "-V" } else { "--version" };
+            let available = cmd.arg(arg)
+                .stdout(std::process::Stdio::null())
+                .stderr(std::process::Stdio::null())
+                .status()
+                .map(|s| s.success())
+                .unwrap_or(false);
+            if available {
+                return Some(candidate.to_string());
+            }
+        }
+        None
     }
 
     fn shell_command(program: &str, args: &[&str]) -> String {
@@ -216,8 +205,20 @@ impl CommandRunner for SandboxedCommandRunner {
         current_dir: Option<&Path>,
         envs: Vec<(String, String)>,
     ) -> io::Result<Output> {
-        if Self::should_use_container_backend() {
-            if let Some(runtime) = Self::find_container_runtime() {
+        let backend_env = std::env::var("OHC_AGENT_COMMAND_BACKEND")
+            .unwrap_or_default()
+            .to_lowercase();
+        let execution_mode = Self::execution_mode();
+
+        if Self::should_use_container_backend(&backend_env, &execution_mode) {
+            // Retrieve cached runtime based on backend
+            static RUNTIME: OnceLock<Option<String>> = OnceLock::new();
+            let runtime_opt = RUNTIME.get_or_init(|| {
+                let current_backend = std::env::var("OHC_AGENT_COMMAND_BACKEND").unwrap_or_default().to_lowercase();
+                Self::find_container_runtime(&current_backend)
+            }).clone();
+
+            if let Some(runtime) = runtime_opt {
                 let container_args = Self::container_args(
                     program,
                     args,
@@ -421,5 +422,24 @@ mod tests {
         assert_eq!(args[3], "FOO=bar");
         assert_eq!(args[4], "--");
         assert_eq!(args[5], "echo hello");
+    }
+
+    #[test]
+    fn test_should_use_container_backend() {
+        assert!(SandboxedCommandRunner::should_use_container_backend("docker", "standalone"));
+        assert!(SandboxedCommandRunner::should_use_container_backend("modal", "standalone"));
+        assert!(SandboxedCommandRunner::should_use_container_backend("unknown", "cloud"));
+        assert!(SandboxedCommandRunner::should_use_container_backend("unknown", "cluster"));
+        assert!(!SandboxedCommandRunner::should_use_container_backend("unknown", "standalone"));
+        assert!(!SandboxedCommandRunner::should_use_container_backend("", ""));
+    }
+
+    #[test]
+    fn test_find_container_runtime_candidates() {
+        // Without mocking `which::which` or `std::process::Command`, we can only verify the logic doesn't crash.
+        // It should silently return None if the binary is missing on the host.
+        let _ = SandboxedCommandRunner::find_container_runtime("ssh");
+        let _ = SandboxedCommandRunner::find_container_runtime("modal");
+        let _ = SandboxedCommandRunner::find_container_runtime("unknown");
     }
 }
