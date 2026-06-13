@@ -1228,7 +1228,12 @@
               };
               document.getElementById('milestone-icon').innerText = iconMap[reachedMilestone.id] || '✨';
 
-              document.getElementById('milestone-container').style.display = 'block';
+              const dismissedKey = `dismissed_milestone_${reachedMilestone.id}`;
+              if (localStorage.getItem(dismissedKey) !== 'true') {
+                document.getElementById('milestone-container').style.display = 'block';
+              } else {
+                document.getElementById('milestone-container').style.display = 'none';
+              }
 
               // Button events
               const copyBtn = document.getElementById('milestone-copy-btn');
@@ -1255,6 +1260,7 @@
                 tempInput.select();
                 document.execCommand('copy');
                 document.body.removeChild(tempInput);
+                localStorage.setItem(dismissedKey, 'true');
 
                 const originalText = copyBtn.innerHTML;
                 copyBtn.innerHTML = '<svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Copied Text!';
@@ -1267,6 +1273,8 @@
                 const link = await getInviteLink();
                 const text = `I just hit a huge business milestone (${reachedMilestone.title}) using OHC! Launch your own store today: ${link} ⚡ Powered by OHC`;
                 window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, '_blank');
+                localStorage.setItem(dismissedKey, 'true');
+                document.getElementById('milestone-container').style.display = 'none';
               });
             }
           }
@@ -1353,6 +1361,7 @@
           tempInput.select();
           document.execCommand("copy");
           document.body.removeChild(tempInput);
+                localStorage.setItem(dismissedKey, 'true');
 
           copyBtn.innerText = "Copied!";
           setTimeout(() => {
@@ -1373,6 +1382,8 @@
         const link = referralLink.value;
         const text = `Join my team on OHC! Here is your invite link:\n\n${link}\n\n⚡ Powered by OHC`;
         window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, '_blank');
+                localStorage.setItem(dismissedKey, 'true');
+                document.getElementById('milestone-container').style.display = 'none';
       });
 
 
@@ -2127,6 +2138,8 @@ document.addEventListener('DOMContentLoaded', () => {
         shareXBtn.addEventListener('click', () => {
             const text = `I manage my business with OHC! Join using my invite link and get 1 month free: ${linkInput.value}\n\n⚡ Powered by OHC`;
             window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, '_blank');
+                localStorage.setItem(dismissedKey, 'true');
+                document.getElementById('milestone-container').style.display = 'none';
         });
     }
 });
