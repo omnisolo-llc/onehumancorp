@@ -1400,7 +1400,11 @@
         const projectsSection = document.getElementById('projects-section');
         const projectsContainer = document.getElementById('projects-container');
         try {
-          const res = await fetch(`/api/v1/projects`);
+          // get the current tenant id
+          const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default';
+          const res = await fetch(`/api/v1/projects`, {
+              headers: { 'x-tenant-id': tenantId }
+          });
           if (!res.ok) throw new Error("Failed to load projects");
 
           const projects = await res.json();
