@@ -11,6 +11,7 @@ pub fn router(agent: Arc<OnboardingAgent>) -> Router<Arc<dyn ohc_builtin_agent::
     let r = Router::new()
         .route("/start", post(start_onboarding))
         .route("/intake", post(process_intake_handler))
+        .route("/chat", post(process_chat_handler))
         .route("/state", get(get_state).post(save_state))
         .route("/launch", post(launch_onboarding))
         .route("/draft", get(get_draft).post(save_draft))
@@ -26,6 +27,11 @@ pub struct IntakeRequest {
     pub description: String,
 }
 
+#[derive(serde::Deserialize)]
+pub struct ChatRequest {
+    pub messages: Vec<crate::services::onboarding::onboarding_agent::ChatMessage>,
+}
+
 async fn process_intake_handler(
     State(agent): State<Arc<OnboardingAgent>>,
     Json(payload): Json<IntakeRequest>,
@@ -34,6 +40,19 @@ async fn process_intake_handler(
         Ok(data) => Ok(Json(data)),
         Err(error) => {
             tracing::error!("onboarding intake agent error: {}", error);
+            Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+async fn process_chat_handler(
+    State(agent): State<Arc<OnboardingAgent>>,
+    Json(payload): Json<ChatRequest>,
+) -> Result<Json<crate::services::onboarding::onboarding_agent::ChatResponse>, axum::http::StatusCode> {
+    match agent.process_chat(payload.messages).await {
+        Ok(data) => Ok(Json(data)),
+        Err(error) => {
+            tracing::error!("onboarding chat agent error: {}", error);
             Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR)
         }
     }

@@ -7,7 +7,7 @@ use ::server_utils::cache::HybridCache;
 
 pub static ONBOARDING_STATE_AGENT_CACHE: OnceLock<HybridCache<serde_json::Value>> = OnceLock::new();
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct IntakeData {
     pub location: Option<String>,
     pub target_audience: Option<String>,
@@ -17,18 +17,32 @@ pub struct IntakeData {
     pub initial_products: Vec<IntakeProduct>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct IntakeProductVariant {
     pub name: String,
     pub price_modifier: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct IntakeProduct {
     pub name: String,
     pub price: String,
     pub description: Option<String>,
     pub variants: Option<Vec<IntakeProductVariant>>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct ChatMessage {
+    pub role: String,
+    pub content: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct ChatResponse {
+    pub is_complete: bool,
+    pub reply: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub intake_data: Option<IntakeData>,
 }
 
 #[derive(Clone)]
@@ -44,6 +58,27 @@ impl OnboardingAgent {
             .ok()
             .map(|key| std::sync::Arc::new(MinimaxClient::new(key)));
         OnboardingAgent { db, hub, minimax }
+    }
+
+    pub async fn process_chat(&self, messages: Vec<ChatMessage>) -> Result<ChatResponse, String> {
+        let user_messages: Vec<&ChatMessage> = messages.iter().filter(|m| m.role == "user").collect();
+
+        if user_messages.len() <= 1 {
+            return Ok(ChatResponse {
+                is_complete: false,
+                reply: "Great! Could you provide an example photo or a little more detail about what you sell?".to_string(),
+                intake_data: None,
+            });
+        }
+
+        let combined_input = user_messages.iter().map(|m| m.content.clone()).collect::<Vec<String>>().join("\n");
+        let intake_data = self.process_intake(&combined_input).await?;
+
+        Ok(ChatResponse {
+            is_complete: true,
+            reply: "Give me a minute... I'm building your business.".to_string(),
+            intake_data: Some(intake_data),
+        })
     }
 
     pub async fn process_intake(&self, input: &str) -> Result<IntakeData, String> {
