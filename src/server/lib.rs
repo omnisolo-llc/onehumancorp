@@ -3010,6 +3010,10 @@ pub async fn create_ui_triage_item_handler(
                 return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": e.to_string()}))).into_response();
             }
 
+            let cache = UI_TRIAGE_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
+            cache.invalidate(&format!("ui_triage:{}:mobile:false", tenant_id)).await;
+            cache.invalidate(&format!("ui_triage:{}:mobile:true", tenant_id)).await;
+
             (axum::http::StatusCode::CREATED, axum::Json(serde_json::json!({"id": new_id, "status": "success"}))).into_response()
         }
         crate::db::DbStore::Sqlite(_) => {
@@ -3231,8 +3235,8 @@ pub async fn update_ui_triage_action_handler(
                 Ok(_) => {
                     let _ = tx.commit().await;
                     let cache = UI_TRIAGE_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
-                    let cache_key = format!("ui_triage:{}", tenant_id);
-                    cache.invalidate(&cache_key).await;
+                    cache.invalidate(&format!("ui_triage:{}:mobile:false", tenant_id)).await;
+                    cache.invalidate(&format!("ui_triage:{}:mobile:true", tenant_id)).await;
                     (axum::http::StatusCode::OK, axum::Json(serde_json::json!({"status": "success"}))).into_response()
                 },
                 Err(e) => {
