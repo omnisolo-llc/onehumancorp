@@ -899,7 +899,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                         onClick={() => handleDecision(approval.id, true)}
                         className="w-full min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center mb-3"
                         aria-label="Approve & Send Proposal"
-                        data-testid="approve-send-proposal"
+                        data-testid="approve-proposal"
                       >
                         Approve & Send Proposal
                       </button>

@@ -44,7 +44,7 @@ test.describe('Nora Intake Proposal Flow (375px viewport)', () => {
     await expect(quoteCard).toContainText('Scope of Work:');
 
     // Action buttons check
-    const approveBtn = page.getByTestId('approve-send-proposal').first();
+    const approveBtn = page.getByTestId('approve-proposal').first();
     await expect(approveBtn).toBeVisible();
 
     const editBtn = page.getByTestId('edit-proposal').first();

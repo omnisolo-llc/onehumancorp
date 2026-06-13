@@ -112,7 +112,7 @@ async fn handle_webhook(
     }
 
     // Client intake flow via email or form webhook
-    if payload.source == "intake_form" || payload.source == "email_inquiry" {
+    if payload.source == "intake_form" || payload.source == "email_inquiry" || payload.source == "work_intake" {
         let tenant_id = payload.tenant_id.clone();
         let inquiry = payload.message.clone();
 
