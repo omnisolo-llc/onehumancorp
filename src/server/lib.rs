@@ -3736,7 +3736,6 @@ async fn ui_dashboard_unified_feed_handler(
     axum::extract::Query(query): axum::extract::Query<UiTenantQuery>,
 ) -> axum::response::Response {
     use axum::response::IntoResponse;
-    use sqlx::Row;
     let tenant_id = ui_tenant_id(&query);
     let mobile_optimized = query.mobile_optimized.unwrap_or(false);
 
@@ -3904,7 +3903,6 @@ async fn ui_dashboard_unified_agent_feed_handler(
     axum::extract::Query(query): axum::extract::Query<UiTenantQuery>,
 ) -> axum::response::Response {
     use axum::response::IntoResponse;
-    use sqlx::Row;
     let tenant_id = ui_tenant_id(&query);
     let mobile_optimized = query.mobile_optimized.unwrap_or(false);
 
@@ -4181,6 +4179,7 @@ async fn list_ui_bookings_handler(
             .fetch_all(&db.pool)
             .await {
                 Ok(rows) => Ok(rows.into_iter().map(|row| {
+                    use sqlx::Row;
                     if query.mobile_optimized.unwrap_or(false) {
                         serde_json::json!({
                             "id": row.get::<String, _>("id"),
@@ -4214,6 +4213,7 @@ async fn list_ui_bookings_handler(
             .fetch_all(pool)
             .await {
                 Ok(rows) => Ok(rows.into_iter().map(|row| {
+                    use sqlx::Row;
                     if query.mobile_optimized.unwrap_or(false) {
                         serde_json::json!({
                             "id": row.get::<String, _>("id"),
