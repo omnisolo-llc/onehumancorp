@@ -120,7 +120,9 @@ impl HybridSyncDaemon {
     pub async fn sync_cloud_escalations(&self) -> Result<(), Box<dyn std::error::Error>> {
         let start = Instant::now();
         // 1. Update `sync_daemon.go` to explicitly fetch missions from `agent_missions` where `status = 'CLOUD_ESCALATION'` and sync them to the remote API.
-        let rows = sqlx::query("SELECT id, status, payload, tenant_id FROM agent_missions WHERE synced_to_cloud = false AND (status = 'CLOUD_ESCALATION' OR status = 'BURSTING' OR status = 'PENDING') AND (sync_error IS NULL OR last_synced_at < datetime('now', '-5 minute')) LIMIT 100")
+        let rows = sqlx::query("SELECT id, status, payload, tenant_id FROM agent_missions WHERE synced_to_cloud = $1 AND (status = 'CLOUD_ESCALATION' OR status = 'BURSTING' OR status = 'PENDING') AND (sync_error IS NULL OR last_synced_at < datetime('now', '-5 minute')) LIMIT 100"
+            )
+            .bind(false)
             .fetch_all(&self.sqlite_pool)
             .await?;
 
@@ -186,8 +188,9 @@ impl HybridSyncDaemon {
                     }
 
                     let update_res = sqlx::query(
-                        "UPDATE agent_missions SET synced_to_cloud = true, sync_error = NULL WHERE id = ?",
+                        "UPDATE agent_missions SET synced_to_cloud = $1, sync_error = NULL WHERE id = $2",
                     )
+                    .bind(true)
                     .bind(&id)
                     .execute(&self.sqlite_pool)
                     .await;
