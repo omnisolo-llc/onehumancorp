@@ -188,6 +188,8 @@ where
         .route("/milestone/card", get(handle_get_milestone_card))
         .route("/trial-extension/claim", post(handle_trial_extension_claim))
         .route("/time-savings", get(handle_time_savings))
+        .route("/loyalty/generate", post(handle_generate_loyalty))
+        .route("/loyalty", get(handle_loyalty_status))
         .layer(Extension(GrowthState { pool, hub }))
 }
 
@@ -385,6 +387,31 @@ pub struct GenerateCustomerReferralRequest {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct GenerateCustomerReferralResponse {
     pub message: String,
+}
+
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct GenerateLoyaltyRequest {
+    pub give_amount: String,
+    pub get_amount: String,
+    pub reward_type: String,
+    pub store_name: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct GenerateLoyaltyResponse {
+    pub message: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct LoyaltyStatusQuery {
+    pub tenant_id: String,
+    pub customer_id: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct LoyaltyStatusResponse {
+    pub points_balance: i32,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -2175,4 +2202,35 @@ pub async fn handle_embed_widget(
         bg_color, text_color, escaped_type, escaped_tenant, escaped_type, escaped_type
     );
     axum::response::Html(html)
+}
+
+async fn handle_generate_loyalty(
+    Extension(_state): Extension<GrowthState>,
+    Json(req): Json<GenerateLoyaltyRequest>,
+) -> impl IntoResponse {
+    let generated = format!(
+        "Subject: Welcome to {} Rewards!\n\nHi there,\n\nWe're thrilled to introduce our new loyalty program! Give your friends {} and get {} when they make their first purchase. Your reward type is {}.\n\nStart sharing and earning today!\n\nWarmly,\nThe {} Team\n\n⚡ Powered by OHC",
+        req.store_name, req.give_amount, req.get_amount, req.reward_type, req.store_name
+    );
+
+    Json(GenerateLoyaltyResponse {
+        message: generated,
+    })
+}
+
+async fn handle_loyalty_status(
+    Extension(state): Extension<GrowthState>,
+    axum::extract::Query(query): axum::extract::Query<LoyaltyStatusQuery>
+) -> Result<Json<LoyaltyStatusResponse>, StatusCode> {
+    let points_balance: i32 = sqlx::query_scalar("SELECT points_balance FROM loyalty_ledger WHERE tenant_id = $1 AND customer_id = $2")
+        .bind(&query.tenant_id)
+        .bind(&query.customer_id)
+        .fetch_optional(&state.pool)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+        .unwrap_or(50); // Fallback to 50 if not found
+
+    Ok(Json(LoyaltyStatusResponse {
+        points_balance,
+    }))
 }
