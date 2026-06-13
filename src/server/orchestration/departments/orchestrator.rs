@@ -918,7 +918,7 @@ impl DepartmentOrchestrator {
                             }
 
                             let invoice_id = uuid::Uuid::new_v4().to_string();
-                            if let Err(e) = sqlx::query("INSERT INTO invoices (id, tenant_id, customer_id, type, amount, status, due_date, total_amount, currency) VALUES ($1, $2, $3, 'Deposit', $4, 'Draft', $5, $6, 'USD')")
+                            if let Err(e) = sqlx::query("INSERT INTO invoices (id, tenant_id, client_id, client_name, status, due_date, currency, total_amount, total_amount_cents, payment_status, view_count, amount_paid_cents) VALUES ($1, $2, $3, 'Client', 'draft', $5, 'USD', $6, 0, 'draft', 0, 0)")
                                 .bind(&invoice_id)
                                 .bind(tenant_id)
                                 .bind(&customer_id_to_use)
@@ -991,7 +991,7 @@ impl DepartmentOrchestrator {
                             }
 
                             let invoice_id = uuid::Uuid::new_v4().to_string();
-                            if let Err(e) = sqlx::query("INSERT INTO invoices (id, tenant_id, customer_id, type, amount, status, due_date, total_amount, currency) VALUES (?, ?, ?, 'Deposit', ?, 'Draft', ?, ?, 'USD')")
+                            if let Err(e) = sqlx::query("INSERT INTO invoices (id, tenant_id, client_id, client_name, status, due_date, currency, total_amount, total_amount_cents, payment_status, view_count, amount_paid_cents) VALUES (?, ?, ?, 'Client', 'draft', ?, 'USD', ?, 0, 'draft', 0, 0)")
                                 .bind(&invoice_id)
                                 .bind(tenant_id)
                                 .bind(&customer_id_to_use)
