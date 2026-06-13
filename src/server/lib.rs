@@ -3267,44 +3267,56 @@ pub(crate) async fn load_ui_dashboard_metrics(
     db: &crate::db::DB,
     tenant_id: &str,
 ) -> Result<UiDashboardMetrics, sqlx::Error> {
+    let t_id = tenant_id.to_string();
+    let db_1 = db.clone();
+    let db_2 = db.clone();
+    let db_3 = db.clone();
+    let db_4 = db.clone();
+    let db_5 = db.clone();
+    let t_id_1 = t_id.clone();
+    let t_id_2 = t_id.clone();
+    let t_id_3 = t_id.clone();
+    let t_id_4 = t_id.clone();
+    let t_id_5 = t_id.clone();
+
     let (active_customers_res, pending_orders_res, sales_res, campaigns_res, auto_replied_res) = tokio::join!(
-        async {
-            match &db.store {
-                crate::db::DbStore::Postgres => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM customers WHERE tenant_id = $1").bind(tenant_id).fetch_one(&db.pool).await,
-                crate::db::DbStore::Sqlite(pool) => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM customers WHERE tenant_id = ?").bind(tenant_id).fetch_one(pool).await,
+        tokio::spawn(async move {
+            match &db_1.store {
+                crate::db::DbStore::Postgres => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM customers WHERE tenant_id = $1").bind(&t_id_1).fetch_one(&db_1.pool).await,
+                crate::db::DbStore::Sqlite(pool) => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM customers WHERE tenant_id = ?").bind(&t_id_1).fetch_one(pool).await,
             }
-        },
-        async {
-            match &db.store {
-                crate::db::DbStore::Postgres => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM orders WHERE tenant_id = $1 AND status = 'pending'").bind(tenant_id).fetch_one(&db.pool).await,
-                crate::db::DbStore::Sqlite(pool) => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM orders WHERE tenant_id = ? AND status = 'pending'").bind(tenant_id).fetch_one(pool).await,
+        }),
+        tokio::spawn(async move {
+            match &db_2.store {
+                crate::db::DbStore::Postgres => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM orders WHERE tenant_id = $1 AND status = 'pending'").bind(&t_id_2).fetch_one(&db_2.pool).await,
+                crate::db::DbStore::Sqlite(pool) => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM orders WHERE tenant_id = ? AND status = 'pending'").bind(&t_id_2).fetch_one(pool).await,
             }
-        },
-        async {
-            match &db.store {
-                crate::db::DbStore::Postgres => sqlx::query_scalar::<_, Option<f64>>("SELECT CAST(SUM(total_amount) AS DOUBLE PRECISION) FROM orders WHERE tenant_id = $1").bind(tenant_id).fetch_one(&db.pool).await,
-                crate::db::DbStore::Sqlite(pool) => sqlx::query_scalar::<_, Option<f64>>("SELECT CAST(SUM(total_amount) AS REAL) FROM orders WHERE tenant_id = ?").bind(tenant_id).fetch_one(pool).await,
+        }),
+        tokio::spawn(async move {
+            match &db_3.store {
+                crate::db::DbStore::Postgres => sqlx::query_scalar::<_, Option<f64>>("SELECT CAST(SUM(total_amount) AS DOUBLE PRECISION) FROM orders WHERE tenant_id = $1").bind(&t_id_3).fetch_one(&db_3.pool).await,
+                crate::db::DbStore::Sqlite(pool) => sqlx::query_scalar::<_, Option<f64>>("SELECT CAST(SUM(total_amount) AS REAL) FROM orders WHERE tenant_id = ?").bind(&t_id_3).fetch_one(pool).await,
             }
-        },
-        async {
-            match &db.store {
-                crate::db::DbStore::Postgres => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM agent_actions WHERE tenant_id = $1 AND action_type = 'growth.campaign_sent'").bind(tenant_id).fetch_one(&db.pool).await,
-                crate::db::DbStore::Sqlite(pool) => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM agent_actions WHERE tenant_id = ? AND action_type = 'growth.campaign_sent'").bind(tenant_id).fetch_one(pool).await,
+        }),
+        tokio::spawn(async move {
+            match &db_4.store {
+                crate::db::DbStore::Postgres => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM agent_actions WHERE tenant_id = $1 AND action_type = 'growth.campaign_sent'").bind(&t_id_4).fetch_one(&db_4.pool).await,
+                crate::db::DbStore::Sqlite(pool) => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM agent_actions WHERE tenant_id = ? AND action_type = 'growth.campaign_sent'").bind(&t_id_4).fetch_one(pool).await,
             }
-        },
-        async {
-            match &db.store {
-                crate::db::DbStore::Postgres => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM inbox_messages WHERE tenant_id = $1 AND status = 'auto_replied'").bind(tenant_id).fetch_one(&db.pool).await,
-                crate::db::DbStore::Sqlite(pool) => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM inbox_messages WHERE tenant_id = ? AND status = 'auto_replied'").bind(tenant_id).fetch_one(pool).await,
+        }),
+        tokio::spawn(async move {
+            match &db_5.store {
+                crate::db::DbStore::Postgres => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM inbox_messages WHERE tenant_id = $1 AND status = 'auto_replied'").bind(&t_id_5).fetch_one(&db_5.pool).await,
+                crate::db::DbStore::Sqlite(pool) => sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM inbox_messages WHERE tenant_id = ? AND status = 'auto_replied'").bind(&t_id_5).fetch_one(pool).await,
             }
-        }
+        })
     );
 
-    let active_customers = active_customers_res.unwrap_or(0);
-    let pending_orders = pending_orders_res.unwrap_or(0);
-    let total_sales = sales_res.unwrap_or(Some(0.0)).unwrap_or(0.0);
-    let total_campaigns_sent = campaigns_res.unwrap_or(0);
-    let auto_replied = auto_replied_res.unwrap_or(0);
+    let active_customers = active_customers_res.unwrap_or(Ok(0)).unwrap_or(0);
+    let pending_orders = pending_orders_res.unwrap_or(Ok(0)).unwrap_or(0);
+    let total_sales = sales_res.unwrap_or(Ok(Some(0.0))).unwrap_or(Some(0.0)).unwrap_or(0.0);
+    let total_campaigns_sent = campaigns_res.unwrap_or(Ok(0)).unwrap_or(0);
+    let auto_replied = auto_replied_res.unwrap_or(Ok(0)).unwrap_or(0);
 
     Ok(UiDashboardMetrics {
         active_customers,
