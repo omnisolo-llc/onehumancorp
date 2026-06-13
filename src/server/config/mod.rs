@@ -157,14 +157,14 @@ impl ModeEnforcer for StandaloneModeEnforcer {
 
         let sqlite_url = if let Some(key) = &cfg.sqlite_encryption_key {
             if !key.is_empty() {
-                base_sqlite_url.clone()
+                format!("{}?mode=rwc&vfs=unix-excl", base_sqlite_url)
             } else if let Ok(_fallback_key) = std::env::var("OHC_SQLITE_KEY") {
-                base_sqlite_url.clone()
+                format!("{}?mode=rwc&vfs=unix-excl", base_sqlite_url)
             } else {
                 base_sqlite_url
             }
         } else if let Ok(_fallback_key) = std::env::var("OHC_SQLITE_KEY") {
-            base_sqlite_url.clone()
+            format!("{}?mode=rwc&vfs=unix-excl", base_sqlite_url)
         } else {
             base_sqlite_url
         };
