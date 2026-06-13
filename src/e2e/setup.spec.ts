@@ -24,7 +24,10 @@ test.describe('OHC Setup Wizard Flow', () => {
     await expect(page.locator('h1').first()).toBeVisible();
     // Start My Business
     await page.locator('.next-step-btn[data-next="step-context"]').click();
+
+
     await expect(page.locator('#step-context')).toBeVisible();
+
     await expect(page.getByText('How do you work?')).toBeVisible();
 
     // Context step
@@ -112,7 +115,10 @@ test.describe('OHC Setup Wizard Flow', () => {
     expect(btnBox?.height).toBeGreaterThanOrEqual(44);
 
     await page.locator('.next-step-btn[data-next="step-context"]').click();
+
+
     await expect(page.locator('#step-context')).toBeVisible();
+
     const inputbox = await page.locator('.radio-option').first().boundingBox();
     expect(inputbox?.height).toBeGreaterThanOrEqual(44);
   });
