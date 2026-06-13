@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-
+import { e2eBaseUrl } from './fixtures';
 
 test('agent audit dashboard rendering and glassmorphism', async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
