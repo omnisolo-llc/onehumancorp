@@ -1,5 +1,5 @@
-use crate::types::{ChatRequest, Message};
 use crate::llm::LlmClient;
+use crate::types::{ChatRequest, Message};
 
 const TARGET_CHARS_MAX: usize = 8000;
 const CHUNK_SIZE_CHARS: usize = 20000;
@@ -65,7 +65,10 @@ pub async fn condense_summary_llm(
     if current_text.len() > TARGET_CHARS_MAX {
         current_text = format!(
             "{}\n\n[Output truncated. Subagent failed to condense summary.]",
-            current_text.chars().take(TARGET_CHARS_MAX).collect::<String>()
+            current_text
+                .chars()
+                .take(TARGET_CHARS_MAX)
+                .collect::<String>()
         );
     }
 

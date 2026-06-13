@@ -7,10 +7,10 @@ use crate::agent::{Agent, AgentEvent, AgentRunConfig};
 use crate::auth::AuthMode;
 use chrono::{DateTime, Utc};
 use ohc_builtin_agent_llm::{
+    LlmClient,
     anthropic::AnthropicClient,
     ollama::OllamaClient,
     openai::{OpenAIClient, OpenAIClientConfig},
-    LlmClient,
 };
 
 #[derive(Debug, Clone)]
@@ -40,15 +40,15 @@ pub fn inject_memories_into_prompt(memories: &[MemoryEntry], system_prompt: &str
 }
 
 use crate::consolidation_worker::ConsolidationWorker;
-use crate::departments::{get_department_config, Department};
+use crate::departments::{Department, get_department_config};
 use crate::memory_store::{EmbeddingRecord, VectorRepository};
 use crate::proto::agent_service::{
-    agent_service_server::AgentService, EventType, PingRequest, PingResponse, RunTaskEvent,
-    RunTaskRequest, SkillConfig, SubAgentRequest, SubAgentResponse, ToolsetConfig,
+    EventType, PingRequest, PingResponse, RunTaskEvent, RunTaskRequest, SkillConfig,
+    SubAgentRequest, SubAgentResponse, ToolsetConfig, agent_service_server::AgentService,
 };
 use crate::tools::{
-    sendmessage::Mailbox, task::TaskStore, todowrite::TodoItem, SharedMailbox, SharedTaskStore,
-    SharedTodos, Tool,
+    SharedMailbox, SharedTaskStore, SharedTodos, Tool, sendmessage::Mailbox, task::TaskStore,
+    todowrite::TodoItem,
 };
 use serde_json::Value;
 use std::path::PathBuf;
@@ -436,26 +436,26 @@ impl AgentServiceImpl {
             _ => {
                 // Auto-detect from env vars
                 if let Ok(key) = std::env::var("ANTHROPIC_API_KEY")
-                    && !key.is_empty() {
-                        return Arc::new(AnthropicClient::new(key));
-                    }
+                    && !key.is_empty()
+                {
+                    return Arc::new(AnthropicClient::new(key));
+                }
                 if let Ok(key) = std::env::var("OPENAI_API_KEY")
-                    && !key.is_empty() {
-                        let model = self.resolve_model_for_request("openai", req_model);
-                        let mut config = OpenAIClientConfig::openai(key);
-                        config.default_model = Some(model);
-                        return Arc::new(OpenAIClient::from_config(config));
-                    }
+                    && !key.is_empty()
+                {
+                    let model = self.resolve_model_for_request("openai", req_model);
+                    let mut config = OpenAIClientConfig::openai(key);
+                    config.default_model = Some(model);
+                    return Arc::new(OpenAIClient::from_config(config));
+                }
                 if let Ok(key) = std::env::var("MINIMAX_API_KEY")
-                    && !key.is_empty() {
-                        return Arc::new(OpenAIClient::minimax(
-                            key,
-                            Self::first_non_empty_env(&[
-                                "MINIMAX_BASE_URL",
-                                "MINIMAX_API_BASE_URL",
-                            ]),
-                        ));
-                    }
+                    && !key.is_empty()
+                {
+                    return Arc::new(OpenAIClient::minimax(
+                        key,
+                        Self::first_non_empty_env(&["MINIMAX_BASE_URL", "MINIMAX_API_BASE_URL"]),
+                    ));
+                }
                 // Fallback: Ollama
                 Arc::new(OllamaClient::new(
                     std::env::var("OHC_LOCAL_LLM_ENDPOINT").unwrap_or_default(),
@@ -758,10 +758,11 @@ impl AgentServiceImpl {
         tools.push(crate::tools::create_skill::create_skill_tool());
 
         if !department.is_empty()
-            && let Ok(dep) = Department::from_str(department) {
-                let dep_cfg = get_department_config(dep);
-                tools.retain(|t| dep_cfg.allowed_tools.contains(&t.name.as_str()));
-            }
+            && let Ok(dep) = Department::from_str(department)
+        {
+            let dep_cfg = get_department_config(dep);
+            tools.retain(|t| dep_cfg.allowed_tools.contains(&t.name.as_str()));
+        }
 
         if let Some(toolset) = toolset {
             if !toolset.builtin_tools.is_empty() {
@@ -1028,12 +1029,12 @@ impl AgentService for AgentServiceImpl {
                         if (err_str.contains("timeout")
                             || err_str.contains("rate limit")
                             || err_str.contains("unavailable"))
-                            && attempt < max_attempts {
-                                last_result = Err(e);
-                                tokio::time::sleep(std::time::Duration::from_secs(1 << attempt))
-                                    .await;
-                                continue;
-                            }
+                            && attempt < max_attempts
+                        {
+                            last_result = Err(e);
+                            tokio::time::sleep(std::time::Duration::from_secs(1 << attempt)).await;
+                            continue;
+                        }
                         last_result = Err(e);
                         break;
                     }
@@ -1201,7 +1202,7 @@ impl AgentService for AgentServiceImpl {
 
         // Remote dispatch: forward to sub-agent gRPC server.
         use crate::proto::agent_service::{
-            agent_service_client::AgentServiceClient, RunTaskRequest,
+            RunTaskRequest, agent_service_client::AgentServiceClient,
         };
 
         let channel =
@@ -1603,7 +1604,9 @@ mod memory_tests {
     #[tokio::test]
     async fn test_anthropic_memory_initialization_and_accessor() {
         unsafe {
-            std::env::set_var("OHC_ENABLE_ANTHROPIC_MEMORY", "true"); std::env::set_var("OHC_ANTHROPIC_MEMORY_DIR", ".test-agent-memory"); std::fs::create_dir_all(".test-agent-memory").unwrap();
+            std::env::set_var("OHC_ENABLE_ANTHROPIC_MEMORY", "true");
+            std::env::set_var("OHC_ANTHROPIC_MEMORY_DIR", ".test-agent-memory");
+            std::fs::create_dir_all(".test-agent-memory").unwrap();
             std::env::set_var("OHC_ANTHROPIC_MEMORY_DIR", ".test-agent-memory");
         }
 

@@ -130,33 +130,39 @@ impl JetBrainsObservationMasker {
                 let age = msg_count - i;
                 if age > self.threshold {
                     for tr in &mut messages[i].tool_results {
-                        if tr.error.is_empty() && (!tr.content.starts_with("{\"_masked_observation\"") && !tr.content.starts_with("{\"error\": \"[Observation Masked")) {
+                        if tr.error.is_empty()
+                            && (!tr.content.starts_with("{\"_masked_observation\"")
+                                && !tr.content.starts_with("{\"error\": \"[Observation Masked"))
+                        {
                             let bytes = tr.content.len();
                             if bytes > self.size_limit {
                                 // Try structural JSON masking first (fast path check for JSON structure)
                                 let content_trimmed = tr.content.trim();
-                                if (content_trimmed.starts_with('{') || content_trimmed.starts_with('['))
-                                    && let Ok(mut json_val) = serde_json::from_str::<Value>(&tr.content)
-                                    {
-                                        let _modified = Self::mask_json_value(
-                                            &mut json_val,
-                                            self.size_limit,
-                                            self.element_limit,
-                                            0,
+                                if (content_trimmed.starts_with('{')
+                                    || content_trimmed.starts_with('['))
+                                    && let Ok(mut json_val) =
+                                        serde_json::from_str::<Value>(&tr.content)
+                                {
+                                    let _modified = Self::mask_json_value(
+                                        &mut json_val,
+                                        self.size_limit,
+                                        self.element_limit,
+                                        0,
+                                    );
+                                    let new_content = serde_json::to_string(&json_val)
+                                        .unwrap_or_else(|_| tr.content.clone());
+                                    if new_content.len() <= self.size_limit {
+                                        tr.content = new_content;
+                                    } else {
+                                        // Either it wasn't modified, or the modification still didn't bring it under the limit.
+                                        // We replace the entire content with a safe JSON string indicating masking.
+                                        tr.content = format!(
+                                            "{{\"error\": \"[Observation Masked to save context. Output was {} bytes. Use 'RecallObservation' with ID '{}' to retrieve full output.]\"}}",
+                                            bytes, tr.tool_call_id
                                         );
-                                        let new_content = serde_json::to_string(&json_val).unwrap_or_else(|_| tr.content.clone());
-                                        if new_content.len() <= self.size_limit {
-                                            tr.content = new_content;
-                                        } else {
-                                            // Either it wasn't modified, or the modification still didn't bring it under the limit.
-                                            // We replace the entire content with a safe JSON string indicating masking.
-                                            tr.content = format!(
-                                                "{{\"error\": \"[Observation Masked to save context. Output was {} bytes. Use 'RecallObservation' with ID '{}' to retrieve full output.]\"}}",
-                                                bytes, tr.tool_call_id
-                                            );
-                                        }
-                                        continue; // Treated as JSON, don't fall back to raw string masking
                                     }
+                                    continue; // Treated as JSON, don't fall back to raw string masking
+                                }
 
                                 // Fallback to raw string masking
                                 // Adapt preview size to the allowed size limit
@@ -175,7 +181,9 @@ impl JetBrainsObservationMasker {
                                         bytes, start_preview, end_preview, tr.tool_call_id
                                     );
                                     let content_trimmed = tr.content.trim();
-                                    if content_trimmed.starts_with('{') || content_trimmed.starts_with('[') {
+                                    if content_trimmed.starts_with('{')
+                                        || content_trimmed.starts_with('[')
+                                    {
                                         serde_json::json!({ "error": raw_msg }).to_string()
                                     } else {
                                         raw_msg
@@ -186,7 +194,9 @@ impl JetBrainsObservationMasker {
                                         bytes, tr.tool_call_id
                                     );
                                     let content_trimmed = tr.content.trim();
-                                    if content_trimmed.starts_with('{') || content_trimmed.starts_with('[') {
+                                    if content_trimmed.starts_with('{')
+                                        || content_trimmed.starts_with('[')
+                                    {
                                         serde_json::json!({ "error": raw_msg }).to_string()
                                     } else {
                                         raw_msg
@@ -196,7 +206,8 @@ impl JetBrainsObservationMasker {
                                 // Return as valid JSON object containing the masked string.
                                 tr.content = serde_json::json!({
                                     "_masked_observation": masked_str
-                                }).to_string();
+                                })
+                                .to_string();
                             }
                         }
                     }
@@ -206,7 +217,12 @@ impl JetBrainsObservationMasker {
     }
 }
 
-pub fn apply_observation_masking(messages: &mut Vec<Message>, threshold: usize, size_limit: usize, element_limit: usize) {
+pub fn apply_observation_masking(
+    messages: &mut Vec<Message>,
+    threshold: usize,
+    size_limit: usize,
+    element_limit: usize,
+) {
     let masker = JetBrainsObservationMasker::new(threshold, size_limit, element_limit);
     masker.apply_masking(messages);
 }
@@ -325,12 +341,18 @@ mod tests {
         if let Ok(parsed) = serde_json::from_str::<Value>(masked_content) {
             if let Some(obj) = parsed.as_object() {
                 if obj.contains_key("error") {
-                     // It fell back to complete masking. Let's make sure it contains Observation Masked.
-                     let err_str = obj.get("error").unwrap().as_str().unwrap();
-                     assert!(err_str.contains("[Observation Masked"));
+                    // It fell back to complete masking. Let's make sure it contains Observation Masked.
+                    let err_str = obj.get("error").unwrap().as_str().unwrap();
+                    assert!(err_str.contains("[Observation Masked"));
                 } else {
-                     assert_eq!(obj.get("small").unwrap().as_str().unwrap(), "abc");
-                     assert!(obj.get("large").unwrap().as_str().unwrap().contains("Masked string"));
+                    assert_eq!(obj.get("small").unwrap().as_str().unwrap(), "abc");
+                    assert!(
+                        obj.get("large")
+                            .unwrap()
+                            .as_str()
+                            .unwrap()
+                            .contains("Masked string")
+                    );
                 }
             } else {
                 panic!("Expected an object format");
@@ -397,7 +419,11 @@ mod additional_tests {
             tracing::debug!("MASKED CONTENT: {}", masked_content);
             assert!(last_element.contains("[Masked array:"));
             assert!(last_element.contains("elements truncated]"));
-        } else if let Some(s) = parsed.as_object().and_then(|o| o.get("error")).and_then(|v| v.as_str()) {
+        } else if let Some(s) = parsed
+            .as_object()
+            .and_then(|o| o.get("error"))
+            .and_then(|v| v.as_str())
+        {
             assert!(s.contains("[Observation Masked"));
         } else {
             panic!("Unexpected mask format");
@@ -498,6 +524,9 @@ mod additional_tests {
         masker.apply_masking(&mut messages);
 
         let masked_content = &messages[0].tool_results[0].content;
-        assert!(masked_content.contains("[Masked: depth limit exceeded]") || masked_content.contains("[Observation Masked"));
+        assert!(
+            masked_content.contains("[Masked: depth limit exceeded]")
+                || masked_content.contains("[Observation Masked")
+        );
     }
 }
