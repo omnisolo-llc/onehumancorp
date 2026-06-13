@@ -1,37 +1,4 @@
 {
-  "__elements": {},
-  "__requires": [
-    {
-      "type": "grafana",
-      "id": "grafana",
-      "name": "Grafana",
-      "version": "10.0.0"
-    },
-    {
-      "type": "panel",
-      "id": "text",
-      "name": "Text",
-      "version": ""
-    },
-    {
-      "type": "panel",
-      "id": "timeseries",
-      "name": "Time series",
-      "version": ""
-    },
-    {
-      "type": "panel",
-      "id": "logs",
-      "name": "Logs",
-      "version": ""
-    },
-    {
-      "type": "panel",
-      "id": "stat",
-      "name": "Stat",
-      "version": ""
-    }
-  ],
   "annotations": {
     "list": [
       {
@@ -41,6 +8,12 @@
         "hide": true,
         "iconColor": "rgba(0, 211, 255, 1)",
         "name": "Annotations & Alerts",
+        "target": {
+          "limit": 100,
+          "matchAny": false,
+          "tags": [],
+          "type": "dashboard"
+        },
         "type": "dashboard"
       }
     ]
@@ -48,97 +21,13 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
-  "id": null,
   "links": [],
-  "liveNow": true,
+  "liveNow": false,
   "panels": [
     {
-      "type": "text",
-      "title": "OHC Aesthetics",
-      "gridPos": {
-        "h": 2,
-        "w": 24,
-        "x": 0,
-        "y": 0
-      },
-      "options": {
-        "mode": "html",
-        "content": "<link rel=\"stylesheet\" href=\"/public/css/custom.css\">"
-      },
-      "transparent": true
-    },
-    {
-      "title": "Agent Violations Feed",
-      "type": "logs",
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 0,
-        "y": 2
-      },
       "datasource": {
         "type": "prometheus",
-        "uid": "Prometheus"
-      },
-      "targets": [
-        {
-          "expr": "sum by (agent_id, violation_type) (rate(ohc_agent_sandbox_violations_total[5m])) > 0",
-          "refId": "A"
-        }
-      ],
-      "options": {
-        "showLabels": true,
-        "showTime": true,
-        "sortOrder": "Descending"
-      },
-      "transparent": true
-    },
-    {
-      "title": "Swarm USD Cost Tracker",
-      "type": "timeseries",
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 8,
-        "y": 2
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "Prometheus"
-      },
-      "targets": [
-        {
-          "expr": "sum(ohc_total_cost_usd)",
-          "refId": "A"
-        }
-      ],
-      "transparent": true
-    },
-    {
-      "title": "State Machine Transitions",
-      "type": "timeseries",
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 16,
-        "y": 2
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "Prometheus"
-      },
-      "targets": [
-        {
-          "expr": "sum by (state) (rate(ohc_task_transitions_total[5m]))",
-          "refId": "A"
-        }
-      ],
-      "transparent": true
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -146,7 +35,6 @@
             "mode": "palette-classic"
           },
           "custom": {
-            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
@@ -160,7 +48,6 @@
               "tooltip": false,
               "viz": false
             },
-            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -190,7 +77,8 @@
                 "value": 80
               }
             ]
-          }
+          },
+          "unit": "currencyUSD"
         },
         "overrides": []
       },
@@ -198,9 +86,9 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 24
+        "y": 0
       },
-      "id": 100,
+      "id": 1,
       "options": {
         "legend": {
           "calcs": [],
@@ -213,27 +101,27 @@
           "sort": "none"
         }
       },
+      "title": "LLM Token Spend by Tenant",
+      "type": "timeseries",
       "targets": [
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "sum(rate(ohc_mission_cost_cents[5m])) by (tenant_id)",
-          "legendFormat": "{{tenant_id}}",
+          "expr": "sum by (organization_id) (increase(ohc_mission_cost_cents[24h])) / 100",
+          "instant": false,
+          "legendFormat": "{{organization_id}}",
           "range": true,
           "refId": "A"
         }
-      ],
-      "title": "Mission Cost per Tenant (Cents/sec)",
-      "type": "timeseries",
-      "transparent": true
+      ]
     },
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -241,7 +129,6 @@
             "mode": "palette-classic"
           },
           "custom": {
-            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
@@ -255,7 +142,6 @@
               "tooltip": false,
               "viz": false
             },
-            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -279,13 +165,10 @@
               {
                 "color": "green",
                 "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
               }
             ]
-          }
+          },
+          "unit": "decbytes"
         },
         "overrides": []
       },
@@ -293,9 +176,9 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 24
+        "y": 0
       },
-      "id": 101,
+      "id": 2,
       "options": {
         "legend": {
           "calcs": [],
@@ -308,27 +191,27 @@
           "sort": "none"
         }
       },
+      "title": "Storage Usage by Tenant",
+      "type": "timeseries",
       "targets": [
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "sum(rate(ohc_rag_escalation_total[5m])) by (organization_id)",
+          "expr": "ohc_storage_rw_cost",
+          "instant": false,
           "legendFormat": "{{organization_id}}",
           "range": true,
           "refId": "A"
         }
-      ],
-      "title": "RAG Escalation Rate",
-      "type": "timeseries",
-      "transparent": true
+      ]
     },
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -336,21 +219,19 @@
             "mode": "palette-classic"
           },
           "custom": {
-            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
-            "drawStyle": "bars",
-            "fillOpacity": 100,
+            "drawStyle": "line",
+            "fillOpacity": 0,
             "gradientMode": "none",
             "hideFrom": {
               "legend": false,
               "tooltip": false,
               "viz": false
             },
-            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -361,7 +242,7 @@
             "spanNulls": false,
             "stacking": {
               "group": "A",
-              "mode": "normal"
+              "mode": "none"
             },
             "thresholdsStyle": {
               "mode": "off"
@@ -374,23 +255,20 @@
               {
                 "color": "green",
                 "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
               }
             ]
-          }
+          },
+          "unit": "currencyUSD"
         },
         "overrides": []
       },
       "gridPos": {
         "h": 8,
-        "w": 12,
+        "w": 24,
         "x": 0,
-        "y": 32
+        "y": 8
       },
-      "id": 102,
+      "id": 3,
       "options": {
         "legend": {
           "calcs": [],
@@ -403,42 +281,38 @@
           "sort": "none"
         }
       },
+      "title": "Outbound API Call Costs (Stripe/Twilio)",
+      "type": "timeseries",
       "targets": [
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "sum(increase(ohc_token_budget_alert_total[1h])) by (organization_id)",
-          "legendFormat": "{{organization_id}}",
+          "expr": "sum by (organization_id, entity) (increase(ohc_api_call_cost[24h]))",
+          "instant": false,
+          "legendFormat": "{{organization_id}} - {{entity}}",
           "range": true,
           "refId": "A"
         }
-      ],
-      "title": "Token Budget Alerts (last 1h)",
-      "type": "timeseries",
-      "transparent": true
+      ]
     }
   ],
-  "refresh": "5s",
   "schemaVersion": 38,
   "style": "dark",
-  "tags": [
-    "ohc",
-    "agents",
-    "audit"
-  ],
+  "tags": [],
   "templating": {
     "list": []
   },
   "time": {
-    "from": "now-1h",
+    "from": "now-6h",
     "to": "now"
   },
   "timepicker": {},
   "timezone": "",
-  "title": "Agent Audit Dashboard",
-  "uid": "glassmorphism_agent_audit_dashboard",
-  "version": 1
+  "title": "Tenant Cost Visibility (💰 Miser)",
+  "uid": "tenant_costs",
+  "version": 1,
+  "weekStart": ""
 }
