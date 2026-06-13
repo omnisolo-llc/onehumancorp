@@ -2929,7 +2929,6 @@ pub async fn create_ui_triage_item_handler(
 
             if let Some(action_type) = payload.action_type {
                 let action_id = format!("act-{}", uuid::Uuid::new_v4());
-                let action_payload = payload.action_payload.unwrap_or_else(|| "".to_string());
                 if let Err(e) = sqlx::query(
                     "INSERT INTO triage_proposed_actions (id, triage_item_id, tenant_id, action_type, payload) VALUES ($1, $2, $3, $4, $5)"
                 )
@@ -2937,7 +2936,7 @@ pub async fn create_ui_triage_item_handler(
                 .bind(&new_id)
                 .bind(&tenant_id)
                 .bind(&action_type)
-                .bind(&action_payload)
+                .bind(&payload.action_payload)
                 .execute(&mut *tx).await {
                     tracing::error!("Failed to insert triage action: {:?}", e);
                     return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": e.to_string()}))).into_response();
@@ -3736,7 +3735,6 @@ async fn ui_dashboard_unified_feed_handler(
     axum::extract::Query(query): axum::extract::Query<UiTenantQuery>,
 ) -> axum::response::Response {
     use axum::response::IntoResponse;
-    use sqlx::Row;
     let tenant_id = ui_tenant_id(&query);
     let mobile_optimized = query.mobile_optimized.unwrap_or(false);
 
@@ -3904,7 +3902,6 @@ async fn ui_dashboard_unified_agent_feed_handler(
     axum::extract::Query(query): axum::extract::Query<UiTenantQuery>,
 ) -> axum::response::Response {
     use axum::response::IntoResponse;
-    use sqlx::Row;
     let tenant_id = ui_tenant_id(&query);
     let mobile_optimized = query.mobile_optimized.unwrap_or(false);
 

@@ -74,7 +74,8 @@ export default function AffiliateBadgeBuilderPage() {
             <div className="space-y-6">
               <div>
                 <label htmlFor="badge-text" className="block text-sm font-semibold text-gray-700 mb-2">Badge Text</label>
-                <input id="badge-text"
+                <input
+                  id="badge-text"
                   type="text"
                   value={text}
                   onChange={(e) => setText(e.target.value)}
