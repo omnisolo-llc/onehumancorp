@@ -14,8 +14,6 @@ export async function GET(req: Request) {
     headers.authorization = authHeader;
   }
 
-  try {
-
   const { searchParams } = new URL(req.url);
   const id = searchParams.get('id');
 
@@ -49,8 +47,12 @@ export async function POST(req: Request) {
     headers.authorization = authHeader;
   }
 
+  let body;
   try {
-    const body = await req.json();
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+  }
 
   const { searchParams } = new URL(req.url);
   const id = searchParams.get('id');
