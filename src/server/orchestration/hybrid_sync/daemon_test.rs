@@ -377,4 +377,70 @@ async fn test_hybrid_sync_clears_error_on_success() {
     let error: Option<String> = row.try_get("sync_error").unwrap_or(None);
     assert_eq!(status, "SYNCED");
     assert_eq!(error, None, "sync_error should be cleared on success");
+
+    #[tokio::test]
+    async fn test_hybrid_sync_pos_offline_transactions() {
+        let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+
+        sqlx::query(
+            "CREATE TABLE IF NOT EXISTS pos_offline_transactions (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                client_id TEXT NOT NULL,
+                amount_cents BIGINT NOT NULL,
+                currency TEXT NOT NULL DEFAULT 'USD',
+                payload TEXT NOT NULL,
+                status TEXT NOT NULL DEFAULT 'PENDING',
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )"
+        ).execute(&sqlite_pool).await.unwrap();
+
+        let database_url = std::env::var("OHC_DATABASE_URL")
+            .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
+
+        let pg_pool = match tokio::time::timeout(
+            std::time::Duration::from_millis(50),
+            sqlx::postgres::PgPoolOptions::new().connect(&database_url),
+        )
+        .await
+        {
+            Ok(Ok(p)) => p,
+            Ok(Err(_)) | Err(_) => return,
+        };
+
+        sqlx::query("INSERT INTO tenants (id, name) VALUES ('tenant-pos-sync-test', 'POS Sync Tenant') ON CONFLICT DO NOTHING")
+            .execute(&pg_pool).await.unwrap();
+
+        sqlx::query(
+            "INSERT INTO pos_offline_transactions (id, tenant_id, client_id, amount_cents, currency, payload, status) VALUES ('pos-tx-1', 'tenant-pos-sync-test', 'client-1', 1500, 'USD', '{\"test\":\"payload\"}', 'PENDING')"
+        ).execute(&sqlite_pool).await.unwrap();
+
+        let daemon = super::daemon::HybridSyncDaemon::new(sqlite_pool.clone(), pg_pool.clone());
+        daemon.sync_pos_offline_transactions().await.unwrap();
+
+        let synced_row = sqlx::query("SELECT status FROM pos_offline_transactions WHERE id = 'pos-tx-1'")
+            .fetch_one(&sqlite_pool)
+            .await
+            .unwrap();
+
+        let status: String = sqlx::Row::get(&synced_row, "status");
+        assert_eq!(status, "SYNCED");
+
+        let pg_row = sqlx::query("SELECT status FROM pos_offline_transactions WHERE id = 'pos-tx-1'")
+            .fetch_optional(&pg_pool)
+            .await
+            .unwrap();
+        assert!(pg_row.is_some());
+
+        let job_row = sqlx::query("SELECT id FROM ohc_job_queue WHERE job_type = 'offline_pos_sync' AND payload::jsonb->>'pos_transaction_id' = 'pos-tx-1'")
+            .fetch_optional(&pg_pool)
+            .await
+            .unwrap();
+        assert!(job_row.is_some());
+    }
+
 }
