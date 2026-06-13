@@ -160,7 +160,11 @@ impl RedisRateLimiter {
         let mut conn = self.get_connection().await?;
         let now = chrono::Utc::now();
         let month_key = now.format("%Y-%m").to_string();
-        let tenant_key = format!("tenant:{}:actions_used:{}", tenant_id, month_key);
+        let mut tenant_key = String::with_capacity(21 + tenant_id.len() + month_key.len());
+        tenant_key.push_str("tenant:");
+        tenant_key.push_str(tenant_id);
+        tenant_key.push_str(":actions_used:");
+        tenant_key.push_str(&month_key);
         let used: Option<u32> = conn.get(&tenant_key).await.map_err(|e| e.to_string())?;
         Ok(used.unwrap_or(0))
     }
@@ -169,7 +173,13 @@ impl RedisRateLimiter {
         let mut conn = self.get_connection().await?;
         let now = chrono::Utc::now();
         let month_key = now.format("%Y-%m").to_string();
-        let agent_key = format!("tenant:{}:agent:{}:actions_used:{}", tenant_id, agent_id, month_key);
+        let mut agent_key = String::with_capacity(28 + tenant_id.len() + agent_id.len() + month_key.len());
+        agent_key.push_str("tenant:");
+        agent_key.push_str(tenant_id);
+        agent_key.push_str(":agent:");
+        agent_key.push_str(agent_id);
+        agent_key.push_str(":actions_used:");
+        agent_key.push_str(&month_key);
         let used: Option<u32> = conn.get(&agent_key).await.map_err(|e| e.to_string())?;
         Ok(used.unwrap_or(0))
     }
@@ -203,9 +213,19 @@ impl RedisRateLimiter {
         let now = chrono::Utc::now();
         let month_key = now.format("%Y-%m").to_string();
 
-        let tenant_key = format!("tenant:{}:actions_used:{}", tenant_id, month_key);
+        let mut tenant_key = String::with_capacity(21 + tenant_id.len() + month_key.len());
+        tenant_key.push_str("tenant:");
+        tenant_key.push_str(tenant_id);
+        tenant_key.push_str(":actions_used:");
+        tenant_key.push_str(&month_key);
         tracing::info!("💰 Miser telemetry: Recording action for tenant: {} agent: {}", tenant_id, agent_id);
-        let agent_key = format!("tenant:{}:agent:{}:actions_used:{}", tenant_id, agent_id, month_key);
+        let mut agent_key = String::with_capacity(28 + tenant_id.len() + agent_id.len() + month_key.len());
+        agent_key.push_str("tenant:");
+        agent_key.push_str(tenant_id);
+        agent_key.push_str(":agent:");
+        agent_key.push_str(agent_id);
+        agent_key.push_str(":actions_used:");
+        agent_key.push_str(&month_key);
 
         let tenant_used: u32 = conn.incr(&tenant_key, 1).await.map_err(|e| e.to_string())?;
         let agent_used: u32 = conn.incr(&agent_key, 1).await.map_err(|e| e.to_string())?;
@@ -600,7 +620,11 @@ mod tests {
                 let month_key = now.format("%Y-%m").to_string();
 
                 let mut conn = limiter.get_connection().await.unwrap();
-                let tenant_key = format!("tenant:{}:actions_used:{}", tenant_id, month_key);
+                let mut tenant_key = String::with_capacity(21 + tenant_id.len() + month_key.len());
+        tenant_key.push_str("tenant:");
+        tenant_key.push_str(tenant_id);
+        tenant_key.push_str(":actions_used:");
+        tenant_key.push_str(&month_key);
                 let _ : () = conn.del(&tenant_key).await.unwrap_or(());
 
                 // Set tier to Free
@@ -629,7 +653,13 @@ mod tests {
                 let mut conn = limiter.get_connection().await.unwrap();
                 let now = chrono::Utc::now();
                 let month_key = now.format("%Y-%m").to_string();
-                let agent_key = format!("tenant:{}:agent:{}:actions_used:{}", tenant_id, agent_id, month_key);
+                let mut agent_key = String::with_capacity(28 + tenant_id.len() + agent_id.len() + month_key.len());
+        agent_key.push_str("tenant:");
+        agent_key.push_str(tenant_id);
+        agent_key.push_str(":agent:");
+        agent_key.push_str(agent_id);
+        agent_key.push_str(":actions_used:");
+        agent_key.push_str(&month_key);
                 let _ : () = conn.del(&agent_key).await.unwrap_or(());
 
                 limiter.set_tenant_tier(tenant_id, PlanTier::Free).await.unwrap();
@@ -654,7 +684,11 @@ mod tests {
                 let mut conn = limiter.get_connection().await.unwrap();
                 let now = chrono::Utc::now();
                 let month_key = now.format("%Y-%m").to_string();
-                let tenant_key = format!("tenant:{}:actions_used:{}", tenant_id, month_key);
+                let mut tenant_key = String::with_capacity(21 + tenant_id.len() + month_key.len());
+        tenant_key.push_str("tenant:");
+        tenant_key.push_str(tenant_id);
+        tenant_key.push_str(":actions_used:");
+        tenant_key.push_str(&month_key);
                 let _ : () = conn.del(&tenant_key).await.unwrap_or(());
 
                 limiter.set_tenant_tier(tenant_id, PlanTier::Free).await.unwrap();

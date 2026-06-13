@@ -192,17 +192,17 @@ export default function MyPlanPage() {
 
         {/* Management Actions */}
         <section className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
-            <button onClick={() => router.push('/cost-dashboard')} className="p-5 min-h-[44px] app-card hover:shadow-md hover:-translate-y-1 transition-all duration-300 text-left">
+            <button onClick={() => router.push('/cost-dashboard')} className="p-5 min-h-[44px] app-card bg-white/70 backdrop-blur-xl saturate-200 border border-white/40 rounded-xl hover:shadow-md hover:-translate-y-1 transition-all duration-300 text-left">
                 <h3 className="font-semibold text-gray-900">View Cost Details</h3>
                 <p className="text-sm text-gray-600 mt-1">Check your total costs, AI agent limits, and storage details.</p>
             </button>
-            <button onClick={() => router.push('/pricing')} className="p-5 min-h-[44px] app-card hover:shadow-md hover:-translate-y-1 transition-all duration-300 text-left">
+            <button onClick={() => router.push('/pricing')} className="p-5 min-h-[44px] app-card bg-white/70 backdrop-blur-xl saturate-200 border border-white/40 rounded-xl hover:shadow-md hover:-translate-y-1 transition-all duration-300 text-left">
                 <h3 className="font-semibold text-gray-900">Change Plan</h3>
                 <p className="text-sm text-gray-600 mt-1">Upgrade or downgrade your current subscription.</p>
             </button>
             <button
                 onClick={() => setActionMessage('Invoice download is ready for your current billing period.')}
-                className="p-5 min-h-[44px] app-card hover:shadow-md hover:-translate-y-1 transition-all duration-300 text-left"
+                className="p-5 min-h-[44px] app-card bg-white/70 backdrop-blur-xl saturate-200 border border-white/40 rounded-xl hover:shadow-md hover:-translate-y-1 transition-all duration-300 text-left"
             >
                 <h3 className="font-semibold text-gray-900">Download Invoice</h3>
                 <p className="text-sm text-gray-600 mt-1">Get a PDF copy of your recent billing statements.</p>
