@@ -41,5 +41,6 @@ test.describe('Viral Waitlist Loop', () => {
     await expect(footerLink).toBeVisible();
     const footerHref = await footerLink.getAttribute('href');
     expect(footerHref).toContain('/onboarding');
+
   });
 });

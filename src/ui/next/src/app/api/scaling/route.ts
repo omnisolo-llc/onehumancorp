@@ -6,7 +6,7 @@ async function proxyToAgent(method: string, params: any) {
   const agentUrl = process.env.OHC_AGENT_URL || 'http://127.0.0.1:18789';
 
   try {
-    const res = await fetch(`${agentUrl}/rpc`, {
+    const res = await fetch(`${agentUrl}/json_rpc`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -15,7 +15,7 @@ async function proxyToAgent(method: string, params: any) {
         method,
         params,
       }),
-      signal: AbortSignal.timeout(5000),
+      signal: AbortSignal.timeout(60000),
     });
 
     if (res.ok) {
@@ -26,42 +26,18 @@ async function proxyToAgent(method: string, params: any) {
       return data.result;
     }
 
-    // Explicitly NO mocks are allowed in this project based on PR rejection rules!
     throw new Error(`Failed to call agent RPC: ${res.status}`);
   } catch (e: any) {
     throw e;
   }
 }
 
-export async function GET(request: NextRequest) {
-  const method = request.nextUrl.searchParams.get('method');
-  const task_id = request.nextUrl.searchParams.get('task_id');
-
-  if (!method) {
-    return NextResponse.json({ error: 'method is required' }, { status: 400 });
-  }
-
-  try {
-    const params: any = {};
-    if (task_id) params.task_id = task_id;
-
-    const result = await proxyToAgent(method, params);
-    return NextResponse.json(result);
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-}
-
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { method, params } = body;
+    const { count, message } = body;
 
-    if (!method) {
-      return NextResponse.json({ error: 'method is required' }, { status: 400 });
-    }
-
-    const result = await proxyToAgent(method, params || {});
+    const result = await proxyToAgent('run_scalable_agents', { count, message });
     return NextResponse.json(result);
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
