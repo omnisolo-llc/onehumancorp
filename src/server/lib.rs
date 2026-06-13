@@ -1341,9 +1341,16 @@ impl HubService for MyHubService {
             hub_clone_for_storage.tracker().get_tenant_storage_used(&tenant_id_clone).await.unwrap_or(0)
         });
 
-        let (storage_res, auditor_res) = tokio::join!(storage_future, auditor_future);
+        let t_id = tenant_id.clone();
+        let db_pool = self.hub.pool.clone();
+        let trend_future = tokio::task::spawn(async move {
+            crate::pricing::cost_aggregator::aggregate_daily_costs(&db_pool, &t_id).await
+        });
+
+        let (storage_res, auditor_res, trend_res) = tokio::join!(storage_future, auditor_future, trend_future);
 
         let storage_bytes = storage_res.unwrap_or(0);
+        let trend = trend_res.unwrap_or_else(|_| vec![]);
         let (llm_cost_cents, total_revenue_f64, payment_fees_f64, compute_cost_f64, network_cost_f64, bandwidth_savings_f64, total_tokens, cached_tokens) = auditor_res.unwrap_or((0, 0.0, 0.0, 0.0, 0.0, 0.0, 0, 0));
         let llm_cost_f64 = llm_cost_cents as f64 / 100.0;
 
@@ -1364,7 +1371,12 @@ impl HubService for MyHubService {
         let cost_per_gb = auditor.get_cost_per_gb_month();
         let storage_cost_f64 = storage_gb * cost_per_gb;
 
-        let total_costs_f64 = llm_cost_f64 + storage_cost_f64 + payment_fees_f64 + compute_cost_f64 + network_cost_f64;
+        let email_cost_cents: i64 = trend.iter().map(|d| d.email_cost).sum();
+        let api_cost_cents: i64 = trend.iter().map(|d| d.api_cost).sum();
+        let email_cost_f64 = email_cost_cents as f64 / 100.0;
+        let api_cost_f64 = api_cost_cents as f64 / 100.0;
+
+        let total_costs_f64 = llm_cost_f64 + storage_cost_f64 + payment_fees_f64 + compute_cost_f64 + network_cost_f64 + email_cost_f64 + api_cost_f64;
 
         let now = chrono::Utc::now();
         use chrono::Datelike;
@@ -1392,6 +1404,8 @@ impl HubService for MyHubService {
             cost_per_1k_tokens: (cost_per_1k_tokens * 10000.0).round() / 10000.0,
             period_start,
             period_end,
+            email_cost: email_cost_cents,
+            api_cost: api_cost_cents,
         };
 
         cache.set(&cache_key, response.clone(), std::time::Duration::from_secs(60)).await;
