@@ -3855,7 +3855,7 @@ async fn load_ui_priority_tasks_from_db(db: &crate::db::DB, tenant_id: &str, mob
     }
 }
 
-async fn load_ui_agent_feed_from_db(db: &crate::db::DB, tenant_id: &str) -> Result<Vec<serde_json::Value>, sqlx::Error> {
+async fn load_ui_agent_feed_from_db(db: &crate::db::DB, tenant_id: &str, mobile_optimized: bool) -> Result<Vec<serde_json::Value>, sqlx::Error> {
     use sqlx::Row;
     let limit = 20i64;
     match &db.store {
@@ -3872,8 +3872,8 @@ async fn load_ui_agent_feed_from_db(db: &crate::db::DB, tenant_id: &str) -> Resu
                     "id": row.get::<String, _>("id"),
                     "tenant_id": row.get::<String, _>("tenant_id"),
                     "event_source": row.get::<String, _>("event_source"),
-                    "context_payload": row.get::<Option<String>, _>("context_payload"),
-                    "proposed_action": row.get::<Option<String>, _>("proposed_action"),
+                    "context_payload": if mobile_optimized { None::<String> } else { row.get::<Option<String>, _>("context_payload") },
+                    "proposed_action": if mobile_optimized { None::<String> } else { row.get::<Option<String>, _>("proposed_action") },
                     "lifecycle_state": row.get::<String, _>("lifecycle_state"),
                     "created_at": row.try_get::<chrono::DateTime<chrono::Utc>, _>("created_at").map(|dt| dt.to_rfc3339()).unwrap_or_default(),
                     "updated_at": row.try_get::<chrono::DateTime<chrono::Utc>, _>("updated_at").map(|dt| dt.to_rfc3339()).unwrap_or_default(),
@@ -3893,8 +3893,8 @@ async fn load_ui_agent_feed_from_db(db: &crate::db::DB, tenant_id: &str) -> Resu
                     "id": row.get::<String, _>("id"),
                     "tenant_id": row.get::<String, _>("tenant_id"),
                     "event_source": row.get::<String, _>("event_source"),
-                    "context_payload": row.get::<Option<String>, _>("context_payload"),
-                    "proposed_action": row.get::<Option<String>, _>("proposed_action"),
+                    "context_payload": if mobile_optimized { None::<String> } else { row.get::<Option<String>, _>("context_payload") },
+                    "proposed_action": if mobile_optimized { None::<String> } else { row.get::<Option<String>, _>("proposed_action") },
                     "lifecycle_state": row.get::<String, _>("lifecycle_state"),
                     "created_at": row.try_get::<String, _>("created_at").unwrap_or_default(),
                     "updated_at": row.try_get::<String, _>("updated_at").unwrap_or_default(),
@@ -3938,7 +3938,7 @@ async fn ui_dashboard_unified_feed_handler(
                 tokio::spawn({ let db = db_bg.clone(); let t = t_bg.clone(); async move { load_ui_inbox_from_db(&db, &t, mobile_optimized).await } }),
                 tokio::spawn({ let db = db_bg.clone(); let t = t_bg.clone(); async move { load_ui_triage_from_db(&db, &t, mobile_optimized).await } }),
                 tokio::spawn({ let db = db_bg.clone(); let t = t_bg.clone(); async move { load_ui_agent_approvals_from_db(&db, &t).await } }),
-                tokio::spawn({ let db = db_bg.clone(); let t = t_bg.clone(); async move { load_ui_agent_feed_from_db(&db, &t).await } }),
+                tokio::spawn({ let db = db_bg.clone(); let t = t_bg.clone(); async move { load_ui_agent_feed_from_db(&db, &t, mobile_optimized).await } }),
                 tokio::spawn({ let db = db_bg.clone(); let t = t_bg.clone(); async move { load_ui_priority_tasks_from_db(&db, &t, mobile_optimized).await } })
             );
 
@@ -3975,6 +3975,7 @@ async fn ui_dashboard_unified_feed_handler(
                 for item in agent_feed.iter_mut() {
                     if let Some(obj) = item.as_object_mut() {
                         obj.remove("context_payload");
+                        obj.remove("proposed_action");
                     }
                 }
             }
@@ -4008,7 +4009,7 @@ async fn ui_dashboard_unified_feed_handler(
         tokio::spawn({ let db = db.clone(); let t = tenant_id.clone(); async move { load_ui_supply_from_db(&db, &t, mobile_optimized).await } }),
         tokio::spawn({ let db = db.clone(); let t = tenant_id.clone(); async move { load_ui_triage_from_db(&db, &t, mobile_optimized).await } }),
         tokio::spawn({ let db = db.clone(); let t = tenant_id.clone(); async move { load_ui_agent_approvals_from_db(&db, &t).await } }),
-        tokio::spawn({ let db = db.clone(); let t = tenant_id.clone(); async move { load_ui_agent_feed_from_db(&db, &t).await } }),
+        tokio::spawn({ let db = db.clone(); let t = tenant_id.clone(); async move { load_ui_agent_feed_from_db(&db, &t, mobile_optimized).await } }),
         tokio::spawn({ let db = db.clone(); let t = tenant_id.clone(); async move { load_ui_priority_tasks_from_db(&db, &t, mobile_optimized).await } })
     );
 
@@ -4046,6 +4047,7 @@ async fn ui_dashboard_unified_feed_handler(
         for item in agent_feed.iter_mut() {
             if let Some(obj) = item.as_object_mut() {
                 obj.remove("context_payload");
+                obj.remove("proposed_action");
             }
         }
     }
