@@ -1628,7 +1628,7 @@
           }).join('');
         } else {
 
-          const activities = items.filter(i => i.lifecycle_state === 'APPROVED' || i.lifecycle_state === 'DISMISSED');
+          const activities = items.filter(i => i.lifecycle_state === 'APPROVED' || i.lifecycle_state === 'DISMISSED' || i.lifecycle_state === 'REJECTED' || i.status === 'resolved' || i.status === 'dismissed' || i.status === 'APPROVED' || i.status === 'REJECTED');
           if (activities.length === 0) {
             triageQueue.innerHTML = '<div class="triage-card empty">No recent activity found.</div>';
             return;
