@@ -4119,7 +4119,8 @@
         "yAxis": {
           "axisPlacement": "left"
         }
-      }
+      },
+      "transparent": true
     },
     {
       "type": "stat",
@@ -4149,7 +4150,8 @@
         "textMode": "auto",
         "colorMode": "value",
         "graphMode": "area"
-      }
+      },
+      "transparent": true
     }
   ],
   "refresh": "",
