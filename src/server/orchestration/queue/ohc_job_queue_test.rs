@@ -85,7 +85,7 @@ async fn test_ohc_job_queue_fail_backoff() {
 
     // 2nd fail
     queue.dequeue(vec![job_type]).await.unwrap(); // might fail if next_retry_at is in future, but assuming time hasn't passed it will skip, let's update it for test
-    sqlx::query("UPDATE ohc_job_queue SET next_retry_at = CURRENT_TIMESTAMP WHERE id = $1").bind(&job_id).execute(&pool).await.unwrap();
+    sqlx::query("UPDATE ohc_job_queue SET next_retry_at = '2020-01-01T00:00:00Z' WHERE id = $1").bind(&job_id).execute(&pool).await.unwrap();
     queue.dequeue(vec![job_type]).await.unwrap();
 
     queue.fail(&job_id, 3).await.unwrap();
@@ -98,7 +98,7 @@ async fn test_ohc_job_queue_fail_backoff() {
     assert_eq!(status_retry2.1, 2);
 
     // 3rd fail (should dead letter)
-    sqlx::query("UPDATE ohc_job_queue SET next_retry_at = CURRENT_TIMESTAMP WHERE id = $1").bind(&job_id).execute(&pool).await.unwrap();
+    sqlx::query("UPDATE ohc_job_queue SET next_retry_at = '2020-01-01T00:00:00Z' WHERE id = $1").bind(&job_id).execute(&pool).await.unwrap();
     queue.dequeue(vec![job_type]).await.unwrap();
     queue.fail(&job_id, 3).await.unwrap();
 
