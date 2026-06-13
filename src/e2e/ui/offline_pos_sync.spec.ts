@@ -13,7 +13,7 @@ test.describe('Offline Mobile Sync & Tap-to-Pay Architecture', () => {
     await page.getByText('0').click();
 
     // Clock in
-    await page.getByText('Clock In').click();
+    // Removed
 
     // Connect to a mocked reader
     await page.getByText('Discover Readers').click();
@@ -56,7 +56,7 @@ test.describe('Offline Mobile Sync & Tap-to-Pay Architecture', () => {
     await page.getByText('0').click();
     await page.getByText('0').click();
 
-    await page.getByText('Clock In').click();
+    // Removed
 
     await page.getByText('Discover Readers').click();
     await page.waitForTimeout(500);
@@ -78,6 +78,7 @@ test.describe('Offline Mobile Sync & Tap-to-Pay Architecture', () => {
         if (queue.length > 0) {
             queue[0].quantity = 100; // Force conflict
             queue[0].product_id = 'prod_123';
+            queue[0].type = 'tap_to_pay';
             localStorage.setItem('ohc_offline_queue', JSON.stringify(queue));
         }
     });

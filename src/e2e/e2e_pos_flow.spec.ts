@@ -47,10 +47,10 @@ test.describe('In-Person Payment (POS) Flow', () => {
     // Test Centralized Inventory & Distributed POS Architecture
     // Trigger offline conflict generation
     await page.evaluate(() => {
-        localStorage.setItem('ohc_offline_pos_tx', JSON.stringify([{
+        localStorage.setItem('ohc_offline_queue', JSON.stringify([{
             id: 'tx_conflict',
-            client_id: 'device_1',
-            amount_cents: 5000,
+            type: 'tap_to_pay',
+            amount: 5000,
             currency: 'USD',
             product_id: 'prod-conflict',
             quantity_deducted: 10 // Force a shortage to test pending_reconciliation
@@ -80,7 +80,7 @@ test.describe('In-Person Payment (POS) Flow', () => {
     // Wait for background sync to trigger (interval is 10s) and clear events
     await expect(async () => {
       const remainingEvents = await page.evaluate(() => JSON.parse(localStorage.getItem('ohc_offline_events') || '[]'));
-      const remainingPosTx = await page.evaluate(() => JSON.parse(localStorage.getItem('ohc_offline_pos_tx') || '[]'));
+      const remainingPosTx = await page.evaluate(() => JSON.parse(localStorage.getItem('ohc_offline_queue') || '[]'));
       // Only verifying pos_tx because timecard events backend is apparently not responding in mock UI mode
       expect(remainingPosTx.length).toBe(0);
     }).toPass({ timeout: 15000 });

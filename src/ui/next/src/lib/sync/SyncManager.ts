@@ -1,3 +1,5 @@
+import { enqueueAction, getActions, removeAction } from '../../app/utils/offlineQueue';
+
 export class SyncManager {
   private static instance: SyncManager;
   private queueKey = 'ohc_offline_queue';
@@ -18,10 +20,23 @@ export class SyncManager {
     return SyncManager.instance;
   }
 
-  public enqueue(mutation: any) {
+  public async enqueue(mutation: any) {
     if (typeof window === 'undefined') return;
 
-    const queue = this.getQueue();
+    try {
+      if (window.indexedDB) {
+        await enqueueAction({
+          id: mutation.id || \`act_\${Date.now()}_\${Math.random().toString(36).substr(2, 9)}\`,
+          type: mutation.type || 'unknown',
+          payload: mutation,
+          timestamp: mutation.timestamp || Date.now()
+        });
+      }
+    } catch (e) {
+      console.warn("IndexedDB fallback to localStorage", e);
+    }
+
+    const queue = this.getQueueSync();
     queue.push(mutation);
     localStorage.setItem(this.queueKey, JSON.stringify(queue));
     this.notifyListeners();
@@ -31,17 +46,35 @@ export class SyncManager {
     }
   }
 
-  public getQueueLength(): number {
-    return this.getQueue().length;
+  public async getQueueLength(): Promise<number> {
+    const q = await this.getQueue();
+    return q.length;
   }
 
-  private getQueue(): any[] {
+  private getQueueSync(): any[] {
     if (typeof window === 'undefined') return [];
     try {
       return JSON.parse(localStorage.getItem(this.queueKey) || '[]');
     } catch {
       return [];
     }
+  }
+
+  private async getQueue(): Promise<any[]> {
+    if (typeof window === 'undefined') return [];
+
+    try {
+      if (window.indexedDB) {
+        const actions = await getActions();
+        if (actions && actions.length > 0) {
+           return actions.map(a => a.payload);
+        }
+      }
+    } catch (e) {
+      // Fallback
+    }
+
+    return this.getQueueSync();
   }
 
   private notifyListeners() {
@@ -54,7 +87,7 @@ export class SyncManager {
   public async sync(retryCount = 0) {
     if (typeof window === 'undefined' || this.syncInProgress || !navigator.onLine) return;
 
-    let queue = this.getQueue();
+    let queue = await this.getQueue();
     if (queue.length === 0) return;
 
     this.syncInProgress = true;
@@ -65,10 +98,10 @@ export class SyncManager {
         return {
           id: m.id,
           client_id: 'terminal_client', // Default fallback
-          amount_cents: Math.round(m.amount),
+          amount_cents: Math.round(m.amount || m.amount_cents || 0),
           currency: m.currency || 'usd',
-          payload: JSON.stringify([{ product_id: m.product_id, quantity: m.quantity || 1 }]),
-          timestamp: new Date().toISOString()
+          payload: m.payload || JSON.stringify([{ product_id: m.product_id, quantity: m.quantity || 1 }]),
+          timestamp: m.timestamp || new Date().toISOString()
         };
       });
 
@@ -100,7 +133,7 @@ export class SyncManager {
       });
 
       const tenantId = localStorage.getItem("tenant_id") || localStorage.getItem("tenant") || "default";
-      const spiffeId = `spiffe://ohc/org/${tenantId}/agent/ui`;
+      const spiffeId = \`spiffe://ohc/org/\${tenantId}/agent/ui\`;
 
       let allOk = true;
 
@@ -120,7 +153,7 @@ export class SyncManager {
         });
         if (!resPos.ok) {
           allOk = false;
-          throw new Error(`POS Sync failed with status ${resPos.status}`);
+          throw new Error(\`POS Sync failed with status \${resPos.status}\`);
         }
       }
 
@@ -136,11 +169,17 @@ export class SyncManager {
         });
         if (!resGen.ok) {
           allOk = false;
-          throw new Error(`General Sync failed with status ${resGen.status}`);
+          throw new Error(\`General Sync failed with status \${resGen.status}\`);
         }
       }
 
       if (allOk) {
+        if (window.indexedDB) {
+           const actions = await getActions();
+           for (const a of actions) {
+              await removeAction(a.id);
+           }
+        }
         localStorage.setItem(this.queueKey, '[]');
         this.notifyListeners();
         this.retryDelayMs = 1000; // Reset delay on success
