@@ -43,19 +43,21 @@
         align-items: stretch;
       }
 
-      .pricing-card {
+      .ohc-growth-card {
         background: rgba(255, 255, 255, 0.65);
-        backdrop-filter: blur(30px) saturate(210%);
+        backdrop-filter: blur(30px) saturate(2.1);
+        -webkit-backdrop-filter: blur(30px) saturate(2.1);
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        color: #1d1d1f;
         border-radius: 16px;
         padding: 32px 24px;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
-        border: 1px solid rgba(255, 255, 255, 0.4);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
         display: flex;
         flex-direction: column;
         position: relative;
       }
 
-      .pricing-card.recommended {
+      .ohc-growth-card.recommended {
         border: 2px solid #0066FF;
         background: rgba(255, 255, 255, 0.85);
         transform: scale(1.02);
@@ -171,12 +173,13 @@
         background-color: #16161a;
         color: #f5f5f7;
     }
-    .pricing-card {
+    .ohc-growth-card {
         background: rgba(22, 22, 26, 0.7) !important;
-        backdrop-filter: blur(30px) saturate(210%);
+        backdrop-filter: blur(30px) saturate(2.1);
+        -webkit-backdrop-filter: blur(30px) saturate(2.1);
         border: 1px solid rgba(255, 255, 255, 0.1) !important;
     }
-    .pricing-card.recommended {
+    .ohc-growth-card.recommended {
         background: rgba(32, 32, 36, 0.85) !important;
     }
     .price-text {
@@ -194,7 +197,7 @@
 
       <div class="pricing-grid">
         <!-- Free Plan -->
-        <div class="app-card pricing-card">
+        <div class="ohc-growth-card">
           <div class="plan-name">Free</div>
           <div class="plan-price">$0<span>/month</span></div>
           <ul class="features-list">
@@ -203,11 +206,11 @@
             <li><svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg> 500MB Storage Quota</li>
             <li><svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg> 10 Products Limit</li>
           </ul>
-          <button class="btn btn-secondary" disabled>Current Plan</button>
+          <button class="btn-secondary" disabled>Current Plan</button>
         </div>
 
         <!-- Starter Plan -->
-        <div class="app-card pricing-card recommended">
+        <div class="ohc-growth-card recommended">
           <div class="badge">Recommended</div>
           <div class="plan-name">Starter</div>
           <div class="plan-price">$29<span>/month</span></div>
@@ -218,11 +221,11 @@
             <li><svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg> 5GB Storage Quota</li>
             <li><svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg> 100 Products Limit</li>
           </ul>
-          <button class="btn btn-primary" onclick="upgradePlan('Starter')">Upgrade to Starter via Stripe</button>
+          <button class="btn-primary" onclick="upgradePlan('Starter')">Upgrade to Starter via Stripe</button>
         </div>
 
         <!-- Pro Plan -->
-        <div class="app-card pricing-card">
+        <div class="ohc-growth-card">
           <div class="plan-name">Pro</div>
           <div class="plan-price">$79<span>/month</span></div>
           <ul class="features-list">
@@ -231,11 +234,11 @@
             <li><svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg> 50GB Storage Quota</li>
             <li><svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg> Unlimited Products</li>
           </ul>
-          <button class="btn btn-primary" style="background-color: #1d1d1f; box-shadow: none;" onclick="upgradePlan('Pro')">Upgrade to Pro via Stripe</button>
+          <button class="btn-primary" style="background-color: #1d1d1f; box-shadow: none;" onclick="upgradePlan('Pro')">Upgrade to Pro via Stripe</button>
         </div>
 
         <!-- Business Plan -->
-        <div class="app-card pricing-card">
+        <div class="ohc-growth-card">
           <div class="plan-name">Business</div>
           <div class="plan-price">$299<span>/month</span></div>
           <ul class="features-list">
@@ -244,7 +247,7 @@
             <li><svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg> 500GB Storage Quota</li>
             <li><svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg> Unlimited Products</li>
           </ul>
-          <button class="btn btn-primary" style="background-color: #1d1d1f; box-shadow: none;" onclick="upgradePlan('Business')">Upgrade to Business via Stripe</button>
+          <button class="btn-primary" style="background-color: #1d1d1f; box-shadow: none;" onclick="upgradePlan('Business')">Upgrade to Business via Stripe</button>
         </div>
       </div>
 
@@ -252,6 +255,20 @@
 
       <div style="margin-top: 40px; text-align: center; color: #86868b; font-size: 14px;">
         100% money back guarantee. Secure SSL payments powered by Stripe.
+      </div>
+
+      <div class="app-card pricing-card" style="margin-top: 40px; width: 100%; box-sizing: border-box;">
+        <h2 style="margin-top: 0; font-size: 20px; font-weight: 700; color: #1d1d1f; margin-bottom: 20px;">Frequently Asked Questions</h2>
+
+        <div style="margin-bottom: 24px;">
+          <h3 style="margin: 0 0 8px 0; font-size: 16px; font-weight: 600; color: #1d1d1f;">How do I upgrade, downgrade, or cancel?</h3>
+          <p style="margin: 0; font-size: 14px; color: #86868b; line-height: 1.5;">Stripe Billing for self-serve plan upgrades, downgrades, and cancellation. You can upgrade, downgrade, or cancel anytime straight from the My Plan page.</p>
+        </div>
+
+        <div>
+          <h3 style="margin: 0 0 8px 0; font-size: 16px; font-weight: 600; color: #1d1d1f;">What is the storage limit?</h3>
+          <p style="margin: 0; font-size: 14px; color: #86868b; line-height: 1.5;">Storage limits vary by plan, starting at 500MB for Free and up to 500GB for Business.</p>
+        </div>
       </div>
     </div>
 

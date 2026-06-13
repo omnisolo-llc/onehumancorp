@@ -74,7 +74,8 @@ export default function OnboardingWizard() {
     aiAutoRespond, setAiAutoRespond,
     isLoading, setIsLoading,
     error, setError,
-    startResult, setStartResult
+    startResult, setStartResult,
+    instantImageUrl, setInstantImageUrl
   } = useOnboardingStore();
 
   const [isLoaded, setIsLoaded] = useState(false);
