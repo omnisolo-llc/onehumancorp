@@ -12,6 +12,15 @@ pub struct GenerateQuoteArgs {
     pub total_amount_cents: i64,
     pub required_deposit_cents: i64,
     pub checkout_url: Option<String>,
+    pub line_items: Vec<QuoteLineItemArgs>,
+}
+
+#[derive(Deserialize)]
+pub struct QuoteLineItemArgs {
+    pub description: String,
+    pub unit_price_cents: i64,
+    pub quantity: i32,
+    pub is_optional: bool,
 }
 
 pub struct GenerateQuoteExecutor;
@@ -25,7 +34,7 @@ impl PydanticToolExecutor<GenerateQuoteArgs> for GenerateQuoteExecutor {
         let required_deposit_cents = args.required_deposit_cents;
         let checkout_url = args.checkout_url;
 
-        let quote_id = Uuid::new_v4().to_string();
+        let quote_id = Uuid::new_v4();
 
         let db_url = std::env::var("OHC_DATABASE_URL")
             .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
@@ -33,23 +42,48 @@ impl PydanticToolExecutor<GenerateQuoteArgs> for GenerateQuoteExecutor {
         let pool = sqlx::PgPool::connect(&db_url).await
             .map_err(|e| ToolError::LlmRecoverable(format!("DB connection failed: {}", e)))?;
 
+        let mut tx = pool.begin().await
+            .map_err(|e| ToolError::LlmRecoverable(format!("Failed to begin transaction: {}", e)))?;
+
         sqlx::query(
-            "INSERT INTO quotes (id, tenant_id, customer_id, status, total_amount, required_deposit, checkout_url) VALUES ($1, $2, $3, 'proposed', $4, $5, $6)"
+            "INSERT INTO quotes (id, tenant_id, customer_id, status, total_amount, required_deposit, checkout_url, created_at, updated_at) VALUES ($1, $2, $3, 'DRAFT', $4, $5, $6, NOW(), NOW())"
         )
-        .bind(&quote_id)
+        .bind(quote_id)
         .bind(&tenant_id)
-        .bind(&customer_id)
-        .bind((total_amount_cents as f64) / 100.0)
-        .bind((required_deposit_cents as f64) / 100.0)
+        .bind(match Uuid::parse_str(&customer_id) {
+            Ok(u) => u,
+            Err(_) => return Err(ToolError::LlmRecoverable("Invalid customer_id format".to_string()))
+        })
+        .bind(total_amount_cents)
+        .bind(required_deposit_cents)
         .bind(&checkout_url)
-        .execute(&pool)
+        .execute(&mut *tx)
         .await
-        .map_err(|e| ToolError::LlmRecoverable(format!("DB insert failed: {}", e)))?;
+        .map_err(|e| ToolError::LlmRecoverable(format!("DB insert quote failed: {}", e)))?;
+
+        for item in args.line_items {
+            let item_id = Uuid::new_v4();
+            sqlx::query(
+                "INSERT INTO quote_line_items (id, quote_id, description, unit_price_cents, quantity, is_optional, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())"
+            )
+            .bind(item_id)
+            .bind(quote_id)
+            .bind(&item.description)
+            .bind(item.unit_price_cents)
+            .bind(item.quantity)
+            .bind(item.is_optional)
+            .execute(&mut *tx)
+            .await
+            .map_err(|e| ToolError::LlmRecoverable(format!("DB insert quote_line_item failed: {}", e)))?;
+        }
+
+        tx.commit().await
+            .map_err(|e| ToolError::LlmRecoverable(format!("Failed to commit transaction: {}", e)))?;
 
         Ok(json!({
             "status": "success",
             "message": "Quote generated successfully.",
-            "quote_id": quote_id
+            "quote_id": quote_id.to_string()
         }).to_string())
     }
 }
@@ -63,12 +97,25 @@ pub fn generate_quote_tool() -> Tool {
             "type": "object",
             "properties": {
                 "tenant_id": { "type": "string" },
-                "customer_id": { "type": "string" },
+                "customer_id": { "type": "string", "description": "UUID of the customer" },
                 "total_amount_cents": { "type": "integer" },
                 "required_deposit_cents": { "type": "integer" },
-                "checkout_url": { "type": "string" }
+                "checkout_url": { "type": "string" },
+                "line_items": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "description": { "type": "string" },
+                            "unit_price_cents": { "type": "integer" },
+                            "quantity": { "type": "integer" },
+                            "is_optional": { "type": "boolean" }
+                        },
+                        "required": ["description", "unit_price_cents", "quantity", "is_optional"]
+                    }
+                }
             },
-            "required": ["tenant_id", "customer_id", "total_amount_cents", "required_deposit_cents"]
+            "required": ["tenant_id", "customer_id", "total_amount_cents", "required_deposit_cents", "line_items"]
         }),
         execute: Arc::new(PydanticAdapter::new(GenerateQuoteExecutor)),
     }
