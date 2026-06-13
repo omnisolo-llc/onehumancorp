@@ -1446,7 +1446,7 @@
                   <div style="font-size: 14px; margin-top: 4px; color: #333;">Scope of Work: ${scope}</div>
                   <div class="triage-controls" style="margin-top: 12px; display: flex; gap: 8px;">
                     <button class="triage-btn-approve" data-testid="approve-proposal" onclick="handleTriageAction('${item.id}', true)" style="min-width: 44px; min-height: 44px; padding: 12px; background: #0066FF; color: white; border: none; border-radius: 8px; flex: 1;">Approve & Send Proposal</button>
-                    <button class="triage-btn-dismiss" data-testid="edit-proposal" onclick="window.location.href='quote.html?id=${item.id}'" style="min-width: 44px; min-height: 44px; padding: 12px; background: rgba(0,0,0,0.05); border: none; border-radius: 8px; flex: 1;">Edit</button>
+                    <button class="triage-btn-dismiss" data-testid="edit-quote-draft" onclick="window.location.href='/quoting?id=${item.id}'" style="min-width: 44px; min-height: 44px; padding: 12px; background: rgba(0,0,0,0.05); border: none; border-radius: 8px; flex: 1;">Edit</button>
                     <button class="triage-btn-dismiss" data-testid="reject-proposal" onclick="handleTriageAction('${item.id}', false)" style="min-width: 44px; min-height: 44px; padding: 12px; background: rgba(0,0,0,0.05); border: none; border-radius: 8px; flex: 1;">Dismiss</button>
                   </div>
                 </div>
