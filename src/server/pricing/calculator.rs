@@ -198,7 +198,7 @@ pub fn calculate_projected_monthly_cost_cents(current_cost: f64, days_elapsed: u
 }
 
 pub fn calculate_projected_monthly_cost(current_cost: f64, days_elapsed: u32, total_days: u32) -> f64 {
-    if days_elapsed == 0 {
+    if days_elapsed == 0 || current_cost < 0.0 {
         return 0.0;
     }
     let projected = (current_cost / days_elapsed as f64) * total_days as f64;
@@ -382,6 +382,7 @@ mod tests {
         assert_eq!(calculate_projected_monthly_cost(10.0, 30, 30), 10.0);
         assert_eq!(calculate_projected_monthly_cost(15.5, 10, 31), 48.05);
         assert_eq!(calculate_projected_monthly_cost(10.0, 5, 0), 0.0);
+        assert_eq!(calculate_projected_monthly_cost(-10.0, 5, 30), 0.0);
     }
 
     #[test]

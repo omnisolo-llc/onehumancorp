@@ -122,6 +122,10 @@ impl PromptCache {
     /// Intelligently truncates a context string to fit within a given token limit.
     /// This is a fast heuristic using 4 chars per token. Safely handles UTF-8 string slicing.
     pub fn truncate_context(context: &str, max_tokens: usize) -> String {
+        if max_tokens == 0 {
+            return String::new();
+        }
+
         let max_chars = max_tokens * 4;
 
         let mut char_count = 0;
@@ -270,5 +274,9 @@ mod tests {
         // Extreme truncation
         let res3 = PromptCache::truncate_context(text, 1);
         assert_eq!(res3, "This...");
+
+        // Zero truncation
+        let res4 = PromptCache::truncate_context(text, 0);
+        assert_eq!(res4, "");
     }
 }

@@ -188,4 +188,15 @@ mod tests {
         let manager = BudgetManager::new(0.0);
         assert!(!manager.check_alert_threshold());
     }
+
+    #[test]
+    fn test_budget_manager_edge_cases() {
+        let manager = BudgetManager::new(f64::MAX);
+        assert!(manager.record_spend(1.0).unwrap());
+
+        // Check extremely small threshold values
+        let threshold_manager = BudgetManager::new(100.0).with_alert_threshold(0.01);
+        threshold_manager.record_spend(0.02).unwrap();
+        assert!(threshold_manager.check_alert_threshold());
+    }
 }
