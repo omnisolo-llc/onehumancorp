@@ -3765,6 +3765,21 @@ async fn load_ui_triage_from_db(db: &crate::db::DB, tenant_id: &str, mobile_opti
 
     results.extend(feed_rows_json);
 
+    if let Ok(mut approvals) = load_ui_agent_approvals_from_db(db, tenant_id).await {
+        for approval in &mut approvals {
+            if let Some(obj) = approval.as_object_mut() {
+                // Ensure approval items map correctly to triage UI
+                if !obj.contains_key("lifecycle_state") {
+                    obj.insert("lifecycle_state".to_string(), serde_json::json!("PENDING_APPROVAL"));
+                }
+                if !obj.contains_key("created_at") {
+                    obj.insert("created_at".to_string(), serde_json::json!(""));
+                }
+            }
+        }
+        results.extend(approvals);
+    }
+
     // Sort combined results by created_at DESC
     results.sort_by(|a, b| {
         let a_time = a.get("created_at").and_then(|t| t.as_str()).unwrap_or("");
