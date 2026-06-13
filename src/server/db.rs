@@ -50,6 +50,24 @@ pub struct DB {
 }
 
 
+#[cfg(test)]
+pub async fn create_sqlite_pool_for_test() -> sqlx::SqlitePool {
+    let db_id = uuid::Uuid::new_v4().to_string();
+    let uri = format!("sqlite:file:{}?mode=memory&cache=shared", db_id);
+    sqlx::sqlite::SqlitePoolOptions::new()
+        .max_connections(2)
+        .connect(&uri)
+        .await
+        .unwrap()
+}
+
+#[cfg(test)]
+pub async fn create_dummy_pg_pool() -> sqlx::PgPool {
+    sqlx::postgres::PgPoolOptions::new()
+        .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+        .unwrap()
+}
+
 #[derive(serde::Serialize)]
 pub struct SearchResult {
     pub id: String,
