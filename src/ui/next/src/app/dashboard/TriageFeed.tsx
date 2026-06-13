@@ -93,7 +93,15 @@ export function TriageFeed({ tenantId, initialItems }: { tenantId: string, initi
   }
 
   if (items.length === 0) {
-    return null;
+    return (
+      <div className="mb-6 p-6 rounded-[16px] glassmorphism border border-white/40 dark:border-white/10 text-gray-500">
+        <div className="app-empty flex flex-col items-center justify-center py-12">
+          <div className="text-4xl mb-4">✨</div>
+          <div className="text-lg font-medium text-gray-900 dark:text-white">All caught up!</div>
+          <div className="text-sm text-gray-500 mt-2">No triage items need your attention right now. Great job!</div>
+        </div>
+      </div>
+    );
   }
 
   const proactiveItems = items.filter(item => item.event_source === "Proactive Context Agent");
@@ -139,7 +147,7 @@ export function TriageFeed({ tenantId, initialItems }: { tenantId: string, initi
       ))}
 
       <div className="mb-4 p-6 rounded-[16px] glassmorphism border border-white/40 dark:border-white/10">
-        <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Unified Agent Feed</h2>
+        <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Action Center</h2>
         <p className="text-gray-600 dark:text-gray-400">Review AI-prepared actions and reply drafts across all channels.</p>
       </div>
 
@@ -213,7 +221,7 @@ export function TriageFeed({ tenantId, initialItems }: { tenantId: string, initi
 
               <div className="flex flex-col sm:flex-row gap-3">
                 <button
-                  className="app-btn-primary flex-1 min-h-[44px]"
+                  className="app-btn-primary flex-1 min-h-[44px] min-w-[44px]"
                   data-testid="approve-btn"
                   onClick={() => handleDecision(selected.id, true)}
                 >

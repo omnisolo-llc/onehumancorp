@@ -6,7 +6,7 @@ test.describe('Cost Dashboard & Plan Limits UI', () => {
     await page.goto('/cost-dashboard.html');
 
     // Wait for the main heading to be visible
-    await expect(page.getByRole('heading', { name: 'Cost Transparency Dashboard' })).toBeVisible({ timeout: 15000 });
+    await expect(page.getByRole('heading', { name: 'My Plan' }).first()).toBeVisible({ timeout: 15000 });
 
     // Verify key sections are present
     await expect(page.getByText('Total Costs')).toBeVisible();
@@ -14,8 +14,8 @@ test.describe('Cost Dashboard & Plan Limits UI', () => {
     await expect(page.locator('span', { hasText: 'Storage' }).first()).toBeVisible();
     await expect(page.getByText('Bandwidth Savings')).toBeVisible();
 
-    // Check if the plan navigation button is present
-    await expect(page.getByRole('button', { name: 'Back to Dashboard' })).toBeVisible();
+    // Check if the plan navigation link is present
+    await expect(page.getByRole('link', { name: '← Back to Dashboard' })).toBeVisible();
   });
 
   test('should display my plan limits and route to pricing', async ({ page }) => {
@@ -25,7 +25,7 @@ test.describe('Cost Dashboard & Plan Limits UI', () => {
     // Wait for the main heading to be visible
     await expect(page.getByRole('heading', { name: 'My Plan' }).first()).toBeVisible({ timeout: 15000 });
 
-    // Verify data placeholders or limits are populated (Even if it says Free or Loading, these labels should exist)
+    // Verify data placeholders or limits are populated
     await expect(page.getByText('Estimated Next Bill')).toBeVisible();
     await expect(page.getByText('AI actions used this month')).toBeVisible();
 
