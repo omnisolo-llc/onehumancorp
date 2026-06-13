@@ -368,7 +368,7 @@ jobs:
 
       - name: Pull E2E Docker images
         run: |
-          docker pull pgvector/pgvector:pg16
+          docker pull ankane/pgvector:v0.5.1
           docker pull valkey/valkey:8-alpine
 
       - name: Test Playwright UI E2E target
@@ -491,11 +491,11 @@ jobs:
           if [[ -f /tmp/ohc-kind-images/images.tar ]]; then
             docker load -i /tmp/ohc-kind-images/images.tar
           fi
-          docker pull pgvector/pgvector:pg15
+          docker pull ankane/pgvector:v0.5.1
           docker pull valkey/valkey:8-alpine
           mkdir -p /tmp/ohc-kind-images
           docker save \
-            pgvector/pgvector:pg15 \
+            ankane/pgvector:v0.5.1 \
             valkey/valkey:8-alpine \
             -o /tmp/ohc-kind-images/images.tar
 
@@ -561,11 +561,11 @@ jobs:
 
       - name: Pull Docker Compose images
         run: |
-          docker pull pgvector/pgvector:pg16
+          docker pull ankane/pgvector:v0.5.1
           docker pull valkey/valkey:8-alpine
           mkdir -p /tmp/ohc-docker-compose-images
           docker save \
-            pgvector/pgvector:pg16 \
+            ankane/pgvector:v0.5.1 \
             valkey/valkey:8-alpine \
             -o /tmp/ohc-docker-compose-images/images.tar
 

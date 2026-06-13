@@ -371,7 +371,7 @@ helm template "${STANDALONE_RELEASE_NAME}" "${CHART_DIR}" "${STANDALONE_HELM_SMO
 
 log "Loading images into Kind cluster ..."
   kind load docker-image onehumancorp/server:e2e --name "${CLUSTER_NAME}"
-  ensure_image_loaded_in_kind postgres:15-alpine
+  ensure_image_loaded_in_kind ankane/pgvector:v0.5.1
   ensure_image_loaded_in_kind redis:alpine
 
 # ── Create namespace ───────────────────────────────────────────────────────────
@@ -381,7 +381,7 @@ kubectl create namespace "${NAMESPACE}" --dry-run=client -o yaml | kubectl apply
 log "Installing PostgreSQL ..."
 kubectl run postgres \
   --namespace "${NAMESPACE}" \
-  --image postgres:15-alpine \
+  --image ankane/pgvector:v0.5.1 \
   --env POSTGRES_USER=ohc \
   --env POSTGRES_PASSWORD=ohc \
   --env POSTGRES_DB=ohc \
