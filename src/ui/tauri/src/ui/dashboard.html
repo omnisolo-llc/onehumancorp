@@ -1416,7 +1416,7 @@
           }
           triageQueue.innerHTML = proposals.map(item => {
             const actionType = item.action_type || item.proposed_action?.action_type;
-            const description = item.context || item.proposed_action?.message || actionType || item.context_payload?.description || 'Agent proposed an action.';
+            const description = item.context || item.proposed_action?.message || actionType || item.context_payload?.description || item.action_payload?.message || item.action_payload?.description || 'Agent proposed an action.';
             const isDraft = item.proposed_action?.context?.weekly_health_report === true;
             const approveTestId = isDraft ? "approve-draft" : "approve-proposal";
             const approveText = isDraft ? "Yes, draft it!" : "Approve";

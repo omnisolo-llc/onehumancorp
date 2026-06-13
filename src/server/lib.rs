@@ -2985,14 +2985,16 @@ pub async fn list_ui_triage_handler(
                 return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(Vec::<serde_json::Value>::new())).into_response();
             }
 
-            match sqlx::query(
+            let mut items: Vec<serde_json::Value> = Vec::new();
+
+            // 1. Fetch triage items
+            if let Ok(rows) = sqlx::query(
                 "SELECT t.id, t.tenant_id, t.customer_id, t.source, t.priority, t.context, t.status, t.created_at, a.action_type, a.payload AS action_payload FROM triage_items t LEFT JOIN triage_proposed_actions a ON t.id = a.triage_item_id WHERE t.tenant_id = $1 AND t.status != 'resolved' AND t.status != 'dismissed' ORDER BY t.created_at DESC"
             )
             .bind(&tenant_id)
             .fetch_all(&mut *tx)
-            .await
-            {
-                Ok(rows) => rows.into_iter().map(|row| {
+            .await {
+                items.extend(rows.into_iter().map(|row| {
                     if mobile_optimized {
                         serde_json::json!({
                             "id": row.get::<String, _>("id"),
@@ -3018,19 +3020,75 @@ pub async fn list_ui_triage_handler(
                             "action_payload": row.try_get::<String, _>("action_payload").unwrap_or_default(),
                         })
                     }
-                }).collect::<Vec<_>>(),
-                Err(e) => { tracing::error!("Failed to fetch triage items: {:?}", e); vec![] }
+                }));
+            } else {
+                tracing::error!("Failed to fetch triage items");
             }
+
+            // 2. Fetch agent feed items
+            if let Ok(rows) = sqlx::query(
+                "SELECT id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at FROM agent_feed_items WHERE tenant_id = $1 AND lifecycle_state = 'PENDING_APPROVAL' ORDER BY created_at DESC"
+            )
+            .bind(&tenant_id)
+            .fetch_all(&mut *tx)
+            .await {
+                items.extend(rows.into_iter().map(|row| {
+                    if mobile_optimized {
+                        serde_json::json!({
+                            "id": row.get::<String, _>("id"),
+                            "tenant_id": row.get::<String, _>("tenant_id"),
+                            "source": row.try_get::<String, _>("event_source").unwrap_or_default(),
+                            "status": row.try_get::<String, _>("lifecycle_state").unwrap_or_default(),
+                            "created_at": row.try_get::<chrono::DateTime<chrono::Utc>, _>("created_at").map(|dt| dt.to_rfc3339()).unwrap_or_default(),
+                            "action_type": row.try_get::<sqlx::types::Json<serde_json::Value>, _>("proposed_action").and_then(|json| json.0.get("action_type").and_then(|v| v.as_str()).map(|s| s.to_string())).unwrap_or_default(),
+                        })
+                    } else {
+                        serde_json::json!({
+                            "id": row.get::<String, _>("id"),
+                            "tenant_id": row.get::<String, _>("tenant_id"),
+                            "source": row.try_get::<String, _>("event_source").unwrap_or_default(),
+                            "status": row.try_get::<String, _>("lifecycle_state").unwrap_or_default(),
+                            "created_at": row.try_get::<chrono::DateTime<chrono::Utc>, _>("created_at").map(|dt| dt.to_rfc3339()).unwrap_or_default(),
+                            "context": row.try_get::<sqlx::types::Json<serde_json::Value>, _>("context_payload").map(|json| json.0.to_string()).unwrap_or_default(),
+                            "action_type": row.try_get::<sqlx::types::Json<serde_json::Value>, _>("proposed_action").and_then(|json| json.0.get("action_type").and_then(|v| v.as_str()).map(|s| s.to_string())).unwrap_or_default(),
+                            "action_payload": row.try_get::<sqlx::types::Json<serde_json::Value>, _>("proposed_action").map(|json| json.0.to_string()).unwrap_or_default(),
+                        })
+                    }
+                }));
+            }
+
+            // 3. Fetch agent approvals (DRAFT/PAUSED)
+            if let Ok(rows) = sqlx::query(
+                "SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = $1 AND status IN ('DRAFT', 'PAUSED') ORDER BY id ASC"
+            )
+            .bind(&tenant_id)
+            .fetch_all(&mut *tx)
+            .await {
+                items.extend(rows.into_iter().map(|row| {
+                    serde_json::json!({
+                        "id": row.get::<String, _>("id"),
+                        "tenant_id": row.get::<String, _>("tenant_id"),
+                        "source": row.try_get::<String, _>("department").unwrap_or_default(),
+                        "status": row.try_get::<String, _>("status").unwrap_or_default(),
+                        "context": row.try_get::<String, _>("description").unwrap_or_default(),
+                        "action_payload": row.try_get::<Option<serde_json::Value>, _>("payload").map(|v| v.map(|json| json.to_string()).unwrap_or_default()).unwrap_or_default(),
+                    })
+                }));
+            }
+
+            items
         }
         crate::db::DbStore::Sqlite(pool) => {
-            match sqlx::query(
+            let mut items: Vec<serde_json::Value> = Vec::new();
+
+            // 1. Fetch triage items
+            if let Ok(rows) = sqlx::query(
                 "SELECT t.id, t.tenant_id, t.customer_id, t.source, t.priority, t.context, t.status, t.created_at, a.action_type, a.payload AS action_payload FROM triage_items t LEFT JOIN triage_proposed_actions a ON t.id = a.triage_item_id WHERE t.tenant_id = ? AND t.status != 'resolved' AND t.status != 'dismissed' ORDER BY t.created_at DESC"
             )
             .bind(&tenant_id)
             .fetch_all(pool)
-            .await
-            {
-                Ok(rows) => rows.into_iter().map(|row| {
+            .await {
+                items.extend(rows.into_iter().map(|row| {
                     if mobile_optimized {
                         serde_json::json!({
                             "id": row.get::<String, _>("id"),
@@ -3056,9 +3114,59 @@ pub async fn list_ui_triage_handler(
                             "action_payload": row.try_get::<String, _>("action_payload").unwrap_or_default(),
                         })
                     }
-                }).collect::<Vec<_>>(),
-                Err(e) => { tracing::error!("Failed to fetch triage items: {:?}", e); vec![] }
+                }));
             }
+
+            // 2. Fetch agent feed items
+            if let Ok(rows) = sqlx::query(
+                "SELECT id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at FROM agent_feed_items WHERE tenant_id = ? AND lifecycle_state = 'PENDING_APPROVAL' ORDER BY created_at DESC"
+            )
+            .bind(&tenant_id)
+            .fetch_all(pool)
+            .await {
+                items.extend(rows.into_iter().map(|row| {
+                    if mobile_optimized {
+                        serde_json::json!({
+                            "id": row.get::<String, _>("id"),
+                            "tenant_id": row.get::<String, _>("tenant_id"),
+                            "source": row.try_get::<String, _>("event_source").unwrap_or_default(),
+                            "status": row.try_get::<String, _>("lifecycle_state").unwrap_or_default(),
+                            "created_at": row.try_get::<String, _>("created_at").unwrap_or_default(),
+                        })
+                    } else {
+                        serde_json::json!({
+                            "id": row.get::<String, _>("id"),
+                            "tenant_id": row.get::<String, _>("tenant_id"),
+                            "source": row.try_get::<String, _>("event_source").unwrap_or_default(),
+                            "status": row.try_get::<String, _>("lifecycle_state").unwrap_or_default(),
+                            "created_at": row.try_get::<String, _>("created_at").unwrap_or_default(),
+                            "context": row.try_get::<String, _>("context_payload").unwrap_or_default(),
+                            "action_payload": row.try_get::<String, _>("proposed_action").unwrap_or_default(),
+                        })
+                    }
+                }));
+            }
+
+            // 3. Fetch agent approvals (DRAFT/PAUSED)
+            if let Ok(rows) = sqlx::query(
+                "SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = ? AND status IN ('DRAFT', 'PAUSED') ORDER BY id ASC"
+            )
+            .bind(&tenant_id)
+            .fetch_all(pool)
+            .await {
+                items.extend(rows.into_iter().map(|row| {
+                    serde_json::json!({
+                        "id": row.get::<String, _>("id"),
+                        "tenant_id": row.get::<String, _>("tenant_id"),
+                        "source": row.try_get::<String, _>("department").unwrap_or_default(),
+                        "status": row.try_get::<String, _>("status").unwrap_or_default(),
+                        "context": row.try_get::<String, _>("description").unwrap_or_default(),
+                        "action_payload": row.try_get::<Option<String>, _>("payload").and_then(|s| serde_json::from_str::<serde_json::Value>(&s).ok()),
+                    })
+                }));
+            }
+
+            items
         }
     };
 
