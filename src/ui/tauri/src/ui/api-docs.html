@@ -15,6 +15,7 @@
         padding: 40px 20px;
         box-sizing: border-box;
         min-height: 100vh;
+        overflow-x: hidden;
       }
       .container {
         max-width: 800px;
@@ -139,9 +140,12 @@
       <div class="header">
         <h1><span id="api-docs-tooltip" data-tooltip="Direct API access is only for custom integrations." class="badge cursor-help" style="cursor: help;">Advanced:</span> API Reference for advanced users</h1>
         <p class="subtitle">Integrate your custom checkout or external tools directly with OHC.</p>
+        <p>This section is for developers directly integrating with our APIs.</p>
       </div>
 
-      <div id="swagger-ui" class="docs-card" style="padding: 0;"></div>
+      <div class="backdrop-blur-[20px] saturate-200">
+        <div id="swagger-ui" class="docs-card swagger-ui" style="padding: 0;"></div>
+      </div>
     </div>
 
     <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css" />

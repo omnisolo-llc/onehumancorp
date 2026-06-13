@@ -799,6 +799,24 @@ document.addEventListener('DOMContentLoaded', () => {
         player.src = "";
         modal.style.display = "none";
       }
+
+      function openAISupport() {
+        const helpBtn = document.getElementById('ohc-floating-help-btn');
+        if (helpBtn) {
+          helpBtn.click();
+
+          requestAnimationFrame(() => {
+            const chatTab = document.getElementById('tab-btn-chat');
+            if (chatTab) chatTab.click();
+
+            requestAnimationFrame(() => {
+              const chatInput = document.getElementById('ohc-help-chat-input');
+              if (chatInput) chatInput.focus();
+            });
+          });
+        }
+      }
+
       function renderContent(query) {
         const lowerQuery = query.toLowerCase().trim();
 
@@ -820,7 +838,8 @@ document.addEventListener('DOMContentLoaded', () => {
             resultsContainer.innerHTML = `
               <div class="empty-state">
                  <p style="margin:0; font-size: 16px;">No results found matching <strong>"${query}"</strong></p>
-                 <p style="margin-top:10px; font-size: 14px; opacity: 0.7;">Try adjusting your search terms or ask our AI assistant for help.</p><button style="margin-top: 15px; padding: 10px 20px; border-radius: 8px; background-color: #0066FF; color: white; border: none; cursor: pointer; font-family: Outfit;" onclick="document.getElementById('ohc-help-btn').click()">Ask AI Support Agent</button>
+                 <p style="margin-top:10px; font-size: 14px; opacity: 0.7;">Try adjusting your search terms or ask our AI assistant for help.</p>
+                 <button id="ask-ai-support-btn" style="margin-top: 15px; padding: 10px 20px; border-radius: 8px; background-color: #0066FF; color: white; border: none; cursor: pointer; font-family: Outfit;" onclick="openAISupport()">Ask AI Support Agent</button>
               </div>
             `;
             return;
@@ -852,7 +871,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Videos
         if (filteredVideos.length > 0) {
-            html += `<div class="section-title">Video Tutorials</div><div class="videos-grid">`;
+            html += `<h2 class="section-title">Video Guides</h2><div class="videos-grid">`;
             filteredVideos.forEach(v => {
                 html += `
                   <div class="video-card" onclick="openVideo('${v.video_url}', '${v.title.replace(/'/g, "\\'")}', '${v.duration}')">
@@ -1377,7 +1396,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
             </div>
             <div id="ohc-help-chat-input-container">
-                <input type="text" id="ohc-help-chat-input" placeholder="Ask anything...">
+                <input type="text" id="ohc-help-chat-input" placeholder="Ask me anything...">
                 <button id="ohc-help-chat-send" aria-label="Send message">Send</button>
             </div>
         </div>
