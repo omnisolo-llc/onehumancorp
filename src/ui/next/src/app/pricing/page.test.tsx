@@ -84,7 +84,7 @@ describe('PricingPage', () => {
         const currentButton = currentButtons[0] as HTMLButtonElement;
         expect(currentButton.disabled).toBe(true);
 
-        const freeButton = screen.getByText('Upgrade to Free via Stripe');
+        const freeButton = screen.getByText('Downgrade to Free via Stripe');
         expect(freeButton).toBeDefined();
     });
   });
