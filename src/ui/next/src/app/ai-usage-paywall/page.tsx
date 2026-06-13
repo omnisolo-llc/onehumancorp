@@ -25,6 +25,7 @@ export default function AiUsagePaywallPage() {
   const router = useRouter();
   const [data, setData] = useState<CostDashboardResponse | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refLink, setRefLink] = useState('default');
 
   useEffect(() => {
     async function fetchData() {
@@ -49,6 +50,10 @@ export default function AiUsagePaywallPage() {
       }
     }
     fetchData();
+
+    if (typeof window !== 'undefined') {
+      setRefLink(localStorage.getItem('ohc_active_tenant_id') || 'default');
+    }
   }, []);
 
   const handleShareOnX = () => {
@@ -153,9 +158,9 @@ export default function AiUsagePaywallPage() {
       </div>
 
       <div className="mt-4 text-center">
-        <button onClick={() => router.push('/about-ohc')} className="inline-flex items-center gap-1 text-sm font-bold text-gray-400 hover:text-gray-600 transition-colors">
+        <a href={`/api/v1/growth/referrals/click?target=/onboarding&ref=${refLink}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-sm font-bold text-gray-400 hover:text-gray-600 transition-colors">
           ⚡ Powered by OHC
-        </button>
+        </a>
       </div>
 
       <style dangerouslySetInnerHTML={{__html: `
