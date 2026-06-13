@@ -2177,6 +2177,14 @@ async fn get_pending_approvals(
         &self,
         request: Request<AgentCapabilities>,
     ) -> Result<Response<PublishMessageResponse>, Status> {
+        let md = request.metadata();
+        let spiffe_id = crate::auth::extract_spiffe_id_from_metadata(md)
+            .map_err(|e| Status::unauthenticated(e))?;
+
+        if let Err(e) = crate::auth::grpc::validate_spiffe_id(&spiffe_id) {
+            return Err(e);
+        }
+
         let req = request.into_inner();
         if req.agent_id.is_empty() {
             return Err(Status::invalid_argument("agent_id is required"));
@@ -2211,6 +2219,14 @@ async fn get_pending_approvals(
         &self,
         request: Request<::server_ohc::orchestration::PublishMeshEventRequest>,
     ) -> Result<Response<PublishMessageResponse>, Status> {
+        let md = request.metadata();
+        let spiffe_id = crate::auth::extract_spiffe_id_from_metadata(md)
+            .map_err(|e| Status::unauthenticated(e))?;
+
+        if let Err(e) = crate::auth::grpc::validate_spiffe_id(&spiffe_id) {
+            return Err(e);
+        }
+
         let req = request.into_inner();
         if let Some(event) = req.event {
             self.publish_counter.add(1, &[opentelemetry::KeyValue::new("topic", event.topic.clone())]);
@@ -2252,6 +2268,14 @@ async fn get_pending_approvals(
         &self,
         request: Request<PublishTeammateMeshEventRequest>,
     ) -> Result<Response<PublishMessageResponse>, Status> {
+        let md = request.metadata();
+        let spiffe_id = crate::auth::extract_spiffe_id_from_metadata(md)
+            .map_err(|e| Status::unauthenticated(e))?;
+
+        if let Err(e) = crate::auth::grpc::validate_spiffe_id(&spiffe_id) {
+            return Err(e);
+        }
+
         let req = request.into_inner();
         if req.channel.is_empty() {
             return Err(Status::invalid_argument("channel is required"));
