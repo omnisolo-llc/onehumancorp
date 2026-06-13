@@ -9,7 +9,10 @@ export async function POST(request: NextRequest) {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     'x-tenant-id': tenantId,
-    'x-user-id': userId
+    'x-user-id': userId,
+    'Cache-Control': 'no-cache, no-store, must-revalidate',
+    'Pragma': 'no-cache',
+    'Expires': '0'
   };
   if (authHeader) {
     headers['authorization'] = authHeader;
