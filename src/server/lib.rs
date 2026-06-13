@@ -4742,7 +4742,10 @@ async fn create_ui_bom_item_handler(
             dynamic_workflow_state_dir,
         ),
     );
+    let customer360_service = crate::services::customer360::Customer360Service::new(db.clone());
+
     let app = axum::Router::new()
+        .nest("/api/v1/customer360", customer360_service.router())
         .nest("/oauth", crate::api::oauth::proxy::router())
         .route("/api/settings/sms-verify", axum::routing::post(|axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
             use axum::response::IntoResponse;
