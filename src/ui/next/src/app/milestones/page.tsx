@@ -98,8 +98,8 @@ export default function MilestonesPage() {
                             onClick={() => m.reached && setSelectedMilestone(m.id)}
                             className={`p-4 rounded-2xl transition-all ${
                                 m.reached
-                                ? 'glassmorphism hover:border-indigo-300 hover:shadow-md cursor-pointer'
-                                : 'glassmorphism opacity-60 cursor-not-allowed'
+                                ? 'glass-panel hover:border-indigo-300 hover:shadow-md cursor-pointer'
+                                : 'glass-panel opacity-60 cursor-not-allowed'
                             } ${selectedMilestone === m.id ? 'ring-2 ring-indigo-500 shadow-md' : ''}`}
                         >
                             <div className="flex items-center gap-4">
@@ -171,7 +171,7 @@ export default function MilestonesPage() {
                                         setCopied(true);
                                         setTimeout(() => setCopied(false), 2000);
                                     }}
-                                    className={`w-full py-3 rounded-xl text-sm font-bold transition-all shadow-sm ${copied ? 'bg-green-100 text-green-700' : 'glassmorphism text-gray-800 hover:brightness-95'}`}
+                                    className={`w-full py-3 rounded-xl text-sm font-bold transition-all shadow-sm ${copied ? 'bg-green-100 text-green-700' : 'glass-panel text-gray-800 hover:brightness-95'}`}
                                 >
                                     {copied ? 'Copied Message!' : 'Copy Share Message'}
                                 </button>
@@ -213,7 +213,7 @@ export default function MilestonesPage() {
                         </div>
                     );
                 })() : (
-                    <div className="w-full aspect-square md:aspect-[4/3] rounded-3xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-gray-400 glassmorphism">
+                    <div className="w-full aspect-square md:aspect-[4/3] rounded-3xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-gray-400 glass-panel">
                         <span className="text-4xl mb-4">🏆</span>
                         <p className="font-medium text-sm">Select an unlocked milestone</p>
                     </div>

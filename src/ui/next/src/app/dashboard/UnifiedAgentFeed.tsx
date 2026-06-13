@@ -353,7 +353,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
 
   if (error) {
     return (
-      <div className="w-full mb-6 p-4 glassmorphism rounded-[16px] border border-[#FF3B30]/50 bg-[#FF3B30]/10 text-[#FF3B30] text-center">
+      <div className="w-full mb-6 p-4 glass-panel rounded-[16px] border border-[#FF3B30]/50 bg-[#FF3B30]/10 text-[#FF3B30] text-center">
         {error}
       </div>
     );
@@ -363,12 +363,12 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
     <section className="mb-6 max-w-[375px] w-full mx-auto sm:max-w-none" aria-label="Unified Agent Feed">
       <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2 hidden md:block">Action Center</h2>
       {isOffline && (
-        <div className="mb-4 w-full p-2 glassmorphism rounded-[8px] bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 text-center text-sm font-semibold flex items-center justify-center gap-2">
+        <div className="mb-4 w-full p-2 glass-panel rounded-[8px] bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 text-center text-sm font-semibold flex items-center justify-center gap-2">
           <span>📡</span> You are offline. Actions will sync when online.
         </div>
       )}
       {offlineActionsCount > 0 && (
-        <div className="mb-4 w-full p-2 glassmorphism rounded-[8px] bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 text-center text-sm font-semibold flex items-center justify-center gap-2">
+        <div className="mb-4 w-full p-2 glass-panel rounded-[8px] bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 text-center text-sm font-semibold flex items-center justify-center gap-2">
           <span>🔄</span> Pending Sync ({offlineActionsCount})
         </div>
       )}
@@ -398,7 +398,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
       <div className="flex flex-col gap-4">
         {activeTab === "proposals" && (
           <>
-            <div className="glassmorphism p-5 rounded-[16px] border border-white/40 dark:border-white/10 shadow-sm flex flex-col gap-4">
+            <div className="glass-panel p-5 rounded-[16px] border border-white/40 dark:border-white/10 shadow-sm flex flex-col gap-4">
               <div className="flex flex-col gap-1">
                 <div className="flex justify-between items-start">
                   <span className="text-xs font-bold uppercase tracking-wider text-green-600 bg-green-100 dark:bg-green-900 dark:text-green-300 px-2 py-1 rounded">Action Needed</span>
@@ -410,7 +410,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
               </div>
             </div>
 
-            <div className="glassmorphism p-5 rounded-[16px] border border-white/40 dark:border-white/10 shadow-sm flex flex-col gap-4">
+            <div className="glass-panel p-5 rounded-[16px] border border-white/40 dark:border-white/10 shadow-sm flex flex-col gap-4">
               <div className="flex flex-col gap-1">
                 <div className="flex justify-between items-start">
                   <span className="text-xs font-bold uppercase tracking-wider text-[#0066FF] bg-[#0066FF]/10 dark:bg-[#3388FF]/20 dark:text-[#3388FF] px-2 py-1 rounded">Approval</span>
@@ -440,12 +440,12 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
             </div>
 
             {loading && (
-              <div className="w-full p-4 glassmorphism rounded-[16px] text-center text-gray-500">
+              <div className="w-full p-4 glass-panel rounded-[16px] text-center text-gray-500">
                 Loading Agent Proposals...
               </div>
             )}
             {!loading && items.length === 0 && (
-              <div className="w-full flex flex-col items-center gap-6 p-6 glassmorphism rounded-[16px] border border-white/40 dark:border-white/10 shadow-sm opacity-90 text-center">
+              <div className="w-full flex flex-col items-center gap-6 p-6 glass-panel rounded-[16px] border border-white/40 dark:border-white/10 shadow-sm opacity-90 text-center">
                 <div className="text-3xl mb-2">✨</div>
                 <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7]">All caught up!</h3>
                 <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 break-words">
@@ -459,7 +459,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
             {items.map((approval) => (
               <div
                 key={approval.id}
-                className="glassmorphism p-5 rounded-[16px] border border-white/40 dark:border-white/10 shadow-sm flex flex-col gap-4"
+                className="glass-panel p-5 rounded-[16px] border border-white/40 dark:border-white/10 shadow-sm flex flex-col gap-4"
               >
                 <div className="flex flex-col gap-1">
                   <div className="flex items-center gap-2">
@@ -496,7 +496,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                         </div>
                       )}
                       {(approval.proposed_action || approval.context_payload)?.feature_type === "instagram_dm" && (
-                        <div className="mb-4 p-4 rounded-xl glassmorphism border border-white/40 dark:border-white/10 flex flex-col gap-3" data-testid="instagram-dm-card">
+                        <div className="mb-4 p-4 rounded-xl glass-panel border border-white/40 dark:border-white/10 flex flex-col gap-3" data-testid="instagram-dm-card">
                           <div className="flex items-center gap-2 text-pink-600 font-semibold text-sm">
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
@@ -512,7 +512,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                         </div>
                       )}
                       {(approval.proposed_action || approval.context_payload)?.feature_type === "ambassador_reply" && (
-                        <div className="mb-4 p-4 rounded-xl glassmorphism border border-white/40 dark:border-white/10 flex flex-col gap-3" data-testid="ambassador-reply-card">
+                        <div className="mb-4 p-4 rounded-xl glass-panel border border-white/40 dark:border-white/10 flex flex-col gap-3" data-testid="ambassador-reply-card">
                           <div className="flex items-center gap-2 text-[#0066FF] font-semibold text-sm">
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
@@ -534,7 +534,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                         </div>
                       )}
                       {(approval.proposed_action || approval.context_payload)?.feature_type === "quote_draft" && (
-                        <div className="mb-4 p-4 rounded-xl glassmorphism border border-white/40 dark:border-white/10 flex flex-col gap-3" data-testid="quote-draft-card">
+                        <div className="mb-4 p-4 rounded-xl glass-panel border border-white/40 dark:border-white/10 flex flex-col gap-3" data-testid="quote-draft-card">
                           <div className="flex items-center gap-2 text-[#0066FF] font-semibold text-sm">
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -544,7 +544,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                           <div className="text-xs text-[#0066FF] dark:text-blue-400 font-medium break-words">
                             {(approval.proposed_action || approval.context_payload).customer_inquiry}
                           </div>
-                          <div className="glassmorphism dark:bg-gray-800 p-3 rounded-lg border border-white/40 dark:border-white/10 relative mt-2">
+                          <div className="glass-panel dark:bg-gray-800 p-3 rounded-lg border border-white/40 dark:border-white/10 relative mt-2">
                             <div className="text-[10px] uppercase font-bold text-gray-500 mb-2">AI Proposed Quote</div>
                             <div className="space-y-2">
                               <div className="flex justify-between">
@@ -962,12 +962,12 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
         {activeTab === "activity" && (
           <>
             {activityLoading && (
-              <div className="w-full p-4 glassmorphism rounded-[16px] text-center text-gray-500">
+              <div className="w-full p-4 glass-panel rounded-[16px] text-center text-gray-500">
                 Loading Activity Feed...
               </div>
             )}
             {!activityLoading && activities.length === 0 && (
-              <div className="w-full p-6 glassmorphism rounded-[16px] text-center">
+              <div className="w-full p-6 glass-panel rounded-[16px] text-center">
                 <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 break-words">
                   No recent activity found.
                 </p>
@@ -977,7 +977,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
             {activities.map((activity) => (
               <div
                 key={activity.id}
-                className="glassmorphism p-5 rounded-[16px] border border-white/40 dark:border-white/10 shadow-sm flex flex-col gap-3 opacity-90 min-h-[44px]"
+                className="glass-panel p-5 rounded-[16px] border border-white/40 dark:border-white/10 shadow-sm flex flex-col gap-3 opacity-90 min-h-[44px]"
               >
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold font-outfit uppercase tracking-wider text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-1 rounded-md">

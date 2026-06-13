@@ -82,7 +82,7 @@ export default function EmbedBuilderPage() {
                 <div className="flex flex-col lg:flex-row gap-8">
                     {/* Left Column: Configuration */}
                     <div className="w-full lg:w-1/3 flex flex-col gap-6">
-                        <div className="glassmorphism p-6 rounded-[24px] border border-gray-200 shadow-xl bg-white/80">
+                        <div className="glass-panel p-6 rounded-[24px] border border-gray-200 shadow-xl bg-white/80">
                             <h2 className="text-xl font-bold font-outfit text-gray-900 mb-6">Configuration</h2>
 
                             <div className="mb-6">
@@ -161,7 +161,7 @@ export default function EmbedBuilderPage() {
                         </div>
 
                         {/* Embed Code Snippet Area */}
-                        <div className="glassmorphism p-6 rounded-[24px] border border-gray-200 shadow-xl bg-white/80">
+                        <div className="glass-panel p-6 rounded-[24px] border border-gray-200 shadow-xl bg-white/80">
                             <h2 className="text-xl font-bold font-outfit text-gray-900 mb-4">Embed Code</h2>
                             <div className="relative group">
                                 <pre className="w-full h-40 p-4 bg-gray-900 border border-gray-700 rounded-xl font-mono text-xs text-gray-300 overflow-x-auto overflow-y-auto shadow-inner leading-relaxed">
@@ -190,7 +190,7 @@ export default function EmbedBuilderPage() {
 
                     {/* Right Column: Live Preview */}
                     <div className="w-full lg:w-2/3 flex flex-col">
-                        <div className="flex-1 glassmorphism rounded-[24px] border border-gray-200 shadow-xl bg-white/80 overflow-hidden flex flex-col relative min-h-[600px]">
+                        <div className="flex-1 glass-panel rounded-[24px] border border-gray-200 shadow-xl bg-white/80 overflow-hidden flex flex-col relative min-h-[600px]">
                             <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-400 via-indigo-500 to-purple-500 z-10"></div>
                             <div className="p-4 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center z-10 relative">
                                 <h3 className="text-sm font-bold text-gray-600 uppercase tracking-widest flex items-center gap-2">

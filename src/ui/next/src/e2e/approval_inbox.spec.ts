@@ -16,8 +16,8 @@ test.describe('Unified Agent Feed Mobile Test', () => {
     // Switch tabs
     await page.locator('button', { hasText: 'Activity Feed' }).click();
 
-    // Verify glassmorphism CSS
-    const feedContainer = page.locator('.glassmorphism').first();
+    // Verify glass-panel CSS
+    const feedContainer = page.locator('.glass-panel').first();
     await expect(feedContainer).toBeVisible();
     await expect(feedContainer).toHaveCSS('backdrop-filter', /blur\(30px\)|none/);
 
@@ -72,7 +72,7 @@ test.describe('Unified Agent Feed Mobile Test', () => {
     await page.locator('button', { hasText: 'Activity Feed' }).click();
 
     // Loading or empty state or populated activities
-    const activityFeedItems = page.locator('.glassmorphism', { hasText: /Activity Feed|No recent activity found|Action completed/ });
+    const activityFeedItems = page.locator('.glass-panel', { hasText: /Activity Feed|No recent activity found|Action completed/ });
     await expect(activityFeedItems.first()).toBeVisible();
   });
 });

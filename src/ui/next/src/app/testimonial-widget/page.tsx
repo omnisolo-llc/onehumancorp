@@ -51,7 +51,7 @@ export default function TestimonialWidgetGenerator() {
       <main className="p-6 md:p-8 flex-1 max-w-6xl mx-auto w-full flex flex-col md:flex-row gap-8">
         {/* Controls */}
         <div className="w-full md:w-1/3 flex flex-col gap-6">
-            <div className="p-6 rounded-[24px] shadow-lg glassmorphism border border-white/40">
+            <div className="p-6 rounded-[24px] shadow-lg glass-panel border border-white/40">
                 <h2 className="text-xl font-bold font-outfit text-gray-900 mb-6">Widget Settings</h2>
 
                 <div className="mb-4">
@@ -131,7 +131,7 @@ export default function TestimonialWidgetGenerator() {
                 </button>
             </div>
 
-            <div className="p-6 rounded-[20px] glassmorphism border border-white/40">
+            <div className="p-6 rounded-[20px] glass-panel border border-white/40">
                 <h3 className="text-md font-semibold font-outfit mb-2 flex items-center gap-2">
                     <span className="text-xl">🏆</span> Build Trust
                 </h3>
@@ -235,7 +235,7 @@ export default function TestimonialWidgetGenerator() {
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap');
         .font-inter { font-family: 'Inter', sans-serif; }
         .font-outfit { font-family: 'Outfit', sans-serif; }
-        .glassmorphism {
+        .glass-panel {
           background: rgba(255, 255, 255, 0.65);
           backdrop-filter: blur(30px) saturate(210%);
           -webkit-backdrop-filter: blur(30px) saturate(210%);

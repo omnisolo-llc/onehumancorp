@@ -89,12 +89,12 @@ export function TriageFeed({ tenantId, initialItems }: { tenantId: string, initi
   }
 
   if (loading) {
-    return <div className="mb-6 p-6 rounded-[16px] glassmorphism border border-white/40 dark:border-white/10 text-gray-500">Loading triage items...</div>;
+    return <div className="mb-6 p-6 rounded-[16px] glass-panel border border-white/40 dark:border-white/10 text-gray-500">Loading triage items...</div>;
   }
 
   if (items.length === 0) {
     return (
-      <div className="mb-6 p-6 rounded-[16px] glassmorphism border border-white/40 dark:border-white/10 text-gray-500">
+      <div className="mb-6 p-6 rounded-[16px] glass-panel border border-white/40 dark:border-white/10 text-gray-500">
         <div className="app-empty flex flex-col items-center justify-center py-12">
           <div className="text-4xl mb-4">✨</div>
           <div className="text-lg font-medium text-gray-900 dark:text-white">All caught up!</div>
@@ -110,7 +110,7 @@ export function TriageFeed({ tenantId, initialItems }: { tenantId: string, initi
   return (
     <div className="mb-6">
       {proactiveItems.map((item) => (
-        <div key={item.id} className="mb-6 p-6 rounded-[16px] glassmorphism border border-orange-400/50 dark:border-orange-500/30 bg-orange-50/50 dark:bg-orange-900/10 shadow-lg relative overflow-hidden">
+        <div key={item.id} className="mb-6 p-6 rounded-[16px] glass-panel border border-orange-400/50 dark:border-orange-500/30 bg-orange-50/50 dark:bg-orange-900/10 shadow-lg relative overflow-hidden">
           <div className="absolute top-0 left-0 w-1 h-full bg-orange-500"></div>
           <div className="flex justify-between items-start mb-3">
             <div>
@@ -146,7 +146,7 @@ export function TriageFeed({ tenantId, initialItems }: { tenantId: string, initi
         </div>
       ))}
 
-      <div className="mb-4 p-6 rounded-[16px] glassmorphism border border-white/40 dark:border-white/10">
+      <div className="mb-4 p-6 rounded-[16px] glass-panel border border-white/40 dark:border-white/10">
         <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Action Center</h2>
         <p className="text-gray-600 dark:text-gray-400">Review AI-prepared actions and reply drafts across all channels.</p>
       </div>
@@ -154,7 +154,7 @@ export function TriageFeed({ tenantId, initialItems }: { tenantId: string, initi
       {actionStatus && <div className="mb-4 app-badge good" role="status">{actionStatus}</div>}
 
       <div className="app-grid two" style={{ display: regularItems.length > 0 ? "grid" : "none" }}>
-        <section className="app-panel glassmorphism backdrop-blur-md bg-white/60 dark:bg-black/40 border border-white/20">
+        <section className="app-panel glass-panel backdrop-blur-md bg-white/60 dark:bg-black/40 border border-white/20">
           <div className="app-panel-header">
             <div>
               <div className="app-panel-title">Triage Queue</div>
@@ -181,7 +181,7 @@ export function TriageFeed({ tenantId, initialItems }: { tenantId: string, initi
           </div>
         </section>
 
-        <section className="app-panel glassmorphism backdrop-blur-md bg-white/60 dark:bg-black/40 border border-white/20">
+        <section className="app-panel glass-panel backdrop-blur-md bg-white/60 dark:bg-black/40 border border-white/20">
           <div className="app-panel-header">
             <div className="app-panel-title">Triage Detail</div>
           </div>
@@ -209,11 +209,11 @@ export function TriageFeed({ tenantId, initialItems }: { tenantId: string, initi
               )}
 
               <div className="grid grid-cols-2 gap-3 mb-6">
-                <div className="app-card glassmorphism backdrop-blur-md bg-white/30 dark:bg-black/30 border border-white/20">
+                <div className="app-card glass-panel backdrop-blur-md bg-white/30 dark:bg-black/30 border border-white/20">
                   <div className="app-metric-label">Priority</div>
                   <div className="mt-2"><span className={`app-badge ${badgeTone(selected.context_payload?.priority)}`}>{selected.context_payload?.priority || "Normal"}</span></div>
                 </div>
-                <div className="app-card glassmorphism backdrop-blur-md bg-white/30 dark:bg-black/30 border border-white/20">
+                <div className="app-card glass-panel backdrop-blur-md bg-white/30 dark:bg-black/30 border border-white/20">
                   <div className="app-metric-label">Created</div>
                   <div className="mt-2 text-sm font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">{new Date(selected.created_at || Date.now()).toLocaleString()}</div>
                 </div>

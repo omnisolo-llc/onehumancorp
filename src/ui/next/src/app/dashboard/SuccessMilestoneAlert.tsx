@@ -70,7 +70,7 @@ export function SuccessMilestoneAlert() {
   const shareText = `I just hit a huge business milestone (${milestone.title}) using OHC! Launch your own store today: ${shareTarget}`;
 
   return (
-    <div className="mb-6 glassmorphism p-6 rounded-[24px] border border-indigo-200/50 dark:border-indigo-800/30 shadow-xl bg-gradient-to-br from-indigo-50/80 via-white/80 to-purple-50/80 dark:from-indigo-950/40 dark:via-gray-900/60 dark:to-purple-900/40 relative overflow-hidden group" data-testid="success-milestone-alert">
+    <div className="mb-6 glass-panel p-6 rounded-[24px] border border-indigo-200/50 dark:border-indigo-800/30 shadow-xl bg-gradient-to-br from-indigo-50/80 via-white/80 to-purple-50/80 dark:from-indigo-950/40 dark:via-gray-900/60 dark:to-purple-900/40 relative overflow-hidden group" data-testid="success-milestone-alert">
       {/* Decorative background elements */}
       <div className="absolute -top-10 -right-10 w-32 h-32 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none"></div>
       <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-purple-500/10 rounded-full blur-3xl pointer-events-none"></div>

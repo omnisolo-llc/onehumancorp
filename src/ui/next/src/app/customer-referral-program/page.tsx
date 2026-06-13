@@ -51,7 +51,7 @@ export default function CustomerReferralProgramPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Controls */}
           <div className="space-y-6">
-            <div className="glassmorphism p-6 rounded-[24px] border border-white/40 dark:border-white/10 shadow-xl bg-white/40 backdrop-blur-xl">
+            <div className="glass-panel p-6 rounded-[24px] border border-white/40 dark:border-white/10 shadow-xl bg-white/40 backdrop-blur-xl">
               <h2 className="text-xl font-bold font-outfit text-gray-900 dark:text-white mb-6">Program Rules</h2>
 
               <div className="space-y-5">
@@ -98,7 +98,7 @@ export default function CustomerReferralProgramPage() {
 
           {/* Preview */}
           <div className="space-y-6">
-            <div className="glassmorphism p-6 md:p-8 rounded-[24px] border border-white/40 dark:border-white/10 shadow-xl bg-white/40 backdrop-blur-xl relative overflow-hidden group">
+            <div className="glass-panel p-6 md:p-8 rounded-[24px] border border-white/40 dark:border-white/10 shadow-xl bg-white/40 backdrop-blur-xl relative overflow-hidden group">
               <div className="absolute top-4 right-4 px-3 py-1 bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 text-xs font-bold rounded-full tracking-wide">PREVIEW</div>
 
               <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-6">Give ${giveAmount}, Get ${getAmount}</h3>

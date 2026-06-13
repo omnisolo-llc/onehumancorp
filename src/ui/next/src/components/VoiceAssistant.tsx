@@ -84,7 +84,7 @@ export function VoiceAssistant() {
   return (
     <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] flex flex-col items-center gap-4 w-full max-w-[375px] px-4 pointer-events-none">
       {status !== "idle" && (
-        <div className="w-full p-4 glassmorphism border border-white/40 shadow-2xl rounded-2xl animate-fade-in pointer-events-auto">
+        <div className="w-full p-4 glass-panel border border-white/40 shadow-2xl rounded-2xl animate-fade-in pointer-events-auto">
           <div className="flex items-center gap-3">
             <div className={`w-3 h-3 rounded-full ${status === 'listening' ? 'bg-red-500 animate-pulse' : status === 'processing' ? 'bg-blue-500 animate-bounce' : status === 'error' ? 'bg-red-600' : 'bg-green-500'}`} />
             <span className="text-sm font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7]">
@@ -101,7 +101,7 @@ export function VoiceAssistant() {
         className={`w-16 h-16 rounded-full flex items-center justify-center shadow-2xl transition-all duration-300 pointer-events-auto touch-none ${
           isRecording
             ? "bg-red-500 scale-110 ring-8 ring-red-500/20"
-            : "glassmorphism border border-white/40 hover:scale-105 active:scale-95"
+            : "glass-panel border border-white/40 hover:scale-105 active:scale-95"
         }`}
         onMouseDown={startRecording}
         onMouseUp={stopRecording}
@@ -140,13 +140,13 @@ export function VoiceAssistant() {
       </button>
 
       <style jsx>{`
-        .glassmorphism {
+        .glass-panel {
           background: rgba(255, 255, 255, 0.7);
           backdrop-filter: blur(20px) saturate(180%);
           -webkit-backdrop-filter: blur(20px) saturate(180%);
         }
         @media (prefers-color-scheme: dark) {
-          .glassmorphism {
+          .glass-panel {
             background: rgba(20, 20, 25, 0.7);
           }
         }

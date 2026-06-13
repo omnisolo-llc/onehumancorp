@@ -62,7 +62,7 @@ export default function ReferralWidgetPage() {
 
       <main className="flex flex-col md:flex-row gap-8 max-w-7xl mx-auto">
         <div className="w-full md:w-1/3 flex flex-col gap-6">
-            <div className="p-8 rounded-[24px] glassmorphism border border-white/40 shadow-sm relative z-10">
+            <div className="p-8 rounded-[24px] glass-panel border border-white/40 shadow-sm relative z-10">
                 <h2 className="text-xl font-bold font-outfit mb-6 flex items-center gap-2">
                    <svg className="w-5 h-5 text-indigo-500" fill="currentColor" viewBox="0 0 20 20"><path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z"></path></svg>
                    Configuration
@@ -128,7 +128,7 @@ export default function ReferralWidgetPage() {
                 </button>
             </div>
 
-            <div className="p-6 rounded-[20px] glassmorphism border border-white/40">
+            <div className="p-6 rounded-[20px] glass-panel border border-white/40">
                 <h3 className="text-md font-semibold font-outfit mb-2 flex items-center gap-2">
                     <span className="text-xl">🚀</span> Viral Growth
                 </h3>
@@ -268,7 +268,7 @@ export default function ReferralWidgetPage() {
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap');
         .font-inter { font-family: 'Inter', sans-serif; }
         .font-outfit { font-family: 'Outfit', sans-serif; }
-        .glassmorphism {
+        .glass-panel {
           background: rgba(255, 255, 255, 0.65);
           backdrop-filter: blur(30px) saturate(210%);
           -webkit-backdrop-filter: blur(30px) saturate(210%);

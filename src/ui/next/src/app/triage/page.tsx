@@ -104,13 +104,13 @@ export default function TriagePage() {
     >
       {actionStatus && <div className="mb-4 app-badge good" role="status">{actionStatus}</div>}
 
-      <div className="mb-6 p-6 rounded-[16px] glassmorphism border border-white/40 dark:border-white/10">
+      <div className="mb-6 p-6 rounded-[16px] glass-panel border border-white/40 dark:border-white/10">
         <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Action Center</h2>
         <p className="text-gray-600 dark:text-gray-400">Review AI-prepared actions and reply drafts across all channels.</p>
       </div>
 
       <div className="app-grid two grid grid-cols-1 lg:grid-cols-[1.5fr_0.8fr] gap-6">
-        <section className="app-panel glassmorphism backdrop-blur-md bg-white/60 dark:bg-black/40 border border-white/20">
+        <section className="app-panel glass-panel backdrop-blur-md bg-white/60 dark:bg-black/40 border border-white/20">
           <div className="app-panel-header">
             <div>
               <div className="app-panel-title">Triage Queue</div>
@@ -143,7 +143,7 @@ export default function TriagePage() {
           </div>
         </section>
 
-        <section className="app-panel glassmorphism backdrop-blur-md bg-white/60 dark:bg-black/40 border border-white/20">
+        <section className="app-panel glass-panel backdrop-blur-md bg-white/60 dark:bg-black/40 border border-white/20">
           <div className="app-panel-header">
             <div className="app-panel-title">Triage Detail</div>
           </div>
@@ -171,11 +171,11 @@ export default function TriagePage() {
               )}
 
               <div className="grid grid-cols-2 gap-3 mb-6">
-                <div className="app-card glassmorphism backdrop-blur-md bg-white/30 dark:bg-black/30 border border-white/20">
+                <div className="app-card glass-panel backdrop-blur-md bg-white/30 dark:bg-black/30 border border-white/20">
                   <div className="app-metric-label">Priority</div>
                   <div className="mt-2"><span className={`app-badge ${badgeTone(selected.priority)}`}>{selected.priority || "Normal"}</span></div>
                 </div>
-                <div className="app-card glassmorphism backdrop-blur-md bg-white/30 dark:bg-black/30 border border-white/20">
+                <div className="app-card glass-panel backdrop-blur-md bg-white/30 dark:bg-black/30 border border-white/20">
                   <div className="app-metric-label">Created</div>
                   <div className="mt-2 text-sm font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">{new Date(selected.created_at || Date.now()).toLocaleString()}</div>
                 </div>

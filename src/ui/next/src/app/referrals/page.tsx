@@ -162,7 +162,7 @@ export default function ReferralsPage() {
           </div>
         </div>
 
-        <div className="ohc-growth-card glassmorphism p-6 rounded-[16px] border border-white/40 dark:border-white/10 shadow-lg mb-8">
+        <div className="ohc-growth-card glass-panel p-6 rounded-[16px] border border-white/40 dark:border-white/10 shadow-lg mb-8">
             <h3 className="text-xl font-bold font-outfit text-gray-900 dark:text-white mb-2">Cloud Bridge Invite</h3>
             <p className="text-sm text-gray-600 dark:text-gray-300 mb-6">Generate an invite link to provision a cloud-native tenant and bring a team member on board.</p>
             <div className="flex flex-col sm:flex-row gap-3">

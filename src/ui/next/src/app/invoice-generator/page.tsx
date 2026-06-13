@@ -60,7 +60,7 @@ export default function InvoiceGeneratorPage() {
       </header>
 
       <main className="p-4 md:p-8 flex-1 w-full max-w-4xl mx-auto flex flex-col gap-8">
-        <section className="glassmorphism p-8 md:p-10 border border-white/40 dark:border-white/10 relative" style={{ borderRadius: '16px' }}>
+        <section className="glass-panel p-8 md:p-10 border border-white/40 dark:border-white/10 relative" style={{ borderRadius: '16px' }}>
           <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-6">Create Professional Invoice</h2>
           <p className="text-gray-600 mb-8 text-sm leading-relaxed">
             Generate an invoice with a viral loop built-in. Share the link with your client, and they'll see a professional invoice powered by OHC.
@@ -188,7 +188,7 @@ export default function InvoiceGeneratorPage() {
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap');
         .font-inter { font-family: 'Inter', sans-serif; }
         .font-outfit { font-family: 'Outfit', sans-serif; }
-        .glassmorphism {
+        .glass-panel {
             background: rgba(255, 255, 255, 0.65);
             backdrop-filter: blur(30px) saturate(210%);
         }

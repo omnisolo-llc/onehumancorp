@@ -27,7 +27,7 @@ export function DashboardViralInviteWidget() {
   const shareText = `Start your business on OHC! It's super easy. Use my link to get $50 off your first month: ${referralLink}`;
 
   return (
-    <div className="mb-6 p-6 rounded-[16px] glassmorphism border border-white/40 dark:border-white/10 bg-gradient-to-r from-indigo-50/50 to-purple-50/50 dark:from-indigo-900/20 dark:to-purple-900/20" data-testid="dashboard-viral-invite-widget">
+    <div className="mb-6 p-6 rounded-[16px] glass-panel border border-white/40 dark:border-white/10 bg-gradient-to-r from-indigo-50/50 to-purple-50/50 dark:from-indigo-900/20 dark:to-purple-900/20" data-testid="dashboard-viral-invite-widget">
       <div className="flex flex-col md:flex-row items-center gap-6 justify-between">
         <div className="flex-1 text-center md:text-left">
           <div className="inline-flex items-center gap-2 mb-2 px-3 py-1 rounded-full bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 text-xs font-bold uppercase tracking-wider border border-indigo-200 dark:border-indigo-800">

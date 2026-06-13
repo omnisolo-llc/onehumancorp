@@ -49,7 +49,7 @@ export default function LeadGenCampaignPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 p-4 sm:p-6 lg:p-8 flex items-center justify-center font-inter">
-      <div className="w-full max-w-md mx-auto glassmorphism p-8 rounded-2xl border border-white/50 shadow-xl">
+      <div className="w-full max-w-md mx-auto glass-panel p-8 rounded-2xl border border-white/50 shadow-xl">
         <div className="mb-6">
           <Link href="/dashboard" className="text-sm font-semibold text-blue-600 hover:text-blue-800 transition-colors">
             &larr; Back to Dashboard
