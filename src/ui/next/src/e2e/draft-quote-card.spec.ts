@@ -1,7 +1,8 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../../../../e2e/fixtures';
 
 test.describe('Draft Quote Action Card CUJ', () => {
-  test('Owner sees draft quote suggestion and approves it', async ({ page }) => {
+  test('Owner sees draft quote suggestion and approves it', async ({ page, loginAs, adminUser }) => {
+    await loginAs(page, adminUser);
     // 1. Simulate the SalesAgent drafting a quote
     await page.request.post('/api/agents/approvals/simulate-quote-draft', {
       headers: {

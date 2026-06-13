@@ -93,6 +93,8 @@ async fn enqueue_batch(&self, jobs: Vec<Job>) -> Result<(), String> {
     }
 
     async fn enqueue(&self, job: Job) -> Result<(), String> {
+        let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
+        ::server_common::auth_utils::set_org_context(&mut *tx, &job.tenant_id).await.map_err(|e| e.to_string())?;
         ::server_telemetry::record_queue_length_sync(1, ::server_telemetry::get_deployment_mode());
         let payload_json: serde_json::Value = serde_json::from_str(&job.payload).unwrap_or(serde_json::Value::Null);
 
@@ -127,7 +129,6 @@ async fn enqueue_batch(&self, jobs: Vec<Job>) -> Result<(), String> {
         .map_err(|e| e.to_string())?;
 
         tx.commit().await.map_err(|e| e.to_string())?;
-
         Ok(())
     }
 
@@ -199,7 +200,6 @@ async fn enqueue_batch(&self, jobs: Vec<Job>) -> Result<(), String> {
     async fn complete(&self, job_id: &str) -> Result<(), String> {
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
         ::server_common::auth_utils::set_system_context(&mut *tx).await.map_err(|e| e.to_string())?;
-
         let row = sqlx::query("UPDATE ohc_job_queue SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = $1 RETURNING updated_at, next_retry_at")
             .bind(job_id)
             .fetch_optional(&mut *tx)
@@ -216,6 +216,7 @@ async fn enqueue_batch(&self, jobs: Vec<Job>) -> Result<(), String> {
             let latency = (updated - next_retry_at).num_milliseconds() as f64 / 1000.0;
             ::server_telemetry::record_task_processing_latency(::server_telemetry::get_deployment_mode(), latency);
         }
+        tx.commit().await.map_err(|e| e.to_string())?;
         Ok(())
     }
 

@@ -823,13 +823,13 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                       <button
                         onClick={() => handleDecision(approval.id, true)}
                         className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center"
-                        aria-label="Approve & Send Proposal"
+                        aria-label="Approve & Send"
                         data-testid="approve-quote-draft"
                       >
-                        Approve & Send Proposal
+                        Approve & Send
                       </button>
                       <a
-                        href={`/quoting?id=${approval.id}`}
+                        href={`/quoting?id=${(approval.proposed_action || approval.context_payload)?.quote_id || approval.id}`}
                         className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
                         aria-label="Edit Draft"
                         data-testid="edit-quote-draft"
@@ -898,14 +898,14 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                       <button
                         onClick={() => handleDecision(approval.id, true)}
                         className="w-full min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center mb-3"
-                        aria-label="Approve & Send Proposal"
+                        aria-label="Approve & Send"
                         data-testid="approve-send-proposal"
                       >
-                        Approve & Send Proposal
+                        Approve & Send
                       </button>
                       <div className="flex flex-col sm:flex-row gap-3 w-full">
                         <a
-                          href={`/quoting?id=${approval.id}`}
+                          href={`/quoting?id=${(approval.proposed_action || approval.context_payload)?.quote_id || approval.id}`}
                           className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
                           aria-label="Edit Draft"
                           data-testid="edit-proposal"
