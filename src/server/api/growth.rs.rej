@@ -1,0 +1,67 @@
+--- src/server/api/growth.rs
++++ src/server/api/growth.rs
+@@ -342,35 +342,48 @@
+     let tenant_id_str = auth_info.org_id;
+
+     // Calculate aggregated time savings based on completed tasks
+-    let f1 = async {
++    let p1 = state.pool.clone();
++    let p2 = state.pool.clone();
++    let p3 = state.pool.clone();
++    let p4 = state.pool.clone();
++    let u1 = parsed_uuid.clone();
++    let u2 = parsed_uuid.clone();
++    let u3 = parsed_uuid.clone();
++    let tenant_id_str_2 = tenant_id_str.clone();
++
++    let f1 = tokio::spawn(async move {
+         sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM tasks WHERE (tenant_id = $1 OR organization_id = $1) AND title ILIKE '%inquiry%' AND status = 'COMPLETED'")
+-            .bind(parsed_uuid)
+-            .fetch_optional(&state.pool)
++            .bind(u1)
++            .fetch_optional(&p1)
+             .await
+-    };
++    });
+
+-    let f2 = async {
++    let f2 = tokio::spawn(async move {
+         sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM tasks WHERE (tenant_id = $1 OR organization_id = $1) AND title ILIKE '%appointment%' AND status = 'COMPLETED'")
+-            .bind(parsed_uuid)
+-            .fetch_optional(&state.pool)
++            .bind(u2)
++            .fetch_optional(&p2)
+             .await
+-    };
++    });
+
+-    let f3 = async {
++    let f3 = tokio::spawn(async move {
+         sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM tasks WHERE (tenant_id = $1 OR organization_id = $1) AND title ILIKE '%cart%' AND status = 'COMPLETED'")
+-            .bind(parsed_uuid)
+-            .fetch_optional(&state.pool)
++            .bind(u3)
++            .fetch_optional(&p3)
+             .await
+-    };
++    });
+
+-    let f4 = async {
++    let f4 = tokio::spawn(async move {
+         sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM inbox_messages WHERE tenant_id = $1 AND status = 'auto_replied'")
+-            .bind(&tenant_id_str)
+-            .fetch_optional(&state.pool)
++            .bind(&tenant_id_str_2)
++            .fetch_optional(&p4)
+             .await
+-    };
++    });
+
+     let (res1, res2, res3, res4) = tokio::join!(f1, f2, f3, f4);
++    let res1 = res1.unwrap_or(Ok(None));
++    let res2 = res2.unwrap_or(Ok(None));
++    let res3 = res3.unwrap_or(Ok(None));
++    let res4 = res4.unwrap_or(Ok(None));
+     let inquiries_handled = res1.unwrap_or(Some(0)).unwrap_or(0);
+     let appointments_scheduled = res2.unwrap_or(Some(0)).unwrap_or(0);
+     let carts_recovered = res3.unwrap_or(Some(0)).unwrap_or(0);

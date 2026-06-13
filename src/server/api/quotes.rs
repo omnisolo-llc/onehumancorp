@@ -1,14 +1,15 @@
 use axum::{
-    extract::{Path, State},
+    extract::{Extension, Path, State},
     http::StatusCode,
     response::IntoResponse,
     routing::{get, post},
     Json, Router,
 };
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use uuid::Uuid;
 
+use ::server_common::Claims;
 use crate::domain::repository::models::{Quote, QuoteLineItem};
 
 pub fn router<S>() -> Router<S>

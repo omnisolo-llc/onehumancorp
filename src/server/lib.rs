@@ -70,6 +70,7 @@ mod triage_cache_tests {
         let cache = UI_TRIAGE_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
         // Note: we can't do full integration test easily without db setup, but we verify get/set compiles and runs
         let _ = cache.get("test_key").await;
+        let _ = cache.get_with_swr("test_key").await;
     }
 }
 
@@ -2966,7 +2967,21 @@ pub async fn list_ui_triage_handler(
 
     let cache_key = format!("ui_triage:{}:mobile:{}", tenant_id, mobile_optimized);
     let cache = UI_TRIAGE_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
-    if let Some(cached) = cache.get(&cache_key).await {
+    if let Some((cached, is_stale)) = cache.get_with_swr(&cache_key).await {
+        if !is_stale {
+            return (axum::http::StatusCode::OK, axum::Json(cached)).into_response();
+        }
+
+        let db_bg = db.clone();
+        let t_bg = tenant_id.clone();
+        let cache_key_bg = cache_key.clone();
+        tokio::spawn(async move {
+            if let Ok(items) = load_ui_triage_from_db(&db_bg, &t_bg, mobile_optimized).await {
+                if let Some(c) = UI_TRIAGE_CACHE.get() {
+                    c.set(&cache_key_bg, items, std::time::Duration::from_secs(10)).await;
+                }
+            }
+        });
         return (axum::http::StatusCode::OK, axum::Json(cached)).into_response();
     }
 
@@ -3296,20 +3311,12 @@ async fn ui_dashboard_analytics_briefing_handler(
     use axum::response::IntoResponse;
     let tenant_id = ui_tenant_id(&query);
 
-    let t1 = tenant_id.clone();
-    let t2 = tenant_id.clone();
-    let db1 = db.clone();
-    let db2 = db.clone();
-
     let (metrics_res, inbox_res) = tokio::join!(
-        tokio::spawn(async move { load_ui_dashboard_metrics(&db1, &t1).await }),
-        tokio::spawn(async move { load_ui_inbox_from_db(&db2, &t2, false).await })
+        load_ui_dashboard_metrics(&db, &tenant_id),
+        load_ui_inbox_from_db(&db, &tenant_id, false)
     );
 
-    let metrics_res = metrics_res.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound));
-    let inbox_res = inbox_res.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound));
-
-    let metrics = metrics_res.unwrap_or_else(|_| UiDashboardMetrics {
+    let metrics = metrics_res.unwrap_or(UiDashboardMetrics {
         active_customers: 0,
         pending_orders: 0,
         total_sales: 0.0,
