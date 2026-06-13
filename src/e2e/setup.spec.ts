@@ -115,3 +115,93 @@ test.describe('OHC Setup Wizard Flow', () => {
     expect(inputbox?.height).toBeGreaterThanOrEqual(44);
   });
 });
+
+  test('should generate storefront perfectly using instant text area', async ({ page }) => {
+      await page.route('**/api/tooltips', async route => {
+          await route.fulfill({ status: 200, body: JSON.stringify({}) });
+      });
+      await page.goto('http://mock/setup.html');
+      await page.locator('button', { hasText: 'Skip Setup (30s)' }).click();
+
+      await expect(page.locator('#step-instant')).toBeVisible();
+
+      await page.locator('#instant-bio').fill('A bike repair shop');
+
+      await page.route('**/api/onboarding/intake', async route => {
+         await route.fulfill({ status: 200, body: JSON.stringify({
+             business_name: 'Fast Bikes',
+             business_type: 'Repair',
+         })});
+      });
+
+      await page.route('**/api/onboarding/start', async route => {
+         await route.fulfill({ status: 200, body: JSON.stringify({ organization_id: 'bike-org' }) });
+      });
+
+      await page.route('**/success.html', async route => {
+          await route.fulfill({ status: 200, body: 'Success' });
+      });
+
+      await page.locator('#generate-storefront-btn').click();
+      await page.waitForURL('**/success.html');
+      await expect(page.url()).toContain('success.html');
+  });
+
+  test('should handle chat conversations accurately', async ({ page }) => {
+      await page.route('**/api/tooltips', async route => {
+          await route.fulfill({ status: 200, body: JSON.stringify({}) });
+      });
+      await page.goto('http://mock/setup.html');
+      await page.locator('button', { hasText: 'Talk to Assistant' }).click();
+
+      await expect(page.locator('#step-chat')).toBeVisible();
+
+      await page.route('**/api/onboarding/chat', async route => {
+         await route.fulfill({ status: 200, body: JSON.stringify({
+             reply: 'Got it. Here is your store.',
+             is_complete: true,
+             intake_data: { business_name: 'Chat Store', categories: ['physical'] }
+         })});
+      });
+
+      await page.route('**/api/onboarding/start', async route => {
+         await route.fulfill({ status: 200, body: JSON.stringify({ organization_id: 'chat-org' }) });
+      });
+
+      await page.route('**/success.html', async route => {
+          await route.fulfill({ status: 200, body: 'Success' });
+      });
+
+      await page.locator('#chat-input').fill('Hello');
+      await page.locator('#chat-send-btn').click();
+
+      await page.waitForURL('**/success.html');
+      await expect(page.url()).toContain('success.html');
+  });
+
+  test('should fail gracefully if backend returns error during start_onboarding', async ({ page }) => {
+    await page.route('**/api/tooltips', async route => {
+        await route.fulfill({ status: 200, body: JSON.stringify({}) });
+    });
+    await page.goto('http://mock/setup.html');
+
+    // Jump straight to template to test finish
+    await page.evaluate(() => {
+       window.goToStep('step-template');
+    });
+
+    await page.locator('#template-selection').selectOption('Modern');
+
+    await page.route('**/api/onboarding/start', async route => {
+      await route.fulfill({
+        status: 500,
+        contentType: 'application/json',
+        body: JSON.stringify({ error: 'Failed to start onboarding.' })
+      });
+    });
+
+    await page.locator('#finish-btn').click();
+
+    // Expect error handling or button reset
+    await expect(page.locator('#finish-btn')).toHaveText('Finish Setup', { timeout: 3000 });
+  });

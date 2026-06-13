@@ -33,7 +33,6 @@
         backdrop-filter: blur(30px) saturate(210%);
         -webkit-backdrop-filter: blur(30px) saturate(210%);
         border: 1px solid rgba(255, 255, 255, 0.4);
-        border-radius: 16px;
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
       }
       h1 {
@@ -65,9 +64,6 @@
         border-radius: 8px;
       }
       input.glassmorphism {
-        border-radius: 8px;
-      }
-      select, textarea, input {
         border-radius: 8px;
       }
       select, textarea, input {
@@ -156,7 +152,6 @@
           backdrop-filter: blur(30px) saturate(210%);
           -webkit-backdrop-filter: blur(30px) saturate(210%);
           border: 1px solid rgba(255, 255, 255, 0.1);
-          border-radius: 16px;
           box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
         }
         h1 {
@@ -170,7 +165,10 @@
           border: 1px solid rgba(255, 255, 255, 0.2);
           color: #F5F5F7;
         }
-        input:focus {
+        select, textarea, input {
+        border-radius: 8px;
+      }
+      input:focus {
           border-color: #0066FF;
           background: rgba(255, 255, 255, 0.15);
         }
@@ -1144,6 +1142,60 @@
       const chatMessagesEl = document.getElementById('chat-messages');
       let chatHistory = [];
 
+
+      async function submitOnboarding(req, successUrl) {
+          const tenantIdStr = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront';
+          const userIdStr = localStorage.getItem('user_id') || 'test-user';
+          const backendUrl = (window.location.origin.includes('localhost') || window.location.protocol === 'file:') ? 'http://127.0.0.1:18789' : '';
+
+          if (window.__TAURI__ && window.__TAURI__.core) {
+              await window.__TAURI__.core.invoke("start_onboarding", { req });
+              localStorage.setItem('has_onboarded', 'true');
+              window.location.href = successUrl;
+              return;
+          }
+
+          const res = await fetch(`${backendUrl}/api/onboarding/start`, {
+              method: 'POST',
+              headers: {
+                  'Content-Type': 'application/json',
+                  'X-Tenant-ID': tenantIdStr,
+                  'X-User-ID': userIdStr
+              },
+              body: JSON.stringify({
+                  business_type: req.businessType || req.business_type,
+                  company_name: req.companyName || req.company_name,
+                  company_description: req.companyDescription || req.company_description,
+                  selling_categories: req.sellingCategories || req.selling_categories,
+                  payment_pref: req.paymentPref || req.payment_pref,
+                  admin_email: req.adminEmail || req.admin_email,
+                  website_template: req.websiteTemplate || req.website_template,
+                  first_product_name: req.firstProductName || req.first_product_name,
+                  first_product_price: req.firstProductPrice || req.first_product_price,
+                  domain_choice: req.domainChoice || req.domain_choice,
+                  admin_name: req.adminName || req.admin_name,
+                  admin_password: req.adminPassword || req.admin_password,
+                  price_type: req.priceType || req.price_type,
+                  location: req.location,
+                  target_audience: req.targetAudience || req.target_audience,
+                  initial_products: req.initialProducts || req.initial_products || []
+              })
+          });
+
+          if (!res.ok) {
+              const errData = await res.json().catch(()=>({}));
+              throw new Error(errData.error || errData.message || 'Failed to start onboarding');
+          }
+
+          const startData = await res.json();
+          if (startData.organization_id) {
+              localStorage.setItem('tenant_id', startData.organization_id);
+              localStorage.setItem('tenant', startData.organization_id);
+          }
+          localStorage.setItem('has_onboarded', 'true');
+          window.location.href = successUrl;
+      }
+
       async function sendChatMessage() {
           const text = chatInputEl.value.trim();
           if (!text) return;
@@ -1192,48 +1244,7 @@
                       initialProducts: intakeData.initial_products || []
                   };
 
-                  if (window.__TAURI__ && window.__TAURI__.core) {
-                      await window.__TAURI__.core.invoke("start_onboarding", { req });
-                      localStorage.setItem('has_onboarded', 'true');
-                      window.location.href = "success.html";
-                      return;
-                  }
-
-                  const tenantIdStr = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront';
-                  const userIdStr = localStorage.getItem('user_id') || 'test-user';
-
-                  const startRes = await fetch(`${backendUrl}/api/onboarding/start`, {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({
-                          business_type: req.businessType,
-                          company_name: req.companyName,
-                          company_description: req.companyDescription,
-                          selling_categories: req.sellingCategories,
-                          payment_pref: req.paymentPref,
-                          admin_email: req.adminEmail,
-                          website_template: req.websiteTemplate,
-                          first_product_name: req.firstProductName,
-                          first_product_price: req.firstProductPrice,
-                          domain_choice: req.domainChoice,
-                          admin_name: req.adminName,
-                          admin_password: req.adminPassword,
-                          price_type: req.priceType,
-                          location: req.location,
-                          target_audience: req.targetAudience,
-                          initial_products: req.initialProducts
-                      })
-                  });
-
-                  if (startRes.ok) {
-                      const startData = await startRes.json();
-                      if (startData.organization_id) {
-                          localStorage.setItem('tenant_id', startData.organization_id);
-                          localStorage.setItem('tenant', startData.organization_id);
-                      }
-                      localStorage.setItem('has_onboarded', 'true');
-                      window.location.href = "success.html";
-                  }
+                  await submitOnboarding(req, "success.html");
               }
           } catch (e) {
               chatMessagesEl.innerHTML += `<div style="margin-bottom: 10px; color: #FF3B30;"><strong>Error:</strong> Failed to connect.</div>`;
@@ -1307,51 +1318,7 @@
                       initialProducts: intakeData.initial_products || []
                   };
 
-                  if (window.__TAURI__ && window.__TAURI__.core) {
-                      await window.__TAURI__.core.invoke("start_onboarding", { req });
-                      localStorage.setItem('has_onboarded', 'true');
-                      window.location.href = "success.html";
-                  } else {
-                      const startRes = await fetch(`${backendUrl}/api/onboarding/start`, {
-                          method: 'POST',
-                          headers: {
-                              'Content-Type': 'application/json',
-                              'X-Tenant-ID': tenantIdStr,
-                              'X-User-ID': userIdStr
-                          },
-                          body: JSON.stringify({
-                              business_type: req.businessType,
-                              company_name: req.companyName,
-                              company_description: req.companyDescription,
-                              selling_categories: req.sellingCategories,
-                              payment_pref: req.paymentPref,
-                              admin_email: req.adminEmail,
-                              website_template: req.websiteTemplate,
-                              first_product_name: req.firstProductName,
-                              first_product_price: req.firstProductPrice,
-                              domain_choice: req.domainChoice,
-                              admin_name: req.adminName,
-                              admin_password: req.adminPassword,
-                              price_type: req.priceType,
-                              location: req.location,
-                              target_audience: req.targetAudience,
-                              initial_products: req.initialProducts
-                          })
-                      });
-
-                      if (!startRes.ok) {
-                          const errData = await startRes.json().catch(()=>({}));
-                          throw new Error(errData.error || errData.message || 'Failed to start onboarding');
-                      }
-
-                      const startData = await startRes.json();
-                      if (startData.organization_id) {
-                          localStorage.setItem('tenant_id', startData.organization_id);
-                          localStorage.setItem('tenant', startData.organization_id);
-                      }
-                      localStorage.setItem('has_onboarded', 'true');
-                      window.location.href = "success.html";
-                  }
+                  await submitOnboarding(req, "success.html");
 
               } catch (err) {
                   console.error(err);
@@ -1387,39 +1354,14 @@
                    target_audience: "General"
                };
 
-               if (window.__TAURI__ && window.__TAURI__.core) {
-                 finishBtn.disabled = true;
-                 finishBtn.innerHTML = '<div class="spinner"></div>Saving...';
-                 window.__TAURI__.core.invoke("start_onboarding", { req }).then(() => {
-                   window.location.href = "success.html";
-                 }).catch((err) => {
+               finishBtn.disabled = true;
+               finishBtn.innerHTML = '<div class="spinner"></div>Saving...';
+               localStorage.setItem('onboardingState', JSON.stringify(state));
+               submitOnboarding(req, "success.html").catch((err) => {
                    console.error(err);
                    finishBtn.disabled = false;
                    finishBtn.innerText = "Finish Setup";
-                 });
-               } else {
-                 finishBtn.disabled = true;
-                 finishBtn.innerHTML = '<div class="spinner"></div>Saving...';
-                 const backendUrl = (window.location.origin.includes('localhost') || window.location.protocol === 'file:') ? 'http://127.0.0.1:18789' : '';
-                 fetch(`${backendUrl}/api/onboarding/start`, {
-                     method: 'POST',
-                     headers: {
-                         'Content-Type': 'application/json'
-                     },
-                     body: JSON.stringify(req)
-                 }).then(response => {
-                     if (response.ok) {
-                         localStorage.setItem('onboardingState', JSON.stringify(state));
-                         window.location.href = "success.html";
-                     } else {
-                         throw new Error('Failed to start onboarding');
-                     }
-                 }).catch((err) => {
-                     console.error(err);
-                     finishBtn.disabled = false;
-                     finishBtn.innerText = "Finish Setup";
-                 });
-               }
+               });
            }
         });
       }
@@ -1695,7 +1637,10 @@ document.addEventListener('DOMContentLoaded', () => {
             background: rgba(255, 255, 255, 0.8);
             font-size: 14px;
         }
-        #ohc-help-input:focus { border-color: #0066FF; }
+        #ohc-help-select, textarea, input {
+        border-radius: 8px;
+      }
+      input:focus { border-color: #0066FF; }
         #ohc-help-send {
             background: #0066FF;
             color: white;
@@ -2184,7 +2129,10 @@ document.addEventListener('DOMContentLoaded', () => {
             outline: none;
             background: rgba(255, 255, 255, 0.8);
         }
-        #ohc-help-chat-input:focus {
+        #ohc-help-chat-select, textarea, input {
+        border-radius: 8px;
+      }
+      input:focus {
             border-color: #0066FF;
         }
         #ohc-help-chat-send {
