@@ -271,6 +271,7 @@ where
         .route("/team-invites/accept", post(handle_team_invite_accept))
         .route("/cloud-bridge/invite", post(handle_cloud_bridge_invite))
         .route("/embed/widget", get(handle_embed_widget))
+        .route("/work-intake/embed", get(handle_work_intake_embed))
         .route("/referrals/generate", post(handle_referral_generate))
         .route("/onboarding-metrics", get(handle_onboarding_metrics))
         .route("/discount_share/generate", post(handle_generate_discount_share))
@@ -2412,6 +2413,286 @@ mod cloud_bridge_tests {
         let recent_events = state.hub.recent_events(10);
         assert!(recent_events.iter().any(|e| e.r#type == "growth.cloud_bridge_invite_created"));
     }
+}
+
+#[derive(Deserialize, Debug)]
+pub struct WorkIntakeEmbedQuery {
+    pub tenant: Option<String>,
+    pub theme: Option<String>,
+    pub title: Option<String>,
+    pub branding: Option<String>,
+}
+
+pub async fn handle_work_intake_embed(
+    axum::extract::Extension(_state): axum::extract::Extension<GrowthState>,
+    axum::extract::Query(query): axum::extract::Query<WorkIntakeEmbedQuery>
+) -> axum::response::Html<String> {
+    let tenant = query.tenant.unwrap_or_else(|| "demo".to_string());
+    let theme = query.theme.unwrap_or_else(|| "light".to_string());
+    let title = query.title.unwrap_or_else(|| "Work Request".to_string());
+    let raw_branding = query.branding.as_deref() != Some("false");
+
+    let is_dark = theme == "dark";
+    let bg = if is_dark { "#1a1a1a" } else { "#ffffff" };
+    let text = if is_dark { "#f5f5f5" } else { "#111827" };
+    let border = if is_dark { "#333333" } else { "#e5e7eb" };
+    let input_bg = if is_dark { "#2d2d2d" } else { "#f9fafb" };
+    let button_bg = if is_dark { "#ffffff" } else { "#111827" };
+    let button_text = if is_dark { "#000000" } else { "#ffffff" };
+    let muted = if is_dark { "#9ca3af" } else { "#6b7280" };
+
+    let escaped_tenant = escape_html(&tenant);
+    let escaped_title = escape_html(&title);
+    let encoded_tenant = escaped_tenant.replace(" ", "%20").replace("<", "%3C").replace(">", "%3E").replace("\"", "%22").replace("'", "%27");
+
+    let branding_html = if raw_branding {
+        format!(r#"
+        <div class="footer">
+            ⚡ Powered by OHC
+            <!-- Hidden link for crawler attribution and referral loop -->
+            <span style="display:none;">
+               <a href="/api/v1/growth/referrals/click?target=/onboarding&ref={}" target="_blank" rel="noopener noreferrer">OHC</a>
+            </span>
+        </div>
+        "#, encoded_tenant)
+    } else {
+        "".to_string()
+    };
+
+    let html = format!(r#"
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{escaped_title}</title>
+    <style>
+        * {{ box-sizing: border-box; }}
+        body {{
+            margin: 0;
+            padding: 20px;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: {bg};
+            color: {text};
+            -webkit-font-smoothing: antialiased;
+        }}
+
+        .container {{
+            max-width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }}
+
+        h2 {{
+            margin: 0 0 16px 0;
+            font-size: 1.25rem;
+            font-weight: 600;
+        }}
+
+        .form-group {{
+            margin-bottom: 16px;
+        }}
+
+        label {{
+            display: block;
+            margin-bottom: 6px;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }}
+
+        input, textarea {{
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid {border};
+            border-radius: 8px;
+            background-color: {input_bg};
+            color: {text};
+            font-family: inherit;
+            font-size: 0.875rem;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }}
+
+        input:focus, textarea:focus {{
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }}
+
+        textarea {{
+            resize: vertical;
+            min-height: 80px;
+        }}
+
+        button {{
+            width: 100%;
+            padding: 12px;
+            background-color: {button_bg};
+            color: {button_text};
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: opacity 0.2s;
+            margin-top: 8px;
+        }}
+
+        button:hover {{
+            opacity: 0.9;
+        }}
+
+        button:active {{
+            transform: scale(0.98);
+        }}
+
+        /* Loading Spinner */
+        .spinner {{
+            display: none;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: currentColor;
+            animation: spin 1s ease-in-out infinite;
+            margin: 0 auto;
+        }}
+
+        @keyframes spin {{
+            to {{ transform: rotate(360deg); }}
+        }}
+
+        button.loading span {{ display: none; }}
+        button.loading .spinner {{ display: block; }}
+
+        /* Success State */
+        .success-state {{
+            display: none;
+            text-align: center;
+            padding: 32px 0;
+            animation: fadeIn 0.4s ease;
+        }}
+
+        .success-icon {{
+            font-size: 48px;
+            margin-bottom: 16px;
+        }}
+
+        @keyframes fadeIn {{
+            from {{ opacity: 0; transform: translateY(10px); }}
+            to {{ opacity: 1; transform: translateY(0); }}
+        }}
+
+        .footer {{
+            margin-top: auto;
+            padding-top: 20px;
+            text-align: center;
+            font-size: 0.75rem;
+            color: {muted};
+        }}
+
+        .footer a {{
+            color: inherit;
+            text-decoration: none;
+            font-weight: 600;
+        }}
+
+        .footer a:hover {{
+            text-decoration: underline;
+        }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="form-container">
+            <h2>{escaped_title}</h2>
+            <form id="intake-form">
+                <div class="form-group">
+                    <label for="name">Name</label>
+                    <input type="text" id="name" name="name" required placeholder="Jane Doe">
+                </div>
+
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <input type="email" id="email" name="email" required placeholder="jane@example.com">
+                </div>
+
+                <div class="form-group">
+                    <label for="details">What do you need help with?</label>
+                    <textarea id="details" name="details" required placeholder="Please describe your project or request..."></textarea>
+                </div>
+
+                <button type="submit" id="submit-btn">
+                    <span>Send Request</span>
+                    <div class="spinner"></div>
+                </button>
+            </form>
+        </div>
+
+        <div id="success-container" class="success-state">
+            <div class="success-icon">✨</div>
+            <h2 style="margin-bottom: 8px;">Request Received</h2>
+            <p style="color: {muted}; font-size: 0.875rem;">We'll get back to you shortly.</p>
+            <button id="reset-btn" style="background-color: transparent; color: {text}; border: 1px solid {border}; margin-top: 24px;">
+                Send another request
+            </button>
+        </div>
+
+        {branding_html}
+    </div>
+
+    <script>
+        document.getElementById('intake-form').addEventListener('submit', async (e) => {{
+            e.preventDefault();
+
+            const btn = document.getElementById('submit-btn');
+            const formContainer = document.getElementById('form-container');
+            const successContainer = document.getElementById('success-container');
+
+            // Loading state
+            btn.classList.add('loading');
+            btn.disabled = true;
+
+            const formData = new FormData(e.target);
+            const encodedDetails = encodeURIComponent(formData.get('details'));
+            const encodedEmail = encodeURIComponent(formData.get('email'));
+            const encodedName = encodeURIComponent(formData.get('name'));
+
+            try {{
+                const res = await fetch('/api/v1/work-intake/submit?tenant={encoded_tenant}', {{
+                    method: 'POST',
+                    headers: {{
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    }},
+                    body: `name=${{encodedName}}&email=${{encodedEmail}}&details=${{encodedDetails}}`
+                }});
+
+                if (res.ok) {{
+                    formContainer.style.display = 'none';
+                    successContainer.style.display = 'block';
+                }} else {{
+                    alert('There was an error submitting your request. Please try again later.');
+                }}
+            }} catch (error) {{
+                console.error('Error submitting form:', error);
+                alert('There was an error submitting your request. Please try again later.');
+            }} finally {{
+                btn.classList.remove('loading');
+                btn.disabled = false;
+            }}
+        }});
+
+        document.getElementById('reset-btn').addEventListener('click', () => {{
+            document.getElementById('intake-form').reset();
+            document.getElementById('success-container').style.display = 'none';
+            document.getElementById('form-container').style.display = 'block';
+        }});
+    </script>
+</body>
+</html>
+    "#);
+
+    axum::response::Html(html)
 }
 
 #[derive(Deserialize, Debug)]
