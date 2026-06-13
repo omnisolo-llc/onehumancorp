@@ -789,7 +789,7 @@ impl DB {
                         id TEXT PRIMARY KEY,
                         owner_id TEXT,
                         name TEXT,
-                        tier TEXT,
+                        plan_tier TEXT DEFAULT 'free',
                         subdomain TEXT,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
