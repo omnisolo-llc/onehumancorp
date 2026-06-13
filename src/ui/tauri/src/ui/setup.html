@@ -478,7 +478,7 @@
         <h1>Tell us about your business</h1>
         <p>Our AI will handle the rest in 30 seconds.</p>
 
-        <textarea id="instant-bio" class="glassmorphism" placeholder="e.g. I run a local bakery that sells custom vegan cakes..." rows="6" style="resize: none;"></textarea>
+        <textarea id="instant-bio" class="glassmorphism min-h-[44px]" placeholder="e.g. I run a local bakery that sells custom vegan cakes..." rows="6" style="resize: none;"></textarea>
         <div id="instant-error" class="error-msg" style="margin-bottom: 20px;"></div>
 
         <div class="btn-group" style="margin-top: 24px;">
@@ -507,7 +507,7 @@
         </div>
 
         <div style="display: flex; gap: 10px;">
-            <input type="text" id="chat-input" class="glassmorphism" placeholder="Type a message..." style="margin-bottom: 0; flex-grow: 1; min-height: 44px; border-radius: 8px;">
+            <input type="text" id="chat-input" class="glassmorphism min-h-[44px]" placeholder="Type a message..." style="margin-bottom: 0; flex-grow: 1; min-height: 44px; border-radius: 8px;">
             <button id="chat-send-btn" style="width: auto; min-height: 44px; min-width: 44px; border-radius: 8px;">Send</button>
         </div>
       </div>
@@ -576,7 +576,7 @@
       <div class="step" id="step-categories">
         <h1>What's your category?</h1>
         <p>e.g. Baking, Plumbing, Design</p>
-        <select id="business-categories" class="glassmorphism">
+        <select id="business-categories" class="glassmorphism min-h-[44px]">
           <option value="" disabled selected>Select a category...</option>
         </select>
         <div id="categories-error" class="error-msg">Please enter a category.</div>
@@ -591,10 +591,10 @@
       <div class="step" id="step-name">
         <h1>What's the name of your business?</h1>
         <p>We'll use this to set up your workspace.</p>
-        <input type="text" id="business-name" class="glassmorphism" placeholder="e.g. Maya's Bakery" autocomplete="organization" />
+        <input type="text" id="business-name" class="glassmorphism min-h-[44px]" placeholder="e.g. Maya's Bakery" autocomplete="organization" />
         <div id="name-error" class="error-msg">Business Name must be at least 3 characters.</div>
 
-        <input type="text" id="business-tagline" class="glassmorphism" placeholder="Tagline (optional)" />
+        <input type="text" id="business-tagline" class="glassmorphism min-h-[44px]" placeholder="Tagline (optional)" />
 
         <div class="btn-group">
           <button class="next-step-btn" data-next="step-assistant">Next</button>
@@ -612,10 +612,10 @@
             "Hi! I'll be your partner in growing this business. What should I call myself, and how should we talk?"
         </div>
 
-        <input type="text" id="assistant-name" class="glassmorphism" placeholder="e.g. Jarvis" />
+        <input type="text" id="assistant-name" class="glassmorphism min-h-[44px]" placeholder="e.g. Jarvis" />
         <div id="assistant-name-error" class="error-msg">Please enter a name for your assistant.</div>
 
-        <select id="assistant-tone" class="glassmorphism">
+        <select id="assistant-tone" class="glassmorphism min-h-[44px]">
           <option value="" disabled selected>Select a tone</option>
           <option value="Professional">Professional</option>
           <option value="Friendly">Friendly</option>
@@ -636,10 +636,10 @@
         <h1>Admin Credentials</h1>
         <p>Set up your login details.</p>
 
-        <input type="email" id="admin-email" class="glassmorphism" placeholder="admin@mybusiness.com" inputmode="email" autocomplete="email" />
+        <input type="email" id="admin-email" class="glassmorphism min-h-[44px]" placeholder="admin@mybusiness.com" inputmode="email" autocomplete="email" />
         <div id="email-error" class="error-msg">Please enter a valid email address.</div>
 
-        <input type="password" id="admin-password" class="glassmorphism" placeholder="Password (min 8 chars)" autocomplete="new-password" />
+        <input type="password" id="admin-password" class="glassmorphism min-h-[44px]" placeholder="Password (min 8 chars)" autocomplete="new-password" />
         <div id="password-error" class="error-msg">Password must be at least 8 characters.</div>
 
         <div class="btn-group">
@@ -653,7 +653,7 @@
       <div class="step" id="step-offer">
         <h1>Your First Offer</h1>
         <p>What is the main thing you sell?</p>
-        <input type="text" id="first-offer" class="glassmorphism" placeholder="e.g. Custom Birthday Cake" />
+        <input type="text" id="first-offer" class="glassmorphism min-h-[44px]" placeholder="e.g. Custom Birthday Cake" />
         <div id="offer-error" class="error-msg">Please enter an offer.</div>
         <div class="btn-group">
           <button class="next-step-btn" data-next="step-template">Next</button>
@@ -666,7 +666,7 @@
       <div class="step" id="step-template">
         <h1>Template Selection</h1>
         <p>Choose a look for your workspace</p>
-        <select id="template-selection" class="glassmorphism">
+        <select id="template-selection" class="glassmorphism min-h-[44px]">
           <option value="" disabled selected>Select a template...</option>
           <option value="Modern">Modern</option>
           <option value="Classic">Classic</option>
