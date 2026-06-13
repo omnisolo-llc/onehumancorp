@@ -5,6 +5,7 @@ use sha2::Sha256;
 #[derive(Debug, Clone)]
 #[allow(dead_code)]
 enum AuthMode {
+    #[allow(dead_code)]
     Disabled,
     Token(Vec<u8>), // HMAC-SHA256 of expected token
     SPIFFE { allowed_id: Option<String> },
