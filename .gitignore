@@ -132,8 +132,3 @@ dummy.*
 dummy_*
 .next/
 /*.patch
-
-
-# Allow docs js to be tracked
-!src/ui/next/public/api/ui/shared_docs.js
-!src/ui/tauri/src/ui/shared_docs.js

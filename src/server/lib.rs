@@ -5396,10 +5396,10 @@ async fn create_ui_bom_item_handler(
         .route("/api/ui/api-docs.html", axum::routing::get(|| async {
             axum::response::Html(include_str!("../ui/tauri/src/ui/api-docs.html"))
         }))
-                .route("/shared_docs.js", axum::routing::get(|| async {
+                .route("/shared_docs.js.html", axum::routing::get(|| async {
             axum::response::Response::builder()
                 .header("Content-Type", "application/javascript")
-                .body(axum::body::Body::from(include_str!("../ui/tauri/src/ui/shared_docs.js")))
+                .body(axum::body::Body::from(include_str!("../ui/tauri/src/ui/shared_docs.js.html")))
                 .unwrap()
         }))
         .route("/api/ui/changelog.html", axum::routing::get(|| async {
