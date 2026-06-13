@@ -1,0 +1,2 @@
+#!/bin/bash
+exec "\$BAZEL_REAL" "\$@" --bes_backend= --remote_cache= --remote_upload_local_results=false
