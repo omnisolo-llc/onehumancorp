@@ -5399,7 +5399,7 @@ async fn create_ui_bom_item_handler(
                 .route("/shared_docs.js", axum::routing::get(|| async {
             axum::response::Response::builder()
                 .header("Content-Type", "application/javascript")
-                .body(axum::body::Body::from(include_str!("../ui/next/public/api/ui/shared_docs.js")))
+                .body(axum::body::Body::from(include_str!("../ui/tauri/src/ui/shared_docs.js")))
                 .unwrap()
         }))
         .route("/api/ui/changelog.html", axum::routing::get(|| async {
