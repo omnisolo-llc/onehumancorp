@@ -584,7 +584,7 @@ export default function Dashboard() {
         </section>
       )}
 
-      <main id="dashboard-screen" className="app-grid" style={{ gap: 16 }}>
+      <main id="dashboard-screen" className="app-grid overflow-x-hidden" style={{ gap: 16 }}>
         {activeDepartments.length > 0 && (
           <section className="mb-6 w-full col-span-full">
             <h2 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-4">Active AI Departments</h2>
