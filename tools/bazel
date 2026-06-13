@@ -1,8 +1,0 @@
-#!/bin/bash
-# Override bazel to disable broken remote caching and execution
-BAZEL_CMD="${BAZEL_REAL:-bazel}"
-if [[ -n "$GITHUB_ACTIONS" || -n "$CI" ]]; then
-    exec "$BAZEL_CMD" "$@" --remote_cache= --remote_executor= --bes_backend= --bes_results_url= --config=local
-else
-    exec "$BAZEL_CMD" "$@"
-fi
