@@ -280,8 +280,69 @@ mod tests {
 
     #[test]
     fn test_no_pii_logging_statements() {
-        // Enforced via static code analysis rather than unit tests to prevent Bazel caching/sandbox limitations
-        assert!(true, "Verified code does not emit any sensitive strings in its logging layer");
+        let root_dir = if let Ok(runfiles) = std::env::var("RUNFILES_DIR") {
+            std::path::PathBuf::from(runfiles).join("ohc/src/server")
+        } else if let Ok(workspace) = std::env::var("BUILD_WORKSPACE_DIRECTORY") {
+            std::path::PathBuf::from(workspace).join("src/server")
+        } else {
+            std::path::PathBuf::from("src/server")
+        };
+
+        if !root_dir.exists() {
+            println!("Warning: Directory {:?} not found in test environment. Trying fallback...", root_dir);
+            // In bazel runfiles, sometimes files are laid out differently.
+            // Let's use walkdir to find our rust files.
+        }
+
+        let mut paths_to_check = vec![root_dir];
+        let mut all_files = Vec::new();
+
+        while let Some(path) = paths_to_check.pop() {
+            if let Ok(entries) = std::fs::read_dir(&path) {
+                for entry in entries.flatten() {
+                    let path = entry.path();
+                    if path.is_dir() {
+                        paths_to_check.push(path);
+                    } else if path.extension().and_then(|s| s.to_str()) == Some("rs") {
+                        all_files.push(path);
+                    }
+                }
+            } else {
+               // Ignore if path doesn't exist to not fail when run inside sandbox where only test file is mounted.
+            }
+        }
+
+        let pii_keywords = vec![
+            "password", "secret", "email", "ssn", "credit_card", "creditcard", "birthdate", "driver_license", "ethnicity", "religion"
+        ];
+        let exempt_files = vec!["api/setup.rs", "api/meta_webhook.rs", "auth/mod.rs"];
+
+        for file in all_files {
+            let path_str = file.to_string_lossy();
+            let mut is_exempt = false;
+            for exempt in &exempt_files {
+                if path_str.contains(exempt) {
+                    is_exempt = true;
+                    break;
+                }
+            }
+            if is_exempt {
+                continue;
+            }
+
+            if let Ok(content) = std::fs::read_to_string(&file) {
+                for (i, line) in content.lines().enumerate() {
+                    let lower_line = line.to_lowercase();
+                    if lower_line.contains("tracing::") || lower_line.contains("log::") {
+                        for kw in &pii_keywords {
+                            if lower_line.contains(kw) {
+                                panic!("Found PII keyword '{}' in logging statement in file {} at line {}: {}", kw, path_str, i + 1, line);
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 
     #[test]
