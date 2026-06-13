@@ -40,7 +40,7 @@ impl PydanticToolExecutor<TailArgs> for TailExecutor {
             return Ok(String::new());
         }
         if lines_to_read > 1000 {
-            return Err(ToolError::LlmRecoverable("JIT Retrieval Error: Cannot read more than 1000 lines at once.".to_string()));
+            return Err(ToolError::LlmRecoverable("JIT Retrieval Error: Cannot read more than 1000 lines at once. Please paginate to read in smaller chunks to avoid context rot.".to_string()));
         }
 
         let metadata = file.metadata().await.map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
