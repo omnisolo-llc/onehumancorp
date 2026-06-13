@@ -26,11 +26,12 @@ impl CircuitBreaker {
     }
 
     fn allow(&self) -> bool {
-        let failures = self.failures.lock().unwrap();
+        let mut failures = self.failures.lock().unwrap();
         if *failures >= self.max_failures {
             let last_failure = self.last_failure.lock().unwrap();
             if let Some(last) = *last_failure {
                 if last.elapsed() > self.reset_timeout {
+                    *failures = 0; // Reset failures so we can retry properly
                     return true;
                 }
             }
