@@ -25,6 +25,12 @@ services:
       interval: 5s
       timeout: 3s
       retries: 30
+    security_opt:
+      - seccomp:unconfined
+      - apparmor:unconfined
+    cap_add:
+      - SYS_ADMIN
+      - DAC_READ_SEARCH
     ports:
       - "5432:5432"
     deploy:
