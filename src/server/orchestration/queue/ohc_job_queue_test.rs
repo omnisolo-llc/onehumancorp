@@ -11,7 +11,7 @@ async fn test_ohc_job_queue_e2e() {
 
     let database_url = std::env::var("OHC_DATABASE_URL").unwrap();
     let pool = PgPoolOptions::new()
-        .max_connections(5)
+        .max_connections(2)
         .connect(&database_url)
         .await
         .unwrap();
@@ -56,7 +56,7 @@ async fn test_ohc_job_queue_fail_backoff() {
 
     let database_url = std::env::var("OHC_DATABASE_URL").unwrap();
     let pool = PgPoolOptions::new()
-        .max_connections(5)
+        .max_connections(2)
         .connect(&database_url)
         .await
         .unwrap();
@@ -137,7 +137,7 @@ async fn test_worker_pool_and_ledger() {
 
     let database_url = std::env::var("OHC_DATABASE_URL").unwrap();
     let pool = PgPoolOptions::new()
-        .max_connections(5)
+        .max_connections(2)
         .connect(&database_url)
         .await
         .unwrap();
@@ -189,7 +189,7 @@ async fn test_worker_pool_chaos_timeout() {
 
     let database_url = std::env::var("OHC_DATABASE_URL").unwrap();
     let pool = PgPoolOptions::new()
-        .max_connections(5)
+        .max_connections(2)
         .connect(&database_url)
         .await
         .unwrap();
@@ -228,7 +228,7 @@ async fn test_ohc_job_queue_fail_max_retries_dead_letter() {
 
     let database_url = std::env::var("OHC_DATABASE_URL").unwrap();
     let pool = PgPoolOptions::new()
-        .max_connections(5)
+        .max_connections(2)
         .connect(&database_url)
         .await
         .unwrap();
@@ -276,4 +276,64 @@ async fn test_ohc_job_queue_fail_max_retries_dead_letter() {
     assert_eq!(dl_department, "job_queue");
     assert_eq!(dl_payload, "{\"test\":\"payload\"}");
     assert_eq!(dl_error_message, "Max retries exceeded");
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn test_ohc_job_queue_concurrent_dequeue() {
+    if std::env::var("OHC_DATABASE_URL").is_err() {
+        return;
+    }
+
+    let database_url = std::env::var("OHC_DATABASE_URL").unwrap();
+    let pool = PgPoolOptions::new()
+        .max_connections(2)
+        .connect(&database_url)
+        .await
+        .unwrap();
+
+    let queue = Arc::new(OHCJobQueue::new(Arc::new(pool.clone())));
+
+    // Ensure table is clean
+    sqlx::query("DELETE FROM ohc_job_queue").execute(&pool).await.unwrap();
+
+    let num_jobs = 100;
+    for i in 0..num_jobs {
+        let tenant_id = format!("tenant-{}", i % 5);
+        queue.enqueue(&tenant_id, "concurrent-role", &serde_json::json!({})).await.unwrap();
+    }
+
+    let mut handles = vec![];
+    let num_workers = 2;
+
+    for _ in 0..num_workers {
+        let q_clone = queue.clone();
+        handles.push(tokio::spawn(async move {
+            let mut processed = 0;
+            loop {
+                let job_opt = q_clone.dequeue(vec!["concurrent-role"]).await.unwrap();
+                match job_opt {
+                    Some(job) => {
+                        // Simulate work
+                        tokio::time::sleep(tokio::time::Duration::from_millis(5)).await;
+                        q_clone.complete(&job.id).await.unwrap();
+                        processed += 1;
+                    }
+                    None => break,
+                }
+            }
+            processed
+        }));
+    }
+
+    let mut total_processed = 0;
+    for handle in handles {
+        total_processed += handle.await.unwrap();
+    }
+
+    assert_eq!(total_processed, num_jobs);
+
+    // Verify all are completed
+    let count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM ohc_job_queue WHERE status = 'COMPLETED'")
+        .fetch_one(&pool).await.unwrap();
+    assert_eq!(count.0 as usize, num_jobs);
 }

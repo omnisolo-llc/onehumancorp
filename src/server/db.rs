@@ -317,13 +317,8 @@ impl DB {
                             Ok(true)
                         })
                     })
-                    .after_release(|conn, _meta| {
-                        Box::pin(async move {
-                            use sqlx::Executor;
-                            conn.execute("DISCARD ALL").await?;
-                            Ok(true)
-                        })
-                    })
+                    .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+                    .max_connections(if cfg!(test) { 2 } else { 50 })
                     .acquire_timeout(std::time::Duration::from_millis(2000))
                     .connect(&pg_url)
                     .await

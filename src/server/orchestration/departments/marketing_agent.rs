@@ -457,30 +457,19 @@ mod tests {
 
     #[test]
     fn marketing_copy_backend_captures_minimax_key_at_construction() {
-        let old_provider = std::env::var("OHC_LLM_PROVIDER").ok();
-        let old_key = std::env::var("MINIMAX_API_KEY").ok();
-
-        unsafe {
-            std::env::set_var("OHC_LLM_PROVIDER", "minimax");
-            std::env::set_var("MINIMAX_API_KEY", "configured-key");
-        }
-
-        assert_eq!(
-            MarketingCopyBackend::from_env(),
-            MarketingCopyBackend::Minimax {
-                api_key: "configured-key".to_string()
+        temp_env::with_vars(
+            vec![
+                ("OHC_LLM_PROVIDER", Some("minimax")),
+                ("MINIMAX_API_KEY", Some("configured-key")),
+            ],
+            || {
+                assert_eq!(
+                    MarketingCopyBackend::from_env(),
+                    MarketingCopyBackend::Minimax {
+                        api_key: "configured-key".to_string()
+                    }
+                );
             }
         );
-
-        unsafe {
-            match old_provider {
-                Some(value) => std::env::set_var("OHC_LLM_PROVIDER", value),
-                None => std::env::remove_var("OHC_LLM_PROVIDER"),
-            }
-            match old_key {
-                Some(value) => std::env::set_var("MINIMAX_API_KEY", value),
-                None => std::env::remove_var("MINIMAX_API_KEY"),
-            }
-        }
     }
 }
