@@ -40,10 +40,10 @@ test.describe('Cost Dashboard "My Plan" functionality', () => {
     await proPage.waitForLoadState('networkidle');
 
     // Ensure the page renders / Unlimited for AI actions
-    await expect(proPage.locator('div.stat-value', { hasText: '/ Unlimited' }).nth(0)).toBeVisible();
+    await expect(proPage.locator('div.stat-value', { hasText: /.*\/ Unlimited/ }).nth(0)).toBeVisible();
 
     // Ensure the page renders / 50 GB for Storage
-    await expect(proPage.locator('div.stat-value', { hasText: '/ 50 GB' }).first()).toBeVisible();
+    await expect(proPage.locator('div.stat-value', { hasText: /.*\/ 50 GB/ }).first()).toBeVisible();
 
     await proPage.close();
     await context.close();
@@ -58,7 +58,7 @@ test.describe('Cost Dashboard "My Plan" functionality', () => {
     await proPage.waitForLoadState('networkidle');
 
     const aiActionsCard = proPage.locator('div', { has: proPage.locator('div.stat-title', { hasText: 'AI actions used this month' }) }).first();
-    await expect(aiActionsCard.locator('div.stat-value', { hasText: '/ Unlimited' }).first()).toBeVisible();
+    await expect(aiActionsCard.locator('div.stat-value', { hasText: /.*\/ Unlimited/ }).first()).toBeVisible();
 
     await proPage.close();
     await context.close();
@@ -73,7 +73,7 @@ test.describe('Cost Dashboard "My Plan" functionality', () => {
     await proPage.waitForLoadState('networkidle');
 
     const storageCard = proPage.locator('div', { has: proPage.locator('div.stat-title', { hasText: 'Storage used' }) }).first();
-    await expect(storageCard.locator('div.stat-value', { hasText: '/ 50 GB' }).first()).toBeVisible();
+    await expect(storageCard.locator('div.stat-value', { hasText: /.*\/ 50 GB/ }).first()).toBeVisible();
 
     await proPage.close();
     await context.close();
