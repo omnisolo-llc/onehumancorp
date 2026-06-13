@@ -233,7 +233,7 @@ impl InferentialSensor for LlmJudgeSensor {
 
         let req = ChatRequest {
             model: self.model.clone(),
-            system: system_prompt.to_string(),
+            system: ::server_pricing::compression::reduce_tokens(&system_prompt),
             messages: vec![Message::user(user_prompt)],
             tools: vec![],
             max_tokens: 1000,

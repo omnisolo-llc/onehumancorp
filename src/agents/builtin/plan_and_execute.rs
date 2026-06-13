@@ -73,7 +73,7 @@ impl Planner {
 
         let req = ChatRequest {
             model: "gpt-4o".to_string(), // Or get from config if available
-            system: system_prompt,
+            system: ::server_pricing::compression::reduce_tokens(&system_prompt),
             messages: vec![Message::user(user_query.to_string())],
             tools: vec![],
             max_tokens: 4000,

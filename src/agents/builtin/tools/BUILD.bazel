@@ -84,6 +84,7 @@ rust_library(
         "@crates//:tree-sitter-python",
         "@crates//:tree-sitter-typescript",
         "@crates//:tree-sitter-go",
+        "//src/server/pricing:server_pricing",
     ],
     proc_macro_deps = [
         "@crates//:async-recursion",
