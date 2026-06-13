@@ -138,8 +138,8 @@ jobs:
           cache-save: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
           bazelrc: |
             # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
-            common --remote_header=x-nativelink-api-key=${{ secrets.NATIVELINK_API_KEY }}
-            common --bes_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
+            # common --remote_header=x-nativelink-api-key=${{ secrets.NATIVELINK_API_KEY }}
+            # common --bes_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
             common --remote_upload_local_results=true
             build --build_metadata=ROLE=CI
             build --show_timestamps
@@ -283,8 +283,8 @@ jobs:
           cache-save: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
           bazelrc: |
             # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
-            common --remote_header=x-nativelink-api-key=${{ secrets.NATIVELINK_API_KEY }}
-            common --bes_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
+            # common --remote_header=x-nativelink-api-key=${{ secrets.NATIVELINK_API_KEY }}
+            # common --bes_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
             common --remote_upload_local_results=true
             build --build_metadata=ROLE=CI
             build --show_timestamps
@@ -356,8 +356,8 @@ jobs:
           cache-save: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
           bazelrc: |
             # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
-            common --remote_header=x-nativelink-api-key=${{ secrets.NATIVELINK_API_KEY }}
-            common --bes_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
+            # common --remote_header=x-nativelink-api-key=${{ secrets.NATIVELINK_API_KEY }}
+            # common --bes_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
             common --remote_upload_local_results=true
             build --build_metadata=ROLE=CI
             build --show_timestamps
@@ -468,8 +468,8 @@ jobs:
           repository-cache: true
           bazelrc: |
             # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
-            common --remote_header=x-nativelink-api-key=${{ secrets.NATIVELINK_API_KEY }}
-            common --bes_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
+            # common --remote_header=x-nativelink-api-key=${{ secrets.NATIVELINK_API_KEY }}
+            # common --bes_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
             common --remote_upload_local_results=true
             build --build_metadata=ROLE=CI
             build --show_timestamps
@@ -580,8 +580,8 @@ jobs:
           repository-cache: true
           bazelrc: |
             # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
-            common --remote_header=x-nativelink-api-key=${{ secrets.NATIVELINK_API_KEY }}
-            common --bes_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
+            # common --remote_header=x-nativelink-api-key=${{ secrets.NATIVELINK_API_KEY }}
+            # common --bes_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
             common --remote_upload_local_results=true
             build --build_metadata=ROLE=CI
             build --show_timestamps

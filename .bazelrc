@@ -104,7 +104,7 @@ build --action_env=CI
 
 common:bes --bes_timeout=600s
 common:bes --bes_results_url=https://buildbuddy.phslc.com/invocation/
-common:bes --bes_backend=grpcs://buildbuddy-grpc.phslc.com
+# common:bes --bes_backend=grpcs://buildbuddy-grpc.phslc.com
 common:bes --bes_header=x-buildbuddy-api-key=GZRlHAyqIIcVJw9dJ9n9
 
 # ── BuildBuddy  ──────────────────────────────────────
@@ -124,7 +124,7 @@ common:buildbuddy-readonly --remote_header=x-buildbuddy-api-key=GZRlHAyqIIcVJw9d
 # ── Nativelink  ──────────────────────────────────────
 # Alternative self-hosted Nativelink cluster; use with --config=nativelink.
 common:nativelink --experimental_build_event_upload_strategy=local
-common:nativelink --remote_cache=grpcs://nativelink-grpc.phslc.com
+# common:nativelink --remote_cache=grpcs://nativelink-grpc.phslc.com
 common:nativelink --remote_instance_name=main
 # common:nativelink --remote_executor=grpcs://nativelink-grpc.phslc.com
 common:nativelink --remote_local_fallback
