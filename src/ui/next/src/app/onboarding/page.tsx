@@ -396,7 +396,7 @@ export default function OnboardingWizard() {
         localStorage.setItem('tenant_id', result.organization_id);
         localStorage.setItem('tenant', result.organization_id);
       }
-      setTimeout(() => { setStep(5); syncStateToBackend({ step: 5 }); }, 100); // Go to "You're Live" screen
+      setStep(5); syncStateToBackend({ step: 5 }); // Go to "You're Live" screen
       fetch('/api/onboarding/launch', { method: 'POST', headers: { 'X-Tenant-ID': tenantId, 'X-User-ID': userId } }).catch(console.error);
 
     } catch (err: any) {
@@ -574,17 +574,16 @@ export default function OnboardingWizard() {
                             localStorage.setItem('tenant', startData.organization_id);
                         }
                         localStorage.setItem('has_onboarded', 'true');
-                        setStep(5);
-                        syncStateToBackend({ step: 5 });
+                        setStep(5); syncStateToBackend({ step: 5 });
                       } else {
                         throw new Error(data.error || data.message || 'Failed to analyze business details');
                       }
                     } catch (err: any) {
                       console.error(err);
-                      if (err.message === 'Failed to fetch') {
+                      if (err.message?.includes('fetch')) {
                           setError('Failed to launch. Please try again.');
                       } else {
-                          setError(err.message || 'Failed to launch. Please try again.');
+                          setError(err.message || 'Network Error. Failed to launch.');
                       }
                     } finally {
                       setIsLoading(false);
@@ -601,7 +600,7 @@ export default function OnboardingWizard() {
                       </svg>
                       Generating...
                     </span>
-                  ) : <IconLabel icon="launch">Generate Storefront</IconLabel>}
+                  ) : <IconLabel icon="launch">Next</IconLabel>}
                 </button>
               </div>
             </div>

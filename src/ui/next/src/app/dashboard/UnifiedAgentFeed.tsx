@@ -361,6 +361,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
 
   return (
     <section className="mb-6 max-w-[375px] w-full mx-auto sm:max-w-none" aria-label="Unified Agent Feed">
+      <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2 hidden md:block">Action Center</h2>
       {isOffline && (
         <div className="mb-4 w-full p-2 glassmorphism rounded-[8px] bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 text-center text-sm font-semibold flex items-center justify-center gap-2">
           <span>📡</span> You are offline. Actions will sync when online.
@@ -374,7 +375,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
       <div className="mb-4 flex items-center border-b border-gray-200 dark:border-gray-700">
         <button
           onClick={() => setActiveTab("proposals")}
-          className={`flex-1 min-h-[44px] py-3 text-center text-sm font-semibold transition-all duration-200 ${
+          className={`flex-1 min-h-[44px] min-w-[44px] py-3 text-center text-sm font-semibold transition-all duration-200 ${
             activeTab === "proposals"
               ? "border-b-2 border-[#0066FF] text-[#0066FF] dark:text-[#3388FF]"
               : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
@@ -384,7 +385,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
         </button>
         <button
           onClick={() => setActiveTab("activity")}
-          className={`flex-1 min-h-[44px] py-3 text-center text-sm font-semibold transition-all duration-200 ${
+          className={`flex-1 min-h-[44px] min-w-[44px] py-3 text-center text-sm font-semibold transition-all duration-200 ${
             activeTab === "activity"
               ? "border-b-2 border-[#0066FF] text-[#0066FF] dark:text-[#3388FF]"
               : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
@@ -421,17 +422,17 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
               </div>
               <div className="flex flex-col sm:flex-row gap-3 w-full mt-2">
                 <button
-                  className="flex-1 min-h-[44px] rounded-lg font-bold text-sm bg-green-500 hover:bg-green-600 text-white shadow-sm transition-transform active:scale-[0.98]"
+                  className="flex-1 min-h-[44px] min-w-[44px] rounded-lg font-bold text-sm bg-green-500 hover:bg-green-600 text-white shadow-sm transition-transform active:scale-[0.98]"
                 >
                   Approve
                 </button>
                 <button
-                  className="flex-1 min-h-[44px] rounded-lg font-bold text-sm bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 text-[#1D1D1F] dark:text-[#F5F5F7] transition-transform active:scale-[0.98]"
+                  className="flex-1 min-h-[44px] min-w-[44px] rounded-lg font-bold text-sm bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 text-[#1D1D1F] dark:text-[#F5F5F7] transition-transform active:scale-[0.98]"
                 >
                   Edit
                 </button>
                 <button
-                  className="flex-1 min-h-[44px] rounded-lg font-bold text-sm bg-red-100 hover:bg-red-200 text-red-600 dark:bg-red-900/30 dark:hover:bg-red-900/50 dark:text-red-400 transition-transform active:scale-[0.98]"
+                  className="flex-1 min-h-[44px] min-w-[44px] rounded-lg font-bold text-sm bg-red-100 hover:bg-red-200 text-red-600 dark:bg-red-900/30 dark:hover:bg-red-900/50 dark:text-red-400 transition-transform active:scale-[0.98]"
                 >
                   Deny
                 </button>

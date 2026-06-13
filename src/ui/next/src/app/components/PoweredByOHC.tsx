@@ -39,7 +39,7 @@ export function PoweredByOHC({ tenantId }: PoweredByOHCProps) {
   return (
     <div
       ref={containerRef}
-      className="flex flex-col justify-center items-center mt-8 pb-4 relative"
+      className="powered-by-footer flex flex-col justify-center items-center mt-8 pb-4 relative"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
