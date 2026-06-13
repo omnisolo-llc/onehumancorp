@@ -41,7 +41,7 @@ export default function FeedPage() {
   const handleAction = async (id: string, state: string) => {
     try {
       const res = await fetch(`/api/agent-feed/${id}`, {
-        method: 'PATCH',
+        method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ state }),
       });
