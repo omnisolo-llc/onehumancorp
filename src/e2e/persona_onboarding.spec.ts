@@ -8,7 +8,7 @@ test.describe('Persona-Driven Onboarding E2E', () => {
     const fs = require('fs');
     const path = require('path');
     await page.route('**/setup.html', async route => {
-        const fileContent = fs.readFileSync(path.join(process.cwd(), 'src/ui/tauri/src/ui/setup.html'), 'utf-8');
+        const fileContent = fs.readFileSync(path.join(process.env.TEST_WORKSPACE ? path.join(process.env.TEST_SRCDIR, process.env.TEST_WORKSPACE) : process.cwd(), 'src/ui/tauri/src/ui/setup.html'), 'utf-8');
         await route.fulfill({ contentType: 'text/html', body: fileContent });
     });
     await page.goto('http://mock/setup.html');
@@ -72,11 +72,13 @@ test.describe('Persona-Driven Onboarding E2E', () => {
     const fs = require('fs');
     const path = require('path');
     await page.route('**/setup.html', async route => {
-        const fileContent = fs.readFileSync(path.join(process.cwd(), 'src/ui/tauri/src/ui/setup.html'), 'utf-8');
+        const fileContent = fs.readFileSync(path.join(process.env.TEST_WORKSPACE ? path.join(process.env.TEST_SRCDIR, process.env.TEST_WORKSPACE) : process.cwd(), 'src/ui/tauri/src/ui/setup.html'), 'utf-8');
         await route.fulfill({ contentType: 'text/html', body: fileContent });
     });
     await page.goto('http://mock/setup.html');
 
+    await page.locator(".next-step-btn[data-next=\"step-context\"]").click();
+    await expect(page.getByText("How do you work?")).toBeVisible();
     await page.getByText("I'm a Handyman").click();
     await expect(page.getByText("Applied!")).toBeVisible();
     await expect(page.locator('input[value="Local Service"]')).toBeChecked();
@@ -107,11 +109,13 @@ test.describe('Persona-Driven Onboarding E2E', () => {
     const fs = require('fs');
     const path = require('path');
     await page.route('**/setup.html', async route => {
-        const fileContent = fs.readFileSync(path.join(process.cwd(), 'src/ui/tauri/src/ui/setup.html'), 'utf-8');
+        const fileContent = fs.readFileSync(path.join(process.env.TEST_WORKSPACE ? path.join(process.env.TEST_SRCDIR, process.env.TEST_WORKSPACE) : process.cwd(), 'src/ui/tauri/src/ui/setup.html'), 'utf-8');
         await route.fulfill({ contentType: 'text/html', body: fileContent });
     });
     await page.goto('http://mock/setup.html');
 
+    await page.locator(".next-step-btn[data-next=\"step-context\"]").click();
+    await expect(page.getByText("How do you work?")).toBeVisible();
     await page.getByText("I'm a Boutique Owner").click();
     await page.getByText('Next').first().click();
     await expect(page.locator('#business-categories')).toHaveValue('Boutique');
@@ -124,11 +128,13 @@ test.describe('Persona-Driven Onboarding E2E', () => {
     const fs = require('fs');
     const path = require('path');
     await page.route('**/setup.html', async route => {
-        const fileContent = fs.readFileSync(path.join(process.cwd(), 'src/ui/tauri/src/ui/setup.html'), 'utf-8');
+        const fileContent = fs.readFileSync(path.join(process.env.TEST_WORKSPACE ? path.join(process.env.TEST_SRCDIR, process.env.TEST_WORKSPACE) : process.cwd(), 'src/ui/tauri/src/ui/setup.html'), 'utf-8');
         await route.fulfill({ contentType: 'text/html', body: fileContent });
     });
     await page.goto('http://mock/setup.html');
 
+    await page.locator(".next-step-btn[data-next=\"step-context\"]").click();
+    await expect(page.getByText("How do you work?")).toBeVisible();
     await page.getByText("I'm a Tutor").click();
     await page.getByText('Next').first().click();
     await expect(page.locator('#business-categories')).toHaveValue('Tutoring');
@@ -141,7 +147,7 @@ test.describe('Persona-Driven Onboarding E2E', () => {
     const fs = require('fs');
     const path = require('path');
     await page.route('**/setup.html', async route => {
-        const fileContent = fs.readFileSync(path.join(process.cwd(), 'src/ui/tauri/src/ui/setup.html'), 'utf-8');
+        const fileContent = fs.readFileSync(path.join(process.env.TEST_WORKSPACE ? path.join(process.env.TEST_SRCDIR, process.env.TEST_WORKSPACE) : process.cwd(), 'src/ui/tauri/src/ui/setup.html'), 'utf-8');
         await route.fulfill({ contentType: 'text/html', body: fileContent });
     });
     await page.goto('http://mock/setup.html');

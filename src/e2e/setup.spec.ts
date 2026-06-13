@@ -5,7 +5,8 @@ import * as fs from 'fs';
 test.describe('OHC Setup Wizard Flow', () => {
 
   test.beforeEach(async ({ page }) => {
-      const tauriUiDir = path.join(process.cwd(), 'src/ui/tauri/src/ui');
+      const workspaceRoot = process.env.TEST_WORKSPACE ? path.join(process.env.TEST_SRCDIR, process.env.TEST_WORKSPACE) : process.cwd();
+      const tauriUiDir = path.join(workspaceRoot, 'src/ui/tauri/src/ui');
       await page.route('**/setup.html', async route => {
           const content = fs.readFileSync(path.join(tauriUiDir, 'setup.html'), 'utf-8');
           await route.fulfill({ contentType: 'text/html', body: content });
@@ -23,7 +24,7 @@ test.describe('OHC Setup Wizard Flow', () => {
     // Check initial UI loading
     await expect(page.locator('h1').first()).toBeVisible();
     // Start My Business
-    await page.locator('.next-step-btn[data-next="step-context"]').click();
+    await page.getByRole('button', { name: "Start My Business" }).click();
     await expect(page.getByText('How do you work?')).toBeVisible();
 
     // Context step
@@ -110,7 +111,7 @@ test.describe('OHC Setup Wizard Flow', () => {
     const btnBox = await page.locator('.next-step-btn').first().boundingBox();
     expect(btnBox?.height).toBeGreaterThanOrEqual(44);
 
-    await page.locator('.next-step-btn[data-next="step-context"]').click();
+    await page.getByRole('button', { name: "Start My Business" }).click();
     const inputbox = await page.locator('.radio-option').first().boundingBox();
     expect(inputbox?.height).toBeGreaterThanOrEqual(44);
   });
