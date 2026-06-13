@@ -28,6 +28,7 @@ rust_library(
     ],
     visibility = ["//visibility:public"],
     deps = [
+        "//src/server/pricing:server_pricing",
         "@crates//:chrono",
         "@crates//:futures",
         "@crates//:hmac",

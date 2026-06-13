@@ -66,7 +66,7 @@ impl<T: ExpertTeamLlmClient + ?Sized> DomainExpert<T> {
 
         let req = ChatRequest {
             model: "default".to_string(),
-            system: system_prompt,
+            system: ::server_pricing::compression::reduce_tokens(&system_prompt),
             messages: vec![Message::user(task)],
             tools: vec![],
             max_tokens: 4000,

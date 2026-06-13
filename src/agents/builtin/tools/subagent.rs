@@ -46,7 +46,7 @@ impl SubagentExecutor {
 
                 let req = ohc_builtin_agent_core::types::ChatRequest {
                     model: "gpt-4o-mini".to_string(), // Default fallback model
-                    system: system_prompt.to_string(),
+                    system: ::server_pricing::compression::reduce_tokens(&system_prompt),
                     messages: vec![ohc_builtin_agent_core::types::Message::user(chunk)],
                     tools: vec![],
                     max_tokens: 2000,
@@ -74,7 +74,7 @@ impl SubagentExecutor {
         if raw_output.len() == current_text.len() {
             let req = ohc_builtin_agent_core::types::ChatRequest {
                 model: "gpt-4o-mini".to_string(),
-                system: system_prompt.to_string(),
+                system: ::server_pricing::compression::reduce_tokens(&system_prompt),
                 messages: vec![ohc_builtin_agent_core::types::Message::user(current_text)],
                 tools: vec![],
                 max_tokens: 2000,
