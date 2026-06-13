@@ -2071,7 +2071,7 @@ impl HubService for MyHubService {
 
         let req = request.into_inner();
 
-        self.dept_orchestrator.decide_approval(&req.task_id, &org_id, req.is_approved).await
+        self.dept_orchestrator.decide_approval(&req.task_id, &org_id, req.is_approved, None).await
             .map_err(|e| Status::internal(e))?;
 
         Ok(Response::new(ApproveTaskResponse {
