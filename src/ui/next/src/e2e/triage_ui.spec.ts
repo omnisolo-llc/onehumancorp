@@ -8,8 +8,8 @@ test.describe('Work Triage Agentic Inbox', () => {
     await page.fill('input[type="email"]', 'admin@ohc.local');
     await page.fill('input[type="password"]', 'changeme');
     await page.click('button[type="submit"]');
-    await page.goto('/dashboard');
-    await expect(page.locator('h2').filter({ hasText: 'Unified Agent Feed' })).toBeVisible({ timeout: 15000 });
+    await page.goto('/triage');
+    await expect(page.locator('h2').filter({ hasText: 'Action Center' })).toBeVisible({ timeout: 15000 });
   });
 
   test('Owner reviews and approves a triage item', async ({ page }) => {
