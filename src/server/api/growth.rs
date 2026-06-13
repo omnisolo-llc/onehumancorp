@@ -1643,7 +1643,7 @@ async fn handle_onboarding_metrics(
 ) -> Result<Json<OnboardingMetricsResponse>, StatusCode> {
     let cache_key = "onboarding_metrics";
     let cache = ONBOARDING_METRICS_CACHE.get_or_init(|| HybridCache::new(None));
-    if let Some(cached_resp) = cache.get(cache_key).await {
+    if let Some(cached_resp) = cache.get(&cache_key).await {
         return Ok(Json(cached_resp));
     }
 
@@ -1655,7 +1655,7 @@ async fn handle_onboarding_metrics(
             use sqlx::Row;
             let metrics = rows.into_iter().map(|r| OnboardingMetric { step: r.get("step"), count: r.get::<i64, _>("count") as i32 }).collect();
             let resp = OnboardingMetricsResponse { metrics };
-            cache.set(cache_key, resp.clone(), std::time::Duration::from_secs(60)).await;
+            cache.set(&cache_key, resp.clone(), std::time::Duration::from_secs(60)).await;
             Ok(Json(resp))
         }
         Err(e) => {
@@ -2256,10 +2256,11 @@ mod tests {
 
 async fn handle_aggregated_team_invites_metrics(
     Extension(state): Extension<GrowthState>,
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
 ) -> Result<Json<TeamInvitesMetricsResponse>, StatusCode> {
-    let cache_key = "aggregated_metrics";
+    let cache_key = format!("aggregated_metrics_{}", auth_info.org_id);
     let cache = METRICS_CACHE.get_or_init(|| HybridCache::new(None));
-    if let Some(cached_resp) = cache.get(cache_key).await {
+    if let Some(cached_resp) = cache.get(&cache_key).await {
         return Ok(Json(cached_resp));
     }
 
@@ -2267,14 +2268,16 @@ async fn handle_aggregated_team_invites_metrics(
     let tracker = crate::services::growth::invites::InviteTracker::new(repo);
 
     let pool_clone = state.pool.clone();
+    let org_id_clone = auth_info.org_id.clone();
     let active_referrals_fut = async {
-        sqlx::query_scalar("SELECT COALESCE(SUM(conversions), 0) FROM referrals")
+        sqlx::query_scalar("SELECT COALESCE(SUM(conversions), 0) FROM referrals WHERE tenant_id = $1")
+            .bind(&org_id_clone)
             .fetch_one(&pool_clone)
             .await
             .unwrap_or(0)
     };
 
-    let invites_count_fut = tracker.get_total_invites_count();
+    let invites_count_fut = tracker.get_total_invites_count(&auth_info.org_id);
     let (active_referrals, invites_count_res) = tokio::join!(active_referrals_fut, invites_count_fut);
 
     match invites_count_res {
@@ -2288,7 +2291,7 @@ async fn handle_aggregated_team_invites_metrics(
                     pending_rewards: 0.0,
                 }
             };
-            cache.set(cache_key, resp.clone(), std::time::Duration::from_secs(60)).await;
+            cache.set(&cache_key, resp.clone(), std::time::Duration::from_secs(60)).await;
             Ok(Json(resp))
         },
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
