@@ -1103,38 +1103,20 @@ impl DepartmentOrchestrator {
                                 }
                             }
 
-                            // Dispatch simulated reorder to job queue
-                            let reorder_payload = serde_json::json!({
-                                "items": [{"product_id": product_id, "quantity": 50}]
+                            let product_name = payload.get("context").and_then(|c| c.get("product_name")).and_then(|v| v.as_str()).unwrap_or("Item");
+                            let draft_desc = format!("Draft promotional email for {}", product_name);
+                            let draft_payload = serde_json::json!({
+                                "feature_type": "promotional_email_draft",
+                                "product_name": product_name,
+                                "new_price": new_price
                             });
-
-                            if let DbStore::Postgres = &self.db.store {
-                                let task_id = uuid::Uuid::new_v4().to_string();
-                                if let Err(e) = sqlx::query("INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status) VALUES ($1, $2, $3, $4, $5, $6)")
-                                    .bind(&task_id)
-                                    .bind(tenant_id)
-                                    .bind("operations")
-                                    .bind("OrderPlaced")
-                                    .bind(serde_json::to_string(&reorder_payload).unwrap_or_default())
-                                    .bind("PENDING")
-                                    .execute(&self.db.pool)
-                                    .await
-                                {
-                                    tracing::error!("Failed to dispatch reorder task: {}", e);
-                                }
-                            } else if let DbStore::Sqlite(pool) = &self.db.store {
-                                let task_id = uuid::Uuid::new_v4().to_string();
-                                // Ignore sqlite error if table not exists in tests
-                                let _ = sqlx::query("INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status) VALUES (?, ?, ?, ?, ?, ?)")
-                                    .bind(&task_id)
-                                    .bind(tenant_id)
-                                    .bind("operations")
-                                    .bind("OrderPlaced")
-                                    .bind(serde_json::to_string(&reorder_payload).unwrap_or_default())
-                                    .bind("PENDING")
-                                    .execute(pool)
-                                    .await;
-                            }
+                            let _ = self.execute_action(
+                                DepartmentType::Marketing,
+                                draft_desc,
+                                tenant_id.to_string(),
+                                ActionRisk::DraftForReview,
+                                draft_payload
+                            ).await;
                         }
                     }
                 }

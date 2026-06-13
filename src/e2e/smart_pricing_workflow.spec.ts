@@ -69,5 +69,9 @@ test.describe('Smart Pricing autonomous workflow', () => {
     // The item should move to Activity Feed
     await page.click('button:has-text("Activity Feed")');
     await expect(page.locator('text=Smart Price Suggestion: Winter Scarf')).toBeVisible({ timeout: 10000 });
+
+    // The marketing agent should draft a promotional email
+    await page.click('button:has-text("Proposals")');
+    await expect(page.locator('text=Draft promotional email for Winter Scarf')).toBeVisible({ timeout: 10000 });
   });
 });
