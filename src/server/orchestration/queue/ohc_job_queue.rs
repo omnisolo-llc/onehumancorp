@@ -115,6 +115,25 @@ impl OHCJobQueue {
         Ok(())
     }
 
+    pub async fn cleanup_stale_jobs(&self) -> Result<u64, String> {
+        let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
+        ::server_common::auth_utils::set_system_context(&mut *tx).await.map_err(|e| e.to_string())?;
+
+        // Reset jobs that have been in PROCESSING for more than 1 hour.
+        // We move them back to PENDING and increment retry_count.
+        let result = sqlx::query(
+            "UPDATE ohc_job_queue
+             SET status = 'PENDING', retry_count = retry_count + 1, updated_at = CURRENT_TIMESTAMP
+             WHERE status = 'PROCESSING' AND updated_at < CURRENT_TIMESTAMP - INTERVAL '1 hour'"
+        )
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| e.to_string())?;
+
+        tx.commit().await.map_err(|e| e.to_string())?;
+        Ok(result.rows_affected())
+    }
+
     pub async fn fail(&self, job_id: &str, max_retries: i32) -> Result<(), String> {
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
         ::server_common::auth_utils::set_system_context(&mut *tx).await.map_err(|e| e.to_string())?;

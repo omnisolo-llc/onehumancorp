@@ -28,7 +28,7 @@ rust_test(
     size = "small",
     crate = ":server_telemetry",
     data = [
-        "//src/server/monitoring:dashboards/hybrid-telemetry.json",
+        "//src/server/monitoring:dashboards/ohc-hybrid-telemetry.json",
         "//deploy:hybrid_telemetry_dashboard_mirrors",
     ],
     edition = "2024",
