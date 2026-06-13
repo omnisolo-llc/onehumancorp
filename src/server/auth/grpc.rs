@@ -4,7 +4,6 @@ use sha2::Sha256;
 
 #[derive(Debug, Clone)]
 enum AuthMode {
-    Disabled,
     Token(Vec<u8>), // HMAC-SHA256 of expected token
     SPIFFE { allowed_id: Option<String> },
 }
@@ -30,7 +29,6 @@ impl AuthConfig {
 
     pub fn authenticate(&self, req: &Request<()>) -> Result<(), Status> {
         match &self.mode {
-            AuthMode::Disabled => Ok(()),
             AuthMode::Token(expected_hash) => self.check_token(req, expected_hash),
             AuthMode::SPIFFE { allowed_id } => self.check_spiffe(req, allowed_id.as_deref()),
         }
