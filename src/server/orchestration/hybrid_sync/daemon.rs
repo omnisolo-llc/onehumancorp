@@ -51,6 +51,17 @@ impl HybridSyncDaemon {
                 )
                 .await;
             }
+
+            if let Err(e) = self.sync_pos_offline_transactions().await {
+                error!("Hybrid sync pos offline transactions error: {}", e);
+                let _ = ::server_telemetry::record_sync_daemon_error_total(
+                    &self.pg_pool,
+                    1.0,
+                    ::server_telemetry::get_deployment_mode(),
+                    "sync_pos_offline_transactions_error",
+                )
+                .await;
+            }
             tokio::time::sleep(Duration::from_secs(5)).await;
         }
     }
@@ -411,4 +422,117 @@ impl HybridSyncDaemon {
 
         Ok(())
     }
+
+    pub async fn sync_pos_offline_transactions(&self) -> Result<(), Box<dyn std::error::Error>> {
+        let start = Instant::now();
+        let rows = sqlx::query("SELECT id, tenant_id, client_id, amount_cents, currency, payload, status FROM pos_offline_transactions WHERE status = 'PENDING' ORDER BY created_at ASC LIMIT 100")
+            .fetch_all(&self.sqlite_pool)
+            .await?;
+
+        let mut _success_count = 0;
+        let mut total_payload_size = 0;
+        let batch_size = rows.len();
+
+        for row in rows {
+            let id: String = row.get("id");
+            let tenant_id: String = row.get("tenant_id");
+            let client_id: String = row.get("client_id");
+            let amount_cents: i64 = row.get("amount_cents");
+            let currency: String = row.get("currency");
+            let payload_str: String = row.get("payload");
+            let _payload: Value = serde_json::from_str(&payload_str).unwrap_or(json!({}));
+
+            total_payload_size += payload_str.len();
+
+            let mut tx = match self.pg_pool.begin().await {
+                Ok(t) => t,
+                Err(e) => {
+                    warn!("Failed to begin pg transaction for pos sync: {}, gracefully degrading.", e);
+                    continue;
+                }
+            };
+
+            let insert_res = sqlx::query(
+                "INSERT INTO pos_offline_transactions (id, tenant_id, client_id, amount_cents, currency, payload, status, _sync_status)
+                 VALUES ($1, $2, $3, $4, $5, $6::jsonb, 'PENDING', 'pending')
+                 ON CONFLICT (id) DO UPDATE SET _sync_status = 'pending'"
+            )
+            .bind(&id)
+            .bind(&tenant_id)
+            .bind(&client_id)
+            .bind(amount_cents)
+            .bind(&currency)
+            .bind(&payload_str)
+            .execute(&mut *tx)
+            .await;
+
+            if let Err(e) = insert_res {
+                warn!("Failed to insert pos_offline_transactions to pg: {}", e);
+                let _ = tx.rollback().await;
+                continue;
+            }
+
+            let job_id = Uuid::new_v4().to_string();
+            let job_payload = json!({
+                "pos_transaction_id": id,
+                "client_id": client_id,
+                "amount_cents": amount_cents,
+                "currency": currency,
+                "payload": payload_str,
+            }).to_string();
+
+            let job_res = sqlx::query(
+                "INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload)
+                 VALUES ($1, $2, 'offline_pos_sync', $3::jsonb)"
+            )
+            .bind(&job_id)
+            .bind(&tenant_id)
+            .bind(&job_payload)
+            .execute(&mut *tx)
+            .await;
+
+            if let Err(e) = job_res {
+                warn!("Failed to enqueue pos_offline_sync job to pg: {}", e);
+                let _ = tx.rollback().await;
+                continue;
+            }
+
+            if let Err(e) = tx.commit().await {
+                warn!("Failed to commit pg transaction for pos sync: {}", e);
+                continue;
+            }
+
+            let _ = sqlx::query("UPDATE pos_offline_transactions SET status = 'SYNCED', updated_at = CURRENT_TIMESTAMP WHERE id = ?")
+                .bind(&id)
+                .execute(&self.sqlite_pool)
+                .await?;
+
+            _success_count += 1;
+            info!("Successfully synced POS transaction {} to cloud", id);
+        }
+
+        if batch_size > 0 {
+            let _ = ::server_telemetry::record_sync_latency(
+                &self.pg_pool,
+                start.elapsed().as_millis() as f32,
+                ::server_telemetry::get_deployment_mode(),
+            )
+            .await;
+            let _ = ::server_telemetry::record_sync_daemon_batch_size(
+                &self.pg_pool,
+                batch_size as f32,
+                ::server_telemetry::get_deployment_mode(),
+            )
+            .await;
+            let _ = ::server_telemetry::record_sync_payload_size(
+                &self.pg_pool,
+                total_payload_size as f32,
+                ::server_telemetry::get_deployment_mode(),
+            )
+            .await;
+        }
+
+        Ok(())
+    }
+
 }
