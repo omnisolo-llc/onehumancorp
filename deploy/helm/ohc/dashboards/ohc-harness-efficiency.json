@@ -1,40 +1,225 @@
 {
-  "title": "Harness Efficiency Dashboard",
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "liveNow": false,
   "panels": [
     {
       "type": "text",
-      "title": "OHC Aesthetics",
+      "title": "OHC Aesthetic Injector",
       "gridPos": {
-        "h": 2,
+        "h": 3,
         "w": 24,
         "x": 0,
         "y": 0
       },
       "options": {
         "mode": "html",
-        "content": "<link rel=\"stylesheet\" href=\"/public/css/custom.css\">"
+        "content": "<link rel=\"stylesheet\" href=\"/public/css/custom.css\">\n<h1 >HARNESS EFFICIENCY</h1>\n  <p >Telemetry for Agent Harness Cloud vs Standalone Modes</p>"
       },
       "transparent": true
     },
     {
-      "title": "Harness Init Latency",
-      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "opacity",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "ms"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 3
+      },
+      "id": 2,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "editorMode": "code",
           "expr": "histogram_quantile(0.95, sum(rate(harness_init_latency_seconds_bucket[5m])) by (le, deployment_mode))",
-          "legendFormat": "{{deployment_mode}} Init Latency (p95)"
+          "legendFormat": "{{deployment_mode}} P95",
+          "range": true,
+          "refId": "A"
         }
-      ]
+      ],
+      "title": "Harness Init Latency (P95)",
+      "type": "timeseries",
+      "transparent": true
     },
     {
-      "title": "Harness DB I/O Latency",
-      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "opacity",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "ms"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 3
+      },
+      "id": 3,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "editorMode": "code",
           "expr": "histogram_quantile(0.95, sum(rate(harness_db_io_latency_seconds_bucket[5m])) by (le, deployment_mode, operation))",
-          "legendFormat": "{{deployment_mode}} {{operation}} Latency (p95)"
+          "legendFormat": "{{deployment_mode}} {{operation}} P95",
+          "range": true,
+          "refId": "A"
         }
-      ]
+      ],
+      "title": "Harness DB I/O Latency (P95)",
+      "type": "timeseries",
+      "transparent": true
     },
     {
       "datasource": {
@@ -119,7 +304,7 @@
             "uid": "Prometheus"
           },
           "editorMode": "code",
-          "expr": "histogram_quantile(0.95, sum(rate(harness_execution_latency_bucket[5m])) by (le, deployment_mode))",
+          "expr": "histogram_quantile(0.95, sum(rate(ohc_harness_execution_duration_ms_bucket[5m])) by (le, deployment_mode))",
           "legendFormat": "{{deployment_mode}} P95",
           "range": true,
           "refId": "A"
@@ -129,5 +314,24 @@
       "type": "timeseries",
       "transparent": true
     }
-  ]
+  ],
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": [
+    "Harness",
+    "Hybrid",
+    "OHC"
+  ],
+  "templating": {
+    "list": []
+  },
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
+  "title": "Harness Efficiency",
+  "uid": "harness-efficiency",
+  "version": 1
 }

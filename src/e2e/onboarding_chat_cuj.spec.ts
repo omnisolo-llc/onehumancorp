@@ -6,7 +6,10 @@ test.describe('Conversational Setup CUJ', () => {
 
   test.beforeEach(async ({ page }) => {
     // Intercept standard setup.html load to serve from filesystem for tests
-    const tauriUiDir = path.join(process.cwd(), 'src/ui/tauri/src/ui');
+    let tauriUiDir = path.join(process.cwd(), 'src/ui/tauri/src/ui');
+    if (!fs.existsSync(tauriUiDir)) {
+        tauriUiDir = path.join(process.env.RUNFILES_DIR || process.cwd(), '_main/src/ui/tauri/src/ui');
+    }
     await page.route('**/setup.html', async route => {
       const content = fs.readFileSync(path.join(tauriUiDir, 'setup.html'), 'utf-8');
       await route.fulfill({ contentType: 'text/html', body: content });
@@ -121,6 +124,8 @@ test.describe('Conversational Setup CUJ', () => {
 
     // 5. Send second message (simulating uploading a photo or additional details)
     await chatInput.fill('Here is a picture of my cakes.');
+    const chatImageUrl = page.locator('#chat-image-url');
+    await chatImageUrl.fill('https://example.com/cake.jpg');
     await chatSendBtn.click();
 
     // 6. Verify bot finishes the conversation

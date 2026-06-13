@@ -149,11 +149,19 @@ test.describe('OnboardingWizard CUJ', () => {
     // 1. Start Wizard and Save Draft
     await page.goto('/onboarding');
     await expect(page.getByText("10-Minute Setup Wizard")).toBeVisible();
+
+    // Check for glassmorphism
+    await expect(page.locator('#setup-screen')).toHaveClass(/glassmorphism/);
+
     await page.getByRole('button', { name: 'Start My Business' }).click();
 
     await page.getByPlaceholder(/Maya's Custom Cake/i).fill('My Restored Business');
     await page.getByRole('button', { name: 'Save Draft' }).click();
     await expect(page.getByText('Draft Saved!')).toBeVisible();
+
+    // Ensure localStorage is populated via zustand persist
+    const lsStore = await page.evaluate(() => window.localStorage.getItem('onboarding-storage-v3'));
+    expect(lsStore).toContain('My Restored Business');
 
     // 2. Clear local storage to simulate device switch
     await page.evaluate(() => window.localStorage.clear());

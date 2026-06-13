@@ -666,6 +666,36 @@
         </div>
       </div>
 
+
+      <!-- Viral Loop Performance Widget -->
+      <div class="ohc-growth-card" id="viral-loop-performance-widget" style="margin-bottom: 20px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+          <div>
+            <h2 style="margin-bottom: 4px;">Viral Loop Performance</h2>
+            <p style="margin-top: 0; margin-bottom: 0;">Track your referral program and team growth.</p>
+          </div>
+          <div style="background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600;">Active</div>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
+          <div style="background: rgba(255, 255, 255, 0.4); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 12px; padding: 16px;">
+            <p style="margin: 0; font-size: 14px; color: #6b7280; margin-bottom: 8px;">Invites Sent</p>
+            <p class="text-3xl" id="viral-loop-invites-sent" style="margin: 0; font-size: 28px; font-weight: 700; color: #1D1D1F;">0</p>
+          </div>
+          <div style="background: rgba(255, 255, 255, 0.4); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 12px; padding: 16px;">
+            <p style="margin: 0; font-size: 14px; color: #6b7280; margin-bottom: 8px;">Active Referrals</p>
+            <p class="text-3xl" id="viral-loop-active-referrals" style="margin: 0; font-size: 28px; font-weight: 700; color: #1D1D1F;">0</p>
+          </div>
+          <div style="background: rgba(255, 255, 255, 0.4); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 12px; padding: 16px;">
+            <p style="margin: 0; font-size: 14px; color: #6b7280; margin-bottom: 8px;">Revenue from Referrals</p>
+            <p class="text-3xl" id="viral-loop-revenue" style="margin: 0; font-size: 28px; font-weight: 700; color: #1D1D1F;">$0.00</p>
+          </div>
+          <div style="background: rgba(255, 255, 255, 0.4); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 12px; padding: 16px;">
+            <p style="margin: 0; font-size: 14px; color: #6b7280; margin-bottom: 8px;">Pending Rewards</p>
+            <p class="text-3xl" id="viral-loop-pending-rewards" style="margin: 0; font-size: 28px; font-weight: 700; color: #1D1D1F;">$0.00</p>
+          </div>
+        </div>
+      </div>
+
       <div class="ohc-growth-card" id="referral-tier-section" style="margin-bottom: 20px; display: none;">
         <h2>Your Referral Rewards</h2>
         <p id="referral-tier-text">Loading your tier...</p>
@@ -1205,6 +1235,24 @@
       }
       checkReferralTier();
 
+      // Fetch Viral Loop Performance Metrics
+      async function fetchViralLoopMetrics() {
+        try {
+          const res = await fetch('/api/v1/growth/team-invites/aggregated-metrics');
+          if (res.ok) {
+            const data = await res.json();
+            document.getElementById('viral-loop-invites-sent').innerText = data.total_invites || '0';
+            document.getElementById('viral-loop-active-referrals').innerText = data.metrics?.active_referrals || '0';
+            document.getElementById('viral-loop-revenue').innerText = '$' + (data.metrics?.revenue || 0).toFixed(2);
+            document.getElementById('viral-loop-pending-rewards').innerText = '$' + (data.metrics?.pending_rewards || 0).toFixed(2);
+          }
+        } catch (e) {
+          console.error("Failed to fetch viral loop metrics", e);
+        }
+      }
+      fetchViralLoopMetrics();
+
+
 
       // Milestone logic
       async function checkMilestones() {
@@ -1230,7 +1278,12 @@
               };
               document.getElementById('milestone-icon').innerText = iconMap[reachedMilestone.id] || '✨';
 
-              document.getElementById('milestone-container').style.display = 'block';
+              const dismissedKey = `dismissed_milestone_${reachedMilestone.id}`;
+              if (localStorage.getItem(dismissedKey) !== 'true') {
+                document.getElementById('milestone-container').style.display = 'block';
+              } else {
+                document.getElementById('milestone-container').style.display = 'none';
+              }
 
               // Button events
               const copyBtn = document.getElementById('milestone-copy-btn');
@@ -1257,6 +1310,7 @@
                 tempInput.select();
                 document.execCommand('copy');
                 document.body.removeChild(tempInput);
+                localStorage.setItem(dismissedKey, 'true');
 
                 const originalText = copyBtn.innerHTML;
                 copyBtn.innerHTML = '<svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Copied Text!';
@@ -1269,6 +1323,8 @@
                 const link = await getInviteLink();
                 const text = `I just hit a huge business milestone (${reachedMilestone.title}) using OHC! Launch your own store today: ${link} ⚡ Powered by OHC`;
                 window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, '_blank');
+                localStorage.setItem(dismissedKey, 'true');
+                document.getElementById('milestone-container').style.display = 'none';
               });
             }
           }
@@ -1355,6 +1411,7 @@
           tempInput.select();
           document.execCommand("copy");
           document.body.removeChild(tempInput);
+                localStorage.setItem(dismissedKey, 'true');
 
           copyBtn.innerText = "Copied!";
           setTimeout(() => {
@@ -1375,6 +1432,8 @@
         const link = referralLink.value;
         const text = `Join my team on OHC! Here is your invite link:\n\n${link}\n\n⚡ Powered by OHC`;
         window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, '_blank');
+                localStorage.setItem(dismissedKey, 'true');
+                document.getElementById('milestone-container').style.display = 'none';
       });
 
 
@@ -1392,7 +1451,13 @@
       };
 
       async function loadTriage() {
-        triageSection.style.display = 'block';
+        if (window.innerWidth <= 768) {
+          triageSection.style.display = 'block';
+          // Ensure we scroll to it or prioritize it
+          triageSection.scrollIntoView({ behavior: 'smooth' });
+        } else {
+          triageSection.style.display = 'block';
+        }
         try {
           const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default';
           const res = await fetch(`/api/ui/triage?tenant_id=${encodeURIComponent(tenantId)}&mobile_optimized=true`, {
@@ -1447,7 +1512,7 @@
                   <div style="font-size: 14px; margin-top: 4px; color: #333;">Scope of Work: ${scope}</div>
                   <div class="triage-controls" style="margin-top: 12px; display: flex; gap: 8px;">
                     <button class="triage-btn-approve" data-testid="approve-proposal" onclick="handleTriageAction('${item.id}', true)" style="min-width: 44px; min-height: 44px; padding: 12px; background: #0066FF; color: white; border: none; border-radius: 8px; flex: 1;">Approve & Send Proposal</button>
-                    <button class="triage-btn-dismiss" data-testid="edit-proposal" onclick="window.location.href='quote.html?id=${item.id}'" style="min-width: 44px; min-height: 44px; padding: 12px; background: rgba(0,0,0,0.05); border: none; border-radius: 8px; flex: 1;">Edit</button>
+                    <button class="triage-btn-dismiss" data-testid="edit-quote-draft" onclick="window.location.href='/quoting?id=${item.id}'" style="min-width: 44px; min-height: 44px; padding: 12px; background: rgba(0,0,0,0.05); border: none; border-radius: 8px; flex: 1;">Edit</button>
                     <button class="triage-btn-dismiss" data-testid="reject-proposal" onclick="handleTriageAction('${item.id}', false)" style="min-width: 44px; min-height: 44px; padding: 12px; background: rgba(0,0,0,0.05); border: none; border-radius: 8px; flex: 1;">Dismiss</button>
                   </div>
                 </div>
@@ -1540,7 +1605,7 @@
             let parsedPayload = {};
             try { parsedPayload = JSON.parse(item.action_payload || '{}'); } catch(e){}
             return `
-              <div class="triage-item" data-testid="triage-card-${item.id}" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.4); backdrop-filter: blur(20px); border-radius: 16px; padding: 16px; border: 1px solid rgba(255,255,255,0.6);">
+              <div class="triage-item glassmorphism" data-testid="triage-card-${item.id}" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.4); backdrop-filter: blur(20px); border-radius: 16px; padding: 16px; border: 1px solid rgba(255,255,255,0.6);">
                 <div class="triage-header" style="margin-bottom: 12px;">
                   <div class="triage-source" style="display: flex; align-items: center; gap: 8px;">
                     <span style="font-size: 18px;">✨</span> <strong>The Promoter</strong>
@@ -1563,7 +1628,7 @@
           }
 
           return `
-            <div class="triage-item" data-testid="triage-card-${item.id}" id="triage-${item.id}">
+            <div class="triage-item glassmorphism" data-testid="triage-card-${item.id}" id="triage-${item.id}">
               <div class="triage-header">
                 <div class="triage-source" style="text-transform: uppercase; font-size: 10px; background: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 4px 8px; border-radius: 4px;">${(item.source || item.event_source || 'Unknown').replace('_', ' ')}</div>
                 <div class="triage-priority" style="font-size: 12px; color: #6b7280;">Action Needed</div>
@@ -1580,7 +1645,7 @@
           }).join('');
         } else {
 
-          const activities = items.filter(i => i.lifecycle_state === 'APPROVED' || i.lifecycle_state === 'DISMISSED');
+          const activities = items.filter(i => i.lifecycle_state === 'APPROVED' || i.lifecycle_state === 'DISMISSED' || i.lifecycle_state === 'REJECTED' || i.status === 'resolved' || i.status === 'dismissed' || i.status === 'APPROVED' || i.status === 'REJECTED');
           if (activities.length === 0) {
             triageQueue.innerHTML = '<div class="triage-card empty">No recent activity found.</div>';
             return;
@@ -1671,7 +1736,9 @@
         }
       };
 // Load on start
-      setTimeout(loadTriage, 500);
+      setTimeout(() => {
+        loadTriage();
+      }, 500);
 
       // Omnibox logic
       const omniboxOverlay = document.getElementById('omnibox-overlay');
@@ -1777,13 +1844,14 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!window.OHC_TOOLTIPS) {
         window.OHC_TOOLTIPS = {};
         fetch("/api/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(e => {
-            // Fallback for playwright
-            window.OHC_TOOLTIPS = {
-                "nav-store": "Your Storefront. This is where you manage what you sell.",
-                "nav-agents": "AI Helpers. These are your digital employees.",
-                "ohc-help-btn": "Need help? Click here to access our Help Center and tutorials.",
-                "search-input": "Search our knowledge base for help articles.",
-            };
+            //
+            //
+            //
+            //
+            //
+            //
+            //
+            console.error(e);
         });
     }
 
@@ -2177,6 +2245,8 @@ document.addEventListener('DOMContentLoaded', () => {
         shareXBtn.addEventListener('click', () => {
             const text = `I manage my business with OHC! Join using my invite link and get 1 month free: ${linkInput.value}\n\n⚡ Powered by OHC`;
             window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, '_blank');
+                localStorage.setItem(dismissedKey, 'true');
+                document.getElementById('milestone-container').style.display = 'none';
         });
     }
 });
@@ -2215,13 +2285,14 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!window.OHC_TOOLTIPS) {
         window.OHC_TOOLTIPS = {};
         fetch("/api/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(e => {
-            // Fallback for playwright
-            window.OHC_TOOLTIPS = {
-                "nav-store": "Your Storefront. This is where you manage what you sell.",
-                "nav-agents": "AI Helpers. These are your digital employees.",
-                "ohc-help-btn": "Need help? Click here to access our Help Center and tutorials.",
-                "search-input": "Search our knowledge base for help articles.",
-            };
+            //
+            //
+            //
+            //
+            //
+            //
+            //
+            console.error(e);
         });
     }
     const tooltipEl = document.createElement('div');
@@ -2297,8 +2368,8 @@ function initWalkthrough() {
             const step = steps[currentStep];
 
             // Clean up previous highlights
-            document.querySelectorAll('.walkthrough-highlight').forEach(el => {
-                el.classList.remove('walkthrough-highlight');
+            document.querySelectorAll('.walkthrough-highlight, .ohc-walkthrough-highlight').forEach(el => {
+                el.classList.remove('walkthrough-highlight', 'ohc-walkthrough-highlight');
                 el.style.position = '';
                 el.style.zIndex = '';
                 el.style.background = '';
@@ -2353,8 +2424,8 @@ function initWalkthrough() {
         }
 
         function closeWalkthrough() {
-            document.querySelectorAll('.walkthrough-highlight').forEach(el => {
-                el.classList.remove('walkthrough-highlight');
+            document.querySelectorAll('.walkthrough-highlight, .ohc-walkthrough-highlight').forEach(el => {
+                el.classList.remove('walkthrough-highlight', 'ohc-walkthrough-highlight');
                 el.style.position = '';
                 el.style.zIndex = '';
                 el.style.background = '';
@@ -2739,12 +2810,13 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!window.OHC_TOOLTIPS) {
         window.OHC_TOOLTIPS = {};
         fetch("/api/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(e => {
-            // Fallback for playwright
-            window.OHC_TOOLTIPS = {
-                "nav-store": "Your Storefront. This is where you manage what you sell.",
-                "nav-agents": "AI Helpers. These are your digital employees.",
-                "ohc-floating-help-btn": "Need help? Click here to access our Help Center and tutorials.",
-            };
+            //
+            //
+            //
+            //
+            //
+            //
+            console.error(e);
         });
     }
     const tooltipEl = document.createElement('div');
@@ -2813,8 +2885,8 @@ document.addEventListener('DOMContentLoaded', () => {
             function renderStep() {
                 const step = steps[currentStep];
 
-                document.querySelectorAll('.walkthrough-highlight').forEach(el => {
-                    el.classList.remove('walkthrough-highlight');
+                document.querySelectorAll('.walkthrough-highlight, .ohc-walkthrough-highlight').forEach(el => {
+                    el.classList.remove('walkthrough-highlight', 'ohc-walkthrough-highlight');
                     el.style.position = '';
                     el.style.zIndex = '';
                     el.style.background = '';
@@ -2866,8 +2938,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             function closeWalkthrough() {
-                document.querySelectorAll('.walkthrough-highlight').forEach(el => {
-                    el.classList.remove('walkthrough-highlight');
+                document.querySelectorAll('.walkthrough-highlight, .ohc-walkthrough-highlight').forEach(el => {
+                    el.classList.remove('walkthrough-highlight', 'ohc-walkthrough-highlight');
                     el.style.position = '';
                     el.style.zIndex = '';
                     el.style.background = '';
