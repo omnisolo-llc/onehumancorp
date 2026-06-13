@@ -5,9 +5,10 @@ test.describe('Unified Agent Feed (Mobile MVP)', () => {
 
   test('displays action cards and allows approval without horizontal scrolling', async ({ page }) => {
     // MOCK API if we want to test ui reliably without backend
-    await page.route('/api/agent-feed', async route => {
+    await page.route('/api/ui/dashboard/unified-agent-feed?tenant_id=default&mobile_optimized=true', async route => {
         const json = {
-            items: [
+            entries: [],
+            pending_approvals: [
                 {
                     id: "1",
                     tenant_id: "t1",
@@ -23,19 +24,19 @@ test.describe('Unified Agent Feed (Mobile MVP)', () => {
     });
 
     // Navigate to the feed page
-    await page.goto('/feed');
+    await page.goto('/api/ui/dashboard.html');
 
     // Wait for feed items to load
-    await page.waitForSelector('[data-testid="agent-feed"]');
+    await page.waitForSelector('[id="triage-section"]');
 
     // Ensure there is no horizontal scroll
     const clientWidth = await page.evaluate(() => document.documentElement.clientWidth);
     const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
     expect(scrollWidth).toBeLessThanOrEqual(clientWidth);
 
-    await page.waitForSelector('[data-testid="agent-feed-card"]');
+    await page.waitForSelector('.triage-item');
 
-    const cards = page.locator('[data-testid="agent-feed-card"]');
+    const cards = page.locator('.triage-item');
 
     const count = await cards.count();
     expect(count).toBeGreaterThan(0);
@@ -52,7 +53,7 @@ test.describe('Unified Agent Feed (Mobile MVP)', () => {
       const firstApproveButton = buttons.filter({ hasText: 'Approve' }).first();
 
       // MOCK API for patch
-      await page.route('**/api/agent-feed/*', async route => {
+      await page.route('**/api/agent-feed/*/state', async route => {
           await route.fulfill({ status: 200, json: { success: true } });
       });
 

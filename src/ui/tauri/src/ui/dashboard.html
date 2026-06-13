@@ -1402,7 +1402,7 @@
 
           const data = await res.json();
           // Adjust logic to match new ui triage shape if necessary
-          agentFeedItems = Array.isArray(data) ? data : (data.items || []);
+          agentFeedItems = Array.isArray(data) ? data : (data.pending_approvals || data.items || data.entries || []);
           renderTriageItems(agentFeedItems);
         } catch (err) {
           console.error("Agent Feed load error:", err);
@@ -1424,6 +1424,7 @@
             const description = item.context || item.proposed_action?.message || actionType || item.context_payload?.description || 'Agent proposed an action.';
             const isDraft = item.proposed_action?.context?.weekly_health_report === true;
             const approveTestId = isDraft ? "approve-draft" : "approve-proposal";
+            const rejectTestId = isDraft ? "reject-draft" : "reject-proposal";
             const approveText = isDraft ? "Yes, draft it!" : "Approve";
 
             if (item.proposed_action?.feature_type === 'quote_draft' || item.context_payload?.feature_type === 'quote_draft' || actionType === 'quote_draft' || item.action_payload?.feature_type === 'quote_draft') {
@@ -1571,7 +1572,7 @@
               <div class="triage-context" style="font-size: 16px; font-weight: 600; margin-top: 8px;">${description}</div>
               <div class="triage-controls" style="margin-top: 12px;">
                 <button class="triage-btn-approve" data-testid="${approveTestId}" onclick="handleTriageAction('${item.id}', true)">${approveText}</button>
-                <button class="triage-btn-dismiss" data-testid="reject-proposal" onclick="handleTriageAction('${item.id}', false)">Dismiss</button>
+                <button class="triage-btn-dismiss" data-testid="${rejectTestId}" onclick="handleTriageAction('${item.id}', false)">Dismiss</button>
               </div>
 
                 </div>
@@ -1634,7 +1635,7 @@
           let bodyPayload;
 
           if (isAgentFeed) {
-             url = `/api/v1/feed/${encodeURIComponent(id)}/state`;
+             url = `/api/agent-feed/${encodeURIComponent(id)}/state`;
              method = 'PUT';
              let finalState = 'APPROVED';
              if (typeof state === 'boolean') {
