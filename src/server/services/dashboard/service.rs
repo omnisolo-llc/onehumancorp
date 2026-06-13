@@ -83,9 +83,12 @@ impl MyDashboardService {
 
         let mut filtered = Vec::new();
         for m in org_meetings.iter() {
-            let mut mtg = m.clone();
-            mtg.transcript.clear();
-            filtered.push(mtg);
+            filtered.push(::server_ohc::orchestration::MeetingRoom {
+                id: m.id.clone(),
+                participants: m.participants.clone(),
+                transcript: Vec::new(),
+                agenda: m.agenda.clone(),
+            });
         }
         Ok(Arc::new(filtered))
     }
@@ -177,7 +180,7 @@ impl MyDashboardService {
     #[tracing::instrument(skip(self))]
     async fn fetch_products_impl(&self, org_id: &str, mobile_optimized: bool) -> Result<Vec<::server_ohc::organization::Product>, String> {
         let q = if mobile_optimized {
-            "SELECT id, '' as organization_id, name, '' as description, COALESCE(price_cents, 0) as price_cents, '' as fulfillment_strategy, COALESCE(currency, 'USD') as currency, '{}' as metadata FROM products WHERE organization_id = $1 LIMIT 10"
+            "SELECT id, '' as organization_id, name, '' as description, COALESCE(price_cents, 0) as price_cents, '' as fulfillment_strategy, COALESCE(currency, 'USD') as currency, '' as metadata FROM products WHERE organization_id = $1 LIMIT 10"
         } else {
             "SELECT id, organization_id, name, description, COALESCE(price_cents, 0) as price_cents, fulfillment_strategy, COALESCE(currency, 'USD') as currency, COALESCE(metadata, '{}') as metadata FROM products WHERE organization_id = $1 LIMIT 10"
         };
@@ -195,9 +198,13 @@ impl MyDashboardService {
                             price_cents: r.try_get("price_cents").unwrap_or_default(),
                             currency: r.try_get("currency").unwrap_or_else(|_| "USD".to_string()),
                             fulfillment_strategy: r.try_get("fulfillment_strategy").unwrap_or_default(),
-                            metadata_json: match r.try_get::<serde_json::Value, _>("metadata") {
+                            metadata_json: if mobile_optimized {
+                                String::new()
+                            } else {
+                                match r.try_get::<serde_json::Value, _>("metadata") {
                                     Ok(v) => v.to_string(),
                                     Err(_) => r.try_get::<String, _>("metadata").unwrap_or_else(|_| "{}".to_string())
+                                }
                             },
                         };
                         results.push(p);
@@ -215,9 +222,13 @@ impl MyDashboardService {
                             price_cents: r.try_get("price_cents").unwrap_or_default(),
                             currency: r.try_get("currency").unwrap_or_else(|_| "USD".to_string()),
                             fulfillment_strategy: r.try_get("fulfillment_strategy").unwrap_or_default(),
-                            metadata_json: match r.try_get::<serde_json::Value, _>("metadata") {
+                            metadata_json: if mobile_optimized {
+                                String::new()
+                            } else {
+                                match r.try_get::<serde_json::Value, _>("metadata") {
                                     Ok(v) => v.to_string(),
                                     Err(_) => r.try_get::<String, _>("metadata").unwrap_or_else(|_| "{}".to_string())
+                                }
                             },
                         };
                         results.push(p);
