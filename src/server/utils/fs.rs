@@ -84,7 +84,7 @@ mod tests {
             .collect();
         let filename = std::env::temp_dir().join(format!("test_atomic_write_{}.txt", random_suffix));
         let data = b"hello world";
-        let _mode = 0o644;
+        let _mode = 0o600;
 
         write_file_atomic(&filename, data, _mode).unwrap();
 
