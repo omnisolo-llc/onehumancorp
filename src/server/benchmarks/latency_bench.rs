@@ -646,7 +646,7 @@ mod tests {
         let (_tx, rx) = tokio::sync::oneshot::channel::<()>();
 
         let result = tokio::time::timeout(timeout_duration, async {
-            let _ = rx.await;
+            tokio::time::sleep(std::time::Duration::from_millis(2500)).await;
             Ok::<(), String>(())
         }).await;
 
@@ -659,7 +659,7 @@ mod tests {
         let start = std::time::Instant::now();
         let (_tx, rx) = tokio::sync::oneshot::channel::<()>();
         let result = tokio::time::timeout(std::time::Duration::from_millis(2000), async {
-            let _ = rx.await;
+            tokio::time::sleep(std::time::Duration::from_millis(2500)).await;
             "data"
         }).await;
         assert!(result.is_err());

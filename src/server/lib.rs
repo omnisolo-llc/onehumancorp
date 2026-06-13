@@ -1,3 +1,4 @@
+use sqlx::Row;
 pub mod rag_sync;
 pub mod cart_recovery;
 pub use ::server_harness as harness;
@@ -721,7 +722,6 @@ async fn http_login_handler(
 ) -> axum::response::Response {
     use axum::http::StatusCode;
     use axum::response::IntoResponse;
-    use sqlx::Row;
 
     let username = payload.username.trim();
     if username.is_empty() || payload.password.is_empty() {
@@ -1704,8 +1704,7 @@ impl HubService for MyHubService {
             .map_err(|e| tonic::Status::internal(e.to_string()))?;
 
         let (mut merged_state, prev_step) = if let Some(record) = row {
-            use sqlx::Row;
-            let existing_json: serde_json::Value = record.try_get("state_json").unwrap_or_else(|_| serde_json::json!({}));
+                    let existing_json: serde_json::Value = record.try_get("state_json").unwrap_or_else(|_| serde_json::json!({}));
             let existing_step: i32 = record.try_get("current_step").unwrap_or(0);
             (existing_json, existing_step)
         } else {
@@ -1770,8 +1769,7 @@ impl HubService for MyHubService {
 
         let mut state = std::collections::HashMap::new();
         if let Some(record) = row {
-            use sqlx::Row;
-            let state_json: serde_json::Value = record.get("state_json");
+                    let state_json: serde_json::Value = record.get("state_json");
             if let Some(json_obj) = state_json.as_object() {
                 for (k, v) in json_obj.iter() {
                     if let Some(s) = v.as_str() {
@@ -2073,7 +2071,7 @@ impl HubService for MyHubService {
 
         let req = request.into_inner();
 
-        self.dept_orchestrator.decide_approval(&req.task_id, &org_id, req.is_approved).await
+        self.dept_orchestrator.decide_approval(&req.task_id, &org_id, req.is_approved, None).await
             .map_err(|e| Status::internal(e))?;
 
         Ok(Response::new(ApproveTaskResponse {
@@ -2854,6 +2852,12 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .route("/api/v1/webhooks/omnichannel", axum::routing::post(api::omnichannel_webhook::handle_omnichannel_webhook))
         .with_state(omnichannel_webhook_state);
 
+    let inbox_webhook_state = api::inbox::webhook::OmnichannelWebhookState {
+        orchestrator: dept_orchestrator.clone(),
+        db: db.clone(),
+    };
+    let inbox_webhook_router = api::inbox::webhook::router(inbox_webhook_state);
+
     let health_router = axum::Router::new()
         .route("/api/v1/health", axum::routing::get(api::health::health_handler))
         .with_state(hub.clone());
@@ -2900,8 +2904,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
         Ok(rows) => {
             let _ = tx.commit().await;
             let messages: Vec<serde_json::Value> = rows.into_iter().map(|row| {
-                use sqlx::Row;
-                let created_at: Option<chrono::NaiveDateTime> = row.get("created_at");
+                            let created_at: Option<chrono::NaiveDateTime> = row.get("created_at");
                 let created_at_str = created_at.map(|d| d.format("%Y-%m-%d %H:%M:%S").to_string()).unwrap_or_default();
                 serde_json::json!({
                     "id": row.get::<String, _>("id"),
@@ -3086,8 +3089,7 @@ pub async fn update_ui_triage_action_handler(
             let status = if payload.approved { "resolved" } else { "dismissed" };
 
             if payload.approved {
-                use sqlx::Row;
-                // Check if there is a proposed action to execute
+                            // Check if there is a proposed action to execute
                 if let Ok(Some(row)) = sqlx::query("SELECT action_type, payload FROM triage_proposed_actions WHERE triage_item_id = $1 AND tenant_id = $2")
                     .bind(&payload.triage_item_id)
                     .bind(&tenant_id)
@@ -3314,7 +3316,6 @@ pub(crate) async fn load_ui_dashboard_metrics(
 
 
 async fn load_ui_orders_from_db(db: &crate::db::DB, tenant_id: &str, mobile_optimized: bool) -> Result<Vec<serde_json::Value>, sqlx::Error> {
-    use sqlx::Row;
     match &db.store {
         crate::db::DbStore::Postgres => {
             sqlx::query("SELECT o.id, COALESCE(c.name, '') AS customer_name, CAST(COALESCE(o.total_amount, 0.0) AS DOUBLE PRECISION) AS total_amount, COALESCE(o.status, '') AS status, COALESCE(o.created_at::text, '') AS created_at FROM orders o LEFT JOIN customers c ON c.id = o.customer_id AND c.tenant_id = o.tenant_id WHERE o.tenant_id = $1 ORDER BY o.created_at DESC LIMIT 50")
@@ -3443,7 +3444,6 @@ async fn ui_dashboard_analytics_chat_handler(
 }
 
 async fn load_ui_inbox_from_db(db: &crate::db::DB, tenant_id: &str, mobile_optimized: bool) -> Result<Vec<serde_json::Value>, sqlx::Error> {
-    use sqlx::Row;
     match &db.store {
         crate::db::DbStore::Postgres => {
             sqlx::query("SELECT id, COALESCE(source, '') AS source, COALESCE(content, '') AS content, COALESCE(original_content, content, '') AS original_content, COALESCE(translated_from_language, '') AS translated_from_language, COALESCE(draft_reply, '') AS draft_reply, COALESCE(status, '') AS status, COALESCE(sender_id, '') AS sender_id, COALESCE(created_at::text, '') AS created_at FROM inbox_messages WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 50")
@@ -3505,7 +3505,6 @@ async fn load_ui_inbox_from_db(db: &crate::db::DB, tenant_id: &str, mobile_optim
 }
 
 async fn load_ui_supply_from_db(db: &crate::db::DB, tenant_id: &str, mobile_optimized: bool) -> Result<serde_json::Value, sqlx::Error> {
-    use sqlx::Row;
     match &db.store {
         crate::db::DbStore::Postgres => {
             let (v_res, rm_res, bi_res) = tokio::join!(
@@ -3533,7 +3532,6 @@ async fn load_ui_supply_from_db(db: &crate::db::DB, tenant_id: &str, mobile_opti
 }
 
 async fn load_ui_agent_approvals_from_db(db: &crate::db::DB, tenant_id: &str) -> Result<Vec<serde_json::Value>, sqlx::Error> {
-    use sqlx::Row;
     let limit = 20i64;
     match &db.store {
         crate::db::DbStore::Postgres => {
@@ -3570,7 +3568,6 @@ async fn load_ui_agent_approvals_from_db(db: &crate::db::DB, tenant_id: &str) ->
 }
 
 async fn load_ui_ledger_from_db(db: &crate::db::DB, tenant_id: &str) -> Result<Vec<serde_json::Value>, sqlx::Error> {
-    use sqlx::Row;
     let limit_ledger = 50i64;
     match &db.store {
         crate::db::DbStore::Postgres => {
@@ -3610,7 +3607,6 @@ async fn load_ui_ledger_from_db(db: &crate::db::DB, tenant_id: &str) -> Result<V
 
 
 async fn load_ui_triage_from_db(db: &crate::db::DB, tenant_id: &str, mobile_optimized: bool) -> Result<Vec<serde_json::Value>, sqlx::Error> {
-    use sqlx::Row;
     let mut results = Vec::new();
 
     // Legacy triage items
@@ -3775,6 +3771,21 @@ async fn load_ui_triage_from_db(db: &crate::db::DB, tenant_id: &str, mobile_opti
 
     results.extend(feed_rows_json);
 
+    if let Ok(mut approvals) = load_ui_agent_approvals_from_db(db, tenant_id).await {
+        for approval in &mut approvals {
+            if let Some(obj) = approval.as_object_mut() {
+                // Ensure approval items map correctly to triage UI
+                if !obj.contains_key("lifecycle_state") {
+                    obj.insert("lifecycle_state".to_string(), serde_json::json!("PENDING_APPROVAL"));
+                }
+                if !obj.contains_key("created_at") {
+                    obj.insert("created_at".to_string(), serde_json::json!(""));
+                }
+            }
+        }
+        results.extend(approvals);
+    }
+
     // Sort combined results by created_at DESC
     results.sort_by(|a, b| {
         let a_time = a.get("created_at").and_then(|t| t.as_str()).unwrap_or("");
@@ -3790,7 +3801,6 @@ async fn load_ui_triage_from_db(db: &crate::db::DB, tenant_id: &str, mobile_opti
 
 
 async fn load_ui_priority_tasks_from_db(db: &crate::db::DB, tenant_id: &str, mobile_optimized: bool) -> Result<Vec<serde_json::Value>, sqlx::Error> {
-    use sqlx::Row;
     let limit = 20i64;
     match &db.store {
         crate::db::DbStore::Postgres => {
@@ -3856,7 +3866,6 @@ async fn load_ui_priority_tasks_from_db(db: &crate::db::DB, tenant_id: &str, mob
 }
 
 async fn load_ui_agent_feed_from_db(db: &crate::db::DB, tenant_id: &str) -> Result<Vec<serde_json::Value>, sqlx::Error> {
-    use sqlx::Row;
     let limit = 20i64;
     match &db.store {
         crate::db::DbStore::Postgres => {
@@ -4194,16 +4203,14 @@ async fn list_ui_orders_handler(
             .fetch_all(&db.pool)
             .await {
                 Ok(rows) => Ok(rows.into_iter().map(|row| {
-                    use sqlx::Row;
-                    if query.mobile_optimized.unwrap_or(false) {
+                                    if query.mobile_optimized.unwrap_or(false) {
                         serde_json::json!({
                             "id": row.get::<String, _>("id"),
                             "total_amount": row.get::<f64, _>("total_amount"),
                             "status": row.get::<String, _>("status"),
                         })
                     } else {
-                        use sqlx::Row;
-                        serde_json::json!({
+                                            serde_json::json!({
                             "id": row.get::<String, _>("id"),
                             "customer_name": row.get::<String, _>("customer_name"),
                             "total_amount": row.get::<f64, _>("total_amount"),
@@ -4225,16 +4232,14 @@ async fn list_ui_orders_handler(
             .fetch_all(pool)
             .await {
                 Ok(rows) => Ok(rows.into_iter().map(|row| {
-                    use sqlx::Row;
-                    if query.mobile_optimized.unwrap_or(false) {
+                                    if query.mobile_optimized.unwrap_or(false) {
                         serde_json::json!({
                             "id": row.get::<String, _>("id"),
                             "total_amount": row.get::<f64, _>("total_amount"),
                             "status": row.get::<String, _>("status"),
                         })
                     } else {
-                        use sqlx::Row;
-                        serde_json::json!({
+                                            serde_json::json!({
                             "id": row.get::<String, _>("id"),
                             "customer_name": row.get::<String, _>("customer_name"),
                             "total_amount": row.get::<f64, _>("total_amount"),
@@ -4292,8 +4297,7 @@ async fn list_ui_bookings_handler(
                     .fetch_all(&db.pool)
                     .await {
                         Ok(rows) => Ok(rows.into_iter().map(|row| {
-                            use sqlx::Row;
-                            serde_json::json!({
+                                                    serde_json::json!({
                                 "id": row.get::<String, _>("id"),
                                 "customer_name": row.get::<String, _>("customer_name"),
                                 "product_id": row.get::<String, _>("product_id"),
@@ -4317,8 +4321,7 @@ async fn list_ui_bookings_handler(
                     .fetch_all(pool)
                     .await {
                         Ok(rows) => Ok(rows.into_iter().map(|row| {
-                            use sqlx::Row;
-                            serde_json::json!({
+                                                    serde_json::json!({
                                 "id": row.get::<String, _>("id"),
                                 "customer_name": row.get::<String, _>("customer_name"),
                                 "product_id": row.get::<String, _>("product_id"),
@@ -4353,8 +4356,7 @@ async fn list_ui_bookings_handler(
             .fetch_all(&db.pool)
             .await {
                 Ok(rows) => Ok(rows.into_iter().map(|row| {
-                    use sqlx::Row;
-                    if query.mobile_optimized.unwrap_or(false) {
+                                    if query.mobile_optimized.unwrap_or(false) {
                         serde_json::json!({
                             "id": row.get::<String, _>("id"),
                             "product_title": row.get::<String, _>("product_title"),
@@ -4387,8 +4389,7 @@ async fn list_ui_bookings_handler(
             .fetch_all(pool)
             .await {
                 Ok(rows) => Ok(rows.into_iter().map(|row| {
-                    use sqlx::Row;
-                    if query.mobile_optimized.unwrap_or(false) {
+                                    if query.mobile_optimized.unwrap_or(false) {
                         serde_json::json!({
                             "id": row.get::<String, _>("id"),
                             "product_title": row.get::<String, _>("product_title"),
@@ -4429,7 +4430,6 @@ async fn list_ui_inbox_handler(
     axum::extract::Query(query): axum::extract::Query<UiTenantQuery>,
 ) -> axum::response::Response {
     use axum::response::IntoResponse;
-    use sqlx::Row;
     let tenant_id = ui_tenant_id(&query);
     let mobile_optimized = query.mobile_optimized.unwrap_or(false);
 
@@ -5364,10 +5364,12 @@ async fn create_ui_bom_item_handler(
         .nest("/api/agents/settings", api::agents::settings::router(dept_orchestrator.clone()))
         .nest("/api/agents/chat", api::agents::chat::router(dept_orchestrator.clone(), semantic_router.clone()))
         .nest("/api/agents/webhook", api::agents::webhook::router(dept_orchestrator.clone()))
+        .route("/api/v1/feed/ws", axum::routing::get(api::agent_feed::ws_feed_handler))
         .nest("/api/agent-feed", api::agent_feed::router().with_state(db.pool.clone()))
         .nest("/api/v1/incidents", api::incidents::router().with_state(db.pool.clone()))
         .nest("/api/v1/invoices", api::invoice::router(hub.clone()))
         .nest("/api/v1/quotes", api::quotes::router().with_state(db.pool.clone()))
+        .nest("/api/v1/work-intake/submit", api::agents::client_intake::router(dept_orchestrator.clone()))
         .nest("/api/v1/booking/request", api::booking::request::router(dept_orchestrator.clone()))
         .nest("/api/agents/mission", api::agents::mission::handoff::router(std::sync::Arc::new(crate::sip::SipDB::new(db.pool.clone(), "default".to_string()))))
         .route("/api/telemetry/sync", axum::routing::post(api::telemetry::sync_telemetry_handler))
@@ -5459,6 +5461,7 @@ async fn create_ui_bom_item_handler(
         })))
         .merge(meta_webhook_router)
         .merge(omnichannel_webhook_router)
+        .nest("/api/inbox", inbox_webhook_router)
         .merge(health_router)
         .fallback(api_not_found_handler);
 
