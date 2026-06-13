@@ -120,3 +120,69 @@ async fn test_pg_fail_max_retries_dead_letter() {
     assert_eq!(dl_payload, "{\"test\":\"payload\"}");
     assert_eq!(dl_error_message, "test reason");
 }
+
+#[tokio::test]
+async fn test_pg_concurrent_dequeue() {
+    if std::env::var("OHC_DATABASE_URL").is_err() {
+        return;
+    }
+
+    let database_url = std::env::var("OHC_DATABASE_URL").unwrap();
+    let pool = PgPoolOptions::new()
+        .max_connections(20)
+        .connect(&database_url)
+        .await
+        .unwrap();
+
+    let queue = Arc::new(PgTaskQueue::new(Arc::new(pool.clone())));
+
+    // Clean up before test
+    sqlx::query("DELETE FROM ohc_job_queue").execute(&pool).await.unwrap();
+
+    // Enqueue 100 jobs
+    let mut jobs = Vec::new();
+    for i in 0..100 {
+        jobs.push(Job {
+            id: format!("job-concurrent-{}", i),
+            tenant_id: "test_org".to_string(),
+            parent_task_id: "parent-1".to_string(),
+            job_type: "concurrent-role".to_string(),
+            payload: "{}".to_string(),
+            status: "PENDING".to_string(),
+            retry_count: 0,
+            max_retries: 3,
+            next_retry_at: Utc::now() - chrono::Duration::seconds(10),
+            locked_until: None,
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+        });
+    }
+    queue.enqueue_batch(jobs).await.unwrap();
+
+    // Spin up 5 workers
+    let mut handles = Vec::new();
+    let processed_count = Arc::new(tokio::sync::Mutex::new(0));
+
+    for _ in 0..5 {
+        let q = queue.clone();
+        let count_ref = processed_count.clone();
+        handles.push(tokio::spawn(async move {
+            loop {
+                let job_opt = q.dequeue(vec!["concurrent-role".to_string()], 0, 0).await.unwrap();
+                if let Some(job) = job_opt {
+                    q.complete(&job.id).await.unwrap();
+                    let mut c = count_ref.lock().await;
+                    *c += 1;
+                } else {
+                    break;
+                }
+            }
+        }));
+    }
+
+    for h in handles {
+        h.await.unwrap();
+    }
+
+    assert_eq!(*processed_count.lock().await, 100);
+}
