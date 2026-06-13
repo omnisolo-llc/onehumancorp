@@ -1,5 +1,5 @@
 use serde_json::Value;
-use sqlx::{PgPool, Postgres, pool::PoolConnection};
+use sqlx::{PgPool, Postgres, Transaction};
 use uuid::Uuid;
 
 #[derive(sqlx::FromRow)]
@@ -21,33 +21,33 @@ pub struct BrandToolbox {
 pub(crate) async fn acquire_tenant_conn(
     pool: &PgPool,
     tenant_id: Uuid,
-) -> Result<PoolConnection<Postgres>, sqlx::Error> {
-    let mut conn = pool.acquire().await?;
-    sqlx::query("SELECT set_config('app.current_tenant', $1, false)")
+) -> Result<Transaction<'static, Postgres>, sqlx::Error> {
+    let mut tx = pool.begin().await?;
+    sqlx::query("SELECT set_config('app.current_tenant', $1, true)")
         .bind(tenant_id.to_string())
-        .execute(&mut *conn)
+        .execute(&mut *tx)
         .await?;
-    Ok(conn)
+    Ok(tx)
 }
 
 pub async fn list_sites(pool: &PgPool, tenant_id: Uuid) -> Result<Vec<Site>, sqlx::Error> {
-    let mut conn = acquire_tenant_conn(pool, tenant_id).await?;
+    let mut tx = acquire_tenant_conn(pool, tenant_id).await?;
     sqlx::query_as::<_, Site>(
         "SELECT id, tenant_id, domain FROM builder_sites WHERE tenant_id = $1",
     )
     .bind(tenant_id)
-    .fetch_all(&mut *conn)
+    .fetch_all(&mut *tx)
     .await
 }
 
 pub async fn get_site(pool: &PgPool, tenant_id: Uuid, site_id: Uuid) -> Result<Site, sqlx::Error> {
-    let mut conn = acquire_tenant_conn(pool, tenant_id).await?;
+    let mut tx = acquire_tenant_conn(pool, tenant_id).await?;
     sqlx::query_as::<_, Site>(
         "SELECT id, tenant_id, domain FROM builder_sites WHERE tenant_id = $1 AND id = $2",
     )
     .bind(tenant_id)
     .bind(site_id)
-    .fetch_one(&mut *conn)
+    .fetch_one(&mut *tx)
     .await
 }
 
@@ -96,11 +96,11 @@ pub async fn get_site_structure_rows(
     tenant_id: Uuid,
     site_id: Uuid,
 ) -> Result<Vec<SiteStructureRow>, sqlx::Error> {
-    let mut conn = acquire_tenant_conn(pool, tenant_id).await?;
+    let mut tx = acquire_tenant_conn(pool, tenant_id).await?;
     sqlx::query_as::<_, SiteStructureRow>(site_structure_query())
         .bind(tenant_id)
         .bind(site_id)
-        .fetch_all(&mut *conn)
+        .fetch_all(&mut *tx)
         .await
 }
 
@@ -111,8 +111,8 @@ pub async fn create_brand_toolbox(
     source_description: String,
     toolbox: Value,
 ) -> Result<BrandToolbox, sqlx::Error> {
-    let mut conn = acquire_tenant_conn(pool, tenant_id).await?;
-    sqlx::query_as::<_, BrandToolbox>(
+    let mut tx = acquire_tenant_conn(pool, tenant_id).await?;
+    let result = sqlx::query_as::<_, BrandToolbox>(
         r#"
         INSERT INTO builder_brand_toolboxes (tenant_id, name, source_description, toolbox)
         VALUES ($1, $2, $3, $4)
@@ -123,8 +123,10 @@ pub async fn create_brand_toolbox(
     .bind(name)
     .bind(source_description)
     .bind(toolbox)
-    .fetch_one(&mut *conn)
-    .await
+    .fetch_one(&mut *tx)
+    .await?;
+    tx.commit().await?;
+    Ok(result)
 }
 
 pub async fn get_brand_toolbox(
@@ -132,7 +134,7 @@ pub async fn get_brand_toolbox(
     tenant_id: Uuid,
     toolbox_id: Uuid,
 ) -> Result<BrandToolbox, sqlx::Error> {
-    let mut conn = acquire_tenant_conn(pool, tenant_id).await?;
+    let mut tx = acquire_tenant_conn(pool, tenant_id).await?;
     sqlx::query_as::<_, BrandToolbox>(
         r#"
         SELECT id, tenant_id, name, source_description, toolbox
@@ -142,7 +144,7 @@ pub async fn get_brand_toolbox(
     )
     .bind(tenant_id)
     .bind(toolbox_id)
-    .fetch_one(&mut *conn)
+    .fetch_one(&mut *tx)
     .await
 }
 
@@ -150,7 +152,7 @@ pub async fn list_brand_toolboxes(
     pool: &PgPool,
     tenant_id: Uuid,
 ) -> Result<Vec<BrandToolbox>, sqlx::Error> {
-    let mut conn = acquire_tenant_conn(pool, tenant_id).await?;
+    let mut tx = acquire_tenant_conn(pool, tenant_id).await?;
     sqlx::query_as::<_, BrandToolbox>(
         r#"
         SELECT id, tenant_id, name, source_description, toolbox
@@ -160,7 +162,7 @@ pub async fn list_brand_toolboxes(
         "#,
     )
     .bind(tenant_id)
-    .fetch_all(&mut *conn)
+    .fetch_all(&mut *tx)
     .await
 }
 
@@ -169,14 +171,16 @@ pub async fn create_site(
     tenant_id: Uuid,
     domain: Option<String>,
 ) -> Result<Site, sqlx::Error> {
-    let mut conn = acquire_tenant_conn(pool, tenant_id).await?;
-    sqlx::query_as::<_, Site>(
+    let mut tx = acquire_tenant_conn(pool, tenant_id).await?;
+    let result = sqlx::query_as::<_, Site>(
         "INSERT INTO builder_sites (tenant_id, domain) VALUES ($1, $2) RETURNING id, tenant_id, domain",
     )
     .bind(tenant_id)
     .bind(domain)
-    .fetch_one(&mut *conn)
-    .await
+    .fetch_one(&mut *tx)
+    .await?;
+    tx.commit().await?;
+    Ok(result)
 }
 
 #[derive(sqlx::FromRow)]
@@ -194,13 +198,13 @@ pub async fn list_pages(
     tenant_id: Uuid,
     site_id: Uuid,
 ) -> Result<Vec<Page>, sqlx::Error> {
-    let mut conn = acquire_tenant_conn(pool, tenant_id).await?;
+    let mut tx = acquire_tenant_conn(pool, tenant_id).await?;
     sqlx::query_as::<_, Page>(
         "SELECT id, tenant_id, site_id, path, title, seo_metadata FROM builder_pages WHERE tenant_id = $1 AND site_id = $2",
     )
     .bind(tenant_id)
     .bind(site_id)
-    .fetch_all(&mut *conn)
+    .fetch_all(&mut *tx)
     .await
 }
 
@@ -211,16 +215,18 @@ pub async fn create_page(
     path: String,
     title: String,
 ) -> Result<Page, sqlx::Error> {
-    let mut conn = acquire_tenant_conn(pool, tenant_id).await?;
-    sqlx::query_as::<_, Page>(
+    let mut tx = acquire_tenant_conn(pool, tenant_id).await?;
+    let result = sqlx::query_as::<_, Page>(
         "INSERT INTO builder_pages (tenant_id, site_id, path, title) VALUES ($1, $2, $3, $4) RETURNING id, tenant_id, site_id, path, title, seo_metadata",
     )
     .bind(tenant_id)
     .bind(site_id)
     .bind(path)
     .bind(title)
-    .fetch_one(&mut *conn)
-    .await
+    .fetch_one(&mut *tx)
+    .await?;
+    tx.commit().await?;
+    Ok(result)
 }
 
 pub async fn update_page_seo_metadata(
@@ -229,13 +235,14 @@ pub async fn update_page_seo_metadata(
     page_id: Uuid,
     seo_metadata: Value,
 ) -> Result<(), sqlx::Error> {
-    let mut conn = acquire_tenant_conn(pool, tenant_id).await?;
+    let mut tx = acquire_tenant_conn(pool, tenant_id).await?;
     sqlx::query("UPDATE builder_pages SET seo_metadata = $1 WHERE tenant_id = $2 AND id = $3")
         .bind(seo_metadata)
         .bind(tenant_id)
         .bind(page_id)
-        .execute(&mut *conn)
+        .execute(&mut *tx)
         .await?;
+    tx.commit().await?;
     Ok(())
 }
 
@@ -254,13 +261,13 @@ pub async fn get_block(
     tenant_id: Uuid,
     block_id: Uuid,
 ) -> Result<Block, sqlx::Error> {
-    let mut conn = acquire_tenant_conn(pool, tenant_id).await?;
+    let mut tx = acquire_tenant_conn(pool, tenant_id).await?;
     sqlx::query_as::<_, Block>(
         "SELECT id, tenant_id, page_id, block_type, content, sort_order FROM builder_blocks WHERE tenant_id = $1 AND id = $2",
     )
     .bind(tenant_id)
     .bind(block_id)
-    .fetch_one(&mut *conn)
+    .fetch_one(&mut *tx)
     .await
 }
 
@@ -269,13 +276,13 @@ pub async fn list_blocks(
     tenant_id: Uuid,
     page_id: Uuid,
 ) -> Result<Vec<Block>, sqlx::Error> {
-    let mut conn = acquire_tenant_conn(pool, tenant_id).await?;
+    let mut tx = acquire_tenant_conn(pool, tenant_id).await?;
     sqlx::query_as::<_, Block>(
         "SELECT id, tenant_id, page_id, block_type, content, sort_order FROM builder_blocks WHERE tenant_id = $1 AND page_id = $2 ORDER BY sort_order ASC",
     )
     .bind(tenant_id)
     .bind(page_id)
-    .fetch_all(&mut *conn)
+    .fetch_all(&mut *tx)
     .await
 }
 
@@ -287,8 +294,8 @@ pub async fn create_block(
     content: Value,
     sort_order: i32,
 ) -> Result<Block, sqlx::Error> {
-    let mut conn = acquire_tenant_conn(pool, tenant_id).await?;
-    sqlx::query_as::<_, Block>(
+    let mut tx = acquire_tenant_conn(pool, tenant_id).await?;
+    let result = sqlx::query_as::<_, Block>(
         "INSERT INTO builder_blocks (tenant_id, page_id, block_type, content, sort_order) VALUES ($1, $2, $3, $4, $5) RETURNING id, tenant_id, page_id, block_type, content, sort_order",
     )
     .bind(tenant_id)
@@ -296,8 +303,10 @@ pub async fn create_block(
     .bind(block_type)
     .bind(content)
     .bind(sort_order)
-    .fetch_one(&mut *conn)
-    .await
+    .fetch_one(&mut *tx)
+    .await?;
+    tx.commit().await?;
+    Ok(result)
 }
 
 pub async fn update_block(
@@ -306,15 +315,17 @@ pub async fn update_block(
     block_id: Uuid,
     content: Value,
 ) -> Result<Block, sqlx::Error> {
-    let mut conn = acquire_tenant_conn(pool, tenant_id).await?;
-    sqlx::query_as::<_, Block>(
+    let mut tx = acquire_tenant_conn(pool, tenant_id).await?;
+    let result = sqlx::query_as::<_, Block>(
         "UPDATE builder_blocks SET content = $1, updated_at = NOW() WHERE tenant_id = $2 AND id = $3 RETURNING id, tenant_id, page_id, block_type, content, sort_order",
     )
     .bind(content)
     .bind(tenant_id)
     .bind(block_id)
-    .fetch_one(&mut *conn)
-    .await
+    .fetch_one(&mut *tx)
+    .await?;
+    tx.commit().await?;
+    Ok(result)
 }
 
 pub async fn reorder_blocks(
@@ -323,11 +334,7 @@ pub async fn reorder_blocks(
     page_id: Uuid,
     block_ids: Vec<Uuid>,
 ) -> Result<(), sqlx::Error> {
-    let mut tx = pool.begin().await?;
-    sqlx::query("SELECT set_config('app.current_tenant', $1, true)")
-        .bind(tenant_id.to_string())
-        .execute(&mut *tx)
-        .await?;
+    let mut tx = acquire_tenant_conn(pool, tenant_id).await?;
     for (index, id) in block_ids.iter().enumerate() {
         let sort_order = index as i32;
         sqlx::query(

@@ -370,3 +370,34 @@ async fn test_builder_generate_and_publish_draft() {
         .await;
     let _ = sqlx::query("DELETE FROM builder_sites WHERE id = $1").bind(site.id).execute(&pool).await;
 }
+
+#[tokio::test]
+async fn test_tenant_isolation_in_db_operations() {
+    let pool = match crate::db::DB::new().await {
+        Ok(db) => db.pool,
+        Err(_) => return,
+    };
+
+    let tenant_id_1 = Uuid::new_v4();
+    let tenant_id_2 = Uuid::new_v4();
+
+    // Insert a site for tenant 1
+    let site_1 = db::create_site(&pool, tenant_id_1, Some("tenant-1.com".to_string())).await.expect("Failed to create site for tenant 1");
+
+    // Insert a site for tenant 2
+    let site_2 = db::create_site(&pool, tenant_id_2, Some("tenant-2.com".to_string())).await.expect("Failed to create site for tenant 2");
+
+    // Retrieve sites for tenant 1, ensure tenant 2's site is NOT present
+    let sites_1 = db::list_sites(&pool, tenant_id_1).await.expect("Failed to list sites for tenant 1");
+    assert!(sites_1.iter().any(|s| s.id == site_1.id));
+    assert!(!sites_1.iter().any(|s| s.id == site_2.id));
+
+    // Retrieve sites for tenant 2, ensure tenant 1's site is NOT present
+    let sites_2 = db::list_sites(&pool, tenant_id_2).await.expect("Failed to list sites for tenant 2");
+    assert!(sites_2.iter().any(|s| s.id == site_2.id));
+    assert!(!sites_2.iter().any(|s| s.id == site_1.id));
+
+    // Cleanup
+    let _ = sqlx::query("DELETE FROM builder_sites WHERE id = $1").bind(site_1.id).execute(&pool).await;
+    let _ = sqlx::query("DELETE FROM builder_sites WHERE id = $1").bind(site_2.id).execute(&pool).await;
+}
