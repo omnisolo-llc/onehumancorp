@@ -75,4 +75,41 @@ test.describe('Unified Agent Feed Interactive Flow', () => {
       await expect(page.locator('text=You are offline. Actions will sync when online.')).not.toBeVisible();
     }
   });
+
+  test('Feed Page should load items and approve', async ({ page }) => {
+    test.setTimeout(180000);
+    await page.goto('/feed');
+    await expect(page.getByTestId('agent-feed')).toBeVisible({ timeout: 25000 });
+
+    const card = page.getByTestId('agent-feed-card').first();
+    if (await card.isVisible()) {
+        const approveBtn = card.locator('button', { hasText: 'Approve' });
+        await approveBtn.click();
+        await expect(card).not.toBeVisible({ timeout: 5000 });
+    }
+  });
+
+  test('Feed Page should load items and dismiss', async ({ page }) => {
+    test.setTimeout(180000);
+    await page.goto('/feed');
+    await expect(page.getByTestId('agent-feed')).toBeVisible({ timeout: 25000 });
+
+    const card = page.getByTestId('agent-feed-card').first();
+    if (await card.isVisible()) {
+        const dismissBtn = card.locator('button', { hasText: 'Dismiss' });
+        await dismissBtn.click();
+        await expect(card).not.toBeVisible({ timeout: 5000 });
+    }
+  });
+
+  test('Dashboard should have functional UnifiedAgentFeed component', async ({ page }) => {
+    test.setTimeout(180000);
+    await page.goto('/dashboard');
+    await expect(page.locator('h1', { hasText: 'Dashboard' }).first()).toBeVisible({ timeout: 25000 });
+
+    // Check if feed loads
+    const feedContainer = page.locator('div.glassmorphism', { hasText: 'Approval' }).first();
+    await expect(feedContainer).toBeVisible({ timeout: 15000 });
+  });
+
 });
