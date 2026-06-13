@@ -38,6 +38,16 @@ test.describe("Unified Agent Feed Mobile UX", () => {
   };
 
   test("1. Renders seeded cards and tab navigation on 375px mobile screen", async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 812 });
+    await page.goto('/feed');
+    const proactiveCard = page.locator('[data-testid="agent-feed-card"]').filter({ hasText: 'DraftFollowups' });
+    await expect(proactiveCard).toBeVisible();
+    await expect(proactiveCard).toContainText('Draft followups for pending orders');
+    await proactiveCard.getByTestId('feed-approve-btn').click();
+    await expect(proactiveCard).not.toBeVisible();
+  });
+
+  test("1b. Renders seeded cards and tab navigation on 375px mobile screen", async ({ page }) => {
     await performLogin(page);
 
     const opsCard = page.locator("text=3 new orders to fulfill").first();
