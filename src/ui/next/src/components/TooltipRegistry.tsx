@@ -33,6 +33,7 @@ export function TooltipProvider({ children }: { children: ReactNode }) {
             Object.entries(data).filter((entry): entry is [string, string] => typeof entry[1] === 'string')
           );
           setTooltips(safeTooltips);
+          (window as any).OHC_TOOLTIPS = safeTooltips;
         }
       })
       .catch(() => {});
