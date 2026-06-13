@@ -1,2 +1,0 @@
-build --remote_cache=
-test --remote_cache=
