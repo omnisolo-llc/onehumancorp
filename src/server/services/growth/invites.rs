@@ -121,8 +121,9 @@ impl InviteRepository {
         Ok(())
     }
 
-    pub async fn get_total_invites_count(&self) -> Result<i64, String> {
-        let row = sqlx::query("SELECT COUNT(*) FROM team_invites")
+    pub async fn get_total_invites_count(&self, tenant_id: &str) -> Result<i64, String> {
+        let row = sqlx::query("SELECT COUNT(*) FROM team_invites WHERE tenant_id = $1")
+            .bind(tenant_id)
             .fetch_one(&self.pool)
             .await
             .map_err(|e| e.to_string())?;
@@ -193,8 +194,8 @@ impl InviteTracker {
         self.repo.accept_invite(invite_id).await
     }
 
-    pub async fn get_total_invites_count(&self) -> Result<i64, String> {
-        self.repo.get_total_invites_count().await
+    pub async fn get_total_invites_count(&self, tenant_id: &str) -> Result<i64, String> {
+        self.repo.get_total_invites_count(tenant_id).await
     }
 
     pub async fn record_invites(&self, team_id: &str, inviter_id: &str, invitee_ids: &[String]) -> Result<(), String> {
