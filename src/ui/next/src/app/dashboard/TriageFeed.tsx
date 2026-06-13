@@ -213,7 +213,7 @@ export function TriageFeed({ tenantId, initialItems }: { tenantId: string, initi
 
               <div className="flex flex-col sm:flex-row gap-3">
                 <button
-                  className="app-btn-primary flex-1 min-h-[44px]"
+                  className="app-btn-primary flex-1 min-h-[44px] min-w-[44px]"
                   data-testid="approve-btn"
                   onClick={() => handleDecision(selected.id, true)}
                 >
