@@ -584,7 +584,7 @@
       <div class="step" id="step-name">
         <h1>What's the name of your business?</h1>
         <p>We'll use this to set up your workspace.</p>
-        <input type="text" id="business-name" class="glassmorphism" placeholder="e.g. Maya's Bakery" />
+        <input type="text" id="business-name" class="glassmorphism" placeholder="e.g. Maya's Bakery" autocomplete="organization" />
         <div id="name-error" class="error-msg">Business Name must be at least 3 characters.</div>
 
         <input type="text" id="business-tagline" class="glassmorphism" placeholder="Tagline (optional)" />
@@ -629,10 +629,10 @@
         <h1>Admin Credentials</h1>
         <p>Set up your login details.</p>
 
-        <input type="email" id="admin-email" class="glassmorphism" placeholder="admin@mybusiness.com" />
+        <input type="email" id="admin-email" class="glassmorphism" placeholder="admin@mybusiness.com" inputmode="email" autocomplete="email" />
         <div id="email-error" class="error-msg">Please enter a valid email address.</div>
 
-        <input type="password" id="admin-password" class="glassmorphism" placeholder="Password (min 8 chars)" />
+        <input type="password" id="admin-password" class="glassmorphism" placeholder="Password (min 8 chars)" autocomplete="new-password" />
         <div id="password-error" class="error-msg">Password must be at least 8 characters.</div>
 
         <div class="btn-group">
