@@ -817,6 +817,9 @@ impl DB {
                         started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         last_synced_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         offline_changes_count INTEGER DEFAULT 0,
+                        pending_reconciliation TEXT DEFAULT '[]',
+                        last_conflict_resolved_at TIMESTAMP,
+                        sync_status TEXT DEFAULT 'SYNCED',
                         UNIQUE(tenant_id, device_id)
                     );
 
