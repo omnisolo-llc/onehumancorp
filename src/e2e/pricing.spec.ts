@@ -6,6 +6,13 @@ test.describe('Pricing Page', () => {
     await expect(page.locator('h1', { hasText: 'Pricing Plans' })).toBeVisible({ timeout: 10000 });
   });
 
+  test('should display FAQ section', async ({ page }) => {
+    await page.goto('/pricing.html');
+    await expect(page.locator('h2', { hasText: 'Frequently Asked Questions' })).toBeVisible();
+    await expect(page.locator('h3', { hasText: 'How do I upgrade, downgrade, or cancel?' })).toBeVisible();
+    await expect(page.locator('h3', { hasText: 'What is the storage limit?' })).toBeVisible();
+  });
+
   test('should display all four pricing tiers', async ({ page }) => {
     await page.goto('/pricing.html');
     await expect(page.locator('.plan-name', { hasText: 'Free' })).toBeVisible();
