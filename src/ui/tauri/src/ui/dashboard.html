@@ -738,17 +738,19 @@
 
 
 
-      <div class="ohc-growth-card" id="triage-section" style="display: none; padding: 20px; border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px;">
-        <h2 style="font-size: 24px; font-weight: 700; color: #1D1D1F;">Unified Agent Feed</h2>
-        <p style="color: #6b7280; margin-bottom: 16px;">Review AI-prepared actions and reply drafts across all channels.</p>
-        <div class="triage-tab-container">
-          <div class="triage-tab active" id="tab-proposals" onclick="switchTriageTab('proposals')">Proposals</div>
-          <div class="triage-tab" id="tab-activity" onclick="switchTriageTab('activity')">Activity Feed</div>
+      <section aria-label="Unified Agent Feed">
+        <div class="ohc-growth-card" id="triage-section" style="display: none; padding: 20px; border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px;">
+          <h2 style="font-size: 24px; font-weight: 700; color: #1D1D1F;">Unified Agent Feed</h2>
+          <p style="color: #6b7280; margin-bottom: 16px;">Review AI-prepared actions and reply drafts across all channels.</p>
+          <div class="triage-tab-container">
+            <button class="triage-tab active" id="tab-proposals" onclick="switchTriageTab('proposals')">Proposals</button>
+            <button class="triage-tab" id="tab-activity" onclick="switchTriageTab('activity')">Activity Feed</button>
+          </div>
+          <div id="triage-queue">
+            <div class="triage-card empty">Loading agent feed...</div>
+          </div>
         </div>
-        <div id="triage-queue">
-          <div class="triage-card empty">Loading agent feed...</div>
-        </div>
-      </div>
+      </section>
 
         <div id="triage-queue">
           <div class="triage-card empty">Loading agent feed...</div>
@@ -1421,17 +1423,29 @@
             const approveTestId = isDraft ? "approve-draft" : "approve-proposal";
             const approveText = isDraft ? "Yes, draft it!" : "Approve";
 
-            if (item.proposed_action?.feature_type === 'quote_draft' || item.context_payload?.feature_type === 'quote_draft') {
+            if (item.proposed_action?.feature_type === 'quote_draft' || item.context_payload?.feature_type === 'quote_draft' || actionType === 'quote_draft' || item.action_payload?.feature_type === 'quote_draft') {
+              let payload = item.proposed_action || item.context_payload || {};
+              if (typeof item.action_payload === 'string') {
+                  try { payload = JSON.parse(item.action_payload); } catch(e){}
+              } else if (item.action_payload) {
+                  payload = item.action_payload;
+              }
+              const clientName = payload.client_name || 'Client';
+              const price = payload.suggested_price || 0;
+              const scope = payload.scope || '';
               return `
-                <div class="triage-item" data-testid="triage-card-${item.id}" id="triage-${item.id}">
+                <div class="triage-item glassmorphism" data-testid="quote-draft-card" id="triage-${item.id}">
                   <div class="triage-header">
-                    <div class="triage-source" style="text-transform: uppercase; font-size: 10px; background: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 4px 8px; border-radius: 4px;">${(item.event_source || 'Unknown').replace('_', ' ')}</div>
+                    <div class="triage-source" style="text-transform: uppercase; font-size: 10px; background: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 4px 8px; border-radius: 4px;">Draft Quote</div>
                     <div class="triage-priority" style="font-size: 12px; color: #6b7280;">Action Needed</div>
                   </div>
-                  <div class="triage-context" style="font-size: 16px; font-weight: 600; margin-top: 8px;">${description}</div>
-                  <div class="triage-controls" style="margin-top: 12px;">
-                    <button class="triage-btn-approve" data-testid="edit-quote-draft" onclick="window.location.href='quote.html?id=${item.id}'">Review Quote</button>
-                    <button class="triage-btn-dismiss" data-testid="reject-proposal" onclick="handleTriageAction('${item.id}', 'DISMISSED')">Dismiss</button>
+                  <div class="triage-context" style="font-size: 16px; font-weight: 600; margin-top: 8px;">${clientName}</div>
+                  <div style="font-size: 14px; margin-top: 4px; color: #333;">Calculated Total: $${price}</div>
+                  <div style="font-size: 14px; margin-top: 4px; color: #333;">Scope of Work: ${scope}</div>
+                  <div class="triage-controls" style="margin-top: 12px; display: flex; gap: 8px;">
+                    <button class="triage-btn-approve" data-testid="approve-proposal" onclick="handleTriageAction('${item.id}', true)" style="min-width: 44px; min-height: 44px; padding: 12px; background: #0066FF; color: white; border: none; border-radius: 8px; flex: 1;">Approve & Send Proposal</button>
+                    <button class="triage-btn-dismiss" data-testid="edit-proposal" onclick="window.location.href='quote.html?id=${item.id}'" style="min-width: 44px; min-height: 44px; padding: 12px; background: rgba(0,0,0,0.05); border: none; border-radius: 8px; flex: 1;">Edit</button>
+                    <button class="triage-btn-dismiss" data-testid="reject-proposal" onclick="handleTriageAction('${item.id}', false)" style="min-width: 44px; min-height: 44px; padding: 12px; background: rgba(0,0,0,0.05); border: none; border-radius: 8px; flex: 1;">Dismiss</button>
                   </div>
                 </div>
               `;
