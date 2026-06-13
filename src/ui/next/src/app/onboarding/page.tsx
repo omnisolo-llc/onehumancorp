@@ -502,10 +502,17 @@ export default function OnboardingWizard() {
                   placeholder="e.g. I run a local bakery that sells custom vegan cakes..."
                   rows={6}
                 />
+                {error && (
+                  <div className="animate-shake text-[#FF3B30] text-sm border border-[#FF3B30]/30 rounded p-2 bg-[#FF3B30]/10 mt-2">
+                    {error}
+                  </div>
+                )}
               </div>
 
               <div className="mt-auto pt-6 w-full">
                 <button
+                  disabled={!bio.trim()}
+                  className="w-full bg-[#0066FF] text-white min-h-[44px] min-w-[44px] p-4 rounded-[8px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] hover:shadow-[0_6px_20px_rgba(0,102,255,0.23)] active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
                   onClick={async () => {
                     if (!bio.trim()) return;
                     setIsLoading(true);
