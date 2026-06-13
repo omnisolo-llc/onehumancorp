@@ -135,7 +135,7 @@ impl OnboardingAgent {
             - Nora (Agency): Needs project intake, proposals, and task assignment.
 
             If the input matches or is similar to these personas, use them for inspiration.
-            If the input is an Instagram/social link, infer details from the profile.
+            If the input is an Instagram/social link, infer details from the profile.\n            If the input contains an image URL, use it to infer details about the products and business.
 
             Return ONLY a valid JSON object with fields:
             - business_name (string)
