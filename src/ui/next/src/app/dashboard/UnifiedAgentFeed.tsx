@@ -295,7 +295,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
 
   const submitDecision = async (id: string, approved: boolean) => {
     const tenant = tenantId();
-    const res = await fetch(`/api/agent-feed/${id}/state`, {
+    const res = await fetch(`/api/agent-feed/${id}`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
