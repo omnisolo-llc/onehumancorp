@@ -131,7 +131,7 @@ mod tests {
         let start = std::time::Instant::now();
         let (_tx, rx) = tokio::sync::oneshot::channel::<()>();
         let result = timeout(Duration::from_millis(500), async {
-            let _ = rx.await;
+            tokio::time::sleep(std::time::Duration::from_millis(2500)).await;
             "ok"
         }).await;
         assert!(result.is_err()); // Timeout triggers
