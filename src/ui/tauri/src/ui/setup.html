@@ -129,7 +129,7 @@
       .spinner {
         display: inline-block;
         width: 16px;
-        height: 16px;
+        min-height: 44px; height: auto;
         border: 2px solid rgba(255, 255, 255, 0.3);
         border-radius: 50%;
         border-top-color: #fff;
@@ -196,7 +196,7 @@
       }
       .step-indicator {
         width: 12px;
-        height: 12px;
+        min-height: 44px; height: auto;
         border-radius: 50%;
         background: rgba(255, 255, 255, 0.5);
         border: 2px solid rgba(255, 255, 255, 0.8);
@@ -428,7 +428,7 @@
         }
         .step-indicator {
           width: 8px;
-          height: 8px;
+          min-height: 44px; height: auto;
         }
         .step-indicator.active {
           transform: scale(1.2);
@@ -473,7 +473,7 @@
       <!-- Step Instant: Instant Build -->
       <div class="step" id="step-instant">
         <button onclick="goToStep('step-initial')" style="background: none; border: none; color: #0066FF; padding: 0; box-shadow: none; width: auto; font-size: 14px; min-height: auto; margin-bottom: 16px; display: flex; align-items: center; gap: 4px; font-weight: 600;">
-          <svg style="width: 16px; height: 16px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg> Back
+          <svg style="width: 16px; min-height: 44px; height: auto;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg> Back
         </button>
         <h1>Tell us about your business</h1>
         <p>Our AI will handle the rest in 30 seconds.</p>
@@ -490,7 +490,7 @@
       <!-- Step Chat: Conversational Build -->
       <div class="step" id="step-chat">
         <button onclick="goToStep('step-initial')" style="background: none; border: none; color: #0066FF; padding: 0; box-shadow: none; width: auto; font-size: 14px; min-height: auto; margin-bottom: 16px; display: flex; align-items: center; gap: 4px; font-weight: 600;">
-          <svg style="width: 16px; height: 16px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg> Back
+          <svg style="width: 16px; min-height: 44px; height: auto;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg> Back
         </button>
         <h1>Setup Assistant</h1>
         <p>Talk to our AI to build your business.</p>
