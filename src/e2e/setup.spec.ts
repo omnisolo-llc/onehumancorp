@@ -115,3 +115,72 @@ test.describe('OHC Setup Wizard Flow', () => {
     expect(inputbox?.height).toBeGreaterThanOrEqual(44);
   });
 });
+
+test.describe('OHC Setup Wizard Form Configuration', () => {
+
+  test.beforeEach(async ({ page }) => {
+      const tauriUiDir = require('path').join(process.cwd(), 'src/ui/tauri/src/ui');
+      await page.route('**/setup.html', async route => {
+          const content = require('fs').readFileSync(require('path').join(tauriUiDir, 'setup.html'), 'utf-8');
+          await route.fulfill({ contentType: 'text/html', body: content });
+      });
+  });
+
+  test('should have appropriate HTML attributes for mobile input configuration', async ({ page }) => {
+    await page.goto('http://mock/setup.html');
+
+    // Name step
+    const businessName = page.locator('#business-name');
+    await expect(businessName).toHaveAttribute('autocomplete', 'organization');
+
+    // Admin step
+    const adminEmail = page.locator('#admin-email');
+    await expect(adminEmail).toHaveAttribute('autocomplete', 'email');
+    await expect(adminEmail).toHaveAttribute('inputmode', 'email');
+
+    const adminPassword = page.locator('#admin-password');
+    await expect(adminPassword).toHaveAttribute('autocomplete', 'new-password');
+  });
+
+  test('should have border-radius of 16px for .glassmorphism styling', async ({ page }) => {
+    // This tests the CSS inline in setup.html and imported globals.css
+    await page.goto('http://mock/setup.html');
+
+    const container = page.locator('.container.glassmorphism').first();
+    await expect(container).toHaveCSS('border-radius', '16px');
+
+    const textInput = page.locator('#instant-bio');
+    // Inputs also use glassmorphism but might be overridden to 8px.
+    // However, the mandate specifies containers need 16px.
+    await expect(textInput).toHaveCSS('border-radius', '8px');
+  });
+
+  test('should support 375px mobile view without horizontal scroll', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 812 });
+    await page.goto('http://mock/setup.html');
+
+    // Evaluate horizontal scroll
+    const hasHorizontalScroll = await page.evaluate(() => {
+        return document.documentElement.scrollWidth > window.innerWidth;
+    });
+    expect(hasHorizontalScroll).toBe(false);
+  });
+
+  test('should have minimum 44px touch targets on buttons', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 812 });
+    await page.goto('http://mock/setup.html');
+
+    // Verify touch targets height
+    const btnBox = await page.locator('.next-step-btn').first().boundingBox();
+    expect(btnBox?.height).toBeGreaterThanOrEqual(44);
+  });
+
+  test('should have minimum 44px touch targets on radio options', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 812 });
+    await page.goto('http://mock/setup.html');
+
+    await page.locator('.next-step-btn[data-next="step-context"]').click();
+    const inputbox = await page.locator('.radio-option').first().boundingBox();
+    expect(inputbox?.height).toBeGreaterThanOrEqual(44);
+  });
+});
