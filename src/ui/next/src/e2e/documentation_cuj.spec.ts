@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../../../../e2e/fixtures';
 
 test.describe('Documentation User Journey', () => {
   test('Maya navigates the Help Center and views the Changelog', async ({ page }) => {
