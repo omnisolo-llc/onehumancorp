@@ -42,6 +42,15 @@ function generateSubdomain(name: string): string {
 }
 
 export default function OnboardingWizard() {
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+    }
+  }, [chatMessages]);
+
   const {
     step, setStep,
     chatStep, setChatStep,
@@ -470,143 +479,200 @@ export default function OnboardingWizard() {
                 </button>
 
                 <button
-                  className="w-full glassmorphism text-[#0066FF] border border-[#0066FF] p-4 font-bold rounded-[8px] shadow-sm hover:bg-blue-50 transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)]"
-                  onClick={() => { setStep(10); syncStateToBackend({ step: 10 }); }}
+                  className="w-full glassmorphism text-[#0066FF] border border-[#0066FF] p-4 font-bold rounded-[8px] shadow-sm hover:bg-blue-50 transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] flex items-center justify-center gap-2"
+                  onClick={() => {
+                    setStep(10);
+                    syncStateToBackend({ step: 10 });
+                    if (chatMessages.length === 0) {
+                      setChatMessages([{ role: 'assistant', content: "Hi! I'm your OHC AI Assistant. Tell me about the business you want to build." }]);
+                    }
+                  }}
                 >
-                  Instant Build
+                  <IconLabel icon="sparkles">Instant Build with AI</IconLabel>
                 </button>
               </div>
             </div>
           )}
 
           {step === 10 && (
-            <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in">
-              <button onClick={() => { setStep(0); syncStateToBackend({ step: 0 }); }} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
-              </button>
-              <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Tell us about your business</h2>
-              <div className="flex items-center justify-between mb-6 w-full">
-                <p className="text-gray-500 dark:text-[#A1A1A6] text-sm">
-                  Our AI will handle the rest in 30 seconds.
-                </p>
+            <div className="flex flex-col flex-1 h-full animate-fade-in relative">
+              <div className="flex items-center justify-between mb-4 flex-shrink-0 pt-2">
+                <button onClick={() => { setStep(0); syncStateToBackend({ step: 0 }); }} className="text-[#0066FF] text-sm font-semibold flex items-center gap-1 z-10 relative">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
+                </button>
+                <h2 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] absolute left-0 right-0 text-center pointer-events-none">AI Assistant</h2>
               </div>
 
-              <div className="space-y-4 flex-1 w-full">
-                <textarea
-                  value={bio}
-                  onChange={(e) => {
-                    setBio(e.target.value);
-                    if (error) setError('');
-                  }}
-                  className={`w-full glassmorphism min-h-[44px] min-w-[44px] p-4 border outline-none transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] resize-none text-gray-800 dark:text-[#f5f5f7] shadow-inner rounded-[8px] ${error ? 'border-[#FF3B30] focus:ring-2 focus:ring-[#FF3B30] focus:border-[#FF3B30]' : 'border-transparent focus:ring-2 focus:ring-[#0066FF] focus:border-[#0066FF]'}`}
-                  placeholder="e.g. I run a local bakery that sells custom vegan cakes..."
-                  rows={6}
-                />
-                {error && (
-                  <div className="animate-shake text-[#FF3B30] text-sm border border-[#FF3B30]/30 rounded p-2 bg-[#FF3B30]/10 mt-2">
-                    {error}
+              <div ref={chatContainerRef} className="flex-1 overflow-y-auto mb-4 space-y-4 px-2 custom-scrollbar pb-24">
+                {chatMessages.map((msg, i) => (
+                  <div key={i} className={`flex w-full ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                    <div className={`max-w-[85%] rounded-[16px] p-3 text-sm ${msg.role === 'user' ? 'bg-[#0066FF] text-white rounded-br-none' : 'bg-white dark:bg-[#1D1D1F] text-[#1D1D1F] dark:text-[#F5F5F7] border border-gray-200 dark:border-gray-800 rounded-bl-none shadow-sm'}`}>
+                      {msg.content}
+                    </div>
+                  </div>
+                ))}
+                {isLoading && (
+                  <div className="flex w-full justify-start">
+                    <div className="max-w-[85%] rounded-[16px] p-3 text-sm bg-white dark:bg-[#1D1D1F] text-[#1D1D1F] dark:text-[#F5F5F7] border border-gray-200 dark:border-gray-800 rounded-bl-none shadow-sm">
+                      <div className="flex gap-1 items-center h-4">
+                        <div className="w-2 h-2 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                        <div className="w-2 h-2 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                        <div className="w-2 h-2 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>
 
-              <div className="mt-auto pt-6 w-full">
-                <button
-                  onClick={async () => {
-                    if (!bio.trim()) return;
-                    setIsLoading(true);
+              {error && (
+                <div className="absolute bottom-20 left-0 right-0 animate-shake text-[#FF3B30] text-sm border border-[#FF3B30]/30 rounded p-2 bg-[#FF3B30]/10 mx-2 text-center z-10">
+                  {error}
+                </div>
+              )}
 
-                    try {
-                      const tenantIdStr = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
-                      const userIdStr = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
+              <div className="mt-auto absolute bottom-0 left-0 right-0 bg-gradient-to-t from-[#f5f5f7] via-[#f5f5f7] to-transparent dark:from-black dark:via-black pt-4 pb-0 z-10">
+                <div className="w-full mb-2">
+                  <input
+                    id="instant-image-url"
+                    type="text"
+                    className="w-full glassmorphism min-h-[40px] px-4 py-2 border border-transparent outline-none transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] text-xs text-gray-800 dark:text-[#f5f5f7] shadow-inner rounded-[8px] focus:ring-1 focus:ring-[#0066FF] focus:border-[#0066FF]"
+                    placeholder="Image URL (Optional) e.g. https://example.com/logo.png"
+                  />
+                </div>
+                <div className="flex gap-2 items-center">
+                  <input
+                    type="text"
+                    value={bio}
+                    onChange={(e) => {
+                      setBio(e.target.value);
+                      if (error) setError('');
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !isLoading) {
+                        e.preventDefault();
+                        const btn = document.getElementById('chat-send-btn');
+                        if (btn) btn.click();
+                      }
+                    }}
+                    className={`flex-1 glassmorphism min-h-[44px] min-w-[44px] p-3 px-4 border outline-none transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] text-sm text-gray-800 dark:text-[#f5f5f7] shadow-inner rounded-full ${error ? 'border-[#FF3B30] focus:ring-2 focus:ring-[#FF3B30] focus:border-[#FF3B30]' : 'border-transparent focus:ring-2 focus:ring-[#0066FF] focus:border-[#0066FF]'}`}
+                    placeholder="e.g. I run a local bakery that sells custom vegan cakes..."
+                  />
+                  <button
+                    id="chat-send-btn"
+                    name="Next"
+                    onClick={async () => {
+                      if (!bio.trim()) return;
+                      const userMsg = bio;
 
-                      const res = await fetch('/api/onboarding/intake', {
-                        method: 'POST',
-                        headers: {
-                          'Content-Type': 'application/json',
-                          'X-Tenant-ID': tenantIdStr,
-                          'X-User-ID': userIdStr,
-                        },
-                        body: JSON.stringify({ description: bio }),
-                      });
+                      const imageUrlInput = document.getElementById('instant-image-url') as HTMLInputElement;
+                      const imageUrl = imageUrlInput?.value?.trim() || undefined;
 
-                      const data = await res.json();
-                      if (res.ok) {
-                        const inferredBusinessName = data.business_name || 'My Business';
-                        const inferredBusinessType = data.business_type || 'Online Store';
-                        const inferredProductName = data.initial_products?.[0]?.name || 'First Product';
-                        const inferredProductPrice = data.initial_products?.[0]?.price || '10.00';
-                        const inferredLocation = data.location || 'Unknown';
+                      const newMessages = [...chatMessages, { role: 'user', content: userMsg, image_url: imageUrl }];
+                      setChatMessages(newMessages);
+                      setBio('');
+                      if (imageUrlInput) imageUrlInput.value = '';
+                      setIsLoading(true);
 
-                        setBusinessName(inferredBusinessName);
-                        setBusinessType(inferredBusinessType);
-                        setFirstProductName(inferredProductName);
-                        setFirstProductPrice(inferredProductPrice);
+                      try {
+                        const tenantIdStr = typeof window !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
+                        const userIdStr = typeof window !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
 
-                        const startRes = await fetch('/api/onboarding/start', {
+                        const chatRes = await fetch('/api/onboarding/chat', {
                           method: 'POST',
-                          headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': tenantIdStr, 'X-User-ID': userIdStr },
-                          body: JSON.stringify({
-                            company_name: inferredBusinessName,
-                            admin_email: adminEmail || 'admin@example.com',
-                            admin_name: adminName || 'Admin',
-                            admin_password: adminPassword || 'password123',
-                            business_type: inferredBusinessType,
-                            company_description: bio,
-                            selling_categories: data.categories || ["physical"],
-                            payment_pref: 'online',
-                            website_template: 'auto',
-                            domain_choice: 'subdomain',
-                            first_product_name: inferredProductName,
-                            first_product_price: inferredProductPrice,
-                            price_type: 'physical',
-                            location: inferredLocation,
-                            target_audience: data.target_audience || '',
-                            initial_products: data.initial_products || [],
-                            ai_agents: aiAgents,
-                            ai_auto_respond: aiAutoRespond
-                          })
+                          headers: {
+                            'Content-Type': 'application/json',
+                            'X-Tenant-ID': tenantIdStr,
+                            'X-User-ID': userIdStr,
+                          },
+                          body: JSON.stringify({ messages: newMessages }),
                         });
 
-                        if (!startRes.ok) {
-                          const startData = await startRes.json().catch(() => ({}));
-                          throw new Error(startData.error || startData.message || 'Failed to start onboarding');
-                        }
+                        const data = await chatRes.json();
 
-                        const startData = await startRes.json();
-                        setStartResult(startData);
-                        if (startData.organization_id) {
-                            localStorage.setItem('tenant_id', startData.organization_id);
-                            localStorage.setItem('tenant', startData.organization_id);
+                        if (chatRes.ok) {
+                          if (data.is_complete && data.intake_data) {
+                            setChatMessages([...newMessages, { role: 'assistant', content: data.reply }]);
+                            const intake = data.intake_data;
+
+                            const inferredBusinessName = intake.business_name || 'My Business';
+                            const inferredBusinessType = intake.business_type || 'Online Store';
+                            const inferredProductName = intake.initial_products?.[0]?.name || 'First Product';
+                            const inferredProductPrice = intake.initial_products?.[0]?.price || '10.00';
+                            const inferredLocation = intake.location || 'Unknown';
+
+                            setBusinessName(inferredBusinessName);
+                            setBusinessType(inferredBusinessType);
+                            setFirstProductName(inferredProductName);
+                            setFirstProductPrice(inferredProductPrice);
+
+                            const startRes = await fetch('/api/onboarding/start', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': tenantIdStr, 'X-User-ID': userIdStr },
+                              body: JSON.stringify({
+                                company_name: inferredBusinessName,
+                                admin_email: adminEmail || 'admin@example.com',
+                                admin_name: adminName || 'Admin',
+                                admin_password: adminPassword || 'password123',
+                                business_type: inferredBusinessType,
+                                company_description: userMsg,
+                                selling_categories: intake.categories || ["physical"],
+                                payment_pref: 'online',
+                                website_template: 'auto',
+                                domain_choice: 'subdomain',
+                                first_product_name: inferredProductName,
+                                first_product_price: inferredProductPrice,
+                                price_type: 'physical',
+                                location: inferredLocation,
+                                target_audience: intake.target_audience || '',
+                                initial_products: intake.initial_products || [],
+                                ai_agents: aiAgents,
+                                ai_auto_respond: aiAutoRespond
+                              })
+                            });
+
+                            if (!startRes.ok) {
+                              const startData = await startRes.json().catch(() => ({}));
+                              throw new Error(startData.error || startData.message || 'Failed to start onboarding');
+                            }
+
+                            const startData = await startRes.json();
+                            setStartResult(startData);
+                            if (startData.organization_id) {
+                                localStorage.setItem('tenant_id', startData.organization_id);
+                                localStorage.setItem('tenant', startData.organization_id);
+                            }
+                            localStorage.setItem('has_onboarded', 'true');
+                            setStep(5); syncStateToBackend({ step: 5 });
+                          } else {
+                            setChatMessages([...newMessages, { role: 'assistant', content: data.reply }]);
+                          }
+                        } else {
+                          throw new Error(data.error || data.message || 'Failed to process chat');
                         }
-                        localStorage.setItem('has_onboarded', 'true');
-                        setStep(5); syncStateToBackend({ step: 5 });
-                      } else {
-                        throw new Error(data.error || data.message || 'Failed to analyze business details');
+                      } catch (err: any) {
+                        console.error(err);
+                        if (err.message?.includes('fetch')) {
+                            setError('Failed to launch. Please try again.');
+                        } else {
+                            setError(err.message || 'Network Error. Failed to launch.');
+                        }
+                      } finally {
+                        setIsLoading(false);
                       }
-                    } catch (err: any) {
-                      console.error(err);
-                      if (err.message?.includes('fetch')) {
-                          setError('Failed to launch. Please try again.');
-                      } else {
-                          setError(err.message || 'Network Error. Failed to launch.');
-                      }
-                    } finally {
-                      setIsLoading(false);
-                    }
-                  }}
-                  disabled={!bio.trim() || isLoading}
-                  className="w-full bg-[#0066FF] text-white min-h-[44px] min-w-[44px] p-4 rounded-[8px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] hover:shadow-[0_6px_20px_rgba(0,102,255,0.23)] active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isLoading ? (
-                    <span className="flex items-center justify-center gap-2">
-                      <svg className="animate-spin h-5 w-5 text-white rounded-full shadow-[0_0_10px_rgba(255,255,255,0.5)]" style={{ backdropFilter: 'blur(30px) saturate(210%)', WebkitBackdropFilter: 'blur(30px) saturate(210%)' }} fill="none" viewBox="0 0 24 24">
+                    }}
+                    disabled={!bio.trim() || isLoading}
+                    className="flex-shrink-0 bg-[#0066FF] text-white min-h-[44px] min-w-[44px] w-11 h-11 rounded-full flex items-center justify-center font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] hover:shadow-[0_6px_20px_rgba(0,102,255,0.23)] active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isLoading ? (
+                      <svg className="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                       </svg>
-                      Generating...
-                    </span>
-                  ) : <IconLabel icon="launch">Next</IconLabel>}
-                </button>
+                    ) : (
+                      <svg className="w-5 h-5 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
+                    )}
+                  </button>
+                </div>
               </div>
             </div>
           )}

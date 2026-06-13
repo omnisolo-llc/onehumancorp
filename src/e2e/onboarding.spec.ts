@@ -205,7 +205,7 @@ test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
     await expect(imageUrlInput).toBeVisible();
     await imageUrlInput.fill("https://example.com/logo.png");
 
-    const generateButton = page.getByRole('button', { name: 'Next' });
+    const generateButton = page.locator('#chat-send-btn');
     await expect(generateButton).toBeVisible();
     await generateButton.click();
 
@@ -232,7 +232,7 @@ test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
 
     await page.route('**/api/onboarding/**', route => route.abort('failed'));
 
-    const generateButton = page.getByRole('button', { name: 'Next' });
+    const generateButton = page.locator('#chat-send-btn');
     await generateButton.click();
 
     // Verify error is shown with correct styling
@@ -257,7 +257,7 @@ test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
     const instantBuildButton = page.locator('button', { hasText: 'Instant Build' });
     await instantBuildButton.click();
 
-    const generateButton = page.getByRole('button', { name: 'Next' });
+    const generateButton = page.locator('#chat-send-btn');
 
     // Button should be disabled when input is empty.
     await expect(generateButton).toBeDisabled();
@@ -278,7 +278,7 @@ test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
     // Only provide a generic description
     await bioInput.fill("I sell things online.");
 
-    const generateButton = page.getByRole('button', { name: 'Next' });
+    const generateButton = page.locator('#chat-send-btn');
     await generateButton.click();
 
     const successHeading = page.getByRole('heading', { name: "You're Live!" });
@@ -298,7 +298,7 @@ test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
     expect(Math.round(box?.height || 0)).toBeGreaterThanOrEqual(44);
     expect(box?.width).toBeLessThanOrEqual(375);
 
-    const generateButton = page.getByRole('button', { name: 'Next' });
+    const generateButton = page.locator('#chat-send-btn');
     const btnBox = await generateButton.boundingBox();
     expect(Math.round(btnBox?.height || 0)).toBeGreaterThanOrEqual(44);
   });

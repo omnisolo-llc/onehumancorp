@@ -170,6 +170,9 @@ describe('OnboardingWizard', () => {
           })
         });
       }
+      if (url === '/api/onboarding/chat') {
+        return Promise.resolve({ ok: true, json: async () => ({ is_complete: true, reply: "Done", intake_data: { business_name: 'Test Business' } }) });
+      }
       if (url === '/api/onboarding/start') {
         return Promise.resolve({
           ok: true,
@@ -726,7 +729,7 @@ describe('OnboardingWizard', () => {
     await user.click(instantBuildBtn);
 
     // Verify transition to Instant Build step (Step 10)
-    expect(await screen.findByText('Tell us about your business')).toBeInTheDocument();
+    expect(await screen.findByText('AI Assistant')).toBeInTheDocument();
     expect(screen.getByPlaceholderText(/e.g. I run a local bakery/i)).toBeInTheDocument();
 
     // Fill bio
@@ -735,6 +738,9 @@ describe('OnboardingWizard', () => {
 
     // Mock fetch for /api/onboarding/start to resolve
     (global.fetch as any).mockImplementation((url: string) => {
+      if (url === '/api/onboarding/chat') {
+        return Promise.resolve({ ok: true, json: async () => ({ is_complete: true, reply: "Done", intake_data: { business_name: 'Test Business' } }) });
+      }
       if (url === '/api/onboarding/start') {
         return Promise.resolve({ ok: true, json: async () => ({}) });
       }
@@ -742,7 +748,7 @@ describe('OnboardingWizard', () => {
     });
 
     // Submit
-    const generateBtn = screen.getByRole('button', { name: /Next/i });
+    const generateBtn = document.getElementById('chat-send-btn') as HTMLElement;
     await user.click(generateBtn);
 
     // Check if it transitions successfully
