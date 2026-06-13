@@ -1,9 +1,21 @@
 import { chromium, type FullConfig } from '@playwright/test';
 
+
 export default async function globalSetup(config: FullConfig) {
   const baseURL = config.projects[0]?.use?.baseURL as string | undefined;
   if (!baseURL) {
     throw new Error('Playwright baseURL is required for e2e global setup.');
+  }
+
+  // The Bazel test runner starts a local postgres instance on a random port and exports it via DATABASE_URL
+  const databaseUrl = process.env.DATABASE_URL;
+  if (!databaseUrl) {
+    throw new Error('DATABASE_URL is not set in the environment. Tests must run with a valid database.');
+  }
+
+  // Ensure there are no hardcoded localhost:5432 ports in use
+  if (databaseUrl.includes('localhost:5432') && process.env.CI) {
+      console.warn('WARNING: Using hardcoded localhost:5432 database URL in CI. This is discouraged.');
   }
 
   // wait for app to be ready
