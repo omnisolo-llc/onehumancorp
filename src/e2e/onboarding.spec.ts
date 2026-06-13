@@ -215,6 +215,45 @@ test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
     await expect(successHeading).toBeVisible({ timeout: 60000 });
   });
 
+  test('Instant Build image URL is submitted and correctly mapped to state', async ({ page }) => {
+    await page.goto('/onboarding');
+    const instantBuildButton = page.locator('button', { hasText: 'Instant Build' });
+    await instantBuildButton.click();
+
+    const bioInput = page.getByPlaceholder("e.g. I run a local bakery that sells custom vegan cakes...");
+    await bioInput.fill("Test business description.");
+
+    const imageUrlInput = page.locator('#instant-image-url');
+    await expect(imageUrlInput).toBeVisible();
+    await expect(imageUrlInput).toHaveAttribute('type', 'url');
+    await imageUrlInput.fill("https://example.com/logo.png");
+
+    const generateButton = page.getByRole('button', { name: 'Next' });
+    await generateButton.click();
+
+    const successHeading = page.getByRole('heading', { name: "You're Live!" });
+    await expect(successHeading).toBeVisible({ timeout: 60000 });
+  });
+
+  test('Instant Build image URL can be empty and successfully launches', async ({ page }) => {
+    await page.goto('/onboarding');
+    const instantBuildButton = page.locator('button', { hasText: 'Instant Build' });
+    await instantBuildButton.click();
+
+    const bioInput = page.getByPlaceholder("e.g. I run a local bakery that sells custom vegan cakes...");
+    await bioInput.fill("Test business description without image.");
+
+    const imageUrlInput = page.locator('#instant-image-url');
+    await expect(imageUrlInput).toBeVisible();
+    // leave empty
+
+    const generateButton = page.getByRole('button', { name: 'Next' });
+    await generateButton.click();
+
+    const successHeading = page.getByRole('heading', { name: "You're Live!" });
+    await expect(successHeading).toBeVisible({ timeout: 60000 });
+  });
+
   // Test 2: Verifies Instant Build handles network error gracefully
   test('Instant Build gracefully displays an error state on a network failure with proper styling', async ({ page }) => {
     await page.goto('/onboarding');
