@@ -144,6 +144,8 @@ jobs:
             build --build_metadata=ROLE=CI
             build --show_timestamps
             build --nokeep_going
+            test --config=local
+            build --config=local
             build --verbose_failures
 
       - name: Build non-test artifacts
@@ -159,7 +161,7 @@ jobs:
             except //deploy:all
             except //release:all
           ' > build-targets.txt
-          xargs -r bazelisk build \
+          xargs -r bazelisk build --config=local \ --config=local
             --config=${{ matrix.bazel_config }} \
             --skip_incompatible_explicit_targets \
             --build_tag_filters=-manual,-e2e,-requires-docker,-local,-no-sandbox \
@@ -181,7 +183,7 @@ jobs:
       - name: Build Tauri desktop Bazel target
         if: matrix.name == 'linux-x86_64'
         run: |
-          bazelisk build \
+          bazelisk build --config=local \ --config=local
             //src/ui/tauri:app \
             --config=linux_x86_64 \
             --//src/ui/tauri:build_tauri=true
@@ -189,14 +191,14 @@ jobs:
       - name: Build server web image tarball
         if: matrix.name == 'linux-x86_64'
         run: |
-          bazelisk build //deploy:server_web_image_tar \
+          bazelisk build --config=local //deploy:server_web_image_tar \ --config=local
             --config=linux_x86_64 \
             --output_groups=+tarball
 
       - name: Build Tauri Android Bazel targets
         if: matrix.name == 'android'
         run: |
-          bazelisk build \
+          bazelisk build --config=local \ --config=local
             //src/ui/tauri:tauri_android_apk \
             //src/ui/tauri:tauri_android_aab \
             --config=linux_x86_64
@@ -231,11 +233,11 @@ jobs:
 
       - name: Build Tauri iOS Bazel target
         if: matrix.name == 'macos-aarch64' && github.event_name != 'pull_request'
-        run: bazelisk build //src/ui/tauri:tauri_ios_ipa --config=macos_aarch64
+        run: bazelisk build --config=local //src/ui/tauri:tauri_ios_ipa --config=macos_aarch64 --config=local
 
       - name: Analyze Tauri iOS Bazel target
         if: matrix.name == 'macos-aarch64' && github.event_name == 'pull_request'
-        run: bazelisk build //src/ui/tauri:tauri_ios_ipa --config=macos_aarch64 --nobuild
+        run: bazelisk build --config=local //src/ui/tauri:tauri_ios_ipa --config=macos_aarch64 --nobuild --config=local
 
   bazel-test:
     name: Bazel test
@@ -289,13 +291,15 @@ jobs:
             build --build_metadata=ROLE=CI
             build --show_timestamps
             build --nokeep_going
+            test --config=local
+            build --config=local
             build --verbose_failures
             test --test_output=errors
             test --test_summary=detailed
 
       - name: Test fast targets
         run: |
-          bazelisk test \
+          bazelisk test --config=local \ --config=local
             --build_tag_filters=-e2e,-requires-docker,-local,-no-sandbox \
             --test_tag_filters=-e2e,-requires-docker,-local,-no-sandbox \
             //...
@@ -362,6 +366,8 @@ jobs:
             build --build_metadata=ROLE=CI
             build --show_timestamps
             build --nokeep_going
+            test --config=local
+            build --config=local
             build --verbose_failures
             test --test_output=errors
             test --test_summary=detailed
@@ -373,7 +379,7 @@ jobs:
 
       - name: Test Playwright UI E2E target
         run: |
-          bazelisk test "${{ matrix.target }}" \
+          bazelisk test --config=local "${{ matrix.target }}" \ --config=local
             --local_test_jobs="$(nproc)" \
             --jobs="$(nproc)" \
             --nocache_test_results
@@ -474,6 +480,8 @@ jobs:
             build --build_metadata=ROLE=CI
             build --show_timestamps
             build --nokeep_going
+            test --config=local
+            build --config=local
             build --verbose_failures
             test --test_output=errors
             test --test_summary=detailed
@@ -511,7 +519,7 @@ jobs:
           else
             BAZEL_PLATFORM_CONFIG=linux
           fi
-          bazelisk test //deploy:kind_e2e_test \
+          bazelisk test --config=local //deploy:kind_e2e_test \ --config=local
             --config="${BAZEL_PLATFORM_CONFIG}" \
             --nocache_test_results
 
@@ -586,6 +594,8 @@ jobs:
             build --build_metadata=ROLE=CI
             build --show_timestamps
             build --nokeep_going
+            test --config=local
+            build --config=local
             build --verbose_failures
             test --test_output=errors
             test --test_summary=detailed
@@ -595,7 +605,7 @@ jobs:
           command -v docker
           command -v curl
           command -v bazelisk
-          bazelisk test //deploy:docker_compose_e2e_test \
+          bazelisk test --config=local //deploy:docker_compose_e2e_test \ --config=local
             --config=linux \
             --nocache_test_results
 
