@@ -6,7 +6,7 @@ async function proxyToAgent(method: string, params: any) {
   const agentUrl = process.env.OHC_AGENT_URL || 'http://127.0.0.1:18789';
 
   try {
-    const res = await fetch(`${agentUrl}/json_rpc`, {
+    const res = await fetch(`${agentUrl}/rpc`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
