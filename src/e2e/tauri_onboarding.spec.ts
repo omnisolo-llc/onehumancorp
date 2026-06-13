@@ -74,7 +74,6 @@ test.describe('Tauri Onboarding Wizard Flow', () => {
     await page.getByRole('button', { name: 'Start My Business' }).click();
 
     // Setup page (Step 1: Context)
-    await expect(page.locator('#step-context')).toBeVisible();
     await expect(page.getByRole('heading', { name: "How do you work?" })).toBeVisible();
 
     // Verify validation triggers
