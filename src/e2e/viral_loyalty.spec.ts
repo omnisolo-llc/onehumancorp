@@ -9,8 +9,9 @@ test.describe('Loyalty Program Page E2E', () => {
     await expect(page.getByText('Customer Loyalty Program 🤝')).toBeVisible();
 
     // Fill in the details
-    await page.fill('input[placeholder="e.g. 10"]', '15'); // give amount
-    await page.fill('input[placeholder="e.g. 10"]', '15'); // get amount
+    const inputs = page.locator('input[placeholder="e.g. 10"]');
+    await inputs.nth(0).fill('15'); // give amount
+    await inputs.nth(1).fill('15'); // get amount
     await page.selectOption('select', 'Store Credit');
 
     // Click generate
