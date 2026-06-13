@@ -482,10 +482,17 @@
         <div id="instant-error" class="error-msg" style="margin-bottom: 20px;"></div>
 
         <div class="btn-group" style="margin-top: 24px;">
-          <button id="generate-storefront-btn">Generate Storefront</button>
+          <button id="generate-storefront-btn">Next</button>
         </div>
       </div>
 
+
+
+      <div class="step" id="step-loading">
+        <h1>Building Your Business...</h1>
+        <p>Please wait while we set up your workspace.</p>
+        <div class="spinner" style="margin: 0 auto; width: 40px; height: 40px;"></div>
+      </div>
 
       <!-- Step Chat: Conversational Build -->
       <div class="step" id="step-chat">
@@ -668,7 +675,7 @@
         <div id="template-error" class="error-msg">Please select a template.</div>
 
         <div class="btn-group">
-          <button id="finish-btn">Finish Setup</button>
+          <button id="finish-btn">Launch Store</button>
           <button type="button" class="btn-secondary save-draft-btn">Save Draft</button>
           <button class="btn-secondary prev-step-btn" data-prev="step-offer">Back</button>
         </div>
@@ -1129,10 +1136,18 @@
       const instantErrorEl = document.getElementById('instant-error');
 
       if (instantBioInputEl) {
+          // Initialize disabled state
+          if (generateStorefrontBtn && !instantBioInputEl.value.trim()) {
+              generateStorefrontBtn.disabled = true;
+          }
           instantBioInputEl.addEventListener('input', () => {
               instantBioInputEl.classList.remove('border-[#FF3B30]');
               if (instantErrorEl) {
                   instantErrorEl.style.display = 'none';
+                  instantErrorEl.classList.remove('text-[#FF3B30]', 'border-[#FF3B30]/30', 'animate-shake');
+              }
+              if (generateStorefrontBtn) {
+                  generateStorefrontBtn.disabled = !instantBioInputEl.value.trim();
               }
           });
       }
@@ -1193,7 +1208,7 @@
                   };
 
                   if (window.__TAURI__ && window.__TAURI__.core) {
-                      await window.__TAURI__.core.invoke("start_onboarding", { req });
+                      await goToStep('step-loading'); window.__TAURI__.core.invoke("start_onboarding", { req });
                       localStorage.setItem('has_onboarded', 'true');
                       window.location.href = "success.html";
                       return;
@@ -1251,16 +1266,16 @@
               if (!bioInput.trim()) {
                   instantErrorEl.innerText = "Please tell us about your business.";
                   instantErrorEl.style.display = 'block';
-                  instantErrorEl.classList.add('text-[#FF3B30]', 'border-[#FF3B30]/30');
+                  instantErrorEl.classList.add('text-[#FF3B30]', 'border-[#FF3B30]/30', 'animate-shake');
                   instantBioInputEl.classList.add('border-[#FF3B30]');
                   return;
               }
 
               instantErrorEl.style.display = 'none';
-              instantErrorEl.classList.remove('text-[#FF3B30]', 'border-[#FF3B30]/30');
+              instantErrorEl.classList.remove('text-[#FF3B30]', 'border-[#FF3B30]/30', 'animate-shake');
               instantBioInputEl.classList.remove('border-[#FF3B30]');
               generateStorefrontBtn.disabled = true;
-              generateStorefrontBtn.innerHTML = '<div class="spinner"></div>Generating...';
+              generateStorefrontBtn.innerHTML = '<div class="spinner"></div>Building Your Business...';
 
               try {
                   const backendUrl = (window.location.origin.includes('localhost') || window.location.protocol === 'file:') ? 'http://127.0.0.1:18789' : '';
@@ -1361,7 +1376,7 @@
                   instantErrorEl.classList.add('text-[#FF3B30]', 'border-[#FF3B30]/30');
                   instantBioInputEl.classList.add('border-[#FF3B30]');
                   generateStorefrontBtn.disabled = false;
-                  generateStorefrontBtn.innerText = "Generate Storefront";
+                  generateStorefrontBtn.innerText = "Next";
               }
           });
       }
@@ -1457,13 +1472,14 @@
 
                if (window.__TAURI__ && window.__TAURI__.core) {
                  finishBtn.disabled = true;
-                 finishBtn.innerHTML = '<div class="spinner"></div>Saving...';
+                 goToStep('step-loading');
                  window.__TAURI__.core.invoke("start_onboarding", { req }).then(() => {
                    window.location.href = "success.html";
                  }).catch((err) => {
                    console.error(err);
+                   goToStep('step-template');
                    finishBtn.disabled = false;
-                   finishBtn.innerText = "Finish Setup";
+                   finishBtn.innerText = "Launch Store";
                  });
                } else {
                  finishBtn.disabled = true;
@@ -1484,8 +1500,9 @@
                      }
                  }).catch((err) => {
                      console.error(err);
+                     goToStep('step-template');
                      finishBtn.disabled = false;
-                     finishBtn.innerText = "Finish Setup";
+                     finishBtn.innerText = "Launch Store";
                  });
                }
            }
