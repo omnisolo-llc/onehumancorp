@@ -245,6 +245,28 @@ impl Department for MarketingAgent {
             let payload = serde_json::json!({
                 "site_id": site_id,
             });
+
+            if let Ok(orchestrator) = self.orchestrator() {
+                let db = orchestrator.db();
+                let pool = db.pool.clone();
+                let tenant_id_str = event.tenant_id.clone();
+                let site_id_str = site_id.to_string();
+
+                tokio::spawn(async move {
+                    if let Ok(tenant_id) = uuid::Uuid::parse_str(&tenant_id_str) {
+                        if let Ok(s_id) = uuid::Uuid::parse_str(&site_id_str) {
+                            let _ = crate::builder::jobs::enqueue_publish_site_job(&pool, tenant_id, s_id).await;
+                        } else {
+                            if let Ok(sites) = crate::builder::db::list_sites(&pool, tenant_id).await {
+                                for site in sites {
+                                    let _ = crate::builder::jobs::enqueue_publish_site_job(&pool, tenant_id, site.id).await;
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
             return self.orchestrator()?.execute_action(
                 DepartmentType::Marketing,
                 "Trigger Agentic SEO Pre-rendering".to_string(),
