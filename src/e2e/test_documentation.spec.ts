@@ -29,7 +29,7 @@ test('Documentation, Tooltips and Help flows', async ({ page }) => {
 
   // 4. Video Tutorials page
   await page.goto('/help.html');
-  await expect(page.getByText('Video Guides')).toBeVisible();
+  await expect(page.getByText('Video Tutorials')).toBeVisible();
 
   // 5. Release Notes & Changelog
   await page.goto('/changelog.html');
