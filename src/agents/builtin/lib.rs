@@ -72,6 +72,7 @@ pub mod marketplace;
 pub mod plan_and_execute;
 pub mod sona_patterns;
 pub mod swarm_topology;
+pub mod llm_condensation;
 pub mod visual_workflow;
 pub mod visual_workflow_client;
 
