@@ -347,3 +347,39 @@ pub struct LedgerEntry {
     pub reference_id: String,
     pub created_at: Option<DateTime<Utc>>,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct PaymentRoutingRule {
+    pub id: String,
+    pub tenant_id: String,
+    pub product_service_id: String,
+    pub split_percentage: f64,
+    pub destination_party_id: String,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct TransactionGroup {
+    pub id: String,
+    pub tenant_id: String,
+    pub reference_type: String,
+    pub reference_id: String,
+    pub status: Option<String>,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct InvisibleLedgerEntry {
+    pub id: String,
+    pub tenant_id: String,
+    pub transaction_group_id: String,
+    pub entry_type: String,
+    pub amount: f64,
+    pub currency: String,
+    pub source_party_id: String,
+    pub destination_party_id: String,
+    pub status: Option<String>,
+    pub created_at: Option<DateTime<Utc>>,
+}
