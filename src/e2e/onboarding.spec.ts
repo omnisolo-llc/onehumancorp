@@ -201,6 +201,13 @@ test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
 
     await bioInput.fill("I run a high-end tech consultation firm specializing in AI in San Francisco.");
 
+    const nameInput = page.getByPlaceholder(/e.g. Maya Smith/i);
+    const emailInput = page.getByPlaceholder(/you@example.com/i);
+    const pwdInput = page.getByPlaceholder(/••••••••/i);
+    await nameInput.fill('Maya Smith');
+    await emailInput.fill('admin@example.com');
+    await pwdInput.fill('password123');
+
     const generateButton = page.getByRole('button', { name: 'Next' });
     await expect(generateButton).toBeVisible();
     await generateButton.click();
@@ -225,6 +232,13 @@ test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
 
     const bioInput = page.getByPlaceholder("e.g. I run a local bakery that sells custom vegan cakes...");
     await bioInput.fill("Will fail network request");
+
+    const nameInput = page.getByPlaceholder(/e.g. Maya Smith/i);
+    const emailInput = page.getByPlaceholder(/you@example.com/i);
+    const pwdInput = page.getByPlaceholder(/••••••••/i);
+    await nameInput.fill('Maya Smith');
+    await emailInput.fill('admin@example.com');
+    await pwdInput.fill('password123');
 
     await page.route('**/api/onboarding/**', route => route.abort('failed'));
 
@@ -273,6 +287,13 @@ test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
     const bioInput = page.getByPlaceholder("e.g. I run a local bakery that sells custom vegan cakes...");
     // Only provide a generic description
     await bioInput.fill("I sell things online.");
+
+    const nameInput = page.getByPlaceholder(/e.g. Maya Smith/i);
+    const emailInput = page.getByPlaceholder(/you@example.com/i);
+    const pwdInput = page.getByPlaceholder(/••••••••/i);
+    await nameInput.fill('Maya Smith');
+    await emailInput.fill('admin@example.com');
+    await pwdInput.fill('password123');
 
     const generateButton = page.getByRole('button', { name: 'Next' });
     await generateButton.click();

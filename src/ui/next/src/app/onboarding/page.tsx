@@ -504,10 +504,65 @@ export default function OnboardingWizard() {
                 />
               </div>
 
+              <div className="w-full space-y-4 pt-4 border-t border-white/50 dark:border-white/10">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Admin Name</label>
+                  <input
+                    type="text"
+                    value={adminName}
+                    onChange={(e) => setAdminName(e.target.value)}
+                    placeholder="e.g. Maya Smith"
+                    className="w-full p-3 sm:p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none glassmorphism min-h-[44px] min-w-[44px] text-[#1D1D1F] dark:text-[#F5F5F7]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Admin Email</label>
+                  <input
+                    type="email"
+                    value={adminEmail}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setAdminEmail(val);
+                      if (!val.trim()) {
+                        setValidationErrors(prev => ({ ...prev, adminEmail: 'Admin Email is required' }));
+                      } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)) {
+                        setValidationErrors(prev => ({ ...prev, adminEmail: 'Please enter a valid email address' }));
+                      } else {
+                        setValidationErrors(prev => { const { adminEmail, ...rest } = prev; return rest; });
+                      }
+                    }}
+                    placeholder="you@example.com"
+                    className={`w-full p-3 sm:p-4 rounded-[8px] border ${validationErrors.adminEmail ? "border-[#FF3B30]" : "border-white/50 dark:border-white/10 focus:border-[#0066FF]"} outline-none glassmorphism min-h-[44px] min-w-[44px] text-[#1D1D1F] dark:text-[#F5F5F7]`}
+                  />
+                  {validationErrors.adminEmail && <p className="text-[#FF3B30] text-xs mt-1">{validationErrors.adminEmail}</p>}
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Admin Password</label>
+                  <input
+                    type="password"
+                    value={adminPassword}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setAdminPassword(val);
+                      if (!val.trim()) {
+                        setValidationErrors(prev => ({ ...prev, adminPassword: 'Password is required' }));
+                      } else if (val.length < 8 || !/\d/.test(val)) {
+                        setValidationErrors(prev => ({ ...prev, adminPassword: 'Password must be at least 8 characters and contain a number' }));
+                      } else {
+                        setValidationErrors(prev => { const { adminPassword, ...rest } = prev; return rest; });
+                      }
+                    }}
+                    placeholder="••••••••"
+                    className={`w-full p-3 sm:p-4 rounded-[8px] border ${validationErrors.adminPassword ? "border-[#FF3B30]" : "border-white/50 dark:border-white/10 focus:border-[#0066FF]"} outline-none glassmorphism min-h-[44px] min-w-[44px] text-[#1D1D1F] dark:text-[#F5F5F7]`}
+                  />
+                  {validationErrors.adminPassword && <p className="text-[#FF3B30] text-xs mt-1">{validationErrors.adminPassword}</p>}
+                </div>
+              </div>
+
               <div className="mt-auto pt-6 w-full">
                 <button
                   onClick={async () => {
-                    if (!bio.trim()) return;
+                    if (!bio.trim() || !adminEmail.trim() || !adminPassword.trim() || validationErrors.adminEmail || validationErrors.adminPassword) return;
                     setIsLoading(true);
 
                     try {
@@ -542,9 +597,9 @@ export default function OnboardingWizard() {
                           headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': tenantIdStr, 'X-User-ID': userIdStr },
                           body: JSON.stringify({
                             company_name: inferredBusinessName,
-                            admin_email: adminEmail || 'admin@example.com',
-                            admin_name: adminName || 'Admin',
-                            admin_password: adminPassword || 'password123',
+                            admin_email: adminEmail,
+                            admin_name: adminName || 'Business Owner',
+                            admin_password: adminPassword,
                             business_type: inferredBusinessType,
                             company_description: bio,
                             selling_categories: data.categories || ["physical"],
@@ -589,7 +644,7 @@ export default function OnboardingWizard() {
                       setIsLoading(false);
                     }
                   }}
-                  disabled={!bio.trim() || isLoading}
+                  disabled={!bio.trim() || !adminEmail.trim() || !adminPassword.trim() || !!validationErrors.adminEmail || !!validationErrors.adminPassword || isLoading}
                   className="w-full bg-[#0066FF] text-white min-h-[44px] min-w-[44px] p-4 rounded-[8px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] hover:shadow-[0_6px_20px_rgba(0,102,255,0.23)] active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isLoading ? (

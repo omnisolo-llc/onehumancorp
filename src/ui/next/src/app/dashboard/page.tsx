@@ -501,6 +501,53 @@ export default function Dashboard() {
         {actionMessage && <div className="app-badge good" role="status">{actionMessage}</div>}
       </div>
 
+      {dashboardData?.initialAgentFeed?.items && dashboardData.initialAgentFeed.items.length > 0 && (
+        <section className="mb-12">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7]">Agent Feed</h2>
+            <Link href="/feed" className="text-sm font-semibold text-[#0066FF] hover:underline">View All</Link>
+          </div>
+          <div className="flex flex-col gap-4">
+            {dashboardData.initialAgentFeed.items.map((item: any) => (
+              <div key={item.id} className="glassmorphism p-6 rounded-[16px] shadow-sm border border-white/40 dark:border-white/10" data-testid="agent-feed-card">
+                <div className="flex justify-between items-start mb-2">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-indigo-500">
+                    {item.event_source.replace(/_/g, ' ')}
+                  </span>
+                  <span className="text-xs text-gray-500">
+                    {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                </div>
+                <h3 className="font-medium text-gray-900 dark:text-white mb-1">
+                  {item.proposed_action?.title || 'Review Required'}
+                </h3>
+                <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+                  {item.context_payload?.summary || item.proposed_action?.description || 'A new update requires your attention.'}
+                </p>
+                <div className="flex gap-2 mt-4">
+                  <button onClick={async () => {
+                    const tenant = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default';
+                    const userId = localStorage.getItem('user_id') || 'default';
+                    await fetch(`/api/agent-feed/${item.id}/state`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': tenant, 'X-User-ID': userId }, body: JSON.stringify({ state: 'APPROVED' }) });
+                    setDashboardData((prev: any) => ({ ...prev, initialAgentFeed: { ...prev.initialAgentFeed, items: prev.initialAgentFeed.items.filter((i: any) => i.id !== item.id) } }));
+                  }} className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 px-4 rounded-lg transition-colors" data-testid="approve-proposal">
+                    Approve
+                  </button>
+                  <button onClick={async () => {
+                    const tenant = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default';
+                    const userId = localStorage.getItem('user_id') || 'default';
+                    await fetch(`/api/agent-feed/${item.id}/state`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': tenant, 'X-User-ID': userId }, body: JSON.stringify({ state: 'DISMISSED' }) });
+                    setDashboardData((prev: any) => ({ ...prev, initialAgentFeed: { ...prev.initialAgentFeed, items: prev.initialAgentFeed.items.filter((i: any) => i.id !== item.id) } }));
+                  }} className="flex-1 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-900 dark:text-white font-medium py-3 px-4 rounded-lg transition-colors" data-testid="edit-proposal">
+                    Dismiss
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
       <UnifiedAgentFeed initialData={{ proposals: pendingApprovals, activity: activities }} />
 
       <SuccessMilestoneAlert />

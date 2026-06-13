@@ -56,7 +56,7 @@ export default function FeedPage() {
 
   return (
     <AppShell title="Agent Feed" subtitle="Your daily priorities, prepared by your team.">
-      <div className="max-w-md mx-auto p-4 space-y-4" data-testid="agent-feed">
+      <div className="max-w-2xl w-full mx-auto p-4 flex flex-col gap-4" data-testid="agent-feed">
         {loading && <p>Loading feed...</p>}
         {error && <p className="text-red-500">Error: {error}</p>}
         {!loading && !error && items.length === 0 && (
@@ -64,7 +64,7 @@ export default function FeedPage() {
         )}
 
         {items.map((item) => (
-          <div key={item.id} className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-700" data-testid="agent-feed-card">
+          <div key={item.id} className="glassmorphism p-6 rounded-[16px] shadow-sm border border-white/40 dark:border-white/10" data-testid="agent-feed-card">
             <div className="flex justify-between items-start mb-2">
               <span className="text-xs font-semibold uppercase tracking-wider text-indigo-500">
                 {item.event_source.replace(/_/g, ' ')}
