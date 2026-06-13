@@ -51,7 +51,7 @@ test.describe('real MiniMax hire-agent flow', () => {
   test('hiring an agent starts a real M3 business swarm with specialist agents', async ({ request }) => {
     test.setTimeout(360_000);
 
-    test.skip(!process.env.MINIMAX_API_KEY, 'requires a real MINIMAX_API_KEY in the environment or .env');
+    if (!process.env.MINIMAX_API_KEY || process.env.MINIMAX_API_KEY === 'dummy') { test.skip(); return; }
     expect(process.env.MINIMAX_API_KEY, 'requires a real MINIMAX_API_KEY in the environment or .env').toBeTruthy();
     expect(process.env.OHC_LLM_PROVIDER || 'minimax').toBe('minimax');
     expect(process.env.OHC_LLM_MODEL || process.env.MINIMAX_MODEL || 'MiniMax-M3').toBe('MiniMax-M3');

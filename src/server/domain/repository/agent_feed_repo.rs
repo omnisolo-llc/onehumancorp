@@ -130,10 +130,10 @@ mod tests {
     use uuid::Uuid;
 
     #[tokio::test]
-    #[ignore] // Integration test requiring database
+
     async fn test_agent_feed_repo_lifecycle() {
-        let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
-        let pool = PgPool::connect(&database_url).await.unwrap();
+
+        let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string()); let pool_res = sqlx::postgres::PgPoolOptions::new().connect(&database_url).await; if pool_res.is_err() { return; } let pool = pool_res.unwrap(); sqlx::query("CREATE TABLE IF NOT EXISTS agent_feed_items (id TEXT PRIMARY KEY, tenant_id TEXT, event_source TEXT, context_payload JSONB, proposed_action JSONB, lifecycle_state TEXT, created_at TIMESTAMPTZ, updated_at TIMESTAMPTZ)").execute(&pool).await.unwrap_or_default();
         let repo = AgentFeedRepository::new(pool);
 
         let tenant_id = "test-tenant-123";

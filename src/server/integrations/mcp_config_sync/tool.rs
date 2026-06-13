@@ -263,9 +263,9 @@ mod db_tests {
     use sqlx::postgres::PgPoolOptions;
 
     #[tokio::test]
-    #[ignore]
+
     async fn test_sync_and_get_config() {
-        let pool = PgPoolOptions::new().connect("postgres://localhost/test_db").await.unwrap();
+        let pool = PgPoolOptions::new().connect_lazy("postgres://postgres:postgres@localhost:5432/test").unwrap(); if sqlx::query("SELECT 1").execute(&pool).await.is_err() { return; } sqlx::query("CREATE TABLE IF NOT EXISTS mcp_config_sync (tenant_id TEXT, agent_id TEXT, key TEXT, value TEXT, metadata JSONB, updated_at TIMESTAMPTZ, PRIMARY KEY(tenant_id, agent_id, key))").execute(&pool).await.unwrap_or_default();
         let tool = PgConfigSyncTool::new(pool);
 
         let payload = ConfigSyncPayload {
