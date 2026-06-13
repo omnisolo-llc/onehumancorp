@@ -133,7 +133,8 @@
         }
       ],
       "title": "SQLite Lock Contention (Standalone)",
-      "type": "timeseries"
+      "type": "timeseries",
+      "transparent": true
     },
     {
       "datasource": {
@@ -226,7 +227,8 @@
         }
       ],
       "title": "Task Queue Length",
-      "type": "timeseries"
+      "type": "timeseries",
+      "transparent": true
     },
     {
       "datasource": {
@@ -319,7 +321,8 @@
         }
       ],
       "title": "Task Failures",
-      "type": "timeseries"
+      "type": "timeseries",
+      "transparent": true
     },
     {
       "datasource": {
@@ -412,7 +415,8 @@
         }
       ],
       "title": "SQLite Retry Exhausted",
-      "type": "timeseries"
+      "type": "timeseries",
+      "transparent": true
     },
     {
       "datasource": {
@@ -505,7 +509,8 @@
         }
       ],
       "title": "SQLite Throttled Requests",
-      "type": "timeseries"
+      "type": "timeseries",
+      "transparent": true
     }
   ],
   "refresh": "",
