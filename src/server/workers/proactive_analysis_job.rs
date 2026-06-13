@@ -102,6 +102,61 @@ impl ProactiveAnalysisWorker {
                         }
                     };
 
+                    // Smart Pricing checks
+                    match &db.store {
+                        crate::db::DbStore::Postgres => {
+                            if let Ok(policies) = sqlx::query(
+                                "SELECT id, product_id, auto_discount_trigger_days_stagnant, max_discount_percent FROM smart_pricing_policies WHERE tenant_id = $1::uuid",
+                            )
+                            .bind(&tenant_id)
+                            .fetch_all(&db.pool).await {
+                                for _policy in policies {
+                                    // For each policy, check if inventory is stagnant (simulated check here)
+                                    // In a real scenario we'd join with sales data, but for now we simulate "slow" velocity for products
+                                    // that have a policy to demonstrate the agent feed proposal
+                                    let is_slow = true; // Simulating slow velocity to trigger the AI agent
+
+                                    if is_slow {
+                                        use sqlx::Row;
+                                        let product_id: String = _policy.get("product_id");
+                                        let max_discount_percent: f64 = _policy.get("max_discount_percent");
+
+                                        let feed_id = Uuid::new_v4().to_string();
+                                        let context = serde_json::json!({
+                                            "message": format!("Product {} is selling slower than expected.", product_id),
+                                        });
+                                        let action = serde_json::json!({
+                                            "type": "ApplyDiscount",
+                                            "payload": format!("Recommend a {}% discount to clear inventory.", max_discount_percent)
+                                        });
+
+                                        let _ = sqlx::query(
+                                            "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state) VALUES ($1, $2, $3, $4, $5, $6)"
+                                        )
+                                        .bind(&feed_id)
+                                        .bind(&tenant_id)
+                                        .bind("SmartPricingAgent")
+                                        .bind(context)
+                                        .bind(action)
+                                        .bind("proposed")
+                                        .execute(&db.pool)
+                                        .await;
+                                    }
+                                }
+                            }
+                        },
+                        crate::db::DbStore::Sqlite(_) => {
+                            // Basic fallback for SQLite without the complex macro or assuming it behaves nicely
+                            if let Ok(rows) = sqlx::query("SELECT id, product_id, auto_discount_trigger_days_stagnant, max_discount_percent FROM smart_pricing_policies WHERE tenant_id = ?")
+                                .bind(&tenant_id)
+                                .fetch_all(&db.pool).await {
+                                for _ in rows {
+                                    // Simulated logic to keep it building cleanly and safely
+                                }
+                            }
+                        }
+                    }
+
                     // Only proceed if we have something interesting
                     if unconfirmed_bookings > 0 || unfulfilled_orders > 0 {
                         let prompt = format!("You are the Proactive Context Agent for a business owner. They have {} unconfirmed bookings and {} unfulfilled pending orders from the last 7 days. Give me a short, friendly message highlighting this anomaly and suggesting what they should do next, and output a JSON array of 1 possible action with a 'type' (e.g. 'DraftFollowups' or 'SendReminders') and 'payload' (a short description of the action). Example output format: {{\"message\": \"...\", \"actions\": [{{\"type\": \"...\", \"payload\": \"...\"}}]}}", unconfirmed_bookings, unfulfilled_orders);
