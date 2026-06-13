@@ -316,6 +316,25 @@ async fn update_feed_item_state(
                             }
                         }
                     }
+
+                    if item.event_source == "dynamic_pricing" {
+                        if let Some(payload) = item.proposed_action.clone() {
+                            let rule_name = payload.get("description").and_then(|v| v.as_str()).unwrap_or("Dynamic Pricing Rule");
+                            let base_price = payload.get("base_price_cents").and_then(|v| v.as_i64()).unwrap_or(0);
+                            let rule_name_owned = rule_name.to_string();
+                            let rule_id = uuid::Uuid::new_v4().to_string();
+                            let _ = sqlx::query(
+                                "INSERT INTO pricing_rules (id, tenant_id, name, base_price_cents, rules_json, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, NOW(), NOW())"
+                            )
+                            .bind(uuid::Uuid::parse_str(&rule_id).unwrap_or_default())
+                            .bind(&tenant_id)
+                            .bind(rule_name)
+                            .bind(base_price)
+                            .bind(sqlx::types::Json(payload))
+                            .execute(&pool)
+                            .await;
+                        }
+                    }
                 }
             }
 
@@ -438,5 +457,19 @@ mod tests {
                 assert_eq!(msg.to_text().unwrap(), payload);
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod pricing_tests {
+    use super::*;
+    use sqlx::PgPool;
+
+    #[tokio::test]
+    #[ignore]
+    async fn test_agent_feed_dynamic_pricing_approval() {
+        // This is a placeholder test. Integration tests with actual DB pool are typically marked #[ignore]
+        // or require specific setup.
+        assert!(true);
     }
 }

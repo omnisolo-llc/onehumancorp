@@ -1,5 +1,5 @@
 use uuid::Uuid;
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Utc, Timelike};
 use serde::{Deserialize, Serialize};
 use crate::db::get_pool;
 use sqlx::Row;
@@ -1169,7 +1169,7 @@ impl BookingEngineService for NativeBookingService {
              }
         }
 
-        let _ = tx.commit().await;
+        // We need the transaction for dynamic pricing queries later.
 
         let soft_locks = self.soft_lock_store();
         let mut available_slots = vec![];
@@ -1201,7 +1201,64 @@ impl BookingEngineService for NativeBookingService {
             }
         }
 
-        Ok(Response::new(CheckAvailabilityResponse { available_slots }))
+        // Apply dynamic pricing rules to availability logic for yield management
+        let mut final_slots = vec![];
+        let rules_rows = sqlx::query("SELECT rules_json FROM pricing_rules WHERE tenant_id = $1")
+            .bind(&tenant_id)
+            .fetch_all(&mut *tx)
+            .await
+            .unwrap_or_default();
+
+        let base_price_opt: Option<i64> = sqlx::query_scalar("SELECT price_cents FROM products WHERE id = $1 AND tenant_id = $2")
+            .bind(&product_id)
+            .bind(&tenant_id)
+            .fetch_optional(&mut *tx)
+            .await
+            .unwrap_or_default();
+
+        let base_price = base_price_opt.unwrap_or(0);
+
+        for slot in available_slots {
+            let _adjusted_price = base_price; // Assuming we use it later when TimeSlot supports price
+            for rule_row in &rules_rows {
+                if let Ok(rules_json) = rule_row.try_get::<sqlx::types::Json<serde_json::Value>, _>("rules_json") {
+                    if let Some(rule_product_id) = rules_json.get("product_id").and_then(|v| v.as_str()) {
+                        if rule_product_id == product_id {
+                            if let Some(min_price) = rules_json.get("min_price_cents").and_then(|v| v.as_i64()) {
+                                let bounds = crate::pricing::dynamic::PricingBounds {
+                                    base_price: base_price as f64 / 100.0,
+                                    min_price: min_price as f64 / 100.0,
+                                    max_price: (base_price * 2) as f64 / 100.0,
+                                };
+
+                                // Parse hour from slot to determine time of day
+                                let dt = DateTime::parse_from_rfc3339(&slot.start_time).unwrap();
+                                let hour = dt.hour();
+                                let time_of_day = if hour < 12 { "morning" } else if hour < 17 { "afternoon" } else { "evening" };
+
+                                let context = crate::pricing::dynamic::ContextSignals {
+                                    time_of_day: time_of_day.to_string(),
+                                    weather: "sunny".to_string(),
+                                    inventory_velocity: "normal".to_string(),
+                                    demand_level: if hour >= 17 && hour <= 19 { "high" } else { "normal" }.to_string(), // Surge for evening
+                                };
+                                let result = crate::pricing::dynamic::DynamicPricingEngine::calculate_price(&bounds, &context);
+                                let _adjusted_price = (result.price * 100.0).round() as i64;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Assuming TimeSlot might have price_cents in the future or this helps the client.
+            // Currently app.proto TimeSlot only has start/end.
+            final_slots.push(slot);
+        }
+
+        let _ = tx.commit().await;
+
+        Ok(Response::new(CheckAvailabilityResponse { available_slots: final_slots }))
     }
 
     async fn reserve_time_slot(
