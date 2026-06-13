@@ -92,9 +92,9 @@ impl UserRepository for PgUserRepository {
     async fn get_by_id(&self, id: &str, org_id: &str) -> Result<User, String> {
         validate_org_id!(org_id);
 
-        let _is_multitenant = is_multitenant_mode();
-        let should_bypass = (!is_multitenant_mode()) && org_id.eq_ignore_ascii_case("system");
-        if is_multitenant_mode() && org_id.trim().eq_ignore_ascii_case("system") {
+        let is_multitenant = is_multitenant_mode();
+        let should_bypass = (!is_multitenant) && org_id.eq_ignore_ascii_case("system");
+        if is_multitenant && org_id.trim().eq_ignore_ascii_case("system") {
             return Err("tenant_id 'system' cannot be queried in multi-tenant mode".to_string());
         }
 
@@ -140,9 +140,9 @@ impl UserRepository for PgUserRepository {
     async fn get_by_username(&self, username: &str, org_id: &str) -> Result<User, String> {
         validate_org_id!(org_id);
 
-        let _is_multitenant = is_multitenant_mode();
-        let should_bypass = (!is_multitenant_mode()) && org_id.eq_ignore_ascii_case("system");
-        if is_multitenant_mode() && org_id.trim().eq_ignore_ascii_case("system") {
+        let is_multitenant = is_multitenant_mode();
+        let should_bypass = (!is_multitenant) && org_id.eq_ignore_ascii_case("system");
+        if is_multitenant && org_id.trim().eq_ignore_ascii_case("system") {
             return Err("tenant_id 'system' cannot be queried in multi-tenant mode".to_string());
         }
 
@@ -187,9 +187,9 @@ impl UserRepository for PgUserRepository {
     async fn get_by_email(&self, email: &str, org_id: &str) -> Result<User, String> {
         validate_org_id!(org_id);
 
-        let _is_multitenant = is_multitenant_mode();
-        let should_bypass = (!is_multitenant_mode()) && org_id.eq_ignore_ascii_case("system");
-        if is_multitenant_mode() && org_id.trim().eq_ignore_ascii_case("system") {
+        let is_multitenant = is_multitenant_mode();
+        let should_bypass = (!is_multitenant) && org_id.eq_ignore_ascii_case("system");
+        if is_multitenant && org_id.trim().eq_ignore_ascii_case("system") {
             return Err("tenant_id 'system' cannot be queried in multi-tenant mode".to_string());
         }
 
@@ -234,9 +234,9 @@ impl UserRepository for PgUserRepository {
     async fn get_by_oidc_subject(&self, sub: &str, org_id: &str) -> Result<User, String> {
         validate_org_id!(org_id);
 
-        let _is_multitenant = is_multitenant_mode();
-        let should_bypass = (!is_multitenant_mode()) && org_id.eq_ignore_ascii_case("system");
-        if is_multitenant_mode() && org_id.trim().eq_ignore_ascii_case("system") {
+        let is_multitenant = is_multitenant_mode();
+        let should_bypass = (!is_multitenant) && org_id.eq_ignore_ascii_case("system");
+        if is_multitenant && org_id.trim().eq_ignore_ascii_case("system") {
             return Err("tenant_id 'system' cannot be queried in multi-tenant mode".to_string());
         }
 
@@ -280,9 +280,9 @@ impl UserRepository for PgUserRepository {
 
     async fn list_users(&self, org_id: &str) -> Result<Vec<User>, String> {
         validate_org_id!(org_id);
-        let _is_multitenant = is_multitenant_mode();
-        let should_bypass = (!is_multitenant_mode()) && org_id.eq_ignore_ascii_case("system");
-        if is_multitenant_mode() && org_id.trim().eq_ignore_ascii_case("system") {
+        let is_multitenant = is_multitenant_mode();
+        let should_bypass = (!is_multitenant) && org_id.eq_ignore_ascii_case("system");
+        if is_multitenant && org_id.trim().eq_ignore_ascii_case("system") {
             return Err("tenant_id 'system' cannot be queried in multi-tenant mode".to_string());
         }
         let query = if should_bypass {
@@ -330,9 +330,9 @@ impl UserRepository for PgUserRepository {
     async fn update_user(&self, user: User, org_id: &str) -> Result<(), String> {
         validate_org_id!(org_id);
         let roles_json = serde_json::to_string(&user.roles).unwrap_or_default();
-        let _is_multitenant = is_multitenant_mode();
-        let should_bypass = (!is_multitenant_mode()) && org_id.eq_ignore_ascii_case("system");
-        if is_multitenant_mode() && org_id.trim().eq_ignore_ascii_case("system") {
+        let is_multitenant = is_multitenant_mode();
+        let should_bypass = (!is_multitenant) && org_id.eq_ignore_ascii_case("system");
+        if is_multitenant && org_id.trim().eq_ignore_ascii_case("system") {
             return Err("tenant_id 'system' cannot be queried in multi-tenant mode".to_string());
         }
 
@@ -396,9 +396,9 @@ impl UserRepository for PgUserRepository {
 
     async fn delete_user(&self, id: &str, org_id: &str) -> Result<(), String> {
         validate_org_id!(org_id);
-        let _is_multitenant = is_multitenant_mode();
-        let should_bypass = (!is_multitenant_mode()) && org_id.eq_ignore_ascii_case("system");
-        if is_multitenant_mode() && org_id.trim().eq_ignore_ascii_case("system") {
+        let is_multitenant = is_multitenant_mode();
+        let should_bypass = (!is_multitenant) && org_id.eq_ignore_ascii_case("system");
+        if is_multitenant && org_id.trim().eq_ignore_ascii_case("system") {
             return Err("tenant_id 'system' cannot be queried in multi-tenant mode".to_string());
         }
         let query = if should_bypass {
@@ -509,7 +509,8 @@ mod security_tests {
         // Cloud multitenant mode should NOT allow bypassing.
         let old_val = std::env::var("OHC_MULTITENANT").ok();
         unsafe { std::env::set_var("OHC_MULTITENANT", "true"); }
-        let org_id = "system"; let should_bypass = (!is_multitenant_mode()) && org_id.eq_ignore_ascii_case("system");
+        let is_multitenant = is_multitenant_mode();
+        let org_id = "system"; let should_bypass = (!is_multitenant) && org_id.eq_ignore_ascii_case("system");
 
         // Ensure the condition strictly evaluates to false when multitenant is true.
         assert!(!should_bypass, "Cloud mode should NEVER bypass tenant filters when org_id is 'system'");

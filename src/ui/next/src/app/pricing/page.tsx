@@ -9,8 +9,28 @@ import { PoweredByOHC } from '../components/PoweredByOHC';
 export default function PricingPage() {
   const router = useRouter();
 
-  const handleUpgrade = (tier: string) => {
-    router.push('/checkout?tier=' + tier);
+  const handleUpgrade = async (tier: string) => {
+    try {
+      const response = await fetch('/api/billing/create-checkout-session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ tier }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create checkout session');
+      }
+
+      const data = await response.json();
+      if (data.checkout_url) {
+        window.location.href = data.checkout_url;
+      }
+    } catch (error) {
+      console.error('Error upgrading plan:', error);
+      alert('Failed to initiate upgrade. Please try again.');
+    }
   };
 
   return (

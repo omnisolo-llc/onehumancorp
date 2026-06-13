@@ -52,15 +52,13 @@ pub async fn omni_inbox_post_handler(
          return (StatusCode::INTERNAL_SERVER_ERROR, Json(WebhookResponse { success: false })).into_response();
     }
 
-    // In future iterations we can save customer_id onto the inbox_messages table,
-    // but for now we follow the schema which has sender_id.
-
     // 2. Insert into omni_inbox_messages
+    let customer_id = customer_id_result.as_ref().ok().map(|s| s.as_str());
     let inbox_id = Uuid::new_v4().to_string();
     let insert_result = match &state.db.store {
         crate::db::DbStore::Postgres => {
             sqlx::query(
-                "INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, status, sender_id, created_at) VALUES ($1, $2, $3, $4, $5, 'English', 'unread', $6, NOW())"
+                "INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, status, sender_id, customer_id, created_at) VALUES ($1, $2, $3, $4, $5, 'English', 'unread', $6, $7, NOW())"
             )
             .bind(&inbox_id)
             .bind(&tenant_id)
@@ -68,12 +66,13 @@ pub async fn omni_inbox_post_handler(
             .bind(&message)
             .bind(&message) // translated content is same initially
             .bind(&sender_id)
+            .bind(customer_id)
             .execute(&state.db.pool)
             .await.map(|_| ())
         },
         crate::db::DbStore::Sqlite(sqlite_pool) => {
             sqlx::query(
-                "INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, status, sender_id, created_at) VALUES (?, ?, ?, ?, ?, 'English', 'unread', ?, CURRENT_TIMESTAMP)"
+                "INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, status, sender_id, customer_id, created_at) VALUES (?, ?, ?, ?, ?, 'English', 'unread', ?, ?, CURRENT_TIMESTAMP)"
             )
             .bind(&inbox_id)
             .bind(&tenant_id)
@@ -81,6 +80,7 @@ pub async fn omni_inbox_post_handler(
             .bind(&message)
             .bind(&message)
             .bind(&sender_id)
+            .bind(customer_id)
             .execute(sqlite_pool)
             .await.map(|_| ())
         }
