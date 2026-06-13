@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test.describe('Pricing Branding Growth Loop', () => {
     test('Powered by OHC footer is present on Pricing page', async ({ page }) => {
