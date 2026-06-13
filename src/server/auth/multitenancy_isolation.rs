@@ -1,6 +1,6 @@
-use crate::postgres_store::UserRepository;
-use crate::postgres_store::PgUserRepository;
-use crate::User;
+use super::postgres_store::UserRepository;
+use super::postgres_store::PgUserRepository;
+use super::User;
 use std::time::Duration;
 use sqlx::postgres::PgPoolOptions;
 use std::sync::Mutex;
@@ -28,18 +28,10 @@ async fn test_multitenant_idor_system_bypass_prevention_regression() {
     let repo = PgUserRepository::new(pool.clone());
 
     // In Cloud multi-tenant mode, querying with org_id "system" must be rejected.
-    let old_val = std::env::var("OHC_MULTITENANT").ok();
-    unsafe { std::env::set_var("OHC_MULTITENANT", "true"); }
-
-    let res: Result<User, String> = repo.get_by_email("dummy_id", "system").await;
-
-    if let Some(val) = old_val {
-        unsafe { std::env::set_var("OHC_MULTITENANT", val); }
-    } else {
-        unsafe { std::env::remove_var("OHC_MULTITENANT"); }
-    }
-
-    assert!(res.is_err(), "Must reject system id in multitenant mode");
+    temp_env::async_with_vars([("OHC_MULTITENANT", Some("true"))], async {
+        let res: Result<User, String> = repo.get_by_email("dummy_id", "system").await;
+        assert!(res.is_err(), "Must reject system id in multitenant mode");
+    }).await;
 }
 
 #[tokio::test]
@@ -62,20 +54,12 @@ async fn test_standalone_mode_allows_system_org_id() {
 
     let repo = PgUserRepository::new(pool.clone());
 
-    let old_val = std::env::var("OHC_MULTITENANT").ok();
-    unsafe { std::env::set_var("OHC_MULTITENANT", "false"); }
-
-    let res: Result<User, String> = repo.get_by_email("dummy_id", "system").await;
-
-    if let Some(val) = old_val {
-        unsafe { std::env::set_var("OHC_MULTITENANT", val); }
-    } else {
-        unsafe { std::env::remove_var("OHC_MULTITENANT"); }
-    }
-
-    if let Err(e) = res {
-        assert_ne!(e, "tenant_id 'system' cannot be queried in multi-tenant mode");
-    }
+    temp_env::async_with_vars([("OHC_MULTITENANT", Some("false"))], async {
+        let res: Result<User, String> = repo.get_by_email("dummy_id", "system").await;
+        if let Err(e) = res {
+            assert_ne!(e, "tenant_id 'system' cannot be queried in multi-tenant mode");
+        }
+    }).await;
 }
 
 #[tokio::test]
