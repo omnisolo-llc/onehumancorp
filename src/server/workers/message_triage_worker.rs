@@ -116,10 +116,11 @@ Analyze the following incoming customer message.
 Message from {}: '{}'
 Source: {}
 
-Please extract the context, priority, and decide if the request needs a Quote, a Booking, or a General Reply.
+Please extract the context, priority, and decide if the request needs a Quote, a Booking, or a General Reply. Note if the source is Instagram DM, whatsapp or similar, explicitly mention the feature type as instagram_dm.
 Output JSON format:
 {{
     \"priority\": \"High\" or \"Medium\" or \"Low\",
+    \"feature_type\": \"instagram_dm\" or \"general\",
     \"context_summary\": \"A short one sentence summary of the request.\",
     \"action_type\": \"Draft Reply\" or \"Draft Quote\" or \"Draft Booking\",
     \"action_payload\": \"The draft reply, or quote details, or booking details.\"
@@ -131,6 +132,7 @@ Output JSON format:
 
             let mut extracted = serde_json::json!({
                 "priority": "Medium",
+                "feature_type": "general",
                 "context_summary": "Customer inquiry",
                 "action_type": "Draft Reply",
                 "action_payload": "Thanks for reaching out! We will review this and get back to you soon."
@@ -190,12 +192,16 @@ Output JSON format:
             }
 
             let priority = extracted.get("priority").and_then(|v| v.as_str()).unwrap_or("Medium");
+            let feature_type = extracted.get("feature_type").and_then(|v| v.as_str()).unwrap_or("general");
             let context_summary = extracted.get("context_summary").and_then(|v| v.as_str()).unwrap_or("Customer inquiry");
             let action_type = extracted.get("action_type").and_then(|v| v.as_str()).unwrap_or("Draft Reply");
             let action_payload = extracted.get("action_payload").and_then(|v| v.as_str()).unwrap_or("Thanks for reaching out! We will review this and get back to you soon.");
 
-            let triage_item_id = Uuid::new_v4().to_string();
-            let action_id = Uuid::new_v4().to_string();
+            let agent_feed_item_id = Uuid::new_v4().to_string();
+            let mut event_source = source.to_string();
+            if feature_type == "instagram_dm" || source.to_lowercase().contains("instagram") {
+                event_source = "instagram_dm".to_string();
+            }
 
             // Get actual customer_id if exists in payload, otherwise empty string or NULL logic
             let customer_id_val = payload.get("customer_id").and_then(|v| v.as_str());
@@ -209,32 +215,26 @@ Output JSON format:
                         .execute(&self.db.pool).await;
 
                     if let Err(e) = sqlx::query(
-                        "INSERT INTO triage_items (id, tenant_id, customer_id, source, priority, context, status) VALUES ($1, $2, $3, $4, $5, $6, 'pending')"
+                        "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, 'PENDING_APPROVAL', NOW(), NOW())"
                     )
-                    .bind(&triage_item_id)
+                    .bind(&agent_feed_item_id)
                     .bind(&tenant_id)
-                    .bind(customer_id_val)
-                    .bind(&source)
-                    .bind(&priority)
-                    .bind(&context_summary)
+                    .bind(&event_source)
+                    .bind(serde_json::json!({
+                        "customer_message": customer_message,
+                        "feature_type": event_source,
+                        "priority": priority,
+                        "context": context_summary,
+                        "inbox_message_id": message_id,
+                        "customer_id": customer_id_val
+                    }))
+                    .bind(serde_json::json!({
+                        "action_type": action_type,
+                        "draft_reply": action_payload,
+                        "inbox_message_id": message_id
+                    }))
                     .execute(&self.db.pool).await {
-                        tracing::error!("Failed to insert triage item: {}", e);
-                        let _ = sqlx::query("UPDATE ohc_job_queue SET status = 'FAILED', updated_at = NOW() WHERE id = $1")
-                            .bind(&job_id)
-                            .execute(&self.db.pool).await;
-                        return Ok(false);
-                    }
-
-                    if let Err(e) = sqlx::query(
-                        "INSERT INTO triage_proposed_actions (id, triage_item_id, tenant_id, action_type, payload) VALUES ($1, $2, $3, $4, $5)"
-                    )
-                    .bind(&action_id)
-                    .bind(&triage_item_id)
-                    .bind(&tenant_id)
-                    .bind(&action_type)
-                    .bind(&action_payload)
-                    .execute(&self.db.pool).await {
-                        tracing::error!("Failed to insert triage action: {}", e);
+                        tracing::error!("Failed to insert agent feed item: {}", e);
                         let _ = sqlx::query("UPDATE ohc_job_queue SET status = 'FAILED', updated_at = NOW() WHERE id = $1")
                             .bind(&job_id)
                             .execute(&self.db.pool).await;
@@ -253,32 +253,26 @@ Output JSON format:
                         .execute(sqlite_pool).await;
 
                     if let Err(e) = sqlx::query(
-                        "INSERT INTO triage_items (id, tenant_id, customer_id, source, priority, context, status) VALUES (?, ?, ?, ?, ?, ?, 'pending')"
+                        "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at) VALUES (?, ?, ?, ?, ?, 'PENDING_APPROVAL', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
                     )
-                    .bind(&triage_item_id)
+                    .bind(&agent_feed_item_id)
                     .bind(&tenant_id)
-                    .bind(customer_id_val)
-                    .bind(&source)
-                    .bind(&priority)
-                    .bind(&context_summary)
+                    .bind(&event_source)
+                    .bind(serde_json::json!({
+                        "customer_message": customer_message,
+                        "feature_type": event_source,
+                        "priority": priority,
+                        "context": context_summary,
+                        "inbox_message_id": message_id,
+                        "customer_id": customer_id_val
+                    }).to_string())
+                    .bind(serde_json::json!({
+                        "action_type": action_type,
+                        "draft_reply": action_payload,
+                        "inbox_message_id": message_id
+                    }).to_string())
                     .execute(sqlite_pool).await {
-                        tracing::error!("Failed to insert triage item (SQLite): {}", e);
-                        let _ = sqlx::query("UPDATE ohc_job_queue SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP WHERE id = ?")
-                            .bind(&job_id)
-                            .execute(sqlite_pool).await;
-                        return Ok(false);
-                    }
-
-                    if let Err(e) = sqlx::query(
-                        "INSERT INTO triage_proposed_actions (id, triage_item_id, tenant_id, action_type, payload) VALUES (?, ?, ?, ?, ?)"
-                    )
-                    .bind(&action_id)
-                    .bind(&triage_item_id)
-                    .bind(&tenant_id)
-                    .bind(&action_type)
-                    .bind(&action_payload)
-                    .execute(sqlite_pool).await {
-                        tracing::error!("Failed to insert triage action (SQLite): {}", e);
+                        tracing::error!("Failed to insert agent feed item (SQLite): {}", e);
                         let _ = sqlx::query("UPDATE ohc_job_queue SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP WHERE id = ?")
                             .bind(&job_id)
                             .execute(sqlite_pool).await;
