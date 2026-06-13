@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { loadStripeTerminal } from '@stripe/terminal-js';
 
-export default function StripeTerminalClient({ amount, productId, tenantId }: { amount: number, productId: string, tenantId: string }) {
+export default function StripeTerminalClient({ amount, productId, tenantId, onReserveStart, onReserveFail, onPaymentComplete }: { amount: number, productId: string, tenantId: string, onReserveStart?: () => void, onReserveFail?: () => void, onPaymentComplete?: () => void }) {
   const [terminal, setTerminal] = useState<any>(null);
   const [status, setStatus] = useState<string>('Initializing...');
   const [discoveredReaders, setDiscoveredReaders] = useState<any[]>([]);
@@ -157,6 +157,9 @@ export default function StripeTerminalClient({ amount, productId, tenantId }: { 
     }
 
     setStatus('Reserving inventory...');
+    if (onReserveStart) {
+       onReserveStart();
+    }
 
     let lockId = '';
     try {
@@ -168,12 +171,14 @@ export default function StripeTerminalClient({ amount, productId, tenantId }: { 
       const reserveData = await reserveRes.json();
 
       if (!reserveData.success) {
+        if (onReserveFail) onReserveFail();
         setStatus('Reservation failed: ' + (reserveData.error_message || 'Item is currently being purchased elsewhere'));
         setReserving(false);
         return;
       }
       lockId = reserveData.lock_id;
     } catch (e: any) {
+      if (onReserveFail) onReserveFail();
       setStatus('Reservation error: ' + e.message);
       setReserving(false);
       return;
@@ -191,6 +196,7 @@ export default function StripeTerminalClient({ amount, productId, tenantId }: { 
       setStatus('Collecting payment method...');
       const collectResult = await terminal.collectPaymentMethod(data.client_secret);
       if (collectResult.error) {
+        if (onReserveFail) onReserveFail();
         setStatus('Payment collection failed: ' + collectResult.error.message);
         setReserving(false);
         return;
@@ -199,6 +205,7 @@ export default function StripeTerminalClient({ amount, productId, tenantId }: { 
       setStatus('Processing payment...');
       const processResult = await terminal.processPayment(collectResult.paymentIntent);
       if (processResult.error) {
+        if (onReserveFail) onReserveFail();
         setStatus('Payment processing failed: ' + processResult.error.message);
       } else {
         setStatus('Payment successful. Committing inventory...');
@@ -217,15 +224,19 @@ export default function StripeTerminalClient({ amount, productId, tenantId }: { 
           });
           const commitData = await commitRes.json();
           if (commitData.success) {
+            if (onPaymentComplete) onPaymentComplete();
             setStatus('Payment successful!');
           } else {
+            if (onReserveFail) onReserveFail(); // Revert optimistic if backend commit fails
             setStatus('Payment successful, but inventory commit failed: ' + commitData.error_message);
           }
         } catch (commitErr: any) {
+          if (onReserveFail) onReserveFail();
           setStatus('Payment successful, but inventory commit error: ' + commitErr.message);
         }
       }
     } catch (e: any) {
+      if (onReserveFail) onReserveFail();
       setStatus('Error: ' + e.message);
     } finally {
       setReserving(false);

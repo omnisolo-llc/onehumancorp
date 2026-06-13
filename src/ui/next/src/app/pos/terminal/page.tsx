@@ -447,6 +447,16 @@ export default function TerminalPage() {
                   amount={selectedProduct.price_cents}
                   productId={selectedProduct.id}
                   tenantId={activeStaff?.tenant_id || "default_tenant"}
+                  onReserveStart={() => {
+                     setInventory(prev => prev.map(p => p.id === selectedProduct.id ? { ...p, inventory_count: p.inventory_count - 1 } : p));
+                  }}
+                  onReserveFail={() => {
+                     // Revert optimistic update
+                     setInventory(prev => prev.map(p => p.id === selectedProduct.id ? { ...p, inventory_count: p.inventory_count + 1 } : p));
+                  }}
+                  onPaymentComplete={() => {
+                     setOrderStatus(t('Payment Completed'));
+                  }}
                />
              </>
            )}
