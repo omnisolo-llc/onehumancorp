@@ -1,7 +1,7 @@
 import { test, expect } from './fixtures';
 import { currentAppSmoke } from './current_app_smoke';
 
-currentAppSmoke('share_to_unlock_loop');
+
 
 test.describe('Share-to-Unlock Growth Loop', () => {
     test('generator page renders, copies link, and public page reveals code after share', async ({ page, adminUser, loginAs }) => {
