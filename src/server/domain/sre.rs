@@ -28,6 +28,17 @@ impl AlertParser {
                 status: "INVESTIGATING".to_string(),
             });
         }
+        if alert.contains("OOMKilled") {
+            let id = format!("inc-{}", Utc::now().format("%Y%m%d%H%M%S"));
+            return Ok(Incident {
+                id,
+                severity: "P1".to_string(),
+                summary: "OOMKilled".to_string(),
+                root_cause_analysis: "".to_string(),
+                resolution_plan_id: "".to_string(),
+                status: "INVESTIGATING".to_string(),
+            });
+        }
         Err("unknown alert".to_string())
     }
 }
@@ -59,6 +70,16 @@ mod tests {
         let incident = res.unwrap();
         assert_eq!(incident.summary, "HighErrorRate");
         assert_eq!(incident.severity, "P0");
+        assert_eq!(incident.status, "INVESTIGATING");
+        assert!(incident.id.starts_with("inc-"));
+
+        // Valid Alert OOMKilled
+        let alert = "firing: OOMKilled in background-worker";
+        let res = parser.parse_prometheus_alert(alert);
+        assert!(res.is_ok());
+        let incident = res.unwrap();
+        assert_eq!(incident.summary, "OOMKilled");
+        assert_eq!(incident.severity, "P1");
         assert_eq!(incident.status, "INVESTIGATING");
         assert!(incident.id.starts_with("inc-"));
 
