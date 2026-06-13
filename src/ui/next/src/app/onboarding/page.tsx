@@ -65,7 +65,8 @@ export default function OnboardingWizard() {
     aiAutoRespond, setAiAutoRespond,
     isLoading, setIsLoading,
     error, setError,
-    startResult, setStartResult
+    startResult, setStartResult,
+    instantImageUrl, setInstantImageUrl
   } = useOnboardingStore();
 
   const [isLoaded, setIsLoaded] = useState(false);
@@ -502,6 +503,14 @@ export default function OnboardingWizard() {
                   placeholder="e.g. I run a local bakery that sells custom vegan cakes..."
                   rows={6}
                 />
+                <input
+                  id="instant-image-url"
+                  type="url"
+                  value={instantImageUrl}
+                  onChange={(e) => setInstantImageUrl(e.target.value)}
+                  className={`w-full glassmorphism min-h-[44px] min-w-[44px] p-4 border outline-none transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] text-gray-800 dark:text-[#f5f5f7] shadow-inner rounded-[8px] border-transparent focus:ring-2 focus:ring-[#0066FF] focus:border-[#0066FF]`}
+                  placeholder="Optional: Link to your logo or a product image"
+                />
                 {error && (
                   <div className="animate-shake text-[#FF3B30] text-sm border border-[#FF3B30]/30 rounded p-2 bg-[#FF3B30]/10 mt-2">
                     {error}
@@ -526,7 +535,7 @@ export default function OnboardingWizard() {
                           'X-Tenant-ID': tenantIdStr,
                           'X-User-ID': userIdStr,
                         },
-                        body: JSON.stringify({ description: bio }),
+                        body: JSON.stringify({ description: bio, image_url: instantImageUrl || undefined }),
                       });
 
                       const data = await res.json();
