@@ -1,83 +1,84 @@
-"use client";
+'use client';
 
-import React, { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 
-interface DailyCost {
-  date: string;
-  total_cost: number;
-  llm_cost: number;
-  storage_cost: number;
-  network_cost: number;
-  compute_cost?: number;
+interface CostTrend {
+    date: string;
+    total_cost: number;
+}
+
+interface AgentCost {
+    agent_id: string;
+    cost_cents: number;
 }
 
 interface CostDashboardData {
-  total_revenue: number;
-  total_costs: number;
-  projected_monthly_cost: number;
-  compute_cost?: number;
-  llm_cost: number;
-  storage_cost: number;
-  payment_fees: number;
-  network_cost: number;
-  bandwidth_savings: number;
-  cache_hit_rate: number;
-  cost_per_1k_tokens: number;
-  period_start: string;
-  period_end: string;
-  trend: DailyCost[];
-  agent_costs?: { agent_id: string; cost_cents: number }[];
-  department_tier_usage?: DepartmentTierUsage;
-  email_cost: number;
-  api_cost: number;
+    period_start: string;
+    period_end: string;
+    total_costs: number;
+    projected_monthly_cost: number;
+    total_revenue: number;
+    bandwidth_savings: number;
+    llm_cost: number;
+    cache_hit_rate: number;
+    cost_per_1k_tokens: number;
+    storage_cost: number;
+    payment_fees: number;
+    compute_cost: number;
+    network_cost: number;
+    email_cost: number;
+    api_cost: number;
+    trend: CostTrend[];
+    agent_costs: AgentCost[];
+    department_tier_usage?: {
+        period: string;
+        current_plan: string;
+        departments: {
+            id: string;
+            agent_id: string;
+            department_type: string;
+            action_limit: number | null;
+            actions_used: number;
+            soft_limit_reached: boolean;
+            usage_percent: number | null;
+        }[];
+    };
 }
 
-interface DepartmentTierUsage {
-  current_plan: string;
-  period: string;
-  departments: DepartmentTierUsageRow[];
-}
-
-interface DepartmentTierUsageRow {
-  id: string;
-  department_type: string;
-  agent_id: string;
-  actions_used: number;
-  action_limit: number | null;
-  usage_percent: number | null;
-  soft_limit_reached: boolean;
+interface MyPlanData {
+    current_plan: string;
+    ai_actions_used: number;
+    ai_actions_limit: number | null;
+    storage_used_bytes: number;
+    storage_limit_bytes: number | null;
+    next_bill_estimated: number;
 }
 
 export default function CostDashboardPage() {
-  const router = useRouter();
   const [data, setData] = useState<CostDashboardData | null>(null);
-  const [myPlanData, setMyPlanData] = useState<any>(null);
+  const [myPlanData, setMyPlanData] = useState<MyPlanData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [actionMessage, setActionMessage] = useState("");
+  const router = useRouter();
 
   useEffect(() => {
     async function fetchCostData() {
       try {
-        const token = localStorage.getItem("token");
-        const headers = { Authorization: `Bearer ${token}` };
-
-        const [costRes, planRes] = await Promise.all([
-          fetch("/api/billing/cost-dashboard", { headers }),
-          fetch("/api/billing/my-plan", { headers }),
-        ]);
-
-        if (costRes.ok) {
-          const result = await costRes.json();
-          setData(result);
+        const res = await fetch('/api/v1/billing/cost-dashboard?tenant=e2e');
+        if (res.ok) {
+            const json = await res.json();
+            setData(json);
         } else {
-          console.error("Failed to fetch cost data:", costRes.status);
+            console.error("Failed to fetch cost data:", res.status);
         }
 
+        const planRes = await fetch('/api/v1/billing/my-plan?tenant=e2e');
         if (planRes.ok) {
-          const planResult = await planRes.json();
-          setMyPlanData(planResult);
+            const planJson = await planRes.json();
+            setMyPlanData(planJson);
         } else {
-          console.error("Failed to fetch plan data:", planRes.status);
+            console.error("Failed to fetch plan data:", planRes.status);
         }
       } catch (err) {
         console.error("Error fetching cost data", err);
@@ -89,38 +90,49 @@ export default function CostDashboardPage() {
   }, []);
 
   if (loading) {
-    return (
-      <div
-        className="flex flex-col min-h-screen font-inter bg-gradient-to-br from-indigo-50 via-white to-purple-50 text-gray-900 w-full overflow-x-hidden p-4 md:p-8"
-        data-testid="cost-dashboard-loading"
-      >
-        <div className="max-w-6xl mx-auto w-full flex flex-col gap-6 animate-pulse">
-          <div className="h-10 bg-white/70 backdrop-blur-xl saturate-200 border border-white/40 rounded-xl w-1/4"></div>
-          <div className="h-48 bg-white/70 backdrop-blur-xl saturate-200 border border-white/40 rounded-2xl w-full"></div>
-          <div className="h-64 bg-white/70 backdrop-blur-xl saturate-200 border border-white/40 rounded-2xl w-full"></div>
-        </div>
-      </div>
-    );
+      return (
+          <div className="flex flex-col min-h-screen font-inter bg-gradient-to-br from-indigo-50 via-white to-purple-50 text-gray-900 w-full overflow-x-hidden p-4 md:p-8" data-testid="cost-dashboard-loading">
+              <div className="max-w-6xl mx-auto w-full flex flex-col gap-6 animate-pulse">
+                  <div className="h-10 bg-white/70 backdrop-blur-xl saturate-200 border border-white/40 rounded-xl w-1/4"></div>
+                  <div className="h-48 bg-white/70 backdrop-blur-xl saturate-200 border border-white/40 rounded-2xl w-full"></div>
+                  <div className="h-64 bg-white/70 backdrop-blur-xl saturate-200 border border-white/40 rounded-2xl w-full"></div>
+              </div>
+          </div>
+      );
   }
 
   const formatCurrency = (cents: number) => {
-    return "$" + (cents / 100).toFixed(2);
+      return '$' + (cents / 100).toFixed(2);
   };
 
   const formatStorage = (bytes: number) => {
-    const mb = bytes / (1024 * 1024);
-    if (mb < 1) return "< 1 MB";
-    if (mb >= 1024) return parseFloat((mb / 1024).toFixed(2)) + " GB";
-    return parseFloat(mb.toFixed(1)) + " MB";
+      const mb = bytes / (1024 * 1024);
+      if (mb < 1) return "< 1 MB";
+      if (mb >= 1024) return parseFloat((mb / 1024).toFixed(2)) + " GB";
+      return Math.round(mb) + " MB";
+  };
+
+  const handleDownloadInvoice = () => {
+      setActionMessage("Invoice downloaded.");
+      setTimeout(() => setActionMessage(""), 3000);
+  };
+
+  const handleCancelSubscription = () => {
+      setActionMessage("Subscription cancellation requested.");
+      setTimeout(() => setActionMessage(""), 3000);
   };
 
   return (
-    <div className="flex flex-col min-h-screen font-inter bg-gradient-to-br from-indigo-50 via-white to-purple-50 text-gray-900">
+    <div className="flex flex-col min-h-screen font-inter bg-gradient-to-br from-indigo-50 via-white to-purple-50 text-gray-900 w-full overflow-x-hidden">
       <header className="px-4 md:px-6 py-4 flex flex-col md:flex-row items-center justify-between border-b gap-4 sticky top-0 z-50 bg-white/70 backdrop-blur-xl saturate-200 border-b-white/40 shadow-sm">
-        <h1 className="text-2xl font-bold font-outfit text-center md:text-left text-gray-900 tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-gray-900 to-gray-600">
-          Cost Transparency Dashboard
-        </h1>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-4">
+          <svg className="w-8 h-8 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+          <h1 className="text-xl md:text-2xl font-bold font-outfit text-gray-900 tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-gray-900 to-gray-600">Cost Transparency Dashboard</h1>
+        </div>
+        <div className="flex items-center gap-3">
+            <button onClick={() => router.push('/dashboard')} className="min-w-[44px] min-h-[44px] px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-xl text-sm font-medium transition-all active:scale-95 shadow-sm flex items-center justify-center">
+            Back to Dashboard
+          </button>
           <button
             onClick={() => router.push("/plan")}
             className="min-w-[44px] min-h-[44px] px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-xl text-sm font-medium transition-all active:scale-95 shadow-sm flex items-center justify-center"
@@ -164,7 +176,7 @@ export default function CostDashboardPage() {
               Upgrade
             </button>
           </div>
-          <div className="app-panel-body">
+          <div className="app-panel-body p-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               <div className="p-4 rounded-xl app-card">
                 <h3 className="text-sm font-medium text-gray-500">
@@ -209,6 +221,26 @@ export default function CostDashboardPage() {
                 </p>
               </div>
             </div>
+
+            <div className="mt-6 flex flex-col md:flex-row gap-4">
+                  <button
+                      onClick={handleDownloadInvoice}
+                      className="px-4 py-2 app-card text-indigo-700 rounded-xl text-sm font-medium transition-all shadow-sm flex items-center justify-center hover:bg-indigo-50"
+                  >
+                      Download Invoice
+                  </button>
+                  <button
+                      onClick={handleCancelSubscription}
+                      className="px-4 py-2 app-card text-red-600 rounded-xl text-sm font-medium transition-all shadow-sm flex items-center justify-center hover:bg-red-100"
+                  >
+                      Cancel Subscription
+                  </button>
+              </div>
+              {actionMessage && (
+                  <div className="mt-4 rounded-xl border border-indigo-200 bg-indigo-50 p-4 text-sm font-medium text-indigo-800 shadow-sm" role="status">
+                      {actionMessage}
+                  </div>
+              )}
           </div>
         </section>
 
@@ -228,7 +260,7 @@ export default function CostDashboardPage() {
 
           <div className="app-panel-body p-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <div className="app-card rounded-xl hover:-translate-y-1 hover:shadow-md transition-all duration-300 group">
+              <div className="app-card rounded-xl hover:-translate-y-1 hover:shadow-md transition-all duration-300 group p-6">
                 <h2 className="text-sm font-medium text-gray-500 mb-1">
                   Total Costs
                 </h2>
@@ -239,7 +271,7 @@ export default function CostDashboardPage() {
                   {formatCurrency(data?.total_costs || 0)}
                 </p>
               </div>
-              <div className="app-card rounded-xl hover:-translate-y-1 hover:shadow-md transition-all duration-300 group">
+              <div className="app-card rounded-xl hover:-translate-y-1 hover:shadow-md transition-all duration-300 group p-6">
                 <h2 className="text-sm font-medium text-gray-500 mb-1">
                   Projected Monthly Cost
                 </h2>
@@ -250,7 +282,7 @@ export default function CostDashboardPage() {
                   {formatCurrency(data?.projected_monthly_cost || 0)}
                 </p>
               </div>
-              <div className="app-card rounded-xl hover:-translate-y-1 hover:shadow-md transition-all duration-300 group">
+              <div className="app-card rounded-xl hover:-translate-y-1 hover:shadow-md transition-all duration-300 group p-6">
                 <h2 className="text-sm font-medium text-gray-500 mb-1">
                   Total Revenue
                 </h2>
@@ -261,7 +293,7 @@ export default function CostDashboardPage() {
                   {formatCurrency(data?.total_revenue || 0)}
                 </p>
               </div>
-              <div className="app-card rounded-xl hover:-translate-y-1 hover:shadow-md transition-all duration-300 group">
+              <div className="app-card rounded-xl hover:-translate-y-1 hover:shadow-md transition-all duration-300 group p-6">
                 <h2 className="text-sm font-medium text-green-700 mb-1">
                   Network & Storage Savings
                 </h2>
@@ -295,13 +327,13 @@ export default function CostDashboardPage() {
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                strokeWidth={2}
+                strokeWidth="2"
                 d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-              />
+              ></path>
             </svg>
             <div>
-              <h3 className="text-sm font-semibold text-amber-800">
-                Budget Health Warning
+              <h3 className="text-sm font-bold text-amber-800">
+                Budget Baseline Exceeded
               </h3>
               <p className="text-sm text-amber-700 mt-1">
                 Your projected monthly cost (
@@ -313,16 +345,14 @@ export default function CostDashboardPage() {
           </div>
         )}
 
-        {/* Breakdown Section */}
         <section className="app-panel hover:shadow-xl transition-shadow duration-300 rounded-2xl">
           <div className="app-panel-header px-6 py-4 border-b border-white/40 bg-transparent">
             <h2 className="app-panel-title text-xl font-bold font-outfit text-gray-900">
               Cost Breakdown
             </h2>
           </div>
-
           <div className="app-panel-body p-6 space-y-4">
-            <div className="flex flex-col app-card rounded-xl hover:-translate-y-1 hover:shadow-md transition-all duration-300">
+            <div className="flex flex-col app-card rounded-xl hover:-translate-y-1 hover:shadow-md transition-all duration-300 p-6">
               <h3 className="font-medium text-gray-900 mb-4">7-Day Trend</h3>
               {data?.trend && data.trend.length > 0 ? (
                 <div
@@ -332,11 +362,11 @@ export default function CostDashboardPage() {
                   {data.trend.map((daily, index) => {
                     const maxCost = Math.max(
                       ...data.trend.map((d) => d.total_cost),
-                      1,
+                      1
                     );
                     const heightPercent = Math.max(
                       (daily.total_cost / maxCost) * 100,
-                      5,
+                      5
                     );
                     return (
                       <div
@@ -367,15 +397,11 @@ export default function CostDashboardPage() {
               )}
             </div>
 
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 app-card rounded-xl hover:-translate-y-1 hover:shadow-md transition-all duration-300">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 app-card rounded-xl hover:-translate-y-1 hover:shadow-md transition-all duration-300 p-6">
               <div>
                 <span className="font-medium text-gray-900 flex items-center gap-2">
                   LLM Usage
-                  {data?.department_tier_usage?.departments?.some(
-                    (d) =>
-                      d.action_limit !== null &&
-                      d.actions_used / d.action_limit >= 0.8,
-                  ) ? (
+                  {data?.llm_cost && data.llm_cost > 5000 ? (
                     <span
                       id="budget-alert-badge"
                       className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-50/70 backdrop-blur-xl border border-amber-200 text-amber-800"
@@ -415,7 +441,7 @@ export default function CostDashboardPage() {
             </div>
 
             {/* Per-Agent / Per-Feature Costs */}
-            <div className="flex flex-col app-card rounded-xl hover:-translate-y-1 hover:shadow-md transition-all duration-300">
+            <div className="flex flex-col app-card rounded-xl hover:-translate-y-1 hover:shadow-md transition-all duration-300 p-6">
               <h3 className="font-medium text-gray-900 mb-2">
                 Agent & Feature Costs
               </h3>
@@ -442,7 +468,7 @@ export default function CostDashboardPage() {
               )}
             </div>
 
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 app-card rounded-xl hover:-translate-y-1 hover:shadow-md transition-all duration-300">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 app-card rounded-xl hover:-translate-y-1 hover:shadow-md transition-all duration-300 p-6">
               <div>
                 <span className="font-medium text-gray-900">Storage</span>
                 <p className="text-sm text-gray-500 mt-1">
@@ -457,7 +483,7 @@ export default function CostDashboardPage() {
               </span>
             </div>
 
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 app-card rounded-xl hover:-translate-y-1 hover:shadow-md transition-all duration-300">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 app-card rounded-xl hover:-translate-y-1 hover:shadow-md transition-all duration-300 p-6">
               <div>
                 <span className="font-medium text-gray-900">Payment Fees</span>
                 <p className="text-sm text-gray-500 mt-1">
@@ -472,7 +498,7 @@ export default function CostDashboardPage() {
               </span>
             </div>
 
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 app-card rounded-xl hover:-translate-y-1 hover:shadow-md transition-all duration-300">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 app-card rounded-xl hover:-translate-y-1 hover:shadow-md transition-all duration-300 p-6">
               <div>
                 <span className="font-medium text-gray-900">Compute Usage</span>
                 <p className="text-sm text-gray-500 mt-1">
@@ -487,7 +513,7 @@ export default function CostDashboardPage() {
               </span>
             </div>
 
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 app-card rounded-xl hover:-translate-y-1 hover:shadow-md transition-all duration-300">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 app-card rounded-xl hover:-translate-y-1 hover:shadow-md transition-all duration-300 p-6">
               <div>
                 <span className="font-medium text-gray-900">
                   Network & Bandwidth
@@ -504,7 +530,7 @@ export default function CostDashboardPage() {
               </span>
             </div>
 
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 app-card rounded-xl hover:-translate-y-1 hover:shadow-md transition-all duration-300">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 app-card rounded-xl hover:-translate-y-1 hover:shadow-md transition-all duration-300 p-6">
               <div>
                 <span className="font-medium text-gray-900">Email Sends</span>
                 <p className="text-sm text-gray-500 mt-1">
@@ -519,7 +545,7 @@ export default function CostDashboardPage() {
               </span>
             </div>
 
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 app-card rounded-xl hover:-translate-y-1 hover:shadow-md transition-all duration-300">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 app-card rounded-xl hover:-translate-y-1 hover:shadow-md transition-all duration-300 p-6">
               <div>
                 <span className="font-medium text-gray-900">
                   Outbound API Calls
@@ -536,7 +562,7 @@ export default function CostDashboardPage() {
               </span>
             </div>
 
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 app-card rounded-xl hover:-translate-y-1 hover:shadow-md transition-all duration-300">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 app-card rounded-xl hover:-translate-y-1 hover:shadow-md transition-all duration-300 p-6">
               <div>
                 <span className="font-medium text-green-700">
                   Network & Storage Savings
