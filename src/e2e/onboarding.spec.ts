@@ -261,7 +261,7 @@ test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
     await expect(generateButton).toBeDisabled();
 
     // We shouldn't see a loading state.
-    const loadingState = page.getByText('Generating...');
+    const loadingState = page.getByText('Building Your Business...');
     await expect(loadingState).not.toBeVisible();
     await expect(page.getByRole('heading', { name: "Tell us about your business" })).toBeVisible();
   });
