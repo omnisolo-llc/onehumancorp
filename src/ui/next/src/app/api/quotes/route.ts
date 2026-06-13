@@ -14,8 +14,6 @@ export async function GET(req: Request) {
     headers.authorization = authHeader;
   }
 
-  try {
-
   const { searchParams } = new URL(req.url);
   const id = searchParams.get('id');
 
@@ -49,13 +47,11 @@ export async function POST(req: Request) {
     headers.authorization = authHeader;
   }
 
-  try {
-    const body = await req.json();
-
   const { searchParams } = new URL(req.url);
   const id = searchParams.get('id');
 
   try {
+    const body = await req.json();
     const res = await fetch(`${backendUrl}/api/v1/quotes${id ? `/${id}` : ''}`, {
       method: 'POST',
       headers,
