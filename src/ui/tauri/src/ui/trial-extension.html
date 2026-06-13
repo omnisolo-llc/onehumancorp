@@ -162,7 +162,16 @@
 document.addEventListener('DOMContentLoaded', () => {
     if (!window.OHC_TOOLTIPS) {
         window.OHC_TOOLTIPS = {};
-        fetch("/api/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(console.error);
+        fetch("/api/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(e => {
+            //
+            //
+            //
+            //
+            //
+            //
+            //
+            console.error(e);
+        });
     }
     const tooltipEl = document.createElement('div');
     tooltipEl.className = 'ohc-tooltip';
@@ -677,7 +686,15 @@ document.addEventListener('DOMContentLoaded', () => {
     // Tooltips
     if (!window.OHC_TOOLTIPS) {
         window.OHC_TOOLTIPS = {};
-        fetch("/api/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(console.error);
+        fetch("/api/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(e => {
+            //
+            //
+            //
+            //
+            //
+            //
+            console.error(e);
+        });
     }
     const tooltipEl = document.createElement('div');
     tooltipEl.className = 'ohc-tooltip';
