@@ -1,4 +1,13 @@
+# One Human Corp — Docker Compose
+#
+# Single-machine deployment defaults to the same lean cloud/web shape exercised
+# by deploy/tests/kind_e2e_test.sh: server + pgvector Postgres + Valkey.
+# Optional sidecars are available through Compose profiles.
+#
+# Cloud-native (k8s) deployment: see deploy/helm/ for multi-tenant Helm charts.
+
 services:
+  # ─── Rust Core (settings · agent scheduler · meeting rooms · chat) ────────
   ohc-core:
     profiles: ["ohc-core"]
     logging:
@@ -65,8 +74,12 @@ services:
       OHC_AGENT_TASK_TIMEOUT_SECS: ${OHC_AGENT_TASK_TIMEOUT_SECS:-240}
       OHC_LLM_TIMEOUT_SECS: ${OHC_LLM_TIMEOUT_SECS:-180}
       OHC_BUILTIN_AGENT_BINARY: ${OHC_BUILTIN_AGENT_BINARY:-/usr/local/bin/ohc-builtin-agent}
+      # Multi-tenant mode is disabled by default in single-docker deployment.
+      # Set to "true" to enable the TenantRegistry for k8s-style multi-tenancy.
       OHC_MULTITENANT: ${OHC_MULTITENANT:-false}
+      # Set to "true" for API-only / remote-client deployments.
       OHC_HEADLESS: ${OHC_HEADLESS:-false}
+      # Initial admin credentials read by the one-time bootstrap script.
       SETUP_ADMIN_INIT_USERNAME: ${SETUP_ADMIN_INIT_USERNAME:-admin}
       SETUP_ADMIN_INIT_PASSWORD: ${SETUP_ADMIN_INIT_PASSWORD:-admin}
     depends_on:
@@ -77,6 +90,11 @@ services:
     ports:
       - "${OHC_DOCKER_SERVER_PORT:-8080}:8080"
 
+  # ─── One-time admin bootstrap ─────────────────────────────────────────────
+  # Runs once at install time: waits for `server` to be healthy, then creates
+  # the initial admin account from SETUP_ADMIN_INIT_USERNAME / _PASSWORD.
+  # A marker file written to the `server-init-data` volume prevents it from
+  # repeating even if the container is restarted.
   server-init:
     logging:
       driver: "json-file"
@@ -129,7 +147,7 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
-    image: postgres:15
+    image: pgvector/pgvector:pg15
     pull_policy: missing
     command: ["postgres", "-c", "wal_level=logical"]
     environment:
@@ -303,6 +321,9 @@ services:
           cpus: "0.05"
           memory: 64M
 
+
+
+
   pushgateway:
     profiles: ["observability"]
     logging:
@@ -341,4 +362,5 @@ services:
           memory: 64M
 
 volumes:
+  # Persists the bootstrap marker so the admin-init script runs only once.
   server-init-data:
