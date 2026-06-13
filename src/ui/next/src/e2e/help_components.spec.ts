@@ -41,6 +41,26 @@ test.describe('Help Components', () => {
     await expect(tooltipText).toBeVisible();
   });
 
+  test('Help Chat opens and sends a message', async ({ page }) => {
+    // Need to use ?test_chat=true to ensure the chat component is mounted in E2E mode
+    await page.goto('/help?test_chat=true');
+
+    // Open chat
+    const chatButton = page.locator('button[aria-label="Open help chat"]');
+    await expect(chatButton).toBeVisible();
+    await chatButton.click();
+    await expect(page.locator('text=Ask AI Help').first()).toBeVisible();
+
+    // Fill message and send
+    const input = page.locator('input[placeholder="Ask anything..."]');
+    await input.fill('How do I accept credit cards?');
+    await page.locator('button[aria-label="Send message"]').click();
+
+    // Verify response
+    await expect(page.locator('text=How do I accept credit cards?').first()).toBeVisible();
+    await expect(page.locator('text=I\'m having trouble connecting to my brain right now.').first()).toBeVisible({ timeout: 15000 });
+  });
+
   test('Interactive Walkthrough functions correctly on dashboard', async ({ page }) => {
     await page.goto('/dashboard?test_walkthrough=true');
 
