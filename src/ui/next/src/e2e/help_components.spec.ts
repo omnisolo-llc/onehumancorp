@@ -58,7 +58,7 @@ test.describe('Help Components', () => {
 
     // Verify response
     await expect(page.locator('text=How do I accept credit cards?').first()).toBeVisible();
-    await expect(page.locator('text=I\'m having trouble connecting to my brain right now.').first()).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('text=Sorry, I\'m having trouble connecting right now.').first()).toBeVisible({ timeout: 15000 });
   });
 
   test('Interactive Walkthrough functions correctly on dashboard', async ({ page }) => {

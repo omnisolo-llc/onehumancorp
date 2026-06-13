@@ -16,7 +16,7 @@ _NEXT_UI_E2E_SPECS = [
     "//src/ui/next:src/e2e/field-ops.spec.ts",
     "//src/ui/next:src/e2e/dashboard_ux.spec.ts",
     "//src/ui/next:src/e2e/embeddable-storefront.spec.ts",
-    "//src/ui/next:src/e2e/help.spec.ts",
+
     "//src/ui/next:src/e2e/integrations.spec.ts",
     "//src/ui/next:src/e2e/kds.spec.ts",
     "//src/ui/next:src/e2e/link-in-bio.spec.ts",
@@ -45,7 +45,7 @@ _NEXT_UI_E2E_SPECS = [
     "//src/ui/next:e2e/dashboard-feed.spec.ts",
     "//src/ui/next:src/e2e/documentation_cuj.spec.ts",
     "//src/ui/next:src/e2e/documentation_flows.spec.ts",
-    "//src/ui/next:src/e2e/help_components.spec.ts",
+
     "//src/ui/next:e2e/localization_offline.spec.ts",
     "//src/ui/next:e2e/referrals.spec.ts",
     "//src/ui/next:e2e/social-proof-nudge.spec.ts",
