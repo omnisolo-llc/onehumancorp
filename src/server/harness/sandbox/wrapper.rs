@@ -27,6 +27,7 @@ impl BashWrapper {
     pub fn wrap(&self, cmd: &str) -> String {
         // Enforce state management / I/O instrumenting based on config
         let mut preamble = String::new();
+        preamble.push_str("set -e; umask 077; ");
         if let (Some(path), Some(port)) = (&self.socat_socket_path, self.socat_proxy_port) {
             let escaped_path = path.replace("'", "'\\''");
             preamble.push_str(&format!(
@@ -37,8 +38,6 @@ impl BashWrapper {
                 escaped_path, port, escaped_path
             ));
         }
-
-        preamble.push_str("set -e; umask 077; ");
         // simple representation of instrumentation
         if !self.read_only_paths.is_empty() {
             // For assistant-class isolation, we simulate read-only enforcement

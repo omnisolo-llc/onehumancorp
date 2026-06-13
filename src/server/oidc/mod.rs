@@ -96,6 +96,7 @@ async fn fetch_jwks(issuer_url: &str) -> Result<Vec<JWK>, String> {
     
     let (host, ip) = validate_url_and_get_ip(&disc_url).await?;
     let client = reqwest::Client::builder()
+        .redirect(reqwest::redirect::Policy::none())
         .resolve(&host, std::net::SocketAddr::new(ip, if disc_url.starts_with("https") { 443 } else { 80 }))
         .build()
         .map_err(|e| e.to_string())?;
@@ -110,6 +111,7 @@ async fn fetch_jwks(issuer_url: &str) -> Result<Vec<JWK>, String> {
         
     let (jwks_host, jwks_ip) = validate_url_and_get_ip(&disc.jwks_uri).await?;
     let jwks_client = reqwest::Client::builder()
+        .redirect(reqwest::redirect::Policy::none())
         .resolve(&jwks_host, std::net::SocketAddr::new(jwks_ip, if disc.jwks_uri.starts_with("https") { 443 } else { 80 }))
         .build()
         .map_err(|e| e.to_string())?;
