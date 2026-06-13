@@ -9,16 +9,16 @@ test.describe('Work Triage Agentic Inbox', () => {
     await page.fill('input[type="password"]', 'changeme');
     await page.click('button[type="submit"]');
     await page.goto('/dashboard');
-    await expect(page.locator('h2').filter({ hasText: 'Unified Agent Feed' })).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('h2').filter({ hasText: 'Welcome back' }).first()).toBeVisible({ timeout: 15000 });
   });
 
   test('Owner reviews and approves a triage item', async ({ page }) => {
-    const triageCard = page.locator('[data-testid="triage-card-triage-test-1"]');
+    const triageCard = page.locator('[data-testid="triage-card-app-test-ab12-34f7-e43e-7264a9c4021d"]');
     await expect(triageCard).toBeVisible({ timeout: 10000 });
 
     // Verify detail view is populated from selected card (first item by default)
-    await expect(page.locator('text=Maya requested a custom cake for Friday')).toBeVisible();
-    await expect(page.locator('text=Hi Maya! I can definitely help with the custom cake. It will be $50.')).toBeVisible();
+    await expect(page.locator('text=Mark requested to reschedule his 4 PM lesson to 5 PM today. You have a conflict. Suggest tomorrow at 4 PM?')).toBeVisible();
+    await expect(page.locator('text=Mark requested to reschedule his 4 PM lesson to 5 PM today. You have a conflict. Suggest tomorrow at 4 PM?')).toBeVisible();
 
     // Approve action
     const approveBtn = page.locator('[data-testid="approve-btn"]');
@@ -29,7 +29,7 @@ test.describe('Work Triage Agentic Inbox', () => {
   });
 
   test('Owner can dismiss a triage item', async ({ page }) => {
-    const triageCard = page.locator('[data-testid="triage-card-triage-test-2"]');
+    const triageCard = page.locator('[data-testid="triage-card-app-test-cd34-34f7-e43e-7264a9c4021d"]');
     await expect(triageCard).toBeVisible({ timeout: 15000 });
 
     // Select the card first to ensure detail view updates
@@ -42,31 +42,31 @@ test.describe('Work Triage Agentic Inbox', () => {
   });
 
   test('Triage feed renders items correctly', async ({ page }) => {
-    const triageCard = page.locator('[data-testid="triage-card-triage-test-1"]');
+    const triageCard = page.locator('[data-testid="triage-card-app-test-ab12-34f7-e43e-7264a9c4021d"]');
     await expect(triageCard).toBeVisible({ timeout: 15000 });
-    await expect(triageCard.locator('text=Instagram DM')).toBeVisible();
-    await expect(triageCard.locator('text=Maya requested a custom cake for Friday')).toBeVisible();
+    await expect(triageCard.locator('text=Operations')).toBeVisible();
+    await expect(triageCard.locator('text=Mark requested to reschedule his 4 PM lesson to 5 PM today. You have a conflict. Suggest tomorrow at 4 PM?')).toBeVisible();
   });
 
   test('Triage detail shows correct information on click', async ({ page }) => {
-    const triageCard = page.locator('[data-testid="triage-card-triage-test-2"]');
+    const triageCard = page.locator('[data-testid="triage-card-app-test-cd34-34f7-e43e-7264a9c4021d"]');
     await expect(triageCard).toBeVisible({ timeout: 15000 });
     await triageCard.click();
 
-    await expect(page.locator('text=Question about delivery times')).toBeVisible();
-    await expect(page.locator('text=We deliver between 9 AM and 5 PM on weekdays.')).toBeVisible();
+    await expect(page.locator('text=Agent tentatively booked a roof repair estimate for Sarah on Tuesday 2 PM. Pending $50 deposit. No action needed.')).toBeVisible();
+    await expect(page.locator('text=Agent tentatively booked a roof repair estimate for Sarah on Tuesday 2 PM. Pending $50 deposit. No action needed.')).toBeVisible();
   });
 
   test('Layout is fully usable at 375px', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 667 });
 
     // Have to reload since viewport change might act weird mid-flight in some setups, but we just check visibility
-    const triageCard = page.locator('[data-testid="triage-card-triage-test-1"]');
+    const triageCard = page.locator('[data-testid="triage-card-app-test-ab12-34f7-e43e-7264a9c4021d"]');
     await expect(triageCard).toBeVisible({ timeout: 15000 });
 
     // Ensure detail view can be scrolled into view or is stacked correctly
     await triageCard.click();
-    await expect(page.locator('text=Maya requested a custom cake for Friday')).toBeVisible();
+    await expect(page.locator('text=Mark requested to reschedule his 4 PM lesson to 5 PM today. You have a conflict. Suggest tomorrow at 4 PM?')).toBeVisible();
     await expect(page.locator('[data-testid="approve-btn"]')).toBeVisible();
   });
 });
