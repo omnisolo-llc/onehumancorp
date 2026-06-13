@@ -600,7 +600,7 @@ export default function OnboardingWizard() {
                       </svg>
                       Generating...
                     </span>
-                  ) : <IconLabel icon="launch">Generate Storefront</IconLabel>}
+                  ) : <IconLabel icon="launch">Next</IconLabel>}
                 </button>
               </div>
             </div>
@@ -1119,6 +1119,8 @@ export default function OnboardingWizard() {
                           }
                         }}
                         placeholder="you@example.com"
+                        inputMode="email"
+                        enterKeyHint="next"
                         className={`w-full p-3 sm:p-4 rounded-[8px] border ${validationErrors.adminEmail ? "border-[#FF3B30]" : "border-white/50 dark:border-white/10 focus:border-[#0066FF]"} outline-none glassmorphism min-h-[44px] min-w-[44px] text-[#1D1D1F] dark:text-[#F5F5F7]`}
                       />
                       {validationErrors.adminEmail && <p className="text-[#FF3B30] text-xs mt-1">{validationErrors.adminEmail}</p>}

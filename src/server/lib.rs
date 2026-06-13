@@ -717,7 +717,7 @@ async fn http_login_handler(
     let mut tx = match db.pool.begin().await {
         Ok(tx) => tx,
         Err(e) => {
-            ::server_telemetry::record_error_signal("failed to start login transaction");
+            ::server_telemetry::record_error_signal("[BUG] failed to start login transaction");
             tracing::error!("failed to start login transaction: {}", e);
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
@@ -728,7 +728,7 @@ async fn http_login_handler(
     };
 
     if let Err(e) = ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await {
-        ::server_telemetry::record_error_signal("failed to set tenant context for login");
+        ::server_telemetry::record_error_signal("[INFRA] failed to set tenant context for login");
         tracing::error!("failed to set tenant context for login: {}", e);
         return (
             StatusCode::INTERNAL_SERVER_ERROR,
@@ -752,7 +752,7 @@ async fn http_login_handler(
     {
         Ok(row) => row,
         Err(e) => {
-            ::server_telemetry::record_error_signal("failed to query login user");
+            ::server_telemetry::record_error_signal("[BUG] failed to query login user");
             tracing::error!("failed to query login user: {}", e);
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
@@ -778,7 +778,7 @@ async fn http_login_handler(
         match tokio::task::spawn_blocking(move || bcrypt::verify(&password, &hash)).await {
             Ok(res) => res,
             Err(e) => {
-                ::server_telemetry::record_error_signal("spawn_blocking failed for bcrypt");
+                ::server_telemetry::record_error_signal("[BUG] spawn_blocking failed for bcrypt");
                 tracing::error!("spawn_blocking failed for bcrypt: {}", e);
                 return (
                     StatusCode::INTERNAL_SERVER_ERROR,
@@ -799,7 +799,7 @@ async fn http_login_handler(
                 .into_response();
         }
         Err(e) => {
-            ::server_telemetry::record_error_signal("failed to verify auth credential");
+            ::server_telemetry::record_error_signal("[SECURITY] failed to verify auth credential");
             tracing::error!("failed to verify auth credential: {}", e);
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
@@ -831,7 +831,7 @@ async fn http_login_handler(
     let token = match store.issue_token(&user) {
         Ok(t) => t,
         Err(e) => {
-            ::server_telemetry::record_error_signal("failed to issue login token");
+            ::server_telemetry::record_error_signal("[BUG] failed to issue login token");
             tracing::error!("failed to issue login token: {}", e);
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
@@ -1012,7 +1012,7 @@ pub async fn advisory_insights_handler(
             (StatusCode::OK, axum::Json(serde_json::json!({ "summary": output }))).into_response()
         }
         Err(e) => {
-            ::server_telemetry::record_error_signal("MiniMax advisory insights failed");
+            ::server_telemetry::record_error_signal("[AI] MiniMax advisory insights failed");
             tracing::error!("MiniMax advisory insights failed: {}", e);
             (
                 StatusCode::BAD_GATEWAY,
@@ -1093,7 +1093,7 @@ async fn draft_reply_handler(
     match client.reason(&compressed_prompt).await {
         Ok(output) => (StatusCode::OK, axum::Json(DraftReplyResponse { output })).into_response(),
         Err(e) => {
-            ::server_telemetry::record_error_signal("MiniMax draft reply failed");
+            ::server_telemetry::record_error_signal("[AI] MiniMax draft reply failed");
             tracing::error!("MiniMax draft reply failed: {}", e);
             (
                 StatusCode::BAD_GATEWAY,
@@ -2469,7 +2469,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     tokio::spawn(async move {
         loop {
             if let Err(e) = agent_memory_pipeline_clone.run().await {
-                ::server_telemetry::record_error_signal("Agent Memory Pipeline error");
+                ::server_telemetry::record_error_signal("[BUG] Agent Memory Pipeline error");
                 tracing::error!("Agent Memory Pipeline error: {}", e);
             }
             tokio::time::sleep(tokio::time::Duration::from_secs(60)).await;
@@ -2609,7 +2609,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         let payload = match serde_json::to_string(&task) {
             Ok(p) => p,
             Err(e) => {
-                ::server_telemetry::record_error_signal("Failed to serialize task");
+                ::server_telemetry::record_error_signal("[BUG] Failed to serialize task");
                 tracing::error!("Failed to serialize task: {}", e);
                 return;
             }
@@ -2633,7 +2633,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         is_cloud
     );
     if let Err(e) = handoff_manager.start_listener().await {
-        ::server_telemetry::record_error_signal("Failed to start handoff listener");
+        ::server_telemetry::record_error_signal("[INFRA] Failed to start handoff listener");
         tracing::error!("Failed to start handoff listener: {}", e);
     }
 
@@ -2671,7 +2671,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                         .register_presence(&heartbeat_agent_id, "online", 60)
                         .await
                     {
-                        ::server_telemetry::record_error_signal("Failed to register builtin agent presence");
+                        ::server_telemetry::record_error_signal("[INFRA] Failed to register builtin agent presence");
                         tracing::error!("Failed to register builtin agent presence: {}", e);
                     }
                 }
@@ -2727,7 +2727,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                         .register_presence(&agent_id_clone, "active", 30)
                         .await
                     {
-                        ::server_telemetry::record_error_signal("Failed to register presence");
+                        ::server_telemetry::record_error_signal("[INFRA] Failed to register presence");
                         tracing::error!("Failed to register presence: {}", e);
                     }
                     tokio::time::sleep(std::time::Duration::from_secs(15)).await;
@@ -2811,7 +2811,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
     let mut tx = match pool.begin().await {
         Ok(t) => t,
         Err(e) => {
-            ::server_telemetry::record_error_signal("Failed to begin transaction");
+            ::server_telemetry::record_error_signal("[BUG] Failed to begin transaction");
             tracing::error!("Failed to begin transaction: {}", e);
             return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!([]))).into_response();
         }
@@ -2819,7 +2819,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
 
     let org_id = user.organization_id.unwrap_or_default();
     if let Err(e) = crate::common::auth_utils::set_org_context(&mut *tx, &org_id).await {
-        ::server_telemetry::record_error_signal("Failed to set org context");
+        ::server_telemetry::record_error_signal("[INFRA] Failed to set org context");
         tracing::error!("Failed to set org context: {}", e);
         return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!([]))).into_response();
     }
@@ -2856,7 +2856,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
             (axum::http::StatusCode::OK, axum::Json(messages)).into_response()
         }
         Err(e) => {
-            ::server_telemetry::record_error_signal("Failed to fetch inbox messages");
+            ::server_telemetry::record_error_signal("[BUG] Failed to fetch inbox messages");
             tracing::error!("Failed to fetch inbox messages: {}", e);
             (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!([]))).into_response()
         }
@@ -2929,7 +2929,6 @@ pub async fn create_ui_triage_item_handler(
 
             if let Some(action_type) = payload.action_type {
                 let action_id = format!("act-{}", uuid::Uuid::new_v4());
-                let action_payload = payload.action_payload.unwrap_or_else(|| "".to_string());
                 if let Err(e) = sqlx::query(
                     "INSERT INTO triage_proposed_actions (id, triage_item_id, tenant_id, action_type, payload) VALUES ($1, $2, $3, $4, $5)"
                 )
@@ -2937,7 +2936,7 @@ pub async fn create_ui_triage_item_handler(
                 .bind(&new_id)
                 .bind(&tenant_id)
                 .bind(&action_type)
-                .bind(&action_payload)
+                .bind(&payload.action_payload)
                 .execute(&mut *tx).await {
                     tracing::error!("Failed to insert triage action: {:?}", e);
                     return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": e.to_string()}))).into_response();
@@ -3736,7 +3735,6 @@ async fn ui_dashboard_unified_feed_handler(
     axum::extract::Query(query): axum::extract::Query<UiTenantQuery>,
 ) -> axum::response::Response {
     use axum::response::IntoResponse;
-    use sqlx::Row;
     let tenant_id = ui_tenant_id(&query);
     let mobile_optimized = query.mobile_optimized.unwrap_or(false);
 
@@ -3904,7 +3902,6 @@ async fn ui_dashboard_unified_agent_feed_handler(
     axum::extract::Query(query): axum::extract::Query<UiTenantQuery>,
 ) -> axum::response::Response {
     use axum::response::IntoResponse;
-    use sqlx::Row;
     let tenant_id = ui_tenant_id(&query);
     let mobile_optimized = query.mobile_optimized.unwrap_or(false);
 
@@ -4081,7 +4078,7 @@ async fn list_ui_orders_handler(
             (axum::http::StatusCode::OK, axum::Json(orders)).into_response()
         },
         Err(e) => {
-            ::server_telemetry::record_error_signal("Failed to fetch UI orders");
+            ::server_telemetry::record_error_signal("[BUG] Failed to fetch UI orders");
             tracing::error!("Failed to fetch UI orders: {}", e);
             (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!([]))).into_response()
         }
@@ -4375,7 +4372,7 @@ async fn list_ui_inbox_handler(
             (axum::http::StatusCode::OK, axum::Json(messages)).into_response()
         },
         Err(e) => {
-            ::server_telemetry::record_error_signal("Failed to fetch UI inbox messages");
+            ::server_telemetry::record_error_signal("[BUG] Failed to fetch UI inbox messages");
             tracing::error!("Failed to fetch UI inbox messages: {}", e);
             (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!([]))).into_response()
         }
@@ -4420,7 +4417,7 @@ async fn ui_dashboard_metrics_handler(
             (axum::http::StatusCode::OK, axum::Json(res)).into_response()
         }
         Err(e) => {
-            ::server_telemetry::record_error_signal("Failed to fetch UI dashboard metrics");
+            ::server_telemetry::record_error_signal("[BUG] Failed to fetch UI dashboard metrics");
             tracing::error!("Failed to fetch UI dashboard metrics: {}", e);
             (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({
                 "active_customers": 0,
@@ -4469,7 +4466,7 @@ async fn create_ui_supply_vendor_handler(
     match result {
         Ok(_) => (axum::http::StatusCode::OK, axum::Json(serde_json::json!({"id": id, "name": name, "contact_info": contact_info}))).into_response(),
         Err(e) => {
-            ::server_telemetry::record_error_signal("Failed to create UI supply vendor");
+            ::server_telemetry::record_error_signal("[BUG] Failed to create UI supply vendor");
             tracing::error!("Failed to create UI supply vendor: {}", e);
             (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": "database write failed"}))).into_response()
         }
@@ -4497,7 +4494,7 @@ async fn create_ui_raw_material_handler(
     match result {
         Ok(_) => (axum::http::StatusCode::OK, axum::Json(serde_json::json!({"id": id, "name": name, "current_quantity": current_quantity, "reorder_threshold": reorder_threshold}))).into_response(),
         Err(e) => {
-            ::server_telemetry::record_error_signal("Failed to create UI raw material");
+            ::server_telemetry::record_error_signal("[BUG] Failed to create UI raw material");
             tracing::error!("Failed to create UI raw material: {}", e);
             (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": "database write failed"}))).into_response()
         }
@@ -4525,7 +4522,7 @@ async fn create_ui_bom_item_handler(
     match result {
         Ok(_) => (axum::http::StatusCode::OK, axum::Json(serde_json::json!({"id": id, "finished_good_id": finished_good_id, "raw_material_id": raw_material_id, "quantity_required": quantity_required}))).into_response(),
         Err(e) => {
-            ::server_telemetry::record_error_signal("Failed to create UI BOM item");
+            ::server_telemetry::record_error_signal("[BUG] Failed to create UI BOM item");
             tracing::error!("Failed to create UI BOM item: {}", e);
             (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!({"error": "database write failed"}))).into_response()
         }
@@ -4670,7 +4667,7 @@ async fn create_ui_bom_item_handler(
                 let new_order = req.get("new_order").and_then(|v| v.as_bool()).unwrap_or(false);
 
                 if let Err(e) = settings_store.set_sms_preferences(phone, urgent_booking, failed_payment, new_order) {
-                    ::server_telemetry::record_error_signal("Failed to save SMS preferences");
+                    ::server_telemetry::record_error_signal("[BUG] Failed to save SMS preferences");
                     tracing::error!("Failed to save SMS preferences: {}", e);
                     return axum::response::Json(serde_json::json!({ "success": false }));
                 }
@@ -4696,7 +4693,7 @@ async fn create_ui_bom_item_handler(
                 let fee = req.get("delivery_fee").and_then(|v| v.as_f64());
 
                 if let Err(e) = settings_store.set_delivery_settings(enabled, radius, fee) {
-                    ::server_telemetry::record_error_signal("Failed to save delivery settings");
+                    ::server_telemetry::record_error_signal("[BUG] Failed to save delivery settings");
                     tracing::error!("Failed to save delivery settings: {}", e);
                     return axum::response::Json(serde_json::json!({ "success": false }));
                 }
@@ -4733,7 +4730,7 @@ async fn create_ui_bom_item_handler(
                 };
 
                 if let Err(e) = settings_store.set_voice_settings(enabled, number, persona) {
-                    ::server_telemetry::record_error_signal("Failed to save voice settings");
+                    ::server_telemetry::record_error_signal("[BUG] Failed to save voice settings");
                     tracing::error!("Failed to save voice settings: {}", e);
                     return axum::response::Json(serde_json::json!({ "success": false }));
                 }
@@ -4755,7 +4752,7 @@ async fn create_ui_bom_item_handler(
                     Some(mock_number.clone()),
                     settings.voice_receptionist_persona,
                 ) {
-                    ::server_telemetry::record_error_signal("Failed to provision voice number");
+                    ::server_telemetry::record_error_signal("[INFRA] Failed to provision voice number");
                     tracing::error!("Failed to provision voice number: {}", e);
                     return axum::response::Json(serde_json::json!({ "success": false, "error": "Internal error" }));
                 }
@@ -5056,7 +5053,7 @@ async fn create_ui_bom_item_handler(
                         }).await;
 
                         if let Err(e) = result {
-                            ::server_telemetry::record_error_signal("Failed to seed data");
+                            ::server_telemetry::record_error_signal("[BUG] Failed to seed data");
                             tracing::error!("Failed to seed data: {}", e);
                             return axum::Json(serde_json::json!({ "ok": false, "error": e }));
                         }
@@ -5298,7 +5295,7 @@ async fn create_ui_bom_item_handler(
     tokio::spawn(async move {
         tracing::info!("Mesh WebSocket server listening on {}", mesh_addr);
         if let Err(e) = axum::serve(listener, app.into_make_service()).await {
-            ::server_telemetry::record_error_signal("Mesh server error");
+            ::server_telemetry::record_error_signal("[INFRA] Mesh server error");
             tracing::error!("Mesh server error: {}", e);
         }
     });
@@ -5337,11 +5334,11 @@ async fn create_ui_bom_item_handler(
             loop {
                 interval.tick().await;
                 if let Err(e) = cloud_sync_clone.push_pending_missions("system").await {
-                    ::server_telemetry::record_error_signal("failed to push pending missions");
+                    ::server_telemetry::record_error_signal("[INFRA] failed to push pending missions");
                     tracing::error!("failed to push pending missions: {}", e);
                 }
                 if let Err(e) = cloud_sync_clone.pull_mission_updates("system").await {
-                    ::server_telemetry::record_error_signal("failed to pull mission updates");
+                    ::server_telemetry::record_error_signal("[INFRA] failed to pull mission updates");
                     tracing::error!("failed to pull mission updates: {}", e);
                 }
             }
@@ -5368,11 +5365,11 @@ async fn create_ui_bom_item_handler(
                 _ = prune_interval.tick() => {
                     let sip_db = crate::sip::SipDB::new(hub_for_sched.pool.clone(), "system".to_string());
                     if let Err(e) = sip_db.prune_stale_missions(chrono::Duration::days(7)).await {
-                        ::server_telemetry::record_error_signal("failed to prune stale missions");
+                        ::server_telemetry::record_error_signal("[MAINTENANCE] failed to prune stale missions");
                         tracing::error!("failed to prune stale missions: {}", e);
                     }
                     if let Err(e) = sip_db.cleanup_stagnant_missions(chrono::Duration::minutes(5)).await {
-                        ::server_telemetry::record_error_signal("failed to cleanup stagnant missions");
+                        ::server_telemetry::record_error_signal("[MAINTENANCE] failed to cleanup stagnant missions");
                         tracing::error!("failed to cleanup stagnant missions: {}", e);
                     }
                 }
@@ -5383,7 +5380,7 @@ async fn create_ui_bom_item_handler(
 
                         // Mark as running
                         if let Err(e) = hub_for_sched.scheduler().mark_running(&task.organization_id, &task.id) {
-                            ::server_telemetry::record_error_signal("failed to mark task as running");
+                            ::server_telemetry::record_error_signal("[BUG] failed to mark task as running");
                             tracing::error!("failed to mark task as running: {}", e);
                             continue;
                         }
@@ -5404,7 +5401,7 @@ async fn create_ui_bom_item_handler(
                                 let _ = hub_for_sched.scheduler().mark_done(&task.organization_id, &task.id, true);
                             }
                             Err(e) => {
-                                ::server_telemetry::record_error_signal("failed to publish scheduled task message");
+                                ::server_telemetry::record_error_signal("[INFRA] failed to publish scheduled task message");
                                 tracing::error!("failed to publish scheduled task message: {}", e);
                                 let _ = hub_for_sched.scheduler().mark_done(&task.organization_id, &task.id, false);
                             }

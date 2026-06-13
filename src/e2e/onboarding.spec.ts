@@ -201,7 +201,7 @@ test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
 
     await bioInput.fill("I run a high-end tech consultation firm specializing in AI in San Francisco.");
 
-    const generateButton = page.getByRole('button', { name: 'Generate Storefront' });
+    const generateButton = page.getByRole('button', { name: 'Next' });
     await expect(generateButton).toBeVisible();
     await generateButton.click();
 
@@ -228,7 +228,7 @@ test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
 
     await page.route('**/api/onboarding/**', route => route.abort('failed'));
 
-    const generateButton = page.getByRole('button', { name: 'Generate Storefront' });
+    const generateButton = page.getByRole('button', { name: 'Next' });
     await generateButton.click();
 
     // Verify error is shown with correct styling
@@ -253,13 +253,13 @@ test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
     const instantBuildButton = page.locator('button', { hasText: 'Instant Build' });
     await instantBuildButton.click();
 
-    const generateButton = page.getByRole('button', { name: 'Generate Storefront' });
+    const generateButton = page.getByRole('button', { name: 'Next' });
 
     // Button should be disabled when input is empty.
     await expect(generateButton).toBeDisabled();
 
     // We shouldn't see a loading state.
-    const loadingState = page.getByText('Generating...');
+    const loadingState = page.getByText('Building Your Business...');
     await expect(loadingState).not.toBeVisible();
     await expect(page.getByRole('heading', { name: "Tell us about your business" })).toBeVisible();
   });
@@ -274,7 +274,7 @@ test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
     // Only provide a generic description
     await bioInput.fill("I sell things online.");
 
-    const generateButton = page.getByRole('button', { name: 'Generate Storefront' });
+    const generateButton = page.getByRole('button', { name: 'Next' });
     await generateButton.click();
 
     const successHeading = page.getByRole('heading', { name: "You're Live!" });
@@ -294,7 +294,7 @@ test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
     expect(Math.round(box?.height || 0)).toBeGreaterThanOrEqual(44);
     expect(box?.width).toBeLessThanOrEqual(375);
 
-    const generateButton = page.getByRole('button', { name: 'Generate Storefront' });
+    const generateButton = page.getByRole('button', { name: 'Next' });
     const btnBox = await generateButton.boundingBox();
     expect(Math.round(btnBox?.height || 0)).toBeGreaterThanOrEqual(44);
   });
