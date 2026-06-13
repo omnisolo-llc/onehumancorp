@@ -197,23 +197,23 @@ export default function OnboardingWizard() {
     .then(([draftData, stateData]) => {
       const data = (draftData && draftData.wizardState) ? draftData : stateData;
       if (data && data.wizardState) {
-        if (data.wizardState.step) setStep(data.wizardState.step === 4 ? 3 : data.wizardState.step);
-        if (data.wizardState.chatStep) setChatStep(data.wizardState.chatStep);
-        if (data.wizardState.businessDescription) setBusinessDescription(data.wizardState.businessDescription);
-        if (data.wizardState.businessName) setBusinessName(data.wizardState.businessName);
-        if (data.wizardState.whatYouSell) setWhatYouSell(data.wizardState.whatYouSell);
-        if (data.wizardState.location) setLocation(data.wizardState.location);
-        if (data.wizardState.targetAudience) setTargetAudience(data.wizardState.targetAudience);
-        if (data.wizardState.businessType) setBusinessType(data.wizardState.businessType);
-        if (data.wizardState.categories) setCategories(data.wizardState.categories);
-        if (data.wizardState.websiteTemplate) setWebsiteTemplate(data.wizardState.websiteTemplate);
-        if (data.wizardState.firstProductName) setFirstProductName(data.wizardState.firstProductName);
-        if (data.wizardState.firstProductPrice) setFirstProductPrice(data.wizardState.firstProductPrice);
-        if (data.wizardState.adminName) setAdminName(data.wizardState.adminName);
-        if (data.wizardState.adminEmail) setAdminEmail(data.wizardState.adminEmail);
-        if (data.wizardState.adminPassword) setAdminPassword(data.wizardState.adminPassword);
-        if (data.wizardState.domainChoice) setDomainChoice(data.wizardState.domainChoice);
-        if (data.wizardState.aiAgents) setAiAgents(data.wizardState.aiAgents);
+        if (data.wizardState.step !== undefined) setStep(data.wizardState.step === 4 ? 3 : data.wizardState.step);
+        if (data.wizardState.chatStep !== undefined) setChatStep(data.wizardState.chatStep);
+        if (data.wizardState.businessDescription !== undefined) setBusinessDescription(data.wizardState.businessDescription);
+        if (data.wizardState.businessName !== undefined) setBusinessName(data.wizardState.businessName);
+        if (data.wizardState.whatYouSell !== undefined) setWhatYouSell(data.wizardState.whatYouSell);
+        if (data.wizardState.location !== undefined) setLocation(data.wizardState.location);
+        if (data.wizardState.targetAudience !== undefined) setTargetAudience(data.wizardState.targetAudience);
+        if (data.wizardState.businessType !== undefined) setBusinessType(data.wizardState.businessType);
+        if (data.wizardState.categories !== undefined) setCategories(data.wizardState.categories);
+        if (data.wizardState.websiteTemplate !== undefined) setWebsiteTemplate(data.wizardState.websiteTemplate);
+        if (data.wizardState.firstProductName !== undefined) setFirstProductName(data.wizardState.firstProductName);
+        if (data.wizardState.firstProductPrice !== undefined) setFirstProductPrice(data.wizardState.firstProductPrice);
+        if (data.wizardState.adminName !== undefined) setAdminName(data.wizardState.adminName);
+        if (data.wizardState.adminEmail !== undefined) setAdminEmail(data.wizardState.adminEmail);
+        if (data.wizardState.adminPassword !== undefined) setAdminPassword(data.wizardState.adminPassword);
+        if (data.wizardState.domainChoice !== undefined) setDomainChoice(data.wizardState.domainChoice);
+        if (data.wizardState.aiAgents !== undefined) setAiAgents(data.wizardState.aiAgents);
         if (data.wizardState.aiAutoRespond !== undefined) setAiAutoRespond(data.wizardState.aiAutoRespond);
         initialStateLoaded.current = true;
       }
@@ -600,7 +600,7 @@ export default function OnboardingWizard() {
                       </svg>
                       Generating...
                     </span>
-                  ) : <IconLabel icon="launch">Generate Storefront</IconLabel>}
+                  ) : <IconLabel icon="launch">Next</IconLabel>}
                 </button>
               </div>
             </div>
@@ -636,7 +636,7 @@ export default function OnboardingWizard() {
                       <input
                         type="text"
                         autoFocus
-                        enterKeyHint="next"
+
                         autoCapitalize="words"
                         autoComplete="organization"
                         value={businessName}
@@ -702,7 +702,7 @@ export default function OnboardingWizard() {
                     <div>
                       <textarea
                         autoFocus
-                        enterKeyHint="next"
+
                         autoCapitalize="sentences"
                         value={whatYouSell}
                         onChange={(e) => setWhatYouSell(e.target.value)}
@@ -768,7 +768,7 @@ export default function OnboardingWizard() {
                       <input
                         type="text"
                         autoFocus
-                        enterKeyHint="next"
+
                         autoCapitalize="words"
                         value={location}
                         onChange={(e) => setLocation(e.target.value)}
@@ -834,7 +834,7 @@ export default function OnboardingWizard() {
                       <input
                         type="text"
                         autoFocus
-                        enterKeyHint="next"
+
                         autoCapitalize="words"
                         value={targetAudience}
                         onChange={(e) => setTargetAudience(e.target.value)}
@@ -911,7 +911,7 @@ export default function OnboardingWizard() {
                   <input
                     type="text"
                     autoFocus
-                    enterKeyHint="next"
+
                     autoCapitalize="words"
                     value={businessName}
                     onChange={(e) => {
@@ -926,7 +926,7 @@ export default function OnboardingWizard() {
                   <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">Business Type</label>
                   <input
                     type="text"
-                    enterKeyHint="next"
+
                     autoCapitalize="words"
                     value={businessType}
                     onChange={(e) => {
@@ -941,7 +941,7 @@ export default function OnboardingWizard() {
                   <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">Categories (Comma separated)</label>
                   <input
                     type="text"
-                    enterKeyHint="next"
+
                     autoCapitalize="words"
                     value={categories.join(', ')}
                     onChange={(e) => setCategories(e.target.value.split(',').map(c => c.trim()))}
@@ -953,7 +953,7 @@ export default function OnboardingWizard() {
                       <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">First Product</label>
                       <input
                         type="text"
-                        enterKeyHint="next"
+
                         autoCapitalize="words"
                         value={firstProductName}
                         onChange={(e) => setFirstProductName(e.target.value)}
@@ -1080,7 +1080,7 @@ export default function OnboardingWizard() {
                       <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Admin Name</label>
                       <input
                         type="text"
-                        enterKeyHint="next"
+
                         autoCapitalize="words"
                         autoComplete="name"
                         value={adminName}
@@ -1102,9 +1102,9 @@ export default function OnboardingWizard() {
                       <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Admin Email</label>
                       <input
                         type="email"
-                        enterKeyHint="next"
+
                         autoCapitalize="none"
-                        inputMode="email"
+
                         autoComplete="email"
                         value={adminEmail}
                         onChange={(e) => {
@@ -1119,6 +1119,8 @@ export default function OnboardingWizard() {
                           }
                         }}
                         placeholder="you@example.com"
+
+
                         className={`w-full p-3 sm:p-4 rounded-[8px] border ${validationErrors.adminEmail ? "border-[#FF3B30]" : "border-white/50 dark:border-white/10 focus:border-[#0066FF]"} outline-none glassmorphism min-h-[44px] min-w-[44px] text-[#1D1D1F] dark:text-[#F5F5F7]`}
                       />
                       {validationErrors.adminEmail && <p className="text-[#FF3B30] text-xs mt-1">{validationErrors.adminEmail}</p>}

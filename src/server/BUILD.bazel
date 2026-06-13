@@ -489,6 +489,11 @@ rust_binary(
 SERVER_LIB_TEST_GROUPS = {
     "agents": [
         "sip::tests::test_delegate_mission_tc2_agents_md",
+        "sip::tests::test_delegate_mission_tc1_no_context_root",
+        "sip::tests::test_delegate_mission_tc6_omni_context_resilience",
+        "sip::tests::test_delegate_mission_tc3_claude_md_fallback",
+        "sip::tests::test_delegate_mission_tc4_grounding_priority",
+        "sip::tests::test_delegate_mission_tc5_missing_files",
     ],
     "core": [
         "analytics::",

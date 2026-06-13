@@ -136,27 +136,55 @@ Output JSON format:
                 "action_payload": "Thanks for reaching out! We will review this and get back to you soon."
             });
 
-            let llm_call = async {
-                match std::env::var("OHC_INBOX_DRAFT_LLM_PROVIDER")
-                    .or_else(|_| std::env::var("OHC_LLM_PROVIDER"))
-                    .as_deref()
-                {
-                    Ok("minimax") => {
-                        let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
-                        if !api_key.is_empty() {
-                            crate::minimax::MinimaxClient::new(api_key).reason(&compressed_prompt).await
-                        } else {
-                            crate::minimax::LocalLLMClient::new().reason(&compressed_prompt).await
+            let max_retries = 3;
+            let mut retry_count = 0;
+
+            while retry_count < max_retries {
+                let compressed_prompt_clone = compressed_prompt.clone();
+                let llm_call = async {
+                    match std::env::var("OHC_INBOX_DRAFT_LLM_PROVIDER")
+                        .or_else(|_| std::env::var("OHC_LLM_PROVIDER"))
+                        .as_deref()
+                    {
+                        Ok("minimax") => {
+                            let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
+                            if !api_key.is_empty() {
+                                crate::minimax::MinimaxClient::new(api_key).reason(&compressed_prompt_clone).await
+                            } else {
+                                crate::minimax::LocalLLMClient::new().reason(&compressed_prompt_clone).await
+                            }
+                        }
+                        _ => crate::minimax::LocalLLMClient::new().reason(&compressed_prompt_clone).await,
+                    }
+                };
+
+                match tokio::time::timeout(Duration::from_secs(60), llm_call).await {
+                    Ok(Ok(reply)) => {
+                        if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&reply) {
+                            if parsed.is_object() && parsed.get("priority").is_some() && parsed.get("context_summary").is_some() && parsed.get("action_type").is_some() && parsed.get("action_payload").is_some() {
+                                extracted = parsed;
+                                break;
+                            }
+                        }
+                        retry_count += 1;
+                        tracing::warn!("LLM returned invalid format in MessageTriageWorker (attempt {}/{})", retry_count, max_retries);
+                        if retry_count < max_retries {
+                            tokio::time::sleep(Duration::from_secs(2u64.pow(retry_count as u32))).await;
                         }
                     }
-                    _ => crate::minimax::LocalLLMClient::new().reason(&compressed_prompt).await,
-                }
-            };
-
-            if let Ok(Ok(reply)) = tokio::time::timeout(Duration::from_secs(60), llm_call).await {
-                if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&reply) {
-                    if parsed.is_object() {
-                        extracted = parsed;
+                    Ok(Err(e)) => {
+                        retry_count += 1;
+                        tracing::warn!("LLM error in MessageTriageWorker (attempt {}/{}): {}", retry_count, max_retries, e);
+                        if retry_count < max_retries {
+                            tokio::time::sleep(Duration::from_secs(2u64.pow(retry_count as u32))).await;
+                        }
+                    }
+                    Err(_) => {
+                        retry_count += 1;
+                        tracing::warn!("LLM timeout in MessageTriageWorker (attempt {}/{}): 60s exceeded", retry_count, max_retries);
+                        if retry_count < max_retries {
+                            tokio::time::sleep(Duration::from_secs(2u64.pow(retry_count as u32))).await;
+                        }
                     }
                 }
             }
@@ -174,7 +202,7 @@ Output JSON format:
 
             match &self.db.store {
                 crate::db::DbStore::Postgres => {
-                    let _ = sqlx::query("UPDATE inbox_messages SET draft_reply = $1 WHERE id = $2 AND tenant_id = $3")
+                    let _ = sqlx::query("UPDATE omni_inbox_messages SET draft_reply = $1 WHERE id = $2 AND tenant_id = $3")
                         .bind(&action_payload)
                         .bind(&message_id)
                         .bind(&tenant_id)
@@ -218,7 +246,7 @@ Output JSON format:
                         .execute(&self.db.pool).await;
                 },
                 crate::db::DbStore::Sqlite(sqlite_pool) => {
-                    let _ = sqlx::query("UPDATE inbox_messages SET draft_reply = ? WHERE id = ? AND tenant_id = ?")
+                    let _ = sqlx::query("UPDATE omni_inbox_messages SET draft_reply = ? WHERE id = ? AND tenant_id = ?")
                         .bind(&action_payload)
                         .bind(&message_id)
                         .bind(&tenant_id)

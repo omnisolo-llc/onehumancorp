@@ -137,7 +137,7 @@ export default function WorkIntakeWidgetPage() {
         <section className="w-full md:w-2/3 flex flex-col gap-4 items-center">
              <h2 className="text-xl font-semibold font-outfit self-start" style={{ color: '#1D1D1F' }}>Live Preview</h2>
 
-             {/* Realistic mock environment wrapper */}
+             {/* Realistic environment wrapper */}
              <div className="w-full max-w-2xl bg-white rounded-xl overflow-hidden border border-gray-300 shadow-2xl relative mt-4">
                  <div className="bg-gray-100 border-b border-gray-300 px-4 py-3 flex items-center gap-2">
                      <div className="flex gap-1.5">

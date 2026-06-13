@@ -17,7 +17,7 @@ impl LocalRepository for PgLocalRepository {
         let rows = sqlx::query(
             "SELECT id, organization_id, status, payload, created_at, synced_to_cloud, cloud_mission_id, sync_error, last_synced_at
              FROM agent_missions
-             WHERE organization_id = $1 AND synced_to_cloud = FALSE AND (sync_error IS NULL OR last_synced_at < NOW() - INTERVAL '5 minutes')
+             WHERE organization_id = $1 AND synced_to_cloud = false AND (sync_error IS NULL OR last_synced_at < NOW() - INTERVAL '5 minutes')
              LIMIT $2"
         )
         .bind(organization_id)
@@ -56,7 +56,7 @@ impl LocalRepository for PgLocalRepository {
     async fn mark_synced(&self, organization_id: &str, local_id: &str, cloud_id: &str) -> Result<(), String> {
         sqlx::query(
             "UPDATE agent_missions
-             SET synced_to_cloud = TRUE, cloud_mission_id = $1, sync_error = NULL, last_synced_at = NOW()
+             SET synced_to_cloud = true, cloud_mission_id = $1, sync_error = NULL, last_synced_at = NOW()
              WHERE id = $2 AND organization_id = $3"
         )
         .bind(cloud_id)
@@ -89,7 +89,7 @@ impl LocalRepository for PgLocalRepository {
         let rows = sqlx::query(
             "SELECT id, organization_id, status, payload, created_at, synced_to_cloud, cloud_mission_id, sync_error, last_synced_at
              FROM agent_missions
-             WHERE organization_id = $1 AND synced_to_cloud = TRUE AND cloud_mission_id IS NOT NULL AND status NOT IN ('COMPLETED', 'FAILED')"
+             WHERE organization_id = $1 AND synced_to_cloud = true AND cloud_mission_id IS NOT NULL AND status NOT IN ('COMPLETED', 'FAILED')"
         )
         .bind(organization_id)
         .fetch_all(&self.pool)
