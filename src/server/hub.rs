@@ -90,7 +90,7 @@ impl Hub {
                 let cost_cents = (cost * 100.0).round() as i64;
                 let mut labels_cents = labels.clone();
                 labels_cents["cost_cents"] = serde_json::json!(cost_cents);
-                let _ = ::server_telemetry::buffer_metric_i64(&pool_clone, "ohc_mission_cost_cents", "counter", cost_cents, labels_cents).await;
+                let _ = ::server_telemetry::buffer_metric_i64(&pool_clone, "ohc_llm_cost_total_cents", "counter", cost_cents, labels_cents).await;
             }
         });
 
