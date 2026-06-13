@@ -2764,6 +2764,8 @@ pub struct TriageActionPayload {
     pub approved: bool,
 }
 
+
+
 pub async fn list_ui_triage_handler(
     axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
     axum::extract::Query(query): axum::extract::Query<UiTenantQuery>,
@@ -2771,12 +2773,6 @@ pub async fn list_ui_triage_handler(
     use axum::response::IntoResponse;
     use sqlx::Row;
     let tenant_id = ui_tenant_id(&query);
-
-    let cache_key = format!("ui_triage:{}", tenant_id);
-    let cache = UI_TRIAGE_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
-    if let Some(cached) = cache.get(&cache_key).await {
-        return (axum::http::StatusCode::OK, axum::Json(cached)).into_response();
-    }
 
     let items = match &db.store {
         crate::db::DbStore::Postgres => {
@@ -2793,35 +2789,41 @@ pub async fn list_ui_triage_handler(
             }
 
             match sqlx::query(
-                "SELECT t.id, t.tenant_id, t.customer_id, t.source, t.priority, t.context, t.status, t.created_at, a.action_type, a.payload AS action_payload FROM triage_items t LEFT JOIN triage_proposed_actions a ON t.id = a.triage_item_id WHERE t.tenant_id = $1 AND t.status != 'resolved' ORDER BY t.created_at DESC"
+                "SELECT id, tenant_id, idempotency_token, intent, title, description, payload, status, created_at FROM triage_proposed_actions WHERE tenant_id = $1 AND status = 'pending' ORDER BY created_at DESC"
             )
             .bind(&tenant_id)
             .fetch_all(&mut *tx)
-            .await
-            {
-                Ok(rows) => rows.into_iter().map(|row| {
-                    serde_json::json!({
-                        "id": row.get::<String, _>("id"),
-                        "tenant_id": row.get::<String, _>("tenant_id"),
-                        "customer_id": row.try_get::<String, _>("customer_id").unwrap_or_default(),
-                        "source": row.try_get::<String, _>("source").unwrap_or_default(),
-                        "priority": row.try_get::<String, _>("priority").unwrap_or_default(),
-                        "context": row.try_get::<String, _>("context").unwrap_or_default(),
-                        "status": row.try_get::<String, _>("status").unwrap_or_default(),
-                        "created_at": row.try_get::<chrono::DateTime<chrono::Utc>, _>("created_at").map(|dt| dt.to_rfc3339()).unwrap_or_default(),
-                        "action_type": row.try_get::<String, _>("action_type").unwrap_or_default(),
-                        "action_payload": row.try_get::<String, _>("action_payload").unwrap_or_default(),
-                    })
-                }).collect::<Vec<_>>(),
-                Err(e) => { tracing::error!("Failed to fetch triage items: {:?}", e); vec![] }
+            .await {
+                Ok(rows) => {
+                    let mut items = Vec::new();
+                    for row in rows {
+                        let id: uuid::Uuid = row.get("id");
+                        let intent: i32 = row.get("intent");
+                        let title: String = row.get("title");
+                        let description: String = row.get("description");
+                        let payload: serde_json::Value = row.get("payload");
+                        let created_at: i64 = row.get("created_at");
+
+                        items.push(serde_json::json!({
+                            "id": id.to_string(),
+                            "intent": intent,
+                            "title": title,
+                            "description": description,
+                            "payload": payload,
+                            "created_at": created_at,
+                        }));
+                    }
+                    items
+                }
+                Err(e) => { tracing::error!("Failed to fetch triage actions: {:?}", e); vec![] }
             }
         }
-        _ => vec![],
+        crate::db::DbStore::Sqlite => vec![]
     };
-
-    let _ = cache.set(&cache_key, items.clone(), std::time::Duration::from_secs(10)).await;
     (axum::http::StatusCode::OK, axum::Json(items)).into_response()
 }
+
+
 
 pub async fn update_ui_triage_action_handler(
     axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
