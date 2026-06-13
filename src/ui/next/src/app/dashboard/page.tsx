@@ -501,14 +501,21 @@ export default function Dashboard() {
         {actionMessage && <div className="app-badge good" role="status">{actionMessage}</div>}
       </div>
 
-      <UnifiedAgentFeed initialData={{ proposals: pendingApprovals, activity: activities }} />
+      <div className="flex flex-col md:flex-col">
+        <div className="order-first md:order-last mb-6">
+          {/* Action Feed: prioritized on mobile (top), rendered below metrics on desktop. */}
+          <UnifiedAgentFeed initialData={{ proposals: pendingApprovals, activity: activities }} />
+        </div>
 
-      <SuccessMilestoneAlert />
-      <SuccessMilestoneWidget />
-      <ViralLoopPerformanceWidget />
-      <div className="mb-6">
-        <div className="mb-4"><CartRecoveryWidget /></div>
-        <AffiliateMarketingWidget />
+        <div className="order-last md:order-first">
+          <SuccessMilestoneAlert />
+          <SuccessMilestoneWidget />
+          <ViralLoopPerformanceWidget />
+          <div className="mb-6">
+            <div className="mb-4"><CartRecoveryWidget /></div>
+            <AffiliateMarketingWidget />
+          </div>
+        </div>
       </div>
 
       <div className="mb-6 flex flex-col md:flex-row justify-between items-center gap-4">

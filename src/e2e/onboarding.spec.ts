@@ -201,6 +201,10 @@ test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
 
     await bioInput.fill("I run a high-end tech consultation firm specializing in AI in San Francisco.");
 
+    const imageUrlInput = page.locator('#instant-image-url');
+    await expect(imageUrlInput).toBeVisible();
+    await imageUrlInput.fill("https://example.com/logo.png");
+
     const generateButton = page.getByRole('button', { name: 'Next' });
     await expect(generateButton).toBeVisible();
     await generateButton.click();
