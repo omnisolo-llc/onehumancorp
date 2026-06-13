@@ -4250,7 +4250,6 @@ async fn list_ui_bookings_handler(
     axum::extract::Query(query): axum::extract::Query<UiTenantQuery>,
 ) -> axum::response::Response {
     use axum::response::IntoResponse;
-    use sqlx::Row;
     let tenant_id = ui_tenant_id(&query);
     let mobile_optimized = query.mobile_optimized.unwrap_or(false);
 
