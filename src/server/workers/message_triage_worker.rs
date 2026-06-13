@@ -116,13 +116,12 @@ Analyze the following incoming customer message.
 Message from {}: '{}'
 Source: {}
 
-Please extract the context, priority, and decide if the request needs a Quote, a Booking, or a General Reply.
+Please extract the context, priority, and draft a response.
 Output JSON format:
 {{
     \"priority\": \"High\" or \"Medium\" or \"Low\",
     \"context_summary\": \"A short one sentence summary of the request.\",
-    \"action_type\": \"Draft Reply\" or \"Draft Quote\" or \"Draft Booking\",
-    \"action_payload\": \"The draft reply, or quote details, or booking details.\"
+    \"draft_reply\": \"The draft reply to the user.\"
 }}",
                 sender_id, customer_message, source
             );
@@ -132,8 +131,7 @@ Output JSON format:
             let mut extracted = serde_json::json!({
                 "priority": "Medium",
                 "context_summary": "Customer inquiry",
-                "action_type": "Draft Reply",
-                "action_payload": "Thanks for reaching out! We will review this and get back to you soon."
+                "draft_reply": "Thanks for reaching out! We will review this and get back to you soon."
             });
 
             let llm_call = async {
@@ -163,8 +161,7 @@ Output JSON format:
 
             let priority = extracted.get("priority").and_then(|v| v.as_str()).unwrap_or("Medium");
             let context_summary = extracted.get("context_summary").and_then(|v| v.as_str()).unwrap_or("Customer inquiry");
-            let action_type = extracted.get("action_type").and_then(|v| v.as_str()).unwrap_or("Draft Reply");
-            let action_payload = extracted.get("action_payload").and_then(|v| v.as_str()).unwrap_or("Thanks for reaching out! We will review this and get back to you soon.");
+            let draft_reply = extracted.get("draft_reply").and_then(|v| v.as_str()).unwrap_or("Thanks for reaching out! We will review this and get back to you soon.");
 
             let triage_item_id = Uuid::new_v4().to_string();
             let action_id = Uuid::new_v4().to_string();
@@ -175,7 +172,7 @@ Output JSON format:
             match &self.db.store {
                 crate::db::DbStore::Postgres => {
                     let _ = sqlx::query("UPDATE inbox_messages SET draft_reply = $1 WHERE id = $2 AND tenant_id = $3")
-                        .bind(&action_payload)
+                        .bind(&draft_reply)
                         .bind(&message_id)
                         .bind(&tenant_id)
                         .execute(&self.db.pool).await;
@@ -203,8 +200,8 @@ Output JSON format:
                     .bind(&action_id)
                     .bind(&triage_item_id)
                     .bind(&tenant_id)
-                    .bind(&action_type)
-                    .bind(&action_payload)
+                    .bind("Draft Reply")
+                    .bind(&draft_reply)
                     .execute(&self.db.pool).await {
                         tracing::error!("Failed to insert triage action: {}", e);
                         let _ = sqlx::query("UPDATE ohc_job_queue SET status = 'FAILED', updated_at = NOW() WHERE id = $1")
@@ -219,7 +216,7 @@ Output JSON format:
                 },
                 crate::db::DbStore::Sqlite(sqlite_pool) => {
                     let _ = sqlx::query("UPDATE inbox_messages SET draft_reply = ? WHERE id = ? AND tenant_id = ?")
-                        .bind(&action_payload)
+                        .bind(&draft_reply)
                         .bind(&message_id)
                         .bind(&tenant_id)
                         .execute(sqlite_pool).await;
@@ -247,8 +244,8 @@ Output JSON format:
                     .bind(&action_id)
                     .bind(&triage_item_id)
                     .bind(&tenant_id)
-                    .bind(&action_type)
-                    .bind(&action_payload)
+                    .bind("Draft Reply")
+                    .bind(&draft_reply)
                     .execute(sqlite_pool).await {
                         tracing::error!("Failed to insert triage action (SQLite): {}", e);
                         let _ = sqlx::query("UPDATE ohc_job_queue SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP WHERE id = ?")
