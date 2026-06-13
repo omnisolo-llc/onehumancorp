@@ -4029,6 +4029,7 @@ async fn list_ui_orders_handler(
                             "status": row.get::<String, _>("status"),
                         })
                     } else {
+                        use sqlx::Row;
                         serde_json::json!({
                             "id": row.get::<String, _>("id"),
                             "customer_name": row.get::<String, _>("customer_name"),
@@ -4059,6 +4060,7 @@ async fn list_ui_orders_handler(
                             "status": row.get::<String, _>("status"),
                         })
                     } else {
+                        use sqlx::Row;
                         serde_json::json!({
                             "id": row.get::<String, _>("id"),
                             "customer_name": row.get::<String, _>("customer_name"),
