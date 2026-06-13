@@ -31,7 +31,7 @@ test.describe('Business Setup Wizard Comprehensive Flow', () => {
 
     await page.getByPlaceholder('e.g. I run a local bakery').fill('I run a modern art shop online');
 
-    await page.getByRole('button', { name: /Generate Storefront/ }).click();
+    await page.getByRole('button', { name: /Next/ }).click();
 
     await expect(page.getByText('Agents are building your store...')).toBeVisible({ timeout: 10000 });
 
@@ -46,7 +46,7 @@ test.describe('Business Setup Wizard Comprehensive Flow', () => {
     await page.getByRole('button', { name: /Instant Build/ }).click();
 
     // The textarea starts empty
-    const generateBtn = page.getByRole('button', { name: /Generate Storefront/ });
+    const generateBtn = page.getByRole('button', { name: /Next/ });
     await expect(generateBtn).toBeDisabled();
 
     await page.getByPlaceholder('e.g. I run a local bakery').fill('A');
@@ -67,7 +67,7 @@ test.describe('Business Setup Wizard Comprehensive Flow', () => {
     await page.getByRole('button', { name: /Instant Build/ }).click();
 
     // Bio should be cleared and button disabled
-    const generateBtn = page.getByRole('button', { name: /Generate Storefront/ });
+    const generateBtn = page.getByRole('button', { name: /Next/ });
     await expect(generateBtn).toBeDisabled();
     await expect(page.getByPlaceholder('e.g. I run a local bakery')).toHaveValue('');
   });
@@ -84,7 +84,7 @@ test.describe('Business Setup Wizard Comprehensive Flow', () => {
     await page.goto('/website-builder');
     await page.getByRole('button', { name: /Instant Build/ }).click();
 
-    const generateBtn = page.getByRole('button', { name: /Generate Storefront/ });
+    const generateBtn = page.getByRole('button', { name: /Next/ });
     await expect(generateBtn).toBeDisabled();
 
     await page.getByPlaceholder('e.g. I run a local bakery').fill('   \n  ');

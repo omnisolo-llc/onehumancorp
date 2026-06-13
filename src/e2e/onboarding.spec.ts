@@ -203,7 +203,7 @@ test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
 
     await bioInput.fill("I run a high-end tech consultation firm specializing in AI in San Francisco.");
 
-    const generateButton = page.getByRole('button', { name: 'Generate Storefront' });
+    const generateButton = page.getByRole('button', { name: 'Next' });
     await expect(generateButton).toBeVisible();
     await generateButton.click();
 
@@ -230,7 +230,7 @@ test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
 
     await page.context().setOffline(true);
 
-    const generateButton = page.getByRole('button', { name: 'Generate Storefront' });
+    const generateButton = page.getByRole('button', { name: 'Next' });
     await generateButton.click();
 
     // Verify error is shown with correct styling
@@ -255,7 +255,7 @@ test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
     const instantBuildButton = page.locator('button', { hasText: 'Instant Build' });
     await instantBuildButton.click();
 
-    const generateButton = page.getByRole('button', { name: 'Generate Storefront' });
+    const generateButton = page.getByRole('button', { name: 'Next' });
 
     // Button should be disabled when input is empty.
     await expect(generateButton).toBeDisabled();
@@ -276,7 +276,7 @@ test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
     // Only provide a generic description
     await bioInput.fill("I sell things online.");
 
-    const generateButton = page.getByRole('button', { name: 'Generate Storefront' });
+    const generateButton = page.getByRole('button', { name: 'Next' });
     await generateButton.click();
 
     const successHeading = page.getByRole('heading', { name: "You're Live!" });
@@ -296,7 +296,7 @@ test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
     expect(box?.height).toBeGreaterThanOrEqual(44);
     expect(box?.width).toBeLessThanOrEqual(375);
 
-    const generateButton = page.getByRole('button', { name: 'Generate Storefront' });
+    const generateButton = page.getByRole('button', { name: 'Next' });
     const btnBox = await generateButton.boundingBox();
     expect(btnBox?.height).toBeGreaterThanOrEqual(44);
   });
