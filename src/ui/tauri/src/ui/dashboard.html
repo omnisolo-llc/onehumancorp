@@ -666,6 +666,36 @@
         </div>
       </div>
 
+
+      <!-- Viral Loop Performance Widget -->
+      <div class="ohc-growth-card" id="viral-loop-performance-widget" style="margin-bottom: 20px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+          <div>
+            <h2 style="margin-bottom: 4px;">Viral Loop Performance</h2>
+            <p style="margin-top: 0; margin-bottom: 0;">Track your referral program and team growth.</p>
+          </div>
+          <div style="background-color: rgba(0, 102, 255, 0.1); color: #0066FF; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600;">Active</div>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
+          <div style="background: rgba(255, 255, 255, 0.4); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 12px; padding: 16px;">
+            <p style="margin: 0; font-size: 14px; color: #6b7280; margin-bottom: 8px;">Invites Sent</p>
+            <p class="text-3xl" id="viral-loop-invites-sent" style="margin: 0; font-size: 28px; font-weight: 700; color: #1D1D1F;">0</p>
+          </div>
+          <div style="background: rgba(255, 255, 255, 0.4); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 12px; padding: 16px;">
+            <p style="margin: 0; font-size: 14px; color: #6b7280; margin-bottom: 8px;">Active Referrals</p>
+            <p class="text-3xl" id="viral-loop-active-referrals" style="margin: 0; font-size: 28px; font-weight: 700; color: #1D1D1F;">0</p>
+          </div>
+          <div style="background: rgba(255, 255, 255, 0.4); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 12px; padding: 16px;">
+            <p style="margin: 0; font-size: 14px; color: #6b7280; margin-bottom: 8px;">Revenue from Referrals</p>
+            <p class="text-3xl" id="viral-loop-revenue" style="margin: 0; font-size: 28px; font-weight: 700; color: #1D1D1F;">$0.00</p>
+          </div>
+          <div style="background: rgba(255, 255, 255, 0.4); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 12px; padding: 16px;">
+            <p style="margin: 0; font-size: 14px; color: #6b7280; margin-bottom: 8px;">Pending Rewards</p>
+            <p class="text-3xl" id="viral-loop-pending-rewards" style="margin: 0; font-size: 28px; font-weight: 700; color: #1D1D1F;">$0.00</p>
+          </div>
+        </div>
+      </div>
+
       <div class="ohc-growth-card" id="referral-tier-section" style="margin-bottom: 20px; display: none;">
         <h2>Your Referral Rewards</h2>
         <p id="referral-tier-text">Loading your tier...</p>
@@ -1204,6 +1234,24 @@
         }
       }
       checkReferralTier();
+
+      // Fetch Viral Loop Performance Metrics
+      async function fetchViralLoopMetrics() {
+        try {
+          const res = await fetch('/api/v1/growth/team-invites/aggregated-metrics');
+          if (res.ok) {
+            const data = await res.json();
+            document.getElementById('viral-loop-invites-sent').innerText = data.total_invites || '0';
+            document.getElementById('viral-loop-active-referrals').innerText = data.metrics?.active_referrals || '0';
+            document.getElementById('viral-loop-revenue').innerText = '$' + (data.metrics?.revenue || 0).toFixed(2);
+            document.getElementById('viral-loop-pending-rewards').innerText = '$' + (data.metrics?.pending_rewards || 0).toFixed(2);
+          }
+        } catch (e) {
+          console.error("Failed to fetch viral loop metrics", e);
+        }
+      }
+      fetchViralLoopMetrics();
+
 
 
       // Milestone logic
