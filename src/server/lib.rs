@@ -3906,7 +3906,7 @@ async fn ui_dashboard_unified_agent_feed_handler(
         let cache_key_bg = cache_key.clone();
         tokio::spawn(async move {
             let (approvals_res, ledger_res) = tokio::join!(
-                tokio::spawn({ let db = db.clone(); let t = t.clone(); async move { load_ui_agent_approvals_from_db(&db, &t).await } }),
+                tokio::spawn({ let db = db.clone(); let t = t.clone(); async move { load_ui_agent_feed_from_db(&db, &t).await } }),
                 tokio::spawn({ let db = db.clone(); let t = t.clone(); async move { load_ui_ledger_from_db(&db, &t).await } })
             );
 
@@ -3916,7 +3916,7 @@ async fn ui_dashboard_unified_agent_feed_handler(
             if mobile_optimized {
                 for item in pending_approvals.iter_mut() {
                     if let Some(obj) = item.as_object_mut() {
-                        obj.remove("payload");
+                        obj.remove("context_payload");
                     }
                 }
                 for item in entries.iter_mut() {
@@ -3939,7 +3939,7 @@ async fn ui_dashboard_unified_agent_feed_handler(
     }
 
     let (approvals_res, ledger_res) = tokio::join!(
-        tokio::spawn({ let db = db.clone(); let t = tenant_id.clone(); async move { load_ui_agent_approvals_from_db(&db, &t).await } }),
+        tokio::spawn({ let db = db.clone(); let t = tenant_id.clone(); async move { load_ui_agent_feed_from_db(&db, &t).await } }),
         tokio::spawn({ let db = db.clone(); let t = tenant_id.clone(); async move { load_ui_ledger_from_db(&db, &t).await } })
     );
 
@@ -3949,7 +3949,7 @@ async fn ui_dashboard_unified_agent_feed_handler(
     if mobile_optimized {
         for item in pending_approvals.iter_mut() {
             if let Some(obj) = item.as_object_mut() {
-                obj.remove("payload");
+                obj.remove("context_payload");
             }
         }
         for item in entries.iter_mut() {

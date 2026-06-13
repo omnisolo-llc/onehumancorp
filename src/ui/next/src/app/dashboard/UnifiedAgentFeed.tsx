@@ -53,6 +53,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
   const [isOffline, setIsOffline] = useState(false);
   const [offlineActionsCount, setOfflineActionsCount] = useState(0);
   const [queuedActionIds, setQueuedActionIds] = useState<Set<string>>(new Set());
+  const [transitioningId, setTransitioningId] = useState<string | null>(null);
 
   const tenantId = () => {
     if (typeof window === "undefined") return "default";
@@ -311,6 +312,16 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
   };
 
   const handleDecision = async (id: string, approved: boolean) => {
+    if (approved) {
+      setTransitioningId(id);
+      setTimeout(() => {
+        setItems(prev => prev.filter(app => app.id !== id));
+        setTransitioningId(null);
+      }, 500);
+    } else {
+      setItems(prev => prev.filter(app => app.id !== id));
+    }
+
     if (isOffline) {
       // Enqueue offline action
       await enqueueAction({
@@ -323,9 +334,6 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
       setQueuedActionIds(prev => new Set(prev).add(id));
       return;
     }
-
-    // Optimistic UI update
-    setItems(prev => prev.filter(app => app.id !== id));
 
     try {
       await submitDecision(id, approved);
@@ -459,7 +467,10 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
             {items.map((approval) => (
               <div
                 key={approval.id}
-                className="glassmorphism p-5 rounded-[16px] border border-white/40 dark:border-white/10 shadow-sm flex flex-col gap-4"
+                className={`glassmorphism p-5 rounded-[16px] shadow-sm flex flex-col gap-4 relative overflow-hidden transition-all duration-300 ${
+                  transitioningId === approval.id ? 'border-green-500 scale-95 opacity-50 border-2' : 'border border-white/40 dark:border-white/10'
+                }`}
+                data-testid="agent-feed-card"
               >
                 <div className="flex flex-col gap-1">
                   <div className="flex items-center gap-2">
