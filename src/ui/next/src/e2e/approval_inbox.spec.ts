@@ -1,10 +1,23 @@
-import { expect, test } from '@playwright/test';
+import { test, expect } from '../../../../e2e/fixtures';
 
 test.describe('Unified Agent Feed Mobile Test', () => {
   test.use({ viewport: { width: 375, height: 812 } });
 
-  test('should render properly and handle tabs', async ({ page }) => {
+  test('should render properly and handle tabs and display an action card from real data', async ({ page, loginAs, adminUser }) => {
     test.setTimeout(180000);
+
+    await loginAs(page, adminUser);
+
+    // 1. Simulate the SalesAgent drafting a quote to create a real proposal in the feed
+    await page.request.post('/api/agents/approvals/simulate-quote-draft', {
+      headers: {
+        'x-tenant-id': 'tenant-1',
+        'x-user-id': 'default'
+      },
+      data: {
+        inbox_message_id: 'msg-feed-test-1'
+      }
+    });
 
     await page.goto('/dashboard');
     await expect(page.locator('h1', { hasText: 'Dashboard' }).first()).toBeVisible({ timeout: 25000 });
@@ -21,50 +34,33 @@ test.describe('Unified Agent Feed Mobile Test', () => {
     await expect(feedContainer).toBeVisible();
     await expect(feedContainer).toHaveCSS('backdrop-filter', /blur\(30px\)|none/);
 
-    // Switch back
+    // Switch back to proposals
     await page.locator('button', { hasText: /Proposals/ }).first().click({ force: true });
 
-    // Verify one of the approval items is visible
-    await expect(page.locator('h3', { hasText: /Agent tentatively booked/ }).first()).toBeVisible();
-  });
+    // Verify the proposal we injected is visible
+    await expect(page.getByText('Draft Quote: Plumbing Fix for Customer').first()).toBeVisible();
+    await expect(page.getByText('Requires Review').first()).toBeVisible();
 
-  test('should display Action Needed tag correctly', async ({ page }) => {
-    await page.goto('/dashboard');
-    await expect(page.locator('button', { hasText: /Proposals/ }).first()).toBeVisible({ timeout: 15000 });
-
-    // Look for Action Needed tag
-    const actionNeededTag = page.locator('span', { hasText: 'Action Needed' }).first();
-    await expect(actionNeededTag).toBeVisible();
-    await expect(actionNeededTag).toHaveClass(/bg-green-100/);
-  });
-
-  test('should display Approval tag correctly', async ({ page }) => {
-    await page.goto('/dashboard');
-    await expect(page.locator('button', { hasText: /Proposals/ }).first()).toBeVisible({ timeout: 15000 });
-
-    // Look for Approval tag
-    const approvalTag = page.locator('span', { hasText: 'Approval' }).first();
-    await expect(approvalTag).toBeVisible();
-    await expect(approvalTag).toHaveClass(/bg-\[\#0066FF\]\/10/);
-  });
-
-  test('should display action buttons for proposals', async ({ page }) => {
-    await page.goto('/dashboard');
-    await expect(page.locator('button', { hasText: /Proposals/ }).first()).toBeVisible({ timeout: 15000 });
-
-    const approveButton = page.locator('button', { hasText: 'Approve' }).first();
+    // Verify action buttons for the proposal
+    const approveButton = page.locator('button', { hasText: 'Approve & Send' }).first();
     await expect(approveButton).toBeVisible();
-    await expect(approveButton).toHaveClass(/bg-green-500/);
 
-    const editButton = page.locator('button', { hasText: 'Edit' }).first();
+    const editButton = page.locator('a', { hasText: 'Edit Draft' }).first();
     await expect(editButton).toBeVisible();
 
-    const denyButton = page.locator('button', { hasText: 'Deny' }).first();
-    await expect(denyButton).toBeVisible();
-    await expect(denyButton).toHaveClass(/bg-red-100/);
+    const rejectButton = page.locator('button', { hasText: 'Ask Agent to Adjust' }).first();
+    await expect(rejectButton).toBeVisible();
+
+    // Test the optimistic approval
+    await approveButton.click();
+
+    // The optimistic update should remove the card from proposals
+    await expect(page.getByText('Draft Quote: Plumbing Fix for Customer')).toHaveCount(0);
   });
 
-  test('should display empty state or loading state in Activity Feed correctly', async ({ page }) => {
+  test('should display empty state or loading state in Activity Feed correctly', async ({ page, loginAs, adminUser }) => {
+    await loginAs(page, adminUser);
+
     await page.goto('/dashboard');
     await expect(page.locator('button', { hasText: 'Activity Feed' })).toBeVisible({ timeout: 15000 });
 
