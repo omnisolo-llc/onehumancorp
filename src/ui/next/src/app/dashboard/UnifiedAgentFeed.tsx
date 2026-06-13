@@ -4,6 +4,19 @@ import { useEffect, useState } from "react";
 import GrowthReferralWidget from "../components/GrowthReferralWidget";
 import { enqueueAction, getActions, removeAction } from "../utils/offlineQueue";
 
+type TriageItem = {
+  id: string;
+  tenant_id: string;
+  customer_id?: string;
+  source?: string;
+  priority?: string;
+  context?: string;
+  action_type?: string;
+  action_payload?: string;
+  status?: string;
+  created_at: string;
+};
+
 type AgentFeedItem = {
   id: string;
   tenant_id: string;
@@ -44,6 +57,10 @@ type ApprovalRequest = {
 };
 
 export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
+  const [triageItems, setTriageItems] = useState<TriageItem[]>([]);
+  const [triageLoading, setTriageLoading] = useState(true);
+  const [triageError, setTriageError] = useState("");
+
   const [items, setItems] = useState<AgentFeedItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -120,7 +137,25 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
   useEffect(() => {
     let mounted = true;
 
+    async function fetchTriage() {
+      setTriageLoading(true);
+      setTriageError("");
+      try {
+        const tenant = tenantId();
+        const res = await fetch(`/api/ui/triage?tenant_id=${encodeURIComponent(tenant)}`);
+        if (!res.ok) throw new Error("Failed to load triage items from the database");
+        const data = await res.json();
+        const rows = Array.isArray(data) ? data : (Array.isArray(data?.items) ? data.items : []);
+        if (mounted) setTriageItems(rows);
+      } catch (e: any) {
+        if (mounted) setTriageError(e?.message || "Failed to load triage items");
+      } finally {
+        if (mounted) setTriageLoading(false);
+      }
+    }
+
     async function fetchAll() {
+      fetchTriage();
       try {
         setLoading(true);
         setActivityLoading(true);
@@ -293,6 +328,29 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
     return () => events.close();
   }, []);
 
+  const handleTriageDecision = async (id: string, approved: boolean) => {
+    try {
+      const res = await fetch(`/api/ui/triage/action?tenant_id=${encodeURIComponent(tenantId())}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ triage_item_id: id, approved })
+      });
+      if (!res.ok) throw new Error("Failed to update action");
+
+      // Optimistic UI update
+      setTriageItems(prev => prev.filter(i => i.id !== id));
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const badgeTone = (priority?: string) => {
+    const p = (priority || "").toLowerCase();
+    if (p === "high" || p === "urgent") return "bad";
+    if (p === "low") return "neutral";
+    return "warning";
+  };
+
   const submitDecision = async (id: string, approved: boolean) => {
     const tenant = tenantId();
     const res = await fetch(`/api/agent-feed/${id}/state`, {
@@ -360,7 +418,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
   }
 
   return (
-    <section className="mb-6 max-w-[375px] w-full mx-auto sm:max-w-none" aria-label="Unified Agent Feed">
+    <section className="mb-6 w-full max-w-full overflow-hidden sm:max-w-none" aria-label="Unified Agent Feed">
       <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2 hidden md:block">Action Center</h2>
       {isOffline && (
         <div className="mb-4 w-full p-2 glassmorphism rounded-[8px] bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 text-center text-sm font-semibold flex items-center justify-center gap-2">
@@ -398,6 +456,89 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
       <div className="flex flex-col gap-4">
         {activeTab === "proposals" && (
           <>
+            {triageError && (
+              <div className="w-full mb-4 p-4 glassmorphism rounded-[16px] border border-[#FF3B30]/50 bg-[#FF3B30]/10 text-[#FF3B30] text-center">
+                {triageError}
+              </div>
+            )}
+
+            {triageItems.filter(item => item.source === "Proactive Context Agent").map((item) => (
+              <div key={item.id} className="mb-6 p-6 rounded-[16px] glassmorphism border border-orange-400/50 dark:border-orange-500/30 bg-orange-50/50 dark:bg-orange-900/10 shadow-lg relative overflow-hidden">
+                <div className="absolute top-0 left-0 w-1 h-full bg-orange-500"></div>
+                <div className="flex justify-between items-start mb-3">
+                  <div>
+                    <h2 className="text-xl font-bold font-outfit text-orange-900 dark:text-orange-100 flex items-center gap-2">
+                      <span className="text-2xl">✨</span> Needs Attention Today
+                    </h2>
+                    <p className="text-orange-800/80 dark:text-orange-200/80 mt-1 text-sm font-medium">{item.context}</p>
+                  </div>
+                  <span className={`app-badge ${badgeTone(item.priority)}`}>{item.priority || "High"}</span>
+                </div>
+
+                {item.action_type && (
+                  <div className="mt-4 mb-5 p-4 rounded-xl bg-white/60 dark:bg-black/40 border border-orange-200 dark:border-orange-900/50">
+                    <div className="text-xs uppercase tracking-wider font-semibold text-orange-800 dark:text-orange-300 mb-1">Suggested Action: {item.action_type}</div>
+                    <div className="text-sm font-medium text-gray-900 dark:text-gray-100 whitespace-pre-wrap">{item.action_payload}</div>
+                  </div>
+                )}
+
+                <div className="flex flex-col sm:flex-row gap-3 mt-2 w-full">
+                  <button
+                    onClick={() => handleTriageDecision(item.id, true)}
+                    className="flex-1 px-6 py-2.5 min-h-[44px] min-w-[44px] rounded-[16px] bg-orange-500 hover:bg-orange-600 text-white font-medium shadow-sm transition-colors flex items-center justify-center"
+                    data-testid={`triage-approve-${item.id}`}
+                  >
+                    Approve & Execute
+                  </button>
+                  <button
+                    onClick={() => handleTriageDecision(item.id, false)}
+                    className="flex-1 px-6 py-2.5 min-h-[44px] min-w-[44px] rounded-[16px] bg-white/50 dark:bg-black/30 border border-orange-200 dark:border-orange-900/30 hover:bg-white/80 dark:hover:bg-black/50 text-orange-900 dark:text-orange-100 font-medium transition-colors flex items-center justify-center"
+                    data-testid={`triage-dismiss-${item.id}`}
+                  >
+                    Dismiss
+                  </button>
+                </div>
+              </div>
+            ))}
+
+            {triageItems.filter(item => item.source !== "Proactive Context Agent").map((item) => (
+              <div key={item.id} className="mb-6 p-6 rounded-[16px] glassmorphism border border-white/40 dark:border-white/10 shadow-sm overflow-hidden">
+                <div className="flex justify-between items-start mb-3">
+                  <div>
+                    <h2 className="text-lg font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7]">
+                      {item.source || "Triage Action"}
+                    </h2>
+                    <p className="text-gray-600 dark:text-gray-400 mt-1 text-sm">{item.context}</p>
+                  </div>
+                  <span className={`app-badge ${badgeTone(item.priority)}`}>{item.priority || "Normal"}</span>
+                </div>
+
+                {item.action_type && (
+                  <div className="mt-4 mb-4 p-4 rounded-xl border border-blue-200 dark:border-blue-900/30 bg-blue-50/50 dark:bg-blue-900/20">
+                    <div className="text-xs uppercase tracking-wider font-semibold text-blue-900 dark:text-blue-300 mb-1">Proposed Action: {item.action_type}</div>
+                    <div className="text-sm font-medium text-blue-900 dark:text-blue-100 whitespace-pre-wrap">{item.action_payload}</div>
+                  </div>
+                )}
+
+                <div className="flex flex-col sm:flex-row gap-3 mt-2 w-full">
+                  <button
+                    onClick={() => handleTriageDecision(item.id, true)}
+                    className="flex-1 px-6 py-2.5 min-h-[44px] min-w-[44px] rounded-[16px] bg-[#0066FF] hover:bg-[#0052CC] text-white font-medium shadow-sm transition-colors flex items-center justify-center"
+                    data-testid={`triage-approve-${item.id}`}
+                  >
+                    Approve
+                  </button>
+                  <button
+                    onClick={() => handleTriageDecision(item.id, false)}
+                    className="flex-1 px-6 py-2.5 min-h-[44px] min-w-[44px] rounded-[16px] bg-white/50 dark:bg-black/30 border border-gray-200 dark:border-white/10 hover:bg-white/80 dark:hover:bg-black/50 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium transition-colors flex items-center justify-center"
+                    data-testid={`triage-dismiss-${item.id}`}
+                  >
+                    Dismiss
+                  </button>
+                </div>
+              </div>
+            ))}
+
             <div className="glassmorphism p-5 rounded-[16px]  shadow-sm flex flex-col gap-4">
               <div className="flex flex-col gap-1">
                 <div className="flex justify-between items-start">
@@ -439,12 +580,12 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
               </div>
             </div>
 
-            {loading && (
+            {(loading || triageLoading) && (
               <div className="w-full p-4 glassmorphism rounded-[16px] text-center text-gray-500">
                 Loading Agent Proposals...
               </div>
             )}
-            {!loading && items.length === 0 && (
+            {!loading && !triageLoading && items.length === 0 && triageItems.length === 0 && (
               <div className="w-full flex flex-col items-center gap-6 p-6 glassmorphism rounded-[16px]  shadow-sm opacity-90 text-center">
                 <div className="text-3xl mb-2">✨</div>
                 <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7]">All caught up!</h3>
