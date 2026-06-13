@@ -1,0 +1,40 @@
+--- src/server/services/booking.rs
++++ src/server/services/booking.rs
+@@ -1172,7 +1172,7 @@
+              }
+         }
+
+-        let _ = tx.commit().await;
++        // We need the transaction for dynamic pricing queries later.
+
+         let soft_locks = self.soft_lock_store();
+         let mut available_slots = vec![];
+@@ -1221,8 +1221,8 @@
+         let base_price = base_price_opt.unwrap_or(0);
+
+-        for mut slot in available_slots {
+-            let mut adjusted_price = base_price;
++        for slot in available_slots {
++            let _adjusted_price = base_price; // Assuming we use it later when TimeSlot supports price
+             for rule_row in &rules_rows {
+                 if let Ok(rules_json) = rule_row.try_get::<sqlx::types::Json<serde_json::Value>, _>("rules_json") {
+                     if let Some(rule_product_id) = rules_json.get("product_id").and_then(|v| v.as_str()) {
+                         if rule_product_id == product_id {
+@@ -1246,7 +1246,7 @@
+                                     demand_level: if hour >= 17 && hour <= 19 { "high" } else { "normal" }.to_string(), // Surge for evening
+                                 };
+                                 let result = crate::pricing::dynamic::DynamicPricingEngine::calculate_price(&bounds, &context);
+-                                adjusted_price = (result.price * 100.0).round() as i64;
++                                let _adjusted_price = (result.price * 100.0).round() as i64;
+                                 break;
+                             }
+                         }
+@@ -1257,7 +1257,8 @@
+             // Currently app.proto TimeSlot only has start/end.
+             final_slots.push(slot);
+         }
+
++        let _ = tx.commit().await;
+
+         Ok(Response::new(CheckAvailabilityResponse { available_slots: final_slots }))
+     }

@@ -45,21 +45,6 @@
   "panels": [
     {
       "type": "text",
-      "title": "OHC Aesthetic Injector",
-      "gridPos": {
-        "h": 2,
-        "w": 24,
-        "x": 0,
-        "y": 0
-      },
-      "options": {
-        "mode": "html",
-        "content": "<link rel=\"stylesheet\" href=\"/public/css/custom.css\">"
-      },
-      "transparent": true
-    },
-    {
-      "type": "text",
       "title": "OHC Aesthetics",
       "gridPos": {
         "h": 2,
@@ -181,7 +166,8 @@
         }
       ],
       "title": "API Request Rate (5m avg)",
-      "type": "timeseries"
+      "type": "timeseries",
+      "transparent": true
     },
     {
       "datasource": {
@@ -271,7 +257,8 @@
         }
       ],
       "title": "API Request Latency (5m avg)",
-      "type": "timeseries"
+      "type": "timeseries",
+      "transparent": true
     }
   ],
   "refresh": "10s",
