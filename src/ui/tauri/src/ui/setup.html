@@ -203,6 +203,15 @@
         z-index: 2;
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       }
+
+      /* Chat Step Styles */
+      #chat-messages {
+        height: 300px;
+        overflow-y: auto;
+        padding: 10px;
+        margin-bottom: 20px;
+      }
+
       .step-indicator.active {
         background: #0066FF;
         border-color: #0066FF;
@@ -457,6 +466,7 @@
         <div class="btn-group" style="margin-top: 32px;">
           <button class="next-step-btn" data-next="step-context">Start My Business</button>
           <button type="button" class="btn-secondary" onclick="goToStep('step-instant')">Instant Build</button>
+          <button type="button" class="btn-secondary" onclick="goToStep('step-chat')" style="margin-top: 10px;">Conversational Setup</button>
         </div>
       </div>
 
@@ -473,6 +483,25 @@
 
         <div class="btn-group" style="margin-top: 24px;">
           <button id="generate-storefront-btn">Generate Storefront</button>
+        </div>
+      </div>
+
+
+      <!-- Step Chat: Conversational Build -->
+      <div class="step" id="step-chat">
+        <button onclick="goToStep('step-initial')" style="background: none; border: none; color: #0066FF; padding: 0; box-shadow: none; width: auto; font-size: 14px; min-height: auto; margin-bottom: 16px; display: flex; align-items: center; gap: 4px; font-weight: 600;">
+          <svg style="width: 16px; height: 16px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg> Back
+        </button>
+        <h1>Setup Assistant</h1>
+        <p>Talk to our AI to build your business.</p>
+
+        <div id="chat-messages" class="glassmorphism" style="text-align: left;">
+            <div style="margin-bottom: 10px; color: #333;"><strong>Assistant:</strong> What do you do? (e.g. I make custom vegan cakes in Austin)</div>
+        </div>
+
+        <div style="display: flex; gap: 10px;">
+            <input type="text" id="chat-input" class="glassmorphism" placeholder="Type a message..." style="margin-bottom: 0; flex-grow: 1;">
+            <button id="chat-send-btn" style="width: auto;">Send</button>
         </div>
       </div>
 
@@ -875,7 +904,7 @@
       function validateStep(stepId) {
           let isValid = true;
 
-          if (stepId === 'step-initial' || stepId === 'step-instant') {
+          if (stepId === 'step-initial' || stepId === 'step-instant' || stepId === 'step-chat') {
               return true;
           }
 
@@ -987,7 +1016,7 @@
 
       function updateStepper(stepId) {
           const stepperIndicator = document.getElementById('stepper-indicator');
-          if (stepId === 'step-initial' || stepId === 'step-instant') {
+          if (stepId === 'step-initial' || stepId === 'step-instant' || stepId === 'step-chat') {
               if (stepperIndicator) stepperIndicator.style.display = 'none';
           } else {
               if (stepperIndicator) stepperIndicator.style.display = 'flex';
@@ -1104,6 +1133,114 @@
               }
           });
       }
+
+
+      // Chat logic
+      const chatInputEl = document.getElementById('chat-input');
+      const chatSendBtn = document.getElementById('chat-send-btn');
+      const chatMessagesEl = document.getElementById('chat-messages');
+      let chatHistory = [];
+
+      async function sendChatMessage() {
+          const text = chatInputEl.value.trim();
+          if (!text) return;
+
+          // Append user message
+          chatMessagesEl.innerHTML += `<div style="margin-bottom: 10px; color: #0066FF;"><strong>You:</strong> ${text}</div>`;
+          chatInputEl.value = '';
+          chatHistory.push({ role: 'user', content: text });
+          chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
+
+          chatSendBtn.disabled = true;
+
+          try {
+              const backendUrl = (window.location.origin.includes('localhost') || window.location.protocol === 'file:') ? 'http://127.0.0.1:18789' : '';
+              const res = await fetch(`${backendUrl}/api/onboarding/chat`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ messages: chatHistory })
+              });
+
+              if (!res.ok) throw new Error('Chat request failed');
+              const data = await res.json();
+
+              chatMessagesEl.innerHTML += `<div style="margin-bottom: 10px; color: #333;"><strong>Assistant:</strong> ${data.reply}</div>`;
+              chatHistory.push({ role: 'assistant', content: data.reply });
+              chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
+
+              if (data.is_complete && data.intake_data) {
+                  const intakeData = data.intake_data;
+                  const req = {
+                      companyName: intakeData.business_name || "My Business",
+                      businessType: intakeData.business_type || "Online Store",
+                      companyDescription: chatHistory.map(m => m.content).join(" "),
+                      sellingCategories: intakeData.categories || ["physical"],
+                      paymentPref: "online",
+                      adminEmail: "admin@mybusiness.com",
+                      adminName: "Admin",
+                      adminPassword: "password",
+                      websiteTemplate: "auto",
+                      firstProductName: intakeData.initial_products?.[0]?.name || "First Product",
+                      firstProductPrice: intakeData.initial_products?.[0]?.price || "0.00",
+                      domainChoice: "subdomain",
+                      priceType: "fixed",
+                      location: intakeData.location || "Local",
+                      targetAudience: intakeData.target_audience || "General",
+                      initialProducts: intakeData.initial_products || []
+                  };
+
+                  if (window.__TAURI__ && window.__TAURI__.core) {
+                      await window.__TAURI__.core.invoke("start_onboarding", { req });
+                      localStorage.setItem('has_onboarded', 'true');
+                      window.location.href = "success.html";
+                      return;
+                  }
+
+                  const tenantIdStr = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront';
+                  const userIdStr = localStorage.getItem('user_id') || 'test-user';
+
+                  const startRes = await fetch(`${backendUrl}/api/onboarding/start`, {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                          business_type: req.businessType,
+                          company_name: req.companyName,
+                          company_description: req.companyDescription,
+                          selling_categories: req.sellingCategories,
+                          payment_pref: req.paymentPref,
+                          admin_email: req.adminEmail,
+                          website_template: req.websiteTemplate,
+                          first_product_name: req.firstProductName,
+                          first_product_price: req.firstProductPrice,
+                          domain_choice: req.domainChoice,
+                          admin_name: req.adminName,
+                          admin_password: req.adminPassword,
+                          price_type: req.priceType,
+                          location: req.location,
+                          target_audience: req.targetAudience,
+                          initial_products: req.initialProducts
+                      })
+                  });
+
+                  if (startRes.ok) {
+                      const startData = await startRes.json();
+                      if (startData.organization_id) {
+                          localStorage.setItem('tenant_id', startData.organization_id);
+                          localStorage.setItem('tenant', startData.organization_id);
+                      }
+                      localStorage.setItem('has_onboarded', 'true');
+                      window.location.href = "success.html";
+                  }
+              }
+          } catch (e) {
+              chatMessagesEl.innerHTML += `<div style="margin-bottom: 10px; color: #FF3B30;"><strong>Error:</strong> Failed to connect.</div>`;
+          } finally {
+              chatSendBtn.disabled = false;
+          }
+      }
+
+      if (chatSendBtn) { chatSendBtn.addEventListener('click', sendChatMessage); }
+      if (chatInputEl) { chatInputEl.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendChatMessage(); }); }
 
       if (generateStorefrontBtn) {
           generateStorefrontBtn.addEventListener('click', async () => {
