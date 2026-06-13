@@ -70,6 +70,55 @@ pub struct WorkflowExecutor {
     pub config: AgentRunConfig,
 }
 
+
+fn evaluate_condition(expr: &str) -> bool {
+    let operators = ["==", "!=", ">=", "<=", ">", "<"];
+    for op in operators {
+        if let Some(idx) = expr.find(op) {
+            let left = expr[..idx].trim();
+            let right = expr[idx + op.len()..].trim();
+
+            let num_left = left.parse::<f64>();
+            let num_right = right.parse::<f64>();
+
+            return match op {
+                "==" => left == right,
+                "!=" => left != right,
+                ">" => {
+                    if let (Ok(l), Ok(r)) = (&num_left, &num_right) {
+                        l > r
+                    } else {
+                        left > right
+                    }
+                },
+                "<" => {
+                    if let (Ok(l), Ok(r)) = (&num_left, &num_right) {
+                        l < r
+                    } else {
+                        left < right
+                    }
+                },
+                ">=" => {
+                    if let (Ok(l), Ok(r)) = (&num_left, &num_right) {
+                        l >= r
+                    } else {
+                        left >= right
+                    }
+                },
+                "<=" => {
+                    if let (Ok(l), Ok(r)) = (&num_left, &num_right) {
+                        l <= r
+                    } else {
+                        left <= right
+                    }
+                },
+                _ => false,
+            };
+        }
+    }
+    expr.trim().eq_ignore_ascii_case("true")
+}
+
 impl WorkflowExecutor {
     pub fn new(
         graph: WorkflowGraph,
@@ -264,13 +313,7 @@ impl WorkflowExecutor {
                         expr = expr.replace(&format!("{{{{{}}}}}", k), v);
                     }
 
-                    // A very naive evaluation for demo purposes: e.g. "success == success"
-                    let parts: Vec<&str> = expr.split("==").collect();
-                    let is_true = if parts.len() == 2 {
-                        parts[0].trim() == parts[1].trim()
-                    } else {
-                        false
-                    };
+                    let is_true = evaluate_condition(&expr);
 
                     current_node_id = if is_true {
                         true_target.clone()
@@ -460,12 +503,7 @@ impl WorkflowExecutor {
                             expr = expr.replace(&format!("{{{{{}}}}}", k), v);
                         }
 
-                        let parts: Vec<&str> = expr.split("==").collect();
-                        let is_true = if parts.len() == 2 {
-                            parts[0].trim() == parts[1].trim()
-                        } else {
-                            false
-                        };
+                        let is_true = evaluate_condition(&expr);
 
                         current_node_id = if is_true {
                             true_target.clone()
