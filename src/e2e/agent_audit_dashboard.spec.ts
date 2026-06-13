@@ -1,10 +1,10 @@
 import { test, expect } from '@playwright/test';
-import { e2eBaseUrl } from './fixtures';
+
 
 test('agent audit dashboard rendering and glassmorphism', async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
 
-  await page.goto(`${e2eBaseUrl}/ui/agent-audit-dashboard.html`);
+  await page.goto(`/api/ui/agent-audit-dashboard.html`);
 
   await expect(page.locator('h1', { hasText: 'Agent Audit Dashboard' })).toBeVisible({ timeout: 15000 });
   await expect(page.locator('text=Cost Tracker')).toBeVisible();
