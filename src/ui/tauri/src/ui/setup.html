@@ -420,7 +420,7 @@
         }
       }
 
-      @media (max-width: 375px) {
+            @media (max-width: 375px) {
         .stepper {
           gap: 4px;
         }
@@ -446,6 +446,17 @@
       }
         .radio-option {
           padding: 8px 12px;
+          font-size: 14px;
+        }
+        h1 {
+          font-size: 20px;
+        }
+        p {
+          font-size: 13px;
+        }
+        .persona-chip {
+          padding: 6px 12px;
+          font-size: 12px;
         }
       }
 
@@ -815,6 +826,7 @@
         .then(apiState => {
             if (apiState && Object.keys(apiState).length > 0) {
                 state = { ...state, ...(apiState.wizardState || apiState) };
+                localStorage.setItem('onboardingState', JSON.stringify(state)); // Sync cross-device state down to local
                 populateForm();
             }
         })
@@ -838,6 +850,35 @@
               inputs.name.style.borderColor = 'rgba(255, 255, 255, 0.5)';
           }
       });
+
+      inputs.adminEmail.addEventListener('input', () => {
+          if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(inputs.adminEmail.value.trim())) {
+              errors.adminEmail.style.display = 'none';
+              inputs.adminEmail.style.borderColor = 'rgba(255, 255, 255, 0.5)';
+          }
+      });
+
+      inputs.adminPassword.addEventListener('input', () => {
+          if (inputs.adminPassword.value.trim().length >= 8) {
+              errors.adminPassword.style.display = 'none';
+              inputs.adminPassword.style.borderColor = 'rgba(255, 255, 255, 0.5)';
+          }
+      });
+
+      inputs.assistantName.addEventListener('input', () => {
+          if (inputs.assistantName.value.trim().length > 0) {
+              errors.assistantName.style.display = 'none';
+              inputs.assistantName.style.borderColor = 'rgba(255, 255, 255, 0.5)';
+          }
+      });
+
+      inputs.firstOffer.addEventListener('input', () => {
+          if (inputs.firstOffer.value.trim().length > 0) {
+              errors.firstOffer.style.display = 'none';
+              inputs.firstOffer.style.borderColor = 'rgba(255, 255, 255, 0.5)';
+          }
+      });
+
 
       function populateForm() {
           if (state.businessName) inputs.name.value = state.businessName;
