@@ -9,7 +9,7 @@ test.describe('Agentic Invoicing Flow', () => {
 
     test('should allow owner to review, edit and send AI-drafted invoice', async ({ page }) => {
         // 1. Verify page loads correctly
-        await expect(page.locator('h1')).toHaveText('Finance & Invoicing');
+        await expect(page.locator('h1', { hasText: 'Finance & Invoicing' })).toBeVisible();
 
         // 2. Look for the AI Triage Feed card
         const triageCard = page.locator('text=Draft Invoice ready for Nora\'s Design Project');

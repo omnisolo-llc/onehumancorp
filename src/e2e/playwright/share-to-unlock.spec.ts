@@ -14,7 +14,7 @@ test('share-to-unlock generator sets up a campaign and generates a valid link', 
   await page.fill('textarea[placeholder="e.g. I just unlocked a secret 20% discount!"]', 'Check out this deal!');
 
   // Check the preview updates
-  await expect(page.locator('.text-2xl.font-bold', { hasText: 'My Awesome Campaign' })).toBeVisible();
+  await expect(page.locator('h2', { hasText: 'My Awesome Campaign' }).first()).toBeVisible();
 
   // Get the generated link from the link input/display
   const linkText = await page.locator('.font-mono.truncate').textContent();
