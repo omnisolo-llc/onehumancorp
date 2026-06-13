@@ -91,6 +91,14 @@ describe('OnboardingWizard', () => {
     const targetAudienceInput = await screen.findByPlaceholderText(/Local families, Tech startups/i);
     await user.type(targetAudienceInput, 'Local families{Enter}');
 
+    // Chat Step 5 - Use Enter Key
+    await waitFor(() => {
+      expect(screen.getByText("What are you trying to accomplish?")).toBeInTheDocument();
+    });
+
+    const goalInput = await screen.findByPlaceholderText(/e.g. Expand locally, Increase online sales/i);
+    await user.type(goalInput, 'Expand locally{Enter}');
+
     // Verify it transitions to Step 2: Review Details by triggering handleIntake
     await waitFor(() => {
       expect(screen.getByText("Review Details")).toBeInTheDocument();
@@ -210,11 +218,21 @@ describe('OnboardingWizard', () => {
     const targetAudienceInput = await screen.findByPlaceholderText(/Local families, Tech startups/i);
     await user.type(targetAudienceInput, 'Local families');
 
-    const button = screen.getByRole('button', { name: /Next/i });
+    const button = screen.getAllByRole('button', { name: /Next/i })[0];
     expect(button).not.toBeDisabled();
 
-    // Step 1: Intake
     await user.click(button);
+
+    // Verify it transitions to Step 5: Business Goal
+    await waitFor(() => {
+      expect(screen.getByText("What are you trying to accomplish?")).toBeInTheDocument();
+    });
+
+    const goalInput = await screen.findByPlaceholderText(/e.g. Expand locally, Increase online sales/i);
+    await user.type(goalInput, 'Expand locally');
+
+    const nextButton = screen.getAllByRole('button', { name: /Next/i })[0];
+    await user.click(nextButton);
 
     // Verify it transitions to Step 2: Review Details
     await waitFor(() => {
@@ -308,9 +326,19 @@ describe('OnboardingWizard', () => {
     const targetAudienceInput = await screen.findByPlaceholderText(/Local families, Tech startups/i);
     await user.type(targetAudienceInput, 'Local families');
 
-    const button = screen.getByRole('button', { name: /Next/i });
-
+    const button = screen.getAllByRole('button', { name: /Next/i })[0];
     await user.click(button);
+
+    // Chat Step 5
+    await waitFor(() => {
+      expect(screen.getByText('What are you trying to accomplish?')).toBeInTheDocument();
+    });
+
+    const goalInput = await screen.findByPlaceholderText(/e.g. Expand locally, Increase online sales/i);
+    await user.type(goalInput, 'Expand locally');
+
+    const nextButton = screen.getAllByRole('button', { name: /Next/i })[0];
+    await user.click(nextButton);
 
     // Verify error appears and step goes back to last input screen
     await waitFor(() => {
@@ -347,7 +375,10 @@ describe('OnboardingWizard', () => {
     // Verify error appears and step goes back to 3
     await waitFor(() => {
       expect(screen.getByText("Failed to start onboarding")).toBeInTheDocument();
-      expect(screen.getByText("Style & Team")).toBeInTheDocument();
+    });
+    // Give it a moment to render the step since the state update happens after the error is set
+    await waitFor(() => {
+        expect(screen.getByText("Style & Team")).toBeInTheDocument();
     });
 
     consoleErrorSpy.mockRestore();
@@ -595,30 +626,27 @@ describe('OnboardingWizard', () => {
     expect(screen.getByDisplayValue('Draft Products')).toBeInTheDocument();
   });
 
-  it('Step 4: Target audience saves and navigates to launch correctly', async () => {
+  it('Step 5: Business Goal saves and navigates correctly', async () => {
     const user = userEvent.setup({ delay: null });
 
-    // Set initial state to Step 4 (chatStep = 4)
     act(() => {
       useOnboardingStore.setState({
         step: 1,
-        chatStep: 4,
+        chatStep: 5,
         businessName: 'Valid Name',
         whatYouSell: 'Products',
-        location: 'City'
+        location: 'City',
+        targetAudience: 'Local families'
       });
     });
 
     await renderOnboardingWizard();
 
-    const targetAudienceInput = await screen.findByPlaceholderText(/Local families, Tech startups/i);
-    await user.type(targetAudienceInput, 'Local families');
+    const goalInput = await screen.findByPlaceholderText(/e.g. Expand locally, Increase online sales/i);
+    await user.type(goalInput, 'Expand locally');
 
     const generateBtn = screen.getByRole('button', { name: /Next/i });
     expect(generateBtn).not.toBeDisabled();
-
-    // Note: handleIntake uses fetch which is either mocked or fails, but we just want to test
-    // that the UI hook for targetAudience works.
   });
 
   it('Save Draft button triggers draft API and shows success message', async () => {

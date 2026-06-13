@@ -100,6 +100,7 @@ export default function OnboardingWizard() {
       step,
       chatStep,
       businessDescription,
+      businessGoal,
       businessName,
       whatYouSell,
       location,
@@ -144,6 +145,7 @@ export default function OnboardingWizard() {
         step,
         chatStep,
         businessDescription,
+        businessGoal,
         businessName,
         whatYouSell,
         location,
@@ -200,6 +202,7 @@ export default function OnboardingWizard() {
         if (data.wizardState.step !== undefined) setStep(data.wizardState.step === 4 ? 3 : data.wizardState.step);
         if (data.wizardState.chatStep !== undefined) setChatStep(data.wizardState.chatStep);
         if (data.wizardState.businessDescription !== undefined) setBusinessDescription(data.wizardState.businessDescription);
+        if (data.wizardState.businessGoal !== undefined) setBusinessGoal(data.wizardState.businessGoal);
         if (data.wizardState.businessName !== undefined) setBusinessName(data.wizardState.businessName);
         if (data.wizardState.whatYouSell !== undefined) setWhatYouSell(data.wizardState.whatYouSell);
         if (data.wizardState.location !== undefined) setLocation(data.wizardState.location);
@@ -239,6 +242,7 @@ export default function OnboardingWizard() {
       step,
       chatStep,
       businessDescription,
+      businessGoal,
       businessName,
       whatYouSell,
       location,
@@ -279,7 +283,7 @@ export default function OnboardingWizard() {
       const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
       const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
 
-      const combinedDescription = `Business Name: ${businessName}\nWhat we sell: ${whatYouSell}\nLocation: ${location}\nTarget Audience: ${targetAudience}`;
+      const combinedDescription = `Business Name: ${businessName}\nWhat we sell: ${whatYouSell}\nLocation: ${location}\nTarget Audience: ${targetAudience}\nGoal: ${businessGoal}`;
 
       const intakeRes = await fetch('/api/onboarding/intake', {
         method: 'POST',
@@ -846,7 +850,7 @@ export default function OnboardingWizard() {
                               return;
                             }
                             setValidationError('');
-                            handleIntake();
+                            setChatStep(5); syncStateToBackend({ chatStep: 5 });
                           }
                         }}
                         placeholder="e.g. Local families, Tech startups"
@@ -864,9 +868,74 @@ export default function OnboardingWizard() {
                           return;
                         }
                         setValidationError('');
+                        setChatStep(5); syncStateToBackend({ chatStep: 5 });
+                      }}
+                      disabled={!targetAudience.trim()}
+                      className="w-full bg-[#0066FF] text-white min-h-[44px] min-w-[44px] p-4 rounded-[8px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] hover:shadow-[0_6px_20px_rgba(0,102,255,0.23)] active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <IconLabel icon="next">Next</IconLabel>
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {chatStep === 5 && (
+                <div className="flex flex-col justify-center items-center gap-4 flex-1 animate-fade-in">
+                  <button onClick={() => { setChatStep(4); syncStateToBackend({ chatStep: 4 }); }} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
+                  </button>
+                  <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">What are you trying to accomplish?</h2>
+                  <div className="flex items-start sm:items-center justify-between mb-6 w-full gap-2">
+                    <p className="text-gray-500 dark:text-[#A1A1A6] text-sm pr-4">
+                      This helps our AI generate the perfect storefront copy and select the best tools for your business.
+                    </p>
+                    <button
+                      onClick={() => handleSaveDraft()}
+                      className="text-sm font-semibold text-[#0066FF] hover:underline whitespace-nowrap shrink-0 ml-auto flex items-center justify-center"
+                    >
+                      <IconLabel icon="save">Save Draft</IconLabel>
+                    </button>
+                  </div>
+
+                  {saveMessage && <p className="text-[#34C759] text-sm font-semibold mb-2">{saveMessage}</p>}
+
+                  <div className="space-y-4 flex-1 w-full">
+                    <div>
+                      <input
+                        type="text"
+                        autoFocus
+                        autoCapitalize="sentences"
+                        value={businessGoal}
+                        onChange={(e) => setBusinessGoal(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && !e.shiftKey) {
+                            e.preventDefault();
+                            if (!businessGoal.trim()) {
+                              setValidationError('Please tell us your business goal.');
+                              return;
+                            }
+                            setValidationError('');
+                            handleIntake();
+                          }
+                        }}
+                        placeholder="e.g. Expand locally, Increase online sales"
+                        className={`w-full p-3 sm:p-4 rounded-[8px] border outline-none glassmorphism min-h-[44px] min-w-[44px] text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] shadow-inner ${validationError === 'Please tell us your business goal.' ? 'border-[#FF3B30]' : 'border-white/50 dark:border-white/10 focus:border-[#0066FF]'}`}
+                      />
+                    </div>
+                  </div>
+
+                  {validationError && <p className="text-[#FF3B30] text-sm font-semibold mb-2">{validationError}</p>}
+                  <div className="mt-auto pt-6 w-full">
+                    <button
+                      onClick={() => {
+                        if (!businessGoal.trim()) {
+                          setValidationError('Please tell us your business goal.');
+                          return;
+                        }
+                        setValidationError('');
                         handleIntake();
                       }}
-                      disabled={!targetAudience.trim() || isLoading}
+                      disabled={!businessGoal.trim() || isLoading}
                       className="w-full bg-[#0066FF] text-white min-h-[44px] min-w-[44px] p-4 rounded-[8px] font-bold shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#0052cc] hover:shadow-[0_6px_20px_rgba(0,102,255,0.23)] active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {isLoading ? (
@@ -877,7 +946,7 @@ export default function OnboardingWizard() {
                           </svg>
                           Analyzing...
                         </span>
-                      ) : <IconLabel icon="launch">Next</IconLabel>}
+                      ) : <IconLabel icon="next">Next</IconLabel>}
                     </button>
                   </div>
                 </div>
