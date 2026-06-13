@@ -53,7 +53,7 @@ test.describe('Dashboard Cleanup Audit', () => {
         tooltipLoaded = true;
       }
     });
-    await page.goto('/setup');
+    await page.goto('/dashboard');
     await page.waitForTimeout(3000);
     expect(tooltipLoaded).toBe(false);
   });
