@@ -172,9 +172,15 @@ Output JSON format:
             // Get actual customer_id if exists in payload, otherwise empty string or NULL logic
             let customer_id_val = payload.get("customer_id").and_then(|v| v.as_str());
 
+            let stored_action_payload = if action_type == "Draft Reply" {
+                serde_json::json!({ "message_id": message_id, "draft_reply": action_payload }).to_string()
+            } else {
+                action_payload.to_string()
+            };
+
             match &self.db.store {
                 crate::db::DbStore::Postgres => {
-                    let _ = sqlx::query("UPDATE inbox_messages SET draft_reply = $1 WHERE id = $2 AND tenant_id = $3")
+                    let _ = sqlx::query("UPDATE omni_inbox_messages SET draft_reply = $1 WHERE id = $2 AND tenant_id = $3")
                         .bind(&action_payload)
                         .bind(&message_id)
                         .bind(&tenant_id)
@@ -204,7 +210,7 @@ Output JSON format:
                     .bind(&triage_item_id)
                     .bind(&tenant_id)
                     .bind(&action_type)
-                    .bind(&action_payload)
+                    .bind(&stored_action_payload)
                     .execute(&self.db.pool).await {
                         tracing::error!("Failed to insert triage action: {}", e);
                         let _ = sqlx::query("UPDATE ohc_job_queue SET status = 'FAILED', updated_at = NOW() WHERE id = $1")
@@ -218,7 +224,7 @@ Output JSON format:
                         .execute(&self.db.pool).await;
                 },
                 crate::db::DbStore::Sqlite(sqlite_pool) => {
-                    let _ = sqlx::query("UPDATE inbox_messages SET draft_reply = ? WHERE id = ? AND tenant_id = ?")
+                    let _ = sqlx::query("UPDATE omni_inbox_messages SET draft_reply = ? WHERE id = ? AND tenant_id = ?")
                         .bind(&action_payload)
                         .bind(&message_id)
                         .bind(&tenant_id)
@@ -248,7 +254,7 @@ Output JSON format:
                     .bind(&triage_item_id)
                     .bind(&tenant_id)
                     .bind(&action_type)
-                    .bind(&action_payload)
+                    .bind(&stored_action_payload)
                     .execute(sqlite_pool).await {
                         tracing::error!("Failed to insert triage action (SQLite): {}", e);
                         let _ = sqlx::query("UPDATE ohc_job_queue SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP WHERE id = ?")

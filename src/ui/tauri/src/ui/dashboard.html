@@ -1407,7 +1407,20 @@
       }
 
 
+
+      function escapeHTML(str) {
+        return (str || '').replace(/[&<>'"]/g,
+            tag => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                "'": '&#39;',
+                '"': '&quot;'
+            }[tag]));
+      }
+
       function renderTriageItems(items) {
+
         if (currentTriageTab === 'proposals') {
           // If items use 'status' (ui/triage) instead of 'lifecycle_state' (agent-feed)
           const proposals = items.filter(i => i.status !== 'resolved' && i.status !== 'dismissed' && i.lifecycle_state !== 'APPROVED' && i.lifecycle_state !== 'DISMISSED');
@@ -1510,6 +1523,34 @@
                 <div class="triage-controls" style="display: flex; gap: 8px;">
                   <button class="triage-btn-approve" data-testid="approve-btn" onclick="handleTriageAction('${item.id}', true)" style="flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 12px; font-weight: 600; border: none; cursor: pointer;">Approve & Schedule</button>
                   <button class="triage-btn-dismiss" onclick="handleTriageAction('${item.id}', false)" style="flex: 1; background: rgba(0,0,0,0.05); color: #1d1d1f; padding: 12px; border-radius: 12px; font-weight: 600; border: none; cursor: pointer;">Edit Draft</button>
+                </div>
+              </div>
+            `;
+          }
+
+
+if (item.action_type === 'Draft Reply') {
+            let parsedPayload = {};
+            try { parsedPayload = JSON.parse(item.action_payload || '{}'); } catch(e){}
+            const draftText = escapeHTML(parsedPayload.draft_reply || parsedPayload.action_payload || item.action_payload || '');
+            const customerMsg = escapeHTML(item.context || item.context_payload?.customer_message || 'New message');
+            return `
+              <div class="triage-item" data-testid="triage-card-${item.id}" id="triage-${item.id}" style="background: rgba(255, 255, 255, 0.4); backdrop-filter: blur(20px); border-radius: 16px; padding: 16px; border: 1px solid rgba(255,255,255,0.6);">
+                <div class="triage-header" style="margin-bottom: 12px;">
+                  <div class="triage-source" style="display: flex; align-items: center; gap: 8px;">
+                    <span style="font-size: 18px;">💬</span> <strong style="text-transform: capitalize;">${(item.source || item.event_source || 'Message').replace('_', ' ')}</strong>
+                  </div>
+                  <div class="triage-priority ${priorityClass}">${item.priority || 'Normal'}</div>
+                </div>
+                <div class="triage-context" style="font-weight: 600; margin-bottom: 12px; font-size: 15px;">
+                  ${customerMsg}
+                </div>
+                <div style="background: rgba(0,0,0,0.03); padding: 12px; border-radius: 12px; margin-bottom: 16px; font-size: 14px; color: #333; font-style: italic;">
+                  ${draftText}
+                </div>
+                <div class="triage-controls" style="display: flex; gap: 8px;">
+                  <button class="triage-btn-approve" data-testid="approve-btn" onclick="handleTriageAction('${item.id}', true)" style="flex: 1; background: #0066FF; color: white; padding: 12px; border-radius: 12px; font-weight: 600; border: none; cursor: pointer;">Approve & Send</button>
+                  <button class="triage-btn-dismiss" onclick="handleTriageAction('${item.id}', false)" style="flex: 1; background: rgba(0,0,0,0.05); color: #1d1d1f; padding: 12px; border-radius: 12px; font-weight: 600; border: none; cursor: pointer;">Edit / Dismiss</button>
                 </div>
               </div>
             `;

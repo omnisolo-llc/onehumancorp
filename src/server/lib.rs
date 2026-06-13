@@ -3033,18 +3033,19 @@ pub async fn update_ui_triage_action_handler(
                     let action_payload = row.try_get::<String, _>("payload").unwrap_or_default();
 
                     if action_type == "Draft Reply" {
-                        let new_msg_id = format!("msg-{}", uuid::Uuid::new_v4());
-                        let _ = sqlx::query(
-                            "INSERT INTO inbox_messages (id, tenant_id, source, content, draft_reply, status) VALUES ($1, $2, $3, $4, $5, $6)"
-                        )
-                        .bind(&new_msg_id)
-                        .bind(&tenant_id)
-                        .bind("Triage Action")
-                        .bind(&action_payload)
-                        .bind("")
-                        .bind("sent")
-                        .execute(&mut *tx)
-                        .await;
+                        let json_payload: serde_json::Value = serde_json::from_str(&action_payload).unwrap_or(serde_json::json!({}));
+                        if let Some(message_id) = json_payload.get("message_id").and_then(|v| v.as_str()) {
+                            let _ = sqlx::query(
+                                "UPDATE omni_inbox_messages SET status = 'sent' WHERE id = $1 AND tenant_id = $2"
+                            )
+                            .bind(message_id)
+                            .bind(&tenant_id)
+                            .execute(&mut *tx)
+                            .await;
+                        } else {
+                            tracing::warn!("Could not extract a message_id for Draft Reply action payload: {}", action_payload);
+                        }
+
                     } else if action_type == "SocialPostDraft" {
                         tracing::info!("Approved and scheduled SocialPostDraft for tenant: {}", tenant_id);
                         // In a real implementation we would send this to AYRSHARE or similar buffer here
