@@ -104,13 +104,13 @@ export default function TriagePage() {
     >
       {actionStatus && <div className="mb-4 app-badge good" role="status">{actionStatus}</div>}
 
-      <div className="mb-6 p-6 rounded-[16px] border border-white/40 dark:border-white/10 shadow-sm" style={{ background: "rgba(255, 255, 255, 0.65)", backdropFilter: "blur(30px) saturate(210%)" }}>
+      <div className="mb-6 p-6 glassmorphism border border-white/40 dark:border-white/10 shadow-sm" >
         <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Action Center</h2>
         <p className="text-gray-600 dark:text-gray-400">Review AI-prepared actions and reply drafts across all channels.</p>
       </div>
 
       <div className="app-grid two grid grid-cols-1 lg:grid-cols-[1.5fr_0.8fr] gap-6">
-        <section className="app-panel rounded-[16px] border border-white/40 shadow-sm flex flex-col" style={{ background: "rgba(255, 255, 255, 0.65)", backdropFilter: "blur(30px) saturate(210%)" }}>
+        <section className="app-panel glassmorphism shadow-sm flex flex-col" >
           <div className="app-panel-header">
             <div>
               <div className="app-panel-title">Triage Queue</div>
@@ -149,7 +149,7 @@ export default function TriagePage() {
           </div>
         </section>
 
-        <section className="app-panel rounded-[16px] border border-white/40 shadow-sm flex flex-col" style={{ background: "rgba(255, 255, 255, 0.65)", backdropFilter: "blur(30px) saturate(210%)" }}>
+        <section className="app-panel glassmorphism shadow-sm flex flex-col" >
           <div className="app-panel-header">
             <div className="app-panel-title">Triage Detail</div>
           </div>
@@ -183,11 +183,11 @@ export default function TriagePage() {
               )}
 
               <div className="grid grid-cols-2 gap-3 mb-6">
-                <div className="app-card rounded-[16px] border border-white/40 shadow-sm" style={{ background: "rgba(255, 255, 255, 0.4)", backdropFilter: "blur(20px)" }}>
+                <div className="app-card glassmorphism shadow-sm">
                   <div className="app-metric-label">Priority</div>
                   <div className="mt-2"><span className={`app-badge ${badgeTone(selected.priority)}`}>{selected.priority || "Normal"}</span></div>
                 </div>
-                <div className="app-card rounded-[16px] border border-white/40 shadow-sm" style={{ background: "rgba(255, 255, 255, 0.4)", backdropFilter: "blur(20px)" }}>
+                <div className="app-card glassmorphism shadow-sm">
                   <div className="app-metric-label">Created</div>
                   <div className="mt-2 text-sm font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">{new Date(selected.created_at || Date.now()).toLocaleString()}</div>
                 </div>
