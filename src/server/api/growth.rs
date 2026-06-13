@@ -8,6 +8,7 @@ pub static MILESTONES_CACHE: OnceLock<HybridCache<Vec<String>>> = OnceLock::new(
 pub static TEAM_INVITES_CACHE: OnceLock<HybridCache<TeamInvitesResponse>> = OnceLock::new();
 pub static METRICS_CACHE: OnceLock<HybridCache<TeamInvitesMetricsResponse>> = OnceLock::new();
 pub static ONBOARDING_METRICS_CACHE: OnceLock<HybridCache<OnboardingMetricsResponse>> = OnceLock::new();
+pub static TIME_SAVINGS_CACHE: OnceLock<HybridCache<TimeSavingsResponse>> = OnceLock::new();
 use axum::{
     http::StatusCode,
     response::IntoResponse,
@@ -321,7 +322,7 @@ async fn handle_referral_tier(
     }))
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct TimeSavingsResponse {
     pub hours_saved: f64,
     pub inquiries_handled: i64,
@@ -340,6 +341,13 @@ async fn handle_time_savings(
     };
 
     let tenant_id_str = auth_info.org_id;
+
+    let cache_key = format!("time_savings:{}", tenant_id_str);
+    let cache = TIME_SAVINGS_CACHE.get_or_init(|| HybridCache::new(crate::get_redis_client()));
+
+    if let Some(cached_res) = cache.get(&cache_key).await {
+        return Ok(Json(cached_res));
+    }
 
     let pool1 = state.pool.clone();
     let pool2 = state.pool.clone();
@@ -388,13 +396,17 @@ async fn handle_time_savings(
     let base_hours = (inquiries_handled as f64 * 0.2) + (appointments_scheduled as f64 * 0.3) + (carts_recovered as f64 * 0.43) + (auto_replied as f64 * 0.1);
     let hours_saved = (base_hours * 10.0).round() / 10.0; // round to 1 decimal place
 
-    Ok(Json(TimeSavingsResponse {
+    let response = TimeSavingsResponse {
         hours_saved,
         inquiries_handled,
         appointments_scheduled,
         carts_recovered,
         auto_replied,
-    }))
+    };
+
+    cache.set(&cache_key, response.clone(), std::time::Duration::from_secs(60)).await;
+
+    Ok(Json(response))
 }
 
 #[derive(Debug, Serialize, Deserialize)]
