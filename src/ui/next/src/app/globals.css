@@ -633,3 +633,9 @@ button {
     border: 1px solid rgba(255, 255, 255, 0.1);
   }
 }
+.glassmorphism {
+  border-radius: 16px;
+}
+.app-button {
+  border-radius: 8px;
+}
