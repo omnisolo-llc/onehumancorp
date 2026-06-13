@@ -1440,7 +1440,13 @@
       };
 
       async function loadTriage() {
-        triageSection.style.display = 'block';
+        if (window.innerWidth <= 768) {
+          triageSection.style.display = 'block';
+          // Ensure we scroll to it or prioritize it
+          triageSection.scrollIntoView({ behavior: 'smooth' });
+        } else {
+          triageSection.style.display = 'block';
+        }
         try {
           const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default';
           const res = await fetch(`/api/ui/triage?tenant_id=${encodeURIComponent(tenantId)}&mobile_optimized=true`, {
@@ -1719,7 +1725,9 @@
         }
       };
 // Load on start
-      setTimeout(loadTriage, 500);
+      setTimeout(() => {
+        loadTriage();
+      }, 500);
 
       // Omnibox logic
       const omniboxOverlay = document.getElementById('omnibox-overlay');
