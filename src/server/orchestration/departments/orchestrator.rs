@@ -135,6 +135,10 @@ pub struct DepartmentOrchestrator {
 }
 
 impl DepartmentOrchestrator {
+    pub fn db(&self) -> Arc<crate::db::DB> {
+        self.db.clone()
+    }
+
     pub fn new(db: Arc<crate::db::DB>, mesh: Arc<dyn TeammateMesh>) -> Self {
         let memory_repo = match &db.store {
             DbStore::Postgres => Arc::new(VectorRepository::new(db.pool.clone())),
@@ -847,9 +851,17 @@ impl DepartmentOrchestrator {
                         let expires_at = now + chrono::Duration::days(2);
                         let quote_id = uuid::Uuid::new_v4().to_string();
 
+
+                        let customer_id = payload.get("customer_id").and_then(|v| v.as_str()).unwrap_or("").to_string();
+                        let mut customer_id_to_use = customer_id.clone();
+                        if customer_id_to_use.is_empty() {
+                            customer_id_to_use = uuid::Uuid::new_v4().to_string();
+                        }
+
                         let api_key = std::env::var("STRIPE_SECRET_KEY").unwrap_or_else(|_| "sk_test_123".to_string());
                         let stripe = crate::integrations::stripe::client::StripeClient::new(api_key);
-                        let stripe_link = stripe.create_checkout_session(&quote_id, "customer_123", price * 0.20, false).await.unwrap_or_default();
+                        let stripe_link = stripe.create_checkout_session(&quote_id, &customer_id_to_use, price * 0.20, false).await.unwrap_or_default();
+
 
                         let mut generated_reply = payload.get("generated_response").and_then(|v| v.as_str()).unwrap_or("").to_string();
                         if !stripe_link.is_empty() {
@@ -870,6 +882,53 @@ impl DepartmentOrchestrator {
                                 .await
                             {
                                 tracing::error!("Failed to insert quote: {}", e);
+                            }
+
+                            // Issue #27509: Create Project, Tasks, and Invoice upon Quote Acceptance (Approval)
+                            let project_id = uuid::Uuid::new_v4().to_string();
+
+                            let _ = sqlx::query("INSERT INTO customers (id, tenant_id, name) VALUES ($1, $2, 'Inquiry Customer') ON CONFLICT DO NOTHING")
+                                .bind(&customer_id_to_use)
+                                .bind(tenant_id)
+                                .execute(&self.db.pool)
+                                .await;
+
+                            if let Err(e) = sqlx::query("INSERT INTO projects (id, tenant_id, quote_id, customer_id, title, status) VALUES ($1, $2, $3, $4, $5, 'Active')")
+                                .bind(&project_id)
+                                .bind(tenant_id)
+                                .bind(&quote_id)
+                                .bind(&customer_id_to_use)
+                                .bind(format!("Project for Quote {}", quote_id))
+                                .execute(&self.db.pool)
+                                .await
+                            {
+                                tracing::error!("Failed to insert project: {}", e);
+                            }
+
+                            let task_id = uuid::Uuid::new_v4().to_string();
+                            if let Err(e) = sqlx::query("INSERT INTO project_tasks (id, tenant_id, project_id, title, status) VALUES ($1, $2, $3, $4, 'Pending')")
+                                .bind(&task_id)
+                                .bind(tenant_id)
+                                .bind(&project_id)
+                                .bind("Initial Task")
+                                .execute(&self.db.pool)
+                                .await
+                            {
+                                tracing::error!("Failed to insert project task: {}", e);
+                            }
+
+                            let invoice_id = uuid::Uuid::new_v4().to_string();
+                            if let Err(e) = sqlx::query("INSERT INTO invoices (id, tenant_id, client_id, client_name, status, due_date, currency, total_amount, total_amount_cents, payment_status, view_count, amount_paid_cents) VALUES ($1, $2, $3, 'Client', 'draft', $5, 'USD', $6, 0, 'draft', 0, 0)")
+                                .bind(&invoice_id)
+                                .bind(tenant_id)
+                                .bind(&customer_id_to_use)
+                                .bind(deposit_amount)
+                                .bind(now + chrono::Duration::days(7))
+                                .bind(total_amount_cents as f64 / 100.0)
+                                .execute(&self.db.pool)
+                                .await
+                            {
+                                tracing::error!("Failed to insert invoice: {}", e);
                             }
 
                             if !inbox_message_id.is_empty() {
@@ -896,6 +955,53 @@ impl DepartmentOrchestrator {
                                 .await
                             {
                                 tracing::error!("Failed to insert quote: {}", e);
+                            }
+
+                            // Issue #27509: Create Project, Tasks, and Invoice upon Quote Acceptance (Approval)
+                            let project_id = uuid::Uuid::new_v4().to_string();
+
+                            let _ = sqlx::query("INSERT INTO customers (id, tenant_id, name) VALUES (?, ?, 'Inquiry Customer') ON CONFLICT DO NOTHING")
+                                .bind(&customer_id_to_use)
+                                .bind(tenant_id)
+                                .execute(pool)
+                                .await;
+
+                            if let Err(e) = sqlx::query("INSERT INTO projects (id, tenant_id, quote_id, customer_id, title, status) VALUES (?, ?, ?, ?, ?, 'Active')")
+                                .bind(&project_id)
+                                .bind(tenant_id)
+                                .bind(&quote_id)
+                                .bind(&customer_id_to_use)
+                                .bind(format!("Project for Quote {}", quote_id))
+                                .execute(pool)
+                                .await
+                            {
+                                tracing::error!("Failed to insert project: {}", e);
+                            }
+
+                            let task_id = uuid::Uuid::new_v4().to_string();
+                            if let Err(e) = sqlx::query("INSERT INTO project_tasks (id, tenant_id, project_id, title, status) VALUES (?, ?, ?, ?, 'Pending')")
+                                .bind(&task_id)
+                                .bind(tenant_id)
+                                .bind(&project_id)
+                                .bind("Initial Task")
+                                .execute(pool)
+                                .await
+                            {
+                                tracing::error!("Failed to insert project task: {}", e);
+                            }
+
+                            let invoice_id = uuid::Uuid::new_v4().to_string();
+                            if let Err(e) = sqlx::query("INSERT INTO invoices (id, tenant_id, client_id, client_name, status, due_date, currency, total_amount, total_amount_cents, payment_status, view_count, amount_paid_cents) VALUES (?, ?, ?, 'Client', 'draft', ?, 'USD', ?, 0, 'draft', 0, 0)")
+                                .bind(&invoice_id)
+                                .bind(tenant_id)
+                                .bind(&customer_id_to_use)
+                                .bind(deposit_amount)
+                                .bind(now + chrono::Duration::days(7))
+                                .bind(total_amount_cents as f64 / 100.0)
+                                .execute(pool)
+                                .await
+                            {
+                                tracing::error!("Failed to insert invoice: {}", e);
                             }
 
                             if !inbox_message_id.is_empty() {

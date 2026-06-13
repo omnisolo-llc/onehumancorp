@@ -62,7 +62,7 @@ export default function PricingPage() {
               </ul>
             </div>
             <button onClick={() => handleUpgrade('Starter')} className="w-full min-h-[44px] px-4 py-2 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 transition-colors shadow-sm flex items-center justify-center">
-              Upgrade to Starter
+              Upgrade to Starter via Stripe
             </button>
           </div>
 
@@ -79,7 +79,7 @@ export default function PricingPage() {
               </ul>
             </div>
             <button onClick={() => handleUpgrade('Pro')} className="w-full min-h-[44px] px-4 py-2 bg-gray-900 text-white rounded-xl font-medium hover:bg-black transition-colors shadow-sm flex items-center justify-center">
-              Upgrade to Pro
+              Upgrade to Pro via Stripe
             </button>
           </div>
 
@@ -96,7 +96,7 @@ export default function PricingPage() {
               </ul>
             </div>
             <button onClick={() => handleUpgrade('Business')} className="w-full min-h-[44px] px-4 py-2 bg-gray-900 text-white rounded-xl font-medium hover:bg-black transition-colors shadow-sm flex items-center justify-center">
-              Upgrade to Business
+              Upgrade to Business via Stripe
             </button>
           </div>
         </div>

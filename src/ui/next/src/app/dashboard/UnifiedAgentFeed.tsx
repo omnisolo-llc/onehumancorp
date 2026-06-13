@@ -361,6 +361,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
 
   return (
     <section className="mb-6 max-w-[375px] w-full mx-auto sm:max-w-none" aria-label="Unified Agent Feed">
+      <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2 hidden md:block">Action Center</h2>
       {isOffline && (
         <div className="mb-4 w-full p-2 glassmorphism rounded-[8px] bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 text-center text-sm font-semibold flex items-center justify-center gap-2">
           <span>📡</span> You are offline. Actions will sync when online.
@@ -374,7 +375,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
       <div className="mb-4 flex items-center border-b border-gray-200 dark:border-gray-700">
         <button
           onClick={() => setActiveTab("proposals")}
-          className={`flex-1 min-h-[44px] py-3 text-center text-sm font-semibold transition-all duration-200 ${
+          className={`flex-1 min-h-[44px] min-w-[44px] py-3 text-center text-sm font-semibold transition-all duration-200 ${
             activeTab === "proposals"
               ? "border-b-2 border-[#0066FF] text-[#0066FF] dark:text-[#3388FF]"
               : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
@@ -384,7 +385,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
         </button>
         <button
           onClick={() => setActiveTab("activity")}
-          className={`flex-1 min-h-[44px] py-3 text-center text-sm font-semibold transition-all duration-200 ${
+          className={`flex-1 min-h-[44px] min-w-[44px] py-3 text-center text-sm font-semibold transition-all duration-200 ${
             activeTab === "activity"
               ? "border-b-2 border-[#0066FF] text-[#0066FF] dark:text-[#3388FF]"
               : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
@@ -421,17 +422,17 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
               </div>
               <div className="flex flex-col sm:flex-row gap-3 w-full mt-2">
                 <button
-                  className="flex-1 min-h-[44px] rounded-lg font-bold text-sm bg-green-500 hover:bg-green-600 text-white shadow-sm transition-transform active:scale-[0.98]"
+                  className="flex-1 min-h-[44px] min-w-[44px] rounded-lg font-bold text-sm bg-green-500 hover:bg-green-600 text-white shadow-sm transition-transform active:scale-[0.98]"
                 >
                   Approve
                 </button>
                 <button
-                  className="flex-1 min-h-[44px] rounded-lg font-bold text-sm bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 text-[#1D1D1F] dark:text-[#F5F5F7] transition-transform active:scale-[0.98]"
+                  className="flex-1 min-h-[44px] min-w-[44px] rounded-lg font-bold text-sm bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 text-[#1D1D1F] dark:text-[#F5F5F7] transition-transform active:scale-[0.98]"
                 >
                   Edit
                 </button>
                 <button
-                  className="flex-1 min-h-[44px] rounded-lg font-bold text-sm bg-red-100 hover:bg-red-200 text-red-600 dark:bg-red-900/30 dark:hover:bg-red-900/50 dark:text-red-400 transition-transform active:scale-[0.98]"
+                  className="flex-1 min-h-[44px] min-w-[44px] rounded-lg font-bold text-sm bg-red-100 hover:bg-red-200 text-red-600 dark:bg-red-900/30 dark:hover:bg-red-900/50 dark:text-red-400 transition-transform active:scale-[0.98]"
                 >
                   Deny
                 </button>
@@ -447,7 +448,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
               <div className="w-full flex flex-col items-center gap-6 p-6 glassmorphism rounded-[16px] border border-white/40 dark:border-white/10 shadow-sm opacity-90 text-center">
                 <div className="text-3xl mb-2">✨</div>
                 <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7]">All caught up!</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 break-words">
                   Your agents are currently monitoring the business. While you're here, why not help us grow?
                 </p>
                 <div className="w-full max-w-md text-left">
@@ -489,7 +490,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                             </svg>
                             CRITICAL INCIDENT
                           </div>
-                          <p className="text-gray-700 dark:text-gray-300 text-sm">
+                          <p className="text-gray-700 dark:text-gray-300 text-sm break-words">
                             {(approval.proposed_action || approval.context_payload)?.description || 'An operational issue requires immediate attention.'}
                           </p>
                         </div>
@@ -505,7 +506,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                           <div className="text-xs text-gray-500 font-medium">
                             Customer: {(approval.proposed_action || approval.context_payload).customer_message}
                           </div>
-                          <div className="text-xs text-gray-900 dark:text-gray-100 italic line-clamp-3 bg-white/50 dark:bg-black/20 p-2 rounded">
+                          <div className="text-xs text-gray-900 dark:text-gray-100 italic line-clamp-3 bg-white/50 dark:bg-black/20 p-2 rounded break-words">
                             Draft: {(approval.proposed_action || approval.context_payload).draft_reply}
                           </div>
                         </div>
@@ -540,7 +541,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                             </svg>
                             Draft Quote: {(approval.proposed_action || approval.context_payload).service || 'Plumbing Fix'} for Customer
                           </div>
-                          <div className="text-xs text-[#0066FF] dark:text-blue-400 font-medium">
+                          <div className="text-xs text-[#0066FF] dark:text-blue-400 font-medium break-words">
                             {(approval.proposed_action || approval.context_payload).customer_inquiry}
                           </div>
                           <div className="glassmorphism dark:bg-gray-800 p-3 rounded-lg border border-white/40 dark:border-white/10 relative mt-2">
@@ -823,13 +824,13 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                       <button
                         onClick={() => handleDecision(approval.id, true)}
                         className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center"
-                        aria-label="Approve & Send Proposal"
+                        aria-label="Approve & Send"
                         data-testid="approve-quote-draft"
                       >
-                        Approve & Send Proposal
+                        Approve & Send
                       </button>
                       <a
-                        href={`/quoting?id=${approval.id}`}
+                        href={`/quoting?id=${(approval.proposed_action || approval.context_payload)?.quote_id || approval.id}`}
                         className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
                         aria-label="Edit Draft"
                         data-testid="edit-quote-draft"
@@ -898,14 +899,14 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                       <button
                         onClick={() => handleDecision(approval.id, true)}
                         className="w-full min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center mb-3"
-                        aria-label="Approve & Send Proposal"
+                        aria-label="Approve & Send"
                         data-testid="approve-send-proposal"
                       >
-                        Approve & Send Proposal
+                        Approve & Send
                       </button>
                       <div className="flex flex-col sm:flex-row gap-3 w-full">
                         <a
-                          href={`/quoting?id=${approval.id}`}
+                          href={`/quoting?id=${(approval.proposed_action || approval.context_payload)?.quote_id || approval.id}`}
                           className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
                           aria-label="Edit Draft"
                           data-testid="edit-proposal"
@@ -967,7 +968,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
             )}
             {!activityLoading && activities.length === 0 && (
               <div className="w-full p-6 glassmorphism rounded-[16px] text-center">
-                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 break-words">
                   No recent activity found.
                 </p>
               </div>

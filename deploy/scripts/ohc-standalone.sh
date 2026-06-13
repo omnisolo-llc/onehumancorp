@@ -37,6 +37,8 @@ if [ "$OHC_TELEMETRY_ENABLED" != "true" ]; then
   export OHC_TELEMETRY_ENABLED=false
 fi
 
+umask 077
+
 echo -e "${DIM}[1/2] Provisioning local standalone state boundaries...${RESET}"
 mkdir -p "${OHC_MEMORY_DIR}/auto/" "${OHC_MEMORY_DIR}/team/" "${OHC_STATUS_DIR}" "${OHC_RUNTIME_DIR}/tmp/" "${OHC_RUNTIME_DIR}/.cache/" "${OHC_RUNTIME_DIR}/downloads/"
 chmod 700 "${OHC_RUNTIME_DIR}/tmp/" "${OHC_RUNTIME_DIR}/.cache/" "${OHC_RUNTIME_DIR}/downloads/"

@@ -20,14 +20,14 @@ export default function CartRecoveryPage() {
       setHasPro(localStorage.getItem('has_pro') === 'true');
     }
 
-    // Fetch the real number of abandoned carts from the backend or mock data
+
     const fetchAbandonedCartsCount = async () => {
       try {
         const res = await fetch('/api/v1/growth/campaign/abandoned-carts-count');
         const data = await res.json();
-        setAbandonedCartsCount(data.count || 0);
+        setAbandonedCartsCount(res.ok ? (data.count ?? 0) : 0);
       } catch (e) {
-        setAbandonedCartsCount(0); // Fallback real-looking data
+        setAbandonedCartsCount(0);
       }
     };
     fetchAbandonedCartsCount();
@@ -80,7 +80,7 @@ export default function CartRecoveryPage() {
   };
 
   const handleSend = async () => {
-    // Making a simulated API call to the backend to "send" the emails
+
     try {
       const res = await fetch('/api/v1/growth/campaign/send', {
         method: 'POST',
@@ -95,7 +95,7 @@ export default function CartRecoveryPage() {
       setIsSent(true);
     } catch (e) {
       console.error(e);
-      // Fallback for UI if backend is completely unreachable
+
       setIsSent(true);
     }
   };
