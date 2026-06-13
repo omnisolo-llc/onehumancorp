@@ -117,121 +117,20 @@ pub async fn create_checkout_session_handler(
         _ => return Err(StatusCode::BAD_REQUEST),
     };
 
+    let mut acquired_lock_id = "".to_string();
     if let (Some(product_id), Some(quantity)) = (&req.product_id, req.quantity) {
         if quantity > 0 {
-            let lock_id = uuid::Uuid::new_v4().to_string();
-            let lock_key = format!("ohc:lock:{}:inventory:{}", tenant_id, product_id);
             let ttl = req.ttl_seconds.unwrap_or(300); // 5 minutes default for online checkout
-
-            if let Some(redis_client) = &hub.redis_client {
-                if let Ok(mut conn) = redis_client.get_multiplexed_async_connection().await {
-                    let acquired: bool = redis::cmd("SET")
-                        .arg(&lock_key).arg(&lock_id).arg("EX").arg(ttl).arg("NX")
-                        .query_async(&mut conn).await.unwrap_or(false);
-
-                    if !acquired {
-                        return Err(StatusCode::CONFLICT); // 409 Conflict if locked
+            let inventory_service = crate::services::inventory::InventoryService::new(hub.redis_client.clone());
+            match inventory_service.reserve_inventory(&tenant_id, product_id, quantity, ttl).await {
+                Ok(result) => {
+                    if !result.success {
+                        return Err(StatusCode::CONFLICT);
                     }
-
-                    // Verify database stock
-                    let pool = crate::db::get_pool();
-                    if let Ok(mut tx) = pool.begin().await {
-                        if let Ok(_) = crate::common::auth_utils::set_org_context(&mut *tx, &tenant_id).await {
-                            let current_stock: Option<i32> = sqlx::query_scalar("SELECT available_quantity FROM products WHERE id = $1 AND tenant_id = $2")
-                                .bind(product_id)
-                                .bind(&tenant_id)
-                                .fetch_optional(&mut *tx)
-                                .await
-                                .unwrap_or(None);
-
-                            if let Some(stock) = current_stock {
-                                if stock < quantity {
-                                    let _ = tx.rollback().await;
-                                    let _: () = redis::cmd("DEL").arg(&lock_key).query_async(&mut conn).await.unwrap_or(());
-                                    return Err(StatusCode::CONFLICT);
-                                } else {
-                                    let _ = sqlx::query("UPDATE products SET locked_quantity = locked_quantity + $1, available_quantity = available_quantity - $1 WHERE id = $2 AND tenant_id = $3")
-                                        .bind(quantity)
-                                        .bind(product_id)
-                                        .bind(&tenant_id)
-                                        .execute(&mut *tx)
-                                        .await;
-                                }
-                            } else {
-                                let fallback_stock: Option<i32> = sqlx::query_scalar("SELECT inventory_count FROM products WHERE id = $1 AND tenant_id = $2")
-                                    .bind(product_id)
-                                    .bind(&tenant_id)
-                                    .fetch_optional(&mut *tx)
-                                    .await
-                                    .unwrap_or(None);
-
-                                if let Some(f_stock) = fallback_stock {
-                                    if f_stock < quantity {
-                                        let _ = tx.rollback().await;
-                                        let _: () = redis::cmd("DEL").arg(&lock_key).query_async(&mut conn).await.unwrap_or(());
-                                        return Err(StatusCode::CONFLICT);
-                                    } else {
-                                        let _ = sqlx::query("UPDATE products SET locked_quantity = $1, available_quantity = inventory_count - $1 WHERE id = $2 AND tenant_id = $3")
-                                            .bind(quantity)
-                                            .bind(product_id)
-                                            .bind(&tenant_id)
-                                            .execute(&mut *tx)
-                                            .await;
-                                    }
-                                } else {
-                                    let _ = tx.rollback().await;
-                                    let _: () = redis::cmd("DEL").arg(&lock_key).query_async(&mut conn).await.unwrap_or(());
-                                    return Err(StatusCode::NOT_FOUND);
-                                }
-                            }
-                        }
-                        let _ = tx.commit().await;
-                    }
+                    acquired_lock_id = result.lock_id;
                 }
-            } else {
-                // Fallback without redis
-                let pool = crate::db::get_pool();
-                if let Ok(mut tx) = pool.begin().await {
-                    if let Ok(_) = crate::common::auth_utils::set_org_context(&mut *tx, &tenant_id).await {
-                        let current_stock: Option<i32> = sqlx::query_scalar("SELECT available_quantity FROM products WHERE id = $1 AND tenant_id = $2")
-                            .bind(product_id)
-                            .bind(&tenant_id)
-                            .fetch_optional(&mut *tx)
-                            .await
-                            .unwrap_or(None);
-
-                        if let Some(stock) = current_stock {
-                            if stock < quantity {
-                                let _ = tx.rollback().await;
-                                return Err(StatusCode::CONFLICT);
-                            }
-                        } else {
-                            let fallback_stock: Option<i32> = sqlx::query_scalar("SELECT inventory_count FROM products WHERE id = $1 AND tenant_id = $2")
-                                .bind(product_id)
-                                .bind(&tenant_id)
-                                .fetch_optional(&mut *tx)
-                                .await
-                                .unwrap_or(None);
-
-                            if let Some(f_stock) = fallback_stock {
-                                if f_stock < quantity {
-                                    let _ = tx.rollback().await;
-                                    return Err(StatusCode::CONFLICT);
-                                } else {
-                                    let _ = sqlx::query("UPDATE products SET locked_quantity = $1, available_quantity = inventory_count - $1 WHERE id = $2 AND tenant_id = $3")
-                                        .bind(quantity)
-                                        .bind(product_id)
-                                        .bind(&tenant_id)
-                                        .execute(&mut *tx)
-                                        .await;
-                                }
-                            } else {
-                                let _ = tx.rollback().await;
-                                return Err(StatusCode::NOT_FOUND);
-                            }
-                        }
-                    }
-                    let _ = tx.commit().await;
+                Err(_) => {
+                    return Err(StatusCode::INTERNAL_SERVER_ERROR);
                 }
             }
         }
@@ -245,12 +144,8 @@ pub async fn create_checkout_session_handler(
                 // Explicitly release the lock if the stripe session creation fails
                 if let (Some(product_id), Some(quantity)) = (&req.product_id, req.quantity) {
                     if quantity > 0 {
-                        if let Some(redis_client) = &hub.redis_client {
-                            if let Ok(mut conn) = redis_client.get_multiplexed_async_connection().await {
-                                let lock_key = format!("ohc:lock:{}:inventory:{}", tenant_id, product_id);
-                                let _: () = redis::cmd("DEL").arg(&lock_key).query_async(&mut conn).await.unwrap_or(());
-                            }
-                        }
+                        let inventory_service = crate::services::inventory::InventoryService::new(hub.redis_client.clone());
+                        let _ = inventory_service.release_inventory(&tenant_id, product_id, quantity, &acquired_lock_id).await;
                     }
                 }
                 Err(StatusCode::INTERNAL_SERVER_ERROR)
