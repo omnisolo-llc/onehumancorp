@@ -40,8 +40,13 @@ export default function AgentMarketplacePage() {
  }, [query]);
 
  return (
- <div className="min-h-screen bg-gray-50 p-8 font-outfit">
- <div className="max-w-6xl mx-auto">
+ <div className="min-h-screen bg-gray-50/50 relative p-8 font-outfit overflow-hidden">
+ {/* Background subtle ambient blobs for the translucent glass effect */}
+ <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-400/20 rounded-full mix-blend-multiply filter blur-3xl opacity-50 animate-blob"></div>
+ <div className="absolute top-0 right-1/4 w-96 h-96 bg-purple-400/20 rounded-full mix-blend-multiply filter blur-3xl opacity-50 animate-blob animation-delay-2000"></div>
+ <div className="absolute -bottom-8 left-1/2 w-96 h-96 bg-pink-400/20 rounded-full mix-blend-multiply filter blur-3xl opacity-50 animate-blob animation-delay-4000"></div>
+
+ <div className="max-w-6xl mx-auto relative z-10">
  <header className="mb-8">
  <h1 className="text-4xl font-bold text-gray-900 mb-2">Agent Marketplace</h1>
  <p className="text-xl text-gray-600">
@@ -49,13 +54,13 @@ export default function AgentMarketplacePage() {
  </p>
  </header>
 
- <div className="mb-8 relative">
+ <div className="mb-8 relative group">
  <input
  type="text"
  placeholder="Search for agents..."
  value={query}
  onChange={(e) => setQuery(e.target.value)}
- className="w-full p-4 pl-12 text-lg rounded-xl shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-white/40"
+ className="w-full p-4 pl-12 text-lg rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.04)] focus:shadow-[0_8px_32px_rgba(0,0,0,0.08)] focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 outline-none transition-all bg-white/40 backdrop-blur-xl saturate-[200%] border border-white/40 text-gray-800 placeholder-gray-400"
  />
  <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400">
  🔍
@@ -77,7 +82,7 @@ export default function AgentMarketplacePage() {
  {agents.map((agent) => (
  <div
  key={agent.id}
- className="p-6 rounded-2xl shadow-sm hover:shadow-md transition-all flex flex-col bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-white/40"
+ className="p-6 rounded-3xl shadow-[0_8px_32px_rgba(0,0,0,0.04)] hover:shadow-[0_16px_48px_rgba(0,0,0,0.08)] transition-all duration-300 flex flex-col bg-white/40 backdrop-blur-2xl saturate-[200%] border border-white/50 hover:border-white/80 hover:-translate-y-1"
 >
  <div className="mb-4 flex-grow">
  <h3 className="text-2xl font-bold text-gray-900 mb-2">{agent.name}</h3>
@@ -100,7 +105,7 @@ export default function AgentMarketplacePage() {
  setInstalledAgents((current) => current.includes(agent.id) ? current : [...current, agent.id]);
  }}
  aria-pressed={installedAgents.includes(agent.id)}
- className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl transition-colors focus:ring-4 focus:ring-blue-200"
+ className="w-full py-3 px-4 bg-blue-600/90 hover:bg-blue-600 text-white font-medium rounded-2xl shadow-sm transition-all focus:ring-4 focus:ring-blue-500/20 backdrop-blur-sm"
 >
  {installedAgents.includes(agent.id) ? 'Installed' : 'Install Agent'}
  </button>
@@ -108,7 +113,7 @@ export default function AgentMarketplacePage() {
  </div>
  ))}
  {agents.length === 0 && (
- <div className="col-span-full flex flex-col items-center justify-center p-12 rounded-2xl border border-dashed text-gray-500 bg-white/65 backdrop-blur-[30px] saturate-[210%] border-white/40">
+ <div className="col-span-full flex flex-col items-center justify-center p-12 rounded-3xl border border-dashed text-gray-500 bg-white/30 backdrop-blur-xl saturate-[200%] border-white/60 shadow-sm">
  <span className="text-4xl mb-4">🤖</span>
  <p className="text-xl">No agents found matching "{query}"</p>
  </div>
