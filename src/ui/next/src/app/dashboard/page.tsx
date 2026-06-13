@@ -319,62 +319,72 @@ export default function Dashboard() {
 
       try {
         const userId = localStorage.getItem("user_id") || "default";
-        const [unifiedRes, onboardingRes, approvalsRes, agentFeedRes] = await Promise.all([
-          fetch(`/api/ui/dashboard/unified-feed?tenant_id=${tenant}&mobile_optimized=${window.innerWidth < 768}`),
-          fetch(`/api/onboarding/state`, { headers: { 'X-Tenant-ID': tenant, 'X-User-ID': userId } }),
-          fetch(`/api/agents/approvals?tenant_id=${tenant}`),
-          fetch(`/api/agent-feed?tenant_id=${tenant}`, { headers: { 'x-tenant-id': tenant, 'x-user-id': userId } }),
-        ]);
 
-        if (!unifiedRes.ok) {
-          throw new Error("Unified UI feed endpoint failed");
-        }
+        // 1. Fetch Unified Feed Independently
+        const p1 = fetch(`/api/ui/dashboard/unified-feed?tenant_id=${tenant}&mobile_optimized=${window.innerWidth < 768}`)
+          .then(res => {
+            if (!res.ok) throw new Error("Unified UI feed endpoint failed");
+            return res.json();
+          })
+          .then(unifiedData => {
+            const metricsData = unifiedData.metrics || {};
+            const ordersData = unifiedData.orders || [];
+            const inboxData = unifiedData.inbox || [];
+            const supplyData = unifiedData.supply || {};
 
-        const [unifiedData, onboardingData, approvalsData, agentFeedData] = await Promise.all([
-          unifiedRes.json(),
-          onboardingRes.ok ? onboardingRes.json() : Promise.resolve(null),
-          approvalsRes.ok ? approvalsRes.json() : Promise.resolve([]),
-          agentFeedRes.ok ? agentFeedRes.json() : Promise.resolve({ items: [] }),
-        ]);
+            setMetrics({ ...emptyMetrics, ...metricsData });
+            setOrders(Array.isArray(ordersData) ? ordersData : []);
+            setMessages(Array.isArray(inboxData) ? inboxData : []);
+            setSupply({
+              vendors: Array.isArray(supplyData?.vendors) ? supplyData.vendors : [],
+              raw_materials: Array.isArray(supplyData?.raw_materials) ? supplyData.raw_materials : [],
+              bom_items: Array.isArray(supplyData?.bom_items) ? supplyData.bom_items : [],
+            });
+          })
+          .catch(e => {
+            setError(e?.message || "Failed to load unified feed data");
+          });
 
-        setDashboardData((prev: any) => ({ ...prev, initialAgentFeed: agentFeedData }));
+        // 2. Fetch Onboarding State Independently
+        const p2 = fetch(`/api/onboarding/state`, { headers: { 'X-Tenant-ID': tenant, 'X-User-ID': userId } })
+          .then(res => res.ok ? res.json() : null)
+          .then(onboardingData => {
+            if (onboardingData?.wizardState?.aiAgents) {
+              setActiveDepartments(onboardingData.wizardState.aiAgents);
+            } else {
+              setActiveDepartments([]);
+            }
+          })
+          .catch(e => console.error("Failed to load onboarding state", e));
 
-        if (approvalsData && Array.isArray(approvalsData)) {
-            setPendingApprovals(approvalsData.filter((i: any) => i.status !== "APPROVED" && i.status !== "REJECTED"));
-            setActivities(approvalsData.filter((i: any) => i.status === "APPROVED" || i.status === "REJECTED"));
-        } else if (agentFeedData && agentFeedData.items) {
-            setPendingApprovals(agentFeedData.items.filter((i: any) => i.lifecycle_state !== "APPROVED" && i.lifecycle_state !== "DISMISSED"));
-            setActivities(agentFeedData.items.filter((i: any) => i.lifecycle_state === "APPROVED" || i.lifecycle_state === "DISMISSED").map((a: any) => ({
-                id: a.id,
-                event_type: a.lifecycle_state,
-                department: a.event_source,
-                payload: typeof a.context_payload === 'object' ? JSON.stringify({ original_payload: a.context_payload }) : a.context_payload,
-                created_at: a.created_at
-            })));
-        }
+        // 3. Fetch Approvals and Agent Feed Independently
+        const p3 = Promise.all([
+          fetch(`/api/agents/approvals?tenant_id=${tenant}`).then(res => res.ok ? res.json() : []),
+          fetch(`/api/agent-feed?tenant_id=${tenant}`, { headers: { 'x-tenant-id': tenant, 'x-user-id': userId } }).then(res => res.ok ? res.json() : { items: [] })
+        ]).then(([approvalsData, agentFeedData]) => {
+          setDashboardData((prev: any) => ({ ...prev, initialAgentFeed: agentFeedData }));
 
-        const metricsData = unifiedData.metrics || {};
-        const ordersData = unifiedData.orders || [];
-        const inboxData = unifiedData.inbox || [];
-        const supplyData = unifiedData.supply || {};
+          if (approvalsData && Array.isArray(approvalsData)) {
+              setPendingApprovals(approvalsData.filter((i: any) => i.status !== "APPROVED" && i.status !== "REJECTED"));
+              setActivities(approvalsData.filter((i: any) => i.status === "APPROVED" || i.status === "REJECTED"));
+          } else if (agentFeedData && agentFeedData.items) {
+              setPendingApprovals(agentFeedData.items.filter((i: any) => i.lifecycle_state !== "APPROVED" && i.lifecycle_state !== "DISMISSED"));
+              setActivities(agentFeedData.items.filter((i: any) => i.lifecycle_state === "APPROVED" || i.lifecycle_state === "DISMISSED").map((a: any) => ({
+                  id: a.id,
+                  event_type: a.lifecycle_state,
+                  department: a.event_source,
+                  payload: typeof a.context_payload === 'object' ? JSON.stringify({ original_payload: a.context_payload }) : a.context_payload,
+                  created_at: a.created_at
+              })));
+          }
 
-        if (onboardingData?.wizardState?.aiAgents) {
-          setActiveDepartments(onboardingData.wizardState.aiAgents);
-        } else {
-          setActiveDepartments([]);
-        }
+          setApprovals(Array.isArray(approvalsData?.approvals) ? approvalsData.approvals : (Array.isArray(approvalsData) ? approvalsData : []));
+        }).catch(e => console.error("Failed to load approvals or agent feed", e));
 
-        setMetrics({ ...emptyMetrics, ...metricsData });
-        setOrders(Array.isArray(ordersData) ? ordersData : []);
-        setMessages(Array.isArray(inboxData) ? inboxData : []);
-        setSupply({
-          vendors: Array.isArray(supplyData?.vendors) ? supplyData.vendors : [],
-          raw_materials: Array.isArray(supplyData?.raw_materials) ? supplyData.raw_materials : [],
-          bom_items: Array.isArray(supplyData?.bom_items) ? supplyData.bom_items : [],
-        });
-        setApprovals(Array.isArray(approvalsData?.approvals) ? approvalsData.approvals : (Array.isArray(approvalsData) ? approvalsData : []));
+        await Promise.all([p1, p2, p3]);
+
       } catch (e: any) {
-        setError(e?.message || "Failed to load dashboard data");
+        setError(e?.message || "Failed to initiate dashboard data fetch");
       } finally {
         setLoading(false);
       }
