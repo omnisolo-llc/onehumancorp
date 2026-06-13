@@ -437,7 +437,7 @@ export default function OnboardingWizard() {
         {/* Progress Bar */}
         <div className="h-1.5 w-full bg-gray-200 overflow-hidden">
           <div
-            className="h-full bg-[#0066FF] transition-all duration-700 ease-out shadow-[0_0_10px_rgba(0,102,255,0.5)]"
+            className="h-full bg-[#0066FF] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] shadow-[0_0_10px_rgba(0,102,255,0.5)]"
             style={{ width: `${getProgress()}%` }}
           ></div>
         </div>
@@ -463,14 +463,14 @@ export default function OnboardingWizard() {
 
               <div className="flex flex-col gap-4 w-full">
                 <button
-                  className="w-full bg-[#0066FF] text-white p-4 font-bold rounded-[8px] shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#005bb5] transition-all"
+                  className="w-full bg-[#0066FF] text-white p-4 font-bold rounded-[8px] shadow-[0_4px_14px_0_rgba(0,102,255,0.39)] hover:bg-[#005bb5] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)]"
                   onClick={() => { setStep(1); syncStateToBackend({ step: 1 }); }}
                 >
                   Start My Business
                 </button>
 
                 <button
-                  className="w-full glassmorphism text-[#0066FF] border border-[#0066FF] p-4 font-bold rounded-[8px] shadow-sm hover:bg-blue-50 transition-all"
+                  className="w-full glassmorphism text-[#0066FF] border border-[#0066FF] p-4 font-bold rounded-[8px] shadow-sm hover:bg-blue-50 transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)]"
                   onClick={() => { setStep(10); syncStateToBackend({ step: 10 }); }}
                 >
                   Instant Build
@@ -498,7 +498,7 @@ export default function OnboardingWizard() {
                     setBio(e.target.value);
                     if (error) setError('');
                   }}
-                  className={`w-full glassmorphism min-h-[44px] min-w-[44px] p-4 border outline-none transition-all resize-none text-gray-800 dark:text-[#f5f5f7] shadow-inner rounded-[8px] ${error ? 'border-[#FF3B30] focus:ring-2 focus:ring-[#FF3B30] focus:border-[#FF3B30]' : 'border-transparent focus:ring-2 focus:ring-[#0066FF] focus:border-[#0066FF]'}`}
+                  className={`w-full glassmorphism min-h-[44px] min-w-[44px] p-4 border outline-none transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] resize-none text-gray-800 dark:text-[#f5f5f7] shadow-inner rounded-[8px] ${error ? 'border-[#FF3B30] focus:ring-2 focus:ring-[#FF3B30] focus:border-[#FF3B30]' : 'border-transparent focus:ring-2 focus:ring-[#0066FF] focus:border-[#0066FF]'}`}
                   placeholder="e.g. I run a local bakery that sells custom vegan cakes..."
                   rows={6}
                 />
@@ -654,7 +654,7 @@ export default function OnboardingWizard() {
                           }
                         }}
                         placeholder="e.g. Maya's Custom Cakes"
-                        className={`w-full p-3 sm:p-4 rounded-[8px] border outline-none glassmorphism min-h-[44px] min-w-[44px] text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner ${validationError === 'Business Name must be at least 3 characters.' ? 'border-[#FF3B30]' : 'border-white/50 dark:border-white/10 focus:border-[#0066FF]'}`}
+                        className={`w-full p-3 sm:p-4 rounded-[8px] border outline-none glassmorphism min-h-[44px] min-w-[44px] text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] shadow-inner ${validationError === 'Business Name must be at least 3 characters.' ? 'border-[#FF3B30]' : 'border-white/50 dark:border-white/10 focus:border-[#0066FF]'}`}
                       />
                     </div>
                   </div>
@@ -719,7 +719,7 @@ export default function OnboardingWizard() {
                           }
                         }}
                         placeholder="e.g. I bake custom vegan cakes for weddings and parties..."
-                        className={`w-full p-3 sm:p-4 rounded-[8px] border outline-none glassmorphism min-h-[44px] min-w-[44px] text-[#1D1D1F] dark:text-[#F5F5F7] h-32 resize-none transition-all shadow-inner ${validationError === 'Please tell us what you sell.' ? 'border-[#FF3B30]' : 'border-white/50 dark:border-white/10 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30'}`}
+                        className={`w-full p-3 sm:p-4 rounded-[8px] border outline-none glassmorphism min-h-[44px] min-w-[44px] text-[#1D1D1F] dark:text-[#F5F5F7] h-32 resize-none transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] shadow-inner ${validationError === 'Please tell us what you sell.' ? 'border-[#FF3B30]' : 'border-white/50 dark:border-white/10 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30'}`}
                       />
                     </div>
                   </div>
@@ -785,7 +785,7 @@ export default function OnboardingWizard() {
                           }
                         }}
                         placeholder="e.g. Portland, OR"
-                        className={`w-full p-3 sm:p-4 rounded-[8px] border outline-none glassmorphism min-h-[44px] min-w-[44px] text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner ${validationError === 'Please tell us your location.' ? 'border-[#FF3B30]' : 'border-white/50 dark:border-white/10 focus:border-[#0066FF]'}`}
+                        className={`w-full p-3 sm:p-4 rounded-[8px] border outline-none glassmorphism min-h-[44px] min-w-[44px] text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] shadow-inner ${validationError === 'Please tell us your location.' ? 'border-[#FF3B30]' : 'border-white/50 dark:border-white/10 focus:border-[#0066FF]'}`}
                       />
                     </div>
                   </div>
@@ -851,7 +851,7 @@ export default function OnboardingWizard() {
                           }
                         }}
                         placeholder="e.g. Local families, Tech startups"
-                        className={`w-full p-3 sm:p-4 rounded-[8px] border outline-none glassmorphism min-h-[44px] min-w-[44px] text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner ${validationError === 'Please tell us your target audience.' ? 'border-[#FF3B30]' : 'border-white/50 dark:border-white/10 focus:border-[#0066FF]'}`}
+                        className={`w-full p-3 sm:p-4 rounded-[8px] border outline-none glassmorphism min-h-[44px] min-w-[44px] text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] shadow-inner ${validationError === 'Please tell us your target audience.' ? 'border-[#FF3B30]' : 'border-white/50 dark:border-white/10 focus:border-[#0066FF]'}`}
                       />
                     </div>
                   </div>
@@ -1046,7 +1046,7 @@ export default function OnboardingWizard() {
                       <div
                         key={template}
                         onClick={() => setWebsiteTemplate(template)}
-                        className={`p-3 rounded-[8px] border cursor-pointer transition-all ${websiteTemplate === template ? 'border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]' : 'border-white/50 dark:border-white/10 glassmorphism hover:border-gray-400 dark:hover:border-gray-500 text-[#1D1D1F] dark:text-white'}`}
+                        className={`p-3 rounded-[8px] border cursor-pointer transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] ${websiteTemplate === template ? 'border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]' : 'border-white/50 dark:border-white/10 glassmorphism hover:border-gray-400 dark:hover:border-gray-500 text-[#1D1D1F] dark:text-white'}`}
                       >
                         <div className="font-semibold text-sm">{template}</div>
                       </div>
@@ -1059,14 +1059,14 @@ export default function OnboardingWizard() {
                   <div className="grid grid-cols-2 gap-3 mb-2">
                     <div
                       onClick={() => setDomainChoice('subdomain')}
-                      className={`p-3 rounded-[8px] border cursor-pointer transition-all flex flex-col items-center justify-center text-center ${domainChoice === 'subdomain' ? 'border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]' : 'border-white/50 dark:border-white/10 glassmorphism text-[#1D1D1F] dark:text-white hover:border-gray-400 dark:hover:border-gray-500'}`}
+                      className={`p-3 rounded-[8px] border cursor-pointer transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] flex flex-col items-center justify-center text-center ${domainChoice === 'subdomain' ? 'border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]' : 'border-white/50 dark:border-white/10 glassmorphism text-[#1D1D1F] dark:text-white hover:border-gray-400 dark:hover:border-gray-500'}`}
                     >
                       <span className="font-semibold text-sm mb-1">Free Subdomain</span>
                       <span className="text-[10px] opacity-70">your-name.ohc.app</span>
                     </div>
                     <div
                       onClick={() => setDomainChoice('custom')}
-                      className={`p-3 rounded-[8px] border cursor-pointer transition-all flex flex-col items-center justify-center text-center ${domainChoice === 'custom' ? 'border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]' : 'border-white/50 dark:border-white/10 glassmorphism text-[#1D1D1F] dark:text-white hover:border-gray-400 dark:hover:border-gray-500'}`}
+                      className={`p-3 rounded-[8px] border cursor-pointer transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] flex flex-col items-center justify-center text-center ${domainChoice === 'custom' ? 'border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]' : 'border-white/50 dark:border-white/10 glassmorphism text-[#1D1D1F] dark:text-white hover:border-gray-400 dark:hover:border-gray-500'}`}
                     >
                       <span className="font-semibold text-sm mb-1">Custom Domain</span>
                       <span className="text-[10px] opacity-70">your-name.com</span>
@@ -1120,6 +1120,8 @@ export default function OnboardingWizard() {
                           }
                         }}
                         placeholder="you@example.com"
+                        inputMode="email"
+                        enterKeyHint="next"
                         className={`w-full p-3 sm:p-4 rounded-[8px] border ${validationErrors.adminEmail ? "border-[#FF3B30]" : "border-white/50 dark:border-white/10 focus:border-[#0066FF]"} outline-none glassmorphism min-h-[44px] min-w-[44px] text-[#1D1D1F] dark:text-[#F5F5F7]`}
                       />
                       {validationErrors.adminEmail && <p className="text-[#FF3B30] text-xs mt-1">{validationErrors.adminEmail}</p>}
@@ -1159,7 +1161,7 @@ export default function OnboardingWizard() {
                     {aiAgents.map(agent => (
                       <div
                         key={agent}
-                        className="px-3 py-1.5 rounded-full border border-[#34C759] bg-[#34C759]/10 text-[#34C759] flex items-center gap-1.5 text-sm font-semibold transition-all"
+                        className="px-3 py-1.5 rounded-full border border-[#34C759] bg-[#34C759]/10 text-[#34C759] flex items-center gap-1.5 text-sm font-semibold transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)]"
                       >
                         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
                         {agent}
@@ -1205,7 +1207,7 @@ export default function OnboardingWizard() {
           )}
 
           {step === 4 && (
-             <div aria-live="polite" className="flex flex-col flex-1 justify-center items-center text-center animate-fade-in glassmorphism shadow-2xl p-8">
+             <div aria-live="polite" className="flex flex-col flex-1 justify-center items-center text-center animate-fade-in glassmorphism rounded-[16px] shadow-2xl p-8">
                <div className="w-24 h-24 relative mb-8">
                  <div className="absolute inset-0 border-4 border-[#0066FF]/20 rounded-full"></div>
                  <div className="absolute inset-0 border-4 border-[#0066FF] rounded-full border-t-transparent animate-spin"></div>
