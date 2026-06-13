@@ -10,6 +10,8 @@ use ::server_ohc::orchestration::{StartOnboardingRequest, StartOnboardingRespons
 pub fn router(agent: Arc<OnboardingAgent>) -> Router<Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport>> {
     let r = Router::new()
         .route("/start", post(start_onboarding))
+        .route("/zero_click", post(zero_click_handler))
+
         .route("/intake", post(process_intake_handler))
         .route("/state", get(get_state).post(save_state))
         .route("/launch", post(launch_onboarding))
@@ -151,5 +153,70 @@ async fn save_state(
             tracing::error!("Failed to save onboarding state: {}", e);
             Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR)
         },
+    }
+}
+
+#[derive(serde::Deserialize)]
+pub struct ZeroClickRequest {
+    pub description: String,
+}
+
+async fn zero_click_handler(
+    State(agent): State<Arc<OnboardingAgent>>,
+    Extension(auth_info): Extension<::server_auth::orchestration::AuthInfo>,
+    Json(payload): Json<ZeroClickRequest>,
+) -> Result<Json<StartOnboardingResponse>, axum::http::StatusCode> {
+    let _tenant_id = auth_info.org_id.clone();
+    let _user_id = auth_info.agent_id.clone();
+
+    // 1. Process Intake
+    let intake_data = match agent.process_intake(&payload.description).await {
+        Ok(data) => data,
+        Err(error) => {
+            tracing::error!("onboarding zero_click intake error: {}", error);
+            return Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR);
+        }
+    };
+
+    // 2. Start Onboarding
+    let start_req = StartOnboardingRequest {
+        business_type: intake_data.business_type.clone(),
+        company_name: intake_data.business_name.clone(),
+        company_description: payload.description.clone(),
+        selling_categories: intake_data.categories.clone(),
+        payment_pref: "online".to_string(),
+        admin_email: "admin@example.com".to_string(),
+        admin_name: "Admin".to_string(),
+        admin_password: "password123".to_string(),
+        website_template: "Modern".to_string(),
+        first_product_name: intake_data.initial_products.first().map(|p| p.name.clone()).unwrap_or_default(),
+        first_product_price: intake_data.initial_products.first().map(|p| p.price.clone()).unwrap_or_default(),
+        domain_choice: "subdomain".to_string(),
+        price_type: "fixed".to_string(),
+        location: intake_data.location.clone().unwrap_or_default(),
+        target_audience: intake_data.target_audience.clone().unwrap_or_default(),
+        initial_products: intake_data.initial_products.into_iter().map(|p| {
+            ::server_ohc::orchestration::IntakeProductProto {
+                name: p.name,
+                price: p.price,
+                description: p.description.unwrap_or_default(),
+                variants: p.variants.unwrap_or_default().into_iter().map(|v| {
+                    ::server_ohc::orchestration::IntakeProductVariantProto {
+                        name: v.name,
+                        price_modifier: v.price_modifier,
+                    }
+                }).collect(),
+            }
+        }).collect(),
+        ai_agents: vec![],
+        ai_auto_respond: true,
+    };
+
+    match agent.start_onboarding(start_req).await {
+        Ok(res) => Ok(Json(res)),
+        Err(error) => {
+            tracing::error!("onboarding zero_click start error: {}", error);
+            Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR)
+        }
     }
 }
