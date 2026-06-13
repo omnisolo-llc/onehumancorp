@@ -89,7 +89,7 @@ async fn get_storefront_product(
     let mut response = Html(format!("<!DOCTYPE html><html><body>Product {} not found</body></html>", product_id)).into_response();
     response.headers_mut().insert(
         http::header::CACHE_CONTROL,
-        "public, max-age=10".parse().unwrap(),
+        "public, s-maxage=60, stale-while-revalidate=86400".parse().unwrap(),
     );
     Ok(response)
 }
