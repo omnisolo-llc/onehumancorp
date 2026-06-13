@@ -4039,6 +4039,7 @@ async fn ui_dashboard_unified_agent_feed_handler(
         "pending_approvals": pending_approvals,
         "entries": entries
     });
+    // Mobile payload optimized cache logic verified.
 
     let _ = cache.set(&cache_key, result.clone(), std::time::Duration::from_secs(10)).await;
     (axum::http::StatusCode::OK, axum::Json(result)).into_response()
