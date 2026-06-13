@@ -23,43 +23,43 @@ test.describe('OHC Setup Wizard Flow', () => {
     // Check initial UI loading
     await expect(page.locator('h1').first()).toBeVisible();
     // Start My Business
-    await page.locator('.next-step-btn[data-next="step-context"]').click();
+    await page.locator('[data-testid=\"next-step-btn\"][data-next=\"step-context\"]').click();
     await expect(page.getByText('How do you work?')).toBeVisible();
 
     // Context step
     await page.locator('.radio-option', { hasText: 'Storefront or Cafe' }).click();
-    await page.locator('.next-step-btn[data-next="step-categories"]').click();
+    await page.locator('[data-testid=\"next-step-btn\"][data-next=\"step-categories\"]').click();
 
     // Categories step
-    const categorySelect = page.locator('#business-categories');
+    const categorySelect = page.getByTestId('business-categories');
     await expect(categorySelect).toBeVisible();
     await page.waitForTimeout(100);
     await categorySelect.selectOption('Bakery');
-    await page.locator('.next-step-btn[data-next="step-name"]').click();
+    await page.locator('[data-testid=\"next-step-btn\"][data-next=\"step-name\"]').click();
 
     // Name step
-    await page.locator('#business-name').fill('Test Bakery');
-    await page.locator('.next-step-btn[data-next="step-assistant"]').click();
+    await page.getByTestId('business-name').fill('Test Bakery');
+    await page.locator('[data-testid=\"next-step-btn\"][data-next=\"step-assistant\"]').click();
 
     // Assistant step
-    await page.locator('#assistant-name').fill('Buddy');
-    await page.locator('#assistant-tone').selectOption('Friendly');
-    await page.locator('.next-step-btn[data-next="step-admin"]').click();
+    await page.getByTestId('assistant-name').fill('Buddy');
+    await page.getByTestId('assistant-tone').selectOption('Friendly');
+    await page.locator('[data-testid=\"next-step-btn\"][data-next=\"step-admin\"]').click();
 
     // Admin step
-    await page.locator('#admin-email').fill('admin@testbakery.local');
-    await page.locator('#admin-password').fill('SuperSecretPassword123');
-    await page.locator('.next-step-btn[data-next="step-offer"]').click();
+    await page.getByTestId('admin-email').fill('admin@testbakery.local');
+    await page.getByTestId('admin-password').fill('SuperSecretPassword123');
+    await page.locator('[data-testid=\"next-step-btn\"][data-next=\"step-offer\"]').click();
 
     // Offer step
-    await page.locator('#first-offer').fill('Chocolate Cake');
-    await page.locator('.next-step-btn[data-next="step-template"]').click();
+    await page.getByTestId('first-offer').fill('Chocolate Cake');
+    await page.locator('[data-testid=\"next-step-btn\"][data-next=\"step-template\"]').click();
 
     // Template step
-    await page.locator('#template-selection').selectOption('Modern');
+    await page.getByTestId('template-selection').selectOption('Modern');
 
     // Make sure finish btn is visible before interacting
-    await expect(page.locator('#finish-btn')).toBeVisible();
+    await expect(page.getByTestId('finish-btn')).toBeVisible();
 
     // Intercept backend call
     await page.route('**/api/onboarding/start', async route => {
@@ -75,7 +75,7 @@ test.describe('OHC Setup Wizard Flow', () => {
     });
 
     // Click Save Draft
-    const saveDraftBtn = page.locator('.save-draft-btn').last();
+    const saveDraftBtn = page.getByTestId('save-draft-btn').last();
     await expect(saveDraftBtn).toBeVisible();
     await saveDraftBtn.click();
     await expect(saveDraftBtn).toHaveText('Saved!', { timeout: 3000 });
@@ -85,7 +85,7 @@ test.describe('OHC Setup Wizard Flow', () => {
     });
 
     // Submit setup
-    await page.locator('#finish-btn').click();
+    await page.getByTestId('finish-btn').click();
 
     await page.waitForURL('**/success.html', { timeout: 10000 });
     await expect(page.url()).toContain('success.html');
@@ -110,7 +110,7 @@ test.describe('OHC Setup Wizard Flow', () => {
     const btnBox = await page.locator('.next-step-btn').first().boundingBox();
     expect(btnBox?.height).toBeGreaterThanOrEqual(44);
 
-    await page.locator('.next-step-btn[data-next="step-context"]').click();
+    await page.locator('[data-testid=\"next-step-btn\"][data-next=\"step-context\"]').click();
     const inputbox = await page.locator('.radio-option').first().boundingBox();
     expect(inputbox?.height).toBeGreaterThanOrEqual(44);
   });
@@ -130,15 +130,15 @@ test.describe('OHC Setup Wizard Form Configuration', () => {
     await page.goto('http://mock/setup.html');
 
     // Name step
-    const businessName = page.locator('#business-name');
+    const businessName = page.getByTestId('business-name');
     await expect(businessName).toHaveAttribute('autocomplete', 'organization');
 
     // Admin step
-    const adminEmail = page.locator('#admin-email');
+    const adminEmail = page.getByTestId('admin-email');
     await expect(adminEmail).toHaveAttribute('autocomplete', 'email');
     await expect(adminEmail).toHaveAttribute('inputmode', 'email');
 
-    const adminPassword = page.locator('#admin-password');
+    const adminPassword = page.getByTestId('admin-password');
     await expect(adminPassword).toHaveAttribute('autocomplete', 'new-password');
   });
 
@@ -179,7 +179,7 @@ test.describe('OHC Setup Wizard Form Configuration', () => {
     await page.setViewportSize({ width: 375, height: 812 });
     await page.goto('http://mock/setup.html');
 
-    await page.locator('.next-step-btn[data-next="step-context"]').click();
+    await page.locator('[data-testid=\"next-step-btn\"][data-next=\"step-context\"]').click();
     const inputbox = await page.locator('.radio-option').first().boundingBox();
     expect(inputbox?.height).toBeGreaterThanOrEqual(44);
   });
