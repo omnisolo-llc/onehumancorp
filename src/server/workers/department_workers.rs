@@ -163,7 +163,7 @@ impl OperationsWorker {
                         },
                         _ => {
                             attempts += 1;
-                            tokio::time::sleep(Duration::from_secs(2u64.pow(attempts))).await;
+                            tokio::time::sleep(Duration::from_secs(2u64.pow(attempts as u32))).await;
                         }
                     }
                 }
@@ -424,7 +424,7 @@ impl OperationsWorker {
                                                         }
                                                     }
                                                 }
-                                                tokio::time::sleep(Duration::from_secs(2u64.pow(attempts))).await;
+                                                tokio::time::sleep(Duration::from_secs(2u64.pow(attempts as u32))).await;
                                             }
                                         }
                                     }
@@ -806,7 +806,7 @@ impl CustomerSuccessWorker {
                                 .execute(&db.pool)
                                 .await;
                             }
-                            tokio::time::sleep(Duration::from_secs(2u64.pow(attempts))).await;
+                            tokio::time::sleep(Duration::from_secs(2u64.pow(attempts as u32))).await;
                         }
                     }
                 }
@@ -835,7 +835,7 @@ impl CustomerSuccessWorker {
                                 if attempts == MAX_RETRIES {
                                     final_status = "PAUSED";
                                 }
-                                tokio::time::sleep(Duration::from_secs(2u64.pow(attempts))).await;
+                                tokio::time::sleep(Duration::from_secs(2u64.pow(attempts as u32))).await;
                             }
                         }
                     }
@@ -1040,7 +1040,7 @@ let db_for_products = self.db.clone();
                                                     }
                                                 }
                                             }
-                                            tokio::time::sleep(std::time::Duration::from_secs(2u64.pow(attempts))).await;
+                                            tokio::time::sleep(std::time::Duration::from_secs(2u64.pow(attempts as u32))).await;
                                         }
                                     }
                                 }
@@ -1184,7 +1184,7 @@ let db_for_products = self.db.clone();
                                                     }
                                                 }
                                             }
-                                            tokio::time::sleep(Duration::from_secs(2u64.pow(attempts))).await;
+                                            tokio::time::sleep(Duration::from_secs(2u64.pow(attempts as u32))).await;
                                         }
                                     }
                                 }
@@ -1406,7 +1406,7 @@ impl AdvisorWorker {
                                         }
                                     }
                                 }
-                                tokio::time::sleep(std::time::Duration::from_secs(2u64.pow(attempts))).await;
+                                tokio::time::sleep(std::time::Duration::from_secs(2u64.pow(attempts as u32))).await;
                             }
                         }
                     }
