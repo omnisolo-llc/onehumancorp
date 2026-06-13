@@ -1,7 +1,7 @@
 import { test, expect } from './fixtures';
 
 test.describe('Miser Cost Features E2E', () => {
-  test.skip('Cost Dashboard displays Cost Transparency and allows navigation to My Plan', async ({ page, adminUser, loginAs }) => {
+  test('Cost Dashboard displays Cost Transparency and allows navigation to My Plan', async ({ page, adminUser, loginAs }) => {
     // Log in as an admin user
     await loginAs(page, adminUser);
 
@@ -32,7 +32,7 @@ test.describe('Miser Cost Features E2E', () => {
     await expect(page.locator('text=AI actions used this month')).toBeVisible({ timeout: 15000 });
   });
 
-  test.skip('Pricing Page displays Free Tier details and "Current Plan" disabled button', async ({ page, adminUser, loginAs }) => {
+  test('Pricing Page displays Free Tier details and "Current Plan" disabled button', async ({ page, adminUser, loginAs }) => {
     await loginAs(page, adminUser);
     await page.goto('/pricing');
     await page.waitForLoadState('networkidle');
@@ -50,7 +50,7 @@ test.describe('Miser Cost Features E2E', () => {
     await expect(currentPlanButton).toBeDisabled();
   });
 
-  test.skip('Pricing Page displays Starter Tier details and navigates to checkout', async ({ page, adminUser, loginAs }) => {
+  test('Pricing Page displays Starter Tier details and navigates to checkout', async ({ page, adminUser, loginAs }) => {
     await loginAs(page, adminUser);
     await page.goto('/pricing');
     await page.waitForLoadState('networkidle');
@@ -71,7 +71,7 @@ test.describe('Miser Cost Features E2E', () => {
     await expect(page.getByRole('heading', { name: 'Complete Your Upgrade' }).or(page.getByText('Plan Upgrade'))).toBeVisible({ timeout: 15000 });
   });
 
-  test.skip('Pricing Page displays Pro Tier details and navigates to checkout', async ({ page, adminUser, loginAs }) => {
+  test('Pricing Page displays Pro Tier details and navigates to checkout', async ({ page, adminUser, loginAs }) => {
     await loginAs(page, adminUser);
     await page.goto('/pricing');
     await page.waitForLoadState('networkidle');
@@ -92,7 +92,7 @@ test.describe('Miser Cost Features E2E', () => {
     await expect(page.getByRole('heading', { name: 'Complete Your Upgrade' }).or(page.getByText('Plan Upgrade'))).toBeVisible({ timeout: 15000 });
   });
 
-  test.skip('Pricing Page displays Business Tier details and navigates to checkout', async ({ page, adminUser, loginAs }) => {
+  test('Pricing Page displays Business Tier details and navigates to checkout', async ({ page, adminUser, loginAs }) => {
     await loginAs(page, adminUser);
     await page.goto('/pricing');
     await page.waitForLoadState('networkidle');
