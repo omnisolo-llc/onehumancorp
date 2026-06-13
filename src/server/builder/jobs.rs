@@ -120,6 +120,34 @@ async fn execute_publish_site_job(
         .ok();
     info!("Ops Agent: Invalidated edge cache for {}", cache_key);
 
+    let mut all_product_ids = std::collections::HashSet::new();
+    for page in &pages {
+        if let Ok(blocks) = super::db::list_blocks(pool, tenant_id, page.id).await {
+            for block in blocks {
+                if let Some(items) = block.content.get("items").and_then(|v| v.as_array()) {
+                    for item in items {
+                        if let Some(pid) = item.get("product_id").and_then(|v| v.as_str()) {
+                            all_product_ids.insert(pid.to_string());
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    all_product_ids.insert(Uuid::nil().to_string());
+
+    for product_id_str in all_product_ids {
+        let render_cache_key = format!("storefront:product:{}:{}", tenant_id, product_id_str);
+        let _ = crate::builder::edge::regenerate_cache(
+            pool.clone(),
+            tenant_id,
+            site_id,
+            render_cache_key,
+            cache.clone(),
+        ).await;
+    }
+
     let site = super::db::list_sites(pool, tenant_id)
         .await
         .map_err(|e| e.to_string())?
