@@ -120,3 +120,85 @@ async fn test_pg_fail_max_retries_dead_letter() {
     assert_eq!(dl_payload, "{\"test\":\"payload\"}");
     assert_eq!(dl_error_message, "test reason");
 }
+
+use std::sync::atomic::{AtomicUsize, Ordering};
+
+#[tokio::test]
+async fn test_pg_queue_concurrent_workers() {
+    if std::env::var("OHC_DATABASE_URL").is_err() {
+        return;
+    }
+
+    let database_url = std::env::var("OHC_DATABASE_URL").unwrap();
+    let pool = PgPoolOptions::new()
+        .max_connections(20)
+        .connect(&database_url)
+        .await
+        .unwrap();
+
+    let queue = Arc::new(PgTaskQueue::new(Arc::new(pool.clone())));
+
+    // Clean up
+    sqlx::query("DELETE FROM ohc_job_queue").execute(&pool).await.unwrap();
+
+    // 1. Enqueue 100 jobs
+    let mut jobs = Vec::new();
+    for i in 0..100 {
+        jobs.push(Job {
+            id: format!("job-concurrent-{}", i),
+            tenant_id: "test_org".to_string(),
+            parent_task_id: "parent".to_string(),
+            job_type: "concurrent-role".to_string(),
+            payload: "{}".to_string(),
+            status: "PENDING".to_string(),
+            retry_count: 0,
+            max_retries: 3,
+            next_retry_at: Utc::now(),
+            locked_until: None,
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+        });
+    }
+    queue.enqueue_batch(jobs).await.unwrap();
+
+    // 2. Spin up 5 workers
+    let processed_count = Arc::new(AtomicUsize::new(0));
+    let mut handles = Vec::new();
+
+    for worker_id in 0..5 {
+        let queue_clone = queue.clone();
+        let counter = processed_count.clone();
+
+        handles.push(tokio::spawn(async move {
+            let mut local_count = 0;
+            loop {
+                // Try to claim
+                match queue_clone.dequeue(vec!["concurrent-role".to_string()], 0, 0).await {
+                    Ok(Some(job)) => {
+                        // Complete it
+                        queue_clone.complete(&job.id).await.unwrap();
+                        counter.fetch_add(1, Ordering::SeqCst);
+                        local_count += 1;
+                    }
+                    Ok(None) => {
+                        // No more jobs
+                        break;
+                    }
+                    Err(e) => {
+                        panic!("Worker {} failed to dequeue: {}", worker_id, e);
+                    }
+                }
+            }
+            local_count
+        }));
+    }
+
+    // Wait for all workers to finish
+    let mut total_from_workers = 0;
+    for handle in handles {
+        total_from_workers += handle.await.unwrap();
+    }
+
+    assert_eq!(total_from_workers, 100, "Exactly 100 jobs should have been executed");
+    assert_eq!(processed_count.load(Ordering::SeqCst), 100, "Exactly 100 jobs should have been marked completed");
+}
