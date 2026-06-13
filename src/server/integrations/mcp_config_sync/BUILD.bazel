@@ -30,6 +30,8 @@ rust_library(
         "@crates//:tracing",
         "@crates//:opentelemetry",
         "@crates//:chrono",
+        "//src/server:server_lib",
+        "//src/server/common:server_common",
     ],
 )
 
