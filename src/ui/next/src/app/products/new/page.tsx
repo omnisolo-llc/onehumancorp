@@ -138,10 +138,6 @@ function AutoCatalogContent() {
         interval: subscriptionInterval,
         cutoff: subscriptionCutoff,
       }));
-      setPublished(true);
-      setLoading(false);
-      setPublishingStep(0);
-      return;
     }
 
     try {
