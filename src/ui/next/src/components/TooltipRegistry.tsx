@@ -17,6 +17,16 @@ const TooltipContext = createContext<TooltipContextType | undefined>(undefined);
 export function TooltipProvider({ children }: { children: ReactNode }) {
   const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
   const [tooltipRect, setTooltipRect] = useState<DOMRect | null>(null);
+  const [isTooltipVisible, setIsTooltipVisible] = useState(false);
+
+  useEffect(() => {
+    if (activeTooltip) {
+      setIsTooltipVisible(true);
+    } else {
+      const timer = setTimeout(() => setIsTooltipVisible(false), 200);
+      return () => clearTimeout(timer);
+    }
+  }, [activeTooltip]);
   const [tooltipText, setTooltipText] = useState<string>("");
   const [tooltips, setTooltips] = useState<Record<string, string>>({});
 
@@ -52,9 +62,9 @@ export function TooltipProvider({ children }: { children: ReactNode }) {
   return (
     <TooltipContext.Provider value={{ activeTooltip, setActiveTooltip, tooltipRect, setTooltipRect, tooltipText, setTooltipText, getTooltip: (id: string) => tooltips[id] }}>
       {children}
-      {activeTooltip && tooltipRect && (
+      {isTooltipVisible && tooltipRect && (
         <div
-          className="fixed z-[100] bg-white/70 text-gray-900 text-sm font-inter p-3 rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] pointer-events-none w-64 max-w-[calc(100vw-32px)] mx-4 text-center leading-relaxed backdrop-blur-xl saturate-[210%] border border-white/50 animate-fade-in-up"
+          className={`fixed z-[100] bg-white/70 text-gray-900 text-sm font-inter p-3 rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] pointer-events-none w-64 max-w-[calc(100vw-32px)] mx-4 text-center leading-relaxed backdrop-blur-xl saturate-[210%] border border-white/50 transition-all duration-200 ease-out ${activeTooltip ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"}`}
           style={{
             top: tooltipRect.top - 10,
             left: Math.max(128, Math.min(windowWidth - 128, tooltipRect.left + tooltipRect.width / 2)),
@@ -65,13 +75,7 @@ export function TooltipProvider({ children }: { children: ReactNode }) {
           <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-solid border-t-white/90 border-t-8 border-x-transparent border-x-8 border-b-0"></div>
         </div>
       )}
-      <style dangerouslySetInnerHTML={{__html: `
-        @keyframes fade-in-up {
-          0% { opacity: 0; transform: translate(-50%, -90%); }
-          100% { opacity: 1; transform: translate(-50%, -100%); }
-        }
-        .animate-fade-in-up { animation: fade-in-up 0.2s ease-out forwards; }
-      `}} />
+
     </TooltipContext.Provider>
   );
 }

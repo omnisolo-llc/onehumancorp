@@ -196,7 +196,7 @@ export function AppShell({
               </Link>
             ))}
             <WithTooltip id="help-btn-tooltip" defaultText="Need help? Click here to access our Help Center and tutorials.">
-              <Link href="/help" className="app-button min-h-[44px]" aria-label="Help Center" style={{ padding: '0 12px', minWidth: 'auto', borderRadius: '50%' }}>
+              <Link href="/help" className="app-button min-h-[44px]" aria-label="Help" role="button" style={{ padding: '0 12px', minWidth: 'auto', borderRadius: '50%' }}>
                 <span style={{ fontWeight: 'bold', fontSize: '1.2rem' }}>?</span>
               </Link>
             </WithTooltip>

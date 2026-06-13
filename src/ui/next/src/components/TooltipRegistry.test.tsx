@@ -39,14 +39,16 @@ describe('TooltipRegistry', () => {
         await new Promise(r => setTimeout(r, 20));
     });
 
-    expect(screen.getByText('Fetched tooltip text')).toBeInTheDocument();
+    expect(screen.getByText('Fetched tooltip text')).toHaveClass('opacity-100');
 
     await act(async () => {
         fireEvent.mouseLeave(button.parentElement!);
         await new Promise(r => setTimeout(r, 20));
     });
 
-    expect(screen.queryByText('Fetched tooltip text')).not.toBeInTheDocument();
+    { const foundEl = screen.queryByText('Fetched tooltip text');
+    if (foundEl) { expect(foundEl).not.toHaveClass('opacity-100'); }
+    else { expect(true).toBe(true); } }
   });
 
   it('handles touch events (long press) for mobile', async () => {
@@ -67,14 +69,16 @@ describe('TooltipRegistry', () => {
         await new Promise(r => setTimeout(r, 550));
     });
 
-    expect(screen.getByText('Fetched tooltip text')).toBeInTheDocument();
+    expect(screen.getByText('Fetched tooltip text')).toHaveClass('opacity-100');
 
     await act(async () => {
         fireEvent.touchEnd(button.parentElement!);
         await new Promise(r => setTimeout(r, 2050));
     });
 
-    expect(screen.queryByText('Fetched tooltip text')).not.toBeInTheDocument();
+    { const foundEl = screen.queryByText('Fetched tooltip text');
+    if (foundEl) { expect(foundEl).not.toHaveClass('opacity-100'); }
+    else { expect(true).toBe(true); } }
 
     await act(async () => {
         fireEvent.touchStart(button.parentElement!);
@@ -83,7 +87,9 @@ describe('TooltipRegistry', () => {
         await new Promise(r => setTimeout(r, 350));
     });
 
-    expect(screen.queryByText('Fetched tooltip text')).not.toBeInTheDocument();
+    { const foundEl = screen.queryByText('Fetched tooltip text');
+    if (foundEl) { expect(foundEl).not.toHaveClass('opacity-100'); }
+    else { expect(true).toBe(true); } }
   });
 
   it('handles fetch errors gracefully', async () => {
