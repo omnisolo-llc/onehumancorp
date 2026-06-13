@@ -46,14 +46,14 @@ impl ProactiveAnalysisWorker {
                     // Check if there's already a pending proactive task for this tenant today to avoid spamming
                     let has_pending = match &db.store {
                         crate::db::DbStore::Postgres => {
-                            sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM triage_items WHERE tenant_id = $1 AND source = 'Proactive Context Agent' AND status = 'pending' AND created_at > CURRENT_TIMESTAMP - INTERVAL '1 day'")
+                            sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM agent_feed_items WHERE tenant_id = $1 AND event_source = 'proactive_analysis' AND lifecycle_state = 'PENDING_APPROVAL' AND created_at > CURRENT_TIMESTAMP - INTERVAL '1 day'")
                                 .bind(&tenant_id)
                                 .fetch_one(&db.pool)
                                 .await
                                 .unwrap_or(0) > 0
                         },
                         crate::db::DbStore::Sqlite(_) => {
-                            sqlx::query_scalar::<_, i32>("SELECT COUNT(*) FROM triage_items WHERE tenant_id = $1 AND source = 'Proactive Context Agent' AND status = 'pending' AND created_at > datetime('now', '-1 day')")
+                            sqlx::query_scalar::<_, i32>("SELECT COUNT(*) FROM agent_feed_items WHERE tenant_id = $1 AND event_source = 'proactive_analysis' AND lifecycle_state = 'PENDING_APPROVAL' AND created_at > datetime('now', '-1 day')")
                                 .bind(&tenant_id)
                                 .fetch_one(&db.pool)
                                 .await
@@ -144,66 +144,64 @@ impl ProactiveAnalysisWorker {
                                     let context_message = parsed.get("message").and_then(|m| m.as_str()).unwrap_or("You have some items needing attention.");
                                     let task_id = Uuid::new_v4().to_string();
 
+                                    let mut action_type = "Review".to_string();
+                                    let mut action_payload = "".to_string();
+
+                                    if let Some(actions) = parsed.get("actions").and_then(|a| a.as_array()) {
+                                        if let Some(first_action) = actions.first() {
+                                            action_type = first_action.get("type").and_then(|t| t.as_str()).unwrap_or("Review").to_string();
+                                            action_payload = first_action.get("payload").and_then(|p| p.as_str()).unwrap_or("").to_string();
+                                        }
+                                    }
+
+                                    let context_payload = serde_json::json!({
+                                        "message": context_message,
+                                        "trigger": "proactive_analysis",
+                                        "unconfirmed_bookings": unconfirmed_bookings,
+                                        "unfulfilled_orders": unfulfilled_orders
+                                    });
+
+                                    let proposed_action = serde_json::json!({
+                                        "action_type": action_type,
+                                        "description": action_payload
+                                    });
+
+                                    let mut conn = match db.pool.acquire().await {
+                                        Ok(c) => c,
+                                        Err(e) => {
+                                            tracing::error!("Failed to acquire connection for proactive agent feed insert: {:?}", e);
+                                            continue;
+                                        }
+                                    };
+
+                                    if let Err(e) = ::server_common::auth_utils::set_org_context(&mut *conn, &tenant_id).await {
+                                        tracing::error!("Failed to set org context for proactive agent feed insert: {:?}", e);
+                                    }
+
                                     match &db.store {
                                         crate::db::DbStore::Postgres => {
                                             let _ = sqlx::query(
-                                                "INSERT INTO triage_items (id, tenant_id, source, priority, context, status) VALUES ($1, $2, $3, $4, $5, $6)"
+                                                "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state) VALUES ($1, $2, $3, $4, $5, 'PENDING_APPROVAL')"
                                             )
                                             .bind(&task_id)
                                             .bind(&tenant_id)
-                                            .bind("Proactive Context Agent")
-                                            .bind("High")
-                                            .bind(context_message)
-                                            .bind("pending")
-                                            .execute(&db.pool)
+                                            .bind("proactive_analysis")
+                                            .bind(sqlx::types::Json(context_payload))
+                                            .bind(sqlx::types::Json(proposed_action))
+                                            .execute(&mut *conn)
                                             .await;
                                         },
                                         crate::db::DbStore::Sqlite(_) => {
                                             let _ = sqlx::query(
-                                                "INSERT INTO triage_items (id, tenant_id, source, priority, context, status) VALUES (?, ?, ?, ?, ?, ?)"
+                                                "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state) VALUES (?, ?, ?, ?, ?, 'PENDING_APPROVAL')"
                                             )
                                             .bind(&task_id)
                                             .bind(&tenant_id)
-                                            .bind("Proactive Context Agent")
-                                            .bind("High")
-                                            .bind(context_message)
-                                            .bind("pending")
-                                            .execute(&db.pool)
+                                            .bind("proactive_analysis")
+                                            .bind(sqlx::types::Json(context_payload))
+                                            .bind(sqlx::types::Json(proposed_action))
+                                            .execute(&mut *conn)
                                             .await;
-                                        }
-                                    }
-
-                                    if let Some(actions) = parsed.get("actions").and_then(|a| a.as_array()) {
-                                        if let Some(first_action) = actions.first() {
-                                            let action_type = first_action.get("type").and_then(|t| t.as_str()).unwrap_or("Review");
-                                            let action_payload = first_action.get("payload").and_then(|p| p.as_str()).unwrap_or("");
-
-                                            match &db.store {
-                                                crate::db::DbStore::Postgres => {
-                                                    let _ = sqlx::query(
-                                                        "INSERT INTO triage_proposed_actions (id, triage_item_id, tenant_id, action_type, payload) VALUES ($1, $2, $3, $4, $5)"
-                                                    )
-                                                    .bind(Uuid::new_v4().to_string())
-                                                    .bind(&task_id)
-                                                    .bind(&tenant_id)
-                                                    .bind(action_type)
-                                                    .bind(action_payload)
-                                                    .execute(&db.pool)
-                                                    .await;
-                                                },
-                                                crate::db::DbStore::Sqlite(_) => {
-                                                    let _ = sqlx::query(
-                                                        "INSERT INTO triage_proposed_actions (id, triage_item_id, tenant_id, action_type, payload) VALUES (?, ?, ?, ?, ?)"
-                                                    )
-                                                    .bind(Uuid::new_v4().to_string())
-                                                    .bind(&task_id)
-                                                    .bind(&tenant_id)
-                                                    .bind(action_type)
-                                                    .bind(action_payload)
-                                                    .execute(&db.pool)
-                                                    .await;
-                                                }
-                                            }
                                         }
                                     }
                                 }

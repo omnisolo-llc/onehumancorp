@@ -478,9 +478,9 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                     )}
                   </div>
                   <h3 className="text-lg font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] leading-snug mt-1">
-                    {(approval.context_payload?.description || approval.proposed_action?.message || approval.proposed_action?.action_type || approval.event_source)}
+                    {(approval.context_payload?.description || approval.proposed_action?.description || approval.proposed_action?.message || approval.proposed_action?.action_type || approval.event_source)}
                   </h3>
-                  {((approval.proposed_action || approval.context_payload)?.context || (approval.proposed_action || approval.context_payload)?.remaining_stock !== undefined || (approval.proposed_action || approval.context_payload)?.feature_type === "quote_draft" || (approval.proposed_action || approval.context_payload)?.feature_type === "social_post_draft" || (approval.proposed_action || approval.context_payload)?.feature_type === "ambassador_reply" || (approval.proposed_action || approval.context_payload)?.feature_type === "incident_resolution" || (approval.proposed_action || approval.context_payload)?.feature_type === "instagram_dm") && (
+                  {((approval.proposed_action || approval.context_payload)?.trigger === "proactive_analysis" || (approval.proposed_action || approval.context_payload)?.context || (approval.proposed_action || approval.context_payload)?.remaining_stock !== undefined || (approval.proposed_action || approval.context_payload)?.feature_type === "quote_draft" || (approval.proposed_action || approval.context_payload)?.feature_type === "social_post_draft" || (approval.proposed_action || approval.context_payload)?.feature_type === "ambassador_reply" || (approval.proposed_action || approval.context_payload)?.feature_type === "incident_resolution" || (approval.proposed_action || approval.context_payload)?.feature_type === "instagram_dm") && (
                     <div className="mt-2 flex flex-col gap-1 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
                       {(approval.proposed_action || approval.context_payload)?.feature_type === "incident_resolution" && (
                         <div className="mb-4 p-4 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 flex flex-col gap-3" data-testid="incident-resolution-card">
@@ -508,6 +508,23 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                           </div>
                           <div className="text-xs text-gray-900 dark:text-gray-100 italic line-clamp-3 bg-white/50 dark:bg-black/20 p-2 rounded break-words">
                             Draft: {(approval.proposed_action || approval.context_payload).draft_reply}
+                          </div>
+                        </div>
+                      )}
+                      {(approval.proposed_action || approval.context_payload)?.trigger === "proactive_analysis" && (
+                        <div className="mb-4 p-4 rounded-xl glassmorphism border border-white/40 dark:border-white/10 flex flex-col gap-3" data-testid="proactive-analysis-card">
+                          <div className="flex items-center gap-2 text-indigo-600 font-semibold text-sm">
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            Proactive Operations Analysis
+                          </div>
+                          <div className="text-sm text-gray-800 dark:text-gray-200 font-medium">
+                            {approval.context_payload?.unconfirmed_bookings > 0 && <div>{approval.context_payload.unconfirmed_bookings} Unconfirmed Bookings</div>}
+                            {approval.context_payload?.unfulfilled_orders > 0 && <div>{approval.context_payload.unfulfilled_orders} Unfulfilled Orders</div>}
+                          </div>
+                          <div className="text-xs text-gray-600 dark:text-gray-400">
+                            {approval.context_payload?.message}
                           </div>
                         </div>
                       )}
@@ -777,6 +794,25 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                         className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
                         aria-label="Dismiss proposal"
                         data-testid="dismiss-social-post"
+                      >
+                        Dismiss
+                      </button>
+                    </div>
+                  ) : (approval.proposed_action || approval.context_payload)?.trigger === "proactive_analysis" ? (
+                    <div className="flex flex-col sm:flex-row gap-3 w-full">
+                      <button
+                        onClick={() => handleDecision(approval.id, true)}
+                        className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] bg-indigo-600 text-white font-medium hover:bg-indigo-700 transition-all duration-200 shadow-md flex items-center justify-center"
+                        aria-label="Approve proactive action"
+                        data-testid="approve-proactive"
+                      >
+                        Approve
+                      </button>
+                      <button
+                        onClick={() => handleDecision(approval.id, false)}
+                        className="flex-1 min-h-[44px] min-w-[44px] px-4 rounded-[8px] border border-gray-300 dark:border-gray-600 text-[#1D1D1F] dark:text-[#F5F5F7] font-medium hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 flex items-center justify-center"
+                        aria-label="Dismiss"
+                        data-testid="dismiss-proactive"
                       >
                         Dismiss
                       </button>
