@@ -852,26 +852,39 @@ impl BookingEngineService for NativeBookingService {
         .await
         .map_err(|e| Status::internal(e.to_string()))?;
 
+        let service_ids: Vec<String> = rows.iter().map(|r| r.get("id")).collect();
+
+        // Avoid the query entirely if there are no services
+        let all_reqs = if service_ids.is_empty() {
+            Vec::new()
+        } else {
+            sqlx::query(
+                r#"
+                SELECT service_id, resource_type, quantity
+                FROM service_resource_requirements
+                WHERE service_id = ANY($1)
+                "#,
+            )
+            .bind(&service_ids)
+            .fetch_all(&mut *tx)
+            .await
+            .unwrap_or_default()
+        };
+
+        let mut reqs_map: std::collections::HashMap<String, Vec<::server_ohc::app::ServiceResourceRequirement>> = std::collections::HashMap::new();
+        for r in all_reqs {
+            let s_id: String = r.get("service_id");
+            let req = ::server_ohc::app::ServiceResourceRequirement {
+                resource_type: r.get("resource_type"),
+                quantity: r.get::<i32, _>("quantity") as i32,
+            };
+            reqs_map.entry(s_id).or_default().push(req);
+        }
+
         let mut service_definitions = Vec::new();
         for row in rows {
             let service_id: String = row.get("id");
-
-            let reqs = sqlx::query(
-                r#"
-                SELECT resource_type, quantity
-                FROM service_resource_requirements
-                WHERE service_id = $1
-                "#,
-            )
-            .bind(&service_id)
-            .fetch_all(&mut *tx)
-            .await
-            .unwrap_or_default();
-
-            let resource_requirements = reqs.into_iter().map(|r| ::server_ohc::app::ServiceResourceRequirement {
-                resource_type: r.get("resource_type"),
-                quantity: r.get::<i32, _>("quantity") as i32,
-            }).collect();
+            let resource_requirements = reqs_map.remove(&service_id).unwrap_or_default();
 
             service_definitions.push(::server_ohc::app::ServiceDefinition {
                 id: service_id,
