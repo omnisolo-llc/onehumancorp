@@ -468,6 +468,7 @@ export default function Dashboard() {
             }
             setIsWalkthroughOpen(true);
           }}
+          id="dashboard-walkthrough-btn"
           className="app-button min-h-[44px]"
         >
           Start Tour
