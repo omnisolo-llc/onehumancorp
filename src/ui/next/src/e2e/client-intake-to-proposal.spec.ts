@@ -43,7 +43,7 @@ test.describe('Automated Client Intake to Proposal Generation Pipeline', () => {
     await expect(page.getByText('Scope of Work:')).toBeVisible();
     await expect(page.getByText('Suggested Time:')).toBeVisible();
 
-    // Step 3: Owner taps "Approve & Send Proposal"
+    // Step 3: Owner taps "Approve & Send"
     const approveBtn = page.getByTestId('approve-quote-draft').first();
     await approveBtn.waitFor({ state: 'visible' });
     await approveBtn.click();

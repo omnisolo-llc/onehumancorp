@@ -53,7 +53,7 @@ test.describe('Nora Intake Proposal Flow (375px viewport)', () => {
     const rejectBtn = page.getByTestId('reject-proposal').first();
     await expect(rejectBtn).toBeVisible();
 
-    // Click the "Approve & Send Proposal" button
+    // Click the "Approve & Send" button
     await approveBtn.click();
 
     // Wait for the card to disappear or success state
