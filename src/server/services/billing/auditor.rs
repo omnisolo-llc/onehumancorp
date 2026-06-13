@@ -306,6 +306,22 @@ impl CostAuditor {
         *tenant_payment_fees.get(tenant_id).unwrap_or(&0.0)
     }
 
+    pub async fn check_alert_threshold(&self, tenant_id: &str, plan_tier: &::server_pricing::rate_limit::PlanTier) -> Option<bool> {
+        let limit = plan_tier.base_price() * 3.0; // Dynamic threshold based on base price
+        let tenant_costs = self.tenant_costs.lock().unwrap();
+        let cost = *tenant_costs.get(tenant_id).unwrap_or(&0.0);
+
+        if limit <= 0.0 {
+            // For free tier, base_price is 0. Alert if any cost is incurred.
+            Some(cost > 0.0)
+        } else {
+            // Use BudgetManager to check the threshold
+            let manager = ::server_pricing::budget::BudgetManager::new(limit);
+            manager.record_spend(cost).unwrap_or(false);
+            Some(manager.check_alert_threshold())
+        }
+    }
+
     pub fn get_tenant_compute_cost(&self, tenant_id: &str) -> f64 {
         let tenant_compute_costs = self.tenant_compute_costs.lock().unwrap();
         *tenant_compute_costs.get(tenant_id).unwrap_or(&0.0)

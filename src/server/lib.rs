@@ -1389,6 +1389,10 @@ impl HubService for MyHubService {
             bandwidth_savings: (bandwidth_savings_f64 * 100.0).round() as i64,
             cache_hit_rate: (cache_hit_rate * 100.0).round() / 100.0,
             cost_per_1k_tokens: (cost_per_1k_tokens * 10000.0).round() / 10000.0,
+            is_budget_alert: auditor.check_alert_threshold(
+                &tenant_id,
+                &self.hub.tracker().get_tenant_tier(&tenant_id).await.unwrap_or(::server_pricing::rate_limit::PlanTier::Free)
+            ).await.unwrap_or(false),
             period_start,
             period_end,
         };

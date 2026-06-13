@@ -45,6 +45,7 @@ describe('CostDashboardPage', () => {
       bandwidth_savings: 5000,
       cache_hit_rate: 85.5,
       cost_per_1k_tokens: 0.0015,
+      is_budget_alert: false,
       period_start: "2023-10-01",
       period_end: "2023-10-31",
       trend: [
@@ -201,6 +202,7 @@ describe('CostDashboardPage', () => {
       bandwidth_savings: 0,
       cache_hit_rate: 0,
       cost_per_1k_tokens: 0,
+      is_budget_alert: true,
       period_start: "2023-10-01",
       period_end: "2023-10-31",
       trend: [],
@@ -256,6 +258,7 @@ describe('CostDashboardPage', () => {
   test('renders 0 limits properly', async () => {
     const mockCostData = {
       cost_per_1k_tokens: 0.0015,
+      is_budget_alert: false,
       projected_monthly_cost: 0,
       trend: [],
       department_tier_usage: {
@@ -300,6 +303,7 @@ describe('CostDashboardPage', () => {
   test('renders unlimited limits properly', async () => {
     const mockCostData = {
       cost_per_1k_tokens: 0.0015,
+      is_budget_alert: false,
       projected_monthly_cost: 0,
       trend: [],
       department_tier_usage: {

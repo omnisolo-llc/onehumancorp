@@ -47,6 +47,7 @@ pub struct CostDashboardResponse {
     pub department_tier_usage: DepartmentTierUsageResponse,
     pub email_cost: i64,
     pub api_cost: i64,
+    pub is_budget_alert: bool,
 }
 #[derive(serde::Serialize, serde::Deserialize, Clone, Default)]
 pub struct DepartmentTierUsageResponse {
@@ -254,7 +255,7 @@ pub async fn cost_dashboard_handler(
                 auth.org_id.clone()
             }
         },
-        None => return Json(CostDashboardResponse { total_revenue: 0, total_costs: 0, projected_monthly_cost: 0, llm_cost: 0, storage_cost: 0, payment_fees: 0, network_cost: 0, compute_cost: 0, bandwidth_savings: 0, cache_hit_rate: 0.0, cost_per_1k_tokens: 0.0, period_start: "2024-05-01".to_string(), period_end: "2024-05-31".to_string(), trend: vec![], agent_costs: vec![], department_tier_usage: empty_department_tier_usage_response(), email_cost: 0, api_cost: 0 })
+        None => return Json(CostDashboardResponse { total_revenue: 0, total_costs: 0, projected_monthly_cost: 0, llm_cost: 0, storage_cost: 0, payment_fees: 0, network_cost: 0, compute_cost: 0, bandwidth_savings: 0, cache_hit_rate: 0.0, cost_per_1k_tokens: 0.0, period_start: "2024-05-01".to_string(), period_end: "2024-05-31".to_string(), trend: vec![], agent_costs: vec![], department_tier_usage: empty_department_tier_usage_response(), email_cost: 0, api_cost: 0, is_budget_alert: false })
     };
 
     let cache = COST_DASHBOARD_CACHE.get_or_init(|| HybridCache::new(None));
@@ -358,6 +359,9 @@ pub async fn cost_dashboard_handler(
         now.day()
     };
 
+    let tier = hub.tracker().get_tenant_tier(&tenant_id).await.unwrap_or(::server_pricing::rate_limit::PlanTier::Free);
+    let is_budget_alert = auditor.check_alert_threshold(&tenant_id, &tier).await.unwrap_or(false);
+
     let resp = CostDashboardResponse {
         total_revenue: (total_revenue_f64 * 100.0).round() as i64,
         total_costs: (total_costs_f64 * 100.0).round() as i64,
@@ -377,6 +381,7 @@ pub async fn cost_dashboard_handler(
         department_tier_usage,
         email_cost: email_cost_cents,
         api_cost: api_cost_cents,
+        is_budget_alert,
     };
     cache.set(&tenant_id, resp.clone(), std::time::Duration::from_secs(60)).await;
     Json(resp)
@@ -401,6 +406,8 @@ pub async fn department_tier_usage_for_tenant(hub: &Arc<Hub>, tenant_id: &str) -
     if let Some(cached_resp) = cache.get(tenant_id).await {
         return cached_resp;
     }
+
+
 
     let tier_future = hub.tracker().get_tenant_tier(tenant_id);
     let departments_future = load_department_records(&hub.pool, tenant_id);
