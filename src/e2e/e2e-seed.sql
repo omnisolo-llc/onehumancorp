@@ -170,7 +170,8 @@ SET status = EXCLUDED.status,
 INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at)
 VALUES
   ('app-test-ab12-34f7-e43e-7264a9c4021d', 'e2e-tenant', 'Operations', '{"description": "Mark requested to reschedule his 4 PM lesson to 5 PM today. You have a conflict. Suggest tomorrow at 4 PM?"}', '{"context":{"description": "Mark requested to reschedule his 4 PM lesson to 5 PM today. You have a conflict. Suggest tomorrow at 4 PM?"}}', 'PENDING_APPROVAL', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-  ('app-test-cd34-34f7-e43e-7264a9c4021d', 'e2e-tenant', 'Operations', '{"description": "Agent tentatively booked a roof repair estimate for Sarah on Tuesday 2 PM. Pending $50 deposit. No action needed."}', '{"context":{"description": "Agent tentatively booked a roof repair estimate for Sarah on Tuesday 2 PM. Pending $50 deposit. No action needed."}}', 'PENDING_APPROVAL', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+  ('app-test-cd34-34f7-e43e-7264a9c4021d', 'e2e-tenant', 'Operations', '{"description": "Agent tentatively booked a roof repair estimate for Sarah on Tuesday 2 PM. Pending $50 deposit. No action needed."}', '{"context":{"description": "Agent tentatively booked a roof repair estimate for Sarah on Tuesday 2 PM. Pending $50 deposit. No action needed."}}', 'PENDING_APPROVAL', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+  ('e2e-feed-test-proactive', 'e2e-tenant', 'proactive_analysis', '{"summary": "You have 3 pending orders and 1 unconfirmed booking. You should follow up.", "insight_type": "operations"}', '{"title": "DraftFollowups", "description": "Draft followups for pending orders", "type": "DraftFollowups", "payload": "Draft followups for pending orders"}', 'PENDING_APPROVAL', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
 ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO agents (id, tenant_id, name, role, status, provider_type, region)
