@@ -1,28 +1,28 @@
 import { test, expect } from '@playwright/test';
+import { e2eBaseUrl } from './fixtures';
 
 test('agent audit dashboard rendering and glassmorphism', async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
 
-  await page.goto('/agent-audit-dashboard');
+  await page.goto(`${e2eBaseUrl}/ui/agent-audit-dashboard.html`);
 
   await expect(page.locator('h1', { hasText: 'Agent Audit Dashboard' })).toBeVisible({ timeout: 15000 });
   await expect(page.locator('text=Cost Tracker')).toBeVisible();
   await expect(page.locator('text=Operations')).toBeVisible();
   await expect(page.locator('text=Marketing & Advertising')).toBeVisible();
-  await expect(page.locator('text=Violation Feed')).toBeVisible();
+  await expect(page.locator('text=Violation & Activity Feed')).toBeVisible();
   await expect(page.locator('text=Agent Health: Optimal')).toBeVisible();
   await expect(page.locator('text=Campaigns Sync: Active')).toBeVisible();
 
   // Verify glassmorphism style drift on dashboard panels
-  const panel = page.locator('.app-panel').first();
+  const panel = page.locator('.panel.glassmorphism').first();
   await expect(panel).toBeVisible();
   await expect(panel).toHaveCSS('backdrop-filter', /blur\(30px\)/);
   await expect(panel).toHaveCSS('border-radius', '16px');
 
   // Verify glassmorphism style drift on dashboard cards
-  const card = page.locator('.app-card').first();
+  const card = page.locator('.agent-card').first();
   await expect(card).toBeVisible();
   await expect(card).toHaveCSS('backdrop-filter', /blur\(30px\)/);
-  await expect(card).toHaveCSS('border-radius', '16px');
+  await expect(card).toHaveCSS('border-radius', '12px');
 });
-
