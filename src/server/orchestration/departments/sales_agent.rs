@@ -354,9 +354,39 @@ impl Department for SalesAgent {
                     "quote_generated_from_message",
                 );
 
+                let quote_id = uuid::Uuid::new_v4().to_string();
+
+                // Generate quote in DB so it can be edited
+                let pool = match &self.orchestrator.db().store {
+                    crate::db::DbStore::Postgres => &self.orchestrator.db().pool,
+                    _ => unimplemented!("Sqlite not supported for this mutation yet"),
+                };
+
+                let _ = sqlx::query(
+                    "INSERT INTO quotes (id, tenant_id, status, created_at, updated_at) VALUES ($1, $2, 'Draft', NOW(), NOW()) ON CONFLICT DO NOTHING"
+                )
+                .bind(&quote_id)
+                .bind(&event.tenant_id)
+                .execute(pool)
+                .await;
+
+                let item_id = uuid::Uuid::new_v4().to_string();
+                let _ = sqlx::query(
+                    "INSERT INTO quote_line_items (id, tenant_id, quote_id, description, unit_price_cents, quantity, is_optional, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, false, NOW(), NOW()) ON CONFLICT DO NOTHING"
+                )
+                .bind(&item_id)
+                .bind(&event.tenant_id)
+                .bind(&quote_id)
+                .bind(format!("{} - {}", service_name, scope))
+                .bind((price * 100.0) as i64)
+                .bind(1)
+                .execute(pool)
+                .await;
+
                 let action_payload = serde_json::json!({
                     "inbox_message_id": event.payload.get("inbox_message_id").and_then(|v| v.as_str()).unwrap_or(""),
                     "feature_type": "quote_draft",
+                    "quote_id": quote_id,
                     "customer_inquiry": intent.original_message,
                     "suggested_price": price,
                     "scope": scope,

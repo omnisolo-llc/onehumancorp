@@ -123,8 +123,37 @@ async fn simulate_quote_draft(
         None => return (StatusCode::UNAUTHORIZED, Json(DecisionResponse { success: false })).into_response(),
     };
 
+    let quote_id = uuid::Uuid::new_v4().to_string();
+
+    let pool = match &orchestrator.db().store {
+        crate::db::DbStore::Postgres => &orchestrator.db().pool,
+        _ => unimplemented!("Sqlite not supported for this mutation yet"),
+    };
+
+    let _ = sqlx::query(
+        "INSERT INTO quotes (id, tenant_id, status, created_at, updated_at) VALUES ($1, $2, 'Draft', NOW(), NOW()) ON CONFLICT DO NOTHING"
+    )
+    .bind(&quote_id)
+    .bind(&tenant_id)
+    .execute(pool)
+    .await;
+
+    let item_id = uuid::Uuid::new_v4().to_string();
+    let _ = sqlx::query(
+        "INSERT INTO quote_line_items (id, tenant_id, quote_id, description, unit_price_cents, quantity, is_optional, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, false, NOW(), NOW()) ON CONFLICT DO NOTHING"
+    )
+    .bind(&item_id)
+    .bind(&tenant_id)
+    .bind(&quote_id)
+    .bind("Plumbing Fix including labor and standard materials.")
+    .bind(25000_i64)
+    .bind(1)
+    .execute(pool)
+    .await;
+
     let payload = serde_json::json!({
         "feature_type": "quote_draft",
+        "quote_id": quote_id,
         "service": "Plumbing Fix",
         "customer_inquiry": "I need a quote for Plumbing Fix",
         "suggested_price": 250.0,

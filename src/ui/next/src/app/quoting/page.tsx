@@ -21,7 +21,7 @@ function QuotingContent() {
 
     const fetchQuote = async () => {
       try {
-        const res = await fetch(`/api/quotes?id=${quoteId}`, {
+        const res = await fetch(`/api/v1/quotes/${quoteId}`, {
           headers: {
             'x-tenant-id': 'tenant-1' // hardcoded for test
           }
@@ -47,7 +47,7 @@ function QuotingContent() {
 
   const handleAccept = async () => {
     try {
-      const res = await fetch(`/api/quotes?id=${quoteId}`, {
+      const res = await fetch(`/api/v1/quotes/${quoteId}/accept`, {
         method: 'POST',
         headers: {
           'x-tenant-id': 'tenant-1' // hardcoded for test

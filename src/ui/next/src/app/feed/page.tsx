@@ -116,16 +116,29 @@ export default function FeedPage() {
                   {item.context_payload?.summary || item.proposed_action?.description || 'A new update requires your attention.'}
                 </p>
 
+
                 <div className="flex gap-3">
+                  {item.context_payload?.feature_type === 'quote_draft' && item.context_payload?.quote_id ? (
+                    <button
+                      onClick={() => window.location.href = `/quoting/edit?id=${item.context_payload.quote_id}&feed_item_id=${item.id}`}
+                      disabled={isProcessing}
+                      className="flex-1 bg-[#0066FF] hover:bg-[#0052CC] dark:bg-[#0071E3] dark:hover:bg-[#005bb5] text-white font-bold py-3 px-4 rounded-lg min-h-[44px] transition-colors flex items-center justify-center gap-2 border-0 cursor-pointer"
+                      data-testid="feed-edit-quote-btn"
+                    >
+                      Edit Quote
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => handleAction(item.id, 'APPROVED')}
+                      disabled={isProcessing}
+                      className="flex-1 bg-[#0066FF] hover:bg-[#0052CC] dark:bg-[#0071E3] dark:hover:bg-[#005bb5] text-white font-bold py-3 px-4 rounded-lg min-h-[44px] transition-colors flex items-center justify-center gap-2 border-0 cursor-pointer"
+                      data-testid="feed-approve-btn"
+                    >
+                      {isProcessing ? 'Processing...' : 'Approve'}
+                    </button>
+                  )}
                   <button
-                    onClick={() => handleAction(item.id, 'APPROVED')}
-                    disabled={isProcessing}
-                    className="flex-1 bg-[#0066FF] hover:bg-[#0052CC] dark:bg-[#0071E3] dark:hover:bg-[#005bb5] text-white font-bold py-3 px-4 rounded-lg min-h-[44px] transition-colors flex items-center justify-center gap-2 border-0 cursor-pointer"
-                    data-testid="feed-approve-btn"
-                  >
-                    {isProcessing ? 'Processing...' : 'Approve'}
-                  </button>
-                  <button
+
                     onClick={() => handleAction(item.id, 'DISMISSED')}
                     disabled={isProcessing}
                     className="flex-1 bg-[rgba(0,0,0,0.05)] hover:bg-[rgba(0,0,0,0.1)] dark:bg-[rgba(255,255,255,0.1)] dark:hover:bg-[rgba(255,255,255,0.15)] text-gray-700 dark:text-white font-bold py-3 px-4 rounded-lg min-h-[44px] transition-colors border-0 cursor-pointer"
