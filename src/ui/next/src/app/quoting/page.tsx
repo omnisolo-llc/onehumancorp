@@ -1,9 +1,9 @@
 "use client";
-
+import { Suspense } from "react";
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 
-export default function QuotingPage() {
+function QuotingContent() {
   const searchParams = useSearchParams();
   const quoteId = searchParams.get('id');
 
@@ -142,5 +142,13 @@ export default function QuotingPage() {
         .font-outfit { font-family: 'Outfit', sans-serif; }
       `}} />
     </div>
+  );
+}
+
+export default function QuotingPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <QuotingContent />
+    </Suspense>
   );
 }
