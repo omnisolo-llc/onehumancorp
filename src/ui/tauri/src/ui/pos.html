@@ -598,7 +598,6 @@
               console.warn("Terminal token API returned an error status");
           } else {
               const tokenData = await tokenRes.json();
-              console.log("Terminal connection token fetched successfully");
           }
 
           // Request Payment Intent
@@ -621,7 +620,6 @@
           if (res.ok) {
               const data = await res.json();
               if (data.client_secret && typeof window !== 'undefined' && window.Terminal) {
-                  console.log("Initializing Terminal SDK with intent:", data.client_secret);
                   // Mock or real call for Terminal SDK would go here to set up the reader
               }
           } else {
