@@ -971,6 +971,7 @@
 
               if (emailVal === '' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal)) {
                   errors.adminEmail.style.display = 'block';
+                  errors.adminEmail.innerText = emailVal === '' ? 'Admin Email is required' : 'Please enter a valid email address.';
                   inputs.adminEmail.style.borderColor = '#FF3B30';
                   stepValid = false;
               } else {
@@ -978,8 +979,9 @@
                   inputs.adminEmail.style.borderColor = 'rgba(255, 255, 255, 0.5)';
               }
 
-              if (passVal.length < 8) {
+              if (passVal.length < 8 || !/\d/.test(passVal)) {
                   errors.adminPassword.style.display = 'block';
+                  errors.adminPassword.innerText = passVal === '' ? 'Password is required' : 'Password must be at least 8 characters and contain a number';
                   inputs.adminPassword.style.borderColor = '#FF3B30';
                   stepValid = false;
               } else {
