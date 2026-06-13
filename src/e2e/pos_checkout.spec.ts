@@ -2,7 +2,7 @@ import { test, expect } from './fixtures';
 import { pool } from './global-setup';
 
 test.describe('Tap to Pay / POS Checkout API Flow', () => {
-  test('POS payment intent creation and webhook deducts inventory', async ({ adminPage }) => {
+  test('POS payment intent creation and webhook deducts inventory', async ({ browser }) => {
     // As per the constraints: real CUJ flow without mocking the network.
     // Given the task is mostly backend ("Mobile Implementation Deferred, but API must support it"),
     // we'll verify the backend API endpoints and webhook trigger.
@@ -17,6 +17,8 @@ test.describe('Tap to Pay / POS Checkout API Flow', () => {
       [productId, tenantId, 'Test POS Product', 1500, 10]
     );
 
+    const adminPage = await browser.newPage();
+    await adminPage.goto('/dashboard.html');
     // Call create intent API using the auth from the admin page
     const intentRes = await adminPage.request.post('/api/v1/payments/terminal/intent', {
       data: {
