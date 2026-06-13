@@ -240,6 +240,20 @@ ON CONFLICT (id) DO UPDATE
 SET title = EXCLUDED.title,
     description = EXCLUDED.description,
     status = EXCLUDED.status,
+    priority = EXCLUDED.priority,
+    payload = EXCLUDED.payload,
+    updated_at = CURRENT_TIMESTAMP;
+
+-- Seed task data for time savings metrics
+INSERT INTO tasks (id, organization_id, title, description, status, assignee_id, priority, task_metadata)
+VALUES
+  ('e2e-task-savings-1', 'e2e-tenant', 'Handle inquiry', 'Handled a customer inquiry', 'COMPLETED', 'e2e-agent-ops', 'P2', '{"source":"database_seed"}'),
+  ('e2e-task-savings-2', 'e2e-tenant', 'Schedule appointment', 'Scheduled an appointment', 'COMPLETED', 'e2e-agent-ops', 'P2', '{"source":"database_seed"}'),
+  ('e2e-task-savings-3', 'e2e-tenant', 'Recover cart', 'Recovered an abandoned cart', 'COMPLETED', 'e2e-agent-marketing', 'P2', '{"source":"database_seed"}')
+ON CONFLICT (id) DO UPDATE
+SET title = EXCLUDED.title,
+    description = EXCLUDED.description,
+    status = EXCLUDED.status,
     agent_id = EXCLUDED.agent_id,
     priority = EXCLUDED.priority,
     payload = EXCLUDED.payload,
@@ -370,6 +384,10 @@ ON CONFLICT (id) DO NOTHING;
 -- Seed 10th order milestone for e2e-tenant
 INSERT INTO business_milestones (id, tenant_id, milestone_type, reached_at)
 VALUES ('ms_e2e_10th_order', 'e2e-tenant', '10th_order', NOW())
+ON CONFLICT (id) DO NOTHING;
+-- Seed 10th order milestone for e2e-tenant-unlimited
+INSERT INTO business_milestones (id, tenant_id, milestone_type, reached_at)
+VALUES ('ms_e2e_unlimited_10th_order', 'e2e-tenant-unlimited', '10th_order', NOW())
 ON CONFLICT (id) DO NOTHING;
 -- Seed real data for Chaos Report
 INSERT INTO telemetry_buffer (tenant_id, metric_name, metric_type, value, labels_json, timestamp, sync_status) VALUES
