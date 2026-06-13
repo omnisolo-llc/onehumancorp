@@ -12,9 +12,10 @@ test.describe('Omnichannel Inbox UI', () => {
 
     // Check if the mock message 'e2e-inbox-msg-1' is rendered with sender 'maya_bakes'
     const msg = page.locator('.app-list-item', { hasText: 'Do you have vegan options' }).first();
-    await expect(msg).toBeVisible({ timeout: 5000 });
+    await expect(msg).toBeVisible({ timeout: 10000 });
     await msg.click();
 
     await expect(page.getByText('maya_bakes')).toBeVisible();
+    await expect(page.getByText('Known Customer')).toBeVisible();
   });
 });

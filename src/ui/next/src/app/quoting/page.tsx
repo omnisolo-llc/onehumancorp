@@ -1,9 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-
-import { Suspense } from 'react';
 
 function QuotingPageContent() {
   const searchParams = useSearchParams();
@@ -146,7 +144,6 @@ function QuotingPageContent() {
     </div>
   );
 }
-
 
 export default function QuotingPage() {
   return (

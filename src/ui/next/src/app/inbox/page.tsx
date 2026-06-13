@@ -199,7 +199,7 @@ function InboxContent() {
                 {badgeTone(selected.status) === "warn" && (
                   <div className="mt-6">
                     <button
-                      className="app-btn-primary w-full"
+                      className="app-button primary w-full"
                       onClick={() => handleApproveAndSend(selected.id)}
                     >✨ Approve &amp; Send Draft</button>
                   </div>

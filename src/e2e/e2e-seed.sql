@@ -262,6 +262,12 @@ VALUES
   ('e2e-inbox-msg-2', 'e2e-tenant', 'WhatsApp', 'Can I schedule a consultation for my wedding?', 'Hi! Absolutely. I have availability this Thursday at 2pm or Friday at 10am. Which works best for you?', 'pending', '+15550102')
 ON CONFLICT DO NOTHING;
 
+INSERT INTO omni_inbox_messages (id, tenant_id, source, original_content, translated_content, target_language, draft_reply, status, sender_id, customer_id)
+VALUES
+  ('e2e-inbox-msg-1', 'e2e-tenant', 'Instagram DM', 'Do you have vegan options for birthday cakes?', 'Do you have vegan options for birthday cakes?', 'English', 'Hi there! Yes, we do offer vegan birthday cakes. They start at $45. Would you like to see our menu?', 'pending', 'maya_bakes', 'e2e-customer-ava'),
+  ('e2e-inbox-msg-2', 'e2e-tenant', 'WhatsApp', 'Can I schedule a consultation for my wedding?', 'Can I schedule a consultation for my wedding?', 'English', 'Hi! Absolutely. I have availability this Thursday at 2pm or Friday at 10am. Which works best for you?', 'pending', '+15550102', 'e2e-customer-ben')
+ON CONFLICT DO NOTHING;
+
 ALTER TABLE IF EXISTS tenants ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS business_milestones ENABLE ROW LEVEL SECURITY;
