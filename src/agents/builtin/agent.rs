@@ -5796,7 +5796,7 @@ mod tests {
                 let mut reqs = self.requests.lock().await;
                 reqs.push(req.clone());
 
-                if req.system.contains("You are a research planner") {
+                if req.system.contains("planner") {
                     let plan = serde_json::json!(["Sub-topic A", "Sub-topic B"]);
                     Ok(crate::types::ChatResponse {
                         message: crate::types::Message::assistant(plan.to_string()),
@@ -5804,10 +5804,7 @@ mod tests {
                         stop_reason: "stop".to_string(),
                         response_id: Some("mock-id".to_string()),
                     })
-                } else if req
-                    .system
-                    .contains("You are a specialized research execution agent")
-                {
+                } else if req.system.contains("execution agent") {
                     Ok(crate::types::ChatResponse {
                         message: crate::types::Message::assistant("Detailed content here"),
                         usage: Usage::default(),
@@ -5840,7 +5837,7 @@ mod tests {
         let result = agent
             .run(&cfg, "Research quantum computing", &mut on_event)
             .await;
-        assert!(result.is_ok());
+                assert!(result.is_ok());
         let res_str = result.unwrap();
 
         assert!(res_str.contains("# Research Report: Research quantum computing"));
