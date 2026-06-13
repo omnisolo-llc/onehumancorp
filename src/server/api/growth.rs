@@ -2270,3 +2270,19 @@ mod promoter_tests {
         assert_eq!(req.name, "Vegan Chocolate Cake");
     }
 }
+
+#[cfg(test)]
+mod additional_tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_promoter_generate_struct() {
+        let req = PromoterGenerateRequest {
+            product_id: "test1".to_string(),
+            name: "Test Cake".to_string(),
+            description: Some("Delicious vegan cake".to_string()),
+        };
+        assert_eq!(req.name, "Test Cake");
+        assert_eq!(req.description.unwrap(), "Delicious vegan cake");
+    }
+}
