@@ -159,10 +159,10 @@ impl PydanticToolExecutor<SubagentArgs> for SubagentExecutor {
                     if !inner.error.is_empty() {
                         Err(ToolError::LlmRecoverable(inner.error))
                     } else {
-                        let summary = self.summarize_output(&inner.result).await.unwrap_or_else(|e| format!("Failed to summarize: {}
-
-{}", e, inner.result));
-                        Ok(format!("[Subagent (Worktree)] Completed task: {}. Summary: {}", task, summary))
+                        match self.summarize_output(&inner.result).await {
+                            Ok(summary) => Ok(format!("[Subagent (Worktree)] Completed task: {}. Summary: {}", task, summary)),
+                            Err(e) => Err(ToolError::LlmRecoverable(format!("Failed to summarize worktree subagent output: {}", e))),
+                        }
                     }
                 }
                 Err(e) => Err(ToolError::LlmRecoverable(format!("Subagent failed: {}", e))),
@@ -203,10 +203,10 @@ impl PydanticToolExecutor<SubagentArgs> for SubagentExecutor {
                     if !inner.error.is_empty() {
                         Err(ToolError::LlmRecoverable(inner.error))
                     } else {
-                        let summary = self.summarize_output(&inner.result).await.unwrap_or_else(|e| format!("Failed to summarize: {}
-
-{}", e, inner.result));
-                        Ok(format!("[Subagent (Fork)] Completed task: {}. Summary: {}", task, summary))
+                        match self.summarize_output(&inner.result).await {
+                            Ok(summary) => Ok(format!("[Subagent (Fork)] Completed task: {}. Summary: {}", task, summary)),
+                            Err(e) => Err(ToolError::LlmRecoverable(format!("Failed to summarize fork subagent output: {}", e))),
+                        }
                     }
                 }
                 Err(e) => Err(ToolError::LlmRecoverable(format!("Subagent failed: {}", e))),
@@ -300,9 +300,10 @@ When finished or if you need to report progress, write your final summary to {}.
                     let stdout = String::from_utf8_lossy(&out.stdout).to_string();
                     let stderr = String::from_utf8_lossy(&out.stderr).to_string();
                     if out.status.success() {
-                        self.summarize_output(&stdout).await.unwrap_or_else(|e| format!("Failed to summarize: {}
-
-{}", e, stdout))
+                        match self.summarize_output(&stdout).await {
+                            Ok(summary) => summary,
+                            Err(e) => format!("Failed to summarize teammate subagent output: {}", e),
+                        }
                     } else {
                         format!("Subagent error: {}", stderr)
                     }
