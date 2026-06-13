@@ -384,52 +384,10 @@ pub async fn stripe_webhook_handler(
                     .and_then(|q| q.parse::<i32>().ok())
                     .unwrap_or(1);
 
-                if let Ok(mut conn) = webhook_state.rate_limiter.get_connection().await {
-                    let lock_key = format!("ohc:lock:{}:inventory:{}", tenant_id, product_id);
-                    let acquired: bool = redis::cmd("SET")
-                        .arg(&lock_key)
-                        .arg("1")
-                        .arg("NX")
-                        .arg("PX")
-                        .arg(5000)
-                        .query_async(&mut conn)
-                        .await
-                        .unwrap_or(false);
+                let inventory_service = crate::services::inventory::InventoryService::new(None);
 
-                    if acquired {
-                        let update_res = match &webhook_state.db.store {
-                            crate::db::DbStore::Sqlite(pool) => {
-                                sqlx::query("UPDATE products SET inventory_count = MAX(0, inventory_count - ?) WHERE id = ? AND tenant_id = ?")
-                                    .bind(quantity)
-                                    .bind(product_id)
-                                    .bind(tenant_id)
-                                    .execute(pool)
-                                    .await
-                                    .map(|_| ())
-                            }
-                            crate::db::DbStore::Postgres => {
-                                sqlx::query("UPDATE products SET inventory_count = GREATEST(0, inventory_count - $1) WHERE id = $2 AND tenant_id = $3")
-                                    .bind(quantity)
-                                    .bind(product_id)
-                                    .bind(tenant_id)
-                                    .execute(&webhook_state.db.pool)
-                                    .await
-                                    .map(|_| ())
-                            }
-                        };
+                let _ = inventory_service.commit_inventory(tenant_id, product_id, quantity, "").await;
 
-                        // Release lock
-                        let _: () = redis::cmd("DEL").arg(&lock_key).query_async(&mut conn).await.unwrap_or(());
-
-                        if let Err(e) = update_res {
-                            ::server_telemetry::record_error_signal("Failed to update inventory count for product : {:?}");
-                            tracing::error!("Failed to update inventory count for product {}: {:?}", product_id, e);
-                        }
-                    } else {
-                        tracing::warn!("Failed to acquire inventory lock for product {} on POS transaction", product_id);
-                        return StatusCode::CONFLICT.into_response();
-                    }
-                }
             }
 
             // Also try to update the order status to Paid if order_id is present
