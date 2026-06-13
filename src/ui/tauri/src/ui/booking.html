@@ -505,15 +505,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (!window.OHC_TOOLTIPS) {
         window.OHC_TOOLTIPS = {};
-        fetch("/api/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(e => {
-            // Fallback for playwright
-            window.OHC_TOOLTIPS = {
-                "nav-store": "Your Storefront. This is where you manage what you sell.",
-                "nav-agents": "AI Helpers. These are your digital employees.",
-                "ohc-help-btn": "Need help? Click here to access our Help Center and tutorials.",
-                "search-input": "Search our knowledge base for help articles.",
-            };
-        });
+        fetch("/api/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(console.error);
     }
 
     const tooltipEl = document.createElement('div');
@@ -618,15 +610,7 @@ document.addEventListener('DOMContentLoaded', () => {
 document.addEventListener('DOMContentLoaded', () => {
     if (!window.OHC_TOOLTIPS) {
         window.OHC_TOOLTIPS = {};
-        fetch("/api/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(e => {
-            // Fallback for playwright
-            window.OHC_TOOLTIPS = {
-                "nav-store": "Your Storefront. This is where you manage what you sell.",
-                "nav-agents": "AI Helpers. These are your digital employees.",
-                "ohc-help-btn": "Need help? Click here to access our Help Center and tutorials.",
-                "search-input": "Search our knowledge base for help articles.",
-            };
-        });
+        fetch("/api/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(console.error);
     }
     const tooltipEl = document.createElement('div');
     tooltipEl.className = 'ohc-tooltip';
@@ -701,8 +685,8 @@ function initWalkthrough() {
             const step = steps[currentStep];
 
             // Clean up previous highlights
-            document.querySelectorAll('.walkthrough-highlight').forEach(el => {
-                el.classList.remove('walkthrough-highlight');
+            document.querySelectorAll('.walkthrough-highlight, .ohc-walkthrough-highlight').forEach(el => {
+                el.classList.remove('walkthrough-highlight', 'ohc-walkthrough-highlight');
                 el.style.position = '';
                 el.style.zIndex = '';
                 el.style.background = '';
@@ -757,8 +741,8 @@ function initWalkthrough() {
         }
 
         function closeWalkthrough() {
-            document.querySelectorAll('.walkthrough-highlight').forEach(el => {
-                el.classList.remove('walkthrough-highlight');
+            document.querySelectorAll('.walkthrough-highlight, .ohc-walkthrough-highlight').forEach(el => {
+                el.classList.remove('walkthrough-highlight', 'ohc-walkthrough-highlight');
                 el.style.position = '';
                 el.style.zIndex = '';
                 el.style.background = '';
@@ -1141,14 +1125,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Tooltips
     if (!window.OHC_TOOLTIPS) {
         window.OHC_TOOLTIPS = {};
-        fetch("/api/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(e => {
-            // Fallback for playwright
-            window.OHC_TOOLTIPS = {
-                "nav-store": "Your Storefront. This is where you manage what you sell.",
-                "nav-agents": "AI Helpers. These are your digital employees.",
-                "ohc-floating-help-btn": "Need help? Click here to access our Help Center and tutorials.",
-            };
-        });
+        fetch("/api/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(console.error);
     }
     const tooltipEl = document.createElement('div');
     tooltipEl.className = 'ohc-tooltip';
@@ -1216,8 +1193,8 @@ document.addEventListener('DOMContentLoaded', () => {
             function renderStep() {
                 const step = steps[currentStep];
 
-                document.querySelectorAll('.walkthrough-highlight').forEach(el => {
-                    el.classList.remove('walkthrough-highlight');
+                document.querySelectorAll('.walkthrough-highlight, .ohc-walkthrough-highlight').forEach(el => {
+                    el.classList.remove('walkthrough-highlight', 'ohc-walkthrough-highlight');
                     el.style.position = '';
                     el.style.zIndex = '';
                     el.style.background = '';
@@ -1269,8 +1246,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             function closeWalkthrough() {
-                document.querySelectorAll('.walkthrough-highlight').forEach(el => {
-                    el.classList.remove('walkthrough-highlight');
+                document.querySelectorAll('.walkthrough-highlight, .ohc-walkthrough-highlight').forEach(el => {
+                    el.classList.remove('walkthrough-highlight', 'ohc-walkthrough-highlight');
                     el.style.position = '';
                     el.style.zIndex = '';
                     el.style.background = '';
