@@ -109,7 +109,6 @@ Chart.lock
 !/README.md
 !/CHANGELOG.md
 !/RELEASE_NOTES.md
-!/AGENTS.md
 
 # Golang is not allowed in this project
 *.go
