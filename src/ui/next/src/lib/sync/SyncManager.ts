@@ -26,7 +26,7 @@ export class SyncManager {
     try {
       if (window.indexedDB) {
         await enqueueAction({
-          id: mutation.id || \`act_\${Date.now()}_\${Math.random().toString(36).substr(2, 9)}\`,
+          id: mutation.id || `act_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
           type: mutation.type || 'unknown',
           payload: mutation,
           timestamp: mutation.timestamp || Date.now()
@@ -133,7 +133,7 @@ export class SyncManager {
       });
 
       const tenantId = localStorage.getItem("tenant_id") || localStorage.getItem("tenant") || "default";
-      const spiffeId = \`spiffe://ohc/org/\${tenantId}/agent/ui\`;
+      const spiffeId = `spiffe://ohc/org/${tenantId}/agent/ui`;
 
       let allOk = true;
 
@@ -153,7 +153,7 @@ export class SyncManager {
         });
         if (!resPos.ok) {
           allOk = false;
-          throw new Error(\`POS Sync failed with status \${resPos.status}\`);
+          throw new Error(`POS Sync failed with status ${resPos.status}`);
         }
       }
 
@@ -169,7 +169,7 @@ export class SyncManager {
         });
         if (!resGen.ok) {
           allOk = false;
-          throw new Error(\`General Sync failed with status \${resGen.status}\`);
+          throw new Error(`General Sync failed with status ${resGen.status}`);
         }
       }
 
