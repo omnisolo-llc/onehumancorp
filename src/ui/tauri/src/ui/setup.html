@@ -33,7 +33,6 @@
         backdrop-filter: blur(30px) saturate(2.1);
         -webkit-backdrop-filter: blur(30px) saturate(2.1);
         border: 1px solid rgba(255, 255, 255, 0.4);
-        border-radius: 16px;
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
       }
       h1 {
@@ -129,7 +128,7 @@
       .spinner {
         display: inline-block;
         width: 16px;
-        height: 16px;
+        min-height: 44px; height: auto;
         border: 2px solid rgba(255, 255, 255, 0.3);
         border-radius: 50%;
         border-top-color: #fff;
@@ -156,7 +155,6 @@
           backdrop-filter: blur(30px) saturate(2.1);
           -webkit-backdrop-filter: blur(30px) saturate(2.1);
           border: 1px solid rgba(255, 255, 255, 0.1);
-          border-radius: 16px;
           box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
         }
         h1 {
@@ -196,7 +194,7 @@
       }
       .step-indicator {
         width: 12px;
-        height: 12px;
+        min-height: 44px; height: auto;
         border-radius: 50%;
         background: rgba(255, 255, 255, 0.5);
         border: 2px solid rgba(255, 255, 255, 0.8);
@@ -428,14 +426,24 @@
         }
         .step-indicator {
           width: 8px;
-          height: 8px;
+          min-height: 44px; height: auto;
         }
         .step-indicator.active {
           transform: scale(1.2);
         }
         .container {
-          padding: 16px;
-        }
+        background: rgba(255, 255, 255, 0.65);
+        backdrop-filter: blur(30px) saturate(210%);
+        -webkit-backdrop-filter: blur(30px) saturate(210%);
+        padding: 40px;
+        border-radius: 16px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        text-align: center;
+        max-width: 480px;
+        width: 100%;
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        box-sizing: border-box;
+      }
         .radio-option {
           padding: 8px 12px;
         }
@@ -464,7 +472,7 @@
         <p>Zero tech skills needed. We do the heavy lifting. Review and add any extra details to help our AI generate the perfect store.</p>
 
         <div class="btn-group" style="margin-top: 32px;">
-          <button class="next-step-btn" data-next="step-context">Start My Business</button>
+          <button class="next-step-btn" data-testid="next-step-btn" data-next="step-context">Start My Business</button>
           <button type="button" class="btn-secondary" onclick="goToStep('step-instant')">Instant Build</button>
           <button type="button" class="btn-secondary" onclick="goToStep('step-chat')" style="margin-top: 10px;">Conversational Setup</button>
         </div>
@@ -473,7 +481,7 @@
       <!-- Step Instant: Instant Build -->
       <div class="step" id="step-instant">
         <button onclick="goToStep('step-initial')" style="background: none; border: none; color: #0066FF; padding: 0; box-shadow: none; width: auto; font-size: 14px; min-height: auto; margin-bottom: 16px; display: flex; align-items: center; gap: 4px; font-weight: 600;">
-          <svg style="width: 16px; height: 16px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg> Back
+          <svg style="width: 16px; min-height: 44px; height: auto;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg> Back
         </button>
         <h1>Tell us about your business</h1>
         <p>Our AI will handle the rest in 30 seconds.</p>
@@ -482,7 +490,7 @@
         <div id="instant-error" class="error-msg" style="margin-bottom: 20px;"></div>
 
         <div class="btn-group" style="margin-top: 24px;">
-          <button id="generate-storefront-btn">Next</button>
+          <button id="generate-storefront-btn" data-testid="generate-storefront-btn">Next</button>
         </div>
       </div>
 
@@ -497,7 +505,7 @@
       <!-- Step Chat: Conversational Build -->
       <div class="step" id="step-chat">
         <button onclick="goToStep('step-initial')" style="background: none; border: none; color: #0066FF; padding: 0; box-shadow: none; width: auto; font-size: 14px; min-height: auto; margin-bottom: 16px; display: flex; align-items: center; gap: 4px; font-weight: 600;">
-          <svg style="width: 16px; height: 16px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg> Back
+          <svg style="width: 16px; min-height: 44px; height: auto;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg> Back
         </button>
         <h1>Setup Assistant</h1>
         <p>Talk to our AI to build your business.</p>
@@ -512,7 +520,7 @@
         </div>
       </div>
 
-      <div class="stepper" id="stepper-indicator" style="display: none;">
+      <div class="stepper" id="stepper-indicator" style="display: none;" role="progressbar" aria-label="Setup progress" aria-valuemin="0" aria-valuemax="7">
         <div class="step-indicator active" data-step="step-context"></div>
         <div class="step-indicator" data-step="step-categories"></div>
         <div class="step-indicator" data-step="step-name"></div>
@@ -529,10 +537,10 @@
         <p>Choose a quick-start or select how you work.</p>
 
         <div class="persona-row">
-            <div class="persona-chip" onclick="applyPersona('Baker', event)">I'm a Baker</div>
-            <div class="persona-chip" onclick="applyPersona('Handyman', event)">I'm a Handyman</div>
-            <div class="persona-chip" onclick="applyPersona('Boutique', event)">I'm a Boutique Owner</div>
-            <div class="persona-chip" onclick="applyPersona('Tutor', event)">I'm a Tutor</div>
+            <div class="persona-chip" onclick="applyPersona('Baker', event)" data-testid="persona-baker">I'm a Baker</div>
+            <div class="persona-chip" onclick="applyPersona('Handyman', event)" data-testid="persona-handyman">I'm a Handyman</div>
+            <div class="persona-chip" onclick="applyPersona('Boutique', event)" data-testid="persona-boutique">I'm a Boutique Owner</div>
+            <div class="persona-chip" onclick="applyPersona('Tutor', event)" data-testid="persona-tutor">I'm a Tutor</div>
         </div>
 
         <div class="radio-group" id="context-group">
@@ -565,10 +573,10 @@
             </div>
           </label>
         </div>
-        <div id="context-error" class="error-msg">Please select an option.</div>
+        <div id="context-error" class="error-msg" aria-live="polite">Please select an option.</div>
         <div class="btn-group">
-          <button class="next-step-btn" data-next="step-categories">Next</button>
-          <button type="button" class="btn-secondary save-draft-btn">Save Draft</button>
+          <button class="next-step-btn" data-testid="next-step-btn" data-next="step-categories">Next</button>
+          <button type="button" class="btn-secondary save-draft-btn" data-testid="save-draft-btn">Save Draft</button>
         </div>
       </div>
 
@@ -579,11 +587,11 @@
         <select id="business-categories" class="glassmorphism min-h-[44px]">
           <option value="" disabled selected>Select a category...</option>
         </select>
-        <div id="categories-error" class="error-msg">Please enter a category.</div>
+        <div id="categories-error" class="error-msg" aria-live="polite">Please enter a category.</div>
         <div class="btn-group">
-          <button class="next-step-btn" data-next="step-name">Next</button>
-          <button type="button" class="btn-secondary save-draft-btn">Save Draft</button>
-          <button class="btn-secondary prev-step-btn" data-prev="step-context">Back</button>
+          <button class="next-step-btn" data-testid="next-step-btn" data-next="step-name">Next</button>
+          <button type="button" class="btn-secondary save-draft-btn" data-testid="save-draft-btn">Save Draft</button>
+          <button class="btn-secondary prev-step-btn" data-testid="prev-step-btn" data-prev="step-context">Back</button>
         </div>
       </div>
 
@@ -597,9 +605,9 @@
         <input type="text" id="business-tagline" class="glassmorphism min-h-[44px]" placeholder="Tagline (optional)" />
 
         <div class="btn-group">
-          <button class="next-step-btn" data-next="step-assistant">Next</button>
-          <button type="button" class="btn-secondary save-draft-btn">Save Draft</button>
-          <button class="btn-secondary prev-step-btn" data-prev="step-categories">Back</button>
+          <button class="next-step-btn" data-testid="next-step-btn" data-next="step-assistant">Next</button>
+          <button type="button" class="btn-secondary save-draft-btn" data-testid="save-draft-btn">Save Draft</button>
+          <button class="btn-secondary prev-step-btn" data-testid="prev-step-btn" data-prev="step-categories">Back</button>
         </div>
       </div>
 
@@ -621,12 +629,12 @@
           <option value="Friendly">Friendly</option>
           <option value="Concise">Concise</option>
         </select>
-        <div id="tone-error" class="error-msg">Please select a tone.</div>
+        <div id="tone-error" class="error-msg" aria-live="polite">Please select a tone.</div>
 
         <div class="btn-group">
-          <button class="next-step-btn" data-next="step-admin">Next</button>
-          <button type="button" class="btn-secondary save-draft-btn">Save Draft</button>
-          <button class="btn-secondary prev-step-btn" data-prev="step-name">Back</button>
+          <button class="next-step-btn" data-testid="next-step-btn" data-next="step-admin">Next</button>
+          <button type="button" class="btn-secondary save-draft-btn" data-testid="save-draft-btn">Save Draft</button>
+          <button class="btn-secondary prev-step-btn" data-testid="prev-step-btn" data-prev="step-name">Back</button>
         </div>
       </div>
 
@@ -643,9 +651,9 @@
         <div id="password-error" class="error-msg">Password must be at least 8 characters.</div>
 
         <div class="btn-group">
-          <button class="next-step-btn" data-next="step-offer">Next</button>
-          <button type="button" class="btn-secondary save-draft-btn">Save Draft</button>
-          <button class="btn-secondary prev-step-btn" data-prev="step-assistant">Back</button>
+          <button class="next-step-btn" data-testid="next-step-btn" data-next="step-offer">Next</button>
+          <button type="button" class="btn-secondary save-draft-btn" data-testid="save-draft-btn">Save Draft</button>
+          <button class="btn-secondary prev-step-btn" data-testid="prev-step-btn" data-prev="step-assistant">Back</button>
         </div>
       </div>
 
@@ -656,9 +664,9 @@
         <input type="text" id="first-offer" class="glassmorphism min-h-[44px]" placeholder="e.g. Custom Birthday Cake" />
         <div id="offer-error" class="error-msg">Please enter an offer.</div>
         <div class="btn-group">
-          <button class="next-step-btn" data-next="step-template">Next</button>
-          <button type="button" class="btn-secondary save-draft-btn">Save Draft</button>
-          <button class="btn-secondary prev-step-btn" data-prev="step-admin">Back</button>
+          <button class="next-step-btn" data-testid="next-step-btn" data-next="step-template">Next</button>
+          <button type="button" class="btn-secondary save-draft-btn" data-testid="save-draft-btn">Save Draft</button>
+          <button class="btn-secondary prev-step-btn" data-testid="prev-step-btn" data-prev="step-admin">Back</button>
         </div>
       </div>
 
@@ -672,12 +680,12 @@
           <option value="Classic">Classic</option>
           <option value="Playful">Playful</option>
         </select>
-        <div id="template-error" class="error-msg">Please select a template.</div>
+        <div id="template-error" class="error-msg" aria-live="polite">Please select a template.</div>
 
         <div class="btn-group">
-          <button id="finish-btn">Launch Store</button>
-          <button type="button" class="btn-secondary save-draft-btn">Save Draft</button>
-          <button class="btn-secondary prev-step-btn" data-prev="step-offer">Back</button>
+          <button id="finish-btn" data-testid="finish-btn">Launch Store</button>
+          <button type="button" class="btn-secondary save-draft-btn" data-testid="save-draft-btn">Save Draft</button>
+          <button class="btn-secondary prev-step-btn" data-testid="prev-step-btn" data-prev="step-offer">Back</button>
         </div>
       </div>
 
@@ -1033,6 +1041,7 @@
 
           const steps = ['step-context', 'step-categories', 'step-name', 'step-assistant', 'step-admin', 'step-offer', 'step-template'];
           const currentIndex = steps.indexOf(stepId);
+          if (stepperIndicator) stepperIndicator.setAttribute('aria-valuenow', currentIndex + 1);
 
           document.querySelectorAll('.step-indicator').forEach((indicator, index) => {
               if (index < currentIndex) {
