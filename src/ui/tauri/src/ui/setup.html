@@ -1258,12 +1258,18 @@
                   };
 
                   if (window.__TAURI__ && window.__TAURI__.core) {
-                      await goToStep('step-loading'); window.__TAURI__.core.invoke("start_onboarding", { req });
-                      localStorage.setItem('has_onboarded', 'true');
-                      window.location.href = "success.html";
-                      return;
+                      goToStep('step-loading');
+                      try {
+                          await window.__TAURI__.core.invoke("start_onboarding", { req });
+                          localStorage.setItem('has_onboarded', 'true');
+                          window.location.href = "success.html";
+                          return;
+                      } catch (err) {
+                          throw new Error(err.message || 'Failed to start onboarding');
+                      }
                   }
 
+                  goToStep('step-loading');
                   const tenantIdStr = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront';
                   const userIdStr = localStorage.getItem('user_id') || 'test-user';
 
@@ -1290,6 +1296,11 @@
                       })
                   });
 
+                  if (!startRes.ok) {
+                      const errData = await startRes.json().catch(()=>({}));
+                      throw new Error(errData.error || errData.message || 'Failed to start onboarding');
+                  }
+
                   if (startRes.ok) {
                       const startData = await startRes.json();
                       if (startData.organization_id) {
@@ -1301,7 +1312,12 @@
                   }
               }
           } catch (e) {
-              chatMessagesEl.innerHTML += `<div style="margin-bottom: 10px; color: #FF3B30;"><strong>Error:</strong> Failed to connect.</div>`;
+              if (document.getElementById('step-loading').classList.contains('active')) {
+                  goToStep('step-chat');
+              }
+              const errorMsg = e.message || "Failed to connect.";
+              chatMessagesEl.innerHTML += `<div style="margin-bottom: 10px; color: #FF3B30;"><strong>Error:</strong> ${errorMsg}</div>`;
+              chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
           } finally {
               chatSendBtn.disabled = false;
           }

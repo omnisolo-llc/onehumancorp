@@ -303,3 +303,34 @@ test.describe('Onboarding Wizard E2E Flow - Instant Build Extensions', () => {
     expect(Math.round(btnBox?.height || 0)).toBeGreaterThanOrEqual(44);
   });
 });
+
+test.describe('Onboarding Wizard E2E Flow - Conversational Extensions', () => {
+  test('Conversational Setup completes successfully', async ({ page }) => {
+    // Navigates to onboarding
+    await page.goto('/onboarding');
+    const setupScreen = page.locator('#setup-screen');
+    await expect(setupScreen).toBeVisible({ timeout: 30000 });
+
+    // Click Conversational Setup
+    const conversationalSetupBtn = page.locator('button', { hasText: 'Conversational Setup' });
+    await expect(conversationalSetupBtn).toBeVisible();
+    await conversationalSetupBtn.click();
+
+    await expect(page.getByRole('heading', { name: "Setup Assistant" })).toBeVisible();
+
+    // Type a comprehensive message
+    const chatInput = page.getByPlaceholder("Type a message...");
+    await expect(chatInput).toBeVisible();
+    await chatInput.fill("I run a local bakery that sells custom vegan cakes in Austin. The name is Maya's Cakes.");
+
+    const sendBtn = page.locator('button', { hasText: 'Send' });
+    await sendBtn.click();
+
+    // The chatbot should reply, and because we gave enough info, it should auto-complete and move to loading
+    // We expect the text "Building Your Business..." to eventually show.
+    await expect(page.getByRole('heading', { name: "Building Your Business..." })).toBeVisible({ timeout: 60000 });
+
+    // Wait for the final success screen
+    await expect(page.getByRole('heading', { name: "You're Live!" })).toBeVisible({ timeout: 90000 });
+  });
+});
