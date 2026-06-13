@@ -1,7 +1,8 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../../../../e2e/fixtures';
 
 test.describe('Automated Client Intake to Proposal Generation Pipeline', () => {
-  test('New lead submits a request and owner approves the AI drafted proposal', async ({ page, request }) => {
+  test('New lead submits a request and owner approves the AI drafted proposal', async ({ page, request, loginAs, adminUser }) => {
+    await loginAs(page, adminUser);
 
     // Step 1: Simulate the form intake API submission
     // This directly calls the endpoint that our widget or webhook would hit.
