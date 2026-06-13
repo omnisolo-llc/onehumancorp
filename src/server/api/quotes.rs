@@ -18,8 +18,8 @@ where
     PgPool: axum::extract::FromRef<S>,
 {
     Router::new()
-        .route("/:id", get(get_quote))
-        .route("/:id/accept", post(accept_quote))
+        .route("/{id}", get(get_quote))
+        .route("/{id}/accept", post(accept_quote))
 }
 
 #[derive(Serialize)]
