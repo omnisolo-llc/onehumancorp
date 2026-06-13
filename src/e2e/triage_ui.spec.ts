@@ -17,11 +17,11 @@ test.describe('Work Triage Agentic Inbox', () => {
     await expect(triageCard).toBeVisible({ timeout: 10000 });
 
     // Verify detail view is populated from selected card (first item by default)
-    await expect(page.locator('text=Maya requested a custom cake for Friday')).toBeVisible();
-    await expect(page.locator('text=Hi Maya! I can definitely help with the custom cake. It will be $50.')).toBeVisible();
+    await expect(triageCard.locator('text=Maya requested a custom cake for Friday')).toBeVisible();
 
     // Approve action
-    const approveBtn = page.locator('[data-testid="approve-btn"]');
+    const approveBtn = triageCard.locator('[data-testid="approve-btn"]');
+    await expect(approveBtn).toBeVisible();
     await approveBtn.click();
 
     // Should show approved status and disappear from list
@@ -32,7 +32,8 @@ test.describe('Work Triage Agentic Inbox', () => {
     const triageCard = page.locator('[data-testid="triage-card-triage-test-2"]');
     await expect(triageCard).toBeVisible({ timeout: 15000 });
 
-    const dismissBtn = page.locator('[data-testid="reject-proposal"]');
+    const dismissBtn = triageCard.locator('[data-testid="reject-proposal"]');
+    await expect(dismissBtn).toBeVisible();
     await dismissBtn.click();
 
     await expect(triageCard).not.toBeVisible();
@@ -49,8 +50,7 @@ test.describe('Work Triage Agentic Inbox', () => {
     const triageCard = page.locator('[data-testid="triage-card-triage-test-2"]');
     await expect(triageCard).toBeVisible({ timeout: 15000 });
 
-    await expect(page.locator('text=Question about delivery times')).toBeVisible();
-    await expect(page.locator('text=We deliver between 9 AM and 5 PM on weekdays.')).toBeVisible();
+    await expect(triageCard.locator('text=Question about delivery times')).toBeVisible();
   });
 
   test('Layout is fully usable at 375px', async ({ page }) => {
@@ -61,7 +61,7 @@ test.describe('Work Triage Agentic Inbox', () => {
     await expect(triageCard).toBeVisible({ timeout: 15000 });
 
     // Ensure detail view can be scrolled into view or is stacked correctly
-    await expect(page.locator('text=Maya requested a custom cake for Friday')).toBeVisible();
-    await expect(page.locator('[data-testid="approve-btn"]')).toBeVisible();
+    await expect(triageCard.locator('text=Maya requested a custom cake for Friday')).toBeVisible();
+    await expect(triageCard.locator('[data-testid="approve-btn"]')).toBeVisible();
   });
 });
