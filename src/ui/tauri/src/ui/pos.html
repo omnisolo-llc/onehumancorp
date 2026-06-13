@@ -195,7 +195,41 @@
         margin-bottom: 16px;
       }
 
+
+      .offline-banner {
+        background: rgba(255, 149, 0, 0.85);
+        backdrop-filter: blur(20px);
+        color: white;
+        padding: 8px 16px;
+        text-align: center;
+        font-size: 14px;
+        font-weight: 600;
+        display: none;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        z-index: 10;
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        border-radius: 16px 16px 0 0;
+      }
+      .sync-toast {
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #34C759;
+        color: white;
+        padding: 10px 20px;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        z-index: 9999;
+        display: none;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      }
       /* Receipt Screen */
+
       .receipt-screen {
         display: none;
         flex-direction: column;
@@ -255,8 +289,11 @@
   <body>
     <div class="container" id="main-container">
 
+
       <div id="pos-view" style="display: flex; flex-direction: column; height: 100%;">
-          <div class="header">
+          <div class="offline-banner" id="offline-banner">Working Offline - Syncing Paused</div>
+          <div class="header" style="margin-top: 32px;">
+
             <a href="dashboard.html" class="back-btn">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 4px;"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
               Dashboard
@@ -314,9 +351,12 @@
 
         <button class="btn-outline" style="background: rgba(0,0,0,0.05); border: none; padding: 12px 24px; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; margin-bottom: 12px; width: 100%;">Email Receipt</button>
         <button class="charge-btn" onclick="resetPOS()">New Sale</button>
+
       </div>
+      <div class="sync-toast" id="sync-toast">Sync Complete</div>
 
     </div>
+
 
 
     <script>
@@ -547,6 +587,57 @@
       const receiptScreen = document.getElementById('receipt-screen');
       const receiptAmount = document.getElementById('receipt-amount');
       const simulateTapBtn = document.getElementById('simulate-tap-btn');
+      const offlineBanner = document.getElementById('offline-banner');
+      const syncToast = document.getElementById('sync-toast');
+      let isAppOffline = !navigator.onLine;
+
+      function updateNetworkStatus() {
+        isAppOffline = !navigator.onLine;
+        if (isAppOffline) {
+          offlineBanner.style.display = 'block';
+        } else {
+          offlineBanner.style.display = 'none';
+          syncOfflineTransactions();
+        }
+      }
+
+      window.addEventListener('online', updateNetworkStatus);
+      window.addEventListener('offline', updateNetworkStatus);
+
+      // Initialize status
+      updateNetworkStatus();
+
+      async function syncOfflineTransactions() {
+        const queue = JSON.parse(localStorage.getItem('ohc_offline_pos_tx') || '[]');
+        if (queue.length > 0) {
+            console.log("Syncing offline transactions...");
+            try {
+                const res = await fetch('/api/v1/payments/terminal/sync_offline', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        session_id: 'web_session',
+                        transactions: queue
+                    })
+                });
+
+                if (res.ok) {
+                    localStorage.setItem('ohc_offline_pos_tx', '[]');
+                    syncToast.style.display = 'block';
+                    setTimeout(() => {
+                        syncToast.style.display = 'none';
+                    }, 3000);
+                    console.log("Offline transactions synced successfully.");
+                } else {
+                    console.warn("Failed to sync offline transactions. Will retry later.");
+                }
+            } catch (err) {
+                console.error("Error syncing offline transactions:", err);
+            }
+        }
+      }
+
+
 
       function updateDisplay() {
         const dollars = (currentAmountCents / 100).toFixed(2);
@@ -644,23 +735,33 @@
               posView.style.display = 'none';
               receiptScreen.style.display = 'flex';
 
-              // In real flow, we'd confirm the intent and sync offline txs.
-              // We simulate the offline sync for E2E validation:
               const tenantId = localStorage.getItem('tenant_id') || 'default';
-              fetch('/api/v1/payments/terminal/sync_offline', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                      session_id: 'web_session',
-                      transactions: [{
-                          id: 'tx_' + Date.now(),
-                          client_id: 'web_client',
-                          amount_cents: currentAmountCents,
-                          currency: 'usd',
-                          payload: '{}'
-                      }]
-                  })
-              }).catch(console.error);
+              const transactionPayload = {
+                  id: 'tx_' + Date.now(),
+                  client_id: 'web_client',
+                  amount_cents: currentAmountCents,
+                  currency: 'usd',
+                  payload: '{}'
+              };
+
+              if (window.isAppOffline || isAppOffline || !navigator.onLine) {
+                  // Optimistic Update & Queue
+                  const queue = JSON.parse(localStorage.getItem('ohc_offline_pos_tx') || '[]');
+                  queue.push(transactionPayload);
+                  localStorage.setItem('ohc_offline_pos_tx', JSON.stringify(queue));
+                  console.log("Saved offline. Will sync when online.");
+              } else {
+                  // In real flow, we'd confirm the intent and sync offline txs.
+                  // We simulate the offline sync for E2E validation:
+                  fetch('/api/v1/payments/terminal/sync_offline', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                          session_id: 'web_session',
+                          transactions: [transactionPayload]
+                      })
+                  }).catch(console.error);
+              }
 
           }, 800);
       });
