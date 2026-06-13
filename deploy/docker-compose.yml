@@ -24,7 +24,7 @@ services:
           cpus: "0.1"
           memory: 64M
     image: onehumancorp/mono-core:latest
-    pull_policy: never
+    pull_policy: missing
     environment:
       LOG_FORMAT: "json"
       LOG_LEVEL: "info"
@@ -54,7 +54,7 @@ services:
           cpus: "0.1"
           memory: 64M
     image: onehumancorp/server:latest
-    pull_policy: never
+    pull_policy: missing
     environment:
       LOG_FORMAT: "json"
       LOG_LEVEL: "info"
@@ -126,12 +126,12 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
-    image: valkey/valkey:8-alpine
+    image: redis:alpine
     pull_policy: missing
     ports:
       - "${OHC_DOCKER_VALKEY_PORT:-6379}:6379"
     healthcheck:
-      test: ["CMD", "valkey-cli", "ping"]
+      test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       timeout: 3s
       retries: 10
@@ -147,7 +147,7 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
-    image: pgvector/pgvector:pg15
+    image: postgres:15-alpine
     pull_policy: missing
     command: ["postgres", "-c", "wal_level=logical"]
     environment:

@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('Onboarding Wizard UI Flow', () => {
+test.describe('Onboarding Wizard E2E Flow', () => {
   test.beforeEach(async ({ page }) => {
     // Clear local storage to ensure fresh state
     await page.addInitScript(() => {
@@ -276,7 +276,7 @@ test.describe('Onboarding Wizard UI Flow', () => {
     // Expect it to eventually reach "You're Live!" screen
     await expect(page.getByText("You're Live!")).toBeVisible({ timeout: 15000 });
   });
-
+});
 
   test('Instant Build handles network failures gracefully without mock data', async ({ page, context }) => {
     await page.goto('/onboarding');
@@ -351,4 +351,3 @@ test.describe('Onboarding Wizard UI Flow', () => {
     await context.unroute('/api/onboarding/start');
     await context.unroute('/api/onboarding/intake');
   });
-});
