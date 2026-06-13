@@ -14,7 +14,8 @@ export async function POST(request: Request) {
 
     const data = await res.json();
     return NextResponse.json(data, { status: res.status });
-  } catch (err: any) {
-    return NextResponse.json({ success: false, error_message: "Backend connection failed" }, { status: 500 });
+  } catch (err: unknown) {
+    const errorMsg = err instanceof Error ? err.message : "Backend connection failed";
+    return NextResponse.json({ success: false, error_message: errorMsg }, { status: 500 });
   }
 }
