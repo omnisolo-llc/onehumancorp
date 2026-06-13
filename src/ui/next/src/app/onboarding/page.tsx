@@ -197,23 +197,23 @@ export default function OnboardingWizard() {
     .then(([draftData, stateData]) => {
       const data = (draftData && draftData.wizardState) ? draftData : stateData;
       if (data && data.wizardState) {
-        if (data.wizardState.step) setStep(data.wizardState.step === 4 ? 3 : data.wizardState.step);
-        if (data.wizardState.chatStep) setChatStep(data.wizardState.chatStep);
-        if (data.wizardState.businessDescription) setBusinessDescription(data.wizardState.businessDescription);
-        if (data.wizardState.businessName) setBusinessName(data.wizardState.businessName);
-        if (data.wizardState.whatYouSell) setWhatYouSell(data.wizardState.whatYouSell);
-        if (data.wizardState.location) setLocation(data.wizardState.location);
-        if (data.wizardState.targetAudience) setTargetAudience(data.wizardState.targetAudience);
-        if (data.wizardState.businessType) setBusinessType(data.wizardState.businessType);
-        if (data.wizardState.categories) setCategories(data.wizardState.categories);
-        if (data.wizardState.websiteTemplate) setWebsiteTemplate(data.wizardState.websiteTemplate);
-        if (data.wizardState.firstProductName) setFirstProductName(data.wizardState.firstProductName);
-        if (data.wizardState.firstProductPrice) setFirstProductPrice(data.wizardState.firstProductPrice);
-        if (data.wizardState.adminName) setAdminName(data.wizardState.adminName);
-        if (data.wizardState.adminEmail) setAdminEmail(data.wizardState.adminEmail);
-        if (data.wizardState.adminPassword) setAdminPassword(data.wizardState.adminPassword);
-        if (data.wizardState.domainChoice) setDomainChoice(data.wizardState.domainChoice);
-        if (data.wizardState.aiAgents) setAiAgents(data.wizardState.aiAgents);
+        if (data.wizardState.step !== undefined) setStep(data.wizardState.step === 4 ? 3 : data.wizardState.step);
+        if (data.wizardState.chatStep !== undefined) setChatStep(data.wizardState.chatStep);
+        if (data.wizardState.businessDescription !== undefined) setBusinessDescription(data.wizardState.businessDescription);
+        if (data.wizardState.businessName !== undefined) setBusinessName(data.wizardState.businessName);
+        if (data.wizardState.whatYouSell !== undefined) setWhatYouSell(data.wizardState.whatYouSell);
+        if (data.wizardState.location !== undefined) setLocation(data.wizardState.location);
+        if (data.wizardState.targetAudience !== undefined) setTargetAudience(data.wizardState.targetAudience);
+        if (data.wizardState.businessType !== undefined) setBusinessType(data.wizardState.businessType);
+        if (data.wizardState.categories !== undefined) setCategories(data.wizardState.categories);
+        if (data.wizardState.websiteTemplate !== undefined) setWebsiteTemplate(data.wizardState.websiteTemplate);
+        if (data.wizardState.firstProductName !== undefined) setFirstProductName(data.wizardState.firstProductName);
+        if (data.wizardState.firstProductPrice !== undefined) setFirstProductPrice(data.wizardState.firstProductPrice);
+        if (data.wizardState.adminName !== undefined) setAdminName(data.wizardState.adminName);
+        if (data.wizardState.adminEmail !== undefined) setAdminEmail(data.wizardState.adminEmail);
+        if (data.wizardState.adminPassword !== undefined) setAdminPassword(data.wizardState.adminPassword);
+        if (data.wizardState.domainChoice !== undefined) setDomainChoice(data.wizardState.domainChoice);
+        if (data.wizardState.aiAgents !== undefined) setAiAgents(data.wizardState.aiAgents);
         if (data.wizardState.aiAutoRespond !== undefined) setAiAutoRespond(data.wizardState.aiAutoRespond);
         initialStateLoaded.current = true;
       }
