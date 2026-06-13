@@ -66,7 +66,7 @@ test.describe('Onboarding Wizard E2E Flow', () => {
     await expect(audienceInput).toHaveClass(/min-h-\[44px\]/);
     await expect(audienceInput).toHaveClass(/glassmorphism/);
     await audienceInput.fill("Tech enthusiasts and developers");
-    await page.getByRole('button', { name: 'Generate My Business' }).click();
+    await page.getByRole('button', { name: 'Next' }).click();
 
     // Step 4: Review Details
     await expect(page.getByRole('heading', { name: "Review Details" })).toBeVisible({ timeout: 30000 });
