@@ -244,28 +244,47 @@ impl Department for SalesAgent {
                     if feature_type == "quote_draft" {
                         let suggested_price = payload.get("suggested_price").and_then(|v| v.as_f64()).unwrap_or(0.0);
                         let customer_inquiry = payload.get("customer_inquiry").and_then(|v| v.as_str()).unwrap_or("Unknown");
-                        let deposit_amount = suggested_price * 0.20; // 20% deposit
+                        let scope = payload.get("scope").and_then(|v| v.as_str()).unwrap_or("Standard service");
+
+                        let tenant_id = event.tenant_id.clone();
+                        let customer_id = uuid::Uuid::new_v4(); // In real app, extract from payload
+                        let quote_id = uuid::Uuid::new_v4();
 
                         tracing::info!(
-                            "Executing approved quote draft for inquiry: '{}'. Suggested price: ${}. Deposit: ${}",
+                            "Executing approved quote draft for inquiry: '{}'. Suggested price: ${}.",
                             customer_inquiry,
-                            suggested_price,
-                            deposit_amount
+                            suggested_price
                         );
 
-                        // Simulate creating a Stripe checkout session for the deposit
-                        let stripe_client = crate::integrations::stripe::client::StripeClient::new(
-                            std::env::var("STRIPE_API_KEY").unwrap_or_else(|_| "sk_test_123".to_string()),
-                        );
+                        match &self.orchestrator.db.store {
+                            crate::db::DbStore::Postgres => {
+                                let mut tx = match self.orchestrator.db.pool.begin().await {
+                                    Ok(tx) => tx,
+                                    Err(_) => return Ok(())
+                                };
 
-                        match stripe_client.create_checkout_session("price_dummy", "cus_dummy", deposit_amount, false).await {
-                            Ok(url) => {
-                                tracing::info!("Generated deposit link: {}", url);
-                                // Optional: Update timeline or send a message
+                                let _ = sqlx::query(
+                                    "INSERT INTO quotes (id, tenant_id, customer_id, status) VALUES ($1, $2, $3, 'DRAFT')"
+                                )
+                                .bind(quote_id)
+                                .bind(&tenant_id)
+                                .bind(customer_id)
+                                .execute(&mut *tx)
+                                .await;
+
+                                let _ = sqlx::query(
+                                    "INSERT INTO quote_line_items (id, quote_id, description, unit_price_cents, quantity, is_optional) VALUES ($1, $2, $3, $4, 1, false)"
+                                )
+                                .bind(uuid::Uuid::new_v4())
+                                .bind(quote_id)
+                                .bind(scope)
+                                .bind((suggested_price * 100.0) as i64)
+                                .execute(&mut *tx)
+                                .await;
+
+                                let _ = tx.commit().await;
                             }
-                            Err(e) => {
-                                tracing::error!("Failed to create checkout session for quote deposit: {}", e);
-                            }
+                            _ => {}
                         }
                     }
                 }

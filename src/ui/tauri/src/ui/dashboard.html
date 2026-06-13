@@ -738,6 +738,15 @@
 
 
 
+
+      <div class="ohc-growth-card" id="projects-section" style="display: none; padding: 20px; border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; margin-top: 20px;">
+        <h2 style="font-size: 24px; font-weight: 700; color: #1D1D1F;">Active Projects</h2>
+        <p style="color: #6b7280; margin-bottom: 16px;">Track your ongoing project tasks and invoices.</p>
+        <div id="projects-container">
+          <div class="triage-card empty">Loading projects...</div>
+        </div>
+      </div>
+
       <div class="ohc-growth-card" id="triage-section" style="display: none; padding: 20px; border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px;">
         <h2 style="font-size: 24px; font-weight: 700; color: #1D1D1F;">Unified Agent Feed</h2>
         <p style="color: #6b7280; margin-bottom: 16px;">Review AI-prepared actions and reply drafts across all channels.</p>
@@ -1386,6 +1395,33 @@
         renderTriageItems(agentFeedItems);
       };
 
+
+      async function loadProjects() {
+        const projectsSection = document.getElementById('projects-section');
+        const projectsContainer = document.getElementById('projects-container');
+        try {
+          const res = await fetch(`/api/v1/projects`);
+          if (!res.ok) throw new Error("Failed to load projects");
+
+          const projects = await res.json();
+          if (projects.length > 0) {
+            projectsSection.style.display = 'block';
+            projectsContainer.innerHTML = projects.map(p => `
+              <div class="triage-item" data-testid="project-card-${p.id}" style="background: rgba(255, 255, 255, 0.4); backdrop-filter: blur(20px); border-radius: 16px; padding: 16px; border: 1px solid rgba(255,255,255,0.6); margin-bottom: 10px;">
+                <div style="font-weight: 600; margin-bottom: 8px;">Project for Quote ${p.quote_id || 'Unknown'}</div>
+                <div style="font-size: 14px; color: #6b7280; margin-bottom: 8px;">Status: ${p.status}</div>
+                <button class="triage-btn-approve" onclick="alert('View Project Details')">View Details</button>
+              </div>
+            `).join('');
+          } else {
+            projectsSection.style.display = 'none';
+          }
+        } catch (err) {
+          console.error("Projects load error:", err);
+          projectsSection.style.display = 'none';
+        }
+      }
+
       async function loadTriage() {
         triageSection.style.display = 'block';
         try {
@@ -1598,6 +1634,7 @@
           window.showStatus('Approving...', true);
           window.showStatus((state === 'APPROVED' || state === true) ? 'Approved!' : 'Dismissed.', true);
           loadTriage();
+      loadProjects();
         } catch (err) {
           console.error(err);
           if (itemEl) itemEl.style.opacity = '1';

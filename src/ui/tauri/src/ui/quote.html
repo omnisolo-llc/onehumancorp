@@ -346,6 +346,7 @@
 
     <div id="action-buttons" style="margin-bottom: 100px;">
       <button class="btn btn-primary" id="btn-approve-send" style="display: none;">Approve & Send to Customer</button>
+      <button class="btn btn-primary" id="btn-simulate-client-accept" style="display: none; background-color: #34C759; margin-top: 10px;">Simulate Client Accept</button>
       <button class="btn btn-apple-pay" id="btn-pay-deposit" style="display: none;">Pay Deposit with Pay</button>
       <button class="btn btn-primary" id="btn-pay-card" style="display: none; background-color: #333;">Pay with Card</button>
     </div>
@@ -454,17 +455,39 @@
         });
 
         btnApproveSend.addEventListener('click', () => {
-          btnApproveSend.innerText = 'Sending...';
-          setTimeout(() => {
-            alert('Quote sent to customer via SMS/WhatsApp!');
-            window.location.href = 'team.html'; // Or dashboard
-          }, 1000);
+          alert('Quote sent to customer!');
+          window.location.href = `quote.html?id=${quoteId}&tenant=${quoteData.tenantId}&mode=customer`;
         });
 
       } else {
         // Customer View
         btnPayDeposit.style.display = 'flex';
         btnPayCard.style.display = 'block';
+
+        const btnSimulateAccept = document.getElementById('btn-simulate-client-accept');
+        if (btnSimulateAccept) {
+            btnSimulateAccept.style.display = 'block';
+            btnSimulateAccept.addEventListener('click', async () => {
+              btnSimulateAccept.innerText = 'Accepting...';
+              try {
+                const res = await fetch(`/api/v1/quotes/${quoteId || '1029'}/approve`, {
+                  method: 'PATCH'
+                });
+                if (res.ok) {
+                  alert('Project and Invoice created successfully!');
+                  window.location.href = 'dashboard.html';
+                } else {
+                  alert('Failed to approve quote.');
+                }
+              } catch (e) {
+                console.error(e);
+                alert('Error during approval.');
+              } finally {
+                btnSimulateAccept.innerText = 'Simulate Client Accept';
+              }
+            });
+        }
+
         document.getElementById('quote-status').innerText = 'Action Required';
 
         // Show viral badge
