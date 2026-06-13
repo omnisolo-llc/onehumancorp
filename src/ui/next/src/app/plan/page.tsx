@@ -157,7 +157,13 @@ export default function MyPlanPage() {
                     {planData?.ai_actions_limit && planData.ai_actions_used >= planData.ai_actions_limit && (
                         <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-800 flex items-start gap-2 shadow-sm">
                             <span className="text-lg">💡</span>
-                            <p>You've reached your free action limit. While you can still use the app, upgrading to Starter gives you 1,000 actions and faster response times for just $29/mo.</p>
+                            <p>
+                                {planData.current_plan === 'Free'
+                                    ? "You've reached your free action limit. While you can still use the app, upgrading to Starter gives you 1,000 actions and faster response times for just $29/mo."
+                                    : planData.current_plan === 'Starter'
+                                    ? "You've reached your Starter action limit. Upgrade to Pro for unlimited AI actions and priority processing."
+                                    : "You've reached your AI action limit. Consider upgrading your plan."}
+                            </p>
                         </div>
                     )}
                 </div>
@@ -183,7 +189,13 @@ export default function MyPlanPage() {
                     {planData?.storage_limit_bytes && planData.storage_used_bytes >= planData.storage_limit_bytes && (
                         <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-800 flex items-start gap-2 shadow-sm">
                             <span className="text-lg">📦</span>
-                            <p>Storage is getting full! We're automatically optimizing your images to WebP to save space, but upgrading to Starter would give you 5GB of headroom for your products.</p>
+                            <p>
+                                {planData.current_plan === 'Free'
+                                    ? "Storage is getting full! We're automatically optimizing your images to WebP to save space, but upgrading to Starter would give you 5GB of headroom for your products."
+                                    : planData.current_plan === 'Starter'
+                                    ? "Storage is getting full! We're automatically optimizing your images to WebP to save space, but upgrading to Pro would give you 50GB of headroom for your products."
+                                    : "Storage is getting full! Consider upgrading your plan for more space."}
+                            </p>
                         </div>
                     )}
                 </div>

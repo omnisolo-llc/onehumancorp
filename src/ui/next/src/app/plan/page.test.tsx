@@ -105,6 +105,49 @@ describe('MyPlanPage', () => {
     });
   });
 
+
+  it('renders soft limit warning for Starter tier when limits are reached', async () => {
+    const mockData = {
+      current_plan: 'Starter',
+      next_bill_estimated: 0,
+      ai_actions_used: 1000,
+      ai_actions_limit: 1000,
+      storage_used_bytes: 0,
+      storage_limit_bytes: 0,
+    };
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => mockData,
+    });
+
+    render(<MyPlanPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/You've reached your Starter action limit/)).toBeDefined();
+    });
+  });
+
+  it('renders storage soft limit warning for Starter tier', async () => {
+    const mockData = {
+      current_plan: 'Starter',
+      next_bill_estimated: 0,
+      ai_actions_used: 0,
+      ai_actions_limit: 1000,
+      storage_used_bytes: 5 * 1024 * 1024 * 1024,
+      storage_limit_bytes: 5 * 1024 * 1024 * 1024,
+    };
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => mockData,
+    });
+
+    render(<MyPlanPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/upgrading to Pro would give you 50GB/)).toBeDefined();
+    });
+  });
+
   it('navigates to cost-dashboard when clicking "View Cost Details"', async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,

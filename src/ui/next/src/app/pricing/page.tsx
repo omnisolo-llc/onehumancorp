@@ -1,16 +1,73 @@
 "use client";
 
 // Pricing Page Implementation
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { WithTooltip } from '../../components/TooltipRegistry';
 import { PoweredByOHC } from '../components/PoweredByOHC';
 
 export default function PricingPage() {
   const router = useRouter();
+  const [currentPlan, setCurrentPlan] = useState<string>('Free');
+
+  useEffect(() => {
+    async function fetchPlanData() {
+      try {
+        const token = localStorage.getItem('token');
+        const res = await fetch('/api/billing/my-plan', {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setCurrentPlan(data.current_plan);
+        } else {
+            console.error("Failed to fetch plan data:", res.status);
+        }
+      } catch (err) {
+        console.error("Error fetching plan data", err);
+      }
+    }
+    fetchPlanData();
+  }, []);
 
   const handleUpgrade = (tier: string) => {
     router.push('/checkout?tier=' + tier);
+  };
+
+  const getButtonProps = (tier: string) => {
+    if (tier === currentPlan) {
+      return {
+        className: "w-full min-h-[44px] px-4 py-2 bg-gray-200 text-gray-800 rounded-xl font-medium flex items-center justify-center cursor-not-allowed",
+        disabled: true,
+        text: "Current Plan",
+        onClick: undefined
+      };
+    }
+
+    if (tier === 'Starter') {
+        const tierWeights: Record<string, number> = { 'Free': 0, 'Starter': 1, 'Pro': 2, 'Business': 3 };
+        const currentWeight = tierWeights[currentPlan] || 0;
+        const targetWeight = tierWeights[tier] || 0;
+        return {
+            className: "w-full min-h-[44px] px-4 py-2 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 transition-colors shadow-sm flex items-center justify-center",
+            disabled: false,
+            text: targetWeight > currentWeight ? "Upgrade to Starter via Stripe" : "Downgrade to Starter via Stripe",
+            onClick: () => handleUpgrade('Starter')
+        }
+    }
+
+    const tierWeights: Record<string, number> = { 'Free': 0, 'Starter': 1, 'Pro': 2, 'Business': 3 };
+    const currentWeight = tierWeights[currentPlan] || 0;
+    const targetWeight = tierWeights[tier] || 0;
+
+    return {
+        className: "w-full min-h-[44px] px-4 py-2 bg-gray-900 text-white rounded-xl font-medium hover:bg-black transition-colors shadow-sm flex items-center justify-center",
+        disabled: false,
+        text: targetWeight > currentWeight ? `Upgrade to ${tier} via Stripe` : `Downgrade to ${tier} via Stripe`,
+        onClick: () => handleUpgrade(tier)
+    }
   };
 
   return (
@@ -42,9 +99,10 @@ export default function PricingPage() {
                 <li className="flex items-center gap-2"><span>✓</span> 10 Products Limit</li>
               </ul>
             </div>
-            <button className="w-full min-h-[44px] px-4 py-2 bg-gray-200 text-gray-800 rounded-xl font-medium flex items-center justify-center cursor-not-allowed" disabled>
-              Current Plan
-            </button>
+            {(() => {
+                const props = getButtonProps('Free');
+                return <button onClick={props.onClick} className={props.className} disabled={props.disabled}>{props.text}</button>
+            })()}
           </div>
 
           {/* Starter Tier */}
@@ -61,9 +119,10 @@ export default function PricingPage() {
                 <li className="flex items-center gap-2"><span>✓</span> 100 Products Limit</li>
               </ul>
             </div>
-            <button onClick={() => handleUpgrade('Starter')} className="w-full min-h-[44px] px-4 py-2 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 transition-colors shadow-sm flex items-center justify-center">
-              Upgrade to Starter via Stripe
-            </button>
+            {(() => {
+                const props = getButtonProps('Starter');
+                return <button onClick={props.onClick} className={props.className} disabled={props.disabled}>{props.text}</button>
+            })()}
           </div>
 
           {/* Pro Tier */}
@@ -78,9 +137,10 @@ export default function PricingPage() {
                 <li className="flex items-center gap-2"><span>✓</span> Unlimited Products</li>
               </ul>
             </div>
-            <button onClick={() => handleUpgrade('Pro')} className="w-full min-h-[44px] px-4 py-2 bg-gray-900 text-white rounded-xl font-medium hover:bg-black transition-colors shadow-sm flex items-center justify-center">
-              Upgrade to Pro via Stripe
-            </button>
+            {(() => {
+                const props = getButtonProps('Pro');
+                return <button onClick={props.onClick} className={props.className} disabled={props.disabled}>{props.text}</button>
+            })()}
           </div>
 
           {/* Business Tier */}
@@ -95,9 +155,10 @@ export default function PricingPage() {
                 <li className="flex items-center gap-2"><span>✓</span> Unlimited Products</li>
               </ul>
             </div>
-            <button onClick={() => handleUpgrade('Business')} className="w-full min-h-[44px] px-4 py-2 bg-gray-900 text-white rounded-xl font-medium hover:bg-black transition-colors shadow-sm flex items-center justify-center">
-              Upgrade to Business via Stripe
-            </button>
+            {(() => {
+                const props = getButtonProps('Business');
+                return <button onClick={props.onClick} className={props.className} disabled={props.disabled}>{props.text}</button>
+            })()}
           </div>
         </div>
 
@@ -119,16 +180,11 @@ export default function PricingPage() {
             </div>
         </div>
 
-        <div className="flex justify-center mt-4">
-          <PoweredByOHC tenantId="ohc" />
-        </div>
+        <footer className="mt-8 mb-4 border-t border-gray-200/50 pt-8 flex flex-col items-center">
+            <PoweredByOHC />
+            <p className="text-xs text-gray-500 mt-4">Pricing plans are subject to change without notice. All rights reserved.</p>
+        </footer>
       </main>
-
-      <style dangerouslySetInnerHTML={{__html: `
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap');
-        .font-inter { font-family: 'Inter', sans-serif; }
-        .font-outfit { font-family: 'Outfit', sans-serif; }
-      `}} />
     </div>
   );
 }
