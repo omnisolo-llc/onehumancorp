@@ -105,7 +105,7 @@ async fn handle_feed_socket(socket: WebSocket, tenant_id: String) {
         }
     };
 
-    let topic = format!("ohc:feed:{}", tenant_id);
+    let topic = format!("agent_feed:{}", tenant_id);
     if let Err(e) = pubsub_conn.subscribe(&topic).await {
         tracing::error!("Failed to subscribe to topic {}: {}", topic, e);
         let _ = sender.send(WsMessage::Text("{\"error\":\"Failed to subscribe\"}".into())).await;
@@ -239,7 +239,7 @@ async fn create_feed_item(
 
             // Publish to Redis Pub/Sub
             let client = get_redis_client();
-            let topic = format!("ohc:feed:{}", tenant_id);
+            let topic = format!("agent_feed:{}", tenant_id);
             if let Ok(payload_json) = serde_json::to_string(&item) {
                 // In background task, to not block response
                 tokio::spawn(async move {
@@ -423,7 +423,7 @@ mod tests {
 
                 // Publish mock message to redis channel
                 let mut conn = client.get_multiplexed_async_connection().await.unwrap();
-                let topic = "ohc:feed:test_ws_tenant";
+                let topic = "agent_feed:test_ws_tenant";
                 let payload = "{\"mock\":\"data\"}";
                 let _: () = redis::cmd("PUBLISH").arg(topic).arg(payload).query_async(&mut conn).await.unwrap();
 
