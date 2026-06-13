@@ -8,7 +8,7 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
 
-    const res = await fetch(`${backendUrl}/api/onboarding/intake`, {
+    const res = await fetch(`${backendUrl}/api/onboarding/zero_click`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
