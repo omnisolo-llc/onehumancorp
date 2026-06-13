@@ -3828,7 +3828,7 @@ async fn ui_dashboard_unified_feed_handler(
 
             let mut orders = orders_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
             let mut inbox = messages_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
-            let mut triage = triage_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
+            let triage = triage_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
             let mut approvals = approvals_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
             let mut agent_feed = agent_feed_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
             let mut priority_tasks = priority_tasks_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
@@ -3845,9 +3845,7 @@ async fn ui_dashboard_unified_feed_handler(
                         obj.remove("original_message");
                     }
                 }
-                for _item in triage.iter_mut() {
-                    // retained context and action_payload for mobile view
-                }
+
                 for item in approvals.iter_mut() {
                     if let Some(obj) = item.as_object_mut() {
                         obj.remove("payload");
@@ -3900,7 +3898,7 @@ async fn ui_dashboard_unified_feed_handler(
 
     let mut orders = orders_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
     let mut inbox = messages_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
-    let mut triage = triage_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
+    let triage = triage_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
     let mut approvals = approvals_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
     let mut agent_feed = agent_feed_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
     let mut priority_tasks = priority_tasks_res.unwrap_or_else(|_| Ok(vec![])).unwrap_or_default();
@@ -3918,9 +3916,7 @@ async fn ui_dashboard_unified_feed_handler(
                 obj.remove("original_message");
             }
         }
-        for _item in triage.iter_mut() {
-            // retained context and action_payload for mobile view
-        }
+
         for item in approvals.iter_mut() {
             if let Some(obj) = item.as_object_mut() {
                 obj.remove("payload");
