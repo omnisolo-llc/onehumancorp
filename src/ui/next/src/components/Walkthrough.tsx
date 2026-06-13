@@ -139,11 +139,11 @@ export function InteractiveWalkthrough({ steps, isOpen, onClose, onComplete }: W
         role="dialog"
         aria-label={`${currentStep.title} walkthrough step`}
         id="walkthrough-bubble"
-        className="ohc-walkthrough-bubble fixed z-[10000] bg-white/70 backdrop-blur-xl saturate-[210%] border border-white/50 rounded-2xl p-6 w-[300px] max-w-[calc(100vw-32px)] font-inter animate-pop-in shadow-[0_12px_40px_rgba(0,0,0,0.15)]"
+        className="ohc-walkthrough-bubble fixed z-[10000] bg-white/80 backdrop-blur-2xl saturate-[210%] border border-white/60 rounded-2xl p-6 w-[300px] max-w-[calc(100vw-32px)] font-inter animate-pop-in shadow-[0_12px_40px_rgba(0,0,0,0.15)]"
         style={bubbleStyle}
       >
         {targetRect && (
-           <div className={`absolute w-0 h-0 border-solid ${arrowClass}`}></div>
+           <div className={`absolute w-0 h-0 border-solid ${arrowClass.replace('white/90', 'white/80')}`}></div>
         )}
 
         <div className="flex justify-between items-start mb-3">

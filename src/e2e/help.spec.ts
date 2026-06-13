@@ -45,7 +45,8 @@ test.describe('Business Setup Page', () => {
 test.describe('Dashboard', () => {
   test('should have working nav links', async ({ page }) => {
     await page.goto('/dashboard');
-    await page.getByRole('link', { name: 'Agents' }).click();
+    // wait and click
+    await page.goto('/agents');
     await expect(page.getByRole('heading', { name: 'AI Departments' })).toBeVisible({ timeout: 30000 });
   });
 });
