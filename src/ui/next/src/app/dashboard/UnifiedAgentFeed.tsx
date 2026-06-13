@@ -447,7 +447,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
               <div className="w-full flex flex-col items-center gap-6 p-6 glassmorphism rounded-[16px] border border-white/40 dark:border-white/10 shadow-sm opacity-90 text-center">
                 <div className="text-3xl mb-2">✨</div>
                 <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7]">All caught up!</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 break-words">
                   Your agents are currently monitoring the business. While you're here, why not help us grow?
                 </p>
                 <div className="w-full max-w-md text-left">
@@ -489,7 +489,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                             </svg>
                             CRITICAL INCIDENT
                           </div>
-                          <p className="text-gray-700 dark:text-gray-300 text-sm">
+                          <p className="text-gray-700 dark:text-gray-300 text-sm break-words">
                             {(approval.proposed_action || approval.context_payload)?.description || 'An operational issue requires immediate attention.'}
                           </p>
                         </div>
@@ -505,7 +505,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                           <div className="text-xs text-gray-500 font-medium">
                             Customer: {(approval.proposed_action || approval.context_payload).customer_message}
                           </div>
-                          <div className="text-xs text-gray-900 dark:text-gray-100 italic line-clamp-3 bg-white/50 dark:bg-black/20 p-2 rounded">
+                          <div className="text-xs text-gray-900 dark:text-gray-100 italic line-clamp-3 bg-white/50 dark:bg-black/20 p-2 rounded break-words">
                             Draft: {(approval.proposed_action || approval.context_payload).draft_reply}
                           </div>
                         </div>
@@ -540,7 +540,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
                             </svg>
                             Draft Quote: {(approval.proposed_action || approval.context_payload).service || 'Plumbing Fix'} for Customer
                           </div>
-                          <div className="text-xs text-[#0066FF] dark:text-blue-400 font-medium">
+                          <div className="text-xs text-[#0066FF] dark:text-blue-400 font-medium break-words">
                             {(approval.proposed_action || approval.context_payload).customer_inquiry}
                           </div>
                           <div className="glassmorphism dark:bg-gray-800 p-3 rounded-lg border border-white/40 dark:border-white/10 relative mt-2">
@@ -967,7 +967,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
             )}
             {!activityLoading && activities.length === 0 && (
               <div className="w-full p-6 glassmorphism rounded-[16px] text-center">
-                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 break-words">
                   No recent activity found.
                 </p>
               </div>
