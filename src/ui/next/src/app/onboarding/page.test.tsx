@@ -742,7 +742,7 @@ describe('OnboardingWizard', () => {
     });
 
     // Submit
-    const generateBtn = screen.getByRole('button', { name: /Generate Storefront/i });
+    const generateBtn = screen.getByRole('button', { name: /Next/i });
     await user.click(generateBtn);
 
     // Check if it transitions successfully

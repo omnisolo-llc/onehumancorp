@@ -172,7 +172,7 @@ describe('WebsiteBuilderPage', () => {
 
     fireEvent.click(screen.getByText('Instant Build'));
     fireEvent.change(screen.getByPlaceholderText('e.g. I run a local bakery'), { target: { value: 'I run a local bakery' } });
-    fireEvent.click(screen.getByText('Generate Storefront'));
+    fireEvent.click(screen.getByText('Next'));
 
     // Status changes to 'generating', wait for it
     await waitFor(() => {
@@ -284,7 +284,7 @@ describe('WebsiteBuilderPage', () => {
     // Trigger something that changes status (e.g. going through the instant build flow generates a live status)
     fireEvent.click(screen.getByText('Instant Build'));
     fireEvent.change(screen.getByPlaceholderText('e.g. I run a local bakery'), { target: { value: 'I run a local bakery' } });
-    fireEvent.click(screen.getByText('Generate Storefront'));
+    fireEvent.click(screen.getByText('Next'));
 
     // Status changes to 'generating', wait for it
     await waitFor(() => {
