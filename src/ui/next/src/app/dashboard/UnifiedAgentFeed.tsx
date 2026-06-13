@@ -361,6 +361,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
 
   return (
     <section className="mb-6 max-w-[375px] w-full mx-auto sm:max-w-none" aria-label="Unified Agent Feed">
+      <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2 hidden md:block">Action Center</h2>
       {isOffline && (
         <div className="mb-4 w-full p-2 glassmorphism rounded-[8px] bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 text-center text-sm font-semibold flex items-center justify-center gap-2">
           <span>📡</span> You are offline. Actions will sync when online.

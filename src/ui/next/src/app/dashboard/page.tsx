@@ -502,6 +502,8 @@ export default function Dashboard() {
         {actionMessage && <div className="app-badge good" role="status">{actionMessage}</div>}
       </div>
 
+      <UnifiedAgentFeed initialData={{ proposals: pendingApprovals, activity: activities }} />
+
       <SuccessMilestoneAlert />
       <SuccessMilestoneWidget />
       <ViralLoopPerformanceWidget />
@@ -671,8 +673,6 @@ export default function Dashboard() {
                }}
              />
         ))}
-
-        <UnifiedAgentFeed initialData={{ proposals: pendingApprovals, activity: activities }} />
 
         <section>
           <div className="mb-6 p-6 rounded-[16px] bg-white/65 dark:bg-[#16161a]/70 border border-white/40 dark:border-white/10">
