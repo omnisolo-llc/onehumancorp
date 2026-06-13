@@ -527,6 +527,7 @@
 
         <div style="display: flex; gap: 10px;">
             <input type="text" id="chat-input" data-testid="chat-input" class="glassmorphism" placeholder="Type a message..." style="margin-bottom: 0; flex-grow: 1; min-height: 44px; border-radius: 8px;">
+            <input type="text" id="chat-image-url" data-testid="chat-image-url" class="glassmorphism" placeholder="Image URL (optional)..." style="margin-bottom: 0; flex-grow: 0.5; min-height: 44px; border-radius: 8px;">
             <button id="chat-send-btn" data-testid="chat-send-btn" style="width: auto; min-height: 44px; min-width: 44px; border-radius: 8px;">Send</button>
         </div>
       </div>
@@ -1207,18 +1208,28 @@
 
       // Chat logic
       const chatInputEl = document.getElementById('chat-input');
+      const chatImageUrlEl = document.getElementById('chat-image-url');
       const chatSendBtn = document.getElementById('chat-send-btn');
       const chatMessagesEl = document.getElementById('chat-messages');
       let chatHistory = [];
 
       async function sendChatMessage() {
           const text = chatInputEl.value.trim();
-          if (!text) return;
+          const imageUrl = chatImageUrlEl ? chatImageUrlEl.value.trim() : '';
+          if (!text && !imageUrl) return;
 
           // Append user message
-          chatMessagesEl.innerHTML += `<div style="margin-bottom: 10px; color: #0066FF;"><strong>You:</strong> ${text}</div>`;
+          let msgHtml = `<div style="margin-bottom: 10px; color: #0066FF;"><strong>You:</strong> ${text}`;
+          if (imageUrl) {
+              msgHtml += `<br/><img src="${imageUrl}" style="max-width: 100px; max-height: 100px; margin-top: 5px; border-radius: 4px;" />`;
+          }
+          msgHtml += `</div>`;
+          chatMessagesEl.innerHTML += msgHtml;
           chatInputEl.value = '';
-          chatHistory.push({ role: 'user', content: text });
+          if (chatImageUrlEl) chatImageUrlEl.value = '';
+          const messageObj = { role: 'user', content: text };
+          if (imageUrl) messageObj.image_url = imageUrl;
+          chatHistory.push(messageObj);
           chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
 
           chatSendBtn.disabled = true;
