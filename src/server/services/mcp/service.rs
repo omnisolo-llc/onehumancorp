@@ -261,30 +261,52 @@ impl McpService for MyMcpService {
         let grounding_content = sip_db.load_grounding_content().await;
 
         let is_standalone = crate::is_standalone_runtime();
-        let _permit = if is_standalone {
-            match crate::sip::get_sqlite_limiter().try_acquire() {
-                Ok(p) => Some(p),
-                Err(_) => {
-                    let _ = crate::telemetry::record_sqlite_throttled_request(&self.hub.pool, "delegate_missions").await;
-                    Some(crate::sip::get_sqlite_limiter().acquire().await.map_err(|e| Status::internal(e.to_string()))?)
+        let mut attempt = 0;
+        let max_attempts = 3;
+        let mut backoff = std::time::Duration::from_millis(50);
+
+        loop {
+            let res = async {
+                let _permit = if is_standalone {
+                    match crate::sip::get_sqlite_limiter().try_acquire() {
+                        Ok(p) => Some(p),
+                        Err(_) => {
+                            let _ = crate::telemetry::record_sqlite_throttled_request(&self.hub.pool, "delegate_missions").await;
+                            Some(crate::sip::get_sqlite_limiter().acquire().await.map_err(|e| sqlx::Error::Io(std::io::Error::new(std::io::ErrorKind::Other, e.to_string())))?)
+                        }
+                    }
+                } else {
+                    None
+                };
+
+                let mut tx = self.hub.pool.begin().await?;
+                ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await?;
+
+                for m in &req.missions {
+                    sip_db.delegate_mission_with_tx(&mut tx, &m.id, &m.status, &m.payload, m.force_local, &grounding_content).await?;
+                }
+
+                tx.commit().await?;
+                Ok::<_, sqlx::Error>(())
+            }.await;
+
+            match res {
+                Ok(_) => return Ok(Response::new(EmptyResponse {})),
+                Err(err) => {
+                    let err_str = err.to_string().to_lowercase();
+                    if crate::sip::is_retryable_sqlx_error(&err) || err_str.contains("connection refused") || err_str.contains("connection reset") {
+                        attempt += 1;
+                        if attempt >= max_attempts {
+                            return Err(Status::internal(err.to_string()));
+                        }
+                        tokio::time::sleep(backoff).await;
+                        backoff *= 2;
+                    } else {
+                        return Err(Status::internal(err.to_string()));
+                    }
                 }
             }
-        } else {
-            None
-        };
-
-        let mut tx = self.hub.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
-        ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| Status::internal(e.to_string()))?;
-
-        for m in req.missions {
-            sip_db.delegate_mission_with_tx(&mut tx, &m.id, &m.status, &m.payload, m.force_local, &grounding_content)
-                .await
-                .map_err(|e| Status::internal(e.to_string()))?;
         }
-
-        tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
-
-        Ok(Response::new(EmptyResponse {}))
     }
 
     async fn sync_context(

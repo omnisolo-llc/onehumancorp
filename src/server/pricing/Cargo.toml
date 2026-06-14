@@ -19,6 +19,7 @@ dashmap = "5"
 sha2 = "0.10"
 tracing = "0.1"
 hex = "0.4"
+uuid = { version = "1.23.3", features = ["v4"] }
 
 [lib]
 path = "mod.rs"

@@ -32,7 +32,7 @@ pub fn is_retryable_database_error_message(message: &str) -> bool {
         || lower.contains("closed")
 }
 
-fn is_retryable_sqlx_error(err: &sqlx::Error) -> bool {
+pub fn is_retryable_sqlx_error(err: &sqlx::Error) -> bool {
     if let Some(db_err) = err.as_database_error() {
         let code = db_err.code();
         if matches!(code.as_deref(), Some("40P01") | Some("40001") | Some("55P03")) {
