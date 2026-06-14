@@ -53,6 +53,38 @@ pub async fn offline_sync_handler(
         let db_clone = db.clone();
         let mesh_clone = mesh.clone();
 
+        if mutation.mutation_type.as_deref() == Some("approve_agent_feed") {
+            futures.push(Box::pin(async move {
+                if let Some(payload_str) = &mutation.payload {
+                    if let Ok(json_payload) = serde_json::from_str::<serde_json::Value>(payload_str) {
+                        if let (Some(id), Some(approved)) = (json_payload["id"].as_str(), json_payload["approved"].as_bool()) {
+                            let state = if approved { "APPROVED" } else { "DISMISSED" };
+                            let mut db_tx = db_clone.begin().await.unwrap();
+                            let _ = sqlx::query("UPDATE agent_feed_items SET lifecycle_state = $1, updated_at = NOW() WHERE id = $2 AND tenant_id = $3")
+                                .bind(state)
+                                .bind(id)
+                                .bind(&tenant_id_clone)
+                                .execute(&mut *db_tx)
+                                .await;
+
+                            // Legacy execution update
+                            if state == "APPROVED" || state == "REJECTED" || state == "DISMISSED" {
+                                let legacy_status = if state == "APPROVED" { "APPROVED" } else { "REJECTED" };
+                                let _ = sqlx::query("UPDATE agent_approvals SET status = $1 WHERE id = $2 AND tenant_id = $3")
+                                    .bind(legacy_status)
+                                    .bind(id)
+                                    .bind(&tenant_id_clone)
+                                    .execute(&mut *db_tx)
+                                    .await;
+                            }
+                            db_tx.commit().await.unwrap();
+                        }
+                    }
+                }
+            }) as std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>>);
+            continue;
+        }
+
         if mutation.mutation_type.as_deref() == Some("draft_quote") {
             futures.push(Box::pin(async move {
                 let mut db_tx = db_clone.begin().await.unwrap();

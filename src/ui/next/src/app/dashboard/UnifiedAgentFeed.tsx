@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import GrowthReferralWidget from "../components/GrowthReferralWidget";
-import { enqueueAction, getActions, removeAction } from "../utils/offlineQueue";
+import { SyncManager } from "../../lib/sync/SyncManager";
 import { WorkTriageFeed } from "../components/WorkTriageFeed";
 
 type TriageItem = {
@@ -91,7 +91,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
   useEffect(() => {
     const updateOfflineCount = async () => {
       try {
-        const actions = await getActions();
+        const actions = await SyncManager.getInstance().getQueue();
         setOfflineActionsCount(actions.length);
         const ids = new Set<string>();
         actions.forEach(a => { if (a.payload && a.payload.id) ids.add(a.payload.id) });
@@ -99,27 +99,12 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
       } catch (err) {}
     };
     updateOfflineCount();
+    const unsubscribe = SyncManager.getInstance().subscribe(updateOfflineCount);
 
     setIsOffline(!navigator.onLine);
 
     const handleOnline = async () => {
       setIsOffline(false);
-      // Sync queued offline actions
-      try {
-        const actions = await getActions();
-        for (const action of actions) {
-          if (action.type === 'approve_agent_feed') {
-            await submitDecision(action.payload.id, action.payload.approved);
-            await removeAction(action.id);
-            setOfflineActionsCount(prev => Math.max(0, prev - 1));
-            setQueuedActionIds(prev => {
-              const newSet = new Set(prev); newSet.delete(action.payload.id); return newSet;
-            });
-          }
-        }
-      } catch (err) {
-        console.error("Failed to sync offline actions", err);
-      }
     };
 
     const handleOffline = () => {
@@ -132,6 +117,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
     return () => {
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
+      if (unsubscribe) unsubscribe();
     };
   }, []);
 
@@ -393,14 +379,12 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: any }) {
   const handleDecision = async (id: string, approved: boolean) => {
     if (isOffline) {
       // Enqueue offline action
-      await enqueueAction({
+      await SyncManager.getInstance().enqueue({
         id: crypto.randomUUID(),
         type: 'approve_agent_feed',
         payload: { id, approved },
         timestamp: Date.now()
       });
-      setOfflineActionsCount(prev => prev + 1);
-      setQueuedActionIds(prev => new Set(prev).add(id));
       return;
     }
 

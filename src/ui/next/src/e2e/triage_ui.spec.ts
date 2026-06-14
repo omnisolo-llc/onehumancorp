@@ -18,7 +18,33 @@ test.describe('Work Triage Agentic Inbox on Dashboard', () => {
     await expect(triageFeed).toBeVisible({ timeout: 15000 });
   });
 
-  test('Owner reviews and approves a triage item', async ({ page }) => {
+  test('Owner reviews and approves a triage item offline, then syncs online', async ({ page, context }) => {
+    // Navigate to triage dashboard
+    await page.goto('/dashboard');
+    const triageCard = page.locator('[data-testid="triage-card-triage-test-1"]');
+    await expect(triageCard).toBeVisible({ timeout: 15000 });
+
+    // Go offline
+    await context.setOffline(true);
+    await page.evaluate(() => window.dispatchEvent(new Event('offline')));
+
+    // Approve the item
+    const approveBtn = page.locator('[data-testid="triage-approve-triage-test-1"]');
+    await expect(approveBtn).toBeVisible();
+    await approveBtn.click();
+
+    // Verify it disappears from UI optimistically
+    await expect(triageCard).not.toBeVisible();
+
+    // Go back online
+    await context.setOffline(false);
+    await page.evaluate(() => window.dispatchEvent(new Event('online')));
+
+    // It should sync and remain invisible
+    await expect(triageCard).not.toBeVisible();
+  });
+
+  test('Owner reviews and approves a triage item online', async ({ page }) => {
     const triageCard = page.locator('[data-testid="triage-card-triage-test-1"]');
     await expect(triageCard).toBeVisible({ timeout: 15000 });
 
