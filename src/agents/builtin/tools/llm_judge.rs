@@ -1,4 +1,4 @@
-use ohc_builtin_agent_core::expert_team::ExpertTeamLlmClient;
+use ohc_builtin_agent_llm::LlmClient;
 use ohc_builtin_agent_core::types::ToolError;
 use serde::Deserialize;
 use serde_json::json;
@@ -14,7 +14,7 @@ struct LlmJudgeArgs {
 }
 
 struct LlmJudgeExecutor {
-    llm: Arc<dyn ExpertTeamLlmClient>,
+    llm: Arc<dyn LlmClient>,
     model: String,
 }
 
@@ -102,7 +102,7 @@ impl PydanticToolExecutor<LlmJudgeArgs> for LlmJudgeExecutor {
     }
 }
 
-pub fn llm_judge_tool(llm: Arc<dyn ExpertTeamLlmClient>, model: String) -> Tool {
+pub fn llm_judge_tool(llm: Arc<dyn LlmClient>, model: String) -> Tool {
     Tool {
         name: "llm_judge".to_string(),
         description: "Evaluate the quality and accuracy of an intermediate output using an LLM-as-judge subagent. Use this tool to proactively verify your work against the task requirements.".to_string(),
@@ -135,7 +135,7 @@ mod tests {
     }
 
     #[async_trait::async_trait]
-    impl ohc_builtin_agent_core::expert_team::ExpertTeamLlmClient for MockLlmClient {
+    impl LlmClient for MockLlmClient {
         async fn chat(
             &self,
             _req: ChatRequest,

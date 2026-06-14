@@ -105,6 +105,7 @@ pub type SharedMailbox = Arc<RwLock<sendmessage::Mailbox>>;
 
 /// Build the default set of all tools.
 pub fn all_tools(
+    agent_llm: Option<std::sync::Arc<dyn ohc_builtin_agent_llm::LlmClient>>,
     llm: Option<std::sync::Arc<dyn ohc_builtin_agent_core::expert_team::ExpertTeamLlmClient>>,
     native_env: Option<Arc<tokio::sync::RwLock<ohc_builtin_agent_core::code_native::RichExecutionEnvironment>>>,
     todos: SharedTodos,
@@ -168,7 +169,7 @@ pub fn all_tools(
 
 ];
 
-    if let Some(llm) = llm.clone() {
+    if let Some(llm) = agent_llm {
         tools.push(llm_judge::llm_judge_tool(llm, "gemini-2.5-pro".to_string()));
     }
 
