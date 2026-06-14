@@ -1,9 +1,15 @@
 import { test, expect } from '@playwright/test';
+import * as path from 'path';
 
 test.describe('Onboarding Setup', () => {
   test('Save Draft button gives visual feedback', async ({ page }) => {
+    // Reverting back to fileUrl approach for this isolated UI component test
     const fileUrl = `file://${process.cwd()}/src/ui/tauri/src/ui/setup.html`;
     await page.goto(fileUrl);
+
+    // Have to click through the first screen
+    await page.locator('#step-initial [data-testid="next-step-btn"]').click();
+
 
     // Select "I'm a Baker" to move to the next step
     await page.locator('text="I\'m a Baker"').click();
