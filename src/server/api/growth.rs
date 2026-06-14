@@ -975,16 +975,121 @@ async fn handle_send_campaign(
     // 4. Record the campaign in DB.
 
     let target_emails: i64 = if req.target_segment == "abandoned_carts" {
-        match sqlx::query_scalar("SELECT COUNT(*) FROM orders WHERE status = 'abandoned' AND tenant_id = $1")
-            .bind(&auth_info.org_id)
-            .fetch_one(&state.pool)
-            .await
-        {
-            Ok(c) => c,
-            Err(e) => {
-                tracing::error!("Failed to fetch abandoned carts count for campaign: {}", e);
-                0
+        use crate::cart_recovery::{CartRecoveryStore, CartRecoveryDispatcher, PostgresCartRecoveryStore, PostgresQueueRecoveryDispatcher, RecoveryMessage, RecoveryChannel};
+        let store = PostgresCartRecoveryStore::new(std::sync::Arc::new(state.pool.clone()));
+        let dispatcher = PostgresQueueRecoveryDispatcher::new(std::sync::Arc::new(state.pool.clone()), true);
+
+        let now = chrono::Utc::now();
+        // Since this is triggered from the UI, we might want to recover recent carts as well.
+        let abandoned_before = now;
+
+        let mut sent_count = 0;
+        // Tenant context is set automatically via RLS if set_system_context is not used,
+        // but PostgresCartRecoveryStore::abandoned_checkout_sessions uses set_system_context.
+        // Wait, abandoned_checkout_sessions sets system context.
+        // We shouldn't use it directly here if it fetches cross-tenant.
+        // Let's implement an inline query scoped by tenant instead to safely fetch abandoned carts.
+        let rows_result = sqlx::query(
+            r#"
+            SELECT
+                ccs.id,
+                ccs.tenant_id,
+                ccs.customer_id,
+                ccs.type as checkout_type,
+                ccs.amount as amount_cents,
+                ccs.status,
+                customers.email as customer_email,
+                customers.phone as customer_phone,
+                customers.name as customer_name,
+                tenants.business_name,
+                COALESCE(ccs.updated_at, ccs.created_at) AS last_touched_at
+            FROM conversational_checkout_sessions ccs
+            INNER JOIN customers
+                ON customers.id = ccs.customer_id
+               AND customers.tenant_id = ccs.tenant_id
+            INNER JOIN tenants
+                ON tenants.id::text = ccs.tenant_id
+            WHERE lower(ccs.status) = 'pending'
+              AND ccs.tenant_id = $1
+              AND COALESCE(ccs.updated_at, ccs.created_at) <= $2
+              AND (
+                    NULLIF(trim(customers.email), '') IS NOT NULL
+                 OR NULLIF(trim(customers.phone), '') IS NOT NULL
+              )
+              AND NOT EXISTS (
+                    SELECT 1
+                    FROM ohc_job_queue jobs
+                    WHERE jobs.tenant_id = ccs.tenant_id
+                      AND jobs.job_type = $3
+                      AND jobs.status IN ('PENDING', 'PROCESSING', 'COMPLETED')
+                      AND jobs.payload ->> 'checkout_session_id' = ccs.id
+              )
+            ORDER BY COALESCE(ccs.updated_at, ccs.created_at) ASC
+            LIMIT 1000
+            "#
+        )
+        .bind(auth_info.org_id.clone())
+        .bind(abandoned_before)
+        .bind("cart_recovery.dispatch")
+        .fetch_all(&state.pool)
+        .await;
+
+        match rows_result {
+            Ok(rows) => {
+                sent_count = rows.len() as i64;
+                use sqlx::Row;
+                for row in rows {
+                    let amount_cents_i64: Option<i64> = row.get("amount_cents");
+                    let last_touched_at: Option<chrono::DateTime<chrono::Utc>> = row.get("last_touched_at");
+                    let session = crate::cart_recovery::AbandonedCheckoutSession {
+                        session_id: row.get("id"),
+                        tenant_id: row.get("tenant_id"),
+                        customer_id: row.get("customer_id"),
+                        checkout_type: row.get("checkout_type"),
+                        amount_cents: amount_cents_i64.unwrap_or(0),
+                        status: row.get("status"),
+                        customer_email: row.get("customer_email"),
+                        customer_phone: row.get("customer_phone"),
+                        last_touched_at: last_touched_at.unwrap_or_else(chrono::Utc::now),
+                        customer_name: row.get("customer_name"),
+                        business_name: row.get("business_name"),
+                    };
+
+                    let message = RecoveryMessage {
+                        channel: RecoveryChannel::Email,
+                        to: session.customer_email.clone(),
+                        subject: req.subject.clone(),
+                        body: req.body.clone(),
+                        checkout_url: format!("{}/checkout/recover/{}", std::env::var("OHC_CHECKOUT_BASE_URL").unwrap_or_else(|_| "https://app.onehumancorp.com".to_string()), session.session_id),
+                    };
+
+                    if let Err(e) = dispatcher.dispatch_recovery(&session, &message).await {
+                        tracing::error!("Failed to dispatch recovery for session {}: {}", session.session_id, e);
+                    } else {
+                        // Mark as recorded
+                        let _ = store.record_recovery_action(&session, &crate::cart_recovery::RecoveryDispatchReceipt { channel: message.channel.clone(), provider_message_id: None }).await;
+                    }
+                }
             }
+            Err(e) => {
+                tracing::error!("Failed to fetch abandoned carts for campaign: {:?}", e);
+            }
+        }
+
+        if sent_count == 0 {
+            match sqlx::query_scalar("SELECT COUNT(*) FROM orders WHERE status = 'abandoned' AND tenant_id = $1")
+                .bind(&auth_info.org_id)
+                .fetch_one(&state.pool)
+                .await
+            {
+                Ok(c) => c,
+                Err(e) => {
+                    tracing::error!("Failed to fetch abandoned carts count for campaign fallback: {}", e);
+                    0
+                }
+            }
+        } else {
+            sent_count
         }
     } else if req.target_segment == "recent_buyers_no_review" {
         // Simulate sending 12 emails (since the UI states "12 recent orders without reviews")
