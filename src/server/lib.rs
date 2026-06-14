@@ -5625,6 +5625,9 @@ async fn create_ui_bom_item_handler(
         .route("/api/ui/api-docs.html", axum::routing::get(|| async {
             axum::response::Html(include_str!("../ui/tauri/src/ui/api-docs.html"))
         }))
+        .route("/api-docs", axum::routing::get(|| async {
+            axum::response::Html(include_str!("../ui/tauri/src/ui/api-docs.html"))
+        }))
         .route("/api/ui/changelog.html", axum::routing::get(|| async {
             axum::response::Html(include_str!("../ui/next/public/api/ui/changelog.html"))
         }))
