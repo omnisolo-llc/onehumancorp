@@ -15,6 +15,8 @@ function CheckoutContent() {
   const productId = searchParams?.get("product_id") || "prod_123";
   const quantity = parseInt(searchParams?.get("quantity") || "1", 10);
   const discountParam = searchParams?.get("discount");
+  const isSubscriptionAvailable = searchParams?.get("is_subscription_available") === "true";
+  const subscriptionDiscount = parseInt(searchParams?.get("subscription_discount") || "10", 10);
   const [isProcessing, setIsProcessing] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [tenant, setTenant] = useState("my-store");
@@ -267,6 +269,7 @@ function CheckoutContent() {
             {deliveryFee !== null && <p className="text-xs text-green-600 mt-1 font-medium">Delivery available: +${deliveryFee.toFixed(2)}</p>}
           </div>
 
+          {isSubscriptionAvailable && (
           <div className="flex items-center mb-4">
             <label htmlFor="subscribe" className="flex items-center cursor-pointer group">
               <div className="relative">
@@ -281,10 +284,11 @@ function CheckoutContent() {
                 <div className={`dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform duration-300 ease-in-out shadow-sm ${isSubscription ? 'transform translate-x-4' : ''}`}></div>
               </div>
               <div className="ml-3 text-sm font-medium text-gray-700 group-hover:text-gray-900 transition-colors">
-                Subscribe & Save 10%
+                Subscribe & Save {subscriptionDiscount}%
               </div>
             </label>
           </div>
+          )}
 
           <div className="bg-green-50 border border-green-100 rounded-xl p-4 my-2 mb-4">
             <div className="flex justify-between items-center">
@@ -300,7 +304,7 @@ function CheckoutContent() {
              <div className="flex justify-between items-center pt-2 border-t border-gray-100">
                <span className="font-semibold text-gray-700">Total with Delivery</span>
                <span className="text-xl font-bold font-outfit text-gray-900">
-                 ${((45.00 + deliveryFee) * (useLoyaltyPoints && loyaltyDiscount ? (1 - loyaltyDiscount) : 1)).toFixed(2)}
+                 ${(((45.00 * (isSubscription ? (1 - (subscriptionDiscount/100)) : 1)) + deliveryFee) * (useLoyaltyPoints && loyaltyDiscount ? (1 - loyaltyDiscount) : 1)).toFixed(2)}
                </span>
              </div>
           )}
@@ -308,7 +312,7 @@ function CheckoutContent() {
              <div className="flex justify-between items-center pt-2 border-t border-gray-100">
                <span className="font-semibold text-gray-700">Total</span>
                <span className="text-xl font-bold font-outfit text-gray-900">
-                 ${(45.00 * (useLoyaltyPoints && loyaltyDiscount ? (1 - loyaltyDiscount) : 1)).toFixed(2)}
+                 ${(45.00 * (isSubscription ? (1 - (subscriptionDiscount/100)) : 1) * (useLoyaltyPoints && loyaltyDiscount ? (1 - loyaltyDiscount) : 1)).toFixed(2)}
                </span>
              </div>
           )}

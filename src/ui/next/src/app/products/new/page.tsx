@@ -53,37 +53,13 @@ function AutoCatalogContent() {
         });
         const data = await response.json();
         if (!response.ok) {
-          if (subscriptionMode) {
-            setProductData({
-              title: 'Vegan Cake',
-              description: 'Monthly vegan cake box with rotating seasonal flavors.',
-              price: '50.00',
-              category: 'Subscription Box',
-              isSubscription: true,
-              subscriptionInterval,
-              subscriptionDiscount: '10',
-            });
-            return;
-          }
           setError(data.message || 'Auto-catalog is unavailable.');
           return;
         }
         setProductData(subscriptionMode ? { ...data, isSubscription: true, subscriptionInterval } : data);
       } catch (error) {
         console.error('Error auto-cataloging:', error);
-        if (subscriptionMode) {
-          setProductData({
-            title: 'Vegan Cake',
-            description: 'Monthly vegan cake box with rotating seasonal flavors.',
-            price: '50.00',
-            category: 'Subscription Box',
-            isSubscription: true,
-            subscriptionInterval,
-            subscriptionDiscount: '10',
-          });
-        } else {
-          setError('Auto-catalog is unavailable.');
-        }
+        setError('Auto-catalog is unavailable.');
       } finally {
         setLoading(false);
       setPublishingStep(0);
@@ -155,6 +131,7 @@ function AutoCatalogContent() {
         })
       });
       const data = await response.json().catch(() => ({}));
+
 
       if (response.ok) {
         setTimeout(() => {

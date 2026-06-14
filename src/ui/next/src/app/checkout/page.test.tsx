@@ -80,6 +80,7 @@ beforeEach(() => {
   });
 
   it('handles regular checkout session flow correctly', async () => {
+    mockUseSearchParams.mockImplementation(() => new URLSearchParams('?is_subscription_available=true&subscription_discount=10'));
     const assign = vi.fn();
     Object.defineProperty(window, 'location', {
       configurable: true,
