@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { PoweredByOHC } from '../components/PoweredByOHC';
 
 export default function ZeroClickBuilderPage() {
   const router = useRouter();
@@ -193,6 +194,9 @@ export default function ZeroClickBuilderPage() {
               </a>
             )}
           </p>
+          <div className="flex justify-center mt-2">
+            <PoweredByOHC tenantId="ohc" />
+          </div>
         </div>
       </div>
     </div>

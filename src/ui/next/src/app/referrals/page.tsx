@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { PoweredByOHC } from '../components/PoweredByOHC';
+
 export default function ReferralsPage() {
   const [copied, setCopied] = useState(false);
   const [copiedMessage, setCopiedMessage] = useState(false);
@@ -263,11 +265,7 @@ export default function ReferralsPage() {
         </div>
       </main>
 
-      <footer className="mt-8 text-center pb-8">
-        <a href="/onboarding" className="text-sm font-semibold text-gray-500 hover:text-gray-900 transition-colors">
-          ⚡ Powered by OHC
-        </a>
-      </footer>
+      <PoweredByOHC tenantId="my-store" />
 
       <style dangerouslySetInnerHTML={{__html: `
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap');

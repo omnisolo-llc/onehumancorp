@@ -64,6 +64,7 @@ describe('ZeroClickBuilderPage', () => {
 
   it('renders Powered by OHC branding', () => {
     render(<ZeroClickBuilderPage />);
-    expect(screen.getByText(/Powered by OHC/i)).toBeInTheDocument();
+    const texts = screen.getAllByText(/Powered by OHC/i);
+    expect(texts.length).toBeGreaterThan(0);
   });
 });

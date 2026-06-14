@@ -97,7 +97,7 @@ describe('ReferralsPage', () => {
     await act(async () => {
       render(<ReferralsPage />);
     });
-    const footerLink = screen.getByText('⚡ Powered by OHC');
+    const footerLink = screen.getByText('Powered by OHC');
     expect(footerLink).toBeDefined();
   });
 });
