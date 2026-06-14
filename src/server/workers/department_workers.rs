@@ -1448,6 +1448,8 @@ mod tests {
                 tenant_id TEXT,
                 name TEXT,
                 inventory_count INT,
+                locked_quantity INT DEFAULT 0,
+                available_quantity INT DEFAULT 0,
                 supplier_name TEXT,
                 supplier_contact TEXT
             );
