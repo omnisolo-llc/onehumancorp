@@ -19,6 +19,7 @@ pub mod toolsearch;
 pub mod task;
 pub mod booking;
 pub mod agent_tool;
+pub mod superpowers_tool;
 pub mod sleep;
 pub mod marketing;
 pub mod finance;
@@ -143,6 +144,7 @@ pub fn all_tools(
         task::task_update_tool(task_store.clone()),
         agent_tool::agent_stop_tool(),
         agent_tool::agent_status_tool(),
+        superpowers_tool::superpowers_skill_tool(),
         sleep::sleep_tool(),
         marketing::qr_generate_tool(),
         finance::finance_report_tool(),

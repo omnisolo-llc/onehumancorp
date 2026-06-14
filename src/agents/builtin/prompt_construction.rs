@@ -216,6 +216,35 @@ impl HierarchicalPromptBuilder {
                 }
             }
         }
+
+        // Superpowers Skills (obra/superpowers) Injection
+        if let Ok(repo_dir) = std::env::current_dir() {
+            let superpowers_dir = repo_dir.join(".superpowers").join("skills");
+            if superpowers_dir.exists() {
+                let mut registry = crate::microagent::MicroAgentRegistry::new();
+                let _ = registry.load_superpowers_from_dir(&superpowers_dir);
+                let active_superpowers = registry.get_active_instructions(&user_instr);
+                if !active_superpowers.is_empty() {
+                    user_instr.push_str(&format!("
+
+[Superpowers Skills]:
+{}!", active_superpowers));
+                }
+            } else {
+                let fallback_dir = repo_dir.join(".openhands").join("microagents");
+                if fallback_dir.exists() {
+                    let mut registry = crate::microagent::MicroAgentRegistry::new();
+                    let _ = registry.load_superpowers_from_dir(&fallback_dir);
+                    let active_superpowers = registry.get_active_instructions(&user_instr);
+                    if !active_superpowers.is_empty() {
+                        user_instr.push_str(&format!("
+
+[Superpowers Skills]:
+{}!", active_superpowers));
+                    }
+                }
+            }
+        }
         let limit = 32768;
 
         if user_instr.chars().count() > limit {
