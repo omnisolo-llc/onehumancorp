@@ -121,7 +121,6 @@
 
       <div id="changelog-container">Loading...</div>
 
-
     <script>
       const container = document.getElementById('changelog-container');
 
@@ -172,7 +171,6 @@
 
       loadChangelog();
     </script>
-
 
     <script>
 document.addEventListener('DOMContentLoaded', () => {
@@ -441,9 +439,52 @@ document.addEventListener('DOMContentLoaded', () => {
 
 </script>
 
+    <script>
+      const container = document.getElementById('changelog-container');
+
+      async function loadChangelog() {
+        try {
+          let data = null;
+          if (window.__TAURI__ && window.__TAURI__.core) {
+             data = await window.__TAURI__.core.invoke('get_changelog', {});
+          } else {
+             const res = await fetch(`/api/changelog`);
+             if (res.ok) data = await res.json();
+          }
 
 
 
+          let html = '';
+          data.forEach(item => {
+             let contentHtml = item.contentLines ? item.contentLines.map(line => {
+                if (line.startsWith('### ')) return `<h3>${line.substring(4)}</h3>`;
+                if (line.startsWith('- ')) return `<p>• ${line.substring(2)}</p>`;
+                return `<p>${line}</p>`;
+             }).join('') : (item.content_lines ? item.content_lines.map(line => {
+                if (line.startsWith('### ')) return `<h3>${line.substring(4)}</h3>`;
+                if (line.startsWith('- ')) return `<p>• ${line.substring(2)}</p>`;
+                return `<p>${line}</p>`;
+             }).join('') : '');
+
+             let imgHtml = item.screenshot_url ? `<img src="${item.screenshot_url}" class="screenshot" alt="Screenshot" onerror="this.style.display='none'"/>` : '';
+
+             html += `
+               <div class="changelog-card">
+                 <h2 class="version-title">${item.version}</h2>
+                 ${imgHtml}
+                 <div class="content">${contentHtml}</div>
+               </div>
+             `;
+          });
+          container.innerHTML = html;
+        } catch (e) {
+          console.error("Failed to load changelog", e);
+          container.innerHTML = `<div class="changelog-card"><p style="color:#FF3B30">Failed to load changelog.</p></div>`;
+        }
+      }
+
+      loadChangelog();
+    </script>
 
 
 
