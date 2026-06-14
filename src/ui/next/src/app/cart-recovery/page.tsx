@@ -11,8 +11,14 @@ export default function CartRecoveryPage() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSent, setIsSent] = useState(false);
   const [abandonedCartsCount, setAbandonedCartsCount] = useState<number>(0);
+  const [hasPro, setHasPro] = useState(false);
+  const [showSoftPaywall, setShowSoftPaywall] = useState(false);
+  const [trialStatus, setTrialStatus] = useState('');
 
   useEffect(() => {
+    if (typeof localStorage !== 'undefined') {
+      setHasPro(localStorage.getItem('has_pro') === 'true');
+    }
     const fetchAbandonedCartsCount = async () => {
       try {
         const res = await fetch('/api/v1/growth/campaign/abandoned-carts-count');
@@ -40,7 +46,7 @@ export default function CartRecoveryPage() {
         });
 
         const data = await res.json();
-        setGeneratedDraft(data.message);
+        setGeneratedDraft(`${data.message}\n\n⚡ Powered by OHC`);
         setIsGenerating(false);
         setIsSent(false);
     } catch (e) {
@@ -50,6 +56,23 @@ export default function CartRecoveryPage() {
   };
 
   const handleGenerate = () => {
+    if (!hasPro) {
+      setShowSoftPaywall(true);
+      return;
+    }
+    generateDraft();
+  };
+
+  const claimTrialExtension = () => {
+    const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || 'DEFAULT' : 'DEFAULT';
+    const referralUrl = `${window.location.origin}/onboarding?ref=${tenant}`;
+    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('I just set up automated abandoned cart recovery for my business on One Human Corp! Start your own business today: ' + referralUrl)}`, '_blank');
+    if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('has_pro', 'true');
+    }
+    setHasPro(true);
+    setShowSoftPaywall(false);
+    setTrialStatus('Your 7-day Pro trial has been activated.');
     generateDraft();
   };
 
@@ -87,6 +110,7 @@ export default function CartRecoveryPage() {
       </header>
 
       <main className="p-6 md:p-8 flex-1 max-w-4xl mx-auto w-full flex flex-col gap-8">
+        {trialStatus && <p className="rounded-lg border border-green-100 bg-green-50 px-4 py-3 text-sm font-semibold text-green-800" role="status">{trialStatus}</p>}
         <div className="bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-100 rounded-2xl p-6 shadow-sm">
            <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">Recover Abandoned Carts</h2>
            <p className="text-gray-600 text-sm">
@@ -173,6 +197,49 @@ export default function CartRecoveryPage() {
           </section>
         </div>
       </main>
+
+      {/* Soft Paywall Modal */}
+      {showSoftPaywall && (
+        <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
+          <div className="app-card w-full max-w-md rounded-2xl p-8 shadow-2xl relative overflow-hidden font-inter border border-orange-100 text-center">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-orange-50 rounded-bl-full -z-10"></div>
+
+            <div className="flex justify-end mb-2">
+              <button
+                onClick={() => setShowSoftPaywall(false)}
+                className="text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors w-8 h-8 flex items-center justify-center"
+              >
+                <span className="text-xl leading-none">&times;</span>
+              </button>
+            </div>
+
+            <div className="w-16 h-16 bg-orange-100 rounded-2xl flex items-center justify-center text-3xl shadow-inner text-orange-600 mx-auto mb-6">
+              🛒
+            </div>
+            <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-3">Upgrade to Pro</h2>
+            <p className="text-gray-600 mb-6 text-sm leading-relaxed">
+              Abandoned Cart Recovery is a Pro feature. Upgrade to our Pro plan to automatically recover lost sales.
+            </p>
+
+            <button
+              onClick={() => { setShowSoftPaywall(false); window.location.href = '/pricing'; }}
+              className="w-full py-4 rounded-xl font-bold text-white mb-4 transition-all shadow-md hover:shadow-lg hover:opacity-90 bg-gradient-to-r from-orange-500 to-amber-500"
+            >
+              Upgrade to Pro
+            </button>
+
+            <div className="my-4 text-gray-400 font-medium text-sm">OR</div>
+
+            <button
+              onClick={claimTrialExtension}
+              className="w-full py-3.5 rounded-xl font-bold transition-all shadow-sm hover:bg-gray-50 flex items-center justify-center gap-2 border-2 border-[#1DA1F2] text-[#1DA1F2] bg-white"
+            >
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.008 5.94H5.078z"/></svg>
+              Share on X to get 7 Days Free
+            </button>
+          </div>
+        </div>
+      )}
 
       <style dangerouslySetInnerHTML={{__html: `
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap');
