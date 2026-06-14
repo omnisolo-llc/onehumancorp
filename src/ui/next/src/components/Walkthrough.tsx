@@ -136,7 +136,7 @@ export function InteractiveWalkthrough({ steps, isOpen, onClose, onComplete }: W
       {/* Target Highlight Overlay (using box-shadow to punch a hole) */}
       {targetRect && (
         <div
-          className="ohc-walkthrough-overlay fixed pointer-events-none transition-all duration-300 ease-in-out ring-4 ring-blue-500/50 rounded-xl shadow-[0_0_0_9999px_rgba(0,0,0,0.6)] backdrop-blur-[2px]"
+          className="ohc-walkthrough-overlay fixed pointer-events-none transition-all duration-300 ease-in-out ring-[6px] ring-blue-500/30 rounded-2xl shadow-[0_0_0_9999px_rgba(0,0,0,0.65)] backdrop-blur-[4px]"
           style={{
             zIndex: 9999,
             top: targetRect.top - 4,
@@ -152,7 +152,7 @@ export function InteractiveWalkthrough({ steps, isOpen, onClose, onComplete }: W
         role="dialog"
         aria-label={`${currentStep.title} walkthrough step`}
         id="walkthrough-bubble"
-        className="ohc-walkthrough-bubble fixed z-[10000] bg-white/80 backdrop-blur-2xl saturate-[210%] border border-white/60 rounded-2xl p-6 w-[300px] max-w-[calc(100vw-32px)] font-inter animate-pop-in shadow-[0_12px_40px_rgba(0,0,0,0.15)]"
+        className="ohc-walkthrough-bubble fixed z-[10000] bg-white/70 backdrop-blur-[40px] saturate-[200%] border border-white/50 rounded-3xl p-6 w-[320px] max-w-[calc(100vw-32px)] font-inter animate-pop-in shadow-[0_24px_64px_rgba(0,0,0,0.2)]"
         style={bubbleStyle}
       >
         {targetRect && (
