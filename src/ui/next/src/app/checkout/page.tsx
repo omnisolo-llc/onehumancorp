@@ -132,6 +132,24 @@ function CheckoutContent() {
     }
   };
 
+  const handleMercadoPago = async () => {
+    setIsMercadoPagoProcessing(true);
+    setCheckoutStatus("Preparing Mercado Pago Checkout...");
+    try {
+      const response = await fetch("/api/checkout/mercadopago", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tenant_id: tenant, product_id: productId, quantity }),
+      });
+      const data = await response.json();
+      if (data.init_point) window.location.assign(data.init_point);
+      else setCheckoutStatus("Mercado Pago checkout failed.");
+    } catch {
+      setCheckoutStatus("Mercado Pago unavailable.");
+    }
+    setIsMercadoPagoProcessing(false);
+  };
+
   return (
     <div className="flex flex-col min-h-screen font-inter bg-[#F8F9FA] text-gray-900 overflow-x-hidden">
       <header className="px-4 md:px-6 py-4 flex flex-col md:flex-row items-center justify-between gap-4 sticky top-0 z-50 bg-white/70 backdrop-blur-xl saturate-200 border-b border-white/40 shadow-sm">
@@ -323,6 +341,16 @@ function CheckoutContent() {
               className="w-full px-4 py-3 bg-black text-white rounded-lg font-medium hover:bg-gray-900 transition-colors shadow-sm flex items-center justify-center gap-2"
             >
               {isProcessing ? "Processing..." : "Pay"}
+            </button>
+          </WithTooltip>
+
+          <WithTooltip id="checkout-mercadopago-tooltip" defaultText="Pay securely using Mercado Pago.">
+            <button
+              onClick={handleMercadoPago}
+              disabled={isMercadoPagoProcessing || isProcessing}
+              className="w-full px-4 py-3 bg-[#009EE3] text-white rounded-lg font-medium hover:bg-[#008ACB] transition-colors shadow-sm flex items-center justify-center gap-2"
+            >
+              {isMercadoPagoProcessing ? "Processing..." : "Pay with Mercado Pago"}
             </button>
           </WithTooltip>
 
