@@ -97,7 +97,7 @@ test.describe('Help Center & Documentation Features', () => {
     await helpButton.first().evaluate((b) => (b as HTMLElement).click());
 
     // 3. Switch to Ask AI tab
-    const askAiTab = page.locator('button:has-text("Ask AI")');
+    const askAiTab = page.getByRole('button', { name: 'Ask AI', exact: true });
     if (await askAiTab.isVisible()) {
       await askAiTab.evaluate((b) => (b as HTMLElement).click());
     }
