@@ -20,7 +20,7 @@
         -webkit-backdrop-filter: blur(30px) saturate(2.1);
         padding: 40px;
         border-radius: 16px;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
         text-align: center;
         max-width: 480px;
         width: 100%;
@@ -33,7 +33,7 @@
         backdrop-filter: blur(30px) saturate(2.1);
         -webkit-backdrop-filter: blur(30px) saturate(2.1);
         border: 1px solid rgba(255, 255, 255, 0.4);
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
       }
       h1 {
         margin-top: 0;
@@ -46,7 +46,7 @@
         font-size: 14px;
         margin-bottom: 20px;
       }
-      input, select, textarea {
+      input {
         width: 100%;
         padding: 14px;
         min-height: 44px !important;
@@ -59,10 +59,20 @@
         backdrop-filter: blur(10px) saturate(200%);
         -webkit-backdrop-filter: blur(10px) saturate(200%);
         transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
-        color: #1d1d1f;
-        font-family: inherit;
       }
-      input:focus, select:focus, textarea:focus {
+      select.glassmorphism, textarea.glassmorphism {
+        border-radius: 8px;
+      }
+      input.glassmorphism {
+        border-radius: 8px;
+      }
+      select, textarea, input {
+        border-radius: 8px;
+      }
+      select, textarea, input {
+        border-radius: 8px;
+      }
+      input:focus {
         outline: none;
         border-color: #0066FF;
         background: rgba(255, 255, 255, 0.8);
@@ -98,6 +108,10 @@
         text-align: left;
       }
 
+      .text-\[\#FF3B30\] { color: #FF3B30 !important; }
+      .border-\[\#FF3B30\] { border-color: #FF3B30 !important; }
+      .border-\[\#FF3B30\]\/30 { border-color: rgba(255, 59, 48, 0.3) !important; border-width: 1px !important; border-style: solid !important; border-radius: 8px !important; padding: 10px !important; }
+
       @keyframes shake {
         0%, 100% { transform: translateX(0); }
         25% { transform: translateX(-5px); }
@@ -114,7 +128,7 @@
       .spinner {
         display: inline-block;
         width: 16px;
-        min-height: 16px;
+        min-height: 44px; height: auto;
         border: 2px solid rgba(255, 255, 255, 0.3);
         border-radius: 50%;
         border-top-color: #fff;
@@ -124,30 +138,42 @@
       }
 
       @media (prefers-color-scheme: dark) {
-        body { background-color: #16161a; }
-        .container, .glassmorphism {
-          background: rgba(22, 22, 26, 0.7);
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        body {
+          background-color: #16161a;
         }
-        h1 { color: #F5F5F7; }
-        p { color: #A1A1A6; }
-        input, select, textarea {
+        .container {
+          background: rgba(22, 22, 26, 0.7);
+          backdrop-filter: blur(30px) saturate(2.1);
+          -webkit-backdrop-filter: blur(30px) saturate(2.1);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 16px;
+          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        .glassmorphism {
+          border-radius: 16px;
+          background: rgba(22, 22, 26, 0.7);
+          backdrop-filter: blur(30px) saturate(2.1);
+          -webkit-backdrop-filter: blur(30px) saturate(2.1);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        h1 {
+          color: #F5F5F7;
+        }
+        p {
+          color: #A1A1A6;
+        }
+        input {
           background: rgba(255, 255, 255, 0.1);
           border: 1px solid rgba(255, 255, 255, 0.2);
           color: #F5F5F7;
         }
-        .chat-bubble {
-          background: rgba(255, 255, 255, 0.1) !important;
-          color: #F5F5F7 !important;
-          border-color: rgba(255, 255, 255, 0.1) !important;
+        input:focus {
+          border-color: #0066FF;
+          background: rgba(255, 255, 255, 0.15);
         }
-        .radio-option {
-          background: rgba(255, 255, 255, 0.1) !important;
-          border-color: rgba(255, 255, 255, 0.2) !important;
-        }
-        .radio-label { color: #F5F5F7 !important; }
       }
+
 
       .stepper {
         display: flex;
@@ -168,13 +194,22 @@
       }
       .step-indicator {
         width: 12px;
-        min-height: 12px;
+        min-height: 44px; height: auto;
         border-radius: 50%;
         background: rgba(255, 255, 255, 0.5);
         border: 2px solid rgba(255, 255, 255, 0.8);
         z-index: 2;
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       }
+
+      /* Chat Step Styles */
+      #chat-messages {
+        height: 300px;
+        overflow-y: auto;
+        padding: 10px;
+        margin-bottom: 20px;
+      }
+
       .step-indicator.active {
         background: #0066FF;
         border-color: #0066FF;
@@ -186,16 +221,51 @@
         border-color: #0066FF;
       }
 
+      @media (prefers-color-scheme: dark) {
+        .stepper::before {
+          background: rgba(255, 255, 255, 0.1);
+        }
+        .step-indicator {
+          background: rgba(255, 255, 255, 0.1);
+          border-color: rgba(255, 255, 255, 0.2);
+        }
+      }
+
+      /* Multi-step logic */
       .step {
         display: none;
         animation: fadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
       }
-      .step.active { display: block; }
+      .step.active {
+        display: block;
+      }
       @keyframes fadeIn {
         from { opacity: 0; transform: translateY(10px); }
         to { opacity: 1; transform: translateY(0); }
       }
 
+      select, textarea {
+        color: #1d1d1f;
+        width: 100%;
+        padding: 14px;
+        min-height: 44px !important;
+        margin-bottom: 20px;
+        border: 1px solid rgba(255, 255, 255, 0.5);
+        border-radius: 8px;
+        box-sizing: border-box;
+        font-size: 16px;
+        background: rgba(255, 255, 255, 0.5);
+        font-family: "Outfit", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        backdrop-filter: blur(10px) saturate(200%);
+        -webkit-backdrop-filter: blur(10px) saturate(200%);
+        transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+      }
+      select:focus, textarea:focus {
+        outline: none;
+        border-color: #0066FF;
+        background: rgba(255, 255, 255, 0.8);
+        box-shadow: 0 0 0 3px rgba(0, 102, 255, 0.2);
+      }
       .radio-group {
         display: flex;
         flex-direction: column;
@@ -209,6 +279,7 @@
         gap: 10px;
         background: rgba(255, 255, 255, 0.5);
         backdrop-filter: blur(10px) saturate(200%);
+        -webkit-backdrop-filter: blur(10px) saturate(200%);
         border: 1px solid rgba(255, 255, 255, 0.5);
         padding: 12px 16px;
         min-height: 44px !important;
@@ -216,21 +287,43 @@
         cursor: pointer;
         transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
       }
+      .radio-option:hover {
+        background: rgba(255, 255, 255, 0.7);
+      }
       .radio-option.selected {
         border-color: #0066FF;
         background: rgba(0, 102, 255, 0.1);
       }
-      .radio-option input[type="radio"] { display: none; }
-      .radio-label { font-weight: 500; color: #1d1d1f; }
-      .radio-desc { font-size: 12px; color: #555555; margin-top: 2px; }
+      .radio-option input[type="radio"] {
+        display: none;
+      }
+      .radio-label {
+        font-weight: 500;
+        color: #1d1d1f;
+      }
+      .radio-desc {
+        font-size: 12px;
+        color: #555555;
+        margin-top: 2px;
+      }
 
       .btn-secondary {
         background-color: transparent;
         color: #555555;
         box-shadow: none;
         border: 1px solid rgba(0, 0, 0, 0.1);
+        margin-top: 10px;
+        min-height: 44px !important;
       }
-      .btn-group { display: flex; flex-direction: column; gap: 10px; }
+      .btn-secondary:hover {
+        background-color: rgba(0, 0, 0, 0.05);
+        color: #1d1d1f;
+      }
+      .btn-group {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
 
       .persona-row {
         display: flex;
@@ -238,6 +331,7 @@
         margin-bottom: 20px;
         overflow-x: auto;
         padding-bottom: 10px;
+        -webkit-overflow-scrolling: touch;
       }
       .persona-chip {
         flex: 0 0 auto;
@@ -254,7 +348,13 @@
         border: 1px solid transparent;
         transition: all 0.2s;
       }
-      .persona-chip.selected { background: #0066FF; color: white; }
+      .persona-chip:hover {
+        background: rgba(0, 102, 255, 0.2);
+      }
+      .persona-chip.selected {
+        background: #0066FF;
+        color: white;
+      }
 
       .chat-bubble {
         background: rgba(255, 255, 255, 0.8);
@@ -270,21 +370,108 @@
         box-shadow: 0 2px 8px rgba(0,0,0,0.05);
       }
 
-      @media (max-width: 768px) {
-        .container { padding: 20px; border-radius: 16px; border: none; }
+      @media (prefers-color-scheme: dark) {
+        select, textarea {
+          background: rgba(255, 255, 255, 0.1);
+          border: 1px solid rgba(255, 255, 255, 0.2);
+          color: #F5F5F7;
+        }
+        select:focus, textarea:focus {
+          border-color: #0066FF;
+          background: rgba(255, 255, 255, 0.15);
+        }
+        .radio-option {
+          background: rgba(255, 255, 255, 0.1);
+          border-color: rgba(255, 255, 255, 0.2);
+        }
+        .radio-option:hover {
+          background: rgba(255, 255, 255, 0.15);
+        }
+        .radio-option.selected {
+          border-color: #0066FF;
+          background: rgba(0, 102, 255, 0.2);
+        }
+        .radio-label {
+          color: #F5F5F7;
+        }
+        .btn-secondary {
+          border-color: rgba(255, 255, 255, 0.2);
+          color: #A1A1A6;
+        }
+        .btn-secondary:hover {
+          background-color: rgba(255, 255, 255, 0.1);
+          color: #F5F5F7;
+        }
+        .chat-bubble {
+          background: rgba(255, 255, 255, 0.1);
+          color: #F5F5F7;
+          border-color: rgba(255, 255, 255, 0.1);
+        }
       }
 
-      @media (max-width: 375px) {
-        .stepper { gap: 4px; }
-        .step-indicator { width: 8px; min-height: 8px; }
-        .step-indicator.active { transform: scale(1.2); }
-        h1 { font-size: 20px; }
-        p { font-size: 13px; }
+      @media (max-width: 768px) {
+        .container {
+          padding: 20px;
+          border-radius: 16px;
+          width: 100%;
+          border: none;
+        }
+        input, select, textarea, button, .radio-option, .persona-chip {
+          min-height: 44px !important;
+        }
       }
+
+            @media (max-width: 375px) {
+        .stepper {
+          gap: 4px;
+        }
+        .step-indicator {
+          width: 8px;
+          min-height: 44px; height: auto;
+        }
+        .step-indicator.active {
+          transform: scale(1.2);
+        }
+        .container {
+        background: rgba(255, 255, 255, 0.65);
+        backdrop-filter: blur(30px) saturate(210%);
+        -webkit-backdrop-filter: blur(30px) saturate(210%);
+        padding: 40px;
+        border-radius: 16px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        text-align: center;
+        max-width: 480px;
+        width: 100%;
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        box-sizing: border-box;
+      }
+        .radio-option {
+          padding: 8px 12px;
+          font-size: 14px;
+        }
+        h1 {
+          font-size: 20px;
+        }
+        p {
+          font-size: 13px;
+        }
+        .persona-chip {
+          padding: 6px 12px;
+          font-size: 12px;
+        }
+      }
+
+
+      *:focus-visible {
+        outline: 3px solid #0066FF;
+        outline-offset: 2px;
+      }
+
     </style>
   </head>
   <body>
-    <div class="container glassmorphism" id="form-container">
+        <div class="container glassmorphism" id="form-container">
+
 
       <!-- Step 0: Initial Screen -->
       <div class="step active" id="step-initial">
@@ -294,54 +481,62 @@
           </svg>
         </div>
         <h1>10-Minute Setup Wizard</h1>
-        <p>Zero tech skills needed. Review and add any extra details to help our AI generate the perfect store.</p>
+        <p>Zero tech skills needed. We do the heavy lifting. Review and add any extra details to help our AI generate the perfect store.</p>
 
         <div class="btn-group" style="margin-top: 32px;">
           <button class="next-step-btn" data-testid="next-step-btn" data-next="step-context">Start My Business</button>
           <button type="button" class="btn-secondary" onclick="goToStep('step-instant')">Instant Build</button>
-          <button type="button" class="btn-secondary" onclick="goToStep('step-chat')">Conversational Setup</button>
+          <button type="button" class="btn-secondary" onclick="goToStep('step-chat')" style="margin-top: 10px;">Conversational Setup</button>
         </div>
       </div>
 
       <!-- Step Instant: Instant Build -->
       <div class="step" id="step-instant">
-        <button onclick="goToStep('step-initial')" class="btn-secondary" style="border:none; color: #0066FF; width: auto; font-size: 14px; margin-bottom: 16px;">
-          &larr; Back
+        <button onclick="goToStep('step-initial')" style="background: none; border: none; color: #0066FF; padding: 0; box-shadow: none; width: auto; font-size: 14px; min-height: 44px; margin-bottom: 16px; display: flex; align-items: center; gap: 4px; font-weight: 600;">
+          <svg style="width: 16px; height: auto;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg> Back
         </button>
         <h1>Tell us about your business</h1>
         <p>Our AI will handle the rest in 30 seconds.</p>
+
         <textarea id="instant-bio" data-testid="instant-bio" class="glassmorphism" placeholder="e.g. I run a local bakery that sells custom vegan cakes..." rows="6" style="resize: none;"></textarea>
         <div id="instant-error" class="error-msg" aria-live="polite" style="margin-bottom: 20px;"></div>
-        <div class="btn-group">
+
+        <div class="btn-group" style="margin-top: 24px;">
           <button id="generate-storefront-btn" data-testid="generate-storefront-btn">Next</button>
         </div>
       </div>
 
+
+
       <div class="step" id="step-loading">
         <h1>Building Your Business...</h1>
-        <p id="loading-status">Hiring your AI Manager...</p>
-        <div class="spinner" style="margin: 0 auto; width: 40px; height: 40px; border-width: 4px; border-top-color: #0066FF;"></div>
+        <p>Please wait while we set up your workspace.</p>
+        <div class="spinner" style="margin: 0 auto; width: 40px; height: 40px;"></div>
       </div>
 
       <!-- Step Chat: Conversational Build -->
       <div class="step" id="step-chat">
-        <button onclick="goToStep('step-initial')" class="btn-secondary" style="border:none; color: #0066FF; width: auto; font-size: 14px; margin-bottom: 16px;">
-          &larr; Back
+        <button onclick="goToStep('step-initial')" style="background: none; border: none; color: #0066FF; padding: 0; box-shadow: none; width: auto; font-size: 14px; min-height: 44px; margin-bottom: 16px; display: flex; align-items: center; gap: 4px; font-weight: 600;">
+          <svg style="width: 16px; height: auto;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg> Back
         </button>
         <h1>Setup Assistant</h1>
         <p>Talk to our AI to build your business.</p>
-        <div id="chat-messages" class="glassmorphism" style="text-align: left; height: 250px; overflow-y: auto; padding: 10px; margin-bottom: 15px;">
+
+        <div id="chat-messages" class="glassmorphism" style="text-align: left;">
             <div style="margin-bottom: 10px; color: #333;"><strong>Assistant:</strong> What do you do? (e.g. I make custom vegan cakes in Austin)</div>
         </div>
-        <input type="text" id="chat-image-url" class="glassmorphism" placeholder="Image URL (Optional)" style="margin-bottom: 10px;">
-        <div style="display: flex; gap: 10px;">
-            <input type="text" id="chat-input" class="glassmorphism" placeholder="Type a message..." style="margin-bottom: 0;">
-            <button id="chat-send-btn" style="width: auto; min-width: 44px;">Send</button>
+
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+            <input type="text" id="chat-image-url" data-testid="chat-image-url" class="glassmorphism" placeholder="Image URL (Optional)" style="margin-bottom: 0; width: 100%; min-height: 44px; border-radius: 8px;">
+            <div style="display: flex; gap: 10px;">
+                <input type="text" id="chat-input" data-testid="chat-input" class="glassmorphism" placeholder="Type a message..." style="margin-bottom: 0; flex-grow: 1; min-height: 44px; border-radius: 8px;">
+                <button id="chat-send-btn" data-testid="chat-send-btn" style="width: auto; min-height: 44px; min-width: 44px; border-radius: 8px;">Send</button>
+            </div>
         </div>
       </div>
 
       <div class="stepper" id="stepper-indicator" style="display: none;" role="progressbar" aria-label="Setup progress" aria-valuemin="0" aria-valuemax="7">
-        <div class="step-indicator" data-step="step-context"></div>
+        <div class="step-indicator active" data-step="step-context"></div>
         <div class="step-indicator" data-step="step-categories"></div>
         <div class="step-indicator" data-step="step-name"></div>
         <div class="step-indicator" data-step="step-assistant"></div>
@@ -349,11 +544,13 @@
         <div class="step-indicator" data-step="step-offer"></div>
         <div class="step-indicator" data-step="step-template"></div>
       </div>
+      <div id="draft-saved-msg" style="display: none; color: #34C759; font-weight: bold; margin-bottom: 15px;">Draft Saved!</div>
 
       <!-- Step 1: Work Context -->
       <div class="step" id="step-context">
         <h1>How do you work?</h1>
-        <p>Choose a persona to pre-fill or select below.</p>
+        <p>Choose a quick-start or select how you work.</p>
+
         <div class="persona-row">
             <div class="persona-chip" onclick="applyPersona('Baker', event)" data-testid="persona-baker">Baker (Maya)</div>
             <div class="persona-chip" onclick="applyPersona('Handyman', event)" data-testid="persona-handyman">Handyman (Carlos)</div>
@@ -362,6 +559,7 @@
             <div class="persona-chip" onclick="applyPersona('Agency', event)" data-testid="persona-agency">Agency (Nora)</div>
             <div class="persona-chip" onclick="applyPersona('Manager', event)" data-testid="persona-manager">Manager (Jun)</div>
         </div>
+
         <div class="radio-group" id="context-group">
           <label class="radio-option">
             <input type="radio" name="work_context" value="Local Service" />
@@ -392,10 +590,10 @@
             </div>
           </label>
         </div>
-        <div id="context-error" class="error-msg">Please select an option.</div>
+        <div id="context-error" class="error-msg" aria-live="polite">Please select an option.</div>
         <div class="btn-group">
           <button class="next-step-btn" data-testid="next-step-btn" data-next="step-categories">Next</button>
-          <button type="button" class="btn-secondary save-draft-btn">Save Draft</button>
+          <button type="button" class="btn-secondary save-draft-btn" data-testid="save-draft-btn">Save Draft</button>
         </div>
       </div>
 
@@ -406,98 +604,170 @@
         <select id="business-categories" data-testid="business-categories" class="glassmorphism">
           <option value="" disabled selected>Select a category...</option>
         </select>
-        <div id="categories-error" class="error-msg">Please enter a category.</div>
+        <div id="categories-error" class="error-msg" aria-live="polite">Please enter a category.</div>
         <div class="btn-group">
           <button class="next-step-btn" data-testid="next-step-btn" data-next="step-name">Next</button>
-          <button type="button" class="btn-secondary save-draft-btn">Save Draft</button>
-          <button class="btn-secondary prev-step-btn" data-prev="step-context">Back</button>
+          <button type="button" class="btn-secondary save-draft-btn" data-testid="save-draft-btn">Save Draft</button>
+          <button class="btn-secondary prev-step-btn" data-testid="prev-step-btn" data-prev="step-context">Back</button>
         </div>
       </div>
 
-      <!-- Step 3: Business Name -->
+      <!-- Step 3: Business Name and Tagline -->
       <div class="step" id="step-name">
-        <h1>Business Name</h1>
-        <p>Set up your identity.</p>
-        <input type="text" id="business-name" data-testid="business-name" class="glassmorphism" placeholder="e.g. Maya's Bakery" />
-        <div id="name-error" class="error-msg">Business Name must be at least 3 characters.</div>
-        <input type="text" id="business-tagline" class="glassmorphism" placeholder="Tagline (optional)" />
+        <h1>What's the name of your business?</h1>
+        <p>We'll use this to set up your workspace.</p>
+        <input type="text" id="business-name" data-testid="business-name" class="glassmorphism" placeholder="e.g. Maya's Bakery" autocomplete="organization" />
+        <div id="name-error" class="error-msg" aria-live="polite">Business Name must be at least 3 characters.</div>
+
+        <input type="text" id="business-tagline" data-testid="business-tagline" class="glassmorphism" placeholder="Tagline (optional)" />
+
         <div class="btn-group">
           <button class="next-step-btn" data-testid="next-step-btn" data-next="step-assistant">Next</button>
-          <button type="button" class="btn-secondary save-draft-btn">Save Draft</button>
-          <button class="btn-secondary prev-step-btn" data-prev="step-categories">Back</button>
+          <button type="button" class="btn-secondary save-draft-btn" data-testid="save-draft-btn">Save Draft</button>
+          <button class="btn-secondary prev-step-btn" data-testid="prev-step-btn" data-prev="step-categories">Back</button>
         </div>
       </div>
 
       <!-- Step 4: Assistant Setup -->
       <div class="step" id="step-assistant">
         <h1>Set up your Assistant</h1>
-        <div class="chat-bubble">"Hi! What should I call myself?"</div>
+        <p>Give your AI assistant a name and tone.</p>
+
+        <div class="chat-bubble" id="assistant-intro">
+            "Hi! I'll be your partner in growing this business. What should I call myself, and how should we talk?"
+        </div>
+
         <input type="text" id="assistant-name" data-testid="assistant-name" class="glassmorphism" placeholder="e.g. Jarvis" />
-        <div id="assistant-name-error" class="error-msg">Please enter a name.</div>
+        <div id="assistant-name-error" class="error-msg" aria-live="polite">Please enter a name for your assistant.</div>
+
         <select id="assistant-tone" data-testid="assistant-tone" class="glassmorphism">
           <option value="" disabled selected>Select a tone</option>
           <option value="Professional">Professional</option>
           <option value="Friendly">Friendly</option>
           <option value="Concise">Concise</option>
         </select>
-        <div id="tone-error" class="error-msg">Please select a tone.</div>
+        <div id="tone-error" class="error-msg" aria-live="polite">Please select a tone.</div>
+
         <div class="btn-group">
           <button class="next-step-btn" data-testid="next-step-btn" data-next="step-admin">Next</button>
-          <button type="button" class="btn-secondary save-draft-btn">Save Draft</button>
-          <button class="btn-secondary prev-step-btn" data-prev="step-name">Back</button>
+          <button type="button" class="btn-secondary save-draft-btn" data-testid="save-draft-btn">Save Draft</button>
+          <button class="btn-secondary prev-step-btn" data-testid="prev-step-btn" data-prev="step-name">Back</button>
         </div>
       </div>
 
-      <!-- Step 5: Admin Credentials -->
+
+      <!-- Step 5: Admin Setup -->
       <div class="step" id="step-admin">
-        <h1>Admin Details</h1>
-        <input type="email" id="admin-email" data-testid="admin-email" class="glassmorphism" placeholder="admin@mybusiness.com" />
-        <div id="email-error" class="error-msg">Please enter a valid email.</div>
-        <input type="password" id="admin-password" data-testid="admin-password" class="glassmorphism" placeholder="Password (min 8 chars)" />
-        <div id="password-error" class="error-msg">Password must be at least 8 characters.</div>
+        <h1>Admin Credentials</h1>
+        <p>Set up your login details.</p>
+
+        <input type="email" id="admin-email" data-testid="admin-email" class="glassmorphism" placeholder="admin@mybusiness.com" inputmode="email" autocomplete="email" />
+        <div id="email-error" class="error-msg" aria-live="polite">Please enter a valid email address.</div>
+
+        <input type="password" id="admin-password" data-testid="admin-password" class="glassmorphism" placeholder="Password (min 8 chars)" autocomplete="new-password" />
+        <div id="password-error" class="error-msg" aria-live="polite">Password must be at least 8 characters.</div>
+
         <div class="btn-group">
           <button class="next-step-btn" data-testid="next-step-btn" data-next="step-offer">Next</button>
-          <button type="button" class="btn-secondary save-draft-btn">Save Draft</button>
-          <button class="btn-secondary prev-step-btn" data-prev="step-assistant">Back</button>
+          <button type="button" class="btn-secondary save-draft-btn" data-testid="save-draft-btn">Save Draft</button>
+          <button class="btn-secondary prev-step-btn" data-testid="prev-step-btn" data-prev="step-assistant">Back</button>
         </div>
       </div>
 
       <!-- Step 6: First Offer -->
       <div class="step" id="step-offer">
         <h1>Your First Offer</h1>
+        <p>What is the main thing you sell?</p>
         <input type="text" id="first-offer" data-testid="first-offer" class="glassmorphism" placeholder="e.g. Custom Birthday Cake" />
-        <div id="offer-error" class="error-msg">Please enter an offer.</div>
+        <div id="offer-error" class="error-msg" aria-live="polite">Please enter an offer.</div>
         <div class="btn-group">
           <button class="next-step-btn" data-testid="next-step-btn" data-next="step-template">Next</button>
-          <button type="button" class="btn-secondary save-draft-btn">Save Draft</button>
-          <button class="btn-secondary prev-step-btn" data-prev="step-admin">Back</button>
+          <button type="button" class="btn-secondary save-draft-btn" data-testid="save-draft-btn">Save Draft</button>
+          <button class="btn-secondary prev-step-btn" data-testid="prev-step-btn" data-prev="step-admin">Back</button>
         </div>
       </div>
 
-      <!-- Step 7: Template -->
+      <!-- Step 6: Template -->
       <div class="step" id="step-template">
         <h1>Template Selection</h1>
+        <p>Choose a look for your workspace</p>
         <select id="template-selection" data-testid="template-selection" class="glassmorphism">
           <option value="" disabled selected>Select a template...</option>
           <option value="Modern">Modern</option>
           <option value="Classic">Classic</option>
           <option value="Playful">Playful</option>
         </select>
-        <div id="template-error" class="error-msg">Please select a template.</div>
+        <div id="template-error" class="error-msg" aria-live="polite">Please select a template.</div>
+
         <div class="btn-group">
           <button id="finish-btn" data-testid="finish-btn">Launch Store</button>
-          <button type="button" class="btn-secondary save-draft-btn">Save Draft</button>
-          <button class="btn-secondary prev-step-btn" data-prev="step-offer">Back</button>
+          <button type="button" class="btn-secondary save-draft-btn" data-testid="save-draft-btn">Save Draft</button>
+          <button class="btn-secondary prev-step-btn" data-testid="prev-step-btn" data-prev="step-offer">Back</button>
         </div>
       </div>
 
-      <div id="draft-saved-msg" style="display: none; color: #34C759; font-weight: bold; margin-top: 15px;">Draft Saved!</div>
     </div>
-
     <script>
-      const stepsList = ['step-initial', 'step-context', 'step-categories', 'step-name', 'step-assistant', 'step-admin', 'step-offer', 'step-template'];
-      let state = { step: 0 };
-      const backendUrl = (window.location.origin.includes('localhost') || window.location.protocol === 'file:') ? 'http://127.0.0.1:18789' : '';
+      const container = document.getElementById('form-container');
+
+      function applyPersona(persona, event) {
+          document.querySelectorAll('.persona-chip').forEach(el => el.classList.remove('selected'));
+          event.target.classList.add('selected');
+
+          if (persona === 'Baker') {
+              state.work_context = 'Storefront';
+              state.categories = 'Bakery';
+              state.businessName = "Maya's Bakery";
+              state.assistantName = "Cookie";
+              state.assistantTone = "Friendly";
+              state.first_offer = "Custom Birthday Cake";
+          } else if (persona === 'Handyman') {
+              state.work_context = 'Local Service';
+              state.categories = 'Handyman';
+              state.businessName = "Carlos Repairs";
+              state.assistantName = "Tools";
+              state.assistantTone = "Concise";
+              state.first_offer = "Standard Repair Visit";
+          } else if (persona === 'Boutique') {
+              state.work_context = 'Storefront';
+              state.categories = 'Boutique';
+              state.businessName = "Priya's Boutique";
+              state.assistantName = "Style";
+              state.assistantTone = "Professional";
+              state.first_offer = "Signature Dress";
+          } else if (persona === 'Tutor') {
+              state.work_context = 'Online Creator';
+              state.categories = 'Tutoring';
+              state.businessName = "Leo's Music";
+              state.assistantName = "Melody";
+              state.assistantTone = "Friendly";
+              state.first_offer = "1-Hour Guitar Lesson";
+          } else if (persona === 'Agency') {
+              state.work_context = 'Agency';
+              state.categories = 'Design';
+              state.businessName = "Nora Design Studio";
+              state.assistantName = "Creative";
+              state.assistantTone = "Professional";
+              state.first_offer = "Brand Identity Audit";
+          } else if (persona === 'Manager') {
+              state.work_context = 'Storefront';
+              state.categories = 'Retail';
+              state.businessName = "Downtown Branch";
+              state.assistantName = "Helper";
+              state.assistantTone = "Concise";
+              state.first_offer = "In-Store Pickup Slot";
+          }
+          populateForm();
+          saveCurrentState();
+
+          // Flash feedback
+          const chip = event.target;
+          const originalText = chip.innerText;
+          chip.innerText = "Applied!";
+          setTimeout(() => { chip.innerText = originalText; }, 1000);
+      }
+
+      const finishBtn = document.getElementById('finish-btn');
 
       const inputs = {
           context: document.querySelectorAll('input[name="work_context"]'),
@@ -524,32 +794,337 @@
           templateSelection: document.getElementById('template-error')
       };
 
-      function goToStep(stepId) {
-          if (stepId === 'step-categories') populateCategories();
-          document.querySelectorAll('.step').forEach(el => el.classList.remove('active'));
-          const target = document.getElementById(stepId);
-          if (target) target.classList.add('active');
-          updateStepper(stepId);
+      let state = {
+          businessName: '',
+          assistantName: '',
+          assistantTone: '',
+          work_context: '',
+          categories: '',
+          tagline: '',
+          first_offer: '',
+          templateSelection: ''
+      };
+
+      // Handle radio buttons selection visual state
+      inputs.context.forEach(radio => {
+          radio.addEventListener('change', (e) => {
+              document.querySelectorAll('.radio-option').forEach(el => el.classList.remove('selected'));
+              e.target.closest('.radio-option').classList.add('selected');
+              errors.context.style.display = 'none';
+          });
+      });
+
+      // Load existing state
+      if (window.__TAURI__ && window.__TAURI__.core) {
+        window.__TAURI__.core.invoke("get_onboarding_state").then((backendState) => {
+          if (backendState) {
+            state = { ...state, ...backendState };
+            populateForm();
+          }
+        }).catch(console.error);
+
+      } else {
+        const stored = localStorage.getItem('onboardingState');
+        if (stored) {
+          state = { ...state, ...JSON.parse(stored) };
+          populateForm();
+        }
+
+        // Fetch from API to support cross-device resume
+        const backendUrl = (window.location.origin.includes('localhost') || window.location.protocol === 'file:') ? 'http://127.0.0.1:18789' : '';
+        const tenantId = localStorage.getItem('tenant_id') || 'storefront';
+        const userId = localStorage.getItem('user_id') || 'test-user';
+
+        fetch(`${backendUrl}/api/onboarding/state`, {
+            method: 'GET',
+            headers: {
+                'X-Tenant-ID': tenantId,
+                'X-User-ID': userId
+            }
+        })
+        .then(res => res.json())
+        .then(apiState => {
+            if (apiState && Object.keys(apiState).length > 0) {
+                state = { ...state, ...(apiState.wizardState || apiState) };
+                localStorage.setItem('onboardingState', JSON.stringify(state)); // Sync cross-device state down to local
+                populateForm();
+            }
+        })
+        .catch(err => console.error('Failed to load cross-device state:', err));
       }
 
-      function updateStepper(stepId) {
-          const indicator = document.getElementById('stepper-indicator');
-          const idx = stepsList.indexOf(stepId);
-          if (idx <= 0 || stepId === 'step-instant' || stepId === 'step-chat') {
-              indicator.style.display = 'none';
-          } else {
-              indicator.style.display = 'flex';
-              document.querySelectorAll('.step-indicator').forEach((dot, i) => {
-                  dot.className = 'step-indicator' + (i < idx-1 ? ' completed' : (i === idx-1 ? ' active' : ''));
+
+      if (state.step === undefined || state.step === 0) {
+         goToStep('step-initial');
+      } else {
+         const steps = ['step-context', 'step-categories', 'step-name', 'step-assistant', 'step-admin', 'step-offer', 'step-template'];
+         if (state.step < steps.length) {
+            goToStep(steps[state.step]);
+         }
+      }
+
+            // Clear name error on typing if valid
+      inputs.name.addEventListener('input', () => {
+          if (inputs.name.value.trim().length >= 3) {
+              errors.name.style.display = 'none';
+              inputs.name.style.borderColor = 'rgba(255, 255, 255, 0.5)';
+          }
+      });
+
+      inputs.adminEmail.addEventListener('input', () => {
+          if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(inputs.adminEmail.value.trim())) {
+              errors.adminEmail.style.display = 'none';
+              inputs.adminEmail.style.borderColor = 'rgba(255, 255, 255, 0.5)';
+          }
+      });
+
+      inputs.adminPassword.addEventListener('input', () => {
+          if (inputs.adminPassword.value.trim().length >= 8) {
+              errors.adminPassword.style.display = 'none';
+              inputs.adminPassword.style.borderColor = 'rgba(255, 255, 255, 0.5)';
+          }
+      });
+
+      inputs.assistantName.addEventListener('input', () => {
+          if (inputs.assistantName.value.trim().length > 0) {
+              errors.assistantName.style.display = 'none';
+              inputs.assistantName.style.borderColor = 'rgba(255, 255, 255, 0.5)';
+          }
+      });
+
+      inputs.firstOffer.addEventListener('input', () => {
+          if (inputs.firstOffer.value.trim().length > 0) {
+              errors.firstOffer.style.display = 'none';
+              inputs.firstOffer.style.borderColor = 'rgba(255, 255, 255, 0.5)';
+          }
+      });
+
+
+      function populateForm() {
+          if (state.businessName) inputs.name.value = state.businessName;
+          if (state.tagline) inputs.tagline.value = state.tagline;
+
+          if (state.work_context) {
+              populateCategories();
+          }
+          if (state.categories) inputs.categories.value = state.categories;
+
+          if (state.assistantName) inputs.assistantName.value = state.assistantName;
+          if (state.assistantTone) inputs.assistantTone.value = state.assistantTone;
+          if (state.adminEmail) inputs.adminEmail.value = state.adminEmail;
+          if (state.adminPassword) inputs.adminPassword.value = state.adminPassword;
+          if (state.first_offer) inputs.firstOffer.value = state.first_offer;
+          if (state.templateSelection) inputs.templateSelection.value = state.templateSelection;
+
+          const contextVal = state.work_context;
+          if (contextVal) {
+              inputs.context.forEach(r => {
+                  if (r.value === contextVal) {
+                      r.checked = true;
+                      document.querySelectorAll('.radio-option').forEach(el => el.classList.remove('selected'));
+                      r.closest('.radio-option').classList.add('selected');
+                  }
               });
+          }
+
+          if (state.step !== undefined && state.step > 0) {
+              const steps = ['step-context', 'step-categories', 'step-name', 'step-assistant', 'step-admin', 'step-offer', 'step-template'];
+              if (state.step < steps.length) {
+                  goToStep(steps[state.step]);
+              }
           }
       }
 
+            function saveCurrentState() {
+          state.categories = inputs.categories.value;
+          state.businessName = inputs.name.value;
+          state.tagline = inputs.tagline.value;
+          state.assistantName = inputs.assistantName.value;
+          state.assistantTone = inputs.assistantTone.value;
+          state.first_offer = inputs.firstOffer.value;
+          state.templateSelection = inputs.templateSelection.value;
+
+          let selectedContext = document.querySelector('input[name="work_context"]:checked');
+          if (selectedContext) {
+              state.work_context = selectedContext.value;
+          }
+
+          // Increment step if we are moving forward
+
+          let stepNumber = 0;
+          const activeStep = document.querySelector('.step.active');
+          if (activeStep) {
+              if (activeStep.id === 'step-context') stepNumber = 0;
+              if (activeStep.id === 'step-categories') stepNumber = 1;
+              if (activeStep.id === 'step-name') stepNumber = 2;
+              if (activeStep.id === 'step-assistant') stepNumber = 3;
+              if (activeStep.id === 'step-admin') stepNumber = 4;
+              if (activeStep.id === 'step-offer') stepNumber = 5;
+              if (activeStep.id === 'step-template') stepNumber = 6;
+          }
+          state.step = stepNumber;
+
+          if (window.__TAURI__ && window.__TAURI__.core) {
+              window.__TAURI__.core.invoke("save_onboarding_state", { state }).catch(console.error);
+          } else {
+              localStorage.setItem('onboardingState', JSON.stringify(state));
+              const backendUrl = (window.location.origin.includes('localhost') || window.location.protocol === 'file:') ? 'http://127.0.0.1:18789' : '';
+              const tenantId = localStorage.getItem('tenant_id') || 'storefront';
+              const userId = localStorage.getItem('user_id') || 'test-user';
+              fetch(`${backendUrl}/api/onboarding/state`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': tenantId, 'X-User-ID': userId },
+                  body: JSON.stringify({ wizardState: state })
+              }).catch(console.error);
+          }
+      }
+
+      function validateStep(stepId) {
+          let isValid = true;
+
+          if (stepId === 'step-initial' || stepId === 'step-instant' || stepId === 'step-chat') {
+              return true;
+          }
+
+          if (stepId === 'step-context') {
+              const selected = document.querySelector('input[name="work_context"]:checked');
+              if (!selected) {
+                  errors.context.style.display = 'block';
+                  isValid = false;
+              } else {
+                  state.work_context = selected.value;
+              }
+          }
+          else if (stepId === 'step-categories') {
+              if (inputs.categories.value.trim() === '') {
+                  errors.categories.style.display = 'block';
+                  isValid = false;
+              } else {
+                  errors.categories.style.display = 'none';
+                  state.categories = inputs.categories.value.trim();
+              }
+          }
+          else if (stepId === 'step-name') {
+              if (inputs.name.value.trim().length < 3) {
+                  errors.name.style.display = 'block';
+                  inputs.name.style.borderColor = '#FF3B30';
+                  isValid = false;
+              } else {
+                  errors.name.style.display = 'none';
+                  inputs.name.style.borderColor = 'rgba(255, 255, 255, 0.5)';
+                  state.businessName = inputs.name.value.trim();
+                  state.tagline = inputs.tagline.value.trim();
+              }
+          }
+          else if (stepId === 'step-assistant') {
+              if (inputs.assistantName.value.trim() === '') {
+                  errors.assistantName.style.display = 'block'; inputs.assistantName.style.borderColor = '#FF3B30';
+                  isValid = false;
+              } else {
+                  errors.assistantName.style.display = 'none'; inputs.assistantName.style.borderColor = 'rgba(255, 255, 255, 0.5)';
+                  state.assistantName = inputs.assistantName.value.trim();
+              }
+
+              if (!inputs.assistantTone.value) {
+                  errors.assistantTone.style.display = 'block';
+                  isValid = false;
+              } else {
+                  errors.assistantTone.style.display = 'none';
+                  state.assistantTone = inputs.assistantTone.value;
+              }
+          }
+          else if (stepId === 'step-admin') {
+              const emailVal = inputs.adminEmail.value.trim();
+              const passVal = inputs.adminPassword.value.trim();
+              let stepValid = true;
+
+              if (emailVal === '' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal)) {
+                  errors.adminEmail.style.display = 'block';
+                  errors.adminEmail.innerText = emailVal === '' ? 'Admin Email is required' : 'Please enter a valid email address.';
+                  inputs.adminEmail.style.borderColor = '#FF3B30';
+                  stepValid = false;
+              } else {
+                  errors.adminEmail.style.display = 'none';
+                  inputs.adminEmail.style.borderColor = 'rgba(255, 255, 255, 0.5)';
+              }
+
+              if (passVal.length < 8 || !/\d/.test(passVal)) {
+                  errors.adminPassword.style.display = 'block';
+                  errors.adminPassword.innerText = passVal === '' ? 'Password is required' : 'Password must be at least 8 characters and contain a number';
+                  inputs.adminPassword.style.borderColor = '#FF3B30';
+                  stepValid = false;
+              } else {
+                  errors.adminPassword.style.display = 'none';
+                  inputs.adminPassword.style.borderColor = 'rgba(255, 255, 255, 0.5)';
+              }
+
+              if (stepValid) {
+                  state.adminEmail = emailVal;
+                  state.adminPassword = passVal;
+              } else {
+                  isValid = false;
+              }
+          }
+          else if (stepId === 'step-offer') {
+              if (inputs.firstOffer.value.trim() === '') {
+                  errors.firstOffer.style.display = 'block';
+                  isValid = false;
+              } else {
+                  errors.firstOffer.style.display = 'none';
+                  state.first_offer = inputs.firstOffer.value.trim();
+              }
+          }
+          else if (stepId === 'step-template') {
+              if (inputs.templateSelection.value === '') {
+                  errors.templateSelection.style.display = 'block';
+                  isValid = false;
+              } else {
+                  errors.templateSelection.style.display = 'none';
+                  state.templateSelection = inputs.templateSelection.value;
+              }
+          }
+
+          if (!isValid) {
+              container.classList.remove('animate-shake');
+              void container.offsetWidth; // trigger reflow
+              container.classList.add('animate-shake');
+          }
+
+          return isValid;
+      }
+
+
+      function updateStepper(stepId) {
+          const stepperIndicator = document.getElementById('stepper-indicator');
+          if (stepId === 'step-initial' || stepId === 'step-instant' || stepId === 'step-chat') {
+              if (stepperIndicator) stepperIndicator.style.display = 'none';
+          } else {
+              if (stepperIndicator) stepperIndicator.style.display = 'flex';
+          }
+
+          const steps = ['step-context', 'step-categories', 'step-name', 'step-assistant', 'step-admin', 'step-offer', 'step-template'];
+          const currentIndex = steps.indexOf(stepId);
+          if (stepperIndicator) stepperIndicator.setAttribute('aria-valuenow', currentIndex + 1);
+
+          document.querySelectorAll('.step-indicator').forEach((indicator, index) => {
+              if (index < currentIndex) {
+                  indicator.classList.add('completed');
+                  indicator.classList.remove('active');
+              } else if (index === currentIndex) {
+                  indicator.classList.add('active');
+                  indicator.classList.remove('completed');
+              } else {
+                  indicator.classList.remove('active');
+                  indicator.classList.remove('completed');
+              }
+          });
+      }
+
       const categoriesMap = {
-          'Local Service': ['Plumbing', 'Handyman', 'Cleaning', 'Landscaping'],
-          'Storefront': ['Bakery', 'Cafe', 'Boutique', 'Retail'],
-          'Online Creator': ['Tutoring', 'Music', 'Consulting'],
-          'Agency': ['Design', 'Marketing', 'Development']
+          'Local Service': ['Plumbing', 'Electrical', 'Cleaning', 'Landscaping', 'HVAC', 'Pest Control', 'Handyman', 'Other'],
+          'Storefront': ['Bakery', 'Cafe', 'Restaurant', 'Retail', 'Salon', 'Spa', 'Gym', 'Boutique', 'Other'],
+          'Online Creator': ['Tutoring', 'Consulting', 'Digital Art', 'Software', 'Writing', 'Video Creation', 'Music', 'Other'],
+          'Agency': ['Marketing', 'Design', 'Development', 'Consulting', 'Advertising', 'PR', 'Other']
       };
 
       function populateCategories() {
@@ -558,145 +1133,1574 @@
           inputs.categories.innerHTML = '<option value="" disabled selected>Select a category...</option>';
           cats.forEach(c => {
               const opt = document.createElement('option');
-              opt.value = opt.textContent = c;
+              opt.value = c;
+              opt.textContent = c;
               inputs.categories.appendChild(opt);
           });
-          if (state.categories) inputs.categories.value = state.categories;
-      }
-
-      function populateForm() {
-          if (state.businessName) inputs.name.value = state.businessName;
-          if (state.tagline) inputs.tagline.value = state.tagline;
-          if (state.work_context) {
-              inputs.context.forEach(r => {
-                  if (r.value === state.work_context) {
-                      r.checked = true;
-                      r.closest('.radio-option').classList.add('selected');
-                  }
-              });
+          if (state.categories && cats.includes(state.categories)) {
+              inputs.categories.value = state.categories;
+          } else {
+              inputs.categories.value = "";
           }
-          if (state.assistantName) inputs.assistantName.value = state.assistantName;
-          if (state.assistantTone) inputs.assistantTone.value = state.assistantTone;
-          if (state.adminEmail) inputs.adminEmail.value = state.adminEmail;
-          if (state.adminPassword) inputs.adminPassword.value = state.adminPassword;
-          if (state.first_offer) inputs.firstOffer.value = state.first_offer;
-          if (state.templateSelection) inputs.templateSelection.value = state.templateSelection;
       }
 
-      function applyPersona(persona, e) {
-          document.querySelectorAll('.persona-chip').forEach(c => c.classList.remove('selected'));
-          e.target.classList.add('selected');
-          const configs = {
-              'Baker': { work_context: 'Storefront', categories: 'Bakery', businessName: "Maya's Bakery", assistantName: 'Cookie', assistantTone: 'Friendly', first_offer: 'Custom Cake' },
-              'Handyman': { work_context: 'Local Service', categories: 'Handyman', businessName: 'Carlos Repairs', assistantName: 'Tools', assistantTone: 'Concise', first_offer: 'Repair Visit' },
-              'Boutique': { work_context: 'Storefront', categories: 'Boutique', businessName: "Priya's Boutique", assistantName: 'Style', assistantTone: 'Professional', first_offer: 'Signature Dress' },
-              'Tutor': { work_context: 'Online Creator', categories: 'Tutoring', businessName: "Leo's Music", assistantName: 'Melody', assistantTone: 'Friendly', first_offer: 'Music Lesson' },
-              'Agency': { work_context: 'Agency', categories: 'Design', businessName: 'Nora Studio', assistantName: 'Creative', assistantTone: 'Professional', first_offer: 'Brand Audit' },
-              'Manager': { work_context: 'Storefront', categories: 'Retail', businessName: 'Downtown Branch', assistantName: 'Helper', assistantTone: 'Concise', first_offer: 'Pickup' }
-          };
-          Object.assign(state, configs[persona]);
-          populateForm();
-          saveCurrentState();
-      }
-
-      async function saveCurrentState() {
-          const activeStep = document.querySelector('.step.active');
-          if (activeStep) state.step = stepsList.indexOf(activeStep.id);
-          state.work_context = document.querySelector('input[name="work_context"]:checked')?.value || state.work_context;
-          state.categories = inputs.categories.value;
-          state.businessName = inputs.name.value;
-          state.assistantName = inputs.assistantName.value;
-          state.assistantTone = inputs.assistantTone.value;
-          state.first_offer = inputs.firstOffer.value;
-          state.templateSelection = inputs.templateSelection.value;
-
-          localStorage.setItem('onboardingState', JSON.stringify(state));
-          const tid = localStorage.getItem('tenant_id') || 'storefront';
-          const uid = localStorage.getItem('user_id') || 'test-user';
-          try {
-              await fetch(`${backendUrl}/api/onboarding/state`, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': tid, 'X-User-ID': uid },
-                  body: JSON.stringify({ wizardState: state, step: state.step })
-              });
-          } catch(e) {}
-      }
-
-      function validateStep(stepId) {
-          let ok = true;
-          if (stepId === 'step-context' && !document.querySelector('input[name="work_context"]:checked')) {
-              errors.context.style.display = 'block'; ok = false;
-          } else if (stepId === 'step-name' && inputs.name.value.length < 3) {
-              errors.name.style.display = 'block'; ok = false;
-          } else if (stepId === 'step-admin' && (inputs.adminPassword.value.length < 8 || !inputs.adminEmail.value.includes('@'))) {
-              errors.password.style.display = 'block'; ok = false;
+      function goToStep(stepId) {
+          if (stepId === 'step-categories') {
+              populateCategories();
           }
-          if (!ok) {
-              document.getElementById('form-container').classList.add('animate-shake');
-              setTimeout(() => document.getElementById('form-container').classList.remove('animate-shake'), 400);
-          }
-          return ok;
+          document.querySelectorAll('.step').forEach(el => el.classList.remove('active'));
+          document.getElementById(stepId).classList.add('active');
+          updateStepper(stepId);
       }
 
-      // Hydration
-      (async () => {
-          const tid = localStorage.getItem('tenant_id') || 'storefront';
-          const uid = localStorage.getItem('user_id') || 'test-user';
-          try {
-              const res = await fetch(`${backendUrl}/api/onboarding/state`, { headers: { 'X-Tenant-ID': tid, 'X-User-ID': uid }});
-              const remote = await res.json();
-              if (remote.wizardState) {
-                  state = { ...state, ...remote.wizardState };
-                  if (remote.step !== undefined) state.step = remote.step;
-                  populateForm();
-                  // Only jump step if it's the initial load and not step 0
-                  if (state.step > 0) goToStep(stepsList[state.step]);
-              }
-          } catch(e) {}
-      })();
-
-      // Event Listeners
       document.querySelectorAll('.next-step-btn').forEach(btn => {
-          btn.onclick = async () => {
-              const curr = btn.closest('.step').id;
-              if (validateStep(curr)) {
-                  goToStep(btn.dataset.next);
-                  await saveCurrentState();
+          btn.addEventListener('click', (e) => {
+              const currentStep = e.target.closest('.step').id;
+              const nextStepId = e.target.getAttribute('data-next');
+              if (validateStep(currentStep)) {
+                  goToStep(nextStepId);
+                  saveCurrentState();
               }
-          };
+          });
       });
+
       document.querySelectorAll('.prev-step-btn').forEach(btn => {
-          btn.onclick = async () => { goToStep(btn.dataset.prev); await saveCurrentState(); };
+          btn.addEventListener('click', (e) => {
+              const prevStepId = e.target.getAttribute('data-prev');
+              goToStep(prevStepId);
+              saveCurrentState();
+          });
       });
+
       document.querySelectorAll('.save-draft-btn').forEach(btn => {
-          btn.onclick = async () => {
-              const txt = btn.innerText; btn.innerText = "Saving...";
-              await saveCurrentState();
+          btn.addEventListener('click', async (e) => {
+              e.preventDefault();
+              const originalText = btn.innerText;
+              btn.innerText = "Saving...";
+              btn.disabled = true;
+
+              // Add a small delay to allow browser to render "Saving..."
+              await new Promise(r => setTimeout(r, 100));
+
+              saveCurrentState();
+
               btn.innerText = "Saved!";
-              setTimeout(() => btn.innerText = txt, 2000);
-          };
+              btn.style.backgroundColor = "#34C759";
+              btn.style.color = "white";
+              btn.style.borderColor = "#34C759";
+
+              const msg = document.getElementById('draft-saved-msg');
+              if (msg) msg.style.display = 'block';
+
+              setTimeout(() => {
+                  btn.innerText = originalText;
+                  btn.disabled = false;
+                  btn.style.backgroundColor = "";
+                  btn.style.color = "";
+                  btn.style.borderColor = "";
+                  if (msg) msg.style.display = 'none';
+              }, 2000);
+          });
       });
-      document.getElementById('generate-storefront-btn').onclick = async () => {
-          const bio = document.getElementById('instant-bio').value;
-          if (!bio) return;
-          goToStep('step-loading');
+
+      const generateStorefrontBtn = document.getElementById('generate-storefront-btn');
+      const instantBioInputEl = document.getElementById('instant-bio');
+      const instantErrorEl = document.getElementById('instant-error');
+
+      if (instantBioInputEl) {
+          // Initialize disabled state
+          if (generateStorefrontBtn && !instantBioInputEl.value.trim()) {
+              generateStorefrontBtn.disabled = true;
+          }
+          instantBioInputEl.addEventListener('input', () => {
+              instantBioInputEl.classList.remove('border-[#FF3B30]');
+              if (instantErrorEl) {
+                  instantErrorEl.style.display = 'none';
+                  instantErrorEl.classList.remove('text-[#FF3B30]', 'border-[#FF3B30]/30', 'animate-shake');
+              }
+              if (generateStorefrontBtn) {
+                  generateStorefrontBtn.disabled = !instantBioInputEl.value.trim();
+              }
+          });
+      }
+
+
+      // Chat logic
+      const chatInputEl = document.getElementById('chat-input');
+      const chatSendBtn = document.getElementById('chat-send-btn');
+      const chatMessagesEl = document.getElementById('chat-messages');
+      let chatHistory = [];
+
+      async function sendChatMessage() {
+          const text = chatInputEl.value.trim();
+          const chatImageEl = document.getElementById('chat-image-url');
+          const imageUrl = chatImageEl ? chatImageEl.value.trim() : '';
+          if (!text && !imageUrl) return;
+
+          // Append user message
+          let displayMsg = text;
+          if (imageUrl) displayMsg += `<br><span style="font-size: 12px; color: #666;">[Attached Image: ${imageUrl}]</span>`;
+
+          chatMessagesEl.innerHTML += `<div style="margin-bottom: 10px; color: #0066FF;"><strong>You:</strong> ${displayMsg}</div>`;
+          chatInputEl.value = '';
+          if (chatImageEl) chatImageEl.value = '';
+
+          let msgObj = { role: 'user', content: text };
+          if (imageUrl) msgObj.image_url = imageUrl;
+
+          chatHistory.push(msgObj);
+          chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
+
+          chatSendBtn.disabled = true;
+
           try {
-              const res = await fetch(`${backendUrl}/api/onboarding/start`, {
+              const backendUrl = (window.location.origin.includes('localhost') || window.location.protocol === 'file:') ? 'http://127.0.0.1:18789' : '';
+              const res = await fetch(`${backendUrl}/api/onboarding/chat`, {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ business_type: 'Storefront', company_name: 'AI Generated', company_description: bio, admin_email: 'admin@ai.com', admin_password: 'password123' })
+                  body: JSON.stringify({ messages: chatHistory })
               });
-              if (res.ok) window.location.href = "success.html";
-          } catch(e) { goToStep('step-instant'); }
-      };
-      document.getElementById('finish-btn').onclick = async () => {
-          if (validateStep('step-template')) {
-              btn.disabled = true;
-              await saveCurrentState();
-              // In real app, call /api/onboarding/start
-              window.location.href = "success.html";
+
+              if (!res.ok) throw new Error('Chat request failed');
+              const data = await res.json();
+
+              chatMessagesEl.innerHTML += `<div style="margin-bottom: 10px; color: #333;"><strong>Assistant:</strong> ${data.reply}</div>`;
+              chatHistory.push({ role: 'assistant', content: data.reply });
+              chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
+
+              if (data.is_complete && data.intake_data) {
+                  const intakeData = data.intake_data;
+                  const req = {
+                      companyName: intakeData.business_name || "My Business",
+                      businessType: intakeData.business_type || "Online Store",
+                      companyDescription: chatHistory.map(m => m.content).join(" "),
+                      sellingCategories: intakeData.categories || ["physical"],
+                      paymentPref: "online",
+                      adminEmail: "admin@mybusiness.com",
+                      adminName: "Admin",
+                      adminPassword: "password",
+                      websiteTemplate: "auto",
+                      firstProductName: intakeData.initial_products?.[0]?.name || "First Product",
+                      firstProductPrice: intakeData.initial_products?.[0]?.price || "0.00",
+                      domainChoice: "subdomain",
+                      priceType: "fixed",
+                      location: intakeData.location || "Local",
+                      targetAudience: intakeData.target_audience || "General",
+                      initialProducts: intakeData.initial_products || []
+                  };
+
+                  if (window.__TAURI__ && window.__TAURI__.core) {
+                      await goToStep('step-loading'); window.__TAURI__.core.invoke("start_onboarding", { req });
+                      localStorage.setItem('has_onboarded', 'true');
+                      window.location.href = "success.html";
+                      return;
+                  }
+
+                  const tenantIdStr = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront';
+                  const userIdStr = localStorage.getItem('user_id') || 'test-user';
+
+                  const startRes = await fetch(`${backendUrl}/api/onboarding/start`, {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                          business_type: req.businessType,
+                          company_name: req.companyName,
+                          company_description: req.companyDescription,
+                          selling_categories: req.sellingCategories,
+                          payment_pref: req.paymentPref,
+                          admin_email: req.adminEmail,
+                          website_template: req.websiteTemplate,
+                          first_product_name: req.firstProductName,
+                          first_product_price: req.firstProductPrice,
+                          domain_choice: req.domainChoice,
+                          admin_name: req.adminName,
+                          admin_password: req.adminPassword,
+                          price_type: req.priceType,
+                          location: req.location,
+                          target_audience: req.targetAudience,
+                          initial_products: req.initialProducts
+                      })
+                  });
+
+                  if (startRes.ok) {
+                      const startData = await startRes.json();
+                      if (startData.organization_id) {
+                          localStorage.setItem('tenant_id', startData.organization_id);
+                          localStorage.setItem('tenant', startData.organization_id);
+                      }
+                      localStorage.setItem('has_onboarded', 'true');
+                      window.location.href = "success.html";
+                  }
+              }
+          } catch (e) {
+              chatMessagesEl.innerHTML += `<div style="margin-bottom: 10px; color: #FF3B30;"><strong>Error:</strong> Failed to connect.</div>`;
+          } finally {
+              chatSendBtn.disabled = false;
           }
-      };
+      }
+
+      if (chatSendBtn) { chatSendBtn.addEventListener('click', sendChatMessage); }
+      if (chatInputEl) { chatInputEl.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendChatMessage(); }); }
+
+      if (generateStorefrontBtn) {
+          generateStorefrontBtn.addEventListener('click', async () => {
+              const bioInput = instantBioInputEl.value;
+              if (!bioInput.trim()) {
+                  instantErrorEl.innerText = "Please tell us about your business.";
+                  instantErrorEl.style.display = 'block';
+                  instantErrorEl.classList.add('text-[#FF3B30]', 'border-[#FF3B30]/30', 'animate-shake');
+                  instantBioInputEl.classList.add('border-[#FF3B30]');
+                  return;
+              }
+
+              instantErrorEl.style.display = 'none';
+              instantErrorEl.classList.remove('text-[#FF3B30]', 'border-[#FF3B30]/30', 'animate-shake');
+              instantBioInputEl.classList.remove('border-[#FF3B30]');
+              generateStorefrontBtn.disabled = true;
+              generateStorefrontBtn.innerHTML = '<div class="spinner"></div>Building Your Business...';
+
+              try {
+                  const backendUrl = (window.location.origin.includes('localhost') || window.location.protocol === 'file:') ? 'http://127.0.0.1:18789' : '';
+                  const tenantIdStr = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront';
+                  const userIdStr = localStorage.getItem('user_id') || 'test-user';
+
+                  let intakeData = null;
+
+                  if (window.__TAURI__ && window.__TAURI__.core) {
+                     intakeData = await window.__TAURI__.core.invoke("process_intake", { input: bioInput });
+                  } else {
+                     const res = await fetch(`${backendUrl}/api/onboarding/intake`, {
+                         method: 'POST',
+                         headers: {
+                             'Content-Type': 'application/json',
+                             'X-Tenant-ID': tenantIdStr,
+                             'X-User-ID': userIdStr
+                         },
+                         body: JSON.stringify({ description: bioInput })
+                     });
+                     if (!res.ok) {
+                         const errData = await res.json().catch(()=>({}));
+                         throw new Error(errData.error || errData.message || 'Failed to analyze business details');
+                     }
+                     intakeData = await res.json();
+                  }
+
+                  const req = {
+                      companyName: intakeData.business_name || "My Business",
+                      businessType: intakeData.business_type || "Online Store",
+                      companyDescription: bioInput,
+                      sellingCategories: intakeData.categories || ["physical"],
+                      paymentPref: "online",
+                      adminEmail: "admin@mybusiness.com",
+                      adminName: "Admin",
+                      adminPassword: "password",
+                      websiteTemplate: "auto",
+                      firstProductName: intakeData.initial_products?.[0]?.name || "First Product",
+                      firstProductPrice: intakeData.initial_products?.[0]?.price || "0.00",
+                      domainChoice: "subdomain",
+                      priceType: "fixed",
+                      location: intakeData.location || "Local",
+                      targetAudience: intakeData.target_audience || "General",
+                      initialProducts: intakeData.initial_products || []
+                  };
+
+                  if (window.__TAURI__ && window.__TAURI__.core) {
+                      await window.__TAURI__.core.invoke("start_onboarding", { req });
+                      localStorage.setItem('has_onboarded', 'true');
+                      window.location.href = "success.html";
+                  } else {
+                      const startRes = await fetch(`${backendUrl}/api/onboarding/start`, {
+                          method: 'POST',
+                          headers: {
+                              'Content-Type': 'application/json',
+                              'X-Tenant-ID': tenantIdStr,
+                              'X-User-ID': userIdStr
+                          },
+                          body: JSON.stringify({
+                              business_type: req.businessType,
+                              company_name: req.companyName,
+                              company_description: req.companyDescription,
+                              selling_categories: req.sellingCategories,
+                              payment_pref: req.paymentPref,
+                              admin_email: req.adminEmail,
+                              website_template: req.websiteTemplate,
+                              first_product_name: req.firstProductName,
+                              first_product_price: req.firstProductPrice,
+                              domain_choice: req.domainChoice,
+                              admin_name: req.adminName,
+                              admin_password: req.adminPassword,
+                              price_type: req.priceType,
+                              location: req.location,
+                              target_audience: req.targetAudience,
+                              initial_products: req.initialProducts
+                          })
+                      });
+
+                      if (!startRes.ok) {
+                          const errData = await startRes.json().catch(()=>({}));
+                          throw new Error(errData.error || errData.message || 'Failed to start onboarding');
+                      }
+
+                      const startData = await startRes.json();
+                      if (startData.organization_id) {
+                          localStorage.setItem('tenant_id', startData.organization_id);
+                          localStorage.setItem('tenant', startData.organization_id);
+                      }
+                      localStorage.setItem('has_onboarded', 'true');
+                      window.location.href = "success.html";
+                  }
+
+              } catch (err) {
+                  console.error(err);
+                  const errorMsg = err.message || "Network Error: Failed to fetch";
+                  instantErrorEl.innerText = errorMsg;
+                  instantErrorEl.style.display = 'block';
+                  instantErrorEl.classList.add('text-[#FF3B30]', 'border-[#FF3B30]/30');
+                  instantBioInputEl.classList.add('border-[#FF3B30]');
+                  generateStorefrontBtn.disabled = false;
+                  generateStorefrontBtn.innerText = "Next";
+              }
+          });
+      }
+      document.querySelectorAll(".save-draft-btn").forEach(btn => {
+        btn.addEventListener("click", (e) => {
+            const originalText = e.target.innerText;
+            e.target.innerText = "Saving...";
+            e.target.disabled = true;
+
+            const backendUrl = (window.location.origin.includes("localhost") || window.location.protocol === "file:") ? "http://127.0.0.1:18789" : "";
+            const tenantId = localStorage.getItem("tenant_id") || "storefront";
+            const userId = localStorage.getItem("user_id") || "test-user";
+
+            const currentStepEl = document.querySelector(".step.active");
+            let currentStepIdx = 0;
+            if (currentStepEl) {
+                const steps = Array.from(document.querySelectorAll(".step"));
+                currentStepIdx = steps.indexOf(currentStepEl);
+            }
+
+            const payload = {
+                wizardState: state,
+                step: currentStepIdx
+            };
+
+            if (window.__TAURI__ && window.__TAURI__.core) {
+                window.__TAURI__.core.invoke("save_onboarding_state", { state: payload }).then(() => {
+                    e.target.innerText = "Saved!";
+                    setTimeout(() => {
+                        e.target.innerText = originalText;
+                        e.target.disabled = false;
+                    }, 3000);
+                }).catch(err => {
+                    console.error("Failed to save draft", err);
+                    e.target.innerText = "Error!";
+                    setTimeout(() => {
+                        e.target.innerText = originalText;
+                        e.target.disabled = false;
+                    }, 3000);
+                });
+            } else {
+                fetch(`${backendUrl}/api/onboarding/state`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-Tenant-ID": tenantId,
+                        "X-User-ID": userId
+                    },
+                    body: JSON.stringify(payload)
+                }).then(res => {
+                    if (res.ok) {
+                        e.target.innerText = "Saved!";
+                        setTimeout(() => {
+                            e.target.innerText = originalText;
+                            e.target.disabled = false;
+                        }, 3000);
+                    } else {
+                        throw new Error("Failed to save");
+                    }
+                }).catch(err => {
+                    console.error("Failed to save draft", err);
+                    e.target.innerText = "Error!";
+                    setTimeout(() => {
+                        e.target.innerText = originalText;
+                        e.target.disabled = false;
+                    }, 3000);
+                });
+            }
+        });
+      });
+
+
+      if (finishBtn) {
+        finishBtn.addEventListener('click', () => {
+           if (validateStep('step-template')) {
+               const req = {
+                   business_type: state.workContext || state.work_context || "Local Service",
+                   company_name: state.businessName,
+                   company_description: state.tagline || "",
+                   selling_categories: state.categories ? [state.categories] : [],
+                   payment_pref: "online",
+                   admin_email: state.adminEmail || "admin@mybusiness.com",
+                   admin_name: state.assistantName || "Admin",
+                   admin_password: state.adminPassword || "password",
+                   website_template: state.templateSelection || "Modern",
+                   first_product_name: state.firstOffer || "First Offer",
+                   first_product_price: "0.00",
+                   domain_choice: "subdomain",
+                   price_type: "fixed",
+                   location: "Local",
+                   target_audience: "General"
+               };
+
+               if (window.__TAURI__ && window.__TAURI__.core) {
+                 finishBtn.disabled = true;
+                 goToStep('step-loading');
+                 window.__TAURI__.core.invoke("start_onboarding", { req }).then(() => {
+                   window.location.href = "success.html";
+                 }).catch((err) => {
+                   console.error(err);
+                   goToStep('step-template');
+                   finishBtn.disabled = false;
+                   finishBtn.innerText = "Launch Store";
+                 });
+               } else {
+                 finishBtn.disabled = true;
+                 finishBtn.innerHTML = '<div class="spinner"></div>Saving...';
+                 const backendUrl = (window.location.origin.includes('localhost') || window.location.protocol === 'file:') ? 'http://127.0.0.1:18789' : '';
+                 fetch(`${backendUrl}/api/onboarding/start`, {
+                     method: 'POST',
+                     headers: {
+                         'Content-Type': 'application/json'
+                     },
+                     body: JSON.stringify(req)
+                 }).then(response => {
+                     if (response.ok) {
+                         localStorage.setItem('onboardingState', JSON.stringify(state));
+                         window.location.href = "success.html";
+                     } else {
+                         throw new Error('Failed to start onboarding');
+                     }
+                 }).catch((err) => {
+                     console.error(err);
+                     goToStep('step-template');
+                     finishBtn.disabled = false;
+                     finishBtn.innerText = "Launch Store";
+                 });
+               }
+           }
+        });
+      }
+
+      // Enter key support for text inputs
+      document.querySelectorAll('input[type="text"]').forEach(input => {
+          input.addEventListener('keydown', (e) => {
+              if (e.key === 'Enter') {
+                  e.preventDefault();
+                  const step = e.target.closest('.step');
+                  const nextBtn = step.querySelector('.next-step-btn') || step.querySelector('#finish-btn');
+                  if (nextBtn) nextBtn.click();
+              }
+          });
+      });
     </script>
-  </body>
+    <script>
+document.addEventListener('DOMContentLoaded', () => {
+    // Inject tooltip CSS
+    const style = document.createElement('style');
+    style.textContent = `
+        .ohc-tooltip {
+            position: fixed;
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(20px) saturate(2.1);
+            -webkit-backdrop-filter: blur(20px) saturate(2.1);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            border-radius: 16px;
+            padding: 12px 16px;
+            color: #1d1d1f;
+            font-family: "Outfit", -apple-system, BlinkMacSystemFont, sans-serif;
+            font-size: 14px;
+            line-height: 1.4;
+            max-width: 250px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            z-index: 10000;
+            pointer-events: none;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: opacity 0.2s ease, transform 0.2s ease;
+            text-align: center;
+        }
+        .ohc-tooltip.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        @media (prefers-color-scheme: dark) {
+            .ohc-tooltip {
+                background: rgba(22, 22, 26, 0.7);
+                border-color: rgba(255, 255, 255, 0.1);
+                color: #f5f5f7;
+            }
+        }
+    `;
+    document.head.appendChild(style);
+
+    if (!window.OHC_TOOLTIPS) {
+        window.OHC_TOOLTIPS = {};
+        fetch("/api/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(e => {
+            //
+            //
+            //
+            //
+            //
+            //
+            //
+            console.error(e);
+        });
+    }
+    const tooltipEl = document.createElement('div');
+    tooltipEl.className = 'ohc-tooltip';
+    document.body.appendChild(tooltipEl);
+
+    let hideTimeout;
+
+    function showTooltip(e, text) {
+        clearTimeout(hideTimeout);
+        tooltipEl.textContent = text;
+
+        const targetRect = e.target.getBoundingClientRect();
+
+        // Position below the element by default
+        let top = targetRect.bottom + 10;
+        let left = targetRect.left + (targetRect.width / 2) - (tooltipEl.offsetWidth / 2);
+
+        // Adjust if it goes off screen
+        if (left < 10) left = 10;
+        if (left + tooltipEl.offsetWidth > window.innerWidth - 10) {
+            left = window.innerWidth - tooltipEl.offsetWidth - 10;
+        }
+
+        if (top + tooltipEl.offsetHeight > window.innerHeight - 10) {
+            // Position above if it doesn't fit below
+            top = targetRect.top - tooltipEl.offsetHeight - 10;
+        }
+
+        tooltipEl.style.top = `${top}px`;
+        tooltipEl.style.left = `${left}px`;
+        tooltipEl.classList.add('visible');
+    }
+
+    function hideTooltip() {
+        hideTimeout = setTimeout(() => {
+            tooltipEl.classList.remove('visible');
+        }, 100); // slight delay to prevent flicker
+    }
+
+    // Desktop hover
+    document.addEventListener('mouseover', (e) => {
+        const t = e.target;
+        const target = t && typeof t.closest === 'function' ? t.closest('[data-tooltip]') : null;
+        if (target) {
+            showTooltip(e, (window.OHC_TOOLTIPS && window.OHC_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip'));
+        }
+    });
+
+    document.addEventListener('mouseout', (e) => {
+        const target = e.target; if (target && typeof target.closest === 'function' && target.closest('[data-tooltip]')) {
+            hideTooltip();
+        }
+    });
+
+    // Mobile long press (contextmenu) or touchstart
+    let touchTimeout;
+    document.addEventListener('touchstart', (e) => {
+        const t = e.target;
+        const target = t && typeof t.closest === 'function' ? t.closest('[data-tooltip]') : null;
+        if (target) {
+            touchTimeout = setTimeout(() => {
+                showTooltip(e, (window.OHC_TOOLTIPS && window.OHC_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip'));
+            }, 500); // 500ms long press
+        }
+    });
+
+    document.addEventListener('touchend', () => {
+        clearTimeout(touchTimeout);
+        hideTooltip();
+    });
+
+    document.addEventListener('touchmove', () => {
+        clearTimeout(touchTimeout);
+        hideTooltip();
+    });
+});
+
+</script>
+    <script>
+document.addEventListener('DOMContentLoaded', () => {
+    // Inject chat CSS
+    const style = document.createElement('style');
+    style.textContent = `
+        #ohc-help-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 56px;
+            height: 56px;
+            border-radius: 16px;
+            background: #0066FF;
+            color: white;
+            border: none;
+            box-shadow: 0 4px 14px rgba(0, 102, 255, 0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 9999;
+            transition: transform 0.2s;
+        }
+        #ohc-help-btn:hover {
+            transform: scale(1.05);
+        }
+        #ohc-help-btn svg {
+            width: 28px;
+            height: 28px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2;
+        }
+        #ohc-help-chat-overlay {
+            position: fixed;
+            bottom: 90px;
+            right: 20px;
+            width: 350px;
+            height: 500px;
+            max-height: calc(100vh - 120px);
+            max-width: calc(100vw - 40px);
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(30px) saturate(2.1);
+            -webkit-backdrop-filter: blur(30px) saturate(2.1);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            border-radius: 16px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+            display: none;
+            flex-direction: column;
+            z-index: 9998;
+            overflow: hidden;
+            font-family: "Outfit", sans-serif;
+            transform-origin: bottom right;
+            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        @keyframes popIn {
+            0% { transform: scale(0.5); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        #ohc-help-chat-header {
+            padding: 15px 20px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.5);
+        }
+        #ohc-help-chat-header h3 {
+            margin: 0;
+            font-size: 16px;
+            color: #1d1d1f;
+        }
+        #ohc-help-close {
+            background: none;
+            border: none;
+            color: #555555;
+            cursor: pointer;
+            padding: 5px;
+        }
+        #ohc-help-close:hover { color: #1d1d1f; }
+        #ohc-help-messages {
+            flex-grow: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .msg {
+            max-width: 85%;
+            padding: 12px 16px;
+            border-radius: 16px;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+        .msg-user {
+            align-self: flex-end;
+            background: #0066FF;
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+        .msg-ai {
+            align-self: flex-start;
+            background: rgba(0, 0, 0, 0.05);
+            color: #1d1d1f;
+            border-bottom-left-radius: 4px;
+        }
+        .msg-ai a {
+            color: #0066FF;
+            font-weight: 600;
+            text-decoration: none;
+            display: block;
+            margin-top: 5px;
+        }
+        #ohc-help-input-area {
+            padding: 15px;
+            border-top: 1px solid rgba(0, 0, 0, 0.1);
+            display: flex;
+            gap: 10px;
+            background: rgba(255, 255, 255, 0.5);
+        }
+        #ohc-help-input {
+            flex-grow: 1;
+            border: 1px solid rgba(0, 0, 0, 0.2);
+            border-radius: 16px;
+            padding: 10px 15px;
+            outline: none;
+            background: rgba(255, 255, 255, 0.8);
+            font-size: 14px;
+        }
+        #ohc-help-input:focus { border-color: #0066FF; }
+        #ohc-help-send {
+            background: #0066FF;
+            color: white;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            #ohc-help-chat-overlay {
+                background: rgba(22, 22, 26, 0.7);
+                border-color: rgba(255, 255, 255, 0.1);
+            }
+            #ohc-help-chat-header, #ohc-help-input-area {
+                background: rgba(0, 0, 0, 0.2);
+                border-color: rgba(255, 255, 255, 0.1);
+            }
+            #ohc-help-chat-header h3 { color: #f5f5f7; }
+            .msg-ai {
+                background: rgba(255, 255, 255, 0.1);
+                color: #f5f5f7;
+            }
+            #ohc-help-input {
+                background: rgba(0, 0, 0, 0.3);
+                border-color: rgba(255, 255, 255, 0.2);
+                color: white;
+            }
+        }
+    `;
+    document.head.appendChild(style);
+
+    // Inject HTML
+    const btn = document.createElement('button');
+    btn.id = 'ohc-help-btn';
+    btn.setAttribute('aria-label', 'Open help chat');
+    btn.innerHTML = `<svg viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
+    document.body.appendChild(btn);
+
+    const overlay = document.createElement('div');
+    overlay.id = 'ohc-help-chat-overlay';
+    overlay.innerHTML = `
+        <div id="ohc-help-chat-header">
+            <h3>Ask AI Help</h3>
+            <button id="ohc-help-close" aria-label="Close help chat">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+        </div>
+        <div id="ohc-help-messages">
+            <div class="msg msg-ai">Hi! I am your AI Help Agent! How can I assist you with OHC today?</div>
+        </div>
+
+        <div id="ohc-help-walkthroughs" style="margin-top: 15px; border-top: 1px solid rgba(0,0,0,0.1); padding-top: 15px;">
+            <h4 style="margin: 0 0 10px 0; font-size: 14px;">Interactive Tours</h4>
+            <button onclick="window.startWalkthrough && window.startWalkthrough([{targetId: 'nav-store', title: 'Set up your store', content: 'Click here to go to your storefront builder.'}])" style="width: 100%; text-align: left; padding: 8px; border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; background: white; margin-bottom: 8px; cursor: pointer; font-size: 13px;">Tour: Set up your store</button>
+            <button onclick="window.startWalkthrough && window.startWalkthrough([{targetId: 'nav-agents', title: 'Activate your AI Support Agent', content: 'Activate your AI agent to help with tasks.'}])" style="width: 100%; text-align: left; padding: 8px; border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; background: white; margin-bottom: 8px; cursor: pointer; font-size: 13px;">Tour: Activate your AI Support Agent</button>
+        </div>
+
+<div id="ohc-help-input-area">
+            <input type="text" id="ohc-help-input" placeholder="Ask me anything..." />
+            <button id="ohc-help-send" aria-label="Send message">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
+            </button>
+        </div>
+    `;
+    document.body.appendChild(overlay);
+
+    const closeBtn = document.getElementById('ohc-help-close');
+    const messages = document.getElementById('ohc-help-messages');
+    const input = document.getElementById('ohc-help-input');
+    const sendBtn = document.getElementById('ohc-help-send');
+
+    btn.addEventListener('click', () => {
+        overlay.style.display = 'flex';
+        input.focus();
+    });
+
+    closeBtn.addEventListener('click', () => {
+        overlay.style.display = 'none';
+    });
+
+        async function sendMessage() {
+        const text = input.value.trim();
+        if (!text) return;
+
+        // Add user msg
+        const uMsg = document.createElement('div');
+        uMsg.className = 'msg msg-user';
+        uMsg.textContent = text;
+        messages.appendChild(uMsg);
+        input.value = '';
+        messages.scrollTop = messages.scrollHeight;
+
+        try {
+            let url = '/api/chat';
+            if (window.__TAURI__ && window.__TAURI__.core) {
+                url = 'http://127.0.0.1:18789/api/chat';
+            }
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: text })
+            });
+            const data = await response.json();
+
+            const aiMsg = document.createElement('div');
+            aiMsg.className = 'msg msg-ai';
+            if (data.link && data.link.url) {
+                aiMsg.innerHTML = `${data.reply}<br/><a href="${data.link.url}">${data.link.title}</a>`;
+            } else {
+                aiMsg.textContent = data.reply;
+            }
+            messages.appendChild(aiMsg);
+            messages.scrollTop = messages.scrollHeight;
+        } catch (e) {
+            console.error(e);
+            const aiMsg = document.createElement('div');
+            aiMsg.className = 'msg msg-ai';
+            aiMsg.textContent = 'Sorry, there was an error connecting to the help assistant.';
+            messages.appendChild(aiMsg);
+            messages.scrollTop = messages.scrollHeight;
+        }
+    }
+
+    sendBtn.addEventListener('click', sendMessage);
+    input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') sendMessage();
+    });
+});
+
+</script>
+
+
+
+
+
+
+
+
+
+
+<style>
+.ohc-tooltip {
+    position: fixed;
+    background: #333;
+    color: white;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-family: Outfit, sans-serif;
+    z-index: 100000;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    max-width: 250px;
+    line-height: 1.4;
+}
+.ohc-tooltip.visible {
+    opacity: 1;
+}
+</style>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    if (!window.OHC_TOOLTIPS) {
+        window.OHC_TOOLTIPS = {};
+        fetch("/api/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(e => {
+            //
+            //
+            //
+            //
+            //
+            //
+            //
+            console.error(e);
+        });
+    }
+    const tooltipEl = document.createElement('div');
+    tooltipEl.className = 'ohc-tooltip';
+    document.body.appendChild(tooltipEl);
+
+    function showTooltip(e, text) {
+        if (!text) return;
+        tooltipEl.textContent = text;
+        const targetRect = e.target.closest('[id]') ? e.target.closest('[id]').getBoundingClientRect() : e.target.getBoundingClientRect();
+
+        let left = targetRect.left + (targetRect.width / 2) - (tooltipEl.offsetWidth / 2);
+        let top = targetRect.bottom + 10;
+
+        if (left + tooltipEl.offsetWidth > window.innerWidth - 10) {
+            left = window.innerWidth - tooltipEl.offsetWidth - 10;
+        } else if (left < 10) {
+            left = 10;
+        }
+
+        if (top + tooltipEl.offsetHeight > window.innerHeight - 10) {
+            top = targetRect.top - tooltipEl.offsetHeight - 10;
+        }
+
+        tooltipEl.style.top = `${top}px`;
+        tooltipEl.style.left = `${left}px`;
+        tooltipEl.classList.add('visible');
+    }
+
+    function hideTooltip() {
+        tooltipEl.classList.remove('visible');
+    }
+
+    document.addEventListener('mouseover', (e) => {
+        const target = e.target.closest('[id]');
+        if (target && target.id && window.OHC_TOOLTIPS[target.id]) {
+            showTooltip(e, window.OHC_TOOLTIPS[target.id]);
+        }
+    });
+
+    document.addEventListener('mouseout', (e) => {
+        const target = e.target.closest('[id]');
+        if (target && target.id && window.OHC_TOOLTIPS[target.id]) {
+            hideTooltip();
+        }
+    });
+});
+</script>
+
+
+<script>
+function initWalkthrough() {
+    window.startWalkthrough = function(steps) {
+        if (!steps || steps.length === 0) return;
+
+        let currentStep = 0;
+
+        // Create overlay
+        const overlay = document.createElement('div');
+        overlay.id = 'walkthrough-overlay';
+        overlay.className = 'fixed z-[90]';
+        overlay.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 99998;';
+        document.body.appendChild(overlay);
+
+        // Create bubble
+        const bubble = document.createElement('div');
+        bubble.id = 'walkthrough-bubble';
+        bubble.setAttribute('role', 'dialog');
+        bubble.style.cssText = 'position: fixed; background: white; border-radius: 8px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif;';
+        document.body.appendChild(bubble);
+
+        function renderStep() {
+            const step = steps[currentStep];
+
+            // Clean up previous highlights
+            document.querySelectorAll('.walkthrough-highlight, .ohc-walkthrough-highlight').forEach(el => {
+                el.classList.remove('walkthrough-highlight', 'ohc-walkthrough-highlight');
+                el.style.position = '';
+                el.style.zIndex = '';
+                el.style.background = '';
+            });
+
+            // Find target
+            const target = document.getElementById(step.targetId) || document.querySelector(step.targetId);
+
+            bubble.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 8px;">
+                    <h4 style="margin: 0; font-size: 16px; font-weight: bold;">${step.title || 'Tour'}</h4>
+                    <button id="wt-close" style="background: none; border: none; cursor: pointer; font-size: 18px;">&times;</button>
+                </div>
+                <p style="margin: 0; font-size: 14px; color: #333;">${step.content}</p>
+                <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;">
+                    ${currentStep > 0 ? '<button id="wt-prev" style="padding: 6px 12px; border: 1px solid #ccc; border-radius: 4px; background: white; cursor: pointer;">Back</button>' : ''}
+                    <button id="wt-next" style="padding: 6px 12px; border: none; border-radius: 4px; background: #0066FF; color: white; cursor: pointer;">${currentStep === steps.length - 1 ? 'Finish' : 'Next'}</button>
+                </div>
+            `;
+
+            document.getElementById('wt-close').onclick = closeWalkthrough;
+            if (document.getElementById('wt-prev')) document.getElementById('wt-prev').onclick = () => { currentStep--; renderStep(); };
+            document.getElementById('wt-next').onclick = () => {
+                if (currentStep === steps.length - 1) {
+                    closeWalkthrough();
+                } else {
+                    currentStep++;
+                    renderStep();
+                }
+            };
+
+            if (target) {
+                target.classList.add('walkthrough-highlight');
+                target.style.position = 'relative';
+                target.style.zIndex = '99999';
+                target.style.background = 'white'; // Make it pop
+
+                const rect = target.getBoundingClientRect();
+                // Position bubble below target if space permits, else above
+                if (rect.bottom + 200 < window.innerHeight) {
+                    bubble.style.top = (rect.bottom + 10) + 'px';
+                } else {
+                    bubble.style.top = (rect.top - bubble.offsetHeight - 10) + 'px';
+                }
+                bubble.style.left = Math.max(10, Math.min(rect.left, window.innerWidth - 320)) + 'px';
+            } else {
+                // Center if no target
+                bubble.style.top = '50%';
+                bubble.style.left = '50%';
+                bubble.style.transform = 'translate(-50%, -50%)';
+            }
+        }
+
+        function closeWalkthrough() {
+            document.querySelectorAll('.walkthrough-highlight, .ohc-walkthrough-highlight').forEach(el => {
+                el.classList.remove('walkthrough-highlight', 'ohc-walkthrough-highlight');
+                el.style.position = '';
+                el.style.zIndex = '';
+                el.style.background = '';
+            });
+            if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+            if (bubble.parentNode) bubble.parentNode.removeChild(bubble);
+        }
+
+        renderStep();
+    };
+}
+initWalkthrough();
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // Inject floating widget styles
+    const style = document.createElement('style');
+    style.textContent = `
+        #ohc-floating-help-btn {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            width: 56px;
+            height: 56px;
+            border-radius: 28px;
+            background-color: rgba(0, 102, 255, 0.9);
+            backdrop-filter: blur(10px);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.2);
+            box-shadow: 0 4px 16px rgba(0, 102, 255, 0.3);
+            cursor: pointer;
+            z-index: 99990;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.2s;
+        }
+        #ohc-floating-help-btn:hover {
+            transform: scale(1.05);
+        }
+        #ohc-floating-help-btn svg {
+            width: 28px;
+            height: 28px;
+            fill: currentColor;
+        }
+        #ohc-floating-help-widget {
+            position: fixed;
+            bottom: 96px;
+            right: 24px;
+            width: 380px;
+            height: 600px;
+            max-height: calc(100vh - 120px);
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(20px);
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+            z-index: 99990;
+            display: none;
+            flex-direction: column;
+            overflow: hidden;
+            font-family: Outfit, -apple-system, sans-serif;
+            border: 1px solid rgba(0,0,0,0.05);
+        }
+        @media (max-width: 480px) {
+            #ohc-floating-help-widget {
+                bottom: 0;
+                right: 0;
+                width: 100%;
+                height: 100%;
+                max-height: 100vh;
+                border-radius: 0;
+            }
+        }
+        #ohc-floating-help-header {
+            padding: 16px;
+            background: rgba(248, 250, 252, 0.6);
+            border-bottom: 1px solid rgba(226, 232, 240, 0.5);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        #ohc-floating-help-header h3 {
+            margin: 0;
+            font-size: 18px;
+            font-weight: 600;
+            color: #0f172a;
+        }
+        #ohc-floating-help-close {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #64748b;
+            padding: 4px;
+        }
+        #ohc-floating-help-tabs {
+            display: flex;
+            border-bottom: 1px solid rgba(226, 232, 240, 0.5);
+            background: rgba(248, 250, 252, 0.6);
+        }
+        .ohc-help-tab {
+            flex: 1;
+            padding: 12px;
+            text-align: center;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-weight: 500;
+            color: #64748b;
+            border-bottom: 2px solid transparent;
+            font-size: 14px;
+        }
+        .ohc-help-tab.active {
+            color: #0066FF;
+            border-bottom-color: #0066FF;
+        }
+        .ohc-help-content {
+            display: none;
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+        }
+        .ohc-help-content.active {
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Chat styles */
+        #ohc-help-chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        .ohc-chat-msg {
+            padding: 12px 16px;
+            border-radius: 12px;
+            max-width: 85%;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        .ohc-chat-msg.user {
+            background: rgba(0, 102, 255, 0.9);
+            color: white;
+            align-self: flex-end;
+            border-bottom-right-radius: 4px;
+        }
+        .ohc-chat-msg.agent {
+            background: rgba(241, 245, 249, 0.8);
+            color: #0f172a;
+            align-self: flex-start;
+            border-bottom-left-radius: 4px;
+        }
+        .ohc-chat-msg a {
+            color: #0066FF;
+            text-decoration: underline;
+            font-weight: 500;
+            display: block;
+            margin-top: 4px;
+        }
+        #ohc-help-chat-input-container {
+            display: flex;
+            gap: 8px;
+            padding-top: 12px;
+            border-top: 1px solid rgba(226, 232, 240, 0.5);
+        }
+        #ohc-help-chat-input {
+            flex: 1;
+            padding: 10px 14px;
+            border: 1px solid #cbd5e1;
+            border-radius: 20px;
+            font-size: 14px;
+            outline: none;
+            background: rgba(255, 255, 255, 0.8);
+        }
+        #ohc-help-chat-input:focus {
+            border-color: #0066FF;
+        }
+        #ohc-help-chat-send {
+            background: #0066FF;
+            color: white;
+            border: none;
+            border-radius: 20px;
+            padding: 0 16px;
+            font-weight: 500;
+            cursor: pointer;
+        }
+
+        /* Tours styles */
+        .ohc-tour-card {
+            padding: 16px;
+            border: 1px solid rgba(226, 232, 240, 0.5);
+            border-radius: 8px;
+            margin-bottom: 12px;
+            cursor: pointer;
+            transition: background 0.2s;
+            background: rgba(255, 255, 255, 0.5);
+        }
+        .ohc-tour-card:hover {
+            background: rgba(248, 250, 252, 0.8);
+        }
+        .ohc-tour-card h4 {
+            margin: 0 0 4px 0;
+            font-size: 15px;
+            color: #0f172a;
+        }
+        .ohc-tour-card p {
+            margin: 0;
+            font-size: 13px;
+            color: #64748b;
+        }
+
+        /* Tooltip Styles */
+        .ohc-tooltip {
+            position: fixed;
+            background: #333;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-family: Outfit, sans-serif;
+            z-index: 100000;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            max-width: 250px;
+            line-height: 1.4;
+        }
+        .ohc-tooltip.visible {
+            opacity: 1;
+        }
+    `;
+    document.head.appendChild(style);
+
+    // Create the button
+    const btn = document.createElement('button');
+    btn.id = 'ohc-floating-help-btn';
+    btn.setAttribute('aria-label', 'Help');
+    btn.title = 'Help';
+    btn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z"/></svg>`;
+    document.body.appendChild(btn);
+
+    // Create the widget
+    const widget = document.createElement('div');
+    widget.id = 'ohc-floating-help-widget';
+    widget.innerHTML = `
+        <div id="ohc-floating-help-header">
+            <h3>Help Center</h3>
+            <button id="ohc-floating-help-close" aria-label="Close">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+        </div>
+        <div id="ohc-floating-help-tabs">
+            <button class="ohc-help-tab active" data-target="tab-articles">Articles</button>
+            <button class="ohc-help-tab" data-target="tab-tours">Interactive Tours</button>
+            <button class="ohc-help-tab" data-target="tab-chat" aria-label="Ask AI">Ask AI</button>
+        </div>
+
+        <div id="tab-articles" class="ohc-help-content active">
+            <div style="margin-bottom: 16px;">
+                <a href="/help.html" style="display: block; padding: 12px; background: rgba(241, 245, 249, 0.8); border-radius: 8px; text-decoration: none; color: #0f172a; font-weight: 500; text-align: center;">Open Full Help Center</a>
+            </div>
+            <h4>Popular Articles</h4>
+            <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px;" id="ohc-help-articles-list">
+                <li><a href="/help_article.html?id=getting-started-1" style="color: #0066FF; text-decoration: none; font-size: 14px;">Welcome to One Human Corp</a></li>
+                <li><a href="/help_article.html?id=my-store-1" style="color: #0066FF; text-decoration: none; font-size: 14px;">Setting up your storefront</a></li>
+                <li><a href="/help_article.html?id=payments-1" style="color: #0066FF; text-decoration: none; font-size: 14px;">Accepting your first payment</a></li>
+            </ul>
+            <div style="margin-top: auto; padding-top: 16px; border-top: 1px solid rgba(226, 232, 240, 0.5);">
+                <a href="/api-docs.html" style="color: #64748b; font-size: 13px; text-decoration: none;">API Reference for advanced users</a>
+            </div>
+        </div>
+
+        <div id="tab-tours" class="ohc-help-content">
+            <div class="ohc-tour-card" onclick="window.startWalkthrough && window.startWalkthrough([{targetId: '#nav-store', title: 'Set up your store', content: 'Click here to access your storefront and add your first products.'}])">
+                <h4>Set up your store</h4>
+                <p>Learn how to add products and customize your storefront.</p>
+            </div>
+            <div class="ohc-tour-card" onclick="window.startWalkthrough && window.startWalkthrough([{targetId: '#nav-settings', title: 'Accept your first payment', content: 'Go to Settings > Payments to connect your bank account.'}])">
+                <h4>Accept your first payment</h4>
+                <p>Connect your account to start receiving money.</p>
+            </div>
+            <div class="ohc-tour-card" onclick="window.startWalkthrough && window.startWalkthrough([{targetId: '#nav-agents', title: 'Activate your AI Support Agent', content: 'Visit the AI Agents tab to hire your first digital assistant.'}])">
+                <h4>Activate your AI Support Agent</h4>
+                <p>Let AI handle customer queries for you.</p>
+            </div>
+        </div>
+
+        <div id="tab-chat" class="ohc-help-content" style="padding-bottom: 12px;">
+            <div id="ohc-help-chat-messages">
+                <div class="ohc-chat-msg agent">
+                    Hi! I'm your Help Agent. How can I assist you today? You can ask me anything about using OHC.
+                </div>
+            </div>
+            <div id="ohc-help-chat-input-container">
+                <input type="text" id="ohc-help-chat-input" placeholder="Ask anything...">
+                <button id="ohc-help-chat-send" aria-label="Send message">Send</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(widget);
+
+    // Logic
+    btn.addEventListener('click', () => {
+        widget.style.display = widget.style.display === 'flex' ? 'none' : 'flex';
+    });
+
+    document.getElementById('ohc-floating-help-close').addEventListener('click', () => {
+        widget.style.display = 'none';
+    });
+
+    const tabs = widget.querySelectorAll('.ohc-help-tab');
+    const contents = widget.querySelectorAll('.ohc-help-content');
+
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            tabs.forEach(t => t.classList.remove('active'));
+            contents.forEach(c => c.classList.remove('active'));
+
+            tab.classList.add('active');
+            document.getElementById(tab.getAttribute('data-target')).classList.add('active');
+        });
+    });
+
+    // Chat Logic
+    const chatInput = document.getElementById('ohc-help-chat-input');
+    const chatSend = document.getElementById('ohc-help-chat-send');
+    const chatMessages = document.getElementById('ohc-help-chat-messages');
+
+    function appendMessage(text, sender, link = null) {
+        const msg = document.createElement('div');
+        msg.className = `ohc-chat-msg ${sender}`;
+        msg.innerHTML = text;
+        if (link && link.url && link.title) {
+            msg.innerHTML += `<a href="${link.url}">${link.title}</a>`;
+        }
+        chatMessages.appendChild(msg);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    async function handleSend() {
+        const text = chatInput.value.trim();
+        if (!text) return;
+
+        appendMessage(text, 'user');
+        chatInput.value = '';
+
+        try {
+            const res = await fetch('/api/chat', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ message: text })
+            });
+            const data = await res.json();
+
+            if (data.reply) {
+                appendMessage(data.reply.text || data.reply, 'agent', data.reply.link);
+            } else if (data.text) {
+                appendMessage(data.text, 'agent', data.link);
+            } else {
+                appendMessage(data, 'agent');
+            }
+        } catch (e) {
+            appendMessage("I'm sorry, I'm having trouble connecting right now.", 'agent');
+        }
+    }
+
+    chatSend.addEventListener('click', handleSend);
+    chatInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') handleSend();
+    });
+
+    // --- Global Tooltip & Walkthrough Logic ---
+
+    // Tooltips
+    if (!window.OHC_TOOLTIPS) {
+        window.OHC_TOOLTIPS = {};
+        fetch("/api/tooltips").then(r => r.json()).then(data => { window.OHC_TOOLTIPS = data; }).catch(e => {
+            //
+            //
+            //
+            //
+            //
+            //
+            console.error(e);
+        });
+    }
+    const tooltipEl = document.createElement('div');
+    tooltipEl.className = 'ohc-tooltip';
+    document.body.appendChild(tooltipEl);
+
+    function showTooltip(e, text) {
+        if (!text) return;
+        tooltipEl.textContent = text;
+        const targetRect = e.target.closest('[id]') ? e.target.closest('[id]').getBoundingClientRect() : e.target.getBoundingClientRect();
+
+        let left = targetRect.left + (targetRect.width / 2) - (tooltipEl.offsetWidth / 2);
+        let top = targetRect.bottom + 10;
+
+        if (left + tooltipEl.offsetWidth > window.innerWidth - 10) {
+            left = window.innerWidth - tooltipEl.offsetWidth - 10;
+        } else if (left < 10) {
+            left = 10;
+        }
+
+        if (top + tooltipEl.offsetHeight > window.innerHeight - 10) {
+            top = targetRect.top - tooltipEl.offsetHeight - 10;
+        }
+
+        tooltipEl.style.top = `${top}px`;
+        tooltipEl.style.left = `${left}px`;
+        tooltipEl.classList.add('visible');
+    }
+
+    function hideTooltip() {
+        tooltipEl.classList.remove('visible');
+    }
+
+    document.addEventListener('mouseover', (e) => {
+        const target = e.target.closest('[id]');
+        if (target && target.id && window.OHC_TOOLTIPS[target.id]) {
+            showTooltip(e, window.OHC_TOOLTIPS[target.id]);
+        }
+    });
+
+    document.addEventListener('mouseout', (e) => {
+        const target = e.target.closest('[id]');
+        if (target && target.id && window.OHC_TOOLTIPS[target.id]) {
+            hideTooltip();
+        }
+    });
+
+    // Walkthroughs
+    if (!window.startWalkthrough) {
+        window.startWalkthrough = function(steps) {
+            if (!steps || steps.length === 0) return;
+
+            let currentStep = 0;
+
+            const overlay = document.createElement('div');
+            overlay.id = 'walkthrough-overlay';
+            overlay.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 99998;';
+            document.body.appendChild(overlay);
+
+            const bubble = document.createElement('div');
+            bubble.id = 'walkthrough-bubble';
+            bubble.setAttribute('role', 'dialog');
+            bubble.style.cssText = 'position: fixed; background: white; border-radius: 8px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 99999; max-width: 300px; display: flex; flex-direction: column; gap: 8px; font-family: Outfit, sans-serif;';
+            document.body.appendChild(bubble);
+
+            function renderStep() {
+                const step = steps[currentStep];
+
+                document.querySelectorAll('.walkthrough-highlight, .ohc-walkthrough-highlight').forEach(el => {
+                    el.classList.remove('walkthrough-highlight', 'ohc-walkthrough-highlight');
+                    el.style.position = '';
+                    el.style.zIndex = '';
+                    el.style.background = '';
+                });
+
+                const target = document.getElementById(step.targetId) || document.querySelector(step.targetId || step.selector);
+
+                bubble.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 8px;">
+                        <h4 style="margin: 0; font-size: 16px; font-weight: bold;">${step.title || 'Tour'}</h4>
+                        <button id="wt-close" style="background: none; border: none; cursor: pointer; font-size: 18px;">&times;</button>
+                    </div>
+                    <p style="margin: 0; font-size: 14px; color: #333;">${step.content || step.text}</p>
+                    <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;">
+                        ${currentStep > 0 ? '<button id="wt-prev" style="padding: 6px 12px; border: 1px solid #ccc; border-radius: 4px; background: white; cursor: pointer;">Back</button>' : ''}
+                        <button id="wt-next" style="padding: 6px 12px; border: none; border-radius: 4px; background: #0066FF; color: white; cursor: pointer;">${currentStep === steps.length - 1 ? 'Finish' : 'Next'}</button>
+                    </div>
+                `;
+
+                document.getElementById('wt-close').onclick = closeWalkthrough;
+                if (document.getElementById('wt-prev')) document.getElementById('wt-prev').onclick = () => { currentStep--; renderStep(); };
+                document.getElementById('wt-next').onclick = () => {
+                    if (currentStep === steps.length - 1) {
+                        closeWalkthrough();
+                    } else {
+                        currentStep++;
+                        renderStep();
+                    }
+                };
+
+                if (target) {
+                    target.classList.add('walkthrough-highlight');
+                    target.style.position = 'relative';
+                    target.style.zIndex = '99999';
+                    target.style.background = 'white';
+
+                    const rect = target.getBoundingClientRect();
+                    if (rect.bottom + 200 < window.innerHeight) {
+                        bubble.style.top = (rect.bottom + 10) + 'px';
+                    } else {
+                        bubble.style.top = (rect.top - bubble.offsetHeight - 10) + 'px';
+                    }
+                    bubble.style.left = Math.max(10, Math.min(rect.left, window.innerWidth - 320)) + 'px';
+                } else {
+                    bubble.style.top = '50%';
+                    bubble.style.left = '50%';
+                    bubble.style.transform = 'translate(-50%, -50%)';
+                }
+            }
+
+            function closeWalkthrough() {
+                document.querySelectorAll('.walkthrough-highlight, .ohc-walkthrough-highlight').forEach(el => {
+                    el.classList.remove('walkthrough-highlight', 'ohc-walkthrough-highlight');
+                    el.style.position = '';
+                    el.style.zIndex = '';
+                    el.style.background = '';
+                });
+                if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+                if (bubble.parentNode) bubble.parentNode.removeChild(bubble);
+            }
+
+            renderStep();
+        };
+    }
+});
+</script>
+</body>
 </html>
