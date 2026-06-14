@@ -16,6 +16,7 @@ import { InteractiveWalkthrough, WalkthroughTarget } from "../../components/Walk
 import { WithTooltip } from "../../components/TooltipRegistry";
 import { DashboardViralInviteWidget } from "./DashboardViralInviteWidget";
 import AiTimeSavingsWidget from "../components/AiTimeSavingsWidget";
+import { WrappedWidget } from "./WrappedWidget";
 
 import { SmartBlock } from "../builder/components";
 import { UnifiedAgentFeed } from "./UnifiedAgentFeed";
@@ -499,6 +500,7 @@ export default function Dashboard() {
         </div>
 
         <div className="order-last md:order-first">
+          <WrappedWidget />
           <SuccessMilestoneAlert />
           <SuccessMilestoneWidget />
           <ViralLoopPerformanceWidget />
